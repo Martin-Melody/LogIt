@@ -3,7 +3,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.example.app',
   appName: 'logit-frontend',
-  webDir: 'build'
+  webDir: 'build',
+  server: {
+    cleartext: true
+  }
 };
 
 export default config;
