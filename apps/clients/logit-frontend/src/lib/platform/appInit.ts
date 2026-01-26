@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { initRepo } from "$lib/data/repoProvider";
 import { appReady } from "$lib/stores/appReady.store";
 
 let didInit = false;
@@ -12,6 +13,9 @@ export async function appInit(): Promise<void> {
   didInit = true;
 
   console.log("[appInit] starting");
+
+  await initRepo();
+  console.log("[appInit] storage initalised");
 
   // ---- storage init (placeholder) ----
   // later: await initRepo();
