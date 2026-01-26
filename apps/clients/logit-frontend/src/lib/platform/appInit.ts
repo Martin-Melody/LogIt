@@ -1,6 +1,7 @@
 import { browser } from "$app/environment";
 import { initRepo } from "$lib/data/repoProvider";
 import { appReady } from "$lib/stores/appReady.store";
+import { currentSession } from "$lib/stores/currentSession.store";
 
 let didInit = false;
 
@@ -27,6 +28,7 @@ export async function appInit(): Promise<void> {
 
   // ---- restore draft session (later) ----
   // later: await currentSession.loadDraft();
+  await currentSession.loadDraft();
   console.log("[appInit] draft restore checked");
 
   appReady.set(true);
