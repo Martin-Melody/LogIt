@@ -4,20 +4,37 @@
 
   export let hasDraft = false;
   export let isOffline = false;
-  export let lastSyncLabel = "Last sync: 2 days ago";
+  export let lastSyncLabel = "Last sync: never";
+
+  export let onStart: () => void | Promise<void> = () => {};
+  export let onContinue: () => void | Promise<void> = () => {};
 </script>
 
 <Card.Root class="w-full">
   <Card.Header>
-    <Card.Title>Ready to train?</Card.Title>
-    <Card.Description>Log your workout in seconds.</Card.Description>
+    <Card.Title
+      >{hasDraft ? "Workout in progress" : "Ready to train?"}</Card.Title
+    >
+    <Card.Description>
+      {hasDraft
+        ? "Pick up where you left off."
+        : "Log your workout in seconds."}
+    </Card.Description>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-3">
-    <Button size="lg" class="w-full">Start Workout</Button>
+    <Button size="lg" class="w-full" onclick={() => void onStart()}>
+      {hasDraft ? "Start new workout" : "Start Workout"}
+    </Button>
 
     {#if hasDraft}
-      <Button variant="outline" class="w-full">Continue last workout</Button>
+      <Button
+        variant="outline"
+        class="w-full"
+        onclick={() => void onContinue()}
+      >
+        Continue last workout
+      </Button>
     {/if}
   </Card.Content>
 
