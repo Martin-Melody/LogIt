@@ -28,6 +28,13 @@ export type WorkoutSession = {
   exercises: ExerciseEntry[];
 };
 
+export type SessionSummary = {
+  id: string;
+  dateLabel: string;
+  durationLabel: string;
+  topSetLabel: string;
+};
+
 export type TopSetHighlight = {
   exerciseName: string;
   reps: number;

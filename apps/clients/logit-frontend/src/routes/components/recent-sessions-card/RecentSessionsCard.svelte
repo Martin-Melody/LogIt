@@ -1,20 +1,17 @@
 <script context="module">
-  export type SessionSummary = {
-    id: string;
-    dateLabel: string; // "Today", "Wed 24 Jan", etc.
-    durationLabel: string; // "52 min"
-    topSetLabel: string; // "Bench — 5×80kg"
-  };
 </script>
 
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
+  import type { SessionSummary } from "$lib/domain/workout";
 
   export let sessions: SessionSummary[] = [];
 
-  const onOpen = (id: string) => {};
-  const onRepeat = (id: string) => {};
+  // callbacks from parent/container
+  export let onOpen: (id: string) => void = () => {};
+  export let onRepeat: (id: string) => void = () => {};
+  export let onViewAll: () => void = () => {};
 </script>
 
 <Card.Root class="w-full">
@@ -66,7 +63,7 @@
 
   {#if sessions.length > 0}
     <Card.Footer class="pt-2">
-      <Button variant="link" class="h-auto p-0 text-sm">
+      <Button variant="link" class="h-auto p-0 text-sm" onclick={onViewAll}>
         View all sessions
       </Button>
     </Card.Footer>
