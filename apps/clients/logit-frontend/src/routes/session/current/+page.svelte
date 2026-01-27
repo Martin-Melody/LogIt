@@ -2,9 +2,11 @@
   import { currentSession } from "$lib/stores/currentSession.store";
   import { goto } from "$app/navigation";
   import { Button } from "$lib/components/ui/button";
+  import { recentSessions } from "$lib/stores/recentSessions.store";
 
   async function finish() {
     await currentSession.finish();
+    await recentSessions.refresh(5);
     await goto("/");
   }
 </script>
