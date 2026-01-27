@@ -42,7 +42,7 @@
     void goto(`/sessions/${id}`);
   }
 
-  async function onRepeat(id: string) {
+  async function onRepeat() {
     // MVP placeholder: just start a new workout and go to current session.
     // Later we'll call your repeatSession use-case.
     await currentSession.start();
