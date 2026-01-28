@@ -173,6 +173,18 @@ export function getTopSetHighlight(
   };
 }
 
+export function updateExerciseName(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  exerciseName: string,
+): WorkoutSession {
+  return updateExercise(session, exerciseEntryId, (exercise) => ({
+    ...exercise,
+    exerciseName: exerciseName.trim(),
+  }));
+}
+
+
 // ---------- internal helper ----------
 function updateExercise(
   session: WorkoutSession,
