@@ -3,6 +3,7 @@ import { initRepo } from "$lib/data/repoProvider";
 import { appReady } from "$lib/stores/appReady.store";
 import { currentSession } from "$lib/stores/currentSession.store";
 import { recentSessions } from "$lib/stores/recentSessions.store";
+import { setupKeyboard } from "./keyboard";
 
 let didInit = false;
 
@@ -23,6 +24,14 @@ export async function appInit(): Promise<void> {
   // ---- hydrate stores ----
   await recentSessions.refresh(5);
   console.log("[appInit] stores hydrated");
+
+  // ---- Keyboard Setup ----
+  try {
+    await setupKeyboard();
+    console.log('[appInit] keyboard configured')
+  } catch (e) {
+    console.warn('[appInit] keyboard setup failed (continuing)', e);
+  }
 
   // ---- restore draft session ----
   await currentSession.loadDraft();
