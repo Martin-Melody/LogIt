@@ -1,8 +1,10 @@
 import { browser } from "$app/environment";
-import { initRepo } from "$lib/data/repoProvider";
+import { initRepos } from "$lib/data/repoProvider";
+import { activeSplit } from "$lib/stores/activeSplit.store";
 import { appReady } from "$lib/stores/appReady.store";
 import { currentSession } from "$lib/stores/currentSession.store";
 import { recentSessions } from "$lib/stores/recentSessions.store";
+import { splits } from "$lib/stores/splits.store";
 import { setupKeyboard } from "./keyboard";
 
 let didInit = false;
@@ -18,11 +20,13 @@ export async function appInit(): Promise<void> {
   console.log("[appInit] starting");
 
   // ---- storage init ----
-  await initRepo();
+  await initRepos();
   console.log("[appInit] storage initialized");
 
   // ---- hydrate stores ----
   await recentSessions.refresh(5);
+  await splits.refresh({ limit: 20 })
+  await activeSplit.load();
   console.log("[appInit] stores hydrated");
 
   // ---- Keyboard Setup ----

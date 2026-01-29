@@ -13,7 +13,7 @@
   export let plan: TodayPlan | null = null;
 
   const onStart = () => {};
-  const onEdit = () => {};
+  export let onEdit: () => void | Promise<void> = () => {};
 </script>
 
 <Card.Root class="w-full">

@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import { get } from "svelte/store";
 
-  import { getRepo } from "$lib/data/repoProvider";
+  import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { recentSessions } from "$lib/stores/recentSessions.store";
 
@@ -46,7 +46,7 @@
     ui.saving = true;
     ui.error = null;
     try {
-      await getRepo().saveDraftSession(next);
+      await getWorkoutRepo().saveDraftSession(next);
     } catch (e) {
       ui.error =
         e instanceof Error ? e.message : "Failed to save draft session";
