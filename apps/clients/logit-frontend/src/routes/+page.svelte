@@ -6,6 +6,7 @@
   import QuickActionsRow from "./components/quick-actions-row/QuickActionsRow.svelte";
   import RecentSessionsCardContainer from "./components/recent-sessions-card/RecentSessionsCardContainer.svelte";
   import TodaysPlanCard from "./components/todays-plan-card/TodaysPlanCard.svelte";
+  import TodaysPlanCardContainer from "./components/todays-plan-card/TodaysPlanCardContainer.svelte";
 
   async function start() {
     await currentSession.start();
@@ -14,6 +15,10 @@
 
   async function continueWorkout() {
     await goto("/session/current");
+  }
+
+  async function createSplit() {
+    await goto("/splits/");
   }
 </script>
 
@@ -24,7 +29,7 @@
     onStart={start}
     onContinue={continueWorkout}
   />
-  <TodaysPlanCard />
+  <TodaysPlanCardContainer />
   <RecentSessionsCardContainer />
   <QuickActionsRow />
 </div>

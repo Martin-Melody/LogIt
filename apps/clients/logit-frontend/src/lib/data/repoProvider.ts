@@ -1,29 +1,46 @@
 import { browser } from "$app/environment";
 import type { WorkoutRepo } from "$lib/data/workoutRepo";
+import type { SplitRepo } from "$lib/data/splitRepo";
+
 import { createLocalWorkoutRepo } from "$lib/data/workoutRepo.local";
+import { createLocalSplitRepo } from "$lib/data/splitRepo.local";
+
 import { isNativePlatform } from "$lib/platform/isNative";
 
-let repo: WorkoutRepo | null = null;
 let didInit = false;
 
-export async function initRepo(): Promise<void> {
+let workoutRepo: WorkoutRepo | null = null;
+let splitRepo: SplitRepo | null = null;
+
+export async function initRepos(): Promise<void> {
   if (!browser) return;
   if (didInit) return;
   didInit = true;
 
-  // For MVP: always use localStorage (works on web + Capacitor WebView).
-  // Later: if (isNativePlatform()) use SQLite repo instead.
-  // Keeping the platform check here shows where the switch will live.
-  void isNativePlatform();
+  const isNative = isNativePlatform(); // or await if yours is async
 
-  repo = createLocalWorkoutRepo();
+  // MVP: localStorage everywhere
+  // Later:
+  // if (isNative) { workoutRepo = createSqliteWorkoutRepo(); splitRepo = createSqliteSplitRepo(); }
+  // else { workoutRepo = createLocalWorkoutRepo(); splitRepo = createLocalSplitRepo(); }
+
+  void isNative;
+
+  workoutRepo = createLocalWorkoutRepo();
+  splitRepo = createLocalSplitRepo();
 }
 
-export function getRepo(): WorkoutRepo {
-  if (!repo) {
-    throw new Error(
-      "WorkoutRepo not initialized. Call initRepo() during app startup (appInit) before using getRepo().",
-    );
+export function getWorkoutRepo(): WorkoutRepo {
+  if (!workoutRepo) {
+    throw new Error("WorkoutRepo not initialized. Call initRepos() first.");
   }
-  return repo;
+  return workoutRepo;
 }
+
+export function getSplitRepo(): SplitRepo {
+  if (!splitRepo) {
+    throw new Error("SplitRepo not initialized. Call initRepos() first.");
+  }
+  return splitRepo;
+}
+
