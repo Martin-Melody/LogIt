@@ -1,19 +1,17 @@
-<script context="module">
-  export type TodayPlan = {
-    dayNumber: number;
-    dayName?: string; // "Push"
-    exercises: { id: string; name: string }[];
-  };
-</script>
-
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
 
-  export let plan: TodayPlan | null = null;
+  export type TodayPlan = {
+    dayNumber: number;
+    dayName?: string;
+    exercises: { id: string; name: string }[];
+  };
 
-  const onStart = () => {};
-  export let onEdit: () => void | Promise<void> = () => {};
+  const { plan = null, onEdit = () => {} } = $props<{
+    plan?: TodayPlan | null;
+    onEdit?: () => void | Promise<void>;
+  }>();
 </script>
 
 <Card.Root class="w-full">
@@ -26,26 +24,22 @@
           Day {plan.dayNumber}{plan.dayName ? ` — ${plan.dayName}` : ""}
         </Card.Description>
       {:else}
-        <Card.Description>No split selected yet.</Card.Description>
+        <Card.Description>No plan yet.</Card.Description>
       {/if}
     </div>
 
-    {#if plan}
-      <Button variant="link" class="h-auto p-0 text-sm" onclick={onEdit}>
-        Edit plan
-      </Button>
-    {/if}
+    <Button variant="link" class="h-auto p-0 text-sm" onclick={onEdit}>
+      Edit plan
+    </Button>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-4">
     {#if plan}
       <ul class="space-y-2">
         {#each plan.exercises.slice(0, 6) as ex, i (ex.id)}
-          <li class="flex items-center justify-between">
-            <span class="text-sm">
-              <span class="text-muted-foreground">{i + 1}.</span>
-              {ex.name}
-            </span>
+          <li class="text-sm">
+            <span class="text-muted-foreground">{i + 1}.</span>
+            {ex.name}
           </li>
         {/each}
 
@@ -55,19 +49,10 @@
           </li>
         {/if}
       </ul>
-
-      <Button class="w-full" size="lg" onclick={onStart}>
-        Start planned workout
-      </Button>
     {:else}
-      <div class="flex flex-col gap-3">
-        <p class="text-sm text-muted-foreground">
-          Create a split to see your planned workouts here.
-        </p>
-        <Button class="w-full" variant="outline" onclick={onEdit}>
-          Create a split
-        </Button>
-      </div>
+      <p class="text-sm text-muted-foreground">
+        Add days and exercises to your split to see today’s plan here.
+      </p>
     {/if}
   </Card.Content>
 </Card.Root>

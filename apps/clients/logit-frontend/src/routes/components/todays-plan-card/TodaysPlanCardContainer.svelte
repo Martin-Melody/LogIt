@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
   import TodaysPlanCard from "./TodaysPlanCard.svelte";
-
+  import { goto } from "$app/navigation";
   import { activeSplit } from "$lib/stores/activeSplit.store";
   import { getTodayPlanFromSplit } from "$lib/domain/todayPlan";
 
@@ -9,19 +8,11 @@
     $activeSplit ? getTodayPlanFromSplit($activeSplit) : null,
   );
 
-  function onEdit() {
-    if (!$activeSplit) {
-      void goto("/splits");
-      return;
-    }
-    void goto(`/splits/${$activeSplit.id}`);
-  }
-
-  function onStart() {
-    // MVP: later you'll implement “start workout from plan”
-    // For now you can just go to session/current and you’ll wire in the plan later.
-    void goto("/session/current");
+  function edit() {
+    // either go to splits list or the active split editor
+    if ($activeSplit) void goto(`/splits/${$activeSplit.id}`);
+    else void goto("/splits");
   }
 </script>
 
-<TodaysPlanCard {plan} {onEdit} />
+<TodaysPlanCard {plan} onEdit={edit} />

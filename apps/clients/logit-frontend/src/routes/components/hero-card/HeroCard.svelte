@@ -2,12 +2,21 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
 
-  export let hasDraft = false;
-  export let isOffline = false;
-  export let lastSyncLabel = "Last sync: never";
-
-  export let onStart: () => void | Promise<void> = () => {};
-  export let onContinue: () => void | Promise<void> = () => {};
+  const {
+    hasDraft = false,
+    isOffline = false,
+    lastSyncLabel = "Last sync: never",
+    showPrimaryStart = true,
+    onStart = () => {},
+    onContinue = () => {},
+  } = $props<{
+    hasDraft?: boolean;
+    isOffline?: boolean;
+    lastSyncLabel?: string;
+    showPrimaryStart?: boolean;
+    onStart?: () => void | Promise<void>;
+    onContinue?: () => void | Promise<void>;
+  }>();
 </script>
 
 <Card.Root class="w-full">
@@ -23,9 +32,11 @@
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-3">
-    <Button size="lg" class="w-full" onclick={() => void onStart()}>
-      {hasDraft ? "Start new workout" : "Start Workout"}
-    </Button>
+    {#if showPrimaryStart}
+      <Button size="lg" class="w-full" onclick={() => void onStart()}>
+        {hasDraft ? "Start new workout" : "Start workout"}
+      </Button>
+    {/if}
 
     {#if hasDraft}
       <Button

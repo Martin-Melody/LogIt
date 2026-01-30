@@ -14,6 +14,7 @@
 
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
+  import { createId } from "$lib/domain/ids";
 
   const props = $props<{ params: { id: string } }>();
   const splitId = $derived(props.params.id);
@@ -110,7 +111,7 @@
       days: [
         ...split.days,
         {
-          id: `day_${crypto.randomUUID()}`, // MVP id is fine
+          id: createId("day"),
           orderIndex: nextOrder,
           name: `Day ${nextOrder + 1}`,
           exercises: [],
