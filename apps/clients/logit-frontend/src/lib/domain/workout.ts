@@ -1,4 +1,3 @@
-// src/lib/domain/workout.ts
 import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
 
