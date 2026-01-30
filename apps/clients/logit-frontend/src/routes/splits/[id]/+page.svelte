@@ -122,6 +122,10 @@
     await persist(next);
   }
 
+  function openDay(dayId: string) {
+    void goto(`/splits/${splitId}/days/${dayId}`);
+  }
+
   async function setActive() {
     if (!split) return;
     ui.error = null;
@@ -260,8 +264,7 @@
                 type="button"
                 class="rounded-lg border p-3 text-left"
                 onclick={() => {
-                  // Step 4 later: navigate to day editor or expand inline.
-                  console.log("day clicked", d.id);
+                  openDay(d.id);
                 }}
               >
                 <p class="text-sm font-medium">
