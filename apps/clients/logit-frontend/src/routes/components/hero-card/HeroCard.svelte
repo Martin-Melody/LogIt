@@ -4,17 +4,35 @@
 
   const {
     hasDraft = false,
+    hasPlan = false,
     isOffline = false,
     lastSyncLabel = "Last sync: never",
     showPrimaryStart = true,
     onStart = () => {},
+    onStartUnplanned = undefined,
     onContinue = () => {},
   } = $props<{
     hasDraft?: boolean;
+    hasPlan?: boolean;
     isOffline?: boolean;
     lastSyncLabel?: string;
     showPrimaryStart?: boolean;
+
+    /**
+     * Primary CTA.
+     * Recommended: when hasPlan=true, this starts planned; otherwise unplanned.
+     */
     onStart?: () => void | Promise<void>;
+
+    /**
+     * Optional secondary CTA when hasPlan=true and no draft exists.
+     * Recommended: start unplanned session.
+     */
+    onStartUnplanned?: (() => void | Promise<void>) | undefined;
+
+    /**
+     * Continue existing draft session.
+     */
     onContinue?: () => void | Promise<void>;
   }>();
 </script>
@@ -24,17 +42,38 @@
     <Card.Title
       >{hasDraft ? "Workout in progress" : "Ready to train?"}</Card.Title
     >
+
     <Card.Description>
-      {hasDraft
-        ? "Pick up where you left off."
-        : "Log your workout in seconds."}
+      {#if hasDraft}
+        Pick up where you left off.
+      {:else if hasPlan}
+        Start today’s planned session from your split.
+      {:else}
+        Log your workout in seconds.
+      {/if}
     </Card.Description>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-3">
     {#if showPrimaryStart}
       <Button size="lg" class="w-full" onclick={() => void onStart()}>
-        {hasDraft ? "Start new workout" : "Start workout"}
+        {#if hasDraft}
+          Start new workout
+        {:else if hasPlan}
+          Start planned workout
+        {:else}
+          Start workout
+        {/if}
+      </Button>
+    {/if}
+
+    {#if !hasDraft && hasPlan && onStartUnplanned}
+      <Button
+        variant="outline"
+        class="w-full"
+        onclick={() => void onStartUnplanned()}
+      >
+        Start unplanned instead
       </Button>
     {/if}
 

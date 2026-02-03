@@ -19,6 +19,9 @@
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
+  import { ArrowLeftIcon, Delete } from "lucide-svelte";
+  import { Plus, Trash } from "@lucide/svelte";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
 
   const props = $props<{ params: { id: string; dayId: string } }>();
   const splitId = $derived(props.params.id);
@@ -29,7 +32,6 @@
     saving: false,
     error: null as string | null,
 
-    // add exercise dialog
     addOpen: false,
     addName: "",
     addError: null as string | null,
@@ -165,6 +167,20 @@
     await persist(next);
   }
 
+  async function deleteDay() {
+    if (!split || !day) return;
+
+    const next: WorkoutSplit = {
+      ...split,
+      days: split.days
+        .filter((d) => d.id !== day.id)
+        .map((d, i) => ({ ...d, orderIndex: i })),
+    };
+
+    await persist(next);
+    back();
+  }
+
   onMount(() => {
     void load();
   });
@@ -184,10 +200,34 @@
         </div>
 
         <div class="flex gap-2">
-          <Button variant="outline" onclick={back}>Back</Button>
-          <Button onclick={openAddExercise} disabled={!day || ui.saving}>
-            Add exercise
+          <Button variant="outline" size="icon" onclick={back}>
+            <ArrowLeftIcon />
           </Button>
+          <Button
+            onclick={openAddExercise}
+            size="icon"
+            disabled={!day || ui.saving}
+          >
+            <Plus />
+          </Button>
+
+          <ConfirmDialog
+            title="Delete this day?"
+            description="This will remove the day and all exercises planned in it. This action cannot be undone."
+            confirmLabel="Delete day"
+            cancelLabel="Cancel"
+            saving={ui.saving}
+            onConfirm={deleteDay}
+          >
+            <Button
+              variant="destructive"
+              size="icon"
+              disabled={!day || ui.saving}
+              aria-label="Delete day"
+            >
+              <Trash />
+            </Button>
+          </ConfirmDialog>
         </div>
       </div>
     </Card.Header>
@@ -205,13 +245,13 @@
         <p class="text-sm text-muted-foreground">Day not found.</p>
       {:else}
         <div class="rounded-lg border p-3 flex flex-col gap-2">
-          <Label for="day-name">Day name</Label>
+          <Label for="day-name">Day Name</Label>
           <Input
             id="day-name"
             value={day.name ?? ""}
             disabled={ui.saving}
             placeholder="e.g. Push"
-            oninput={(e) =>
+            onblur={(e) =>
               renameDay((e.currentTarget as HTMLInputElement).value)}
           />
           <p class="text-xs text-muted-foreground">
@@ -251,11 +291,12 @@
                 </div>
 
                 <Button
-                  variant="outline"
+                  size="icon"
+                  variant="ghost"
                   disabled={ui.saving}
                   onclick={() => void deleteExercise(ex.id)}
                 >
-                  Delete
+                  <Trash color="red" />
                 </Button>
               </div>
             {/each}

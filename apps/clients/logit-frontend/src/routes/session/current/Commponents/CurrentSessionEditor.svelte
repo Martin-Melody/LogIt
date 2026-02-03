@@ -12,6 +12,7 @@
     addSet,
     removeExercise,
     updateSet,
+    updateExerciseName,
   } from "$lib/domain/workout";
 
   import CurrentSessionHeader from "./CurrentSessionHeader.svelte";
@@ -88,6 +89,14 @@
     await persistDraft(deleted);
   }
 
+  async function onRenameExercise(exerciseEntryId: string, nextName: string) {
+    const s = getSessionOrNull();
+    if (!s) return;
+
+    const updated = updateExerciseName(s, exerciseEntryId, nextName);
+    await persistDraft(updated);
+  }
+
   async function onRepsChange(
     exerciseEntryId: string,
     setId: string,
@@ -140,6 +149,7 @@
         saving={ui.saving}
         onAddSet={() => onAddSet(ex.id)}
         onDelete={() => onDeleteExercise(ex.id)}
+        onRename={(name) => onRenameExercise(ex.id, name)}
       >
         {#if ex.sets.length > 0}
           <SetsTableHeader />
