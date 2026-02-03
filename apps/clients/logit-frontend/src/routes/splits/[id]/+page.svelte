@@ -15,6 +15,10 @@
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import { createId } from "$lib/domain/ids";
+  import { ArrowLeftIcon, CheckIcon, Pencil, Trash } from "lucide-svelte";
+  import { Check, Rainbow, X } from "@lucide/svelte";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import { deleteSplit } from "$lib/usecases/Splits/deleteSplit";
 
   const props = $props<{ params: { id: string } }>();
   const splitId = $derived(props.params.id);
@@ -137,6 +141,27 @@
     }
   }
 
+  async function deleteThisSplit() {
+    if (!split) return;
+
+    ui.saving = true;
+    ui.error = null;
+
+    try {
+      await deleteSplit(split.id);
+
+      await splits.refresh({ limit: 50, sortBy: "updated", order: "desc" });
+
+      await activeSplit.load();
+
+      back();
+    } catch (e) {
+      ui.error = e instanceof Error ? e.message : "Failed to delete split";
+    } finally {
+      ui.saving = false;
+    }
+  }
+
   function back() {
     void goto("/splits");
   }
@@ -160,14 +185,35 @@
         </div>
 
         <div class="flex gap-2">
-          <Button variant="outline" onclick={back}>Back</Button>
+          <Button variant="outline" size="icon" onclick={back}
+            ><ArrowLeftIcon /></Button
+          >
           <Button
+            size="icon"
             variant="outline"
             onclick={() => void setActive()}
             disabled={!split || ui.saving}
           >
-            Set active
+            <Rainbow />
           </Button>
+
+          <ConfirmDialog
+            title="Delete this split?"
+            description="This will permanently delete the split and all its days/exercises. This action cannot be undone."
+            confirmLabel="Delete split"
+            cancelLabel="Cancel"
+            saving={ui.saving}
+            onConfirm={deleteThisSplit}
+          >
+            <Button
+              variant="destructive"
+              size="icon"
+              disabled={!split || ui.saving}
+              aria-label="Delete split"
+            >
+              <Trash />
+            </Button>
+          </ConfirmDialog>
         </div>
       </div>
     </Card.Header>
@@ -212,28 +258,31 @@
               {/if}
             </div>
 
-            <div class="flex gap-2">
+            <div class=" flex gap-2">
               {#if ui.renaming}
                 <Button
-                  variant="outline"
+                  size="icon"
+                  variant="destructive"
                   onclick={cancelRename}
                   disabled={ui.saving}
                 >
-                  Cancel
+                  <X />
                 </Button>
                 <Button
+                  size="icon"
                   onclick={() => void commitRename()}
                   disabled={ui.saving}
                 >
-                  Save
+                  <Check />
                 </Button>
               {:else}
                 <Button
+                  size="icon"
                   variant="outline"
                   onclick={startRename}
                   disabled={ui.saving}
                 >
-                  Rename
+                  <Pencil />
                 </Button>
               {/if}
             </div>

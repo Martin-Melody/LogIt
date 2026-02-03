@@ -3,10 +3,13 @@ import type { WorkoutSession } from "$lib/domain/workout";
 import { startSession } from "$lib/usecases/startSession";
 import { loadDraftSession } from "$lib/usecases/loadDraftSession";
 import { finishCurrentSession } from "$lib/usecases/finnishCurrentSession";
+import type { SplitDay } from "$lib/domain/WorkoutSplit";
+import { startSessionFromSplitDay } from "$lib/usecases/startSessionFromSplitDay";
 
 type CurrentSessionStore = {
   subscribe: (run: (value: WorkoutSession | null) => void) => () => void;
   start: () => Promise<WorkoutSession>;
+  startFromSplitDay: (day: SplitDay) => Promise<WorkoutSession>;
   loadDraft: () => Promise<WorkoutSession | null>;
   finish: () => Promise<WorkoutSession | null>;
   clear: () => void;
@@ -25,6 +28,11 @@ function createCurrentSessionStore(): CurrentSessionStore {
       return session;
     },
 
+    async startFromSplitDay(day: SplitDay) {
+      const session = await startSessionFromSplitDay(day);
+      store.set(session);
+      return session;
+    },
     async loadDraft() {
       const draft = await loadDraftSession();
       store.set(draft);

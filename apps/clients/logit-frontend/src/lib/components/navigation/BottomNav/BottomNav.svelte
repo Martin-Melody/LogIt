@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import { Dumbbell, House, SquareChartGantt } from "@lucide/svelte";
+  import { House, List, SquareChartGantt } from "@lucide/svelte";
 
   const isActive = (href: string) => $page.url.pathname === href;
 </script>
@@ -8,14 +8,14 @@
 <ul class="flex w-full justify-around">
   <li>
     <a
-      href="/log"
+      href="/sessions"
       class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
-      class:text-primary={isActive("/log")}
-      class:text-muted-foreground={!isActive("/log")}
-      aria-current={isActive("/log") ? "page" : undefined}
+      class:text-primary={isActive("/sessions")}
+      class:text-muted-foreground={!isActive("/sessions")}
+      aria-current={isActive("/sessions") ? "page" : undefined}
     >
-      <Dumbbell size={22} strokeWidth={isActive("/log") ? 2.5 : 2} />
-      <span>Log</span>
+      <List size={22} strokeWidth={isActive("/log") ? 2.5 : 2} />
+      <span>Sessions</span>
     </a>
   </li>
 

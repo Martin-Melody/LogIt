@@ -58,7 +58,7 @@ export function renameSplit(split: WorkoutSplit, name: string): WorkoutSplit {
   return touchSplit({ ...split, name: nextName });
 }
 
-export function archiveSplit(split: WorkoutSplit, archived = true): workoutspllit {
+export function archiveSplit(split: WorkoutSplit, archived = true): WorkoutSplit {
   return touchSplit({ ...split, archived });
 }
 
