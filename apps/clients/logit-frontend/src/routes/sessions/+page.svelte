@@ -45,7 +45,6 @@
       loading = true;
       error = null;
 
-      // MVP: pull a bigger list using the same store
       await recentSessions.refresh(50);
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load sessions";
