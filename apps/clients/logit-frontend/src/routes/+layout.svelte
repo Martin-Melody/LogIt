@@ -7,11 +7,23 @@
   import { onMount } from "svelte";
   import { appInit } from "$lib/platform/appInit";
   import { appReady } from "$lib/stores/appReady.store";
+  import { onNavigate } from "$app/navigation";
 
   let { children } = $props();
 
   onMount(() => {
     void appInit();
+  });
+
+  onNavigate((navigation) => {
+    if (!document.startViewTransition) return;
+
+    return new Promise<void>((resolve) => {
+      document.startViewTransition(async () => {
+        resolve();
+        await navigation.complete;
+      });
+    });
   });
 </script>
 
