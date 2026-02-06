@@ -10,10 +10,8 @@ import { setupKeyboard } from "./keyboard";
 let didInit = false;
 
 export async function appInit(): Promise<void> {
-  // Never run during SSR
   if (!browser) return;
 
-  // Prevent double init (HMR, layout remounts, etc.)
   if (didInit) return;
   didInit = true;
 

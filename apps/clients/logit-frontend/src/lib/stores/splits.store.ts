@@ -1,7 +1,6 @@
 import type { ListSplitsOptions } from "$lib/data/splitRepo";
-import type { WorkoutSplit } from "$lib/domain/WorkoutSplit"
+import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
 import { writable } from "svelte/store";
-import { Store } from "lucide-svelte";
 import { setActiveSplit } from "$lib/usecases/Splits/setActiveSplit";
 import { listSplits } from "$lib/usecases/Splits/listSplits";
 
@@ -37,10 +36,8 @@ function createSplitStore(): SplitsStore {
       await setActiveSplit(id);
 
       await this.refresh();
-    }
-
-  }
+    },
+  };
 }
 
 export const splits = createSplitStore();
-

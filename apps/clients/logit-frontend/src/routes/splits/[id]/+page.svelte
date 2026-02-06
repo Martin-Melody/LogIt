@@ -15,7 +15,7 @@
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import { createId } from "$lib/domain/ids";
-  import { ArrowLeftIcon, CheckIcon, Pencil, Trash } from "lucide-svelte";
+  import { ArrowLeftIcon, Pencil, Trash } from "lucide-svelte";
   import { Check, Rainbow, X } from "@lucide/svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { deleteSplit } from "$lib/usecases/Splits/deleteSplit";
@@ -31,8 +31,6 @@
     nameDraft: "",
   });
 
-  // IMPORTANT: in runes mode, the $state(...) binding is const, but the value is mutable.
-  // So we keep "split" as a $state variable and update it by assignment.
   let split = $state<WorkoutSplit | null>(null);
 
   function formatDate(ms: number): string {
@@ -54,7 +52,7 @@
       const s = await getSplit(splitId);
       split = s;
       ui.nameDraft = s?.name ?? "";
-      await activeSplit.load(); // so badge renders correctly
+      await activeSplit.load();
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load split";
       split = null;
@@ -71,7 +69,6 @@
       await saveSplit(touched);
       split = touched;
 
-      // keep list + active split in sync
       await splits.refresh({ limit: 50, sortBy: "updated", order: "desc" });
       await activeSplit.load();
     } catch (e) {

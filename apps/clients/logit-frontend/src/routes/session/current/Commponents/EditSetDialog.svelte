@@ -29,16 +29,13 @@
     note: null,
   };
 
-  // Track which set we last initialized from
   let lastKey: string | null = null;
 
   function initDraft() {
     if (!initial) return;
 
-    // key based on current "identity" of the initial set
     const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}`;
 
-    // only initialize when open and key changed
     if (!open) return;
     if (lastKey === key) return;
 
@@ -53,7 +50,6 @@
     };
   }
 
-  // ✅ Initialize on open and when setTypeOptions arrive
   $: open, initial, setTypeOptions, initDraft();
 
   function num(v: string) {

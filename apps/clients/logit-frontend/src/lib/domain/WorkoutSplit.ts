@@ -8,34 +8,28 @@ export type WorkoutSplit = {
   createdAtMs: number;
   updatedAtMs: number;
   days: SplitDay[];
-}
+};
 
 export type SplitDay = {
   id: string;
   orderIndex: number;
   name?: string;
   exercises: PlannedExercise[];
-}
+};
 
 export type PlannedExercise = {
   id: string;
   orderIndex: number;
   exerciseName: string;
-  exerciseId?: string; // later form exercise library
+  exerciseId?: string;
   targets?: PlannedTargets;
-}
+};
 
 export type PlannedTargets = {
   sets?: number;
   reps?: number;
   weight?: number;
-}
-
-type SplitSchedule = {
-  id: string;
-  splitId: string;
-  mapping: Record<string, number>;
-}
+};
 
 export function createSplit(name: string = "New Split"): WorkoutSplit {
   const now = nowMs();
@@ -46,7 +40,7 @@ export function createSplit(name: string = "New Split"): WorkoutSplit {
     createdAtMs: now,
     updatedAtMs: now,
     days: [],
-  }
+  };
 }
 
 export function touchSplit(split: WorkoutSplit): WorkoutSplit {
@@ -58,7 +52,10 @@ export function renameSplit(split: WorkoutSplit, name: string): WorkoutSplit {
   return touchSplit({ ...split, name: nextName });
 }
 
-export function archiveSplit(split: WorkoutSplit, archived = true): WorkoutSplit {
+export function archiveSplit(
+  split: WorkoutSplit,
+  archived = true,
+): WorkoutSplit {
   return touchSplit({ ...split, archived });
 }
 
@@ -68,19 +65,22 @@ export function addDay(split: WorkoutSplit, name?: string): WorkoutSplit {
     orderIndex: split.days.length,
     name: name?.trim() || undefined,
     exercises: [],
-  }
+  };
 
   return touchSplit({
     ...split,
-    days: [...split.days, day]
-  })
-
+    days: [...split.days, day],
+  });
 }
 
 export function addPlannedExercise(
   split: WorkoutSplit,
   dayId: string,
-  exercise: { exerciseName: string; exerciseId?: string; targets?: PlannedTargets },
+  exercise: {
+    exerciseName: string;
+    exerciseId?: string;
+    targets?: PlannedTargets;
+  },
 ): WorkoutSplit {
   const idx = split.days.findIndex((d) => d.id === dayId);
   if (idx === -1) return split;
@@ -141,5 +141,3 @@ export function reorderPlannedExercises(
   const nextDays = split.days.map((d, i) => (i === dayIdx ? nextDay : d));
   return touchSplit({ ...split, days: nextDays });
 }
-
-

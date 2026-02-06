@@ -4,7 +4,6 @@
   import CurrentSessionEditor from "./Commponents/CurrentSessionEditor.svelte";
 
   async function ensureSessionExists() {
-    // load draft; if none, start a new session
     await currentSession.loadDraft();
     if (!$currentSession) {
       await currentSession.start();
