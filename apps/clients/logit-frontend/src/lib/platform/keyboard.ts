@@ -5,7 +5,6 @@ import { Keyboard } from "@capacitor/keyboard";
 let didSetup = false;
 
 export async function setupKeyboard(): Promise<void> {
-  // Prevent double setup (HMR etc.)
   if (didSetup) return;
   didSetup = true;
 

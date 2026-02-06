@@ -8,7 +8,6 @@ export async function startSession(): Promise<
 
   const session = createSession();
 
-  // Persist draft immediately so the user can resume after app close
   await repo.saveDraftSession(session);
 
   return session;

@@ -19,7 +19,7 @@
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
-  import { ArrowLeftIcon, Delete } from "lucide-svelte";
+  import { ArrowLeftIcon } from "lucide-svelte";
   import { Plus, Trash } from "@lucide/svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
 
@@ -114,7 +114,7 @@
       id: createId("pex"),
       orderIndex: nextOrder,
       exerciseName: name,
-      targets: {}, // MVP
+      targets: {},
     };
 
     const next: WorkoutSplit = {

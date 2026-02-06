@@ -11,8 +11,8 @@
   export let onDelete: (() => void) | undefined;
   export let onEdit: (() => void) | undefined;
 
-  let dx = 0; // current translateX
-  let open = false; // snapped state
+  let dx = 0;
+  let open = false;
 
   function clamp(n: number, min: number, max: number) {
     return Math.max(min, Math.min(max, n));
@@ -21,7 +21,6 @@
   function onSwiping(e: CustomEvent<SwipeEventData>) {
     if (disabled) return;
 
-    // Negative deltaX means finger moving left (reveal right-side actions)
     const next = open ? -actionsWidth + e.detail.deltaX : e.detail.deltaX;
     dx = clamp(next, -actionsWidth, 0);
   }
@@ -29,7 +28,6 @@
   function onSwiped(e: CustomEvent<SwipeEventData>) {
     if (disabled) return;
 
-    // Decide snap based on how far it moved (or velocity if you want)
     const shouldOpen = dx < -actionsWidth * 0.35;
     open = shouldOpen;
     dx = open ? -actionsWidth : 0;
@@ -45,7 +43,6 @@
     dx = open ? -actionsWidth : 0;
   }
 
-  // Optional: close if user taps the row while open
   function onTap() {
     if (open) close();
   }
@@ -85,14 +82,12 @@
     </div>
   </div>
 
-  <!-- Front layer: draggable content -->
   <div
     use:swipeable={{
       trackTouch: true,
       trackMouse: false,
       delta: 8,
       preventScrollOnSwipe: true,
-      // important for iOS scroll + horizontal swipe feel
       touchEventOptions: { passive: false },
     }}
     on:swiping={onSwiping}
@@ -106,7 +101,6 @@
     <slot />
   </div>
 
-  <!-- Optional: quick “grab” affordance or open toggle -->
   {#if !disabled}
     <button
       type="button"

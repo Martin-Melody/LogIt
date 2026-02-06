@@ -11,7 +11,6 @@
     onSubmit?: (name: string) => void | Promise<void>;
   }>();
 
-  // Defaults (without destructuring open into a const binding target)
   const saving = props.saving ?? false;
   const onOpenChange = props.onOpenChange ?? ((_v: boolean) => {});
   const onSubmit = props.onSubmit ?? (async (_name: string) => {});

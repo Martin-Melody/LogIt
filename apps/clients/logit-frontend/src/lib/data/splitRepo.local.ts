@@ -58,12 +58,10 @@ export function createLocalSplitRepo(): SplitRepo {
 
       let result = [...splits];
 
-      // default: hide archived
       if (!options?.includeArchived) {
         result = result.filter((s) => !s.archived);
       }
 
-      // default sort: updated desc
       result.sort(sortByMostRecentlyUpdated);
 
       if (typeof options?.offset === "number") {
@@ -82,7 +80,6 @@ export function createLocalSplitRepo(): SplitRepo {
       const next = splits.filter((s) => s.id !== id);
       writeJson(STORAGE_KEYS.splits, next);
 
-      // If you delete the active split, clear active pointer
       const active = readJson<string | null>(STORAGE_KEYS.activeSplitId, null);
       if (active === id) {
         ensureBrowser();
@@ -104,4 +101,3 @@ export function createLocalSplitRepo(): SplitRepo {
     },
   };
 }
-

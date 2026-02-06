@@ -6,7 +6,6 @@ export type ListRecentSessionsOptions = {
 };
 
 export interface WorkoutRepo {
-  // Sessions (finished)
   saveSession(session: WorkoutSession): Promise<void>;
   getSession(id: string): Promise<WorkoutSession | null>;
   listRecentSessions(
@@ -14,7 +13,6 @@ export interface WorkoutRepo {
   ): Promise<WorkoutSession[]>;
   deleteSession(id: string): Promise<void>;
 
-  // Draft (in-progress)
   saveDraftSession(session: WorkoutSession): Promise<void>;
   loadDraftSession(): Promise<WorkoutSession | null>;
   clearDraftSession(): Promise<void>;

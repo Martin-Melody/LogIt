@@ -50,7 +50,6 @@ export function createLocalExerciseRepo(): ExerciseRepo {
         result = result.filter((e) => normalize(e.name).includes(q));
       }
 
-      // sort alphabetically for selection UX
       result = [...result].sort((a, b) => a.name.localeCompare(b.name));
 
       if (typeof offset === "number") result = result.slice(offset);

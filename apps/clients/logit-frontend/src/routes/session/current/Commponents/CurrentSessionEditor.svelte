@@ -47,7 +47,6 @@
     setId: null as string | null,
   });
 
-  // ✅ parent-controlled open state for AddExerciseDialog
   const addExerciseUi = $state({ open: false });
 
   function sortByOrderIndex(
@@ -107,7 +106,6 @@
     await persistDraft(updated);
   }
 
-  // ✅ used by EmptySessionCard and any other "Add exercise" entry point
   function onAddExercise() {
     addExerciseUi.open = true;
   }

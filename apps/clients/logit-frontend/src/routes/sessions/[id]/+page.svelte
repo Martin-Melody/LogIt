@@ -106,7 +106,6 @@
     void load();
   });
 
-  // Reload if the route param changes without remounting
   $effect(() => {
     id;
     void load();

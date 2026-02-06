@@ -18,21 +18,10 @@
     lastSyncLabel?: string;
     showPrimaryStart?: boolean;
 
-    /**
-     * Primary CTA.
-     * Recommended: when hasPlan=true, this starts planned; otherwise unplanned.
-     */
     onStart?: () => void | Promise<void>;
 
-    /**
-     * Optional secondary CTA when hasPlan=true and no draft exists.
-     * Recommended: start unplanned session.
-     */
     onStartUnplanned?: (() => void | Promise<void>) | undefined;
 
-    /**
-     * Continue existing draft session.
-     */
     onContinue?: () => void | Promise<void>;
   }>();
 </script>
