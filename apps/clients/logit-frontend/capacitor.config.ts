@@ -1,12 +1,17 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: 'com.example.app',
-  appName: 'logit-frontend',
-  webDir: 'build',
+  appId: "com.example.app",
+  appName: "LogIt",
+  webDir: "build",
   server: {
-    cleartext: true
-  }
+    cleartext: true,
+  },
+  plugins: {
+    CapacitorSQLite: {
+      iosDatabaseLocation: "Library/Databases",
+    },
+  },
 };
 
 export default config;
