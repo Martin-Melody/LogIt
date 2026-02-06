@@ -1,19 +1,25 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { get } from "svelte/store";
+  import { onMount } from "svelte";
+  import { Plus } from "lucide-svelte";
 
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { recentSessions } from "$lib/stores/recentSessions.store";
+  import { setTypesStore } from "$lib/stores/setTypeStore";
 
-  import type { WorkoutSession } from "$lib/domain/workout";
+  import type { SetEntry, WorkoutSession } from "$lib/domain/workout";
   import {
     addExercise,
     addSet,
     removeExercise,
     updateSet,
     updateExerciseName,
+    removeSet,
   } from "$lib/domain/workout";
+
+  import { Button } from "$lib/components/ui/button/index.js";
 
   import CurrentSessionHeader from "./CurrentSessionHeader.svelte";
   import EmptySessionCard from "./EmptySessionCard.svelte";
@@ -22,11 +28,27 @@
   import SetsTableHeader from "./SetsTableHeader.svelte";
   import FinishWorkoutCard from "./FinishWorkoutCard.svelte";
   import AddExerciseDialog from "./AddExerciseDialog.svelte";
+  import SwipeRevealRow from "./SwipeRevealRow.svelte";
+  import EditSetDialog from "./EditSetDialog.svelte";
+  import { keyboard } from "$lib/stores/keybaord.store";
+
+  onMount(() => {
+    setTypesStore.load();
+  });
 
   const ui = $state({
     saving: false,
     error: null as string | null,
   });
+
+  const editSetUi = $state({
+    open: false,
+    exerciseEntryId: null as string | null,
+    setId: null as string | null,
+  });
+
+  // ✅ parent-controlled open state for AddExerciseDialog
+  const addExerciseUi = $state({ open: false });
 
   function sortByOrderIndex(
     a: { orderIndex: number },
@@ -40,10 +62,8 @@
   }
 
   async function persistDraft(next: WorkoutSession) {
-    // Update store first so UI feels instant
     currentSession.setSession(next);
 
-    // Persist so "continue workout" survives reload/app close
     ui.saving = true;
     ui.error = null;
     try {
@@ -54,6 +74,26 @@
     } finally {
       ui.saving = false;
     }
+  }
+
+  function getEditableSet() {
+    const s = getSessionOrNull();
+    if (!s) return null;
+
+    const exId = editSetUi.exerciseEntryId;
+    const setId = editSetUi.setId;
+    if (!exId || !setId) return null;
+
+    const ex = s.exercises.find((x) => x.id === exId);
+    const set = ex?.sets.find((t) => t.id === setId);
+    if (!set) return null;
+
+    return {
+      reps: set.reps,
+      weight: set.weight,
+      setType: set.setType,
+      note: set.note ?? null,
+    };
   }
 
   async function addExerciseWithName(name: string) {
@@ -67,10 +107,9 @@
     await persistDraft(updated);
   }
 
-  async function onAddExercise() {
-    const name = prompt("Exercise name?");
-    if (!name?.trim()) return;
-    await addExerciseWithName(name);
+  // ✅ used by EmptySessionCard and any other "Add exercise" entry point
+  function onAddExercise() {
+    addExerciseUi.open = true;
   }
 
   async function onAddSet(exerciseEntryId: string) {
@@ -94,6 +133,34 @@
     if (!s) return;
 
     const updated = updateExerciseName(s, exerciseEntryId, nextName);
+    await persistDraft(updated);
+  }
+
+  async function onDeleteSet(exerciseId: string, setId: string) {
+    const s = getSessionOrNull();
+    if (!s) return;
+
+    const deleted = removeSet(s, exerciseId, setId);
+    await persistDraft(deleted);
+  }
+
+  function openEditSetDialog(exerciseEntryId: string, setId: string) {
+    editSetUi.exerciseEntryId = exerciseEntryId;
+    editSetUi.setId = setId;
+    editSetUi.open = true;
+  }
+
+  async function saveSetPatch(
+    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
+  ) {
+    const s = getSessionOrNull();
+    if (!s) return;
+
+    const exId = editSetUi.exerciseEntryId;
+    const setId = editSetUi.setId;
+    if (!exId || !setId) return;
+
+    const updated = updateSet(s, exId, setId, patch);
     await persistDraft(updated);
   }
 
@@ -124,12 +191,8 @@
   }
 
   async function finish() {
-    // Your store/usecase should: finish session, save finished, clear draft, clear store
     await currentSession.finish();
-
-    // Make Home's recent card reflect the new finished session
     await recentSessions.refresh(5);
-
     await goto("/");
   }
 </script>
@@ -155,16 +218,25 @@
           <SetsTableHeader />
         {/if}
 
-        {#each [...ex.sets].sort(sortByOrderIndex) as set (set.id)}
-          <SetRow
-            setType={set.setType}
-            reps={set.reps}
-            weight={set.weight}
-            disabled={ui.saving}
-            onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
-            onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}
-          />
-        {/each}
+        <div class="flex flex-col gap-2">
+          {#each [...ex.sets].sort(sortByOrderIndex) as set (set.id)}
+            <SwipeRevealRow
+              disabled={ui.saving}
+              actionsWidth={80}
+              onDelete={() => onDeleteSet(ex.id, set.id)}
+              onEdit={() => openEditSetDialog(ex.id, set.id)}
+            >
+              <SetRow
+                setType={set.setType}
+                reps={set.reps}
+                weight={set.weight}
+                disabled={ui.saving}
+                onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
+                onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}
+              />
+            </SwipeRevealRow>
+          {/each}
+        </div>
 
         {#if ex.sets.length === 0}
           <p class="text-sm text-muted-foreground">No sets yet.</p>
@@ -173,20 +245,46 @@
     {/each}
   {/if}
 
-  <!-- Floating “Add exercise” button (always visible) -->
-  <div class="fixed left-0 right-0 bottom-35 px-3">
-    <div class="flex justify-end">
-      <AddExerciseDialog saving={ui.saving} onSubmit={addExerciseWithName} />
+  <EditSetDialog
+    open={editSetUi.open}
+    disabled={ui.saving}
+    initial={getEditableSet()}
+    setTypeOptions={$setTypesStore.options}
+    setTypeLoading={$setTypesStore.loading}
+    onOpenChange={(v) => (editSetUi.open = v)}
+    onSave={saveSetPatch}
+  />
+
+  <AddExerciseDialog
+    open={addExerciseUi.open}
+    saving={ui.saving}
+    onOpenChange={(v: boolean) => (addExerciseUi.open = v)}
+    onSubmit={addExerciseWithName}
+  />
+
+  {#if !$keyboard.visible}
+    <div class="fixed left-0 right-0 bottom-35 px-3">
+      <div class="flex justify-end">
+        <Button
+          size="icon"
+          class="rounded-full shadow-lg"
+          disabled={ui.saving}
+          aria-label="Add exercise"
+          onclick={() => (addExerciseUi.open = true)}
+        >
+          <Plus />
+        </Button>
+      </div>
     </div>
-  </div>
-  <!-- Finish bar (always visible) -->
-  <div
-    class="fixed left-0 right-0 bottom-15 px-3 pb-[env(safe-area-inset-bottom)]"
-  >
-    <FinishWorkoutCard
-      canFinish={!!$currentSession && !$currentSession.endedAtMs}
-      saving={ui.saving}
-      onFinish={finish}
-    />
-  </div>
+
+    <div
+      class="fixed left-0 right-0 bottom-15 px-3 pb-[env(safe-area-inset-bottom)]"
+    >
+      <FinishWorkoutCard
+        canFinish={!!$currentSession && !$currentSession.endedAtMs}
+        saving={ui.saving}
+        onFinish={finish}
+      />
+    </div>
+  {/if}
 </div>

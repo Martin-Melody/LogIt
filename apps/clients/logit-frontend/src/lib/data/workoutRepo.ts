@@ -1,4 +1,5 @@
 import type { WorkoutSession } from "$lib/domain/workout";
+import type { SetTypeOption } from "./types";
 
 export type ListRecentSessionsOptions = {
   limit: number;
@@ -17,4 +18,6 @@ export interface WorkoutRepo {
   saveDraftSession(session: WorkoutSession): Promise<void>;
   loadDraftSession(): Promise<WorkoutSession | null>;
   clearDraftSession(): Promise<void>;
+
+  getSetTypes(): Promise<SetTypeOption[]>;
 }

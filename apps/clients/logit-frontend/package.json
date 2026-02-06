@@ -10,7 +10,7 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "android:sync:dev": "npm run build && npx cap sync android && npm run dev -- --host 192.168.1.28 --port 3000",
+    "android:sync:dev": "npm run build && npx cap sync android && npm run dev -- --host 192.168.1.19 --port 3000",
     "android:live": "npx cap run android --live-reload",
     "android:dev": "npm run dev -- --host 192.168.1.28 --port 3000"
   },
@@ -40,6 +40,7 @@
     "@capacitor/cli": "^8.0.1",
     "@capacitor/core": "^8.0.1",
     "@capacitor/keyboard": "^8.0.0",
+    "@react2svelte/swipeable": "^0.1.4",
     "lucide-svelte": "^0.563.0",
     "nanoid": "^5.1.6"
   }

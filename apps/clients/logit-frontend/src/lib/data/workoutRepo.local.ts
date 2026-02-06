@@ -4,6 +4,7 @@ import type {
   ListRecentSessionsOptions,
 } from "$lib/data/workoutRepo";
 import type { WorkoutSession } from "$lib/domain/workout";
+import type { SetTypeOption } from "./types";
 
 const STORAGE_KEYS = {
   sessions: "logit:sessions:v1", // array of WorkoutSession
@@ -88,6 +89,16 @@ export function createLocalWorkoutRepo(): WorkoutRepo {
     async clearDraftSession(): Promise<void> {
       ensureBrowser();
       localStorage.removeItem(STORAGE_KEYS.draft);
+    },
+
+    async getSetTypes(): Promise<SetTypeOption[]> {
+      return [
+        { id: "normal", code: "normal", label: "Normal" },
+        { id: "warmup", code: "warmup", label: "Warm-up" },
+        { id: "dropset", code: "dropset", label: "Drop set" },
+        { id: "amrap", code: "amrap", label: "AMRAP" },
+        { id: "failure", code: "failure", label: "To failure" },
+      ];
     },
   };
 }
