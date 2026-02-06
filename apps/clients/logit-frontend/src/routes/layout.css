@@ -143,3 +143,39 @@ body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+::view-transition-old(root) {
+  animation: page-out 220ms ease;
+}
+
+::view-transition-new(root) {
+  animation: page-in 220ms ease;
+}
+
+@keyframes page-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-12px);
+    opacity: 0;
+  }
+}
+
+@keyframes page-in {
+  from {
+    transform: translateX(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
