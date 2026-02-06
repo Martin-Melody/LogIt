@@ -1,19 +1,22 @@
-<script context="module">
-  export type TodayPlan = {
-    dayNumber: number;
-    dayName?: string; // "Push"
-    exercises: { id: string; name: string }[];
-  };
-</script>
-
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
+  import type { SplitDay } from "$lib/domain/WorkoutSplit";
 
-  export let plan: TodayPlan | null = null;
+  const { day = null, activeSplitId = null } = $props<{
+    day?: SplitDay | null;
+    activeSplitId?: string | null;
+  }>();
 
-  const onStart = () => {};
-  const onEdit = () => {};
+  const exercisesSorted = $derived(
+    day ? [...day.exercises].sort((a, b) => a.orderIndex - b.orderIndex) : [],
+  );
+
+  function edit() {
+    if (activeSplitId) void goto(`/splits/${activeSplitId}`);
+    else void goto("/splits");
+  }
 </script>
 
 <Card.Root class="w-full">
@@ -21,53 +24,40 @@
     <div>
       <Card.Title>Today’s plan</Card.Title>
 
-      {#if plan}
+      {#if day}
         <Card.Description>
-          Day {plan.dayNumber}{plan.dayName ? ` — ${plan.dayName}` : ""}
+          Day {day.orderIndex + 1}{day.name ? ` — ${day.name}` : ""}
         </Card.Description>
       {:else}
-        <Card.Description>No split selected yet.</Card.Description>
+        <Card.Description>No plan yet.</Card.Description>
       {/if}
     </div>
 
-    {#if plan}
-      <Button variant="link" class="h-auto p-0 text-sm" onclick={onEdit}>
-        Edit plan
-      </Button>
-    {/if}
+    <Button variant="link" class="h-auto p-0 text-sm" onclick={edit}>
+      Edit plan
+    </Button>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-4">
-    {#if plan}
+    {#if day}
       <ul class="space-y-2">
-        {#each plan.exercises.slice(0, 6) as ex, i (ex.id)}
-          <li class="flex items-center justify-between">
-            <span class="text-sm">
-              <span class="text-muted-foreground">{i + 1}.</span>
-              {ex.name}
-            </span>
+        {#each exercisesSorted.slice(0, 6) as ex, i (ex.id)}
+          <li class="text-sm">
+            <span class="text-muted-foreground">{i + 1}.</span>
+            {ex.exerciseName}
           </li>
         {/each}
 
-        {#if plan.exercises.length > 6}
+        {#if exercisesSorted.length > 6}
           <li class="text-xs text-muted-foreground">
-            +{plan.exercises.length - 6} more…
+            +{exercisesSorted.length - 6} more…
           </li>
         {/if}
       </ul>
-
-      <Button class="w-full" size="lg" onclick={onStart}>
-        Start planned workout
-      </Button>
     {:else}
-      <div class="flex flex-col gap-3">
-        <p class="text-sm text-muted-foreground">
-          Create a split to see your planned workouts here.
-        </p>
-        <Button class="w-full" variant="outline" onclick={onEdit}>
-          Create a split
-        </Button>
-      </div>
+      <p class="text-sm text-muted-foreground">
+        Add days and exercises to your split to see today’s plan here.
+      </p>
     {/if}
   </Card.Content>
 </Card.Root>

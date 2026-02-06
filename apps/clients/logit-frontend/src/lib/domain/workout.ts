@@ -1,4 +1,3 @@
-// src/lib/domain/workout.ts
 import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
 
@@ -9,13 +8,13 @@ export type SetEntry = {
   setType: SetType;
   reps: number;
   weight: number;
-  note?: string;
+  note?: string | null;
   orderIndex: number;
 };
 
 export type ExerciseEntry = {
   id: string;
-  exerciseId?: string; // optional until you have an exercise library
+  exerciseId?: string;
   exerciseName: string;
   orderIndex: number;
   sets: SetEntry[];
@@ -72,7 +71,6 @@ export function removeExercise(
   exerciseEntryId: string,
 ): WorkoutSession {
   const filtered = session.exercises.filter((e) => e.id !== exerciseEntryId);
-  // reindex to keep ordering stable
   const reindexed = filtered.map((e, i) => ({ ...e, orderIndex: i }));
   return { ...session, exercises: reindexed };
 }
@@ -137,12 +135,6 @@ export function getSessionDurationMs(session: WorkoutSession): number | null {
   return Math.max(0, session.endedAtMs - session.startedAtMs);
 }
 
-/**
- * "Top set" highlight for Home.
- * Simple MVP definition:
- * - choose the set with the highest weight
- * - tie-breaker: higher reps
- */
 export function getTopSetHighlight(
   session: WorkoutSession,
 ): TopSetHighlight | null {
@@ -173,7 +165,17 @@ export function getTopSetHighlight(
   };
 }
 
-// ---------- internal helper ----------
+export function updateExerciseName(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  exerciseName: string,
+): WorkoutSession {
+  return updateExercise(session, exerciseEntryId, (exercise) => ({
+    ...exercise,
+    exerciseName: exerciseName.trim(),
+  }));
+}
+
 function updateExercise(
   session: WorkoutSession,
   exerciseEntryId: string,

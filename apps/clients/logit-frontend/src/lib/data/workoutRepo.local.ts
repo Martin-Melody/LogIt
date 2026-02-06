@@ -4,10 +4,11 @@ import type {
   ListRecentSessionsOptions,
 } from "$lib/data/workoutRepo";
 import type { WorkoutSession } from "$lib/domain/workout";
+import type { SetTypeOption } from "./types";
 
 const STORAGE_KEYS = {
-  sessions: "logit:sessions:v1", // array of WorkoutSession
-  draft: "logit:draft:v1", // WorkoutSession
+  sessions: "logit:sessions:v1",
+  draft: "logit:draft:v1",
 } as const;
 
 function ensureBrowser(): void {
@@ -35,7 +36,6 @@ function writeJson<T>(key: string, value: T): void {
 }
 
 function sortByMostRecent(a: WorkoutSession, b: WorkoutSession): number {
-  // Prefer endedAt if present, otherwise startedAt
   const aTime = a.endedAtMs ?? a.startedAtMs;
   const bTime = b.endedAtMs ?? b.startedAtMs;
   return bTime - aTime;
@@ -46,12 +46,10 @@ export function createLocalWorkoutRepo(): WorkoutRepo {
     async saveSession(session: WorkoutSession): Promise<void> {
       const sessions = readJson<WorkoutSession[]>(STORAGE_KEYS.sessions, []);
 
-      // Upsert by id
       const next = sessions.some((s) => s.id === session.id)
         ? sessions.map((s) => (s.id === session.id ? session : s))
         : [...sessions, session];
 
-      // Keep sorted newest-first
       next.sort(sortByMostRecent);
 
       writeJson(STORAGE_KEYS.sessions, next);
@@ -88,6 +86,16 @@ export function createLocalWorkoutRepo(): WorkoutRepo {
     async clearDraftSession(): Promise<void> {
       ensureBrowser();
       localStorage.removeItem(STORAGE_KEYS.draft);
+    },
+
+    async getSetTypes(): Promise<SetTypeOption[]> {
+      return [
+        { id: "normal", code: "normal", label: "Normal" },
+        { id: "warmup", code: "warmup", label: "Warm-up" },
+        { id: "dropset", code: "dropset", label: "Drop set" },
+        { id: "amrap", code: "amrap", label: "AMRAP" },
+        { id: "failure", code: "failure", label: "To failure" },
+      ];
     },
   };
 }

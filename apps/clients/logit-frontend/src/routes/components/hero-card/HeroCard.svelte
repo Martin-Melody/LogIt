@@ -2,12 +2,28 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
 
-  export let hasDraft = false;
-  export let isOffline = false;
-  export let lastSyncLabel = "Last sync: never";
+  const {
+    hasDraft = false,
+    hasPlan = false,
+    isOffline = false,
+    lastSyncLabel = "Last sync: never",
+    showPrimaryStart = true,
+    onStart = () => {},
+    onStartUnplanned = undefined,
+    onContinue = () => {},
+  } = $props<{
+    hasDraft?: boolean;
+    hasPlan?: boolean;
+    isOffline?: boolean;
+    lastSyncLabel?: string;
+    showPrimaryStart?: boolean;
 
-  export let onStart: () => void | Promise<void> = () => {};
-  export let onContinue: () => void | Promise<void> = () => {};
+    onStart?: () => void | Promise<void>;
+
+    onStartUnplanned?: (() => void | Promise<void>) | undefined;
+
+    onContinue?: () => void | Promise<void>;
+  }>();
 </script>
 
 <Card.Root class="w-full">
@@ -15,17 +31,40 @@
     <Card.Title
       >{hasDraft ? "Workout in progress" : "Ready to train?"}</Card.Title
     >
+
     <Card.Description>
-      {hasDraft
-        ? "Pick up where you left off."
-        : "Log your workout in seconds."}
+      {#if hasDraft}
+        Pick up where you left off.
+      {:else if hasPlan}
+        Start today’s planned session from your split.
+      {:else}
+        Log your workout in seconds.
+      {/if}
     </Card.Description>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-3">
-    <Button size="lg" class="w-full" onclick={() => void onStart()}>
-      {hasDraft ? "Start new workout" : "Start Workout"}
-    </Button>
+    {#if showPrimaryStart}
+      <Button size="lg" class="w-full" onclick={() => void onStart()}>
+        {#if hasDraft}
+          Start new workout
+        {:else if hasPlan}
+          Start planned workout
+        {:else}
+          Start workout
+        {/if}
+      </Button>
+    {/if}
+
+    {#if !hasDraft && hasPlan && onStartUnplanned}
+      <Button
+        variant="outline"
+        class="w-full"
+        onclick={() => void onStartUnplanned()}
+      >
+        Start unplanned instead
+      </Button>
+    {/if}
 
     {#if hasDraft}
       <Button

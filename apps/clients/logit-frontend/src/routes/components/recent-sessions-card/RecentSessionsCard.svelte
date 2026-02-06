@@ -8,7 +8,6 @@
 
   export let sessions: SessionSummary[] = [];
 
-  // callbacks from parent/container
   export let onOpen: (id: string) => void = () => {};
   export let onRepeat: (id: string) => void = () => {};
   export let onViewAll: () => void = () => {};
