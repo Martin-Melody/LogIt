@@ -8,7 +8,7 @@ export type SetEntry = {
   setType: SetType;
   reps: number;
   weight: number;
-  note?: string;
+  note?: string | null;
   orderIndex: number;
 };
 
@@ -182,7 +182,6 @@ export function updateExerciseName(
     exerciseName: exerciseName.trim(),
   }));
 }
-
 
 // ---------- internal helper ----------
 function updateExercise(

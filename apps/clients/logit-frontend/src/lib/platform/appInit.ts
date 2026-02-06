@@ -25,16 +25,16 @@ export async function appInit(): Promise<void> {
 
   // ---- hydrate stores ----
   await recentSessions.refresh(5);
-  await splits.refresh({ limit: 20 })
+  await splits.refresh({ limit: 20 });
   await activeSplit.load();
   console.log("[appInit] stores hydrated");
 
   // ---- Keyboard Setup ----
   try {
     await setupKeyboard();
-    console.log('[appInit] keyboard configured')
+    console.log("[appInit] keyboard configured");
   } catch (e) {
-    console.warn('[appInit] keyboard setup failed (continuing)', e);
+    console.warn("[appInit] keyboard setup failed (continuing)", e);
   }
 
   // ---- restore draft session ----
