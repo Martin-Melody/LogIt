@@ -38,6 +38,7 @@
 
   const ui = $state({
     saving: false,
+    finishing: false,
     error: null as string | null,
   });
 
@@ -61,6 +62,7 @@
   }
 
   async function persistDraft(next: WorkoutSession) {
+    if (ui.finishing) return;
     currentSession.setSession(next);
 
     ui.saving = true;
@@ -107,6 +109,7 @@
   }
 
   function onAddExercise() {
+    if (ui.finishing) return;
     addExerciseUi.open = true;
   }
 
@@ -143,6 +146,7 @@
   }
 
   function openEditSetDialog(exerciseEntryId: string, setId: string) {
+    if (ui.finishing) return;
     editSetUi.exerciseEntryId = exerciseEntryId;
     editSetUi.setId = setId;
     editSetUi.open = true;
@@ -189,63 +193,79 @@
   }
 
   async function finish() {
-    await currentSession.finish();
-    await recentSessions.refresh(5);
-    await goto("/");
+    if (ui.finishing) return;
+
+    ui.finishing = true;
+    ui.error = null;
+
+    // this prevents the flash when currentSession is cleared
+    currentSession.beginTransition();
+
+    try {
+      await goto("/");
+      await currentSession.finish(); // will clear session/draft
+      void recentSessions.refresh(5);
+    } catch (e) {
+      ui.error = e instanceof Error ? e.message : "Failed to finish workout";
+      ui.finishing = false;
+      currentSession.endTransition();
+    }
   }
 </script>
 
 <div class="p-3 flex flex-col gap-3 pb-40">
-  <CurrentSessionHeader saving={ui.saving} error={ui.error} />
+  <CurrentSessionHeader saving={ui.saving || ui.finishing} error={ui.error} />
 
-  {#if !$currentSession}
-    <EmptySessionCard {onAddExercise} />
-  {:else if $currentSession.exercises.length === 0}
-    <EmptySessionCard {onAddExercise} />
-  {:else}
-    {#each [...$currentSession.exercises].sort(sortByOrderIndex) as ex (ex.id)}
-      <ExerciseCard
-        exerciseName={ex.exerciseName}
-        setCount={ex.sets.length}
-        saving={ui.saving}
-        onAddSet={() => onAddSet(ex.id)}
-        onDelete={() => onDeleteExercise(ex.id)}
-        onRename={(name) => onRenameExercise(ex.id, name)}
-      >
-        {#if ex.sets.length > 0}
-          <SetsTableHeader />
-        {/if}
+  {#if !ui.finishing}
+    {#if !$currentSession}
+      <EmptySessionCard {onAddExercise} />
+    {:else if $currentSession.exercises.length === 0}
+      <EmptySessionCard {onAddExercise} />
+    {:else}
+      {#each [...$currentSession.exercises].sort(sortByOrderIndex) as ex (ex.id)}
+        <ExerciseCard
+          exerciseName={ex.exerciseName}
+          setCount={ex.sets.length}
+          saving={ui.saving || ui.finishing}
+          onAddSet={() => onAddSet(ex.id)}
+          onDelete={() => onDeleteExercise(ex.id)}
+          onRename={(name) => onRenameExercise(ex.id, name)}
+        >
+          {#if ex.sets.length > 0}
+            <SetsTableHeader />
+          {/if}
 
-        <div class="flex flex-col gap-2">
-          {#each [...ex.sets].sort(sortByOrderIndex) as set (set.id)}
-            <SwipeRevealRow
-              disabled={ui.saving}
-              actionsWidth={80}
-              onDelete={() => onDeleteSet(ex.id, set.id)}
-              onEdit={() => openEditSetDialog(ex.id, set.id)}
-            >
-              <SetRow
-                setType={set.setType}
-                reps={set.reps}
-                weight={set.weight}
-                disabled={ui.saving}
-                onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
-                onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}
-              />
-            </SwipeRevealRow>
-          {/each}
-        </div>
+          <div class="flex flex-col gap-2">
+            {#each [...ex.sets].sort(sortByOrderIndex) as set (set.id)}
+              <SwipeRevealRow
+                disabled={ui.saving || ui.finishing}
+                actionsWidth={80}
+                onDelete={() => onDeleteSet(ex.id, set.id)}
+                onEdit={() => openEditSetDialog(ex.id, set.id)}
+              >
+                <SetRow
+                  setType={set.setType}
+                  reps={set.reps}
+                  weight={set.weight}
+                  disabled={ui.saving || ui.finishing}
+                  onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
+                  onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}
+                />
+              </SwipeRevealRow>
+            {/each}
+          </div>
 
-        {#if ex.sets.length === 0}
-          <p class="text-sm text-muted-foreground">No sets yet.</p>
-        {/if}
-      </ExerciseCard>
-    {/each}
+          {#if ex.sets.length === 0}
+            <p class="text-sm text-muted-foreground">No sets yet.</p>
+          {/if}
+        </ExerciseCard>
+      {/each}
+    {/if}
   {/if}
 
   <EditSetDialog
     open={editSetUi.open}
-    disabled={ui.saving}
+    disabled={ui.saving || ui.finishing}
     initial={getEditableSet()}
     setTypeOptions={$setTypesStore.options}
     setTypeLoading={$setTypesStore.loading}
@@ -255,18 +275,18 @@
 
   <AddExerciseDialog
     open={addExerciseUi.open}
-    saving={ui.saving}
+    saving={ui.saving || ui.finishing}
     onOpenChange={(v: boolean) => (addExerciseUi.open = v)}
     onSubmit={addExerciseWithName}
   />
 
-  {#if !$keyboard.visible}
+  {#if !ui.finishing && !$keyboard.visible}
     <div class="fixed left-0 right-0 bottom-35 px-3">
       <div class="flex justify-end">
         <Button
           size="icon"
           class="rounded-full shadow-lg"
-          disabled={ui.saving}
+          disabled={ui.saving || ui.finishing}
           aria-label="Add exercise"
           onclick={() => (addExerciseUi.open = true)}
         >
@@ -280,7 +300,7 @@
     >
       <FinishWorkoutCard
         canFinish={!!$currentSession && !$currentSession.endedAtMs}
-        saving={ui.saving}
+        saving={ui.saving || ui.finishing}
         onFinish={finish}
       />
     </div>
