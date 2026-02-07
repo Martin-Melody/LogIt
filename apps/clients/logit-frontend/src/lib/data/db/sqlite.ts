@@ -136,6 +136,19 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_session_sets_unique_order
       ON session_sets(exercise_entry_id, order_index);
+
+    -- extra indexes for common reads
+    CREATE INDEX IF NOT EXISTS idx_sessions_started
+      ON sessions(started_at_ms DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_session_exercises_session
+      ON session_exercises(session_id, order_index);
+
+    CREATE INDEX IF NOT EXISTS idx_session_sets_ex_entry
+      ON session_sets(exercise_entry_id, order_index);
+
+    CREATE INDEX IF NOT EXISTS idx_exercises_name_nocase
+      ON exercises(name COLLATE NOCASE);
   `);
 
   await seedSetTypes(db);
