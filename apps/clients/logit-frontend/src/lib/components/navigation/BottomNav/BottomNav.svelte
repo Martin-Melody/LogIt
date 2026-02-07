@@ -2,6 +2,7 @@
   import { page } from "$app/stores";
   import { keyboard } from "$lib/stores/keybaord.store";
   import { House, List, SquareChartGantt } from "@lucide/svelte";
+  import { ChartNoAxesColumn, User } from "lucide-svelte";
 
   const isActive = (href: string) => $page.url.pathname === href;
 </script>
@@ -23,6 +24,22 @@
 
     <li>
       <a
+        href="/splits"
+        class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
+        class:text-primary={isActive("/splits")}
+        class:text-muted-foreground={!isActive("/splits")}
+        aria-current={isActive("/splits") ? "page" : undefined}
+      >
+        <SquareChartGantt
+          size={22}
+          strokeWidth={isActive("/splits") ? 2.5 : 2}
+        />
+        <span>Splits</span>
+      </a>
+    </li>
+
+    <li>
+      <a
         href="/"
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
         class:text-primary={isActive("/")}
@@ -36,17 +53,30 @@
 
     <li>
       <a
-        href="/splits"
+        href="/progress"
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
-        class:text-primary={isActive("/splits")}
-        class:text-muted-foreground={!isActive("/splits")}
-        aria-current={isActive("/splits") ? "page" : undefined}
+        class:text-primary={isActive("/progress")}
+        class:text-muted-foreground={!isActive("/progress")}
+        aria-current={isActive("/progress") ? "page" : undefined}
       >
-        <SquareChartGantt
+        <ChartNoAxesColumn
           size={22}
-          strokeWidth={isActive("/splits") ? 2.5 : 2}
+          strokeWidth={isActive("/progress") ? 2.5 : 2}
         />
-        <span>Splits</span>
+        <span>Progress</span>
+      </a>
+    </li>
+
+    <li>
+      <a
+        href="/profile"
+        class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
+        class:text-primary={isActive("/profile")}
+        class:text-muted-foreground={!isActive("/profile")}
+        aria-current={isActive("/profille") ? "page" : undefined}
+      >
+        <User size={22} strokeWidth={isActive("/profile") ? 2.5 : 2} />
+        <span>Profile</span>
       </a>
     </li>
   </ul>
