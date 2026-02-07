@@ -37,7 +37,9 @@
 
 {#if $appReady}
   <div class="flex h-screen flex-col bg-background text-foreground">
-    <TopBar />
+    <header>
+      <TopBar />
+    </header>
 
     <main class="flex-1 overflow-y-auto overscroll-contain">
       {@render children()}
