@@ -11,27 +11,55 @@
   import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
   import TodaysPlanCard from "./components/todays-plan-card/TodaysPlanCard.svelte";
 
-  $: hasDraft = $currentSession !== null;
-  $: activeSplitId = $activeSplit?.id ?? null;
+  // runes mode (no $:)
+  const hasDraft = $derived(() => $currentSession !== null);
+  const activeSplitId = $derived(() => $activeSplit?.id ?? null);
 
-  $: todayDay = $activeSplit ? getTodaySplitDay($activeSplit) : null;
-  $: hasPlan = !!todayDay;
+  const todayDay = $derived(() =>
+    $activeSplit ? getTodaySplitDay($activeSplit) : null,
+  );
+  const hasPlan = $derived(() => !!todayDay());
+
+  // single guard to avoid double taps + UI flicker
+  let starting = $state(false);
+
+  async function navigateToCurrent() {
+    await goto("/session/current");
+  }
 
   async function startUnplanned() {
-    if (hasDraft) return goto("/session/current");
-    await currentSession.start();
-    await goto("/session/current");
+    if (starting) return;
+    starting = true;
+
+    if (hasDraft()) return navigateToCurrent();
+
+    // navigate first (fast UI), persist in background
+    await navigateToCurrent();
+
+    void currentSession.start();
   }
 
   async function startPlanned() {
-    if (hasDraft) return goto("/session/current");
-    if (!todayDay) return startUnplanned(); // fallback
-    await currentSession.startFromSplitDay(todayDay);
-    await goto("/session/current");
+    if (starting) return;
+    starting = true;
+
+    if (hasDraft()) return navigateToCurrent();
+
+    const day = todayDay();
+    await navigateToCurrent();
+
+    if (!day) {
+      void currentSession.start();
+      return;
+    }
+
+    void currentSession.startFromSplitDay(day);
   }
 
   async function continueWorkout() {
-    await goto("/session/current");
+    if (starting) return;
+    starting = true;
+    await navigateToCurrent();
   }
 </script>
 
@@ -39,15 +67,15 @@
   <DailyGreeting />
 
   <HeroCard
-    {hasDraft}
-    {hasPlan}
+    hasDraft={hasDraft()}
+    hasPlan={hasPlan()}
     onStart={startPlanned}
     onStartUnplanned={startUnplanned}
     onContinue={continueWorkout}
-    showPrimaryStart={!hasDraft}
+    showPrimaryStart={!hasDraft()}
   />
 
-  <TodaysPlanCard day={todayDay} {activeSplitId} />
+  <TodaysPlanCard day={todayDay()} activeSplitId={activeSplitId()} />
 
   <RecentSessionsCardContainer />
   <QuickActionsRow />
