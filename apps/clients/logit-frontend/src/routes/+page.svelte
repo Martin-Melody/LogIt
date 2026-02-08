@@ -45,15 +45,17 @@
 
     if (hasDraft()) return navigateToCurrent();
 
+    const split = $activeSplit;
     const day = todayDay();
+
     await navigateToCurrent();
 
-    if (!day) {
+    if (!split || !day) {
       void currentSession.start();
       return;
     }
 
-    void currentSession.startFromSplitDay(day);
+    void currentSession.startFromSplitDay(split, day);
   }
 
   async function continueWorkout() {

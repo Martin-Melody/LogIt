@@ -9,7 +9,7 @@ import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
 
 const DB_NAME = "logit";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let sqlite: SQLiteConnection | null = null;
 let db: SQLiteDBConnection | null = null;
@@ -35,11 +35,14 @@ export async function initSqlite(): Promise<void> {
         false,
         "no-encryption",
         DB_VERSION,
-        false,
+        false
       );
 
   await db.open();
-  await createSchemaAndSeed(db);
+  await createSchema(db);
+  await runMigrations(db);
+  await seedSetTypes(db);
+  await seedExercises(db);
 }
 
 export function getDb(): SQLiteDBConnection {
@@ -47,7 +50,7 @@ export function getDb(): SQLiteDBConnection {
   return db;
 }
 
-async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
+async function createSchema(db: SQLiteDBConnection): Promise<void> {
   await db.execute(`
     PRAGMA foreign_keys = ON;
 
@@ -131,6 +134,7 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       reps INTEGER NOT NULL,
       weight REAL NOT NULL,
       note TEXT NULL,
+      completed INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (exercise_entry_id) REFERENCES session_exercises(id) ON DELETE CASCADE
     );
 
@@ -150,9 +154,6 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_exercises_name_nocase
       ON exercises(name COLLATE NOCASE);
   `);
-
-  await seedSetTypes(db);
-  await seedExercises(db);
 }
 
 async function seedSetTypes(db: SQLiteDBConnection): Promise<void> {
@@ -170,7 +171,7 @@ async function seedSetTypes(db: SQLiteDBConnection): Promise<void> {
   for (const r of rows) {
     await db.run(
       `INSERT INTO set_types(id, code, label, sort_order) VALUES(?, ?, ?, ?)`,
-      [createId("settype"), r.code, r.label, r.sort],
+      [createId("settype"), r.code, r.label, r.sort]
     );
   }
 }
@@ -218,7 +219,41 @@ async function seedExercises(db: SQLiteDBConnection): Promise<void> {
   for (const name of exercises) {
     await db.run(
       `INSERT INTO exercises(id, name, created_at_ms) VALUES(?, ?, ?)`,
-      [createId("exdb"), name, now],
+      [createId("exdb"), name, now]
+    );
+  }
+}
+
+async function runMigrations(db: SQLiteDBConnection) {
+  // if meta table exists but db_version key doesn’t, treat as v1 (not v0)
+  const res = await db.query(
+    `SELECT value FROM meta WHERE key = 'db_version'`,
+    []
+  );
+
+  // if db existed before you added db_version, it will be missing => you want 1 here
+  const current = res.values?.length ? Number(res.values?.[0]?.value) : 1;
+
+  if (current < 2) {
+    await migrate_1_to_2(db);
+  }
+
+  await db.run(
+    `INSERT INTO meta(key, value)
+     VALUES('db_version', ?)
+     ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
+    [String(DB_VERSION)]
+  );
+}
+
+async function migrate_1_to_2(db: SQLiteDBConnection) {
+  const cols = await db.query(`PRAGMA table_info(session_sets)`, []);
+  const hasCompleted = (cols.values ?? []).some(
+    (c: any) => c.name === "completed"
+  );
+  if (!hasCompleted) {
+    await db.execute(
+      `ALTER TABLE session_sets ADD COLUMN completed INTEGER NOT NULL DEFAULT 0;`
     );
   }
 }
