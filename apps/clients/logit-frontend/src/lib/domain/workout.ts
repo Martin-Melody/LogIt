@@ -10,6 +10,7 @@ export type SetEntry = {
   weight: number;
   note?: string | null;
   orderIndex: number;
+  completed?: boolean;
 };
 
 export type ExerciseEntry = {
@@ -25,6 +26,13 @@ export type WorkoutSession = {
   startedAtMs: number;
   endedAtMs?: number;
   exercises: ExerciseEntry[];
+
+  origin?: {
+    splitId: string;
+    splitName: string;
+    dayId: string;
+    dayName?: string;
+  };
 };
 
 export type SessionSummary = {
@@ -50,7 +58,7 @@ export function createSession(startedAtMs: number = nowMs()): WorkoutSession {
 
 export function addExercise(
   session: WorkoutSession,
-  exercise: { exerciseName: string; exerciseId?: string },
+  exercise: { exerciseName: string; exerciseId?: string }
 ): WorkoutSession {
   const entry: ExerciseEntry = {
     id: createId("ex"),
@@ -68,7 +76,7 @@ export function addExercise(
 
 export function removeExercise(
   session: WorkoutSession,
-  exerciseEntryId: string,
+  exerciseEntryId: string
 ): WorkoutSession {
   const filtered = session.exercises.filter((e) => e.id !== exerciseEntryId);
   const reindexed = filtered.map((e, i) => ({ ...e, orderIndex: i }));
@@ -78,7 +86,9 @@ export function removeExercise(
 export function addSet(
   session: WorkoutSession,
   exerciseEntryId: string,
-  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
+  defaults?: Partial<
+    Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed">
+  >
 ): WorkoutSession {
   return updateExercise(session, exerciseEntryId, (exercise) => {
     const set: SetEntry = {
@@ -88,6 +98,7 @@ export function addSet(
       weight: defaults?.weight ?? 0,
       note: defaults?.note,
       orderIndex: exercise.sets.length,
+      completed: false,
     };
 
     return { ...exercise, sets: [...exercise.sets, set] };
@@ -98,11 +109,13 @@ export function updateSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
-  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
+  patch: Partial<
+    Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed">
+  >
 ): WorkoutSession {
   return updateExercise(session, exerciseEntryId, (exercise) => {
     const sets = exercise.sets.map((s) =>
-      s.id === setId ? { ...s, ...patch } : s,
+      s.id === setId ? { ...s, ...patch } : s
     );
     return { ...exercise, sets };
   });
@@ -111,7 +124,7 @@ export function updateSet(
 export function removeSet(
   session: WorkoutSession,
   exerciseEntryId: string,
-  setId: string,
+  setId: string
 ): WorkoutSession {
   return updateExercise(session, exerciseEntryId, (exercise) => {
     const filtered = exercise.sets.filter((s) => s.id !== setId);
@@ -122,7 +135,7 @@ export function removeSet(
 
 export function finishSession(
   session: WorkoutSession,
-  endedAtMs: number = nowMs(),
+  endedAtMs: number = nowMs()
 ): WorkoutSession {
   return {
     ...session,
@@ -136,7 +149,7 @@ export function getSessionDurationMs(session: WorkoutSession): number | null {
 }
 
 export function getTopSetHighlight(
-  session: WorkoutSession,
+  session: WorkoutSession
 ): TopSetHighlight | null {
   let best: { exerciseName: string; set: SetEntry } | null = null;
 
@@ -168,7 +181,7 @@ export function getTopSetHighlight(
 export function updateExerciseName(
   session: WorkoutSession,
   exerciseEntryId: string,
-  exerciseName: string,
+  exerciseName: string
 ): WorkoutSession {
   return updateExercise(session, exerciseEntryId, (exercise) => ({
     ...exercise,
@@ -179,7 +192,7 @@ export function updateExerciseName(
 function updateExercise(
   session: WorkoutSession,
   exerciseEntryId: string,
-  updater: (exercise: ExerciseEntry) => ExerciseEntry,
+  updater: (exercise: ExerciseEntry) => ExerciseEntry
 ): WorkoutSession {
   const idx = session.exercises.findIndex((e) => e.id === exerciseEntryId);
   if (idx === -1) return session;

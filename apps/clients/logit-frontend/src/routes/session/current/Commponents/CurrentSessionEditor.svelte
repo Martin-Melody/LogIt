@@ -31,6 +31,8 @@
   import SwipeRevealRow from "./SwipeRevealRow.svelte";
   import EditSetDialog from "./EditSetDialog.svelte";
   import { keyboard } from "$lib/stores/keybaord.store";
+  import { formatShortDate } from "$lib/utils";
+  import { getSessionDate } from "$lib/domain/sessions/sessionDates";
 
   onMount(() => {
     setTypesStore.load();
@@ -153,7 +155,9 @@
   }
 
   async function saveSetPatch(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
+    patch: Partial<
+      Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed">
+    >,
   ) {
     const s = getSessionOrNull();
     if (!s) return;
@@ -163,6 +167,18 @@
     if (!exId || !setId) return;
 
     const updated = updateSet(s, exId, setId, patch);
+    await persistDraft(updated);
+  }
+
+  async function setCompleted(
+    exerciseEntryId: string,
+    setId: string,
+    v: boolean,
+  ) {
+    const s = getSessionOrNull();
+    if (!s) return;
+
+    const updated = updateSet(s, exerciseEntryId, setId, { completed: v });
     await persistDraft(updated);
   }
 
@@ -211,10 +227,25 @@
       currentSession.endTransition();
     }
   }
+
+  const subtitle = $derived(() => $currentSession?.origin?.dayName ?? null);
+
+  const description = $derived(() =>
+    $currentSession?.origin
+      ? "Follow the plan and log your sets."
+      : "Log sets as you go.",
+  );
 </script>
 
-<div class="p-3 flex flex-col gap-3 pb-40">
-  <CurrentSessionHeader saving={ui.saving || ui.finishing} error={ui.error} />
+<div class="p-1 flex flex-col gap-3 pb-40">
+  <CurrentSessionHeader
+    date={$currentSession
+      ? formatShortDate(getSessionDate($currentSession)!)
+      : ""}
+    subtitle={subtitle()}
+    description={description()}
+    error={ui.error}
+  />
 
   {#if !ui.finishing}
     {#if !$currentSession}
@@ -244,9 +275,11 @@
                 onEdit={() => openEditSetDialog(ex.id, set.id)}
               >
                 <SetRow
-                  setType={set.setType}
+                  setType={set.orderIndex}
                   reps={set.reps}
                   weight={set.weight}
+                  completed={set.completed ?? false}
+                  onCompletedChange={(v) => setCompleted(ex.id, set.id, v)}
                   disabled={ui.saving || ui.finishing}
                   onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
                   onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}

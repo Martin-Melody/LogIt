@@ -30,7 +30,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
           started_at_ms=excluded.started_at_ms,
           ended_at_ms=excluded.ended_at_ms
         `,
-        [session.id, session.startedAtMs, session.endedAtMs ?? null],
+        [session.id, session.startedAtMs, session.endedAtMs ?? null]
       );
 
       await db.run(`DELETE FROM session_exercises WHERE session_id = ?`, [
@@ -49,16 +49,16 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
             ex.orderIndex,
             ex.exerciseId ?? null,
             ex.exerciseName,
-          ],
+          ]
         );
 
         for (const set of ex.sets) {
           await db.run(
             `
             INSERT INTO session_sets(
-              id, exercise_entry_id, order_index, set_type, reps, weight, note
+              id, exercise_entry_id, order_index, set_type, reps, weight, note, completed
             )
-            VALUES(?, ?, ?, ?, ?, ?, ?)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
               set.id,
@@ -68,7 +68,8 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
               set.reps,
               set.weight,
               set.note ?? null,
-            ],
+              set.completed ? 1 : 0,
+            ]
           );
         }
       }
@@ -79,7 +80,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
       const baseRes = await db.query(
         `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs FROM sessions WHERE id = ?`,
-        [id],
+        [id]
       );
       const base = (baseRes.values?.[0] as any) ?? null;
       if (!base) return null;
@@ -91,19 +92,19 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         WHERE session_id = ?
         ORDER BY order_index ASC
         `,
-        [id],
+        [id]
       );
 
       const exercises = [];
       for (const ex of (exRes.values ?? []) as any[]) {
         const setsRes = await db.query(
           `
-          SELECT id, order_index as orderIndex, set_type as setType, reps, weight, note
+          SELECT id, order_index as orderIndex, set_type as setType, reps, weight, note, completed
           FROM session_sets
           WHERE exercise_entry_id = ?
           ORDER BY order_index ASC
           `,
-          [ex.id],
+          [ex.id]
         );
 
         exercises.push({
@@ -124,7 +125,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
     },
 
     async listRecentSessions(
-      options: ListRecentSessionsOptions,
+      options: ListRecentSessionsOptions
     ): Promise<WorkoutSession[]> {
       const db = getDb();
       const limit = options.limit;
@@ -137,7 +138,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         ORDER BY ended_at_ms DESC
         LIMIT ?
         `,
-        [limit],
+        [limit]
       );
 
       return ((res.values ?? []) as any[]).map((r) => ({
@@ -158,7 +159,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       await db.run(
         `INSERT INTO meta(key, value) VALUES('draft_session_id', ?)
          ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
-        [session.id],
+        [session.id]
       );
       await this.saveSession(session);
     },
@@ -167,7 +168,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       const db = getDb();
       const res = await db.query(
         `SELECT value FROM meta WHERE key='draft_session_id'`,
-        [],
+        []
       );
       const draftId = (
         ((res.values?.[0] as any)?.value as string | undefined) ?? ""
@@ -187,7 +188,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       // matches schema: set_types(id, code, label, sort_order)
       const res = await db.query(
         `SELECT id, code, label FROM set_types ORDER BY sort_order ASC`,
-        [],
+        []
       );
 
       const rows = (res.values ?? []) as any[];

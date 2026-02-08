@@ -8,6 +8,9 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   plugins: {
+    StatusBar: {
+      hidden: false,
+    },
     CapacitorSQLite: {
       iosDatabaseLocation: "Library/Databases",
     },

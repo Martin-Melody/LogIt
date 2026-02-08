@@ -1,5 +1,5 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
-import type { SplitDay } from "$lib/domain/WorkoutSplit";
+import type { SplitDay, WorkoutSplit } from "$lib/domain/WorkoutSplit";
 import {
   type WorkoutSession,
   createSession,
@@ -11,15 +11,25 @@ function sortByOrderIndex<T extends { orderIndex: number }>(arr: T[]): T[] {
   return [...arr].sort((a, b) => a.orderIndex - b.orderIndex);
 }
 
-export async function startSessionFromSplitDay(day: SplitDay): Promise<WorkoutSession> {
+export async function startSessionFromSplitDay(
+  split: WorkoutSplit,
+  day: SplitDay
+): Promise<WorkoutSession> {
   const repo = getWorkoutRepo();
 
-  let session = createSession();
+  let session: WorkoutSession = {
+    ...createSession(),
+    origin: {
+      splitId: split.id,
+      splitName: split.name,
+      dayId: day.id,
+      dayName: day.name,
+    },
+  };
 
   const plannedExercises = sortByOrderIndex(day.exercises);
 
   for (const pex of plannedExercises) {
-    // Add exercise entry
     session = addExercise(session, {
       exerciseName: pex.exerciseName,
       exerciseId: pex.exerciseId,
@@ -28,7 +38,6 @@ export async function startSessionFromSplitDay(day: SplitDay): Promise<WorkoutSe
     const addedExerciseEntry = session.exercises[session.exercises.length - 1];
     if (!addedExerciseEntry) continue;
 
-    // Pre-create sets if a target exists
     const targetSets = pex.targets?.sets ?? 0;
 
     for (let i = 0; i < targetSets; i++) {
@@ -40,9 +49,6 @@ export async function startSessionFromSplitDay(day: SplitDay): Promise<WorkoutSe
     }
   }
 
-  // Persist draft immediately so the user can resume after app close
   await repo.saveDraftSession(session);
-
   return session;
 }
-

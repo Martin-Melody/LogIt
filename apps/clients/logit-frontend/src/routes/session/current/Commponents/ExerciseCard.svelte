@@ -1,8 +1,17 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
-  import { Plus, Pencil, Check, X, Trash2 } from "lucide-svelte";
+  import {
+    Plus,
+    Pencil,
+    Check,
+    X,
+    Trash2,
+    ChevronDown,
+    ChevronRight,
+  } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import { addSet } from "$lib/domain/workout";
 
   const {
     exerciseName = "",
@@ -25,6 +34,7 @@
   const ui = $state({
     editing: false,
     draftName: "",
+    expanded: true,
   });
 
   let inputEl = $state<HTMLInputElement | null>(null);
@@ -32,6 +42,15 @@
   $effect(() => {
     if (ui.editing) inputEl?.focus();
   });
+
+  async function handleAddSet() {
+    ui.expanded = true;
+    await onAddSet();
+  }
+
+  function toggleExpanded() {
+    ui.expanded = !ui.expanded;
+  }
 
   function startEdit() {
     ui.draftName = exerciseName;
@@ -57,8 +76,10 @@
   }
 </script>
 
-<Card.Root class="w-full">
-  <Card.Header class="pb-2">
+<Card.Root
+  class="w-full rounded-none py-1 px-1 shadow-none border-x-0 border-t border-b ring-0 outline-none"
+>
+  <Card.Header class="pb-1 px-0">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0 flex-1">
         {#if ui.editing}
@@ -93,6 +114,22 @@
           </div>
         {:else}
           <div class="flex items-center gap-1">
+            <Button
+              class="m-0"
+              size="icon"
+              variant="ghost"
+              onclick={toggleExpanded}
+              disabled={saving}
+              aria-label={ui.expanded ? "Collapse exercise" : "Expand exercise"}
+              aria-expanded={ui.expanded}
+            >
+              {#if ui.expanded}
+                <ChevronDown class="h-4 w-4" />
+              {:else}
+                <ChevronRight class="h-4 w-4" />
+              {/if}
+            </Button>
+
             <Card.Title class="text-base truncate">{exerciseName}</Card.Title>
 
             <Button
@@ -129,11 +166,12 @@
           </Card.Description>
         {/if}
       </div>
-      <div>
+
+      <div class="flex items-center gap-1">
         <Button
           size="icon"
           variant="outline"
-          onclick={() => void onAddSet()}
+          onclick={() => void handleAddSet()}
           disabled={saving}
           aria-label="Add set"
         >
@@ -143,7 +181,9 @@
     </div>
   </Card.Header>
 
-  <Card.Content class="pt-2">
-    {@render children?.()}
-  </Card.Content>
+  {#if ui.expanded}
+    <Card.Content class="p-0">
+      {@render children?.()}
+    </Card.Content>
+  {/if}
 </Card.Root>

@@ -3,8 +3,9 @@ import type { WorkoutSession } from "$lib/domain/workout";
 import { startSession } from "$lib/usecases/startSession";
 import { loadDraftSession } from "$lib/usecases/loadDraftSession";
 import { finishCurrentSession } from "$lib/usecases/finnishCurrentSession";
-import type { SplitDay } from "$lib/domain/WorkoutSplit";
+import type { SplitDay, WorkoutSplit } from "$lib/domain/WorkoutSplit";
 import { startSessionFromSplitDay } from "$lib/usecases/startSessionFromSplitDay";
+import { getWorkoutRepo } from "$lib/data/repoProvider";
 
 type CurrentSessionState = {
   session: WorkoutSession | null;
@@ -16,7 +17,10 @@ type CurrentSessionStore = {
   subscribeState: (run: (value: CurrentSessionState) => void) => () => void;
 
   start: () => Promise<WorkoutSession>;
-  startFromSplitDay: (day: SplitDay) => Promise<WorkoutSession>;
+  startFromSplitDay: (
+    split: WorkoutSplit,
+    tday: SplitDay
+  ) => Promise<WorkoutSession>;
   loadDraft: () => Promise<WorkoutSession | null>;
   finish: () => Promise<WorkoutSession | null>;
 
@@ -52,17 +56,26 @@ function createCurrentSessionStore(): CurrentSessionStore {
 
     async start() {
       const session = await startSession();
+
+      await getWorkoutRepo().saveDraftSession(session);
+
       store.set({ session, transitioning: false });
       return session;
     },
 
-    async startFromSplitDay(day: SplitDay) {
-      const session = await startSessionFromSplitDay(day);
+    async startFromSplitDay(split: WorkoutSplit, day: SplitDay) {
+      const session = await startSessionFromSplitDay(split, day);
+
+      await getWorkoutRepo().saveDraftSession(session);
+
       store.set({ session, transitioning: false });
       return session;
     },
 
     async loadDraft() {
+      const existing = get(store).session;
+      if (existing) return existing;
+
       const draft = await loadDraftSession();
       store.set({ session: draft, transitioning: false });
       return draft;
