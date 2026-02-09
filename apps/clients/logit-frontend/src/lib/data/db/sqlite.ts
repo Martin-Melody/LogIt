@@ -1,3 +1,4 @@
+// src/lib/data/db/sqlite.ts
 import { browser } from "$app/environment";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -9,7 +10,7 @@ import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
 
 const DB_NAME = "logit";
-const DB_VERSION = 2;
+const DB_VERSION = 3; // <-- bump
 
 let sqlite: SQLiteConnection | null = null;
 let db: SQLiteDBConnection | null = null;
@@ -31,12 +32,12 @@ export async function initSqlite(): Promise<void> {
   db = has.result
     ? await sqlite.retrieveConnection(DB_NAME, false)
     : await sqlite.createConnection(
-        DB_NAME,
-        false,
-        "no-encryption",
-        DB_VERSION,
-        false
-      );
+      DB_NAME,
+      false,
+      "no-encryption",
+      DB_VERSION,
+      false,
+    );
 
   await db.open();
   await createSchema(db);
@@ -135,13 +136,17 @@ async function createSchema(db: SQLiteDBConnection): Promise<void> {
       weight REAL NOT NULL,
       note TEXT NULL,
       completed INTEGER NOT NULL DEFAULT 0,
+
+      -- NEW (v3)
+      rest_duration_ms INTEGER NOT NULL DEFAULT 90000,
+      rest_started_at_ms INTEGER NULL,
+
       FOREIGN KEY (exercise_entry_id) REFERENCES session_exercises(id) ON DELETE CASCADE
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_session_sets_unique_order
       ON session_sets(exercise_entry_id, order_index);
 
-    -- extra indexes for common reads
     CREATE INDEX IF NOT EXISTS idx_sessions_started
       ON sessions(started_at_ms DESC);
 
@@ -171,7 +176,7 @@ async function seedSetTypes(db: SQLiteDBConnection): Promise<void> {
   for (const r of rows) {
     await db.run(
       `INSERT INTO set_types(id, code, label, sort_order) VALUES(?, ?, ?, ?)`,
-      [createId("settype"), r.code, r.label, r.sort]
+      [createId("settype"), r.code, r.label, r.sort],
     );
   }
 }
@@ -219,41 +224,58 @@ async function seedExercises(db: SQLiteDBConnection): Promise<void> {
   for (const name of exercises) {
     await db.run(
       `INSERT INTO exercises(id, name, created_at_ms) VALUES(?, ?, ?)`,
-      [createId("exdb"), name, now]
+      [createId("exdb"), name, now],
     );
   }
 }
 
 async function runMigrations(db: SQLiteDBConnection) {
-  // if meta table exists but db_version key doesn’t, treat as v1 (not v0)
   const res = await db.query(
     `SELECT value FROM meta WHERE key = 'db_version'`,
-    []
+    [],
   );
 
-  // if db existed before you added db_version, it will be missing => you want 1 here
   const current = res.values?.length ? Number(res.values?.[0]?.value) : 1;
 
-  if (current < 2) {
-    await migrate_1_to_2(db);
-  }
+  if (current < 2) await migrate_1_to_2(db);
+  if (current < 3) await migrate_2_to_3(db);
 
   await db.run(
     `INSERT INTO meta(key, value)
      VALUES('db_version', ?)
      ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
-    [String(DB_VERSION)]
+    [String(DB_VERSION)],
   );
 }
 
 async function migrate_1_to_2(db: SQLiteDBConnection) {
   const cols = await db.query(`PRAGMA table_info(session_sets)`, []);
-  const hasCompleted = (cols.values ?? []).some(
-    (c: any) => c.name === "completed"
-  );
+  const hasCompleted = (cols.values ?? []).some((c: any) => c.name === "completed");
   if (!hasCompleted) {
     await db.execute(
-      `ALTER TABLE session_sets ADD COLUMN completed INTEGER NOT NULL DEFAULT 0;`
+      `ALTER TABLE session_sets ADD COLUMN completed INTEGER NOT NULL DEFAULT 0;`,
     );
   }
 }
+
+async function migrate_2_to_3(db: SQLiteDBConnection) {
+  const cols = await db.query(`PRAGMA table_info(session_sets)`, []);
+  const hasRestDuration = (cols.values ?? []).some(
+    (c: any) => c.name === "rest_duration_ms",
+  );
+  const hasRestStarted = (cols.values ?? []).some(
+    (c: any) => c.name === "rest_started_at_ms",
+  );
+
+  if (!hasRestDuration) {
+    await db.execute(
+      `ALTER TABLE session_sets ADD COLUMN rest_duration_ms INTEGER NOT NULL DEFAULT 90000;`,
+    );
+  }
+  if (!hasRestStarted) {
+    await db.execute(
+      `ALTER TABLE session_sets ADD COLUMN rest_started_at_ms INTEGER NULL;`,
+    );
+  }
+}
+
