@@ -23,6 +23,12 @@ importers:
       '@capacitor/keyboard':
         specifier: ^8.0.0
         version: 8.0.0(@capacitor/core@8.0.2)
+      '@capacitor/status-bar':
+        specifier: ^8.0.0
+        version: 8.0.0(@capacitor/core@8.0.2)
+      '@dnd-kit-svelte/svelte':
+        specifier: ^0.1.6
+        version: 0.1.6(svelte@5.50.0)
       '@react2svelte/swipeable':
         specifier: ^0.1.4
         version: 0.1.4
@@ -66,12 +72,21 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      mode-watcher:
+        specifier: ^1.1.0
+        version: 1.1.0(svelte@5.50.0)
       svelte:
         specifier: ^5.45.6
         version: 5.50.0
       svelte-check:
         specifier: ^4.3.4
         version: 4.3.6(picomatch@4.0.3)(svelte@5.50.0)(typescript@5.9.3)
+      svelte-dnd-action:
+        specifier: ^0.9.69
+        version: 0.9.69(svelte@5.50.0)
+      svelte-sonner:
+        specifier: ^1.0.7
+        version: 1.0.7(svelte@5.50.0)
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -116,6 +131,37 @@ packages:
     resolution: {integrity: sha512-ycPW6iQyFwzDK95jihesj5EGiyyGSfbBqNek11iNp9tBOB7zDeYkUA2S/vPpOETt3dhP6pWr7a9gNVGuEfj11g==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
+
+  '@capacitor/status-bar@8.0.0':
+    resolution: {integrity: sha512-aIj3bc7z8lfPgOen8HlrBrkfnxpFnh21OCx6jCUx4Mvv+B6eEkUQ49b32DOddgVfr+igRHLX2SYi7duqIsNDXg==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
+  '@dnd-kit-svelte/svelte@0.1.6':
+    resolution: {integrity: sha512-kpmNWeQoPFrJ4SNB0thRkdWtN3kiYMQI/SvEj6MTKTQ8W5VyHBrbXDRm+mdiTj9tzmG8jgCPg+Fgp3aYIU+Hug==}
+    peerDependencies:
+      svelte: ^5.0.0
+
+  '@dnd-kit/abstract@0.2.4':
+    resolution: {integrity: sha512-1F3JQaD8upvTNpfDrhvec57cldTEaUggmVrVJZIpRTIdZR7trKqS7vBYZR1mW3qNjWsxC91eEQAXYWv0vxXXuw==}
+
+  '@dnd-kit/collision@0.2.4':
+    resolution: {integrity: sha512-w8Vzq8MKu8MYvrwtasqQhw2l27v9eRMzL+jOdj8Qp0jnPQ1FICGgUwjAStZ87wO1Pc2WIt0rQWDDPIEyRd6S8A==}
+
+  '@dnd-kit/dom@0.2.4':
+    resolution: {integrity: sha512-ZYIJgx/uyZvmGOHPBDbIeJfqa2xlEUHnkHEHcKlR/VMQz9NoSkPGcjPdcAjpwB+T4dleRQ4tZ8h9X5I3UdTQPw==}
+
+  '@dnd-kit/geometry@0.1.21':
+    resolution: {integrity: sha512-Tir97wNJbopN2HgkD7AjAcoB3vvrVuUHvwdPALmNDUH0fWR637c4MKQ66YjjZAbUEAR8KL6mlDiHH4MzTLd7CQ==}
+
+  '@dnd-kit/geometry@0.2.4':
+    resolution: {integrity: sha512-S8wVj4rQIErimDQoRT0n1+lgxPvlO/gvzT9/1vzyyw1U4bB/S8avtrI+REVw/jH84c/dii+GwrrzVkDDoIluNw==}
+
+  '@dnd-kit/state@0.1.21':
+    resolution: {integrity: sha512-pdhntEPvn/QttcF295bOJpWiLsRqA/Iczh1ODOJUxGiR+E4GkYVz9VapNNm9gDq6ST0tr/e1Q2xBztUHlJqQgA==}
+
+  '@dnd-kit/state@0.2.4':
+    resolution: {integrity: sha512-mPtQfmqBZBcVKa+Fi8AV2ocQWa+phvZa9Muq3PxFM3WIyjrFiEosGGPiPcx5hC3K+i2gkmr6Msc7iPrrpYkB5g==}
 
   '@esbuild/aix-ppc64@0.27.3':
     resolution: {integrity: sha512-9fJMTNFTWZMh5qwrBItuziu834eOCUcEqymSH7pY+zoMVEZg3gcPuBNxH1EvfVYe9h0x/Ptw8KBzv7qxb7l8dg==}
@@ -352,6 +398,9 @@ packages:
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
+
+  '@preact/signals-core@1.13.0':
+    resolution: {integrity: sha512-slT6XeTCAbdql61GVLlGU4x7XHI7kCZV5Um5uhE4zLX4ApgiiXc0UYFvVOKq06xcovzp7p+61l68oPi563ARKg==}
 
   '@react2svelte/swipeable@0.1.4':
     resolution: {integrity: sha512-iMBI1lxsUwbiFd9zyvU3/Ot4UY583pBKHmU7xP9nTVN8ZBX+PtCVHOPGugf8fgSriL+6CCAp45gLw7zxGt/czQ==}
@@ -1045,6 +1094,11 @@ packages:
     resolution: {integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==}
     engines: {node: '>= 18'}
 
+  mode-watcher@1.1.0:
+    resolution: {integrity: sha512-mUT9RRGPDYenk59qJauN1rhsIMKBmWA3xMF+uRwE8MW/tjhaDSCCARqkSuDTq8vr4/2KcAxIGVjACxTjdk5C3g==}
+    peerDependencies:
+      svelte: ^5.27.0
+
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
     engines: {node: '>=4'}
@@ -1142,6 +1196,21 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+  runed@0.23.4:
+    resolution: {integrity: sha512-9q8oUiBYeXIDLWNK5DfCWlkL0EW3oGbk845VdKlPeia28l751VpfesaB/+7pI6rnbx1I6rqoZ2fZxptOJLxILA==}
+    peerDependencies:
+      svelte: ^5.7.0
+
+  runed@0.25.0:
+    resolution: {integrity: sha512-7+ma4AG9FT2sWQEA0Egf6mb7PBT2vHyuHail1ie8ropfSjvZGtEAx8YTmUjv/APCsdRRxEVvArNjALk9zFSOrg==}
+    peerDependencies:
+      svelte: ^5.7.0
+
+  runed@0.28.0:
+    resolution: {integrity: sha512-k2xx7RuO9hWcdd9f+8JoBeqWtYrm5CALfgpkg2YDB80ds/QE4w0qqu34A7fqiAwiBBSBQOid7TLxwxVC27ymWQ==}
+    peerDependencies:
+      svelte: ^5.7.0
+
   runed@0.35.1:
     resolution: {integrity: sha512-2F4Q/FZzbeJTFdIS/PuOoPRSm92sA2LhzTnv6FXhCoENb3huf5+fDuNOg1LNvGOouy3u/225qxmuJvcV3IZK5Q==}
     peerDependencies:
@@ -1237,11 +1306,27 @@ packages:
       svelte: ^4.0.0 || ^5.0.0-next.0
       typescript: '>=5.0.0'
 
+  svelte-dnd-action@0.9.69:
+    resolution: {integrity: sha512-NAmSOH7htJoYraTQvr+q5whlIuVoq88vEuHr4NcFgscDRUxfWPPxgie2OoxepBCQCikrXZV4pqV86aun60wVyw==}
+    peerDependencies:
+      svelte: '>=3.23.0 || ^5.0.0-next.0'
+
+  svelte-sonner@1.0.7:
+    resolution: {integrity: sha512-1EUFYmd7q/xfs2qCHwJzGPh9n5VJ3X6QjBN10fof2vxgy8fYE7kVfZ7uGnd7i6fQaWIr5KvXcwYXE/cmTEjk5A==}
+    peerDependencies:
+      svelte: ^5.0.0
+
   svelte-toolbelt@0.10.6:
     resolution: {integrity: sha512-YWuX+RE+CnWYx09yseAe4ZVMM7e7GRFZM6OYWpBKOb++s+SQ8RBIMMe+Bs/CznBMc0QPLjr+vDBxTAkozXsFXQ==}
     engines: {node: '>=18', pnpm: '>=8.7.0'}
     peerDependencies:
       svelte: ^5.30.2
+
+  svelte-toolbelt@0.7.1:
+    resolution: {integrity: sha512-HcBOcR17Vx9bjaOceUvxkY3nGmbBmCBBbuWLLEWO6jtmWH8f/QoWmbyUfQZrpDINH39en1b8mptfPQT9VKQ1xQ==}
+    engines: {node: '>=18', pnpm: '>=8.7.0'}
+    peerDependencies:
+      svelte: ^5.0.0
 
   svelte@5.50.0:
     resolution: {integrity: sha512-FR9kTLmX5i0oyeQ5j/+w8DuagIkQ7MWMuPpPVioW2zx9Dw77q+1ufLzF1IqNtcTXPRnIIio4PlasliVn43OnbQ==}
@@ -1433,6 +1518,59 @@ snapshots:
   '@capacitor/keyboard@8.0.0(@capacitor/core@8.0.2)':
     dependencies:
       '@capacitor/core': 8.0.2
+
+  '@capacitor/status-bar@8.0.0(@capacitor/core@8.0.2)':
+    dependencies:
+      '@capacitor/core': 8.0.2
+
+  '@dnd-kit-svelte/svelte@0.1.6(svelte@5.50.0)':
+    dependencies:
+      '@dnd-kit/abstract': 0.2.4
+      '@dnd-kit/collision': 0.2.4
+      '@dnd-kit/dom': 0.2.4
+      '@dnd-kit/geometry': 0.1.21
+      '@dnd-kit/state': 0.2.4
+      svelte: 5.50.0
+
+  '@dnd-kit/abstract@0.2.4':
+    dependencies:
+      '@dnd-kit/geometry': 0.2.4
+      '@dnd-kit/state': 0.2.4
+      tslib: 2.8.1
+
+  '@dnd-kit/collision@0.2.4':
+    dependencies:
+      '@dnd-kit/abstract': 0.2.4
+      '@dnd-kit/geometry': 0.2.4
+      tslib: 2.8.1
+
+  '@dnd-kit/dom@0.2.4':
+    dependencies:
+      '@dnd-kit/abstract': 0.2.4
+      '@dnd-kit/collision': 0.2.4
+      '@dnd-kit/geometry': 0.2.4
+      '@dnd-kit/state': 0.2.4
+      tslib: 2.8.1
+
+  '@dnd-kit/geometry@0.1.21':
+    dependencies:
+      '@dnd-kit/state': 0.1.21
+      tslib: 2.8.1
+
+  '@dnd-kit/geometry@0.2.4':
+    dependencies:
+      '@dnd-kit/state': 0.2.4
+      tslib: 2.8.1
+
+  '@dnd-kit/state@0.1.21':
+    dependencies:
+      '@preact/signals-core': 1.13.0
+      tslib: 2.8.1
+
+  '@dnd-kit/state@0.2.4':
+    dependencies:
+      '@preact/signals-core': 1.13.0
+      tslib: 2.8.1
 
   '@esbuild/aix-ppc64@0.27.3':
     optional: true
@@ -1637,6 +1775,8 @@ snapshots:
       svelte: 5.50.0
 
   '@polka/url@1.0.0-next.29': {}
+
+  '@preact/signals-core@1.13.0': {}
 
   '@react2svelte/swipeable@0.1.4': {}
 
@@ -2201,6 +2341,12 @@ snapshots:
     dependencies:
       minipass: 7.1.2
 
+  mode-watcher@1.1.0(svelte@5.50.0):
+    dependencies:
+      runed: 0.25.0(svelte@5.50.0)
+      svelte: 5.50.0
+      svelte-toolbelt: 0.7.1(svelte@5.50.0)
+
   mri@1.2.0: {}
 
   mrmime@2.0.1: {}
@@ -2330,6 +2476,21 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.57.1
       fsevents: 2.3.3
 
+  runed@0.23.4(svelte@5.50.0):
+    dependencies:
+      esm-env: 1.2.2
+      svelte: 5.50.0
+
+  runed@0.25.0(svelte@5.50.0):
+    dependencies:
+      esm-env: 1.2.2
+      svelte: 5.50.0
+
+  runed@0.28.0(svelte@5.50.0):
+    dependencies:
+      esm-env: 1.2.2
+      svelte: 5.50.0
+
   runed@0.35.1(@sveltejs/kit@2.50.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.50.0)(vite@7.3.1(@types/node@25.2.1)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.50.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.2.1)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.50.0):
     dependencies:
       dequal: 2.0.3
@@ -2419,6 +2580,15 @@ snapshots:
     transitivePeerDependencies:
       - picomatch
 
+  svelte-dnd-action@0.9.69(svelte@5.50.0):
+    dependencies:
+      svelte: 5.50.0
+
+  svelte-sonner@1.0.7(svelte@5.50.0):
+    dependencies:
+      runed: 0.28.0(svelte@5.50.0)
+      svelte: 5.50.0
+
   svelte-toolbelt@0.10.6(@sveltejs/kit@2.50.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.50.0)(vite@7.3.1(@types/node@25.2.1)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.50.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.2.1)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.50.0):
     dependencies:
       clsx: 2.1.1
@@ -2427,6 +2597,13 @@ snapshots:
       svelte: 5.50.0
     transitivePeerDependencies:
       - '@sveltejs/kit'
+
+  svelte-toolbelt@0.7.1(svelte@5.50.0):
+    dependencies:
+      clsx: 2.1.1
+      runed: 0.23.4(svelte@5.50.0)
+      style-to-object: 1.0.14
+      svelte: 5.50.0
 
   svelte@5.50.0:
     dependencies:

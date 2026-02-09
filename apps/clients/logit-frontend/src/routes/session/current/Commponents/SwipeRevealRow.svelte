@@ -87,7 +87,7 @@
       trackTouch: true,
       trackMouse: false,
       delta: 8,
-      preventScrollOnSwipe: true,
+      preventScrollOnSwipe: false,
       touchEventOptions: { passive: false },
     }}
     on:swiping={onSwiping}

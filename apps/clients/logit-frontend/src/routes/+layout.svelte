@@ -7,12 +7,36 @@
   import { onMount } from "svelte";
   import { appInit } from "$lib/platform/appInit";
   import { appReady } from "$lib/stores/appReady.store";
-  import { onNavigate } from "$app/navigation";
+  import { goto, onNavigate } from "$app/navigation";
+  import { Toaster } from "$lib/components/ui/sonner";
+  import { Capacitor } from "@capacitor/core";
+  import { LocalNotifications } from "@capacitor/local-notifications";
 
   let { children } = $props();
 
   onMount(() => {
     void appInit();
+    if (!Capacitor.isNativePlatform()) return;
+
+    const remove = LocalNotifications.addListener(
+      "localNotificationActionPerformed",
+      async (event) => {
+        const extra = (event.notification.extra ?? {}) as any;
+        const route =
+          typeof extra.route === "string" ? extra.route : "/session/current";
+
+        // Navigate back into the editor
+        await goto(route);
+
+        // Optional: if you want to focus/scroll to the set:
+        // const setId = extra.setId;
+        // you can store this in a store and scroll in the page
+      },
+    );
+
+    return () => {
+      remove.then((h) => h.remove());
+    };
   });
 
   onNavigate((navigation) => {
@@ -36,6 +60,7 @@
 </svelte:head>
 
 {#if $appReady}
+  <Toaster />
   <div class="flex h-screen flex-col bg-background text-foreground">
     <header>
       <TopBar />

@@ -7,6 +7,7 @@
 
   import type { SetEntry, SetType } from "$lib/domain/workout";
   import type { SetTypeOption } from "$lib/data/types";
+  import { DEFAULT_REST_MS } from "$lib/domain/workout";
 
   import SetTypePicker, {
     type SetTypePickerOption,
@@ -14,7 +15,7 @@
 
   type Editable = Pick<
     SetEntry,
-    "reps" | "weight" | "setType" | "note" | "completed"
+    "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs"
   >;
 
   const {
@@ -40,6 +41,7 @@
     weight: 0,
     setType: "normal" as SetType,
     note: null,
+    restDurationMs: DEFAULT_REST_MS,
   });
 
   let lastKey = $state<string | null>(null);
@@ -47,7 +49,13 @@
   function initDraft() {
     if (!initial) return;
 
-    const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}`;
+    const key = [
+      initial.setType,
+      initial.reps,
+      initial.weight,
+      initial.note ?? "",
+      initial.restDurationMs ?? DEFAULT_REST_MS,
+    ].join("|");
 
     if (!open) return;
     if (lastKey === key) return;
@@ -62,6 +70,7 @@
         (setTypeOptions[0]?.code as SetType) ??
         ("normal" as SetType),
       note: initial.note ?? null,
+      restDurationMs: initial.restDurationMs ?? DEFAULT_REST_MS,
     };
   }
 
@@ -86,6 +95,11 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function clampRestMs(ms: number) {
+    if (!Number.isFinite(ms)) return DEFAULT_REST_MS;
+    return Math.max(0, Math.min(60 * 60 * 1000, Math.floor(ms))); // 0..60m
+  }
+
   async function submit(e: SubmitEvent) {
     e.preventDefault();
     if (disabled) return;
@@ -95,6 +109,7 @@
       weight: Math.max(0, draft.weight),
       setType: draft.setType,
       note: draft.note?.trim() ? draft.note.trim() : null,
+      restDurationMs: clampRestMs(draft.restDurationMs ?? DEFAULT_REST_MS),
     };
 
     await onSave(patch);
@@ -154,6 +169,48 @@
                 (draft.weight = num(
                   (e.currentTarget as HTMLInputElement).value,
                 ))}
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="grid gap-2">
+            <Label for="restSeconds">Rest (seconds)</Label>
+            <Input
+              id="restSeconds"
+              type="number"
+              min="0"
+              step="1"
+              value={Math.round(
+                (draft.restDurationMs ?? DEFAULT_REST_MS) / 1000,
+              )}
+              {disabled}
+              oninput={(e) => {
+                const seconds = num(
+                  (e.currentTarget as HTMLInputElement).value,
+                );
+                draft.restDurationMs = clampRestMs(seconds * 1000);
+              }}
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="restMinutes">Rest (minutes)</Label>
+            <Input
+              id="restMinutes"
+              type="number"
+              min="0"
+              step="0.01"
+              value={Number(
+                ((draft.restDurationMs ?? DEFAULT_REST_MS) / 60000).toFixed(2),
+              )}
+              {disabled}
+              oninput={(e) => {
+                const minutes = num(
+                  (e.currentTarget as HTMLInputElement).value,
+                );
+                draft.restDurationMs = clampRestMs(minutes * 60_000);
+              }}
             />
           </div>
         </div>

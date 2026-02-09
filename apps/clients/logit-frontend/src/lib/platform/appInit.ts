@@ -1,4 +1,3 @@
-// src/lib/platform/appInit.ts
 import { browser } from "$app/environment";
 import { initRepos } from "$lib/data/repoProvider";
 import { activeSplit } from "$lib/stores/activeSplit.store";
@@ -9,6 +8,7 @@ import { splits } from "$lib/stores/splits.store";
 import { Capacitor } from "@capacitor/core";
 import { setupKeyboard } from "./keyboard";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 let didInit = false;
 
@@ -18,6 +18,8 @@ export async function appInit(): Promise<void> {
   didInit = true;
 
   console.log("[appInit] starting");
+
+  await initNotifications();
 
   await initRepos();
   console.log("[appInit] storage initialized");
@@ -51,4 +53,12 @@ export async function appInit(): Promise<void> {
 
   appReady.set(true);
   console.log("[appInit] complete");
+}
+
+export async function initNotifications() {
+  if (!Capacitor.isNativePlatform()) return;
+
+  const perm = await LocalNotifications.requestPermissions();
+  // perm.display === "granted" (on iOS); Android generally grants at install on older versions,
+  // but Android 13+ needs runtime permission too, Capacitor handles this via requestPermissions().
 }

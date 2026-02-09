@@ -8,6 +8,9 @@
   import type { DndEvent } from "svelte-dnd-action";
   import { dragHandleZone } from "svelte-dnd-action";
 
+  import { Capacitor } from "@capacitor/core";
+  import { LocalNotifications } from "@capacitor/local-notifications";
+
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { recentSessions } from "$lib/stores/recentSessions.store";
@@ -39,11 +42,82 @@
   import { formatShortDate } from "$lib/utils";
   import { getSessionDate } from "$lib/domain/sessions/sessionDates";
   import { reorderSetsInExercise } from "$lib/domain/workout/reorderSets";
+  import { DEFAULT_REST_MS } from "$lib/domain/workout";
 
   onMount(() => {
     setTypesStore.load();
   });
 
+  // ---------- Local notifications helpers ----------
+  function isNative() {
+    return Capacitor.isNativePlatform();
+  }
+
+  function restNotificationId(setId: string) {
+    // LocalNotifications requires a number id
+    let hash = 0;
+    for (let i = 0; i < setId.length; i++)
+      hash = (hash * 31 + setId.charCodeAt(i)) | 0;
+    return Math.abs(hash);
+  }
+
+  async function ensureNotifPerms() {
+    if (!isNative()) return;
+    try {
+      await LocalNotifications.requestPermissions();
+    } catch {
+      // ignore (web/unsupported)
+    }
+  }
+
+  async function cancelRestNotification(setId: string) {
+    if (!isNative()) return;
+    const id = restNotificationId(setId);
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id }] });
+    } catch {
+      // ignore
+    }
+  }
+
+  async function scheduleRestFinishedNotification(args: {
+    setId: string;
+    fireAtMs: number;
+    title?: string;
+    body?: string;
+  }) {
+    if (!isNative()) return;
+
+    await ensureNotifPerms();
+
+    const id = restNotificationId(args.setId);
+
+    // cancel previous schedule for this set (if any)
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id }] });
+    } catch {}
+
+    // don’t schedule if already basically over
+    if (args.fireAtMs <= Date.now() + 250) return;
+
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id,
+          title: args.title ?? "Rest time is up",
+          body: args.body ?? "Ready for your next set.",
+          schedule: { at: new Date(args.fireAtMs) },
+          // used by the notification tap handler you’ll add in +layout.svelte
+          extra: {
+            route: "/session/current",
+            setId: args.setId,
+          },
+        },
+      ],
+    });
+  }
+
+  // ---------- UI state ----------
   const ui = $state({
     saving: false,
     finishing: false,
@@ -102,6 +176,7 @@
       weight: set.weight,
       setType: set.setType,
       note: set.note ?? null,
+      restDurationMs: set.restDurationMs ?? DEFAULT_REST_MS,
     };
   }
 
@@ -149,6 +224,9 @@
     const s = getSessionOrNull();
     if (!s) return;
 
+    // if you delete a set, also cancel its pending rest notification
+    await cancelRestNotification(setId);
+
     const deleted = removeSet(s, exerciseId, setId);
     await persistDraft(deleted);
   }
@@ -162,7 +240,10 @@
 
   async function saveSetPatch(
     patch: Partial<
-      Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed">
+      Pick<
+        SetEntry,
+        "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs"
+      >
     >,
   ) {
     const s = getSessionOrNull();
@@ -172,8 +253,27 @@
     const setId = editSetUi.setId;
     if (!exId || !setId) return;
 
+    // If user changes rest duration while a rest is active, reschedule notification
+    const ex = s.exercises.find((x) => x.id === exId);
+    const set = ex?.sets.find((t) => t.id === setId);
+    const startedAt = set?.restStartedAtMs ?? null;
+
     const updated = updateSet(s, exId, setId, patch);
     await persistDraft(updated);
+
+    const nextRestDuration =
+      patch.restDurationMs ??
+      set?.restDurationMs ??
+      DEFAULT_REST_MS ??
+      DEFAULT_REST_MS;
+
+    if (startedAt && nextRestDuration > 0) {
+      const fireAtMs = startedAt + nextRestDuration;
+      await scheduleRestFinishedNotification({
+        setId,
+        fireAtMs,
+      });
+    }
   }
 
   async function setCompleted(
@@ -184,8 +284,49 @@
     const s = getSessionOrNull();
     if (!s) return;
 
-    const updated = updateSet(s, exerciseEntryId, setId, { completed: v });
+    const ex = s.exercises.find((x) => x.id === exerciseEntryId);
+    const set = ex?.sets.find((t) => t.id === setId);
+    if (!set) return;
+
+    const wasCompleted = !!set.completed;
+
+    const restDurationMs =
+      Number.isFinite(set.restDurationMs) && (set.restDurationMs ?? 0) > 0
+        ? (set.restDurationMs as number)
+        : DEFAULT_REST_MS;
+
+    // Only start rest the FIRST time the set is completed
+    const shouldStartRest =
+      v === true &&
+      !wasCompleted &&
+      set.restStartedAtMs == null &&
+      restDurationMs > 0;
+
+    const startedAtMs = shouldStartRest
+      ? Date.now()
+      : (set.restStartedAtMs ?? null);
+
+    const updated = updateSet(s, exerciseEntryId, setId, {
+      completed: v,
+      ...(shouldStartRest ? { restStartedAtMs: startedAtMs } : {}),
+    });
+
     await persistDraft(updated);
+
+    // If user unchecks, cancel pending notification
+    if (v === false) {
+      await cancelRestNotification(setId);
+      return;
+    }
+
+    // Schedule only when we started rest now
+    if (shouldStartRest && startedAtMs) {
+      const fireAtMs = startedAtMs + restDurationMs;
+      await scheduleRestFinishedNotification({
+        setId,
+        fireAtMs,
+      });
+    }
   }
 
   async function onRepsChange(
@@ -298,12 +439,10 @@
 
           <div
             class="
-    flex flex-col gap-2
-    outline-none
-    focus:outline-none
-    focus-visible:outline-none
-    select-none
-  "
+              flex flex-col gap-2
+              outline-none focus:outline-none focus-visible:outline-none
+              select-none
+            "
             use:dragHandleZone={{
               items: ex.sets,
               flipDurationMs,
@@ -325,6 +464,7 @@
                 >
                   <SetRow
                     setType={set.orderIndex}
+                    setId={set.id}
                     reps={set.reps}
                     weight={set.weight}
                     completed={set.completed ?? false}
@@ -334,6 +474,8 @@
                     onRepsChange={(r: number) => onRepsChange(ex.id, set.id, r)}
                     onWeightChange={(w: number) =>
                       onWeightChange(ex.id, set.id, w)}
+                    restDurationMs={set.restDurationMs ?? DEFAULT_REST_MS}
+                    restStartedAtMs={set.restStartedAtMs ?? null}
                   />
                 </SwipeRevealRow>
               </div>

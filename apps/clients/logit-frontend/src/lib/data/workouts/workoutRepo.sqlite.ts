@@ -16,6 +16,8 @@ function isSetType(v: unknown): v is SetType {
   );
 }
 
+const DEFAULT_REST_MS = 90_000;
+
 export function createSqliteWorkoutRepo(): WorkoutRepo {
   return {
     async saveSession(session: WorkoutSession): Promise<void> {
@@ -55,9 +57,18 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
           await db.run(
             `
             INSERT INTO session_sets(
-              id, exercise_entry_id, order_index, set_type, reps, weight, note, completed
+              id,
+              exercise_entry_id,
+              order_index,
+              set_type,
+              reps,
+              weight,
+              note,
+              completed,
+              rest_duration_ms,
+              rest_started_at_ms
             )
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
               set.id,
@@ -68,6 +79,8 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
               set.weight,
               set.note ?? null,
               set.completed ? 1 : 0,
+              set.restDurationMs ?? DEFAULT_REST_MS,
+              set.restStartedAtMs ?? null,
             ]
           );
         }
@@ -98,7 +111,16 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       for (const ex of (exRes.values ?? []) as any[]) {
         const setsRes = await db.query(
           `
-          SELECT id, order_index as orderIndex, set_type as setType, reps, weight, note, completed
+          SELECT
+            id,
+            order_index as orderIndex,
+            set_type as setType,
+            reps,
+            weight,
+            note,
+            completed,
+            rest_duration_ms as restDurationMs,
+            rest_started_at_ms as restStartedAtMs
           FROM session_sets
           WHERE exercise_entry_id = ?
           ORDER BY order_index ASC
@@ -106,12 +128,27 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
           [ex.id]
         );
 
+        const sets = (setsRes.values ?? []).map((s: any) => ({
+          id: String(s.id),
+          orderIndex: Number(s.orderIndex),
+          setType: s.setType as SetType,
+          reps: Number(s.reps),
+          weight: Number(s.weight),
+          note: s.note ?? null,
+          completed: !!s.completed,
+          restDurationMs: Number.isFinite(Number(s.restDurationMs))
+            ? Number(s.restDurationMs)
+            : DEFAULT_REST_MS,
+          restStartedAtMs:
+            s.restStartedAtMs == null ? null : Number(s.restStartedAtMs),
+        }));
+
         exercises.push({
           id: ex.id,
           exerciseId: ex.exerciseId ?? undefined,
           exerciseName: ex.exerciseName,
           orderIndex: ex.orderIndex,
-          sets: (setsRes.values ?? []) as any[],
+          sets,
         });
       }
 
@@ -184,7 +221,6 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
     async getSetTypes(): Promise<SetTypeOption[]> {
       const db = getDb();
 
-      // matches schema: set_types(id, code, label, sort_order)
       const res = await db.query(
         `SELECT id, code, label FROM set_types ORDER BY sort_order ASC`,
         []
