@@ -108,7 +108,6 @@
       on:click|stopPropagation={toggleOpen}
       aria-label="Toggle row actions"
     >
-      ⋮
     </button>
   {/if}
 </div>
