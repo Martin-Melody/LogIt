@@ -1,4 +1,3 @@
-// src/lib/data/workouts/workoutRepo.sqlite.ts
 import type {
   WorkoutRepo,
   ListRecentSessionsOptions,

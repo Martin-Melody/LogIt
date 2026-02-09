@@ -8,28 +8,41 @@
   import type { SetEntry, SetType } from "$lib/domain/workout";
   import type { SetTypeOption } from "$lib/data/types";
 
-  type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note">;
+  import SetTypePicker, {
+    type SetTypePickerOption,
+  } from "./SetTypePicker.svelte";
 
-  export let open = false;
-  export let disabled = false;
-  export let initial: Editable | null = null;
+  type Editable = Pick<
+    SetEntry,
+    "reps" | "weight" | "setType" | "note" | "completed"
+  >;
 
-  export let setTypeOptions: SetTypeOption[] = [];
-  export let setTypeLoading = false;
+  const {
+    open = false,
+    disabled = false,
+    initial = null,
+    setTypeOptions = [],
+    setTypeLoading = false,
+    onOpenChange = (_v: boolean) => {},
+    onSave = async (_patch: Partial<Editable>) => {},
+  } = $props<{
+    open?: boolean;
+    disabled?: boolean;
+    initial?: Editable | null;
+    setTypeOptions?: SetTypeOption[];
+    setTypeLoading?: boolean;
+    onOpenChange?: (v: boolean) => void;
+    onSave?: (patch: Partial<Editable>) => void | Promise<void>;
+  }>();
 
-  export let onOpenChange: (v: boolean) => void = () => {};
-  export let onSave: (
-    patch: Partial<Editable>,
-  ) => void | Promise<void> = async () => {};
-
-  let draft: Editable = {
+  let draft = $state<Editable>({
     reps: 0,
     weight: 0,
     setType: "normal" as SetType,
     note: null,
-  };
+  });
 
-  let lastKey: string | null = null;
+  let lastKey = $state<string | null>(null);
 
   function initDraft() {
     if (!initial) return;
@@ -45,12 +58,28 @@
       reps: initial.reps ?? 0,
       weight: initial.weight ?? 0,
       setType:
-        initial.setType ?? setTypeOptions[0]?.code ?? ("normal" as SetType),
+        initial.setType ??
+        (setTypeOptions[0]?.code as SetType) ??
+        ("normal" as SetType),
       note: initial.note ?? null,
     };
   }
 
-  $: open, initial, setTypeOptions, initDraft();
+  $effect(() => {
+    open;
+    initial;
+    setTypeOptions;
+    initDraft();
+  });
+
+  const pickerOptions = $derived<SetTypePickerOption[]>(
+    setTypeOptions.map((o: any) => ({
+      id: o.id,
+      code: o.code as SetType,
+      label: o.label,
+      subtitle: null,
+    })),
+  );
 
   function num(v: string) {
     const n = Number(v);
@@ -73,7 +102,7 @@
   }
 </script>
 
-<Dialog.Root bind:open {onOpenChange}>
+<Dialog.Root {open} {onOpenChange}>
   <Dialog.Content class="sm:max-w-[425px]">
     <form on:submit={submit}>
       <Dialog.Header>
@@ -86,22 +115,16 @@
       <div class="grid gap-4 py-4">
         <div class="grid gap-2">
           <Label for="setType">Set type</Label>
-          <select
-            id="setType"
-            class="w-full rounded border bg-background px-2 py-2 text-sm"
-            disabled={disabled || setTypeLoading || setTypeOptions.length === 0}
-            bind:value={draft.setType}
-          >
-            {#if setTypeLoading}
-              <option value={draft.setType}>Loading…</option>
-            {:else if setTypeOptions.length === 0}
-              <option value={draft.setType}>No set types</option>
-            {:else}
-              {#each setTypeOptions as opt (opt.id)}
-                <option value={opt.code}>{opt.label}</option>
-              {/each}
-            {/if}
-          </select>
+
+          <SetTypePicker
+            loading={setTypeLoading}
+            disabled={disabled || setTypeLoading}
+            options={pickerOptions}
+            value={draft.setType}
+            onSelect={(opt) => {
+              draft.setType = opt.code as SetType;
+            }}
+          />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
