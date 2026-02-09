@@ -29,7 +29,7 @@
 </script>
 
 <Dialog.Root bind:open={ui.open}>
-  <Dialog.Trigger asChild>
+  <Dialog.Trigger class="w-full">
     {@render children?.()}
   </Dialog.Trigger>
 

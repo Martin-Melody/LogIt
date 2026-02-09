@@ -13,7 +13,7 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       const limit = options?.limit ?? 50;
       const offset = options?.offset ?? 0;
 
-      const where = q ? "WHERE name LIKE ?" : "";
+      const where = q ? "WHERE name LIKE ? COLLATE NOCASE" : "";
       const params: any[] = [];
       if (q) params.push(`%${q}%`);
       params.push(limit);
