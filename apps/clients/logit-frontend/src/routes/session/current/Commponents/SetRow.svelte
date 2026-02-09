@@ -1,6 +1,8 @@
+<!-- SetRow.svelte -->
 <script lang="ts">
   import Checkbox from "$lib/components/ui/checkbox/checkbox.svelte";
   import { GripVertical } from "lucide-svelte";
+  import { dragHandle } from "svelte-dnd-action";
 
   export let setType: number;
   export let reps = 0;
@@ -9,7 +11,6 @@
 
   export let completed = false;
   export let onCompletedChange: (v: boolean) => void | Promise<void> = () => {};
-
   export let onRepsChange: (reps: number) => void | Promise<void> = () => {};
   export let onWeightChange: (
     weight: number,
@@ -26,7 +27,6 @@
     grid items-center justify-items-center gap-x-2
     rounded-md pr-1 transition-colors
     {completed ? 'bg-[#EAF8F0]' : ''}
-
     [grid-template-columns:28px_32px_minmax(0,1fr)_minmax(0,1.6fr)_3.25rem_3.75rem_32px]
     sm:gap-x-3 sm:[grid-template-columns:32px_36px_minmax(0,1fr)_minmax(0,1.8fr)_3.5rem_4.25rem_36px]
   "
@@ -34,12 +34,12 @@
   <div class="flex items-center justify-center">
     <button
       type="button"
+      use:dragHandle
       class="
-      cursor-grab active:cursor-grabbing
-      text-muted-foreground
-      hover:text-foreground
-    "
-      data-dnd-handle
+    cursor-grab active:cursor-grabbing
+    text-muted-foreground
+    hover:text-foreground
+  "
       {disabled}
       aria-label="Reorder set"
       tabindex="-1"
@@ -48,15 +48,13 @@
     </button>
   </div>
 
-  <div class="text-sm tabular-nums">
-    {setType + 1}
-  </div>
+  <div class="text-sm tabular-nums">{setType + 1}</div>
 
-  <div class="min-w-0"><!-- badges --></div>
+  <div class="min-w-0"></div>
 
-  <div class="min-w-0 text-sm text-muted-foreground truncate tabular-nums">
-    <!-- previous: "3 x 70" -->
-  </div>
+  <div
+    class="min-w-0 text-sm text-muted-foreground truncate tabular-nums"
+  ></div>
 
   <input
     class="w-full min-w-0 rounded border bg-background px-1.5 py-1 text-sm text-center tabular-nums"
