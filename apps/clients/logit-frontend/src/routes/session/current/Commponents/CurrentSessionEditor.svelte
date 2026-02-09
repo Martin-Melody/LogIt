@@ -4,6 +4,10 @@
   import { onMount } from "svelte";
   import { Plus } from "lucide-svelte";
 
+  import { flip } from "svelte/animate";
+  import type { DndEvent } from "svelte-dnd-action";
+  import { dragHandleZone } from "svelte-dnd-action";
+
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { recentSessions } from "$lib/stores/recentSessions.store";
@@ -30,9 +34,11 @@
   import AddExerciseDialog from "./AddExerciseDialog.svelte";
   import SwipeRevealRow from "./SwipeRevealRow.svelte";
   import EditSetDialog from "./EditSetDialog.svelte";
+
   import { keyboard } from "$lib/stores/keybaord.store";
   import { formatShortDate } from "$lib/utils";
   import { getSessionDate } from "$lib/domain/sessions/sessionDates";
+  import { reorderSetsInExercise } from "$lib/domain/workout/reorderSets";
 
   onMount(() => {
     setTypesStore.load();
@@ -214,12 +220,11 @@
     ui.finishing = true;
     ui.error = null;
 
-    // this prevents the flash when currentSession is cleared
     currentSession.beginTransition();
 
     try {
       await goto("/");
-      await currentSession.finish(); // will clear session/draft
+      await currentSession.finish();
       void recentSessions.refresh(5);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to finish workout";
@@ -235,6 +240,31 @@
       ? "Follow the plan and log your sets."
       : "Log sets as you go.",
   );
+
+  const flipDurationMs = 150;
+
+  function applySetOrder(exerciseEntryId: string, e: CustomEvent<DndEvent>) {
+    const s = getSessionOrNull();
+    if (!s) return null;
+
+    const nextSets = e.detail.items as SetEntry[];
+    return reorderSetsInExercise(s, exerciseEntryId, nextSets);
+  }
+
+  function onSetsConsider(exerciseEntryId: string, e: CustomEvent<DndEvent>) {
+    const next = applySetOrder(exerciseEntryId, e);
+    if (!next) return;
+    currentSession.setSession(next);
+  }
+
+  async function onSetsFinalize(
+    exerciseEntryId: string,
+    e: CustomEvent<DndEvent>,
+  ) {
+    const next = applySetOrder(exerciseEntryId, e);
+    if (!next) return;
+    await persistDraft(next);
+  }
 </script>
 
 <div class="p-1 flex flex-col gap-3 pb-40">
@@ -266,25 +296,47 @@
             <SetsTableHeader />
           {/if}
 
-          <div class="flex flex-col gap-2">
-            {#each [...ex.sets].sort(sortByOrderIndex) as set (set.id)}
-              <SwipeRevealRow
-                disabled={ui.saving || ui.finishing}
-                actionsWidth={80}
-                onDelete={() => onDeleteSet(ex.id, set.id)}
-                onEdit={() => openEditSetDialog(ex.id, set.id)}
-              >
-                <SetRow
-                  setType={set.orderIndex}
-                  reps={set.reps}
-                  weight={set.weight}
-                  completed={set.completed ?? false}
-                  onCompletedChange={(v) => setCompleted(ex.id, set.id, v)}
+          <div
+            class="
+    flex flex-col gap-2
+    outline-none
+    focus:outline-none
+    focus-visible:outline-none
+    select-none
+  "
+            use:dragHandleZone={{
+              items: ex.sets,
+              flipDurationMs,
+              dragDisabled: ui.saving || ui.finishing,
+              dropTargetStyle: {},
+            }}
+            onconsider={(e) =>
+              onSetsConsider(ex.id, e as CustomEvent<DndEvent>)}
+            onfinalize={(e) =>
+              void onSetsFinalize(ex.id, e as CustomEvent<DndEvent>)}
+          >
+            {#each ex.sets as set (set.id)}
+              <div animate:flip={{ duration: flipDurationMs }}>
+                <SwipeRevealRow
                   disabled={ui.saving || ui.finishing}
-                  onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
-                  onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}
-                />
-              </SwipeRevealRow>
+                  actionsWidth={80}
+                  onDelete={() => onDeleteSet(ex.id, set.id)}
+                  onEdit={() => openEditSetDialog(ex.id, set.id)}
+                >
+                  <SetRow
+                    setType={set.orderIndex}
+                    reps={set.reps}
+                    weight={set.weight}
+                    completed={set.completed ?? false}
+                    onCompletedChange={(v: boolean) =>
+                      setCompleted(ex.id, set.id, v)}
+                    disabled={ui.saving || ui.finishing}
+                    onRepsChange={(r: number) => onRepsChange(ex.id, set.id, r)}
+                    onWeightChange={(w: number) =>
+                      onWeightChange(ex.id, set.id, w)}
+                  />
+                </SwipeRevealRow>
+              </div>
             {/each}
           </div>
 
@@ -302,7 +354,7 @@
     initial={getEditableSet()}
     setTypeOptions={$setTypesStore.options}
     setTypeLoading={$setTypesStore.loading}
-    onOpenChange={(v) => (editSetUi.open = v)}
+    onOpenChange={(v: boolean) => (editSetUi.open = v)}
     onSave={saveSetPatch}
   />
 
