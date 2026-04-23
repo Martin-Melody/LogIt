@@ -56,9 +56,10 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
           await db.run(
             `
             INSERT INTO session_sets(
-              id, exercise_entry_id, order_index, set_type, reps, weight, note
+              id, exercise_entry_id, order_index, set_type, reps, weight, note,
+              completed, rest_duration_ms, rest_started_at_ms
             )
-            VALUES(?, ?, ?, ?, ?, ?, ?)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
               set.id,
@@ -68,6 +69,9 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
               set.reps,
               set.weight,
               set.note ?? null,
+              set.completed ? 1 : 0,
+              set.restDurationMs ?? null,
+              set.restStartedAtMs ?? null,
             ],
           );
         }
@@ -98,7 +102,8 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       for (const ex of (exRes.values ?? []) as any[]) {
         const setsRes = await db.query(
           `
-          SELECT id, order_index as orderIndex, set_type as setType, reps, weight, note
+          SELECT id, order_index as orderIndex, set_type as setType, reps, weight, note,
+                 completed, rest_duration_ms as restDurationMs, rest_started_at_ms as restStartedAtMs
           FROM session_sets
           WHERE exercise_entry_id = ?
           ORDER BY order_index ASC
@@ -106,12 +111,19 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
           [ex.id],
         );
 
+        const sets = ((setsRes.values ?? []) as any[]).map((s) => ({
+          ...s,
+          completed: !!s.completed,
+          restDurationMs: s.restDurationMs ?? undefined,
+          restStartedAtMs: s.restStartedAtMs ?? null,
+        }));
+
         exercises.push({
           id: ex.id,
           exerciseId: ex.exerciseId ?? undefined,
           exerciseName: ex.exerciseName,
           orderIndex: ex.orderIndex,
-          sets: (setsRes.values ?? []) as any[],
+          sets,
         });
       }
 
@@ -129,7 +141,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       const db = getDb();
       const limit = options.limit;
 
-      const res = await db.query(
+      const sessionRes = await db.query(
         `
         SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs
         FROM sessions
@@ -140,11 +152,75 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         [limit],
       );
 
-      return ((res.values ?? []) as any[]).map((r) => ({
+      const sessionRows = (sessionRes.values ?? []) as any[];
+      if (sessionRows.length === 0) return [];
+
+      const sessionIds = sessionRows.map((r) => r.id as string);
+      const sessionPlaceholders = sessionIds.map(() => "?").join(",");
+
+      const exRes = await db.query(
+        `
+        SELECT id, session_id as sessionId, order_index as orderIndex,
+               exercise_id as exerciseId, exercise_name as exerciseName
+        FROM session_exercises
+        WHERE session_id IN (${sessionPlaceholders})
+        ORDER BY session_id, order_index ASC
+        `,
+        sessionIds,
+      );
+
+      const exRows = (exRes.values ?? []) as any[];
+      const exIds = exRows.map((r) => r.id as string);
+
+      let setRows: any[] = [];
+      if (exIds.length > 0) {
+        const setPlaceholders = exIds.map(() => "?").join(",");
+        const setRes = await db.query(
+          `
+          SELECT id, exercise_entry_id as exerciseEntryId, order_index as orderIndex,
+                 set_type as setType, reps, weight, note,
+                 completed, rest_duration_ms as restDurationMs, rest_started_at_ms as restStartedAtMs
+          FROM session_sets
+          WHERE exercise_entry_id IN (${setPlaceholders})
+          ORDER BY exercise_entry_id, order_index ASC
+          `,
+          exIds,
+        );
+        setRows = ((setRes.values ?? []) as any[]).map((s) => ({
+          ...s,
+          completed: !!s.completed,
+          restDurationMs: s.restDurationMs ?? undefined,
+          restStartedAtMs: s.restStartedAtMs ?? null,
+        }));
+      }
+
+      // Index sets by exerciseEntryId
+      const setsByExId = new Map<string, any[]>();
+      for (const set of setRows) {
+        const list = setsByExId.get(set.exerciseEntryId) ?? [];
+        list.push(set);
+        setsByExId.set(set.exerciseEntryId, list);
+      }
+
+      // Index exercises by sessionId
+      const exBySessionId = new Map<string, any[]>();
+      for (const ex of exRows) {
+        const list = exBySessionId.get(ex.sessionId) ?? [];
+        list.push({
+          id: ex.id,
+          exerciseId: ex.exerciseId ?? undefined,
+          exerciseName: ex.exerciseName,
+          orderIndex: ex.orderIndex,
+          sets: setsByExId.get(ex.id) ?? [],
+        });
+        exBySessionId.set(ex.sessionId, list);
+      }
+
+      return sessionRows.map((r) => ({
         id: r.id,
         startedAtMs: r.startedAtMs,
         endedAtMs: r.endedAtMs ?? undefined,
-        exercises: [],
+        exercises: exBySessionId.get(r.id) ?? [],
       }));
     },
 

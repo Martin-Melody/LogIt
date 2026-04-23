@@ -1,50 +1,28 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
+  import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
 
   const props = $props<{
     open?: boolean;
     saving?: boolean;
     onOpenChange?: (v: boolean) => void;
-    onSubmit?: (name: string) => void | Promise<void>;
+    onSubmit?: (selection: { name: string; exerciseId?: string }) => void | Promise<void>;
   }>();
 
   const saving = props.saving ?? false;
   const onOpenChange = props.onOpenChange ?? ((_v: boolean) => {});
-  const onSubmit = props.onSubmit ?? (async (_name: string) => {});
-
-  const ui = $state({
-    name: "",
-    error: null as string | null,
-  });
-
-  let inputEl = $state<HTMLInputElement | null>(null);
+  const onSubmit = props.onSubmit ?? (async (_s: { name: string; exerciseId?: string }) => {});
 
   $effect(() => {
-    if (props.open) {
-      ui.name = "";
-      ui.error = null;
-      queueMicrotask(() => inputEl?.focus());
-    }
+    if (!props.open) searchInput?.clear();
   });
 
-  async function submit() {
-    const name = ui.name.trim();
-    if (!name) {
-      ui.error = "Please enter an exercise name.";
-      return;
-    }
+  let searchInput = $state<ReturnType<typeof ExerciseSearchInput> | null>(null);
 
-    ui.error = null;
-    await onSubmit(name);
+  async function handleConfirm(selection: { name: string; exerciseId?: string }) {
+    await onSubmit(selection);
     onOpenChange(false);
-  }
-
-  function onKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter") void submit();
-    if (e.key === "Escape") onOpenChange(false);
   }
 </script>
 
@@ -53,28 +31,17 @@
     <Dialog.Header>
       <Dialog.Title>Add exercise</Dialog.Title>
       <Dialog.Description>
-        Type a name like “Bench Press” or “Lat Pulldown”.
+        Search your library or type a new name.
       </Dialog.Description>
     </Dialog.Header>
 
-    <div class="grid gap-3">
-      <div class="grid gap-2">
-        <Label for="exercise-name">Exercise name</Label>
-
-        <Input
-          id="exercise-name"
-          bind:ref={inputEl}
-          bind:value={ui.name}
-          disabled={saving}
-          onkeydown={onKeydown}
-          placeholder="e.g. Bench Press"
-        />
-
-        {#if ui.error}
-          <p class="text-sm text-destructive">{ui.error}</p>
-        {/if}
-      </div>
-    </div>
+    <ExerciseSearchInput
+      bind:this={searchInput}
+      placeholder="e.g. Bench Press"
+      disabled={saving}
+      autofocus={props.open}
+      onConfirm={handleConfirm}
+    />
 
     <Dialog.Footer>
       <Button
@@ -84,7 +51,6 @@
       >
         Cancel
       </Button>
-      <Button onclick={() => void submit()} disabled={saving}>Add</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

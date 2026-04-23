@@ -17,28 +17,35 @@ export async function appInit(): Promise<void> {
 
   console.log("[appInit] starting");
 
-  // ---- storage init ----
-  await initRepos();
-  console.log("[appInit] storage initialized");
-
-  // ---- hydrate stores ----
-  await recentSessions.refresh(5);
-  await splits.refresh({ limit: 20 });
-  await activeSplit.load();
-  console.log("[appInit] stores hydrated");
-
-  // ---- Keyboard Setup ----
   try {
-    await setupKeyboard();
-    console.log("[appInit] keyboard configured");
-  } catch (e) {
-    console.warn("[appInit] keyboard setup failed (continuing)", e);
+    // ---- storage init ----
+    await initRepos();
+    console.log("[appInit] storage initialized");
+
+    // ---- hydrate stores ----
+    await recentSessions.refresh(5);
+    await splits.refresh({ limit: 20 });
+    await activeSplit.load();
+    console.log("[appInit] stores hydrated");
+
+    // ---- Keyboard Setup ----
+    try {
+      await setupKeyboard();
+      console.log("[appInit] keyboard configured");
+    } catch (e) {
+      console.warn("[appInit] keyboard setup failed (continuing)", e);
+    }
+
+    // ---- restore draft session ----
+    await currentSession.loadDraft();
+    console.log("[appInit] draft restore checked");
+  } catch (error) {
+    console.error(
+      "[appInit] startup failed, continuing with a minimal shell",
+      error,
+    );
+  } finally {
+    appReady.set(true);
+    console.log("[appInit] complete");
   }
-
-  // ---- restore draft session ----
-  await currentSession.loadDraft();
-  console.log("[appInit] draft restore checked");
-
-  appReady.set(true);
-  console.log("[appInit] complete");
 }

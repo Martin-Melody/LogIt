@@ -1,6 +1,6 @@
 @import "tailwindcss";
-
 @import "tw-animate-css";
+@import "driver.js/dist/driver.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -28,7 +28,7 @@ body {
   --font-sans:
     "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
-  --radius: 0.625rem;
+  --radius: 0.25rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -143,43 +143,6 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none !important;
-  }
-}
-
-::view-transition-old(root) {
-  animation: page-out 220ms ease;
-}
-
-::view-transition-new(root) {
-  animation: page-in 220ms ease;
-}
-
-@keyframes page-out {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-12px);
-    opacity: 0;
-  }
-}
-
-@keyframes page-in {
-  from {
-    transform: translateX(12px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
 main {
   view-transition-name: page;
 }
@@ -189,44 +152,33 @@ footer {
   view-transition-name: none;
 }
 
+/* Disable root-level transitions — only animate the page element */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
 }
 
 ::view-transition-old(page) {
-  animation: page-out 220ms ease both;
+  animation: page-out 160ms ease both;
 }
 
 ::view-transition-new(page) {
-  animation: page-in 220ms ease both;
+  animation: page-in 160ms ease both;
+}
+
+@keyframes page-out {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(-10px); opacity: 0; }
+}
+
+@keyframes page-in {
+  from { transform: translateX(10px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(page),
   ::view-transition-new(page) {
     animation: none !important;
-  }
-}
-
-@keyframes page-out {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-12px);
-    opacity: 0;
-  }
-}
-
-@keyframes page-in {
-  from {
-    transform: translateX(12px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
   }
 }

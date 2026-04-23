@@ -1,19 +1,16 @@
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
-  import { Button } from "$lib/components/ui/button";
-
-  export let onAddExercise: () => void | Promise<void> = () => {};
+  const { onAddExercise = () => {} } = $props<{
+    onAddExercise?: () => void | Promise<void>;
+  }>();
 </script>
 
-<Card.Root class="w-full">
-  <Card.Header>
-    <Card.Title>No exercises yet</Card.Title>
-    <Card.Description
-      >Add your first exercise to begin logging.</Card.Description
-    >
-  </Card.Header>
-
-  <Card.Content>
-    <Button onclick={() => void onAddExercise()}>Add exercise</Button>
-  </Card.Content>
-</Card.Root>
+<div class="flex flex-col items-center gap-3 py-10 text-center px-3">
+  <p class="text-sm text-muted-foreground">No exercises yet.</p>
+  <button
+    type="button"
+    class="text-sm font-medium underline-offset-2 hover:underline"
+    onclick={() => void onAddExercise()}
+  >
+    Add first exercise
+  </button>
+</div>

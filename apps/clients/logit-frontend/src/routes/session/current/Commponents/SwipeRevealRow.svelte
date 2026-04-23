@@ -48,7 +48,7 @@
   }
 </script>
 
-<div class="relative overflow-hidden rounded-md">
+<div class="relative overflow-hidden">
   <!-- Back layer: actions -->
   <div class="absolute inset-0 flex justify-end items-stretch">
     <div class="flex h-full">

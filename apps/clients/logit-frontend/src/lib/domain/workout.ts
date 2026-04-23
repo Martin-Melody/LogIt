@@ -1,6 +1,8 @@
 import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
 
+export const DEFAULT_REST_MS = 90_000;
+
 export type SetType = "normal" | "warmup" | "dropset" | "amrap" | "failure";
 
 export type SetEntry = {
@@ -10,6 +12,9 @@ export type SetEntry = {
   weight: number;
   note?: string | null;
   orderIndex: number;
+  completed?: boolean;
+  restDurationMs?: number;
+  restStartedAtMs?: number | null;
 };
 
 export type ExerciseEntry = {
@@ -98,7 +103,7 @@ export function updateSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
-  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
+  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs">>,
 ): WorkoutSession {
   return updateExercise(session, exerciseEntryId, (exercise) => {
     const sets = exercise.sets.map((s) =>

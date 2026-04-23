@@ -1,19 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
-
-  import * as Card from "$lib/components/ui/card";
-  import { Button } from "$lib/components/ui/button";
+  import { back } from "$lib/navigation";
 
   import type { WorkoutSession } from "$lib/domain/workout";
-  import { getTopSetHighlight } from "$lib/domain/workout";
   import { durationMs, formatDuration } from "$lib/domain/time";
   import { getSession } from "$lib/usecases/getSession";
-  import { Trash } from "lucide-svelte";
   import { deleteSession } from "$lib/usecases/deleteSession";
+  import { Trash, ArrowLeft } from "lucide-svelte";
+  import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
 
   const props = $props<{ params: { id: string } }>();
+  const id = $derived(props.params.id);
 
   const state = $state({
     loading: true,
@@ -22,77 +20,43 @@
     deleting: false,
   });
 
-  function dateLabelFromMs(ms: number): string {
+  function longDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, {
-      weekday: "long",
+      weekday: "short",
       day: "2-digit",
-      month: "long",
+      month: "short",
       year: "numeric",
     });
   }
 
-  async function deleteThisSession() {
-    if (!id) return;
-
-    state.deleting = true;
-    state.error = null;
-
-    try {
-      await deleteSession(id);
-
-      back();
-    } catch (e) {
-      state.error = e instanceof Error ? e.message : "Failed to delete session";
-    } finally {
-      state.deleting = false;
-    }
-  }
-
-  function sortByOrderIndex(
-    a: { orderIndex: number },
-    b: { orderIndex: number },
-  ) {
+  function sortByOrder(a: { orderIndex: number }, b: { orderIndex: number }) {
     return a.orderIndex - b.orderIndex;
   }
 
-  function countSets(session: WorkoutSession): number {
-    return session.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
+  function countSets(s: WorkoutSession): number {
+    return s.exercises.reduce((n, ex) => n + ex.sets.length, 0);
   }
 
-  function totalVolumeKg(session: WorkoutSession): number {
-    let total = 0;
-    for (const ex of session.exercises) {
-      for (const s of ex.sets) {
-        const reps = Number.isFinite(s.reps) ? s.reps : 0;
-        const weight = Number.isFinite(s.weight) ? s.weight : 0;
-        total += reps * weight;
-      }
-    }
-    return total;
+  function totalVolume(s: WorkoutSession): number {
+    let v = 0;
+    for (const ex of s.exercises)
+      for (const set of ex.sets)
+        v += (Number.isFinite(set.reps) ? set.reps : 0) * (Number.isFinite(set.weight) ? set.weight : 0);
+    return v;
   }
 
-  const id = $derived(props.params.id);
-
-  const ended = $derived(
-    state.session?.endedAtMs ?? state.session?.startedAtMs ?? null,
-  );
+  const ended = $derived(state.session?.endedAtMs ?? state.session?.startedAtMs ?? null);
 
   const durationLabel = $derived(
     state.session?.endedAtMs && state.session?.startedAtMs
-      ? formatDuration(
-          durationMs(state.session.startedAtMs, state.session.endedAtMs),
-        )
-      : "—",
-  );
-
-  const top = $derived(
-    state.session ? getTopSetHighlight(state.session) : null,
+      ? formatDuration(durationMs(state.session.startedAtMs, state.session.endedAtMs))
+      : null,
   );
 
   async function load() {
+    state.loading = true;
+    state.error = null;
     try {
-      state.loading = true;
-      state.error = null;
       state.session = await getSession(id);
     } catch (e) {
       state.error = e instanceof Error ? e.message : "Failed to load session";
@@ -102,129 +66,115 @@
     }
   }
 
-  onMount(() => {
-    void load();
-  });
-
-  $effect(() => {
-    id;
-    void load();
-  });
-
-  function back() {
-    void goto("/sessions");
+  async function deleteThisSession() {
+    if (!id) return;
+    state.deleting = true;
+    state.error = null;
+    try {
+      await deleteSession(id);
+      back("/sessions");
+    } catch (e) {
+      state.error = e instanceof Error ? e.message : "Failed to delete session";
+    } finally {
+      state.deleting = false;
+    }
   }
+
+  onMount(() => { void load(); });
+  $effect(() => { id; void load(); });
 </script>
 
-<div class="p-3 flex flex-col gap-3 pb-24">
-  <Card.Root class="w-full">
-    <Card.Header class="flex justify-between">
-      <div>
-        <Card.Title>Session</Card.Title>
-        <Card.Description>
-          {state.session && ended ? dateLabelFromMs(ended) : ""}
-        </Card.Description>
-      </div>
-      <div>
-        <ConfirmDialog
-          title="Delete this session?"
-          description="This will permanently delete the session. This action cannot be undone."
-          confirmLabel="Delete session"
-          cancelLabel="Cancel"
-          saving={state.deleting}
-          onConfirm={deleteThisSession}
-        >
-          <Button
-            variant="destructive"
-            size="icon"
-            disabled={state.loading || !state.session || state.deleting}
-            aria-label="Delete session"
-          >
-            <Trash />
-          </Button>
-        </ConfirmDialog>
-      </div>
-    </Card.Header>
+<div class="flex flex-col pb-24">
+  <!-- Header -->
+  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/sessions")}>
+      <ArrowLeft class="h-4 w-4" />
+    </Button>
 
-    <Card.Content class="flex flex-col gap-3">
-      {#if state.loading}
-        <p class="text-sm text-muted-foreground">Loading…</p>
-      {:else if state.error}
-        <p class="text-sm text-destructive">{state.error}</p>
-      {:else if !state.session}
-        <p class="text-sm text-muted-foreground">Session not found.</p>
-      {:else}
-        <!-- Summary / highlights -->
-        <div class="rounded-lg border p-3 flex flex-col gap-2">
-          <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            <span class="text-muted-foreground">Duration:</span>
-            <span>{durationLabel}</span>
+    <div class="flex-1 min-w-0">
+      <span class="text-sm font-semibold">
+        {ended ? longDate(ended) : "Session"}
+      </span>
+    </div>
 
-            <span class="text-muted-foreground">Exercises:</span>
-            <span>{state.session.exercises.length}</span>
+    <ConfirmDialog
+      title="Delete this session?"
+      description="Permanently removes this session. Cannot be undone."
+      confirmLabel="Delete"
+      cancelLabel="Cancel"
+      saving={state.deleting}
+      onConfirm={deleteThisSession}
+    >
+      <Button
+        variant="ghost"
+        size="icon"
+        class="h-7 w-7 text-muted-foreground hover:text-destructive"
+        disabled={state.loading || !state.session || state.deleting}
+        aria-label="Delete session"
+      >
+        <Trash class="h-3.5 w-3.5" />
+      </Button>
+    </ConfirmDialog>
+  </div>
 
-            <span class="text-muted-foreground">Sets:</span>
-            <span>{countSets(state.session)}</span>
-          </div>
+  {#if state.error}
+    <p class="px-3 py-2 text-sm text-destructive border-b border-border">{state.error}</p>
+  {/if}
 
-          <div class="flex flex-wrap gap-2 text-sm">
-            <span class="text-muted-foreground">Top set:</span>
-            <span>
-              {#if top}
-                {top.exerciseName} — {top.reps}×{top.weight}kg
-              {:else}
-                —
-              {/if}
-            </span>
-          </div>
+  {#if state.loading}
+    <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
+  {:else if !state.session}
+    <p class="px-3 py-4 text-sm text-muted-foreground">Session not found.</p>
+  {:else}
+    <!-- Stats strip -->
+    <div class="flex items-center gap-3 px-3 py-2 border-b border-border text-xs text-muted-foreground flex-wrap">
+      {#if durationLabel}
+        <span>{durationLabel}</span>
+        <span>·</span>
+      {/if}
+      <span>{state.session.exercises.length} exercise{state.session.exercises.length === 1 ? "" : "s"}</span>
+      <span>·</span>
+      <span>{countSets(state.session)} sets</span>
+      <span>·</span>
+      <span>{totalVolume(state.session).toLocaleString()} kg</span>
+    </div>
 
-          <div class="flex flex-wrap gap-2 text-sm">
-            <span class="text-muted-foreground">Total volume:</span>
-            <span>{totalVolumeKg(state.session).toLocaleString()} kg</span>
-          </div>
+    <!-- Exercises -->
+    {#if state.session.exercises.length === 0}
+      <p class="px-3 py-6 text-sm text-muted-foreground text-center">No exercises recorded.</p>
+    {:else}
+      {#each [...state.session.exercises].sort(sortByOrder) as ex (ex.id)}
+        <!-- Exercise section header -->
+        <div class="border-t border-border bg-muted/20 px-3 py-2 flex items-center justify-between gap-3">
+          <span class="text-sm font-semibold truncate">{ex.exerciseName}</span>
+          <span class="text-xs text-muted-foreground shrink-0">
+            {ex.sets.length} set{ex.sets.length === 1 ? "" : "s"}
+          </span>
         </div>
 
-        <!-- Workout details (read-only) -->
-        {#if state.session.exercises.length === 0}
-          <p class="text-sm text-muted-foreground">No exercises recorded.</p>
-        {:else}
-          <div class="flex flex-col gap-2">
-            {#each [...state.session.exercises].sort(sortByOrderIndex) as ex (ex.id)}
-              <div class="rounded-lg border p-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium truncate">
-                      {ex.exerciseName}
-                    </p>
-                    <p class="text-xs text-muted-foreground">
-                      {ex.sets.length} set{ex.sets.length === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                </div>
-
-                {#if ex.sets.length > 0}
-                  <div class="mt-3 flex flex-col gap-2">
-                    {#each [...ex.sets].sort(sortByOrderIndex) as set, i (set.id)}
-                      <div class="flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">
-                          Set {i + 1}{set.setType ? ` · ${set.setType}` : ""}
-                        </span>
-                        <span>{set.reps}×{set.weight}kg</span>
-                      </div>
-                    {/each}
-                  </div>
-                {:else}
-                  <p class="mt-2 text-sm text-muted-foreground">No sets.</p>
-                {/if}
-              </div>
-            {/each}
+        {#if ex.sets.length > 0}
+          <!-- Column headers -->
+          <div class="grid grid-cols-[2rem_1fr_1fr] gap-2 px-3 py-1 text-xs text-muted-foreground border-b border-border">
+            <span>#</span>
+            <span>Reps</span>
+            <span>Weight</span>
           </div>
-        {/if}
-      {/if}
-    </Card.Content>
 
-    <Card.Footer class="pt-2 flex gap-2">
-      <Button variant="outline" onclick={back}>Back</Button>
-    </Card.Footer>
-  </Card.Root>
+          {#each [...ex.sets].sort(sortByOrder) as set, i (set.id)}
+            <div class="grid grid-cols-[2rem_1fr_1fr] gap-2 items-center px-3 py-1.5 border-b border-border/50">
+              <span class="text-xs text-muted-foreground">
+                {#if set.setType && set.setType !== "normal"}
+                  <span class="font-medium text-foreground">{set.setType.slice(0, 1).toUpperCase()}</span>
+                {:else}
+                  {i + 1}
+                {/if}
+              </span>
+              <span class="text-sm tabular-nums">{set.reps}</span>
+              <span class="text-sm tabular-nums">{set.weight} kg</span>
+            </div>
+          {/each}
+        {/if}
+      {/each}
+    {/if}
+  {/if}
 </div>

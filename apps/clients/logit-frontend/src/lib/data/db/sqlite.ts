@@ -151,8 +151,24 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       ON exercises(name COLLATE NOCASE);
   `);
 
+  await migrateSessionSets(db);
   await seedSetTypes(db);
   await seedExercises(db);
+}
+
+async function migrateSessionSets(db: SQLiteDBConnection): Promise<void> {
+  const additions = [
+    "ALTER TABLE session_sets ADD COLUMN completed INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE session_sets ADD COLUMN rest_duration_ms INTEGER NULL",
+    "ALTER TABLE session_sets ADD COLUMN rest_started_at_ms INTEGER NULL",
+  ];
+  for (const sql of additions) {
+    try {
+      await db.run(sql, []);
+    } catch {
+      // Column already exists — safe to ignore
+    }
+  }
 }
 
 async function seedSetTypes(db: SQLiteDBConnection): Promise<void> {

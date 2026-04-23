@@ -12,6 +12,7 @@
     <li>
       <a
         href="/sessions"
+        data-tour="nav-sessions"
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
         class:text-primary={isActive("/sessions")}
         class:text-muted-foreground={!isActive("/sessions")}
@@ -25,6 +26,7 @@
     <li>
       <a
         href="/splits"
+        data-tour="nav-splits"
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
         class:text-primary={isActive("/splits")}
         class:text-muted-foreground={!isActive("/splits")}
@@ -41,6 +43,7 @@
     <li>
       <a
         href="/"
+        data-tour="nav-home"
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
         class:text-primary={isActive("/")}
         class:text-muted-foreground={!isActive("/")}
@@ -54,6 +57,7 @@
     <li>
       <a
         href="/progress"
+        data-tour="nav-progress"
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
         class:text-primary={isActive("/progress")}
         class:text-muted-foreground={!isActive("/progress")}
@@ -70,6 +74,7 @@
     <li>
       <a
         href="/profile"
+        data-tour="nav-profile"
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
         class:text-primary={isActive("/profile")}
         class:text-muted-foreground={!isActive("/profile")}
