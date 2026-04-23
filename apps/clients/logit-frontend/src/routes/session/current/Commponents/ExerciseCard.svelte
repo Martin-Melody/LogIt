@@ -1,13 +1,14 @@
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
-  import { Plus, Pencil, Check, X, Trash2 } from "lucide-svelte";
+  import { Plus, X, Check, Trash2 } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import type { ProgressionOutput, SuggestedSet } from "$lib/domain/progression";
 
   const {
     exerciseName = "",
     setCount = 0,
     saving = false,
+    suggestion = null,
     onAddSet = () => {},
     onRename = () => {},
     onDelete = () => {},
@@ -16,22 +17,34 @@
     exerciseName?: string;
     setCount?: number;
     saving?: boolean;
+    suggestion?: ProgressionOutput | null;
     onAddSet?: () => void | Promise<void>;
     onRename?: (nextName: string) => void | Promise<void>;
     onDelete?: () => void | Promise<void>;
-    children?: () => unknown;
+    children?: import("svelte").Snippet;
   }>();
 
-  const ui = $state({
-    editing: false,
-    draftName: "",
-  });
+  function formatReps(reps: SuggestedSet["reps"]): string {
+    return Array.isArray(reps) ? `${reps[0]}–${reps[1]}` : String(reps);
+  }
 
+  function formatTarget(s: ProgressionOutput): string {
+    const { sets } = s;
+    if (sets.length === 0) return s.label ?? "";
+    const first = sets[0];
+    const allSame = sets.every(
+      (x) => x.weight === first.weight && JSON.stringify(x.reps) === JSON.stringify(first.reps),
+    );
+    const setsStr = allSame
+      ? `${sets.length}×${formatReps(first.reps)} @ ${first.weight}kg`
+      : sets.map((x) => `${formatReps(x.reps)}@${x.weight}kg`).join(", ");
+    return s.label ? `${setsStr} · ${s.label}` : setsStr;
+  }
+
+  const ui = $state({ editing: false, draftName: "" });
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  $effect(() => {
-    if (ui.editing) inputEl?.focus();
-  });
+  $effect(() => { if (ui.editing) inputEl?.focus(); });
 
   function startEdit() {
     ui.draftName = exerciseName;
@@ -41,7 +54,6 @@
   async function commit() {
     const next = ui.draftName.trim();
     ui.editing = false;
-
     if (!next || next === exerciseName) return;
     await onRename(next);
   }
@@ -50,100 +62,79 @@
     ui.editing = false;
     ui.draftName = exerciseName;
   }
-
-  function onKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter") void commit();
-    if (e.key === "Escape") cancel();
-  }
 </script>
 
-<Card.Root class="w-full">
-  <Card.Header class="pb-2">
-    <div class="flex items-start justify-between gap-3">
-      <div class="min-w-0 flex-1">
-        {#if ui.editing}
-          <div class="flex items-center gap-2">
-            <input
-              bind:this={inputEl}
-              class="w-full min-w-0 rounded border bg-background px-2 py-1 text-sm"
-              value={ui.draftName}
-              disabled={saving}
-              oninput={(e) =>
-                (ui.draftName = (e.currentTarget as HTMLInputElement).value)}
-              onkeydown={onKeydown}
-              onblur={() => void commit()}
-            />
+<!-- Exercise section header -->
+<div class="border-t border-border bg-muted/20" data-tour="session-exercise-header">
+  <div class="flex items-center gap-2 px-3 py-2">
+    {#if ui.editing}
+      <input
+        bind:this={inputEl}
+        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
+        bind:value={ui.draftName}
+        disabled={saving}
+        onkeydown={(e) => {
+          if (e.key === "Enter") void commit();
+          if (e.key === "Escape") cancel();
+        }}
+        onblur={() => void commit()}
+      />
+      <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={cancel}>
+        <X class="h-3.5 w-3.5" />
+      </Button>
+      <Button size="icon" class="h-7 w-7 shrink-0" onclick={() => void commit()}>
+        <Check class="h-3.5 w-3.5" />
+      </Button>
+    {:else}
+      <button
+        type="button"
+        class="flex-1 min-w-0 text-left"
+        onclick={startEdit}
+        disabled={saving}
+      >
+        <span class="text-sm font-semibold truncate block">{exerciseName}</span>
+      </button>
 
-            <Button
-              size="icon"
-              variant="outline"
-              onclick={() => void commit()}
-              disabled={saving}
-            >
-              <Check />
-            </Button>
-            <Button
-              size="icon"
-              variant="outline"
-              onclick={cancel}
-              disabled={saving}
-            >
-              <X />
-            </Button>
-          </div>
-        {:else}
-          <div class="flex items-center gap-1">
-            <Card.Title class="text-base truncate">{exerciseName}</Card.Title>
+      <span class="text-xs text-muted-foreground shrink-0">
+        {setCount} set{setCount === 1 ? "" : "s"}
+      </span>
 
-            <Button
-              class="m-0"
-              size="icon"
-              variant="ghost"
-              onclick={startEdit}
-              disabled={saving}
-              aria-label="Rename exercise"
-            >
-              <Pencil class="h-4 w-4" />
-            </Button>
+      <Button
+        size="icon"
+        class="h-7 w-7 shrink-0"
+        onclick={() => void onAddSet()}
+        disabled={saving}
+        aria-label="Add set"
+      >
+        <Plus class="h-3.5 w-3.5" />
+      </Button>
 
-            <ConfirmDialog
-              title="Delete exercise?"
-              description="This will remove the exercise and all its sets from the current session."
-              confirmLabel="Delete"
-              {saving}
-              onConfirm={onDelete}
-            >
-              <Button
-                size="icon"
-                variant="ghost"
-                disabled={saving}
-                aria-label="Delete exercise"
-              >
-                <Trash2 class="h-4 w-4" />
-              </Button>
-            </ConfirmDialog>
-          </div>
-
-          <Card.Description>
-            {setCount} set{setCount === 1 ? "" : "s"}
-          </Card.Description>
-        {/if}
-      </div>
-      <div>
+      <ConfirmDialog
+        title="Remove exercise?"
+        description="Removes this exercise and all its sets from the session."
+        confirmLabel="Remove"
+        {saving}
+        onConfirm={onDelete}
+      >
         <Button
           size="icon"
-          variant="outline"
-          onclick={() => void onAddSet()}
+          variant="ghost"
+          class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
           disabled={saving}
-          aria-label="Add set"
+          aria-label="Delete exercise"
         >
-          <Plus />
+          <Trash2 class="h-3.5 w-3.5" />
         </Button>
-      </div>
-    </div>
-  </Card.Header>
+      </ConfirmDialog>
+    {/if}
+  </div>
 
-  <Card.Content class="pt-2">
-    {@render children?.()}
-  </Card.Content>
-</Card.Root>
+  {#if suggestion && suggestion.sets.length > 0}
+    <p class="px-3 pb-1.5 text-xs text-muted-foreground -mt-1">
+      Target: {formatTarget(suggestion)}
+    </p>
+  {/if}
+</div>
+
+<!-- Sets -->
+{@render children?.()}

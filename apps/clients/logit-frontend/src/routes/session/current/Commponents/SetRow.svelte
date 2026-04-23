@@ -1,45 +1,127 @@
 <script lang="ts">
-  export let setType = "normal";
-  export let reps = 0;
-  export let weight = 0;
-  export let disabled = false;
+  import { Check } from "lucide-svelte";
 
-  export let onRepsChange: (reps: number) => void | Promise<void> = () => {};
-  export let onWeightChange: (
-    weight: number,
-  ) => void | Promise<void> = () => {};
+  const {
+    setNumber = 1,
+    setType = "normal",
+    reps = 0,
+    weight = 0,
+    completed = false,
+    disabled = false,
+    onRepsChange = () => {},
+    onWeightChange = () => {},
+    onComplete = () => {},
+  } = $props<{
+    setNumber?: number;
+    setType?: string;
+    reps?: number;
+    weight?: number;
+    completed?: boolean;
+    disabled?: boolean;
+    onRepsChange?: (reps: number) => void | Promise<void>;
+    onWeightChange?: (weight: number) => void | Promise<void>;
+    onComplete?: () => void | Promise<void>;
+  }>();
+
+  let repsEl = $state<HTMLInputElement | null>(null);
+  let weightEl = $state<HTMLInputElement | null>(null);
 
   function num(value: string) {
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
   }
+
+  function selectAll(e: FocusEvent) {
+    (e.currentTarget as HTMLInputElement).select();
+  }
+
+  function onRepsKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      weightEl?.focus();
+      weightEl?.select();
+    }
+  }
+
+  function onWeightKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      (e.currentTarget as HTMLInputElement).blur();
+    }
+  }
+
+  const typeLabel = $derived(() => {
+    switch (setType) {
+      case "warmup": return "W";
+      case "dropset": return "D";
+      case "amrap": return "A";
+      case "failure": return "F";
+      default: return null;
+    }
+  });
+
+  const repsPlaceholder = $derived(() => {
+    if (setType === "amrap") return "Max";
+    if (setType === "failure") return "Fail";
+    return "0";
+  });
 </script>
 
-<div class="grid grid-cols-12 gap-2 items-center">
-  <div class="col-span-4 text-sm">{setType}</div>
+<div
+  class="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 items-center px-3 py-1.5 transition-opacity {completed
+    ? 'opacity-60'
+    : ''}"
+>
+  <span class="text-xs text-muted-foreground">
+    {#if typeLabel()}
+      <span class="font-semibold text-foreground">{typeLabel()}</span>
+    {:else}
+      {setNumber}
+    {/if}
+  </span>
 
-  <div class="col-span-4">
-    <input
-      class="w-full rounded border bg-background px-2 py-1 text-sm"
-      type="number"
-      min="0"
-      value={reps}
-      {disabled}
-      on:change={(e) =>
-        void onRepsChange(num((e.currentTarget as HTMLInputElement).value))}
-    />
-  </div>
+  <input
+    bind:this={repsEl}
+    class="w-full rounded border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+    type="number"
+    min="0"
+    inputmode="numeric"
+    placeholder={repsPlaceholder()}
+    value={reps}
+    {disabled}
+    onfocus={selectAll}
+    onkeydown={onRepsKeydown}
+    onchange={(e) => void onRepsChange(num((e.currentTarget as HTMLInputElement).value))}
+  />
 
-  <div class="col-span-4">
-    <input
-      class="w-full rounded border bg-background px-2 py-1 text-sm"
-      type="number"
-      min="0"
-      step="0.5"
-      value={weight}
-      {disabled}
-      on:change={(e) =>
-        void onWeightChange(num((e.currentTarget as HTMLInputElement).value))}
-    />
-  </div>
+  <input
+    bind:this={weightEl}
+    class="w-full rounded border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+    type="number"
+    min="0"
+    step="0.5"
+    inputmode="decimal"
+    placeholder="0"
+    value={weight}
+    {disabled}
+    onfocus={selectAll}
+    onkeydown={onWeightKeydown}
+    onchange={(e) => void onWeightChange(num((e.currentTarget as HTMLInputElement).value))}
+  />
+
+  <button
+    type="button"
+    data-tour="session-set-complete"
+    class="h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 justify-self-center
+      {completed
+        ? 'bg-primary border-primary text-primary-foreground'
+        : 'border-muted-foreground/40 hover:border-primary'}"
+    onclick={() => void onComplete()}
+    {disabled}
+    aria-label={completed ? "Mark incomplete" : "Mark complete"}
+  >
+    {#if completed}
+      <Check class="h-3 w-3" />
+    {/if}
+  </button>
 </div>

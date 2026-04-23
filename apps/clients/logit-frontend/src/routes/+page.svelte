@@ -1,82 +1,46 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { currentSession } from "$lib/stores/currentSession.store";
+  import { onMount } from "svelte";
+  import { SlidersHorizontal } from "lucide-svelte";
+  import { Button } from "$lib/components/ui/button";
+  import { homeConfig } from "$lib/stores/homeConfig.store";
+  import { onboarding } from "$lib/stores/onboarding.store";
+  import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
+  import { startHomeTour } from "$lib/tour/index";
 
-  import DailyGreeting from "./components/daily-greeting/DailyGreeting.svelte";
-  import HeroCard from "./components/hero-card/HeroCard.svelte";
-  import RecentSessionsCardContainer from "./components/recent-sessions-card/RecentSessionsCardContainer.svelte";
-  import QuickActionsRow from "./components/quick-actions-row/QuickActionsRow.svelte";
-
-  import { activeSplit } from "$lib/stores/activeSplit.store";
-  import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
-  import TodaysPlanCard from "./components/todays-plan-card/TodaysPlanCard.svelte";
-
-  // runes mode (no $:)
-  const hasDraft = $derived(() => $currentSession !== null);
-  const activeSplitId = $derived(() => $activeSplit?.id ?? null);
-
-  const todayDay = $derived(() =>
-    $activeSplit ? getTodaySplitDay($activeSplit) : null,
+  const activeWidgets = $derived(
+    [...$homeConfig.slots]
+      .filter((s) => s.enabled)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((s) => localWidgetRegistry.get(s.id))
+      .filter((w) => w !== null),
   );
-  const hasPlan = $derived(() => !!todayDay());
 
-  // single guard to avoid double taps + UI flicker
-  let starting = $state(false);
-
-  async function navigateToCurrent() {
-    await goto("/session/current");
-  }
-
-  async function startUnplanned() {
-    if (starting) return;
-    starting = true;
-
-    if (hasDraft()) return navigateToCurrent();
-
-    // navigate first (fast UI), persist in background
-    await navigateToCurrent();
-
-    void currentSession.start();
-  }
-
-  async function startPlanned() {
-    if (starting) return;
-    starting = true;
-
-    if (hasDraft()) return navigateToCurrent();
-
-    const day = todayDay();
-    await navigateToCurrent();
-
-    if (!day) {
-      void currentSession.start();
-      return;
-    }
-
-    void currentSession.startFromSplitDay(day);
-  }
-
-  async function continueWorkout() {
-    if (starting) return;
-    starting = true;
-    await navigateToCurrent();
-  }
+  onMount(() => {
+    // Small delay so widgets render before the tour tries to find them
+    setTimeout(() => {
+      if ($onboarding.completed) startHomeTour();
+    }, 400);
+  });
 </script>
 
-<div class="w-full flex flex-col gap-1 h-full p-3">
-  <DailyGreeting />
+<div class="flex flex-col gap-2 p-3 pb-24">
+  <div class="flex items-center justify-between">
+    <h1 class="text-lg font-semibold">Home</h1>
+    <Button
+      variant="ghost"
+      size="icon"
+      class="h-8 w-8"
+      aria-label="Customise home"
+      data-tour="home-customize"
+      onclick={() => void goto("/home/customize")}
+    >
+      <SlidersHorizontal class="h-4 w-4" />
+    </Button>
+  </div>
 
-  <HeroCard
-    hasDraft={hasDraft()}
-    hasPlan={hasPlan()}
-    onStart={startPlanned}
-    onStartUnplanned={startUnplanned}
-    onContinue={continueWorkout}
-    showPrimaryStart={!hasDraft()}
-  />
-
-  <TodaysPlanCard day={todayDay()} activeSplitId={activeSplitId()} />
-
-  <RecentSessionsCardContainer />
-  <QuickActionsRow />
+  {#each activeWidgets as widget (widget.id)}
+    {@const WidgetComponent = widget.component}
+    <WidgetComponent />
+  {/each}
 </div>

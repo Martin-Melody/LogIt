@@ -1,23 +1,17 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { get } from "svelte/store";
-  import { onMount } from "svelte";
   import { Plus } from "lucide-svelte";
+  import { toast } from "$lib/components/ui/sonner/index";
 
-  import { getWorkoutRepo } from "$lib/data/repoProvider";
+  import { getWorkoutRepo, getExerciseRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { recentSessions } from "$lib/stores/recentSessions.store";
-  import { setTypesStore } from "$lib/stores/setTypeStore";
+  import { getSuggestion, refreshProgressionState } from "$lib/usecases/progression/getSuggestion";
+  import type { ProgressionOutput } from "$lib/domain/progression";
 
   import type { SetEntry, WorkoutSession } from "$lib/domain/workout";
-  import {
-    addExercise,
-    addSet,
-    removeExercise,
-    updateSet,
-    updateExerciseName,
-    removeSet,
-  } from "$lib/domain/workout";
+  import { DEFAULT_REST_MS, addExercise, addSet, removeExercise, updateSet, updateExerciseName, removeSet } from "$lib/domain/workout";
 
   import { Button } from "$lib/components/ui/button/index.js";
 
@@ -30,11 +24,39 @@
   import AddExerciseDialog from "./AddExerciseDialog.svelte";
   import SwipeRevealRow from "./SwipeRevealRow.svelte";
   import EditSetDialog from "./EditSetDialog.svelte";
+  import RestProgressBar from "./RestProgressBar.svelte";
   import { keyboard } from "$lib/stores/keybaord.store";
+  import { startSessionTour } from "$lib/tour/index";
+  import { onMount } from "svelte";
 
   onMount(() => {
-    setTypesStore.load();
+    setTimeout(() => startSessionTour(), 600);
   });
+
+  const suggestions = $state<Record<string, ProgressionOutput | null>>({});
+
+  async function loadSuggestionForExercise(
+    entryId: string,
+    name: string,
+    exerciseId?: string,
+  ) {
+    if (entryId in suggestions) return;
+    suggestions[entryId] = null;
+    try {
+      suggestions[entryId] = await getSuggestion({ id: exerciseId, name });
+    } catch {
+      suggestions[entryId] = null;
+    }
+  }
+
+  $effect(() => {
+    const s = $currentSession;
+    if (!s) return;
+    for (const ex of s.exercises) {
+      void loadSuggestionForExercise(ex.id, ex.exerciseName, ex.exerciseId);
+    }
+  });
+
 
   const ui = $state({
     saving: false,
@@ -49,6 +71,26 @@
   });
 
   const addExerciseUi = $state({ open: false });
+  let finishBarEl = $state<HTMLDivElement | null>(null);
+  let addButtonBottom = $state(0);
+
+  function updateAddButtonOffset() {
+    addButtonBottom = (finishBarEl?.offsetHeight ?? 0) + 12;
+  }
+
+  onMount(() => {
+    updateAddButtonOffset();
+
+    const observer = new ResizeObserver(() => updateAddButtonOffset());
+    if (finishBarEl) observer.observe(finishBarEl);
+
+    window.addEventListener("resize", updateAddButtonOffset);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateAddButtonOffset);
+    };
+  });
 
   function sortByOrderIndex(
     a: { orderIndex: number },
@@ -94,18 +136,30 @@
       weight: set.weight,
       setType: set.setType,
       note: set.note ?? null,
+      restDurationMs: set.restDurationMs ?? DEFAULT_REST_MS,
     };
   }
 
-  async function addExerciseWithName(name: string) {
+  async function addExerciseWithName(selection: { name: string; exerciseId?: string }) {
     const s = getSessionOrNull();
     if (!s) return;
 
-    const trimmed = name.trim();
+    const trimmed = selection.name.trim();
     if (!trimmed) return;
 
-    const updated = addExercise(s, { exerciseName: trimmed });
+    let exerciseId = selection.exerciseId;
+    if (!exerciseId) {
+      const ex = await getExerciseRepo().create(trimmed);
+      exerciseId = ex.id;
+    }
+
+    const updated = addExercise(s, { exerciseName: trimmed, exerciseId });
     await persistDraft(updated);
+
+    const newEntry = updated.exercises[updated.exercises.length - 1];
+    if (newEntry) {
+      void loadSuggestionForExercise(newEntry.id, newEntry.exerciseName, newEntry.exerciseId);
+    }
   }
 
   function onAddExercise() {
@@ -117,7 +171,15 @@
     const s = getSessionOrNull();
     if (!s) return;
 
-    const updated = addSet(s, exerciseEntryId, { reps: 0, weight: 0 });
+    const ex = s.exercises.find((e) => e.id === exerciseEntryId);
+    const suggestion = suggestions[exerciseEntryId];
+    const setIndex = ex?.sets.length ?? 0;
+    const suggestedSet = suggestion?.sets[setIndex] ?? suggestion?.sets[0];
+
+    const updated = addSet(s, exerciseEntryId, {
+      reps: 0,
+      weight: suggestedSet?.weight ?? 0,
+    });
     await persistDraft(updated);
   }
 
@@ -153,7 +215,7 @@
   }
 
   async function saveSetPatch(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
+    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs">>,
   ) {
     const s = getSessionOrNull();
     if (!s) return;
@@ -192,19 +254,113 @@
     await persistDraft(updated);
   }
 
+  function notifId(setId: string): number {
+    let h = 5381;
+    for (let i = 0; i < setId.length; i++) {
+      h = ((h << 5) + h + setId.charCodeAt(i)) & 0x7fffffff;
+    }
+    return h || 1;
+  }
+
+  async function scheduleRestNotification(setId: string, restMs: number) {
+    try {
+      const { LocalNotifications } = await import("@capacitor/local-notifications");
+      const perm = await LocalNotifications.requestPermissions();
+      if (perm.display !== "granted") return;
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: notifId(setId),
+          title: "Rest complete",
+          body: "Time to start your next set!",
+          schedule: { at: new Date(Date.now() + restMs) },
+          smallIcon: "ic_stat_icon_config_sample",
+        }],
+      });
+    } catch {
+      // Silently ignore on web / unsupported platforms
+    }
+  }
+
+  async function cancelRestNotification(setId: string) {
+    try {
+      const { LocalNotifications } = await import("@capacitor/local-notifications");
+      await LocalNotifications.cancel({ notifications: [{ id: notifId(setId) }] });
+    } catch {}
+  }
+
+  async function triggerHaptic() {
+    try {
+      const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+      await Haptics.impact({ style: ImpactStyle.Medium });
+    } catch {}
+  }
+
+  async function onSetCompleted(exerciseEntryId: string, setId: string) {
+    const s = getSessionOrNull();
+    if (!s) return;
+
+    const ex = s.exercises.find((e) => e.id === exerciseEntryId);
+    const set = ex?.sets.find((t) => t.id === setId);
+    if (!set) return;
+
+    const wasCompleted = !!set.completed;
+    const restMs = set.restDurationMs ?? DEFAULT_REST_MS;
+
+    const updated = updateSet(s, exerciseEntryId, setId, {
+      completed: !wasCompleted,
+      restStartedAtMs: !wasCompleted ? Date.now() : null,
+    });
+    await persistDraft(updated);
+
+    if (!wasCompleted) {
+      void triggerHaptic();
+      void scheduleRestNotification(setId, restMs);
+    } else {
+      void cancelRestNotification(setId);
+    }
+  }
+
+  async function handleRestDone(exerciseEntryId: string, setId: string) {
+    void cancelRestNotification(setId);
+    toast("Rest complete — time for your next set!");
+    try {
+      const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } catch {}
+    const s = getSessionOrNull();
+    if (!s) return;
+    const updated = updateSet(s, exerciseEntryId, setId, { restStartedAtMs: null });
+    await persistDraft(updated);
+  }
+
+  async function dismissRest(exerciseEntryId: string, setId: string) {
+    void cancelRestNotification(setId);
+    const s = getSessionOrNull();
+    if (!s) return;
+    const updated = updateSet(s, exerciseEntryId, setId, { restStartedAtMs: null });
+    await persistDraft(updated);
+  }
+
   async function finish() {
     if (ui.finishing) return;
 
     ui.finishing = true;
     ui.error = null;
 
-    // this prevents the flash when currentSession is cleared
+    const sessionSnapshot = getSessionOrNull();
+
     currentSession.beginTransition();
 
     try {
       await goto("/");
-      await currentSession.finish(); // will clear session/draft
+      await currentSession.finish();
       void recentSessions.refresh(5);
+
+      if (sessionSnapshot) {
+        for (const ex of sessionSnapshot.exercises) {
+          void refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName });
+        }
+      }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to finish workout";
       ui.finishing = false;
@@ -213,13 +369,21 @@
   }
 </script>
 
-<div class="p-3 flex flex-col gap-3 pb-40">
+<div
+  class="flex flex-col pb-48"
+  onpointerdown={(e) => {
+    if (!(e.target as HTMLElement).closest("input, textarea")) {
+      const active = document.activeElement as HTMLElement | null;
+      if (active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") {
+        active.blur();
+      }
+    }
+  }}
+>
   <CurrentSessionHeader saving={ui.saving || ui.finishing} error={ui.error} />
 
   {#if !ui.finishing}
-    {#if !$currentSession}
-      <EmptySessionCard {onAddExercise} />
-    {:else if $currentSession.exercises.length === 0}
+    {#if !$currentSession || $currentSession.exercises.length === 0}
       <EmptySessionCard {onAddExercise} />
     {:else}
       {#each [...$currentSession.exercises].sort(sortByOrderIndex) as ex (ex.id)}
@@ -227,16 +391,14 @@
           exerciseName={ex.exerciseName}
           setCount={ex.sets.length}
           saving={ui.saving || ui.finishing}
+          suggestion={suggestions[ex.id] ?? null}
           onAddSet={() => onAddSet(ex.id)}
           onDelete={() => onDeleteExercise(ex.id)}
           onRename={(name) => onRenameExercise(ex.id, name)}
         >
           {#if ex.sets.length > 0}
             <SetsTableHeader />
-          {/if}
-
-          <div class="flex flex-col gap-2">
-            {#each [...ex.sets].sort(sortByOrderIndex) as set (set.id)}
+            {#each [...ex.sets].sort(sortByOrderIndex) as set, i (set.id)}
               <SwipeRevealRow
                 disabled={ui.saving || ui.finishing}
                 actionsWidth={80}
@@ -244,19 +406,35 @@
                 onEdit={() => openEditSetDialog(ex.id, set.id)}
               >
                 <SetRow
+                  setNumber={i + 1}
                   setType={set.setType}
                   reps={set.reps}
                   weight={set.weight}
+                  completed={set.completed ?? false}
                   disabled={ui.saving || ui.finishing}
                   onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
                   onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}
+                  onComplete={() => onSetCompleted(ex.id, set.id)}
                 />
               </SwipeRevealRow>
+              {#if typeof set.restStartedAtMs === "number"}
+                <RestProgressBar
+                  restStartedAtMs={set.restStartedAtMs}
+                  restDurationMs={set.restDurationMs ?? DEFAULT_REST_MS}
+                  onDone={() => handleRestDone(ex.id, set.id)}
+                  onDismiss={() => dismissRest(ex.id, set.id)}
+                />
+              {/if}
             {/each}
-          </div>
-
-          {#if ex.sets.length === 0}
-            <p class="text-sm text-muted-foreground">No sets yet.</p>
+          {:else}
+            <button
+              type="button"
+              class="w-full px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
+              disabled={ui.saving || ui.finishing}
+              onclick={() => onAddSet(ex.id)}
+            >
+              + Add first set
+            </button>
           {/if}
         </ExerciseCard>
       {/each}
@@ -267,8 +445,6 @@
     open={editSetUi.open}
     disabled={ui.saving || ui.finishing}
     initial={getEditableSet()}
-    setTypeOptions={$setTypesStore.options}
-    setTypeLoading={$setTypesStore.loading}
     onOpenChange={(v) => (editSetUi.open = v)}
     onSave={saveSetPatch}
   />
@@ -281,22 +457,26 @@
   />
 
   {#if !ui.finishing && !$keyboard.visible}
-    <div class="fixed left-0 right-0 bottom-35 px-3">
-      <div class="flex justify-end">
-        <Button
-          size="icon"
-          class="rounded-full shadow-lg"
-          disabled={ui.saving || ui.finishing}
-          aria-label="Add exercise"
-          onclick={() => (addExerciseUi.open = true)}
-        >
-          <Plus />
-        </Button>
-      </div>
+    <div
+      class="fixed right-3 z-20"
+      style={`bottom: ${addButtonBottom}px;`}
+    >
+      <Button
+        size="icon"
+        class="rounded-full shadow-lg"
+        disabled={ui.saving || ui.finishing}
+        aria-label="Add exercise"
+        data-tour="session-add-exercise"
+        onclick={() => (addExerciseUi.open = true)}
+      >
+        <Plus />
+      </Button>
     </div>
 
     <div
-      class="fixed left-0 right-0 bottom-15 px-3 pb-[env(safe-area-inset-bottom)]"
+      bind:this={finishBarEl}
+      data-tour="session-finish"
+      class="fixed left-0 right-0 bottom-0 border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
       <FinishWorkoutCard
         canFinish={!!$currentSession && !$currentSession.endedAtMs}

@@ -6,56 +6,53 @@
   import Textarea from "$lib/components/ui/textarea/textarea.svelte";
 
   import type { SetEntry, SetType } from "$lib/domain/workout";
-  import type { SetTypeOption } from "$lib/data/types";
+  import { DEFAULT_REST_MS } from "$lib/domain/workout";
+  import SetTypePicker from "./SetTypePicker.svelte";
 
-  type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note">;
+  type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs">;
 
-  export let open = false;
-  export let disabled = false;
-  export let initial: Editable | null = null;
+  const {
+    open = false,
+    disabled = false,
+    initial = null,
+    onOpenChange = () => {},
+    onSave = async () => {},
+  } = $props<{
+    open?: boolean;
+    disabled?: boolean;
+    initial?: Omit<Editable, "restDurationMs"> & { restDurationMs?: number } | null;
+    onOpenChange?: (v: boolean) => void;
+    onSave?: (patch: Partial<Editable>) => void | Promise<void>;
+  }>();
 
-  export let setTypeOptions: SetTypeOption[] = [];
-  export let setTypeLoading = false;
-
-  export let onOpenChange: (v: boolean) => void = () => {};
-  export let onSave: (
-    patch: Partial<Editable>,
-  ) => void | Promise<void> = async () => {};
-
-  let draft: Editable = {
+  const draft = $state<Editable>({
     reps: 0,
     weight: 0,
     setType: "normal" as SetType,
     note: null,
-  };
+    restDurationMs: DEFAULT_REST_MS,
+  });
 
-  let lastKey: string | null = null;
+  let lastKey = $state<string | null>(null);
 
-  function initDraft() {
-    if (!initial) return;
-
-    const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}`;
-
-    if (!open) return;
+  $effect(() => {
+    if (!open || !initial) return;
+    const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}|${initial.restDurationMs ?? ""}`;
     if (lastKey === key) return;
-
     lastKey = key;
-
-    draft = {
-      reps: initial.reps ?? 0,
-      weight: initial.weight ?? 0,
-      setType:
-        initial.setType ?? setTypeOptions[0]?.code ?? ("normal" as SetType),
-      note: initial.note ?? null,
-    };
-  }
-
-  $: open, initial, setTypeOptions, initDraft();
+    draft.reps = initial.reps ?? 0;
+    draft.weight = initial.weight ?? 0;
+    draft.setType = initial.setType ?? "normal";
+    draft.note = initial.note ?? null;
+    draft.restDurationMs = initial.restDurationMs ?? DEFAULT_REST_MS;
+  });
 
   function num(v: string) {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   }
+
+  const restSecs = $derived(Math.round((draft.restDurationMs ?? DEFAULT_REST_MS) / 1000));
 
   async function submit(e: SubmitEvent) {
     e.preventDefault();
@@ -66,6 +63,7 @@
       weight: Math.max(0, draft.weight),
       setType: draft.setType,
       note: draft.note?.trim() ? draft.note.trim() : null,
+      restDurationMs: draft.restDurationMs ?? DEFAULT_REST_MS,
     };
 
     await onSave(patch);
@@ -73,9 +71,9 @@
   }
 </script>
 
-<Dialog.Root bind:open {onOpenChange}>
+<Dialog.Root {open} {onOpenChange}>
   <Dialog.Content class="sm:max-w-[425px]">
-    <form on:submit={submit}>
+    <form onsubmit={submit}>
       <Dialog.Header>
         <Dialog.Title>Edit set</Dialog.Title>
         <Dialog.Description>
@@ -85,23 +83,12 @@
 
       <div class="grid gap-4 py-4">
         <div class="grid gap-2">
-          <Label for="setType">Set type</Label>
-          <select
-            id="setType"
-            class="w-full rounded border bg-background px-2 py-2 text-sm"
-            disabled={disabled || setTypeLoading || setTypeOptions.length === 0}
-            bind:value={draft.setType}
-          >
-            {#if setTypeLoading}
-              <option value={draft.setType}>Loading…</option>
-            {:else if setTypeOptions.length === 0}
-              <option value={draft.setType}>No set types</option>
-            {:else}
-              {#each setTypeOptions as opt (opt.id)}
-                <option value={opt.code}>{opt.label}</option>
-              {/each}
-            {/if}
-          </select>
+          <Label>Set type</Label>
+          <SetTypePicker
+            value={draft.setType}
+            {disabled}
+            onchange={(t) => (draft.setType = t)}
+          />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -119,7 +106,7 @@
           </div>
 
           <div class="grid gap-2">
-            <Label for="weight">Weight</Label>
+            <Label for="weight">Weight (kg)</Label>
             <Input
               id="weight"
               type="number"
@@ -128,18 +115,31 @@
               value={draft.weight}
               {disabled}
               oninput={(e) =>
-                (draft.weight = num(
-                  (e.currentTarget as HTMLInputElement).value,
-                ))}
+                (draft.weight = num((e.currentTarget as HTMLInputElement).value))}
             />
           </div>
+        </div>
+
+        <div class="grid gap-2">
+          <Label for="rest">Rest (seconds)</Label>
+          <Input
+            id="rest"
+            type="number"
+            min="0"
+            step="5"
+            value={restSecs}
+            {disabled}
+            oninput={(e) =>
+              (draft.restDurationMs =
+                num((e.currentTarget as HTMLInputElement).value) * 1000)}
+          />
         </div>
 
         <div class="grid gap-2">
           <Label for="note">Note</Label>
           <Textarea
             id="note"
-            rows={3}
+            rows={2}
             placeholder="Optional note…"
             {disabled}
             value={draft.note ?? ""}

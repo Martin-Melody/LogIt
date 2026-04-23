@@ -1,25 +1,27 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
+  import { startSplitsTour } from "$lib/tour/index";
+  import { Plus } from "lucide-svelte";
 
-  import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
+  import { Badge } from "$lib/components/ui/badge";
 
   import { splits } from "$lib/stores/splits.store";
   import { activeSplit } from "$lib/stores/activeSplit.store";
 
   import { createSplit } from "$lib/domain/WorkoutSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
-  import { Badge } from "lucide-svelte";
 
   const ui = $state({
     loading: true,
+    creating: false,
     error: null as string | null,
+    settingActive: null as string | null,
   });
 
   function formatDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, {
-      weekday: "short",
       day: "2-digit",
       month: "short",
     });
@@ -28,7 +30,6 @@
   async function load() {
     ui.loading = true;
     ui.error = null;
-
     try {
       await splits.refresh({ limit: 50, sortBy: "updated", order: "desc" });
       await activeSplit.load();
@@ -40,114 +41,99 @@
   }
 
   async function newSplit() {
+    if (ui.creating) return;
+    ui.creating = true;
     ui.error = null;
     try {
       const split = createSplit("New Split");
       await saveSplit(split);
-      // Optional: make it active on create
       await splits.setActive(split.id);
       await activeSplit.load();
-
       await goto(`/splits/${split.id}`);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to create split";
+      ui.creating = false;
     }
   }
 
-  function openSplit(id: string) {
-    void goto(`/splits/${id}`);
-  }
-
-  async function setActive(id: string) {
+  async function setActive(id: string, e: MouseEvent) {
+    e.stopPropagation();
+    ui.settingActive = id;
     ui.error = null;
     try {
       await splits.setActive(id);
       await activeSplit.load();
-    } catch (e) {
-      ui.error = e instanceof Error ? e.message : "Failed to set active split";
+    } catch (err) {
+      ui.error = err instanceof Error ? err.message : "Failed to set active";
+    } finally {
+      ui.settingActive = null;
     }
   }
 
   onMount(() => {
     void load();
+    setTimeout(() => startSplitsTour(), 400);
   });
 </script>
 
-<div class="p-3 flex flex-col gap-3">
-  <Card.Root class="w-full">
-    <Card.Header>
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <Card.Title>Splits</Card.Title>
-          <Card.Description>Build your weekly plan.</Card.Description>
-        </div>
+<div class="flex flex-col pb-24">
+  <div class="flex items-center justify-between px-3 py-3 border-b border-border">
+    <h1 class="text-base font-semibold">Splits</h1>
+    <Button size="sm" disabled={ui.creating} data-tour="splits-new" onclick={() => void newSplit()}>
+      <Plus class="h-3.5 w-3.5 mr-1" />
+      New
+    </Button>
+  </div>
 
-        <Button onclick={() => void newSplit()}>New split</Button>
-      </div>
-    </Card.Header>
+  {#if ui.error}
+    <p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>
+  {/if}
 
-    <Card.Content class="flex flex-col gap-3">
-      {#if ui.error}
-        <p class="text-sm text-destructive">{ui.error}</p>
-      {/if}
-
-      {#if ui.loading}
-        <p class="text-sm text-muted-foreground">Loading…</p>
-      {:else if $splits.length === 0}
-        <p class="text-sm text-muted-foreground">
-          No splits yet. Create one to get started.
-        </p>
-      {:else}
-        <ul class="flex flex-col gap-2">
-          {#each $splits as s (s.id)}
-            <li class="rounded-lg border p-3">
-              <div class="flex items-start justify-between gap-3">
-                <button
-                  type="button"
-                  class="text-left flex-1 min-w-0"
-                  onclick={() => openSplit(s.id)}
-                >
-                  <div class="flex items-center gap-2 min-w-0">
-                    <p class="text-sm font-medium truncate">{s.name}</p>
-
-                    {#if $activeSplit?.id === s.id}
-                      <Badge>Active</Badge>
-                    {/if}
-                  </div>
-
-                  <p class="mt-1 text-xs text-muted-foreground">
-                    Updated {formatDate(s.updatedAtMs)}
-                  </p>
-
-                  <p class="mt-1 text-xs text-muted-foreground">
-                    {s.days.length} day{s.days.length === 1 ? "" : "s"}
-                  </p>
-                </button>
-
-                <div class="flex flex-col gap-2 shrink-0">
-                  {#if $activeSplit?.id !== s.id}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onclick={() => void setActive(s.id)}
-                    >
-                      Set active
-                    </Button>
-                  {/if}
-
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onclick={() => openSplit(s.id)}
-                  >
-                    Edit
-                  </Button>
-                </div>
+  {#if ui.loading}
+    <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
+  {:else if $splits.length === 0}
+    <div class="px-3 py-8 flex flex-col items-center gap-3 text-center">
+      <p class="text-sm text-muted-foreground">No splits yet.</p>
+      <Button variant="outline" onclick={() => void newSplit()}>Create your first split</Button>
+    </div>
+  {:else}
+    <ul class="divide-y divide-border">
+      {#each $splits as s (s.id)}
+        <li class="flex items-center hover:bg-muted/40 active:bg-muted/60 transition-colors">
+          <button
+            type="button"
+            class="flex-1 min-w-0 flex items-center gap-3 px-3 py-3 text-left"
+            onclick={() => void goto(`/splits/${s.id}`)}
+          >
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium truncate">{s.name}</span>
+                {#if $activeSplit?.id === s.id}
+                  <Badge variant="secondary" class="text-xs px-1.5 py-0 shrink-0">Active</Badge>
+                {/if}
               </div>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </Card.Content>
-  </Card.Root>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                {s.days.length} day{s.days.length === 1 ? "" : "s"} · updated {formatDate(s.updatedAtMs)}
+              </p>
+            </div>
+          </button>
+
+          <div class="flex items-center gap-2 shrink-0 pr-3">
+            {#if $activeSplit?.id !== s.id}
+              <button
+                type="button"
+                data-tour="splits-set-active"
+                class="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline py-3"
+                disabled={ui.settingActive === s.id}
+                onclick={(e) => void setActive(s.id, e)}
+              >
+                {ui.settingActive === s.id ? "…" : "Set active"}
+              </button>
+            {/if}
+            <span class="text-muted-foreground text-sm">›</span>
+          </div>
+        </li>
+      {/each}
+    </ul>
+  {/if}
 </div>
