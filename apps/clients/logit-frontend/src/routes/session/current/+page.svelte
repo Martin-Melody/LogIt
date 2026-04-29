@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { currentSession } from "$lib/stores/currentSession.store";
-  import CurrentSessionEditor from "./Commponents/CurrentSessionEditor.svelte";
+  import SessionBuilder from "./SessionBuilder.svelte";
 
   async function ensureSessionExists() {
     await currentSession.loadDraft();
@@ -15,4 +15,4 @@
   });
 </script>
 
-<CurrentSessionEditor />
+<SessionBuilder />

@@ -11,22 +11,22 @@
   import type { ProgressionOutput } from "$lib/domain/progression";
 
   import type { SetEntry, WorkoutSession } from "$lib/domain/workout";
-  import { DEFAULT_REST_MS, addExercise, addSet, removeExercise, updateSet, updateExerciseName, removeSet } from "$lib/domain/workout";
+  import { DEFAULT_REST_MS, addExercise, addSet, removeExercise, updateSet, updateExerciseName, removeSet, moveExercise, moveSet } from "$lib/domain/workout";
 
   import { Button } from "$lib/components/ui/button/index.js";
 
   import CurrentSessionHeader from "./CurrentSessionHeader.svelte";
   import EmptySessionCard from "./EmptySessionCard.svelte";
-  import ExerciseCard from "./ExerciseCard.svelte";
-  import SetRow from "./SetRow.svelte";
-  import SetsTableHeader from "./SetsTableHeader.svelte";
+  import ExerciseCard from "$lib/features/session/ui/ExerciseCard.svelte";
+  import SetRow from "$lib/features/session/ui/SetRow.svelte";
+  import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
   import FinishWorkoutCard from "./FinishWorkoutCard.svelte";
-  import AddExerciseDialog from "./AddExerciseDialog.svelte";
-  import SwipeRevealRow from "./SwipeRevealRow.svelte";
-  import EditSetDialog from "./EditSetDialog.svelte";
-  import RestProgressBar from "./RestProgressBar.svelte";
+  import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
+  import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
+  import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
+  import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
   import { keyboard } from "$lib/stores/keybaord.store";
-  import { startSessionTour } from "$lib/tour/index";
+  import { startSessionTour, destroyActiveTour } from "$lib/tour/index";
   import { onMount } from "svelte";
 
   onMount(() => {
@@ -147,23 +147,29 @@
     const trimmed = selection.name.trim();
     if (!trimmed) return;
 
-    let exerciseId = selection.exerciseId;
-    if (!exerciseId) {
-      const ex = await getExerciseRepo().create(trimmed);
-      exerciseId = ex.id;
-    }
+    try {
+      let exerciseId = selection.exerciseId;
+      if (!exerciseId) {
+        const ex = await getExerciseRepo().create(trimmed);
+        exerciseId = ex.id;
+      }
 
-    const updated = addExercise(s, { exerciseName: trimmed, exerciseId });
-    await persistDraft(updated);
+      const updated = addExercise(s, { exerciseName: trimmed, exerciseId });
+      await persistDraft(updated);
 
-    const newEntry = updated.exercises[updated.exercises.length - 1];
-    if (newEntry) {
-      void loadSuggestionForExercise(newEntry.id, newEntry.exerciseName, newEntry.exerciseId);
+      const newEntry = updated.exercises[updated.exercises.length - 1];
+      if (newEntry) {
+        void loadSuggestionForExercise(newEntry.id, newEntry.exerciseName, newEntry.exerciseId);
+      }
+    } catch (e) {
+      ui.error = e instanceof Error ? e.message : "Failed to add exercise";
+      toast.error(ui.error);
     }
   }
 
   function onAddExercise() {
     if (ui.finishing) return;
+    destroyActiveTour();
     addExerciseUi.open = true;
   }
 
@@ -180,6 +186,20 @@
       reps: 0,
       weight: suggestedSet?.weight ?? 0,
     });
+    await persistDraft(updated);
+  }
+
+  async function onMoveExercise(exerciseEntryId: string, direction: "up" | "down") {
+    const s = getSessionOrNull();
+    if (!s) return;
+    const updated = moveExercise(s, exerciseEntryId, direction);
+    await persistDraft(updated);
+  }
+
+  async function onMoveSet(exerciseEntryId: string, setId: string, direction: "up" | "down") {
+    const s = getSessionOrNull();
+    if (!s) return;
+    const updated = moveSet(s, exerciseEntryId, setId, direction);
     await persistDraft(updated);
   }
 
@@ -386,19 +406,25 @@
     {#if !$currentSession || $currentSession.exercises.length === 0}
       <EmptySessionCard {onAddExercise} />
     {:else}
-      {#each [...$currentSession.exercises].sort(sortByOrderIndex) as ex (ex.id)}
+      {@const sortedExercises = [...$currentSession.exercises].sort(sortByOrderIndex)}
+      {#each sortedExercises as ex, exIdx (ex.id)}
         <ExerciseCard
           exerciseName={ex.exerciseName}
           setCount={ex.sets.length}
           saving={ui.saving || ui.finishing}
+          canMoveUp={exIdx > 0}
+          canMoveDown={exIdx < sortedExercises.length - 1}
           suggestion={suggestions[ex.id] ?? null}
           onAddSet={() => onAddSet(ex.id)}
           onDelete={() => onDeleteExercise(ex.id)}
           onRename={(name) => onRenameExercise(ex.id, name)}
+          onMoveUp={() => onMoveExercise(ex.id, "up")}
+          onMoveDown={() => onMoveExercise(ex.id, "down")}
         >
           {#if ex.sets.length > 0}
             <SetsTableHeader />
-            {#each [...ex.sets].sort(sortByOrderIndex) as set, i (set.id)}
+            {@const sortedSets = [...ex.sets].sort(sortByOrderIndex)}
+            {#each sortedSets as set, i (set.id)}
               <SwipeRevealRow
                 disabled={ui.saving || ui.finishing}
                 actionsWidth={80}
@@ -412,9 +438,13 @@
                   weight={set.weight}
                   completed={set.completed ?? false}
                   disabled={ui.saving || ui.finishing}
+                  canMoveUp={i > 0}
+                  canMoveDown={i < sortedSets.length - 1}
                   onRepsChange={(r) => onRepsChange(ex.id, set.id, r)}
                   onWeightChange={(w) => onWeightChange(ex.id, set.id, w)}
                   onComplete={() => onSetCompleted(ex.id, set.id)}
+                  onMoveUp={() => onMoveSet(ex.id, set.id, "up")}
+                  onMoveDown={() => onMoveSet(ex.id, set.id, "down")}
                 />
               </SwipeRevealRow>
               {#if typeof set.restStartedAtMs === "number"}
@@ -467,7 +497,7 @@
         disabled={ui.saving || ui.finishing}
         aria-label="Add exercise"
         data-tour="session-add-exercise"
-        onclick={() => (addExerciseUi.open = true)}
+        onclick={() => { destroyActiveTour(); addExerciseUi.open = true; }}
       >
         <Plus />
       </Button>

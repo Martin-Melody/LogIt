@@ -1,6 +1,7 @@
 import { browser } from "$app/environment";
 import type { Exercise } from "$lib/domain/exercise";
 import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
+import { createId } from "$lib/domain/ids";
 
 const STORAGE_KEY = "logit:exercises:v1";
 
@@ -73,7 +74,7 @@ export function createLocalExerciseRepo(): ExerciseRepo {
 
       const all = readAll();
       const ex: Exercise = {
-        id: crypto.randomUUID(),
+        id: createId("ex"),
         name: trimmed,
         createdAtMs: Date.now(),
       };

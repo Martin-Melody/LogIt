@@ -1,0 +1,21 @@
+{
+  "id": "sample.progression.linear-plus",
+  "family": "progression-algorithm",
+  "name": "Linear Plus",
+  "description": "A sample progression algorithm that increases the last working weight by a fixed amount.",
+  "version": "1.0.0",
+  "author": "Logit Samples",
+  "homepageUrl": "/sample-plugins/linear-plus/README.txt",
+  "sourceUrl": "/sample-plugins/linear-plus/manifest.json",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "/sample-plugins/linear-plus/manifest.json",
+    "bundleUrl": "/sample-plugins/linear-plus/bundle.js"
+  },
+  "capabilities": [
+    {
+      "family": "progression-algorithm",
+      "algorithmId": "sample.progression.linear-plus"
+    }
+  ]
+}

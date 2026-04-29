@@ -196,9 +196,11 @@
           saving={ui.saving}
           onConfirm={deleteThisSplit}
         >
-          <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={!split || ui.saving}>
-            <Trash class="h-3.5 w-3.5" />
-          </Button>
+          {#snippet child({ props })}
+            <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={!split || ui.saving}>
+              <Trash class="h-3.5 w-3.5" />
+            </Button>
+          {/snippet}
         </ConfirmDialog>
       </div>
     {/if}
