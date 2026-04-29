@@ -1,6 +1,7 @@
 import { getWorkoutRepo, getProgressionRepo, getAlgorithmRegistry } from "$lib/data/repoProvider";
 import type { ProgressionOutput, ExerciseHistoryEntry } from "$lib/domain/progression";
 import { exerciseKey } from "$lib/domain/progression";
+import { getExercises } from "$lib/domain/workout";
 import { nowMs } from "$lib/domain/time";
 
 const HISTORY_WINDOW = 20;
@@ -30,7 +31,7 @@ export async function getSuggestion(
 
   const history: ExerciseHistoryEntry[] = recentSessions
     .flatMap((session) => {
-      const match = session.exercises.find((e) =>
+      const match = getExercises(session).find((e) =>
         exercise.id ? e.exerciseId === exercise.id : e.exerciseName.toLowerCase() === exercise.name.toLowerCase(),
       );
       if (!match) return [];

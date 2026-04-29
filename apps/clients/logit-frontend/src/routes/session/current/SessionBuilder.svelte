@@ -10,7 +10,7 @@
   import { recentSessions } from "$lib/stores/recentSessions.store";
   import { refreshProgressionState } from "$lib/usecases/progression/getSuggestion";
   import type { WorkoutSession } from "$lib/domain/workout";
-  import { addExercise, removeExercise, moveExercise } from "$lib/domain/workout";
+  import { addExercise, removeExercise, moveExercise, getExercises } from "$lib/domain/workout";
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
@@ -131,7 +131,7 @@
       void recentSessions.refresh(5);
 
       if (sessionSnapshot) {
-        for (const ex of sessionSnapshot.exercises) {
+        for (const ex of getExercises(sessionSnapshot)) {
           void refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName });
         }
       }
@@ -157,10 +157,10 @@
   <CurrentSessionHeader saving={ui.saving || ui.finishing} error={ui.error} />
 
   {#if !ui.finishing}
-    {#if !$currentSession || $currentSession.exercises.length === 0}
+    {#if !$currentSession || $currentSession.blocks.length === 0}
       <EmptySessionCard onAddBlock={openAddBlock} />
     {:else}
-      {@const sortedExercises = [...$currentSession.exercises].sort(sortByOrderIndex)}
+      {@const sortedExercises = getExercises($currentSession)}
       {#each sortedExercises as ex, i (ex.id)}
         <BlockHost
           type="strength"

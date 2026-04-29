@@ -25,7 +25,7 @@ export async function startSessionFromSplitDay(day: SplitDay): Promise<WorkoutSe
       exerciseId: pex.exerciseId,
     });
 
-    const addedExerciseEntry = session.exercises[session.exercises.length - 1];
+    const addedExerciseEntry = session.blocks[session.blocks.length - 1];
     if (!addedExerciseEntry) continue;
 
     // Pre-create sets if a target exists

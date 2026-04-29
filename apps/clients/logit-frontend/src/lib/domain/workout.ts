@@ -17,6 +17,22 @@ export type SetEntry = {
   restStartedAtMs?: number | null;
 };
 
+// Data payload for a strength (exercise + sets) block
+export type StrengthBlockData = {
+  exerciseName: string;
+  exerciseId?: string;
+  sets: SetEntry[];
+};
+
+// Generic session block — data is typed per block type
+export type SessionBlock<T = unknown> = {
+  id: string;
+  type: string;
+  orderIndex: number;
+  data: T;
+};
+
+// Flat view of a strength block — used by progression, history views, etc.
 export type ExerciseEntry = {
   id: string;
   exerciseId?: string;
@@ -29,7 +45,7 @@ export type WorkoutSession = {
   id: string;
   startedAtMs: number;
   endedAtMs?: number;
-  exercises: ExerciseEntry[];
+  blocks: SessionBlock[];
 };
 
 export type SessionSummary = {
@@ -45,11 +61,26 @@ export type TopSetHighlight = {
   weight: number;
 };
 
+// Returns all strength blocks as a flat ExerciseEntry list, sorted by orderIndex.
+// Use this anywhere that previously read session.exercises.
+export function getExercises(session: WorkoutSession): ExerciseEntry[] {
+  return session.blocks
+    .filter((b): b is SessionBlock<StrengthBlockData> => b.type === "strength")
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((b) => ({
+      id: b.id,
+      exerciseName: b.data.exerciseName,
+      exerciseId: b.data.exerciseId,
+      orderIndex: b.orderIndex,
+      sets: b.data.sets,
+    }));
+}
+
 export function createSession(startedAtMs: number = nowMs()): WorkoutSession {
   return {
     id: createId("sess"),
     startedAtMs,
-    exercises: [],
+    blocks: [],
   };
 }
 
@@ -57,27 +88,26 @@ export function addExercise(
   session: WorkoutSession,
   exercise: { exerciseName: string; exerciseId?: string },
 ): WorkoutSession {
-  const entry: ExerciseEntry = {
+  const block: SessionBlock<StrengthBlockData> = {
     id: createId("ex"),
-    exerciseId: exercise.exerciseId,
-    exerciseName: exercise.exerciseName.trim(),
-    orderIndex: session.exercises.length,
-    sets: [],
+    type: "strength",
+    orderIndex: session.blocks.length,
+    data: {
+      exerciseName: exercise.exerciseName.trim(),
+      exerciseId: exercise.exerciseId,
+      sets: [],
+    },
   };
-
-  return {
-    ...session,
-    exercises: [...session.exercises, entry],
-  };
+  return { ...session, blocks: [...session.blocks, block] };
 }
 
 export function removeExercise(
   session: WorkoutSession,
   exerciseEntryId: string,
 ): WorkoutSession {
-  const filtered = session.exercises.filter((e) => e.id !== exerciseEntryId);
-  const reindexed = filtered.map((e, i) => ({ ...e, orderIndex: i }));
-  return { ...session, exercises: reindexed };
+  const filtered = session.blocks.filter((b) => b.id !== exerciseEntryId);
+  const reindexed = filtered.map((b, i) => ({ ...b, orderIndex: i }));
+  return { ...session, blocks: reindexed };
 }
 
 export function addSet(
@@ -85,17 +115,16 @@ export function addSet(
   exerciseEntryId: string,
   defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
 ): WorkoutSession {
-  return updateExercise(session, exerciseEntryId, (exercise) => {
+  return updateStrengthBlock(session, exerciseEntryId, (data) => {
     const set: SetEntry = {
       id: createId("set"),
       setType: defaults?.setType ?? "normal",
       reps: defaults?.reps ?? 0,
       weight: defaults?.weight ?? 0,
       note: defaults?.note,
-      orderIndex: exercise.sets.length,
+      orderIndex: data.sets.length,
     };
-
-    return { ...exercise, sets: [...exercise.sets, set] };
+    return { ...data, sets: [...data.sets, set] };
   });
 }
 
@@ -105,12 +134,10 @@ export function updateSet(
   setId: string,
   patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs">>,
 ): WorkoutSession {
-  return updateExercise(session, exerciseEntryId, (exercise) => {
-    const sets = exercise.sets.map((s) =>
-      s.id === setId ? { ...s, ...patch } : s,
-    );
-    return { ...exercise, sets };
-  });
+  return updateStrengthBlock(session, exerciseEntryId, (data) => ({
+    ...data,
+    sets: data.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
+  }));
 }
 
 export function removeSet(
@@ -118,10 +145,10 @@ export function removeSet(
   exerciseEntryId: string,
   setId: string,
 ): WorkoutSession {
-  return updateExercise(session, exerciseEntryId, (exercise) => {
-    const filtered = exercise.sets.filter((s) => s.id !== setId);
+  return updateStrengthBlock(session, exerciseEntryId, (data) => {
+    const filtered = data.sets.filter((s) => s.id !== setId);
     const reindexed = filtered.map((s, i) => ({ ...s, orderIndex: i }));
-    return { ...exercise, sets: reindexed };
+    return { ...data, sets: reindexed };
   });
 }
 
@@ -129,10 +156,7 @@ export function finishSession(
   session: WorkoutSession,
   endedAtMs: number = nowMs(),
 ): WorkoutSession {
-  return {
-    ...session,
-    endedAtMs,
-  };
+  return { ...session, endedAtMs };
 }
 
 export function getSessionDurationMs(session: WorkoutSession): number | null {
@@ -140,21 +164,13 @@ export function getSessionDurationMs(session: WorkoutSession): number | null {
   return Math.max(0, session.endedAtMs - session.startedAtMs);
 }
 
-export function getTopSetHighlight(
-  session: WorkoutSession,
-): TopSetHighlight | null {
+export function getTopSetHighlight(session: WorkoutSession): TopSetHighlight | null {
   let best: { exerciseName: string; set: SetEntry } | null = null;
 
-  for (const ex of session.exercises) {
+  for (const ex of getExercises(session)) {
     for (const set of ex.sets) {
-      if (!best) {
-        best = { exerciseName: ex.exerciseName, set };
-        continue;
-      }
-      if (set.weight > best.set.weight) {
-        best = { exerciseName: ex.exerciseName, set };
-        continue;
-      }
+      if (!best) { best = { exerciseName: ex.exerciseName, set }; continue; }
+      if (set.weight > best.set.weight) { best = { exerciseName: ex.exerciseName, set }; continue; }
       if (set.weight === best.set.weight && set.reps > best.set.reps) {
         best = { exerciseName: ex.exerciseName, set };
       }
@@ -162,12 +178,7 @@ export function getTopSetHighlight(
   }
 
   if (!best) return null;
-
-  return {
-    exerciseName: best.exerciseName,
-    reps: best.set.reps,
-    weight: best.set.weight,
-  };
+  return { exerciseName: best.exerciseName, reps: best.set.reps, weight: best.set.weight };
 }
 
 export function moveExercise(
@@ -175,19 +186,19 @@ export function moveExercise(
   exerciseEntryId: string,
   direction: "up" | "down",
 ): WorkoutSession {
-  const sorted = [...session.exercises].sort((a, b) => a.orderIndex - b.orderIndex);
-  const idx = sorted.findIndex((e) => e.id === exerciseEntryId);
+  const sorted = [...session.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const idx = sorted.findIndex((b) => b.id === exerciseEntryId);
   const swapIdx = direction === "up" ? idx - 1 : idx + 1;
   if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return session;
 
   const a = sorted[idx]!;
   const b = sorted[swapIdx]!;
-  const exercises = session.exercises.map((e) => {
-    if (e.id === a.id) return { ...e, orderIndex: b.orderIndex };
-    if (e.id === b.id) return { ...e, orderIndex: a.orderIndex };
-    return e;
+  const blocks = session.blocks.map((blk) => {
+    if (blk.id === a.id) return { ...blk, orderIndex: b.orderIndex };
+    if (blk.id === b.id) return { ...blk, orderIndex: a.orderIndex };
+    return blk;
   });
-  return { ...session, exercises };
+  return { ...session, blocks };
 }
 
 export function moveSet(
@@ -196,20 +207,20 @@ export function moveSet(
   setId: string,
   direction: "up" | "down",
 ): WorkoutSession {
-  return updateExercise(session, exerciseEntryId, (exercise) => {
-    const sorted = [...exercise.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+  return updateStrengthBlock(session, exerciseEntryId, (data) => {
+    const sorted = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
     const idx = sorted.findIndex((s) => s.id === setId);
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return exercise;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return data;
 
     const a = sorted[idx]!;
     const b = sorted[swapIdx]!;
-    const sets = exercise.sets.map((s) => {
+    const sets = data.sets.map((s) => {
       if (s.id === a.id) return { ...s, orderIndex: b.orderIndex };
       if (s.id === b.id) return { ...s, orderIndex: a.orderIndex };
       return s;
     });
-    return { ...exercise, sets };
+    return { ...data, sets };
   });
 }
 
@@ -218,22 +229,22 @@ export function updateExerciseName(
   exerciseEntryId: string,
   exerciseName: string,
 ): WorkoutSession {
-  return updateExercise(session, exerciseEntryId, (exercise) => ({
-    ...exercise,
+  return updateStrengthBlock(session, exerciseEntryId, (data) => ({
+    ...data,
     exerciseName: exerciseName.trim(),
   }));
 }
 
-function updateExercise(
+function updateStrengthBlock(
   session: WorkoutSession,
-  exerciseEntryId: string,
-  updater: (exercise: ExerciseEntry) => ExerciseEntry,
+  blockId: string,
+  updater: (data: StrengthBlockData) => StrengthBlockData,
 ): WorkoutSession {
-  const idx = session.exercises.findIndex((e) => e.id === exerciseEntryId);
+  const idx = session.blocks.findIndex((b) => b.id === blockId);
   if (idx === -1) return session;
 
-  const updated = updater(session.exercises[idx]);
-  const exercises = session.exercises.map((e, i) => (i === idx ? updated : e));
-
-  return { ...session, exercises };
+  const block = session.blocks[idx] as SessionBlock<StrengthBlockData>;
+  const updated = { ...block, data: updater(block.data) };
+  const blocks = session.blocks.map((b, i) => (i === idx ? updated : b));
+  return { ...session, blocks };
 }

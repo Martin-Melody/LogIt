@@ -4,7 +4,7 @@
 
   import { recentSessions } from "$lib/stores/recentSessions.store";
   import { durationMs, formatDuration } from "$lib/domain/time";
-  import { getTopSetHighlight } from "$lib/domain/workout";
+  import { getTopSetHighlight, getExercises } from "$lib/domain/workout";
 
   const ui = $state({ loading: true, error: null as string | null });
 
@@ -25,7 +25,7 @@
         id: s.id,
         dateLabel: dateLabel(ended),
         durationLabel: s.endedAtMs ? formatDuration(dur) : "In progress",
-        exerciseCount: s.exercises.length,
+        exerciseCount: getExercises(s).length,
         topSet: top ? `${top.exerciseName} ${top.reps}×${top.weight}kg` : null,
       };
     }),
