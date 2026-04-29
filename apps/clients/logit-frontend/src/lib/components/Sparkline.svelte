@@ -10,7 +10,7 @@
   }>();
 
   const W = 200;
-  const H = height;
+  const H = $derived(height);
   const PAD = 4;
 
   function buildPath(vals: number[]): string {

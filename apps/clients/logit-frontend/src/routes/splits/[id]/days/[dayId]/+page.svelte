@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
 
   import { Button } from "$lib/components/ui/button";
@@ -31,13 +30,28 @@
 
   let split = $state<WorkoutSplit | null>(null);
   let dayNameInput = $state<HTMLInputElement | null>(null);
+  let listEl = $state<HTMLUListElement | null>(null);
 
   const day = $derived<SplitDay | null>(
     split ? ((split.days ?? []).find((x) => x.id === dayId) ?? null) : null,
   );
 
+  // Drag-to-reorder state
+  let dragId = $state<string | null>(null);
+  let dragFromIdx = $state(-1);
+  let dragToIdx = $state(-1);
+  let dragStartY = $state(0);
+
   function sortExercises(exs: PlannedExercise[]): PlannedExercise[] {
     return [...exs].sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  function liveOrder(sorted: PlannedExercise[]): PlannedExercise[] {
+    if (dragId === null || dragFromIdx === dragToIdx) return sorted;
+    const result = [...sorted];
+    const [item] = result.splice(dragFromIdx, 1);
+    result.splice(dragToIdx, 0, item!);
+    return result;
   }
 
   async function load() {
@@ -114,6 +128,34 @@
     await persist(next);
   }
 
+  async function commitDragReorder() {
+    const from = dragFromIdx;
+    const to = dragToIdx;
+    dragId = null;
+    dragFromIdx = -1;
+    dragToIdx = -1;
+
+    if (!split || !day || from === to || from === -1) return;
+
+    const sorted = sortExercises(day.exercises);
+    const reordered = [...sorted];
+    const [item] = reordered.splice(from, 1);
+    reordered.splice(to, 0, item!);
+
+    const updatedExercises = day.exercises.map((e) => {
+      const newIdx = reordered.findIndex((r) => r.id === e.id);
+      return newIdx !== -1 ? { ...e, orderIndex: newIdx } : e;
+    });
+
+    const next: WorkoutSplit = {
+      ...split,
+      days: split.days.map((d) =>
+        d.id === day.id ? { ...d, exercises: updatedExercises } : d,
+      ),
+    };
+    await persist(next);
+  }
+
   async function deleteExercise(exId: string) {
     if (!split || !day) return;
     const next: WorkoutSplit = {
@@ -136,6 +178,91 @@
     };
     await persist(next);
     back(`/splits/${splitId}`);
+  }
+
+  async function hapticLight() {
+    try {
+      const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } catch {
+      // Not available on web
+    }
+  }
+
+  // Drag handle action — supports both touch (Android) and mouse (desktop browser).
+  function gripAction(node: HTMLElement, exId: string) {
+    function startDrag(clientY: number) {
+      const sorted = sortExercises(day?.exercises ?? []);
+      const idx = sorted.findIndex((ex) => ex.id === exId);
+      if (idx === -1) return false;
+      dragId = exId;
+      dragFromIdx = idx;
+      dragToIdx = idx;
+      dragStartY = clientY;
+      void hapticLight();
+      return true;
+    }
+
+    function moveDrag(clientY: number) {
+      if (dragId !== exId) return;
+      const total = day?.exercises.length ?? 1;
+      const rowH = listEl ? listEl.getBoundingClientRect().height / total : 48;
+      const delta = clientY - dragStartY;
+      const newIdx = Math.max(0, Math.min(total - 1, Math.round(dragFromIdx + delta / rowH)));
+      if (newIdx !== dragToIdx) dragToIdx = newIdx;
+    }
+
+    // ── Touch handlers ────────────────────────────────────────────────────────
+    function onTouchStart(e: TouchEvent) {
+      if (ui.saving || e.touches.length !== 1) return;
+      e.preventDefault();
+      startDrag(e.touches[0]!.clientY);
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (dragId !== exId) return;
+      e.preventDefault();
+      moveDrag(e.touches[0]!.clientY);
+    }
+    function onTouchEnd() {
+      if (dragId !== exId) return;
+      void commitDragReorder();
+    }
+
+    // ── Mouse handlers (desktop browser) ─────────────────────────────────────
+    function onMouseDown(e: MouseEvent) {
+      if (ui.saving || e.button !== 0) return;
+      e.preventDefault();
+      if (!startDrag(e.clientY)) return;
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    }
+    function onMouseMove(e: MouseEvent) {
+      moveDrag(e.clientY);
+    }
+    function onMouseUp() {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      if (dragId !== exId) return;
+      void commitDragReorder();
+    }
+
+    node.addEventListener("touchstart", onTouchStart, { passive: false });
+    node.addEventListener("touchmove", onTouchMove, { passive: false });
+    node.addEventListener("touchend", onTouchEnd, { passive: true });
+    node.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    node.addEventListener("mousedown", onMouseDown);
+
+    return {
+      destroy() {
+        node.removeEventListener("touchstart", onTouchStart);
+        node.removeEventListener("touchmove", onTouchMove);
+        node.removeEventListener("touchend", onTouchEnd);
+        node.removeEventListener("touchcancel", onTouchEnd);
+        node.removeEventListener("mousedown", onMouseDown);
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      },
+    };
   }
 
   onMount(() => { void load(); });
@@ -202,9 +329,11 @@
           saving={ui.saving}
           onConfirm={deleteDay}
         >
-          <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={!day || ui.saving}>
-            <Trash class="h-3.5 w-3.5" />
-          </Button>
+          {#snippet child({ props })}
+            <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={!day || ui.saving}>
+              <Trash class="h-3.5 w-3.5" />
+            </Button>
+          {/snippet}
         </ConfirmDialog>
       </div>
     {/if}
@@ -247,22 +376,52 @@
       </Button>
     </div>
   {:else}
-    <!-- Exercise section header -->
     <div class="flex items-center justify-between px-3 py-2 border-b border-border">
       <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Exercises · {day.exercises.length}
       </span>
     </div>
 
-    <ul class="divide-y divide-border">
-      {#each sortExercises(day.exercises) as ex, i (ex.id)}
-        <li class="flex items-center gap-2 px-3 py-2.5">
-          <span class="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}</span>
-          <span class="flex-1 min-w-0 text-sm truncate">{ex.exerciseName}</span>
+    {@const sorted = sortExercises(day.exercises)}
+    {@const ordered = liveOrder(sorted)}
+
+    <ul bind:this={listEl} class="divide-y divide-border">
+      {#each ordered as ex, i (ex.id)}
+        {@const isDragging = dragId === ex.id}
+        <!--
+          The li is `position: relative` so the grip button can be absolutely
+          positioned and cover the full row height — a much larger touch target.
+        -->
+        <li class="relative flex items-center py-2.5 pr-3 transition-colors {isDragging ? 'bg-primary/15' : ''}">
+          <!--
+            Full-height drag handle button.
+            - `type="button"` makes this an interactive element, giving it
+              priority over scroll gestures in Android WebView.
+            - `style="touch-action: none"` (inline, not via Tailwind) ensures
+              the browser never treats touches here as a pan/zoom gesture.
+            - Absolute positioning stretches it top-to-bottom so the user has
+              a tall, easy-to-hit drag zone on the left side of each row.
+          -->
+          <button
+            type="button"
+            class="absolute left-0 top-0 bottom-0 flex items-center gap-1 pl-3 pr-2 cursor-grab active:cursor-grabbing"
+            style="touch-action: none; background: rgba(99,102,241,0.15); border-right: 2px solid rgba(99,102,241,0.4);"
+            use:gripAction={ex.id}
+            aria-label="Drag to reorder"
+            tabindex="-1"
+            disabled={ui.saving}
+          >
+            <GripVertical class="h-4 w-4 text-indigo-500" />
+            <span class="text-xs w-5 text-right text-indigo-500 font-medium">{i + 1}</span>
+          </button>
+
+          <!-- Offset name so it doesn't sit under the grip button (~60px) -->
+          <span class="flex-1 min-w-0 pl-16 text-sm truncate">{ex.exerciseName}</span>
+
           <Button
             variant="ghost"
             size="icon"
-            class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+            class="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
             disabled={ui.saving}
             onclick={() => void deleteExercise(ex.id)}
             aria-label="Remove {ex.exerciseName}"

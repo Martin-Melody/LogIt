@@ -1,6 +1,9 @@
-import { writable } from "svelte/store";
+import { browser } from "$app/environment";
+import { writable, type Writable } from "svelte/store";
 import type { HomeConfig, WidgetSlot } from "$lib/features/widgets/widget";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
+import { listInstalledPluginManifests } from "$lib/plugins/catalog";
+import type { PluginManifest, WidgetPluginCapability } from "$lib/plugins";
 
 const STORAGE_KEY = "logit:home-config:v1";
 
@@ -9,6 +12,14 @@ function defaultConfig(): HomeConfig {
     .list()
     .map((w) => ({ id: w.id, enabled: w.defaultEnabled, orderIndex: w.defaultOrder }));
   return { slots };
+}
+
+function getWidgetCapability(manifest: PluginManifest): WidgetPluginCapability | null {
+  return (
+    manifest.capabilities.find(
+      (cap): cap is WidgetPluginCapability => cap.family === "widget",
+    ) ?? null
+  );
 }
 
 function load(): HomeConfig {
@@ -34,6 +45,41 @@ function load(): HomeConfig {
   }
 }
 
+async function reconcileInstalledWidgets(store: Writable<HomeConfig>): Promise<void> {
+  const installed = await listInstalledPluginManifests();
+  const widgetSlots = installed
+    .map((plugin) => {
+      const capability = getWidgetCapability(plugin.manifest);
+      if (!capability) return null;
+      return {
+        id: capability.widgetId,
+        enabled: plugin.enabled && capability.defaultEnabled,
+        orderIndex: capability.defaultOrder,
+      } satisfies WidgetSlot;
+    })
+    .filter((slot): slot is WidgetSlot => slot !== null);
+
+  if (widgetSlots.length === 0) return;
+
+  store.update((config) => {
+    const existing = new Set(config.slots.map((slot) => slot.id));
+    const merged = [...config.slots];
+    let nextOrder = merged.length;
+
+    for (const slot of widgetSlots) {
+      if (!existing.has(slot.id)) {
+        merged.push({ ...slot, orderIndex: nextOrder++ });
+      }
+    }
+
+    if (merged.length === config.slots.length) return config;
+
+    const next = { slots: merged };
+    save(next);
+    return next;
+  });
+}
+
 function save(config: HomeConfig) {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
@@ -41,6 +87,10 @@ function save(config: HomeConfig) {
 
 function createHomeConfigStore() {
   const store = writable<HomeConfig>(load());
+
+  if (browser) {
+    void reconcileInstalledWidgets(store);
+  }
 
   function update(fn: (c: HomeConfig) => HomeConfig) {
     store.update((c) => {
@@ -77,7 +127,11 @@ function createHomeConfigStore() {
     });
   }
 
-  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown };
+  async function reconcilePlugins(): Promise<void> {
+    await reconcileInstalledWidgets(store);
+  }
+
+  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown, reconcilePlugins };
 }
 
 export const homeConfig = createHomeConfigStore();

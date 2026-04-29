@@ -21,8 +21,11 @@
   let searchInput = $state<ReturnType<typeof ExerciseSearchInput> | null>(null);
 
   async function handleConfirm(selection: { name: string; exerciseId?: string }) {
-    await onSubmit(selection);
-    onOpenChange(false);
+    try {
+      await onSubmit(selection);
+    } finally {
+      onOpenChange(false);
+    }
   }
 </script>
 

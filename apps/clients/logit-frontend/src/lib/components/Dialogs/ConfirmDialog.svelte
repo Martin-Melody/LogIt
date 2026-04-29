@@ -1,24 +1,27 @@
 <script lang="ts">
-  import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import { Button } from "$lib/components/ui/button/index.js";
+	import * as Dialog from "$lib/components/ui/dialog/index.js";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import type { Snippet } from "svelte";
 
-  const {
-    title = "Are you sure?",
-    description = "This action cannot be undone.",
-    confirmLabel = "Delete",
-    cancelLabel = "Cancel",
-    saving = false,
-    onConfirm = async () => {},
-    children,
-  } = $props<{
-    title?: string;
-    description?: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    saving?: boolean;
-    onConfirm?: () => void | Promise<void>;
-    children?: () => unknown;
-  }>();
+	const {
+		title = "Are you sure?",
+		description = "This action cannot be undone.",
+		confirmLabel = "Delete",
+		cancelLabel = "Cancel",
+		saving = false,
+		onConfirm = async () => {},
+		child,
+	} = $props<{
+		title?: string;
+		description?: string;
+		confirmLabel?: string;
+		cancelLabel?: string;
+		saving?: boolean;
+		onConfirm?: () => void | Promise<void>;
+		child?: Snippet<[{
+			props: Record<string, unknown>;
+		}]>;
+	}>();
 
   const ui = $state({ open: false });
 
@@ -29,9 +32,7 @@
 </script>
 
 <Dialog.Root bind:open={ui.open}>
-  <Dialog.Trigger asChild>
-    {@render children?.()}
-  </Dialog.Trigger>
+  <Dialog.Trigger {child} />
 
   <Dialog.Content class="sm:max-w-[420px]">
     <Dialog.Header>

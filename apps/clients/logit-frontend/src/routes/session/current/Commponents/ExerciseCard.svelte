@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import { Plus, X, Check, Trash2 } from "lucide-svelte";
+  import { Plus, X, Check, Trash2, ArrowUp, ArrowDown, ChevronDown, ChevronRight } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { ProgressionOutput, SuggestedSet } from "$lib/domain/progression";
 
@@ -8,19 +8,27 @@
     exerciseName = "",
     setCount = 0,
     saving = false,
+    canMoveUp = false,
+    canMoveDown = false,
     suggestion = null,
     onAddSet = () => {},
     onRename = () => {},
     onDelete = () => {},
+    onMoveUp = () => {},
+    onMoveDown = () => {},
     children,
   } = $props<{
     exerciseName?: string;
     setCount?: number;
     saving?: boolean;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
     suggestion?: ProgressionOutput | null;
     onAddSet?: () => void | Promise<void>;
     onRename?: (nextName: string) => void | Promise<void>;
     onDelete?: () => void | Promise<void>;
+    onMoveUp?: () => void | Promise<void>;
+    onMoveDown?: () => void | Promise<void>;
     children?: import("svelte").Snippet;
   }>();
 
@@ -95,6 +103,29 @@
         <span class="text-sm font-semibold truncate block">{exerciseName}</span>
       </button>
 
+      <div class="flex items-center gap-0.5 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-7 w-7"
+          disabled={!canMoveUp || saving}
+          aria-label="Move exercise up"
+          onclick={() => void onMoveUp()}
+        >
+          <ArrowUp class="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-7 w-7"
+          disabled={!canMoveDown || saving}
+          aria-label="Move exercise down"
+          onclick={() => void onMoveDown()}
+        >
+          <ArrowDown class="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
       <span class="text-xs text-muted-foreground shrink-0">
         {setCount} set{setCount === 1 ? "" : "s"}
       </span>
@@ -116,15 +147,18 @@
         {saving}
         onConfirm={onDelete}
       >
-        <Button
-          size="icon"
-          variant="ghost"
-          class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-          disabled={saving}
-          aria-label="Delete exercise"
-        >
-          <Trash2 class="h-3.5 w-3.5" />
-        </Button>
+        {#snippet child({ props })}
+          <Button
+            {...props}
+            size="icon"
+            variant="ghost"
+            class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+            disabled={saving}
+            aria-label="Delete exercise"
+          >
+            <Trash2 class="h-3.5 w-3.5" />
+          </Button>
+        {/snippet}
       </ConfirmDialog>
     {/if}
   </div>

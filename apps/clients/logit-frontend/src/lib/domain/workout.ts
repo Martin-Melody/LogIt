@@ -170,6 +170,49 @@ export function getTopSetHighlight(
   };
 }
 
+export function moveExercise(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  direction: "up" | "down",
+): WorkoutSession {
+  const sorted = [...session.exercises].sort((a, b) => a.orderIndex - b.orderIndex);
+  const idx = sorted.findIndex((e) => e.id === exerciseEntryId);
+  const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return session;
+
+  const a = sorted[idx]!;
+  const b = sorted[swapIdx]!;
+  const exercises = session.exercises.map((e) => {
+    if (e.id === a.id) return { ...e, orderIndex: b.orderIndex };
+    if (e.id === b.id) return { ...e, orderIndex: a.orderIndex };
+    return e;
+  });
+  return { ...session, exercises };
+}
+
+export function moveSet(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  setId: string,
+  direction: "up" | "down",
+): WorkoutSession {
+  return updateExercise(session, exerciseEntryId, (exercise) => {
+    const sorted = [...exercise.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+    const idx = sorted.findIndex((s) => s.id === setId);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return exercise;
+
+    const a = sorted[idx]!;
+    const b = sorted[swapIdx]!;
+    const sets = exercise.sets.map((s) => {
+      if (s.id === a.id) return { ...s, orderIndex: b.orderIndex };
+      if (s.id === b.id) return { ...s, orderIndex: a.orderIndex };
+      return s;
+    });
+    return { ...exercise, sets };
+  });
+}
+
 export function updateExerciseName(
   session: WorkoutSession,
   exerciseEntryId: string,
