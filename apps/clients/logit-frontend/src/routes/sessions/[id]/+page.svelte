@@ -3,6 +3,7 @@
   import { back } from "$lib/navigation";
 
   import type { WorkoutSession } from "$lib/domain/workout";
+  import { getExercises } from "$lib/domain/workout";
   import { durationMs, formatDuration } from "$lib/domain/time";
   import { getSession } from "$lib/usecases/getSession";
   import { deleteSession } from "$lib/usecases/deleteSession";
@@ -34,12 +35,12 @@
   }
 
   function countSets(s: WorkoutSession): number {
-    return s.exercises.reduce((n, ex) => n + ex.sets.length, 0);
+    return getExercises(s).reduce((n, ex) => n + ex.sets.length, 0);
   }
 
   function totalVolume(s: WorkoutSession): number {
     let v = 0;
-    for (const ex of s.exercises)
+    for (const ex of getExercises(s))
       for (const set of ex.sets)
         v += (Number.isFinite(set.reps) ? set.reps : 0) * (Number.isFinite(set.weight) ? set.weight : 0);
     return v;
@@ -135,7 +136,7 @@
         <span>{durationLabel}</span>
         <span>·</span>
       {/if}
-      <span>{state.session.exercises.length} exercise{state.session.exercises.length === 1 ? "" : "s"}</span>
+      <span>{getExercises(state.session).length} exercise{getExercises(state.session).length === 1 ? "" : "s"}</span>
       <span>·</span>
       <span>{countSets(state.session)} sets</span>
       <span>·</span>
@@ -143,10 +144,10 @@
     </div>
 
     <!-- Exercises -->
-    {#if state.session.exercises.length === 0}
+    {#if getExercises(state.session).length === 0}
       <p class="px-3 py-6 text-sm text-muted-foreground text-center">No exercises recorded.</p>
     {:else}
-      {#each [...state.session.exercises].sort(sortByOrder) as ex (ex.id)}
+      {#each getExercises(state.session) as ex (ex.id)}
         <!-- Exercise section header -->
         <div class="border-t border-border bg-muted/20 px-3 py-2 flex items-center justify-between gap-3">
           <span class="text-sm font-semibold truncate">{ex.exerciseName}</span>

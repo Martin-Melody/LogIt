@@ -137,6 +137,14 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_session_sets_unique_order
       ON session_sets(exercise_entry_id, order_index);
 
+    CREATE TABLE IF NOT EXISTS session_blocks (
+      id TEXT PRIMARY KEY NOT NULL,
+      session_id TEXT NOT NULL,
+      block_type TEXT NOT NULL DEFAULT 'strength',
+      order_index INTEGER NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}'
+    );
+
     -- extra indexes for common reads
     CREATE INDEX IF NOT EXISTS idx_sessions_started
       ON sessions(started_at_ms DESC);
@@ -149,11 +157,65 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_exercises_name_nocase
       ON exercises(name COLLATE NOCASE);
+
+    CREATE INDEX IF NOT EXISTS idx_session_blocks_session
+      ON session_blocks(session_id, order_index);
   `);
 
   await migrateSessionSets(db);
+  await migrateExercisesToBlocks(db);
   await seedSetTypes(db);
   await seedExercises(db);
+}
+
+async function migrateExercisesToBlocks(db: SQLiteDBConnection): Promise<void> {
+  const done = await db.query(`SELECT 1 FROM meta WHERE key = 'blocks_migrated_v1'`, []);
+  if ((done.values?.length ?? 0) > 0) return;
+
+  // Convert each session_exercise row into a session_blocks row with JSON data
+  const exRes = await db.query(
+    `SELECT id, session_id, order_index, exercise_id, exercise_name FROM session_exercises`,
+    [],
+  );
+  const exRows = (exRes.values ?? []) as any[];
+
+  for (const ex of exRows) {
+    const setsRes = await db.query(
+      `SELECT id, order_index, set_type, reps, weight, note, completed,
+              rest_duration_ms, rest_started_at_ms
+       FROM session_sets WHERE exercise_entry_id = ?`,
+      [ex.id],
+    );
+    const sets = ((setsRes.values ?? []) as any[]).map((s) => ({
+      id: s.id,
+      setType: s.set_type ?? "normal",
+      reps: s.reps ?? 0,
+      weight: s.weight ?? 0,
+      note: s.note ?? null,
+      orderIndex: s.order_index ?? 0,
+      completed: s.completed === 1,
+      restDurationMs: s.rest_duration_ms ?? undefined,
+      restStartedAtMs: s.rest_started_at_ms ?? null,
+    }));
+
+    const data = JSON.stringify({
+      exerciseName: ex.exercise_name,
+      exerciseId: ex.exercise_id ?? undefined,
+      sets,
+    });
+
+    await db.run(
+      `INSERT OR IGNORE INTO session_blocks(id, session_id, block_type, order_index, data)
+       VALUES(?, ?, 'strength', ?, ?)`,
+      [ex.id, ex.session_id, ex.order_index, data],
+    );
+  }
+
+  await db.run(
+    `INSERT INTO meta(key, value) VALUES('blocks_migrated_v1', '1')
+     ON CONFLICT(key) DO UPDATE SET value = '1'`,
+    [],
+  );
 }
 
 async function migrateSessionSets(db: SQLiteDBConnection): Promise<void> {
