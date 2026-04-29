@@ -7,16 +7,33 @@
   import { onboarding } from "$lib/stores/onboarding.store";
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
   import { startHomeTour } from "$lib/tour/index";
+  import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
+
+  let widgets = $state<RuntimeWidgetDefinition[]>(
+    localWidgetRegistry.list().map((widget) => ({
+      ...widget,
+      source: "builtin" as const,
+      pluginEnabled: true,
+      bundleContract: null,
+    })),
+  );
 
   const activeWidgets = $derived(
     [...$homeConfig.slots]
       .filter((s) => s.enabled)
       .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((s) => localWidgetRegistry.get(s.id))
-      .filter((w) => w !== null),
+      .map((s) => widgets.find((w) => w.id === s.id))
+      .filter(
+        (w): w is RuntimeWidgetDefinition => w !== undefined && w.pluginEnabled,
+      ),
   );
 
   onMount(() => {
+    void homeConfig.reconcilePlugins();
+    void pluginRuntime.listWidgets().then((loaded) => {
+      widgets = loaded;
+    });
+
     // Small delay so widgets render before the tour tries to find them
     setTimeout(() => {
       if ($onboarding.completed) startHomeTour();
@@ -41,6 +58,6 @@
 
   {#each activeWidgets as widget (widget.id)}
     {@const WidgetComponent = widget.component}
-    <WidgetComponent />
+    <WidgetComponent {...(widget.props ?? {})} />
   {/each}
 </div>

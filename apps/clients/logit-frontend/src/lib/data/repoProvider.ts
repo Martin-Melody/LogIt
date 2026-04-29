@@ -15,9 +15,9 @@ import { createLocalWorkoutRepo } from "$lib/data/workoutRepo.local";
 import { createLocalSplitRepo } from "$lib/data/splitRepo.local";
 import { createLocalExerciseRepo } from "$lib/data/exercise/localExerciseRepo";
 import { createLocalProgressionRepo } from "$lib/data/progressionRepo.local";
-import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
 import { createSqliteWorkoutRepo } from "./workouts/workoutRepo.sqlite";
 import { createSqliteSplitRepo } from "./splts/splitRepo.sqlite";
+import { pluginRuntime } from "$lib/plugins";
 
 let didInit = false;
 
@@ -31,7 +31,7 @@ export async function initRepos(): Promise<void> {
   if (!browser) return;
   if (didInit) return;
 
-  algorithmRegistry = createLocalAlgorithmRegistry();
+  algorithmRegistry = pluginRuntime.algorithms;
 
   const native = isNativePlatform();
 

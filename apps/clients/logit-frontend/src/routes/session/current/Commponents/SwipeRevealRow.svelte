@@ -1,37 +1,29 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Trash } from "@lucide/svelte";
-  import { swipeable } from "@react2svelte/swipeable";
-  import type { SwipeEventData } from "@react2svelte/swipeable";
   import { Pencil } from "lucide-svelte";
 
-  export let actionsWidth = 128; // px revealed when open (tweak)
-  export let disabled = false;
+  const {
+    actionsWidth = 128,
+    disabled = false,
+    onDelete,
+    onEdit,
+    children,
+  } = $props<{
+    actionsWidth?: number;
+    disabled?: boolean;
+    onDelete?: (() => void) | undefined;
+    onEdit?: (() => void) | undefined;
+    children?: import("svelte").Snippet;
+  }>();
 
-  export let onDelete: (() => void) | undefined;
-  export let onEdit: (() => void) | undefined;
+  let dx = $state(0);
+  let open = $state(false);
+  let dragging = $state(false);
 
-  let dx = 0;
-  let open = false;
-
-  function clamp(n: number, min: number, max: number) {
-    return Math.max(min, Math.min(max, n));
-  }
-
-  function onSwiping(e: CustomEvent<SwipeEventData>) {
-    if (disabled) return;
-
-    const next = open ? -actionsWidth + e.detail.deltaX : e.detail.deltaX;
-    dx = clamp(next, -actionsWidth, 0);
-  }
-
-  function onSwiped(e: CustomEvent<SwipeEventData>) {
-    if (disabled) return;
-
-    const shouldOpen = dx < -actionsWidth * 0.35;
-    open = shouldOpen;
-    dx = open ? -actionsWidth : 0;
-  }
+  // Only start tracking a swipe after this many px of total movement, then
+  // lock direction. This prevents tiny diagonal touches from blocking scroll.
+  const LOCK_PX = 12;
 
   function close() {
     open = false;
@@ -43,13 +35,71 @@
     dx = open ? -actionsWidth : 0;
   }
 
-  function onTap() {
-    if (open) close();
+  function swipeAction(node: HTMLElement) {
+    let startX = 0;
+    let startY = 0;
+    let dir: "h" | "v" | null = null;
+
+    function onTouchStart(e: TouchEvent) {
+      if (disabled || e.touches.length !== 1) return;
+      const t = e.touches[0]!;
+      startX = t.clientX;
+      startY = t.clientY;
+      dir = null;
+      dragging = false;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (disabled) return;
+      const t = e.touches[0];
+      if (!t) return;
+
+      const dX = t.clientX - startX;
+      const dY = t.clientY - startY;
+
+      if (!dir) {
+        // Wait until movement is large enough to determine intent
+        if (Math.abs(dX) + Math.abs(dY) < LOCK_PX) return;
+        dir = Math.abs(dX) >= Math.abs(dY) ? "h" : "v";
+      }
+
+      // Vertical intent — let the page scroll, don't interfere
+      if (dir === "v") return;
+
+      // Horizontal intent — take over and prevent page scroll
+      e.preventDefault();
+      dragging = true;
+      const raw = open ? -actionsWidth + dX : dX;
+      dx = Math.max(-actionsWidth, Math.min(0, raw));
+    }
+
+    function onTouchEnd() {
+      if (dir === "h") {
+        open = dx < -(actionsWidth * 0.35);
+        dx = open ? -actionsWidth : 0;
+      }
+      dragging = false;
+      dir = null;
+    }
+
+    node.addEventListener("touchstart", onTouchStart, { passive: true });
+    node.addEventListener("touchmove", onTouchMove, { passive: false });
+    node.addEventListener("touchend", onTouchEnd, { passive: true });
+    node.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return {
+      destroy() {
+        node.removeEventListener("touchstart", onTouchStart);
+        node.removeEventListener("touchmove", onTouchMove);
+        node.removeEventListener("touchend", onTouchEnd);
+        node.removeEventListener("touchcancel", onTouchEnd);
+      },
+    };
   }
 </script>
 
 <div class="relative overflow-hidden">
-  <!-- Back layer: actions -->
+  <!-- Actions revealed behind the row -->
   <div class="absolute inset-0 flex justify-end items-stretch">
     <div class="flex h-full">
       {#if onEdit}
@@ -57,24 +107,17 @@
           variant="ghost"
           size="icon-sm"
           {disabled}
-          onclick={() => {
-            onEdit?.();
-            close();
-          }}
+          onclick={() => { onEdit?.(); close(); }}
         >
           <Pencil color="blue" />
         </Button>
       {/if}
-
       {#if onDelete}
         <Button
           variant="ghost"
           size="icon-sm"
           {disabled}
-          onclick={() => {
-            onDelete?.();
-            close();
-          }}
+          onclick={() => { onDelete?.(); close(); }}
         >
           <Trash color="red" />
         </Button>
@@ -82,30 +125,22 @@
     </div>
   </div>
 
+  <!-- Sliding front layer -->
   <div
-    use:swipeable={{
-      trackTouch: true,
-      trackMouse: false,
-      delta: 8,
-      preventScrollOnSwipe: true,
-      touchEventOptions: { passive: false },
-    }}
-    on:swiping={onSwiping}
-    on:swiped={onSwiped}
-    on:tap={onTap}
+    use:swipeAction
+    role="row"
     class="relative bg-background"
-    style="transform: translate3d({dx}px, 0, 0); transition: {disabled
-      ? 'none'
-      : 'transform 140ms ease'}; touch-action: pan-y;"
+    style="transform: translate3d({dx}px, 0, 0); transition: {dragging ? 'none' : 'transform 140ms ease'};"
+    onclick={() => { if (open) close(); }}
   >
-    <slot />
+    {@render children?.()}
   </div>
 
   {#if !disabled}
     <button
       type="button"
       class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-40"
-      on:click|stopPropagation={toggleOpen}
+      onclick={(e) => { e.stopPropagation(); toggleOpen(); }}
       aria-label="Toggle row actions"
     >
       ⋮

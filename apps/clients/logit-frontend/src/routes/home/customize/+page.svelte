@@ -5,10 +5,28 @@
   import * as Card from "$lib/components/ui/card";
   import { homeConfig } from "$lib/stores/homeConfig.store";
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
+  import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
+  import { onMount } from "svelte";
+
+  let widgets = $state<RuntimeWidgetDefinition[]>(
+    localWidgetRegistry.list().map((widget) => ({
+      ...widget,
+      source: "builtin" as const,
+      pluginEnabled: true,
+      bundleContract: null,
+    })),
+  );
 
   const orderedSlots = $derived(
     [...$homeConfig.slots].sort((a, b) => a.orderIndex - b.orderIndex),
   );
+
+  onMount(() => {
+    void homeConfig.reconcilePlugins();
+    void pluginRuntime.listWidgets().then((loaded) => {
+      widgets = loaded;
+    });
+  });
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
@@ -23,7 +41,7 @@
     <Card.Content class="pt-3">
       <ul class="flex flex-col divide-y divide-border">
         {#each orderedSlots as slot, i (slot.id)}
-          {@const def = localWidgetRegistry.get(slot.id)}
+          {@const def = widgets.find((widget) => widget.id === slot.id)}
           {#if def}
             <li class="py-2 flex items-center gap-2">
               <div class="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -56,6 +74,7 @@
                   type="button"
                   role="switch"
                   aria-checked={slot.enabled}
+                  aria-label={slot.enabled ? "Disable widget" : "Enable widget"}
                   class="relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {slot.enabled ? 'bg-primary' : 'bg-input'}"
                   onclick={() => homeConfig.toggleWidget(slot.id)}
                 >
