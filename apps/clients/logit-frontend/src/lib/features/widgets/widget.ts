@@ -6,7 +6,8 @@ export interface WidgetDefinition {
   id: WidgetId;
   label: string;
   description: string;
-  component: Component;
+  component: Component<any>;
+  props?: Record<string, unknown>;
   defaultEnabled: boolean;
   defaultOrder: number;
 }

@@ -1,6 +1,16 @@
 import { browser } from "$app/environment";
 import { writable, get } from "svelte/store";
-import { driver as createDriver } from "driver.js";
+import { driver as createDriver, type DriveStep } from "driver.js";
+
+type DriverInstance = ReturnType<typeof createDriver>;
+let currentDriver: DriverInstance | null = null;
+
+export function destroyActiveTour() {
+  if (currentDriver?.isActive()) {
+    currentDriver.destroy();
+  }
+  currentDriver = null;
+}
 
 const STORAGE_KEY = "logit:tours:v1";
 
@@ -8,6 +18,16 @@ type TourState = {
   home: boolean;
   session: boolean;
   splits: boolean;
+};
+
+type TourStep = {
+  element: string;
+  popover: {
+    title: string;
+    description: string;
+    side: "top" | "bottom" | "left" | "right";
+    align: "start" | "center" | "end";
+  };
 };
 
 const defaults: TourState = { home: false, session: false, splits: false };
@@ -43,7 +63,7 @@ export function startHomeTour(force = false) {
   if (get(_store).home && !force) return;
   markSeen("home");
 
-  const d = createDriver({
+  currentDriver = createDriver({
     showProgress: true,
     progressText: "{{current}} / {{total}}",
     nextBtnText: "Next →",
@@ -124,7 +144,7 @@ export function startHomeTour(force = false) {
     ],
   });
 
-  d.drive();
+  currentDriver.drive();
 }
 
 export function startSessionTour(force = false) {
@@ -175,9 +195,9 @@ export function startSessionTour(force = false) {
         align: "center" as const,
       },
     },
-  ].filter(Boolean) as NonNullable<(typeof allSteps)[number]>[];
+  ].filter(Boolean) as DriveStep[];
 
-  const d = createDriver({
+  currentDriver = createDriver({
     showProgress: true,
     progressText: "{{current}} / {{total}}",
     nextBtnText: "Next →",
@@ -187,7 +207,7 @@ export function startSessionTour(force = false) {
     steps: allSteps,
   });
 
-  d.drive();
+  currentDriver.drive();
 }
 
 export function startSplitsTour(force = false) {
@@ -218,9 +238,9 @@ export function startSplitsTour(force = false) {
         align: "center" as const,
       },
     },
-  ].filter(Boolean) as NonNullable<(typeof steps)[number]>[];
+  ].filter(Boolean) as DriveStep[];
 
-  const d = createDriver({
+  currentDriver = createDriver({
     showProgress: true,
     progressText: "{{current}} / {{total}}",
     nextBtnText: "Next →",
@@ -230,5 +250,5 @@ export function startSplitsTour(force = false) {
     steps,
   });
 
-  d.drive();
+  currentDriver.drive();
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Pencil, Check, X, RotateCcw } from "lucide-svelte";
+  import { Pencil, Check, X, RotateCcw, Sparkles } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -103,6 +103,10 @@
     resetTours();
     onboarding.reset();
     await goto("/onboarding");
+  }
+
+  function openPlugins() {
+    void goto("/plugins");
   }
 </script>
 
@@ -261,6 +265,21 @@
       </Button>
       <Button variant="outline" size="sm" class="justify-start" onclick={() => startSessionTour(true)}>
         <RotateCcw class="h-3.5 w-3.5 mr-2" /> Workout session
+      </Button>
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root class="w-full">
+    <Card.Header>
+      <Card.Title>Plugins</Card.Title>
+      <Card.Description>
+        Explore the plugin catalog and the foundation for community-built widgets and algorithms.
+      </Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-2">
+      <Button variant="outline" size="sm" class="justify-start" onclick={openPlugins}>
+        <Sparkles class="mr-2 h-3.5 w-3.5" />
+        Open plugin catalog
       </Button>
     </Card.Content>
   </Card.Root>

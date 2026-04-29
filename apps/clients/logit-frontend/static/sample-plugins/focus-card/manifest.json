@@ -1,0 +1,24 @@
+{
+  "id": "sample.widget.focus-card",
+  "family": "widget",
+  "name": "Focus Card",
+  "description": "A sample home widget that renders a friendly highlight card.",
+  "version": "1.0.0",
+  "author": "Logit Samples",
+  "homepageUrl": "/sample-plugins/focus-card/README.txt",
+  "sourceUrl": "/sample-plugins/focus-card/manifest.json",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "/sample-plugins/focus-card/manifest.json",
+    "bundleUrl": "/sample-plugins/focus-card/bundle.js"
+  },
+  "capabilities": [
+    {
+      "family": "widget",
+      "widgetId": "sample.widget.focus-card",
+      "slot": "home",
+      "defaultEnabled": true,
+      "defaultOrder": 99
+    }
+  ]
+}

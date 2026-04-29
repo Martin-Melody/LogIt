@@ -105,31 +105,33 @@
     onblur={onBlur}
   />
 
-  {#if open && (results.length > 0 || showAddNew)}
+  {#if open && results.length > 0}
     <ul class="absolute z-50 w-full mt-1 rounded-lg border border-border bg-background shadow-lg overflow-hidden max-h-56 overflow-y-auto">
       {#each results as ex, i (ex.id)}
         <li>
           <button
             type="button"
             class="w-full px-3 py-2 text-sm text-left transition-colors {activeIndex === i ? 'bg-muted' : 'hover:bg-muted'}"
-            onmousedown={() => selectResult(ex)}
+            onclick={() => selectResult(ex)}
           >
             {ex.name}
           </button>
         </li>
       {/each}
-
-      {#if showAddNew}
-        <li class="border-t border-border">
-          <button
-            type="button"
-            class="w-full px-3 py-2 text-sm text-left text-muted-foreground transition-colors {activeIndex === results.length ? 'bg-muted' : 'hover:bg-muted'}"
-            onmousedown={confirmNew}
-          >
-            Add "<span class="text-foreground font-medium">{query.trim()}</span>"
-          </button>
-        </li>
-      {/if}
     </ul>
+  {/if}
+
+  {#if showAddNew}
+    <!--
+      Use onpointerdown + preventDefault so this fires before the keyboard dismisses
+      and before the input blur can cause a layout shift that would move this button.
+    -->
+    <button
+      type="button"
+      class="mt-1 w-full rounded border border-dashed border-border px-3 py-2 text-sm text-left text-muted-foreground hover:bg-muted transition-colors"
+      onpointerdown={(e) => { e.preventDefault(); confirmNew(); }}
+    >
+      Add "<span class="text-foreground font-medium">{query.trim()}</span>"
+    </button>
   {/if}
 </div>

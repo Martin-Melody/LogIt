@@ -105,15 +105,18 @@
       saving={state.deleting}
       onConfirm={deleteThisSession}
     >
-      <Button
-        variant="ghost"
-        size="icon"
-        class="h-7 w-7 text-muted-foreground hover:text-destructive"
-        disabled={state.loading || !state.session || state.deleting}
-        aria-label="Delete session"
-      >
-        <Trash class="h-3.5 w-3.5" />
-      </Button>
+      {#snippet child({ props })}
+        <Button
+          {...props}
+          variant="ghost"
+          size="icon"
+          class="h-7 w-7 text-muted-foreground hover:text-destructive"
+          disabled={state.loading || !state.session || state.deleting}
+          aria-label="Delete session"
+        >
+          <Trash class="h-3.5 w-3.5" />
+        </Button>
+      {/snippet}
     </ConfirmDialog>
   </div>
 

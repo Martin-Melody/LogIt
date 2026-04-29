@@ -1,0 +1,19 @@
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "/sample-plugins/focus-card/actor.json",
+  "type": "Person",
+  "preferredUsername": "focus-card",
+  "name": "Focus Card Sample Actor",
+  "summary": "A sample fediverse actor that publishes a plugin manifest.",
+  "url": "/sample-plugins/focus-card/README.txt",
+  "inbox": "/sample-plugins/focus-card/inbox.json",
+  "outbox": "/sample-plugins/focus-card/outbox.json",
+  "attachment": [
+    {
+      "type": "Link",
+      "mediaType": "application/json",
+      "name": "Focus Card manifest",
+      "href": "/sample-plugins/focus-card/manifest.json"
+    }
+  ]
+}
