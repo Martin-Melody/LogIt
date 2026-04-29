@@ -17,6 +17,25 @@ function ensureBrowser(): void {
   }
 }
 
+function migrateSession(raw: any): WorkoutSession {
+  if (Array.isArray(raw.blocks)) return raw as WorkoutSession;
+  return {
+    id: raw.id,
+    startedAtMs: raw.startedAtMs,
+    endedAtMs: raw.endedAtMs,
+    blocks: (raw.exercises ?? []).map((ex: any) => ({
+      id: ex.id,
+      type: "strength",
+      orderIndex: ex.orderIndex ?? 0,
+      data: {
+        exerciseName: ex.exerciseName ?? "",
+        exerciseId: ex.exerciseId ?? undefined,
+        sets: ex.sets ?? [],
+      },
+    })),
+  };
+}
+
 function readJson<T>(key: string, fallback: T): T {
   ensureBrowser();
 
@@ -56,16 +75,17 @@ export function createLocalWorkoutRepo(): WorkoutRepo {
     },
 
     async getSession(id: string): Promise<WorkoutSession | null> {
-      const sessions = readJson<WorkoutSession[]>(STORAGE_KEYS.sessions, []);
-      return sessions.find((s) => s.id === id) ?? null;
+      const sessions = readJson<any[]>(STORAGE_KEYS.sessions, []);
+      const raw = sessions.find((s) => s.id === id);
+      return raw ? migrateSession(raw) : null;
     },
 
     async listRecentSessions(
       options: ListRecentSessionsOptions,
     ): Promise<WorkoutSession[]> {
-      const sessions = readJson<WorkoutSession[]>(STORAGE_KEYS.sessions, []);
+      const sessions = readJson<any[]>(STORAGE_KEYS.sessions, []);
       const sorted = [...sessions].sort(sortByMostRecent);
-      return sorted.slice(0, options.limit);
+      return sorted.slice(0, options.limit).map(migrateSession);
     },
 
     async deleteSession(id: string): Promise<void> {
@@ -79,8 +99,8 @@ export function createLocalWorkoutRepo(): WorkoutRepo {
     },
 
     async loadDraftSession(): Promise<WorkoutSession | null> {
-      const draft = readJson<WorkoutSession | null>(STORAGE_KEYS.draft, null);
-      return draft;
+      const draft = readJson<any | null>(STORAGE_KEYS.draft, null);
+      return draft ? migrateSession(draft) : null;
     },
 
     async clearDraftSession(): Promise<void> {
