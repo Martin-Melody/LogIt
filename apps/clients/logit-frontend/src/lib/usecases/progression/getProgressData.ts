@@ -1,4 +1,5 @@
 import { getWorkoutRepo, getProgressionRepo } from "$lib/data/repoProvider";
+import { getExercises } from "$lib/domain/workout";
 import type { ExerciseProgressionState } from "$lib/domain/progression";
 
 export type ProgressDataPoint = {
@@ -37,7 +38,7 @@ export async function getProgressData(): Promise<ExerciseProgressData[]> {
   const byKey = new Map<string, Accumulator>();
 
   for (const session of sessions) {
-    for (const ex of session.exercises) {
+    for (const ex of getExercises(session)) {
       const key = ex.exerciseId ?? ex.exerciseName.toLowerCase().trim();
 
       if (!byKey.has(key)) {

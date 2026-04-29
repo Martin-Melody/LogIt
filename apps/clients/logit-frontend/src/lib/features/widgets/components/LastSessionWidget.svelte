@@ -5,7 +5,7 @@
   import * as Card from "$lib/components/ui/card";
   import { recentSessions } from "$lib/stores/recentSessions.store";
   import { durationMs, formatDuration } from "$lib/domain/time";
-  import { getTopSetHighlight } from "$lib/domain/workout";
+  import { getTopSetHighlight, getExercises } from "$lib/domain/workout";
 
   onMount(() => { void recentSessions.refresh(5); });
 
@@ -26,7 +26,7 @@
         dateLabel: label(s.endedAtMs ?? s.startedAtMs),
         durationLabel: s.endedAtMs ? formatDuration(dur) : "In progress",
         topSet: top ? `${top.exerciseName} ${top.reps}×${top.weight}kg` : null,
-        exerciseCount: s.exercises.length,
+        exerciseCount: getExercises(s).length,
       };
     }),
   );
