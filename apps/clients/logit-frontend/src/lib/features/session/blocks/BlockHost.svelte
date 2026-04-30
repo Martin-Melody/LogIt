@@ -1,26 +1,22 @@
 <script lang="ts">
   import { getBlockDef } from "./registry";
-  import type { BlockBaseProps } from "./types";
+  import type { GripAction } from "./types";
   import type { WorkoutSession } from "$lib/domain/workout";
 
   const {
     type,
+    blockId,
     data,
     saving,
-    canMoveUp,
-    canMoveDown,
-    onMoveUp,
-    onMoveDown,
+    gripAction,
     onDelete,
     onMutate,
   } = $props<{
     type: string;
+    blockId: string;
     data: unknown;
     saving: boolean;
-    canMoveUp: boolean;
-    canMoveDown: boolean;
-    onMoveUp: () => void | Promise<void>;
-    onMoveDown: () => void | Promise<void>;
+    gripAction: GripAction;
     onDelete: () => void | Promise<void>;
     onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
   }>();
@@ -31,12 +27,10 @@
 {#if def}
   {@const BlockComponent = def.component}
   <BlockComponent
+    {blockId}
     {data}
     {saving}
-    {canMoveUp}
-    {canMoveDown}
-    {onMoveUp}
-    {onMoveDown}
+    {gripAction}
     {onDelete}
     {onMutate}
   />

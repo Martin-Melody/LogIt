@@ -7,9 +7,21 @@ export type UserProfile = {
   heightUnit: "cm" | "in";
   weight: number | null;
   weightUnit: "kg" | "lbs";
+  blocksCollapsedByDefault: boolean;
+  // Keyed by set type string so plugin-added types slot in without schema changes.
+  // undefined value (or absent key) means no auto-timer for that type.
+  restDefaults: Record<string, number | undefined>;
 };
 
 const STORAGE_KEY = "logit:profile:v1";
+
+const defaultRestDefaults: Record<string, number | undefined> = {
+  normal:  90_000,
+  warmup:  undefined,
+  dropset: 30_000,
+  amrap:   undefined,
+  failure: 90_000,
+};
 
 const defaultProfile: UserProfile = {
   name: "",
@@ -17,6 +29,8 @@ const defaultProfile: UserProfile = {
   heightUnit: "cm",
   weight: null,
   weightUnit: "kg",
+  blocksCollapsedByDefault: true,
+  restDefaults: defaultRestDefaults,
 };
 
 function load(): UserProfile {
@@ -24,7 +38,13 @@ function load(): UserProfile {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...defaultProfile };
-    return { ...defaultProfile, ...(JSON.parse(raw) as Partial<UserProfile>) };
+    const parsed = JSON.parse(raw) as Partial<UserProfile>;
+    return {
+      ...defaultProfile,
+      ...parsed,
+      // Deep-merge so new set types added to defaults reach existing users.
+      restDefaults: { ...defaultRestDefaults, ...(parsed.restDefaults ?? {}) },
+    };
   } catch {
     return { ...defaultProfile };
   }

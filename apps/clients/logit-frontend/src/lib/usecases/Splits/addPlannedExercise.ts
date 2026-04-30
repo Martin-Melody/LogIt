@@ -1,5 +1,5 @@
 import { getSplitRepo } from "$lib/data/repoProvider";
-import { addPlannedExercise as addPlannedExerciseDomain } from "$lib/domain/WorkoutSplit";
+import { addPlannedStrength } from "$lib/domain/WorkoutSplit";
 
 export async function addPlannedExercise(
   splitId: string,
@@ -11,7 +11,7 @@ export async function addPlannedExercise(
   const split = await repo.getSplit(splitId);
   if (!split) throw new Error("Split not found");
 
-  const next = addPlannedExerciseDomain(split, dayId, {
+  const next = addPlannedStrength(split, dayId, {
     exerciseName,
     targets,
   });

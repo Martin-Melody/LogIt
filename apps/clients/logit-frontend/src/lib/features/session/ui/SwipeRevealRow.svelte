@@ -94,8 +94,8 @@
 </script>
 
 <div class="relative overflow-hidden">
-  <div class="absolute inset-0 flex justify-end items-stretch">
-    <div class="flex h-full">
+  <div class="absolute inset-0 flex justify-end items-center">
+    <div class="flex h-full items-center">
       {#if onEdit}
         <Button
           variant="ghost"
@@ -129,14 +129,4 @@
     {@render children?.()}
   </div>
 
-  {#if !disabled}
-    <button
-      type="button"
-      class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-40"
-      onclick={(e) => { e.stopPropagation(); toggleOpen(); }}
-      aria-label="Toggle row actions"
-    >
-      ⋮
-    </button>
-  {/if}
 </div>

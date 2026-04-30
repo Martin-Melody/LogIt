@@ -5,6 +5,15 @@ export const DEFAULT_REST_MS = 90_000;
 
 export type SetType = "normal" | "warmup" | "dropset" | "amrap" | "failure";
 
+// Exported as a mutable array so plugins can push new entries at runtime.
+export const SET_TYPE_META: { type: string; label: string }[] = [
+  { type: "normal",  label: "Normal"  },
+  { type: "warmup",  label: "Warm-up" },
+  { type: "dropset", label: "Drop set" },
+  { type: "amrap",   label: "AMRAP"   },
+  { type: "failure", label: "Failure" },
+];
+
 export type SetEntry = {
   id: string;
   setType: SetType;
@@ -22,6 +31,19 @@ export type StrengthBlockData = {
   exerciseName: string;
   exerciseId?: string;
   sets: SetEntry[];
+};
+
+export type CardioInterval = {
+  id: string;
+  orderIndex: number;
+  durationMs: number | null;
+  distanceM: number | null;
+  note: string | null;
+};
+
+export type CardioBlockData = {
+  activityName: string;
+  intervals: CardioInterval[];
 };
 
 // Generic session block — data is typed per block type
@@ -179,6 +201,22 @@ export function getTopSetHighlight(session: WorkoutSession): TopSetHighlight | n
 
   if (!best) return null;
   return { exerciseName: best.exerciseName, reps: best.set.reps, weight: best.set.weight };
+}
+
+export function addCardioBlock(
+  session: WorkoutSession,
+  activityName: string,
+): WorkoutSession {
+  const block: SessionBlock<CardioBlockData> = {
+    id: createId("cardio"),
+    type: "cardio",
+    orderIndex: session.blocks.length,
+    data: {
+      activityName: activityName.trim(),
+      intervals: [],
+    },
+  };
+  return { ...session, blocks: [...session.blocks, block] };
 }
 
 export function moveExercise(

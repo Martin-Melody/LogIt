@@ -24,8 +24,13 @@ export async function initSqlite(): Promise<void> {
 
   if (!sqlite) sqlite = new SQLiteConnection(CapacitorSQLite);
 
-  const consistent = await sqlite.checkConnectionsConsistency();
-  if (!consistent.result) await sqlite.closeAllConnections();
+  try {
+    const consistent = await sqlite.checkConnectionsConsistency();
+    if (!consistent.result) await sqlite.closeAllConnections();
+  } catch {
+    // Plugin not fully registered yet on this boot — close all and continue
+    try { await sqlite.closeAllConnections(); } catch {}
+  }
 
   const has = await sqlite.isConnection(DB_NAME, false);
   db = has.result
@@ -88,21 +93,22 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_split_days_unique_order
       ON split_days(split_id, order_index);
 
-    CREATE TABLE IF NOT EXISTS planned_exercises (
+    CREATE TABLE IF NOT EXISTS planned_blocks (
       id TEXT PRIMARY KEY NOT NULL,
       day_id TEXT NOT NULL,
+      block_type TEXT NOT NULL DEFAULT 'strength',
       order_index INTEGER NOT NULL,
-      exercise_name TEXT NOT NULL,
+      exercise_name TEXT NULL,
       exercise_id TEXT NULL,
       target_sets INTEGER NULL,
       target_reps INTEGER NULL,
       target_weight REAL NULL,
-      FOREIGN KEY (day_id) REFERENCES split_days(id) ON DELETE CASCADE,
-      FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE SET NULL
+      activity_name TEXT NULL,
+      FOREIGN KEY (day_id) REFERENCES split_days(id) ON DELETE CASCADE
     );
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_planned_exercises_unique_order
-      ON planned_exercises(day_id, order_index);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_planned_blocks_unique_order
+      ON planned_blocks(day_id, order_index);
 
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY NOT NULL,

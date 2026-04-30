@@ -14,16 +14,26 @@ export type SplitDay = {
   id: string;
   orderIndex: number;
   name?: string;
-  exercises: PlannedExercise[];
+  blocks: PlannedBlock[];
 };
 
-export type PlannedExercise = {
+export type PlannedStrength = {
+  type: "strength";
   id: string;
   orderIndex: number;
   exerciseName: string;
   exerciseId?: string;
   targets?: PlannedTargets;
 };
+
+export type PlannedCardio = {
+  type: "cardio";
+  id: string;
+  orderIndex: number;
+  activityName: string;
+};
+
+export type PlannedBlock = PlannedStrength | PlannedCardio;
 
 export type PlannedTargets = {
   sets?: number;
@@ -64,7 +74,7 @@ export function addDay(split: WorkoutSplit, name?: string): WorkoutSplit {
     id: createId("day"),
     orderIndex: split.days.length,
     name: name?.trim() || undefined,
-    exercises: [],
+    blocks: [],
   };
 
   return touchSplit({
@@ -73,7 +83,7 @@ export function addDay(split: WorkoutSplit, name?: string): WorkoutSplit {
   });
 }
 
-export function addPlannedExercise(
+export function addPlannedStrength(
   split: WorkoutSplit,
   dayId: string,
   exercise: {
@@ -85,21 +95,40 @@ export function addPlannedExercise(
   const idx = split.days.findIndex((d) => d.id === dayId);
   if (idx === -1) return split;
 
-  const day = split.days[idx];
+  const day = split.days[idx]!;
 
-  const nextExercise: PlannedExercise = {
+  const nextBlock: PlannedStrength = {
+    type: "strength",
     id: createId("pex"),
-    orderIndex: day.exercises.length,
+    orderIndex: day.blocks.length,
     exerciseName: exercise.exerciseName.trim(),
     exerciseId: exercise.exerciseId,
     targets: exercise.targets,
   };
 
-  const nextDay: SplitDay = {
-    ...day,
-    exercises: [...day.exercises, nextExercise],
+  const nextDay: SplitDay = { ...day, blocks: [...day.blocks, nextBlock] };
+  const nextDays = split.days.map((d, i) => (i === idx ? nextDay : d));
+  return touchSplit({ ...split, days: nextDays });
+}
+
+export function addPlannedCardio(
+  split: WorkoutSplit,
+  dayId: string,
+  activityName: string,
+): WorkoutSplit {
+  const idx = split.days.findIndex((d) => d.id === dayId);
+  if (idx === -1) return split;
+
+  const day = split.days[idx]!;
+
+  const nextBlock: PlannedCardio = {
+    type: "cardio",
+    id: createId("pcardio"),
+    orderIndex: day.blocks.length,
+    activityName: activityName.trim(),
   };
 
+  const nextDay: SplitDay = { ...day, blocks: [...day.blocks, nextBlock] };
   const nextDays = split.days.map((d, i) => (i === idx ? nextDay : d));
   return touchSplit({ ...split, days: nextDays });
 }
@@ -118,7 +147,7 @@ export function reorderDays(
   return touchSplit({ ...split, days: reindexed });
 }
 
-export function reorderPlannedExercises(
+export function reorderPlannedBlocks(
   split: WorkoutSplit,
   dayId: string,
   fromIndex: number,
@@ -127,17 +156,17 @@ export function reorderPlannedExercises(
   const dayIdx = split.days.findIndex((d) => d.id === dayId);
   if (dayIdx === -1) return split;
 
-  const day = split.days[dayIdx];
+  const day = split.days[dayIdx]!;
   if (fromIndex === toIndex) return split;
 
-  const exs = [...day.exercises];
-  const [moved] = exs.splice(fromIndex, 1);
+  const blocks = [...day.blocks];
+  const [moved] = blocks.splice(fromIndex, 1);
   if (!moved) return split;
-  exs.splice(toIndex, 0, moved);
+  blocks.splice(toIndex, 0, moved);
 
-  const reindexed = exs.map((e, i) => ({ ...e, orderIndex: i }));
+  const reindexed = blocks.map((b, i) => ({ ...b, orderIndex: i }));
 
-  const nextDay: SplitDay = { ...day, exercises: reindexed };
+  const nextDay: SplitDay = { ...day, blocks: reindexed };
   const nextDays = split.days.map((d, i) => (i === dayIdx ? nextDay : d));
   return touchSplit({ ...split, days: nextDays });
 }

@@ -9,8 +9,8 @@
     activeSplitId?: string | null;
   }>();
 
-  const exercisesSorted = $derived(
-    day ? [...day.exercises].sort((a, b) => a.orderIndex - b.orderIndex) : [],
+  const blocksSorted = $derived(
+    day ? [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) : [],
   );
 
   function edit() {
@@ -41,16 +41,16 @@
   <Card.Content class="flex flex-col gap-4">
     {#if day}
       <ul class="space-y-2">
-        {#each exercisesSorted.slice(0, 6) as ex, i (ex.id)}
+        {#each blocksSorted.slice(0, 6) as block, i (block.id)}
           <li class="text-sm">
             <span class="text-muted-foreground">{i + 1}.</span>
-            {ex.exerciseName}
+            {block.type === "strength" ? block.exerciseName : block.activityName}
           </li>
         {/each}
 
-        {#if exercisesSorted.length > 6}
+        {#if blocksSorted.length > 6}
           <li class="text-xs text-muted-foreground">
-            +{exercisesSorted.length - 6} more…
+            +{blocksSorted.length - 6} more…
           </li>
         {/if}
       </ul>

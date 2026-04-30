@@ -2,7 +2,7 @@ import type { SplitRepo, ListSplitsOptions } from "$lib/data/splitRepo";
 import type {
   WorkoutSplit,
   SplitDay,
-  PlannedExercise,
+  PlannedBlock,
 } from "$lib/domain/WorkoutSplit";
 import { getDb } from "$lib/data/db/sqlite";
 import { nowMs } from "$lib/domain/time";
@@ -39,26 +39,43 @@ export function createSqliteSplitRepo(): SplitRepo {
           [day.id, split.id, day.orderIndex, day.name ?? null],
         );
 
-        for (const ex of day.exercises) {
-          await db.run(
-            `
-            INSERT INTO planned_exercises(
-              id, day_id, order_index, exercise_name, exercise_id,
-              target_sets, target_reps, target_weight
-            )
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-            `,
-            [
-              ex.id,
-              day.id,
-              ex.orderIndex,
-              ex.exerciseName,
-              ex.exerciseId ?? null,
-              ex.targets?.sets ?? null,
-              ex.targets?.reps ?? null,
-              ex.targets?.weight ?? null,
-            ],
-          );
+        for (const block of day.blocks) {
+          if (block.type === "strength") {
+            await db.run(
+              `
+              INSERT INTO planned_blocks(
+                id, day_id, block_type, order_index,
+                exercise_name, exercise_id,
+                target_sets, target_reps, target_weight,
+                activity_name
+              )
+              VALUES(?, ?, 'strength', ?, ?, ?, ?, ?, ?, NULL)
+              `,
+              [
+                block.id,
+                day.id,
+                block.orderIndex,
+                block.exerciseName,
+                block.exerciseId ?? null,
+                block.targets?.sets ?? null,
+                block.targets?.reps ?? null,
+                block.targets?.weight ?? null,
+              ],
+            );
+          } else if (block.type === "cardio") {
+            await db.run(
+              `
+              INSERT INTO planned_blocks(
+                id, day_id, block_type, order_index,
+                exercise_name, exercise_id,
+                target_sets, target_reps, target_weight,
+                activity_name
+              )
+              VALUES(?, ?, 'cardio', ?, NULL, NULL, NULL, NULL, NULL, ?)
+              `,
+              [block.id, day.id, block.orderIndex, block.activityName],
+            );
+          }
         }
       }
 
@@ -95,47 +112,51 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       const days: SplitDay[] = [];
       for (const d of (daysRes.values ?? []) as any[]) {
-        const exRes = await db.query(
+        const blocksRes = await db.query(
           `
           SELECT
-            id,
-            order_index as orderIndex,
-            exercise_name as exerciseName,
-            exercise_id as exerciseId,
-            target_sets as targetSets,
-            target_reps as targetReps,
-            target_weight as targetWeight
-          FROM planned_exercises
+            id, block_type as blockType, order_index as orderIndex,
+            exercise_name as exerciseName, exercise_id as exerciseId,
+            target_sets as targetSets, target_reps as targetReps, target_weight as targetWeight,
+            activity_name as activityName
+          FROM planned_blocks
           WHERE day_id = ?
           ORDER BY order_index ASC
           `,
           [d.id],
         );
 
-        const exercises: PlannedExercise[] = (
-          (exRes.values ?? []) as any[]
-        ).map((r) => ({
-          id: r.id,
-          orderIndex: r.orderIndex,
-          exerciseName: r.exerciseName,
-          exerciseId: r.exerciseId ?? undefined,
-          targets:
-            r.targetSets == null &&
-            r.targetReps == null &&
-            r.targetWeight == null
-              ? undefined
-              : {
-                  sets: r.targetSets ?? undefined,
-                  reps: r.targetReps ?? undefined,
-                  weight: r.targetWeight ?? undefined,
-                },
-        }));
+        const blocks: PlannedBlock[] = ((blocksRes.values ?? []) as any[]).map((r) => {
+          if (r.blockType === "cardio") {
+            return {
+              type: "cardio" as const,
+              id: r.id,
+              orderIndex: r.orderIndex,
+              activityName: r.activityName ?? "",
+            };
+          }
+          return {
+            type: "strength" as const,
+            id: r.id,
+            orderIndex: r.orderIndex,
+            exerciseName: r.exerciseName ?? "",
+            exerciseId: r.exerciseId ?? undefined,
+            targets:
+              r.targetSets == null && r.targetReps == null && r.targetWeight == null
+                ? undefined
+                : {
+                    sets: r.targetSets ?? undefined,
+                    reps: r.targetReps ?? undefined,
+                    weight: r.targetWeight ?? undefined,
+                  },
+          };
+        });
 
         days.push({
           id: d.id,
           orderIndex: d.orderIndex,
           name: d.name ?? undefined,
-          exercises,
+          blocks,
         });
       }
 
