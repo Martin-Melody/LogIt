@@ -15,10 +15,11 @@ export function getTodayPlanFromSplit(split: WorkoutSplit): TodayPlan | null {
   return {
     dayNumber: day.orderIndex + 1,
     dayName: day.name,
-    exercises: day.exercises
+    exercises: day.blocks
       .slice()
       .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((e) => ({ id: e.id, name: e.exerciseName })),
+      .filter((b) => b.type === "strength")
+      .map((b) => ({ id: b.id, name: b.type === "strength" ? b.exerciseName : "" })),
   };
 }
 

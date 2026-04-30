@@ -2,6 +2,23 @@ import type { WorkoutSplit, SplitDay } from "$lib/domain/WorkoutSplit";
 
 type RotationState = { lastDayId: string; recordedAtMs: number };
 
+export type ScheduleMode = "bump" | "original";
+
+const SCHEDULE_MODE_KEY = "logit:schedule-mode:v1";
+const RESET_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function getScheduleMode(): ScheduleMode {
+  if (typeof localStorage === "undefined") return "bump";
+  try {
+    return localStorage.getItem(SCHEDULE_MODE_KEY) === "original" ? "original" : "bump";
+  } catch { return "bump"; }
+}
+
+export function setScheduleMode(mode: ScheduleMode): void {
+  if (typeof localStorage === "undefined") return;
+  try { localStorage.setItem(SCHEDULE_MODE_KEY, mode); } catch {}
+}
+
 function storageKey(splitId: string) {
   return `logit:split-rotation:${splitId}:v1`;
 }
@@ -10,7 +27,10 @@ function loadState(splitId: string): RotationState | null {
   if (typeof localStorage === "undefined") return null;
   try {
     const raw = localStorage.getItem(storageKey(splitId));
-    return raw ? (JSON.parse(raw) as RotationState) : null;
+    const state = raw ? (JSON.parse(raw) as RotationState) : null;
+    // Auto-reset after a week gap so old state doesn't haunt a returning user
+    if (state && Date.now() - state.recordedAtMs > RESET_AFTER_MS) return null;
+    return state;
   } catch {
     return null;
   }

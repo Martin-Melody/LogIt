@@ -8,7 +8,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { appInit } from "$lib/platform/appInit";
-  import { appReady } from "$lib/stores/appReady.store";
+  import { appReady, appInitError } from "$lib/stores/appReady.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { goto, onNavigate } from "$app/navigation";
 
@@ -55,7 +55,13 @@
   <link rel="icon" href={favicon} />
 </svelte:head>
 
-{#if $appReady}
+{#if $appInitError}
+  <div class="flex h-screen w-screen flex-col items-center justify-center gap-4 px-6 text-center">
+    <p class="text-sm font-semibold text-destructive">Failed to start</p>
+    <p class="text-xs text-muted-foreground max-w-xs">{$appInitError}</p>
+    <p class="text-xs text-muted-foreground">Try closing and reopening the app. If this keeps happening, reinstall it.</p>
+  </div>
+{:else if $appReady}
   {#if isOnboarding}
     {@render children()}
   {:else}
