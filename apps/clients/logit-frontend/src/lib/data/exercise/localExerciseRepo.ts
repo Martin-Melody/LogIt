@@ -38,8 +38,6 @@ const CORE_EXERCISES: Exercise[] = [
   { id: "ex_core_back_ext", name: "Machine Back Extension", notes: null, isCore: true, createdAtMs: 0 },
 ];
 
-const CORE_NAMES_LOWER = new Set(CORE_EXERCISES.map((e) => e.name.toLowerCase()));
-
 const STORAGE_KEY = "logit:exercises:custom";
 
 function ensureBrowser() {
@@ -159,6 +157,18 @@ export function createLocalExerciseRepo(): ExerciseRepo {
       // Cannot remove core exercises
       if (CORE_EXERCISES.some((e) => e.id === id)) return;
       writeCustom(readCustom().filter((e) => e.id !== id));
+    },
+
+    async saveExercise(exercise: Exercise): Promise<void> {
+      // Core exercises are always present — only restore custom ones
+      if (exercise.isCore) return;
+      const custom = readCustom();
+      const exists = custom.some((e) => e.id === exercise.id);
+      writeCustom(exists ? custom.map((e) => (e.id === exercise.id ? exercise : e)) : [exercise, ...custom]);
+    },
+
+    async clearAll(): Promise<void> {
+      writeCustom([]);
     },
   };
 }

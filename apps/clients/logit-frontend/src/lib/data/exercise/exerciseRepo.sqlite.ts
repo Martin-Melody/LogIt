@@ -123,5 +123,21 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       const db = getDb();
       await db.run(`DELETE FROM exercises WHERE id = ? AND is_core = 0`, [id]);
     },
+
+    async saveExercise(exercise: Exercise): Promise<void> {
+      // Core exercises are seeded by migrations — only restore custom ones
+      if (exercise.isCore) return;
+      const db = getDb();
+      await db.run(
+        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms) VALUES(?, ?, ?, 0, ?)
+         ON CONFLICT(id) DO UPDATE SET name=excluded.name, notes=excluded.notes`,
+        [exercise.id, exercise.name, exercise.notes ?? null, exercise.createdAtMs],
+      );
+    },
+
+    async clearAll(): Promise<void> {
+      const db = getDb();
+      await db.run(`DELETE FROM exercises WHERE is_core = 0`, []);
+    },
   };
 }

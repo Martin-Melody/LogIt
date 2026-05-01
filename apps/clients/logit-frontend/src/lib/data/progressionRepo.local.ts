@@ -56,5 +56,10 @@ export function createLocalProgressionRepo(): ProgressionRepo {
       const states = readJson<Record<string, ExerciseProgressionState>>(STORAGE_KEYS.states, {});
       return Object.values(states);
     },
+
+    async clearStates(): Promise<void> {
+      ensureBrowser();
+      localStorage.removeItem(STORAGE_KEYS.states);
+    },
   };
 }

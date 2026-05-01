@@ -14,6 +14,7 @@
   import { profile } from "$lib/stores/profile.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { resetTours, startHomeTour, startSessionTour, startSplitsTour } from "$lib/tour/index";
+  import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
 
   const isDev = import.meta.env.DEV;
 
@@ -455,6 +456,8 @@
       </Button>
     </Card.Content>
   </Card.Root>
+
+  <ImportExportPanel />
 
   <!-- Dev tools — only visible in development builds -->
   {#if isDev}

@@ -8,4 +8,5 @@ export interface ProgressionRepo {
   getExerciseState(key: string): Promise<ExerciseProgressionState | null>;
   saveExerciseState(state: ExerciseProgressionState): Promise<void>;
   listExerciseStates(): Promise<ExerciseProgressionState[]>;
+  clearStates(): Promise<void>;
 }
