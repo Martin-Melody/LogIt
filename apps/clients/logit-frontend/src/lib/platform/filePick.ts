@@ -1,27 +1,29 @@
 import { isNativePlatform } from "./isNative";
 
 /**
- * On native: uses @capawesome/capacitor-file-picker so the WebView lifecycle
- * is handled correctly (avoids the app-pause/resume that resets Svelte state).
+ * On native: uses @capacitor/camera with CameraSource.Prompt, which shows
+ * the OS-native "Take photo / Choose from library" dialog and opens the
+ * photos gallery (not the file system) for the library option.
  * On web: falls back to a programmatic <input type="file">.
- * Always resolves to a File object so callers are platform-agnostic.
+ * Always resolves to a File so callers are platform-agnostic.
  */
 export async function pickImageFile(): Promise<File> {
   if (isNativePlatform()) {
-    const { FilePicker } = await import("@capawesome/capacitor-file-picker");
+    const { Camera, CameraResultType, CameraSource } = await import("@capacitor/camera");
 
-    const result = await FilePicker.pickFiles({
-      types: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
-      readData: true,
+    const photo = await Camera.getPhoto({
+      resultType: CameraResultType.Base64,
+      source: CameraSource.Prompt,
+      quality: 90,
+      correctOrientation: true,
     });
 
-    const file = result.files[0];
-    if (!file) throw new Error("No file selected.");
-    if (!file.data) throw new Error("Could not read file data.");
+    if (!photo.base64String) throw new Error("No photo data returned.");
 
-    const byteArray = Uint8Array.from(atob(file.data), (c) => c.charCodeAt(0));
-    const blob = new Blob([byteArray], { type: file.mimeType ?? "image/jpeg" });
-    return new File([blob], file.name ?? "avatar", { type: blob.type });
+    const mimeType = `image/${photo.format ?? "jpeg"}`;
+    const byteArray = Uint8Array.from(atob(photo.base64String), (c) => c.charCodeAt(0));
+    const blob = new Blob([byteArray], { type: mimeType });
+    return new File([blob], `avatar.${photo.format ?? "jpg"}`, { type: mimeType });
   } else {
     return new Promise((resolve, reject) => {
       const input = document.createElement("input");
