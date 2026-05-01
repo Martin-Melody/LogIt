@@ -209,13 +209,35 @@ export function createSqliteSplitRepo(): SplitRepo {
         [...params, limit, offset],
       );
 
-      return ((res.values ?? []) as any[]).map((r) => ({
+      const splitRows = (res.values ?? []) as any[];
+      if (splitRows.length === 0) return [];
+
+      // Fetch day stubs for all returned splits in one query so the list
+      // page can show the correct day count without loading full split data.
+      const placeholders = splitRows.map(() => "?").join(",");
+      const splitIds = splitRows.map((r) => r.id);
+      const daysRes = await db.query(
+        `SELECT id, split_id as splitId, order_index as orderIndex, name
+         FROM split_days
+         WHERE split_id IN (${placeholders})
+         ORDER BY order_index ASC`,
+        splitIds,
+      );
+
+      const daysBySplitId = new Map<string, SplitDay[]>();
+      for (const d of (daysRes.values ?? []) as any[]) {
+        const list = daysBySplitId.get(d.splitId) ?? [];
+        list.push({ id: d.id, orderIndex: d.orderIndex, name: d.name ?? undefined, blocks: [] });
+        daysBySplitId.set(d.splitId, list);
+      }
+
+      return splitRows.map((r) => ({
         id: r.id,
         name: r.name,
         archived: !!r.archived,
         createdAtMs: r.createdAtMs,
         updatedAtMs: r.updatedAtMs,
-        days: [],
+        days: daysBySplitId.get(r.id) ?? [],
       }));
     },
 
