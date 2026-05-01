@@ -144,9 +144,60 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       }));
     },
 
+    async listAllSessions(): Promise<WorkoutSession[]> {
+      const db = getDb();
+
+      const sessionRes = await db.query(
+        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs
+         FROM sessions
+         ORDER BY COALESCE(ended_at_ms, started_at_ms) DESC`,
+        [],
+      );
+
+      const sessionRows = (sessionRes.values ?? []) as any[];
+      if (sessionRows.length === 0) return [];
+
+      const sessionIds = sessionRows.map((r) => r.id as string);
+      const placeholders = sessionIds.map(() => "?").join(",");
+
+      const blockRes = await db.query(
+        `SELECT id, session_id, block_type, order_index, data
+         FROM session_blocks
+         WHERE session_id IN (${placeholders})
+         ORDER BY session_id, order_index ASC`,
+        sessionIds,
+      );
+
+      const blockRows = (blockRes.values ?? []) as any[];
+      const blocksBySessionId = new Map<string, SessionBlock[]>();
+      for (const row of blockRows) {
+        const list = blocksBySessionId.get(row.session_id) ?? [];
+        list.push({
+          id: row.id,
+          type: row.block_type,
+          orderIndex: row.order_index,
+          data: parseBlockData(row.block_type, row.data),
+        });
+        blocksBySessionId.set(row.session_id, list);
+      }
+
+      return sessionRows.map((r) => ({
+        id: r.id,
+        startedAtMs: r.startedAtMs,
+        endedAtMs: r.endedAtMs ?? undefined,
+        blocks: blocksBySessionId.get(r.id) ?? [],
+      }));
+    },
+
     async deleteSession(id: string): Promise<void> {
       const db = getDb();
       await db.run(`DELETE FROM sessions WHERE id = ?`, [id]);
+    },
+
+    async clearAllSessions(): Promise<void> {
+      const db = getDb();
+      await db.run(`DELETE FROM session_blocks`, []);
+      await db.run(`DELETE FROM sessions`, []);
     },
 
     async saveDraftSession(session: WorkoutSession): Promise<void> {

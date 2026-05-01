@@ -14,4 +14,6 @@ export interface ExerciseRepo {
   getById(id: string): Promise<Exercise | null>;
   update(id: string, patch: ExercisePatch): Promise<Exercise>;
   remove(id: string): Promise<void>;
+  saveExercise(exercise: Exercise): Promise<void>;
+  clearAll(): Promise<void>;
 }
