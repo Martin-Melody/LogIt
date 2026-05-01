@@ -78,7 +78,7 @@
         class="flex min-w-[64px] flex-col items-center gap-1 py-2 text-xs transition-colors"
         class:text-primary={isActive("/profile")}
         class:text-muted-foreground={!isActive("/profile")}
-        aria-current={isActive("/profille") ? "page" : undefined}
+        aria-current={isActive("/profile") ? "page" : undefined}
       >
         <User size={22} strokeWidth={isActive("/profile") ? 2.5 : 2} />
         <span>Profile</span>

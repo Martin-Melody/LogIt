@@ -10,6 +10,7 @@
 
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
+  import { getExerciseRepo } from "$lib/data/repoProvider";
 
   import { ArrowLeft, Plus, Trash, Check, X, GripVertical, Dumbbell, Timer } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -63,7 +64,38 @@
     ui.loading = true;
     ui.error = null;
     try {
-      split = await getSplit(splitId);
+      let loaded = await getSplit(splitId);
+      if (loaded) {
+        const exerciseRepo = getExerciseRepo();
+        let anyChanged = false;
+        const resolvedDays = await Promise.all(
+          loaded.days.map(async (d) => {
+            const resolvedBlocks = await Promise.all(
+              d.blocks.map(async (block) => {
+                if (block.type === "strength" && block.exerciseId) {
+                  const ex = await exerciseRepo.getById(block.exerciseId);
+                  if (ex && ex.name !== block.exerciseName) {
+                    anyChanged = true;
+                    return { ...block, exerciseName: ex.name };
+                  }
+                }
+                return block;
+              }),
+            );
+            return { ...d, blocks: resolvedBlocks };
+          }),
+        );
+        loaded = { ...loaded, days: resolvedDays };
+        if (anyChanged) {
+          const touched = touchSplit(loaded);
+          await saveSplit(touched);
+          split = touched;
+        } else {
+          split = loaded;
+        }
+      } else {
+        split = loaded;
+      }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load";
       split = null;
@@ -117,12 +149,17 @@
 
   async function addExercise(selection: { name: string; exerciseId?: string }) {
     if (!split || !day) return;
+    let exerciseId = selection.exerciseId;
+    if (!exerciseId) {
+      const ex = await getExerciseRepo().create(selection.name);
+      exerciseId = ex.id;
+    }
     const newBlock: PlannedStrength = {
       type: "strength",
       id: createId("pex"),
       orderIndex: nextOrder(),
       exerciseName: selection.name,
-      exerciseId: selection.exerciseId,
+      exerciseId,
       targets: {},
     };
     const next: WorkoutSplit = {
