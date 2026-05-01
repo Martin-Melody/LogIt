@@ -1,13 +1,13 @@
 import type { Component } from "svelte";
 import type { WorkoutSession } from "$lib/domain/workout";
 
+export type GripAction = (node: HTMLElement) => { destroy(): void };
+
 export interface BlockBaseProps<T = unknown> {
+  blockId: string;
   data: T;
   saving: boolean;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  onMoveUp: () => void | Promise<void>;
-  onMoveDown: () => void | Promise<void>;
+  gripAction: GripAction;
   onDelete: () => void | Promise<void>;
   onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
 }

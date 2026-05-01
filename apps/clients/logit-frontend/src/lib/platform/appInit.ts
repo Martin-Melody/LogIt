@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
 import { initRepos } from "$lib/data/repoProvider";
 import { activeSplit } from "$lib/stores/activeSplit.store";
-import { appReady } from "$lib/stores/appReady.store";
+import { appReady, appInitError } from "$lib/stores/appReady.store";
 import { currentSession } from "$lib/stores/currentSession.store";
 import { recentSessions } from "$lib/stores/recentSessions.store";
 import { splits } from "$lib/stores/splits.store";
@@ -40,10 +40,9 @@ export async function appInit(): Promise<void> {
     await currentSession.loadDraft();
     console.log("[appInit] draft restore checked");
   } catch (error) {
-    console.error(
-      "[appInit] startup failed, continuing with a minimal shell",
-      error,
-    );
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[appInit] startup failed", error);
+    appInitError.set(msg);
   } finally {
     appReady.set(true);
     console.log("[appInit] complete");

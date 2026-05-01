@@ -1,37 +1,69 @@
 import { browser } from "$app/environment";
-import type { Exercise } from "$lib/domain/exercise";
+import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
 import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
 import { createId } from "$lib/domain/ids";
 
-const STORAGE_KEY = "logit:exercises:v1";
+// Core exercises are always authoritative — never stored in localStorage.
+const CORE_EXERCISES: Exercise[] = [
+  { id: "ex_core_bench", name: "Bench Press", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_incline_bench", name: "Incline Bench Press", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_squat", name: "Squat", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_front_squat", name: "Front Squat", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_deadlift", name: "Deadlift", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_rdl", name: "Romanian Deadlift", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_ohp", name: "Overhead Press", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_pullup", name: "Pull-Up", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_lat_pulldown", name: "Lat Pulldown", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_bb_row", name: "Barbell Row", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_db_row", name: "Dumbbell Row", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_hip_thrust", name: "Hip Thrust", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_lunge", name: "Lunge", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_chest_fly", name: "Chest Fly", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_lat_raise", name: "Lateral Raise", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_rear_delt", name: "Rear Delt Fly", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_bicep_curl", name: "Bicep Curl", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_hammer_curl", name: "Hammer Curl", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_tricep_push", name: "Tricep Pushdown", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_skullcrusher", name: "Skullcrusher", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_leg_press", name: "Leg Press", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_leg_curl", name: "Leg Curl", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_leg_ext", name: "Leg Extension", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_calf_raise", name: "Calf Raise", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_plank", name: "Plank", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_hlr", name: "Hanging Leg Raise", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_pec_deck", name: "Pec Deck", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_tbar_row", name: "T-Bar Row", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_hip_abduct", name: "Hip Abduction", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_hip_adduct", name: "Hip Adduction", notes: null, isCore: true, createdAtMs: 0 },
+  { id: "ex_core_back_ext", name: "Machine Back Extension", notes: null, isCore: true, createdAtMs: 0 },
+];
+
+const CORE_NAMES_LOWER = new Set(CORE_EXERCISES.map((e) => e.name.toLowerCase()));
+
+const STORAGE_KEY = "logit:exercises:custom";
 
 function ensureBrowser() {
   if (!browser) throw new Error("Exercise repo cannot be used during SSR.");
 }
 
-function readAll(): Exercise[] {
+function readCustom(): Exercise[] {
   ensureBrowser();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return seed();
+    if (!raw) return [];
     return JSON.parse(raw) as Exercise[];
   } catch {
-    return seed();
+    return [];
   }
 }
 
-function writeAll(items: Exercise[]) {
+function writeCustom(items: Exercise[]) {
   ensureBrowser();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-function seed(): Exercise[] {
-  return [
-    { id: "bench", name: "Bench Press", createdAtMs: Date.now() },
-    { id: "squat", name: "Squat", createdAtMs: Date.now() },
-    { id: "deadlift", name: "Deadlift", createdAtMs: Date.now() },
-    { id: "row", name: "Barbell Row", createdAtMs: Date.now() },
-  ];
+function all(): Exercise[] {
+  return [...CORE_EXERCISES, ...readCustom()];
 }
 
 function normalize(s: string) {
@@ -41,10 +73,16 @@ function normalize(s: string) {
 export function createLocalExerciseRepo(): ExerciseRepo {
   return {
     async list(options?: ListExercisesOptions) {
-      const { query, limit, offset } = options ?? {};
-      const all = readAll();
+      const { query, filter, limit, offset } = options ?? {};
 
-      let result = all;
+      let result: Exercise[];
+      if (filter === "core") {
+        result = [...CORE_EXERCISES];
+      } else if (filter === "mine") {
+        result = readCustom();
+      } else {
+        result = all();
+      }
 
       if (query?.trim()) {
         const q = normalize(query);
@@ -60,9 +98,12 @@ export function createLocalExerciseRepo(): ExerciseRepo {
     },
 
     async getByName(name: string) {
-      const all = readAll();
       const n = normalize(name);
-      return all.find((e) => normalize(e.name) === n) ?? null;
+      return all().find((e) => normalize(e.name) === n) ?? null;
+    },
+
+    async getById(id: string) {
+      return all().find((e) => e.id === id) ?? null;
     },
 
     async create(name: string) {
@@ -72,15 +113,52 @@ export function createLocalExerciseRepo(): ExerciseRepo {
       const existing = await this.getByName(trimmed);
       if (existing) return existing;
 
-      const all = readAll();
+      const custom = readCustom();
       const ex: Exercise = {
         id: createId("ex"),
         name: trimmed,
+        notes: null,
+        isCore: false,
         createdAtMs: Date.now(),
       };
-      const next = [ex, ...all];
-      writeAll(next);
+      writeCustom([ex, ...custom]);
       return ex;
+    },
+
+    async update(id: string, patch: ExercisePatch) {
+      // Core exercises can only have their notes updated (name is locked)
+      const coreIdx = CORE_EXERCISES.findIndex((e) => e.id === id);
+      if (coreIdx !== -1) {
+        // Notes on core exercises are stored in custom list as an overlay
+        const custom = readCustom();
+        const overlayIdx = custom.findIndex((e) => e.id === id);
+        if (patch.notes !== undefined) {
+          if (overlayIdx !== -1) {
+            custom[overlayIdx] = { ...custom[overlayIdx]!, notes: patch.notes };
+            writeCustom(custom);
+            return { ...CORE_EXERCISES[coreIdx]!, notes: patch.notes };
+          } else {
+            const overlay: Exercise = { ...CORE_EXERCISES[coreIdx]!, notes: patch.notes };
+            writeCustom([overlay, ...custom]);
+            return overlay;
+          }
+        }
+        return CORE_EXERCISES[coreIdx]!;
+      }
+
+      const custom = readCustom();
+      const idx = custom.findIndex((e) => e.id === id);
+      if (idx === -1) throw new Error(`Exercise ${id} not found.`);
+      const updated = { ...custom[idx]!, ...patch };
+      custom[idx] = updated;
+      writeCustom(custom);
+      return updated;
+    },
+
+    async remove(id: string) {
+      // Cannot remove core exercises
+      if (CORE_EXERCISES.some((e) => e.id === id)) return;
+      writeCustom(readCustom().filter((e) => e.id !== id));
     },
   };
 }

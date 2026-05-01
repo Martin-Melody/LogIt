@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Check, ArrowUp, ArrowDown } from "lucide-svelte";
+  import { Check, GripVertical } from "lucide-svelte";
+  import type { GripAction } from "$lib/features/session/blocks/types";
 
   const {
     setNumber = 1,
@@ -8,13 +9,10 @@
     weight = 0,
     completed = false,
     disabled = false,
-    canMoveUp = false,
-    canMoveDown = false,
+    gripAction,
     onRepsChange = () => {},
     onWeightChange = () => {},
     onComplete = () => {},
-    onMoveUp = () => {},
-    onMoveDown = () => {},
   } = $props<{
     setNumber?: number;
     setType?: string;
@@ -22,13 +20,10 @@
     weight?: number;
     completed?: boolean;
     disabled?: boolean;
-    canMoveUp?: boolean;
-    canMoveDown?: boolean;
+    gripAction: GripAction;
     onRepsChange?: (reps: number) => void | Promise<void>;
     onWeightChange?: (weight: number) => void | Promise<void>;
     onComplete?: () => void | Promise<void>;
-    onMoveUp?: () => void | Promise<void>;
-    onMoveDown?: () => void | Promise<void>;
   }>();
 
   let repsEl = $state<HTMLInputElement | null>(null);
@@ -76,17 +71,29 @@
 </script>
 
 <div
-  class="grid grid-cols-[2rem_1fr_1fr_auto_2rem] gap-2 items-center px-3 py-1.5 transition-opacity {completed
+  class="grid grid-cols-[auto_1fr_1fr_2rem] gap-2 items-center px-3 py-1.5 transition-opacity {completed
     ? 'opacity-60'
     : ''}"
 >
-  <span class="text-xs text-muted-foreground">
-    {#if typeLabel()}
-      <span class="font-semibold text-foreground">{typeLabel()}</span>
-    {:else}
-      {setNumber}
-    {/if}
-  </span>
+  <!-- Grip + set number -->
+  <button
+    type="button"
+    class="flex items-center gap-1 text-muted-foreground cursor-grab active:cursor-grabbing pr-1"
+    style="touch-action: none"
+    use:gripAction
+    aria-label="Drag to reorder set"
+    tabindex="-1"
+    {disabled}
+  >
+    <GripVertical class="h-3 w-3 shrink-0" />
+    <span class="text-xs w-4 text-right tabular-nums">
+      {#if typeLabel()}
+        <span class="font-semibold text-foreground">{typeLabel()}</span>
+      {:else}
+        {setNumber}
+      {/if}
+    </span>
+  </button>
 
   <input
     bind:this={repsEl}
@@ -116,27 +123,6 @@
     onkeydown={onWeightKeydown}
     onchange={(e) => void onWeightChange(num((e.currentTarget as HTMLInputElement).value))}
   />
-
-  <div class="flex items-center gap-0.5">
-    <button
-      type="button"
-      class="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
-      disabled={!canMoveUp || disabled}
-      onclick={() => void onMoveUp()}
-      aria-label="Move set up"
-    >
-      <ArrowUp class="h-3 w-3" />
-    </button>
-    <button
-      type="button"
-      class="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
-      disabled={!canMoveDown || disabled}
-      onclick={() => void onMoveDown()}
-      aria-label="Move set down"
-    >
-      <ArrowDown class="h-3 w-3" />
-    </button>
-  </div>
 
   <button
     type="button"

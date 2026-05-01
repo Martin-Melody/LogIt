@@ -1,8 +1,18 @@
-import type { Exercise } from "$lib/domain/exercise";
+import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
 import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
 import { getDb } from "$lib/data/db/sqlite";
 import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
+
+function row(r: any): Exercise {
+  return {
+    id: r.id,
+    name: r.name,
+    notes: r.notes ?? null,
+    isCore: r.is_core === 1,
+    createdAtMs: r.createdAtMs ?? r.created_at_ms,
+  };
+}
 
 export function createSqliteExerciseRepo(): ExerciseRepo {
   return {
@@ -10,51 +20,57 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       const db = getDb();
 
       const q = options?.query?.trim();
-      const limit = options?.limit ?? 50;
+      const filter = options?.filter ?? "all";
+      const limit = options?.limit ?? 200;
       const offset = options?.offset ?? 0;
 
-      const where = q ? "WHERE name LIKE ?" : "";
+      const conditions: string[] = [];
       const params: any[] = [];
-      if (q) params.push(`%${q}%`);
-      params.push(limit);
-      params.push(offset);
+
+      if (q) {
+        conditions.push("name LIKE ?");
+        params.push(`%${q}%`);
+      }
+      if (filter === "core") {
+        conditions.push("is_core = 1");
+      } else if (filter === "mine") {
+        conditions.push("is_core = 0");
+      }
+
+      const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      params.push(limit, offset);
 
       const res = await db.query(
-        `
-        SELECT id, name, created_at_ms as createdAtMs
-        FROM exercises
-        ${where}
-        ORDER BY name COLLATE NOCASE ASC
-        LIMIT ? OFFSET ?
-        `,
+        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs
+         FROM exercises
+         ${where}
+         ORDER BY name COLLATE NOCASE ASC
+         LIMIT ? OFFSET ?`,
         params,
       );
 
-      return (res.values ?? []) as Exercise[];
+      return (res.values ?? []).map(row);
     },
 
     async create(name: string): Promise<Exercise> {
       const db = getDb();
-
       const trimmed = name.trim();
       if (!trimmed) throw new Error("Exercise name required.");
 
-      const existing = await db.query(
-        `SELECT id, name, created_at_ms as createdAtMs FROM exercises WHERE name = ?`,
-        [trimmed],
-      );
-      const found = (existing.values?.[0] as Exercise | undefined) ?? null;
-      if (found) return found;
+      const existing = await this.getByName(trimmed);
+      if (existing) return existing;
 
       const ex: Exercise = {
         id: createId("exdb"),
         name: trimmed,
+        notes: null,
+        isCore: false,
         createdAtMs: nowMs(),
       };
 
       await db.run(
-        `INSERT INTO exercises(id, name, created_at_ms) VALUES(?, ?, ?)`,
-        [ex.id, ex.name, ex.createdAtMs],
+        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms) VALUES(?, ?, ?, 0, ?)`,
+        [ex.id, ex.name, null, ex.createdAtMs],
       );
 
       return ex;
@@ -66,11 +82,46 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       if (!trimmed) return null;
 
       const res = await db.query(
-        `SELECT id, name, created_at_ms as createdAtMs FROM exercises WHERE name = ?`,
+        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs
+         FROM exercises WHERE name = ?`,
         [trimmed],
       );
-      return ((res.values?.[0] as Exercise | undefined) ??
-        null) as Exercise | null;
+      const r = res.values?.[0];
+      return r ? row(r) : null;
+    },
+
+    async getById(id: string): Promise<Exercise | null> {
+      const db = getDb();
+      const res = await db.query(
+        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs
+         FROM exercises WHERE id = ?`,
+        [id],
+      );
+      const r = res.values?.[0];
+      return r ? row(r) : null;
+    },
+
+    async update(id: string, patch: ExercisePatch): Promise<Exercise> {
+      const db = getDb();
+      const sets: string[] = [];
+      const params: any[] = [];
+
+      if (patch.name !== undefined) { sets.push("name = ?"); params.push(patch.name); }
+      if (patch.notes !== undefined) { sets.push("notes = ?"); params.push(patch.notes); }
+
+      if (sets.length) {
+        params.push(id);
+        await db.run(`UPDATE exercises SET ${sets.join(", ")} WHERE id = ?`, params);
+      }
+
+      const updated = await this.getById(id);
+      if (!updated) throw new Error(`Exercise ${id} not found.`);
+      return updated;
+    },
+
+    async remove(id: string): Promise<void> {
+      const db = getDb();
+      await db.run(`DELETE FROM exercises WHERE id = ? AND is_core = 0`, [id]);
     },
   };
 }

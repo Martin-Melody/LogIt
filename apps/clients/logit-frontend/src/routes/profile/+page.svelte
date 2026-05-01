@@ -1,13 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Pencil, Check, X, RotateCcw, Sparkles } from "lucide-svelte";
+  import { Pencil, Check, X, RotateCcw, Sparkles, Dumbbell, ChevronRight } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
     getProgressionConfig,
     setProgressionAlgorithm,
   } from "$lib/usecases/progression/getProgressionConfig";
+  import { getScheduleMode, setScheduleMode, type ScheduleMode } from "$lib/usecases/Splits/splitRotation";
+  import { SET_TYPE_META } from "$lib/domain/workout";
   import type { ProgressionConfigView } from "$lib/usecases/progression/getProgressionConfig";
   import { profile } from "$lib/stores/profile.store";
   import { onboarding } from "$lib/stores/onboarding.store";
@@ -46,6 +48,27 @@
   }
 
   onMount(() => { void loadProgression(); });
+
+  // --- Schedule mode ---
+  let scheduleMode = $state<ScheduleMode>(getScheduleMode());
+
+  function setMode(mode: ScheduleMode) {
+    scheduleMode = mode;
+    setScheduleMode(mode);
+  }
+
+  const scheduleOptions: { value: ScheduleMode; label: string; description: string }[] = [
+    {
+      value: "bump",
+      label: "Follow what I did",
+      description: "Tomorrow's plan is the day after whichever day you did today. Choosing a different day shifts the whole schedule forward.",
+    },
+    {
+      value: "original",
+      label: "Keep original pace",
+      description: "Tomorrow's plan advances from where you were supposed to be, regardless of which day you picked. One swap never throws off the rest of the week.",
+    },
+  ];
 
   // --- Profile editing ---
   const editing = $state({ open: false });
@@ -144,36 +167,36 @@
 
           <div class="flex flex-col gap-1">
             <label class="text-xs text-muted-foreground" for="p-height">Height</label>
-            <div class="flex gap-2">
+            <div class="grid grid-cols-[1fr_auto] gap-2">
               <input
                 id="p-height"
                 type="number"
                 min="0"
                 inputmode="decimal"
-                class="flex-1 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 bind:value={draft.height}
               />
-              <div class="flex overflow-hidden rounded border text-xs">
-                <button type="button" class="px-3 py-2 {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.heightUnit = "cm")}>cm</button>
-                <button type="button" class="px-3 py-2 {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.heightUnit = "in")}>in</button>
+              <div class="flex shrink-0 overflow-hidden rounded border text-xs">
+                <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "cm")}>cm</button>
+                <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "in")}>in</button>
               </div>
             </div>
           </div>
 
           <div class="flex flex-col gap-1">
             <label class="text-xs text-muted-foreground" for="p-weight">Weight</label>
-            <div class="flex gap-2">
+            <div class="grid grid-cols-[1fr_auto] gap-2">
               <input
                 id="p-weight"
                 type="number"
                 min="0"
                 inputmode="decimal"
-                class="flex-1 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 bind:value={draft.weight}
               />
-              <div class="flex overflow-hidden rounded border text-xs">
-                <button type="button" class="px-3 py-2 {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.weightUnit = "kg")}>kg</button>
-                <button type="button" class="px-3 py-2 {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.weightUnit = "lbs")}>lbs</button>
+              <div class="flex shrink-0 overflow-hidden rounded border text-xs">
+                <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "kg")}>kg</button>
+                <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "lbs")}>lbs</button>
               </div>
             </div>
           </div>
@@ -247,6 +270,155 @@
           </Button>
         {/if}
       {/if}
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Training schedule preference -->
+  <Card.Root class="w-full">
+    <Card.Header>
+      <Card.Title>Training schedule</Card.Title>
+      <Card.Description>
+        When you pick a different day than scheduled, what should tomorrow show?
+      </Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-2">
+      {#each scheduleOptions as opt (opt.value)}
+        <button
+          type="button"
+          class="flex items-start gap-3 rounded border p-3 text-left transition-colors {scheduleMode === opt.value ? 'border-primary bg-primary/5' : 'border-border'}"
+          onclick={() => setMode(opt.value)}
+        >
+          <div class="mt-0.5 h-3.5 w-3.5 rounded-full border-2 shrink-0 transition-colors {scheduleMode === opt.value ? 'border-primary bg-primary' : 'border-muted-foreground/50'}"></div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium">{opt.label}</p>
+            <p class="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
+          </div>
+        </button>
+      {/each}
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Session preferences -->
+  <Card.Root class="w-full">
+    <Card.Header>
+      <Card.Title>Session</Card.Title>
+      <Card.Description>Behaviour during a workout.</Card.Description>
+    </Card.Header>
+    <Card.Content>
+      <button
+        type="button"
+        class="flex items-center justify-between w-full gap-3 py-1"
+        onclick={() => profile.save({ blocksCollapsedByDefault: !$profile.blocksCollapsedByDefault })}
+      >
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-left">Collapse blocks by default</p>
+          <p class="text-xs text-muted-foreground text-left mt-0.5">All exercise and cardio blocks start closed when you open a session.</p>
+        </div>
+        <div class="shrink-0 w-10 h-6 rounded-full transition-colors {$profile.blocksCollapsedByDefault ? 'bg-primary' : 'bg-muted'} relative">
+          <span class="absolute top-1 transition-all w-4 h-4 rounded-full bg-white shadow {$profile.blocksCollapsedByDefault ? 'left-5' : 'left-1'}"></span>
+        </div>
+      </button>
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Exercises library -->
+  <Card.Root class="w-full">
+    <Card.Content class="py-0">
+      <button
+        type="button"
+        class="flex items-center justify-between w-full gap-3 py-4"
+        onclick={() => void goto("/exercises")}
+      >
+        <div class="flex items-center gap-3">
+          <Dumbbell class="h-4 w-4 text-muted-foreground shrink-0" />
+          <div class="text-left">
+            <p class="text-sm font-medium">Exercises</p>
+            <p class="text-xs text-muted-foreground mt-0.5">Browse and manage your exercise library.</p>
+          </div>
+        </div>
+        <ChevronRight class="h-4 w-4 text-muted-foreground shrink-0" />
+      </button>
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Rest timer defaults -->
+  <Card.Root class="w-full">
+    <Card.Header>
+      <Card.Title>Rest timer defaults</Card.Title>
+      <Card.Description>
+        Auto-start the rest timer when a set is completed. Set to None to skip it for that type. You can still override per set from the edit dialog.
+      </Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col divide-y divide-border">
+      {#each SET_TYPE_META as meta (meta.type)}
+        {@const current = $profile.restDefaults[meta.type]}
+        {@const REST_PRESETS = [30_000, 60_000, 90_000, 120_000, 180_000]}
+        {@const STEP_MS = 15_000}
+        <div class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
+          <p class="text-sm font-medium">{meta.label}</p>
+          <div class="flex gap-1.5">
+            <button
+              type="button"
+              class="flex-1 py-1.5 text-xs rounded border transition-colors {current === undefined
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              onclick={() => {
+                const next = { ...$profile.restDefaults };
+                delete next[meta.type];
+                profile.save({ restDefaults: next });
+              }}
+            >
+              None
+            </button>
+            {#each REST_PRESETS as ms (ms)}
+              <button
+                type="button"
+                class="flex-1 py-1.5 text-xs rounded border transition-colors {current === ms
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                onclick={() => profile.save({ restDefaults: { ...$profile.restDefaults, [meta.type]: ms } })}
+              >
+                {#if ms < 60_000}
+                  {ms / 1000}s
+                {:else if ms % 60_000 === 0}
+                  {ms / 60_000}:00
+                {:else}
+                  {Math.floor(ms / 60_000)}:{String((ms % 60_000) / 1000).padStart(2, "0")}
+                {/if}
+              </button>
+            {/each}
+          </div>
+          {#if current !== undefined}
+            <div class="flex items-center justify-between rounded border border-border px-3 py-1.5">
+              <button
+                type="button"
+                class="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                disabled={current <= STEP_MS}
+                onclick={() => profile.save({ restDefaults: { ...$profile.restDefaults, [meta.type]: Math.max(STEP_MS, current - STEP_MS) } })}
+              >
+                −15s
+              </button>
+              <span class="text-sm font-semibold tabular-nums">
+                {#if current < 60_000}
+                  {current / 1000}s
+                {:else if current % 60_000 === 0}
+                  {current / 60_000}:00
+                {:else}
+                  {Math.floor(current / 60_000)}:{String((current % 60_000) / 1000).padStart(2, "0")}
+                {/if}
+              </span>
+              <button
+                type="button"
+                class="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                disabled={current >= 600_000}
+                onclick={() => profile.save({ restDefaults: { ...$profile.restDefaults, [meta.type]: Math.min(600_000, current + STEP_MS) } })}
+              >
+                +15s
+              </button>
+            </div>
+          {/if}
+        </div>
+      {/each}
     </Card.Content>
   </Card.Root>
 
