@@ -76,7 +76,9 @@
     },
   ];
 
-  let step = $state(0);
+  // Persisted in the store so a WebView pause/resume cycle (e.g. file picker
+  // on Android) doesn't reset position back to the welcome screen.
+  const step = $derived($onboarding.step);
 
   // Profile step state
   const draft = $state({
@@ -138,7 +140,7 @@
 
   async function onProfileContinue() {
     saveProfile();
-    step = 2;
+    onboarding.setStep(2);
   }
 
   async function onSplitContinue() {
@@ -146,7 +148,7 @@
     saving = true;
     try {
       await applySplit();
-      step = 3;
+      onboarding.setStep(3);
     } finally {
       saving = false;
     }
@@ -187,7 +189,7 @@
       <button
         type="button"
         class="flex items-center justify-center gap-2 w-full max-w-xs py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
-        onclick={() => (step = 1)}
+        onclick={() => onboarding.setStep(1)}
       >
         Get started <ChevronRight class="h-4 w-4" />
       </button>
@@ -196,7 +198,7 @@
   <!-- Step 1: Profile -->
   {:else if step === 1}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => (step = 0)}>
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(0)}>
         <ArrowLeft class="h-4 w-4" /> Back
       </button>
       <div class="mb-6">
@@ -290,7 +292,7 @@
         <button
           type="button"
           class="w-full py-2 text-sm text-muted-foreground"
-          onclick={() => (step = 2)}
+          onclick={() => onboarding.setStep(2)}
         >
           Skip for now
         </button>
@@ -300,7 +302,7 @@
   <!-- Step 2: Split selection -->
   {:else if step === 2}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => (step = 1)}>
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(1)}>
         <ArrowLeft class="h-4 w-4" /> Back
       </button>
       <div class="mb-6">
@@ -338,7 +340,7 @@
   <!-- Step 3: Notifications -->
   {:else if step === 3}
     <div class="flex flex-col flex-1 px-8 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => (step = 2)}>
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(2)}>
         <ArrowLeft class="h-4 w-4" /> Back
       </button>
     <div class="flex flex-col flex-1 items-center justify-center gap-8 text-center">
