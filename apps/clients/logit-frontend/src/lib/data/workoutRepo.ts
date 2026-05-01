@@ -11,7 +11,9 @@ export interface WorkoutRepo {
   listRecentSessions(
     options: ListRecentSessionsOptions,
   ): Promise<WorkoutSession[]>;
+  listAllSessions(): Promise<WorkoutSession[]>;
   deleteSession(id: string): Promise<void>;
+  clearAllSessions(): Promise<void>;
 
   saveDraftSession(session: WorkoutSession): Promise<void>;
   loadDraftSession(): Promise<WorkoutSession | null>;

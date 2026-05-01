@@ -88,10 +88,19 @@ export function createLocalWorkoutRepo(): WorkoutRepo {
       return sorted.slice(0, options.limit).map(migrateSession);
     },
 
+    async listAllSessions(): Promise<WorkoutSession[]> {
+      const sessions = readJson<any[]>(STORAGE_KEYS.sessions, []);
+      return sessions.map(migrateSession);
+    },
+
     async deleteSession(id: string): Promise<void> {
       const sessions = readJson<WorkoutSession[]>(STORAGE_KEYS.sessions, []);
       const next = sessions.filter((s) => s.id !== id);
       writeJson(STORAGE_KEYS.sessions, next);
+    },
+
+    async clearAllSessions(): Promise<void> {
+      writeJson(STORAGE_KEYS.sessions, []);
     },
 
     async saveDraftSession(session: WorkoutSession): Promise<void> {
