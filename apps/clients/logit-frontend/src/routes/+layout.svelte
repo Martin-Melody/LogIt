@@ -11,6 +11,7 @@
   import { appReady, appInitError } from "$lib/stores/appReady.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { goto, onNavigate } from "$app/navigation";
+  import { ModeWatcher } from "mode-watcher";
 
   let { children } = $props();
 
@@ -88,3 +89,4 @@
 {/if}
 
 <Toaster position="top-center" richColors />
+<ModeWatcher defaultMode="system" modeStorageKey="logit:mode" />
