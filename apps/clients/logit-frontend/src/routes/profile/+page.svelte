@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Pencil, Check, X, RotateCcw, Sparkles } from "lucide-svelte";
+  import { Pencil, Check, X, RotateCcw, Sparkles, Dumbbell, ChevronRight } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -317,6 +317,26 @@
         <div class="shrink-0 w-10 h-6 rounded-full transition-colors {$profile.blocksCollapsedByDefault ? 'bg-primary' : 'bg-muted'} relative">
           <span class="absolute top-1 transition-all w-4 h-4 rounded-full bg-white shadow {$profile.blocksCollapsedByDefault ? 'left-5' : 'left-1'}"></span>
         </div>
+      </button>
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Exercises library -->
+  <Card.Root class="w-full">
+    <Card.Content class="py-0">
+      <button
+        type="button"
+        class="flex items-center justify-between w-full gap-3 py-4"
+        onclick={() => void goto("/exercises")}
+      >
+        <div class="flex items-center gap-3">
+          <Dumbbell class="h-4 w-4 text-muted-foreground shrink-0" />
+          <div class="text-left">
+            <p class="text-sm font-medium">Exercises</p>
+            <p class="text-xs text-muted-foreground mt-0.5">Browse and manage your exercise library.</p>
+          </div>
+        </div>
+        <ChevronRight class="h-4 w-4 text-muted-foreground shrink-0" />
       </button>
     </Card.Content>
   </Card.Root>
