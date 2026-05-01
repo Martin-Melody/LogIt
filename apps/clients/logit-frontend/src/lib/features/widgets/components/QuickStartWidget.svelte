@@ -5,11 +5,25 @@
   import { currentSession } from "$lib/stores/currentSession.store";
   import { activeSplit } from "$lib/stores/activeSplit.store";
   import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
-  import { advanceRotation } from "$lib/usecases/Splits/splitRotation";
+  import { advanceRotation, getScheduleMode } from "$lib/usecases/Splits/splitRotation";
+  import { selectedDayOverride, clearDayOverride } from "$lib/stores/todaysPlan.store";
 
   const hasDraft = $derived($currentSession !== null);
-  const todayDay = $derived($activeSplit ? getTodaySplitDay($activeSplit) : null);
-  const hasPlan = $derived(!!todayDay);
+  const scheduledDay = $derived($activeSplit ? getTodaySplitDay($activeSplit) : null);
+
+  const selectedDay = $derived(
+    $selectedDayOverride?.splitId === $activeSplit?.id
+      ? ($activeSplit?.days.find((d) => d.id === $selectedDayOverride?.dayId) ?? scheduledDay)
+      : scheduledDay,
+  );
+
+  const hasPlan = $derived(!!scheduledDay);
+
+  const startLabel = $derived(
+    selectedDay && scheduledDay && selectedDay.id !== scheduledDay.id
+      ? `Start Day ${selectedDay.orderIndex + 1}${selectedDay.name ? ` — ${selectedDay.name}` : ""}`
+      : "Start today's plan",
+  );
 
   let starting = $state(false);
 
@@ -18,11 +32,16 @@
     starting = true;
     if (hasDraft) { await goto("/session/current"); return; }
 
-    const day = todayDay;
-    if (day && $activeSplit) {
-      // Record rotation before starting so getTodaySplitDay returns the correct
-      // next day immediately after this session begins.
-      advanceRotation($activeSplit.id, day.id);
+    const split = $activeSplit;
+    const day = selectedDay;
+
+    if (day && split) {
+      const mode = getScheduleMode();
+      // "original" mode records the scheduled position so tomorrow's plan stays on track;
+      // "bump" mode records what you actually did so tomorrow follows from that.
+      const dayToRecord = mode === "original" ? scheduledDay : day;
+      if (dayToRecord) advanceRotation(split.id, dayToRecord.id);
+      clearDayOverride();
       await currentSession.startFromSplitDay(day);
     } else {
       await currentSession.start();
@@ -48,9 +67,7 @@
 
 <Card.Root data-tour="quick-start">
   <Card.Header>
-    <div class="flex items-center justify-between">
-      <Card.Title>{hasDraft ? "Workout in progress" : "Quick start"}</Card.Title>
-    </div>
+    <Card.Title>{hasDraft ? "Workout in progress" : "Quick start"}</Card.Title>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-2">
@@ -63,7 +80,7 @@
       </Button>
     {:else if hasPlan}
       <Button class="w-full" onclick={() => void startPlanned()}>
-        Start today's plan
+        {startLabel}
       </Button>
       <Button variant="outline" class="w-full" onclick={() => void startUnplanned()}>
         Start unplanned

@@ -10,6 +10,7 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorSQLite: {
       iosDatabaseLocation: "Library/Databases",
+      androidIsEncryption: false,
     },
   },
 };

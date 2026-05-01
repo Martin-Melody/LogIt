@@ -10,7 +10,7 @@
   import {
     createSplit,
     addDay,
-    addPlannedExercise,
+    addPlannedStrength,
   } from "$lib/domain/WorkoutSplit";
 
   type PresetDay = { name: string; exercises: string[] };
@@ -118,10 +118,7 @@
       const dayId = split.days[split.days.length - 1].id;
       for (const exerciseName of day.exercises) {
         // Seed one starter set so the first workout has an editable set row.
-        split = addPlannedExercise(split, dayId, {
-          exerciseName,
-          targets: { sets: 1 },
-        });
+        split = addPlannedStrength(split, dayId, { exerciseName });
       }
     }
 
@@ -215,25 +212,25 @@
 
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium" for="height">Height</label>
-          <div class="flex gap-2">
+          <div class="grid grid-cols-[1fr_auto] gap-2">
             <input
               id="height"
               type="number"
               min="0"
               inputmode="decimal"
               placeholder={draft.heightUnit === "cm" ? "e.g. 178" : "e.g. 70"}
-              class="flex-1 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.height}
             />
-            <div class="flex rounded border overflow-hidden text-xs">
+            <div class="flex shrink-0 rounded border overflow-hidden text-xs">
               <button
                 type="button"
-                class="px-3 py-2 {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+                class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
                 onclick={() => (draft.heightUnit = "cm")}
               >cm</button>
               <button
                 type="button"
-                class="px-3 py-2 {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+                class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
                 onclick={() => (draft.heightUnit = "in")}
               >in</button>
             </div>
@@ -242,25 +239,25 @@
 
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium" for="weight">Weight</label>
-          <div class="flex gap-2">
+          <div class="grid grid-cols-[1fr_auto] gap-2">
             <input
               id="weight"
               type="number"
               min="0"
               inputmode="decimal"
               placeholder={draft.weightUnit === "kg" ? "e.g. 80" : "e.g. 176"}
-              class="flex-1 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.weight}
             />
-            <div class="flex rounded border overflow-hidden text-xs">
+            <div class="flex shrink-0 rounded border overflow-hidden text-xs">
               <button
                 type="button"
-                class="px-3 py-2 {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+                class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
                 onclick={() => (draft.weightUnit = "kg")}
               >kg</button>
               <button
                 type="button"
-                class="px-3 py-2 {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+                class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
                 onclick={() => (draft.weightUnit = "lbs")}
               >lbs</button>
             </div>

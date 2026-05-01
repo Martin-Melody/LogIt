@@ -4,16 +4,18 @@
 
   import { Button } from "$lib/components/ui/button";
 
-  import type { WorkoutSplit, SplitDay, PlannedExercise } from "$lib/domain/WorkoutSplit";
+  import type { WorkoutSplit, SplitDay, PlannedBlock, PlannedStrength, PlannedCardio } from "$lib/domain/WorkoutSplit";
   import { touchSplit } from "$lib/domain/WorkoutSplit";
   import { createId } from "$lib/domain/ids";
 
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
+  import { getExerciseRepo } from "$lib/data/repoProvider";
 
-  import { ArrowLeft, Plus, Trash, Check, X, GripVertical } from "lucide-svelte";
+  import { ArrowLeft, Plus, Trash, Check, X, GripVertical, Dumbbell, Timer } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
+  import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
 
   const props = $props<{ params: { id: string; dayId: string } }>();
   const splitId = $derived(props.params.id);
@@ -23,7 +25,7 @@
     loading: true,
     saving: false,
     error: null as string | null,
-    addOpen: false,
+    addMode: "none" as "none" | "picker" | "exercise" | "cardio",
     renamingDay: false,
     dayNameDraft: "",
   });
@@ -42,11 +44,11 @@
   let dragToIdx = $state(-1);
   let dragStartY = $state(0);
 
-  function sortExercises(exs: PlannedExercise[]): PlannedExercise[] {
-    return [...exs].sort((a, b) => a.orderIndex - b.orderIndex);
+  function sortBlocks(blocks: PlannedBlock[]): PlannedBlock[] {
+    return [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
   }
 
-  function liveOrder(sorted: PlannedExercise[]): PlannedExercise[] {
+  function liveOrder(sorted: PlannedBlock[]): PlannedBlock[] {
     if (dragId === null || dragFromIdx === dragToIdx) return sorted;
     const result = [...sorted];
     const [item] = result.splice(dragFromIdx, 1);
@@ -54,11 +56,46 @@
     return result;
   }
 
+  function blockLabel(block: PlannedBlock): string {
+    return block.type === "strength" ? block.exerciseName : block.activityName;
+  }
+
   async function load() {
     ui.loading = true;
     ui.error = null;
     try {
-      split = await getSplit(splitId);
+      let loaded = await getSplit(splitId);
+      if (loaded) {
+        const exerciseRepo = getExerciseRepo();
+        let anyChanged = false;
+        const resolvedDays = await Promise.all(
+          loaded.days.map(async (d) => {
+            const resolvedBlocks = await Promise.all(
+              d.blocks.map(async (block) => {
+                if (block.type === "strength" && block.exerciseId) {
+                  const ex = await exerciseRepo.getById(block.exerciseId);
+                  if (ex && ex.name !== block.exerciseName) {
+                    anyChanged = true;
+                    return { ...block, exerciseName: ex.name };
+                  }
+                }
+                return block;
+              }),
+            );
+            return { ...d, blocks: resolvedBlocks };
+          }),
+        );
+        loaded = { ...loaded, days: resolvedDays };
+        if (anyChanged) {
+          const touched = touchSplit(loaded);
+          await saveSplit(touched);
+          split = touched;
+        } else {
+          split = loaded;
+        }
+      } else {
+        split = loaded;
+      }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load";
       split = null;
@@ -105,26 +142,50 @@
     ui.dayNameDraft = day?.name ?? "";
   }
 
+  function nextOrder(): number {
+    if (!day || day.blocks.length === 0) return 0;
+    return Math.max(...day.blocks.map((b) => b.orderIndex)) + 1;
+  }
+
   async function addExercise(selection: { name: string; exerciseId?: string }) {
     if (!split || !day) return;
-    const nextOrder =
-      day.exercises.length === 0
-        ? 0
-        : Math.max(...day.exercises.map((e) => e.orderIndex)) + 1;
-    const newEx: PlannedExercise = {
+    let exerciseId = selection.exerciseId;
+    if (!exerciseId) {
+      const ex = await getExerciseRepo().create(selection.name);
+      exerciseId = ex.id;
+    }
+    const newBlock: PlannedStrength = {
+      type: "strength",
       id: createId("pex"),
-      orderIndex: nextOrder,
+      orderIndex: nextOrder(),
       exerciseName: selection.name,
-      exerciseId: selection.exerciseId,
+      exerciseId,
       targets: {},
     };
     const next: WorkoutSplit = {
       ...split,
       days: split.days.map((d) =>
-        d.id === day.id ? { ...d, exercises: [...d.exercises, newEx] } : d,
+        d.id === day.id ? { ...d, blocks: [...d.blocks, newBlock] } : d,
       ),
     };
-    ui.addOpen = false;
+    ui.addMode = "none";
+    await persist(next);
+  }
+
+  async function addCardio(activityName: string) {
+    if (!split || !day) return;
+    const newBlock: PlannedCardio = {
+      type: "cardio",
+      id: createId("pcardio"),
+      orderIndex: nextOrder(),
+      activityName,
+    };
+    const next: WorkoutSplit = {
+      ...split,
+      days: split.days.map((d) =>
+        d.id === day.id ? { ...d, blocks: [...d.blocks, newBlock] } : d,
+      ),
+    };
     await persist(next);
   }
 
@@ -137,32 +198,32 @@
 
     if (!split || !day || from === to || from === -1) return;
 
-    const sorted = sortExercises(day.exercises);
+    const sorted = sortBlocks(day.blocks);
     const reordered = [...sorted];
     const [item] = reordered.splice(from, 1);
     reordered.splice(to, 0, item!);
 
-    const updatedExercises = day.exercises.map((e) => {
-      const newIdx = reordered.findIndex((r) => r.id === e.id);
-      return newIdx !== -1 ? { ...e, orderIndex: newIdx } : e;
+    const updatedBlocks = day.blocks.map((b) => {
+      const newIdx = reordered.findIndex((r) => r.id === b.id);
+      return newIdx !== -1 ? { ...b, orderIndex: newIdx } : b;
     });
 
     const next: WorkoutSplit = {
       ...split,
       days: split.days.map((d) =>
-        d.id === day.id ? { ...d, exercises: updatedExercises } : d,
+        d.id === day.id ? { ...d, blocks: updatedBlocks } : d,
       ),
     };
     await persist(next);
   }
 
-  async function deleteExercise(exId: string) {
+  async function deleteBlock(blockId: string) {
     if (!split || !day) return;
     const next: WorkoutSplit = {
       ...split,
       days: split.days.map((d) => {
         if (d.id !== day.id) return d;
-        return { ...d, exercises: d.exercises.filter((e) => e.id !== exId) };
+        return { ...d, blocks: d.blocks.filter((b) => b.id !== blockId) };
       }),
     };
     await persist(next);
@@ -184,18 +245,15 @@
     try {
       const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
       await Haptics.impact({ style: ImpactStyle.Light });
-    } catch {
-      // Not available on web
-    }
+    } catch {}
   }
 
-  // Drag handle action — supports both touch (Android) and mouse (desktop browser).
-  function gripAction(node: HTMLElement, exId: string) {
+  function gripAction(node: HTMLElement, blockId: string) {
     function startDrag(clientY: number) {
-      const sorted = sortExercises(day?.exercises ?? []);
-      const idx = sorted.findIndex((ex) => ex.id === exId);
+      const sorted = sortBlocks(day?.blocks ?? []);
+      const idx = sorted.findIndex((b) => b.id === blockId);
       if (idx === -1) return false;
-      dragId = exId;
+      dragId = blockId;
       dragFromIdx = idx;
       dragToIdx = idx;
       dragStartY = clientY;
@@ -204,31 +262,28 @@
     }
 
     function moveDrag(clientY: number) {
-      if (dragId !== exId) return;
-      const total = day?.exercises.length ?? 1;
+      if (dragId !== blockId) return;
+      const total = day?.blocks.length ?? 1;
       const rowH = listEl ? listEl.getBoundingClientRect().height / total : 48;
       const delta = clientY - dragStartY;
       const newIdx = Math.max(0, Math.min(total - 1, Math.round(dragFromIdx + delta / rowH)));
       if (newIdx !== dragToIdx) dragToIdx = newIdx;
     }
 
-    // ── Touch handlers ────────────────────────────────────────────────────────
     function onTouchStart(e: TouchEvent) {
       if (ui.saving || e.touches.length !== 1) return;
       e.preventDefault();
       startDrag(e.touches[0]!.clientY);
     }
     function onTouchMove(e: TouchEvent) {
-      if (dragId !== exId) return;
+      if (dragId !== blockId) return;
       e.preventDefault();
       moveDrag(e.touches[0]!.clientY);
     }
     function onTouchEnd() {
-      if (dragId !== exId) return;
+      if (dragId !== blockId) return;
       void commitDragReorder();
     }
-
-    // ── Mouse handlers (desktop browser) ─────────────────────────────────────
     function onMouseDown(e: MouseEvent) {
       if (ui.saving || e.button !== 0) return;
       e.preventDefault();
@@ -236,13 +291,11 @@
       window.addEventListener("mousemove", onMouseMove);
       window.addEventListener("mouseup", onMouseUp);
     }
-    function onMouseMove(e: MouseEvent) {
-      moveDrag(e.clientY);
-    }
+    function onMouseMove(e: MouseEvent) { moveDrag(e.clientY); }
     function onMouseUp() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
-      if (dragId !== exId) return;
+      if (dragId !== blockId) return;
       void commitDragReorder();
     }
 
@@ -315,15 +368,15 @@
           size="icon"
           class="h-7 w-7"
           disabled={!day || ui.saving}
-          onclick={() => (ui.addOpen = !ui.addOpen)}
-          aria-label="Add exercise"
+          onclick={() => (ui.addMode = ui.addMode === "none" ? "picker" : "none")}
+          aria-label="Add block"
         >
           <Plus class="h-3.5 w-3.5" />
         </Button>
 
         <ConfirmDialog
           title="Delete this day?"
-          description="Removes the day and all its exercises. Cannot be undone."
+          description="Removes the day and all its blocks. Cannot be undone."
           confirmLabel="Delete"
           cancelLabel="Cancel"
           saving={ui.saving}
@@ -343,19 +396,44 @@
     <p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>
   {/if}
 
-  <!-- Add exercise inline search -->
-  {#if ui.addOpen}
+  <!-- Block type picker -->
+  {#if ui.addMode === "picker"}
+    <div class="flex gap-2 px-3 py-2 border-b border-border bg-muted/30">
+      <button
+        type="button"
+        class="flex-1 flex items-center gap-2 rounded border border-border px-3 py-2 text-sm hover:bg-muted/50"
+        onclick={() => (ui.addMode = "exercise")}
+      >
+        <Dumbbell class="h-4 w-4 text-muted-foreground shrink-0" />
+        Exercise
+      </button>
+      <button
+        type="button"
+        class="flex-1 flex items-center gap-2 rounded border border-border px-3 py-2 text-sm hover:bg-muted/50"
+        onclick={() => (ui.addMode = "cardio")}
+      >
+        <Timer class="h-4 w-4 text-muted-foreground shrink-0" />
+        Cardio
+      </button>
+      <Button variant="ghost" class="h-9 px-2 text-xs text-muted-foreground" onclick={() => (ui.addMode = "none")}>
+        Cancel
+      </Button>
+    </div>
+  {/if}
+
+  <!-- Exercise search -->
+  {#if ui.addMode === "exercise"}
     <div class="px-3 py-2 border-b border-border bg-muted/30">
       <ExerciseSearchInput
         placeholder="Search or add exercise…"
         disabled={ui.saving}
-        autofocus={ui.addOpen}
+        autofocus={true}
         onConfirm={(sel) => void addExercise(sel)}
       />
       <Button
         variant="ghost"
         class="mt-1 h-7 px-2 text-xs text-muted-foreground"
-        onclick={() => (ui.addOpen = false)}
+        onclick={() => (ui.addMode = "none")}
       >
         Cancel
       </Button>
@@ -368,45 +446,32 @@
     <p class="px-3 py-4 text-sm text-muted-foreground">Split not found.</p>
   {:else if !day}
     <p class="px-3 py-4 text-sm text-muted-foreground">Day not found.</p>
-  {:else if day.exercises.length === 0}
+  {:else if day.blocks.length === 0}
     <div class="px-3 py-6 flex flex-col items-center gap-2 text-center">
-      <p class="text-sm text-muted-foreground">No exercises yet.</p>
-      <Button variant="outline" size="sm" onclick={() => (ui.addOpen = true)}>
-        Add first exercise
+      <p class="text-sm text-muted-foreground">Nothing planned yet.</p>
+      <Button variant="outline" size="sm" onclick={() => (ui.addMode = "picker")}>
+        Add first block
       </Button>
     </div>
   {:else}
     <div class="flex items-center justify-between px-3 py-2 border-b border-border">
       <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        Exercises · {day.exercises.length}
+        {day.blocks.length} item{day.blocks.length === 1 ? "" : "s"}
       </span>
     </div>
 
-    {@const sorted = sortExercises(day.exercises)}
+    {@const sorted = sortBlocks(day.blocks)}
     {@const ordered = liveOrder(sorted)}
 
     <ul bind:this={listEl} class="divide-y divide-border">
-      {#each ordered as ex, i (ex.id)}
-        {@const isDragging = dragId === ex.id}
-        <!--
-          The li is `position: relative` so the grip button can be absolutely
-          positioned and cover the full row height — a much larger touch target.
-        -->
+      {#each ordered as block, i (block.id)}
+        {@const isDragging = dragId === block.id}
         <li class="relative flex items-center py-2.5 pr-3 transition-colors {isDragging ? 'bg-primary/15' : ''}">
-          <!--
-            Full-height drag handle button.
-            - `type="button"` makes this an interactive element, giving it
-              priority over scroll gestures in Android WebView.
-            - `style="touch-action: none"` (inline, not via Tailwind) ensures
-              the browser never treats touches here as a pan/zoom gesture.
-            - Absolute positioning stretches it top-to-bottom so the user has
-              a tall, easy-to-hit drag zone on the left side of each row.
-          -->
           <button
             type="button"
             class="absolute left-0 top-0 bottom-0 flex items-center gap-1 pl-3 pr-2 cursor-grab active:cursor-grabbing"
             style="touch-action: none; background: rgba(99,102,241,0.15); border-right: 2px solid rgba(99,102,241,0.4);"
-            use:gripAction={ex.id}
+            use:gripAction={block.id}
             aria-label="Drag to reorder"
             tabindex="-1"
             disabled={ui.saving}
@@ -415,16 +480,22 @@
             <span class="text-xs w-5 text-right text-indigo-500 font-medium">{i + 1}</span>
           </button>
 
-          <!-- Offset name so it doesn't sit under the grip button (~60px) -->
-          <span class="flex-1 min-w-0 pl-16 text-sm truncate">{ex.exerciseName}</span>
+          <div class="flex-1 min-w-0 pl-16 flex items-center gap-2">
+            {#if block.type === "cardio"}
+              <Timer class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            {:else}
+              <Dumbbell class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            {/if}
+            <span class="text-sm truncate">{blockLabel(block)}</span>
+          </div>
 
           <Button
             variant="ghost"
             size="icon"
             class="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
             disabled={ui.saving}
-            onclick={() => void deleteExercise(ex.id)}
-            aria-label="Remove {ex.exerciseName}"
+            onclick={() => void deleteBlock(block.id)}
+            aria-label="Remove {blockLabel(block)}"
           >
             <X class="h-3.5 w-3.5" />
           </Button>
@@ -433,3 +504,11 @@
     </ul>
   {/if}
 </div>
+
+<!-- Cardio dialog -->
+<AddCardioDialog
+  open={ui.addMode === "cardio"}
+  saving={ui.saving}
+  onOpenChange={(v) => { if (!v) ui.addMode = "none"; }}
+  onSubmit={(name) => void addCardio(name)}
+/>

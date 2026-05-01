@@ -39,4 +39,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Exact alarm permissions for rest timer notifications -->
+    <!-- USE_EXACT_ALARM auto-grants on API 33+ for timer-style apps, no user action needed -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- SCHEDULE_EXACT_ALARM covers API 31-32; may require user to grant via Special App Access -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>

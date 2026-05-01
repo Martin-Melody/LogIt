@@ -27,29 +27,29 @@ let splitRepo: SplitRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
 export async function initRepos(): Promise<void> {
   if (!browser) return;
   if (didInit) return;
 
   algorithmRegistry = pluginRuntime.algorithms;
 
-  const native = isNativePlatform();
-
-  if (native) {
-    try {
-      await initSqlite();
-      workoutRepo = createSqliteWorkoutRepo();
-      exerciseRepo = createSqliteExerciseRepo();
-      splitRepo = createSqliteSplitRepo();
-      progressionRepo = createLocalProgressionRepo();
-      didInit = true;
-      return;
-    } catch (error) {
-      console.warn(
-        "[repoProvider] native SQLite init failed, falling back to local storage",
-        error,
-      );
-    }
+  if (isNativePlatform()) {
+    await withTimeout(initSqlite(), 10_000, "initSqlite");
+    workoutRepo = createSqliteWorkoutRepo();
+    exerciseRepo = createSqliteExerciseRepo();
+    splitRepo = createSqliteSplitRepo();
+    progressionRepo = createLocalProgressionRepo();
+    didInit = true;
+    return;
   }
 
   workoutRepo = createLocalWorkoutRepo();

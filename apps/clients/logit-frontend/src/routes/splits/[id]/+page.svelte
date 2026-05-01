@@ -17,7 +17,7 @@
   import { deleteSplit } from "$lib/usecases/Splits/deleteSplit";
   import { createId } from "$lib/domain/ids";
 
-  import { ArrowLeft, Trash, Check, X, Plus } from "lucide-svelte";
+  import { ArrowLeft, Trash, Check, X, Plus, GripVertical } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
 
   const props = $props<{ params: { id: string } }>();
@@ -100,7 +100,7 @@
       ...split,
       days: [
         ...split.days,
-        { id: createId("day"), orderIndex: nextOrder, name: `Day ${nextOrder + 1}`, exercises: [] },
+        { id: createId("day"), orderIndex: nextOrder, name: `Day ${nextOrder + 1}`, blocks: [] },
       ],
     };
     await persist(next);
@@ -131,6 +131,121 @@
     } finally {
       ui.saving = false;
     }
+  }
+
+  // ── Day drag-to-reorder ───────────────────────────────────────────────────
+
+  let listEl = $state<HTMLUListElement | null>(null);
+  let dragId = $state<string | null>(null);
+  let dragFromIdx = $state(-1);
+  let dragToIdx = $state(-1);
+  let dragStartY = $state(0);
+
+  function liveDayOrder(sorted: SplitDay[]): SplitDay[] {
+    if (dragId === null || dragFromIdx === dragToIdx) return sorted;
+    const result = [...sorted];
+    const [item] = result.splice(dragFromIdx, 1);
+    result.splice(dragToIdx, 0, item!);
+    return result;
+  }
+
+  async function commitDayDrag() {
+    const from = dragFromIdx;
+    const to = dragToIdx;
+    dragId = null;
+    dragFromIdx = -1;
+    dragToIdx = -1;
+    if (!split || from === to || from === -1) return;
+
+    const sorted = sortDays(split.days);
+    const reordered = [...sorted];
+    const [item] = reordered.splice(from, 1);
+    reordered.splice(to, 0, item!);
+
+    const next: WorkoutSplit = {
+      ...split,
+      days: split.days.map((d) => {
+        const newIdx = reordered.findIndex((r) => r.id === d.id);
+        return newIdx !== -1 ? { ...d, orderIndex: newIdx } : d;
+      }),
+    };
+    await persist(next);
+  }
+
+  async function hapticLight() {
+    try {
+      const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } catch {}
+  }
+
+  function dayGripAction(node: HTMLElement, dayId: string) {
+    function startDrag(clientY: number) {
+      const sorted = sortDays(split?.days ?? []);
+      const idx = sorted.findIndex((d) => d.id === dayId);
+      if (idx === -1) return false;
+      dragId = dayId;
+      dragFromIdx = idx;
+      dragToIdx = idx;
+      dragStartY = clientY;
+      void hapticLight();
+      return true;
+    }
+
+    function moveDrag(clientY: number) {
+      if (dragId !== dayId) return;
+      const total = split?.days.length ?? 1;
+      const rowH = listEl ? listEl.getBoundingClientRect().height / total : 56;
+      const newIdx = Math.max(0, Math.min(total - 1, Math.round(dragFromIdx + (clientY - dragStartY) / rowH)));
+      if (newIdx !== dragToIdx) dragToIdx = newIdx;
+    }
+
+    function onTouchStart(e: TouchEvent) {
+      if (ui.saving || e.touches.length !== 1) return;
+      e.preventDefault();
+      startDrag(e.touches[0]!.clientY);
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (dragId !== dayId) return;
+      e.preventDefault();
+      moveDrag(e.touches[0]!.clientY);
+    }
+    function onTouchEnd() {
+      if (dragId !== dayId) return;
+      void commitDayDrag();
+    }
+    function onMouseDown(e: MouseEvent) {
+      if (ui.saving || e.button !== 0) return;
+      e.preventDefault();
+      if (!startDrag(e.clientY)) return;
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    }
+    function onMouseMove(e: MouseEvent) { moveDrag(e.clientY); }
+    function onMouseUp() {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      if (dragId !== dayId) return;
+      void commitDayDrag();
+    }
+
+    node.addEventListener("touchstart", onTouchStart, { passive: false });
+    node.addEventListener("touchmove", onTouchMove, { passive: false });
+    node.addEventListener("touchend", onTouchEnd, { passive: true });
+    node.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    node.addEventListener("mousedown", onMouseDown);
+
+    return {
+      destroy() {
+        node.removeEventListener("touchstart", onTouchStart);
+        node.removeEventListener("touchmove", onTouchMove);
+        node.removeEventListener("touchend", onTouchEnd);
+        node.removeEventListener("touchcancel", onTouchEnd);
+        node.removeEventListener("mousedown", onMouseDown);
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      },
+    };
   }
 
   onMount(() => { void load(); });
@@ -237,20 +352,35 @@
         <Button variant="outline" size="sm" onclick={() => void addDay()}>Add first day</Button>
       </div>
     {:else}
-      <ul class="divide-y divide-border">
-        {#each sortDays(split.days) as d (d.id)}
-          <li>
+      {@const sorted = sortDays(split.days)}
+      {@const ordered = liveDayOrder(sorted)}
+      <ul bind:this={listEl} class="divide-y divide-border">
+        {#each ordered as d, i (d.id)}
+          {@const isDragging = dragId === d.id}
+          <li class="relative flex items-center transition-colors {isDragging ? 'opacity-50' : ''}">
             <button
               type="button"
-              class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors"
+              class="shrink-0 flex items-center gap-1 pl-3 pr-2 self-stretch cursor-grab active:cursor-grabbing"
+              style="touch-action: none;"
+              use:dayGripAction={d.id}
+              aria-label="Drag to reorder"
+              tabindex="-1"
+              disabled={ui.saving}
+            >
+              <GripVertical class="h-4 w-4 text-muted-foreground" />
+            </button>
+
+            <button
+              type="button"
+              class="flex-1 min-w-0 flex items-center gap-3 py-3 pr-3 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors"
               onclick={() => void goto(`/splits/${splitId}/days/${d.id}`)}
             >
               <div class="min-w-0 flex-1">
                 <p class="text-sm font-medium">
-                  Day {d.orderIndex + 1}{d.name ? ` — ${d.name}` : ""}
+                  Day {i + 1}{d.name ? ` — ${d.name}` : ""}
                 </p>
                 <p class="text-xs text-muted-foreground mt-0.5">
-                  {d.exercises.length} exercise{d.exercises.length === 1 ? "" : "s"}
+                  {d.blocks.length} item{d.blocks.length === 1 ? "" : "s"}
                 </p>
               </div>
               <span class="text-muted-foreground text-sm shrink-0">›</span>
