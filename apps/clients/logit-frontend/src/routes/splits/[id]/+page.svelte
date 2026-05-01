@@ -18,6 +18,7 @@
   import { createId } from "$lib/domain/ids";
 
   import { ArrowLeft, Trash, Check, X, Plus, GripVertical } from "lucide-svelte";
+  import { startSplitDetailTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
 
   const props = $props<{ params: { id: string } }>();
@@ -248,7 +249,9 @@
     };
   }
 
-  onMount(() => { void load(); });
+  onMount(() => {
+    void load().then(() => startSplitDetailTour());
+  });
 </script>
 
 <div class="flex flex-col pb-24">
@@ -282,6 +285,7 @@
         class="flex-1 min-w-0 flex items-center gap-2 text-left"
         onclick={startRename}
         disabled={ui.loading || ui.saving}
+        data-tour="split-detail-name"
       >
         <span class="text-sm font-semibold truncate">
           {split?.name ?? "Split"}
@@ -298,6 +302,7 @@
             class="h-7 px-2 text-xs"
             disabled={ui.saving}
             onclick={() => void setActive()}
+            data-tour="split-detail-set-active"
           >
             Set active
           </Button>
@@ -331,7 +336,7 @@
     <p class="px-3 py-4 text-sm text-muted-foreground">Split not found.</p>
   {:else}
     <!-- Days section header -->
-    <div class="flex items-center justify-between px-3 py-2 border-b border-border">
+    <div class="flex items-center justify-between px-3 py-2 border-b border-border" data-tour="split-detail-days">
       <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Days · {split.days.length}
       </span>
@@ -340,6 +345,7 @@
         class="h-7 px-2 text-xs gap-1"
         disabled={ui.saving}
         onclick={() => void addDay()}
+        data-tour="split-detail-add-day"
       >
         <Plus class="h-3 w-3" />
         Add day

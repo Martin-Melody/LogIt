@@ -4,6 +4,7 @@ import type { WorkoutSession } from "$lib/domain/workout";
 import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
 import type { ExerciseProgressionState, UserProgressionConfig } from "$lib/domain/progression";
 import type { UserProfile } from "$lib/stores/profile.store";
+import type { HomeConfig } from "$lib/features/widgets/widget";
 import {
   getExerciseRepo,
   getSplitRepo,
@@ -11,6 +12,8 @@ import {
   getProgressionRepo,
 } from "$lib/data/repoProvider";
 import { profile } from "$lib/stores/profile.store";
+import { homeConfig } from "$lib/stores/homeConfig.store";
+import { profileConfig } from "$lib/stores/profileConfig.store";
 import { saveTextFile } from "$lib/platform/fileSave";
 
 export const EXPORT_VERSION = 1 as const;
@@ -19,6 +22,8 @@ export type ExportData = {
   version: typeof EXPORT_VERSION;
   exportedAtMs: number;
   profile: UserProfile;
+  homeConfig: HomeConfig;
+  profileConfig: HomeConfig;
   exercises: Exercise[];
   splits: { splits: WorkoutSplit[]; activeSplitId: string | null };
   sessions: WorkoutSession[];
@@ -47,6 +52,8 @@ export async function exportData(): Promise<ExportData> {
     version: EXPORT_VERSION,
     exportedAtMs: Date.now(),
     profile: get(profile),
+    homeConfig: get(homeConfig),
+    profileConfig: get(profileConfig),
     exercises,
     splits: {
       splits: splitsFull.filter((s): s is WorkoutSplit => s !== null),

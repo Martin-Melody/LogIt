@@ -3,6 +3,8 @@ import { writable } from "svelte/store";
 
 export type UserProfile = {
   name: string;
+  bio: string;
+  avatarDataUrl?: string;
   height: number | null;
   heightUnit: "cm" | "in";
   weight: number | null;
@@ -25,6 +27,7 @@ const defaultRestDefaults: Record<string, number | undefined> = {
 
 const defaultProfile: UserProfile = {
   name: "",
+  bio: "",
   height: null,
   heightUnit: "cm",
   weight: null,

@@ -52,6 +52,23 @@ export function getDb(): SQLiteDBConnection {
   return db;
 }
 
+export async function clearAllSqliteData(): Promise<void> {
+  if (!db) return;
+  // Delete in FK-safe order; CASCADE handles children of sessions and splits.
+  await db.execute(`
+    PRAGMA foreign_keys = OFF;
+    DELETE FROM session_sets;
+    DELETE FROM session_exercises;
+    DELETE FROM session_blocks;
+    DELETE FROM sessions;
+    DELETE FROM planned_blocks;
+    DELETE FROM split_days;
+    DELETE FROM splits;
+    DELETE FROM exercises WHERE is_core = 0;
+    PRAGMA foreign_keys = ON;
+  `);
+}
+
 async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
   await db.execute(`
     PRAGMA foreign_keys = ON;
