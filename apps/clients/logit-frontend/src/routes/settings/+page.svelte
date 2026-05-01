@@ -16,6 +16,7 @@
     startProfileTour,
   } from "$lib/tour/index";
   import { clearAllData } from "$lib/usecases/clearAllData";
+  import { setMode, userPrefersMode } from "mode-watcher";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
   import {
     getProgressionConfig,
@@ -97,6 +98,27 @@
     </Button>
     <h1 class="text-base font-semibold">Settings</h1>
   </div>
+
+  <!-- Appearance -->
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>Appearance</Card.Title>
+      <Card.Description>Choose how the app looks.</Card.Description>
+    </Card.Header>
+    <Card.Content>
+      <div class="flex rounded border overflow-hidden text-sm w-fit">
+        {#each ([ ["system", "System"], ["light", "Light"], ["dark", "Dark"] ] as ["system"|"light"|"dark", string][]) as [value, label] (value)}
+          <button
+            type="button"
+            class="px-4 py-2 transition-colors {userPrefersMode.current === value ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+            onclick={() => setMode(value)}
+          >
+            {label}
+          </button>
+        {/each}
+      </div>
+    </Card.Content>
+  </Card.Root>
 
   <!-- Progression -->
   <Card.Root>
