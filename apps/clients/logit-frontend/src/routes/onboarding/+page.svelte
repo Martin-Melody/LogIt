@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { Dumbbell, ChevronRight, Bell, BellOff } from "lucide-svelte";
+  import { Dumbbell, ChevronRight, Bell, BellOff, ArrowLeft } from "lucide-svelte";
+  import ProfileAvatar from "$lib/components/ProfileAvatar.svelte";
 
   import { profile } from "$lib/stores/profile.store";
   import { onboarding } from "$lib/stores/onboarding.store";
@@ -80,6 +81,7 @@
   // Profile step state
   const draft = $state({
     name: $profile.name,
+    bio: $profile.bio,
     height: $profile.height !== null ? String($profile.height) : "",
     heightUnit: $profile.heightUnit,
     weight: $profile.weight !== null ? String($profile.weight) : "",
@@ -98,6 +100,7 @@
   function saveProfile() {
     profile.save({
       name: draft.name.trim(),
+      bio: draft.bio.trim(),
       height: numOrNull(draft.height),
       heightUnit: draft.heightUnit,
       weight: numOrNull(draft.weight),
@@ -192,26 +195,52 @@
 
   <!-- Step 1: Profile -->
   {:else if step === 1}
-    <div class="flex flex-col flex-1 px-6 pt-16 pb-8 max-w-sm mx-auto w-full">
-      <div class="mb-8">
-        <h2 class="text-xl font-bold">A bit about you</h2>
-        <p class="text-sm text-muted-foreground mt-1">Stored on your device only.</p>
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => (step = 0)}>
+        <ArrowLeft class="h-4 w-4" /> Back
+      </button>
+      <div class="mb-6">
+        <h2 class="text-xl font-bold">Set up your profile</h2>
+        <p class="text-sm text-muted-foreground mt-1">Stored on your device only. You can change this any time.</p>
       </div>
 
       <div class="flex flex-col gap-5 flex-1">
+
+        <!-- Avatar preview -->
+        <div class="flex justify-center">
+          <ProfileAvatar
+            name={draft.name}
+            avatarDataUrl={$profile.avatarDataUrl}
+            editable
+            class="h-20 w-20"
+          />
+        </div>
+
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium" for="name">Name</label>
           <input
             id="name"
             type="text"
-            placeholder="Your first name"
+            autocomplete="name"
+            placeholder="Your name"
             class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={draft.name}
           />
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" for="height">Height</label>
+          <label class="text-sm font-medium" for="bio">Bio <span class="text-muted-foreground font-normal">(optional)</span></label>
+          <textarea
+            id="bio"
+            rows={2}
+            placeholder="Something about yourself…"
+            class="w-full rounded border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            bind:value={draft.bio}
+          ></textarea>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium" for="height">Height <span class="text-muted-foreground font-normal">(optional)</span></label>
           <div class="grid grid-cols-[1fr_auto] gap-2">
             <input
               id="height"
@@ -223,22 +252,14 @@
               bind:value={draft.height}
             />
             <div class="flex shrink-0 rounded border overflow-hidden text-xs">
-              <button
-                type="button"
-                class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                onclick={() => (draft.heightUnit = "cm")}
-              >cm</button>
-              <button
-                type="button"
-                class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                onclick={() => (draft.heightUnit = "in")}
-              >in</button>
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "cm")}>cm</button>
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "in")}>in</button>
             </div>
           </div>
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" for="weight">Weight</label>
+          <label class="text-sm font-medium" for="weight">Body weight <span class="text-muted-foreground font-normal">(optional)</span></label>
           <div class="grid grid-cols-[1fr_auto] gap-2">
             <input
               id="weight"
@@ -250,19 +271,12 @@
               bind:value={draft.weight}
             />
             <div class="flex shrink-0 rounded border overflow-hidden text-xs">
-              <button
-                type="button"
-                class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                onclick={() => (draft.weightUnit = "kg")}
-              >kg</button>
-              <button
-                type="button"
-                class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                onclick={() => (draft.weightUnit = "lbs")}
-              >lbs</button>
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "kg")}>kg</button>
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "lbs")}>lbs</button>
             </div>
           </div>
         </div>
+
       </div>
 
       <div class="flex flex-col gap-3 mt-8">
@@ -285,7 +299,10 @@
 
   <!-- Step 2: Split selection -->
   {:else if step === 2}
-    <div class="flex flex-col flex-1 px-6 pt-16 pb-8 max-w-sm mx-auto w-full">
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => (step = 1)}>
+        <ArrowLeft class="h-4 w-4" /> Back
+      </button>
       <div class="mb-6">
         <h2 class="text-xl font-bold">Choose a training split</h2>
         <p class="text-sm text-muted-foreground mt-1">You can change this any time.</p>
@@ -320,7 +337,11 @@
 
   <!-- Step 3: Notifications -->
   {:else if step === 3}
-    <div class="flex flex-col flex-1 items-center justify-center gap-8 px-8 text-center max-w-sm mx-auto w-full">
+    <div class="flex flex-col flex-1 px-8 pt-10 pb-8 max-w-sm mx-auto w-full">
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => (step = 2)}>
+        <ArrowLeft class="h-4 w-4" /> Back
+      </button>
+    <div class="flex flex-col flex-1 items-center justify-center gap-8 text-center">
       <div class="flex flex-col items-center gap-4">
         <div class="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
           <Bell class="h-8 w-8 text-foreground" />
@@ -349,6 +370,7 @@
           <BellOff class="h-3.5 w-3.5" /> Skip for now
         </button>
       </div>
+    </div>
     </div>
   {/if}
 

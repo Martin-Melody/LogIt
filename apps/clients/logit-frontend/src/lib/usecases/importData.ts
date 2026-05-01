@@ -1,3 +1,4 @@
+import { browser } from "$app/environment";
 import {
   getExerciseRepo,
   getSplitRepo,
@@ -16,6 +17,9 @@ export type ImportCategories = {
   sessions: boolean;
   progression: boolean;
 };
+
+const HOME_CONFIG_KEY = "logit:home-config:v1";
+const PROFILE_CONFIG_KEY = "logit:profile-config:v1";
 
 export function parseExportFile(json: string): ExportData {
   let data: unknown;
@@ -51,6 +55,10 @@ export async function importData(
 
   if (categories.profile && data.profile) {
     profile.save(data.profile);
+    if (browser) {
+      if (data.homeConfig) localStorage.setItem(HOME_CONFIG_KEY, JSON.stringify(data.homeConfig));
+      if (data.profileConfig) localStorage.setItem(PROFILE_CONFIG_KEY, JSON.stringify(data.profileConfig));
+    }
   }
 
   if (categories.exercises && data.exercises) {

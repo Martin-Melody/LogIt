@@ -18,6 +18,10 @@ type TourState = {
   home: boolean;
   session: boolean;
   splits: boolean;
+  splitDetail: boolean;
+  splitDay: boolean;
+  exercises: boolean;
+  profile: boolean;
 };
 
 type TourStep = {
@@ -30,7 +34,15 @@ type TourStep = {
   };
 };
 
-const defaults: TourState = { home: false, session: false, splits: false };
+const defaults: TourState = {
+  home: false,
+  session: false,
+  splits: false,
+  splitDetail: false,
+  splitDay: false,
+  exercises: false,
+  profile: false,
+};
 
 function load(): TourState {
   if (!browser) return { ...defaults };
@@ -239,6 +251,220 @@ export function startSplitsTour(force = false) {
       },
     },
   ].filter(Boolean) as DriveStep[];
+
+  currentDriver = createDriver({
+    showProgress: true,
+    progressText: "{{current}} / {{total}}",
+    nextBtnText: "Next →",
+    prevBtnText: "← Back",
+    doneBtnText: "Got it ✓",
+    overlayOpacity: 0.6,
+    steps,
+  });
+
+  currentDriver.drive();
+}
+
+export function startSplitDetailTour(force = false) {
+  if (!browser) return;
+  if (get(_store).splitDetail && !force) return;
+  markSeen("splitDetail");
+
+  const hasSetActive = !!document.querySelector('[data-tour="split-detail-set-active"]');
+
+  const steps = [
+    {
+      element: '[data-tour="split-detail-name"]',
+      popover: {
+        title: "Rename Your Split",
+        description: "Tap the split name to rename it. Give it something memorable like \"Push / Pull / Legs\".",
+        side: "bottom" as const,
+        align: "start" as const,
+      },
+    },
+    hasSetActive && {
+      element: '[data-tour="split-detail-set-active"]',
+      popover: {
+        title: "Set as Active",
+        description: "Make this your current split. Quick Start on the home screen will automatically load today's day from the active split.",
+        side: "bottom" as const,
+        align: "end" as const,
+      },
+    },
+    {
+      element: '[data-tour="split-detail-days"]',
+      popover: {
+        title: "Training Days",
+        description: "Each day in your split is a separate workout template — e.g. Push, Pull, Legs. Drag to reorder them.",
+        side: "bottom" as const,
+        align: "start" as const,
+      },
+    },
+    {
+      element: '[data-tour="split-detail-add-day"]',
+      popover: {
+        title: "Add a Day",
+        description: "Tap here to add a new day to your split. Then tap the day to open it and add exercises.",
+        side: "bottom" as const,
+        align: "end" as const,
+      },
+    },
+  ].filter(Boolean) as DriveStep[];
+
+  currentDriver = createDriver({
+    showProgress: true,
+    progressText: "{{current}} / {{total}}",
+    nextBtnText: "Next →",
+    prevBtnText: "← Back",
+    doneBtnText: "Got it ✓",
+    overlayOpacity: 0.6,
+    steps,
+  });
+
+  currentDriver.drive();
+}
+
+export function startSplitDayTour(force = false) {
+  if (!browser) return;
+  if (get(_store).splitDay && !force) return;
+  markSeen("splitDay");
+
+  const steps: DriveStep[] = [
+    {
+      element: '[data-tour="split-day-name"]',
+      popover: {
+        title: "Day Name",
+        description: "Tap to rename this day — e.g. \"Push\", \"Upper\", or \"Monday\". The name shows up in Quick Start so you always know which session you're doing.",
+        side: "bottom" as const,
+        align: "start" as const,
+      },
+    },
+    {
+      element: '[data-tour="split-day-add-block"]',
+      popover: {
+        title: "Add an Exercise",
+        description: "Tap + to add an exercise or cardio block to this day. Search your library or type a new name to create one on the spot.",
+        side: "bottom" as const,
+        align: "end" as const,
+      },
+    },
+  ];
+
+  currentDriver = createDriver({
+    showProgress: true,
+    progressText: "{{current}} / {{total}}",
+    nextBtnText: "Next →",
+    prevBtnText: "← Back",
+    doneBtnText: "Got it ✓",
+    overlayOpacity: 0.6,
+    steps,
+  });
+
+  currentDriver.drive();
+}
+
+export function startExercisesTour(force = false) {
+  if (!browser) return;
+  if (get(_store).exercises && !force) return;
+  markSeen("exercises");
+
+  const hasList = !!document.querySelector('[data-tour="exercises-list"]');
+
+  const steps = [
+    {
+      element: '[data-tour="exercises-search"]',
+      popover: {
+        title: "Search Exercises",
+        description: "Type to filter exercises instantly. Works across built-in and your own custom exercises.",
+        side: "bottom" as const,
+        align: "start" as const,
+      },
+    },
+    {
+      element: '[data-tour="exercises-filter"]',
+      popover: {
+        title: "Filter by Type",
+        description: "Switch between All exercises, Built-in (core library), or Mine (exercises you've created).",
+        side: "bottom" as const,
+        align: "start" as const,
+      },
+    },
+    hasList && {
+      element: '[data-tour="exercises-list"]',
+      popover: {
+        title: "Exercise Library",
+        description: "Tap any exercise to view or edit it. Built-in exercises can have personal notes added; custom exercises can be fully renamed or deleted.",
+        side: "top" as const,
+        align: "start" as const,
+      },
+    },
+    {
+      element: '[data-tour="exercises-add"]',
+      popover: {
+        title: "Create an Exercise",
+        description: "Tap + to add a custom exercise. Give it a name and optional notes — it'll appear alongside the built-in library everywhere in the app.",
+        side: "bottom" as const,
+        align: "end" as const,
+      },
+    },
+  ].filter(Boolean) as DriveStep[];
+
+  currentDriver = createDriver({
+    showProgress: true,
+    progressText: "{{current}} / {{total}}",
+    nextBtnText: "Next →",
+    prevBtnText: "← Back",
+    doneBtnText: "Got it ✓",
+    overlayOpacity: 0.6,
+    steps,
+  });
+
+  currentDriver.drive();
+}
+
+export function startProfileTour(force = false) {
+  if (!browser) return;
+  if (get(_store).profile && !force) return;
+  markSeen("profile");
+
+  const steps: DriveStep[] = [
+    {
+      element: '[data-tour="profile-avatar"]',
+      popover: {
+        title: "Your Profile",
+        description: "Your avatar shows your initials. Everything here is stored only on your device — nothing is sent anywhere.",
+        side: "bottom" as const,
+        align: "center" as const,
+      },
+    },
+    {
+      element: '[data-tour="profile-edit"]',
+      popover: {
+        title: "Edit Profile",
+        description: "Update your name, bio, height, and body weight here. These are used by widgets on this page.",
+        side: "bottom" as const,
+        align: "center" as const,
+      },
+    },
+    {
+      element: '[data-tour="profile-widgets"]',
+      popover: {
+        title: "Profile Widgets",
+        description: "Widgets show stats at a glance — body measurements, your active training split, and personal records. Tap Customise below to reorder or hide them.",
+        side: "top" as const,
+        align: "start" as const,
+      },
+    },
+    {
+      element: '[data-tour="profile-settings"]',
+      popover: {
+        title: "Settings",
+        description: "Tap the gear to open Settings — configure progression algorithms, rest timers, back up your data, and more.",
+        side: "bottom" as const,
+        align: "end" as const,
+      },
+    },
+  ];
 
   currentDriver = createDriver({
     showProgress: true,

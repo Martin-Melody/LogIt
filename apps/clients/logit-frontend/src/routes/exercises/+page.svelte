@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { Plus, Search, X, ChevronRight, Trash2, ArrowLeft } from "lucide-svelte";
+  import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
   import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
@@ -33,7 +34,9 @@
     }
   }
 
-  onMount(() => void load());
+  onMount(() => {
+    void load().then(() => startExercisesTour());
+  });
 
   const items = $derived.by(() => {
     const q = query.trim().toLowerCase();
@@ -111,13 +114,14 @@
       class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
       onclick={openAdd}
       aria-label="Add exercise"
+      data-tour="exercises-add"
     >
       <Plus class="h-5 w-5" />
     </button>
   </div>
 
   <!-- Search -->
-  <div class="px-3 pt-3 pb-2">
+  <div class="px-3 pt-3 pb-2" data-tour="exercises-search">
     <div class="relative">
       <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
       <input
@@ -140,7 +144,7 @@
   </div>
 
   <!-- Filter tabs -->
-  <div class="flex gap-1 px-3 pb-2">
+  <div class="flex gap-1 px-3 pb-2" data-tour="exercises-filter">
     {#each (["all", "core", "mine"] as Filter[]) as f (f)}
       <button
         type="button"
@@ -160,7 +164,7 @@
       {query ? "No results." : filter === "mine" ? "No custom exercises yet." : "No exercises."}
     </p>
   {:else}
-    <ul class="divide-y divide-border">
+    <ul class="divide-y divide-border" data-tour="exercises-list">
       {#each items as ex (ex.id)}
         <li>
           <button
