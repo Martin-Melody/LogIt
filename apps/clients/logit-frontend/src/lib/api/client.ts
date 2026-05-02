@@ -1,5 +1,7 @@
 import { tokenStorage, type StoredTokens } from "./tokenStorage";
 
+const USER_KEY = "logit:auth:user";
+
 export interface AuthUser {
   id: string;
   username: string;
@@ -32,10 +34,19 @@ function getBaseUrl(): string {
 
 class ApiClient {
   private tokens: StoredTokens | null = null;
+  private cachedUser: AuthUser | null = null;
   private refreshPromise: Promise<boolean> | null = null;
 
   async init(): Promise<void> {
     this.tokens = await tokenStorage.get();
+    if (this.tokens) {
+      try {
+        const raw = localStorage.getItem(USER_KEY);
+        this.cachedUser = raw ? (JSON.parse(raw) as AuthUser) : null;
+      } catch {
+        this.cachedUser = null;
+      }
+    }
   }
 
   isAuthenticated(): boolean {
@@ -43,19 +54,17 @@ class ApiClient {
   }
 
   getUser(): AuthUser | null {
-    if (!this.tokens) return null;
-    try {
-      const payload = JSON.parse(atob(this.tokens.accessToken.split(".")[1]));
-      return {
-        id: payload.sub,
-        username: payload.unique_name,
-        displayName: payload.display_name ?? payload.unique_name,
-        avatarUrl: payload.avatar_url ?? null,
-        tier: payload.tier ?? "Free",
-      };
-    } catch {
-      return null;
-    }
+    return this.cachedUser;
+  }
+
+  private saveUser(user: AuthUser): void {
+    this.cachedUser = user;
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  private clearUser(): void {
+    this.cachedUser = null;
+    localStorage.removeItem(USER_KEY);
   }
 
   private async refreshTokens(): Promise<boolean> {
@@ -133,6 +142,7 @@ class ApiClient {
     });
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
+    this.saveUser(data.user);
     return data.user;
   }
 
@@ -143,6 +153,7 @@ class ApiClient {
     });
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
+    this.saveUser(data.user);
     return data.user;
   }
 
@@ -156,6 +167,7 @@ class ApiClient {
       } catch {}
     }
     this.tokens = null;
+    this.clearUser();
     await tokenStorage.clear();
   }
 
