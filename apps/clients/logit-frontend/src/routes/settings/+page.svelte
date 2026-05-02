@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ArrowLeft, RotateCcw, Sparkles, Cloud, Server, WifiOff } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Sparkles, Cloud, Server, WifiOff, CheckCircle, XCircle, Loader2 } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -20,6 +20,7 @@
   import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { getServerMode, setServerMode, type ServerMode } from "$lib/api/serverConfig";
+  import { testServerConnection, type ConnectionResult } from "$lib/api/testConnection";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
   import {
     getProgressionConfig,
@@ -40,11 +41,20 @@
   let serverMode = $state<ServerMode>(getServerMode());
   let selfHostUrl = $state("");
   let editingServerUrl = $state(false);
+  let urlTestResult = $state<ConnectionResult>("idle");
 
   function applyServerMode(mode: ServerMode) {
     setServerMode(mode, mode === "selfhosted" ? selfHostUrl.trim() : undefined);
     serverMode = mode;
     editingServerUrl = false;
+    urlTestResult = "idle";
+  }
+
+  async function testUrl() {
+    const url = selfHostUrl.trim().replace(/\/$/, "");
+    if (!url) return;
+    urlTestResult = "testing";
+    urlTestResult = await testServerConnection(url);
   }
 
   // --- Progression ---
@@ -212,8 +222,28 @@
           <div class="flex gap-2">
             <input type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
               class="flex-1 min-w-0 rounded border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              oninput={() => (urlTestResult = "idle")}
               bind:value={selfHostUrl} />
             <Button size="sm" variant="outline" onclick={() => applyServerMode("selfhosted")}>Save</Button>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button"
+              class="px-3 py-1.5 rounded border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"
+              disabled={!selfHostUrl.trim() || urlTestResult === "testing"}
+              onclick={() => void testUrl()}>
+              {urlTestResult === "testing" ? "Testing…" : "Test connection"}
+            </button>
+            {#if urlTestResult === "testing"}
+              <Loader2 class="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            {:else if urlTestResult === "ok"}
+              <span class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                <CheckCircle class="h-3.5 w-3.5" /> Reachable
+              </span>
+            {:else if urlTestResult === "error"}
+              <span class="flex items-center gap-1.5 text-xs text-destructive">
+                <XCircle class="h-3.5 w-3.5" /> Can't reach server
+              </span>
+            {/if}
           </div>
         {/if}
       </div>

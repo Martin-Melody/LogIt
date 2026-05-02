@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { Dumbbell, ChevronRight, Bell, BellOff, ArrowLeft, Server, Cloud, WifiOff } from "lucide-svelte";
+  import { Dumbbell, ChevronRight, Bell, BellOff, ArrowLeft, Server, Cloud, WifiOff, CheckCircle, XCircle, Loader2 } from "lucide-svelte";
   import ProfileAvatar from "$lib/components/ProfileAvatar.svelte";
 
   import { profile } from "$lib/stores/profile.store";
@@ -12,6 +12,7 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { setServerMode } from "$lib/api/serverConfig";
   import { ApiError } from "$lib/api/client";
+  import { testServerConnection, type ConnectionResult } from "$lib/api/testConnection";
 
   type PresetDay = { name: string; exercises: string[] };
   type Preset = { id: string; name: string; description: string; days: PresetDay[] };
@@ -70,6 +71,7 @@
   let serverSubStep = $state<ServerSubStep>("pick");
   let chosenMode = $state<"cloud" | "selfhosted" | null>(null);
   let selfHostUrl = $state("https://");
+  let urlTestResult = $state<ConnectionResult>("idle");
   let authMode = $state<AuthMode>("login");
   let authError = $state<string | null>(null);
   let authLoading = $state(false);
@@ -79,6 +81,7 @@
     serverSubStep = "pick";
     chosenMode = null;
     selfHostUrl = "https://";
+    urlTestResult = "idle";
     authMode = "login";
     authError = null;
     authLoading = false;
@@ -86,6 +89,13 @@
     authForm.email = "";
     authForm.password = "";
     authForm.displayName = "";
+  }
+
+  async function testUrl() {
+    const url = selfHostUrl.trim().replace(/\/$/, "");
+    if (!url || url === "https:/") return;
+    urlTestResult = "testing";
+    urlTestResult = await testServerConnection(url);
   }
 
   // Helpers
@@ -437,17 +447,41 @@
           <p class="text-sm text-muted-foreground mt-1">Enter the base URL of your self-hosted Logit instance.</p>
         </div>
 
-        <div class="flex flex-col gap-1.5 flex-1">
-          <label class="text-sm font-medium" for="server-url">Server URL</label>
-          <input id="server-url" type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={selfHostUrl} />
-          <p class="text-xs text-muted-foreground mt-1">You can change this later in Settings.</p>
+        <div class="flex flex-col gap-3 flex-1">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium" for="server-url">Server URL</label>
+            <input id="server-url" type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              oninput={() => (urlTestResult = "idle")}
+              bind:value={selfHostUrl} />
+            <p class="text-xs text-muted-foreground">You can change this later in Settings.</p>
+          </div>
+
+          <!-- Test connection -->
+          <div class="flex items-center gap-3">
+            <button type="button"
+              class="px-3 py-1.5 rounded border border-border text-xs disabled:opacity-50 transition-colors hover:border-muted-foreground/50"
+              disabled={!selfHostUrl.trim() || selfHostUrl === "https:/" || urlTestResult === "testing"}
+              onclick={() => void testUrl()}>
+              {urlTestResult === "testing" ? "Testing…" : "Test connection"}
+            </button>
+            {#if urlTestResult === "testing"}
+              <Loader2 class="h-4 w-4 animate-spin text-muted-foreground" />
+            {:else if urlTestResult === "ok"}
+              <span class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                <CheckCircle class="h-4 w-4" /> Reachable
+              </span>
+            {:else if urlTestResult === "error"}
+              <span class="flex items-center gap-1.5 text-xs text-destructive">
+                <XCircle class="h-4 w-4" /> Can't reach server
+              </span>
+            {/if}
+          </div>
         </div>
 
         <button type="button"
           class="w-full py-3 mt-8 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          disabled={!selfHostUrl.trim() || selfHostUrl === "https://"}
+          disabled={!selfHostUrl.trim() || selfHostUrl === "https:/"}
           onclick={confirmSelfHostUrl}>
           Continue
         </button>
