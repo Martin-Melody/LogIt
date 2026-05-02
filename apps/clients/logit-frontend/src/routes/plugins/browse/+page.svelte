@@ -139,6 +139,13 @@
         >
           Progression
         </button>
+        <button
+          type="button"
+          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'analytics' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          onclick={() => (familyFilter = "analytics")}
+        >
+          Analytics
+        </button>
       </div>
     </div>
 

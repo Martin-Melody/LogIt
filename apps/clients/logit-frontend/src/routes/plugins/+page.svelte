@@ -26,6 +26,7 @@
   const progressionAlgorithms = $derived(
     sortByName(builtins.filter((p) => p.family === "progression-algorithm")),
   );
+  const analyticsPlugins = $derived(sortByName(builtins.filter((p) => p.family === "analytics")));
   const installedPlugins = $derived(sortByName(installed.map((p) => p.manifest)));
 
   function capabilityLabel(manifest: PluginManifest): string {
@@ -195,6 +196,32 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Progression</p>
               <ul class="flex flex-col gap-1.5">
                 {#each progressionAlgorithms as plugin (plugin.id)}
+                  <li class="rounded border border-border p-2.5">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium">{plugin.name}</p>
+                        <p class="text-xs text-muted-foreground">{plugin.description}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="shrink-0"
+                        onclick={() => void goto(`/plugins/${plugin.id}`)}
+                      >
+                        Details
+                      </Button>
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+
+          {#if analyticsPlugins.length > 0}
+            <div>
+              <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Analytics</p>
+              <ul class="flex flex-col gap-1.5">
+                {#each analyticsPlugins as plugin (plugin.id)}
                   <li class="rounded border border-border p-2.5">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
