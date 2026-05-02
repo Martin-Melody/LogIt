@@ -1,0 +1,22 @@
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "type": "OrderedCollectionPage",
+  "orderedItems": [
+    {
+      "type": "Create",
+      "object": {
+        "type": "Note",
+        "name": "Focus Card plugin v1.0.0",
+        "content": "New plugin: Focus Card (widget) v1.0.0. Adds a daily workout tip to your home screen.",
+        "attachment": [
+          {
+            "type": "Link",
+            "mediaType": "application/json",
+            "name": "Plugin manifest",
+            "href": "/sample-plugins/focus-card/manifest.json"
+          }
+        ]
+      }
+    }
+  ]
+}
