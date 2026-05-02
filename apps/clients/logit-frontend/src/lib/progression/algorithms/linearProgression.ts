@@ -30,9 +30,17 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const state: LinearState = (input.state as LinearState | null) ?? DEFAULT_STATE;
 
   if (input.history.length === 0) {
+    // Seed from planned targets so the first suggestion matches the split's intent
+    const seedWeight = input.plannedTargets?.weight ?? state.workingWeight;
+    const seedReps = input.plannedTargets?.reps;
+    const seeded: LinearState = {
+      ...state,
+      workingWeight: seedWeight,
+      repRange: seedReps ? [seedReps, seedReps] : state.repRange,
+    };
     return {
-      sets: makeWorkingSets(state.workingWeight, state.repRange),
-      nextState: state,
+      sets: makeWorkingSets(seeded.workingWeight, seeded.repRange),
+      nextState: seeded,
     };
   }
 

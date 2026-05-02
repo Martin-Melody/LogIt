@@ -1,6 +1,7 @@
 import { browser } from "$app/environment";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
+import { createLocalAnalyticsRegistry } from "$lib/progression/localAnalyticsRegistry";
 import type { InstalledPlugin, PluginManifest } from "./types";
 
 const INSTALLED_STORAGE_KEY = "logit:plugins:installed:v1";
@@ -28,7 +29,7 @@ function validateInstallableManifest(manifest: PluginManifest): void {
   if (manifest.distribution.origin === "builtin") return;
 
   if (
-    (manifest.family === "widget" || manifest.family === "progression-algorithm") &&
+    (manifest.family === "widget" || manifest.family === "progression-algorithm" || manifest.family === "analytics") &&
     !manifest.distribution.bundleUrl
   ) {
     throw new Error(
@@ -115,17 +116,32 @@ async function makeProgressionManifests(): Promise<PluginManifest[]> {
     version: "1.0.0",
     author: algo.author ?? "logit",
     distribution: { origin: "builtin" },
-    capabilities: [
-      {
-        family: "progression-algorithm",
-        algorithmId: algo.id,
-      },
-    ],
+    capabilities: [{ family: "progression-algorithm", algorithmId: algo.id }],
+  }));
+}
+
+async function makeAnalyticsManifests(): Promise<PluginManifest[]> {
+  const registry = createLocalAnalyticsRegistry();
+  const plugins = await registry.list();
+
+  return plugins.map((plugin) => ({
+    id: `builtin.analytics.${plugin.id}`,
+    family: "analytics",
+    name: plugin.name,
+    description: plugin.description,
+    version: "1.0.0",
+    author: plugin.author ?? "logit",
+    distribution: { origin: "builtin" },
+    capabilities: [{ family: "analytics", analyticsId: plugin.id }],
   }));
 }
 
 export async function listBuiltinPluginManifests(): Promise<PluginManifest[]> {
-  return [...makeWidgetManifest(), ...(await makeProgressionManifests())];
+  return [
+    ...makeWidgetManifest(),
+    ...(await makeProgressionManifests()),
+    ...(await makeAnalyticsManifests()),
+  ];
 }
 
 export async function listInstalledPluginManifests(): Promise<InstalledPlugin[]> {
