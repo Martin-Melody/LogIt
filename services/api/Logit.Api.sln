@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{82D05309-A408-4CC8-A33B-96F9E9DD66D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logit.Api", "src\Logit.Api\Logit.Api.csproj", "{86F01528-2E17-43F2-B16E-733B74ECCB9C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A5B94C97-218F-4931-BC51-82838A17EDDF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logit.Api.Tests", "tests\Logit.Api.Tests\Logit.Api.Tests.csproj", "{8C396752-2070-4B9E-97A7-A509F9F29067}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{86F01528-2E17-43F2-B16E-733B74ECCB9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86F01528-2E17-43F2-B16E-733B74ECCB9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86F01528-2E17-43F2-B16E-733B74ECCB9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86F01528-2E17-43F2-B16E-733B74ECCB9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C396752-2070-4B9E-97A7-A509F9F29067}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C396752-2070-4B9E-97A7-A509F9F29067}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C396752-2070-4B9E-97A7-A509F9F29067}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C396752-2070-4B9E-97A7-A509F9F29067}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{86F01528-2E17-43F2-B16E-733B74ECCB9C} = {82D05309-A408-4CC8-A33B-96F9E9DD66D8}
+		{8C396752-2070-4B9E-97A7-A509F9F29067} = {A5B94C97-218F-4931-BC51-82838A17EDDF}
+	EndGlobalSection
+EndGlobal
