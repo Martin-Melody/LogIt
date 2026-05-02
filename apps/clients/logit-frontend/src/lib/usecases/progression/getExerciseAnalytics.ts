@@ -2,18 +2,18 @@ import { getWorkoutRepo, getAnalyticsRegistry } from "$lib/data/repoProvider";
 import { getExercises } from "$lib/domain/workout";
 import type { ExerciseHistoryEntry } from "$lib/domain/progression";
 import type { AnalyticsOutput } from "$lib/domain/analytics";
-
-const DEFAULT_ANALYTICS_ID = "basic-analytics";
+import { resolveAnalyticsId } from "./getAnalyticsConfig";
 
 export async function getExerciseAnalytics(
   exercise: { id?: string; name: string },
 ): Promise<AnalyticsOutput | null> {
-  const [sessions, registry] = await Promise.all([
+  const [sessions, registry, analyticsId] = await Promise.all([
     getWorkoutRepo().listAllSessions(),
     getAnalyticsRegistry(),
+    resolveAnalyticsId(),
   ]);
 
-  const plugin = await registry.get(DEFAULT_ANALYTICS_ID);
+  const plugin = await registry.get(analyticsId);
   if (!plugin) return null;
 
   const history: ExerciseHistoryEntry[] = sessions

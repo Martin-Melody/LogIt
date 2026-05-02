@@ -53,3 +53,7 @@ export interface AnalyticsRegistry {
   list(): Promise<AnalyticsPluginMeta[]>;
   get(id: string): Promise<AnalyticsPlugin | null>;
 }
+
+export type UserAnalyticsConfig = {
+  analyticsId: string;
+};
