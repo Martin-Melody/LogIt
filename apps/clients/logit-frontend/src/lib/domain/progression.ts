@@ -12,6 +12,7 @@ export type ProgressionInput = {
   exercise: { id?: string; name: string };
   history: ExerciseHistoryEntry[]; // most recent first
   state: unknown; // algorithm-owned, opaque to the app
+  plannedTargets?: import("$lib/domain/WorkoutSplit").PlannedTargets;
 };
 
 export type SuggestedSet = {

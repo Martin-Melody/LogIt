@@ -1,10 +1,11 @@
 import type { Component } from "svelte";
 import type { PluginManifest, PluginFamily } from "./types";
 import type { ProgressionAlgorithm } from "$lib/domain/progression";
+import type { AnalyticsPlugin } from "$lib/domain/analytics";
 
 export const PLUGIN_BUNDLE_FORMAT_VERSION = 1 as const;
 
-export type PluginBundleFamily = Extract<PluginFamily, "widget" | "progression-algorithm">;
+export type PluginBundleFamily = Extract<PluginFamily, "widget" | "progression-algorithm" | "analytics">;
 
 export type PluginBundleContract = {
   formatVersion: typeof PLUGIN_BUNDLE_FORMAT_VERSION;
@@ -21,14 +22,14 @@ export type PluginWidgetRenderer = {
   renderHtml: () => string;
 };
 
-type BundleEntry = Component | ProgressionAlgorithm | PluginWidgetRenderer | unknown;
+type BundleEntry = Component | ProgressionAlgorithm | AnalyticsPlugin | PluginWidgetRenderer | unknown;
 
 function isString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 function isBundleFamily(value: unknown): value is PluginBundleFamily {
-  return value === "widget" || value === "progression-algorithm";
+  return value === "widget" || value === "progression-algorithm" || value === "analytics";
 }
 
 export function isPluginBundleContract(value: unknown): value is PluginBundleContract {
@@ -93,6 +94,17 @@ export function isPluginAlgorithm(value: unknown): value is ProgressionAlgorithm
     typeof value === "object" &&
     "suggest" in value &&
     typeof (value as ProgressionAlgorithm).suggest === "function"
+  );
+}
+
+export function isPluginAnalytics(value: unknown): value is AnalyticsPlugin {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "compute" in value &&
+    typeof (value as AnalyticsPlugin).compute === "function" &&
+    "metricDefinitions" in value &&
+    Array.isArray((value as AnalyticsPlugin).metricDefinitions)
   );
 }
 
