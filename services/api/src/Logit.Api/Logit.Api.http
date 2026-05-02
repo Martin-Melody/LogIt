@@ -1,0 +1,6 @@
+@Logit.Api_HostAddress = http://localhost:5118
+
+GET {{Logit.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
