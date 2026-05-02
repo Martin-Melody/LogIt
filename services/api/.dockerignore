@@ -1,0 +1,6 @@
+**/.git
+**/.gitignore
+**/obj
+**/bin
+**/*.db
+**/appsettings.Development.json
