@@ -3,11 +3,13 @@ import type { ProgressionOutput, ExerciseHistoryEntry } from "$lib/domain/progre
 import { exerciseKey } from "$lib/domain/progression";
 import { getExercises } from "$lib/domain/workout";
 import { nowMs } from "$lib/domain/time";
+import type { PlannedTargets } from "$lib/domain/WorkoutSplit";
 
 const HISTORY_WINDOW = 20;
 
 export async function getSuggestion(
   exercise: { id?: string; name: string },
+  plannedTargets?: PlannedTargets,
 ): Promise<ProgressionOutput | null> {
   const progressionRepo = getProgressionRepo();
   const workoutRepo = getWorkoutRepo();
@@ -45,7 +47,7 @@ export async function getSuggestion(
     })
     .sort((a, b) => b.performedAtMs - a.performedAtMs);
 
-  return algorithm.suggest({ exercise, history, state });
+  return algorithm.suggest({ exercise, history, state, plannedTargets });
 }
 
 export async function refreshProgressionState(

@@ -23,6 +23,12 @@
     setProgressionAlgorithm,
   } from "$lib/usecases/progression/getProgressionConfig";
   import type { ProgressionConfigView } from "$lib/usecases/progression/getProgressionConfig";
+  import {
+    getAnalyticsConfig,
+    setAnalyticsPlugin,
+    DEFAULT_ANALYTICS_ID,
+  } from "$lib/usecases/progression/getAnalyticsConfig";
+  import type { AnalyticsConfigView } from "$lib/usecases/progression/getAnalyticsConfig";
 
   const isDev = import.meta.env.DEV;
 
@@ -53,6 +59,36 @@
       progUi.error = e instanceof Error ? e.message : "Failed to save setting";
     } finally {
       progUi.saving = false;
+    }
+  }
+
+  // --- Analytics ---
+  const analyticsUi = $state({ loading: true, saving: false, error: null as string | null });
+  let analyticsView = $state<AnalyticsConfigView>({ config: null, plugins: [] });
+
+  async function loadAnalytics() {
+    analyticsUi.loading = true;
+    analyticsUi.error = null;
+    try {
+      analyticsView = await getAnalyticsConfig();
+    } catch (e) {
+      analyticsUi.error = e instanceof Error ? e.message : "Failed to load settings";
+    } finally {
+      analyticsUi.loading = false;
+    }
+  }
+
+  async function selectAnalyticsPlugin(id: string) {
+    if (analyticsUi.saving) return;
+    analyticsUi.saving = true;
+    analyticsUi.error = null;
+    try {
+      await setAnalyticsPlugin(id);
+      analyticsView = { ...analyticsView, config: id ? { analyticsId: id } : null };
+    } catch (e) {
+      analyticsUi.error = e instanceof Error ? e.message : "Failed to save setting";
+    } finally {
+      analyticsUi.saving = false;
     }
   }
 
@@ -87,7 +123,10 @@
     await goto("/onboarding");
   }
 
-  onMount(() => { void loadProgression(); });
+  onMount(() => {
+    void loadProgression();
+    void loadAnalytics();
+  });
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
@@ -164,6 +203,50 @@
             Disable suggestions
           </Button>
         {/if}
+      {/if}
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Analytics -->
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>Analytics</Card.Title>
+      <Card.Description>How the app computes your progress metrics and chart data.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-3">
+      {#if analyticsUi.error}
+        <p class="text-sm text-destructive">{analyticsUi.error}</p>
+      {/if}
+      {#if analyticsUi.loading}
+        <p class="text-sm text-muted-foreground">Loading…</p>
+      {:else if analyticsView.plugins.length === 0}
+        <p class="text-sm text-muted-foreground">No analytics plugins available.</p>
+      {:else}
+        <ul class="flex flex-col gap-2">
+          {#each analyticsView.plugins as plugin (plugin.id)}
+            {@const activeId = analyticsView.config?.analyticsId ?? DEFAULT_ANALYTICS_ID}
+            {@const isActive = activeId === plugin.id}
+            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium">{plugin.name}</p>
+                    {#if isActive}
+                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                    {/if}
+                  </div>
+                  <p class="mt-1 text-xs text-muted-foreground">{plugin.description}</p>
+                  {#if plugin.author}
+                    <p class="mt-1 text-xs text-muted-foreground/60">by {plugin.author}</p>
+                  {/if}
+                </div>
+                {#if !isActive}
+                  <Button size="sm" variant="outline" disabled={analyticsUi.saving} onclick={() => void selectAnalyticsPlugin(plugin.id)}>Select</Button>
+                {/if}
+              </div>
+            </li>
+          {/each}
+        </ul>
       {/if}
     </Card.Content>
   </Card.Root>

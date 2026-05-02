@@ -1,0 +1,7 @@
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "type": "Service",
+  "name": "Focus Card Plugin",
+  "summary": "Community plugin that adds a daily workout tip widget to the home screen.",
+  "outbox": "/sample-plugins/focus-card/outbox.json"
+}

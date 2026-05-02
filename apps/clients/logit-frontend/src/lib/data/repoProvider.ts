@@ -5,6 +5,7 @@ import type { SplitRepo } from "$lib/data/splitRepo";
 import type { ExerciseRepo } from "$lib/data/exercise/exerciseRepo";
 import type { ProgressionRepo } from "$lib/data/progressionRepo";
 import type { AlgorithmRegistry } from "$lib/progression/algorithmRegistry";
+import type { AnalyticsRegistry } from "$lib/domain/analytics";
 
 import { isNativePlatform } from "$lib/platform/isNative";
 
@@ -26,6 +27,7 @@ let exerciseRepo: ExerciseRepo | null = null;
 let splitRepo: SplitRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
+let analyticsRegistry: AnalyticsRegistry | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -41,6 +43,7 @@ export async function initRepos(): Promise<void> {
   if (didInit) return;
 
   algorithmRegistry = pluginRuntime.algorithms;
+  analyticsRegistry = pluginRuntime.analytics;
 
   if (isNativePlatform()) {
     await withTimeout(initSqlite(), 10_000, "initSqlite");
@@ -87,4 +90,10 @@ export function getAlgorithmRegistry(): AlgorithmRegistry {
   if (!algorithmRegistry)
     throw new Error("AlgorithmRegistry not initialized. Call initRepos() first.");
   return algorithmRegistry;
+}
+
+export function getAnalyticsRegistry(): AnalyticsRegistry {
+  if (!analyticsRegistry)
+    throw new Error("AnalyticsRegistry not initialized. Call initRepos() first.");
+  return analyticsRegistry;
 }
