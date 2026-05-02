@@ -15,7 +15,9 @@
 
   let { children } = $props();
 
-  const isOnboarding = $derived(page.url.pathname.startsWith("/onboarding"));
+  const isOnboarding = $derived(
+    page.url.pathname.startsWith("/onboarding") || page.url.pathname.startsWith("/auth"),
+  );
 
   $effect(() => {
     if ($appReady && !$onboarding.completed && !isOnboarding) {
