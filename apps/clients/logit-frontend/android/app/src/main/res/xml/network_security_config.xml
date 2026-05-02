@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Allow cleartext (HTTP) traffic globally. Self-hosters on a LAN can't get
+        a Let's Encrypt cert for a private IP, so HTTP is their only option.
+        The app warns users in the UI when they enter an http:// URL.
+        Logit cloud always uses HTTPS so cloud users are unaffected.
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <!-- System CAs -->
+            <certificates src="system" />
+            <!-- User-installed CAs — allows self-signed certs for self-hosters -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
