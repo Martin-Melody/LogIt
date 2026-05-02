@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell, Cloud, Server } from "lucide-svelte";
+  import { Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell, Cloud, Server, Rss } from "lucide-svelte";
   import { startProfileTour } from "$lib/tour/index";
   import ProfileAvatar from "$lib/components/ProfileAvatar.svelte";
   import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
@@ -149,7 +149,7 @@
   </div>
 
   <!-- Bottom actions -->
-  <div class="flex justify-center gap-1 mt-6">
+  <div class="flex justify-center gap-1 mt-6 flex-wrap px-2">
     <Button variant="ghost" size="sm" class="text-muted-foreground gap-1.5" onclick={() => void goto("/exercises")}>
       <Dumbbell class="h-3.5 w-3.5" /> Exercise library
     </Button>
@@ -157,6 +157,12 @@
     <Button variant="ghost" size="sm" class="text-muted-foreground gap-1.5" onclick={() => void goto("/profile/customize")}>
       <SlidersHorizontal class="h-3.5 w-3.5" /> Customise
     </Button>
+    {#if authStore.isAuthenticated}
+      <span class="text-muted-foreground/30 self-center">·</span>
+      <Button variant="ghost" size="sm" class="text-muted-foreground gap-1.5" onclick={() => void goto("/social")}>
+        <Rss class="h-3.5 w-3.5" /> Feed
+      </Button>
+    {/if}
   </div>
 
 </div>
