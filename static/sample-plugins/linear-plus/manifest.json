@@ -1,0 +1,19 @@
+{
+  "id": "com.example.linear-plus",
+  "family": "progression-algorithm",
+  "name": "Linear Plus",
+  "description": "Double progression: fill your rep range before adding weight. Includes a warmup set suggestion.",
+  "version": "1.0.0",
+  "author": "Community sample",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "/sample-plugins/linear-plus/manifest.json",
+    "bundleUrl": "/sample-plugins/linear-plus/bundle.js"
+  },
+  "capabilities": [
+    {
+      "family": "progression-algorithm",
+      "algorithmId": "com.example.linear-plus"
+    }
+  ]
+}

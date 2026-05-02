@@ -1,0 +1,22 @@
+[
+  {
+    "id": "com.example.focus-card",
+    "name": "Focus Card",
+    "description": "A daily workout tip widget. Shows a different tip each day of the week.",
+    "family": "widget",
+    "author": "Community sample",
+    "manifestUrl": "/sample-plugins/focus-card/manifest.json",
+    "tags": ["widget", "motivation", "home"],
+    "featured": true
+  },
+  {
+    "id": "com.example.linear-plus",
+    "name": "Linear Plus",
+    "description": "Double progression: fill your rep range before adding weight. Includes a warmup set suggestion.",
+    "family": "progression-algorithm",
+    "author": "Community sample",
+    "manifestUrl": "/sample-plugins/linear-plus/manifest.json",
+    "tags": ["progression", "intermediate", "double-progression"],
+    "featured": true
+  }
+]
