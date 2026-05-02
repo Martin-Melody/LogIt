@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/Logit.Api.props" />
-</Project>
