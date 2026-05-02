@@ -35,7 +35,10 @@
             <li class="flex items-center justify-between text-xs">
               <span class="text-muted-foreground">{day.name ?? `Day ${day.orderIndex + 1}`}</span>
               <span class="text-right text-foreground/70">
-                {day.exercises.slice(0, 3).map(e => e.exerciseName).join(", ")}{day.exercises.length > 3 ? "…" : ""}
+                {(() => {
+                  const names = day.blocks.flatMap(b => b.type === 'strength' ? [b.exerciseName] : []);
+                  return names.slice(0, 3).join(", ") + (names.length > 3 ? "…" : "");
+                })()}
               </span>
             </li>
           {/each}
