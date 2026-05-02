@@ -1,0 +1,25 @@
+{
+  "id": "com.example.focus-card",
+  "family": "widget",
+  "name": "Focus Card",
+  "description": "A daily workout tip widget. Shows a different tip each day of the week.",
+  "version": "1.0.0",
+  "author": "Community sample",
+  "fediverse": {
+    "actorUrl": "/sample-plugins/focus-card/actor.json"
+  },
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "/sample-plugins/focus-card/manifest.json",
+    "bundleUrl": "/sample-plugins/focus-card/bundle.js"
+  },
+  "capabilities": [
+    {
+      "family": "widget",
+      "widgetId": "com.example.focus-card",
+      "slot": "home",
+      "defaultEnabled": true,
+      "defaultOrder": 10
+    }
+  ]
+}

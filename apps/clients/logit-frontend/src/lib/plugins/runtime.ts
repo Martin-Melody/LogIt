@@ -7,10 +7,12 @@ import type {
   ProgressionAlgorithmMeta,
 } from "$lib/domain/progression";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
+import { createLocalAnalyticsRegistry } from "$lib/progression/localAnalyticsRegistry";
 import { listInstalledPluginManifests } from "./catalog";
 import {
   describePluginBundleContract,
   isPluginAlgorithm,
+  isPluginAnalytics,
   isPluginWidgetComponent,
   isPluginWidgetRenderer,
   resolvePluginBundleContract,
@@ -20,11 +22,13 @@ import {
 } from "./bundle";
 import WidgetHost from "./WidgetHost.svelte";
 import type {
+  AnalyticsPluginCapability,
   PluginCapability,
   PluginManifest,
   ProgressionAlgorithmPluginCapability,
   WidgetPluginCapability,
 } from "./types";
+import type { AnalyticsPlugin, AnalyticsPluginMeta, AnalyticsRegistry } from "$lib/domain/analytics";
 
 export type RuntimeWidgetDefinition = WidgetDefinition & {
   source: "builtin" | "installed";
@@ -36,7 +40,7 @@ export type BundleInspection = {
   bundleUrl: string | null;
   contract: PluginBundleContract | null;
   loadable: boolean;
-  entryType: "widget" | "progression-algorithm" | "unknown" | null;
+  entryType: "widget" | "progression-algorithm" | "analytics" | "unknown" | null;
 };
 
 const moduleCache = new Map<string, Promise<PluginBundleModule | null>>();
@@ -61,6 +65,16 @@ function getProgressionCapability(
   manifest: PluginManifest,
 ): ProgressionAlgorithmPluginCapability | null {
   return manifest.capabilities.find(isProgressionCapability) ?? null;
+}
+
+function isAnalyticsCapability(
+  capability: PluginCapability,
+): capability is AnalyticsPluginCapability {
+  return capability.family === "analytics";
+}
+
+function getAnalyticsCapability(manifest: PluginManifest): AnalyticsPluginCapability | null {
+  return manifest.capabilities.find(isAnalyticsCapability) ?? null;
 }
 
 function getBundleUrl(manifest: PluginManifest): string | null {
@@ -196,6 +210,74 @@ async function installedAlgorithmById(id: string): Promise<ProgressionAlgorithm 
   return isPluginAlgorithm(entry) ? entry : null;
 }
 
+async function installedAnalyticsList(): Promise<AnalyticsPluginMeta[]> {
+  const installed = await listInstalledPluginManifests();
+  const result: AnalyticsPluginMeta[] = [];
+
+  for (const plugin of installed) {
+    if (!plugin.enabled || plugin.manifest.family !== "analytics") continue;
+
+    const capability = getAnalyticsCapability(plugin.manifest);
+    if (!capability) continue;
+
+    const bundleUrl = getBundleUrl(plugin.manifest);
+    if (!bundleUrl) continue;
+
+    const module = await loadBundle(bundleUrl);
+    const contract = module ? resolvePluginBundleContract(module, plugin.manifest) : null;
+    const entry = module ? resolvePluginBundleEntry(module, contract) : null;
+    if (!isPluginAnalytics(entry)) continue;
+
+    result.push({
+      id: capability.analyticsId,
+      name: plugin.manifest.name,
+      description: plugin.manifest.description,
+      author: plugin.manifest.author,
+      metricDefinitions: entry.metricDefinitions,
+    });
+  }
+
+  return result;
+}
+
+async function installedAnalyticsById(id: string): Promise<AnalyticsPlugin | null> {
+  const installed = await listInstalledPluginManifests();
+  const plugin = installed.find(
+    (entry) =>
+      entry.enabled &&
+      entry.manifest.family === "analytics" &&
+      getAnalyticsCapability(entry.manifest)?.analyticsId === id,
+  );
+
+  if (!plugin) return null;
+
+  const bundleUrl = getBundleUrl(plugin.manifest);
+  if (!bundleUrl) return null;
+
+  const module = await loadBundle(bundleUrl);
+  if (!module) return null;
+
+  const contract = resolvePluginBundleContract(module, plugin.manifest);
+  const entry = resolvePluginBundleEntry(module, contract);
+  return isPluginAnalytics(entry) ? entry : null;
+}
+
+function analyticsRegistry(): AnalyticsRegistry {
+  const builtin = createLocalAnalyticsRegistry();
+
+  return {
+    async list(): Promise<AnalyticsPluginMeta[]> {
+      return [...(await builtin.list()), ...(await installedAnalyticsList())];
+    },
+
+    async get(id: string): Promise<AnalyticsPlugin | null> {
+      const builtinPlugin = await builtin.get(id);
+      if (builtinPlugin) return builtinPlugin;
+      return installedAnalyticsById(id);
+    },
+  };
+}
+
 function algorithmRegistry(): AlgorithmRegistry {
   const builtin = createLocalAlgorithmRegistry();
 
@@ -243,6 +325,8 @@ export async function inspectPluginBundle(
       ? "widget"
     : isPluginAlgorithm(entry)
       ? "progression-algorithm"
+    : isPluginAnalytics(entry)
+      ? "analytics"
       : contract?.family ?? "unknown";
 
   return {
@@ -267,6 +351,7 @@ export function createPluginRuntime() {
       return installed.find((widget) => widget.id === id) ?? null;
     },
     algorithms: algorithmRegistry(),
+    analytics: analyticsRegistry(),
     describeBundle: describePluginBundleContract,
     inspectPluginBundle,
   };
