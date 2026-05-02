@@ -45,6 +45,7 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/keyboard": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.2",
+    "@capacitor/preferences": "^8.0.1",
     "@capawesome/capacitor-file-picker": "^8.0.2",
     "@react2svelte/swipeable": "^0.1.4",
     "d3-scale": "^4.0.2",
