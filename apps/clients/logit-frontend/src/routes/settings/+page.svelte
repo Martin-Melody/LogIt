@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ArrowLeft, RotateCcw, Sparkles } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Sparkles, Cloud, Server, WifiOff } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -17,6 +17,9 @@
   } from "$lib/tour/index";
   import { clearAllData } from "$lib/usecases/clearAllData";
   import { setMode, userPrefersMode } from "mode-watcher";
+  import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { getServerMode, setServerMode, type ServerMode } from "$lib/api/serverConfig";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
   import {
     getProgressionConfig,
@@ -31,6 +34,18 @@
   import type { AnalyticsConfigView } from "$lib/usecases/progression/getAnalyticsConfig";
 
   const isDev = import.meta.env.DEV;
+
+  // --- Account ---
+  let showConnectPrompt = $state(false);
+  let serverMode = $state<ServerMode>(getServerMode());
+  let selfHostUrl = $state("");
+  let editingServerUrl = $state(false);
+
+  function applyServerMode(mode: ServerMode) {
+    setServerMode(mode, mode === "selfhosted" ? selfHostUrl.trim() : undefined);
+    serverMode = mode;
+    editingServerUrl = false;
+  }
 
   // --- Progression ---
   const progUi = $state({ loading: true, saving: false, error: null as string | null });
@@ -137,6 +152,73 @@
     </Button>
     <h1 class="text-base font-semibold">Settings</h1>
   </div>
+
+  <!-- Account -->
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>Account</Card.Title>
+      <Card.Description>Connect to Logit cloud, a self-hosted instance, or stay offline.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-3">
+      {#if authStore.isAuthenticated && authStore.user}
+        <!-- Logged in state -->
+        <div class="flex items-center gap-3">
+          {#if serverMode === "cloud"}
+            <Cloud class="h-4 w-4 text-primary shrink-0" />
+          {:else}
+            <Server class="h-4 w-4 text-muted-foreground shrink-0" />
+          {/if}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium">@{authStore.user.username}</p>
+            <p class="text-xs text-muted-foreground capitalize">{serverMode === "cloud" ? "Logit cloud" : "Self-hosted"} · {authStore.user.tier}</p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" class="self-start" onclick={() => void authStore.logout()}>
+          Sign out
+        </Button>
+      {:else}
+        <!-- Not connected -->
+        <div class="flex items-center gap-3 text-muted-foreground">
+          <WifiOff class="h-4 w-4 shrink-0" />
+          <p class="text-sm">Not connected — all data is stored locally.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=login")}>
+            Log in
+          </Button>
+          <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=register")}>
+            Create account
+          </Button>
+        </div>
+      {/if}
+
+      <!-- Server mode switcher (always visible) -->
+      <div class="pt-1 border-t border-border flex flex-col gap-2">
+        <p class="text-xs text-muted-foreground font-medium">Server</p>
+        <div class="flex rounded border overflow-hidden text-xs">
+          {#each ([["offline", "Offline"], ["cloud", "Logit cloud"], ["selfhosted", "Self-hosted"]] as [ServerMode, string][]) as [mode, label] (mode)}
+            <button type="button"
+              class="flex-1 py-2 text-center transition-colors {serverMode === mode ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+              onclick={() => {
+                if (mode === "selfhosted") { editingServerUrl = true; }
+                else { applyServerMode(mode); }
+              }}>
+              {label}
+            </button>
+          {/each}
+        </div>
+
+        {#if editingServerUrl || serverMode === "selfhosted"}
+          <div class="flex gap-2">
+            <input type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
+              class="flex-1 min-w-0 rounded border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={selfHostUrl} />
+            <Button size="sm" variant="outline" onclick={() => applyServerMode("selfhosted")}>Save</Button>
+          </div>
+        {/if}
+      </div>
+    </Card.Content>
+  </Card.Root>
 
   <!-- Appearance -->
   <Card.Root>
@@ -352,6 +434,12 @@
   </Card.Root>
 
   <!-- Dev tools -->
+  <ConnectAccountPrompt
+    open={showConnectPrompt}
+    feature="This feature"
+    onclose={() => (showConnectPrompt = false)}
+  />
+
   {#if isDev}
     <Card.Root class="border-destructive/40">
       <Card.Header>

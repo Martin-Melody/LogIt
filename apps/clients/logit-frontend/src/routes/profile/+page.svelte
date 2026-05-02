@@ -1,13 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell } from "lucide-svelte";
+  import { Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell, Cloud, Server } from "lucide-svelte";
   import { startProfileTour } from "$lib/tour/index";
   import ProfileAvatar from "$lib/components/ProfileAvatar.svelte";
+  import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
   import { Button } from "$lib/components/ui/button";
   import { profile } from "$lib/stores/profile.store";
   import { profileConfig } from "$lib/stores/profileConfig.store";
   import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { getServerMode } from "$lib/api/serverConfig";
 
   // --- Profile editing ---
   let editing = $state(false);
@@ -25,6 +28,9 @@
   }
 
   onMount(() => startProfileTour());
+
+  let showConnectPrompt = $state(false);
+  const serverMode = getServerMode();
 
   // --- Widgets ---
   const widgets = localProfileWidgetRegistry.list();
@@ -102,6 +108,39 @@
     {/if}
   </div>
 
+  <!-- Account status -->
+  <div class="mx-3 mb-1">
+    {#if authStore.isAuthenticated && authStore.user}
+      <div class="flex items-center gap-3 rounded border border-border px-3 py-2.5">
+        {#if serverMode === "cloud"}
+          <Cloud class="h-4 w-4 text-primary shrink-0" />
+        {:else}
+          <Server class="h-4 w-4 text-muted-foreground shrink-0" />
+        {/if}
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium truncate">@{authStore.user.username}</p>
+          <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "Logit cloud" : "Self-hosted"}</p>
+        </div>
+        <Button variant="ghost" size="sm" class="text-muted-foreground shrink-0"
+          onclick={() => void authStore.logout()}>
+          Sign out
+        </Button>
+      </div>
+    {:else}
+      <button
+        type="button"
+        class="w-full flex items-center justify-between rounded border border-dashed border-border px-3 py-2.5 text-left hover:border-muted-foreground/50 transition-colors"
+        onclick={() => (showConnectPrompt = true)}
+      >
+        <div>
+          <p class="text-sm font-medium">Connect an account</p>
+          <p class="text-xs text-muted-foreground">Unlock social features and cloud backup.</p>
+        </div>
+        <Cloud class="h-4 w-4 text-muted-foreground/50 shrink-0 ml-3" />
+      </button>
+    {/if}
+  </div>
+
   <!-- Profile widgets -->
   <div class="flex flex-col gap-3 px-3" data-tour="profile-widgets">
     {#each enabledWidgets as { def } (def.id)}
@@ -121,3 +160,9 @@
   </div>
 
 </div>
+
+<ConnectAccountPrompt
+  open={showConnectPrompt}
+  feature="Social features and cloud backup"
+  onclose={() => (showConnectPrompt = false)}
+/>
