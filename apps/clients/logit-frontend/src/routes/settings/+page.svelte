@@ -226,6 +226,11 @@
               bind:value={selfHostUrl} />
             <Button size="sm" variant="outline" onclick={() => applyServerMode("selfhosted")}>Save</Button>
           </div>
+          {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
+            <p class="text-xs text-amber-600 dark:text-amber-400">
+              HTTP is unencrypted — passwords and data are sent in plaintext. Use HTTPS if possible.
+            </p>
+          {/if}
           <div class="flex items-center gap-3">
             <button type="button"
               class="px-3 py-1.5 rounded border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"

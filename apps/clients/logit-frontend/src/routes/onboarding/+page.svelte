@@ -454,7 +454,13 @@
               class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               oninput={() => (urlTestResult = "idle")}
               bind:value={selfHostUrl} />
-            <p class="text-xs text-muted-foreground">You can change this later in Settings.</p>
+            {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
+              <p class="text-xs text-amber-600 dark:text-amber-400">
+                HTTP is unencrypted — passwords and data are sent in plaintext. Use HTTPS if possible.
+              </p>
+            {:else}
+              <p class="text-xs text-muted-foreground">You can change this later in Settings.</p>
+            {/if}
           </div>
 
           <!-- Test connection -->
