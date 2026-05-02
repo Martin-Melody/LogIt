@@ -1,5 +1,6 @@
 import { browser } from "$app/environment";
 import { initRepos } from "$lib/data/repoProvider";
+import { authStore } from "$lib/api/authStore.svelte";
 import { activeSplit } from "$lib/stores/activeSplit.store";
 import { appReady, appInitError } from "$lib/stores/appReady.store";
 import { currentSession } from "$lib/stores/currentSession.store";
@@ -21,6 +22,10 @@ export async function appInit(): Promise<void> {
     // ---- storage init ----
     await initRepos();
     console.log("[appInit] storage initialized");
+
+    // ---- auth (optional — never blocks or throws) ----
+    authStore.init().catch(() => {});
+    console.log("[appInit] auth init kicked off");
 
     // ---- hydrate stores ----
     await recentSessions.refresh(5);
