@@ -7,9 +7,11 @@
   import { durationMs, formatDuration } from "$lib/domain/time";
   import { getSession } from "$lib/usecases/getSession";
   import { deleteSession } from "$lib/usecases/deleteSession";
-  import { Trash, ArrowLeft } from "lucide-svelte";
+  import { Trash, ArrowLeft, Share2 } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
+  import { authStore } from "$lib/api/authStore.svelte";
 
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);
@@ -19,6 +21,7 @@
     error: null as string | null,
     session: null as WorkoutSession | null,
     deleting: false,
+    sharing: false,
   });
 
   function longDate(ms: number): string {
@@ -97,6 +100,19 @@
         {ended ? longDate(ended) : "Session"}
       </span>
     </div>
+
+    {#if authStore.isAuthenticated}
+      <Button
+        variant="ghost"
+        size="icon"
+        class="h-7 w-7 text-muted-foreground"
+        disabled={state.loading || !state.session}
+        aria-label="Share session"
+        onclick={() => (state.sharing = true)}
+      >
+        <Share2 class="h-3.5 w-3.5" />
+      </Button>
+    {/if}
 
     <ConfirmDialog
       title="Delete this session?"
@@ -182,3 +198,9 @@
     {/if}
   {/if}
 </div>
+
+<CreatePostSheet
+  open={state.sharing}
+  prefillSession={state.session}
+  onclose={() => (state.sharing = false)}
+/>

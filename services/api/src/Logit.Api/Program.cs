@@ -1,5 +1,7 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Logit.Api.Data;
+using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
 using Logit.Api.Features.Social;
 using Logit.Api.Features.Users;
@@ -8,6 +10,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Serialize/deserialize all enums as strings so the frontend can use names like "Text" / "WorkoutSession"
+builder.Services.ConfigureHttpJsonOptions(o =>
+    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // Database — SQLite for dev/self-hosted, PostgreSQL for production
 var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -68,6 +74,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapSocialEndpoints();
+app.MapAdminEndpoints(builder.Configuration);
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

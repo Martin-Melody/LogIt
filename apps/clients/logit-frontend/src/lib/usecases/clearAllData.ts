@@ -4,6 +4,7 @@ import { clearAllSqliteData } from "$lib/data/db/sqlite";
 
 const LOGIT_KEY_PREFIX = "logit:";
 
+/** Full factory reset — wipes all data on all platforms. Use for troubleshooting or account deletion. */
 export async function clearAllData(): Promise<void> {
   if (!browser) return;
 

@@ -23,6 +23,7 @@
   import BlockPickerSheet from "$lib/features/session/ui/BlockPickerSheet.svelte";
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
+  import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
 
   import CurrentSessionHeader from "./Commponents/CurrentSessionHeader.svelte";
   import FinishWorkoutCard from "./Commponents/FinishWorkoutCard.svelte";
@@ -44,6 +45,7 @@
   });
 
   let recapSession = $state<WorkoutSession | null>(null);
+  let shareSession = $state<WorkoutSession | null>(null);
   let finishBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
   let addButtonBottom = $state(0);
@@ -342,8 +344,16 @@
       session={recapSession}
       onDone={confirmFinish}
       onCancel={() => { recapSession = null; }}
+      onShare={(s) => { shareSession = s; }}
     />
   {/if}
+
+  <CreatePostSheet
+    open={shareSession !== null}
+    prefillSession={shareSession}
+    onposted={() => { void confirmFinish(); }}
+    onclose={() => { shareSession = null; }}
+  />
 
   <BlockPickerSheet
     open={addBlockUi.pickerOpen}

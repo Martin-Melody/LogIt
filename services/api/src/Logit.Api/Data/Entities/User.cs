@@ -9,6 +9,7 @@ public class User
     public string DisplayName { get; set; } = string.Empty;
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
+    public string? PublicProfileJson { get; set; }
     public UserTier Tier { get; set; } = UserTier.Free;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -19,6 +20,8 @@ public class User
     public ICollection<Post> Posts { get; set; } = [];
     public ICollection<CoachClientRelationship> CoachRelationships { get; set; } = [];
     public ICollection<CoachClientRelationship> ClientRelationships { get; set; } = [];
+    public ICollection<Like> Likes { get; set; } = [];
+    public ICollection<Comment> Comments { get; set; } = [];
 }
 
 public enum UserTier { Free, Pro }

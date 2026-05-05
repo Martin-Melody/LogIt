@@ -20,6 +20,15 @@ public static class SocialEndpoints
         posts.MapGet("/feed", GetFeed).RequireAuthorization();
         posts.MapPost("/", CreatePost).RequireAuthorization();
         posts.MapDelete("/{id:guid}", DeletePost).RequireAuthorization();
+        posts.MapPatch("/{id:guid}", EditPost).RequireAuthorization();
+        posts.MapPost("/{id:guid}/like", LikePost).RequireAuthorization();
+        posts.MapDelete("/{id:guid}/like", UnlikePost).RequireAuthorization();
+        posts.MapGet("/{id:guid}/comments", GetComments);
+        posts.MapPost("/{id:guid}/comments", AddComment).RequireAuthorization();
+        posts.MapPatch("/{id:guid}/comments/{commentId:guid}", EditComment).RequireAuthorization();
+        posts.MapDelete("/{id:guid}/comments/{commentId:guid}", DeleteComment).RequireAuthorization();
+
+        follows.MapGet("/{username}/posts", GetUserPosts);
     }
 
     private static async Task<IResult> Follow(string username, ClaimsPrincipal caller, AppDbContext db)
@@ -52,20 +61,74 @@ public static class SocialEndpoints
 
     private static async Task<IResult> GetFollowers(string username, AppDbContext db)
     {
-        var followers = await db.Follows
+        var follows = await db.Follows
+            .Include(f => f.Follower)
             .Where(f => f.Followed.Username == username.ToLowerInvariant())
-            .Select(f => f.Follower.ToProfileDto(false))
             .ToListAsync();
-        return Results.Ok(followers);
+        return Results.Ok(follows.Select(f => f.Follower.ToProfileDto(false)));
     }
 
     private static async Task<IResult> GetFollowing(string username, AppDbContext db)
     {
-        var following = await db.Follows
+        var follows = await db.Follows
+            .Include(f => f.Followed)
             .Where(f => f.Follower.Username == username.ToLowerInvariant())
-            .Select(f => f.Followed.ToProfileDto(false))
             .ToListAsync();
-        return Results.Ok(following);
+        return Results.Ok(follows.Select(f => f.Followed.ToProfileDto(false)));
+    }
+
+    private static async Task<IResult> GetUserPosts(
+        string username,
+        AppDbContext db,
+        ClaimsPrincipal caller,
+        [FromQuery] int limit = 20,
+        [FromQuery] DateTime? before = null)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        if (user is null) return Results.NotFound();
+
+        Guid? callerId = caller.Identity?.IsAuthenticated == true ? caller.GetUserId() : null;
+
+        var query = db.Posts
+            .Include(p => p.Author)
+            .Include(p => p.Likes)
+            .Include(p => p.Comments)
+            .Where(p => p.AuthorId == user.Id && p.DeletedAt == null);
+
+        if (before.HasValue)
+            query = query.Where(p => p.CreatedAt < before.Value);
+
+        var posts = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(Math.Min(limit, 50))
+            .ToListAsync();
+
+        return Results.Ok(posts.Select(p => p.ToDto(callerId)));
+    }
+
+    private static async Task<IResult> LikePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var post = await db.Posts.FindAsync(id);
+        if (post is null || post.DeletedAt is not null) return Results.NotFound();
+
+        var exists = await db.Likes.AnyAsync(l => l.UserId == userId && l.PostId == id);
+        if (exists) return Results.Conflict(new { error = "Already liked." });
+
+        db.Likes.Add(new Like { UserId = userId, PostId = id });
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> UnlikePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var like = await db.Likes.FindAsync(userId, id);
+        if (like is null) return Results.NotFound();
+
+        db.Likes.Remove(like);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetFeed(
@@ -84,6 +147,8 @@ public static class SocialEndpoints
 
         var query = db.Posts
             .Include(p => p.Author)
+            .Include(p => p.Likes)
+            .Include(p => p.Comments)
             .Where(p => followedIds.Contains(p.AuthorId) && p.DeletedAt == null);
 
         if (before.HasValue)
@@ -92,10 +157,9 @@ public static class SocialEndpoints
         var posts = await query
             .OrderByDescending(p => p.CreatedAt)
             .Take(Math.Min(limit, 50))
-            .Select(p => p.ToDto())
             .ToListAsync();
 
-        return Results.Ok(posts);
+        return Results.Ok(posts.Select(p => p.ToDto(userId)));
     }
 
     private static async Task<IResult> CreatePost(
@@ -115,7 +179,31 @@ public static class SocialEndpoints
         await db.SaveChangesAsync();
 
         await db.Entry(post).Reference(p => p.Author).LoadAsync();
-        return Results.Created($"/posts/{post.Id}", post.ToDto());
+        await db.Entry(post).Collection(p => p.Likes).LoadAsync();
+        await db.Entry(post).Collection(p => p.Comments).LoadAsync();
+        return Results.Created($"/posts/{post.Id}", post.ToDto(post.AuthorId));
+    }
+
+    private static async Task<IResult> EditPost(
+        Guid id,
+        [FromBody] EditBodyRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var post = await db.Posts
+            .Include(p => p.Author)
+            .Include(p => p.Likes)
+            .Include(p => p.Comments)
+            .FirstOrDefaultAsync(p => p.Id == id);
+        if (post is null || post.DeletedAt is not null) return Results.NotFound();
+        if (post.AuthorId != caller.GetUserId()) return Results.Forbid();
+        if (string.IsNullOrWhiteSpace(req.Body)) return Results.BadRequest(new { error = "Body is required." });
+
+        post.Body = req.Body.Trim();
+        post.EditedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Results.Ok(post.ToDto(caller.GetUserId()));
     }
 
     private static async Task<IResult> DeletePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
@@ -128,6 +216,93 @@ public static class SocialEndpoints
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
+
+    private static async Task<IResult> GetComments(
+        Guid id,
+        AppDbContext db,
+        [FromQuery] int limit = 50,
+        [FromQuery] DateTime? before = null)
+    {
+        var post = await db.Posts.FindAsync(id);
+        if (post is null || post.DeletedAt is not null) return Results.NotFound();
+
+        var query = db.Comments
+            .Include(c => c.Author)
+            .Where(c => c.PostId == id && c.DeletedAt == null);
+
+        if (before.HasValue)
+            query = query.Where(c => c.CreatedAt < before.Value);
+
+        var comments = await query
+            .OrderBy(c => c.CreatedAt)
+            .Take(Math.Min(limit, 100))
+            .ToListAsync();
+
+        return Results.Ok(comments.Select(c => c.ToDto()));
+    }
+
+    private static async Task<IResult> AddComment(
+        Guid id,
+        [FromBody] AddCommentRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var post = await db.Posts.FindAsync(id);
+        if (post is null || post.DeletedAt is not null) return Results.NotFound();
+
+        if (string.IsNullOrWhiteSpace(req.Body)) return Results.BadRequest(new { error = "Comment body is required." });
+
+        var comment = new Comment
+        {
+            PostId = id,
+            AuthorId = caller.GetUserId(),
+            Body = req.Body.Trim(),
+        };
+
+        db.Comments.Add(comment);
+        await db.SaveChangesAsync();
+        await db.Entry(comment).Reference(c => c.Author).LoadAsync();
+
+        return Results.Created($"/posts/{id}/comments/{comment.Id}", comment.ToDto());
+    }
+
+    private static async Task<IResult> EditComment(
+        Guid id, Guid commentId,
+        [FromBody] EditBodyRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var comment = await db.Comments
+            .Include(c => c.Author)
+            .FirstOrDefaultAsync(c => c.Id == commentId);
+        if (comment is null || comment.DeletedAt is not null || comment.PostId != id)
+            return Results.NotFound();
+        if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
+        if (string.IsNullOrWhiteSpace(req.Body)) return Results.BadRequest(new { error = "Body is required." });
+
+        comment.Body = req.Body.Trim();
+        comment.EditedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Results.Ok(comment.ToDto());
+    }
+
+    private static async Task<IResult> DeleteComment(
+        Guid id, Guid commentId,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var comment = await db.Comments.FindAsync(commentId);
+        if (comment is null || comment.DeletedAt is not null || comment.PostId != id)
+            return Results.NotFound();
+        if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
+
+        comment.DeletedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
 }
 
 public record CreatePostRequest(PostType Type, string? Body, string? PayloadJson);
+public record AddCommentRequest(string Body);
+public record EditBodyRequest(string Body);
