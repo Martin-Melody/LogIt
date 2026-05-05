@@ -2,6 +2,7 @@ import type { WorkoutRepo, ListRecentSessionsOptions } from "$lib/data/workoutRe
 import type { WorkoutSession, SessionBlock, StrengthBlockData, SetType } from "$lib/domain/workout";
 import type { SetTypeOption } from "$lib/data/types";
 import { getDb } from "$lib/data/db/sqlite";
+import { getActiveOwnerId } from "$lib/data/activeOwner";
 
 function parseBlockData(type: string, dataJson: string): unknown {
   let raw: any;
@@ -66,12 +67,12 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       const db = getDb();
 
       await db.run(
-        `INSERT INTO sessions(id, started_at_ms, ended_at_ms)
-         VALUES(?, ?, ?)
+        `INSERT INTO sessions(id, started_at_ms, ended_at_ms, owner_id)
+         VALUES(?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            started_at_ms = excluded.started_at_ms,
            ended_at_ms   = excluded.ended_at_ms`,
-        [session.id, session.startedAtMs, session.endedAtMs ?? null],
+        [session.id, session.startedAtMs, session.endedAtMs ?? null, getActiveOwnerId()],
       );
 
       await writeBlocks(db, session);
@@ -80,10 +81,11 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
     async getSession(id: string): Promise<WorkoutSession | null> {
       const db = getDb();
 
+      const ownerId = getActiveOwnerId();
       const baseRes = await db.query(
         `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs
-         FROM sessions WHERE id = ?`,
-        [id],
+         FROM sessions WHERE id = ? AND (owner_id = ? OR owner_id IS NULL)`,
+        [id, ownerId],
       );
       const base = (baseRes.values?.[0] as any) ?? null;
       if (!base) return null;
@@ -99,13 +101,14 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
     async listRecentSessions(options: ListRecentSessionsOptions): Promise<WorkoutSession[]> {
       const db = getDb();
 
+      const ownerId = getActiveOwnerId();
       const sessionRes = await db.query(
         `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs
          FROM sessions
-         WHERE ended_at_ms IS NOT NULL
+         WHERE ended_at_ms IS NOT NULL AND (owner_id = ? OR owner_id IS NULL)
          ORDER BY ended_at_ms DESC
          LIMIT ?`,
-        [options.limit],
+        [ownerId, options.limit],
       );
 
       const sessionRows = (sessionRes.values ?? []) as any[];
@@ -147,11 +150,13 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
     async listAllSessions(): Promise<WorkoutSession[]> {
       const db = getDb();
 
+      const ownerId = getActiveOwnerId();
       const sessionRes = await db.query(
         `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs
          FROM sessions
+         WHERE owner_id = ? OR owner_id IS NULL
          ORDER BY COALESCE(ended_at_ms, started_at_ms) DESC`,
-        [],
+        [ownerId],
       );
 
       const sessionRows = (sessionRes.values ?? []) as any[];
@@ -202,17 +207,19 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
     async saveDraftSession(session: WorkoutSession): Promise<void> {
       const db = getDb();
+      const key = `draft_session_id:${getActiveOwnerId() ?? "default"}`;
       await db.run(
-        `INSERT INTO meta(key, value) VALUES('draft_session_id', ?)
+        `INSERT INTO meta(key, value) VALUES(?, ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        [session.id],
+        [key, session.id],
       );
       await this.saveSession(session);
     },
 
     async loadDraftSession(): Promise<WorkoutSession | null> {
       const db = getDb();
-      const res = await db.query(`SELECT value FROM meta WHERE key='draft_session_id'`, []);
+      const key = `draft_session_id:${getActiveOwnerId() ?? "default"}`;
+      const res = await db.query(`SELECT value FROM meta WHERE key=?`, [key]);
       const draftId = (((res.values?.[0] as any)?.value as string | undefined) ?? "").trim();
       if (!draftId) return null;
       return this.getSession(draftId);
@@ -220,7 +227,8 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
     async clearDraftSession(): Promise<void> {
       const db = getDb();
-      await db.run(`DELETE FROM meta WHERE key='draft_session_id'`, []);
+      const key = `draft_session_id:${getActiveOwnerId() ?? "default"}`;
+      await db.run(`DELETE FROM meta WHERE key=?`, [key]);
     },
 
     async getSetTypes(): Promise<SetTypeOption[]> {

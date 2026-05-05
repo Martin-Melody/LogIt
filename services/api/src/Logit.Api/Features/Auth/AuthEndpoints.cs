@@ -16,6 +16,7 @@ public static class AuthEndpoints
         group.MapPost("/login", Login);
         group.MapPost("/refresh", Refresh);
         group.MapPost("/revoke", Revoke).RequireAuthorization();
+        group.MapDelete("/account", DeleteAccount).RequireAuthorization();
     }
 
     private static async Task<IResult> Register(
@@ -23,16 +24,19 @@ public static class AuthEndpoints
         AppDbContext db,
         TokenService tokens)
     {
-        if (await db.Users.AnyAsync(u => u.Username == req.Username))
+        var normalizedUsername = req.Username.Trim().ToLowerInvariant();
+        var normalizedEmail = req.Email.Trim().ToLowerInvariant();
+
+        if (await db.Users.AnyAsync(u => u.Username == normalizedUsername))
             return Results.Conflict(new { error = "Username already taken." });
 
-        if (await db.Users.AnyAsync(u => u.Email == req.Email))
+        if (await db.Users.AnyAsync(u => u.Email == normalizedEmail))
             return Results.Conflict(new { error = "Email already registered." });
 
         var user = new User
         {
-            Username = req.Username.Trim().ToLowerInvariant(),
-            Email = req.Email.Trim().ToLowerInvariant(),
+            Username = normalizedUsername,
+            Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
             DisplayName = req.DisplayName.Trim(),
         };
@@ -98,6 +102,20 @@ public static class AuthEndpoints
         if (stored is null) return Results.NotFound();
 
         stored.RevokedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> DeleteAccount(
+        AppDbContext db,
+        ClaimsPrincipal caller)
+    {
+        var userId = caller.GetUserId();
+        var user = await db.Users.FindAsync(userId);
+        if (user is null) return Results.NotFound();
+
+        db.Users.Remove(user);
         await db.SaveChangesAsync();
 
         return Results.NoContent();

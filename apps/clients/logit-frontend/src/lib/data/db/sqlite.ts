@@ -52,6 +52,18 @@ export function getDb(): SQLiteDBConnection {
   return db;
 }
 
+export async function clearOwnerData(ownerId: string): Promise<void> {
+  if (!db) return;
+  await db.execute(`PRAGMA foreign_keys = OFF`);
+  await db.run(`DELETE FROM session_blocks WHERE session_id IN (SELECT id FROM sessions WHERE owner_id = ?)`, [ownerId]);
+  await db.run(`DELETE FROM sessions WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM planned_blocks WHERE day_id IN (SELECT id FROM split_days WHERE split_id IN (SELECT id FROM splits WHERE owner_id = ?))`, [ownerId]);
+  await db.run(`DELETE FROM split_days WHERE split_id IN (SELECT id FROM splits WHERE owner_id = ?)`, [ownerId]);
+  await db.run(`DELETE FROM splits WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM exercises WHERE owner_id = ? AND is_core = 0`, [ownerId]);
+  await db.execute(`PRAGMA foreign_keys = ON`);
+}
+
 export async function clearAllSqliteData(): Promise<void> {
   if (!db) return;
   // Delete in FK-safe order; CASCADE handles children of sessions and splits.
@@ -83,6 +95,25 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       code TEXT NOT NULL UNIQUE,
       label TEXT NOT NULL,
       sort_order INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS local_accounts (
+      id TEXT PRIMARY KEY NOT NULL,
+      username TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL DEFAULT '',
+      bio TEXT NOT NULL DEFAULT '',
+      avatar_data_url TEXT NULL,
+      height REAL NULL,
+      height_unit TEXT NOT NULL DEFAULT 'cm',
+      weight REAL NULL,
+      weight_unit TEXT NOT NULL DEFAULT 'kg',
+      blocks_collapsed_by_default INTEGER NOT NULL DEFAULT 1,
+      rest_defaults_json TEXT NOT NULL DEFAULT '{}',
+      password_hash TEXT NULL,
+      server_user_id TEXT NULL,
+      onboarding_completed INTEGER NOT NULL DEFAULT 0,
+      onboarding_step INTEGER NOT NULL DEFAULT 0,
+      created_at_ms INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS exercises (
@@ -188,8 +219,23 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
   await migrateSessionSets(db);
   await migrateExercises(db);
   await migrateExercisesToBlocks(db);
+  await migrateOwnerIds(db);
   await seedSetTypes(db);
   await seedExercises(db);
+}
+
+async function migrateOwnerIds(db: SQLiteDBConnection): Promise<void> {
+  const additions = [
+    "ALTER TABLE sessions ADD COLUMN owner_id TEXT NULL",
+    "ALTER TABLE splits ADD COLUMN owner_id TEXT NULL",
+    "ALTER TABLE exercises ADD COLUMN owner_id TEXT NULL",
+    "ALTER TABLE local_accounts ADD COLUMN password_hash TEXT NULL",
+    "ALTER TABLE local_accounts ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE local_accounts ADD COLUMN onboarding_step INTEGER NOT NULL DEFAULT 0",
+  ];
+  for (const sql of additions) {
+    try { await db.run(sql, []); } catch { /* column already exists */ }
+  }
 }
 
 async function migrateExercisesToBlocks(db: SQLiteDBConnection): Promise<void> {

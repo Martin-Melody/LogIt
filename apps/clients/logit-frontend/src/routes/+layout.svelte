@@ -8,18 +8,23 @@
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { appInit } from "$lib/platform/appInit";
-  import { appReady, appInitError } from "$lib/stores/appReady.store";
+  import { appReady, appInitError, needsAccountAuth } from "$lib/stores/appReady.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { goto, onNavigate } from "$app/navigation";
   import { ModeWatcher } from "mode-watcher";
 
   let { children } = $props();
 
-  const isOnboarding = $derived(page.url.pathname.startsWith("/onboarding"));
+  const isOnboarding = $derived(
+    page.url.pathname.startsWith("/onboarding") || page.url.pathname.startsWith("/auth"),
+  );
 
   $effect(() => {
     if ($appReady && !$onboarding.completed && !isOnboarding) {
       void goto("/onboarding");
+    }
+    if ($appReady && $needsAccountAuth && !isOnboarding) {
+      void goto("/auth");
     }
   });
 

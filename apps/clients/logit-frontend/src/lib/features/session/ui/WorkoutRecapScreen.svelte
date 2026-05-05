@@ -5,10 +5,13 @@
   import { getExercises, getTopSetHighlight } from "$lib/domain/workout";
   import { formatDuration } from "$lib/domain/time";
 
-  const { session, onDone, onCancel } = $props<{
+  import { authStore } from "$lib/api/authStore.svelte";
+
+  const { session, onDone, onCancel, onShare } = $props<{
     session: WorkoutSession;
     onDone: () => void | Promise<void>;
     onCancel?: () => void;
+    onShare?: (session: WorkoutSession) => void;
   }>();
 
   const durationMs = Math.max(0, Date.now() - session.startedAtMs);
@@ -82,6 +85,9 @@
   <!-- Done button -->
   <div class="px-4 py-4 flex flex-col gap-2">
     <Button class="w-full" onclick={() => void onDone()}>Save & finish</Button>
+    {#if onShare && authStore.isAuthenticated}
+      <Button variant="outline" class="w-full" onclick={() => onShare(session)}>Share workout</Button>
+    {/if}
     {#if onCancel}
       <Button variant="ghost" class="w-full" onclick={onCancel}>Back to workout</Button>
     {/if}

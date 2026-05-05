@@ -1,13 +1,34 @@
 import { browser } from "$app/environment";
 import { initRepos } from "$lib/data/repoProvider";
+import { authStore } from "$lib/api/authStore.svelte";
 import { activeSplit } from "$lib/stores/activeSplit.store";
 import { appReady, appInitError } from "$lib/stores/appReady.store";
 import { currentSession } from "$lib/stores/currentSession.store";
 import { recentSessions } from "$lib/stores/recentSessions.store";
 import { splits } from "$lib/stores/splits.store";
+import { exercisesStore } from "$lib/stores/exercises.store";
 import { setupKeyboard } from "./keyboard";
 
 let didInit = false;
+
+/**
+ * Clear all data-bearing stores and reload them from the current active owner.
+ * Call this any time the active account changes (login, logout, account switch).
+ */
+export async function rehydrateStores(): Promise<void> {
+  // Clear first so nothing from the previous account lingers
+  recentSessions.clear();
+  splits.clear();
+  activeSplit.clear();
+  currentSession.clear();
+  exercisesStore.clear();
+
+  // Reload from repos (which are already re-initialized with the new owner)
+  await recentSessions.refresh(5);
+  await splits.refresh({ limit: 20 });
+  await activeSplit.load();
+  await currentSession.loadDraft();
+}
 
 export async function appInit(): Promise<void> {
   if (!browser) return;
@@ -15,36 +36,24 @@ export async function appInit(): Promise<void> {
   if (didInit) return;
   didInit = true;
 
-  console.log("[appInit] starting");
-
   try {
-    // ---- storage init ----
     await initRepos();
-    console.log("[appInit] storage initialized");
 
-    // ---- hydrate stores ----
-    await recentSessions.refresh(5);
-    await splits.refresh({ limit: 20 });
-    await activeSplit.load();
-    console.log("[appInit] stores hydrated");
+    // Auth check runs in background — never blocks startup
+    authStore.init().catch(() => {});
 
-    // ---- Keyboard Setup ----
+    await rehydrateStores();
+
     try {
       await setupKeyboard();
-      console.log("[appInit] keyboard configured");
     } catch (e) {
       console.warn("[appInit] keyboard setup failed (continuing)", e);
     }
-
-    // ---- restore draft session ----
-    await currentSession.loadDraft();
-    console.log("[appInit] draft restore checked");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[appInit] startup failed", error);
     appInitError.set(msg);
   } finally {
     appReady.set(true);
-    console.log("[appInit] complete");
   }
 }
