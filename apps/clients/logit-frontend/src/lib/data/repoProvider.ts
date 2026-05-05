@@ -1,4 +1,3 @@
-// src/lib/data/repoProvider.ts
 import { browser } from "$app/environment";
 import type { WorkoutRepo } from "$lib/data/workoutRepo";
 import type { SplitRepo } from "$lib/data/splitRepo";
@@ -19,6 +18,17 @@ import { createLocalProgressionRepo } from "$lib/data/progressionRepo.local";
 import { createSqliteWorkoutRepo } from "./workouts/workoutRepo.sqlite";
 import { createSqliteSplitRepo } from "./splts/splitRepo.sqlite";
 import { pluginRuntime } from "$lib/plugins";
+import { loadActiveOwnerId, getActiveOwnerId, setActiveOwnerId } from "$lib/data/activeOwner";
+import {
+  createLocalAccount,
+  listLocalAccounts,
+  claimOrphanedData,
+  type LocalAccount,
+} from "$lib/data/localAccountRepo";
+import { needsAccountAuth } from "$lib/stores/appReady.store";
+import { profile } from "$lib/stores/profile.store";
+import { onboarding } from "$lib/stores/onboarding.store";
+import * as localAccountRepo from "$lib/data/localAccountRepo";
 
 let didInit = false;
 
@@ -38,6 +48,35 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ]);
 }
 
+async function ensureLocalAccount(): Promise<LocalAccount | null> {
+  loadActiveOwnerId();
+  const currentId = getActiveOwnerId();
+
+  if (currentId) {
+    const existing = await localAccountRepo.getLocalAccount(currentId);
+    if (existing) return existing;
+    // Stored owner ID points to a deleted account — clear it
+    setActiveOwnerId(null);
+  }
+
+  const all = await listLocalAccounts();
+  if (all.length === 0) {
+    if (localStorage.getItem("logit:had_account")) {
+      // Device has had accounts before but user deleted them all — let them create a new one
+      needsAccountAuth.set(true);
+      return null;
+    }
+    // True first launch: create a default local account and claim any orphaned data
+    const account = await createLocalAccount({ username: "local", displayName: "" });
+    setActiveOwnerId(account.id);
+    await claimOrphanedData(account.id);
+    return account;
+  }
+
+  // Accounts exist but no active owner — user needs to authenticate
+  return null;
+}
+
 export async function initRepos(): Promise<void> {
   if (!browser) return;
   if (didInit) return;
@@ -47,6 +86,16 @@ export async function initRepos(): Promise<void> {
 
   if (isNativePlatform()) {
     await withTimeout(initSqlite(), 10_000, "initSqlite");
+
+    const account = await ensureLocalAccount();
+
+    if (account) {
+      profile.initFromLocalAccount(account, localAccountRepo, getActiveOwnerId);
+      onboarding.init(account, localAccountRepo, getActiveOwnerId);
+    } else {
+      needsAccountAuth.set(true);
+    }
+
     workoutRepo = createSqliteWorkoutRepo();
     exerciseRepo = createSqliteExerciseRepo();
     splitRepo = createSqliteSplitRepo();
@@ -55,11 +104,23 @@ export async function initRepos(): Promise<void> {
     return;
   }
 
+  // Web: load active owner from localStorage for consistency (data isolation via owner_id not enforced on web localStorage repos)
+  loadActiveOwnerId();
+
   workoutRepo = createLocalWorkoutRepo();
   exerciseRepo = createLocalExerciseRepo();
   splitRepo = createLocalSplitRepo();
   progressionRepo = createLocalProgressionRepo();
   didInit = true;
+}
+
+/** Call after logout/login to re-initialize repos with the new active owner. */
+export function resetRepos(): void {
+  didInit = false;
+  workoutRepo = null;
+  exerciseRepo = null;
+  splitRepo = null;
+  progressionRepo = null;
 }
 
 export function getWorkoutRepo(): WorkoutRepo {

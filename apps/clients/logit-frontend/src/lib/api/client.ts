@@ -79,7 +79,12 @@ class ApiClient {
           body: JSON.stringify({ refreshToken: this.tokens.refreshToken }),
         });
         if (!res.ok) {
-          await this.logout();
+          // Don't call logout() here — it would try to revoke via fetch(), which
+          // calls refreshTokens() again while this.refreshPromise is still set,
+          // causing an async deadlock. Just clear tokens locally.
+          this.tokens = null;
+          this.clearUser();
+          await tokenStorage.clear();
           return false;
         }
         const data: AuthResponse = await res.json();
@@ -157,6 +162,13 @@ class ApiClient {
     return data.user;
   }
 
+  async deleteAccount(): Promise<void> {
+    await this.fetch("/auth/account", { method: "DELETE" });
+    this.tokens = null;
+    this.clearUser();
+    await tokenStorage.clear();
+  }
+
   async logout(): Promise<void> {
     if (this.tokens) {
       try {
@@ -166,6 +178,13 @@ class ApiClient {
         });
       } catch {}
     }
+    this.tokens = null;
+    this.clearUser();
+    await tokenStorage.clear();
+  }
+
+  /** Clear local auth state without calling the revoke endpoint (e.g. when switching accounts). */
+  async clearLocal(): Promise<void> {
     this.tokens = null;
     this.clearUser();
     await tokenStorage.clear();

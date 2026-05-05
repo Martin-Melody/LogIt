@@ -9,6 +9,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Follow> Follows => Set<Follow>();
     public DbSet<Post> Posts => Set<Post>();
+    public DbSet<Like> Likes => Set<Like>();
+    public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<CoachClientRelationship> CoachClientRelationships => Set<CoachClientRelationship>();
 
     protected override void OnModelCreating(ModelBuilder model)
@@ -48,6 +50,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(p => p.Author)
              .WithMany(u => u.Posts)
              .HasForeignKey(p => p.AuthorId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<Like>(e =>
+        {
+            e.HasKey(l => new { l.UserId, l.PostId });
+            e.HasOne(l => l.User)
+             .WithMany(u => u.Likes)
+             .HasForeignKey(l => l.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.Post)
+             .WithMany(p => p.Likes)
+             .HasForeignKey(l => l.PostId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<Comment>(e =>
+        {
+            e.HasIndex(c => c.PostId);
+            e.HasIndex(c => c.CreatedAt);
+            e.HasOne(c => c.Post)
+             .WithMany(p => p.Comments)
+             .HasForeignKey(c => c.PostId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.Author)
+             .WithMany(u => u.Comments)
+             .HasForeignKey(c => c.AuthorId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -5,6 +5,7 @@ import type {
   PlannedBlock,
 } from "$lib/domain/WorkoutSplit";
 import { getDb } from "$lib/data/db/sqlite";
+import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { nowMs } from "$lib/domain/time";
 
 export function createSqliteSplitRepo(): SplitRepo {
@@ -15,8 +16,8 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       await db.run(
         `
-        INSERT INTO splits(id, name, archived, created_at_ms, updated_at_ms)
-        VALUES(?, ?, ?, ?, ?)
+        INSERT INTO splits(id, name, archived, created_at_ms, updated_at_ms, owner_id)
+        VALUES(?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           name=excluded.name,
           archived=excluded.archived,
@@ -28,6 +29,7 @@ export function createSqliteSplitRepo(): SplitRepo {
           split.archived ? 1 : 0,
           split.createdAtMs,
           updatedAt,
+          getActiveOwnerId(),
         ],
       );
 
@@ -88,13 +90,14 @@ export function createSqliteSplitRepo(): SplitRepo {
     async getSplit(id: string): Promise<WorkoutSplit | null> {
       const db = getDb();
 
+      const ownerId = getActiveOwnerId();
       const splitRes = await db.query(
         `
         SELECT id, name, archived, created_at_ms as createdAtMs, updated_at_ms as updatedAtMs
         FROM splits
-        WHERE id = ?
+        WHERE id = ? AND (owner_id = ? OR owner_id IS NULL)
         `,
-        [id],
+        [id, ownerId],
       );
 
       const base = (splitRes.values?.[0] as any) ?? null;
@@ -180,8 +183,9 @@ export function createSqliteSplitRepo(): SplitRepo {
       const sortBy = options?.sortBy ?? "updated";
       const order = options?.order ?? "desc";
 
-      const where: string[] = [];
-      const params: any[] = [];
+      const ownerId = getActiveOwnerId();
+      const where: string[] = ["(owner_id = ? OR owner_id IS NULL)"];
+      const params: any[] = [ownerId];
 
       if (!includeArchived) where.push("archived = 0");
       if (search) {
@@ -248,21 +252,26 @@ export function createSqliteSplitRepo(): SplitRepo {
 
     async setActiveSplitId(id: string | null): Promise<void> {
       const db = getDb();
+      const key = `active_split_id:${getActiveOwnerId() ?? "default"}`;
       await db.run(
-        `INSERT INTO meta(key, value) VALUES('active_split_id', ?)
+        `INSERT INTO meta(key, value) VALUES(?, ?)
          ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
-        [id ?? ""],
+        [key, id ?? ""],
       );
     },
 
     async getActiveSplitId(): Promise<string | null> {
       const db = getDb();
-      const res = await db.query(
-        `SELECT value FROM meta WHERE key='active_split_id'`,
-        [],
-      );
+      const key = `active_split_id:${getActiveOwnerId() ?? "default"}`;
+      const res = await db.query(`SELECT value FROM meta WHERE key=?`, [key]);
       const v = ((res.values?.[0] as any)?.value as string | undefined) ?? "";
-      return v.trim() ? v : null;
+      // Fallback: check old key for existing installs
+      if (!v.trim()) {
+        const old = await db.query(`SELECT value FROM meta WHERE key='active_split_id'`, []);
+        const ov = ((old.values?.[0] as any)?.value as string | undefined) ?? "";
+        return ov.trim() ? ov : null;
+      }
+      return v;
     },
   };
 }

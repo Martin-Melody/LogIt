@@ -1,5 +1,6 @@
 import { browser } from "$app/environment";
 import { writable } from "svelte/store";
+import { isNativePlatform } from "$lib/platform/isNative";
 
 export type UserProfile = {
   name: string;
@@ -10,8 +11,6 @@ export type UserProfile = {
   weight: number | null;
   weightUnit: "kg" | "lbs";
   blocksCollapsedByDefault: boolean;
-  // Keyed by set type string so plugin-added types slot in without schema changes.
-  // undefined value (or absent key) means no auto-timer for that type.
   restDefaults: Record<string, number | undefined>;
 };
 
@@ -25,7 +24,7 @@ const defaultRestDefaults: Record<string, number | undefined> = {
   failure: 90_000,
 };
 
-const defaultProfile: UserProfile = {
+export const defaultProfile: UserProfile = {
   name: "",
   bio: "",
   height: null,
@@ -36,7 +35,7 @@ const defaultProfile: UserProfile = {
   restDefaults: defaultRestDefaults,
 };
 
-function load(): UserProfile {
+function loadFromStorage(): UserProfile {
   if (!browser) return { ...defaultProfile };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -45,7 +44,6 @@ function load(): UserProfile {
     return {
       ...defaultProfile,
       ...parsed,
-      // Deep-merge so new set types added to defaults reach existing users.
       restDefaults: { ...defaultRestDefaults, ...(parsed.restDefaults ?? {}) },
     };
   } catch {
@@ -53,15 +51,73 @@ function load(): UserProfile {
   }
 }
 
+// Lazily imported on native to avoid loading SQLite on web
+let _nativeRepo: typeof import("$lib/data/localAccountRepo") | null = null;
+let _getOwnerId: (() => string | null) | null = null;
+
 function createProfileStore() {
-  const store = writable<UserProfile>(load());
+  const store = writable<UserProfile>(loadFromStorage());
 
   return {
     subscribe: store.subscribe,
+
+    /** Called by initRepos() on native after SQLite and local account are ready. */
+    initFromLocalAccount(account: {
+      displayName: string;
+      bio: string;
+      avatarDataUrl: string | null;
+      height: number | null;
+      heightUnit: "cm" | "in";
+      weight: number | null;
+      weightUnit: "kg" | "lbs";
+      blocksCollapsedByDefault: boolean;
+      restDefaultsJson: string;
+    }, nativeRepo: typeof import("$lib/data/localAccountRepo"), getOwnerId: () => string | null) {
+      _nativeRepo = nativeRepo;
+      _getOwnerId = getOwnerId;
+
+      let restDefaults: Record<string, number | undefined> = { ...defaultRestDefaults };
+      try { restDefaults = { ...restDefaults, ...JSON.parse(account.restDefaultsJson) }; } catch {}
+
+      store.set({
+        name: account.displayName,
+        bio: account.bio,
+        avatarDataUrl: account.avatarDataUrl ?? undefined,
+        height: account.height,
+        heightUnit: account.heightUnit,
+        weight: account.weight,
+        weightUnit: account.weightUnit,
+        blocksCollapsedByDefault: account.blocksCollapsedByDefault,
+        restDefaults,
+      });
+    },
+
     save(patch: Partial<UserProfile>) {
       store.update((p) => {
         const next = { ...p, ...patch };
-        if (browser) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+        if (browser) {
+          if (isNativePlatform() && _nativeRepo && _getOwnerId) {
+            const ownerId = _getOwnerId();
+            if (ownerId) {
+              const accountPatch: Record<string, unknown> = {};
+              if (patch.name !== undefined)                    accountPatch.displayName = patch.name;
+              if (patch.bio !== undefined)                     accountPatch.bio = patch.bio;
+              if (patch.avatarDataUrl !== undefined)           accountPatch.avatarDataUrl = patch.avatarDataUrl;
+              if (patch.height !== undefined)                  accountPatch.height = patch.height;
+              if (patch.heightUnit !== undefined)              accountPatch.heightUnit = patch.heightUnit;
+              if (patch.weight !== undefined)                  accountPatch.weight = patch.weight;
+              if (patch.weightUnit !== undefined)              accountPatch.weightUnit = patch.weightUnit;
+              if (patch.blocksCollapsedByDefault !== undefined) accountPatch.blocksCollapsedByDefault = patch.blocksCollapsedByDefault;
+              if (patch.restDefaults !== undefined)            accountPatch.restDefaultsJson = JSON.stringify(patch.restDefaults);
+
+              _nativeRepo.updateLocalAccount(ownerId, accountPatch as Parameters<typeof _nativeRepo.updateLocalAccount>[1]).catch(console.error);
+            }
+          } else {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          }
+        }
+
         return next;
       });
     },
