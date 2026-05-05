@@ -48,6 +48,42 @@ namespace Logit.Api.Migrations
                     b.ToTable("CoachClientRelationships");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("Comments");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.Property<Guid>("FollowerId")
@@ -66,6 +102,24 @@ namespace Logit.Api.Migrations
                     b.ToTable("Follows");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "PostId");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("Likes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
                 {
                     b.Property<Guid>("Id")
@@ -82,6 +136,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EditedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PayloadJson")
@@ -158,6 +215,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PublicProfileJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Tier")
                         .HasColumnType("INTEGER");
 
@@ -198,6 +258,25 @@ namespace Logit.Api.Migrations
                     b.Navigation("Coach");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Author")
+                        .WithMany("Comments")
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.Post", "Post")
+                        .WithMany("Comments")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Followed")
@@ -215,6 +294,25 @@ namespace Logit.Api.Migrations
                     b.Navigation("Followed");
 
                     b.Navigation("Follower");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Post", "Post")
+                        .WithMany("Likes")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany("Likes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
@@ -239,15 +337,26 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("Likes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.User", b =>
                 {
                     b.Navigation("ClientRelationships");
 
                     b.Navigation("CoachRelationships");
 
+                    b.Navigation("Comments");
+
                     b.Navigation("Followers");
 
                     b.Navigation("Following");
+
+                    b.Navigation("Likes");
 
                     b.Navigation("Posts");
 

@@ -2,15 +2,32 @@ using Logit.Api.Data.Entities;
 
 namespace Logit.Api.Features;
 
-public record ProfileDto(Guid Id, string Username, string DisplayName, string? Bio, string? AvatarUrl, bool IsSelf);
-public record PostDto(Guid Id, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt);
+public record ProfileDto(
+    Guid Id, string Username, string DisplayName,
+    string? Bio, string? AvatarUrl, bool IsSelf,
+    int FollowerCount, int FollowingCount, bool IsFollowing,
+    string? PublicProfileJson);
+
+public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount);
+
+public record CommentDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Body, DateTime CreatedAt, DateTime? EditedAt);
 
 public static class MappingExtensions
 {
-    public static ProfileDto ToProfileDto(this User user, bool isSelf) =>
-        new(user.Id, user.Username, user.DisplayName, isSelf ? user.Bio : user.Bio, user.AvatarUrl, isSelf);
+    public static ProfileDto ToProfileDto(
+        this User user, bool isSelf,
+        int followerCount = 0, int followingCount = 0, bool isFollowing = false) =>
+        new(user.Id, user.Username, user.DisplayName, user.Bio, user.AvatarUrl,
+            isSelf, followerCount, followingCount, isFollowing, user.PublicProfileJson);
 
-    public static PostDto ToDto(this Post post) =>
-        new(post.Id, post.Author.Username, post.Author.DisplayName, post.Author.AvatarUrl,
-            post.Type.ToString(), post.Body, post.PayloadJson, post.CreatedAt);
+    public static PostDto ToDto(this Post post, Guid? callerId = null) =>
+        new(post.Id, post.AuthorId, post.Author.Username, post.Author.DisplayName, post.Author.AvatarUrl,
+            post.Type.ToString(), post.Body, post.PayloadJson, post.CreatedAt, post.EditedAt,
+            post.Likes.Count,
+            callerId.HasValue && post.Likes.Any(l => l.UserId == callerId.Value),
+            post.Comments.Count(c => c.DeletedAt == null));
+
+    public static CommentDto ToDto(this Comment comment) =>
+        new(comment.Id, comment.AuthorId, comment.Author.Username, comment.Author.DisplayName,
+            comment.Author.AvatarUrl, comment.Body, comment.CreatedAt, comment.EditedAt);
 }

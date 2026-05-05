@@ -1,6 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ArrowLeft, RotateCcw, Sparkles, Cloud, Server, WifiOff, CheckCircle, XCircle, Loader2 } from "lucide-svelte";
+  import {
+    ArrowLeft,
+    RotateCcw,
+    Sparkles,
+    Cloud,
+    Server,
+    WifiOff,
+    CheckCircle,
+    XCircle,
+    Loader2,
+    Trash2,
+    ChevronRight,
+    Lock,
+  } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -16,11 +29,20 @@
     startProfileTour,
   } from "$lib/tour/index";
   import { clearAllData } from "$lib/usecases/clearAllData";
+  import { isNativePlatform } from "$lib/platform/isNative";
+  import { getActiveOwnerId } from "$lib/data/activeOwner";
+  import type { LocalAccount } from "$lib/data/localAccountRepo";
   import { setMode, userPrefersMode } from "mode-watcher";
-  import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { getServerMode, setServerMode, type ServerMode } from "$lib/api/serverConfig";
-  import { testServerConnection, type ConnectionResult } from "$lib/api/testConnection";
+  import {
+    getServerMode,
+    setServerMode,
+    type ServerMode,
+  } from "$lib/api/serverConfig";
+  import {
+    testServerConnection,
+    type ConnectionResult,
+  } from "$lib/api/testConnection";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
   import {
     getProgressionConfig,
@@ -37,13 +59,76 @@
   const isDev = import.meta.env.DEV;
 
   // --- Account ---
-  let showConnectPrompt = $state(false);
   let serverMode = $state<ServerMode>(getServerMode());
   let selfHostUrl = $state("");
   let editingServerUrl = $state(false);
   let urlTestResult = $state<ConnectionResult>("idle");
+  let pendingDeleteAccount = $state(false);
+  let deletingAccount = $state(false);
 
-  function applyServerMode(mode: ServerMode) {
+  // --- Local account password ---
+  let localAccountHasPassword = $state(false);
+  let showPasswordForm = $state(false);
+  let passwordForm = $state({ current: "", next: "", confirm: "" });
+  let passwordError = $state<string | null>(null);
+  let savingPassword = $state(false);
+
+  $effect(() => {
+    const ownerId = getActiveOwnerId();
+    if (!ownerId || !isNativePlatform()) return;
+    void (async () => {
+      try {
+        const { getLocalAccount } = await import("$lib/data/localAccountRepo");
+        const acct = await getLocalAccount(ownerId);
+        localAccountHasPassword = !!acct?.passwordHash;
+      } catch {}
+    })();
+  });
+
+  async function saveLocalAccountPassword(remove = false) {
+    passwordError = null;
+    if (!remove && passwordForm.next !== passwordForm.confirm) {
+      passwordError = "Passwords don't match.";
+      return;
+    }
+    if (localAccountHasPassword && !passwordForm.current.trim()) {
+      passwordError = "Enter your current password to continue.";
+      return;
+    }
+    savingPassword = true;
+    try {
+      const { getLocalAccount, verifyLocalPassword, updateLocalAccount } =
+        await import("$lib/data/localAccountRepo");
+      const ownerId = getActiveOwnerId();
+      if (!ownerId) throw new Error("No active account.");
+      const acct = await getLocalAccount(ownerId);
+      if (!acct) throw new Error("Account not found.");
+      if (localAccountHasPassword) {
+        const ok = await verifyLocalPassword(acct, passwordForm.current);
+        if (!ok) {
+          passwordError = "Current password is incorrect.";
+          return;
+        }
+      }
+      const newPassword = remove
+        ? undefined
+        : passwordForm.next.trim() || undefined;
+      await updateLocalAccount(ownerId, { password: newPassword });
+      localAccountHasPassword = !remove && !!passwordForm.next.trim();
+      showPasswordForm = false;
+      passwordForm = { current: "", next: "", confirm: "" };
+    } catch (e) {
+      passwordError =
+        e instanceof Error ? e.message : "Failed to update password.";
+    } finally {
+      savingPassword = false;
+    }
+  }
+
+  async function applyServerMode(mode: ServerMode) {
+    if (mode === "offline" && authStore.isAuthenticated) {
+      await authStore.logout();
+    }
     setServerMode(mode, mode === "selfhosted" ? selfHostUrl.trim() : undefined);
     serverMode = mode;
     editingServerUrl = false;
@@ -58,7 +143,11 @@
   }
 
   // --- Progression ---
-  const progUi = $state({ loading: true, saving: false, error: null as string | null });
+  const progUi = $state({
+    loading: true,
+    saving: false,
+    error: null as string | null,
+  });
   let view = $state<ProgressionConfigView>({ config: null, algorithms: [] });
 
   async function loadProgression() {
@@ -88,8 +177,15 @@
   }
 
   // --- Analytics ---
-  const analyticsUi = $state({ loading: true, saving: false, error: null as string | null });
-  let analyticsView = $state<AnalyticsConfigView>({ config: null, plugins: [] });
+  const analyticsUi = $state({
+    loading: true,
+    saving: false,
+    error: null as string | null,
+  });
+  let analyticsView = $state<AnalyticsConfigView>({
+    config: null,
+    plugins: [],
+  });
 
   async function loadAnalytics() {
     analyticsUi.loading = true;
@@ -97,7 +193,8 @@
     try {
       analyticsView = await getAnalyticsConfig();
     } catch (e) {
-      analyticsUi.error = e instanceof Error ? e.message : "Failed to load settings";
+      analyticsUi.error =
+        e instanceof Error ? e.message : "Failed to load settings";
     } finally {
       analyticsUi.loading = false;
     }
@@ -109,9 +206,13 @@
     analyticsUi.error = null;
     try {
       await setAnalyticsPlugin(id);
-      analyticsView = { ...analyticsView, config: id ? { analyticsId: id } : null };
+      analyticsView = {
+        ...analyticsView,
+        config: id ? { analyticsId: id } : null,
+      };
     } catch (e) {
-      analyticsUi.error = e instanceof Error ? e.message : "Failed to save setting";
+      analyticsUi.error =
+        e instanceof Error ? e.message : "Failed to save setting";
     } finally {
       analyticsUi.saving = false;
     }
@@ -142,10 +243,65 @@
     profile.save({ restDefaults: { ...$profile.restDefaults, [type]: ms } });
   }
 
+  async function clearAllDataAndAccount() {
+    try {
+      await authStore.deleteAccount();
+    } catch {}
+    await clearAllData();
+  }
+
+  async function confirmDeleteAccount() {
+    deletingAccount = true;
+    try {
+      await authStore.deleteAccount();
+    } catch {
+      deletingAccount = false;
+      pendingDeleteAccount = false;
+    }
+  }
+
   async function resetOnboarding() {
     resetTours();
     onboarding.reset();
     await goto("/onboarding");
+  }
+
+  // --- Dev: local accounts ---
+  let localAccounts = $state<LocalAccount[]>([]);
+  let deletingAccountId = $state<string | null>(null);
+
+  $effect(() => {
+    if (isDev && isNativePlatform()) {
+      void (async () => {
+        try {
+          const { listLocalAccounts } = await import(
+            "$lib/data/localAccountRepo"
+          );
+          localAccounts = await listLocalAccounts();
+        } catch {}
+      })();
+    }
+  });
+
+  async function deleteLocalAccount(id: string) {
+    if (deletingAccountId) return;
+    deletingAccountId = id;
+    try {
+      const [{ clearOwnerData, getDb }] = await Promise.all([
+        import("$lib/data/db/sqlite"),
+      ]);
+      await clearOwnerData(id);
+      const db = getDb();
+      await db.run(`DELETE FROM local_accounts WHERE id = ?`, [id]);
+      localAccounts = localAccounts.filter((a) => a.id !== id);
+      if (getActiveOwnerId() === id) {
+        await authStore.logout();
+      }
+    } catch (e) {
+      console.error("Failed to delete local account", e);
+    } finally {
+      deletingAccountId = null;
+    }
   }
 
   onMount(() => {
@@ -157,7 +313,12 @@
 <div class="flex flex-col gap-3 p-3 pb-24">
   <!-- Header -->
   <div class="flex items-center gap-2">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => back("/profile")}>
+    <Button
+      variant="ghost"
+      size="icon"
+      class="h-8 w-8"
+      onclick={() => back("/profile")}
+    >
       <ArrowLeft class="h-4 w-4" />
     </Button>
     <h1 class="text-base font-semibold">Settings</h1>
@@ -167,52 +328,135 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>Account</Card.Title>
-      <Card.Description>Connect to Logit cloud, a self-hosted instance, or stay offline.</Card.Description>
+      <Card.Description
+        >Manage your identity and server connection.</Card.Description
+      >
     </Card.Header>
-    <Card.Content class="flex flex-col gap-3">
+    <Card.Content class="flex flex-col gap-0">
       {#if authStore.isAuthenticated && authStore.user}
-        <!-- Logged in state -->
-        <div class="flex items-center gap-3">
+        <!-- Identity row -->
+        <div class="flex items-center gap-3 pb-3">
           {#if serverMode === "cloud"}
-            <Cloud class="h-4 w-4 text-primary shrink-0" />
+            <div class="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Cloud class="h-4 w-4 text-primary" />
+            </div>
           {:else}
-            <Server class="h-4 w-4 text-muted-foreground shrink-0" />
+            <div class="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <Server class="h-4 w-4 text-muted-foreground" />
+            </div>
           {/if}
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium">@{authStore.user.username}</p>
-            <p class="text-xs text-muted-foreground capitalize">{serverMode === "cloud" ? "Logit cloud" : "Self-hosted"} · {authStore.user.tier}</p>
+            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "Logit cloud" : "Self-hosted"} · {authStore.user.tier}</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" class="self-start" onclick={() => void authStore.logout()}>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => void authStore.logout()}>
           Sign out
-        </Button>
-      {:else}
-        <!-- Not connected -->
-        <div class="flex items-center gap-3 text-muted-foreground">
-          <WifiOff class="h-4 w-4 shrink-0" />
-          <p class="text-sm">Not connected — all data is stored locally.</p>
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
+
+      {:else if getActiveOwnerId()}
+        <!-- Identity row -->
+        <div class="flex items-center gap-3 pb-3">
+          <div class="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+            <WifiOff class="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium">{$profile.name || "Local account"}</p>
+            <p class="text-xs text-muted-foreground">Offline · data stored on this device</p>
+          </div>
         </div>
-        <div class="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=login")}>
-            Log in
-          </Button>
-          <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=register")}>
-            Create account
-          </Button>
+        <!-- Action rows -->
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm hover:text-primary transition-colors"
+          onclick={() => goto("/connect")}>
+          Connect account
+          <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => goto("/auth?mode=offline")}>
+          Switch account
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => { showPasswordForm = !showPasswordForm; passwordError = null; passwordForm = { current: "", next: "", confirm: "" }; }}>
+          <span class="flex items-center gap-2">
+            <Lock class="h-3.5 w-3.5" />
+            {localAccountHasPassword ? "Change password" : "Set a password"}
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0 transition-transform {showPasswordForm ? 'rotate-90' : ''}" />
+        </button>
+        {#if showPasswordForm}
+          <div class="flex flex-col gap-2 pb-2 pt-1">
+            {#if localAccountHasPassword}
+              <input type="password" placeholder="Current password" autocomplete="current-password"
+                class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                bind:value={passwordForm.current} />
+            {/if}
+            <input type="password" placeholder={localAccountHasPassword ? "New password" : "Password"} autocomplete="new-password"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={passwordForm.next} />
+            <input type="password" placeholder="Confirm password" autocomplete="new-password"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={passwordForm.confirm} />
+            {#if passwordError}
+              <p class="text-xs text-destructive">{passwordError}</p>
+            {/if}
+            <div class="flex gap-2 pt-1">
+              <Button size="sm" disabled={savingPassword} onclick={() => void saveLocalAccountPassword()}>
+                {savingPassword ? "Saving…" : "Save"}
+              </Button>
+              {#if localAccountHasPassword}
+                <Button variant="outline" size="sm" disabled={savingPassword} onclick={() => void saveLocalAccountPassword(true)}>
+                  Remove
+                </Button>
+              {/if}
+              <Button variant="ghost" size="sm" onclick={() => { showPasswordForm = false; passwordError = null; }}>Cancel</Button>
+            </div>
+          </div>
+        {/if}
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => void authStore.logout()}>
+          Sign out
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
+
+      {:else}
+        <!-- No account -->
+        <div class="flex flex-col gap-3 pb-1">
+          <p class="text-sm text-muted-foreground">Not signed in — all data is stored locally on this device.</p>
+          <div class="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=login")}>Log in</Button>
+            <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=register")}>Create account</Button>
+            <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=offline")}>Local account</Button>
+          </div>
         </div>
       {/if}
 
-      <!-- Server mode switcher (always visible) -->
-      <div class="pt-1 border-t border-border flex flex-col gap-2">
-        <p class="text-xs text-muted-foreground font-medium">Server</p>
+      <!-- Server mode switcher -->
+      <div class="border-t border-border pt-4 pb-1 flex flex-col gap-2">
+        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Server</p>
         <div class="flex rounded border overflow-hidden text-xs">
-          {#each ([["offline", "Offline"], ["cloud", "Logit cloud"], ["selfhosted", "Self-hosted"]] as [ServerMode, string][]) as [mode, label] (mode)}
-            <button type="button"
-              class="flex-1 py-2 text-center transition-colors {serverMode === mode ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+          {#each [["offline", "Offline"], ["cloud", "Logit cloud"], ["selfhosted", "Self-hosted"]] as [ServerMode, string][] as [mode, label] (mode)}
+            <button
+              type="button"
+              class="flex-1 py-2 text-center transition-colors {serverMode ===
+              mode
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-background text-muted-foreground hover:text-foreground'}"
               onclick={() => {
-                if (mode === "selfhosted") { editingServerUrl = true; }
-                else { applyServerMode(mode); }
-              }}>
+                if (mode === "selfhosted") {
+                  editingServerUrl = true;
+                } else {
+                  void applyServerMode(mode);
+                }
+              }}
+            >
               {label}
             </button>
           {/each}
@@ -220,28 +464,41 @@
 
         {#if editingServerUrl || serverMode === "selfhosted"}
           <div class="flex gap-2">
-            <input type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
+            <input
+              type="url"
+              inputmode="url"
+              placeholder="https://logit.yourdomain.com"
               class="flex-1 min-w-0 rounded border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               oninput={() => (urlTestResult = "idle")}
-              bind:value={selfHostUrl} />
-            <Button size="sm" variant="outline" onclick={() => applyServerMode("selfhosted")}>Save</Button>
+              bind:value={selfHostUrl}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onclick={() => void applyServerMode("selfhosted")}>Save</Button
+            >
           </div>
           {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
             <p class="text-xs text-amber-600 dark:text-amber-400">
-              HTTP is unencrypted — passwords and data are sent in plaintext. Use HTTPS if possible.
+              HTTP is unencrypted — passwords and data are sent in plaintext.
+              Use HTTPS if possible.
             </p>
           {/if}
           <div class="flex items-center gap-3">
-            <button type="button"
+            <button
+              type="button"
               class="px-3 py-1.5 rounded border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"
               disabled={!selfHostUrl.trim() || urlTestResult === "testing"}
-              onclick={() => void testUrl()}>
+              onclick={() => void testUrl()}
+            >
               {urlTestResult === "testing" ? "Testing…" : "Test connection"}
             </button>
             {#if urlTestResult === "testing"}
               <Loader2 class="h-3.5 w-3.5 animate-spin text-muted-foreground" />
             {:else if urlTestResult === "ok"}
-              <span class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+              <span
+                class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
+              >
                 <CheckCircle class="h-3.5 w-3.5" /> Reachable
               </span>
             {:else if urlTestResult === "error"}
@@ -263,10 +520,13 @@
     </Card.Header>
     <Card.Content>
       <div class="flex rounded border overflow-hidden text-sm w-fit">
-        {#each ([ ["system", "System"], ["light", "Light"], ["dark", "Dark"] ] as ["system"|"light"|"dark", string][]) as [value, label] (value)}
+        {#each [["system", "System"], ["light", "Light"], ["dark", "Dark"]] as ["system" | "light" | "dark", string][] as [value, label] (value)}
           <button
             type="button"
-            class="px-4 py-2 transition-colors {userPrefersMode.current === value ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+            class="px-4 py-2 transition-colors {userPrefersMode.current ===
+            value
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:text-foreground'}"
             onclick={() => setMode(value)}
           >
             {label}
@@ -280,7 +540,9 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>Progression</Card.Title>
-      <Card.Description>How the app suggests weights and reps for your next session.</Card.Description>
+      <Card.Description
+        >How the app suggests weights and reps for your next session.</Card.Description
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       {#if progUi.error}
@@ -294,29 +556,50 @@
         <ul class="flex flex-col gap-2">
           {#each view.algorithms as algo (algo.id)}
             {@const isActive = view.config?.algorithmId === algo.id}
-            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+            <li
+              class="rounded border p-3 transition-colors {isActive
+                ? 'border-primary bg-primary/5'
+                : 'border-border'}"
+            >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium">{algo.name}</p>
                     {#if isActive}
-                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                      <span
+                        class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5"
+                        >Active</span
+                      >
                     {/if}
                   </div>
-                  <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {algo.description}
+                  </p>
                   {#if algo.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">by {algo.author}</p>
+                    <p class="mt-1 text-xs text-muted-foreground/60">
+                      by {algo.author}
+                    </p>
                   {/if}
                 </div>
                 {#if !isActive}
-                  <Button size="sm" variant="outline" disabled={progUi.saving} onclick={() => void selectAlgorithm(algo.id)}>Select</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={progUi.saving}
+                    onclick={() => void selectAlgorithm(algo.id)}>Select</Button
+                  >
                 {/if}
               </div>
             </li>
           {/each}
         </ul>
         {#if view.config}
-          <Button variant="ghost" class="text-muted-foreground text-sm self-start" disabled={progUi.saving} onclick={() => void selectAlgorithm("")}>
+          <Button
+            variant="ghost"
+            class="text-muted-foreground text-sm self-start"
+            disabled={progUi.saving}
+            onclick={() => void selectAlgorithm("")}
+          >
             Disable suggestions
           </Button>
         {/if}
@@ -328,7 +611,9 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>Analytics</Card.Title>
-      <Card.Description>How the app computes your progress metrics and chart data.</Card.Description>
+      <Card.Description
+        >How the app computes your progress metrics and chart data.</Card.Description
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       {#if analyticsUi.error}
@@ -337,28 +622,48 @@
       {#if analyticsUi.loading}
         <p class="text-sm text-muted-foreground">Loading…</p>
       {:else if analyticsView.plugins.length === 0}
-        <p class="text-sm text-muted-foreground">No analytics plugins available.</p>
+        <p class="text-sm text-muted-foreground">
+          No analytics plugins available.
+        </p>
       {:else}
         <ul class="flex flex-col gap-2">
           {#each analyticsView.plugins as plugin (plugin.id)}
-            {@const activeId = analyticsView.config?.analyticsId ?? DEFAULT_ANALYTICS_ID}
+            {@const activeId =
+              analyticsView.config?.analyticsId ?? DEFAULT_ANALYTICS_ID}
             {@const isActive = activeId === plugin.id}
-            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+            <li
+              class="rounded border p-3 transition-colors {isActive
+                ? 'border-primary bg-primary/5'
+                : 'border-border'}"
+            >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium">{plugin.name}</p>
                     {#if isActive}
-                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                      <span
+                        class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5"
+                        >Active</span
+                      >
                     {/if}
                   </div>
-                  <p class="mt-1 text-xs text-muted-foreground">{plugin.description}</p>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {plugin.description}
+                  </p>
                   {#if plugin.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">by {plugin.author}</p>
+                    <p class="mt-1 text-xs text-muted-foreground/60">
+                      by {plugin.author}
+                    </p>
                   {/if}
                 </div>
                 {#if !isActive}
-                  <Button size="sm" variant="outline" disabled={analyticsUi.saving} onclick={() => void selectAnalyticsPlugin(plugin.id)}>Select</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={analyticsUi.saving}
+                    onclick={() => void selectAnalyticsPlugin(plugin.id)}
+                    >Select</Button
+                  >
                 {/if}
               </div>
             </li>
@@ -378,34 +683,55 @@
       <label class="flex items-center justify-between gap-3 cursor-pointer">
         <div>
           <p class="text-sm font-medium">Collapse blocks by default</p>
-          <p class="text-xs text-muted-foreground">Exercise blocks start collapsed in a session.</p>
+          <p class="text-xs text-muted-foreground">
+            Exercise blocks start collapsed in a session.
+          </p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={$profile.blocksCollapsedByDefault}
-          class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {$profile.blocksCollapsedByDefault ? 'bg-primary' : 'bg-input'}"
-          onclick={() => profile.save({ blocksCollapsedByDefault: !$profile.blocksCollapsedByDefault })}
+          class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {$profile.blocksCollapsedByDefault
+            ? 'bg-primary'
+            : 'bg-input'}"
+          onclick={() =>
+            profile.save({
+              blocksCollapsedByDefault: !$profile.blocksCollapsedByDefault,
+            })}
         >
-          <span class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {$profile.blocksCollapsedByDefault ? 'translate-x-4' : 'translate-x-0'}"></span>
+          <span
+            class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {$profile.blocksCollapsedByDefault
+              ? 'translate-x-4'
+              : 'translate-x-0'}"
+          ></span>
         </button>
       </label>
 
       <div class="flex flex-col gap-2">
         <p class="text-sm font-medium">Auto rest timer</p>
-        <p class="text-xs text-muted-foreground mb-1">Enable and set the default rest duration for each set type.</p>
+        <p class="text-xs text-muted-foreground mb-1">
+          Enable and set the default rest duration for each set type.
+        </p>
         {#each Object.keys(SET_TYPE_LABELS) as type (type)}
           {@const enabled = $profile.restDefaults[type] !== undefined}
-          {@const seconds = enabled ? Math.round(($profile.restDefaults[type] ?? 90_000) / 1000) : 90}
+          {@const seconds = enabled
+            ? Math.round(($profile.restDefaults[type] ?? 90_000) / 1000)
+            : 90}
           <div class="flex items-center gap-3">
             <button
               type="button"
               role="switch"
               aria-checked={enabled}
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {enabled ? 'bg-primary' : 'bg-input'}"
+              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {enabled
+                ? 'bg-primary'
+                : 'bg-input'}"
               onclick={() => toggleRestDefault(type)}
             >
-              <span class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {enabled ? 'translate-x-4' : 'translate-x-0'}"></span>
+              <span
+                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {enabled
+                  ? 'translate-x-4'
+                  : 'translate-x-0'}"
+              ></span>
             </button>
             <span class="text-sm w-24">{SET_TYPE_LABELS[type]}</span>
             {#if enabled}
@@ -416,7 +742,8 @@
                   max="600"
                   class="w-16 rounded border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                   value={seconds}
-                  onchange={(e) => setRestSeconds(type, (e.target as HTMLInputElement).value)}
+                  onchange={(e) =>
+                    setRestSeconds(type, (e.target as HTMLInputElement).value)}
                 />
                 <span class="text-xs text-muted-foreground">sec</span>
               </div>
@@ -434,22 +761,49 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>App Tour</Card.Title>
-      <Card.Description>Replay a walkthrough for any part of the app.</Card.Description>
+      <Card.Description
+        >Replay a walkthrough for any part of the app.</Card.Description
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-2">
-      <Button variant="outline" size="sm" class="justify-start" onclick={() => startHomeTour(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        class="justify-start"
+        onclick={() => startHomeTour(true)}
+      >
         <RotateCcw class="h-3.5 w-3.5 mr-2" /> Home overview
       </Button>
-      <Button variant="outline" size="sm" class="justify-start" onclick={() => startSessionTour(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        class="justify-start"
+        onclick={() => startSessionTour(true)}
+      >
         <RotateCcw class="h-3.5 w-3.5 mr-2" /> Workout session
       </Button>
-      <Button variant="outline" size="sm" class="justify-start" onclick={() => startSplitsTour(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        class="justify-start"
+        onclick={() => startSplitsTour(true)}
+      >
         <RotateCcw class="h-3.5 w-3.5 mr-2" /> Training splits
       </Button>
-      <Button variant="outline" size="sm" class="justify-start" onclick={() => startExercisesTour(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        class="justify-start"
+        onclick={() => startExercisesTour(true)}
+      >
         <RotateCcw class="h-3.5 w-3.5 mr-2" /> Exercise library
       </Button>
-      <Button variant="outline" size="sm" class="justify-start" onclick={() => startProfileTour(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        class="justify-start"
+        onclick={() => startProfileTour(true)}
+      >
         <RotateCcw class="h-3.5 w-3.5 mr-2" /> Profile page
       </Button>
     </Card.Content>
@@ -459,21 +813,74 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>Plugins</Card.Title>
-      <Card.Description>Explore community-built widgets and algorithms.</Card.Description>
+      <Card.Description
+        >Explore community-built widgets and algorithms.</Card.Description
+      >
     </Card.Header>
     <Card.Content>
-      <Button variant="outline" size="sm" class="justify-start" onclick={() => void goto("/plugins")}>
+      <Button
+        variant="outline"
+        size="sm"
+        class="justify-start"
+        onclick={() => void goto("/plugins")}
+      >
         <Sparkles class="mr-2 h-3.5 w-3.5" /> Open plugin catalog
       </Button>
     </Card.Content>
   </Card.Root>
 
-  <!-- Dev tools -->
-  <ConnectAccountPrompt
-    open={showConnectPrompt}
-    feature="This feature"
-    onclose={() => (showConnectPrompt = false)}
-  />
+  <!-- Danger zone -->
+  <Card.Root class="border-destructive/40">
+    <Card.Header>
+      <Card.Title class="text-destructive">Danger zone</Card.Title>
+      <Card.Description>Irreversible and destructive actions.</Card.Description>
+    </Card.Header>
+    <Card.Content>
+      {#if pendingDeleteAccount}
+        <div class="flex flex-col gap-3">
+          <p class="text-sm text-destructive">
+            {authStore.isAuthenticated
+              ? "This will permanently delete your account from the server and erase all local data. This cannot be undone."
+              : getActiveOwnerId()
+                ? "This will erase all local data and remove this account from the device. This cannot be undone."
+                : "This will erase all local data on this device. This cannot be undone."}
+          </p>
+          <div class="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              class="border-destructive text-destructive hover:bg-destructive/10 disabled:opacity-50"
+              disabled={deletingAccount}
+              onclick={() => void confirmDeleteAccount()}
+            >
+              {#if deletingAccount}
+                <Loader2 class="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              {/if}
+              Yes, delete everything
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={deletingAccount}
+              onclick={() => (pendingDeleteAccount = false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      {:else}
+        <Button
+          variant="outline"
+          size="sm"
+          class="border-destructive/50 text-destructive hover:bg-destructive/10"
+          onclick={() => (pendingDeleteAccount = true)}
+        >
+          <Trash2 class="h-3.5 w-3.5 mr-1.5" />
+          Delete account and all data
+        </Button>
+      {/if}
+    </Card.Content>
+  </Card.Root>
 
   {#if isDev}
     <Card.Root class="border-destructive/40">
@@ -482,15 +889,81 @@
         <Card.Description>Reset app state for testing.</Card.Description>
       </Card.Header>
       <Card.Content class="flex flex-col gap-2">
-        <Button variant="outline" size="sm" class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10" onclick={() => void resetOnboarding()}>
+        <Button
+          variant="outline"
+          size="sm"
+          class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
+          onclick={() => void resetOnboarding()}
+        >
           <RotateCcw class="h-3.5 w-3.5 mr-2" /> Reset onboarding
         </Button>
-        <Button variant="outline" size="sm" class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10" onclick={() => resetTours()}>
+        <Button
+          variant="outline"
+          size="sm"
+          class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
+          onclick={() => resetTours()}
+        >
           <RotateCcw class="h-3.5 w-3.5 mr-2" /> Reset tours
         </Button>
-        <Button variant="outline" size="sm" class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10" onclick={() => void clearAllData()}>
+        <Button
+          variant="outline"
+          size="sm"
+          class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
+          onclick={() => void clearAllData()}
+        >
           <RotateCcw class="h-3.5 w-3.5 mr-2" /> Clear all data & databases
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
+          disabled={!authStore.isAuthenticated}
+          onclick={() => void clearAllDataAndAccount()}
+        >
+          <RotateCcw class="h-3.5 w-3.5 mr-2" /> Clear all data & delete API account
+        </Button>
+
+        {#if isNativePlatform() && localAccounts.length > 0}
+          <div class="pt-1 border-t border-destructive/20">
+            <p class="text-xs text-muted-foreground mb-2">
+              Local accounts on this device
+            </p>
+            <div class="flex flex-col gap-1.5">
+              {#each localAccounts as account (account.id)}
+                <div
+                  class="flex items-center gap-2 rounded border border-destructive/30 px-3 py-2"
+                >
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium truncate">
+                      {account.displayName || account.username}
+                    </p>
+                    <p class="text-[10px] text-muted-foreground">
+                      {account.serverUserId
+                        ? "linked to online account"
+                        : account.passwordHash
+                          ? "password protected"
+                          : "no password"}
+                      {getActiveOwnerId() === account.id ? " · active" : ""}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="shrink-0 text-destructive/60 hover:text-destructive transition-colors disabled:opacity-40"
+                    disabled={deletingAccountId === account.id}
+                    onclick={() => void deleteLocalAccount(account.id)}
+                    aria-label="Delete account"
+                  >
+                    {#if deletingAccountId === account.id}
+                      <Loader2 class="h-3.5 w-3.5 animate-spin" />
+                    {:else}
+                      <Trash2 class="h-3.5 w-3.5" />
+                    {/if}
+                  </button>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </Card.Content>
     </Card.Root>
   {/if}

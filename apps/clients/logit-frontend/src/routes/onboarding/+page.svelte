@@ -166,6 +166,7 @@
   function pickCloud() {
     chosenMode = "cloud";
     setServerMode("cloud");
+    authForm.displayName = draft.name.trim();
     serverSubStep = "form";
   }
 
@@ -178,6 +179,7 @@
     const url = selfHostUrl.trim().replace(/\/$/, "");
     if (!url || url === "https:/") return;
     setServerMode("selfhosted", url);
+    authForm.displayName = draft.name.trim();
     serverSubStep = "form";
   }
 

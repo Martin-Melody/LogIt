@@ -1,6 +1,7 @@
 import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
 import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
 import { getDb } from "$lib/data/db/sqlite";
+import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
 
@@ -24,8 +25,10 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       const limit = options?.limit ?? 200;
       const offset = options?.offset ?? 0;
 
-      const conditions: string[] = [];
-      const params: any[] = [];
+      const ownerId = getActiveOwnerId();
+      // Show core exercises (shared) + custom exercises for this owner
+      const conditions: string[] = ["(is_core = 1 OR owner_id = ? OR owner_id IS NULL)"];
+      const params: any[] = [ownerId];
 
       if (q) {
         conditions.push("name LIKE ?");
@@ -69,8 +72,8 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       };
 
       await db.run(
-        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms) VALUES(?, ?, ?, 0, ?)`,
-        [ex.id, ex.name, null, ex.createdAtMs],
+        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id) VALUES(?, ?, ?, 0, ?, ?)`,
+        [ex.id, ex.name, null, ex.createdAtMs, getActiveOwnerId()],
       );
 
       return ex;
@@ -129,9 +132,9 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       if (exercise.isCore) return;
       const db = getDb();
       await db.run(
-        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms) VALUES(?, ?, ?, 0, ?)
+        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id) VALUES(?, ?, ?, 0, ?, ?)
          ON CONFLICT(id) DO UPDATE SET name=excluded.name, notes=excluded.notes`,
-        [exercise.id, exercise.name, exercise.notes ?? null, exercise.createdAtMs],
+        [exercise.id, exercise.name, exercise.notes ?? null, exercise.createdAtMs, getActiveOwnerId()],
       );
     },
 
