@@ -114,16 +114,6 @@ export function startHomeTour(force = false) {
         },
       },
       {
-        element: '[data-tour="nav-splits"]',
-        popover: {
-          title: "Training Splits",
-          description:
-            "Build your weekly schedule here — e.g. Push / Pull / Legs. Set one as Active and Quick Start will automatically rotate through the days.",
-          side: "top",
-          align: "center",
-        },
-      },
-      {
         element: '[data-tour="nav-sessions"]',
         popover: {
           title: "Session History",
@@ -134,11 +124,11 @@ export function startHomeTour(force = false) {
         },
       },
       {
-        element: '[data-tour="nav-progress"]',
+        element: '[data-tour="nav-more"]',
         popover: {
-          title: "Progress",
+          title: "More",
           description:
-            "See how your lifts have trended over time. Charts are generated automatically from your session history.",
+            "Splits, Progress charts, Exercises, Settings and Plugins all live here — tap More any time to reach them.",
           side: "top",
           align: "center",
         },

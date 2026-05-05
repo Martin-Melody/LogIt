@@ -16,7 +16,9 @@
   let { children } = $props();
 
   const isOnboarding = $derived(
-    page.url.pathname.startsWith("/onboarding") || page.url.pathname.startsWith("/auth"),
+    page.url.pathname.startsWith("/onboarding") ||
+    page.url.pathname.startsWith("/auth") ||
+    page.url.pathname.startsWith("/connect"),
   );
 
   $effect(() => {
