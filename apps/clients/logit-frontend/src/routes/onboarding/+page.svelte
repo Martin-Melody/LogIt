@@ -227,13 +227,18 @@
         <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Free and open source</p>
       </div>
 
-      <button
-        type="button"
-        class="flex items-center justify-center gap-2 w-full max-w-xs py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
-        onclick={() => onboarding.setStep(1)}
-      >
-        Get started <ChevronRight class="h-4 w-4" />
-      </button>
+      <div class="flex flex-col items-center gap-3 w-full max-w-xs">
+        <button
+          type="button"
+          class="flex items-center justify-center gap-2 w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
+          onclick={() => onboarding.setStep(1)}
+        >
+          Get started <ChevronRight class="h-4 w-4" />
+        </button>
+        <a href="/auth" class="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          Already have an account? <span class="text-foreground font-medium">Log in</span>
+        </a>
+      </div>
     </div>
 
   <!-- Step 1: Profile -->
