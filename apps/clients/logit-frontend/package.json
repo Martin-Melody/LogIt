@@ -10,9 +10,9 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "android:sync:dev": "npm run build && npx cap sync android && npm run dev -- --host $(ip -4 addr show wlan0 | grep inet | awk '{print $2}' | cut -d/ -f1) --port 3000",
-    "android:live": "npx cap run android --live-reload",
-    "android:dev": "npm run dev -- --host $(ip -4 addr show wlan0 | grep inet | awk '{print $2}' | cut -d/ -f1) --port 3000"
+    "android:sync:dev": "npm run build && npx cap sync android && npm run dev -- --host 0.0.0.0 --port 3000",
+    "android:live": "npx cap run android --live-reload --host 10.200.0.2 --port 3000",
+    "android:dev": "npm run dev -- --host 0.0.0.0 --port 3000"
   },
   "devDependencies": {
     "@internationalized/date": "^3.10.1",

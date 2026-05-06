@@ -10,6 +10,11 @@ export function getServerMode(): ServerMode {
   return (localStorage.getItem(MODE_KEY) as ServerMode) ?? "offline";
 }
 
+export function getSelfHostUrl(): string {
+  if (!browser) return "";
+  return localStorage.getItem("logit:api:baseUrl") ?? "";
+}
+
 export function setServerMode(mode: ServerMode, selfHostUrl?: string): void {
   if (!browser) return;
   localStorage.setItem(MODE_KEY, mode);

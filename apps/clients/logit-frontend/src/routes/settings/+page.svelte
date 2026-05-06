@@ -37,6 +37,7 @@
   import {
     getServerMode,
     setServerMode,
+    getSelfHostUrl,
     type ServerMode,
   } from "$lib/api/serverConfig";
   import {
@@ -60,7 +61,7 @@
 
   // --- Account ---
   let serverMode = $state<ServerMode>(getServerMode());
-  let selfHostUrl = $state("");
+  let selfHostUrl = $state(getSelfHostUrl());
   let editingServerUrl = $state(false);
   let urlTestResult = $state<ConnectionResult>("idle");
   let pendingDeleteAccount = $state(false);
