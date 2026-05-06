@@ -6,6 +6,7 @@ import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localPr
 const STORAGE_KEY = "logit:profile-config:v1";
 
 function defaultConfig(): HomeConfig {
+  if (!localProfileWidgetRegistry) return { slots: [] };
   const slots: WidgetSlot[] = localProfileWidgetRegistry
     .list()
     .map((w) => ({ id: w.id, enabled: w.defaultEnabled, orderIndex: w.defaultOrder }));
@@ -13,7 +14,7 @@ function defaultConfig(): HomeConfig {
 }
 
 function load(): HomeConfig {
-  if (!browser) return defaultConfig();
+  if (!browser) return { slots: [] };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultConfig();

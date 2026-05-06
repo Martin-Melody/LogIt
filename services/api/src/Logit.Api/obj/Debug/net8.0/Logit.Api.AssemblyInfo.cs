@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Logit.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a9209bd195f3e54b70b4680a459e9bb0474a5e74")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+94fd39cc9198e6d1a3a9cf349fe7042185de68ec")]
 [assembly: System.Reflection.AssemblyProductAttribute("Logit.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Logit.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

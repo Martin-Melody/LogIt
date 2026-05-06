@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Loader2, RefreshCw, Dumbbell, Trophy, MessageSquare, Trash2, PenSquare, CalendarDays, Activity, Cpu, LayoutDashboard, Heart, MessageCircle, Pencil, Check, X, Search } from "lucide-svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
@@ -102,7 +101,11 @@
     }
   }
 
-  onMount(() => {
+  let _loadStarted = false;
+  $effect(() => {
+    if (!authStore.ready) return;
+    if (_loadStarted) return;
+    _loadStarted = true;
     if (!authStore.isAuthenticated) {
       showConnectPrompt = true;
       loading = false;
@@ -146,7 +149,12 @@
     {/if}
   </div>
 
-  {#if !authStore.isAuthenticated}
+  {#if !authStore.ready || (authStore.ready && !authStore.isAuthenticated && loading)}
+    <div class="flex justify-center py-16">
+      <Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
+    </div>
+
+  {:else if !authStore.isAuthenticated}
     <!-- Not logged in state -->
     <div class="flex flex-col items-center justify-center gap-4 px-6 py-20 text-center">
       <p class="text-sm text-muted-foreground">Sign in to see posts from people you follow.</p>
