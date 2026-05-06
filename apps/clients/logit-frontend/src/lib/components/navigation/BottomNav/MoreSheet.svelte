@@ -7,17 +7,27 @@
     Dumbbell,
     Settings,
     Sparkles,
+    List,
   } from "lucide-svelte";
+  import { authStore } from "$lib/api/authStore.svelte";
 
   const { open, onclose }: { open: boolean; onclose: () => void } = $props();
 
-  const items = [
+  const baseItems = [
     { href: "/splits",    icon: SquareChartGantt,   label: "Splits"    },
     { href: "/progress",  icon: ChartNoAxesColumn,   label: "Progress"  },
     { href: "/exercises", icon: Dumbbell,            label: "Exercises" },
     { href: "/settings",  icon: Settings,            label: "Settings"  },
     { href: "/plugins",   icon: Sparkles,            label: "Plugins"   },
   ] as const;
+
+  const sessionsItem = { href: "/sessions", icon: List, label: "Sessions" } as const;
+
+  const items = $derived(
+    authStore.isAuthenticated
+      ? [sessionsItem, ...baseItems]
+      : baseItems
+  );
 
   function navigate(href: string) {
     onclose();

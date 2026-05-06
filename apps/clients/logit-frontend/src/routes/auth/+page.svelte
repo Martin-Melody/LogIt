@@ -4,7 +4,7 @@
   import { onMount } from "svelte";
   import { ArrowLeft, Cloud, Server, Plus, Eye, EyeOff, Loader2, CheckCircle, XCircle } from "lucide-svelte";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { getServerMode, setServerMode } from "$lib/api/serverConfig";
+  import { getServerMode, setServerMode, getSelfHostUrl } from "$lib/api/serverConfig";
   import { testServerConnection, type ConnectionResult } from "$lib/api/testConnection";
   import { ApiError } from "$lib/api/client";
   import { isNativePlatform } from "$lib/platform/isNative";
@@ -36,14 +36,20 @@
   let serverMode = $state(getServerMode());
   let showServerSetup = $state(false);
   let serverSetupStep = $state<"pick" | "url">("pick");
-  let selfHostUrl = $state("https://");
+  let selfHostUrl = $state(getSelfHostUrl() || "https://");
   let urlTestResult = $state<ConnectionResult>("idle");
   let savingServer = $state(false);
 
   function openServerSetup() {
     showServerSetup = true;
-    serverSetupStep = "pick";
-    selfHostUrl = "https://";
+    const saved = getSelfHostUrl();
+    if (saved) {
+      selfHostUrl = saved;
+      serverSetupStep = "url";
+    } else {
+      selfHostUrl = "https://";
+      serverSetupStep = "pick";
+    }
     urlTestResult = "idle";
   }
 
@@ -257,13 +263,13 @@
           <div class="flex items-center gap-2 flex-wrap">
             <button type="button"
               class="px-3 py-1.5 rounded border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"
-              disabled={!selfHostUrl.trim() || selfHostUrl === "https:/" || urlTestResult === "testing"}
+              disabled={!selfHostUrl.trim() || selfHostUrl.trim().replace(/\/$/, "") === "https:/" || urlTestResult === "testing"}
               onclick={() => void testServerUrl()}>
               {urlTestResult === "testing" ? "Testing…" : "Test connection"}
             </button>
             <button type="button"
               class="px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50"
-              disabled={!selfHostUrl.trim() || selfHostUrl === "https:/"}
+              disabled={!selfHostUrl.trim() || selfHostUrl.trim().replace(/\/$/, "") === "https:/"}
               onclick={saveServerUrl}>
               Save
             </button>

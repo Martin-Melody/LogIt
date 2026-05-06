@@ -8,6 +8,7 @@ import type { PluginManifest, WidgetPluginCapability } from "$lib/plugins";
 const STORAGE_KEY = "logit:home-config:v1";
 
 function defaultConfig(): HomeConfig {
+  if (!localWidgetRegistry) return { slots: [] };
   const slots: WidgetSlot[] = localWidgetRegistry
     .list()
     .map((w) => ({ id: w.id, enabled: w.defaultEnabled, orderIndex: w.defaultOrder }));
@@ -23,7 +24,7 @@ function getWidgetCapability(manifest: PluginManifest): WidgetPluginCapability |
 }
 
 function load(): HomeConfig {
-  if (typeof localStorage === "undefined") return defaultConfig();
+  if (!browser) return { slots: [] };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
