@@ -32,17 +32,29 @@
       <span>Home</span>
     </a>
 
-    <!-- Sessions -->
-    <a
-      href="/sessions"
-      data-tour="nav-sessions"
-      aria-current={isActive("/sessions") ? "page" : undefined}
-      class="flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
-        {isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'}"
-    >
-      <List size={22} strokeWidth={isActive("/sessions") ? 2.5 : 2} />
-      <span>Sessions</span>
-    </a>
+    <!-- Sessions (offline) / Social (online) -->
+    {#if authStore.isAuthenticated}
+      <a
+        href="/social"
+        aria-current={isActive("/social") ? "page" : undefined}
+        class="flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
+          {isActive('/social') ? 'text-primary' : 'text-muted-foreground'}"
+      >
+        <Rss size={22} strokeWidth={isActive("/social") ? 2.5 : 2} />
+        <span>Social</span>
+      </a>
+    {:else}
+      <a
+        href="/sessions"
+        data-tour="nav-sessions"
+        aria-current={isActive("/sessions") ? "page" : undefined}
+        class="flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
+          {isActive('/sessions') ? 'text-primary' : 'text-muted-foreground'}"
+      >
+        <List size={22} strokeWidth={isActive("/sessions") ? 2.5 : 2} />
+        <span>Sessions</span>
+      </a>
+    {/if}
 
     <!-- FAB: Start / Resume session -->
     <a
@@ -63,19 +75,6 @@
       </div>
       <span class="mt-1 text-muted-foreground">{hasSession ? "Resume" : "Start"}</span>
     </a>
-
-    <!-- Social (online users only) -->
-    {#if authStore.isAuthenticated}
-      <a
-        href="/social"
-        aria-current={isActive("/social") ? "page" : undefined}
-        class="flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
-          {isActive('/social') ? 'text-primary' : 'text-muted-foreground'}"
-      >
-        <Rss size={22} strokeWidth={isActive("/social") ? 2.5 : 2} />
-        <span>Social</span>
-      </a>
-    {/if}
 
     <!-- Profile -->
     <a
