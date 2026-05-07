@@ -42,6 +42,7 @@ public static class UserEndpoints
         if (req.Bio is not null) user.Bio = req.Bio.Trim();
         if (req.AvatarUrl is not null) user.AvatarUrl = req.AvatarUrl;
         if (req.PublicProfileJson is not null) user.PublicProfileJson = req.PublicProfileJson;
+        if (req.OnboardingCompleted is not null) user.OnboardingCompleted = req.OnboardingCompleted.Value;
         user.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
@@ -108,4 +109,4 @@ public static class UserEndpoints
     }
 }
 
-public record UpdateProfileRequest(string? DisplayName, string? Bio, string? AvatarUrl, string? PublicProfileJson);
+public record UpdateProfileRequest(string? DisplayName, string? Bio, string? AvatarUrl, string? PublicProfileJson, bool? OnboardingCompleted);

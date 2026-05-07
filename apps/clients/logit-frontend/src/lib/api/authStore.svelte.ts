@@ -81,6 +81,7 @@ function createAuthStore() {
           username: serverUser.username,
           displayName: serverUser.displayName ?? "",
           serverUserId: serverUser.id,
+          onboardingCompleted: serverUser.onboardingCompleted,
         });
         setActiveOwnerId(account.id);
         await claimOrphanedData(account.id);

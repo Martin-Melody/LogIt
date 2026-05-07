@@ -6,4 +6,4 @@ public record RefreshRequest(string RefreshToken);
 public record RevokeRequest(string RefreshToken);
 
 public record AuthResponse(string AccessToken, string RefreshToken, UserDto User);
-public record UserDto(Guid Id, string Username, string DisplayName, string? AvatarUrl, string Tier);
+public record UserDto(Guid Id, string Username, string DisplayName, string? AvatarUrl, string Tier, bool OnboardingCompleted);

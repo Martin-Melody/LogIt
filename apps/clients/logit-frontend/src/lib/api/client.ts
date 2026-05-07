@@ -8,6 +8,7 @@ export interface AuthUser {
   displayName: string;
   avatarUrl: string | null;
   tier: string;
+  onboardingCompleted: boolean;
 }
 
 export interface AuthResponse {
@@ -202,6 +203,16 @@ class ApiClient {
 
   resetBaseUrl(): void {
     localStorage.removeItem(BASE_URL_KEY);
+  }
+
+  async updateOnboardingCompleted(value: boolean): Promise<void> {
+    await this.fetch("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify({ onboardingCompleted: value }),
+    });
+    if (this.cachedUser) {
+      this.saveUser({ ...this.cachedUser, onboardingCompleted: value });
+    }
   }
 }
 
