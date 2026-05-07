@@ -125,6 +125,6 @@ public static class AuthEndpoints
         new(
             tokens.CreateAccessToken(user),
             refreshToken,
-            new UserDto(user.Id, user.Username, user.DisplayName, user.AvatarUrl, user.Tier.ToString())
+            new UserDto(user.Id, user.Username, user.DisplayName, user.AvatarUrl, user.Tier.ToString(), user.OnboardingCompleted)
         );
 }
