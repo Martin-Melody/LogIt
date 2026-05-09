@@ -3,6 +3,7 @@
     X, Dumbbell, Trophy, MessageSquare, CalendarDays,
     Activity, Cpu, LayoutDashboard,
   } from "lucide-svelte";
+  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ApiPost, type PostType } from "$lib/api/socialApi";
   import { ApiError } from "$lib/api/client";
   import { recentSessions } from "$lib/stores/recentSessions.store";
@@ -69,6 +70,13 @@
   let selectedWidgetId = $state<string | null>(null);
 
   // ── Reset and load on open ───────────────────────────────────────────────────
+
+  $effect(() => {
+    if (open) {
+      openOverlay();
+      return () => closeOverlay();
+    }
+  });
 
   $effect(() => {
     if (!open) return;

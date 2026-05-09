@@ -159,6 +159,10 @@
       const { LocalNotifications } = await import("@capacitor/local-notifications");
       await LocalNotifications.requestPermissions();
     } catch {}
+    if (authStore.isAuthenticated) {
+      await finishOnboarding();
+      return;
+    }
     resetServerStep();
     onboarding.setStep(4);
   }
@@ -377,7 +381,7 @@
           </button>
           <button type="button"
             class="w-full py-2 text-sm text-muted-foreground flex items-center justify-center gap-1.5"
-            onclick={() => { resetServerStep(); onboarding.setStep(4); }}>
+            onclick={() => { if (authStore.isAuthenticated) { void finishOnboarding(); return; } resetServerStep(); onboarding.setStep(4); }}>
             <BellOff class="h-3.5 w-3.5" /> Skip for now
           </button>
         </div>
