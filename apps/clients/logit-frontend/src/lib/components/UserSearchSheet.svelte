@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { X, Search, UserPlus, UserCheck, Loader2 } from "lucide-svelte";
   import { socialApi, type UserSearchResult } from "$lib/api/socialApi";
+  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
 
   const { open, onclose } = $props<{
     open: boolean;
@@ -16,6 +17,13 @@
   let togglingId = $state<string | null>(null);
   let inputEl = $state<HTMLInputElement | null>(null);
   let debounceTimer: ReturnType<typeof setTimeout>;
+
+  $effect(() => {
+    if (open) {
+      openOverlay();
+      return () => closeOverlay();
+    }
+  });
 
   $effect(() => {
     if (open) {

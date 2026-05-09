@@ -10,6 +10,7 @@ public class User
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
     public string? PublicProfileJson { get; set; }
+    public bool OnboardingCompleted { get; set; } = false;
     public UserTier Tier { get; set; } = UserTier.Free;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

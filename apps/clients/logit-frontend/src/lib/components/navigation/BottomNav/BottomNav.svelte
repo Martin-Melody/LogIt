@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { keyboard } from "$lib/stores/keybaord.store";
+  import { overlayOpen } from "$lib/stores/overlay.store";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { authStore } from "$lib/api/authStore.svelte";
   import { House, List, Dumbbell, Rss, User, MoreHorizontal } from "lucide-svelte";
@@ -9,7 +10,7 @@
   let showMore = $state(false);
 
   const hasSession = $derived(!!$currentSession);
-  const hidden = $derived($keyboard.visible || $page.url.pathname.startsWith("/session/current"));
+  const hidden = $derived($keyboard.visible || $overlayOpen || $page.url.pathname.startsWith("/session/current"));
 
   function isActive(href: string) {
     if (href === "/") return $page.url.pathname === "/";
