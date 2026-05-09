@@ -1,6 +1,8 @@
 import { browser } from "$app/environment";
 import { writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
+import { apiClient } from "$lib/api/client";
+import { getServerMode } from "$lib/api/serverConfig";
 
 const STORAGE_KEY = "logit:onboarding:v1";
 
@@ -65,6 +67,9 @@ function createOnboardingStore() {
       const next: OnboardingState = { completed: true, step: 0 };
       store.set(next);
       persist(next);
+      if (browser && getServerMode() !== "offline" && apiClient.isAuthenticated()) {
+        apiClient.updateOnboardingCompleted(true).catch(console.error);
+      }
     },
 
     reset() {

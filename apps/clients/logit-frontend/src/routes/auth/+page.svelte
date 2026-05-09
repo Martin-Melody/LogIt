@@ -2,12 +2,14 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { ArrowLeft, Cloud, Server, Plus, Eye, EyeOff, Loader2, CheckCircle, XCircle } from "lucide-svelte";
+  import { ArrowLeft, Cloud, Server, Plus, Eye, EyeOff, Loader2, CheckCircle, XCircle, Pencil } from "lucide-svelte";
+  import { get } from "svelte/store";
   import { authStore } from "$lib/api/authStore.svelte";
   import { getServerMode, setServerMode, getSelfHostUrl } from "$lib/api/serverConfig";
   import { testServerConnection, type ConnectionResult } from "$lib/api/testConnection";
   import { ApiError } from "$lib/api/client";
   import { isNativePlatform } from "$lib/platform/isNative";
+  import { onboarding } from "$lib/stores/onboarding.store";
   import type { LocalAccount } from "$lib/data/localAccountRepo";
 
   type OnlineMode = "login" | "register";
@@ -42,14 +44,8 @@
 
   function openServerSetup() {
     showServerSetup = true;
-    const saved = getSelfHostUrl();
-    if (saved) {
-      selfHostUrl = saved;
-      serverSetupStep = "url";
-    } else {
-      selfHostUrl = "https://";
-      serverSetupStep = "pick";
-    }
+    selfHostUrl = getSelfHostUrl() || "https://";
+    serverSetupStep = "pick";
     urlTestResult = "idle";
   }
 
@@ -112,13 +108,18 @@
     authError = null;
   }
 
+  function resolveRedirect(): string {
+    const { completed } = get(onboarding);
+    return completed ? redirectTo : "/onboarding";
+  }
+
   async function loginOffline() {
     if (!selectedAccountId) return;
     authError = null;
     authLoading = true;
     try {
       await authStore.loginOfflineAccount(selectedAccountId, form.password);
-      await goto(redirectTo);
+      await goto(resolveRedirect());
     } catch (e) {
       authError = e instanceof Error ? e.message : "Could not log in.";
     } finally {
@@ -135,7 +136,7 @@
     authLoading = true;
     try {
       await authStore.createOfflineAccount(form.displayName, form.password);
-      await goto(redirectTo);
+      await goto(resolveRedirect());
     } catch (e) {
       authError = e instanceof Error ? e.message : "Could not create account.";
     } finally {
@@ -161,7 +162,7 @@
           form.displayName.trim() || form.username.trim(),
         );
       }
-      await goto(redirectTo);
+      await goto(resolveRedirect());
     } catch (e) {
       authError = e instanceof ApiError ? e.message : "Something went wrong. Please try again.";
     } finally {
@@ -211,11 +212,21 @@
       <div class="flex items-center gap-2 mb-5">
         <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
         <span class="text-xs text-muted-foreground">Logit cloud</span>
+        {#if !showServerSetup}
+          <button type="button" class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground ml-1" onclick={openServerSetup}>
+            <Pencil class="h-3 w-3" /> Change
+          </button>
+        {/if}
       </div>
     {:else if serverMode === "selfhosted"}
       <div class="flex items-center gap-2 mb-5">
         <Server class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        <span class="text-xs text-muted-foreground">Self-hosted</span>
+        <span class="text-xs text-muted-foreground truncate max-w-[160px]">{getSelfHostUrl() || "Self-hosted"}</span>
+        {#if !showServerSetup}
+          <button type="button" class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground shrink-0 ml-1" onclick={openServerSetup}>
+            <Pencil class="h-3 w-3" /> Change
+          </button>
+        {/if}
       </div>
     {:else if !showServerSetup}
       <button type="button"
@@ -237,7 +248,7 @@
               <Cloud class="h-4 w-4 text-primary shrink-0" />
               <div>
                 <p class="text-sm font-medium">Logit cloud</p>
-                <p class="text-xs text-muted-foreground">Managed hosting by Logit</p>
+                <p class="text-xs text-muted-foreground">Managed hosting — no server setup needed</p>
               </div>
             </button>
             <button type="button"
