@@ -10,6 +10,7 @@
   import { socialApi, type ApiProfile, type ApiPost, type PublicProfileData } from "$lib/api/socialApi";
   import { ApiError } from "$lib/api/client";
   import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
+  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import * as Card from "$lib/components/ui/card";
   import { formatDistanceToNow } from "$lib/utils";
 
@@ -32,6 +33,14 @@
   let showConnectPrompt = $state(false);
   let likingId = $state<string | null>(null);
   let commentPost = $state<ApiPost | null>(null);
+  let showAvatarLightbox = $state(false);
+
+  $effect(() => {
+    if (showAvatarLightbox) {
+      openOverlay();
+      return () => closeOverlay();
+    }
+  });
 
   async function toggleLike(post: ApiPost) {
     if (!authStore.isAuthenticated) { showConnectPrompt = true; return; }
@@ -199,7 +208,14 @@
       <!-- Avatar -->
       <div class="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-xl font-semibold shrink-0">
         {#if profile.avatarUrl}
-          <img src={profile.avatarUrl} alt={profile.displayName} class="h-full w-full rounded-full object-cover" />
+          <button
+            type="button"
+            class="h-full w-full rounded-full overflow-hidden"
+            onclick={() => (showAvatarLightbox = true)}
+            aria-label="View profile picture"
+          >
+            <img src={profile.avatarUrl} alt={profile.displayName} class="h-full w-full object-cover" />
+          </button>
         {:else}
           {initials(profile.displayName)}
         {/if}
@@ -434,3 +450,18 @@
     posts = posts.map((p) => p.id === id ? { ...p, commentCount: p.commentCount + delta } : p);
   }}
 />
+
+{#if showAvatarLightbox && profile?.avatarUrl}
+  <button
+    type="button"
+    aria-label="Close"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+    onclick={() => (showAvatarLightbox = false)}
+  >
+    <img
+      src={profile.avatarUrl}
+      alt={profile.displayName}
+      class="max-h-[80dvh] max-w-[80dvw] rounded-full object-cover shadow-2xl"
+    />
+  </button>
+{/if}

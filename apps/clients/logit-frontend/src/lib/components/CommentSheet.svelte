@@ -2,6 +2,7 @@
   import { Loader2, Trash2, Send, X, Pencil, Check } from "lucide-svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { socialApi, type ApiComment, type ApiPost } from "$lib/api/socialApi";
+  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { formatDistanceToNow } from "$lib/utils";
 
   interface Props {
@@ -21,6 +22,13 @@
   let editDraft = $state("");
   let savingEditId = $state<string | null>(null);
   let body = $state("");
+
+  $effect(() => {
+    if (post) {
+      openOverlay();
+      return () => closeOverlay();
+    }
+  });
 
   $effect(() => {
     if (post) {
