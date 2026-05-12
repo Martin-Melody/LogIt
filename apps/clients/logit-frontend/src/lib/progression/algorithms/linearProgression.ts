@@ -26,8 +26,22 @@ function makeWorkingSets(weight: number, repRange: [number, number]): SuggestedS
   }));
 }
 
+function seedFromHistory(history: ProgressionInput["history"]): LinearState | null {
+  const lastSession = history[0];
+  if (!lastSession) return null;
+  const workingSets = lastSession.sets.filter((s) => s.setType === "normal" || !s.setType);
+  if (workingSets.length === 0) return null;
+  const maxWeight = Math.max(...workingSets.map((s) => s.weight));
+  return { ...DEFAULT_STATE, workingWeight: maxWeight };
+}
+
 function suggest(input: ProgressionInput): ProgressionOutput {
-  const state: LinearState = (input.state as LinearState | null) ?? DEFAULT_STATE;
+  const state: LinearState =
+    (input.state as LinearState | null) ??
+    seedFromHistory(input.history) ?? {
+      ...DEFAULT_STATE,
+      workingWeight: input.plannedTargets?.weight ?? DEFAULT_STATE.workingWeight,
+    };
 
   if (input.history.length === 0) {
     // Seed from planned targets so the first suggestion matches the split's intent
