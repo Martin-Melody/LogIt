@@ -220,6 +220,7 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
   await migrateExercises(db);
   await migrateExercisesToBlocks(db);
   await migrateOwnerIds(db);
+  await migrateMuscleGroups(db);
   await seedSetTypes(db);
   await seedExercises(db);
 }
@@ -302,6 +303,33 @@ async function migrateExercises(db: SQLiteDBConnection): Promise<void> {
   }
 }
 
+async function migrateMuscleGroups(db: SQLiteDBConnection): Promise<void> {
+  const additions = [
+    "ALTER TABLE exercises ADD COLUMN primary_muscles TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE exercises ADD COLUMN secondary_muscles TEXT NOT NULL DEFAULT '[]'",
+  ];
+  for (const sql of additions) {
+    try { await db.run(sql, []); } catch { /* column already exists */ }
+  }
+
+  // Backfill known core exercises with muscle group data
+  const done = await db.query(`SELECT 1 FROM meta WHERE key = 'muscles_seeded_v1'`, []);
+  if ((done.values?.length ?? 0) > 0) return;
+
+  for (const ex of CORE_EXERCISE_DATA) {
+    await db.run(
+      `UPDATE exercises SET primary_muscles = ?, secondary_muscles = ? WHERE name = ?`,
+      [JSON.stringify(ex.primary), JSON.stringify(ex.secondary), ex.name],
+    );
+  }
+
+  await db.run(
+    `INSERT INTO meta(key, value) VALUES('muscles_seeded_v1', '1')
+     ON CONFLICT(key) DO UPDATE SET value = '1'`,
+    [],
+  );
+}
+
 async function migrateSessionSets(db: SQLiteDBConnection): Promise<void> {
   const additions = [
     "ALTER TABLE session_sets ADD COLUMN completed INTEGER NOT NULL DEFAULT 0",
@@ -337,56 +365,65 @@ async function seedSetTypes(db: SQLiteDBConnection): Promise<void> {
   }
 }
 
-const CORE_EXERCISE_NAMES = [
-    "Bench Press",
-    "Incline Bench Press",
-    "Squat",
-    "Front Squat",
-    "Deadlift",
-    "Romanian Deadlift",
-    "Overhead Press",
-    "Pull-Up",
-    "Lat Pulldown",
-    "Barbell Row",
-    "Dumbbell Row",
-    "Chest Fly",
-    "Lateral Raise",
-    "Rear Delt Fly",
-    "Bicep Curl",
-    "Hammer Curl",
-    "Tricep Pushdown",
-    "Skullcrusher",
-    "Leg Press",
-    "Leg Curl",
-    "Leg Extension",
-    "Calf Raise",
-    "Plank",
-    "Hanging Leg Raise",
-    "Machine French Press",
-    "Pec Deck",
-    "JM Press",
-    "T-Bar Row",
-    "Hip Abduction",
-    "Hip Adduction",
-    "Machine Back Extension",
+type CoreExerciseData = {
+  name: string;
+  primary: string[];
+  secondary: string[];
+};
+
+const CORE_EXERCISE_DATA: CoreExerciseData[] = [
+  { name: "Bench Press",            primary: ["chest"],              secondary: ["triceps", "shoulders"] },
+  { name: "Incline Bench Press",    primary: ["chest", "shoulders"], secondary: ["triceps"] },
+  { name: "Squat",                  primary: ["quads", "glutes"],    secondary: ["hamstrings", "core"] },
+  { name: "Front Squat",            primary: ["quads"],              secondary: ["glutes", "core"] },
+  { name: "Deadlift",               primary: ["back", "glutes"],     secondary: ["hamstrings", "quads", "core", "forearms"] },
+  { name: "Romanian Deadlift",      primary: ["hamstrings", "glutes"], secondary: ["back", "core"] },
+  { name: "Overhead Press",         primary: ["shoulders"],          secondary: ["triceps", "core"] },
+  { name: "Pull-Up",                primary: ["back", "biceps"],     secondary: ["shoulders", "core"] },
+  { name: "Lat Pulldown",           primary: ["back"],               secondary: ["biceps", "shoulders"] },
+  { name: "Barbell Row",            primary: ["back"],               secondary: ["biceps", "shoulders", "core"] },
+  { name: "Dumbbell Row",           primary: ["back"],               secondary: ["biceps"] },
+  { name: "Chest Fly",              primary: ["chest"],              secondary: ["shoulders"] },
+  { name: "Lateral Raise",          primary: ["shoulders"],          secondary: [] },
+  { name: "Rear Delt Fly",          primary: ["shoulders", "back"],  secondary: [] },
+  { name: "Bicep Curl",             primary: ["biceps"],             secondary: ["forearms"] },
+  { name: "Hammer Curl",            primary: ["biceps", "forearms"], secondary: [] },
+  { name: "Tricep Pushdown",        primary: ["triceps"],            secondary: [] },
+  { name: "Skullcrusher",           primary: ["triceps"],            secondary: [] },
+  { name: "Leg Press",              primary: ["quads", "glutes"],    secondary: ["hamstrings"] },
+  { name: "Leg Curl",               primary: ["hamstrings"],         secondary: [] },
+  { name: "Leg Extension",          primary: ["quads"],              secondary: [] },
+  { name: "Calf Raise",             primary: ["calves"],             secondary: [] },
+  { name: "Plank",                  primary: ["core"],               secondary: [] },
+  { name: "Hanging Leg Raise",      primary: ["core"],               secondary: [] },
+  { name: "Machine French Press",   primary: ["triceps"],            secondary: [] },
+  { name: "Pec Deck",               primary: ["chest"],              secondary: ["shoulders"] },
+  { name: "JM Press",               primary: ["triceps"],            secondary: ["chest"] },
+  { name: "T-Bar Row",              primary: ["back"],               secondary: ["biceps", "shoulders"] },
+  { name: "Hip Abduction",          primary: ["glutes"],             secondary: [] },
+  { name: "Hip Adduction",          primary: ["glutes"],             secondary: [] },
+  { name: "Machine Back Extension", primary: ["back", "glutes"],     secondary: ["hamstrings"] },
+  { name: "Dips",                   primary: ["chest", "triceps"],   secondary: ["shoulders"] },
 ];
 
 async function seedExercises(db: SQLiteDBConnection): Promise<void> {
   const res = await db.query(`SELECT 1 FROM exercises LIMIT 1`, []);
   if ((res.values?.length ?? 0) > 0) {
     // Mark known core exercises by name for existing installs
-    const placeholders = CORE_EXERCISE_NAMES.map(() => "?").join(", ");
+    const names = CORE_EXERCISE_DATA.map((e) => e.name);
+    const placeholders = names.map(() => "?").join(", ");
     await db.run(
       `UPDATE exercises SET is_core = 1 WHERE name IN (${placeholders})`,
-      CORE_EXERCISE_NAMES,
+      names,
     );
     return;
   }
 
-  for (const name of CORE_EXERCISE_NAMES) {
+  for (const ex of CORE_EXERCISE_DATA) {
     await db.run(
-      `INSERT INTO exercises(id, name, notes, is_core, created_at_ms) VALUES(?, ?, NULL, 1, 0)`,
-      [createId("exdb"), name],
+      `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, primary_muscles, secondary_muscles)
+       VALUES(?, ?, NULL, 1, 0, ?, ?)`,
+      [createId("exdb"), ex.name, JSON.stringify(ex.primary), JSON.stringify(ex.secondary)],
     );
   }
 }
