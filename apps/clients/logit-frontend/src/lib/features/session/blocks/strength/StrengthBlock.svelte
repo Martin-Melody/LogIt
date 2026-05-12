@@ -11,6 +11,7 @@
   } from "$lib/domain/workout";
   import { createId } from "$lib/domain/ids";
   import { getSuggestion } from "$lib/usecases/progression/getSuggestion";
+  import { currentSession } from "$lib/stores/currentSession.store";
   import type { ProgressionOutput } from "$lib/domain/progression";
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
 
@@ -49,7 +50,8 @@
 
   async function loadSuggestion(name: string, exerciseId?: string) {
     try {
-      suggestion = await getSuggestion({ id: exerciseId, name });
+      const session = get(currentSession) ?? undefined;
+      suggestion = await getSuggestion({ id: exerciseId, name }, undefined, session);
     } catch {
       suggestion = null;
     }
