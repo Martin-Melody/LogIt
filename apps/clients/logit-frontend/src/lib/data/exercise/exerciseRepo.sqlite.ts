@@ -1,9 +1,14 @@
-import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
+import type { Exercise, ExercisePatch, MuscleGroup } from "$lib/domain/exercise";
 import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { createId } from "$lib/domain/ids";
 import { nowMs } from "$lib/domain/time";
+
+function parseMuscles(json: string | null | undefined): MuscleGroup[] {
+  if (!json) return [];
+  try { return JSON.parse(json) as MuscleGroup[]; } catch { return []; }
+}
 
 function row(r: any): Exercise {
   return {
@@ -12,6 +17,8 @@ function row(r: any): Exercise {
     notes: r.notes ?? null,
     isCore: r.is_core === 1,
     createdAtMs: r.createdAtMs ?? r.created_at_ms,
+    primaryMuscles: parseMuscles(r.primary_muscles),
+    secondaryMuscles: parseMuscles(r.secondary_muscles),
   };
 }
 
@@ -44,7 +51,7 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       params.push(limit, offset);
 
       const res = await db.query(
-        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs
+        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs, primary_muscles, secondary_muscles
          FROM exercises
          ${where}
          ORDER BY name COLLATE NOCASE ASC
@@ -69,10 +76,13 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
         notes: null,
         isCore: false,
         createdAtMs: nowMs(),
+        primaryMuscles: [],
+        secondaryMuscles: [],
       };
 
       await db.run(
-        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id) VALUES(?, ?, ?, 0, ?, ?)`,
+        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id, primary_muscles, secondary_muscles)
+         VALUES(?, ?, ?, 0, ?, ?, '[]', '[]')`,
         [ex.id, ex.name, null, ex.createdAtMs, getActiveOwnerId()],
       );
 
@@ -85,7 +95,7 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       if (!trimmed) return null;
 
       const res = await db.query(
-        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs
+        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs, primary_muscles, secondary_muscles
          FROM exercises WHERE name = ?`,
         [trimmed],
       );
@@ -96,7 +106,7 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
     async getById(id: string): Promise<Exercise | null> {
       const db = getDb();
       const res = await db.query(
-        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs
+        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs, primary_muscles, secondary_muscles
          FROM exercises WHERE id = ?`,
         [id],
       );
@@ -111,6 +121,8 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
 
       if (patch.name !== undefined) { sets.push("name = ?"); params.push(patch.name); }
       if (patch.notes !== undefined) { sets.push("notes = ?"); params.push(patch.notes); }
+      if (patch.primaryMuscles !== undefined) { sets.push("primary_muscles = ?"); params.push(JSON.stringify(patch.primaryMuscles)); }
+      if (patch.secondaryMuscles !== undefined) { sets.push("secondary_muscles = ?"); params.push(JSON.stringify(patch.secondaryMuscles)); }
 
       if (sets.length) {
         params.push(id);
@@ -132,9 +144,15 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       if (exercise.isCore) return;
       const db = getDb();
       await db.run(
-        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id) VALUES(?, ?, ?, 0, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET name=excluded.name, notes=excluded.notes`,
-        [exercise.id, exercise.name, exercise.notes ?? null, exercise.createdAtMs, getActiveOwnerId()],
+        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id, primary_muscles, secondary_muscles)
+         VALUES(?, ?, ?, 0, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           name=excluded.name, notes=excluded.notes,
+           primary_muscles=excluded.primary_muscles, secondary_muscles=excluded.secondary_muscles`,
+        [
+          exercise.id, exercise.name, exercise.notes ?? null, exercise.createdAtMs, getActiveOwnerId(),
+          JSON.stringify(exercise.primaryMuscles), JSON.stringify(exercise.secondaryMuscles),
+        ],
       );
     },
 
