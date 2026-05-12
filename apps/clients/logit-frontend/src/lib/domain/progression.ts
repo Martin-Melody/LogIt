@@ -1,5 +1,6 @@
 import type { SetEntry } from "$lib/domain/workout";
 import type { PlannedTargets } from "$lib/domain/WorkoutSplit";
+import type { MuscleGroup } from "$lib/domain/exercise";
 
 export type ExerciseHistoryEntry = {
   sessionId: string;
@@ -8,11 +9,22 @@ export type ExerciseHistoryEntry = {
   sets: SetEntry[];
 };
 
+export type PrecedingExercise = {
+  name: string;
+  id?: string;
+  primaryMuscles: MuscleGroup[];
+  secondaryMuscles: MuscleGroup[];
+  completedSets: number;
+};
+
 export type ProgressionInput = {
-  exercise: { id?: string; name: string };
+  exercise: { id?: string; name: string; primaryMuscles?: MuscleGroup[]; secondaryMuscles?: MuscleGroup[] };
   history: ExerciseHistoryEntry[]; // most recent first
   state: unknown; // algorithm-owned, opaque to the app
   plannedTargets?: import("$lib/domain/WorkoutSplit").PlannedTargets;
+  sessionContext?: {
+    precedingExercises: PrecedingExercise[];
+  };
 };
 
 export type SuggestedSet = {
