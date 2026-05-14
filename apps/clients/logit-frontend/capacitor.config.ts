@@ -8,6 +8,7 @@ const config: CapacitorConfig = {
   webDir: "build",
   server: {
     ...(devServerUrl && { url: devServerUrl }),
+    androidScheme: "http",
     cleartext: true,
   },
   plugins: {

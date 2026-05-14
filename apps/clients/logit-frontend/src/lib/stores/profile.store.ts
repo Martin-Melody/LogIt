@@ -1,6 +1,8 @@
 import { browser } from "$app/environment";
 import { writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
+import { pushProfile, setProfileUpdatedAtMs } from "$lib/sync/syncService";
+import type { RemoteProfile } from "$lib/api/syncApi";
 
 export type UserProfile = {
   name: string;
@@ -116,6 +118,24 @@ function createProfileStore() {
           } else {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
           }
+        }
+
+        if (browser) {
+          const updatedAtMs = Date.now();
+          const remote: RemoteProfile = {
+            displayName: next.name,
+            bio: next.bio,
+            avatarDataUrl: next.avatarDataUrl ?? null,
+            height: next.height,
+            heightUnit: next.heightUnit,
+            weight: next.weight,
+            weightUnit: next.weightUnit,
+            blocksCollapsedByDefault: next.blocksCollapsedByDefault,
+            restDefaultsJson: JSON.stringify(next.restDefaults),
+            updatedAtMs,
+          };
+          pushProfile(remote);
+          setProfileUpdatedAtMs(updatedAtMs);
         }
 
         return next;
