@@ -61,6 +61,9 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM split_days WHERE split_id IN (SELECT id FROM splits WHERE owner_id = ?)`, [ownerId]);
   await db.run(`DELETE FROM splits WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM exercises WHERE owner_id = ? AND is_core = 0`, [ownerId]);
+  await db.run(`DELETE FROM progression_states WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM progression_config WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM analytics_config WHERE owner_id = ?`, [ownerId]);
   await db.execute(`PRAGMA foreign_keys = ON`);
 }
 
@@ -214,6 +217,26 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_session_blocks_session
       ON session_blocks(session_id, order_index);
+
+    CREATE TABLE IF NOT EXISTS progression_config (
+      owner_id TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      PRIMARY KEY (owner_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS progression_states (
+      owner_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      updated_at_ms INTEGER NOT NULL,
+      PRIMARY KEY (owner_id, key)
+    );
+
+    CREATE TABLE IF NOT EXISTS analytics_config (
+      owner_id TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      PRIMARY KEY (owner_id)
+    );
   `);
 
   await migrateSessionSets(db);
