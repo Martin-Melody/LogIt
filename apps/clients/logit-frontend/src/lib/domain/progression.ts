@@ -7,6 +7,8 @@ export type ExerciseHistoryEntry = {
   performedAtMs: number;
   planned?: PlannedTargets;
   sets: SetEntry[];
+  // 0-based position of this exercise in its session; undefined if unknown
+  sessionPosition?: number;
 };
 
 export type PrecedingExercise = {
@@ -15,6 +17,9 @@ export type PrecedingExercise = {
   primaryMuscles: MuscleGroup[];
   secondaryMuscles: MuscleGroup[];
   completedSets: number;
+  // 0-1: intensity-weighted effort load. 1.0 ≈ a full 3-set working block at max effort.
+  // Warmups count ~0.25×, failure/AMRAP sets count ~1.5×. Falls back to set-count ratio if absent.
+  effortFactor?: number;
 };
 
 export type ProgressionInput = {
