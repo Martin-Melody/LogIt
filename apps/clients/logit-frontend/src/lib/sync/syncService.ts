@@ -6,6 +6,7 @@ import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "$lib/domain/workout";
 import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
 import type { Exercise } from "$lib/domain/exercise";
+import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 
 // ── localStorage keys ────────────────────────────────────────────────────────
 
@@ -36,9 +37,14 @@ export const lastSyncedAt = writable(getLastSyncedAtMs());
 
 export function pushSession(session: WorkoutSession): void {
   if (!apiClient.isAuthenticated()) return;
-  syncApi
-    .pushSessions([{ id: session.id, startedAtMs: session.startedAtMs, dataJson: JSON.stringify(session) }])
-    .catch(() => {});
+  const dto = { id: session.id, startedAtMs: session.startedAtMs, dataJson: JSON.stringify(session) };
+  syncApi.pushSessions([dto]).catch(() => enqueue({ type: "session", dto }));
+}
+
+export function pushDeletedSession(id: string): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = { id, startedAtMs: 0, dataJson: null, deletedAtMs: Date.now() };
+  syncApi.pushSessions([dto]).catch(() => enqueue({ type: "session", dto }));
 }
 
 export async function pullAndMergeSessions(): Promise<void> {
@@ -54,9 +60,13 @@ export async function pullAndMergeSessions(): Promise<void> {
     const existingIds = new Set(existing.map((s) => s.id));
 
     for (const entry of remote) {
+      if (entry.deletedAtMs) {
+        if (existingIds.has(entry.id)) await repo.deleteSession(entry.id).catch(() => {});
+        continue;
+      }
       if (existingIds.has(entry.id)) continue;
       try {
-        const session: WorkoutSession = JSON.parse(entry.dataJson);
+        const session: WorkoutSession = JSON.parse(entry.dataJson!);
         await repo.saveSession(session);
       } catch {}
     }
@@ -69,9 +79,14 @@ export async function pullAndMergeSessions(): Promise<void> {
 
 export function pushSplit(split: WorkoutSplit): void {
   if (!apiClient.isAuthenticated()) return;
-  syncApi
-    .pushSplits([{ id: split.id, updatedAtMs: split.updatedAtMs, dataJson: JSON.stringify(split) }])
-    .catch(() => {});
+  const dto = { id: split.id, updatedAtMs: split.updatedAtMs, dataJson: JSON.stringify(split) };
+  syncApi.pushSplits([dto]).catch(() => enqueue({ type: "split", dto }));
+}
+
+export function pushDeletedSplit(id: string): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = { id, updatedAtMs: 0, dataJson: null, deletedAtMs: Date.now() };
+  syncApi.pushSplits([dto]).catch(() => enqueue({ type: "split", dto }));
 }
 
 export async function pushAllSplits(): Promise<void> {
@@ -98,10 +113,14 @@ export async function pullAndMergeSplits(): Promise<void> {
     const localMap = new Map(existing.map((s) => [s.id, s.updatedAtMs]));
 
     for (const entry of remote) {
+      if (entry.deletedAtMs) {
+        if (localMap.has(entry.id)) await repo.deleteSplit(entry.id).catch(() => {});
+        continue;
+      }
       const localUpdatedAtMs = localMap.get(entry.id) ?? -1;
       if (entry.updatedAtMs <= localUpdatedAtMs) continue;
       try {
-        const split: WorkoutSplit = JSON.parse(entry.dataJson);
+        const split: WorkoutSplit = JSON.parse(entry.dataJson!);
         await repo.saveSplit(split);
       } catch {}
     }
@@ -115,9 +134,14 @@ export async function pullAndMergeSplits(): Promise<void> {
 export function pushExercise(exercise: Exercise): void {
   if (!apiClient.isAuthenticated()) return;
   if (exercise.isCore) return;
-  syncApi
-    .pushExercises([{ id: exercise.id, createdAtMs: exercise.createdAtMs, dataJson: JSON.stringify(exercise) }])
-    .catch(() => {});
+  const dto = { id: exercise.id, createdAtMs: exercise.createdAtMs, dataJson: JSON.stringify(exercise) };
+  syncApi.pushExercises([dto]).catch(() => enqueue({ type: "exercise", dto }));
+}
+
+export function pushDeletedExercise(id: string): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = { id, createdAtMs: 0, dataJson: null, deletedAtMs: Date.now() };
+  syncApi.pushExercises([dto]).catch(() => enqueue({ type: "exercise", dto }));
 }
 
 export async function pushAllExercises(): Promise<void> {
@@ -144,9 +168,13 @@ export async function pullAndMergeExercises(): Promise<void> {
     const existingIds = new Set(existing.map((e) => e.id));
 
     for (const entry of remote) {
+      if (entry.deletedAtMs) {
+        if (existingIds.has(entry.id)) await repo.remove(entry.id).catch(() => {});
+        continue;
+      }
       if (existingIds.has(entry.id)) continue;
       try {
-        const exercise: Exercise = JSON.parse(entry.dataJson);
+        const exercise: Exercise = JSON.parse(entry.dataJson!);
         await repo.saveExercise(exercise);
       } catch {}
     }
@@ -167,10 +195,13 @@ export function setProfileUpdatedAtMs(ms: number): void {
 
 export function pushProfile(remoteProfile: RemoteProfile): void {
   if (!apiClient.isAuthenticated()) return;
-  syncApi.pushProfile(remoteProfile).catch(() => {});
+  syncApi.pushProfile(remoteProfile).catch(() => enqueue({ type: "profile", dto: remoteProfile }));
 }
 
 export async function syncAll(): Promise<void> {
+  // Flush any writes queued while offline before pulling, so the server has the
+  // latest local state before we merge its response back.
+  await flushOutbox();
   await Promise.all([
     pullAndMergeSessions(),
     pullAndMergeSplits(),
