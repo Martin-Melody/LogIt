@@ -5,6 +5,8 @@ import QuickStartWidget from "./components/QuickStartWidget.svelte";
 import TodaysPlanWidget from "./components/TodaysPlanWidget.svelte";
 import LastSessionWidget from "./components/LastSessionWidget.svelte";
 import ProgressionWidget from "./components/ProgressionWidget.svelte";
+import ActivityTrackerWidget from "./components/ActivityTrackerWidget.svelte";
+import MuscleMapWidget from "./components/MuscleMapWidget.svelte";
 
 const BUNDLED: WidgetDefinition[] = [
   {
@@ -38,6 +40,22 @@ const BUNDLED: WidgetDefinition[] = [
     component: ProgressionWidget,
     defaultEnabled: true,
     defaultOrder: 3,
+  },
+  {
+    id: "activity-tracker",
+    label: "Activity Tracker",
+    description: "Monthly workout calendar. Tap for a full year view.",
+    component: ActivityTrackerWidget,
+    defaultEnabled: true,
+    defaultOrder: 4,
+  },
+  {
+    id: "muscle-map",
+    label: "Muscle Focus",
+    description: "Body map showing which muscles you've trained this week.",
+    component: MuscleMapWidget,
+    defaultEnabled: true,
+    defaultOrder: 5,
   },
 ];
 
