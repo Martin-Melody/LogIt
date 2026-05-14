@@ -25,7 +25,13 @@ export async function getSuggestion(
   if (!algorithm) return null;
 
   const key = exerciseKey(exercise);
-  const saved = await progressionRepo.getExerciseState(key);
+  let saved = await progressionRepo.getExerciseState(key);
+  // Fall back to name-based key for state saved before the exercise had an ID
+  // (e.g. from split blocks that stored no exerciseId, or older sessions).
+  if (!saved && exercise.id) {
+    const nameKey = exercise.name.toLowerCase().trim();
+    if (nameKey !== key) saved = await progressionRepo.getExerciseState(nameKey);
+  }
 
   const state =
     saved?.algorithmId === config.algorithmId
@@ -34,17 +40,22 @@ export async function getSuggestion(
 
   const recentSessions = await workoutRepo.listRecentSessions({ limit: HISTORY_WINDOW });
 
+  const lowerName = exercise.name.toLowerCase();
   const history: ExerciseHistoryEntry[] = recentSessions
     .flatMap((session) => {
-      const match = getExercises(session).find((e) =>
-        exercise.id ? e.exerciseId === exercise.id : e.exerciseName.toLowerCase() === exercise.name.toLowerCase(),
+      const allExercises = getExercises(session);
+      const matchIndex = allExercises.findIndex((e) =>
+        (exercise.id && e.exerciseId && e.exerciseId === exercise.id) ||
+        e.exerciseName.toLowerCase() === lowerName,
       );
-      if (!match) return [];
+      if (matchIndex === -1) return [];
+      const match = allExercises[matchIndex]!;
       return [
         {
           sessionId: session.id,
           performedAtMs: session.endedAtMs ?? session.startedAtMs,
           sets: match.sets,
+          sessionPosition: matchIndex,
         } satisfies ExerciseHistoryEntry,
       ];
     })
@@ -81,12 +92,18 @@ export async function getSuggestion(
             (s) => s.completed && (s.setType === "normal" || !s.setType),
           ).length;
 
+          const normalSets = entry.sets.filter((s) => s.completed && (s.setType === "normal" || !s.setType)).length;
+          const highEffortSets = entry.sets.filter((s) => s.completed && (s.setType === "failure" || s.setType === "amrap")).length;
+          const warmupSets = entry.sets.filter((s) => s.completed && s.setType === "warmup").length;
+          const effortFactor = Math.min(1, (normalSets + highEffortSets * 1.5 + warmupSets * 0.25) / 3);
+
           return {
             name: entry.exerciseName,
             id: entry.exerciseId,
             primaryMuscles: data?.primaryMuscles ?? [],
             secondaryMuscles: data?.secondaryMuscles ?? [],
             completedSets,
+            effortFactor,
           } satisfies PrecedingExercise;
         }),
       );
