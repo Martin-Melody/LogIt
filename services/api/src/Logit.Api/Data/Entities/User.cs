@@ -11,6 +11,8 @@ public class User
     public string? AvatarUrl { get; set; }
     public string? PublicProfileJson { get; set; }
     public bool OnboardingCompleted { get; set; } = false;
+    public string? ProfileJson { get; set; }
+    public long ProfileUpdatedAtMs { get; set; } = 0;
     public UserTier Tier { get; set; } = UserTier.Free;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

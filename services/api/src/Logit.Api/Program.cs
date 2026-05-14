@@ -4,6 +4,7 @@ using Logit.Api.Data;
 using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
 using Logit.Api.Features.Social;
+using Logit.Api.Features.Sync;
 using Logit.Api.Features.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -75,6 +76,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapSocialEndpoints();
 app.MapAdminEndpoints(builder.Configuration);
+app.MapSyncEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

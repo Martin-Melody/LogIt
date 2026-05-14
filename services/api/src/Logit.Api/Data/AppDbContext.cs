@@ -12,6 +12,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Like> Likes => Set<Like>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<CoachClientRelationship> CoachClientRelationships => Set<CoachClientRelationship>();
+    public DbSet<SyncedWorkoutSession> SyncedWorkoutSessions => Set<SyncedWorkoutSession>();
+    public DbSet<SyncedSplit> SyncedSplits => Set<SyncedSplit>();
+    public DbSet<SyncedExercise> SyncedExercises => Set<SyncedExercise>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
