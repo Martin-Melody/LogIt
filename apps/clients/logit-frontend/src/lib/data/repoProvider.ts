@@ -15,6 +15,7 @@ import { createLocalWorkoutRepo } from "$lib/data/workoutRepo.local";
 import { createLocalSplitRepo } from "$lib/data/splitRepo.local";
 import { createLocalExerciseRepo } from "$lib/data/exercise/localExerciseRepo";
 import { createLocalProgressionRepo } from "$lib/data/progressionRepo.local";
+import { createSqliteProgressionRepo } from "$lib/data/progressionRepo.sqlite";
 import { createSqliteWorkoutRepo } from "./workouts/workoutRepo.sqlite";
 import { createSqliteSplitRepo } from "./splts/splitRepo.sqlite";
 import { pluginRuntime } from "$lib/plugins";
@@ -99,7 +100,7 @@ export async function initRepos(): Promise<void> {
     workoutRepo = createSqliteWorkoutRepo();
     exerciseRepo = createSqliteExerciseRepo();
     splitRepo = createSqliteSplitRepo();
-    progressionRepo = createLocalProgressionRepo();
+    progressionRepo = createSqliteProgressionRepo();
     didInit = true;
     return;
   }
