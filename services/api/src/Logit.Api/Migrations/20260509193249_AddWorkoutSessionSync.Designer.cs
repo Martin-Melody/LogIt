@@ -3,6 +3,7 @@ using System;
 using Logit.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Logit.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260509193249_AddWorkoutSessionSync")]
+    partial class AddWorkoutSessionSync
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.26");
@@ -45,7 +48,7 @@ namespace Logit.Api.Migrations
                     b.HasIndex("CoachId", "ClientId")
                         .IsUnique();
 
-                    b.ToTable("CoachClientRelationships", (string)null);
+                    b.ToTable("CoachClientRelationships");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
@@ -81,7 +84,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("Comments", (string)null);
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
@@ -99,7 +102,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("FollowedId");
 
-                    b.ToTable("Follows", (string)null);
+                    b.ToTable("Follows");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>
@@ -117,7 +120,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("Likes", (string)null);
+                    b.ToTable("Likes");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
@@ -153,7 +156,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("CreatedAt");
 
-                    b.ToTable("Posts", (string)null);
+                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.RefreshToken", b =>
@@ -185,73 +188,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
-                });
-
-            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ClientId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("CreatedAtMs")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("DataJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("SyncedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "ClientId")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "CreatedAtMs");
-
-                    b.ToTable("SyncedExercises", (string)null);
-                });
-
-            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedSplit", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ClientId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DataJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("SyncedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("UpdatedAtMs")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "ClientId")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "UpdatedAtMs");
-
-                    b.ToTable("SyncedSplits", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedWorkoutSession", b =>
@@ -284,7 +221,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("UserId", "StartedAtMs");
 
-                    b.ToTable("SyncedWorkoutSessions", (string)null);
+                    b.ToTable("SyncedWorkoutSessions");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.User", b =>
@@ -317,12 +254,6 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ProfileJson")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("ProfileUpdatedAtMs")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("PublicProfileJson")
                         .HasColumnType("TEXT");
 
@@ -344,7 +275,7 @@ namespace Logit.Api.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
@@ -438,28 +369,6 @@ namespace Logit.Api.Migrations
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany("RefreshTokens")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
-                {
-                    b.HasOne("Logit.Api.Data.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedSplit", b =>
-                {
-                    b.HasOne("Logit.Api.Data.Entities.User", "User")
-                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
