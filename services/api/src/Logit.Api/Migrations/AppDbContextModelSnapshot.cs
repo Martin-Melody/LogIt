@@ -45,7 +45,7 @@ namespace Logit.Api.Migrations
                     b.HasIndex("CoachId", "ClientId")
                         .IsUnique();
 
-                    b.ToTable("CoachClientRelationships", (string)null);
+                    b.ToTable("CoachClientRelationships");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
@@ -81,7 +81,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("Comments", (string)null);
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
@@ -99,7 +99,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("FollowedId");
 
-                    b.ToTable("Follows", (string)null);
+                    b.ToTable("Follows");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>
@@ -117,7 +117,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("Likes", (string)null);
+                    b.ToTable("Likes");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
@@ -153,7 +153,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("CreatedAt");
 
-                    b.ToTable("Posts", (string)null);
+                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.RefreshToken", b =>
@@ -185,7 +185,7 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
@@ -205,6 +205,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("TEXT");
 
@@ -213,12 +216,9 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "ClientId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "CreatedAtMs");
-
-                    b.ToTable("SyncedExercises", (string)null);
+                    b.ToTable("SyncedExercises");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedSplit", b =>
@@ -235,6 +235,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("TEXT");
 
@@ -246,12 +249,9 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "ClientId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "UpdatedAtMs");
-
-                    b.ToTable("SyncedSplits", (string)null);
+                    b.ToTable("SyncedSplits");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedWorkoutSession", b =>
@@ -268,6 +268,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long>("StartedAtMs")
                         .HasColumnType("INTEGER");
 
@@ -279,12 +282,9 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "ClientId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "StartedAtMs");
-
-                    b.ToTable("SyncedWorkoutSessions", (string)null);
+                    b.ToTable("SyncedWorkoutSessions");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.User", b =>
@@ -344,7 +344,7 @@ namespace Logit.Api.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
