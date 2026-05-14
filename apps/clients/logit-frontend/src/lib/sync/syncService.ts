@@ -1,3 +1,4 @@
+import { writable } from "svelte/store";
 import { apiClient } from "$lib/api/client";
 import { syncApi, type RemoteProfile } from "$lib/api/syncApi";
 import { getWorkoutRepo, getSplitRepo, getExerciseRepo } from "$lib/data/repoProvider";
@@ -19,6 +20,17 @@ function getTimestamp(key: string): number {
 function setTimestamp(key: string, ms: number): void {
   try { localStorage.setItem(key, String(ms)); } catch {}
 }
+
+// ── Last synced ───────────────────────────────────────────────────────────────
+
+const LAST_SYNCED_AT_KEY = "logit:sync:lastSyncedAt";
+
+function getLastSyncedAtMs(): number {
+  return getTimestamp(LAST_SYNCED_AT_KEY);
+}
+
+/** Reactive store — updates whenever a full sync completes. */
+export const lastSyncedAt = writable(getLastSyncedAtMs());
 
 // ── Sessions ─────────────────────────────────────────────────────────────────
 
@@ -158,6 +170,18 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
   syncApi.pushProfile(remoteProfile).catch(() => {});
 }
 
+export async function syncAll(): Promise<void> {
+  await Promise.all([
+    pullAndMergeSessions(),
+    pullAndMergeSplits(),
+    pullAndMergeExercises(),
+    pullAndApplyProfile(),
+  ]);
+  const now = Date.now();
+  setTimestamp(LAST_SYNCED_AT_KEY, now);
+  lastSyncedAt.set(now);
+}
+
 export async function pullAndApplyProfile(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
@@ -190,7 +214,7 @@ export async function pullAndApplyProfile(): Promise<void> {
     try { restDefaults = JSON.parse(remote.restDefaultsJson); } catch {}
 
     const { profile } = await import("$lib/stores/profile.store");
-    profile.setFromRemote({
+    profile.save({
       name: remote.displayName,
       bio: remote.bio,
       avatarDataUrl: remote.avatarDataUrl ?? undefined,
