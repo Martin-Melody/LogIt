@@ -1,11 +1,13 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { fly } from "svelte/transition";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import { ChevronLeft, ChevronRight } from "lucide-svelte";
   import { activeSplit } from "$lib/stores/activeSplit.store";
   import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
   import { selectedDayOverride, selectDayOverride, clearDayOverride } from "$lib/stores/todaysPlan.store";
+  import { createSwipeHandlers, animateHeight } from "$lib/swipe";
 
   const sortedDays = $derived(
     $activeSplit ? [...$activeSplit.days].sort((a, b) => a.orderIndex - b.orderIndex) : [],
@@ -31,24 +33,25 @@
     selectedDay ? [...selectedDay.blocks].sort((a, b) => a.orderIndex - b.orderIndex) : [],
   );
 
-  // Reset override when the active split changes
   $effect(() => {
     const splitId = $activeSplit?.id;
     if ($selectedDayOverride && $selectedDayOverride.splitId !== splitId) clearDayOverride();
   });
 
+  let slideDir = $state(1);
+
   function prev() {
+    slideDir = -1;
     if (!$activeSplit || sortedDays.length < 2) return;
     const idx = selectedIdx < 0 ? 0 : selectedIdx;
-    const newIdx = (idx - 1 + sortedDays.length) % sortedDays.length;
-    selectDayOverride($activeSplit.id, sortedDays[newIdx]!.id);
+    selectDayOverride($activeSplit.id, sortedDays[(idx - 1 + sortedDays.length) % sortedDays.length]!.id);
   }
 
   function next() {
+    slideDir = 1;
     if (!$activeSplit || sortedDays.length < 2) return;
     const idx = selectedIdx < 0 ? 0 : selectedIdx;
-    const newIdx = (idx + 1) % sortedDays.length;
-    selectDayOverride($activeSplit.id, sortedDays[newIdx]!.id);
+    selectDayOverride($activeSplit.id, sortedDays[(idx + 1) % sortedDays.length]!.id);
   }
 
   function dayLabel(idx: number, name?: string): string {
@@ -59,11 +62,12 @@
     if ($activeSplit) void goto(`/splits/${$activeSplit.id}`);
     else void goto("/splits");
   }
+
+  const swipe = createSwipeHandlers(next, prev);
 </script>
 
-<Card.Root data-tour="todays-plan">
+<Card.Root data-tour="todays-plan" {...swipe}>
   <Card.Header>
-    <!-- Title row — short fixed text on left, controls on right, never overflows -->
     <div class="flex items-center justify-between gap-2">
       <Card.Title>Today's plan</Card.Title>
       <div class="flex items-center gap-0.5 shrink-0">
@@ -89,7 +93,6 @@
       </div>
     </div>
 
-    <!-- Day label row — full width, free to truncate without competing with controls -->
     {#if selectedDay}
       <div class="flex items-center gap-1.5 mt-0.5 overflow-hidden">
         <Card.Description class="truncate min-w-0">
@@ -101,7 +104,6 @@
       </div>
     {/if}
 
-    <!-- Day position dots -->
     {#if sortedDays.length > 1}
       <div class="flex items-center gap-1 pt-1">
         {#each sortedDays as day, i (day.id)}
@@ -114,26 +116,32 @@
   </Card.Header>
 
   <Card.Content>
-    {#if blocks.length === 0}
-      <p class="text-sm text-muted-foreground">
-        {#if $activeSplit}
-          No exercises planned for this day.
+    <div class="overflow-hidden" use:animateHeight>
+    {#key selectedIdx}
+      <div in:fly={{ x: slideDir * 16, duration: 200, opacity: 0 }}>
+        {#if blocks.length === 0}
+          <p class="text-sm text-muted-foreground">
+            {#if $activeSplit}
+              No exercises planned for this day.
+            {:else}
+              Set up a split to see your plan here.
+            {/if}
+          </p>
         {:else}
-          Set up a split to see your plan here.
+          <ol class="flex flex-col gap-1">
+            {#each blocks.slice(0, 7) as block, i (block.id)}
+              <li class="text-sm flex items-center gap-2">
+                <span class="text-muted-foreground w-4 text-right shrink-0">{i + 1}.</span>
+                <span>{block.type === "strength" ? block.exerciseName : block.activityName}</span>
+              </li>
+            {/each}
+            {#if blocks.length > 7}
+              <li class="text-xs text-muted-foreground pl-6">+{blocks.length - 7} more</li>
+            {/if}
+          </ol>
         {/if}
-      </p>
-    {:else}
-      <ol class="flex flex-col gap-1">
-        {#each blocks.slice(0, 7) as block, i (block.id)}
-          <li class="text-sm flex items-center gap-2">
-            <span class="text-muted-foreground w-4 text-right shrink-0">{i + 1}.</span>
-            <span>{block.type === "strength" ? block.exerciseName : block.activityName}</span>
-          </li>
-        {/each}
-        {#if blocks.length > 7}
-          <li class="text-xs text-muted-foreground pl-6">+{blocks.length - 7} more</li>
-        {/if}
-      </ol>
-    {/if}
+      </div>
+    {/key}
+    </div>
   </Card.Content>
 </Card.Root>

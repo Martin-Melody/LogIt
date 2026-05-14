@@ -11,6 +11,7 @@
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import { getExerciseRepo } from "$lib/data/repoProvider";
+  import { activeSplit } from "$lib/stores/activeSplit.store";
 
   import { ArrowLeft, Plus, Trash, Check, X, GripVertical, Dumbbell, Timer } from "lucide-svelte";
   import { startSplitDayTour } from "$lib/tour/index";
@@ -112,6 +113,7 @@
       const touched = touchSplit(next);
       await saveSplit(touched);
       split = touched;
+      await activeSplit.load();
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to save";
     } finally {
