@@ -1,5 +1,6 @@
 import type { ExercisePatch } from "$lib/domain/exercise";
 import { getExerciseRepo, getSplitRepo } from "$lib/data/repoProvider";
+import { pushExercise } from "$lib/sync/syncService";
 
 /**
  * Updates an exercise and propagates the new name to any split blocks that
@@ -10,6 +11,7 @@ export async function updateExercise(id: string, patch: ExercisePatch): Promise<
   const splitRepo = getSplitRepo();
 
   const updated = await exerciseRepo.update(id, patch);
+  pushExercise(updated);
 
   if (!patch.name) return;
 

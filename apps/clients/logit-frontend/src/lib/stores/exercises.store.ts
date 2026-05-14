@@ -1,6 +1,7 @@
 import { writable } from "svelte/store";
 import type { Exercise } from "$lib/domain/exercise";
 import { getExerciseRepo } from "$lib/data/repoProvider";
+import { pushExercise } from "$lib/sync/syncService";
 
 type ExercisesState = {
   query: string;
@@ -34,7 +35,7 @@ function createExercisesStore() {
 
   async function create(name: string) {
     const ex = await getExerciseRepo().create(name);
-    // keep list fresh after create
+    pushExercise(ex);
     await refresh(name);
     return ex;
   }

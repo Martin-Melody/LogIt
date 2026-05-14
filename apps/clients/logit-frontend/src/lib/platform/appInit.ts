@@ -8,6 +8,7 @@ import { recentSessions } from "$lib/stores/recentSessions.store";
 import { splits } from "$lib/stores/splits.store";
 import { exercisesStore } from "$lib/stores/exercises.store";
 import { setupKeyboard } from "./keyboard";
+import { syncAll } from "$lib/sync/syncService";
 
 let didInit = false;
 
@@ -39,8 +40,21 @@ export async function appInit(): Promise<void> {
   try {
     await initRepos();
 
-    // Auth check runs in background — never blocks startup
-    authStore.init().catch(() => {});
+    // Auth check runs in background — never blocks startup; sync follows if authenticated
+    authStore.init()
+      .then(() => {
+        if (!authStore.isAuthenticated) return;
+        void syncAll();
+
+        // Periodic background sync
+        setInterval(() => { if (authStore.isAuthenticated) void syncAll(); }, 5 * 60 * 1000);
+
+        // Sync when the app returns to foreground (e.g. switching back on mobile)
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible" && authStore.isAuthenticated) void syncAll();
+        });
+      })
+      .catch(() => {});
 
     await rehydrateStores();
 

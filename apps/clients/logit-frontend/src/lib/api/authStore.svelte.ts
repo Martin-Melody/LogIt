@@ -5,6 +5,7 @@ import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId } from "$lib/data
 import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
+import { syncAll } from "$lib/sync/syncService";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
 async function switchActiveOwner(): Promise<void> {
@@ -34,12 +35,14 @@ function createAuthStore() {
     const serverUser = await apiClient.login(usernameOrEmail, password);
     user = serverUser;
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
+    void syncAll();
   }
 
   async function register(username: string, email: string, password: string, displayName: string) {
     const serverUser = await apiClient.register(username, email, password, displayName);
     user = serverUser;
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
+    void syncAll();
   }
 
   async function linkOrCreateLocalAccount(serverUser: AuthUser) {

@@ -1,5 +1,6 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
 import { finishSession, type WorkoutSession } from "$lib/domain/workout";
+import { pushSession } from "$lib/sync/syncService";
 
 export async function finishCurrentSession(
   session: WorkoutSession,
@@ -8,11 +9,10 @@ export async function finishCurrentSession(
 
   const finished = finishSession(session);
 
-  // Save finished session
   await repo.saveSession(finished);
-
-  // Draft no longer needed
   await repo.clearDraftSession();
+
+  pushSession(finished);
 
   return finished;
 }
