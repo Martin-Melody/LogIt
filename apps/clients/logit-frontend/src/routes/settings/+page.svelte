@@ -13,6 +13,7 @@
     Trash2,
     ChevronRight,
     Lock,
+    RefreshCw,
   } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
@@ -34,6 +35,9 @@
   import type { LocalAccount } from "$lib/data/localAccountRepo";
   import { setMode, userPrefersMode } from "mode-watcher";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { syncAll, lastSyncedAt } from "$lib/sync/syncService";
+  import { connectionStatus } from "$lib/api/connectionStatus.svelte";
+  import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import {
     getServerMode,
     setServerMode,
@@ -58,6 +62,28 @@
   import type { AnalyticsConfigView } from "$lib/usecases/progression/getAnalyticsConfig";
 
   const isDev = import.meta.env.DEV;
+
+  // --- Sync ---
+  let syncing = $state(false);
+
+  async function manualSync() {
+    if (syncing) return;
+    syncing = true;
+    try {
+      await syncAll();
+    } finally {
+      syncing = false;
+    }
+  }
+
+  function formatLastSynced(ms: number): string {
+    if (!ms) return "Never synced";
+    const diff = Date.now() - ms;
+    if (diff < 60_000) return "Just now";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+    return new Date(ms).toLocaleDateString();
+  }
 
   // --- Account ---
   let serverMode = $state<ServerMode>(getServerMode());
@@ -308,6 +334,7 @@
   onMount(() => {
     void loadProgression();
     void loadAnalytics();
+    if (authStore.isAuthenticated) connectionStatus.startPolling();
   });
 </script>
 
@@ -351,6 +378,19 @@
             <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "Logit cloud" : "Self-hosted"} · {authStore.user.tier}</p>
           </div>
         </div>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          disabled={syncing || serverMode === "offline"}
+          onclick={() => void manualSync()}>
+          <span class="flex items-center gap-2">
+            <RefreshCw class="h-3.5 w-3.5 {syncing ? 'animate-spin' : ''}" />
+            {syncing ? "Syncing…" : "Sync now"}
+          </span>
+          <span class="flex items-center gap-1.5 text-xs">
+            <ConnectionDot />
+            {formatLastSynced($lastSyncedAt)}
+          </span>
+        </button>
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onclick={() => void authStore.logout()}>
