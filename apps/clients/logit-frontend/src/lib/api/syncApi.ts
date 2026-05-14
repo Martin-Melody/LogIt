@@ -31,6 +31,7 @@ export type RemoteProfile = {
   weightUnit: "kg" | "lbs";
   blocksCollapsedByDefault: boolean;
   restDefaultsJson: string;
+  navConfigJson: string | null;
   updatedAtMs: number;
 };
 

@@ -559,7 +559,7 @@
       <Card.Title>Appearance</Card.Title>
       <Card.Description>Choose how the app looks.</Card.Description>
     </Card.Header>
-    <Card.Content>
+    <Card.Content class="flex flex-col gap-3">
       <div class="flex rounded border overflow-hidden text-sm w-fit">
         {#each [["system", "System"], ["light", "Light"], ["dark", "Dark"]] as ["system" | "light" | "dark", string][] as [value, label] (value)}
           <button
@@ -574,6 +574,14 @@
           </button>
         {/each}
       </div>
+      <button
+        type="button"
+        class="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onclick={() => goto("/settings/navbar")}
+      >
+        Customise navigation
+        <ChevronRight class="h-4 w-4 shrink-0" />
+      </button>
     </Card.Content>
   </Card.Root>
 

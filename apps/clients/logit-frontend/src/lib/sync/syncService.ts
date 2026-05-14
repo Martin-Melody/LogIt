@@ -198,6 +198,35 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
   syncApi.pushProfile(remoteProfile).catch(() => enqueue({ type: "profile", dto: remoteProfile }));
 }
 
+/** Called by navConfig.store when the user changes their nav layout. */
+export async function pushNavConfig(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const { get } = await import("svelte/store");
+    const [{ profile }, { getNavConfigJson }] = await Promise.all([
+      import("$lib/stores/profile.store"),
+      import("$lib/stores/navConfig.store"),
+    ]);
+    const p = get(profile);
+    const updatedAtMs = Date.now();
+    const remote: RemoteProfile = {
+      displayName: p.name,
+      bio: p.bio,
+      avatarDataUrl: p.avatarDataUrl ?? null,
+      height: p.height,
+      heightUnit: p.heightUnit,
+      weight: p.weight,
+      weightUnit: p.weightUnit,
+      blocksCollapsedByDefault: p.blocksCollapsedByDefault,
+      restDefaultsJson: JSON.stringify(p.restDefaults),
+      navConfigJson: getNavConfigJson(),
+      updatedAtMs,
+    };
+    setProfileUpdatedAtMs(updatedAtMs);
+    syncApi.pushProfile(remote).catch(() => enqueue({ type: "profile", dto: remote }));
+  } catch {}
+}
+
 export async function syncAll(): Promise<void> {
   // Flush any writes queued while offline before pulling, so the server has the
   // latest local state before we merge its response back.
@@ -239,6 +268,13 @@ export async function pullAndApplyProfile(): Promise<void> {
           restDefaultsJson: remote.restDefaultsJson,
         });
       }
+    }
+
+    if (remote.navConfigJson) {
+      try {
+        const { navConfig } = await import("$lib/stores/navConfig.store");
+        navConfig.applyRemote(JSON.parse(remote.navConfigJson));
+      } catch {}
     }
 
     let restDefaults: Record<string, number | undefined> = {};
