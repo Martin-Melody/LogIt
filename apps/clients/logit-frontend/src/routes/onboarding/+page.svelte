@@ -305,13 +305,10 @@
       </div>
 
       <div class="flex flex-col gap-3 mt-8">
-        <button type="button" class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
+        <button type="button" class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          disabled={!draft.name.trim()}
           onclick={() => void onProfileContinue()}>
           Continue
-        </button>
-        <button type="button" class="w-full py-2 text-sm text-muted-foreground"
-          onclick={() => onboarding.setStep(2)}>
-          Skip for now
         </button>
       </div>
     </div>

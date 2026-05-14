@@ -7,6 +7,18 @@
   import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
   import { advanceRotation, getScheduleMode } from "$lib/usecases/Splits/splitRotation";
   import { selectedDayOverride, clearDayOverride } from "$lib/stores/todaysPlan.store";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { lastSyncedAt } from "$lib/sync/syncService";
+
+  function formatSyncAge(ms: number): string {
+    if (ms === 0) return "never";
+    const diffMin = Math.floor((Date.now() - ms) / 60_000);
+    if (diffMin < 1) return "just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    return `${Math.floor(diffHr / 24)}d ago`;
+  }
 
   const hasDraft = $derived($currentSession !== null);
   const scheduledDay = $derived($activeSplit ? getTodaySplitDay($activeSplit) : null);
@@ -91,4 +103,10 @@
       </Button>
     {/if}
   </Card.Content>
+
+  {#if authStore.isAuthenticated}
+    <Card.Footer class="pt-0">
+      <p class="text-xs text-muted-foreground">Synced {formatSyncAge($lastSyncedAt)}</p>
+    </Card.Footer>
+  {/if}
 </Card.Root>

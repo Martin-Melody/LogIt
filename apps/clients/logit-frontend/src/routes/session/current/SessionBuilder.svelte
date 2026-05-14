@@ -161,9 +161,11 @@
       void recentSessions.refresh(5);
 
       if (sessionSnapshot) {
-        for (const ex of getExercises(sessionSnapshot)) {
-          void refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName });
-        }
+        await Promise.all(
+          getExercises(sessionSnapshot).map((ex) =>
+            refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName }),
+          ),
+        );
       }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to finish workout";
