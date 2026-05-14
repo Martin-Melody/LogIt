@@ -41,6 +41,13 @@ export function pushSession(session: WorkoutSession): void {
     .catch(() => {});
 }
 
+export function pushDeletedSession(id: string): void {
+  if (!apiClient.isAuthenticated()) return;
+  syncApi
+    .pushSessions([{ id, startedAtMs: 0, dataJson: null, deletedAtMs: Date.now() }])
+    .catch(() => {});
+}
+
 export async function pullAndMergeSessions(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
@@ -54,9 +61,13 @@ export async function pullAndMergeSessions(): Promise<void> {
     const existingIds = new Set(existing.map((s) => s.id));
 
     for (const entry of remote) {
+      if (entry.deletedAtMs) {
+        if (existingIds.has(entry.id)) await repo.deleteSession(entry.id).catch(() => {});
+        continue;
+      }
       if (existingIds.has(entry.id)) continue;
       try {
-        const session: WorkoutSession = JSON.parse(entry.dataJson);
+        const session: WorkoutSession = JSON.parse(entry.dataJson!);
         await repo.saveSession(session);
       } catch {}
     }
@@ -71,6 +82,13 @@ export function pushSplit(split: WorkoutSplit): void {
   if (!apiClient.isAuthenticated()) return;
   syncApi
     .pushSplits([{ id: split.id, updatedAtMs: split.updatedAtMs, dataJson: JSON.stringify(split) }])
+    .catch(() => {});
+}
+
+export function pushDeletedSplit(id: string): void {
+  if (!apiClient.isAuthenticated()) return;
+  syncApi
+    .pushSplits([{ id, updatedAtMs: 0, dataJson: null, deletedAtMs: Date.now() }])
     .catch(() => {});
 }
 
@@ -98,10 +116,14 @@ export async function pullAndMergeSplits(): Promise<void> {
     const localMap = new Map(existing.map((s) => [s.id, s.updatedAtMs]));
 
     for (const entry of remote) {
+      if (entry.deletedAtMs) {
+        if (localMap.has(entry.id)) await repo.deleteSplit(entry.id).catch(() => {});
+        continue;
+      }
       const localUpdatedAtMs = localMap.get(entry.id) ?? -1;
       if (entry.updatedAtMs <= localUpdatedAtMs) continue;
       try {
-        const split: WorkoutSplit = JSON.parse(entry.dataJson);
+        const split: WorkoutSplit = JSON.parse(entry.dataJson!);
         await repo.saveSplit(split);
       } catch {}
     }
@@ -117,6 +139,13 @@ export function pushExercise(exercise: Exercise): void {
   if (exercise.isCore) return;
   syncApi
     .pushExercises([{ id: exercise.id, createdAtMs: exercise.createdAtMs, dataJson: JSON.stringify(exercise) }])
+    .catch(() => {});
+}
+
+export function pushDeletedExercise(id: string): void {
+  if (!apiClient.isAuthenticated()) return;
+  syncApi
+    .pushExercises([{ id, createdAtMs: 0, dataJson: null, deletedAtMs: Date.now() }])
     .catch(() => {});
 }
 
@@ -144,9 +173,13 @@ export async function pullAndMergeExercises(): Promise<void> {
     const existingIds = new Set(existing.map((e) => e.id));
 
     for (const entry of remote) {
+      if (entry.deletedAtMs) {
+        if (existingIds.has(entry.id)) await repo.remove(entry.id).catch(() => {});
+        continue;
+      }
       if (existingIds.has(entry.id)) continue;
       try {
-        const exercise: Exercise = JSON.parse(entry.dataJson);
+        const exercise: Exercise = JSON.parse(entry.dataJson!);
         await repo.saveExercise(exercise);
       } catch {}
     }
