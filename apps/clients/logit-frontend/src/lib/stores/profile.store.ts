@@ -2,6 +2,7 @@ import { browser } from "$app/environment";
 import { writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { pushProfile, setProfileUpdatedAtMs } from "$lib/sync/syncService";
+import { getNavConfigJson } from "$lib/stores/navConfig.store";
 import type { RemoteProfile } from "$lib/api/syncApi";
 
 export type UserProfile = {
@@ -132,6 +133,7 @@ function createProfileStore() {
             weightUnit: next.weightUnit,
             blocksCollapsedByDefault: next.blocksCollapsedByDefault,
             restDefaultsJson: JSON.stringify(next.restDefaults),
+            navConfigJson: getNavConfigJson(),
             updatedAtMs,
           };
           pushProfile(remote);
