@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { SlidersHorizontal } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import { homeConfig } from "$lib/stores/homeConfig.store";
@@ -8,6 +8,9 @@
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
   import { startHomeTour } from "$lib/tour/index";
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { connectionStatus } from "$lib/api/connectionStatus.svelte";
+  import ConnectionDot from "$lib/components/ConnectionDot.svelte";
 
   let widgets = $state<RuntimeWidgetDefinition[]>(
     localWidgetRegistry.list().map((widget) => ({
@@ -34,26 +37,35 @@
       widgets = loaded;
     });
 
+    if (authStore.isAuthenticated) connectionStatus.startPolling();
+
     // Small delay so widgets render before the tour tries to find them
     setTimeout(() => {
       if ($onboarding.completed) startHomeTour();
     }, 400);
   });
+
+  onDestroy(() => connectionStatus.stopPolling());
 </script>
 
 <div class="flex flex-col gap-2 p-3 pb-24">
   <div class="flex items-center justify-between">
     <h1 class="text-lg font-semibold">Home</h1>
-    <Button
-      variant="ghost"
-      size="icon"
-      class="h-8 w-8"
-      aria-label="Customise home"
-      data-tour="home-customize"
-      onclick={() => void goto("/home/customize")}
-    >
-      <SlidersHorizontal class="h-4 w-4" />
-    </Button>
+    <div class="flex items-center gap-2">
+      {#if authStore.isAuthenticated}
+        <ConnectionDot />
+      {/if}
+      <Button
+        variant="ghost"
+        size="icon"
+        class="h-8 w-8"
+        aria-label="Customise home"
+        data-tour="home-customize"
+        onclick={() => void goto("/home/customize")}
+      >
+        <SlidersHorizontal class="h-4 w-4" />
+      </Button>
+    </div>
   </div>
 
   {#each activeWidgets as widget (widget.id)}
