@@ -8,5 +8,6 @@ public class SyncedSplit
     public User User { get; set; } = null!;
     public long UpdatedAtMs { get; set; }
     public string DataJson { get; set; } = string.Empty;
+    public long? DeletedAtMs { get; set; }
     public DateTime SyncedAt { get; set; } = DateTime.UtcNow;
 }

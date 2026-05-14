@@ -39,25 +39,41 @@ public static class SyncEndpoints
             return Results.NoContent();
 
         var clientIds = req.Sessions.Select(s => s.Id).ToList();
-        var existingList = await db.SyncedWorkoutSessions
+        var existing = await db.SyncedWorkoutSessions
             .Where(s => s.UserId == userId && clientIds.Contains(s.ClientId))
-            .Select(s => s.ClientId)
             .ToListAsync();
-        var existing = existingList.ToHashSet();
+        var existingMap = existing.ToDictionary(s => s.ClientId);
 
-        var toInsert = req.Sessions
-            .Where(s => !existing.Contains(s.Id))
-            .Select(s => new SyncedWorkoutSession
+        var toInsert = new List<SyncedWorkoutSession>();
+
+        foreach (var dto in req.Sessions)
+        {
+            if (existingMap.TryGetValue(dto.Id, out var stored))
             {
-                ClientId = s.Id,
-                UserId = userId,
-                StartedAtMs = s.StartedAtMs,
-                DataJson = s.DataJson,
-            });
+                if (dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                {
+                    stored.DeletedAtMs = dto.DeletedAtMs;
+                    stored.DataJson = string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                toInsert.Add(new SyncedWorkoutSession
+                {
+                    ClientId = dto.Id,
+                    UserId = userId,
+                    StartedAtMs = dto.StartedAtMs,
+                    DataJson = dto.DataJson ?? string.Empty,
+                    DeletedAtMs = dto.DeletedAtMs,
+                });
+            }
+        }
 
-        db.SyncedWorkoutSessions.AddRange(toInsert);
+        if (toInsert.Count > 0)
+            db.SyncedWorkoutSessions.AddRange(toInsert);
+
         await db.SaveChangesAsync();
-
         return Results.NoContent();
     }
 
@@ -69,9 +85,9 @@ public static class SyncEndpoints
         var userId = caller.GetUserId();
 
         var sessions = await db.SyncedWorkoutSessions
-            .Where(s => s.UserId == userId && s.StartedAtMs > since)
+            .Where(s => s.UserId == userId && (s.StartedAtMs > since || (s.DeletedAtMs != null && s.DeletedAtMs > since)))
             .OrderBy(s => s.StartedAtMs)
-            .Select(s => new SessionDto(s.ClientId, s.StartedAtMs, s.DataJson))
+            .Select(s => new SessionDto(s.ClientId, s.StartedAtMs, s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs))
             .ToListAsync();
 
         return Results.Ok(new { sessions });
@@ -101,10 +117,16 @@ public static class SyncEndpoints
         {
             if (existingMap.TryGetValue(dto.Id, out var stored))
             {
-                if (dto.UpdatedAtMs > stored.UpdatedAtMs)
+                if (dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                {
+                    stored.DeletedAtMs = dto.DeletedAtMs;
+                    stored.DataJson = string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+                else if (!dto.DeletedAtMs.HasValue && dto.UpdatedAtMs > stored.UpdatedAtMs)
                 {
                     stored.UpdatedAtMs = dto.UpdatedAtMs;
-                    stored.DataJson = dto.DataJson;
+                    stored.DataJson = dto.DataJson ?? string.Empty;
                     stored.SyncedAt = DateTime.UtcNow;
                 }
             }
@@ -115,7 +137,8 @@ public static class SyncEndpoints
                     ClientId = dto.Id,
                     UserId = userId,
                     UpdatedAtMs = dto.UpdatedAtMs,
-                    DataJson = dto.DataJson,
+                    DataJson = dto.DataJson ?? string.Empty,
+                    DeletedAtMs = dto.DeletedAtMs,
                 });
             }
         }
@@ -135,9 +158,9 @@ public static class SyncEndpoints
         var userId = caller.GetUserId();
 
         var splits = await db.SyncedSplits
-            .Where(s => s.UserId == userId && s.UpdatedAtMs > since)
+            .Where(s => s.UserId == userId && (s.UpdatedAtMs > since || (s.DeletedAtMs != null && s.DeletedAtMs > since)))
             .OrderBy(s => s.UpdatedAtMs)
-            .Select(s => new SplitDto(s.ClientId, s.UpdatedAtMs, s.DataJson))
+            .Select(s => new SplitDto(s.ClientId, s.UpdatedAtMs, s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs))
             .ToListAsync();
 
         return Results.Ok(new { splits });
@@ -156,25 +179,41 @@ public static class SyncEndpoints
             return Results.NoContent();
 
         var clientIds = req.Exercises.Select(e => e.Id).ToList();
-        var existingList = await db.SyncedExercises
+        var existing = await db.SyncedExercises
             .Where(e => e.UserId == userId && clientIds.Contains(e.ClientId))
-            .Select(e => e.ClientId)
             .ToListAsync();
-        var existing = existingList.ToHashSet();
+        var existingMap = existing.ToDictionary(e => e.ClientId);
 
-        var toInsert = req.Exercises
-            .Where(e => !existing.Contains(e.Id))
-            .Select(e => new SyncedExercise
+        var toInsert = new List<SyncedExercise>();
+
+        foreach (var dto in req.Exercises)
+        {
+            if (existingMap.TryGetValue(dto.Id, out var stored))
             {
-                ClientId = e.Id,
-                UserId = userId,
-                CreatedAtMs = e.CreatedAtMs,
-                DataJson = e.DataJson,
-            });
+                if (dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                {
+                    stored.DeletedAtMs = dto.DeletedAtMs;
+                    stored.DataJson = string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                toInsert.Add(new SyncedExercise
+                {
+                    ClientId = dto.Id,
+                    UserId = userId,
+                    CreatedAtMs = dto.CreatedAtMs,
+                    DataJson = dto.DataJson ?? string.Empty,
+                    DeletedAtMs = dto.DeletedAtMs,
+                });
+            }
+        }
 
-        db.SyncedExercises.AddRange(toInsert);
+        if (toInsert.Count > 0)
+            db.SyncedExercises.AddRange(toInsert);
+
         await db.SaveChangesAsync();
-
         return Results.NoContent();
     }
 
@@ -186,9 +225,9 @@ public static class SyncEndpoints
         var userId = caller.GetUserId();
 
         var exercises = await db.SyncedExercises
-            .Where(e => e.UserId == userId && e.CreatedAtMs > since)
+            .Where(e => e.UserId == userId && (e.CreatedAtMs > since || (e.DeletedAtMs != null && e.DeletedAtMs > since)))
             .OrderBy(e => e.CreatedAtMs)
-            .Select(e => new ExerciseDto(e.ClientId, e.CreatedAtMs, e.DataJson))
+            .Select(e => new ExerciseDto(e.ClientId, e.CreatedAtMs, e.DeletedAtMs == null ? e.DataJson : null, e.DeletedAtMs))
             .ToListAsync();
 
         return Results.Ok(new { exercises });
@@ -244,13 +283,13 @@ public static class SyncEndpoints
 }
 
 public record PushSessionsRequest(List<SessionDto> Sessions);
-public record SessionDto(string Id, long StartedAtMs, string DataJson);
+public record SessionDto(string Id, long StartedAtMs, string? DataJson, long? DeletedAtMs = null);
 
 public record PushSplitsRequest(List<SplitDto> Splits);
-public record SplitDto(string Id, long UpdatedAtMs, string DataJson);
+public record SplitDto(string Id, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);
 
 public record PushExercisesRequest(List<ExerciseDto> Exercises);
-public record ExerciseDto(string Id, long CreatedAtMs, string DataJson);
+public record ExerciseDto(string Id, long CreatedAtMs, string? DataJson, long? DeletedAtMs = null);
 
 public record ProfileDto(
     string DisplayName,

@@ -7,6 +7,7 @@
   import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { updateExercise } from "$lib/usecases/updateExercise";
+  import { pushDeletedExercise } from "$lib/sync/syncService";
   type Filter = "all" | "core" | "mine";
 
   let filter = $state<Filter>("all");
@@ -88,7 +89,9 @@
     if (!editTarget) return;
     saving = true;
     try {
-      await repo.remove(editTarget.id);
+      const removedId = editTarget.id;
+      await repo.remove(removedId);
+      pushDeletedExercise(removedId);
       drawerOpen = false;
       allItems = await repo.list();
     } finally {

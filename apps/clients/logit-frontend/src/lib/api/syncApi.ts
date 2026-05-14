@@ -3,19 +3,22 @@ import { apiClient } from "./client";
 export type RemoteSession = {
   id: string;
   startedAtMs: number;
-  dataJson: string;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
 };
 
 export type RemoteSplit = {
   id: string;
   updatedAtMs: number;
-  dataJson: string;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
 };
 
 export type RemoteExercise = {
   id: string;
   createdAtMs: number;
-  dataJson: string;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
 };
 
 export type RemoteProfile = {
