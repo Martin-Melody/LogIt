@@ -183,6 +183,21 @@
     }
   }
 
+  async function discardSession() {
+    if (ui.finishing) return;
+    ui.finishing = true;
+    currentSession.beginTransition();
+    try {
+      await goto("/");
+      await getWorkoutRepo().clearDraftSession();
+      currentSession.clear();
+    } catch (e) {
+      ui.error = e instanceof Error ? e.message : "Failed to discard workout";
+      ui.finishing = false;
+      currentSession.endTransition();
+    }
+  }
+
   // ── Block-level drag-to-reorder ───────────────────────────────────────────
 
   let blockDragId = $state<string | null>(null);
@@ -408,9 +423,10 @@
       class="fixed left-0 right-0 bottom-0 border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
       <FinishWorkoutCard
-        canFinish={!!$currentSession && !$currentSession.endedAtMs}
+        canFinish={!!$currentSession && !$currentSession.endedAtMs && getExercises($currentSession).length > 0}
         saving={ui.saving || ui.finishing}
         onFinish={showRecap}
+        onDiscard={discardSession}
       />
     </div>
   {/if}

@@ -83,7 +83,7 @@ const PREFERENCES_SCHEMA: AlgorithmPreferencesField[] = [
 ];
 
 const DEFAULT_STATE: LinearState = {
-  workingWeight: 20,
+  workingWeight: 0,
   failedAttempts: 0,
   increment: 2.5,
   repRange: [5, 8],
