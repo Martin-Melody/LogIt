@@ -6,17 +6,9 @@
   import * as Card from "$lib/components/ui/card";
   import * as Chart from "$lib/components/ui/chart";
   import { getProgressData } from "$lib/usecases/progression/getProgressData";
-  import { getExerciseAnalytics } from "$lib/usecases/progression/getExerciseAnalytics";
+  import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "$lib/usecases/progression/getExerciseAnalytics";
   import type { ExerciseProgressData } from "$lib/usecases/progression/getProgressData";
-  import type { AnalyticsOutput, AnalyticsSeries } from "$lib/domain/analytics";
-
-  type SeriesId = "max_weight" | "total_volume" | "estimated_1rm";
-
-  const SERIES_OPTIONS: { id: SeriesId; label: string; unit: string }[] = [
-    { id: "max_weight", label: "Max weight", unit: "kg" },
-    { id: "estimated_1rm", label: "Est. 1RM", unit: "kg" },
-    { id: "total_volume", label: "Volume", unit: "kg" },
-  ];
+  import type { AnalyticsSeries } from "$lib/domain/analytics";
 
   const chartConfig = {
     value: { label: "Value", color: "var(--chart-1)" },
@@ -30,8 +22,11 @@
 
   let exercises = $state<ExerciseProgressData[]>([]);
   let selected = $state<string | null>(null);
-  let analytics = $state<AnalyticsOutput | null>(null);
-  let activeSeries = $state<SeriesId>("max_weight");
+  let analyticsResult = $state<ExerciseAnalyticsResult | null>(null);
+  let activeSeries = $state<string>("");
+
+  const analytics = $derived(analyticsResult?.output ?? null);
+  const metricDefs = $derived(analyticsResult?.metricDefinitions ?? []);
 
   const selectedExercise = $derived(
     exercises.find((e) => e.exerciseName === selected) ?? null,
@@ -62,17 +57,14 @@
     return "flat";
   }
 
-  function metricValue(id: string): string {
-    return analytics?.metrics.find((m) => m.id === id)?.formatted ?? "—";
-  }
-
   async function selectExercise(name: string) {
     selected = name;
-    analytics = null;
-    activeSeries = "max_weight";
+    analyticsResult = null;
+    activeSeries = "";
     ui.detailLoading = true;
     try {
-      analytics = await getExerciseAnalytics({ name });
+      analyticsResult = await getExerciseAnalytics({ name });
+      activeSeries = analyticsResult?.output.series[0]?.metricId ?? "";
     } finally {
       ui.detailLoading = false;
     }
@@ -143,38 +135,31 @@
           {#if ui.detailLoading}
             <p class="text-sm text-muted-foreground py-6 text-center">Loading…</p>
           {:else if analytics}
-            <!-- Metrics grid -->
-            <div class="grid grid-cols-4 gap-2">
-              <div class="text-center">
-                <p class="text-base font-semibold tabular-nums">{metricValue("max_weight")}</p>
-                <p class="text-xs text-muted-foreground mt-0.5">Best</p>
-              </div>
-              <div class="text-center">
-                <p class="text-base font-semibold tabular-nums">{metricValue("estimated_1rm")}</p>
-                <p class="text-xs text-muted-foreground mt-0.5">Est. 1RM</p>
-              </div>
-              <div class="text-center">
-                <p class="text-base font-semibold tabular-nums">{metricValue("total_sessions")}</p>
-                <p class="text-xs text-muted-foreground mt-0.5">Sessions</p>
-              </div>
-              <div class="text-center">
-                <p class="text-base font-semibold tabular-nums">{metricValue("total_volume")}</p>
-                <p class="text-xs text-muted-foreground mt-0.5">Volume</p>
-              </div>
-            </div>
-
-            <!-- Series switcher -->
-            <div class="flex rounded border overflow-hidden text-xs self-start">
-              {#each SERIES_OPTIONS as opt (opt.id)}
-                <button
-                  type="button"
-                  class="px-3 py-1.5 transition-colors {activeSeries === opt.id ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                  onclick={() => (activeSeries = opt.id)}
-                >
-                  {opt.label}
-                </button>
+            <!-- Metrics grid — rendered from whatever the algorithm returns -->
+            <div class="grid gap-2" style="grid-template-columns: repeat({Math.min(analytics.metrics.length, 4)}, 1fr)">
+              {#each analytics.metrics as metric (metric.id)}
+                {@const def = metricDefs.find((d) => d.id === metric.id)}
+                <div class="text-center">
+                  <p class="text-base font-semibold tabular-nums">{metric.formatted ?? metric.value}</p>
+                  <p class="text-xs text-muted-foreground mt-0.5">{def?.label ?? metric.id}</p>
+                </div>
               {/each}
             </div>
+
+            <!-- Series switcher — only shown when more than one series available -->
+            {#if analytics.series.length > 1}
+              <div class="flex rounded border overflow-hidden text-xs self-start">
+                {#each analytics.series as s (s.metricId)}
+                  <button
+                    type="button"
+                    class="px-3 py-1.5 transition-colors {activeSeries === s.metricId ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+                    onclick={() => (activeSeries = s.metricId)}
+                  >
+                    {s.label}
+                  </button>
+                {/each}
+              </div>
+            {/if}
 
             <!-- Chart -->
             {#if chartData.length >= 2}
