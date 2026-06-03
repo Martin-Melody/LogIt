@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
+  import { Search, X } from "lucide-svelte";
 
   import { recentSessions } from "$lib/stores/recentSessions.store";
   import { durationMs, formatDuration } from "$lib/domain/time";
   import { getTopSetHighlight, getExercises } from "$lib/domain/workout";
 
   const ui = $state({ loading: true, error: null as string | null });
+  let query = $state("");
 
   function dateLabel(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, {
@@ -16,7 +18,7 @@
     });
   }
 
-  const summaries = $derived(
+  const allSummaries = $derived(
     ($recentSessions ?? []).map((s) => {
       const ended = s.endedAtMs ?? s.startedAtMs;
       const dur = s.endedAtMs ? durationMs(s.startedAtMs, s.endedAtMs) : 0;
@@ -30,6 +32,16 @@
       };
     }),
   );
+
+  const summaries = $derived.by(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return allSummaries;
+    return allSummaries.filter(
+      (s) =>
+        s.dateLabel.toLowerCase().includes(q) ||
+        s.topSet?.toLowerCase().includes(q),
+    );
+  });
 
   onMount(async () => {
     ui.loading = true;
@@ -49,6 +61,26 @@
     <h1 class="text-base font-semibold">Sessions</h1>
   </div>
 
+  <div class="relative px-3 py-2 border-b border-border">
+    <Search class="absolute left-6 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+    <input
+      type="text"
+      placeholder="Search by date or exercise…"
+      bind:value={query}
+      class="w-full rounded border border-border bg-background pl-8 pr-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+    />
+    {#if query}
+      <button
+        type="button"
+        class="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        onclick={() => (query = "")}
+        aria-label="Clear search"
+      >
+        <X class="h-3.5 w-3.5" />
+      </button>
+    {/if}
+  </div>
+
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
   {:else if ui.error}
@@ -63,7 +95,9 @@
       </button>
     </div>
   {:else if summaries.length === 0}
-    <p class="px-3 py-8 text-sm text-muted-foreground text-center">No sessions yet.</p>
+    <p class="px-3 py-8 text-sm text-muted-foreground text-center">
+      {query.trim() ? "No sessions match your search." : "No sessions yet."}
+    </p>
   {:else}
     <ul class="divide-y divide-border">
       {#each summaries as s (s.id)}

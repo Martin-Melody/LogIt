@@ -9,7 +9,7 @@ type LinearState = {
 };
 
 const DEFAULT_STATE: LinearState = {
-  workingWeight: 20,
+  workingWeight: 0,
   failedAttempts: 0,
   increment: 2.5,
   repRange: [5, 8],
@@ -193,7 +193,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   } else if (anyMissedFloor) {
     failedAttempts += 1;
     if (failedAttempts >= DELOAD_THRESHOLD) {
-      nextWeight = Math.max(state.workingWeight * DELOAD_FACTOR, DEFAULT_STATE.workingWeight);
+      nextWeight = state.workingWeight * DELOAD_FACTOR;
       failedAttempts = 0;
     }
   }
