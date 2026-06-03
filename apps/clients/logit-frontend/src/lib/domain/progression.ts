@@ -2,6 +2,21 @@ import type { SetEntry } from "$lib/domain/workout";
 import type { PlannedTargets } from "$lib/domain/WorkoutSplit";
 import type { MuscleGroup } from "$lib/domain/exercise";
 
+export type AlgorithmPreferencesField = {
+  key: string;
+  label: string;
+  description?: string;
+  type: "number" | "boolean" | "select" | "range";
+  default: unknown;
+  // number / range
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  // select
+  options?: { value: string | number; label: string }[];
+};
+
 export type ExerciseHistoryEntry = {
   sessionId: string;
   performedAtMs: number;
@@ -23,12 +38,15 @@ export type PrecedingExercise = {
 };
 
 export type ProgressionInput = {
-  exercise: { id?: string; name: string; primaryMuscles?: MuscleGroup[]; secondaryMuscles?: MuscleGroup[] };
+  exercise: { id?: string; name: string; primaryMuscles?: MuscleGroup[]; secondaryMuscles?: MuscleGroup[]; exerciseType?: import("$lib/domain/exercise").ExerciseType };
   history: ExerciseHistoryEntry[]; // most recent first
   state: unknown; // algorithm-owned, opaque to the app
+  userPreferences: unknown; // user-configured per-algorithm prefs, schema defined by the algorithm
   plannedTargets?: import("$lib/domain/WorkoutSplit").PlannedTargets;
   sessionContext?: {
     precedingExercises: PrecedingExercise[];
+    timeBudgetMs?: number;
+    avgExerciseDurationMs?: Record<string, number>;
   };
 };
 
@@ -44,6 +62,9 @@ export type ProgressionOutput = {
   nextState: unknown;
   label?: string;
   notes?: string;
+  // "summary": render sets collapsed as e.g. "3×5-8 @ 20kg". "block": show each set as its own row.
+  // Algorithms that return uniform sets should omit this or use "summary"; varied prescriptions use "block".
+  displayMode?: "summary" | "block";
 };
 
 export type ProgressionAlgorithmMeta = {
@@ -55,6 +76,8 @@ export type ProgressionAlgorithmMeta = {
 
 export type ProgressionAlgorithm = ProgressionAlgorithmMeta & {
   defaultState: unknown;
+  defaultPreferences?: unknown; // used as initial values when no stored prefs exist
+  preferencesSchema?: AlgorithmPreferencesField[]; // if present, app renders a settings screen for this algorithm
   suggest(input: ProgressionInput): ProgressionOutput;
 };
 

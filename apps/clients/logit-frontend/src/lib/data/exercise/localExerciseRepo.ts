@@ -1,5 +1,5 @@
 import { browser } from "$app/environment";
-import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
+import type { Exercise, ExercisePatch, ExerciseType } from "$lib/domain/exercise";
 import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
 import { createId } from "$lib/domain/ids";
 
@@ -56,6 +56,7 @@ function readCustom(): Exercise[] {
       ...e,
       primaryMuscles: e.primaryMuscles ?? [],
       secondaryMuscles: e.secondaryMuscles ?? [],
+      exerciseType: e.exerciseType ?? "normal",
     }));
   } catch {
     return [];
@@ -111,7 +112,7 @@ export function createLocalExerciseRepo(): ExerciseRepo {
       return all().find((e) => e.id === id) ?? null;
     },
 
-    async create(name: string) {
+    async create(name: string, exerciseType: ExerciseType = "normal") {
       const trimmed = name.trim();
       if (!trimmed) throw new Error("Exercise name cannot be empty.");
 
@@ -127,25 +128,28 @@ export function createLocalExerciseRepo(): ExerciseRepo {
         createdAtMs: Date.now(),
         primaryMuscles: [],
         secondaryMuscles: [],
+        exerciseType,
       };
       writeCustom([ex, ...custom]);
       return ex;
     },
 
     async update(id: string, patch: ExercisePatch) {
-      // Core exercises can only have their notes updated (name is locked)
+      // Core exercises: notes and exerciseType can be overridden via an overlay
       const coreIdx = CORE_EXERCISES.findIndex((e) => e.id === id);
       if (coreIdx !== -1) {
-        // Notes on core exercises are stored in custom list as an overlay
         const custom = readCustom();
         const overlayIdx = custom.findIndex((e) => e.id === id);
-        if (patch.notes !== undefined) {
+        const hasOverridableField = patch.notes !== undefined || patch.exerciseType !== undefined;
+        if (hasOverridableField) {
+          const base = { ...CORE_EXERCISES[coreIdx]! };
           if (overlayIdx !== -1) {
-            custom[overlayIdx] = { ...custom[overlayIdx]!, notes: patch.notes };
+            const merged = { ...custom[overlayIdx]!, ...patch };
+            custom[overlayIdx] = merged;
             writeCustom(custom);
-            return { ...CORE_EXERCISES[coreIdx]!, notes: patch.notes };
+            return merged;
           } else {
-            const overlay: Exercise = { ...CORE_EXERCISES[coreIdx]!, notes: patch.notes };
+            const overlay: Exercise = { ...base, ...patch };
             writeCustom([overlay, ...custom]);
             return overlay;
           }

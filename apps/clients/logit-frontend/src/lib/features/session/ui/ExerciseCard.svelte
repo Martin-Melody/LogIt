@@ -179,9 +179,19 @@
   </div>
 
   {#if !collapsed && suggestion && suggestion.sets.length > 0}
-    <p class="px-3 pb-1.5 text-xs text-muted-foreground -mt-1">
-      Target: {formatTarget(suggestion)}
-    </p>
+    {#if suggestion.displayMode === "block"}
+      {#if suggestion.label}
+        <p class="px-3 pb-1.5 text-xs text-muted-foreground/60 -mt-1">{suggestion.label}</p>
+      {/if}
+    {:else}
+      <!-- Summary mode (default) -->
+      <p class="px-3 pb-1.5 text-xs text-muted-foreground -mt-1">
+        Target: {formatTarget(suggestion)}
+      </p>
+    {/if}
+    {#if suggestion.notes}
+      <p class="px-3 pb-1.5 text-xs text-amber-600 dark:text-amber-400 -mt-1">{suggestion.notes}</p>
+    {/if}
   {/if}
 </div>
 

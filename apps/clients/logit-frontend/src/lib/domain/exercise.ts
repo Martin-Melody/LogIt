@@ -11,6 +11,8 @@ export type MuscleGroup =
   | "core"
   | "forearms";
 
+export type ExerciseType = "normal" | "assisted" | "bodyweight";
+
 export type Exercise = {
   id: string;
   name: string;
@@ -19,6 +21,7 @@ export type Exercise = {
   createdAtMs: number;
   primaryMuscles: MuscleGroup[];
   secondaryMuscles: MuscleGroup[];
+  exerciseType?: ExerciseType;
 };
 
-export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles">>;
+export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles" | "exerciseType">>;
