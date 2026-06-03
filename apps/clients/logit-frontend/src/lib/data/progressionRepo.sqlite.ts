@@ -96,5 +96,25 @@ export function createSqliteProgressionRepo(): ProgressionRepo {
       const db = getDb();
       await db.run(`DELETE FROM progression_states WHERE owner_id = ?`, [owner()]);
     },
+
+    async getAlgorithmPreferences(algorithmId: string): Promise<unknown> {
+      const db = getDb();
+      const res = await db.query(
+        `SELECT data FROM algorithm_preferences WHERE owner_id = ? AND algorithm_id = ?`,
+        [owner(), algorithmId],
+      );
+      const row = res.values?.[0] as { data: string } | undefined;
+      if (!row) return null;
+      try { return JSON.parse(row.data); } catch { return null; }
+    },
+
+    async setAlgorithmPreferences(algorithmId: string, prefs: unknown): Promise<void> {
+      const db = getDb();
+      await db.run(
+        `INSERT INTO algorithm_preferences(owner_id, algorithm_id, data) VALUES(?, ?, ?)
+         ON CONFLICT(owner_id, algorithm_id) DO UPDATE SET data = excluded.data`,
+        [owner(), algorithmId, JSON.stringify(prefs)],
+      );
+    },
   };
 }

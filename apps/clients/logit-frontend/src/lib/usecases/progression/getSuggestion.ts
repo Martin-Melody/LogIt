@@ -114,10 +114,14 @@ export async function getSuggestion(
     }
   }
 
+  const storedPrefs = await progressionRepo.getAlgorithmPreferences(config.algorithmId);
+  const userPreferences = storedPrefs ?? algorithm.defaultPreferences ?? {};
+
   return algorithm.suggest({
     exercise: exerciseWithMuscles,
     history,
     state,
+    userPreferences,
     plannedTargets,
     sessionContext,
   });
