@@ -505,3 +505,97 @@ test.describe("exercise type — assisted", () => {
     await expect(page.getByText(/More assist next: 22\.5kg/)).toBeVisible({ timeout: 5_000 });
   });
 });
+
+// ── Analytics — exercise type and excluded sessions ───────────────────────────
+
+async function goToProgress(page: Page, exerciseName: string) {
+  await page.goto("/progress");
+  await page.waitForLoadState("networkidle");
+  // Click the exercise in the list if it's not already auto-selected
+  const btn = page.getByRole("button", { name: exerciseName, exact: false });
+  if (await btn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await btn.click();
+    await page.waitForLoadState("networkidle");
+  }
+}
+
+async function seedHistory(page: Page, opts: { history: object[]; exercises?: object[] }) {
+  await page.addInitScript((o) => {
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, session: true, splits: true }));
+    localStorage.setItem("logit:progression:config:v1", JSON.stringify({ algorithmId: "linear-progression" }));
+    localStorage.setItem("logit:analytics:config:v1", JSON.stringify({ analyticsId: "basic-analytics" }));
+    localStorage.setItem("logit:sessions:v1", JSON.stringify(o.history));
+    if (o.exercises) {
+      localStorage.setItem("logit:exercises:custom", JSON.stringify(o.exercises));
+    }
+  }, opts);
+}
+
+test.describe("analytics — excluded sessions", () => {
+  test("excluded session is not counted in analytics", async ({ page }) => {
+    const EXERCISE_ID = "ex_core_bench";
+    // Two sessions: one normal at 100kg, one excluded at 120kg.
+    // Analytics should only see the 100kg session → max weight shown as 100kg.
+    const sets100 = [makeSet("s1", 0, 6, 100), makeSet("s2", 1, 6, 100), makeSet("s3", 2, 6, 100)];
+    const sets120 = [makeSet("s4", 0, 6, 120), makeSet("s5", 1, 6, 120), makeSet("s6", 2, 6, 120)];
+
+    const validSession = makeCompletedSession("sess-a", makeStrengthBlock("b1", "Bench Press", sets100, EXERCISE_ID));
+    const excludedSession = {
+      ...makeCompletedSession("sess-b", makeStrengthBlock("b2", "Bench Press", sets120, EXERCISE_ID)),
+      excludeFromProgression: true,
+    };
+
+    await seedHistory(page, { history: [validSession, excludedSession] });
+    await goToProgress(page, "Bench Press");
+
+    await expect(page.getByText("100kg")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("120kg")).not.toBeVisible();
+  });
+});
+
+test.describe("analytics — assisted exercise", () => {
+  test("shows assistance weight and reduction trend, not max weight", async ({ page }) => {
+    const EXERCISE_ID = "ex_custom_adips";
+    // Two sessions: 30kg assist then 27.5kg assist (progress = lower).
+    const sets30 = [makeSet("s1", 0, 8, 30), makeSet("s2", 1, 8, 30), makeSet("s3", 2, 8, 30)];
+    const sets275 = [makeSet("s4", 0, 8, 27.5), makeSet("s5", 1, 8, 27.5), makeSet("s6", 2, 8, 27.5)];
+
+    const sess1 = { ...makeCompletedSession("sess-1", makeStrengthBlock("b1", "Assisted Dips", sets30, EXERCISE_ID)), startedAtMs: Date.now() - 200_000_000, endedAtMs: Date.now() - 190_000_000 };
+    const sess2 = makeCompletedSession("sess-2", makeStrengthBlock("b2", "Assisted Dips", sets275, EXERCISE_ID));
+
+    await seedHistory(page, {
+      history: [sess1, sess2],
+      exercises: [makeCustomExercise(EXERCISE_ID, "Assisted Dips", "assisted")],
+    });
+    await goToProgress(page, "Assisted Dips");
+
+    // Should show "Min assistance" metric and reduction insight, not "Est. 1RM"
+    await expect(page.getByText("Min assistance", { exact: false })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/Reduced assistance/)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Est. 1RM")).not.toBeVisible();
+  });
+});
+
+test.describe("analytics — bodyweight exercise", () => {
+  test("shows rep-based metrics for zero-weight sets", async ({ page }) => {
+    const EXERCISE_ID = "ex_custom_pullup";
+    // Two sessions of bodyweight pull-ups (weight = 0).
+    const sets10 = [makeSet("s1", 0, 10, 0), makeSet("s2", 1, 10, 0), makeSet("s3", 2, 9, 0)];
+    const sets12 = [makeSet("s4", 0, 12, 0), makeSet("s5", 1, 11, 0), makeSet("s6", 2, 11, 0)];
+
+    const sess1 = { ...makeCompletedSession("sess-1", makeStrengthBlock("b1", "Pull-Up", sets10, EXERCISE_ID)), startedAtMs: Date.now() - 200_000_000, endedAtMs: Date.now() - 190_000_000 };
+    const sess2 = makeCompletedSession("sess-2", makeStrengthBlock("b2", "Pull-Up", sets12, EXERCISE_ID));
+
+    await seedHistory(page, {
+      history: [sess1, sess2],
+      exercises: [makeCustomExercise(EXERCISE_ID, "Pull-Up", "bodyweight")],
+    });
+    await goToProgress(page, "Pull-Up");
+
+    // Should show "Max reps" metric and rep trend, not "Est. 1RM"
+    await expect(page.getByText("Max reps", { exact: false })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/\+\d+ reps/)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Est. 1RM")).not.toBeVisible();
+  });
+});

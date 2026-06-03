@@ -26,7 +26,7 @@ export type AnalyticsSeries = {
 };
 
 export type AnalyticsInput = {
-  exercise: { id?: string; name: string };
+  exercise: { id?: string; name: string; exerciseType?: import("$lib/domain/exercise").ExerciseType };
   history: ExerciseHistoryEntry[]; // oldest first, all available history
 };
 
