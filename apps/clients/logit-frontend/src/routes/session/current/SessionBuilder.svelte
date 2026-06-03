@@ -83,10 +83,18 @@
     }
   }
 
+  let mutateQueue: Promise<void> = Promise.resolve();
+
   async function onMutate(updater: (s: WorkoutSession) => WorkoutSession) {
-    const s = getSessionOrNull();
-    if (!s || ui.finishing) return;
-    await persistDraft(updater(s));
+    const thisCall = mutateQueue.then(async () => {
+      const s = getSessionOrNull();
+      if (!s || ui.finishing) return;
+      await persistDraft(updater(s));
+    });
+    // Advance the queue but swallow errors so later mutations still run.
+    mutateQueue = thisCall.catch(() => {});
+    // Propagate the error to the individual caller.
+    await thisCall;
   }
 
   async function addExerciseWithName(selection: { name: string; exerciseId?: string }) {

@@ -1,16 +1,27 @@
 import { getProgressionRepo, getAlgorithmRegistry } from "$lib/data/repoProvider";
 import type { ProgressionAlgorithmMeta, UserProgressionConfig } from "$lib/domain/progression";
 
+export type ProgressionAlgorithmEntry = ProgressionAlgorithmMeta & {
+  hasPreferences: boolean;
+};
+
 export type ProgressionConfigView = {
   config: UserProgressionConfig | null;
-  algorithms: ProgressionAlgorithmMeta[];
+  algorithms: ProgressionAlgorithmEntry[];
 };
 
 export async function getProgressionConfig(): Promise<ProgressionConfigView> {
-  const [config, algorithms] = await Promise.all([
+  const [config, registry] = await Promise.all([
     getProgressionRepo().getConfig(),
-    getAlgorithmRegistry().list(),
+    getAlgorithmRegistry(),
   ]);
+  const metas = await registry.list();
+  const algorithms: ProgressionAlgorithmEntry[] = await Promise.all(
+    metas.map(async (meta) => {
+      const full = await registry.get(meta.id);
+      return { ...meta, hasPreferences: !!(full?.preferencesSchema?.length) };
+    }),
+  );
   return { config, algorithms };
 }
 

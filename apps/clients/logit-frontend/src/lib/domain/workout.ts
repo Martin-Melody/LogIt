@@ -68,6 +68,7 @@ export type WorkoutSession = {
   startedAtMs: number;
   endedAtMs?: number;
   blocks: SessionBlock[];
+  excludeFromProgression?: boolean;
 };
 
 export type SessionSummary = {

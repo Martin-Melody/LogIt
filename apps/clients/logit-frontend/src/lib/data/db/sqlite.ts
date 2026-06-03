@@ -237,6 +237,13 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       data TEXT NOT NULL DEFAULT '{}',
       PRIMARY KEY (owner_id)
     );
+
+    CREATE TABLE IF NOT EXISTS algorithm_preferences (
+      owner_id TEXT NOT NULL,
+      algorithm_id TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      PRIMARY KEY (owner_id, algorithm_id)
+    );
   `);
 
   await migrateSessionSets(db);
@@ -244,8 +251,22 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
   await migrateExercisesToBlocks(db);
   await migrateOwnerIds(db);
   await migrateMuscleGroups(db);
+  await migrateExerciseType(db);
+  await migrateSessionFlags(db);
   await seedSetTypes(db);
   await seedExercises(db);
+}
+
+async function migrateExerciseType(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run(`ALTER TABLE exercises ADD COLUMN exercise_type TEXT NOT NULL DEFAULT 'normal'`, []);
+  } catch { /* column already exists */ }
+}
+
+async function migrateSessionFlags(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run(`ALTER TABLE sessions ADD COLUMN exclude_from_progression INTEGER NOT NULL DEFAULT 0`, []);
+  } catch { /* column already exists */ }
 }
 
 async function migrateOwnerIds(db: SQLiteDBConnection): Promise<void> {

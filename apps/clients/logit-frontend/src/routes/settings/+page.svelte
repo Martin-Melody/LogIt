@@ -54,6 +54,7 @@
     setProgressionAlgorithm,
   } from "$lib/usecases/progression/getProgressionConfig";
   import type { ProgressionConfigView } from "$lib/usecases/progression/getProgressionConfig";
+  import { Settings2 } from "lucide-svelte";
   import {
     getAnalyticsConfig,
     setAnalyticsPlugin,
@@ -630,14 +631,27 @@
                     </p>
                   {/if}
                 </div>
-                {#if !isActive}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={progUi.saving}
-                    onclick={() => void selectAlgorithm(algo.id)}>Select</Button
-                  >
-                {/if}
+                <div class="flex items-center gap-2 shrink-0">
+                  {#if algo.hasPreferences}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure"
+                      onclick={() => goto(`/settings/progression/${algo.id}`)}
+                    >
+                      <Settings2 class="h-4 w-4" />
+                    </Button>
+                  {/if}
+                  {#if !isActive}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={progUi.saving}
+                      onclick={() => void selectAlgorithm(algo.id)}>Select</Button
+                    >
+                  {/if}
+                </div>
               </div>
             </li>
           {/each}

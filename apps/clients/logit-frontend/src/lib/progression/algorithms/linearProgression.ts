@@ -1,4 +1,4 @@
-import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry } from "$lib/domain/progression";
+import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "$lib/domain/progression";
 import type { MuscleGroup } from "$lib/domain/exercise";
 
 type LinearState = {
@@ -8,14 +8,86 @@ type LinearState = {
   repRange: [number, number];
 };
 
+type LinearPreferences = {
+  repRangeMin: number;
+  repRangeMax: number;
+  workingSets: number;
+  increment: number;
+  suggestionDetail: "summary" | "block";
+};
+
+const DEFAULT_PREFERENCES: LinearPreferences = {
+  repRangeMin: 5,
+  repRangeMax: 8,
+  workingSets: 3,
+  increment: 2.5,
+  suggestionDetail: "summary",
+};
+
+const PREFERENCES_SCHEMA: AlgorithmPreferencesField[] = [
+  {
+    key: "repRangeMin",
+    label: "Rep range — lower bound",
+    description: "Minimum reps to aim for each working set.",
+    type: "number",
+    default: 5,
+    min: 1,
+    max: 30,
+    step: 1,
+    unit: "reps",
+  },
+  {
+    key: "repRangeMax",
+    label: "Rep range — upper bound",
+    description: "Hit this many reps on all sets to trigger a weight increase.",
+    type: "number",
+    default: 8,
+    min: 1,
+    max: 40,
+    step: 1,
+    unit: "reps",
+  },
+  {
+    key: "workingSets",
+    label: "Working sets",
+    description: "Number of working sets to suggest per exercise.",
+    type: "number",
+    default: 3,
+    min: 1,
+    max: 10,
+    step: 1,
+    unit: "sets",
+  },
+  {
+    key: "increment",
+    label: "Weight increment",
+    description: "How much weight to add when you hit the top of your rep range.",
+    type: "number",
+    default: 2.5,
+    min: 0.25,
+    max: 20,
+    step: 0.25,
+    unit: "kg",
+  },
+  {
+    key: "suggestionDetail",
+    label: "Suggestion display",
+    description: "How suggestions are shown in your workout. Simple collapses identical sets into a single line; full block shows each set as its own row.",
+    type: "select",
+    default: "summary",
+    options: [
+      { value: "summary", label: "Simple (e.g. 3×5-8 @ 20kg)" },
+      { value: "block", label: "Full block (each set as its own row)" },
+    ],
+  },
+];
+
 const DEFAULT_STATE: LinearState = {
   workingWeight: 0,
   failedAttempts: 0,
   increment: 2.5,
   repRange: [5, 8],
 };
-
-const WORKING_SETS = 3;
 const DELOAD_THRESHOLD = 2;
 const DELOAD_FACTOR = 0.9;
 // Max weight reduction from fatigue at default sensitivity: 15%.
@@ -27,8 +99,8 @@ const MIN_CALIBRATION_SAMPLES = 3;
 const VARIETY_THRESHOLD = 0.85;
 const VARIETY_MIN_SESSIONS = 10;
 
-function makeWorkingSets(weight: number, repRange: [number, number]): SuggestedSet[] {
-  return Array.from({ length: WORKING_SETS }, () => ({
+function makeWorkingSets(weight: number, repRange: [number, number], count: number): SuggestedSet[] {
+  return Array.from({ length: count }, () => ({
     reps: repRange,
     weight,
     setType: "normal" as const,
@@ -138,11 +210,15 @@ function shouldSuggestVariety(history: ProgressionInput["history"]): boolean {
 }
 
 function suggest(input: ProgressionInput): ProgressionOutput {
+  const prefs: LinearPreferences = { ...DEFAULT_PREFERENCES, ...(input.userPreferences as Partial<LinearPreferences> ?? {}) };
+
   let state: LinearState =
     (input.state as LinearState | null) ??
     seedFromHistory(input.history) ?? {
       ...DEFAULT_STATE,
       workingWeight: input.plannedTargets?.weight ?? DEFAULT_STATE.workingWeight,
+      increment: prefs.increment,
+      repRange: [prefs.repRangeMin, prefs.repRangeMax],
     };
 
   // If history shows a higher working weight than the saved state, reseed from history.
@@ -163,8 +239,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       repRange: seedReps ? [seedReps, seedReps] : state.repRange,
     };
     return {
-      sets: makeWorkingSets(seeded.workingWeight, seeded.repRange),
+      sets: makeWorkingSets(seeded.workingWeight, seeded.repRange, prefs.workingSets),
       nextState: seeded,
+      displayMode: prefs.suggestionDetail,
     };
   }
 
@@ -175,8 +252,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
 
   if (workingSets.length === 0) {
     return {
-      sets: makeWorkingSets(state.workingWeight, state.repRange),
+      sets: makeWorkingSets(state.workingWeight, state.repRange, prefs.workingSets),
       nextState: state,
+      displayMode: prefs.suggestionDetail,
     };
   }
 
@@ -184,26 +262,34 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const allHitCeiling = workingSets.every((s) => s.reps >= repCeiling);
   const anyMissedFloor = workingSets.some((s) => s.reps < repFloor);
 
+  const isAssisted = input.exercise.exerciseType === "assisted";
+
   let nextWeight = state.workingWeight;
   let failedAttempts = state.failedAttempts;
 
   if (allHitCeiling) {
-    nextWeight = state.workingWeight + state.increment;
+    // Assisted: success means reduce the assistance (weight goes down toward 0)
+    nextWeight = isAssisted
+      ? Math.max(0, state.workingWeight - state.increment)
+      : state.workingWeight + state.increment;
     failedAttempts = 0;
   } else if (anyMissedFloor) {
     failedAttempts += 1;
     if (failedAttempts >= DELOAD_THRESHOLD) {
-      nextWeight = state.workingWeight * DELOAD_FACTOR;
+      // Assisted: deload means adding more assistance (weight goes back up)
+      nextWeight = isAssisted
+        ? state.workingWeight + state.increment
+        : state.workingWeight * DELOAD_FACTOR;
       failedAttempts = 0;
     }
   }
 
   const nextState: LinearState = { ...state, workingWeight: nextWeight, failedAttempts };
 
-  // Fatigue discount for this session's suggestion weight.
+  // Fatigue discount doesn't apply to assisted exercises (assistance is machine-controlled)
   const targetPrimary = (input.exercise.primaryMuscles ?? []) as MuscleGroup[];
   const preceding = input.sessionContext?.precedingExercises ?? [];
-  const fatigueScore = computeFatigueScore(targetPrimary, preceding);
+  const fatigueScore = isAssisted ? 0 : computeFatigueScore(targetPrimary, preceding);
 
   // Personal sensitivity: how much do *this user's* reps actually drop when fatigued?
   // Calibrated from their history; defaults to 1.0 until enough data exists.
@@ -216,9 +302,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       : state.workingWeight;
 
   const progressionLabel = allHitCeiling
-    ? `Next: ${nextWeight}kg`
+    ? isAssisted ? `Next: ${nextWeight}kg assist` : `Next: ${nextWeight}kg`
     : anyMissedFloor && failedAttempts === 0
-      ? `Deload next: ${nextWeight}kg`
+      ? isAssisted ? `More assist next: ${nextWeight}kg` : `Deload next: ${nextWeight}kg`
       : undefined;
 
   const discountPct = Math.round(fatigueScore * effectiveDiscount * 100);
@@ -231,10 +317,11 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     : undefined;
 
   return {
-    sets: makeWorkingSets(suggestedWeight, state.repRange),
+    sets: makeWorkingSets(suggestedWeight, state.repRange, prefs.workingSets),
     nextState,
     label,
     notes,
+    displayMode: prefs.suggestionDetail,
   };
 }
 
@@ -245,5 +332,7 @@ export const linearProgression: ProgressionAlgorithm = {
     "Add weight each session when you hit the top of your rep range. Deload after two consecutive failures. Adjusts for muscle fatigue within a session, calibrated to your personal fatigue response over time.",
   author: "logit",
   defaultState: DEFAULT_STATE,
+  defaultPreferences: DEFAULT_PREFERENCES,
+  preferencesSchema: PREFERENCES_SCHEMA,
   suggest,
 };

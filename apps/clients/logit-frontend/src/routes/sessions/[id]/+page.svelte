@@ -261,9 +261,13 @@
       <span>{countSets(displaySession)} sets</span>
       <span>·</span>
       <span>{totalVolume(displaySession).toLocaleString()} kg</span>
+      {#if displaySession.excludeFromProgression}
+        <span>·</span>
+        <span class="text-amber-500 dark:text-amber-400">Excluded from progression</span>
+      {/if}
     </div>
 
-    <!-- Date/time edit -->
+    <!-- Date/time edit + exclude from progression toggle (edit mode only) -->
     {#if edit.active && edit.draft}
       <div class="px-3 py-3 border-b border-border flex flex-col gap-3">
         <div class="flex flex-col gap-1">
@@ -288,6 +292,23 @@
             />
           </div>
         {/if}
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-sm font-medium">Exclude from progression</span>
+            <span class="text-xs text-muted-foreground">This session won't influence future weight suggestions.</span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={edit.draft.excludeFromProgression ?? false}
+            class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {edit.draft.excludeFromProgression ? 'bg-primary' : 'bg-muted'}"
+            onclick={() => { if (edit.draft) edit.draft.excludeFromProgression = !edit.draft.excludeFromProgression; }}
+          >
+            <span
+              class="pointer-events-none block h-4 w-4 rounded-full bg-white shadow transition-transform {edit.draft.excludeFromProgression ? 'translate-x-4' : 'translate-x-0'}"
+            ></span>
+          </button>
+        </div>
       </div>
     {/if}
 
