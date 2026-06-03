@@ -46,6 +46,12 @@
     });
   }
 
+  function msToDatetimeLocal(ms: number): string {
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   function sortByOrder(a: { orderIndex: number }, b: { orderIndex: number }) {
     return a.orderIndex - b.orderIndex;
   }
@@ -261,24 +267,48 @@
       {/if}
     </div>
 
-    <!-- Exclude from progression toggle (edit mode only) -->
+    <!-- Date/time edit + exclude from progression toggle (edit mode only) -->
     {#if edit.active && edit.draft}
-      <div class="flex items-center justify-between px-3 py-3 border-b border-border">
-        <div class="flex flex-col gap-0.5">
-          <span class="text-sm font-medium">Exclude from progression</span>
-          <span class="text-xs text-muted-foreground">This session won't influence future weight suggestions.</span>
+      <div class="px-3 py-3 border-b border-border flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-muted-foreground" for="edit-started">Started</label>
+          <input
+            id="edit-started"
+            type="datetime-local"
+            class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            value={msToDatetimeLocal(edit.draft.startedAtMs)}
+            onchange={(e) => { if (edit.draft) edit.draft.startedAtMs = new Date(e.currentTarget.value).getTime(); }}
+          />
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={edit.draft.excludeFromProgression ?? false}
-          class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {edit.draft.excludeFromProgression ? 'bg-primary' : 'bg-muted'}"
-          onclick={() => { if (edit.draft) edit.draft.excludeFromProgression = !edit.draft.excludeFromProgression; }}
-        >
-          <span
-            class="pointer-events-none block h-4 w-4 rounded-full bg-white shadow transition-transform {edit.draft.excludeFromProgression ? 'translate-x-4' : 'translate-x-0'}"
-          ></span>
-        </button>
+        {#if edit.draft.endedAtMs}
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-muted-foreground" for="edit-ended">Ended</label>
+            <input
+              id="edit-ended"
+              type="datetime-local"
+              class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              value={msToDatetimeLocal(edit.draft.endedAtMs)}
+              onchange={(e) => { if (edit.draft) edit.draft.endedAtMs = new Date(e.currentTarget.value).getTime(); }}
+            />
+          </div>
+        {/if}
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-sm font-medium">Exclude from progression</span>
+            <span class="text-xs text-muted-foreground">This session won't influence future weight suggestions.</span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={edit.draft.excludeFromProgression ?? false}
+            class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {edit.draft.excludeFromProgression ? 'bg-primary' : 'bg-muted'}"
+            onclick={() => { if (edit.draft) edit.draft.excludeFromProgression = !edit.draft.excludeFromProgression; }}
+          >
+            <span
+              class="pointer-events-none block h-4 w-4 rounded-full bg-white shadow transition-transform {edit.draft.excludeFromProgression ? 'translate-x-4' : 'translate-x-0'}"
+            ></span>
+          </button>
+        </div>
       </div>
     {/if}
 
