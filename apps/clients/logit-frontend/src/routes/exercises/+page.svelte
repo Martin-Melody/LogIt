@@ -4,7 +4,7 @@
   import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
-  import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
+  import type { Exercise, ExercisePatch, ExerciseType } from "$lib/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { updateExercise } from "$lib/usecases/updateExercise";
   import { pushDeletedExercise } from "$lib/sync/syncService";
@@ -20,6 +20,7 @@
   let editTarget = $state<Exercise | null>(null);
   let draftName = $state("");
   let draftNotes = $state("");
+  let draftType = $state<ExerciseType>("normal");
   let saving = $state(false);
   let deleteConfirm = $state(false);
 
@@ -55,6 +56,7 @@
     editTarget = null;
     draftName = "";
     draftNotes = "";
+    draftType = "normal";
     deleteConfirm = false;
     drawerOpen = true;
   }
@@ -64,6 +66,7 @@
     editTarget = ex;
     draftName = ex.name;
     draftNotes = ex.notes ?? "";
+    draftType = ex.exerciseType ?? "normal";
     deleteConfirm = false;
     drawerOpen = true;
   }
@@ -73,9 +76,9 @@
     saving = true;
     try {
       if (drawerMode === "add") {
-        await repo.create(draftName.trim());
+        await repo.create(draftName.trim(), draftType);
       } else if (editTarget) {
-        const patch: ExercisePatch = { name: draftName.trim(), notes: draftNotes.trim() || null };
+        const patch: ExercisePatch = { name: draftName.trim(), notes: draftNotes.trim() || null, exerciseType: draftType };
         await updateExercise(editTarget.id, patch);
       }
       drawerOpen = false;
@@ -182,6 +185,9 @@
               {/if}
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
+              {#if ex.exerciseType && ex.exerciseType !== "normal"}
+                <span class="text-xs text-muted-foreground capitalize">{ex.exerciseType}</span>
+              {/if}
               {#if ex.isCore}
                 <span class="text-xs text-muted-foreground">Built-in</span>
               {/if}
@@ -242,6 +248,26 @@
             class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             bind:value={draftNotes}
           ></textarea>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium">Type</span>
+          <div class="flex gap-2">
+            {#each ([["normal", "Normal"], ["assisted", "Assisted"], ["bodyweight", "Bodyweight"]] as [ExerciseType, string][]) as [type, label] (type)}
+              <button
+                type="button"
+                class="flex-1 py-1.5 rounded border text-xs font-medium transition-colors {draftType === type ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}"
+                onclick={() => (draftType = type)}
+              >
+                {label}
+              </button>
+            {/each}
+          </div>
+          {#if draftType === "assisted"}
+            <p class="text-xs text-muted-foreground">Weight = assistance amount. Progression reduces assistance each session.</p>
+          {:else if draftType === "bodyweight"}
+            <p class="text-xs text-muted-foreground">Enter 0 for pure bodyweight, or extra load on top (e.g. 25 = BW+25kg).</p>
+          {/if}
         </div>
 
         <button

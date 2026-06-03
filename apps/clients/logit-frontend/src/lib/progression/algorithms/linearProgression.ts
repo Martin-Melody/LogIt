@@ -184,26 +184,34 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const allHitCeiling = workingSets.every((s) => s.reps >= repCeiling);
   const anyMissedFloor = workingSets.some((s) => s.reps < repFloor);
 
+  const isAssisted = input.exercise.exerciseType === "assisted";
+
   let nextWeight = state.workingWeight;
   let failedAttempts = state.failedAttempts;
 
   if (allHitCeiling) {
-    nextWeight = state.workingWeight + state.increment;
+    // Assisted: success means reduce the assistance (weight goes down toward 0)
+    nextWeight = isAssisted
+      ? Math.max(0, state.workingWeight - state.increment)
+      : state.workingWeight + state.increment;
     failedAttempts = 0;
   } else if (anyMissedFloor) {
     failedAttempts += 1;
     if (failedAttempts >= DELOAD_THRESHOLD) {
-      nextWeight = Math.max(state.workingWeight * DELOAD_FACTOR, DEFAULT_STATE.workingWeight);
+      // Assisted: deload means adding more assistance (weight goes back up)
+      nextWeight = isAssisted
+        ? state.workingWeight + state.increment
+        : state.workingWeight * DELOAD_FACTOR;
       failedAttempts = 0;
     }
   }
 
   const nextState: LinearState = { ...state, workingWeight: nextWeight, failedAttempts };
 
-  // Fatigue discount for this session's suggestion weight.
+  // Fatigue discount doesn't apply to assisted exercises (assistance is machine-controlled)
   const targetPrimary = (input.exercise.primaryMuscles ?? []) as MuscleGroup[];
   const preceding = input.sessionContext?.precedingExercises ?? [];
-  const fatigueScore = computeFatigueScore(targetPrimary, preceding);
+  const fatigueScore = isAssisted ? 0 : computeFatigueScore(targetPrimary, preceding);
 
   // Personal sensitivity: how much do *this user's* reps actually drop when fatigued?
   // Calibrated from their history; defaults to 1.0 until enough data exists.
@@ -216,9 +224,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       : state.workingWeight;
 
   const progressionLabel = allHitCeiling
-    ? `Next: ${nextWeight}kg`
+    ? isAssisted ? `Next: ${nextWeight}kg assist` : `Next: ${nextWeight}kg`
     : anyMissedFloor && failedAttempts === 0
-      ? `Deload next: ${nextWeight}kg`
+      ? isAssisted ? `More assist next: ${nextWeight}kg` : `Deload next: ${nextWeight}kg`
       : undefined;
 
   const discountPct = Math.round(fatigueScore * effectiveDiscount * 100);

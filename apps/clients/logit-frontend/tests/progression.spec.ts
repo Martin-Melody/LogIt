@@ -306,7 +306,7 @@ test.describe("progression state — name key fallback", () => {
 // ── Correct progression still works end-to-end ───────────────────────────────
 
 test.describe("progression — correct behaviour unchanged", () => {
-  test("shows default 20kg when there is genuinely no history", async ({ page }) => {
+  test("shows default 0kg when there is genuinely no history", async ({ page }) => {
     await seed(page, {
       draft: makeDraftSession(
         makeStrengthBlock("b1", "Farmers Carry", [], "exdb_farmers"),
@@ -315,7 +315,7 @@ test.describe("progression — correct behaviour unchanged", () => {
     await goToSession(page);
 
     const target = await getTargetText(page);
-    expect(target).toContain("20kg");
+    expect(target).toContain("0kg");
   });
 
   test("shows 'Next: Xkg' when last session hit the rep ceiling", async ({ page }) => {
@@ -376,5 +376,132 @@ test.describe("progression — correct behaviour unchanged", () => {
     await goToSession(page);
 
     await expect(page.getByText(/Deload next: 90kg/)).toBeVisible();
+  });
+});
+
+// ── excludeFromProgression ───────────────────────────────────────────────────
+
+test.describe("excludeFromProgression", () => {
+  test("excluded session is not counted in progression history", async ({ page }) => {
+    // History has one session at 80kg that is excluded from progression.
+    // With no valid history the suggestion should fall back to 0kg default.
+    const EXERCISE_ID = "ex_core_bench";
+    const historySets = [
+      makeSet("hs1", 0, 8, 80),
+      makeSet("hs2", 1, 8, 80),
+      makeSet("hs3", 2, 8, 80),
+    ];
+
+    const excludedSession = {
+      ...makeCompletedSession("hist-excluded", makeStrengthBlock("pb1", "Bench Press", historySets, EXERCISE_ID)),
+      excludeFromProgression: true,
+    };
+
+    await seed(page, {
+      draft: makeDraftSession(makeStrengthBlock("b1", "Bench Press", [], EXERCISE_ID)),
+      history: [excludedSession],
+    });
+    await goToSession(page);
+
+    // Excluded history means no valid data → falls back to 0kg default
+    const target = await getTargetText(page);
+    expect(target).toContain("0kg");
+    expect(target).not.toContain("80kg");
+  });
+
+  test("non-excluded session still contributes to history", async ({ page }) => {
+    // One excluded session at 50kg, one valid session at 80kg.
+    // Should use the 80kg session.
+    const EXERCISE_ID = "ex_core_bench";
+    const sets80 = [makeSet("s1", 0, 6, 80), makeSet("s2", 1, 6, 80), makeSet("s3", 2, 6, 80)];
+    const sets50 = [makeSet("s4", 0, 6, 50), makeSet("s5", 1, 6, 50), makeSet("s6", 2, 6, 50)];
+
+    const validSession = makeCompletedSession("hist-valid", makeStrengthBlock("pb1", "Bench Press", sets80, EXERCISE_ID));
+    const excludedSession = {
+      ...makeCompletedSession("hist-excl", makeStrengthBlock("pb2", "Bench Press", sets50, EXERCISE_ID)),
+      excludeFromProgression: true,
+    };
+
+    await seed(page, {
+      draft: makeDraftSession(makeStrengthBlock("b1", "Bench Press", [], EXERCISE_ID)),
+      history: [excludedSession, validSession],
+    });
+    await goToSession(page);
+
+    const target = await getTargetText(page);
+    expect(target).toContain("80kg");
+    expect(target).not.toContain("50kg");
+  });
+});
+
+// ── Exercise type — assisted ─────────────────────────────────────────────────
+
+const CUSTOM_EXERCISE_KEY = "logit:exercises:custom";
+
+function makeCustomExercise(id: string, name: string, exerciseType: string) {
+  return {
+    id,
+    name,
+    notes: null,
+    isCore: false,
+    createdAtMs: Date.now() - 1_000_000,
+    primaryMuscles: [],
+    secondaryMuscles: [],
+    exerciseType,
+  };
+}
+
+async function seedExercises(page: Page, exercises: object[]) {
+  await page.addInitScript((items) => {
+    localStorage.setItem("logit:exercises:custom", JSON.stringify(items));
+  }, exercises);
+}
+
+test.describe("exercise type — assisted", () => {
+  test("hitting the rep ceiling decreases assistance weight", async ({ page }) => {
+    // Assisted dips with 30kg assistance; user hit ceiling (8 reps all sets).
+    // Next suggestion should be 30 - 2.5 = 27.5kg assistance.
+    const EXERCISE_ID = "ex_assisted_dips";
+    const historySets = [
+      makeSet("hs1", 0, 8, 30),
+      makeSet("hs2", 1, 8, 30),
+      makeSet("hs3", 2, 8, 30),
+    ];
+
+    await seedExercises(page, [makeCustomExercise(EXERCISE_ID, "Assisted Dips", "assisted")]);
+    await seed(page, {
+      draft: makeDraftSession(makeStrengthBlock("b1", "Assisted Dips", [], EXERCISE_ID)),
+      history: [makeCompletedSession("hist-1", makeStrengthBlock("pb1", "Assisted Dips", historySets, EXERCISE_ID))],
+    });
+    await goToSession(page);
+
+    // Should show the reduced assistance weight and the "Next:" label
+    await expect(page.getByText(/Next: 27\.5kg assist/)).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("missing the rep floor increases assistance weight on deload", async ({ page }) => {
+    // Assisted dips at 20kg; user failed twice (failedAttempts saved as 1, second failure triggers deload).
+    // Deload for assisted = add more assistance: 20 + 2.5 = 22.5kg.
+    const EXERCISE_ID = "ex_assisted_dips2";
+    const failureSets = [
+      makeSet("s1", 0, 3, 20),
+      makeSet("s2", 1, 4, 20),
+      makeSet("s3", 2, 3, 20),
+    ];
+
+    await seedExercises(page, [makeCustomExercise(EXERCISE_ID, "Assisted Dips", "assisted")]);
+    await seed(page, {
+      draft: makeDraftSession(makeStrengthBlock("b1", "Assisted Dips", [], EXERCISE_ID)),
+      history: [makeCompletedSession("hist-1", makeStrengthBlock("pb1", "Assisted Dips", failureSets, EXERCISE_ID))],
+      progressionState: {
+        key: EXERCISE_ID,
+        exerciseName: "Assisted Dips",
+        workingWeight: 20,
+        failedAttempts: 1,
+      },
+    });
+    await goToSession(page);
+
+    await expect(page.getByText(/More assist next: 22\.5kg/)).toBeVisible({ timeout: 5_000 });
   });
 });
