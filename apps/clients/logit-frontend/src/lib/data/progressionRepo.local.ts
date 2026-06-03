@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   config: "logit:progression:config:v1",
   states: "logit:progression:states:v1",
   analyticsConfig: "logit:analytics:config:v1",
+  algorithmPrefs: "logit:progression:prefs:v1",
 } as const;
 
 function ensureBrowser(): void {
@@ -75,6 +76,16 @@ export function createLocalProgressionRepo(): ProgressionRepo {
     async clearAnalyticsConfig(): Promise<void> {
       ensureBrowser();
       localStorage.removeItem(STORAGE_KEYS.analyticsConfig);
+    },
+
+    async getAlgorithmPreferences(algorithmId: string): Promise<unknown> {
+      const all = readJson<Record<string, unknown>>(STORAGE_KEYS.algorithmPrefs, {});
+      return all[algorithmId] ?? null;
+    },
+
+    async setAlgorithmPreferences(algorithmId: string, prefs: unknown): Promise<void> {
+      const all = readJson<Record<string, unknown>>(STORAGE_KEYS.algorithmPrefs, {});
+      writeJson(STORAGE_KEYS.algorithmPrefs, { ...all, [algorithmId]: prefs });
     },
   };
 }

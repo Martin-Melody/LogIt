@@ -237,6 +237,13 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       data TEXT NOT NULL DEFAULT '{}',
       PRIMARY KEY (owner_id)
     );
+
+    CREATE TABLE IF NOT EXISTS algorithm_preferences (
+      owner_id TEXT NOT NULL,
+      algorithm_id TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      PRIMARY KEY (owner_id, algorithm_id)
+    );
   `);
 
   await migrateSessionSets(db);

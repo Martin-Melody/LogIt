@@ -14,4 +14,7 @@ export interface ProgressionRepo {
   saveExerciseState(state: ExerciseProgressionState): Promise<void>;
   listExerciseStates(): Promise<ExerciseProgressionState[]>;
   clearStates(): Promise<void>;
+
+  getAlgorithmPreferences(algorithmId: string): Promise<unknown>;
+  setAlgorithmPreferences(algorithmId: string, prefs: unknown): Promise<void>;
 }

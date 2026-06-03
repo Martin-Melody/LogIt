@@ -34,7 +34,7 @@ async function writeBlocks(db: ReturnType<typeof getDb>, session: WorkoutSession
 
   for (const block of session.blocks) {
     await db.run(
-      `INSERT INTO session_blocks(id, session_id, block_type, order_index, data)
+      `INSERT OR REPLACE INTO session_blocks(id, session_id, block_type, order_index, data)
        VALUES(?, ?, ?, ?, ?)`,
       [block.id, session.id, block.type, block.orderIndex, JSON.stringify(block.data)],
     );

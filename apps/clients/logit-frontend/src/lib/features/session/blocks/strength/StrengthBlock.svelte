@@ -36,6 +36,7 @@
 
   let suggestion = $state<ProgressionOutput | null>(null);
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  let blockAutoApplied = $state(false);
 
   const editSet = $state({
     open: false,
@@ -46,6 +47,18 @@
     const name = data.exerciseName;
     const id = data.exerciseId;
     void loadSuggestion(name, id);
+  });
+
+  $effect(() => {
+    if (
+      suggestion?.displayMode === "block" &&
+      suggestion.sets.length > 0 &&
+      data.sets.length === 0 &&
+      !blockAutoApplied
+    ) {
+      blockAutoApplied = true;
+      void handleApplySuggestion();
+    }
   });
 
   async function loadSuggestion(name: string, exerciseId?: string) {
@@ -67,6 +80,24 @@
     await onMutate((s: WorkoutSession) =>
       addSet(s, blockId, { reps: 0, weight: suggestedSet?.weight ?? 0 }),
     );
+    if (collapsed) collapsed = false;
+  }
+
+  async function handleApplySuggestion() {
+    if (!suggestion?.sets.length) return;
+    const sets = suggestion.sets;
+    await onMutate((s: WorkoutSession) => {
+      let result = s;
+      for (const sugSet of sets) {
+        result = addSet(result, blockId, {
+          reps: 0,
+          weight: sugSet.weight,
+          setType: sugSet.setType ?? "normal",
+          note: sugSet.note,
+        });
+      }
+      return result;
+    });
     if (collapsed) collapsed = false;
   }
 
