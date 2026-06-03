@@ -23,7 +23,7 @@ export type PrecedingExercise = {
 };
 
 export type ProgressionInput = {
-  exercise: { id?: string; name: string; primaryMuscles?: MuscleGroup[]; secondaryMuscles?: MuscleGroup[] };
+  exercise: { id?: string; name: string; primaryMuscles?: MuscleGroup[]; secondaryMuscles?: MuscleGroup[]; exerciseType?: import("$lib/domain/exercise").ExerciseType };
   history: ExerciseHistoryEntry[]; // most recent first
   state: unknown; // algorithm-owned, opaque to the app
   plannedTargets?: import("$lib/domain/WorkoutSplit").PlannedTargets;

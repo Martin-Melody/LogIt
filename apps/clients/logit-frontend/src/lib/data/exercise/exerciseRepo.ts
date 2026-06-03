@@ -1,4 +1,4 @@
-import type { Exercise, ExercisePatch } from "$lib/domain/exercise";
+import type { Exercise, ExercisePatch, ExerciseType } from "$lib/domain/exercise";
 
 export type ListExercisesOptions = {
   query?: string;
@@ -9,7 +9,7 @@ export type ListExercisesOptions = {
 
 export interface ExerciseRepo {
   list(options?: ListExercisesOptions): Promise<Exercise[]>;
-  create(name: string): Promise<Exercise>;
+  create(name: string, exerciseType?: ExerciseType): Promise<Exercise>;
   getByName(name: string): Promise<Exercise | null>;
   getById(id: string): Promise<Exercise | null>;
   update(id: string, patch: ExercisePatch): Promise<Exercise>;

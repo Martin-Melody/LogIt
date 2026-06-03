@@ -42,6 +42,7 @@ export async function getSuggestion(
 
   const lowerName = exercise.name.toLowerCase();
   const history: ExerciseHistoryEntry[] = recentSessions
+    .filter((session) => !session.excludeFromProgression)
     .flatMap((session) => {
       const allExercises = getExercises(session);
       const matchIndex = allExercises.findIndex((e) =>
@@ -70,6 +71,7 @@ export async function getSuggestion(
     ...exercise,
     primaryMuscles: exerciseData?.primaryMuscles ?? [],
     secondaryMuscles: exerciseData?.secondaryMuscles ?? [],
+    exerciseType: exerciseData?.exerciseType,
   };
 
   let sessionContext: { precedingExercises: PrecedingExercise[] } | undefined;
