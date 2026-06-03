@@ -46,6 +46,12 @@
     });
   }
 
+  function msToDatetimeLocal(ms: number): string {
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   function sortByOrder(a: { orderIndex: number }, b: { orderIndex: number }) {
     return a.orderIndex - b.orderIndex;
   }
@@ -256,6 +262,34 @@
       <span>·</span>
       <span>{totalVolume(displaySession).toLocaleString()} kg</span>
     </div>
+
+    <!-- Date/time edit -->
+    {#if edit.active && edit.draft}
+      <div class="px-3 py-3 border-b border-border flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-muted-foreground" for="edit-started">Started</label>
+          <input
+            id="edit-started"
+            type="datetime-local"
+            class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            value={msToDatetimeLocal(edit.draft.startedAtMs)}
+            onchange={(e) => { if (edit.draft) edit.draft.startedAtMs = new Date(e.currentTarget.value).getTime(); }}
+          />
+        </div>
+        {#if edit.draft.endedAtMs}
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-muted-foreground" for="edit-ended">Ended</label>
+            <input
+              id="edit-ended"
+              type="datetime-local"
+              class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              value={msToDatetimeLocal(edit.draft.endedAtMs)}
+              onchange={(e) => { if (edit.draft) edit.draft.endedAtMs = new Date(e.currentTarget.value).getTime(); }}
+            />
+          </div>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Exercises -->
     {#if getExercises(displaySession).length === 0}
