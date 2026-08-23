@@ -7,6 +7,7 @@ import { currentSession } from "$lib/stores/currentSession.store";
 import { recentSessions } from "$lib/stores/recentSessions.store";
 import { splits } from "$lib/stores/splits.store";
 import { exercisesStore } from "$lib/stores/exercises.store";
+import { navConfig } from "$lib/stores/navConfig.store";
 import { setupKeyboard } from "./keyboard";
 import { syncAll } from "$lib/sync/syncService";
 
@@ -43,7 +44,10 @@ export async function appInit(): Promise<void> {
     // Auth check runs in background — never blocks startup; sync follows if authenticated
     authStore.init()
       .then(() => {
-        if (!authStore.isAuthenticated) return;
+        if (!authStore.isAuthenticated) {
+          navConfig.reconcileForOffline();
+          return;
+        }
         void syncAll();
 
         // Periodic background sync

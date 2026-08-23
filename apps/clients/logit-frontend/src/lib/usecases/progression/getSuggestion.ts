@@ -1,6 +1,6 @@
 import { getWorkoutRepo, getProgressionRepo, getAlgorithmRegistry, getExerciseRepo } from "$lib/data/repoProvider";
 import type { ProgressionOutput, ExerciseHistoryEntry, PrecedingExercise } from "$lib/domain/progression";
-import { exerciseKey } from "$lib/domain/progression";
+import { exerciseKey, resolveExerciseIncrement } from "$lib/domain/progression";
 import { getExercises } from "$lib/domain/workout";
 import type { WorkoutSession } from "$lib/domain/workout";
 import { nowMs } from "$lib/domain/time";
@@ -74,6 +74,8 @@ export async function getSuggestion(
     exerciseType: exerciseData?.exerciseType,
   };
 
+  const incrementOverride = resolveExerciseIncrement(exerciseData ?? {}, history);
+
   let sessionContext: { precedingExercises: PrecedingExercise[] } | undefined;
 
   if (currentSession) {
@@ -123,6 +125,7 @@ export async function getSuggestion(
     state,
     userPreferences,
     plannedTargets,
+    incrementOverride,
     sessionContext,
   });
 }

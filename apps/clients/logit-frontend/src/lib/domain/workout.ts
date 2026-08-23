@@ -24,6 +24,7 @@ export type SetEntry = {
   completed?: boolean;
   restDurationMs?: number;
   restStartedAtMs?: number | null;
+  machineId?: string | null;
 };
 
 // Data payload for a strength (exercise + sets) block
@@ -136,7 +137,7 @@ export function removeExercise(
 export function addSet(
   session: WorkoutSession,
   exerciseEntryId: string,
-  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note">>,
+  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "machineId">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => {
     const set: SetEntry = {
@@ -146,6 +147,7 @@ export function addSet(
       weight: defaults?.weight ?? 0,
       note: defaults?.note,
       orderIndex: data.sets.length,
+      machineId: defaults?.machineId,
     };
     return { ...data, sets: [...data.sets, set] };
   });
@@ -155,7 +157,7 @@ export function updateSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
-  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs">>,
+  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => ({
     ...data,

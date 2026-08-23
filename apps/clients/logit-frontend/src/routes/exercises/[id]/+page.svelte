@@ -1,16 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ArrowLeft, Trash2, RotateCcw } from "lucide-svelte";
+  import { ArrowLeft, Trash2, RotateCcw, Pencil } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
-  import type { Exercise, ExercisePatch, ExerciseType } from "$lib/domain/exercise";
+  import type { Exercise, ExercisePatch, ExerciseType, Machine } from "$lib/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { updateExercise } from "$lib/usecases/updateExercise";
   import { getExerciseStats, type ExerciseStats } from "$lib/usecases/progression/getExerciseStats";
   import { resetExerciseProgression } from "$lib/usecases/progression/resetExerciseProgression";
   import { pushDeletedExercise } from "$lib/sync/syncService";
+  import { createId } from "$lib/domain/ids";
 
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);
@@ -19,7 +20,6 @@
     loading: true,
     error: null as string | null,
     exercise: null as Exercise | null,
-    saving: false,
     deleting: false,
     resetting: false,
     resetDone: false,
@@ -33,6 +33,13 @@
   let draftName = $state("");
   let draftNotes = $state("");
   let draftType = $state<ExerciseType>("normal");
+
+  let newMachineName = $state("");
+  let newMachineIncrement = $state(2.5);
+
+  let editingMachineId = $state<string | null>(null);
+  let editMachineName = $state("");
+  let editMachineIncrement = $state(2.5);
 
   function formatDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -69,20 +76,34 @@
     }
   }
 
-  async function save() {
-    if (!view.exercise || !draftName.trim()) return;
-    view.saving = true;
-    try {
-      const patch: ExercisePatch = {
-        name: draftName.trim(),
-        notes: draftNotes.trim() || null,
-        exerciseType: draftType,
-      };
-      await updateExercise(view.exercise.id, patch);
-      view.exercise = { ...view.exercise, ...patch };
-    } finally {
-      view.saving = false;
+  async function saveField(patch: ExercisePatch) {
+    if (!view.exercise) return;
+    await updateExercise(view.exercise.id, patch);
+    view.exercise = { ...view.exercise, ...patch };
+  }
+
+  function commitName() {
+    if (!view.exercise) return;
+    const trimmed = draftName.trim();
+    if (!trimmed) {
+      draftName = view.exercise.name;
+      return;
     }
+    if (trimmed === view.exercise.name) return;
+    void saveField({ name: trimmed });
+  }
+
+  function commitNotes() {
+    if (!view.exercise) return;
+    const trimmed = draftNotes.trim() || null;
+    if (trimmed === (view.exercise.notes ?? null)) return;
+    void saveField({ notes: trimmed });
+  }
+
+  function selectType(type: ExerciseType) {
+    draftType = type;
+    if (!view.exercise || view.exercise.exerciseType === type) return;
+    void saveField({ exerciseType: type });
   }
 
   async function doDelete() {
@@ -95,6 +116,61 @@
     } finally {
       view.deleting = false;
     }
+  }
+
+  async function addMachine() {
+    if (!view.exercise || !newMachineName.trim()) return;
+    const machine: Machine = { id: createId("mach"), name: newMachineName.trim(), incrementKg: newMachineIncrement };
+    const patch: ExercisePatch = { machines: [...(view.exercise.machines ?? []), machine] };
+    await updateExercise(view.exercise.id, patch);
+    view.exercise = { ...view.exercise, ...patch };
+    newMachineName = "";
+    newMachineIncrement = 2.5;
+  }
+
+  let removingMachineId = $state<string | null>(null);
+
+  async function removeMachine(machineId: string) {
+    if (!view.exercise) return;
+    removingMachineId = machineId;
+    try {
+      const patch: ExercisePatch = { machines: (view.exercise.machines ?? []).filter((m) => m.id !== machineId) };
+      if (view.exercise.defaultMachineId === machineId) patch.defaultMachineId = undefined;
+      await updateExercise(view.exercise.id, patch);
+      view.exercise = { ...view.exercise, ...patch };
+    } finally {
+      removingMachineId = null;
+    }
+  }
+
+  function startEditMachine(m: Machine) {
+    editingMachineId = m.id;
+    editMachineName = m.name;
+    editMachineIncrement = m.incrementKg;
+  }
+
+  function cancelEditMachine() {
+    editingMachineId = null;
+  }
+
+  async function saveMachineEdit() {
+    if (!view.exercise || !editingMachineId || !editMachineName.trim()) return;
+    const id = editingMachineId;
+    const patch: ExercisePatch = {
+      machines: (view.exercise.machines ?? []).map((m) =>
+        m.id === id ? { ...m, name: editMachineName.trim(), incrementKg: editMachineIncrement } : m,
+      ),
+    };
+    await updateExercise(view.exercise.id, patch);
+    view.exercise = { ...view.exercise, ...patch };
+    editingMachineId = null;
+  }
+
+  async function setDefaultMachine(machineId: string) {
+    if (!view.exercise) return;
+    const patch: ExercisePatch = { defaultMachineId: machineId };
+    await updateExercise(view.exercise.id, patch);
+    view.exercise = { ...view.exercise, ...patch };
   }
 
   async function doReset() {
@@ -167,6 +243,7 @@
           type="text"
           class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={draftName}
+          onblur={commitName}
           disabled={view.exercise.isCore}
         />
         {#if view.exercise.isCore}
@@ -183,6 +260,7 @@
           rows="3"
           class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
           bind:value={draftNotes}
+          onblur={commitNotes}
         ></textarea>
       </div>
 
@@ -193,7 +271,7 @@
             <button
               type="button"
               class="flex-1 py-1.5 rounded border text-xs font-medium transition-colors {draftType === type ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}"
-              onclick={() => (draftType = type)}
+              onclick={() => selectType(type)}
             >
               {label}
             </button>
@@ -216,15 +294,6 @@
           {/if}
         </div>
       {/if}
-
-      <button
-        type="button"
-        class="w-full py-2.5 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-        disabled={!draftName.trim() || view.saving}
-        onclick={() => void save()}
-      >
-        {view.saving ? "Saving…" : "Save changes"}
-      </button>
     </div>
 
     <!-- Core stats -->
@@ -256,6 +325,105 @@
     <!-- Progression -->
     <div class="px-3 py-4 border-b border-border">
       <ExerciseProgressionPanel exercise={{ id: view.exercise.id, name: view.exercise.name }} />
+    </div>
+
+    <!-- Machines -->
+    <div class="px-3 py-4 border-b border-border flex flex-col gap-3">
+      <span class="text-sm font-medium">Machines</span>
+      {#if (view.exercise.machines ?? []).length > 0}
+        <div class="flex flex-col gap-1.5">
+          {#each view.exercise.machines ?? [] as m (m.id)}
+            {#if editingMachineId === m.id}
+              <div class="flex flex-col gap-2 rounded border border-border px-3 py-2">
+                <div class="flex gap-2 min-w-0">
+                  <input
+                    type="text"
+                    class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    bind:value={editMachineName}
+                  />
+                  <input
+                    type="number"
+                    min="0.25"
+                    max="20"
+                    step="0.25"
+                    class="w-16 shrink-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    bind:value={editMachineIncrement}
+                  />
+                </div>
+                <div class="flex gap-2 justify-end">
+                  <button type="button" class="px-3 py-1.5 rounded border text-xs" onclick={cancelEditMachine}>Cancel</button>
+                  <button
+                    type="button"
+                    class="px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
+                    disabled={!editMachineName.trim()}
+                    onclick={() => void saveMachineEdit()}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            {:else}
+              <div class="flex items-center justify-between gap-2 rounded border border-border px-3 py-2">
+                <button type="button" class="flex-1 min-w-0 text-left text-sm truncate" onclick={() => void setDefaultMachine(m.id)}>
+                  {m.name} <span class="text-muted-foreground text-xs">· {m.incrementKg}kg</span>
+                  {#if view.exercise.defaultMachineId === m.id}<span class="text-primary text-xs ml-1">(default)</span>{/if}
+                </button>
+                <button
+                  type="button"
+                  class="text-muted-foreground hover:text-foreground shrink-0"
+                  aria-label="Edit machine"
+                  onclick={() => startEditMachine(m)}
+                >
+                  <Pencil class="h-3.5 w-3.5" />
+                </button>
+                <ConfirmDialog
+                  title={`Delete "${m.name}"?`}
+                  description="Removes this machine from the exercise. Sets logged against it keep their history."
+                  confirmLabel="Delete"
+                  cancelLabel="Cancel"
+                  saving={removingMachineId === m.id}
+                  onConfirm={() => removeMachine(m.id)}
+                >
+                  {#snippet child({ props })}
+                    <button
+                      {...props}
+                      type="button"
+                      class="text-muted-foreground hover:text-destructive text-xs shrink-0"
+                      aria-label="Delete machine"
+                    >
+                      ✕
+                    </button>
+                  {/snippet}
+                </ConfirmDialog>
+              </div>
+            {/if}
+          {/each}
+        </div>
+      {/if}
+      <div class="flex gap-2 min-w-0">
+        <input
+          type="text"
+          placeholder="Machine name"
+          class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          bind:value={newMachineName}
+        />
+        <input
+          type="number"
+          min="0.25"
+          max="20"
+          step="0.25"
+          class="w-16 shrink-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          bind:value={newMachineIncrement}
+        />
+        <button
+          type="button"
+          class="shrink-0 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
+          disabled={!newMachineName.trim()}
+          onclick={() => void addMachine()}
+        >
+          Add
+        </button>
+      </div>
     </div>
 
     <!-- Reset progression -->

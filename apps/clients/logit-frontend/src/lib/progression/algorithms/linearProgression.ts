@@ -221,6 +221,10 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       repRange: [prefs.repRangeMin, prefs.repRangeMax],
     };
 
+  if (input.incrementOverride !== undefined) {
+    state = { ...state, increment: input.incrementOverride };
+  }
+
   // If history shows a higher working weight than the saved state, reseed from history.
   // This recovers from a stale state (e.g. saved at the default 20kg because history
   // lookup previously failed due to a mismatched exerciseId).

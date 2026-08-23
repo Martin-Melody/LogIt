@@ -14,6 +14,8 @@
   import { currentSession } from "$lib/stores/currentSession.store";
   import type { ProgressionOutput } from "$lib/domain/progression";
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
+  import { getExerciseRepo } from "$lib/data/repoProvider";
+  import type { Machine } from "$lib/domain/exercise";
 
   import { get } from "svelte/store";
   import { profile } from "$lib/stores/profile.store";
@@ -37,6 +39,7 @@
   let suggestion = $state<ProgressionOutput | null>(null);
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
   let blockAutoApplied = $state(false);
+  let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string } | null>(null);
 
   const editSet = $state({
     open: false,
@@ -48,6 +51,23 @@
     const id = data.exerciseId;
     void loadSuggestion(name, id);
   });
+
+  $effect(() => {
+    const exId = data.exerciseId;
+    const name = data.exerciseName;
+    void loadExerciseData(exId, name);
+  });
+
+  async function loadExerciseData(exerciseId?: string, name?: string) {
+    try {
+      const ex = exerciseId
+        ? await getExerciseRepo().getById(exerciseId)
+        : name ? await getExerciseRepo().getByName(name) : null;
+      exerciseData = ex ? { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId } : null;
+    } catch {
+      exerciseData = null;
+    }
+  }
 
   $effect(() => {
     if (
@@ -78,7 +98,7 @@
     const setIndex = data.sets.length;
     const suggestedSet = suggestion?.sets[setIndex] ?? suggestion?.sets[0];
     await onMutate((s: WorkoutSession) =>
-      addSet(s, blockId, { reps: 0, weight: suggestedSet?.weight ?? 0 }),
+      addSet(s, blockId, { reps: 0, weight: suggestedSet?.weight ?? 0, machineId: exerciseData?.defaultMachineId }),
     );
     if (collapsed) collapsed = false;
   }
@@ -94,6 +114,7 @@
           weight: sugSet.weight,
           setType: sugSet.setType ?? "normal",
           note: sugSet.note,
+          machineId: exerciseData?.defaultMachineId,
         });
       }
       return result;
@@ -130,11 +151,12 @@
       // Resolve effective rest so the dialog shows what will actually fire,
       // not just the raw per-set override (which is undefined until explicitly edited).
       restDurationMs: set.restDurationMs ?? get(profile).restDefaults[set.setType],
+      machineId: set.machineId ?? undefined,
     };
   }
 
   async function saveSetPatch(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs">>,
+    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">>,
   ) {
     if (!editSet.setId) return;
     const setId = editSet.setId;
@@ -482,6 +504,9 @@
   open={editSet.open}
   disabled={saving}
   initial={getEditableSet()}
+  machines={exerciseData?.machines ?? []}
+  defaultMachineId={exerciseData?.defaultMachineId}
+  exerciseId={exerciseData?.id}
   onOpenChange={(v) => (editSet.open = v)}
   onSave={saveSetPatch}
 />
