@@ -98,7 +98,6 @@
       }
       return result;
     });
-    if (collapsed) collapsed = false;
   }
 
   async function handleRepsChange(setId: string, reps: number) {
