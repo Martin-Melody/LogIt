@@ -1,6 +1,6 @@
 import type { SetEntry } from "$lib/domain/workout";
 import type { PlannedTargets } from "$lib/domain/WorkoutSplit";
-import type { MuscleGroup } from "$lib/domain/exercise";
+import type { MuscleGroup, Machine } from "$lib/domain/exercise";
 
 export type AlgorithmPreferencesField = {
   key: string;
@@ -43,6 +43,7 @@ export type ProgressionInput = {
   state: unknown; // algorithm-owned, opaque to the app
   userPreferences: unknown; // user-configured per-algorithm prefs, schema defined by the algorithm
   plannedTargets?: import("$lib/domain/WorkoutSplit").PlannedTargets;
+  incrementOverride?: number;
   sessionContext?: {
     precedingExercises: PrecedingExercise[];
     timeBudgetMs?: number;
@@ -96,4 +97,24 @@ export type UserProgressionConfig = {
 
 export function exerciseKey(exercise: { id?: string; name: string }): string {
   return exercise.id ?? exercise.name.toLowerCase().trim();
+}
+
+// historyNewestFirst must be sorted newest-first (matches getSuggestion.ts's ordering,
+// which differs from getExerciseHistory.ts's oldest-first — don't mix the two).
+export function resolveExerciseIncrement(
+  exercise: { machines?: Machine[]; defaultMachineId?: string },
+  historyNewestFirst: ExerciseHistoryEntry[],
+): number | undefined {
+  const machines = exercise.machines ?? [];
+  if (machines.length === 0) return undefined;
+
+  for (const entry of historyNewestFirst) {
+    for (const set of entry.sets) {
+      if (!set.machineId) continue;
+      const m = machines.find((mm) => mm.id === set.machineId);
+      if (m) return m.incrementKg;
+    }
+  }
+
+  return machines.find((m) => m.id === exercise.defaultMachineId)?.incrementKg;
 }
