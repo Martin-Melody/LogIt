@@ -97,6 +97,11 @@ export function createSqliteProgressionRepo(): ProgressionRepo {
       await db.run(`DELETE FROM progression_states WHERE owner_id = ?`, [owner()]);
     },
 
+    async resetExerciseState(key: string): Promise<void> {
+      const db = getDb();
+      await db.run(`DELETE FROM progression_states WHERE owner_id = ? AND key = ?`, [owner(), key]);
+    },
+
     async getAlgorithmPreferences(algorithmId: string): Promise<unknown> {
       const db = getDb();
       const res = await db.query(

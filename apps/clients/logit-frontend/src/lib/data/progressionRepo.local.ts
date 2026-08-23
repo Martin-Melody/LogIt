@@ -65,6 +65,13 @@ export function createLocalProgressionRepo(): ProgressionRepo {
       localStorage.removeItem(STORAGE_KEYS.states);
     },
 
+    async resetExerciseState(key: string): Promise<void> {
+      const states = readJson<Record<string, ExerciseProgressionState>>(STORAGE_KEYS.states, {});
+      if (!(key in states)) return;
+      const { [key]: _removed, ...rest } = states;
+      writeJson(STORAGE_KEYS.states, rest);
+    },
+
     async getAnalyticsConfig(): Promise<UserAnalyticsConfig | null> {
       return readJson<UserAnalyticsConfig | null>(STORAGE_KEYS.analyticsConfig, null);
     },
