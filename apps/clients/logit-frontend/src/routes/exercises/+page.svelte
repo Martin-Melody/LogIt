@@ -1,13 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Plus, Search, X, ChevronRight, Trash2, ArrowLeft } from "lucide-svelte";
+  import { goto } from "$app/navigation";
+  import { Plus, Search, X, ChevronRight, ArrowLeft } from "lucide-svelte";
   import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
-  import type { Exercise, ExercisePatch, ExerciseType } from "$lib/domain/exercise";
+  import type { Exercise, ExerciseType } from "$lib/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
-  import { updateExercise } from "$lib/usecases/updateExercise";
-  import { pushDeletedExercise } from "$lib/sync/syncService";
   type Filter = "all" | "core" | "mine";
 
   let filter = $state<Filter>("all");
@@ -16,13 +15,10 @@
   let loading = $state(true);
 
   let drawerOpen = $state(false);
-  let drawerMode = $state<"add" | "edit">("add");
-  let editTarget = $state<Exercise | null>(null);
   let draftName = $state("");
   let draftNotes = $state("");
   let draftType = $state<ExerciseType>("normal");
   let saving = $state(false);
-  let deleteConfirm = $state(false);
 
   const repo = getExerciseRepo();
 
@@ -52,22 +48,9 @@
   });
 
   function openAdd() {
-    drawerMode = "add";
-    editTarget = null;
     draftName = "";
     draftNotes = "";
     draftType = "normal";
-    deleteConfirm = false;
-    drawerOpen = true;
-  }
-
-  function openEdit(ex: Exercise) {
-    drawerMode = "edit";
-    editTarget = ex;
-    draftName = ex.name;
-    draftNotes = ex.notes ?? "";
-    draftType = ex.exerciseType ?? "normal";
-    deleteConfirm = false;
     drawerOpen = true;
   }
 
@@ -75,26 +58,7 @@
     if (!draftName.trim()) return;
     saving = true;
     try {
-      if (drawerMode === "add") {
-        await repo.create(draftName.trim(), draftType);
-      } else if (editTarget) {
-        const patch: ExercisePatch = { name: draftName.trim(), notes: draftNotes.trim() || null, exerciseType: draftType };
-        await updateExercise(editTarget.id, patch);
-      }
-      drawerOpen = false;
-      allItems = await repo.list();
-    } finally {
-      saving = false;
-    }
-  }
-
-  async function remove() {
-    if (!editTarget) return;
-    saving = true;
-    try {
-      const removedId = editTarget.id;
-      await repo.remove(removedId);
-      pushDeletedExercise(removedId);
+      await repo.create(draftName.trim(), draftType);
       drawerOpen = false;
       allItems = await repo.list();
     } finally {
@@ -176,7 +140,7 @@
           <button
             type="button"
             class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors"
-            onclick={() => openEdit(ex)}
+            onclick={() => goto(`/exercises/${ex.id}`)}
           >
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium truncate">{ex.name}</p>
@@ -202,7 +166,7 @@
 
 <Drawer.Root
   open={drawerOpen}
-  onOpenChange={(v) => { drawerOpen = v; if (!v) deleteConfirm = false; }}
+  onOpenChange={(v) => (drawerOpen = v)}
   shouldScaleBackground={false}
 >
   <Drawer.Portal>
@@ -215,9 +179,7 @@
 
       <!-- Title -->
       <div class="px-4 pb-2">
-        <p class="text-base font-semibold">
-          {drawerMode === "add" ? "Add exercise" : "Edit exercise"}
-        </p>
+        <p class="text-base font-semibold">Add exercise</p>
       </div>
 
       <!-- Body -->
@@ -230,11 +192,7 @@
             placeholder="e.g. Cable Fly"
             class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={draftName}
-            disabled={drawerMode === "edit" && editTarget?.isCore}
           />
-          {#if drawerMode === "edit" && editTarget?.isCore}
-            <p class="text-xs text-muted-foreground">Built-in exercises cannot be renamed.</p>
-          {/if}
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -276,38 +234,8 @@
           disabled={!draftName.trim() || saving}
           onclick={() => void save()}
         >
-          {saving ? "Saving…" : drawerMode === "add" ? "Add exercise" : "Save changes"}
+          {saving ? "Saving…" : "Add exercise"}
         </button>
-
-        {#if drawerMode === "edit" && editTarget && !editTarget.isCore}
-          {#if deleteConfirm}
-            <div class="flex flex-col gap-2">
-              <p class="text-sm text-center text-muted-foreground">Delete "{editTarget.name}"?</p>
-              <div class="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  class="py-2.5 rounded border text-sm"
-                  onclick={() => (deleteConfirm = false)}
-                >Cancel</button>
-                <button
-                  type="button"
-                  class="py-2.5 rounded bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-50"
-                  disabled={saving}
-                  onclick={() => void remove()}
-                >Delete</button>
-              </div>
-            </div>
-          {:else}
-            <button
-              type="button"
-              class="w-full py-2.5 rounded border border-destructive/50 text-destructive text-sm flex items-center justify-center gap-2"
-              onclick={() => (deleteConfirm = true)}
-            >
-              <Trash2 class="h-4 w-4" />
-              Delete exercise
-            </button>
-          {/if}
-        {/if}
       </div>
     </Drawer.Content>
   </Drawer.Portal>
