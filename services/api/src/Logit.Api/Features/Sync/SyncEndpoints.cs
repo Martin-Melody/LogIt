@@ -11,7 +11,9 @@ public static class SyncEndpoints
 {
     public static void MapSyncEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/sync").WithTags("Sync").RequireAuthorization();
+        // Sync is a Pro/Studio feature — Free accounts (mobile-app social only) don't get
+        // cross-device sync or the data it feeds (web dashboard, analytics).
+        var group = app.MapGroup("/sync").WithTags("Sync").RequireAuthorization().RequireTier(UserTier.Pro);
 
         group.MapPost("/sessions", PushSessions);
         group.MapGet("/sessions", PullSessions);
@@ -79,10 +81,12 @@ public static class SyncEndpoints
 
     private static async Task<IResult> PullSessions(
         [FromQuery] long since,
+        [FromQuery] Guid? clientId,
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var userId = caller.GetUserId();
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
 
         var sessions = await db.SyncedWorkoutSessions
             .Where(s => s.UserId == userId && (s.StartedAtMs > since || (s.DeletedAtMs != null && s.DeletedAtMs > since)))
@@ -152,10 +156,12 @@ public static class SyncEndpoints
 
     private static async Task<IResult> PullSplits(
         [FromQuery] long since,
+        [FromQuery] Guid? clientId,
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var userId = caller.GetUserId();
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
 
         var splits = await db.SyncedSplits
             .Where(s => s.UserId == userId && (s.UpdatedAtMs > since || (s.DeletedAtMs != null && s.DeletedAtMs > since)))
@@ -219,10 +225,12 @@ public static class SyncEndpoints
 
     private static async Task<IResult> PullExercises(
         [FromQuery] long since,
+        [FromQuery] Guid? clientId,
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var userId = caller.GetUserId();
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
 
         var exercises = await db.SyncedExercises
             .Where(e => e.UserId == userId && (e.CreatedAtMs > since || (e.DeletedAtMs != null && e.DeletedAtMs > since)))
@@ -256,10 +264,12 @@ public static class SyncEndpoints
     }
 
     private static async Task<IResult> PullProfile(
+        [FromQuery] Guid? clientId,
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var userId = caller.GetUserId();
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
 
         var user = await db.Users
             .AsNoTracking()
@@ -279,6 +289,23 @@ public static class SyncEndpoints
         {
             return Results.Ok(new { profile = (ProfileDto?)null });
         }
+    }
+
+    // ── Coach access ──────────────────────────────────────────────────────────
+
+    /// Resolves which user's data a pull request should actually read: the caller's own
+    /// (clientId absent — unchanged, self-access) or a client's (clientId present — only if
+    /// the caller has an Active coach relationship with them). Read-only by design: this is
+    /// never called from any push/write handler.
+    private static async Task<(Guid? userId, IResult? forbidden)> ResolveTargetUserId(
+        Guid callerId, Guid? clientId, AppDbContext db)
+    {
+        if (clientId is null) return (callerId, null);
+
+        var authorized = await db.CoachClientRelationships.AnyAsync(r =>
+            r.CoachId == callerId && r.ClientId == clientId.Value && r.Status == CoachClientStatus.Active);
+
+        return authorized ? (clientId, null) : (null, Results.Forbid());
     }
 }
 
