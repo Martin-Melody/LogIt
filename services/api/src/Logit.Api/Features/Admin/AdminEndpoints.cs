@@ -38,7 +38,8 @@ public static class AdminEndpoints
         var userCount = await db.Users.CountAsync();
         var postCount = await db.Posts.CountAsync(p => p.DeletedAt == null);
         var activeTokens = await db.RefreshTokens.CountAsync(t => t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow);
-        return Results.Ok(new { userCount, postCount, activeTokens });
+        var workoutCount = await db.SyncedWorkoutSessions.CountAsync(s => s.DeletedAtMs == null);
+        return Results.Ok(new { userCount, postCount, activeTokens, workoutCount });
     }
 
     private static async Task<IResult> GetUsers(AppDbContext db, string? search = null, int page = 1, int pageSize = 100)
@@ -66,6 +67,10 @@ public static class AdminEndpoints
                 PostCount = u.Posts.Count(p => p.DeletedAt == null),
                 FollowerCount = u.Followers.Count,
                 FollowingCount = u.Following.Count,
+                SessionCount = db.SyncedWorkoutSessions.Count(w => w.UserId == u.Id && w.DeletedAtMs == null),
+                LastActive = db.SyncedWorkoutSessions
+                    .Where(w => w.UserId == u.Id && w.DeletedAtMs == null)
+                    .Max(w => (DateTime?)w.SyncedAt),
             })
             .ToListAsync();
 
@@ -91,17 +96,40 @@ public static class AdminEndpoints
                 FollowerCount = u.Followers.Count,
                 FollowingCount = u.Following.Count,
                 ActiveTokens = u.RefreshTokens.Count(t => t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow),
-                RecentPosts = u.Posts
-                    .Where(p => p.DeletedAt == null)
-                    .OrderByDescending(p => p.CreatedAt)
-                    .Take(10)
-                    .Select(p => new { p.Id, Type = p.Type.ToString(), p.Body, p.CreatedAt, LikeCount = p.Likes.Count, CommentCount = p.Comments.Count })
-                    .ToList(),
+                SessionCount = db.SyncedWorkoutSessions.Count(w => w.UserId == id && w.DeletedAtMs == null),
+                SplitCount = db.SyncedSplits.Count(sp => sp.UserId == id && sp.DeletedAtMs == null),
+                ExerciseCount = db.SyncedExercises.Count(e => e.UserId == id && e.DeletedAtMs == null),
+                LastActive = db.SyncedWorkoutSessions
+                    .Where(w => w.UserId == id && w.DeletedAtMs == null)
+                    .Max(w => (DateTime?)w.SyncedAt),
             })
             .FirstOrDefaultAsync();
 
         if (user is null) return Results.NotFound();
-        return Results.Ok(user);
+
+        // Fetched as separate queries rather than nested in the projection above — SQLite's
+        // EF provider can't translate multiple ORDER BY + Take/collection subqueries combined
+        // into one query (needs CROSS APPLY, which SQLite doesn't support).
+        var recentPosts = await db.Posts
+            .Where(p => p.AuthorId == id && p.DeletedAt == null)
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(10)
+            .Select(p => new { p.Id, Type = p.Type.ToString(), p.Body, p.CreatedAt, LikeCount = p.Likes.Count, CommentCount = p.Comments.Count })
+            .ToListAsync();
+
+        var coachingClients = await db.CoachClientRelationships
+            .Where(r => r.CoachId == id)
+            .OrderByDescending(r => r.UpdatedAt)
+            .Select(r => new { r.Id, UserId = r.Client.Id, r.Client.Username, r.Client.DisplayName, Status = r.Status.ToString() })
+            .ToListAsync();
+
+        var coaches = await db.CoachClientRelationships
+            .Where(r => r.ClientId == id)
+            .OrderByDescending(r => r.UpdatedAt)
+            .Select(r => new { r.Id, UserId = r.Coach.Id, r.Coach.Username, r.Coach.DisplayName, Status = r.Status.ToString() })
+            .ToListAsync();
+
+        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
     }
 
     private record UpdateUserRequest(string? DisplayName, string? Email, string? Bio, string? Tier);

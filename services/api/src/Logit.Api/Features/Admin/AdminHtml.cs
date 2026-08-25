@@ -25,6 +25,7 @@ public static class AdminHtml
               --success: #52c07a;
               --warn: #e0a952;
               --pro: #c9a84c;
+              --studio: #8e6fd1;
               --radius: 4px;
               --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
@@ -85,7 +86,13 @@ public static class AdminHtml
             .tier-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; border: 1px solid; }
             .tier-free { color: var(--muted); border-color: var(--border2); }
             .tier-pro { color: var(--pro); border-color: var(--pro); }
+            .tier-studio { color: var(--studio); border-color: var(--studio); }
             .num { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+            .relation-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; margin-bottom: 6px; font-size: 12px; }
+            .relation-status { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; border: 1px solid; text-transform: uppercase; letter-spacing: .03em; }
+            .status-active { color: var(--success); border-color: var(--success); }
+            .status-pending { color: var(--warn); border-color: var(--warn); }
+            .status-revoked { color: var(--muted); border-color: var(--border2); }
 
             /* ── Detail panel ── */
             .detail-panel { width: 45%; display: none; flex-direction: column; overflow: hidden; background: var(--surface); }
@@ -159,7 +166,8 @@ public static class AdminHtml
             <div class="stats">
               <div class="stat"><span class="stat-val" id="stat-users">—</span><span class="stat-label">Users</span></div>
               <div class="stat"><span class="stat-val" id="stat-posts">—</span><span class="stat-label">Posts</span></div>
-              <div class="stat"><span class="stat-val" id="stat-tokens">—</span><span class="stat-label">Active sessions</span></div>
+              <div class="stat"><span class="stat-val" id="stat-tokens">—</span><span class="stat-label">Active logins</span></div>
+              <div class="stat"><span class="stat-val" id="stat-workouts">—</span><span class="stat-label">Workouts</span></div>
             </div>
             <button class="topbar-logout" onclick="logout()">Sign out</button>
           </div>
@@ -180,6 +188,8 @@ public static class AdminHtml
                       <th>Tier</th>
                       <th style="text-align:right">Posts</th>
                       <th style="text-align:right">Followers</th>
+                      <th style="text-align:right">Workouts</th>
+                      <th>Last active</th>
                       <th>Joined</th>
                     </tr>
                   </thead>
@@ -203,7 +213,11 @@ public static class AdminHtml
                 <div class="detail-stat"><div class="detail-stat-val" id="ds-posts">—</div><div class="detail-stat-label">Posts</div></div>
                 <div class="detail-stat"><div class="detail-stat-val" id="ds-followers">—</div><div class="detail-stat-label">Followers</div></div>
                 <div class="detail-stat"><div class="detail-stat-val" id="ds-following">—</div><div class="detail-stat-label">Following</div></div>
-                <div class="detail-stat"><div class="detail-stat-val" id="ds-tokens">—</div><div class="detail-stat-label">Sessions</div></div>
+                <div class="detail-stat"><div class="detail-stat-val" id="ds-tokens">—</div><div class="detail-stat-label">Active logins</div></div>
+                <div class="detail-stat"><div class="detail-stat-val" id="ds-sessions">—</div><div class="detail-stat-label">Workouts</div></div>
+                <div class="detail-stat"><div class="detail-stat-val" id="ds-splits">—</div><div class="detail-stat-label">Splits</div></div>
+                <div class="detail-stat"><div class="detail-stat-val" id="ds-exercises">—</div><div class="detail-stat-label">Exercises</div></div>
+                <div class="detail-stat"><div class="detail-stat-val" id="ds-lastactive">—</div><div class="detail-stat-label">Last active</div></div>
               </div>
               <div class="detail-body">
                 <div class="field-row">
@@ -216,6 +230,7 @@ public static class AdminHtml
                     <select class="field-input" id="f-tier">
                       <option value="Free">Free</option>
                       <option value="Pro">Pro</option>
+                      <option value="Studio">Studio</option>
                     </select>
                   </div>
                 </div>
@@ -230,6 +245,10 @@ public static class AdminHtml
                 <div class="field-group">
                   <label class="field-label">Bio</label>
                   <textarea class="field-input" id="f-bio" rows="3"></textarea>
+                </div>
+                <div class="posts-section" id="coaching-section" style="display:none">
+                  <h3>Coaching</h3>
+                  <div id="d-coaching"></div>
                 </div>
                 <div class="posts-section">
                   <h3>Recent posts</h3>
@@ -316,6 +335,7 @@ public static class AdminHtml
             document.getElementById('stat-users').textContent = s.userCount.toLocaleString();
             document.getElementById('stat-posts').textContent = s.postCount.toLocaleString();
             document.getElementById('stat-tokens').textContent = s.activeTokens.toLocaleString();
+            document.getElementById('stat-workouts').textContent = s.workoutCount.toLocaleString();
           }
 
           async function loadUsers(search = '') {
@@ -356,6 +376,8 @@ public static class AdminHtml
                 <td><span class="tier-badge tier-${u.tier.toLowerCase()}">${u.tier}</span></td>
                 <td class="num">${u.postCount}</td>
                 <td class="num">${u.followerCount}</td>
+                <td class="num">${u.sessionCount}</td>
+                <td class="email">${u.lastActive ? fmtDate(u.lastActive) : 'Never'}</td>
                 <td class="email">${fmtDate(u.createdAt)}</td>
               </tr>`).join('');
           }
@@ -391,6 +413,10 @@ public static class AdminHtml
             document.getElementById('ds-followers').textContent = u.followerCount;
             document.getElementById('ds-following').textContent = u.followingCount;
             document.getElementById('ds-tokens').textContent = u.activeTokens;
+            document.getElementById('ds-sessions').textContent = u.sessionCount;
+            document.getElementById('ds-splits').textContent = u.splitCount;
+            document.getElementById('ds-exercises').textContent = u.exerciseCount;
+            document.getElementById('ds-lastactive').textContent = u.lastActive ? fmtDate(u.lastActive) : 'Never';
 
             // Fields
             document.getElementById('f-username').value = u.username;
@@ -398,6 +424,24 @@ public static class AdminHtml
             document.getElementById('f-email').value = u.email;
             document.getElementById('f-bio').value = u.bio || '';
             document.getElementById('f-tier').value = u.tier;
+
+            // Coaching relationships
+            const coachingSection = document.getElementById('coaching-section');
+            const coachingEl = document.getElementById('d-coaching');
+            const relations = [
+              ...u.coachingClients.map(r => ({ ...r, role: 'Coaches' })),
+              ...u.coaches.map(r => ({ ...r, role: 'Coached by' })),
+            ];
+            if (relations.length === 0) {
+              coachingSection.style.display = 'none';
+            } else {
+              coachingSection.style.display = 'block';
+              coachingEl.innerHTML = relations.map(r => `
+                <div class="relation-item">
+                  <span>${r.role} <strong>@${esc(r.username)}</strong>${r.displayName ? ` (${esc(r.displayName)})` : ''}</span>
+                  <span class="relation-status status-${r.status.toLowerCase()}">${r.status}</span>
+                </div>`).join('');
+            }
 
             // Posts
             const postsEl = document.getElementById('d-posts');
