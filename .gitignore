@@ -11,9 +11,13 @@ dist/
 .vite/
 vite.config.*.timestamp-*
 
+# Cloudflare
+.wrangler/
+
 # Env
 .env
 .env.*
+!.env.example
 .DS_Store
 
 # Capacitor

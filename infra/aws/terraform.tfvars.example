@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (gitignored) and fill in, or export as TF_VAR_db_password etc.
+
+db_password = "" # generate: openssl rand -base64 32
+jwt_secret  = "" # generate: openssl rand -base64 48
+admin_key   = "" # pick your own value
+web_origin  = "" # e.g. https://app.logit.ie — the subdomain you intend to point at logit-web
+
+# Optional at first apply — these four default to a placeholder if omitted, so you can stand
+# up the infrastructure before Stripe is ready. Checkout/webhooks won't work until they're
+# real, but nothing else is blocked. Fill in from your Stripe dashboard when ready:
+# stripe_secret_key      = ""
+# stripe_webhook_secret  = ""
+# stripe_pro_price_id    = ""
+# stripe_studio_price_id = ""
