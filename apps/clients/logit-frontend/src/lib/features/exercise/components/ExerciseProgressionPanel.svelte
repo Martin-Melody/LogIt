@@ -3,8 +3,9 @@
   import { scaleUtc } from "d3-scale";
   import { AreaChart } from "layerchart";
   import * as Chart from "$lib/components/ui/chart";
-  import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "$lib/usecases/progression/getExerciseAnalytics";
-  import type { AnalyticsSeries } from "$lib/domain/analytics";
+  import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "@logit/core/usecases/progression/getExerciseAnalytics";
+  import type { AnalyticsSeries } from "@logit/core/domain/analytics";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 
   const { exercise }: { exercise: { id?: string; name: string } } = $props();
 
@@ -36,7 +37,7 @@
     loading = true;
     analyticsResult = null;
     activeSeries = "";
-    void getExerciseAnalytics(exercise).then((result) => {
+    void getExerciseAnalytics(exercise, getProgressionDeps()).then((result) => {
       analyticsResult = result;
       activeSeries = result?.output.series[0]?.metricId ?? "";
       loading = false;

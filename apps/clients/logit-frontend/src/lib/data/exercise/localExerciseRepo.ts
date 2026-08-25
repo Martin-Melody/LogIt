@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
-import type { Exercise, ExercisePatch, ExerciseType } from "$lib/domain/exercise";
-import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
-import { createId } from "$lib/domain/ids";
+import type { Exercise, ExercisePatch, ExerciseType } from "@logit/core/domain/exercise";
+import type { ExerciseRepo, ListExercisesOptions } from "@logit/core/data/exercise/exerciseRepo";
+import { createId } from "@logit/core/domain/ids";
 
 // Core exercises are always authoritative — never stored in localStorage.
 const CORE_EXERCISES: Exercise[] = [

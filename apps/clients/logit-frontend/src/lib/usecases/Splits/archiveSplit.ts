@@ -1,5 +1,5 @@
 import { getSplitRepo } from "$lib/data/repoProvider";
-import { archiveSplit as archiveSplitDomain } from "$lib/domain/WorkoutSplit";
+import { archiveSplit as archiveSplitDomain } from "@logit/core/domain/WorkoutSplit";
 "$lib/d"
 
 export async function archiveSplit(id: string, archived = true): Promise<void> {

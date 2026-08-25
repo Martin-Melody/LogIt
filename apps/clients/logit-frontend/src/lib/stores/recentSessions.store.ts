@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import type { WorkoutSession } from "$lib/domain/workout";
+import type { WorkoutSession } from "@logit/core/domain/workout";
 import { listRecentSessions } from "$lib/usecases/listRecentSessions";
 
 type RecentSessionsStore = {

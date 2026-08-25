@@ -4,8 +4,8 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import Textarea from "$lib/components/ui/textarea/textarea.svelte";
 
-  import type { SetEntry, SetType } from "$lib/domain/workout";
-  import type { Machine } from "$lib/domain/exercise";
+  import type { SetEntry, SetType } from "@logit/core/domain/workout";
+  import type { Machine } from "@logit/core/domain/exercise";
   import SetTypePicker from "./SetTypePicker.svelte";
 
   type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">;

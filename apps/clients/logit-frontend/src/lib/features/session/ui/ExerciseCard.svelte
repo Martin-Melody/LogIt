@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Plus, X, Check, Trash2, ChevronDown, ChevronRight, GripVertical, Timer } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import type { ProgressionOutput, SuggestedSet } from "$lib/domain/progression";
+  import type { ProgressionOutput, SuggestedSet } from "@logit/core/domain/progression";
   import type { GripAction } from "$lib/features/session/blocks/types";
 
   const {

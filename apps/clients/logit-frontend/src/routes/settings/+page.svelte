@@ -36,31 +36,32 @@
   import { setMode, userPrefersMode } from "mode-watcher";
   import { authStore } from "$lib/api/authStore.svelte";
   import { syncAll, lastSyncedAt } from "$lib/sync/syncService";
-  import { connectionStatus } from "$lib/api/connectionStatus.svelte";
+  import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import {
     getServerMode,
     setServerMode,
     getSelfHostUrl,
     type ServerMode,
-  } from "$lib/api/serverConfig";
+  } from "@logit/core/api/serverConfig";
   import {
     testServerConnection,
     type ConnectionResult,
-  } from "$lib/api/testConnection";
+  } from "@logit/core/api/testConnection";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
   import {
     getProgressionConfig,
     setProgressionAlgorithm,
-  } from "$lib/usecases/progression/getProgressionConfig";
-  import type { ProgressionConfigView } from "$lib/usecases/progression/getProgressionConfig";
+  } from "@logit/core/usecases/progression/getProgressionConfig";
+  import type { ProgressionConfigView } from "@logit/core/usecases/progression/getProgressionConfig";
   import { Settings2 } from "lucide-svelte";
   import {
     getAnalyticsConfig,
     setAnalyticsPlugin,
     DEFAULT_ANALYTICS_ID,
-  } from "$lib/usecases/progression/getAnalyticsConfig";
-  import type { AnalyticsConfigView } from "$lib/usecases/progression/getAnalyticsConfig";
+  } from "@logit/core/usecases/progression/getAnalyticsConfig";
+  import type { AnalyticsConfigView } from "@logit/core/usecases/progression/getAnalyticsConfig";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 
   const isDev = import.meta.env.DEV;
 
@@ -182,7 +183,7 @@
     progUi.loading = true;
     progUi.error = null;
     try {
-      view = await getProgressionConfig();
+      view = await getProgressionConfig(getProgressionDeps());
     } catch (e) {
       progUi.error = e instanceof Error ? e.message : "Failed to load settings";
     } finally {
@@ -195,7 +196,7 @@
     progUi.saving = true;
     progUi.error = null;
     try {
-      await setProgressionAlgorithm(id);
+      await setProgressionAlgorithm(id, getProgressionDeps());
       view = { ...view, config: id ? { algorithmId: id } : null };
     } catch (e) {
       progUi.error = e instanceof Error ? e.message : "Failed to save setting";
@@ -219,7 +220,7 @@
     analyticsUi.loading = true;
     analyticsUi.error = null;
     try {
-      analyticsView = await getAnalyticsConfig();
+      analyticsView = await getAnalyticsConfig(getProgressionDeps());
     } catch (e) {
       analyticsUi.error =
         e instanceof Error ? e.message : "Failed to load settings";
@@ -233,7 +234,7 @@
     analyticsUi.saving = true;
     analyticsUi.error = null;
     try {
-      await setAnalyticsPlugin(id);
+      await setAnalyticsPlugin(id, getProgressionDeps());
       analyticsView = {
         ...analyticsView,
         config: id ? { analyticsId: id } : null,

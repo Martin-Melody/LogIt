@@ -3,7 +3,7 @@
   import { ArrowLeft, Loader2, RefreshCw, Dumbbell, Trophy, MessageSquare, Trash2, PenSquare, CalendarDays, Activity, Cpu, LayoutDashboard, Heart, MessageCircle, Pencil, Check, X, Search } from "lucide-svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { socialApi, type ApiPost, type FeedPage } from "$lib/api/socialApi";
+  import { socialApi, type ApiPost, type FeedPage } from "@logit/core/api/socialApi";
   import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import UserSearchSheet from "$lib/components/UserSearchSheet.svelte";

@@ -5,8 +5,8 @@
   import { recentSessions } from "$lib/stores/recentSessions.store";
   import { currentSession } from "$lib/stores/currentSession.store";
 
-  import { durationMs, formatDuration } from "$lib/domain/time";
-  import { getTopSetHighlight, type SessionSummary } from "$lib/domain/workout";
+  import { durationMs, formatDuration } from "@logit/core/domain/time";
+  import { getTopSetHighlight, type SessionSummary } from "@logit/core/domain/workout";
 
   function dateLabelFromMs(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, {

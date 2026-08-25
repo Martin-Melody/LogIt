@@ -2,10 +2,10 @@
   import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import { createId } from "$lib/domain/ids";
+  import { createId } from "@logit/core/domain/ids";
   import { get } from "svelte/store";
   import { profile } from "$lib/stores/profile.store";
-  import type { CardioBlockData, CardioInterval, WorkoutSession } from "$lib/domain/workout";
+  import type { CardioBlockData, CardioInterval, WorkoutSession } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
 
   const {

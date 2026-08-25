@@ -1,5 +1,5 @@
-import { apiClient, type AuthUser } from "./client";
-import { getServerMode } from "./serverConfig";
+import { apiClient, type AuthUser } from "@logit/core/api/client";
+import { getServerMode } from "@logit/core/api/serverConfig";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId } from "$lib/data/activeOwner";
 import { resetRepos, initRepos } from "$lib/data/repoProvider";

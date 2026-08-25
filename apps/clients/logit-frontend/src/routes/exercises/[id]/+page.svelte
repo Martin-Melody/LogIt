@@ -5,13 +5,14 @@
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
-  import type { Exercise, ExercisePatch, ExerciseType, Machine } from "$lib/domain/exercise";
+  import type { Exercise, ExercisePatch, ExerciseType, Machine } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { updateExercise } from "$lib/usecases/updateExercise";
-  import { getExerciseStats, type ExerciseStats } from "$lib/usecases/progression/getExerciseStats";
-  import { resetExerciseProgression } from "$lib/usecases/progression/resetExerciseProgression";
+  import { getExerciseStats, type ExerciseStats } from "@logit/core/usecases/progression/getExerciseStats";
+  import { resetExerciseProgression } from "@logit/core/usecases/progression/resetExerciseProgression";
   import { pushDeletedExercise } from "$lib/sync/syncService";
-  import { createId } from "$lib/domain/ids";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import { createId } from "@logit/core/domain/ids";
 
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);
@@ -70,7 +71,7 @@
     if (!view.exercise) return;
     stats.loading = true;
     try {
-      stats.data = await getExerciseStats({ id: view.exercise.id, name: view.exercise.name });
+      stats.data = await getExerciseStats({ id: view.exercise.id, name: view.exercise.name }, getProgressionDeps());
     } finally {
       stats.loading = false;
     }
@@ -178,7 +179,7 @@
     view.resetting = true;
     view.resetDone = false;
     try {
-      await resetExerciseProgression({ id: view.exercise.id, name: view.exercise.name });
+      await resetExerciseProgression({ id: view.exercise.id, name: view.exercise.name }, getProgressionDeps());
       view.resetDone = true;
     } finally {
       view.resetting = false;

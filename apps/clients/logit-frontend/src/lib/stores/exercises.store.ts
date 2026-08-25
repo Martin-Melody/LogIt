@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import type { Exercise } from "$lib/domain/exercise";
+import type { Exercise } from "@logit/core/domain/exercise";
 import { getExerciseRepo } from "$lib/data/repoProvider";
 import { pushExercise } from "$lib/sync/syncService";
 

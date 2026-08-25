@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SetType } from "$lib/domain/workout";
+  import type { SetType } from "@logit/core/domain/workout";
 
   const {
     value = "normal",

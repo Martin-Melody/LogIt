@@ -5,8 +5,8 @@ import {
   SQLiteConnection,
   type SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { createId } from "$lib/domain/ids";
-import { nowMs } from "$lib/domain/time";
+import { createId } from "@logit/core/domain/ids";
+import { nowMs } from "@logit/core/domain/time";
 
 const DB_NAME = "logit";
 const DB_VERSION = 1;

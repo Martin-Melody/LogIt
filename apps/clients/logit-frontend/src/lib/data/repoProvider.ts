@@ -1,10 +1,10 @@
 import { browser } from "$app/environment";
-import type { WorkoutRepo } from "$lib/data/workoutRepo";
-import type { SplitRepo } from "$lib/data/splitRepo";
-import type { ExerciseRepo } from "$lib/data/exercise/exerciseRepo";
-import type { ProgressionRepo } from "$lib/data/progressionRepo";
-import type { AlgorithmRegistry } from "$lib/progression/algorithmRegistry";
-import type { AnalyticsRegistry } from "$lib/domain/analytics";
+import type { WorkoutRepo } from "@logit/core/data/workoutRepo";
+import type { SplitRepo } from "@logit/core/data/splitRepo";
+import type { ExerciseRepo } from "@logit/core/data/exercise/exerciseRepo";
+import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
+import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
+import type { AnalyticsRegistry } from "@logit/core/domain/analytics";
 
 import { isNativePlatform } from "$lib/platform/isNative";
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { connectionStatus, type ConnectionState } from "$lib/api/connectionStatus.svelte";
+  import { connectionStatus, type ConnectionState } from "@logit/core/api/connectionStatus.svelte";
 
   const DOT: Record<ConnectionState, { color: string; label: string }> = {
     connected:    { color: "bg-green-500",           label: "Connected" },

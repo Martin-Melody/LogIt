@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
-import { createLocalAnalyticsRegistry } from "$lib/progression/localAnalyticsRegistry";
+import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import type { InstalledPlugin, PluginManifest } from "./types";
 
 const INSTALLED_STORAGE_KEY = "logit:plugins:installed:v1";

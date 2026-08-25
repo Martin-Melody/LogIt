@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Exercise } from "$lib/domain/exercise";
+  import type { Exercise } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
 
   const {

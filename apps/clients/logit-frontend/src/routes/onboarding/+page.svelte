@@ -8,11 +8,11 @@
   import { resetTours } from "$lib/tour/index";
   import { splits } from "$lib/stores/splits.store";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
-  import { createSplit, addDay, addPlannedStrength } from "$lib/domain/WorkoutSplit";
+  import { createSplit, addDay, addPlannedStrength } from "@logit/core/domain/WorkoutSplit";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { setServerMode } from "$lib/api/serverConfig";
-  import { ApiError } from "$lib/api/client";
-  import { testServerConnection, type ConnectionResult } from "$lib/api/testConnection";
+  import { setServerMode } from "@logit/core/api/serverConfig";
+  import { ApiError } from "@logit/core/api/client";
+  import { testServerConnection, type ConnectionResult } from "@logit/core/api/testConnection";
 
   type PresetDay = { name: string; exercises: string[] };
   type Preset = { id: string; name: string; description: string; days: PresetDay[] };

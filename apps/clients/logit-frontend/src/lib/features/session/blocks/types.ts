@@ -1,5 +1,5 @@
 import type { Component } from "svelte";
-import type { WorkoutSession } from "$lib/domain/workout";
+import type { WorkoutSession } from "@logit/core/domain/workout";
 
 export type GripAction = (node: HTMLElement) => { destroy(): void };
 

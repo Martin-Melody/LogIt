@@ -38,6 +38,7 @@
     "vite": "^7.2.6"
   },
   "dependencies": {
+    "@logit/core": "*",
     "@capacitor-community/sqlite": "^8.0.0",
     "@capacitor/android": "^8.0.1",
     "@capacitor/camera": "^8.2.0",

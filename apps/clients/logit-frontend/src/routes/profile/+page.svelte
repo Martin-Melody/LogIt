@@ -15,9 +15,9 @@
   import { profileConfig } from "$lib/stores/profileConfig.store";
   import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { getServerMode } from "$lib/api/serverConfig";
-  import { socialApi, type ApiProfile, type ApiPost } from "$lib/api/socialApi";
-  import { apiClient } from "$lib/api/client";
+  import { getServerMode } from "@logit/core/api/serverConfig";
+  import { socialApi, type ApiProfile, type ApiPost } from "@logit/core/api/socialApi";
+  import { apiClient } from "@logit/core/api/client";
   import { formatDistanceToNow } from "$lib/utils";
   import { activeSplit } from "$lib/stores/activeSplit.store";
   import { getPersonalRecords } from "$lib/usecases/getPersonalRecords";
