@@ -5,9 +5,9 @@
   import { ArrowLeft, Cloud, Server, Plus, Eye, EyeOff, Loader2, CheckCircle, XCircle, Pencil } from "lucide-svelte";
   import { get } from "svelte/store";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { getServerMode, setServerMode, getSelfHostUrl } from "$lib/api/serverConfig";
-  import { testServerConnection, type ConnectionResult } from "$lib/api/testConnection";
-  import { ApiError } from "$lib/api/client";
+  import { getServerMode, setServerMode, getSelfHostUrl } from "@logit/core/api/serverConfig";
+  import { testServerConnection, type ConnectionResult } from "@logit/core/api/testConnection";
+  import { ApiError } from "@logit/core/api/client";
   import { isNativePlatform } from "$lib/platform/isNative";
   import { onboarding } from "$lib/stores/onboarding.store";
   import type { LocalAccount } from "$lib/data/localAccountRepo";

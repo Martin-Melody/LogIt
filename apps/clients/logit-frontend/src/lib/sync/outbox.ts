@@ -1,5 +1,5 @@
-import { syncApi } from "$lib/api/syncApi";
-import type { RemoteSession, RemoteSplit, RemoteExercise, RemoteProfile } from "$lib/api/syncApi";
+import { syncApi } from "@logit/core/api/syncApi";
+import type { RemoteSession, RemoteSplit, RemoteExercise, RemoteProfile } from "@logit/core/api/syncApi";
 
 const KEY = "logit:sync:outbox";
 

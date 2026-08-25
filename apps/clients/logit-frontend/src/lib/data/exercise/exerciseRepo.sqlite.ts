@@ -1,9 +1,9 @@
-import type { Exercise, ExercisePatch, ExerciseType, MuscleGroup, Machine } from "$lib/domain/exercise";
-import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
+import type { Exercise, ExercisePatch, ExerciseType, MuscleGroup, Machine } from "@logit/core/domain/exercise";
+import type { ExerciseRepo, ListExercisesOptions } from "@logit/core/data/exercise/exerciseRepo";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
-import { createId } from "$lib/domain/ids";
-import { nowMs } from "$lib/domain/time";
+import { createId } from "@logit/core/domain/ids";
+import { nowMs } from "@logit/core/domain/time";
 
 function parseMuscles(json: string | null | undefined): MuscleGroup[] {
   if (!json) return [];

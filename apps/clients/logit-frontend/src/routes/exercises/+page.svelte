@@ -5,7 +5,7 @@
   import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
-  import type { Exercise, ExerciseType } from "$lib/domain/exercise";
+  import type { Exercise, ExerciseType } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   type Filter = "all" | "core" | "mine";
 

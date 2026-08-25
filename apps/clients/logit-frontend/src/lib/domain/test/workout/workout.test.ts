@@ -1,7 +1,7 @@
 import {
   createSession, addExercise, addSet, updateSet, removeSet, removeExercise,
   getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
-} from "$lib/domain/workout";
+} from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
 
 function seedSession() {

@@ -2,9 +2,9 @@
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
-  import type { WorkoutSession, SetEntry } from "$lib/domain/workout";
-  import { getExercises, updateSet } from "$lib/domain/workout";
-  import { durationMs, formatDuration } from "$lib/domain/time";
+  import type { WorkoutSession, SetEntry } from "@logit/core/domain/workout";
+  import { getExercises, updateSet } from "@logit/core/domain/workout";
+  import { durationMs, formatDuration } from "@logit/core/domain/time";
   import { getSession } from "$lib/usecases/getSession";
   import { deleteSession } from "$lib/usecases/deleteSession";
   import { editSession } from "$lib/usecases/editSession";
@@ -15,7 +15,7 @@
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { getExerciseRepo } from "$lib/data/repoProvider";
-  import type { Machine } from "$lib/domain/exercise";
+  import type { Machine } from "@logit/core/domain/exercise";
 
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);

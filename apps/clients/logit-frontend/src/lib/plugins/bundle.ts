@@ -1,7 +1,7 @@
 import type { Component } from "svelte";
 import type { PluginManifest, PluginFamily } from "./types";
-import type { ProgressionAlgorithm } from "$lib/domain/progression";
-import type { AnalyticsPlugin } from "$lib/domain/analytics";
+import type { ProgressionAlgorithm } from "@logit/core/domain/progression";
+import type { AnalyticsPlugin } from "@logit/core/domain/analytics";
 
 export const PLUGIN_BUNDLE_FORMAT_VERSION = 1 as const;
 

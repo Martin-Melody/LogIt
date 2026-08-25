@@ -4,8 +4,8 @@
   import { Search, X } from "lucide-svelte";
 
   import { recentSessions } from "$lib/stores/recentSessions.store";
-  import { durationMs, formatDuration } from "$lib/domain/time";
-  import { getTopSetHighlight, getExercises } from "$lib/domain/workout";
+  import { durationMs, formatDuration } from "@logit/core/domain/time";
+  import { getTopSetHighlight, getExercises } from "@logit/core/domain/workout";
 
   const ui = $state({ loading: true, error: null as string | null });
   let query = $state("");

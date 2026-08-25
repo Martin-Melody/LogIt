@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
-import type { ProgressionRepo } from "$lib/data/progressionRepo";
-import type { ExerciseProgressionState, UserProgressionConfig } from "$lib/domain/progression";
-import type { UserAnalyticsConfig } from "$lib/domain/analytics";
+import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
+import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
+import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 
 const STORAGE_KEYS = {
   config: "logit:progression:config:v1",

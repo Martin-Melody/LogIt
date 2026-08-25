@@ -6,7 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import { getAlgorithmRegistry, getProgressionRepo } from "$lib/data/repoProvider";
-  import type { ProgressionAlgorithm, AlgorithmPreferencesField } from "$lib/domain/progression";
+  import type { ProgressionAlgorithm, AlgorithmPreferencesField } from "@logit/core/domain/progression";
 
   const algorithmId = $derived($page.params.algorithmId);
 

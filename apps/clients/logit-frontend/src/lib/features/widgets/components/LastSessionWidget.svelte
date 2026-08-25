@@ -4,8 +4,8 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import { recentSessions } from "$lib/stores/recentSessions.store";
-  import { durationMs, formatDuration } from "$lib/domain/time";
-  import { getTopSetHighlight, getExercises } from "$lib/domain/workout";
+  import { durationMs, formatDuration } from "@logit/core/domain/time";
+  import { getTopSetHighlight, getExercises } from "@logit/core/domain/workout";
 
   onMount(() => { void recentSessions.refresh(5); });
 

@@ -1,5 +1,5 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
-import { finishSession, type WorkoutSession } from "$lib/domain/workout";
+import { finishSession, type WorkoutSession } from "@logit/core/domain/workout";
 import { pushSession } from "$lib/sync/syncService";
 
 export async function finishCurrentSession(

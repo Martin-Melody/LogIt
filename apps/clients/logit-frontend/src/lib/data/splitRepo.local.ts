@@ -1,6 +1,6 @@
 import { browser } from "$app/environment";
-import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
-import type { SplitRepo, ListSplitsOptions } from "./splitRepo";
+import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+import type { SplitRepo, ListSplitsOptions } from "@logit/core/data/splitRepo";
 
 const STORAGE_KEYS = {
   splits: "logit:splits:v1", // array of WorkoutSplit

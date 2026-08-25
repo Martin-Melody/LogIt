@@ -1,4 +1,9 @@
 {
+  "private": true,
+  "workspaces": [
+    "apps/clients/*",
+    "packages/*"
+  ],
   "dependencies": {
     "@sveltejs/adapter-static": "^3.0.10"
   }

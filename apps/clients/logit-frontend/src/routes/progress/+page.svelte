@@ -2,8 +2,9 @@
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
-  import { getProgressData } from "$lib/usecases/progression/getProgressData";
-  import type { ExerciseProgressData } from "$lib/usecases/progression/getProgressData";
+  import { getProgressData } from "@logit/core/usecases/progression/getProgressData";
+  import type { ExerciseProgressData } from "@logit/core/usecases/progression/getProgressData";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 
   const ui = $state({
     loading: true,
@@ -39,7 +40,7 @@
     ui.loading = true;
     ui.error = null;
     try {
-      exercises = await getProgressData();
+      exercises = await getProgressData(getProgressionDeps());
       if (exercises.length > 0) {
         selectExercise(exercises[0].exerciseName);
       }

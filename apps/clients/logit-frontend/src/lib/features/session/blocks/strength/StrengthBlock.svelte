@@ -1,21 +1,22 @@
 <script lang="ts">
   import { toast } from "$lib/components/ui/sonner/index";
 
-  import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "$lib/domain/workout";
+  import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
   import {
     addSet,
     updateSet,
     removeSet,
     updateExerciseName,
     DEFAULT_REST_MS,
-  } from "$lib/domain/workout";
-  import { createId } from "$lib/domain/ids";
-  import { getSuggestion } from "$lib/usecases/progression/getSuggestion";
+  } from "@logit/core/domain/workout";
+  import { createId } from "@logit/core/domain/ids";
+  import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { currentSession } from "$lib/stores/currentSession.store";
-  import type { ProgressionOutput } from "$lib/domain/progression";
+  import type { ProgressionOutput } from "@logit/core/domain/progression";
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
   import { getExerciseRepo } from "$lib/data/repoProvider";
-  import type { Machine } from "$lib/domain/exercise";
+  import type { Machine } from "@logit/core/domain/exercise";
 
   import { get } from "svelte/store";
   import { profile } from "$lib/stores/profile.store";
@@ -84,7 +85,7 @@
   async function loadSuggestion(name: string, exerciseId?: string) {
     try {
       const session = get(currentSession) ?? undefined;
-      suggestion = await getSuggestion({ id: exerciseId, name }, undefined, session);
+      suggestion = await getSuggestion({ id: exerciseId, name }, getProgressionDeps(), undefined, session);
     } catch {
       suggestion = null;
     }

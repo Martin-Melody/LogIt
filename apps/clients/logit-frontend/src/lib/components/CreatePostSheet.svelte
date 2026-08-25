@@ -4,22 +4,23 @@
     Activity, Cpu, LayoutDashboard,
   } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
-  import { socialApi, type ApiPost, type PostType } from "$lib/api/socialApi";
-  import { ApiError } from "$lib/api/client";
+  import { socialApi, type ApiPost, type PostType } from "@logit/core/api/socialApi";
+  import { ApiError } from "@logit/core/api/client";
   import { recentSessions } from "$lib/stores/recentSessions.store";
   import { splits } from "$lib/stores/splits.store";
   import { exercisesStore } from "$lib/stores/exercises.store";
   import { getPersonalRecords, type PersonalRecord } from "$lib/usecases/getPersonalRecords";
-  import { getProgressionConfig } from "$lib/usecases/progression/getProgressionConfig";
-  import { getAnalyticsConfig } from "$lib/usecases/progression/getAnalyticsConfig";
+  import { getProgressionConfig } from "@logit/core/usecases/progression/getProgressionConfig";
+  import { getAnalyticsConfig } from "@logit/core/usecases/progression/getAnalyticsConfig";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
-  import type { WorkoutSession } from "$lib/domain/workout";
-  import { getExercises } from "$lib/domain/workout";
-  import { formatDuration, durationMs as calcDuration } from "$lib/domain/time";
-  import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
-  import type { ProgressionAlgorithmMeta } from "$lib/domain/progression";
-  import type { AnalyticsPluginMeta } from "$lib/domain/analytics";
+  import type { WorkoutSession } from "@logit/core/domain/workout";
+  import { getExercises } from "@logit/core/domain/workout";
+  import { formatDuration, durationMs as calcDuration } from "@logit/core/domain/time";
+  import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+  import type { ProgressionAlgorithmMeta } from "@logit/core/domain/progression";
+  import type { AnalyticsPluginMeta } from "@logit/core/domain/analytics";
 
   const { open, onclose, onposted, prefillSession } = $props<{
     open: boolean;
@@ -117,7 +118,8 @@
     getPersonalRecords(30).then((data) => { prs = data; prsLoading = false; }).catch(() => { prsLoading = false; });
 
     algorithmsLoading = true;
-    Promise.all([getProgressionConfig(), getAnalyticsConfig()]).then(([prog, analytics]) => {
+    const progressionDeps = getProgressionDeps();
+    Promise.all([getProgressionConfig(progressionDeps), getAnalyticsConfig(progressionDeps)]).then(([prog, analytics]) => {
       algorithms = [
         ...prog.algorithms.map((a): AlgoEntry => ({ ...a, family: "progression" })),
         ...analytics.plugins.map((a): AlgoEntry => ({ ...a, family: "analytics" })),

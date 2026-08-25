@@ -1,5 +1,5 @@
 import { writable, get } from "svelte/store";
-import type { SetTypeOption } from "$lib/data/types";
+import type { SetTypeOption } from "@logit/core/data/types";
 import { getSetTypes } from "$lib/usecases/getSetTypes";
 
 type SetTypesState = {

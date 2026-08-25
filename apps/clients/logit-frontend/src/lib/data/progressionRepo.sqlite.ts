@@ -1,9 +1,9 @@
-import type { ProgressionRepo } from "$lib/data/progressionRepo";
-import type { ExerciseProgressionState, UserProgressionConfig } from "$lib/domain/progression";
-import type { UserAnalyticsConfig } from "$lib/domain/analytics";
+import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
+import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
+import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
-import { nowMs } from "$lib/domain/time";
+import { nowMs } from "@logit/core/domain/time";
 
 function owner(): string {
   return getActiveOwnerId() ?? "default";

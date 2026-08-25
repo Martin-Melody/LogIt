@@ -1,4 +1,4 @@
-import type { WorkoutSplit, SplitDay } from "$lib/domain/WorkoutSplit";
+import type { WorkoutSplit, SplitDay } from "@logit/core/domain/WorkoutSplit";
 
 type RotationState = { lastDayId: string; recordedAtMs: number };
 

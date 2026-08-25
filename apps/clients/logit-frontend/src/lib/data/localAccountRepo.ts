@@ -1,6 +1,6 @@
 import { getDb } from "$lib/data/db/sqlite";
-import { createId } from "$lib/domain/ids";
-import { nowMs } from "$lib/domain/time";
+import { createId } from "@logit/core/domain/ids";
+import { nowMs } from "@logit/core/domain/time";
 
 export interface LocalAccount {
   id: string;

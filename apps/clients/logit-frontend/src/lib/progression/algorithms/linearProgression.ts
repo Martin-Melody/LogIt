@@ -1,5 +1,5 @@
-import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "$lib/domain/progression";
-import type { MuscleGroup } from "$lib/domain/exercise";
+import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "@logit/core/domain/progression";
+import type { MuscleGroup } from "@logit/core/domain/exercise";
 
 type LinearState = {
   workingWeight: number;

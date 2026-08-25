@@ -1,11 +1,11 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
-import type { SplitDay } from "$lib/domain/WorkoutSplit";
+import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 import {
   type WorkoutSession,
   createSession,
   addExercise,
   addCardioBlock,
-} from "$lib/domain/workout";
+} from "@logit/core/domain/workout";
 
 function sortByOrderIndex<T extends { orderIndex: number }>(arr: T[]): T[] {
   return [...arr].sort((a, b) => a.orderIndex - b.orderIndex);

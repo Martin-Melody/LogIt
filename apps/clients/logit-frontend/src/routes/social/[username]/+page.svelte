@@ -7,8 +7,8 @@
   } from "lucide-svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { socialApi, type ApiProfile, type ApiPost, type PublicProfileData } from "$lib/api/socialApi";
-  import { ApiError } from "$lib/api/client";
+  import { socialApi, type ApiProfile, type ApiPost, type PublicProfileData } from "@logit/core/api/socialApi";
+  import { ApiError } from "@logit/core/api/client";
   import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import * as Card from "$lib/components/ui/card";
