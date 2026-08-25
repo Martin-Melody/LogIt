@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 using Logit.Api.Data;
 using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
+using Logit.Api.Features.Billing;
+using Logit.Api.Features.Coach;
 using Logit.Api.Features.Social;
 using Logit.Api.Features.Sync;
 using Logit.Api.Features.Users;
@@ -21,9 +23,18 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? "Data Source=logit.db";
 
 if (connectionString.StartsWith("Host=") || connectionString.StartsWith("postgres"))
-    builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(connectionString));
+{
+    // Postgres gets its own DbContext subclass so it has its own migration history — see
+    // PostgresAppDbContext for why the SQLite-authored migrations can't be reused as-is.
+    // Registering it under AppDbContext too keeps every existing `AppDbContext db` injection
+    // site working unchanged regardless of which provider is active.
+    builder.Services.AddDbContext<PostgresAppDbContext>(o => o.UseNpgsql(connectionString));
+    builder.Services.AddScoped<AppDbContext>(sp => sp.GetRequiredService<PostgresAppDbContext>());
+}
 else
+{
     builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(connectionString));
+}
 
 // JWT auth
 var jwtSecret = builder.Configuration["Jwt:Secret"]
@@ -53,6 +64,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+
 var app = builder.Build();
 
 // Auto-migrate on startup
@@ -77,6 +90,8 @@ app.MapUserEndpoints();
 app.MapSocialEndpoints();
 app.MapAdminEndpoints(builder.Configuration);
 app.MapSyncEndpoints();
+app.MapBillingEndpoints();
+app.MapCoachEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 
