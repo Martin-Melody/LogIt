@@ -2,9 +2,8 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
 
-  // Placeholder prices — not real, finalized numbers. Set once actual pricing is decided.
-  const PRO_PRICE_LABEL = "$X/mo";
-  const STUDIO_PRICE_LABEL = "$Y/mo"; // higher than Pro — set once actual pricing is decided
+  const PRO_PRICE_LABEL = "$9/mo";
+  const STUDIO_PRICE_LABEL = "$29/mo";
 </script>
 
 <div class="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-8">
