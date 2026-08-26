@@ -36,7 +36,7 @@
   import { setMode, userPrefersMode } from "mode-watcher";
   import { authStore } from "$lib/api/authStore.svelte";
   import { apiClient, ApiError } from "@logit/core/api/client";
-  import { syncAll, lastSyncedAt } from "$lib/sync/syncService";
+  import { syncAll, pushAllLocalData, lastSyncedAt } from "$lib/sync/syncService";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import {
@@ -73,6 +73,9 @@
     if (syncing) return;
     syncing = true;
     try {
+      // Also push everything local, not just pull — covers accounts that signed in
+      // before local history was ever fully backfilled to the server.
+      await pushAllLocalData();
       await syncAll();
     } finally {
       syncing = false;
