@@ -4,12 +4,19 @@
 
   const PRO_PRICE_LABEL = "$9/mo";
   const STUDIO_PRICE_LABEL = "$29/mo";
+
+  // Falls back to the live App Runner URL so this works out of the box; set VITE_WEB_URL at
+  // build time once app.logit.ie is live.
+  const LOGIN_URL: string = `${import.meta.env.VITE_WEB_URL || "https://zi5nyrmpny.eu-west-1.awsapprunner.com"}/login`;
 </script>
 
 <div class="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-8">
   <div class="text-center flex flex-col gap-2">
     <h1 class="text-2xl font-semibold">Pricing</h1>
     <p class="text-sm text-muted-foreground">Self-host for free, or let us run it for you.</p>
+    <p class="text-xs text-muted-foreground">
+      Already have an account? <a href={LOGIN_URL} class="underline hover:text-foreground">Log in</a>
+    </p>
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

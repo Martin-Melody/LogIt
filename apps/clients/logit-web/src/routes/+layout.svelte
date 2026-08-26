@@ -12,7 +12,11 @@
 
   let ready = $state(false);
 
-  const isLogin = $derived(page.url.pathname.startsWith("/login"));
+  const isLogin = $derived(
+    page.url.pathname.startsWith("/login") ||
+    page.url.pathname.startsWith("/forgot-password") ||
+    page.url.pathname.startsWith("/reset-password"),
+  );
   const isUpgrade = $derived(page.url.pathname.startsWith("/upgrade"));
 
   // apiClient holds plain (non-reactive) fields, not Svelte state — so these must be tied to
@@ -90,6 +94,7 @@
         <nav class="flex items-center gap-3 text-sm text-muted-foreground">
           <a href="/" class="hover:text-foreground">Overview</a>
           <a href="/clients" class="hover:text-foreground">Clients</a>
+          <a href="/account" class="hover:text-foreground">Account</a>
         </nav>
         {#if isStudio && viewingClient.clients.length > 0}
           <select

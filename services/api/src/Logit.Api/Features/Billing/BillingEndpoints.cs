@@ -14,6 +14,7 @@ public static class BillingEndpoints
         var group = app.MapGroup("/billing").WithTags("Billing");
 
         group.MapPost("/checkout", Checkout).RequireAuthorization();
+        group.MapPost("/portal", Portal).RequireAuthorization();
         group.MapGet("/status", Status).RequireAuthorization();
         group.MapPost("/webhook", Webhook);
     }
@@ -60,6 +61,28 @@ public static class BillingEndpoints
         });
 
         return Results.Ok(new CheckoutResponse(session.Url));
+    }
+
+    private static async Task<IResult> Portal(
+        [Microsoft.AspNetCore.Mvc.FromBody] PortalRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var user = await db.Users.FindAsync(userId);
+        if (user is null) return Results.NotFound();
+
+        if (user.StripeCustomerId is null)
+            return Results.BadRequest(new { error = "No billing account yet — subscribe to a plan first." });
+
+        var portalService = new Stripe.BillingPortal.SessionService();
+        var session = await portalService.CreateAsync(new Stripe.BillingPortal.SessionCreateOptions
+        {
+            Customer = user.StripeCustomerId,
+            ReturnUrl = req.ReturnUrl,
+        });
+
+        return Results.Ok(new PortalResponse(session.Url));
     }
 
     private static async Task<IResult> Status(ClaimsPrincipal caller, AppDbContext db)

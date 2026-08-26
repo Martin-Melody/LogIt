@@ -1,4 +1,4 @@
-import { Preferences } from "@capacitor/preferences";
+import { SecureStoragePlugin } from "capacitor-secure-storage-plugin";
 import { isNativePlatform } from "../platform/isNative";
 
 const ACCESS_KEY = "logit:auth:access";
@@ -9,15 +9,23 @@ export interface StoredTokens {
   refreshToken: string;
 }
 
+/** Resolves to null instead of rejecting when the key doesn't exist. */
+async function secureGet(key: string): Promise<string | null> {
+  try {
+    return (await SecureStoragePlugin.get({ key })).value;
+  } catch {
+    return null;
+  }
+}
+
 export const tokenStorage = {
   async get(): Promise<StoredTokens | null> {
     if (isNativePlatform()) {
-      const [a, r] = await Promise.all([
-        Preferences.get({ key: ACCESS_KEY }),
-        Preferences.get({ key: REFRESH_KEY }),
-      ]);
-      if (!a.value || !r.value) return null;
-      return { accessToken: a.value, refreshToken: r.value };
+      // Keychain (iOS) / EncryptedSharedPreferences (Android) — tokens are the most sensitive
+      // thing this app stores locally, unlike general app settings which stay in Preferences.
+      const [a, r] = await Promise.all([secureGet(ACCESS_KEY), secureGet(REFRESH_KEY)]);
+      if (!a || !r) return null;
+      return { accessToken: a, refreshToken: r };
     }
     const raw = localStorage.getItem(ACCESS_KEY);
     const refresh = localStorage.getItem(REFRESH_KEY);
@@ -28,8 +36,8 @@ export const tokenStorage = {
   async set(tokens: StoredTokens): Promise<void> {
     if (isNativePlatform()) {
       await Promise.all([
-        Preferences.set({ key: ACCESS_KEY, value: tokens.accessToken }),
-        Preferences.set({ key: REFRESH_KEY, value: tokens.refreshToken }),
+        SecureStoragePlugin.set({ key: ACCESS_KEY, value: tokens.accessToken }),
+        SecureStoragePlugin.set({ key: REFRESH_KEY, value: tokens.refreshToken }),
       ]);
       return;
     }
@@ -40,8 +48,8 @@ export const tokenStorage = {
   async clear(): Promise<void> {
     if (isNativePlatform()) {
       await Promise.all([
-        Preferences.remove({ key: ACCESS_KEY }),
-        Preferences.remove({ key: REFRESH_KEY }),
+        SecureStoragePlugin.remove({ key: ACCESS_KEY }).catch(() => {}),
+        SecureStoragePlugin.remove({ key: REFRESH_KEY }).catch(() => {}),
       ]);
       return;
     }

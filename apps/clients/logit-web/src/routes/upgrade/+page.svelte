@@ -1,10 +1,30 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { apiClient } from "@logit/core/api/client";
+  import { apiClient, ApiError } from "@logit/core/api/client";
+  import { Button } from "$lib/components/ui/button";
 
   // Falls back to the live Cloudflare Pages URL so this works out of the box; set
   // VITE_MARKETING_URL at build time once logit.ie is live.
   const PRICING_URL: string = `${import.meta.env.VITE_MARKETING_URL || "https://logit-marketing.pages.dev"}/pricing`;
+
+  let checkoutLoading = $state<"pro" | "studio" | null>(null);
+  let checkoutError = $state<string | null>(null);
+
+  async function upgrade(plan: "pro" | "studio") {
+    checkoutLoading = plan;
+    checkoutError = null;
+    try {
+      const url = await apiClient.createCheckoutSession(
+        `${location.origin}/`,
+        `${location.origin}/upgrade`,
+        plan,
+      );
+      location.href = url;
+    } catch (e) {
+      checkoutError = e instanceof ApiError ? e.message : "Couldn't start checkout.";
+      checkoutLoading = null;
+    }
+  }
 
   function logout() {
     void apiClient.logout().then(() => goto("/login"));
@@ -19,11 +39,19 @@
       dashboard, and analytics need a Pro or Studio account — or you can self-host LogIt for
       full access, free.
     </p>
-    <a
-      href={PRICING_URL}
-      class="inline-flex items-center justify-center rounded bg-primary text-primary-foreground text-sm font-medium px-3 py-2"
-    >
-      See Pro and Studio
+
+    <div class="flex gap-2">
+      <Button class="flex-1" disabled={checkoutLoading !== null} onclick={() => void upgrade("pro")}>
+        {checkoutLoading === "pro" ? "Starting…" : "Upgrade to Pro"}
+      </Button>
+      <Button class="flex-1" variant="outline" disabled={checkoutLoading !== null} onclick={() => void upgrade("studio")}>
+        {checkoutLoading === "studio" ? "Starting…" : "Upgrade to Studio"}
+      </Button>
+    </div>
+    {#if checkoutError}<p class="text-xs text-destructive">{checkoutError}</p>{/if}
+
+    <a href={PRICING_URL} class="text-xs text-muted-foreground hover:text-foreground underline">
+      Compare plans and pricing
     </a>
     <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={logout}>
       Log out

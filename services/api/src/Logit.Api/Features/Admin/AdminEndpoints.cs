@@ -23,6 +23,7 @@ public static class AdminEndpoints
         api.MapPatch("/users/{id:guid}", UpdateUser);
         api.MapDelete("/users/{id:guid}", DeleteUser);
         api.MapDelete("/users/{id:guid}/tokens", RevokeTokens);
+        api.MapPost("/users/{id:guid}/reset-password", ResetPassword);
     }
 
     private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminKeyFilter(string key) =>
@@ -174,5 +175,20 @@ public static class AdminEndpoints
         foreach (var t in tokens) t.RevokedAt = now;
         await db.SaveChangesAsync();
         return Results.Ok(new { revokedCount = tokens.Count });
+    }
+
+    private record AdminResetPasswordRequest(string NewPassword);
+
+    /// <summary>Self-host fallback for password resets when SMTP isn't configured — lets an
+    /// admin set a user's password directly via the admin panel/API.</summary>
+    private static async Task<IResult> ResetPassword(Guid id, AdminResetPasswordRequest req, AppDbContext db)
+    {
+        var user = await db.Users.FindAsync(id);
+        if (user is null) return Results.NotFound();
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Results.NoContent();
     }
 }
