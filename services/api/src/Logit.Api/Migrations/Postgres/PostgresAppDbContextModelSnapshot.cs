@@ -50,7 +50,7 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("CoachId", "ClientId")
                         .IsUnique();
 
-                    b.ToTable("CoachClientRelationships", (string)null);
+                    b.ToTable("CoachClientRelationships");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
@@ -86,7 +86,7 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("Comments", (string)null);
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
@@ -104,7 +104,7 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("FollowedId");
 
-                    b.ToTable("Follows", (string)null);
+                    b.ToTable("Follows");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>
@@ -122,7 +122,39 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("Likes", (string)null);
+                    b.ToTable("Likes");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
@@ -158,7 +190,7 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("CreatedAt");
 
-                    b.ToTable("Posts", (string)null);
+                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.RefreshToken", b =>
@@ -190,7 +222,7 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
@@ -223,7 +255,7 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SyncedExercises", (string)null);
+                    b.ToTable("SyncedExercises");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedSplit", b =>
@@ -256,7 +288,7 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SyncedSplits", (string)null);
+                    b.ToTable("SyncedSplits");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedWorkoutSession", b =>
@@ -289,7 +321,7 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SyncedWorkoutSessions", (string)null);
+                    b.ToTable("SyncedWorkoutSessions");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.User", b =>
@@ -355,7 +387,7 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
@@ -430,6 +462,17 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PasswordResetToken", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany("PasswordResetTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -509,6 +552,8 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Following");
 
                     b.Navigation("Likes");
+
+                    b.Navigation("PasswordResetTokens");
 
                     b.Navigation("Posts");
 

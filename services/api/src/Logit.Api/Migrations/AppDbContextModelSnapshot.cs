@@ -120,6 +120,38 @@ namespace Logit.Api.Migrations
                     b.ToTable("Likes");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
                 {
                     b.Property<Guid>("Id")
@@ -429,6 +461,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.PasswordResetToken", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany("PasswordResetTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Author")
@@ -504,6 +547,8 @@ namespace Logit.Api.Migrations
                     b.Navigation("Following");
 
                     b.Navigation("Likes");
+
+                    b.Navigation("PasswordResetTokens");
 
                     b.Navigation("Posts");
 
