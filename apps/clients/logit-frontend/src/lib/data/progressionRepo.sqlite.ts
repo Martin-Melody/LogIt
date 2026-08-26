@@ -1,9 +1,9 @@
-import type { ProgressionRepo } from "$lib/data/progressionRepo";
-import type { ExerciseProgressionState, UserProgressionConfig } from "$lib/domain/progression";
-import type { UserAnalyticsConfig } from "$lib/domain/analytics";
+import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
+import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
+import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
-import { nowMs } from "$lib/domain/time";
+import { nowMs } from "@logit/core/domain/time";
 
 function owner(): string {
   return getActiveOwnerId() ?? "default";
@@ -95,6 +95,11 @@ export function createSqliteProgressionRepo(): ProgressionRepo {
     async clearStates(): Promise<void> {
       const db = getDb();
       await db.run(`DELETE FROM progression_states WHERE owner_id = ?`, [owner()]);
+    },
+
+    async resetExerciseState(key: string): Promise<void> {
+      const db = getDb();
+      await db.run(`DELETE FROM progression_states WHERE owner_id = ? AND key = ?`, [owner(), key]);
     },
 
     async getAlgorithmPreferences(algorithmId: string): Promise<unknown> {

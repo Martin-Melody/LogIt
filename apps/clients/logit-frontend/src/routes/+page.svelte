@@ -9,7 +9,7 @@
   import { startHomeTour } from "$lib/tour/index";
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { connectionStatus } from "$lib/api/connectionStatus.svelte";
+  import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
 
   let widgets = $state<RuntimeWidgetDefinition[]>(

@@ -2,9 +2,9 @@ import { browser } from "$app/environment";
 import type {
   WorkoutRepo,
   ListRecentSessionsOptions,
-} from "$lib/data/workoutRepo";
-import type { WorkoutSession } from "$lib/domain/workout";
-import type { SetTypeOption } from "./types";
+} from "@logit/core/data/workoutRepo";
+import type { WorkoutSession } from "@logit/core/domain/workout";
+import type { SetTypeOption } from "@logit/core/data/types";
 
 const STORAGE_KEYS = {
   sessions: "logit:sessions:v1",

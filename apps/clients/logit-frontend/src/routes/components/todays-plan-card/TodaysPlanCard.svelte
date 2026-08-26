@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
-  import type { SplitDay } from "$lib/domain/WorkoutSplit";
+  import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 
   const { day = null, activeSplitId = null } = $props<{
     day?: SplitDay | null;

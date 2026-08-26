@@ -1,18 +1,20 @@
-import { apiClient, type AuthUser } from "./client";
-import { getServerMode } from "./serverConfig";
+import { apiClient, type AuthUser } from "@logit/core/api/client";
+import { getServerMode } from "@logit/core/api/serverConfig";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId } from "$lib/data/activeOwner";
 import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
+import { navConfig } from "$lib/stores/navConfig.store";
 import { syncAll } from "$lib/sync/syncService";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
-async function switchActiveOwner(): Promise<void> {
+async function switchActiveOwner(isOnlineAccount: boolean): Promise<void> {
   resetRepos();
   await initRepos();
   await rehydrateStores();
   needsAccountAuth.set(false);
+  if (!isOnlineAccount) navConfig.reconcileForOffline();
 }
 
 function createAuthStore() {
@@ -91,7 +93,7 @@ function createAuthStore() {
       }
     }
 
-    await switchActiveOwner();
+    await switchActiveOwner(true);
   }
 
   // ── Offline login / create ───────────────────────────────────────────────
@@ -117,7 +119,7 @@ function createAuthStore() {
     await apiClient.clearLocal();
 
     setActiveOwnerId(account.id);
-    await switchActiveOwner();
+    await switchActiveOwner(false);
   }
 
   /**
@@ -151,7 +153,7 @@ function createAuthStore() {
     });
     setActiveOwnerId(account.id);
     await claimOrphanedData(account.id);
-    await switchActiveOwner();
+    await switchActiveOwner(false);
   }
 
   // ── Logout / delete ──────────────────────────────────────────────────────

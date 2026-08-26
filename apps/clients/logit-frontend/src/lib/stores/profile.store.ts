@@ -3,7 +3,7 @@ import { writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { pushProfile, setProfileUpdatedAtMs } from "$lib/sync/syncService";
 import { getNavConfigJson } from "$lib/stores/navConfig.store";
-import type { RemoteProfile } from "$lib/api/syncApi";
+import type { RemoteProfile } from "@logit/core/api/syncApi";
 
 export type UserProfile = {
   name: string;

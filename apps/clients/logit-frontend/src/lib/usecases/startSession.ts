@@ -1,5 +1,5 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
-import { createSession } from "$lib/domain/workout";
+import { createSession } from "@logit/core/domain/workout";
 
 export async function startSession(): Promise<
   ReturnType<typeof createSession>

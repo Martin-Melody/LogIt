@@ -1,5 +1,5 @@
-import type { ListSplitsOptions } from "$lib/data/splitRepo";
-import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
+import type { ListSplitsOptions } from "@logit/core/data/splitRepo";
+import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 import { writable } from "svelte/store";
 import { setActiveSplit } from "$lib/usecases/Splits/setActiveSplit";
 import { listSplits } from "$lib/usecases/Splits/listSplits";

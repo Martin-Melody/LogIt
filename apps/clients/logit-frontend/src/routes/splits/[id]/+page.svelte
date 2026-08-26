@@ -6,8 +6,8 @@
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
 
-  import type { WorkoutSplit, SplitDay } from "$lib/domain/WorkoutSplit";
-  import { touchSplit } from "$lib/domain/WorkoutSplit";
+  import type { WorkoutSplit, SplitDay } from "@logit/core/domain/WorkoutSplit";
+  import { touchSplit } from "@logit/core/domain/WorkoutSplit";
 
   import { splits } from "$lib/stores/splits.store";
   import { activeSplit } from "$lib/stores/activeSplit.store";
@@ -15,7 +15,7 @@
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import { deleteSplit } from "$lib/usecases/Splits/deleteSplit";
-  import { createId } from "$lib/domain/ids";
+  import { createId } from "@logit/core/domain/ids";
 
   import { ArrowLeft, Trash, Check, X, Plus, GripVertical } from "lucide-svelte";
   import { startSplitDetailTour } from "$lib/tour/index";

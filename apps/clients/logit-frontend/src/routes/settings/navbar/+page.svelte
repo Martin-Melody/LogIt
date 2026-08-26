@@ -4,9 +4,20 @@
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
+  import { authStore } from "$lib/api/authStore.svelte";
   import { navConfig, NAV_ITEM_DEFS, BAR_SLOTS } from "$lib/stores/navConfig.store";
 
-  const barFull = $derived($navConfig.bar.length >= BAR_SLOTS);
+  function isAvailable(def: { authRequired: boolean }): boolean {
+    return !def.authRequired || authStore.isAuthenticated;
+  }
+
+  const visibleBarCount = $derived(
+    $navConfig.bar.filter((id) => {
+      const def = NAV_ITEM_DEFS.find((d) => d.id === id);
+      return !!def && isAvailable(def);
+    }).length,
+  );
+  const barFull = $derived(visibleBarCount >= BAR_SLOTS);
 
   // ── Bar drag state ────────────────────────────────────────────────────────────
   let barDragId = $state<string | null>(null);
@@ -160,7 +171,7 @@
         {#each liveBar as id (id)}
           {@const def = NAV_ITEM_DEFS.find((d) => d.id === id)}
           {@const gripAction = makeGripAction("bar", id)}
-          {#if def}
+          {#if def && isAvailable(def)}
             <li class="py-2 flex items-center gap-2 transition-opacity {barDragId === id ? 'opacity-40' : ''}">
               <button
                 type="button"
@@ -204,7 +215,7 @@
         {#each liveMore as id (id)}
           {@const def = NAV_ITEM_DEFS.find((d) => d.id === id)}
           {@const gripAction = makeGripAction("more", id)}
-          {#if def}
+          {#if def && isAvailable(def)}
             <li class="py-2 flex items-center gap-2 transition-opacity {moreDragId === id ? 'opacity-40' : ''}">
               <button
                 type="button"
@@ -216,9 +227,6 @@
               </button>
               <def.icon size={16} class="shrink-0 text-muted-foreground" />
               <span class="text-sm font-medium flex-1 min-w-0">{def.label}</span>
-              {#if def.authRequired}
-                <span class="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5 shrink-0">Sign-in required</span>
-              {/if}
               <Button
                 variant="ghost"
                 size="icon"

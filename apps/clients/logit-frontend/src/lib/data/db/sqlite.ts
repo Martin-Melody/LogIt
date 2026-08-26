@@ -5,8 +5,8 @@ import {
   SQLiteConnection,
   type SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { createId } from "$lib/domain/ids";
-import { nowMs } from "$lib/domain/time";
+import { createId } from "@logit/core/domain/ids";
+import { nowMs } from "@logit/core/domain/time";
 
 const DB_NAME = "logit";
 const DB_VERSION = 1;
@@ -252,6 +252,7 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
   await migrateOwnerIds(db);
   await migrateMuscleGroups(db);
   await migrateExerciseType(db);
+  await migrateMachines(db);
   await migrateSessionFlags(db);
   await seedSetTypes(db);
   await seedExercises(db);
@@ -261,6 +262,16 @@ async function migrateExerciseType(db: SQLiteDBConnection): Promise<void> {
   try {
     await db.run(`ALTER TABLE exercises ADD COLUMN exercise_type TEXT NOT NULL DEFAULT 'normal'`, []);
   } catch { /* column already exists */ }
+}
+
+async function migrateMachines(db: SQLiteDBConnection): Promise<void> {
+  const additions = [
+    "ALTER TABLE exercises ADD COLUMN machines TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE exercises ADD COLUMN default_machine_id TEXT NULL",
+  ];
+  for (const sql of additions) {
+    try { await db.run(sql, []); } catch { /* column already exists */ }
+  }
 }
 
 async function migrateSessionFlags(db: SQLiteDBConnection): Promise<void> {

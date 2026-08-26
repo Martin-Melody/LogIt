@@ -1,11 +1,11 @@
 import { writable } from "svelte/store";
-import { apiClient } from "$lib/api/client";
-import { syncApi, type RemoteProfile } from "$lib/api/syncApi";
+import { apiClient } from "@logit/core/api/client";
+import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { getWorkoutRepo, getSplitRepo, getExerciseRepo } from "$lib/data/repoProvider";
 import { isNativePlatform } from "$lib/platform/isNative";
-import type { WorkoutSession } from "$lib/domain/workout";
-import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
-import type { Exercise } from "$lib/domain/exercise";
+import type { WorkoutSession } from "@logit/core/domain/workout";
+import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+import type { Exercise } from "@logit/core/domain/exercise";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 
 // ── localStorage keys ────────────────────────────────────────────────────────

@@ -4,9 +4,9 @@
 
   import { Button } from "$lib/components/ui/button";
 
-  import type { WorkoutSplit, SplitDay, PlannedBlock, PlannedStrength, PlannedCardio } from "$lib/domain/WorkoutSplit";
-  import { touchSplit } from "$lib/domain/WorkoutSplit";
-  import { createId } from "$lib/domain/ids";
+  import type { WorkoutSplit, SplitDay, PlannedBlock, PlannedStrength, PlannedCardio } from "@logit/core/domain/WorkoutSplit";
+  import { touchSplit } from "@logit/core/domain/WorkoutSplit";
+  import { createId } from "@logit/core/domain/ids";
 
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";

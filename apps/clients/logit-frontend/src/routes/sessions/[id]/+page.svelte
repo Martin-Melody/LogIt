@@ -2,9 +2,9 @@
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
-  import type { WorkoutSession, SetEntry } from "$lib/domain/workout";
-  import { getExercises, updateSet } from "$lib/domain/workout";
-  import { durationMs, formatDuration } from "$lib/domain/time";
+  import type { WorkoutSession, SetEntry } from "@logit/core/domain/workout";
+  import { getExercises, updateSet } from "@logit/core/domain/workout";
+  import { durationMs, formatDuration } from "@logit/core/domain/time";
   import { getSession } from "$lib/usecases/getSession";
   import { deleteSession } from "$lib/usecases/deleteSession";
   import { editSession } from "$lib/usecases/editSession";
@@ -14,6 +14,8 @@
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { getExerciseRepo } from "$lib/data/repoProvider";
+  import type { Machine } from "@logit/core/domain/exercise";
 
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);
@@ -36,6 +38,34 @@
   });
 
   const displaySession = $derived(edit.active && edit.draft ? edit.draft : state.session);
+
+  let editMachines: Machine[] = $state([]);
+  let editDefaultMachineId: string | undefined = $state(undefined);
+  let editExerciseId: string | undefined = $state(undefined);
+
+  $effect(() => {
+    if (!edit.dialogOpen || !edit.exerciseEntryId || !edit.draft) {
+      editMachines = [];
+      editDefaultMachineId = undefined;
+      editExerciseId = undefined;
+      return;
+    }
+    const entry = getExercises(edit.draft).find((ex) => ex.id === edit.exerciseEntryId);
+    if (!entry) {
+      editMachines = [];
+      editDefaultMachineId = undefined;
+      editExerciseId = undefined;
+      return;
+    }
+    void (async () => {
+      const ex = entry.exerciseId
+        ? await getExerciseRepo().getById(entry.exerciseId)
+        : await getExerciseRepo().getByName(entry.exerciseName);
+      editMachines = ex?.machines ?? [];
+      editDefaultMachineId = ex?.defaultMachineId;
+      editExerciseId = ex?.id;
+    })();
+  });
 
   function longDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, {
@@ -137,7 +167,7 @@
     edit.dialogOpen = true;
   }
 
-  function handleSetSave(patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs">>) {
+  function handleSetSave(patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">>) {
     if (!edit.draft || !edit.exerciseEntryId || !edit.setId) return;
     edit.draft = updateSet(edit.draft, edit.exerciseEntryId, edit.setId, patch);
   }
@@ -374,6 +404,9 @@
   open={edit.dialogOpen}
   disabled={state.saving}
   initial={getEditingSet()}
+  machines={editMachines}
+  defaultMachineId={editDefaultMachineId}
+  exerciseId={editExerciseId}
   onOpenChange={(v) => (edit.dialogOpen = v)}
   onSave={handleSetSave}
 />

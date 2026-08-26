@@ -1,5 +1,5 @@
 import { getSplitRepo } from "$lib/data/repoProvider";
-import { addPlannedStrength } from "$lib/domain/WorkoutSplit";
+import { addPlannedStrength } from "@logit/core/domain/WorkoutSplit";
 
 export async function addPlannedExercise(
   splitId: string,

@@ -1,5 +1,5 @@
-import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "$lib/domain/progression";
-import type { MuscleGroup } from "$lib/domain/exercise";
+import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "@logit/core/domain/progression";
+import type { MuscleGroup } from "@logit/core/domain/exercise";
 
 type LinearState = {
   workingWeight: number;
@@ -220,6 +220,10 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       increment: prefs.increment,
       repRange: [prefs.repRangeMin, prefs.repRangeMax],
     };
+
+  if (input.incrementOverride !== undefined) {
+    state = { ...state, increment: input.incrementOverride };
+  }
 
   // If history shows a higher working weight than the saved state, reseed from history.
   // This recovers from a stale state (e.g. saved at the default 20kg because history

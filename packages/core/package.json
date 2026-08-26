@@ -1,0 +1,22 @@
+{
+  "name": "@logit/core",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    "./domain/*": "./src/domain/*.ts",
+    "./data/*": "./src/data/*.ts",
+    "./progression/*": "./src/progression/*.ts",
+    "./usecases/progression/*": "./src/usecases/progression/*.ts",
+    "./api/*": "./src/api/*.ts",
+    "./platform/*": "./src/platform/*.ts"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "nanoid": "^5.1.6"
+  },
+  "peerDependencies": {
+    "svelte": "^5.45.6"
+  }
+}

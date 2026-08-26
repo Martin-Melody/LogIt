@@ -14,6 +14,8 @@ public class User
     public string? ProfileJson { get; set; }
     public long ProfileUpdatedAtMs { get; set; } = 0;
     public UserTier Tier { get; set; } = UserTier.Free;
+    public string? StripeCustomerId { get; set; }
+    public string? StripeSubscriptionId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -27,4 +29,4 @@ public class User
     public ICollection<Comment> Comments { get; set; } = [];
 }
 
-public enum UserTier { Free, Pro }
+public enum UserTier { Free, Pro, Studio }

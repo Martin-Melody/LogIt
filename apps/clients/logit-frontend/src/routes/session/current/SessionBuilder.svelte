@@ -8,9 +8,10 @@
   import { getWorkoutRepo, getExerciseRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { recentSessions } from "$lib/stores/recentSessions.store";
-  import { refreshProgressionState } from "$lib/usecases/progression/getSuggestion";
-  import type { WorkoutSession, SessionBlock } from "$lib/domain/workout";
-  import { addExercise, addCardioBlock, removeExercise, getExercises } from "$lib/domain/workout";
+  import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import type { WorkoutSession, SessionBlock } from "@logit/core/domain/workout";
+  import { addExercise, addCardioBlock, removeExercise, getExercises } from "@logit/core/domain/workout";
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
@@ -171,7 +172,7 @@
       if (sessionSnapshot) {
         await Promise.all(
           getExercises(sessionSnapshot).map((ex) =>
-            refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName }),
+            refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName }, getProgressionDeps()),
           ),
         );
       }

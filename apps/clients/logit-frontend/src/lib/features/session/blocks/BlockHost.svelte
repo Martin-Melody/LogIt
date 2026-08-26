@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getBlockDef } from "./registry";
   import type { GripAction } from "./types";
-  import type { WorkoutSession } from "$lib/domain/workout";
+  import type { WorkoutSession } from "@logit/core/domain/workout";
 
   const {
     type,

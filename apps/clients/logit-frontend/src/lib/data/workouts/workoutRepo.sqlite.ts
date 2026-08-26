@@ -1,6 +1,6 @@
-import type { WorkoutRepo, ListRecentSessionsOptions } from "$lib/data/workoutRepo";
-import type { WorkoutSession, SessionBlock, StrengthBlockData, SetType } from "$lib/domain/workout";
-import type { SetTypeOption } from "$lib/data/types";
+import type { WorkoutRepo, ListRecentSessionsOptions } from "@logit/core/data/workoutRepo";
+import type { WorkoutSession, SessionBlock, StrengthBlockData, SetType } from "@logit/core/domain/workout";
+import type { SetTypeOption } from "@logit/core/data/types";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 
@@ -22,6 +22,7 @@ function parseBlockData(type: string, dataJson: string): unknown {
         completed: !!s.completed,
         restDurationMs: s.restDurationMs ?? undefined,
         restStartedAtMs: s.restStartedAtMs ?? null,
+        machineId: s.machineId ?? undefined,
       })),
     } satisfies StrengthBlockData;
   }
