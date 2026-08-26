@@ -35,6 +35,7 @@
   import type { LocalAccount } from "$lib/data/localAccountRepo";
   import { setMode, userPrefersMode } from "mode-watcher";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { apiClient, ApiError } from "@logit/core/api/client";
   import { syncAll, lastSyncedAt } from "$lib/sync/syncService";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
@@ -151,6 +152,34 @@
         e instanceof Error ? e.message : "Failed to update password.";
     } finally {
       savingPassword = false;
+    }
+  }
+
+  // --- Online account password ---
+  let showOnlinePasswordForm = $state(false);
+  let onlinePasswordForm = $state({ current: "", next: "", confirm: "" });
+  let onlinePasswordError = $state<string | null>(null);
+  let savingOnlinePassword = $state(false);
+
+  async function saveOnlinePassword() {
+    onlinePasswordError = null;
+    if (onlinePasswordForm.next !== onlinePasswordForm.confirm) {
+      onlinePasswordError = "Passwords don't match.";
+      return;
+    }
+    if (!onlinePasswordForm.current.trim()) {
+      onlinePasswordError = "Enter your current password to continue.";
+      return;
+    }
+    savingOnlinePassword = true;
+    try {
+      await apiClient.changePassword(onlinePasswordForm.current, onlinePasswordForm.next);
+      showOnlinePasswordForm = false;
+      onlinePasswordForm = { current: "", next: "", confirm: "" };
+    } catch (e) {
+      onlinePasswordError = e instanceof ApiError ? e.message : "Failed to update password.";
+    } finally {
+      savingOnlinePassword = false;
     }
   }
 
@@ -377,9 +406,22 @@
           {/if}
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium">@{authStore.user.username}</p>
-            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "Logit cloud" : "Self-hosted"} · {authStore.user.tier}</p>
+            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "logit.ie" : "Self-hosted"} · {authStore.user.tier} plan</p>
           </div>
         </div>
+
+        <!-- Plan (informational only — no purchase link/button; upgrading is handled entirely
+             on the website, never inside the app, per Apple's in-app purchase rules). -->
+        <div class="border-t border-border py-3">
+          <p class="text-xs text-muted-foreground">
+            {#if authStore.user.tier === "Free"}
+              Free plan — social feed on your phone. Cross-device sync and the web dashboard need Pro or Studio. Manage your plan in a browser at logit.ie.
+            {:else}
+              {authStore.user.tier} plan. Manage your plan in a browser at logit.ie.
+            {/if}
+          </p>
+        </div>
+
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           disabled={syncing || serverMode === "offline"}
@@ -393,6 +435,37 @@
             {formatLastSynced($lastSyncedAt)}
           </span>
         </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => { showOnlinePasswordForm = !showOnlinePasswordForm; onlinePasswordError = null; onlinePasswordForm = { current: "", next: "", confirm: "" }; }}>
+          <span class="flex items-center gap-2">
+            <Lock class="h-3.5 w-3.5" />
+            Change password
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0 transition-transform {showOnlinePasswordForm ? 'rotate-90' : ''}" />
+        </button>
+        {#if showOnlinePasswordForm}
+          <div class="flex flex-col gap-2 pb-2 pt-1">
+            <input type="password" placeholder="Current password" autocomplete="current-password"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={onlinePasswordForm.current} />
+            <input type="password" placeholder="New password" autocomplete="new-password"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={onlinePasswordForm.next} />
+            <input type="password" placeholder="Confirm new password" autocomplete="new-password"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={onlinePasswordForm.confirm} />
+            {#if onlinePasswordError}
+              <p class="text-xs text-destructive">{onlinePasswordError}</p>
+            {/if}
+            <div class="flex gap-2 pt-1">
+              <Button size="sm" disabled={savingOnlinePassword} onclick={() => void saveOnlinePassword()}>
+                {savingOnlinePassword ? "Saving…" : "Save"}
+              </Button>
+              <Button variant="ghost" size="sm" onclick={() => { showOnlinePasswordForm = false; onlinePasswordError = null; }}>Cancel</Button>
+            </div>
+          </div>
+        {/if}
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onclick={() => void authStore.logout()}>
@@ -485,7 +558,7 @@
       <div class="border-t border-border pt-4 pb-1 flex flex-col gap-2">
         <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Server</p>
         <div class="flex rounded border overflow-hidden text-xs">
-          {#each [["offline", "Offline"], ["cloud", "Logit cloud"], ["selfhosted", "Self-hosted"]] as [ServerMode, string][] as [mode, label] (mode)}
+          {#each [["offline", "Offline"], ["cloud", "logit.ie"], ["selfhosted", "Self-hosted"]] as [ServerMode, string][] as [mode, label] (mode)}
             <button
               type="button"
               class="flex-1 py-2 text-center transition-colors {serverMode ===

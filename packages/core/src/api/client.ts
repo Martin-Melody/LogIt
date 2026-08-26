@@ -187,6 +187,28 @@ class ApiClient {
     await tokenStorage.clear();
   }
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.fetch("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  /** Always resolves — the server intentionally never reveals whether the email matched. */
+  async forgotPassword(email: string): Promise<{ error?: string }> {
+    return this.fetch("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await this.fetch("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    });
+  }
+
   async logout(): Promise<void> {
     if (this.tokens) {
       try {
@@ -222,6 +244,16 @@ class ApiClient {
     localStorage.removeItem(BASE_URL_KEY);
   }
 
+  async updateDisplayName(displayName: string): Promise<void> {
+    await this.fetch("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify({ displayName }),
+    });
+    if (this.cachedUser) {
+      this.saveUser({ ...this.cachedUser, displayName }, this.cachedIsSelfHosted);
+    }
+  }
+
   async updateOnboardingCompleted(value: boolean): Promise<void> {
     await this.fetch("/users/me", {
       method: "PATCH",
@@ -248,6 +280,14 @@ class ApiClient {
 
   async getBillingStatus(): Promise<BillingStatus> {
     return this.fetch("/billing/status");
+  }
+
+  async createBillingPortalSession(returnUrl: string): Promise<string> {
+    const data: { portalUrl: string } = await this.fetch("/billing/portal", {
+      method: "POST",
+      body: JSON.stringify({ returnUrl }),
+    });
+    return data.portalUrl;
   }
 }
 

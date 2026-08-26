@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<Follow> Follows => Set<Follow>();
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Like> Likes => Set<Like>();
@@ -29,6 +30,15 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(t => t.Token).IsUnique();
             e.HasOne(t => t.User)
              .WithMany(u => u.RefreshTokens)
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<PasswordResetToken>(e =>
+        {
+            e.HasIndex(t => t.Token).IsUnique();
+            e.HasOne(t => t.User)
+             .WithMany(u => u.PasswordResetTokens)
              .HasForeignKey(t => t.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });

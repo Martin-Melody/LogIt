@@ -152,7 +152,7 @@
   {#if serverMode === "cloud"}
     <div class="flex items-center gap-2 mb-5">
       <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
-      <span class="text-xs text-muted-foreground">Logit cloud</span>
+      <span class="text-xs text-muted-foreground">logit.ie</span>
     </div>
   {:else if serverMode === "selfhosted"}
     <div class="flex items-center gap-2 mb-5">
@@ -178,7 +178,7 @@
             onclick={pickCloud}>
             <Cloud class="h-4 w-4 text-primary shrink-0" />
             <div>
-              <p class="text-sm font-medium">Logit cloud</p>
+              <p class="text-sm font-medium">logit.ie</p>
               <p class="text-xs text-muted-foreground">Managed hosting by Logit</p>
             </div>
           </button>

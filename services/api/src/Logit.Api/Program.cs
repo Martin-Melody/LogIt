@@ -5,6 +5,7 @@ using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
 using Logit.Api.Features.Billing;
 using Logit.Api.Features.Coach;
+using Logit.Api.Features.Email;
 using Logit.Api.Features.Social;
 using Logit.Api.Features.Sync;
 using Logit.Api.Features.Users;
@@ -58,6 +59,7 @@ builder.Services
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
