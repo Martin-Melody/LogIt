@@ -5,6 +5,10 @@
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
 
+  // Falls back to the live Cloudflare Pages URL so this works out of the box; set
+  // VITE_MARKETING_URL at build time once logit.ie is live.
+  const SIGNUP_URL: string = `${import.meta.env.VITE_MARKETING_URL || "https://logit-marketing.pages.dev"}/signup`;
+
   let usernameOrEmail = $state("");
   let password = $state("");
   let loading = $state(false);
@@ -83,6 +87,13 @@
         Sign in
       </Button>
     </form>
+
+    <div class="flex items-center justify-between text-xs">
+      <a href="/forgot-password" class="text-muted-foreground hover:text-foreground">Forgot password?</a>
+      <a href={SIGNUP_URL} class="text-muted-foreground hover:text-foreground">
+        Don't have an account? <span class="text-foreground font-medium">Sign up</span>
+      </a>
+    </div>
 
     <div class="text-center">
       <button
