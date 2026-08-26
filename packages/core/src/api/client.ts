@@ -282,6 +282,22 @@ class ApiClient {
     return this.fetch("/billing/status");
   }
 
+  /** Reconciles the cached tier with the server. The cached tier is set at login/register
+   * and otherwise never changes locally, so a tier change elsewhere (e.g. finishing a Stripe
+   * checkout and landing back on a freshly-booted app) would stay invisible until the next
+   * login without this. Failures keep the last-known tier rather than bouncing the user. */
+  async refreshTier(): Promise<void> {
+    if (!this.cachedUser || this.cachedIsSelfHosted) return;
+    try {
+      const { tier } = await this.getBillingStatus();
+      if (tier !== this.cachedUser.tier) {
+        this.saveUser({ ...this.cachedUser, tier }, this.cachedIsSelfHosted);
+      }
+    } catch {
+      // Transient failure — keep the cached tier and try again on the next boot.
+    }
+  }
+
   async createBillingPortalSession(returnUrl: string): Promise<string> {
     const data: { portalUrl: string } = await this.fetch("/billing/portal", {
       method: "POST",

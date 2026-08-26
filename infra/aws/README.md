@@ -55,21 +55,14 @@ expected.
 
 ```bash
 # from the repo root
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-REGION=eu-west-1   # match var.aws_region in variables.tf
-REGISTRY=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
-
-aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $REGISTRY
-
-docker build -f services/api/Dockerfile -t $REGISTRY/logit-api:latest services/api
-docker push $REGISTRY/logit-api:latest
-
-docker build -f apps/clients/logit-web/Dockerfile -t $REGISTRY/logit-web:latest .
-docker push $REGISTRY/logit-web:latest
+./scripts/deploy.sh api    # services/api only
+./scripts/deploy.sh web    # apps/clients/logit-web only
+./scripts/deploy.sh all    # both
 ```
 
-(`logit-web`'s build context is the repo root, not its own directory — see the comment at the
-top of its Dockerfile, it needs `packages/core` alongside it for the npm workspace.)
+Set `AWS_REGION` if you're not in `eu-west-1` (must match `var.aws_region` in `variables.tf`).
+The script just wraps `aws ecr get-login-password` + `docker build` + `docker push` for each
+service — see `scripts/deploy.sh` if you want the raw commands.
 
 With `apprunner_auto_deploy = true` (the default), pushing `:latest` triggers a new deployment
 automatically for whichever service's image changed — no `terraform apply` needed for routine
