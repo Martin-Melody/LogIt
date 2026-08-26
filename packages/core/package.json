@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.0.1",
-    "@capacitor/preferences": "^8.0.1",
+    "capacitor-secure-storage-plugin": "^0.13.0",
     "nanoid": "^5.1.6"
   },
   "peerDependencies": {
