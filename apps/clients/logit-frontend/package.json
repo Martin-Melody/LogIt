@@ -38,7 +38,6 @@
     "vite": "^7.2.6"
   },
   "dependencies": {
-    "@logit/core": "*",
     "@capacitor-community/sqlite": "^8.0.0",
     "@capacitor/android": "^8.0.1",
     "@capacitor/camera": "^8.2.0",
@@ -47,10 +46,11 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/keyboard": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.2",
-    "@capacitor/preferences": "^8.0.1",
     "@capawesome/capacitor-file-picker": "^8.0.2",
+    "@logit/core": "*",
     "@react2svelte/swipeable": "^0.1.4",
     "body-muscles": "^1.0.0",
+    "capacitor-secure-storage-plugin": "^0.13.0",
     "d3-scale": "^4.0.2",
     "d3-shape": "^3.2.0",
     "driver.js": "^1.4.0",
