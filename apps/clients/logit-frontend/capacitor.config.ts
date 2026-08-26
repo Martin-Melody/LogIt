@@ -3,7 +3,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const devServerUrl = process.env.CAPACITOR_DEV_URL;
 
 const config: CapacitorConfig = {
-  appId: "com.example.app",
+  appId: "ie.logit.app",
   appName: "LogIt",
   webDir: "build",
   server: {

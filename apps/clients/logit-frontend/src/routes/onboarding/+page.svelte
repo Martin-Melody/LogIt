@@ -77,20 +77,6 @@
   let authLoading = $state(false);
   const authForm = $state({ username: "", email: "", password: "", displayName: "" });
 
-  function resetServerStep() {
-    serverSubStep = "pick";
-    chosenMode = null;
-    selfHostUrl = "https://";
-    urlTestResult = "idle";
-    authMode = "login";
-    authError = null;
-    authLoading = false;
-    authForm.username = "";
-    authForm.email = "";
-    authForm.password = "";
-    authForm.displayName = "";
-  }
-
   async function testUrl() {
     const url = selfHostUrl.trim().replace(/\/$/, "");
     if (!url || url === "https:/") return;
@@ -140,7 +126,7 @@
 
   async function onProfileContinue() {
     saveProfile();
-    onboarding.setStep(2);
+    onboarding.setStep(3);
   }
 
   async function onSplitContinue() {
@@ -148,7 +134,7 @@
     saving = true;
     try {
       await applySplit();
-      onboarding.setStep(3);
+      onboarding.setStep(4);
     } finally {
       saving = false;
     }
@@ -159,18 +145,13 @@
       const { LocalNotifications } = await import("@capacitor/local-notifications");
       await LocalNotifications.requestPermissions();
     } catch {}
-    if (authStore.isAuthenticated) {
-      await finishOnboarding();
-      return;
-    }
-    resetServerStep();
-    onboarding.setStep(4);
+    await finishOnboarding();
   }
 
-  function pickCloud() {
+  function pickFreeAccount() {
     chosenMode = "cloud";
     setServerMode("cloud");
-    authForm.displayName = draft.name.trim();
+    authMode = "register";
     serverSubStep = "form";
   }
 
@@ -183,7 +164,6 @@
     const url = selfHostUrl.trim().replace(/\/$/, "");
     if (!url || url === "https:/") return;
     setServerMode("selfhosted", url);
-    authForm.displayName = draft.name.trim();
     serverSubStep = "form";
   }
 
@@ -193,6 +173,8 @@
     try {
       if (authMode === "login") {
         await authStore.login(authForm.username.trim(), authForm.password);
+        // Returning to an existing account — their data already exists, skip the setup wizard.
+        await finishOnboarding();
       } else {
         await authStore.register(
           authForm.username.trim(),
@@ -200,8 +182,9 @@
           authForm.password,
           authForm.displayName.trim() || authForm.username.trim(),
         );
+        // New account — continue into profile/split/notification setup.
+        onboarding.setStep(2);
       }
-      await finishOnboarding();
     } catch (e) {
       authError = e instanceof ApiError ? e.message : "Something went wrong. Please try again.";
     } finally {
@@ -226,9 +209,9 @@
       </div>
 
       <div class="flex flex-col gap-2 w-full max-w-xs text-left text-sm text-muted-foreground">
-        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> No account required</p>
-        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Everything stays on your device</p>
-        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Free and open source</p>
+        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Track every set, rep, and PR</p>
+        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Free to use online, offline, or self-hosted</p>
+        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Open source — you own your data</p>
       </div>
 
       <div class="flex flex-col items-center gap-3 w-full max-w-xs">
@@ -245,187 +228,47 @@
       </div>
     </div>
 
-  <!-- Step 1: Profile -->
+  <!-- Step 1: Account path -->
   {:else if step === 1}
-    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(0)}>
-        <ArrowLeft class="h-4 w-4" /> Back
-      </button>
-      <div class="mb-6">
-        <h2 class="text-xl font-bold">Set up your profile</h2>
-        <p class="text-sm text-muted-foreground mt-1">Stored on your device only. You can change this any time.</p>
-      </div>
-
-      <div class="flex flex-col gap-5 flex-1">
-        <div class="flex justify-center">
-          <ProfileAvatar name={draft.name} avatarDataUrl={$profile.avatarDataUrl} editable class="h-20 w-20" />
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" for="name">Name</label>
-          <input id="name" type="text" autocomplete="name" placeholder="Your name"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={draft.name} />
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" for="bio">Bio <span class="text-muted-foreground font-normal">(optional)</span></label>
-          <textarea id="bio" rows={2} placeholder="Something about yourself…"
-            class="w-full rounded border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={draft.bio}></textarea>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" for="height">Height <span class="text-muted-foreground font-normal">(optional)</span></label>
-          <div class="grid grid-cols-[1fr_auto] gap-2">
-            <input id="height" type="number" min="0" inputmode="decimal"
-              placeholder={draft.heightUnit === "cm" ? "e.g. 178" : "e.g. 70"}
-              class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              bind:value={draft.height} />
-            <div class="flex shrink-0 rounded border overflow-hidden text-xs">
-              <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "cm")}>cm</button>
-              <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "in")}>in</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" for="weight">Body weight <span class="text-muted-foreground font-normal">(optional)</span></label>
-          <div class="grid grid-cols-[1fr_auto] gap-2">
-            <input id="weight" type="number" min="0" inputmode="decimal"
-              placeholder={draft.weightUnit === "kg" ? "e.g. 80" : "e.g. 176"}
-              class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              bind:value={draft.weight} />
-            <div class="flex shrink-0 rounded border overflow-hidden text-xs">
-              <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "kg")}>kg</button>
-              <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "lbs")}>lbs</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-3 mt-8">
-        <button type="button" class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          disabled={!draft.name.trim()}
-          onclick={() => void onProfileContinue()}>
-          Continue
-        </button>
-      </div>
-    </div>
-
-  <!-- Step 2: Split selection -->
-  {:else if step === 2}
-    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(1)}>
-        <ArrowLeft class="h-4 w-4" /> Back
-      </button>
-      <div class="mb-6">
-        <h2 class="text-xl font-bold">Choose a training split</h2>
-        <p class="text-sm text-muted-foreground mt-1">You can change this any time.</p>
-      </div>
-
-      <ul class="flex flex-col gap-2 flex-1">
-        {#each PRESETS as preset (preset.id)}
-          <li>
-            <button type="button"
-              class="w-full text-left px-4 py-3 rounded border transition-colors {selectedPreset === preset.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
-              onclick={() => (selectedPreset = preset.id)}>
-              <p class="text-sm font-medium">{preset.name}</p>
-              <p class="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
-            </button>
-          </li>
-        {/each}
-      </ul>
-
-      <div class="flex flex-col gap-3 mt-8">
-        <button type="button"
-          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          disabled={!selectedPreset || saving}
-          onclick={() => void onSplitContinue()}>
-          {saving ? "Setting up…" : "Continue"}
-        </button>
-        <button type="button" class="w-full py-2 text-sm text-muted-foreground"
-          onclick={() => onboarding.setStep(3)}>
-          Skip for now
-        </button>
-      </div>
-    </div>
-
-  <!-- Step 3: Notifications -->
-  {:else if step === 3}
-    <div class="flex flex-col flex-1 px-8 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(2)}>
-        <ArrowLeft class="h-4 w-4" /> Back
-      </button>
-      <div class="flex flex-col flex-1 items-center justify-center gap-8 text-center">
-        <div class="flex flex-col items-center gap-4">
-          <div class="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
-            <Bell class="h-8 w-8 text-foreground" />
-          </div>
-          <div>
-            <h2 class="text-xl font-bold">Stay on track</h2>
-            <p class="mt-2 text-sm text-muted-foreground">
-              Get a notification when your rest period ends so you never lose count between sets.
-            </p>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full">
-          <button type="button"
-            class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
-            onclick={() => void onEnableNotifications()}>
-            Enable notifications
-          </button>
-          <button type="button"
-            class="w-full py-2 text-sm text-muted-foreground flex items-center justify-center gap-1.5"
-            onclick={() => { if (authStore.isAuthenticated) { void finishOnboarding(); return; } resetServerStep(); onboarding.setStep(4); }}>
-            <BellOff class="h-3.5 w-3.5" /> Skip for now
-          </button>
-        </div>
-      </div>
-    </div>
-
-  <!-- Step 4: Server / Account -->
-  {:else if step === 4}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
 
       <!-- Sub-step: pick server mode -->
       {#if serverSubStep === "pick"}
-        <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(3)}>
+        <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(0)}>
           <ArrowLeft class="h-4 w-4" /> Back
         </button>
         <div class="mb-6">
-          <h2 class="text-xl font-bold">Connect an account</h2>
+          <h2 class="text-xl font-bold">How do you want to use Logit?</h2>
           <p class="text-sm text-muted-foreground mt-1">
-            Optional — the app works fully offline. You can connect later in Settings.
+            You can change this any time in Settings.
           </p>
         </div>
 
         <div class="flex flex-col gap-3 flex-1">
           <button type="button"
+            class="w-full text-left px-4 py-4 rounded border border-primary bg-primary/5 transition-colors"
+            onclick={pickFreeAccount}>
+            <div class="flex items-center gap-3">
+              <div class="h-9 w-9 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                <Cloud class="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p class="text-sm font-medium">Create a free account</p>
+                <p class="text-xs text-muted-foreground mt-0.5">Social feed on your phone, free forever. Cross-device sync and the web dashboard need Pro or Studio.</p>
+              </div>
+            </div>
+          </button>
+
+          <button type="button"
             class="w-full text-left px-4 py-4 rounded border border-border hover:border-muted-foreground/50 transition-colors"
-            onclick={() => { setServerMode("offline"); void finishOnboarding(); }}>
+            onclick={() => { setServerMode("offline"); onboarding.setStep(2); }}>
             <div class="flex items-center gap-3">
               <div class="h-9 w-9 rounded bg-muted flex items-center justify-center shrink-0">
                 <WifiOff class="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
                 <p class="text-sm font-medium">Stay offline</p>
-                <p class="text-xs text-muted-foreground mt-0.5">Everything stays on your device. No account needed.</p>
-              </div>
-            </div>
-          </button>
-
-          <button type="button"
-            class="w-full text-left px-4 py-4 rounded border border-border hover:border-muted-foreground/50 transition-colors"
-            onclick={pickCloud}>
-            <div class="flex items-center gap-3">
-              <div class="h-9 w-9 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                <Cloud class="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p class="text-sm font-medium">Logit cloud</p>
-                <p class="text-xs text-muted-foreground mt-0.5">Social features, cloud backup, and the plugin community.</p>
+                <p class="text-xs text-muted-foreground mt-0.5">No account, everything stays on your device. Free and open source — no social feed, since that needs a server.</p>
               </div>
             </div>
           </button>
@@ -438,12 +281,16 @@
                 <Server class="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
-                <p class="text-sm font-medium">Self-hosted</p>
-                <p class="text-xs text-muted-foreground mt-0.5">Connect to your own Logit instance. Full control over your data.</p>
+                <p class="text-sm font-medium">Self-host</p>
+                <p class="text-xs text-muted-foreground mt-0.5">Connect to your own Logit instance. Full feature set, free, full control over your data.</p>
               </div>
             </div>
           </button>
         </div>
+
+        <a href="/auth" class="mt-6 text-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+          Already have an account? <span class="text-foreground font-medium">Log in</span>
+        </a>
 
       <!-- Sub-step: enter self-host URL -->
       {:else if serverSubStep === "url"}
@@ -509,7 +356,7 @@
         <div class="mb-5">
           <h2 class="text-xl font-bold">{authMode === "login" ? "Log in" : "Create account"}</h2>
           <p class="text-sm text-muted-foreground mt-1">
-            {chosenMode === "selfhosted" ? selfHostUrl.replace(/^https?:\/\//, "") : "Logit cloud"}
+            {chosenMode === "selfhosted" ? selfHostUrl.replace(/^https?:\/\//, "") : "logit.ie"}
           </p>
         </div>
 
@@ -577,13 +424,156 @@
             {authLoading ? (authMode === "login" ? "Logging in…" : "Creating account…") : (authMode === "login" ? "Log in" : "Create account")}
           </button>
           <button type="button" class="w-full py-2 text-sm text-muted-foreground"
-            onclick={() => void finishOnboarding()}>
+            onclick={() => { setServerMode("offline"); onboarding.setStep(2); }}>
             Skip for now
           </button>
         </div>
       {/if}
 
     </div>
+
+  <!-- Step 2: Profile -->
+  {:else if step === 2}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(1)}>
+        <ArrowLeft class="h-4 w-4" /> Back
+      </button>
+      <div class="mb-6">
+        <h2 class="text-xl font-bold">Set up your profile</h2>
+        <p class="text-sm text-muted-foreground mt-1">
+          {authStore.isAuthenticated ? "You can change this any time." : "Stored on your device only. You can change this any time."}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-5 flex-1">
+        <div class="flex justify-center">
+          <ProfileAvatar name={draft.name} avatarDataUrl={$profile.avatarDataUrl} editable class="h-20 w-20" />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium" for="name">Name</label>
+          <input id="name" type="text" autocomplete="name" placeholder="Your name"
+            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            bind:value={draft.name} />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium" for="bio">Bio <span class="text-muted-foreground font-normal">(optional)</span></label>
+          <textarea id="bio" rows={2} placeholder="Something about yourself…"
+            class="w-full rounded border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            bind:value={draft.bio}></textarea>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium" for="height">Height <span class="text-muted-foreground font-normal">(optional)</span></label>
+          <div class="grid grid-cols-[1fr_auto] gap-2">
+            <input id="height" type="number" min="0" inputmode="decimal"
+              placeholder={draft.heightUnit === "cm" ? "e.g. 178" : "e.g. 70"}
+              class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={draft.height} />
+            <div class="flex shrink-0 rounded border overflow-hidden text-xs">
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "cm")}>cm</button>
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.heightUnit = "in")}>in</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium" for="weight">Body weight <span class="text-muted-foreground font-normal">(optional)</span></label>
+          <div class="grid grid-cols-[1fr_auto] gap-2">
+            <input id="weight" type="number" min="0" inputmode="decimal"
+              placeholder={draft.weightUnit === "kg" ? "e.g. 80" : "e.g. 176"}
+              class="min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={draft.weight} />
+            <div class="flex shrink-0 rounded border overflow-hidden text-xs">
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "kg")}>kg</button>
+              <button type="button" class="w-12 py-2 text-center transition-colors {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}" onclick={() => (draft.weightUnit = "lbs")}>lbs</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3 mt-8">
+        <button type="button" class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          disabled={!draft.name.trim()}
+          onclick={() => void onProfileContinue()}>
+          Continue
+        </button>
+      </div>
+    </div>
+
+  <!-- Step 3: Split selection -->
+  {:else if step === 3}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(2)}>
+        <ArrowLeft class="h-4 w-4" /> Back
+      </button>
+      <div class="mb-6">
+        <h2 class="text-xl font-bold">Choose a training split</h2>
+        <p class="text-sm text-muted-foreground mt-1">You can change this any time.</p>
+      </div>
+
+      <ul class="flex flex-col gap-2 flex-1">
+        {#each PRESETS as preset (preset.id)}
+          <li>
+            <button type="button"
+              class="w-full text-left px-4 py-3 rounded border transition-colors {selectedPreset === preset.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
+              onclick={() => (selectedPreset = preset.id)}>
+              <p class="text-sm font-medium">{preset.name}</p>
+              <p class="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
+            </button>
+          </li>
+        {/each}
+      </ul>
+
+      <div class="flex flex-col gap-3 mt-8">
+        <button type="button"
+          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          disabled={!selectedPreset || saving}
+          onclick={() => void onSplitContinue()}>
+          {saving ? "Setting up…" : "Continue"}
+        </button>
+        <button type="button" class="w-full py-2 text-sm text-muted-foreground"
+          onclick={() => onboarding.setStep(4)}>
+          Skip for now
+        </button>
+      </div>
+    </div>
+
+  <!-- Step 4: Notifications -->
+  {:else if step === 4}
+    <div class="flex flex-col flex-1 px-8 pt-10 pb-8 max-w-sm mx-auto w-full">
+      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(3)}>
+        <ArrowLeft class="h-4 w-4" /> Back
+      </button>
+      <div class="flex flex-col flex-1 items-center justify-center gap-8 text-center">
+        <div class="flex flex-col items-center gap-4">
+          <div class="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
+            <Bell class="h-8 w-8 text-foreground" />
+          </div>
+          <div>
+            <h2 class="text-xl font-bold">Stay on track</h2>
+            <p class="mt-2 text-sm text-muted-foreground">
+              Get a notification when your rest period ends so you never lose count between sets.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3 w-full">
+          <button type="button"
+            class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
+            onclick={() => void onEnableNotifications()}>
+            Enable notifications
+          </button>
+          <button type="button"
+            class="w-full py-2 text-sm text-muted-foreground flex items-center justify-center gap-1.5"
+            onclick={() => void finishOnboarding()}>
+            <BellOff class="h-3.5 w-3.5" /> Skip for now
+          </button>
+        </div>
+      </div>
+    </div>
+
   {/if}
 
   <!-- Step indicator (steps 1–4) -->

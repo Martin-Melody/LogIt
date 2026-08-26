@@ -7,7 +7,7 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { getServerMode, setServerMode, getSelfHostUrl } from "@logit/core/api/serverConfig";
   import { testServerConnection, type ConnectionResult } from "@logit/core/api/testConnection";
-  import { ApiError } from "@logit/core/api/client";
+  import { apiClient, ApiError } from "@logit/core/api/client";
   import { isNativePlatform } from "$lib/platform/isNative";
   import { onboarding } from "$lib/stores/onboarding.store";
   import type { LocalAccount } from "$lib/data/localAccountRepo";
@@ -33,6 +33,27 @@
   const form = $state({ username: "", email: "", password: "", displayName: "", confirmPassword: "" });
   let authError = $state<string | null>(null);
   let authLoading = $state(false);
+
+  // Forgot password
+  let showForgotPassword = $state(false);
+  let forgotEmail = $state("");
+  let forgotLoading = $state(false);
+  let forgotResult = $state<{ message: string; isError: boolean } | null>(null);
+
+  async function submitForgotPassword() {
+    forgotLoading = true;
+    forgotResult = null;
+    try {
+      const { error } = await apiClient.forgotPassword(forgotEmail.trim());
+      forgotResult = error
+        ? { message: error, isError: true }
+        : { message: "If that email has an account, a reset link is on its way.", isError: false };
+    } catch (e) {
+      forgotResult = { message: e instanceof ApiError ? e.message : "Something went wrong. Please try again.", isError: true };
+    } finally {
+      forgotLoading = false;
+    }
+  }
 
   // Server config (reactive so inline changes reflect immediately)
   let serverMode = $state(getServerMode());
@@ -178,6 +199,7 @@
   function switchOnlineMode(mode: OnlineMode) {
     onlineMode = mode;
     authError = null;
+    showForgotPassword = false;
     form.password = "";
     form.confirmPassword = "";
     showOnlinePassword = false;
@@ -211,7 +233,7 @@
     {#if serverMode === "cloud"}
       <div class="flex items-center gap-2 mb-5">
         <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
-        <span class="text-xs text-muted-foreground">Logit cloud</span>
+        <span class="text-xs text-muted-foreground">logit.ie</span>
         {#if !showServerSetup}
           <button type="button" class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground ml-1" onclick={openServerSetup}>
             <Pencil class="h-3 w-3" /> Change
@@ -247,7 +269,7 @@
               onclick={pickCloud}>
               <Cloud class="h-4 w-4 text-primary shrink-0" />
               <div>
-                <p class="text-sm font-medium">Logit cloud</p>
+                <p class="text-sm font-medium">logit.ie</p>
                 <p class="text-xs text-muted-foreground">Managed hosting — no server setup needed</p>
               </div>
             </button>
@@ -294,6 +316,38 @@
         {/if}
       </div>
     {/if}
+
+    {#if showForgotPassword}
+      <h1 class="text-xl font-bold mb-1">Reset your password</h1>
+      <p class="text-xs text-muted-foreground mb-5">We'll email you a link to set a new password.</p>
+
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium" for="forgot-email">Email</label>
+          <input id="forgot-email" type="email" autocomplete="email" placeholder="you@example.com"
+            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            bind:value={forgotEmail} />
+        </div>
+
+        {#if forgotResult}
+          <div class="rounded border px-3 py-2 {forgotResult.isError ? 'border-destructive/30 bg-destructive/5' : 'border-border'}">
+            <p class="text-sm {forgotResult.isError ? 'text-destructive' : 'text-foreground'}">{forgotResult.message}</p>
+          </div>
+        {/if}
+
+        <button type="button"
+          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+          disabled={forgotLoading || !forgotEmail.trim()}
+          onclick={() => void submitForgotPassword()}>
+          {#if forgotLoading}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+          {forgotLoading ? "Sending…" : "Send reset link"}
+        </button>
+        <button type="button" class="w-full py-2 text-sm text-muted-foreground"
+          onclick={() => (showForgotPassword = false)}>
+          Back to log in
+        </button>
+      </div>
+    {:else}
 
     <h1 class="text-xl font-bold mb-5">{onlineMode === "login" ? "Welcome back" : "Create account"}</h1>
 
@@ -365,6 +419,11 @@
         </div>
         {#if onlineMode === "register"}
           <p class="text-xs text-muted-foreground">At least 8 characters.</p>
+        {:else}
+          <button type="button" class="self-end text-xs text-muted-foreground hover:text-foreground"
+            onclick={() => { showForgotPassword = true; forgotEmail = ""; forgotResult = null; }}>
+            Forgot password?
+          </button>
         {/if}
       </div>
 
@@ -408,6 +467,7 @@
         {/if}
       </button>
     </form>
+    {/if}
 
   <!-- ── OFFLINE TAB ── -->
   {:else}
