@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
-import type { Exercise, ExercisePatch, ExerciseType } from "$lib/domain/exercise";
-import type { ExerciseRepo, ListExercisesOptions } from "./exerciseRepo";
-import { createId } from "$lib/domain/ids";
+import type { Exercise, ExercisePatch, ExerciseType } from "@logit/core/domain/exercise";
+import type { ExerciseRepo, ListExercisesOptions } from "@logit/core/data/exercise/exerciseRepo";
+import { createId } from "@logit/core/domain/ids";
 
 // Core exercises are always authoritative — never stored in localStorage.
 const CORE_EXERCISES: Exercise[] = [
@@ -57,6 +57,7 @@ function readCustom(): Exercise[] {
       primaryMuscles: e.primaryMuscles ?? [],
       secondaryMuscles: e.secondaryMuscles ?? [],
       exerciseType: e.exerciseType ?? "normal",
+      machines: e.machines ?? [],
     }));
   } catch {
     return [];
@@ -140,7 +141,9 @@ export function createLocalExerciseRepo(): ExerciseRepo {
       if (coreIdx !== -1) {
         const custom = readCustom();
         const overlayIdx = custom.findIndex((e) => e.id === id);
-        const hasOverridableField = patch.notes !== undefined || patch.exerciseType !== undefined;
+        const hasOverridableField =
+          patch.notes !== undefined || patch.exerciseType !== undefined ||
+          patch.machines !== undefined || patch.defaultMachineId !== undefined;
         if (hasOverridableField) {
           const base = { ...CORE_EXERCISES[coreIdx]! };
           if (overlayIdx !== -1) {

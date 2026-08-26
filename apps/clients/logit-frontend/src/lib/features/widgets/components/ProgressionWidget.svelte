@@ -4,9 +4,10 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import { getProgressionRepo } from "$lib/data/repoProvider";
-  import { getSuggestion } from "$lib/usecases/progression/getSuggestion";
-  import type { ProgressionOutput } from "$lib/domain/progression";
-  import type { ExerciseProgressionState } from "$lib/domain/progression";
+  import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import type { ProgressionOutput } from "@logit/core/domain/progression";
+  import type { ExerciseProgressionState } from "@logit/core/domain/progression";
 
   type Row = ExerciseProgressionState & { output: ProgressionOutput | null };
 
@@ -20,7 +21,7 @@
 
     const resolved = await Promise.all(
       sorted.map(async (s) => {
-        const output = await getSuggestion({ id: s.exerciseId, name: s.exerciseName }).catch(() => null);
+        const output = await getSuggestion({ id: s.exerciseId, name: s.exerciseName }, getProgressionDeps()).catch(() => null);
         return { ...s, output };
       }),
     );

@@ -15,7 +15,7 @@ namespace Logit.Api.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.26");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.30");
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
                 {
@@ -324,6 +324,12 @@ namespace Logit.Api.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("PublicProfileJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeCustomerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeSubscriptionId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Tier")

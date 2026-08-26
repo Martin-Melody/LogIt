@@ -1,12 +1,12 @@
-import type { SplitRepo, ListSplitsOptions } from "$lib/data/splitRepo";
+import type { SplitRepo, ListSplitsOptions } from "@logit/core/data/splitRepo";
 import type {
   WorkoutSplit,
   SplitDay,
   PlannedBlock,
-} from "$lib/domain/WorkoutSplit";
+} from "@logit/core/domain/WorkoutSplit";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
-import { nowMs } from "$lib/domain/time";
+import { nowMs } from "@logit/core/domain/time";
 
 export function createSqliteSplitRepo(): SplitRepo {
   return {

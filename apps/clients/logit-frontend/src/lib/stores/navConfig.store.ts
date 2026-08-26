@@ -182,6 +182,20 @@ function createNavConfigStore() {
     store.set(complete);
   }
 
+  /**
+   * Offline accounts can't use Social (it requires an online account), so swap it for
+   * Exercises wherever it sits — keeping bar/more symmetrical instead of leaving a gap.
+   * No-ops if Social isn't in the config (e.g. already reconciled).
+   */
+  function reconcileForOffline() {
+    if (!_current.bar.includes("social") && !_current.more.includes("social")) return;
+    update((c) => {
+      const swap = (arr: NavItemId[]) =>
+        arr.map((id) => (id === "social" ? "exercises" : id === "exercises" ? "social" : id));
+      return { bar: swap(c.bar), more: swap(c.more) };
+    });
+  }
+
   return {
     subscribe: store.subscribe,
     reorderBar,
@@ -193,6 +207,7 @@ function createNavConfigStore() {
     moveMoreUp,
     moveMoreDown,
     applyRemote,
+    reconcileForOffline,
   };
 }
 

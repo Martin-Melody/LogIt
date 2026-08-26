@@ -1,13 +1,13 @@
 import { browser } from "$app/environment";
 import type { WidgetDefinition } from "$lib/features/widgets/widget";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
-import type { AlgorithmRegistry } from "$lib/progression/algorithmRegistry";
+import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
 import type {
   ProgressionAlgorithm,
   ProgressionAlgorithmMeta,
-} from "$lib/domain/progression";
+} from "@logit/core/domain/progression";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
-import { createLocalAnalyticsRegistry } from "$lib/progression/localAnalyticsRegistry";
+import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { listInstalledPluginManifests } from "./catalog";
 import {
   describePluginBundleContract,
@@ -28,7 +28,7 @@ import type {
   ProgressionAlgorithmPluginCapability,
   WidgetPluginCapability,
 } from "./types";
-import type { AnalyticsPlugin, AnalyticsPluginMeta, AnalyticsRegistry } from "$lib/domain/analytics";
+import type { AnalyticsPlugin, AnalyticsPluginMeta, AnalyticsRegistry } from "@logit/core/domain/analytics";
 
 export type RuntimeWidgetDefinition = WidgetDefinition & {
   source: "builtin" | "installed";

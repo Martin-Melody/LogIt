@@ -22,7 +22,8 @@ public static class AuthEndpoints
     private static async Task<IResult> Register(
         [FromBody] RegisterRequest req,
         AppDbContext db,
-        TokenService tokens)
+        TokenService tokens,
+        IConfiguration config)
     {
         var normalizedUsername = req.Username.Trim().ToLowerInvariant();
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
@@ -47,13 +48,14 @@ public static class AuthEndpoints
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        return Results.Ok(BuildAuthResponse(user, refresh.Token, tokens));
+        return Results.Ok(BuildAuthResponse(user, refresh.Token, tokens, config));
     }
 
     private static async Task<IResult> Login(
         [FromBody] LoginRequest req,
         AppDbContext db,
-        TokenService tokens)
+        TokenService tokens,
+        IConfiguration config)
     {
         var identifier = req.UsernameOrEmail.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u =>
@@ -72,13 +74,14 @@ public static class AuthEndpoints
         db.RefreshTokens.Add(refresh);
         await db.SaveChangesAsync();
 
-        return Results.Ok(BuildAuthResponse(user, refresh.Token, tokens));
+        return Results.Ok(BuildAuthResponse(user, refresh.Token, tokens, config));
     }
 
     private static async Task<IResult> Refresh(
         [FromBody] RefreshRequest req,
         AppDbContext db,
-        TokenService tokens)
+        TokenService tokens,
+        IConfiguration config)
     {
         var stored = await db.RefreshTokens
             .Include(t => t.User)
@@ -93,7 +96,7 @@ public static class AuthEndpoints
         db.RefreshTokens.Add(next);
         await db.SaveChangesAsync();
 
-        return Results.Ok(BuildAuthResponse(stored.User, next.Token, tokens));
+        return Results.Ok(BuildAuthResponse(stored.User, next.Token, tokens, config));
     }
 
     private static async Task<IResult> Revoke(
@@ -127,10 +130,11 @@ public static class AuthEndpoints
         return Results.NoContent();
     }
 
-    private static AuthResponse BuildAuthResponse(User user, string refreshToken, TokenService tokens) =>
+    private static AuthResponse BuildAuthResponse(User user, string refreshToken, TokenService tokens, IConfiguration config) =>
         new(
             tokens.CreateAccessToken(user),
             refreshToken,
-            new UserDto(user.Id, user.Username, user.DisplayName, user.AvatarUrl, user.Tier.ToString(), user.OnboardingCompleted)
+            new UserDto(user.Id, user.Username, user.DisplayName, user.AvatarUrl, user.Tier.ToString(), user.OnboardingCompleted),
+            config.GetValue<bool>("Deployment:SelfHosted")
         );
 }

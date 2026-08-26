@@ -1,5 +1,5 @@
-import type { AlgorithmRegistry } from "$lib/progression/algorithmRegistry";
-import type { ProgressionAlgorithm, ProgressionAlgorithmMeta } from "$lib/domain/progression";
+import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
+import type { ProgressionAlgorithm, ProgressionAlgorithmMeta } from "@logit/core/domain/progression";
 import { linearProgression } from "$lib/progression/algorithms/linearProgression";
 
 const BUNDLED: ProgressionAlgorithm[] = [linearProgression];

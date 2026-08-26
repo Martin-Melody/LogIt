@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
-import type { ProgressionRepo } from "$lib/data/progressionRepo";
-import type { ExerciseProgressionState, UserProgressionConfig } from "$lib/domain/progression";
-import type { UserAnalyticsConfig } from "$lib/domain/analytics";
+import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
+import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
+import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 
 const STORAGE_KEYS = {
   config: "logit:progression:config:v1",
@@ -63,6 +63,13 @@ export function createLocalProgressionRepo(): ProgressionRepo {
     async clearStates(): Promise<void> {
       ensureBrowser();
       localStorage.removeItem(STORAGE_KEYS.states);
+    },
+
+    async resetExerciseState(key: string): Promise<void> {
+      const states = readJson<Record<string, ExerciseProgressionState>>(STORAGE_KEYS.states, {});
+      if (!(key in states)) return;
+      const { [key]: _removed, ...rest } = states;
+      writeJson(STORAGE_KEYS.states, rest);
     },
 
     async getAnalyticsConfig(): Promise<UserAnalyticsConfig | null> {

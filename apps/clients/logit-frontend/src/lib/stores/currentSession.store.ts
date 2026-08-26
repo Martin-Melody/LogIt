@@ -1,9 +1,9 @@
 import { get, writable } from "svelte/store";
-import type { WorkoutSession } from "$lib/domain/workout";
+import type { WorkoutSession } from "@logit/core/domain/workout";
 import { startSession } from "$lib/usecases/startSession";
 import { loadDraftSession } from "$lib/usecases/loadDraftSession";
 import { finishCurrentSession } from "$lib/usecases/finnishCurrentSession";
-import type { SplitDay } from "$lib/domain/WorkoutSplit";
+import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 import { startSessionFromSplitDay } from "$lib/usecases/startSessionFromSplitDay";
 
 type CurrentSessionState = {

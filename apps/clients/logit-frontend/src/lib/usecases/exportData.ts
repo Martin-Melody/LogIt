@@ -1,8 +1,8 @@
 import { get } from "svelte/store";
-import type { Exercise } from "$lib/domain/exercise";
-import type { WorkoutSession } from "$lib/domain/workout";
-import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
-import type { ExerciseProgressionState, UserProgressionConfig } from "$lib/domain/progression";
+import type { Exercise } from "@logit/core/domain/exercise";
+import type { WorkoutSession } from "@logit/core/domain/workout";
+import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
 import type { UserProfile } from "$lib/stores/profile.store";
 import type { HomeConfig } from "$lib/features/widgets/widget";
 import {

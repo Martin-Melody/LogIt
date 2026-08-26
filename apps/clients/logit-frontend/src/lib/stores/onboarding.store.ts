@@ -1,8 +1,8 @@
 import { browser } from "$app/environment";
 import { writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
-import { apiClient } from "$lib/api/client";
-import { getServerMode } from "$lib/api/serverConfig";
+import { apiClient } from "@logit/core/api/client";
+import { getServerMode } from "@logit/core/api/serverConfig";
 
 const STORAGE_KEY = "logit:onboarding:v1";
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { X, Search, UserPlus, UserCheck, Loader2 } from "lucide-svelte";
-  import { socialApi, type UserSearchResult } from "$lib/api/socialApi";
+  import { socialApi, type UserSearchResult } from "@logit/core/api/socialApi";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
 
   const { open, onclose } = $props<{

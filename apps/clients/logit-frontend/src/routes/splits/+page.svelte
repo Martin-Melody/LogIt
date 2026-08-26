@@ -10,7 +10,7 @@
   import { splits } from "$lib/stores/splits.store";
   import { activeSplit } from "$lib/stores/activeSplit.store";
 
-  import { createSplit } from "$lib/domain/WorkoutSplit";
+  import { createSplit } from "@logit/core/domain/WorkoutSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
 
   const ui = $state({

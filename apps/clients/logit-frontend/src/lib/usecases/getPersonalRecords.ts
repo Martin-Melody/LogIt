@@ -1,5 +1,5 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
-import type { StrengthBlockData } from "$lib/domain/workout";
+import type { StrengthBlockData } from "@logit/core/domain/workout";
 
 export type PersonalRecord = {
   exerciseName: string;

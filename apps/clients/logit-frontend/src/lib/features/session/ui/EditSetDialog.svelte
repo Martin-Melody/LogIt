@@ -4,21 +4,28 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import Textarea from "$lib/components/ui/textarea/textarea.svelte";
 
-  import type { SetEntry, SetType } from "$lib/domain/workout";
+  import type { SetEntry, SetType } from "@logit/core/domain/workout";
+  import type { Machine } from "@logit/core/domain/exercise";
   import SetTypePicker from "./SetTypePicker.svelte";
 
-  type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs">;
+  type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">;
 
   const {
     open = false,
     disabled = false,
     initial = null,
+    machines = [],
+    defaultMachineId = undefined,
+    exerciseId = undefined,
     onOpenChange = () => {},
     onSave = async () => {},
   } = $props<{
     open?: boolean;
     disabled?: boolean;
     initial?: Omit<Editable, "restDurationMs"> & { restDurationMs?: number } | null;
+    machines?: Machine[];
+    defaultMachineId?: string;
+    exerciseId?: string;
     onOpenChange?: (v: boolean) => void;
     onSave?: (patch: Partial<Editable>) => void | Promise<void>;
   }>();
@@ -30,12 +37,14 @@
     setType: SetType;
     note: string | null;
     restDurationMs: number | undefined;
+    machineId: string | null;
   }>({
     reps: null,
     weight: null,
     setType: "normal",
     note: null,
     restDurationMs: undefined,
+    machineId: null,
   });
 
   let noteExpanded = $state(false);
@@ -43,7 +52,7 @@
 
   $effect(() => {
     if (!open || !initial) return;
-    const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}|${initial.restDurationMs ?? ""}`;
+    const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}|${initial.restDurationMs ?? ""}|${initial.machineId ?? ""}|${defaultMachineId ?? ""}`;
     if (lastKey === key) return;
     lastKey = key;
     draft.reps = initial.reps > 0 ? initial.reps : null;
@@ -51,6 +60,9 @@
     draft.setType = initial.setType ?? "normal";
     draft.note = initial.note ?? null;
     draft.restDurationMs = initial.restDurationMs;
+    // No machine explicitly logged for this set yet — default to the exercise's
+    // usual machine; the user only needs to touch this if they're on a different one.
+    draft.machineId = initial.machineId ?? defaultMachineId ?? null;
     noteExpanded = !!initial.note;
   });
 
@@ -100,6 +112,7 @@
       setType: draft.setType,
       note: draft.note?.trim() || null,
       restDurationMs: draft.restDurationMs,
+      machineId: draft.machineId ?? undefined,
     };
 
     await onSave(patch);
@@ -125,6 +138,34 @@
             onchange={(t) => (draft.setType = t)}
           />
         </div>
+
+        <!-- Machine -->
+        {#if machines.length > 0 || exerciseId}
+          <div class="flex flex-col gap-2">
+            <Label>Machine</Label>
+            {#if machines.length > 0}
+              <div class="flex gap-1.5 flex-wrap">
+                {#each machines as m (m.id)}
+                  <button
+                    type="button"
+                    class="px-2.5 py-1.5 text-xs rounded border transition-colors {draft.machineId === m.id
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                    {disabled}
+                    onclick={() => (draft.machineId = m.id)}
+                  >
+                    {m.name}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+            {#if exerciseId}
+              <a href="/exercises/{exerciseId}" class="text-xs text-muted-foreground underline hover:text-foreground self-start">
+                {machines.length > 0 ? "Add another machine" : "No machines set up for this exercise yet — add one"}
+              </a>
+            {/if}
+          </div>
+        {/if}
 
         <!-- Reps + Weight -->
         <div class="grid grid-cols-2 gap-3">

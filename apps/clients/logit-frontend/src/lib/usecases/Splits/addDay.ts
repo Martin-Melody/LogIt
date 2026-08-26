@@ -1,5 +1,5 @@
 import { getSplitRepo } from "$lib/data/repoProvider";
-import { addDay as addDayDomain } from "$lib/domain/WorkoutSplit";
+import { addDay as addDayDomain } from "@logit/core/domain/WorkoutSplit";
 
 export async function addDay(splitId: string, name?: string): Promise<void> {
   const repo = getSplitRepo();

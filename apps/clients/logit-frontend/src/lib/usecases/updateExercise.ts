@@ -1,4 +1,4 @@
-import type { ExercisePatch } from "$lib/domain/exercise";
+import type { ExercisePatch } from "@logit/core/domain/exercise";
 import { getExerciseRepo, getSplitRepo } from "$lib/data/repoProvider";
 import { pushExercise } from "$lib/sync/syncService";
 

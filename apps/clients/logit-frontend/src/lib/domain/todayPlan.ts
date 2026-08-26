@@ -1,4 +1,4 @@
-import type { WorkoutSplit } from "$lib/domain/WorkoutSplit";
+import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 
 export type TodayPlan = {
   dayNumber: number;

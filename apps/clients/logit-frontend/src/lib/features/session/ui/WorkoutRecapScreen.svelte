@@ -1,9 +1,9 @@
 <script lang="ts">
   import { CheckCircle2 } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
-  import type { WorkoutSession, CardioBlockData } from "$lib/domain/workout";
-  import { getExercises, getTopSetHighlight } from "$lib/domain/workout";
-  import { formatDuration } from "$lib/domain/time";
+  import type { WorkoutSession, CardioBlockData } from "@logit/core/domain/workout";
+  import { getExercises, getTopSetHighlight } from "@logit/core/domain/workout";
+  import { formatDuration } from "@logit/core/domain/time";
 
   import { authStore } from "$lib/api/authStore.svelte";
 

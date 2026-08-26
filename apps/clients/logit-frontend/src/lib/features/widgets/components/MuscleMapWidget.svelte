@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
   import { getWorkoutRepo, getExerciseRepo } from "$lib/data/repoProvider";
-  import { getExercises } from "$lib/domain/workout";
-  import type { MuscleGroup } from "$lib/domain/exercise";
+  import { getExercises } from "@logit/core/domain/workout";
+  import type { MuscleGroup } from "@logit/core/domain/exercise";
   import { FRONT_MUSCLES, BACK_MUSCLES } from "body-muscles";
 
   const ALL_MUSCLES: MuscleGroup[] = [
