@@ -2,8 +2,9 @@
   import { goto } from "$app/navigation";
   import { apiClient } from "@logit/core/api/client";
 
-  // Update if the marketing domain changes — must stay in sync with the deployment docs.
-  const PRICING_URL = "https://logit.ie/pricing";
+  // Falls back to the live Cloudflare Pages URL so this works out of the box; set
+  // VITE_MARKETING_URL at build time once logit.ie is live.
+  const PRICING_URL: string = `${import.meta.env.VITE_MARKETING_URL || "https://logit-marketing.pages.dev"}/pricing`;
 
   function logout() {
     void apiClient.logout().then(() => goto("/login"));
