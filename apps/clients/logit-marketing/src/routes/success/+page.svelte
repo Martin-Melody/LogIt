@@ -4,9 +4,10 @@
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
 
-  // Update once the real domain is chosen — see infra/aws/README.md's custom domain section,
-  // this needs to match whatever `web_origin` is set to there.
-  const WEB_DASHBOARD_URL = "https://app.logit.ie";
+  // Falls back to the live App Runner URL (infra/aws terraform output web_service_url) so this
+  // works out of the box; set VITE_WEB_URL at build time once app.logit.ie is live.
+  const WEB_DASHBOARD_URL: string =
+    import.meta.env.VITE_WEB_URL || "https://zi5nyrmpny.eu-west-1.awsapprunner.com";
 
   let loading = $state(true);
   let status = $state<BillingStatus | null>(null);
