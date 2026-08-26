@@ -49,6 +49,10 @@
 
   onMount(async () => {
     await apiClient.init();
+    // Reconcile the cached tier before the guard below decides whether to bounce to
+    // /upgrade — the cache only updates on login, so it's stale right after a Stripe
+    // checkout redirects back into a freshly-booted app.
+    await apiClient.refreshTier();
     ready = true;
     await guardRoute();
     if (apiClient.isAuthenticated() && !isBlockedFreeTier) {
