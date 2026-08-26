@@ -88,6 +88,7 @@ resource "aws_apprunner_service" "api" {
           ASPNETCORE_ENVIRONMENT = "Production"
           Jwt__Issuer            = "logit-api"
           Jwt__Audience          = "logit-app"
+          Web__Origin            = var.web_origin # used to build password-reset email links
         }
 
         runtime_environment_secrets = {

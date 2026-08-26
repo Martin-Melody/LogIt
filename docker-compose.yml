@@ -12,6 +12,12 @@ services:
       Jwt__Audience: logit-app
       Admin__Key: ${ADMIN_KEY:?Set ADMIN_KEY in .env — see .env.example}
       Deployment__SelfHosted: "true"
+      Web__Origin: ${WEB_ORIGIN:-http://localhost:3000}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-}
     volumes:
       - api-data:/data
     restart: unless-stopped
