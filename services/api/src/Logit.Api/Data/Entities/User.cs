@@ -20,6 +20,7 @@ public class User
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
+    public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = [];
     public ICollection<Follow> Followers { get; set; } = [];
     public ICollection<Follow> Following { get; set; } = [];
     public ICollection<Post> Posts { get; set; } = [];
