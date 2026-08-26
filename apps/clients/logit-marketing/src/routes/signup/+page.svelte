@@ -8,12 +8,17 @@
   const plan = rawPlan === "pro" || rawPlan === "studio" ? rawPlan : "free";
   const planLabel = plan === "studio" ? "Studio" : plan === "pro" ? "Pro" : "Free";
 
+  // Falls back to the live App Runner URL so this works out of the box; set VITE_WEB_URL at
+  // build time once app.logit.ie is live.
+  const LOGIN_URL: string = `${import.meta.env.VITE_WEB_URL || "https://zi5nyrmpny.eu-west-1.awsapprunner.com"}/login`;
+
   let username = $state("");
   let email = $state("");
   let password = $state("");
   let displayName = $state("");
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let accountExists = $state(false);
   let registeredFree = $state(false);
 
   const canSubmit = $derived(
@@ -25,6 +30,7 @@
     if (!canSubmit) return;
     loading = true;
     error = null;
+    accountExists = false;
     try {
       await apiClient.register(username.trim(), email.trim(), password, displayName.trim());
 
@@ -41,10 +47,14 @@
         loading = false;
       }
     } catch (e) {
-      error =
-        e instanceof ApiError
-          ? e.message
-          : "Something went wrong creating your account — try again.";
+      if (e instanceof ApiError && e.status === 409) {
+        accountExists = true;
+      } else {
+        error =
+          e instanceof ApiError
+            ? e.message
+            : "Something went wrong creating your account — try again.";
+      }
       loading = false;
     }
   }
@@ -57,7 +67,7 @@
       Open the LogIt mobile app and log in with the account you just created to use the social
       feed — follow people, post, and comment. This account doesn't include cross-device sync,
       the web dashboard, or analytics. If you want those, either self-host (free, full app) or
-      upgrade to Pro from inside the app.
+      upgrade to Pro or Studio any time from your account page on the web.
     </p>
   </div>
 {:else}
@@ -120,7 +130,19 @@
         />
       </div>
 
-      {#if error}
+      {#if accountExists}
+        <div class="rounded border border-border px-3 py-2 flex flex-col gap-1.5">
+          <p class="text-sm">
+            Looks like that username or email already has an account.
+            {#if plan === "pro" || plan === "studio"}
+              Log in and you'll be taken straight to upgrade to {planLabel}.
+            {:else}
+              Log in to manage it.
+            {/if}
+          </p>
+          <a href={LOGIN_URL} class="text-sm font-medium underline hover:text-foreground self-start">Log in</a>
+        </div>
+      {:else if error}
         <p class="text-sm text-destructive">{error}</p>
       {/if}
 
@@ -129,5 +151,9 @@
         {plan === "pro" || plan === "studio" ? "Continue to checkout" : "Create free account"}
       </Button>
     </form>
+
+    <p class="text-center text-xs text-muted-foreground mt-4">
+      Already have an account? <a href={LOGIN_URL} class="underline hover:text-foreground">Log in</a>
+    </p>
   </div>
 {/if}
