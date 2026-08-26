@@ -6,7 +6,7 @@ import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
 import { navConfig } from "$lib/stores/navConfig.store";
-import { syncAll } from "$lib/sync/syncService";
+import { syncAll, pushAllLocalData } from "$lib/sync/syncService";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
 async function switchActiveOwner(isOnlineAccount: boolean): Promise<void> {
@@ -37,14 +37,17 @@ function createAuthStore() {
     const serverUser = await apiClient.login(usernameOrEmail, password);
     user = serverUser;
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
-    void syncAll();
+    // Push this device's existing local history first — otherwise only records
+    // created after this sign-in ever reach the server, and everything logged
+    // offline up to now stays without a cloud copy.
+    void pushAllLocalData().then(() => syncAll());
   }
 
   async function register(username: string, email: string, password: string, displayName: string) {
     const serverUser = await apiClient.register(username, email, password, displayName);
     user = serverUser;
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
-    void syncAll();
+    void pushAllLocalData().then(() => syncAll());
   }
 
   async function linkOrCreateLocalAccount(serverUser: AuthUser) {

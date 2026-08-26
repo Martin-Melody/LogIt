@@ -58,6 +58,17 @@ public static class SyncEndpoints
                     stored.DataJson = string.Empty;
                     stored.SyncedAt = DateTime.UtcNow;
                 }
+                else if (!dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                {
+                    // Sessions carry no updatedAtMs — the pusher is always the owning
+                    // account's own device, so the latest push wins outright. Without this,
+                    // edits made after the first push (e.g. correcting a set after the
+                    // workout finished) never reached the server, so a cloud restore would
+                    // silently resurrect the stale first-synced version.
+                    stored.StartedAtMs = dto.StartedAtMs;
+                    stored.DataJson = dto.DataJson ?? string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
             }
             else
             {
@@ -88,9 +99,14 @@ public static class SyncEndpoints
         var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
         if (forbidden is not null) return forbidden;
 
+        // Filtered on SyncedAt, not StartedAtMs: StartedAtMs is immutable, so an edit
+        // pushed after the initial sync (see PushSessions) would never cross a
+        // StartedAtMs-based cursor on an already-synced second device. SyncedAt advances
+        // on every insert/edit/delete, so it's the correct incremental-sync cursor.
+        var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
         var sessions = await db.SyncedWorkoutSessions
-            .Where(s => s.UserId == userId && (s.StartedAtMs > since || (s.DeletedAtMs != null && s.DeletedAtMs > since)))
-            .OrderBy(s => s.StartedAtMs)
+            .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc)
+            .OrderBy(s => s.SyncedAt)
             .Select(s => new SessionDto(s.ClientId, s.StartedAtMs, s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs))
             .ToListAsync();
 
@@ -200,6 +216,14 @@ public static class SyncEndpoints
                 {
                     stored.DeletedAtMs = dto.DeletedAtMs;
                     stored.DataJson = string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+                else if (!dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                {
+                    // Same reasoning as sessions above: no updatedAtMs to gate on, and the
+                    // pusher is always the owning account, so overwrite on every push.
+                    // Otherwise a rename/edit via updateExercise() never reached the server.
+                    stored.DataJson = dto.DataJson ?? string.Empty;
                     stored.SyncedAt = DateTime.UtcNow;
                 }
             }

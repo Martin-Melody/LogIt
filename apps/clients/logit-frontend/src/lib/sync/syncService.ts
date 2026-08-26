@@ -47,6 +47,17 @@ export function pushDeletedSession(id: string): void {
   syncApi.pushSessions([dto]).catch(() => enqueue({ type: "session", dto }));
 }
 
+export async function pushAllSessions(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const repo = getWorkoutRepo();
+    const all = await repo.listAllSessions();
+    if (all.length === 0) return;
+    const remote = all.map((s) => ({ id: s.id, startedAtMs: s.startedAtMs, dataJson: JSON.stringify(s) }));
+    await syncApi.pushSessions(remote);
+  } catch {}
+}
+
 export async function pullAndMergeSessions(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
@@ -225,6 +236,18 @@ export async function pushNavConfig(): Promise<void> {
     setProfileUpdatedAtMs(updatedAtMs);
     syncApi.pushProfile(remote).catch(() => enqueue({ type: "profile", dto: remote }));
   } catch {}
+}
+
+/**
+ * Pushes every existing local record to the server, regardless of whether it's ever
+ * been pushed before. Call this once whenever sync newly becomes available on a device
+ * (login, register) — otherwise only records created/edited *after* that moment ever
+ * reach the server, silently leaving pre-existing local history (the common case: a
+ * user who's been logging offline and only later signs in) without a cloud copy at all.
+ */
+export async function pushAllLocalData(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  await Promise.all([pushAllSessions(), pushAllSplits(), pushAllExercises()]);
 }
 
 export async function syncAll(): Promise<void> {
