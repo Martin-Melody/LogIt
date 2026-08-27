@@ -98,6 +98,7 @@
         <nav class="flex items-center gap-3 text-sm text-muted-foreground">
           <a href="/" class="hover:text-foreground">Overview</a>
           <a href="/clients" class="hover:text-foreground">Clients</a>
+          <a href="/messages" class="hover:text-foreground">Messages</a>
           <a href="/account" class="hover:text-foreground">Account</a>
         </nav>
         {#if isStudio && viewingClient.clients.length > 0}

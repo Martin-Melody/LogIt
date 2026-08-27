@@ -1,10 +1,25 @@
 import { writable } from "svelte/store";
 import { apiClient } from "@logit/core/api/client";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
-import { getWorkoutRepo, getSplitRepo, getExerciseRepo } from "$lib/data/repoProvider";
+import { coachProgramApi } from "@logit/core/api/coachProgramApi";
+import { checkinApi } from "@logit/core/api/checkinApi";
+import { messagesApi } from "@logit/core/api/messagesApi";
+import {
+  getWorkoutRepo,
+  getSplitRepo,
+  getExerciseRepo,
+  getCoachProgramRepo,
+  getAuthoredProgramRepo,
+  getCheckinRepo,
+  getAuthoredCheckinRepo,
+  getMessagesRepo,
+} from "$lib/data/repoProvider";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+import type { CheckinSchedule, CheckinSubmission } from "@logit/core/domain/Checkin";
+import type { CoachMessage } from "@logit/core/domain/CoachMessage";
 import type { Exercise } from "@logit/core/domain/exercise";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 
@@ -13,6 +28,10 @@ import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 const SESSIONS_LAST_PULLED_KEY = "logit:sync:sessionsLastPulledAt";
 const SPLITS_LAST_PULLED_KEY = "logit:sync:splitsLastPulledAt";
 const EXERCISES_LAST_PULLED_KEY = "logit:sync:exercisesLastPulledAt";
+const COACH_PROGRAMS_LAST_PULLED_KEY = "logit:sync:coachProgramsLastPulledAt";
+const CHECKIN_SCHEDULES_LAST_PULLED_KEY = "logit:sync:checkinSchedulesLastPulledAt";
+const CHECKIN_SUBMISSIONS_LAST_PULLED_KEY = "logit:sync:checkinSubmissionsLastPulledAt";
+const MESSAGES_LAST_PULLED_KEY = "logit:sync:messagesLastPulledAt";
 const PROFILE_UPDATED_AT_KEY = "logit:sync:profileUpdatedAtMs";
 
 function getTimestamp(key: string): number {
@@ -194,6 +213,251 @@ export async function pullAndMergeExercises(): Promise<void> {
   } catch {}
 }
 
+// ── Coach programs (read-only mirror) ─────────────────────────────────────────
+
+/** Pull programs a coach has assigned to this account into the local read-only mirror.
+ * One-directional: the user never edits these, so there's no push counterpart here. */
+export async function pullAndMergeCoachPrograms(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const since = getTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY);
+    const remote = await coachProgramApi.pullAssigned(since);
+    if (remote.length === 0) {
+      setTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY, Date.now());
+      return;
+    }
+
+    const repo = getCoachProgramRepo();
+    for (const entry of remote) {
+      if (entry.deletedAtMs || !entry.dataJson) {
+        await repo.removeFromRemote(entry.programId).catch(() => {});
+        continue;
+      }
+      try {
+        const program = JSON.parse(entry.dataJson) as CoachProgram;
+        // The coach is the sole writer, so a plain last-write-wins on updatedAtMs is safe.
+        const existing = await repo.getAssignedProgram(program.id);
+        if (existing && existing.updatedAtMs >= program.updatedAtMs) continue;
+        await repo.upsertFromRemote(program);
+      } catch {}
+    }
+
+    setTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
+// ── Coach programs (authoring — push) ────────────────────────────────────────
+
+/** Push one authored program to the server, queueing it for retry if offline. Called by the
+ * saveAuthoredProgram / deleteAuthoredProgram usecases, mirroring pushSplit. */
+export function pushCoachProgram(
+  program: CoachProgram,
+  recipientUsername: string | null,
+  deleted = false,
+): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = {
+    programId: program.id,
+    dataJson: deleted ? "" : JSON.stringify(program),
+    updatedAtMs: program.updatedAtMs,
+    recipientUsername: recipientUsername ?? undefined,
+    deletedAtMs: deleted ? Date.now() : undefined,
+  };
+  coachProgramApi.upsert(dto).catch(() => enqueue({ type: "coachProgram", dto }));
+}
+
+/** Re-push every locally authored program — call once when sync newly becomes available
+ * (login/register), same rationale as pushAllLocalData. */
+export async function pushAllAuthoredPrograms(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const rows = await getAuthoredProgramRepo().listForPush();
+    for (const { program, recipientUsername } of rows) {
+      await coachProgramApi
+        .upsert({
+          programId: program.id,
+          dataJson: JSON.stringify(program),
+          updatedAtMs: program.updatedAtMs,
+          recipientUsername: recipientUsername ?? undefined,
+        })
+        .catch(() => {});
+    }
+  } catch {}
+}
+
+// ── Check-ins ────────────────────────────────────────────────────────────────
+
+/** Pull coach check-in schedules into the local read-only mirror (like coach programs). */
+export async function pullAndMergeCheckinSchedules(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const since = getTimestamp(CHECKIN_SCHEDULES_LAST_PULLED_KEY);
+    const remote = await checkinApi.pullAssigned(since);
+    const repo = getCheckinRepo();
+    for (const entry of remote) {
+      if (entry.deletedAtMs || !entry.dataJson) {
+        await repo.removeScheduleFromRemote(entry.scheduleId).catch(() => {});
+        continue;
+      }
+      try {
+        const schedule = JSON.parse(entry.dataJson) as CheckinSchedule;
+        const existing = await repo.getAssignedSchedule(schedule.id);
+        if (existing && existing.updatedAtMs >= schedule.updatedAtMs) continue;
+        await repo.upsertScheduleFromRemote(schedule);
+      } catch {}
+    }
+    setTimestamp(CHECKIN_SCHEDULES_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
+/** Pull this account's own check-in submissions back (multi-device), like sessions. */
+export async function pullAndMergeCheckinSubmissions(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const since = getTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY);
+    const { submissions } = await syncApi.pullCheckinSubmissions(since);
+    const repo = getCheckinRepo();
+    for (const entry of submissions) {
+      if (entry.deletedAtMs || !entry.dataJson) {
+        await repo.removeSubmissionFromRemote(entry.id).catch(() => {});
+        continue;
+      }
+      try {
+        const sub = JSON.parse(entry.dataJson) as CheckinSubmission;
+        const existing = await repo.getSubmission(sub.id);
+        if (existing && existing.updatedAtMs >= sub.updatedAtMs) continue;
+        await repo.upsertSubmissionFromRemote(sub);
+      } catch {}
+    }
+    setTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
+export function pushCheckinSubmission(sub: CheckinSubmission, deleted = false): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = {
+    id: sub.id,
+    createdAtMs: sub.createdAtMs,
+    updatedAtMs: sub.updatedAtMs,
+    dataJson: deleted ? null : JSON.stringify(sub),
+    deletedAtMs: deleted ? Date.now() : undefined,
+  };
+  syncApi.pushCheckinSubmissions([dto]).catch(() => enqueue({ type: "checkinSubmission", dto }));
+}
+
+export async function pushAllCheckinSubmissions(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const subs = await getCheckinRepo().listSubmissionsForPush();
+    if (subs.length === 0) return;
+    await syncApi.pushCheckinSubmissions(
+      subs.map((s) => ({ id: s.id, createdAtMs: s.createdAtMs, updatedAtMs: s.updatedAtMs, dataJson: JSON.stringify(s) })),
+    );
+  } catch {}
+}
+
+/** Coach authoring: push one check-in schedule, queued if offline (mirrors pushCoachProgram). */
+export function pushCheckinSchedule(
+  schedule: CheckinSchedule,
+  recipientUsername: string | null,
+  deleted = false,
+): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = {
+    scheduleId: schedule.id,
+    dataJson: deleted ? "" : JSON.stringify(schedule),
+    updatedAtMs: schedule.updatedAtMs,
+    recipientUsername: recipientUsername ?? undefined,
+    deletedAtMs: deleted ? Date.now() : undefined,
+  };
+  checkinApi.upsert(dto).catch(() => enqueue({ type: "checkinSchedule", dto }));
+}
+
+export async function pushAllAuthoredCheckinSchedules(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const rows = await getAuthoredCheckinRepo().listForPush();
+    for (const { schedule, recipientUsername } of rows) {
+      await checkinApi
+        .upsert({
+          scheduleId: schedule.id,
+          dataJson: JSON.stringify(schedule),
+          updatedAtMs: schedule.updatedAtMs,
+          recipientUsername: recipientUsername ?? undefined,
+        })
+        .catch(() => {});
+    }
+  } catch {}
+}
+
+// ── Messaging ────────────────────────────────────────────────────────────────
+
+/** Pull every message across all active threads into the local mirror. */
+export async function pullAndMergeMessages(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const since = getTimestamp(MESSAGES_LAST_PULLED_KEY);
+    const remote = await messagesApi.listAll(since);
+    const repo = getMessagesRepo();
+    for (const m of remote) {
+      await repo.upsertFromRemote({
+        id: m.messageId,
+        relationshipId: m.relationshipId,
+        body: m.body,
+        createdAtMs: m.createdAtMs,
+        readAtMs: m.readAtMs,
+        mine: m.mine,
+        synced: true,
+      });
+    }
+    setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
+/** Send one message: optimistic local insert already done by the caller; this pushes it. */
+export function pushMessage(message: CoachMessage): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = {
+    relationshipId: message.relationshipId,
+    messageId: message.id,
+    body: message.body,
+    createdAtMs: message.createdAtMs,
+  };
+  messagesApi
+    .send(dto)
+    .then(() => getMessagesRepo().markSynced(message.id))
+    .catch(() => enqueue({ type: "coachMessage", dto }));
+}
+
+export async function pushPendingMessages(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const repo = getMessagesRepo();
+    const pending = await repo.pendingOutgoing();
+    for (const m of pending) {
+      try {
+        await messagesApi.send({
+          relationshipId: m.relationshipId,
+          messageId: m.id,
+          body: m.body,
+          createdAtMs: m.createdAtMs,
+        });
+        await repo.markSynced(m.id);
+      } catch {}
+    }
+  } catch {}
+}
+
+/** Mark the other party's messages in a thread read, locally and on the server. */
+export async function markThreadRead(relationshipId: string, upToMs: number): Promise<void> {
+  try {
+    await getMessagesRepo().markThreadRead(relationshipId, upToMs);
+  } catch {}
+  if (apiClient.isAuthenticated()) {
+    messagesApi.markRead(relationshipId, upToMs).catch(() => {});
+  }
+}
+
 // ── Profile ───────────────────────────────────────────────────────────────────
 
 export function getProfileUpdatedAtMs(): number {
@@ -247,7 +511,15 @@ export async function pushNavConfig(): Promise<void> {
  */
 export async function pushAllLocalData(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
-  await Promise.all([pushAllSessions(), pushAllSplits(), pushAllExercises()]);
+  await Promise.all([
+    pushAllSessions(),
+    pushAllSplits(),
+    pushAllExercises(),
+    pushAllAuthoredPrograms(),
+    pushAllCheckinSubmissions(),
+    pushAllAuthoredCheckinSchedules(),
+    pushPendingMessages(),
+  ]);
 }
 
 export async function syncAll(): Promise<void> {
@@ -258,6 +530,10 @@ export async function syncAll(): Promise<void> {
     pullAndMergeSessions(),
     pullAndMergeSplits(),
     pullAndMergeExercises(),
+    pullAndMergeCoachPrograms(),
+    pullAndMergeCheckinSchedules(),
+    pullAndMergeCheckinSubmissions(),
+    pullAndMergeMessages(),
     pullAndApplyProfile(),
   ]);
   const now = Date.now();

@@ -156,7 +156,12 @@
           {:else}
             {#each clients as c (c.relationshipId)}
               <div class="flex items-center justify-between py-1.5 border-b last:border-0 border-border text-sm">
-                <span>{c.client.displayName || c.client.username}</span>
+                <a
+                  href="/clients/{c.client.id}?u={c.client.username}"
+                  class="hover:underline underline-offset-2"
+                >
+                  {c.client.displayName || c.client.username}
+                </a>
                 <Button
                   size="sm"
                   variant="outline"
