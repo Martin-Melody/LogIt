@@ -1,5 +1,7 @@
 import { createRemoteWorkoutRepo } from "@logit/core/data/remote/remoteWorkoutRepo";
 import { createRemoteSplitRepo } from "@logit/core/data/remote/remoteSplitRepo";
+import { createRemoteCoachProgramRepo } from "@logit/core/data/remote/remoteCoachProgramRepo";
+import { createRemoteCheckinRepo, fetchClientCheckinSubmissions } from "@logit/core/data/remote/remoteCheckinRepo";
 import { createRemoteExerciseRepo } from "@logit/core/data/remote/remoteExerciseRepo";
 import { createRemoteProgressionRepo } from "@logit/core/data/remote/remoteProgressionRepo";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
@@ -36,3 +38,16 @@ export function getWebDeps(clientId?: string): ProgressionDeps {
 export function getWebSplitRepo(clientId?: string) {
   return createRemoteSplitRepo(clientId);
 }
+
+/** Coach-side authoring of training programs. Unscoped (always writes the caller's own
+ * authored programs) — the read-only client-scoping the other repos do doesn't apply here. */
+export function getWebCoachProgramRepo() {
+  return createRemoteCoachProgramRepo();
+}
+
+/** Coach-side authoring of check-in schedules. */
+export function getWebCheckinRepo() {
+  return createRemoteCheckinRepo();
+}
+
+export { fetchClientCheckinSubmissions };

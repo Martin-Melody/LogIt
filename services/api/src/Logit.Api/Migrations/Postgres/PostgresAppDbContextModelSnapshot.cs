@@ -22,6 +22,50 @@ namespace Logit.Api.Migrations.Postgres
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelationshipId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ScheduleId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelationshipId");
+
+                    b.HasIndex("CoachId", "ScheduleId")
+                        .IsUnique();
+
+                    b.HasIndex("RecipientUserId", "SyncedAt");
+
+                    b.ToTable("CheckinSchedules");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
                 {
                     b.Property<Guid>("Id")
@@ -51,6 +95,89 @@ namespace Logit.Api.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("CoachClientRelationships");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MessageId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long?>("ReadAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RelationshipId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SenderUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelationshipId", "SyncedAt");
+
+                    b.HasIndex("SenderUserId", "MessageId")
+                        .IsUnique();
+
+                    b.ToTable("CoachMessages");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachProgram", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProgramId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelationshipId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelationshipId");
+
+                    b.HasIndex("CoachId", "ProgramId")
+                        .IsUnique();
+
+                    b.HasIndex("RecipientUserId", "SyncedAt");
+
+                    b.ToTable("CoachPrograms");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
@@ -225,6 +352,42 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedCheckinSubmissions");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
                 {
                     b.Property<Guid>("Id")
@@ -390,6 +553,31 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
+                        .WithMany()
+                        .HasForeignKey("RelationshipId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Coach");
+
+                    b.Navigation("Recipient");
+
+                    b.Navigation("Relationship");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Client")
@@ -407,6 +595,50 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Client");
 
                     b.Navigation("Coach");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachMessage", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
+                        .WithMany()
+                        .HasForeignKey("RelationshipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Relationship");
+
+                    b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachProgram", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
+                        .WithMany()
+                        .HasForeignKey("RelationshipId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Coach");
+
+                    b.Navigation("Recipient");
+
+                    b.Navigation("Relationship");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
@@ -492,6 +724,17 @@ namespace Logit.Api.Migrations.Postgres
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

@@ -12,6 +12,11 @@ export interface ClientRelationship {
   client: CoachClientUser;
 }
 
+export interface CoachRelationship {
+  relationshipId: string;
+  coach: CoachClientUser;
+}
+
 export interface ReceivedInvite {
   relationshipId: string;
   coach: CoachClientUser;
@@ -31,6 +36,11 @@ export const coachApi = {
 
   async listClients(): Promise<ClientRelationship[]> {
     return apiClient.fetch("/coach/clients");
+  },
+
+  /** The current user's active coaches (the mirror of listClients). */
+  async listCoaches(): Promise<CoachRelationship[]> {
+    return apiClient.fetch("/coach/coaches");
   },
 
   async listReceivedInvites(): Promise<ReceivedInvite[]> {

@@ -12,6 +12,8 @@
     ChevronRight,
     Lock,
     RefreshCw,
+    Users,
+    MessageSquare,
   } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
@@ -409,6 +411,24 @@
             <ConnectionDot />
             {formatLastSynced($lastSyncedAt)}
           </span>
+        </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => goto("/clients")}>
+          <span class="flex items-center gap-2">
+            <Users class="h-3.5 w-3.5" />
+            Coaching
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => goto("/messages")}>
+          <span class="flex items-center gap-2">
+            <MessageSquare class="h-3.5 w-3.5" />
+            Messages
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"

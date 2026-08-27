@@ -26,6 +26,9 @@ public static class SyncEndpoints
 
         group.MapPost("/profile", PushProfile);
         group.MapGet("/profile", PullProfile);
+
+        group.MapPost("/checkins", PushCheckinSubmissions);
+        group.MapGet("/checkins", PullCheckinSubmissions);
     }
 
     // ── Sessions ─────────────────────────────────────────────────────────────
@@ -315,6 +318,86 @@ public static class SyncEndpoints
         }
     }
 
+    // ── Check-in submissions ─────────────────────────────────────────────────
+    // A client's answers to coach check-ins. Client-owned, coach-readable via ?clientId=
+    // (same as the other pull endpoints). Submissions carry updatedAtMs so an edit before
+    // the coach reviews still syncs; last-write-wins by the owning account.
+
+    private static async Task<IResult> PushCheckinSubmissions(
+        [FromBody] PushCheckinSubmissionsRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        if (req.Submissions.Count == 0) return Results.NoContent();
+
+        var clientIds = req.Submissions.Select(s => s.Id).ToList();
+        var existing = await db.SyncedCheckinSubmissions
+            .Where(s => s.UserId == userId && clientIds.Contains(s.ClientId))
+            .ToListAsync();
+        var existingMap = existing.ToDictionary(s => s.ClientId);
+
+        var toInsert = new List<SyncedCheckinSubmission>();
+
+        foreach (var dto in req.Submissions)
+        {
+            if (existingMap.TryGetValue(dto.Id, out var stored))
+            {
+                if (dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                {
+                    stored.DeletedAtMs = dto.DeletedAtMs;
+                    stored.DataJson = string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+                else if (!dto.DeletedAtMs.HasValue && dto.UpdatedAtMs > stored.UpdatedAtMs)
+                {
+                    stored.UpdatedAtMs = dto.UpdatedAtMs;
+                    stored.DataJson = dto.DataJson ?? string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                toInsert.Add(new SyncedCheckinSubmission
+                {
+                    ClientId = dto.Id,
+                    UserId = userId,
+                    CreatedAtMs = dto.CreatedAtMs,
+                    UpdatedAtMs = dto.UpdatedAtMs,
+                    DataJson = dto.DataJson ?? string.Empty,
+                    DeletedAtMs = dto.DeletedAtMs,
+                });
+            }
+        }
+
+        if (toInsert.Count > 0)
+            db.SyncedCheckinSubmissions.AddRange(toInsert);
+
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> PullCheckinSubmissions(
+        [FromQuery] long since,
+        [FromQuery] Guid? clientId,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
+
+        var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
+        var submissions = await db.SyncedCheckinSubmissions
+            .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc)
+            .OrderBy(s => s.SyncedAt)
+            .Select(s => new CheckinSubmissionDto(
+                s.ClientId, s.CreatedAtMs, s.UpdatedAtMs,
+                s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs))
+            .ToListAsync();
+
+        return Results.Ok(new { submissions });
+    }
+
     // ── Coach access ──────────────────────────────────────────────────────────
 
     /// Resolves which user's data a pull request should actually read: the caller's own
@@ -341,6 +424,9 @@ public record SplitDto(string Id, long UpdatedAtMs, string? DataJson, long? Dele
 
 public record PushExercisesRequest(List<ExerciseDto> Exercises);
 public record ExerciseDto(string Id, long CreatedAtMs, string? DataJson, long? DeletedAtMs = null);
+
+public record PushCheckinSubmissionsRequest(List<CheckinSubmissionDto> Submissions);
+public record CheckinSubmissionDto(string Id, long CreatedAtMs, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);
 
 public record ProfileDto(
     string DisplayName,

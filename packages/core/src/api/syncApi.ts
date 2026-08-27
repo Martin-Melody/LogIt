@@ -21,6 +21,14 @@ export type RemoteExercise = {
   deletedAtMs?: number | null;
 };
 
+export type RemoteCheckinSubmission = {
+  id: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
+};
+
 export type RemoteProfile = {
   displayName: string;
   bio: string;
@@ -77,6 +85,21 @@ export const syncApi = {
       method: "POST",
       body: JSON.stringify(profile),
     });
+  },
+
+  pushCheckinSubmissions(submissions: RemoteCheckinSubmission[]): Promise<void> {
+    return apiClient.fetch("/sync/checkins", {
+      method: "POST",
+      body: JSON.stringify({ submissions }),
+    });
+  },
+
+  pullCheckinSubmissions(
+    since: number,
+    clientId?: string,
+  ): Promise<{ submissions: RemoteCheckinSubmission[] }> {
+    const suffix = clientId ? `&clientId=${clientId}` : "";
+    return apiClient.fetch(`/sync/checkins?since=${since}${suffix}`);
   },
 
   pullProfile(clientId?: string): Promise<{ profile: RemoteProfile | null }> {

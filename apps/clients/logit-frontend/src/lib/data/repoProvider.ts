@@ -1,6 +1,7 @@
 import { browser } from "$app/environment";
 import type { WorkoutRepo } from "@logit/core/data/workoutRepo";
 import type { SplitRepo } from "@logit/core/data/splitRepo";
+import type { AssignedProgramRepo } from "@logit/core/data/coachProgramRepo";
 import type { ExerciseRepo } from "@logit/core/data/exercise/exerciseRepo";
 import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
 import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
@@ -13,6 +14,20 @@ import { createSqliteExerciseRepo } from "$lib/data/exercise/exerciseRepo.sqlite
 
 import { createLocalWorkoutRepo } from "$lib/data/workoutRepo.local";
 import { createLocalSplitRepo } from "$lib/data/splitRepo.local";
+import { createLocalCoachProgramRepo } from "$lib/data/coachProgram/coachProgramRepo.local";
+import { createSqliteCoachProgramRepo } from "$lib/data/coachProgram/coachProgramRepo.sqlite";
+import { createLocalAuthoredProgramRepo } from "$lib/data/coachProgram/authoredProgramRepo.local";
+import { createSqliteAuthoredProgramRepo } from "$lib/data/coachProgram/authoredProgramRepo.sqlite";
+import type { AuthoredProgramRepo } from "$lib/data/coachProgram/authoredProgramRepo.sqlite";
+import { createLocalCheckinRepo } from "$lib/data/checkin/checkinRepo.local";
+import { createSqliteCheckinRepo } from "$lib/data/checkin/checkinRepo.sqlite";
+import { createLocalAuthoredCheckinRepo } from "$lib/data/checkin/authoredCheckinRepo.local";
+import { createSqliteAuthoredCheckinRepo } from "$lib/data/checkin/authoredCheckinRepo.sqlite";
+import type { AuthoredCheckinRepo } from "$lib/data/checkin/authoredCheckinRepo.sqlite";
+import type { AssignedCheckinRepo } from "@logit/core/data/checkinRepo";
+import { createLocalMessagesRepo } from "$lib/data/messages/messagesRepo.local";
+import { createSqliteMessagesRepo } from "$lib/data/messages/messagesRepo.sqlite";
+import type { MessagesRepo } from "$lib/data/messages/messagesRepo";
 import { createLocalExerciseRepo } from "$lib/data/exercise/localExerciseRepo";
 import { createLocalProgressionRepo } from "$lib/data/progressionRepo.local";
 import { createSqliteProgressionRepo } from "$lib/data/progressionRepo.sqlite";
@@ -36,6 +51,11 @@ let didInit = false;
 let workoutRepo: WorkoutRepo | null = null;
 let exerciseRepo: ExerciseRepo | null = null;
 let splitRepo: SplitRepo | null = null;
+let coachProgramRepo: AssignedProgramRepo | null = null;
+let authoredProgramRepo: AuthoredProgramRepo | null = null;
+let checkinRepo: AssignedCheckinRepo | null = null;
+let authoredCheckinRepo: AuthoredCheckinRepo | null = null;
+let messagesRepo: MessagesRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
 let analyticsRegistry: AnalyticsRegistry | null = null;
@@ -100,6 +120,11 @@ export async function initRepos(): Promise<void> {
     workoutRepo = createSqliteWorkoutRepo();
     exerciseRepo = createSqliteExerciseRepo();
     splitRepo = createSqliteSplitRepo();
+    coachProgramRepo = createSqliteCoachProgramRepo();
+    authoredProgramRepo = createSqliteAuthoredProgramRepo();
+    checkinRepo = createSqliteCheckinRepo();
+    authoredCheckinRepo = createSqliteAuthoredCheckinRepo();
+    messagesRepo = createSqliteMessagesRepo();
     progressionRepo = createSqliteProgressionRepo();
     didInit = true;
     return;
@@ -111,6 +136,11 @@ export async function initRepos(): Promise<void> {
   workoutRepo = createLocalWorkoutRepo();
   exerciseRepo = createLocalExerciseRepo();
   splitRepo = createLocalSplitRepo();
+  coachProgramRepo = createLocalCoachProgramRepo();
+  authoredProgramRepo = createLocalAuthoredProgramRepo();
+  checkinRepo = createLocalCheckinRepo();
+  authoredCheckinRepo = createLocalAuthoredCheckinRepo();
+  messagesRepo = createLocalMessagesRepo();
   progressionRepo = createLocalProgressionRepo();
   didInit = true;
 }
@@ -121,6 +151,11 @@ export function resetRepos(): void {
   workoutRepo = null;
   exerciseRepo = null;
   splitRepo = null;
+  coachProgramRepo = null;
+  authoredProgramRepo = null;
+  checkinRepo = null;
+  authoredCheckinRepo = null;
+  messagesRepo = null;
   progressionRepo = null;
 }
 
@@ -140,6 +175,36 @@ export function getSplitRepo(): SplitRepo {
   if (!splitRepo)
     throw new Error("SplitRepo not initialized. Call initRepos() first.");
   return splitRepo;
+}
+
+export function getCoachProgramRepo(): AssignedProgramRepo {
+  if (!coachProgramRepo)
+    throw new Error("CoachProgramRepo not initialized. Call initRepos() first.");
+  return coachProgramRepo;
+}
+
+export function getAuthoredProgramRepo(): AuthoredProgramRepo {
+  if (!authoredProgramRepo)
+    throw new Error("AuthoredProgramRepo not initialized. Call initRepos() first.");
+  return authoredProgramRepo;
+}
+
+export function getCheckinRepo(): AssignedCheckinRepo {
+  if (!checkinRepo)
+    throw new Error("CheckinRepo not initialized. Call initRepos() first.");
+  return checkinRepo;
+}
+
+export function getAuthoredCheckinRepo(): AuthoredCheckinRepo {
+  if (!authoredCheckinRepo)
+    throw new Error("AuthoredCheckinRepo not initialized. Call initRepos() first.");
+  return authoredCheckinRepo;
+}
+
+export function getMessagesRepo(): MessagesRepo {
+  if (!messagesRepo)
+    throw new Error("MessagesRepo not initialized. Call initRepos() first.");
+  return messagesRepo;
 }
 
 export function getProgressionRepo(): ProgressionRepo {

@@ -16,6 +16,10 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedWorkoutSession> SyncedWorkoutSessions => Set<SyncedWorkoutSession>();
     public DbSet<SyncedSplit> SyncedSplits => Set<SyncedSplit>();
     public DbSet<SyncedExercise> SyncedExercises => Set<SyncedExercise>();
+    public DbSet<CoachProgram> CoachPrograms => Set<CoachProgram>();
+    public DbSet<CheckinSchedule> CheckinSchedules => Set<CheckinSchedule>();
+    public DbSet<SyncedCheckinSubmission> SyncedCheckinSubmissions => Set<SyncedCheckinSubmission>();
+    public DbSet<CoachMessage> CoachMessages => Set<CoachMessage>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -103,6 +107,65 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(r => r.Client)
              .WithMany(u => u.ClientRelationships)
              .HasForeignKey(r => r.ClientId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CoachProgram>(e =>
+        {
+            e.HasIndex(p => new { p.CoachId, p.ProgramId }).IsUnique();
+            e.HasIndex(p => new { p.RecipientUserId, p.SyncedAt });
+            e.HasOne(p => p.Coach)
+             .WithMany()
+             .HasForeignKey(p => p.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Recipient)
+             .WithMany()
+             .HasForeignKey(p => p.RecipientUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Relationship)
+             .WithMany()
+             .HasForeignKey(p => p.RelationshipId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<CheckinSchedule>(e =>
+        {
+            e.HasIndex(s => new { s.CoachId, s.ScheduleId }).IsUnique();
+            e.HasIndex(s => new { s.RecipientUserId, s.SyncedAt });
+            e.HasOne(s => s.Coach)
+             .WithMany()
+             .HasForeignKey(s => s.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.Recipient)
+             .WithMany()
+             .HasForeignKey(s => s.RecipientUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.Relationship)
+             .WithMany()
+             .HasForeignKey(s => s.RelationshipId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<SyncedCheckinSubmission>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasOne(s => s.User)
+             .WithMany()
+             .HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CoachMessage>(e =>
+        {
+            e.HasIndex(m => new { m.SenderUserId, m.MessageId }).IsUnique();
+            e.HasIndex(m => new { m.RelationshipId, m.SyncedAt });
+            e.HasOne(m => m.Relationship)
+             .WithMany()
+             .HasForeignKey(m => m.RelationshipId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.Sender)
+             .WithMany()
+             .HasForeignKey(m => m.SenderUserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
     }

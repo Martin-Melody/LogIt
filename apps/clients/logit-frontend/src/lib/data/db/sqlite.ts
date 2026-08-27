@@ -64,6 +64,12 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM progression_states WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM progression_config WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM analytics_config WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM coach_programs WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM authored_programs WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM checkin_schedules WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM checkin_submissions WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM authored_checkin_schedules WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM coach_messages WHERE owner_id = ?`, [ownerId]);
   await db.execute(`PRAGMA foreign_keys = ON`);
 }
 
@@ -80,6 +86,12 @@ export async function clearAllSqliteData(): Promise<void> {
     DELETE FROM split_days;
     DELETE FROM splits;
     DELETE FROM exercises WHERE is_core = 0;
+    DELETE FROM coach_programs;
+    DELETE FROM authored_programs;
+    DELETE FROM checkin_schedules;
+    DELETE FROM checkin_submissions;
+    DELETE FROM authored_checkin_schedules;
+    DELETE FROM coach_messages;
     PRAGMA foreign_keys = ON;
   `);
 }
@@ -244,6 +256,84 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       data TEXT NOT NULL DEFAULT '{}',
       PRIMARY KEY (owner_id, algorithm_id)
     );
+
+    -- Read-only local mirror of programs a coach has assigned to this account (PT Studio).
+    -- The whole CoachProgram is stored as a JSON blob — never queried by field, kept in
+    -- sync by pullAndMergeCoachPrograms() in the sync loop, and never edited on device.
+    CREATE TABLE IF NOT EXISTS coach_programs (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      synced_at_ms INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_coach_programs_owner
+      ON coach_programs(owner_id);
+
+    -- Programs THIS account authored as a coach (PT Studio). Local-first: edited on device,
+    -- pushed to the server via the outbox. recipient_username is null for a template.
+    CREATE TABLE IF NOT EXISTS authored_programs (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      recipient_username TEXT NULL,
+      recipient_user_id TEXT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_authored_programs_owner
+      ON authored_programs(owner_id);
+
+    -- Read-only mirror of coach check-in schedules assigned to this account.
+    CREATE TABLE IF NOT EXISTS checkin_schedules (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      synced_at_ms INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_checkin_schedules_owner ON checkin_schedules(owner_id);
+
+    -- This account's own answers to coach check-ins (client-owned, synced to the coach
+    -- through /sync/checkins the same way workout sessions are).
+    CREATE TABLE IF NOT EXISTS checkin_submissions (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      schedule_id TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_checkin_submissions_owner ON checkin_submissions(owner_id, schedule_id);
+
+    -- Schedules THIS account authored as a coach (local-first, pushed via the outbox).
+    CREATE TABLE IF NOT EXISTS authored_checkin_schedules (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      recipient_username TEXT NULL,
+      recipient_user_id TEXT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_authored_checkins_owner ON authored_checkin_schedules(owner_id);
+
+    -- Coach↔client messages (mirror + outgoing). owner_id scopes to the local account.
+    CREATE TABLE IF NOT EXISTS coach_messages (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      relationship_id TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at_ms INTEGER NOT NULL,
+      read_at_ms INTEGER NULL,
+      mine INTEGER NOT NULL DEFAULT 0,
+      synced INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_messages_thread
+      ON coach_messages(owner_id, relationship_id, created_at_ms);
   `);
 
   await migrateSessionSets(db);
