@@ -3,6 +3,8 @@
   import { apiClient, ApiError } from "@logit/core/api/client";
   import { Button } from "$lib/components/ui/button";
 
+  const user = $derived(apiClient.getUser());
+
   // Falls back to the live Cloudflare Pages URL so this works out of the box; set
   // VITE_MARKETING_URL at build time once logit.ie is live.
   const PRICING_URL: string = `${import.meta.env.VITE_MARKETING_URL || "https://logit-marketing.pages.dev"}/pricing`;
@@ -53,7 +55,10 @@
     <a href={PRICING_URL} class="text-xs text-muted-foreground hover:text-foreground underline">
       Compare plans and pricing
     </a>
-    <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={logout}>
+    <p class="text-xs text-muted-foreground">
+      Signed in as <span class="font-medium text-foreground">@{user?.username}</span>
+    </p>
+    <button type="button" class="text-xs text-muted-foreground hover:text-foreground underline" onclick={logout}>
       Log out
     </button>
   </div>

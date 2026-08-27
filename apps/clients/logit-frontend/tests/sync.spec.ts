@@ -36,7 +36,9 @@ async function register(suffix: string): Promise<AuthTokens> {
 async function deleteAccount(accessToken: string): Promise<void> {
   await fetch(`${API_BASE}/auth/account`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    // Every account this helper deletes was created by register() above with this password.
+    body: JSON.stringify({ password: "TestPass123!" }),
   }).catch(() => {});
 }
 
