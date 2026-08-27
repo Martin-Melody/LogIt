@@ -52,18 +52,18 @@ test.describe("welcome screen", () => {
 
     await expect(page.getByRole("heading", { name: "Logit" })).toBeVisible();
     await expect(page.getByText("Track your training. Own your data.")).toBeVisible();
-    await expect(page.getByText("No account required")).toBeVisible();
-    await expect(page.getByText("Everything stays on your device")).toBeVisible();
-    await expect(page.getByText("Free and open source")).toBeVisible();
+    await expect(page.getByText("Track every set, rep, and PR")).toBeVisible();
+    await expect(page.getByText("Works fully offline")).toBeVisible();
+    await expect(page.getByText("Open source")).toBeVisible();
   });
 
-  test("'Get started' advances to the profile step", async ({ page }) => {
+  test("'Get started' advances to the name step", async ({ page }) => {
     await resetState(page);
     await goToOnboarding(page);
 
     await page.getByRole("button", { name: "Get started" }).click();
 
-    await expect(page.getByRole("heading", { name: "Set up your profile" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What should we call you?" })).toBeVisible();
   });
 
   test("'Already have an account?' link goes to /auth", async ({ page }) => {
@@ -77,9 +77,9 @@ test.describe("welcome screen", () => {
   });
 });
 
-// ── Profile step (step 1) ────────────────────────────────────────────────────
+// ── Name step (step 1) ───────────────────────────────────────────────────────
 
-test.describe("profile step", () => {
+test.describe("name step", () => {
   test("Continue is disabled when name is empty", async ({ page }) => {
     await seedAtStep(page, 1);
     await goToOnboarding(page);
@@ -112,15 +112,11 @@ test.describe("profile step", () => {
     expect(profile?.name).toBe("Martin");
   });
 
-  test("optional fields (bio, height, weight) save when filled", async ({ page }) => {
+  test("'Skip for now' advances to split step without saving a name", async ({ page }) => {
     await seedAtStep(page, 1);
     await goToOnboarding(page);
 
-    await page.locator('input[id="name"]').fill("Martin");
-    await page.locator('textarea[id="bio"]').fill("Powerlifter");
-    await page.locator('input[id="height"]').fill("182");
-    await page.locator('input[id="weight"]').fill("90");
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Skip for now" }).click();
 
     await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
 
@@ -128,10 +124,7 @@ test.describe("profile step", () => {
       const raw = localStorage.getItem("logit:profile:v1");
       return raw ? JSON.parse(raw) : null;
     });
-    expect(profile?.name).toBe("Martin");
-    expect(profile?.bio).toBe("Powerlifter");
-    expect(profile?.height).toBe(182);
-    expect(profile?.weight).toBe(90);
+    expect(profile?.name ?? "").toBe("");
   });
 
   test("Back button returns to welcome screen", async ({ page }) => {
@@ -173,14 +166,15 @@ test.describe("split step", () => {
     await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
   });
 
-  test("continuing with PPL saves a split and advances to notifications", async ({ page }) => {
+  test("continuing with PPL saves a split and completes onboarding", async ({ page }) => {
     await seedAtStep(page, 2);
     await goToOnboarding(page);
 
     await page.getByText("Push / Pull / Legs").click();
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page.getByRole("heading", { name: "Stay on track" })).toBeVisible();
+    await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 8000 });
+    expect(page.url()).toBe("http://localhost:5173/");
 
     const splits = await page.evaluate(() => {
       const raw = localStorage.getItem("logit:splits:v1");
@@ -189,107 +183,6 @@ test.describe("split step", () => {
     expect(Array.isArray(splits)).toBe(true);
     expect(splits.length).toBeGreaterThan(0);
     expect(splits[0].name).toBe("Push / Pull / Legs");
-  });
-
-  test("'Skip for now' advances to notifications without saving a split", async ({ page }) => {
-    await seedAtStep(page, 2);
-    await goToOnboarding(page);
-
-    await page.getByRole("button", { name: "Skip for now" }).click();
-
-    await expect(page.getByRole("heading", { name: "Stay on track" })).toBeVisible();
-
-    const splits = await page.evaluate(() => localStorage.getItem("logit:splits:v1"));
-    expect(splits).toBeNull();
-  });
-
-  test("Back button returns to profile step with name preserved", async ({ page }) => {
-    await seedAtStep(page, 2, {
-      "logit:profile:v1": JSON.stringify({ name: "Martin", bio: "", height: null, heightUnit: "cm", weight: null, weightUnit: "kg", blocksCollapsedByDefault: true, restDefaults: {} }),
-    });
-    await goToOnboarding(page);
-
-    await page.getByRole("button", { name: "Back" }).click();
-
-    await expect(page.getByRole("heading", { name: "Set up your profile" })).toBeVisible();
-    await expect(page.locator('input[id="name"]')).toHaveValue("Martin");
-  });
-});
-
-// ── Notifications step (step 3) ──────────────────────────────────────────────
-
-test.describe("notifications step", () => {
-  test("shows the notification prompt", async ({ page }) => {
-    await seedAtStep(page, 3);
-    await goToOnboarding(page);
-
-    await expect(page.getByRole("heading", { name: "Stay on track" })).toBeVisible();
-    await expect(page.getByText(/rest period/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Enable notifications" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Skip for now" })).toBeVisible();
-  });
-
-  test("'Skip for now' advances to server/account step when not authenticated", async ({ page }) => {
-    await seedAtStep(page, 3);
-    await goToOnboarding(page);
-
-    await page.getByRole("button", { name: "Skip for now" }).click();
-
-    await expect(page.getByRole("heading", { name: "Connect an account" })).toBeVisible();
-  });
-
-  test("'Skip for now' completes onboarding and goes to / when already authenticated", async ({ page }) => {
-    await seedAtStep(page, 3, {
-      "logit:server:mode": "cloud",
-      "logit:auth:access": "fake-access-token",
-      "logit:auth:refresh": "fake-refresh-token",
-      "logit:auth:user": JSON.stringify({
-        id: "test-user-id",
-        username: "testuser",
-        displayName: "Test User",
-        avatarUrl: null,
-        tier: "free",
-        onboardingCompleted: false,
-      }),
-    });
-    await goToOnboarding(page);
-
-    await page.getByRole("button", { name: "Skip for now" }).click();
-
-    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 8000 });
-    expect(page.url()).toBe("http://localhost:5173/");
-  });
-
-  test("Back button returns to split step", async ({ page }) => {
-    await seedAtStep(page, 3);
-    await goToOnboarding(page);
-
-    await page.getByRole("button", { name: "Back" }).click();
-
-    await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
-  });
-});
-
-// ── Server / account step (step 4) ───────────────────────────────────────────
-
-test.describe("server / account step", () => {
-  test("shows three connection options", async ({ page }) => {
-    await seedAtStep(page, 4);
-    await goToOnboarding(page);
-
-    await expect(page.getByText("Stay offline")).toBeVisible();
-    await expect(page.getByText("Logit cloud")).toBeVisible();
-    await expect(page.getByText("Self-hosted")).toBeVisible();
-  });
-
-  test("'Stay offline' completes onboarding and goes to /", async ({ page }) => {
-    await seedAtStep(page, 4);
-    await goToOnboarding(page);
-
-    await page.getByText("Stay offline").click();
-
-    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 8000 });
-    expect(page.url()).toBe("http://localhost:5173/");
 
     const state = await page.evaluate(() => {
       const raw = localStorage.getItem("logit:onboarding:v1");
@@ -298,142 +191,85 @@ test.describe("server / account step", () => {
     expect(state?.completed).toBe(true);
   });
 
-  test("'Logit cloud' shows login / register form", async ({ page }) => {
-    await seedAtStep(page, 4);
+  test("'Skip for now' completes onboarding without saving a split", async ({ page }) => {
+    await seedAtStep(page, 2);
     await goToOnboarding(page);
-
-    await page.getByText("Logit cloud").click();
-
-    await expect(page.getByRole("heading", { name: /Log in|Create account/ })).toBeVisible();
-    await expect(page.locator('input[id="auth-username"]')).toBeVisible();
-    await expect(page.locator('input[id="auth-password"]')).toBeVisible();
-  });
-
-  test("'Self-hosted' shows URL input", async ({ page }) => {
-    await seedAtStep(page, 4);
-    await goToOnboarding(page);
-
-    await page.getByText("Self-hosted").click();
-
-    await expect(page.getByRole("heading", { name: "Your server URL" })).toBeVisible();
-    await expect(page.locator('input[id="server-url"]')).toBeVisible();
-  });
-
-  test("entering a self-hosted URL and continuing shows the auth form", async ({ page }) => {
-    await seedAtStep(page, 4);
-    await goToOnboarding(page);
-
-    await page.getByText("Self-hosted").click();
-    await page.locator('input[id="server-url"]').fill("https://logit.example.com");
-    await page.getByRole("button", { name: "Continue" }).click();
-
-    await expect(page.getByRole("heading", { name: /Log in|Create account/ })).toBeVisible();
-    await expect(page.getByText("logit.example.com")).toBeVisible();
-  });
-
-  test("can switch between Log in and Sign up on the auth form", async ({ page }) => {
-    await seedAtStep(page, 4);
-    await goToOnboarding(page);
-
-    await page.getByText("Logit cloud").click();
-
-    // Default is Log in
-    await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
-
-    await page.getByRole("button", { name: "Sign up" }).click();
-    await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
-    await expect(page.locator('input[id="auth-email"]')).toBeVisible();
-  });
-
-  test("'Skip for now' on auth form completes onboarding and goes to /", async ({ page }) => {
-    await seedAtStep(page, 4);
-    await goToOnboarding(page);
-
-    await page.getByText("Logit cloud").click();
-    await expect(page.getByRole("heading", { name: /Log in|Create account/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Skip for now" }).click();
 
-    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 8000 });
-    expect(page.url()).toBe("http://localhost:5173/");
+    await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 8000 });
+
+    const splits = await page.evaluate(() => localStorage.getItem("logit:splits:v1"));
+    expect(splits).toBeNull();
+
+    const state = await page.evaluate(() => {
+      const raw = localStorage.getItem("logit:onboarding:v1");
+      return raw ? JSON.parse(raw) : null;
+    });
+    expect(state?.completed).toBe(true);
   });
 
-  test("Back from self-hosted URL step returns to pick step", async ({ page }) => {
-    await seedAtStep(page, 4);
+  test("Back button returns to name step with the name preserved", async ({ page }) => {
+    await seedAtStep(page, 2, {
+      "logit:profile:v1": JSON.stringify({ name: "Martin", bio: "", height: null, heightUnit: "cm", weight: null, weightUnit: "kg", blocksCollapsedByDefault: true, restDefaults: {} }),
+    });
     await goToOnboarding(page);
 
-    await page.getByText("Self-hosted").click();
     await page.getByRole("button", { name: "Back" }).click();
 
-    await expect(page.getByText("Stay offline")).toBeVisible();
-    await expect(page.getByText("Logit cloud")).toBeVisible();
-  });
-
-  test("Back from cloud auth form returns to pick step", async ({ page }) => {
-    await seedAtStep(page, 4);
-    await goToOnboarding(page);
-
-    await page.getByText("Logit cloud").click();
-    await page.getByRole("button", { name: "Back" }).click();
-
-    await expect(page.getByText("Stay offline")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What should we call you?" })).toBeVisible();
+    await expect(page.locator('input[id="name"]')).toHaveValue("Martin");
   });
 });
 
-// ── Full offline paths ────────────────────────────────────────────────────────
+// ── Full first-run path (offline, no account) ────────────────────────────────
 
-test.describe("full offline path", () => {
-  test("name only → skip split → skip notifications → stay offline → lands at /", async ({ page }) => {
+test.describe("full first-run path", () => {
+  test("name → PPL split → lands at / with the split saved and no account prompt", async ({ page }) => {
     await resetState(page);
     await goToOnboarding(page);
 
     await page.getByRole("button", { name: "Get started" }).click();
+
     await page.locator('input[id="name"]').fill("Martin");
     await page.getByRole("button", { name: "Continue" }).click();
 
     await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
-    await page.getByRole("button", { name: "Skip for now" }).click();
-
-    await expect(page.getByRole("heading", { name: "Stay on track" })).toBeVisible();
-    await page.getByRole("button", { name: "Skip for now" }).click();
-
-    await expect(page.getByText("Stay offline")).toBeVisible();
-    await page.getByText("Stay offline").click();
-
-    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 8000 });
-    expect(page.url()).toBe("http://localhost:5173/");
-  });
-
-  test("name + PPL split → skip notifications → stay offline → split is saved", async ({ page }) => {
-    await resetState(page);
-    await goToOnboarding(page);
-
-    await page.getByRole("button", { name: "Get started" }).click();
-    await page.locator('input[id="name"]').fill("Martin");
-    await page.getByRole("button", { name: "Continue" }).click();
-
     await page.getByText("Push / Pull / Legs").click();
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await page.getByRole("button", { name: "Skip for now" }).click();
-
-    await page.getByText("Stay offline").click();
-
-    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 8000 });
+    await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 8000 });
 
     const splits = await page.evaluate(() => {
       const raw = localStorage.getItem("logit:splits:v1");
       return raw ? JSON.parse(raw) : null;
     });
-    expect(Array.isArray(splits)).toBe(true);
     expect(splits[0].name).toBe("Push / Pull / Legs");
     expect(splits[0].days).toHaveLength(3);
   });
+
+  test("skipping everything still lands at / with onboarding marked complete", async ({ page }) => {
+    await resetState(page);
+    await goToOnboarding(page);
+
+    await page.getByRole("button", { name: "Get started" }).click();
+    await page.getByRole("button", { name: "Skip for now" }).click(); // name
+    await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
+    await page.getByRole("button", { name: "Skip for now" }).click(); // split
+
+    await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 8000 });
+
+    const state = await page.evaluate(() => {
+      const raw = localStorage.getItem("logit:onboarding:v1");
+      return raw ? JSON.parse(raw) : null;
+    });
+    expect(state?.completed).toBe(true);
+  });
 });
 
-// ── Online account — requires live API ───────────────────────────────────────
+// ── Returning user via the welcome-screen login link — requires live API ─────
 
-test.describe("online account - requires API", () => {
+test.describe("returning user - requires API", () => {
   let cleanupToken: string | null = null;
 
   test.afterEach(async () => {
@@ -448,39 +284,7 @@ test.describe("online account - requires API", () => {
     expect(res?.ok, `API not reachable at ${API_BASE} — is the server running?`).toBeTruthy();
   });
 
-  test("registering via Logit cloud completes onboarding and lands at /", async ({ page }) => {
-    await seedAtStep(page, 4, {
-      "logit:server:mode": "selfhosted",
-      "logit:api:baseUrl": API_BASE,
-    });
-    await goToOnboarding(page);
-
-    await page.getByText("Logit cloud").click();
-    await page.getByRole("button", { name: "Sign up" }).click();
-
-    const username = unique("onb");
-    const email = `${username}@test.example`;
-
-    await page.locator('input[id="auth-username"]').fill(username);
-    await page.locator('input[id="auth-email"]').fill(email);
-    await page.locator('input[id="auth-password"]').fill("TestPass123!");
-
-    const responsePromise = page.waitForResponse(
-      (r) => r.url().includes("/auth/register") && r.status() === 200,
-    );
-    await page.getByRole("button", { name: "Create account" }).click();
-
-    const res = await responsePromise.catch(() => null);
-    if (res) {
-      const body = await res.json().catch(() => null);
-      cleanupToken = body?.accessToken ?? null;
-    }
-
-    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 15_000 });
-    expect(page.url()).toBe("http://localhost:5173/");
-  });
-
-  test("logging in via self-hosted completes onboarding and lands at /", async ({ page }) => {
+  test("logging in from the welcome screen skips setup and lands at /", async ({ page }) => {
     const username = unique("onblogin");
     const email = `${username}@test.example`;
 
@@ -493,21 +297,28 @@ test.describe("online account - requires API", () => {
     const { accessToken } = await registerRes.json();
     cleanupToken = accessToken;
 
-    await seedAtStep(page, 4, {
-      "logit:server:mode": "selfhosted",
-      "logit:api:baseUrl": API_BASE,
+    await fetch(`${API_BASE}/users/me`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ onboardingCompleted: true }),
     });
+
+    await page.addInitScript(() => {
+      localStorage.clear();
+      localStorage.setItem("logit:server:mode", "selfhosted");
+      localStorage.setItem("logit:api:baseUrl", "http://localhost:5118");
+      localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+    });
+
     await goToOnboarding(page);
+    await page.getByRole("link", { name: /Already have an account/i }).click();
+    await page.waitForURL(/\/auth/);
 
-    await page.getByText("Self-hosted").click();
-    await page.locator('input[id="server-url"]').fill(API_BASE);
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.locator('input[id="username"]').fill(username);
+    await page.locator('input[id="password"]').fill("TestPass123!");
+    await page.locator("form").getByRole("button", { name: "Log in" }).click();
 
-    await page.locator('input[id="auth-username"]').fill(username);
-    await page.locator('input[id="auth-password"]').fill("TestPass123!");
-    await page.getByRole("button", { name: "Log in" }).click();
-
-    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 15_000 });
+    await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 15_000 });
     expect(page.url()).toBe("http://localhost:5173/");
   });
 });

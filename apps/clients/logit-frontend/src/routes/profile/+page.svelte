@@ -347,10 +347,10 @@
       <button
         type="button"
         class="w-full flex items-center justify-between rounded border border-dashed border-border px-3 py-2.5 text-left hover:border-muted-foreground/50 transition-colors"
-        onclick={() => void goto("/connect")}
+        onclick={() => void goto("/auth?mode=register")}
       >
         <div>
-          <p class="text-sm font-medium">Connect an account</p>
+          <p class="text-sm font-medium">Create an account</p>
           <p class="text-xs text-muted-foreground">Unlock social features and cloud backup.</p>
         </div>
         <Cloud class="h-4 w-4 text-muted-foreground/50 shrink-0 ml-3" />

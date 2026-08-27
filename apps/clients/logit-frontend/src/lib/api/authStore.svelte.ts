@@ -117,7 +117,7 @@ function createAuthStore() {
 
     // Always clear online auth when entering local account mode. The local accounts tab
     // means offline use — even if the account was previously linked, online auth must be
-    // re-established explicitly via the online tab or /connect page.
+    // re-established explicitly via the /auth screen.
     user = null;
     await apiClient.clearLocal();
 
@@ -170,8 +170,11 @@ function createAuthStore() {
     if (isNativePlatform()) {
       // Drop the active owner pointer — data stays in SQLite under owner_id
       setActiveOwnerId(null);
-      // Hard reload to /auth so the account selector is shown fresh
-      window.location.href = "/auth";
+      // App-first: if local profiles still exist, send the user to pick one and
+      // keep using the app offline rather than facing a sign-in wall.
+      const { listLocalAccounts } = await import("$lib/data/localAccountRepo");
+      const hasLocalAccounts = (await listLocalAccounts()).length > 0;
+      window.location.href = hasLocalAccounts ? "/accounts" : "/auth";
     } else {
       const { clearAllData } = await import("$lib/usecases/clearAllData");
       await clearAllData();

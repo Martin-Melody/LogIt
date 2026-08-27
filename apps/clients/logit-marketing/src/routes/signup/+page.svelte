@@ -15,14 +15,19 @@
   let username = $state("");
   let email = $state("");
   let password = $state("");
+  let confirmPassword = $state("");
   let displayName = $state("");
   let loading = $state(false);
   let error = $state<string | null>(null);
   let accountExists = $state(false);
   let registeredFree = $state(false);
 
+  const passwordMismatch = $derived(
+    confirmPassword.length > 0 && password !== confirmPassword,
+  );
+
   const canSubmit = $derived(
-    username.trim() && email.trim() && password && displayName.trim() && !loading,
+    username.trim() && email.trim() && password && confirmPassword && !passwordMismatch && displayName.trim() && !loading,
   );
 
   async function submit(e: Event) {
@@ -128,6 +133,20 @@
           bind:value={password}
           autocomplete="new-password"
         />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="confirm-password" class="text-sm font-medium">Confirm password</label>
+        <input
+          id="confirm-password"
+          type="password"
+          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring {passwordMismatch ? 'border-destructive' : ''}"
+          bind:value={confirmPassword}
+          autocomplete="new-password"
+        />
+        {#if passwordMismatch}
+          <p class="text-xs text-destructive">Passwords don't match.</p>
+        {/if}
       </div>
 
       {#if accountExists}
