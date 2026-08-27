@@ -1,4 +1,4 @@
-package com.example.app;
+package ie.logit.app;
 
 import android.app.Activity;
 import android.content.Intent;

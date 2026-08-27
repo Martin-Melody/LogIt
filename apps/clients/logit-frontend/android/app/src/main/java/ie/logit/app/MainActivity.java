@@ -1,4 +1,4 @@
-package com.example.app;
+package ie.logit.app;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
