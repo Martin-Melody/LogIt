@@ -17,6 +17,18 @@ export interface CoachRelationship {
   coach: CoachClientUser;
 }
 
+export interface RosterEntry {
+  relationshipId: string;
+  client: CoachClientUser;
+  lastSessionAtMs: number | null;
+  sessions7d: number;
+  sessions28d: number;
+  programCount: number;
+  checkinScheduleCount: number;
+  lastCheckinSubmittedAtMs: number | null;
+  unreadFromClient: number;
+}
+
 export interface ReceivedInvite {
   relationshipId: string;
   coach: CoachClientUser;
@@ -41,6 +53,12 @@ export const coachApi = {
   /** The current user's active coaches (the mirror of listClients). */
   async listCoaches(): Promise<CoachRelationship[]> {
     return apiClient.fetch("/coach/coaches");
+  },
+
+  /** Per-client adherence summary for the coach dashboard (Studio-tier only). */
+  async getRoster(): Promise<RosterEntry[]> {
+    const { roster } = await apiClient.fetch<{ roster: RosterEntry[] }>("/coach/roster");
+    return roster;
   },
 
   async listReceivedInvites(): Promise<ReceivedInvite[]> {

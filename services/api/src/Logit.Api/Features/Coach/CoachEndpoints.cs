@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +16,8 @@ public static class CoachEndpoints
         group.MapPost("/clients/{username}/invite", Invite);
         group.MapGet("/clients", GetClients);
         group.MapGet("/coaches", GetCoaches);
+        // Roster adherence summary for the coach dashboard — one request, aggregated server-side.
+        group.MapGet("/roster", GetRoster).RequireTier(UserTier.Studio);
         group.MapGet("/invites/received", GetReceivedInvites);
         group.MapGet("/invites/sent", GetSentInvites);
         group.MapPost("/invites/{relationshipId:guid}/accept", AcceptInvite);
@@ -88,6 +91,107 @@ public static class CoachEndpoints
             relationshipId = r.Id,
             client = r.Client.ToProfileDto(false),
         }));
+    }
+
+    /// Per-client adherence summary for the coach dashboard. One round trip: last workout,
+    /// recent session counts, assigned-content counts, latest submitted check-in, unread
+    /// messages from the client. The coach UI turns these into traffic-light status.
+    private static async Task<IResult> GetRoster(ClaimsPrincipal caller, AppDbContext db)
+    {
+        var coachId = caller.GetUserId();
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var d7 = now - 7L * 86_400_000;
+        var d28 = now - 28L * 86_400_000;
+
+        var rels = await db.CoachClientRelationships
+            .Include(r => r.Client)
+            .Where(r => r.CoachId == coachId && r.Status == CoachClientStatus.Active)
+            .OrderBy(r => r.Client.Username)
+            .ToListAsync();
+        var clientIds = rels.Select(r => r.ClientId).ToList();
+
+        var sessionAgg = (await db.SyncedWorkoutSessions
+            .Where(s => clientIds.Contains(s.UserId) && s.DeletedAtMs == null)
+            .GroupBy(s => s.UserId)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                Last = g.Max(x => (long?)x.StartedAtMs),
+                C7 = g.Count(x => x.StartedAtMs >= d7),
+                C28 = g.Count(x => x.StartedAtMs >= d28),
+            })
+            .ToListAsync()).ToDictionary(x => x.UserId);
+
+        var programCounts = (await db.CoachPrograms
+            .Where(p => p.CoachId == coachId && p.DeletedAtMs == null && p.RecipientUserId != null
+                && clientIds.Contains(p.RecipientUserId.Value))
+            .GroupBy(p => p.RecipientUserId!.Value)
+            .Select(g => new { UserId = g.Key, N = g.Count() })
+            .ToListAsync()).ToDictionary(x => x.UserId, x => x.N);
+
+        var scheduleCounts = (await db.CheckinSchedules
+            .Where(s => s.CoachId == coachId && s.DeletedAtMs == null && s.RecipientUserId != null
+                && clientIds.Contains(s.RecipientUserId.Value))
+            .GroupBy(s => s.RecipientUserId!.Value)
+            .Select(g => new { UserId = g.Key, N = g.Count() })
+            .ToListAsync()).ToDictionary(x => x.UserId, x => x.N);
+
+        var unread = (await db.CoachMessages
+            .Where(m => m.SenderUserId != coachId && m.ReadAtMs == null
+                && m.Relationship.CoachId == coachId && m.Relationship.Status == CoachClientStatus.Active)
+            .GroupBy(m => m.Relationship.ClientId)
+            .Select(g => new { UserId = g.Key, N = g.Count() })
+            .ToListAsync()).ToDictionary(x => x.UserId, x => x.N);
+
+        // Latest *submitted* check-in per client — submittedAtMs lives in the JSON payload,
+        // so pull the (few) non-deleted rows and parse in memory rather than query into JSON.
+        var subsByClient = (await db.SyncedCheckinSubmissions
+            .AsNoTracking()
+            .Where(s => clientIds.Contains(s.UserId) && s.DeletedAtMs == null)
+            .Select(s => new { s.UserId, s.DataJson })
+            .ToListAsync())
+            .GroupBy(x => x.UserId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.DataJson).ToList());
+
+        long? LatestSubmittedCheckin(Guid userId)
+        {
+            if (!subsByClient.TryGetValue(userId, out var jsons)) return null;
+            long? best = null;
+            foreach (var json in jsons)
+            {
+                try
+                {
+                    var doc = JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("submittedAtMs", out var el)
+                        && el.ValueKind == JsonValueKind.Number)
+                    {
+                        var v = el.GetInt64();
+                        if (best is null || v > best) best = v;
+                    }
+                }
+                catch { /* skip unparseable */ }
+            }
+            return best;
+        }
+
+        var roster = rels.Select(r =>
+        {
+            sessionAgg.TryGetValue(r.ClientId, out var s);
+            return new
+            {
+                relationshipId = r.Id,
+                client = r.Client.ToProfileDto(false),
+                lastSessionAtMs = s?.Last,
+                sessions7d = s?.C7 ?? 0,
+                sessions28d = s?.C28 ?? 0,
+                programCount = programCounts.GetValueOrDefault(r.ClientId, 0),
+                checkinScheduleCount = scheduleCounts.GetValueOrDefault(r.ClientId, 0),
+                lastCheckinSubmittedAtMs = LatestSubmittedCheckin(r.ClientId),
+                unreadFromClient = unread.GetValueOrDefault(r.ClientId, 0),
+            };
+        });
+
+        return Results.Ok(new { roster });
     }
 
     private static async Task<IResult> GetCoaches(ClaimsPrincipal caller, AppDbContext db)

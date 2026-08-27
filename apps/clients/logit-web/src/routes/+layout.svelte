@@ -97,6 +97,9 @@
         <span class="text-sm font-semibold">LogIt</span>
         <nav class="flex items-center gap-3 text-sm text-muted-foreground">
           <a href="/" class="hover:text-foreground">Overview</a>
+          {#if isStudio}
+            <a href="/roster" class="hover:text-foreground">Roster</a>
+          {/if}
           <a href="/clients" class="hover:text-foreground">Clients</a>
           <a href="/messages" class="hover:text-foreground">Messages</a>
           <a href="/account" class="hover:text-foreground">Account</a>
