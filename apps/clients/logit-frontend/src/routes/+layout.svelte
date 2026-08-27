@@ -1,6 +1,6 @@
 <script lang="ts">
   import "./layout.css";
-  import favicon from "$lib/assets/favicon.svg";
+  import favicon from "$lib/assets/favicon.png";
   import BottomNav from "$lib/components/navigation/BottomNav/BottomNav.svelte";
   import TopBar from "$lib/components/ui/TopBar/TopBar.svelte";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
