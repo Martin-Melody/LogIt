@@ -7,8 +7,6 @@
     Cloud,
     Server,
     WifiOff,
-    CheckCircle,
-    XCircle,
     Loader2,
     Trash2,
     ChevronRight,
@@ -41,14 +39,8 @@
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import {
     getServerMode,
-    setServerMode,
-    getSelfHostUrl,
     type ServerMode,
   } from "@logit/core/api/serverConfig";
-  import {
-    testServerConnection,
-    type ConnectionResult,
-  } from "@logit/core/api/testConnection";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
   import {
     getProgressionConfig,
@@ -93,9 +85,6 @@
 
   // --- Account ---
   let serverMode = $state<ServerMode>(getServerMode());
-  let selfHostUrl = $state(getSelfHostUrl());
-  let editingServerUrl = $state(false);
-  let urlTestResult = $state<ConnectionResult>("idle");
   let pendingDeleteAccount = $state(false);
   let deletingAccount = $state(false);
 
@@ -184,23 +173,6 @@
     } finally {
       savingOnlinePassword = false;
     }
-  }
-
-  async function applyServerMode(mode: ServerMode) {
-    if (mode === "offline" && authStore.isAuthenticated) {
-      await authStore.logout();
-    }
-    setServerMode(mode, mode === "selfhosted" ? selfHostUrl.trim() : undefined);
-    serverMode = mode;
-    editingServerUrl = false;
-    urlTestResult = "idle";
-  }
-
-  async function testUrl() {
-    const url = selfHostUrl.trim().replace(/\/$/, "");
-    if (!url) return;
-    urlTestResult = "testing";
-    urlTestResult = await testServerConnection(url);
   }
 
   // --- Progression ---
@@ -490,14 +462,20 @@
         <!-- Action rows -->
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm hover:text-primary transition-colors"
-          onclick={() => goto("/connect")}>
-          Connect account
+          onclick={() => goto("/auth?mode=register")}>
+          Create an account
           <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => goto("/auth?mode=offline")}>
-          Switch account
+          onclick={() => goto("/auth?mode=login")}>
+          Log in
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => goto("/accounts")}>
+          Switch profile
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
         <button type="button"
@@ -552,82 +530,12 @@
           <div class="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=login")}>Log in</Button>
             <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=register")}>Create account</Button>
-            <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=offline")}>Local account</Button>
+            {#if isNativePlatform()}
+              <Button variant="outline" size="sm" onclick={() => goto("/accounts")}>Switch profile</Button>
+            {/if}
           </div>
         </div>
       {/if}
-
-      <!-- Server mode switcher -->
-      <div class="border-t border-border pt-4 pb-1 flex flex-col gap-2">
-        <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Server</p>
-        <div class="flex rounded border overflow-hidden text-xs">
-          {#each [["offline", "Offline"], ["cloud", "logit.ie"], ["selfhosted", "Self-hosted"]] as [ServerMode, string][] as [mode, label] (mode)}
-            <button
-              type="button"
-              class="flex-1 py-2 text-center transition-colors {serverMode ===
-              mode
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:text-foreground'}"
-              onclick={() => {
-                if (mode === "selfhosted") {
-                  editingServerUrl = true;
-                } else {
-                  void applyServerMode(mode);
-                }
-              }}
-            >
-              {label}
-            </button>
-          {/each}
-        </div>
-
-        {#if editingServerUrl || serverMode === "selfhosted"}
-          <div class="flex gap-2">
-            <input
-              type="url"
-              inputmode="url"
-              placeholder="https://logit.yourdomain.com"
-              class="flex-1 min-w-0 rounded border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-              oninput={() => (urlTestResult = "idle")}
-              bind:value={selfHostUrl}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onclick={() => void applyServerMode("selfhosted")}>Save</Button
-            >
-          </div>
-          {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
-            <p class="text-xs text-amber-600 dark:text-amber-400">
-              HTTP is unencrypted — passwords and data are sent in plaintext.
-              Use HTTPS if possible.
-            </p>
-          {/if}
-          <div class="flex items-center gap-3">
-            <button
-              type="button"
-              class="px-3 py-1.5 rounded border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"
-              disabled={!selfHostUrl.trim() || urlTestResult === "testing"}
-              onclick={() => void testUrl()}
-            >
-              {urlTestResult === "testing" ? "Testing…" : "Test connection"}
-            </button>
-            {#if urlTestResult === "testing"}
-              <Loader2 class="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-            {:else if urlTestResult === "ok"}
-              <span
-                class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
-              >
-                <CheckCircle class="h-3.5 w-3.5" /> Reachable
-              </span>
-            {:else if urlTestResult === "error"}
-              <span class="flex items-center gap-1.5 text-xs text-destructive">
-                <XCircle class="h-3.5 w-3.5" /> Can't reach server
-              </span>
-            {/if}
-          </div>
-        {/if}
-      </div>
     </Card.Content>
   </Card.Root>
 
