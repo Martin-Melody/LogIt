@@ -4,6 +4,7 @@ using Logit.Api.Data;
 using Logit.Api.Data.Entities;
 using Logit.Api.Features.Email;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 
 namespace Logit.Api.Features.Auth;
@@ -122,12 +123,24 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> DeleteAccount(
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] DeleteAccountRequest? req,
         AppDbContext db,
         ClaimsPrincipal caller)
     {
         var userId = caller.GetUserId();
         var user = await db.Users.FindAsync(userId);
         if (user is null) return Results.NotFound();
+
+        // Re-authenticate before destroying the account. This is a guardrail against
+        // deleting the wrong account: a client whose displayed identity has drifted from
+        // the token it actually holds (stale cache, cross-tab login) will send the
+        // password for the account the user *thinks* they're on, which won't match this
+        // token's user — so the delete is rejected instead of nuking someone else.
+        if (string.IsNullOrEmpty(req?.Password))
+            return Results.BadRequest(new { error = "Enter your password to delete your account." });
+
+        if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
+            return Results.BadRequest(new { error = "Password is incorrect." });
 
         db.Users.Remove(user);
         await db.SaveChangesAsync();

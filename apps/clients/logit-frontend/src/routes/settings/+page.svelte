@@ -88,6 +88,8 @@
   let serverMode = $state<ServerMode>(getServerMode());
   let pendingDeleteAccount = $state(false);
   let deletingAccount = $state(false);
+  let deleteAccountPassword = $state("");
+  let deleteAccountError = $state<string | null>(null);
 
   // --- Local account password ---
   let localAccountHasPassword = $state(false);
@@ -279,18 +281,24 @@
 
   async function clearAllDataAndAccount() {
     try {
-      await authStore.deleteAccount();
+      await authStore.deleteAccount(deleteAccountPassword);
     } catch {}
     await clearAllData();
   }
 
   async function confirmDeleteAccount() {
+    if (authStore.isAuthenticated && !deleteAccountPassword) {
+      deleteAccountError = "Enter your password to delete your account.";
+      return;
+    }
     deletingAccount = true;
+    deleteAccountError = null;
     try {
-      await authStore.deleteAccount();
-    } catch {
+      await authStore.deleteAccount(deleteAccountPassword);
+    } catch (e) {
+      deleteAccountError =
+        e instanceof ApiError ? e.message : "Couldn't delete your account — try again.";
       deletingAccount = false;
-      pendingDeleteAccount = false;
     }
   }
 
@@ -903,6 +911,18 @@
                 ? "This will erase all local data and remove this account from the device. This cannot be undone."
                 : "This will erase all local data on this device. This cannot be undone."}
           </p>
+          {#if authStore.isAuthenticated}
+            <input
+              type="password"
+              placeholder="Confirm your password"
+              autocomplete="current-password"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={deleteAccountPassword}
+            />
+          {/if}
+          {#if deleteAccountError}
+            <p class="text-xs text-destructive">{deleteAccountError}</p>
+          {/if}
           <div class="flex gap-2">
             <Button
               variant="outline"
@@ -920,7 +940,11 @@
               variant="outline"
               size="sm"
               disabled={deletingAccount}
-              onclick={() => (pendingDeleteAccount = false)}
+              onclick={() => {
+                pendingDeleteAccount = false;
+                deleteAccountPassword = "";
+                deleteAccountError = null;
+              }}
             >
               Cancel
             </Button>
