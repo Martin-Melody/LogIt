@@ -181,10 +181,12 @@ function createAuthStore() {
     }
   }
 
-  async function deleteAccount() {
-    // 1. Delete from server if online
+  async function deleteAccount(password = "") {
+    // 1. Delete from server if online. This now requires the account password — let a
+    // failure (wrong password, offline) propagate so we DON'T wipe local data while the
+    // server account is still alive. The caller surfaces the error.
     if (user) {
-      try { await apiClient.deleteAccount(); } catch {}
+      await apiClient.deleteAccount(password);
     }
     user = null;
 

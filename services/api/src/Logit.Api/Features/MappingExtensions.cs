@@ -6,7 +6,10 @@ public record ProfileDto(
     Guid Id, string Username, string DisplayName,
     string? Bio, string? AvatarUrl, bool IsSelf,
     int FollowerCount, int FollowingCount, bool IsFollowing,
-    string? PublicProfileJson);
+    string? PublicProfileJson,
+    // Populated only when IsSelf — lets a client reconcile its cached auth identity
+    // (tier, onboarding state) against server truth on boot. Null for other users.
+    string? Tier = null, bool? OnboardingCompleted = null);
 
 public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount);
 
@@ -18,7 +21,9 @@ public static class MappingExtensions
         this User user, bool isSelf,
         int followerCount = 0, int followingCount = 0, bool isFollowing = false) =>
         new(user.Id, user.Username, user.DisplayName, user.Bio, user.AvatarUrl,
-            isSelf, followerCount, followingCount, isFollowing, user.PublicProfileJson);
+            isSelf, followerCount, followingCount, isFollowing, user.PublicProfileJson,
+            isSelf ? user.Tier.ToString() : null,
+            isSelf ? user.OnboardingCompleted : null);
 
     public static PostDto ToDto(this Post post, Guid? callerId = null) =>
         new(post.Id, post.AuthorId, post.Author.Username, post.Author.DisplayName, post.Author.AvatarUrl,

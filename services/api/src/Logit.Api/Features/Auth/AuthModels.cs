@@ -5,6 +5,7 @@ public record LoginRequest(string UsernameOrEmail, string Password);
 public record RefreshRequest(string RefreshToken);
 public record RevokeRequest(string RefreshToken);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record DeleteAccountRequest(string? Password);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
 

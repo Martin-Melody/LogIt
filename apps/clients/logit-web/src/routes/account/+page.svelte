@@ -92,13 +92,18 @@
   // --- Delete account ---
   let confirmingDelete = $state(false);
   let deleting = $state(false);
+  let deletePassword = $state("");
+  let deleteError = $state<string | null>(null);
 
   async function deleteAccount() {
+    if (!deletePassword) return;
     deleting = true;
+    deleteError = null;
     try {
-      await apiClient.deleteAccount();
+      await apiClient.deleteAccount(deletePassword);
       await goto("/login");
-    } finally {
+    } catch (e) {
+      deleteError = e instanceof ApiError ? e.message : "Couldn't delete your account.";
       deleting = false;
     }
   }
@@ -201,15 +206,39 @@
       {#if !confirmingDelete}
         <Button variant="outline" size="sm" onclick={() => (confirmingDelete = true)}>Delete account</Button>
       {:else}
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2 max-w-xs">
           <p class="text-sm text-muted-foreground">
-            This permanently deletes your account and all synced data. This can't be undone.
+            This permanently deletes the account for <span class="font-medium text-foreground">@{user?.username}</span>
+            and all its synced data. This can't be undone.
           </p>
+          <input
+            type="password"
+            placeholder="Confirm your password"
+            autocomplete="current-password"
+            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            bind:value={deletePassword}
+          />
+          {#if deleteError}<p class="text-xs text-destructive">{deleteError}</p>{/if}
           <div class="flex items-center gap-2">
-            <Button variant="destructive" size="sm" disabled={deleting} onclick={() => void deleteAccount()}>
-              {deleting ? "Deleting…" : "Yes, delete my account"}
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={deleting || !deletePassword}
+              onclick={() => void deleteAccount()}
+            >
+              {deleting ? "Deleting…" : "Yes, delete this account"}
             </Button>
-            <Button variant="ghost" size="sm" onclick={() => (confirmingDelete = false)}>Cancel</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onclick={() => {
+                confirmingDelete = false;
+                deletePassword = "";
+                deleteError = null;
+              }}
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       {/if}

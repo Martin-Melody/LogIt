@@ -108,6 +108,12 @@ class ApiClient {
         const data: AuthResponse = await res.json();
         this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
         await tokenStorage.set(this.tokens);
+        // Re-sync the cached user from the refreshed session. A refresh can happen at any
+        // time (any 401), and the refresh token in storage may belong to a different
+        // account than the last-saved user blob (e.g. after a cross-tab login) — keeping
+        // the blob in step with the token that's actually in use prevents the UI showing
+        // one identity while requests run as another.
+        this.saveUser(data.user, data.isSelfHosted);
         return true;
       } catch {
         return false;
@@ -180,8 +186,11 @@ class ApiClient {
     return data.user;
   }
 
-  async deleteAccount(): Promise<void> {
-    await this.fetch("/auth/account", { method: "DELETE" });
+  async deleteAccount(password: string): Promise<void> {
+    await this.fetch("/auth/account", {
+      method: "DELETE",
+      body: JSON.stringify({ password }),
+    });
     this.tokens = null;
     this.clearUser();
     await tokenStorage.clear();
@@ -282,19 +291,40 @@ class ApiClient {
     return this.fetch("/billing/status");
   }
 
-  /** Reconciles the cached tier with the server. The cached tier is set at login/register
-   * and otherwise never changes locally, so a tier change elsewhere (e.g. finishing a Stripe
-   * checkout and landing back on a freshly-booted app) would stay invisible until the next
-   * login without this. Failures keep the last-known tier rather than bouncing the user. */
-  async refreshTier(): Promise<void> {
-    if (!this.cachedUser || this.cachedIsSelfHosted) return;
+  /** Reconciles the whole cached auth identity against server truth. `init()` only reads
+   * the local user blob, which is written at login and can go stale or belong to a
+   * different account (token refresh, another tab logging in on the same origin). Calling
+   * this on boot makes the displayed identity — id, name, tier, onboarding state — match
+   * the token that requests actually carry. A rejected/duplicate token clears local auth
+   * so the app falls back to login instead of showing a ghost session; transient failures
+   * (offline, 5xx) keep the last-known blob and retry next boot. */
+  async reconcileSession(): Promise<void> {
+    if (!this.tokens) return;
     try {
-      const { tier } = await this.getBillingStatus();
-      if (tier !== this.cachedUser.tier) {
-        this.saveUser({ ...this.cachedUser, tier }, this.cachedIsSelfHosted);
+      const me = await this.fetch<{
+        id: string;
+        username: string;
+        displayName: string;
+        avatarUrl: string | null;
+        tier?: string | null;
+        onboardingCompleted?: boolean | null;
+      }>("/users/me");
+      this.saveUser(
+        {
+          id: me.id,
+          username: me.username,
+          displayName: me.displayName,
+          avatarUrl: me.avatarUrl,
+          tier: me.tier ?? this.cachedUser?.tier ?? "Free",
+          onboardingCompleted:
+            me.onboardingCompleted ?? this.cachedUser?.onboardingCompleted ?? false,
+        },
+        this.cachedIsSelfHosted,
+      );
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
+        await this.clearLocal();
       }
-    } catch {
-      // Transient failure — keep the cached tier and try again on the next boot.
     }
   }
 

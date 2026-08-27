@@ -39,7 +39,8 @@ function unique(prefix: string) {
 async function deleteTestAccount(accessToken: string) {
   await fetch(`${API_BASE}/auth/account`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ password: "TestPass123!" }),
   }).catch(() => {});
 }
 

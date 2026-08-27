@@ -49,10 +49,11 @@
 
   onMount(async () => {
     await apiClient.init();
-    // Reconcile the cached tier before the guard below decides whether to bounce to
-    // /upgrade — the cache only updates on login, so it's stale right after a Stripe
-    // checkout redirects back into a freshly-booted app.
-    await apiClient.refreshTier();
+    // Reconcile the cached identity (who you are, tier, onboarding) against the server
+    // before the guard below runs. The cache only updates on login, so it's stale right
+    // after a Stripe checkout, and can even belong to a different account after a
+    // cross-tab login on this origin — reconciling first makes the UI and the token agree.
+    await apiClient.reconcileSession();
     ready = true;
     await guardRoute();
     if (apiClient.isAuthenticated() && !isBlockedFreeTier) {
