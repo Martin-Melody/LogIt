@@ -63,7 +63,10 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
       access in the Capacitor webview (zxing via `getUserMedia` — no native plugin)
 - [ ] Optional "download full food database" flow (fetch `food-full.zip`, prompt + size +
       WiFi-only, manage in Settings → Nutrition) — deferred, not needed for first ship
-- [ ] Cache online OFF lookups into the local DB so the offline set grows with use
+- [x] Cache online OFF lookups into the local DB so the offline set grows with use
+      (`createCachingFoodDbRepo` in core: bundled → local cache → online, writes every
+      online hit back; `food_cache` table native / localStorage web). Also gives a
+      bundled-DB build its first online fallback for barcode misses.
 - [x] Barcode scanning — `@zxing/browser` live scanner + typed/pasted barcode fallback
       (verified in the build; on-device camera unverified)
 - [ ] Drop the `chore(api): pull in orActivelyCoached` commit when the web branch lands on main

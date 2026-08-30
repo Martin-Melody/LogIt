@@ -16,7 +16,10 @@ import { createSqliteExerciseRepo } from "$lib/data/exercise/exerciseRepo.sqlite
 import { createSqliteNutritionRepo } from "$lib/data/nutrition/nutritionRepo.sqlite";
 import { createLocalNutritionRepo } from "$lib/data/nutrition/nutritionRepo.local";
 import { createSqliteFoodDbRepo } from "$lib/data/nutrition/foodDbRepo.sqlite";
-import { createLocalFoodDbRepo } from "$lib/data/nutrition/foodDbRepo.local";
+import { createSqliteFoodCacheStore } from "$lib/data/nutrition/foodCacheStore.sqlite";
+import { createLocalFoodCacheStore } from "$lib/data/nutrition/foodCacheStore.local";
+import { createCachingFoodDbRepo } from "@logit/core/data/cachingFoodDbRepo";
+import { createOpenFoodFactsRepo } from "@logit/core/data/remote/openFoodFactsRepo";
 import { createSqliteCoachNutritionPlanRepo } from "$lib/data/nutrition/coachNutritionPlanRepo.sqlite";
 import { createLocalCoachNutritionPlanRepo } from "$lib/data/nutrition/coachNutritionPlanRepo.local";
 import type { NutritionRepo } from "@logit/core/data/nutritionRepo";
@@ -147,10 +150,14 @@ export async function initRepos(): Promise<void> {
     coachNutritionPlanRepo = createSqliteCoachNutritionPlanRepo();
     progressionRepo = createSqliteProgressionRepo();
 
-    // Bundled food DB is optional — open it if this build shipped one, else use the online
-    // (Open Food Facts) repo. Doesn't block repo init.
+    // Bundled food DB is optional. Whether or not this build shipped one, layer the online
+    // Open Food Facts lookup on top and cache its hits locally for offline reuse.
     await initFoodDb().catch(() => {});
-    foodDbRepo = getFoodDb() ? createSqliteFoodDbRepo() : createLocalFoodDbRepo();
+    foodDbRepo = createCachingFoodDbRepo({
+      bundled: getFoodDb() ? createSqliteFoodDbRepo() : null,
+      cache: createSqliteFoodCacheStore(),
+      online: createOpenFoodFactsRepo(),
+    });
 
     didInit = true;
     return;
@@ -169,7 +176,11 @@ export async function initRepos(): Promise<void> {
   messagesRepo = createLocalMessagesRepo();
   nutritionRepo = createLocalNutritionRepo();
   coachNutritionPlanRepo = createLocalCoachNutritionPlanRepo();
-  foodDbRepo = createLocalFoodDbRepo();
+  foodDbRepo = createCachingFoodDbRepo({
+    bundled: null,
+    cache: createLocalFoodCacheStore(),
+    online: createOpenFoodFactsRepo(),
+  });
   progressionRepo = createLocalProgressionRepo();
   didInit = true;
 }
