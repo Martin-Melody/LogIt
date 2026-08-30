@@ -145,30 +145,58 @@ test("nutrition personal flow", async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/09-insights.png`, fullPage: true });
 });
 
-test("a coach-assigned plan supersedes the client's own target", async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
-    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true }));
-    localStorage.setItem("logit:had_account", "1");
-    localStorage.setItem(
-      "logit:coachNutritionPlans:v1",
-      JSON.stringify({
-        cnplan_x: {
-          id: "cnplan_x",
-          name: "Coach targets",
-          kcalTarget: 1900,
-          proteinG: 175,
-          note: "Two weeks at a deficit, then we reassess.",
-          archived: false,
-          createdAtMs: 1,
-          updatedAtMs: 2,
-        },
-      }),
-    );
+test("a coach-assigned plan supersedes the target and shows a meal plan", async ({ page }) => {
+  const f = (name: string, kcal: number, grams = 100) => ({
+    id: `pf_${name}`,
+    name,
+    grams,
+    computed: { kcal, proteinG: 20, carbsG: 30, fatG: 10 },
   });
+  await page.addInitScript(
+    (meal) => {
+      localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+      localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true }));
+      localStorage.setItem("logit:had_account", "1");
+      localStorage.setItem(
+        "logit:coachNutritionPlans:v1",
+        JSON.stringify({
+          cnplan_x: {
+            id: "cnplan_x",
+            name: "Coach targets",
+            kcalTarget: 1900,
+            proteinG: 175,
+            note: "Two weeks at a deficit, then we reassess.",
+            meals: [meal],
+            archived: false,
+            createdAtMs: 1,
+            updatedAtMs: 2,
+          },
+        }),
+      );
+    },
+    {
+      id: "pmeal_b",
+      name: "Breakfast",
+      foods: [
+        { ...f("Oats", 350), swaps: [f("Granola", 420)] },
+        f("Skyr", 120, 170),
+      ],
+    },
+  );
+
   await page.goto("/nutrition");
   await expect(page.getByText("From your coach")).toBeVisible();
   await expect(page.getByText("Two weeks at a deficit")).toBeVisible();
-  await expect(page.getByText("1900")).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/11-coach-plan.png`, fullPage: true });
+  await page.getByRole("link", { name: /coach's meal plan/ }).click();
+  await page.waitForURL("**/nutrition/plan");
+  await expect(page.getByRole("heading", { name: "Meal plan" })).toBeVisible();
+  await expect(page.getByText("Breakfast")).toBeVisible();
+  await expect(page.getByText(/Oats · 100 g/)).toBeVisible();
+  await expect(page.getByText("Grocery list")).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/11-coach-meal-plan.png`, fullPage: true });
+
+  // log a food from the plan → it lands in today's diary
+  await page.getByRole("button", { name: "Log", exact: true }).first().click();
+  await page.goto("/nutrition");
+  await expect(page.getByText(/Oats/).first()).toBeVisible();
 });
