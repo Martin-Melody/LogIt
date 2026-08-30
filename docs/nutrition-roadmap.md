@@ -29,22 +29,31 @@ consistent with how programs and check-ins already flow coach→client in PT Stu
 
 ## Phase 1 — Personal nutrition core (mobile)
 
-The first shippable milestone. Mobile (`logit-frontend`) only.
+The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
+`feat/nutrition-tracking`.**
 
-- [ ] `@logit/core` nutrition domain: diary day, logged item, custom food, recipe, weight
+- [x] `@logit/core` nutrition domain: diary day, logged item, custom food, recipe, weight
       entry, nutrition goal
-- [ ] `@logit/core` pure calculations: Mifflin–St Jeor BMR → TDEE → goal-adjusted calorie
+- [x] `@logit/core` pure calculations: Mifflin–St Jeor BMR → TDEE → goal-adjusted calorie
       target → macro split; weight-trend EMA smoothing + goal ETA
-- [ ] `@logit/core` adaptive expenditure estimate (energy-balance method over a rolling
+- [x] `@logit/core` adaptive expenditure estimate (energy-balance method over a rolling
       window; graceful fallback to the calculated TDEE when data is thin)
-- [ ] Bundled food database build pipeline (`scripts/build-food-db/`): USDA + curated Open
+- [x] Bundled food database build pipeline (`scripts/build-food-db/`): USDA + curated Open
       Food Facts → single SQLite file with FTS5 search + barcode index
-- [ ] Local + SQLite repos; read-only food-DB repo; bundled `food.db` shipped as an asset
-- [ ] Cloud sync: new synced entities + dual migrations + `/sync/nutrition/*` endpoints,
+- [x] Local + SQLite repos; read-only food-DB repo; bundled `food.db` opened from app assets
+- [x] Cloud sync: new synced entities + dual migrations + `/sync/nutrition/*` endpoints,
       Pro-gated (diary/weight/goal also allowed for actively-coached Free clients)
-- [ ] Mobile UI: Today (macro rings + meals), food search / barcode / quick-add, recipe
-      editor, weight log + trend chart, goal-setup wizard
-- [ ] `nutrition` as a customizable nav destination (More drawer by default)
+- [x] Mobile UI: Today (macro bars + meals), food search / manual barcode / quick-add,
+      recipe editor, weight log + trend chart, goal-setup wizard
+- [x] `nutrition` as a customizable nav destination (More drawer by default)
+
+**Remaining before ship:**
+
+- [ ] Run `scripts/build-food-db` and drop the real `food.db` into the release build
+- [ ] On-device smoke test: bundled `food.db` opens + FTS works on Android;
+      `/sync/nutrition/*` round-trips with a Pro token
+- [ ] Camera barcode scanning (needs a native plugin — `@capacitor-mlkit/barcode-scanning`)
+- [ ] Drop the `chore(api): pull in orActivelyCoached` commit when the web branch lands on main
 
 **Goal:** a person can set a weight goal, get calorie/macro targets that adapt to their
 real trend, and log food quickly — entirely offline, syncing across devices on Pro.
