@@ -30,6 +30,11 @@ public static class CoachEndpoints
         group.MapGet("/programs", GetMyPrograms).RequireTier(UserTier.Studio);
         group.MapGet("/programs/assigned", GetAssignedPrograms);
 
+        // Coach-assigned nutrition targets — same shape/rules as programs.
+        group.MapPost("/nutrition-plans", UpsertNutritionPlan).RequireTier(UserTier.Studio);
+        group.MapGet("/nutrition-plans", GetMyNutritionPlans).RequireTier(UserTier.Studio);
+        group.MapGet("/nutrition-plans/assigned", GetAssignedNutritionPlans);
+
         // Coach check-in schedules — same shape/rules as programs. Client answers come back
         // as SyncedCheckinSubmission rows via /sync/checkins (see SyncEndpoints).
         group.MapPost("/checkins", UpsertCheckinSchedule).RequireTier(UserTier.Studio);
@@ -418,6 +423,125 @@ public static class CoachEndpoints
         return Results.Ok(new { programs });
     }
 
+    // ── Nutrition plans ───────────────────────────────────────────────────────
+    // Structurally identical to programs (near-copy, matching the per-entity style).
+
+    private static async Task<IResult> UpsertNutritionPlan(
+        [FromBody] UpsertNutritionPlanRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var coachId = caller.GetUserId();
+
+        if (string.IsNullOrWhiteSpace(req.PlanId))
+            return Results.BadRequest(new { error = "planId is required." });
+
+        Guid? recipientUserId = null;
+        Guid? relationshipId = null;
+
+        if (!string.IsNullOrWhiteSpace(req.RecipientUsername))
+        {
+            var recipient = await db.Users
+                .FirstOrDefaultAsync(u => u.Username == req.RecipientUsername.ToLowerInvariant());
+            if (recipient is null) return Results.NotFound(new { error = "Client not found." });
+
+            var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
+                r.CoachId == coachId && r.ClientId == recipient.Id && r.Status == CoachClientStatus.Active);
+            if (relationship is null)
+                return Results.Json(
+                    new { error = "No active coaching relationship with that client." },
+                    statusCode: StatusCodes.Status403Forbidden);
+
+            recipientUserId = recipient.Id;
+            relationshipId = relationship.Id;
+        }
+
+        var stored = await db.CoachNutritionPlans
+            .FirstOrDefaultAsync(p => p.CoachId == coachId && p.PlanId == req.PlanId);
+
+        if (stored is null)
+        {
+            stored = new CoachNutritionPlan
+            {
+                PlanId = req.PlanId,
+                CoachId = coachId,
+                RecipientUserId = recipientUserId,
+                RelationshipId = relationshipId,
+                UpdatedAtMs = req.UpdatedAtMs,
+                DataJson = req.DeletedAtMs.HasValue ? string.Empty : req.DataJson,
+                DeletedAtMs = req.DeletedAtMs,
+            };
+            db.CoachNutritionPlans.Add(stored);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { id = stored.Id, planId = stored.PlanId, updatedAtMs = stored.UpdatedAtMs });
+        }
+
+        if (req.UpdatedAtMs <= stored.UpdatedAtMs)
+            return Results.Ok(new { id = stored.Id, planId = stored.PlanId, updatedAtMs = stored.UpdatedAtMs });
+
+        stored.UpdatedAtMs = req.UpdatedAtMs;
+        stored.DeletedAtMs = req.DeletedAtMs;
+        stored.DataJson = req.DeletedAtMs.HasValue ? string.Empty : req.DataJson;
+        stored.SyncedAt = DateTime.UtcNow;
+        if (recipientUserId.HasValue)
+        {
+            stored.RecipientUserId = recipientUserId;
+            stored.RelationshipId = relationshipId;
+        }
+
+        await db.SaveChangesAsync();
+        return Results.Ok(new { id = stored.Id, planId = stored.PlanId, updatedAtMs = stored.UpdatedAtMs });
+    }
+
+    private static async Task<IResult> GetMyNutritionPlans(
+        [FromQuery] Guid? recipientId,
+        [FromQuery] bool? templates,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var coachId = caller.GetUserId();
+
+        var query = db.CoachNutritionPlans.AsNoTracking().Where(p => p.CoachId == coachId);
+        if (templates == true) query = query.Where(p => p.RecipientUserId == null);
+        else if (recipientId is not null) query = query.Where(p => p.RecipientUserId == recipientId);
+
+        var plans = await query
+            .OrderByDescending(p => p.UpdatedAtMs)
+            .Select(p => new NutritionPlanDto(
+                p.PlanId,
+                p.UpdatedAtMs,
+                p.DeletedAtMs == null ? p.DataJson : null,
+                p.DeletedAtMs,
+                p.RecipientUserId))
+            .ToListAsync();
+
+        return Results.Ok(new { plans });
+    }
+
+    private static async Task<IResult> GetAssignedNutritionPlans(
+        [FromQuery] long since,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
+
+        var plans = await db.CoachNutritionPlans
+            .AsNoTracking()
+            .Where(p => p.RecipientUserId == userId && p.SyncedAt > sinceUtc)
+            .Where(p => db.CoachClientRelationships.Any(r =>
+                r.CoachId == p.CoachId && r.ClientId == userId && r.Status == CoachClientStatus.Active))
+            .OrderBy(p => p.SyncedAt)
+            .Select(p => new AssignedNutritionPlanDto(
+                p.PlanId,
+                p.UpdatedAtMs,
+                p.DeletedAtMs == null ? p.DataJson : null,
+                p.DeletedAtMs))
+            .ToListAsync();
+
+        return Results.Ok(new { plans });
+    }
+
     // ── Check-in schedules ────────────────────────────────────────────────────
     // Structurally identical to programs; kept as parallel handlers to match the
     // per-entity style used throughout SyncEndpoints rather than a shared abstraction.
@@ -710,6 +834,26 @@ public record ProgramDto(
 
 public record AssignedProgramDto(
     string ProgramId,
+    long UpdatedAtMs,
+    string? DataJson,
+    long? DeletedAtMs);
+
+public record UpsertNutritionPlanRequest(
+    string PlanId,
+    string DataJson,
+    long UpdatedAtMs,
+    string? RecipientUsername,
+    long? DeletedAtMs);
+
+public record NutritionPlanDto(
+    string PlanId,
+    long UpdatedAtMs,
+    string? DataJson,
+    long? DeletedAtMs,
+    Guid? RecipientUserId);
+
+public record AssignedNutritionPlanDto(
+    string PlanId,
     long UpdatedAtMs,
     string? DataJson,
     long? DeletedAtMs);
