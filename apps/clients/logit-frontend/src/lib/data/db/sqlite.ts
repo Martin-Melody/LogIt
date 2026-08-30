@@ -11,8 +11,14 @@ import { nowMs } from "@logit/core/domain/time";
 const DB_NAME = "logit";
 const DB_VERSION = 1;
 
+/** Bundled read-only food database (see scripts/build-food-db). Dropped into
+ * android/ios assets/databases/ by the release build; absent in plain dev builds, where
+ * the food repo falls back to the Open Food Facts API. */
+const FOOD_DB_NAME = "food";
+
 let sqlite: SQLiteConnection | null = null;
 let db: SQLiteDBConnection | null = null;
+let foodDb: SQLiteDBConnection | null = null;
 
 function isNative() {
   return Capacitor.isNativePlatform();
@@ -52,6 +58,37 @@ export function getDb(): SQLiteDBConnection {
   return db;
 }
 
+/** Best-effort: copy the bundled food.db out of app assets (once) and open it read-only.
+ * Silently no-ops when there's no bundled DB — getFoodDb() then returns null and the food
+ * repo uses the online fallback. Safe to call more than once. */
+export async function initFoodDb(): Promise<void> {
+  if (!browser || !isNative() || foodDb) return;
+  if (!sqlite) sqlite = new SQLiteConnection(CapacitorSQLite);
+
+  try {
+    // Copies every *.db under assets/databases/ into the plugin store; no-op if the
+    // directory is missing or the DBs are already there.
+    await sqlite.copyFromAssets(false).catch(() => {});
+
+    const exists = await sqlite.isDatabase(FOOD_DB_NAME);
+    if (!exists.result) return;
+
+    const has = await sqlite.isConnection(FOOD_DB_NAME, true);
+    foodDb = has.result
+      ? await sqlite.retrieveConnection(FOOD_DB_NAME, true)
+      : await sqlite.createConnection(FOOD_DB_NAME, false, "no-encryption", 1, true);
+    await foodDb.open();
+  } catch (err) {
+    console.warn("[nutrition] bundled food.db unavailable:", err);
+    foodDb = null;
+  }
+}
+
+/** The bundled food DB connection, or null when this build ships without one. */
+export function getFoodDb(): SQLiteDBConnection | null {
+  return foodDb;
+}
+
 export async function clearOwnerData(ownerId: string): Promise<void> {
   if (!db) return;
   await db.execute(`PRAGMA foreign_keys = OFF`);
@@ -70,6 +107,11 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM checkin_submissions WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM authored_checkin_schedules WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM coach_messages WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM nutrition_days WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM custom_foods WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM recipes WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM weight_entries WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM nutrition_goal WHERE owner_id = ?`, [ownerId]);
   await db.execute(`PRAGMA foreign_keys = ON`);
 }
 
@@ -92,6 +134,11 @@ export async function clearAllSqliteData(): Promise<void> {
     DELETE FROM checkin_submissions;
     DELETE FROM authored_checkin_schedules;
     DELETE FROM coach_messages;
+    DELETE FROM nutrition_days;
+    DELETE FROM custom_foods;
+    DELETE FROM recipes;
+    DELETE FROM weight_entries;
+    DELETE FROM nutrition_goal;
     PRAGMA foreign_keys = ON;
   `);
 }
@@ -334,6 +381,62 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_coach_messages_thread
       ON coach_messages(owner_id, relationship_id, created_at_ms);
+
+    -- ── Nutrition (client-owned, synced via /sync/nutrition/*) ──────────────────
+    -- Each row is a JSON blob of the matching @logit/core type. Last-write-wins by
+    -- updated_at_ms, soft-deleted via deleted_at_ms — same as checkin_submissions.
+
+    -- One food-diary day per date. id is "nday_<date>" so two devices converge.
+    CREATE TABLE IF NOT EXISTS nutrition_days (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      date_iso TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_nutrition_days_owner_date
+      ON nutrition_days(owner_id, date_iso);
+
+    CREATE TABLE IF NOT EXISTS custom_foods (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_custom_foods_owner ON custom_foods(owner_id);
+
+    CREATE TABLE IF NOT EXISTS recipes (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_recipes_owner ON recipes(owner_id);
+
+    CREATE TABLE IF NOT EXISTS weight_entries (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      date_iso TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_weight_entries_owner
+      ON weight_entries(owner_id, date_iso);
+
+    -- Nutrition goal — one row per owner, synced like the profile blob.
+    CREATE TABLE IF NOT EXISTS nutrition_goal (
+      owner_id TEXT PRIMARY KEY NOT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL
+    );
   `);
 
   await migrateSessionSets(db);
