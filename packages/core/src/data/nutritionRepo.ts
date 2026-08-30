@@ -36,6 +36,7 @@ export interface NutritionRepo {
 
   // ── Bodyweight ──
   listWeightEntries(startIso?: string, endIso?: string): Promise<WeightEntry[]>;
+  getWeightEntry(id: string): Promise<WeightEntry | null>;
   saveWeightEntry(entry: WeightEntry): Promise<void>;
   deleteWeightEntry(id: string): Promise<void>;
 

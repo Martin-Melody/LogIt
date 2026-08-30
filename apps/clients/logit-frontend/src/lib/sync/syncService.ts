@@ -13,6 +13,7 @@ import {
   getCheckinRepo,
   getAuthoredCheckinRepo,
   getMessagesRepo,
+  getNutritionRepo,
 } from "$lib/data/repoProvider";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -21,6 +22,13 @@ import type { CoachProgram } from "@logit/core/domain/CoachProgram";
 import type { CheckinSchedule, CheckinSubmission } from "@logit/core/domain/Checkin";
 import type { CoachMessage } from "@logit/core/domain/CoachMessage";
 import type { Exercise } from "@logit/core/domain/exercise";
+import type {
+  CustomFood,
+  DiaryDay,
+  NutritionGoal,
+  Recipe,
+  WeightEntry,
+} from "@logit/core/domain/nutrition";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 
 // ── localStorage keys ────────────────────────────────────────────────────────
@@ -33,6 +41,10 @@ const CHECKIN_SCHEDULES_LAST_PULLED_KEY = "logit:sync:checkinSchedulesLastPulled
 const CHECKIN_SUBMISSIONS_LAST_PULLED_KEY = "logit:sync:checkinSubmissionsLastPulledAt";
 const MESSAGES_LAST_PULLED_KEY = "logit:sync:messagesLastPulledAt";
 const PROFILE_UPDATED_AT_KEY = "logit:sync:profileUpdatedAtMs";
+const NUTRITION_DAYS_LAST_PULLED_KEY = "logit:sync:nutritionDaysLastPulledAt";
+const CUSTOM_FOODS_LAST_PULLED_KEY = "logit:sync:customFoodsLastPulledAt";
+const RECIPES_LAST_PULLED_KEY = "logit:sync:recipesLastPulledAt";
+const WEIGHT_ENTRIES_LAST_PULLED_KEY = "logit:sync:weightEntriesLastPulledAt";
 
 function getTimestamp(key: string): number {
   try { return parseInt(localStorage.getItem(key) ?? "0", 10) || 0; } catch { return 0; }
@@ -458,6 +470,161 @@ export async function markThreadRead(relationshipId: string, upToMs: number): Pr
   }
 }
 
+// ── Nutrition ────────────────────────────────────────────────────────────────
+// Diary days, custom foods, recipes and weight entries all sync like check-in
+// submissions (client-owned, LWW by updatedAtMs, tombstoned). The goal is a singleton
+// blob. Deletions ride along in the blob (deletedAtMs) rather than a separate signal.
+
+type NutritionRow = { createdAtMs: number; updatedAtMs: number; deletedAtMs?: number };
+
+function nutritionRowDto(id: string, row: NutritionRow) {
+  return {
+    id,
+    createdAtMs: row.createdAtMs,
+    updatedAtMs: row.updatedAtMs,
+    dataJson: row.deletedAtMs ? null : JSON.stringify(row),
+    deletedAtMs: row.deletedAtMs,
+  };
+}
+
+export function pushNutritionDay(day: DiaryDay): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = nutritionRowDto(day.id, day);
+  syncApi.pushNutritionDays([dto]).catch(() => enqueue({ type: "nutritionDay", dto }));
+}
+
+export function pushCustomFood(food: CustomFood): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = nutritionRowDto(food.food.id, food);
+  syncApi.pushCustomFoods([dto]).catch(() => enqueue({ type: "customFood", dto }));
+}
+
+export function pushRecipe(recipe: Recipe): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = nutritionRowDto(recipe.id, recipe);
+  syncApi.pushRecipes([dto]).catch(() => enqueue({ type: "recipe", dto }));
+}
+
+export function pushWeightEntry(entry: WeightEntry): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = nutritionRowDto(entry.id, entry);
+  syncApi.pushWeightEntries([dto]).catch(() => enqueue({ type: "weightEntry", dto }));
+}
+
+export function pushNutritionGoal(goal: NutritionGoal): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = { dataJson: JSON.stringify(goal), updatedAtMs: goal.updatedAtMs };
+  syncApi.pushNutritionGoal(dto).catch(() => enqueue({ type: "nutritionGoal", dto }));
+}
+
+/** Push every local nutrition record — called once when sync newly becomes available. */
+export async function pushAllNutrition(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const repo = getNutritionRepo();
+    const [days, foods, recipes, weights, goal] = await Promise.all([
+      repo.listDaysForPush(),
+      repo.listCustomFoodsForPush(),
+      repo.listRecipesForPush(),
+      repo.listWeightEntriesForPush(),
+      repo.getGoal(),
+    ]);
+    if (days.length) await syncApi.pushNutritionDays(days.map((d) => nutritionRowDto(d.id, d)));
+    if (foods.length) await syncApi.pushCustomFoods(foods.map((f) => nutritionRowDto(f.food.id, f)));
+    if (recipes.length) await syncApi.pushRecipes(recipes.map((r) => nutritionRowDto(r.id, r)));
+    if (weights.length) await syncApi.pushWeightEntries(weights.map((w) => nutritionRowDto(w.id, w)));
+    if (goal) await syncApi.pushNutritionGoal({ dataJson: JSON.stringify(goal), updatedAtMs: goal.updatedAtMs });
+  } catch {}
+}
+
+export async function pullAndMergeNutrition(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  const repo = getNutritionRepo();
+
+  try {
+    const since = getTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY);
+    const { days } = await syncApi.pullNutritionDays(since);
+    for (const e of days) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeDayFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const day = JSON.parse(e.dataJson) as DiaryDay;
+        const existing = await repo.getDay(day.dateIso);
+        if (existing && existing.updatedAtMs >= day.updatedAtMs) continue;
+        await repo.upsertDayFromRemote(day);
+      } catch {}
+    }
+    setTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+
+  try {
+    const since = getTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY);
+    const { foods } = await syncApi.pullCustomFoods(since);
+    for (const e of foods) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeCustomFoodFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const food = JSON.parse(e.dataJson) as CustomFood;
+        const existing = await repo.getCustomFood(food.food.id);
+        if (existing && existing.updatedAtMs >= food.updatedAtMs) continue;
+        await repo.upsertCustomFoodFromRemote(food);
+      } catch {}
+    }
+    setTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+
+  try {
+    const since = getTimestamp(RECIPES_LAST_PULLED_KEY);
+    const { recipes } = await syncApi.pullRecipes(since);
+    for (const e of recipes) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeRecipeFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const recipe = JSON.parse(e.dataJson) as Recipe;
+        const existing = await repo.getRecipe(recipe.id);
+        if (existing && existing.updatedAtMs >= recipe.updatedAtMs) continue;
+        await repo.upsertRecipeFromRemote(recipe);
+      } catch {}
+    }
+    setTimestamp(RECIPES_LAST_PULLED_KEY, Date.now());
+  } catch {}
+
+  try {
+    const since = getTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY);
+    const { entries } = await syncApi.pullWeightEntries(since);
+    for (const e of entries) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeWeightEntryFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const entry = JSON.parse(e.dataJson) as WeightEntry;
+        const existing = await repo.getWeightEntry(entry.id);
+        if (existing && existing.updatedAtMs >= entry.updatedAtMs) continue;
+        await repo.upsertWeightEntryFromRemote(entry);
+      } catch {}
+    }
+    setTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY, Date.now());
+  } catch {}
+
+  try {
+    const { goal } = await syncApi.pullNutritionGoal();
+    if (goal?.dataJson) {
+      const remoteGoal = JSON.parse(goal.dataJson) as NutritionGoal;
+      const localGoal = await repo.getGoal();
+      if (!localGoal || remoteGoal.updatedAtMs > localGoal.updatedAtMs) {
+        await repo.upsertGoalFromRemote(remoteGoal);
+      }
+    }
+  } catch {}
+}
+
 // ── Profile ───────────────────────────────────────────────────────────────────
 
 export function getProfileUpdatedAtMs(): number {
@@ -519,6 +686,7 @@ export async function pushAllLocalData(): Promise<void> {
     pushAllCheckinSubmissions(),
     pushAllAuthoredCheckinSchedules(),
     pushPendingMessages(),
+    pushAllNutrition(),
   ]);
 }
 
@@ -534,6 +702,7 @@ export async function syncAll(): Promise<void> {
     pullAndMergeCheckinSchedules(),
     pullAndMergeCheckinSubmissions(),
     pullAndMergeMessages(),
+    pullAndMergeNutrition(),
     pullAndApplyProfile(),
   ]);
   const now = Date.now();
