@@ -13,6 +13,9 @@ public class User
     public bool OnboardingCompleted { get; set; } = false;
     public string? ProfileJson { get; set; }
     public long ProfileUpdatedAtMs { get; set; } = 0;
+    /// The user's nutrition goal — a singleton JSON blob synced like ProfileJson.
+    public string? NutritionGoalJson { get; set; }
+    public long NutritionGoalUpdatedAtMs { get; set; } = 0;
     public UserTier Tier { get; set; } = UserTier.Free;
     public string? StripeCustomerId { get; set; }
     public string? StripeSubscriptionId { get; set; }

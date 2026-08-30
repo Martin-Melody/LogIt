@@ -20,6 +20,10 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<CheckinSchedule> CheckinSchedules => Set<CheckinSchedule>();
     public DbSet<SyncedCheckinSubmission> SyncedCheckinSubmissions => Set<SyncedCheckinSubmission>();
     public DbSet<CoachMessage> CoachMessages => Set<CoachMessage>();
+    public DbSet<SyncedNutritionDay> SyncedNutritionDays => Set<SyncedNutritionDay>();
+    public DbSet<SyncedCustomFood> SyncedCustomFoods => Set<SyncedCustomFood>();
+    public DbSet<SyncedRecipe> SyncedRecipes => Set<SyncedRecipe>();
+    public DbSet<SyncedWeightEntry> SyncedWeightEntries => Set<SyncedWeightEntry>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -152,6 +156,39 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(s => s.User)
              .WithMany()
              .HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Client-owned nutrition rows — all the same shape (see Data/Entities/Nutrition.cs).
+        model.Entity<SyncedNutritionDay>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<SyncedCustomFood>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<SyncedRecipe>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<SyncedWeightEntry>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 
