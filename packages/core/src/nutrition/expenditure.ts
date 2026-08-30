@@ -109,17 +109,19 @@ export function estimateExpenditure(input: {
 
 /**
  * Blend the formula TDEE with the adaptive estimate, weighted by confidence, and clamp the
- * result to ±35% of the formula figure so a bad estimate (sloppy logging, a whoosh) can't
- * send the target somewhere absurd.
+ * result to ±`clampPct`% of the formula figure so a bad estimate (sloppy logging, a whoosh)
+ * can't send the target somewhere absurd. `clampPct` defaults to 35.
  */
 export function blendExpenditure(
   calculatedTdee: number,
   estimate: ExpenditureEstimate,
+  clampPct = 35,
 ): number {
   if (!estimate || calculatedTdee <= 0) return calculatedTdee;
+  const f = Math.max(0, clampPct) / 100;
   const clamped = Math.max(
-    calculatedTdee * 0.65,
-    Math.min(calculatedTdee * 1.35, estimate.tdee),
+    calculatedTdee * (1 - f),
+    Math.min(calculatedTdee * (1 + f), estimate.tdee),
   );
   const w = estimate.confidence;
   return calculatedTdee * (1 - w) + clamped * w;
