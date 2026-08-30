@@ -323,10 +323,22 @@ export type NutritionGoal = {
   proteinGPerKg: number;
   /** Fat as a fraction of total calories (0–1); carbs take the remainder. */
   fatPct: number;
-  /** Track the adaptive expenditure estimate once enough data exists. */
+  /** @deprecated read-only fallback for the standard-adaptive algorithm's `adaptive` pref.
+   * New writes go to algorithmPrefs["standard-adaptive"].adaptive. */
   adaptiveEnabled: boolean;
-  /** Hard override — when set, ignore the calculated/adaptive calorie target. */
+  /** Hard override — when set, ignore the algorithm's calorie target. */
   manualCalorieTarget?: number;
+
+  /** Which nutrition algorithm computes the calorie target. Undefined → the built-in
+   * "standard-adaptive". Community algorithms are installed as plugins. */
+  algorithmId?: string;
+  /** Per-algorithm preferences, keyed by algorithm id, shape defined by each algorithm's
+   * preferencesSchema. Rides on the goal so it syncs with no extra plumbing. */
+  algorithmPrefs?: Record<string, Record<string, unknown>>;
+  /** Which nutrition analytics plugin powers the insights screen. Undefined → the built-in
+   * "basic-nutrition-analytics". */
+  analyticsId?: string;
+
   updatedAtMs: number;
 };
 
@@ -345,6 +357,44 @@ export function defaultNutritionGoal(): NutritionGoal {
 
 export function touchGoal(goal: NutritionGoal): NutritionGoal {
   return { ...goal, updatedAtMs: nowMs() };
+}
+
+export const DEFAULT_NUTRITION_ALGORITHM_ID = "standard-adaptive";
+export const DEFAULT_NUTRITION_ANALYTICS_ID = "basic-nutrition-analytics";
+
+export function resolveAlgorithmId(goal: NutritionGoal | null): string {
+  return goal?.algorithmId || DEFAULT_NUTRITION_ALGORITHM_ID;
+}
+
+export function resolveAnalyticsId(goal: NutritionGoal | null): string {
+  return goal?.analyticsId || DEFAULT_NUTRITION_ANALYTICS_ID;
+}
+
+/** Stored preferences for one algorithm (may be empty — the caller merges its defaults). */
+export function algorithmPrefsFor(
+  goal: NutritionGoal | null,
+  algorithmId: string,
+): Record<string, unknown> {
+  return goal?.algorithmPrefs?.[algorithmId] ?? {};
+}
+
+export function withAlgorithm(goal: NutritionGoal, algorithmId: string): NutritionGoal {
+  return touchGoal({ ...goal, algorithmId });
+}
+
+export function withAlgorithmPrefs(
+  goal: NutritionGoal,
+  algorithmId: string,
+  prefs: Record<string, unknown>,
+): NutritionGoal {
+  return touchGoal({
+    ...goal,
+    algorithmPrefs: { ...(goal.algorithmPrefs ?? {}), [algorithmId]: prefs },
+  });
+}
+
+export function withAnalytics(goal: NutritionGoal, analyticsId: string): NutritionGoal {
+  return touchGoal({ ...goal, analyticsId });
 }
 
 // ── Dates ─────────────────────────────────────────────────────────────────────

@@ -94,9 +94,12 @@ export type NutritionTargets = {
 };
 
 /**
- * Resolve a goal + current bodyweight (+ optional adaptive expenditure estimate) into
- * concrete daily targets. Returns null when there isn't enough profile data to compute a
- * calorie figure and no manual override is set.
+ * The Mifflin–St Jeor formula target: goal + current bodyweight (+ optional adaptive
+ * expenditure estimate) → concrete daily targets. Returns null when there isn't enough
+ * profile data to compute a BMR. Pass `adaptiveExpenditure` to use a measured expenditure
+ * instead of the formula TDEE; the caller decides whether to.
+ *
+ * Manual overrides (goal.manualCalorieTarget) are applied by the caller / usecase, not here.
  */
 export function computeTargets(
   goal: NutritionGoal,
@@ -121,30 +124,11 @@ export function computeTargets(
       })
     : 0;
 
-  const calculatedTdee = canComputeBmr ? tdee(bmr, goal.activityLevel) : 0;
-
-  // Manual override wins outright.
-  if (goal.manualCalorieTarget != null && goal.manualCalorieTarget > 0) {
-    return {
-      kcal: Math.round(goal.manualCalorieTarget),
-      macros: macroTargets({
-        kcalTarget: goal.manualCalorieTarget,
-        weightKg: weightKg ?? 0,
-        proteinGPerKg: goal.proteinGPerKg,
-        fatPct: goal.fatPct,
-      }),
-      bmr,
-      expenditure: calculatedTdee || goal.manualCalorieTarget,
-      source: "manual",
-    };
-  }
-
   if (!canComputeBmr) return null;
 
-  const useAdaptive =
-    goal.adaptiveEnabled &&
-    ctx.adaptiveExpenditure != null &&
-    ctx.adaptiveExpenditure > 0;
+  const calculatedTdee = tdee(bmr, goal.activityLevel);
+
+  const useAdaptive = ctx.adaptiveExpenditure != null && ctx.adaptiveExpenditure > 0;
 
   const expenditure = useAdaptive ? ctx.adaptiveExpenditure! : calculatedTdee;
 

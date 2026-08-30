@@ -114,27 +114,17 @@ describe("computeTargets", () => {
     expect(t.kcal).toBe(2194); // round(2743.5 - 550)
   });
 
-  it("uses the adaptive expenditure when enabled and supplied", () => {
+  it("uses the adaptive expenditure whenever one is supplied (caller decides)", () => {
     const t = computeTargets(goal, { weightKg: 80, adaptiveExpenditure: 2500, now })!;
     expect(t.source).toBe("adaptive");
     expect(t.expenditure).toBe(2500);
     expect(t.kcal).toBeCloseTo(2500 - 550, 0);
+
+    // No adaptive expenditure => calculated, regardless of goal.adaptiveEnabled.
+    const calc = computeTargets({ ...goal, adaptiveEnabled: false }, { weightKg: 80, now })!;
+    expect(calc.source).toBe("calculated");
   });
 
-  it("manual override wins and reports source 'manual'", () => {
-    const t = computeTargets(
-      { ...goal, manualCalorieTarget: 2000 },
-      { weightKg: 80, adaptiveExpenditure: 2500, now },
-    )!;
-    expect(t.source).toBe("manual");
-    expect(t.kcal).toBe(2000);
-  });
-
-  it("does not use adaptive when the goal has it disabled", () => {
-    const t = computeTargets(
-      { ...goal, adaptiveEnabled: false },
-      { weightKg: 80, adaptiveExpenditure: 2500, now },
-    )!;
-    expect(t.source).toBe("calculated");
-  });
+  // Manual override and the adaptive on/off decision moved out of computeTargets — see
+  // usecases/nutrition/getNutritionTargets.test.ts and nutrition/algorithms/standardAdaptive.test.ts.
 });
