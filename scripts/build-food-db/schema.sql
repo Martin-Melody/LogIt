@@ -1,12 +1,14 @@
 -- Bundled food database. Read-only reference data shipped with the app; never synced,
 -- never owner-scoped. Matches FoodDbRepo in @logit/core.
 --
--- `id` is "usda:<fdc_id>" or "off:<barcode>". Macros are per 100 g. `serving_json` is a
--- JSON array of { "label": string, "grams": number }, always including a raw 100 g option.
+-- `id` is "usda:<fdc_id>", "ciqual:<code>" or "off:<barcode>". Macros are per 100 g.
+-- `serving_json` is a JSON array of { "label": string, "grams": number }, always including
+-- a raw 100 g option. `popularity` is a search-ranking hint (OFF scan count; a fixed
+-- baseline for generic USDA/CIQUAL foods) — higher sorts first on equal text relevance.
 
 CREATE TABLE foods (
   id           TEXT PRIMARY KEY,
-  source       TEXT NOT NULL,          -- 'usda' | 'off'
+  source       TEXT NOT NULL,          -- 'usda' | 'ciqual' | 'off'
   name         TEXT NOT NULL,
   brand        TEXT,
   barcode      TEXT,                   -- EAN/UPC, 'off' rows only
@@ -14,6 +16,7 @@ CREATE TABLE foods (
   protein_100g REAL NOT NULL,
   carb_100g    REAL NOT NULL,
   fat_100g     REAL NOT NULL,
+  popularity   INTEGER NOT NULL DEFAULT 0,
   serving_json TEXT NOT NULL DEFAULT '[]'
 );
 

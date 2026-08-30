@@ -1,8 +1,9 @@
-// Minimal RFC 4180 CSV parser — no dependencies. USDA FoodData Central CSV bundles are
-// standard quoted-comma format; fields may contain commas and escaped double quotes.
+// Minimal RFC 4180 CSV parser — no dependencies. Handles quoted fields, escaped double
+// quotes and embedded newlines. The delimiter defaults to a comma (USDA bundles) but can
+// be set to ';' or tab for other exports (e.g. the CIQUAL table).
 
 /** Parse CSV text into an array of string[] rows (including the header row). */
-export function parseCsv(text) {
+export function parseCsv(text, delimiter = ",") {
   const rows = [];
   let row = [];
   let field = "";
@@ -27,7 +28,7 @@ export function parseCsv(text) {
 
     if (c === '"') {
       inQuotes = true;
-    } else if (c === ",") {
+    } else if (c === delimiter) {
       row.push(field);
       field = "";
     } else if (c === "\n" || c === "\r") {
@@ -48,8 +49,8 @@ export function parseCsv(text) {
 }
 
 /** Parse CSV text into an array of objects keyed by the header row. */
-export function parseCsvObjects(text) {
-  const rows = parseCsv(text);
+export function parseCsvObjects(text, delimiter = ",") {
+  const rows = parseCsv(text, delimiter);
   if (rows.length === 0) return [];
   const header = rows[0].map((h) => h.trim());
   return rows.slice(1).map((r) => {

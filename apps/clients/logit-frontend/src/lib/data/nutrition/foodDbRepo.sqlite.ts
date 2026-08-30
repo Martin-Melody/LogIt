@@ -107,7 +107,7 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
           `SELECT ${F_COLS} FROM foods_fts
            JOIN foods f ON f.rowid = foods_fts.rowid
            WHERE foods_fts MATCH ?${sourceClause}
-           ORDER BY rank LIMIT ?`,
+           ORDER BY rank, f.popularity DESC LIMIT ?`,
           [match, ...sourceParam, limit],
         );
         return rows.map(toFoodRef);
@@ -118,7 +118,7 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
       const rows = await query(
         `SELECT ${COLS} FROM foods
          WHERE (name LIKE ? OR brand LIKE ?)${opts.source ? " AND source = ?" : ""}
-         ORDER BY length(name) LIMIT ?`,
+         ORDER BY popularity DESC, length(name) LIMIT ?`,
         [like, like, ...sourceParam, limit],
       );
       return rows.map(toFoodRef);

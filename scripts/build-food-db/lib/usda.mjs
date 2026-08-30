@@ -14,7 +14,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseCsvObjects } from "./csv.mjs";
-import { buildServings, cleanName, clampKcal, clampMacro, r2 } from "./normalize.mjs";
+import { acceptRow, buildServings, cleanName, clampKcal, clampMacro, r2 } from "./normalize.mjs";
+import { config } from "../config.mjs";
 
 const NBR = { energy: "208", energyAtwaterGeneral: "957", energyAtwaterSpecific: "958", protein: "203", fat: "204", carb: "205" };
 
@@ -69,7 +70,7 @@ export async function loadUsdaBundle(dir) {
       n[NBR.energy] ?? n[NBR.energyAtwaterSpecific] ?? n[NBR.energyAtwaterGeneral];
     if (kcal == null) continue;
 
-    rows.push({
+    const row = acceptRow({
       id: `usda:${f.fdc_id}`,
       source: "usda",
       name: cleanName(f.description),
@@ -79,8 +80,10 @@ export async function loadUsdaBundle(dir) {
       protein_100g: r2(clampMacro(n[NBR.protein] ?? 0)),
       carb_100g: r2(clampMacro(n[NBR.carb] ?? 0)),
       fat_100g: r2(clampMacro(n[NBR.fat] ?? 0)),
+      popularity: config.genericPopularity,
       servings: buildServings(portionsByFood.get(f.fdc_id) ?? []),
     });
+    if (row) rows.push(row);
   }
   return rows;
 }

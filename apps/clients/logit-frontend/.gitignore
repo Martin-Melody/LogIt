@@ -25,3 +25,7 @@ vite.config.ts.timestamp-*
 # Playwright
 /test-results
 /playwright-report
+
+# Bundled food DB (built by scripts/build-food-db, dropped in at release time)
+/static/assets/databases/*.zip
+/static/assets/databases/*.db
