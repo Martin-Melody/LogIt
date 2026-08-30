@@ -141,6 +141,7 @@ export async function clearAllSqliteData(): Promise<void> {
     DELETE FROM weight_entries;
     DELETE FROM nutrition_goal;
     DELETE FROM coach_nutrition_plans;
+    DELETE FROM food_cache;
     PRAGMA foreign_keys = ON;
   `);
 }
@@ -451,6 +452,23 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       synced_at_ms INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_coach_nutrition_plans_owner ON coach_nutrition_plans(owner_id);
+
+    -- Foods pulled from the online Open Food Facts lookup, kept for offline reuse. Reference
+    -- data: shared across owners, never synced. Mirrors the bundled food.db 'foods' shape.
+    CREATE TABLE IF NOT EXISTS food_cache (
+      id           TEXT PRIMARY KEY NOT NULL,
+      source       TEXT NOT NULL,
+      name         TEXT NOT NULL,
+      brand        TEXT NULL,
+      barcode      TEXT NULL,
+      kcal_100g    REAL NOT NULL,
+      protein_100g REAL NOT NULL,
+      carb_100g    REAL NOT NULL,
+      fat_100g     REAL NOT NULL,
+      serving_json TEXT NOT NULL DEFAULT '[]',
+      cached_at_ms INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_food_cache_barcode ON food_cache(barcode) WHERE barcode IS NOT NULL;
   `);
 
   await migrateSessionSets(db);
