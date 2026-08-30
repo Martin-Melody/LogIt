@@ -131,6 +131,50 @@ namespace Logit.Api.Migrations
                     b.ToTable("CoachMessages");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachNutritionPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PlanId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RecipientUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RelationshipId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelationshipId");
+
+                    b.HasIndex("CoachId", "PlanId")
+                        .IsUnique();
+
+                    b.HasIndex("RecipientUserId", "SyncedAt");
+
+                    b.ToTable("CoachNutritionPlans");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachProgram", b =>
                 {
                     b.Property<Guid>("Id")
@@ -771,6 +815,31 @@ namespace Logit.Api.Migrations
                     b.Navigation("Relationship");
 
                     b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachNutritionPlan", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
+                        .WithMany()
+                        .HasForeignKey("RelationshipId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Coach");
+
+                    b.Navigation("Recipient");
+
+                    b.Navigation("Relationship");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachProgram", b =>

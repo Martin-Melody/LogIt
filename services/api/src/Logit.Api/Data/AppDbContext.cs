@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedSplit> SyncedSplits => Set<SyncedSplit>();
     public DbSet<SyncedExercise> SyncedExercises => Set<SyncedExercise>();
     public DbSet<CoachProgram> CoachPrograms => Set<CoachProgram>();
+    public DbSet<CoachNutritionPlan> CoachNutritionPlans => Set<CoachNutritionPlan>();
     public DbSet<CheckinSchedule> CheckinSchedules => Set<CheckinSchedule>();
     public DbSet<SyncedCheckinSubmission> SyncedCheckinSubmissions => Set<SyncedCheckinSubmission>();
     public DbSet<CoachMessage> CoachMessages => Set<CoachMessage>();
@@ -117,6 +118,24 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         model.Entity<CoachProgram>(e =>
         {
             e.HasIndex(p => new { p.CoachId, p.ProgramId }).IsUnique();
+            e.HasIndex(p => new { p.RecipientUserId, p.SyncedAt });
+            e.HasOne(p => p.Coach)
+             .WithMany()
+             .HasForeignKey(p => p.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Recipient)
+             .WithMany()
+             .HasForeignKey(p => p.RecipientUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Relationship)
+             .WithMany()
+             .HasForeignKey(p => p.RelationshipId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<CoachNutritionPlan>(e =>
+        {
+            e.HasIndex(p => new { p.CoachId, p.PlanId }).IsUnique();
             e.HasIndex(p => new { p.RecipientUserId, p.SyncedAt });
             e.HasOne(p => p.Coach)
              .WithMany()
