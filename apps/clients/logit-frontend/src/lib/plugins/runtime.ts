@@ -8,11 +8,15 @@ import type {
 } from "@logit/core/domain/progression";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
+import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
+import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import { listInstalledPluginManifests } from "./catalog";
 import {
   describePluginBundleContract,
   isPluginAlgorithm,
   isPluginAnalytics,
+  isPluginNutritionAlgorithm,
+  isPluginNutritionAnalytics,
   isPluginWidgetComponent,
   isPluginWidgetRenderer,
   resolvePluginBundleContract,
@@ -23,12 +27,24 @@ import {
 import WidgetHost from "./WidgetHost.svelte";
 import type {
   AnalyticsPluginCapability,
+  NutritionAlgorithmPluginCapability,
+  NutritionAnalyticsPluginCapability,
   PluginCapability,
   PluginManifest,
   ProgressionAlgorithmPluginCapability,
   WidgetPluginCapability,
 } from "./types";
 import type { AnalyticsPlugin, AnalyticsPluginMeta, AnalyticsRegistry } from "@logit/core/domain/analytics";
+import type {
+  NutritionAlgorithm,
+  NutritionAlgorithmMeta,
+  NutritionAlgorithmRegistry,
+} from "@logit/core/domain/nutritionAlgorithm";
+import type {
+  NutritionAnalyticsPlugin,
+  NutritionAnalyticsPluginMeta,
+  NutritionAnalyticsRegistry,
+} from "@logit/core/domain/nutritionAnalytics";
 
 export type RuntimeWidgetDefinition = WidgetDefinition & {
   source: "builtin" | "installed";
@@ -40,7 +56,14 @@ export type BundleInspection = {
   bundleUrl: string | null;
   contract: PluginBundleContract | null;
   loadable: boolean;
-  entryType: "widget" | "progression-algorithm" | "analytics" | "unknown" | null;
+  entryType:
+    | "widget"
+    | "progression-algorithm"
+    | "analytics"
+    | "nutrition-algorithm"
+    | "nutrition-analytics"
+    | "unknown"
+    | null;
 };
 
 const moduleCache = new Map<string, Promise<PluginBundleModule | null>>();
@@ -75,6 +98,26 @@ function isAnalyticsCapability(
 
 function getAnalyticsCapability(manifest: PluginManifest): AnalyticsPluginCapability | null {
   return manifest.capabilities.find(isAnalyticsCapability) ?? null;
+}
+
+function getNutritionAlgorithmCapability(
+  manifest: PluginManifest,
+): NutritionAlgorithmPluginCapability | null {
+  return (
+    (manifest.capabilities.find(
+      (c) => c.family === "nutrition-algorithm",
+    ) as NutritionAlgorithmPluginCapability | undefined) ?? null
+  );
+}
+
+function getNutritionAnalyticsCapability(
+  manifest: PluginManifest,
+): NutritionAnalyticsPluginCapability | null {
+  return (
+    (manifest.capabilities.find(
+      (c) => c.family === "nutrition-analytics",
+    ) as NutritionAnalyticsPluginCapability | undefined) ?? null
+  );
 }
 
 function getBundleUrl(manifest: PluginManifest): string | null {
@@ -262,6 +305,115 @@ async function installedAnalyticsById(id: string): Promise<AnalyticsPlugin | nul
   return isPluginAnalytics(entry) ? entry : null;
 }
 
+// ── Nutrition algorithms ─────────────────────────────────────────────────────
+
+async function installedNutritionAlgorithms(): Promise<NutritionAlgorithmMeta[]> {
+  const installed = await listInstalledPluginManifests();
+  const out: NutritionAlgorithmMeta[] = [];
+  for (const plugin of installed) {
+    if (!plugin.enabled || plugin.manifest.family !== "nutrition-algorithm") continue;
+    const capability = getNutritionAlgorithmCapability(plugin.manifest);
+    const bundleUrl = getBundleUrl(plugin.manifest);
+    if (!capability || !bundleUrl) continue;
+    const module = await loadBundle(bundleUrl);
+    const contract = module ? resolvePluginBundleContract(module, plugin.manifest) : null;
+    const entry = module ? resolvePluginBundleEntry(module, contract) : null;
+    if (!isPluginNutritionAlgorithm(entry)) continue;
+    out.push({
+      id: capability.algorithmId,
+      name: plugin.manifest.name,
+      description: plugin.manifest.description,
+      author: plugin.manifest.author,
+    });
+  }
+  return out;
+}
+
+async function installedNutritionAlgorithmById(id: string): Promise<NutritionAlgorithm | null> {
+  const installed = await listInstalledPluginManifests();
+  const plugin = installed.find(
+    (p) =>
+      p.enabled &&
+      p.manifest.family === "nutrition-algorithm" &&
+      getNutritionAlgorithmCapability(p.manifest)?.algorithmId === id,
+  );
+  if (!plugin) return null;
+  const bundleUrl = getBundleUrl(plugin.manifest);
+  if (!bundleUrl) return null;
+  const module = await loadBundle(bundleUrl);
+  if (!module) return null;
+  const contract = resolvePluginBundleContract(module, plugin.manifest);
+  const entry = resolvePluginBundleEntry(module, contract);
+  return isPluginNutritionAlgorithm(entry) ? entry : null;
+}
+
+function nutritionAlgorithmRegistry(): NutritionAlgorithmRegistry {
+  const builtin = createLocalNutritionAlgorithmRegistry();
+  return {
+    async list() {
+      return [...(await builtin.list()), ...(await installedNutritionAlgorithms())];
+    },
+    async get(id: string) {
+      return (await builtin.get(id)) ?? installedNutritionAlgorithmById(id);
+    },
+  };
+}
+
+// ── Nutrition analytics ──────────────────────────────────────────────────────
+
+async function installedNutritionAnalytics(): Promise<NutritionAnalyticsPluginMeta[]> {
+  const installed = await listInstalledPluginManifests();
+  const out: NutritionAnalyticsPluginMeta[] = [];
+  for (const plugin of installed) {
+    if (!plugin.enabled || plugin.manifest.family !== "nutrition-analytics") continue;
+    const capability = getNutritionAnalyticsCapability(plugin.manifest);
+    const bundleUrl = getBundleUrl(plugin.manifest);
+    if (!capability || !bundleUrl) continue;
+    const module = await loadBundle(bundleUrl);
+    const contract = module ? resolvePluginBundleContract(module, plugin.manifest) : null;
+    const entry = module ? resolvePluginBundleEntry(module, contract) : null;
+    if (!isPluginNutritionAnalytics(entry)) continue;
+    out.push({
+      id: capability.analyticsId,
+      name: plugin.manifest.name,
+      description: plugin.manifest.description,
+      author: plugin.manifest.author,
+      metricDefinitions: entry.metricDefinitions,
+    });
+  }
+  return out;
+}
+
+async function installedNutritionAnalyticsById(id: string): Promise<NutritionAnalyticsPlugin | null> {
+  const installed = await listInstalledPluginManifests();
+  const plugin = installed.find(
+    (p) =>
+      p.enabled &&
+      p.manifest.family === "nutrition-analytics" &&
+      getNutritionAnalyticsCapability(p.manifest)?.analyticsId === id,
+  );
+  if (!plugin) return null;
+  const bundleUrl = getBundleUrl(plugin.manifest);
+  if (!bundleUrl) return null;
+  const module = await loadBundle(bundleUrl);
+  if (!module) return null;
+  const contract = resolvePluginBundleContract(module, plugin.manifest);
+  const entry = resolvePluginBundleEntry(module, contract);
+  return isPluginNutritionAnalytics(entry) ? entry : null;
+}
+
+function nutritionAnalyticsRegistry(): NutritionAnalyticsRegistry {
+  const builtin = createLocalNutritionAnalyticsRegistry();
+  return {
+    async list() {
+      return [...(await builtin.list()), ...(await installedNutritionAnalytics())];
+    },
+    async get(id: string) {
+      return (await builtin.get(id)) ?? installedNutritionAnalyticsById(id);
+    },
+  };
+}
+
 function analyticsRegistry(): AnalyticsRegistry {
   const builtin = createLocalAnalyticsRegistry();
 
@@ -327,6 +479,10 @@ export async function inspectPluginBundle(
       ? "progression-algorithm"
     : isPluginAnalytics(entry)
       ? "analytics"
+    : isPluginNutritionAlgorithm(entry)
+      ? "nutrition-algorithm"
+    : isPluginNutritionAnalytics(entry)
+      ? "nutrition-analytics"
       : contract?.family ?? "unknown";
 
   return {
@@ -352,6 +508,8 @@ export function createPluginRuntime() {
     },
     algorithms: algorithmRegistry(),
     analytics: analyticsRegistry(),
+    nutritionAlgorithms: nutritionAlgorithmRegistry(),
+    nutritionAnalytics: nutritionAnalyticsRegistry(),
     describeBundle: describePluginBundleContract,
     inspectPluginBundle,
   };

@@ -6,6 +6,8 @@ import type { ExerciseRepo } from "@logit/core/data/exercise/exerciseRepo";
 import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
 import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
 import type { AnalyticsRegistry } from "@logit/core/domain/analytics";
+import type { NutritionAlgorithmRegistry } from "@logit/core/domain/nutritionAlgorithm";
+import type { NutritionAnalyticsRegistry } from "@logit/core/domain/nutritionAnalytics";
 
 import { isNativePlatform } from "$lib/platform/isNative";
 
@@ -67,6 +69,8 @@ let foodDbRepo: FoodDbRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
 let analyticsRegistry: AnalyticsRegistry | null = null;
+let nutritionAlgorithmRegistry: NutritionAlgorithmRegistry | null = null;
+let nutritionAnalyticsRegistry: NutritionAnalyticsRegistry | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -112,6 +116,8 @@ export async function initRepos(): Promise<void> {
 
   algorithmRegistry = pluginRuntime.algorithms;
   analyticsRegistry = pluginRuntime.analytics;
+  nutritionAlgorithmRegistry = pluginRuntime.nutritionAlgorithms;
+  nutritionAnalyticsRegistry = pluginRuntime.nutritionAnalytics;
 
   if (isNativePlatform()) {
     await withTimeout(initSqlite(), 10_000, "initSqlite");
@@ -254,4 +260,16 @@ export function getAnalyticsRegistry(): AnalyticsRegistry {
   if (!analyticsRegistry)
     throw new Error("AnalyticsRegistry not initialized. Call initRepos() first.");
   return analyticsRegistry;
+}
+
+export function getNutritionAlgorithmRegistry(): NutritionAlgorithmRegistry {
+  if (!nutritionAlgorithmRegistry)
+    throw new Error("NutritionAlgorithmRegistry not initialized. Call initRepos() first.");
+  return nutritionAlgorithmRegistry;
+}
+
+export function getNutritionAnalyticsRegistry(): NutritionAnalyticsRegistry {
+  if (!nutritionAnalyticsRegistry)
+    throw new Error("NutritionAnalyticsRegistry not initialized. Call initRepos() first.");
+  return nutritionAnalyticsRegistry;
 }

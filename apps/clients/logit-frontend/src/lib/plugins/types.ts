@@ -2,7 +2,9 @@ export type PluginFamily =
   | "widget"
   | "progression-algorithm"
   | "exercise-pack"
-  | "analytics";
+  | "analytics"
+  | "nutrition-algorithm"
+  | "nutrition-analytics";
 
 export type PluginOrigin = "builtin" | "manual" | "url" | "activitypub";
 
@@ -59,11 +61,23 @@ export type AnalyticsPluginCapability = {
   analyticsId: string;
 };
 
+export type NutritionAlgorithmPluginCapability = {
+  family: "nutrition-algorithm";
+  algorithmId: string;
+};
+
+export type NutritionAnalyticsPluginCapability = {
+  family: "nutrition-analytics";
+  analyticsId: string;
+};
+
 export type PluginCapability =
   | WidgetPluginCapability
   | ProgressionAlgorithmPluginCapability
   | ExercisePackPluginCapability
-  | AnalyticsPluginCapability;
+  | AnalyticsPluginCapability
+  | NutritionAlgorithmPluginCapability
+  | NutritionAnalyticsPluginCapability;
 
 export type PluginManifest = {
   id: string;

@@ -1,6 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Target, Scale, Trash2 } from "lucide-svelte";
+  import {
+    ArrowLeft,
+    ChartNoAxesColumn,
+    ChevronLeft,
+    ChevronRight,
+    Plus,
+    Target,
+    Scale,
+    Trash2,
+  } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
   import {
@@ -12,6 +21,8 @@
     type MealSlot,
   } from "@logit/core/domain/nutrition";
   import { getNutritionRepo } from "$lib/data/repoProvider";
+  import { getNutritionDeps } from "$lib/features/nutrition/deps";
+  import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { pushNutritionDay } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
   import MacroBars from "$lib/features/nutrition/MacroBars.svelte";
@@ -19,7 +30,6 @@
   import {
     fmtKcal,
     fmtWeight,
-    resolveNutritionState,
     totalsFor,
     type NutritionState,
     type WeightUnit,
@@ -59,7 +69,7 @@
       const fallbackKg = $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
       [day, nut] = await Promise.all([
         repo.getDay(dateIso),
-        resolveNutritionState(repo, fallbackKg),
+        getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg }),
       ]);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load";
@@ -78,10 +88,11 @@
 
   const sourceBadge = $derived.by(() => {
     if (!nut?.goal) return null;
-    if (!nut.targets) return { label: "Add height & birth date", variant: "outline" as const };
-    if (nut.targets.source === "manual") return { label: "Manual target", variant: "outline" as const };
-    if (nut.adaptiveActive) return { label: "Adaptive", variant: "secondary" as const };
-    return { label: "Calculated", variant: "outline" as const };
+    if (!nut.targets) {
+      return { label: nut.targetsHint ?? "Add height & birth date", variant: "outline" as const };
+    }
+    const variant = nut.targets.sourceLabel === "Adaptive" ? ("secondary" as const) : ("outline" as const);
+    return { label: nut.targets.sourceLabel, variant };
   });
 
   onMount(() => void load());
@@ -93,7 +104,10 @@
       <ArrowLeft class="h-4 w-4" />
     </button>
     <h1 class="text-sm font-semibold">Nutrition</h1>
-    <a href="/nutrition/goal" class="ml-auto h-8 px-2 flex items-center gap-1 text-xs text-muted-foreground">
+    <a href="/nutrition/insights" class="ml-auto h-8 px-2 flex items-center gap-1 text-xs text-muted-foreground">
+      <ChartNoAxesColumn class="h-4 w-4" /> Insights
+    </a>
+    <a href="/nutrition/goal" class="h-8 px-2 flex items-center gap-1 text-xs text-muted-foreground">
       <Target class="h-4 w-4" /> Goal
     </a>
   </div>

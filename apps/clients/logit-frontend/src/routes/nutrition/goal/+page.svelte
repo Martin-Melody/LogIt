@@ -6,17 +6,30 @@
   import { Badge } from "$lib/components/ui/badge";
   import {
     defaultNutritionGoal,
+    resolveAlgorithmId,
     touchGoal,
     type ActivityLevel,
     type GoalType,
     type NutritionGoal,
     type Sex,
   } from "@logit/core/domain/nutrition";
-  import { computeTargets } from "@logit/core/nutrition/targets";
+  import { macroTargets } from "@logit/core/nutrition/targets";
   import { smoothWeightSeries } from "@logit/core/nutrition/trend";
+  import type { AlgorithmPreferencesField, NutritionAlgorithmMeta } from "@logit/core/domain/nutritionAlgorithm";
+  import {
+    getNutritionAlgorithmConfig,
+    getNutritionAlgorithmPreferences,
+    setNutritionAlgorithm,
+    setNutritionAlgorithmPreferences,
+  } from "@logit/core/usecases/nutrition/getNutritionAlgorithmConfig";
+  import { recentDailyIntake } from "@logit/core/usecases/nutrition/getNutritionTargets";
+  import type { DailyIntakePoint } from "@logit/core/domain/nutritionAlgorithm";
+  import type { WeightEntry } from "@logit/core/domain/nutrition";
   import { getNutritionRepo } from "$lib/data/repoProvider";
+  import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { pushNutritionGoal } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
+  import AlgorithmPreferencesForm from "$lib/components/AlgorithmPreferencesForm.svelte";
   import {
     displayToKg,
     kgToDisplay,
@@ -36,6 +49,14 @@
   const ui = $state({ loading: true, saved: false });
   let goal = $state<NutritionGoal>(defaultNutritionGoal());
   let currentWeightKg = $state<number | null>(null);
+  let weightEntries = $state<WeightEntry[]>([]);
+  let dailyIntake = $state<DailyIntakePoint[]>([]);
+
+  // Algorithm picker + its live preferences.
+  let algorithms = $state<(NutritionAlgorithmMeta & { hasPreferences: boolean })[]>([]);
+  let algoSchema = $state<AlgorithmPreferencesField[]>([]);
+  let algoPrefs = $state<Record<string, unknown>>({});
+  const selectedAlgoId = $derived(resolveAlgorithmId(goal));
 
   const weightUnit = $derived(($profile.weightUnit ?? "kg") as WeightUnit);
   const heightUnit = $derived(($profile.heightUnit ?? "cm") as "cm" | "in");
@@ -45,20 +66,78 @@
   let targetWeightDisplay = $state("");
   let heightDisplay = $state("");
 
-  const preview = $derived.by(() => {
-    const g: NutritionGoal = {
+  /** The goal as currently edited in the form (before Save). */
+  function liveGoal(): NutritionGoal {
+    return {
       ...goal,
-      heightCm: heightUnit === "in" ? (Number(heightDisplay) || 0) * 2.54 : Number(heightDisplay) || undefined,
+      heightCm:
+        heightUnit === "in"
+          ? (Number(heightDisplay) || 0) * 2.54
+          : Number(heightDisplay) || undefined,
       targetRateKgPerWeek:
         goal.goalType === "maintain" ? 0 : displayToKg(Number(rateDisplay) || 0, weightUnit),
-      targetWeightKg: targetWeightDisplay ? displayToKg(Number(targetWeightDisplay), weightUnit) : undefined,
+      targetWeightKg: targetWeightDisplay
+        ? displayToKg(Number(targetWeightDisplay), weightUnit)
+        : undefined,
     };
-    return computeTargets(g, { weightKg: currentWeightKg ?? undefined });
+  }
+
+  let previewAlgo = $state<
+    import("@logit/core/domain/nutritionAlgorithm").NutritionAlgorithm | null
+  >(null);
+
+  const preview = $derived.by(() => {
+    if (!previewAlgo) return null;
+    const g = liveGoal();
+    const out = previewAlgo.computeTargets({
+      goal: g,
+      currentWeightKg: currentWeightKg ?? undefined,
+      weightEntries,
+      dailyIntakeKcal: dailyIntake,
+      userPreferences: algoPrefs,
+      now: Date.now(),
+    });
+    if (!out.kcal || out.kcal <= 0) return null;
+    const macros =
+      out.macros ??
+      macroTargets({
+        kcalTarget: out.kcal,
+        weightKg: currentWeightKg ?? 0,
+        proteinGPerKg: g.proteinGPerKg,
+        fatPct: g.fatPct,
+      });
+    return {
+      kcal: out.kcal,
+      macros,
+      sourceLabel: out.sourceLabel ?? "",
+      maintenanceKcal: out.maintenanceKcal ?? null,
+    };
   });
+
+  async function loadAlgorithm(id: string) {
+    const deps = getNutritionDeps();
+    const [prefs, algo] = await Promise.all([
+      getNutritionAlgorithmPreferences(goal, id, deps),
+      deps.nutritionAlgorithmRegistry.get(id),
+    ]);
+    algoSchema = prefs?.schema ?? [];
+    algoPrefs = prefs?.values ?? {};
+    previewAlgo = algo;
+  }
 
   async function load() {
     const repo = getNutritionRepo();
-    const [existing, weights] = await Promise.all([repo.getGoal(), repo.listWeightEntries()]);
+    const deps = getNutritionDeps();
+    const [existing, weights, intake, config] = await Promise.all([
+      repo.getGoal(),
+      repo.listWeightEntries(),
+      recentDailyIntake(repo, 35, Date.now()),
+      getNutritionAlgorithmConfig(null, deps),
+    ]);
+    weightEntries = weights;
+    dailyIntake = intake;
+    algorithms = config.algorithms;
+
     const trend = smoothWeightSeries(weights);
     currentWeightKg =
       trend.currentKg ?? ($profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null);
@@ -71,7 +150,19 @@
     } else if ($profile.height != null && $profile.heightUnit === heightUnit) {
       heightDisplay = String($profile.height);
     }
+
+    await loadAlgorithm(resolveAlgorithmId(goal));
     ui.loading = false;
+  }
+
+  async function selectAlgorithm(id: string) {
+    goal = setNutritionAlgorithm(goal, id);
+    await loadAlgorithm(id);
+  }
+
+  function setAlgoPref(key: string, value: unknown) {
+    algoPrefs = { ...algoPrefs, [key]: value };
+    goal = setNutritionAlgorithmPreferences(goal, selectedAlgoId, algoPrefs);
   }
 
   async function save() {
@@ -185,18 +276,40 @@
         </div>
       </div>
 
-      <!-- Adaptive -->
+      <!-- Algorithm -->
       <div class="px-3 py-3 flex flex-col gap-2">
-        <label class="flex items-center justify-between">
-          <span class="flex flex-col">
-            <span class="text-xs font-semibold">Adaptive targets</span>
-            <span class="text-[11px] text-muted-foreground">Adjust calories weekly from your real weight trend.</span>
-          </span>
-          <input type="checkbox" class="h-4 w-4" bind:checked={goal.adaptiveEnabled} />
-        </label>
-        <label class="flex flex-col gap-1">
+        <span class="text-xs font-semibold">Algorithm</span>
+        <p class="text-[11px] text-muted-foreground -mt-1">
+          How your calorie target is worked out. Install more from the Plugins screen.
+        </p>
+        <div class="flex flex-col gap-1">
+          {#each algorithms as a (a.id)}
+            <button
+              type="button"
+              class="text-left rounded px-2.5 py-2 border {selectedAlgoId === a.id
+                ? 'border-primary bg-primary/5'
+                : 'border-border'}"
+              onclick={() => void selectAlgorithm(a.id)}
+            >
+              <span class="text-sm font-medium">{a.name}</span>
+              <span class="block text-[11px] text-muted-foreground">{a.description}</span>
+            </button>
+          {/each}
+        </div>
+
+        {#if algoSchema.length}
+          <div class="mt-1 rounded border border-border px-3">
+            <AlgorithmPreferencesForm schema={algoSchema} values={algoPrefs} onChange={setAlgoPref} />
+          </div>
+        {/if}
+
+        <label class="flex flex-col gap-1 mt-1">
           <span class="text-[11px] text-muted-foreground">Manual calorie override (optional)</span>
-          <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" bind:value={goal.manualCalorieTarget} />
+          <input
+            class="bg-muted rounded px-2 py-1.5 text-sm outline-none"
+            inputmode="numeric"
+            bind:value={goal.manualCalorieTarget}
+          />
         </label>
       </div>
 
@@ -204,18 +317,28 @@
       <div class="px-3 py-3 flex flex-col gap-1.5">
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold">Your target</span>
-          {#if preview}<Badge variant="outline" class="text-[10px] capitalize">{preview.source}</Badge>{/if}
+          {#if goal.manualCalorieTarget}
+            <Badge variant="outline" class="text-[10px]">Manual</Badge>
+          {:else if preview?.sourceLabel}
+            <Badge variant="outline" class="text-[10px]">{preview.sourceLabel}</Badge>
+          {/if}
         </div>
-        {#if preview}
+        {#if goal.manualCalorieTarget}
+          <div class="text-sm tabular-nums">
+            <span class="font-semibold">{fmtKcal(Number(goal.manualCalorieTarget))} kcal</span>
+          </div>
+        {:else if preview}
           <div class="text-sm tabular-nums">
             <span class="font-semibold">{fmtKcal(preview.kcal)} kcal</span>
             <span class="text-muted-foreground">
               · P {fmtGrams(preview.macros.proteinG)} · C {fmtGrams(preview.macros.carbsG)} · F {fmtGrams(preview.macros.fatG)}
             </span>
           </div>
-          <p class="text-[11px] text-muted-foreground">
-            Maintenance ≈ {fmtKcal(preview.expenditure)} kcal
-          </p>
+          {#if preview.maintenanceKcal}
+            <p class="text-[11px] text-muted-foreground">
+              Maintenance ≈ {fmtKcal(preview.maintenanceKcal)} kcal
+            </p>
+          {/if}
         {:else}
           <p class="text-xs text-muted-foreground">Add your birth date, height and a recent weight to see a target.</p>
         {/if}
