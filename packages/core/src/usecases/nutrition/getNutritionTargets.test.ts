@@ -41,9 +41,19 @@ function fakeRepo(opts: { goal?: NutritionGoal | null; weight?: WeightEntry[]; d
 }
 
 const registry = createLocalNutritionAlgorithmRegistry();
-const deps = (repo: ReturnType<typeof fakeRepo>) => ({
+const deps = (repo: ReturnType<typeof fakeRepo>, assignedPlan?: import("../../domain/CoachNutritionPlan").CoachNutritionPlan | null) => ({
   nutritionRepo: repo,
   nutritionAlgorithmRegistry: registry,
+  assignedNutritionPlanRepo: {
+    async getAssignedPlan() {
+      return assignedPlan ?? null;
+    },
+    async listAssignedPlans() {
+      return assignedPlan ? [assignedPlan] : [];
+    },
+    async upsertFromRemote() {},
+    async removeFromRemote() {},
+  },
 });
 
 describe("getNutritionTargets", () => {
@@ -83,6 +93,37 @@ describe("getNutritionTargets", () => {
     expect(s.algorithm).toBeNull();
     expect(s.targetsHint).toMatch(/not installed/);
     expect(s.targets).toBeNull();
+  });
+
+  it("a coach-assigned plan wins over the algorithm and the manual override", async () => {
+    const plan = {
+      id: "cnplan_1",
+      name: "Coach targets",
+      kcalTarget: 1850,
+      proteinG: 180,
+      archived: false,
+      createdAtMs: 1,
+      updatedAtMs: 2,
+    };
+    const s = await getNutritionTargets(
+      deps(fakeRepo({ goal: goal({ manualCalorieTarget: 3000 }) }), plan),
+      { fallbackWeightKg: 80, now: NOW },
+    );
+    expect(s.coachPlan?.id).toBe("cnplan_1");
+    expect(s.targets?.source).toBe("coach");
+    expect(s.targets?.sourceLabel).toBe("From your coach");
+    expect(s.targets?.kcal).toBe(1850);
+    expect(s.targets?.macros.proteinG).toBe(180); // coach-set
+    expect(s.targets?.macros.carbsG).toBeGreaterThan(0); // filled from the goal split
+  });
+
+  it("has no coachPlan when the repo isn't provided", async () => {
+    const s = await getNutritionTargets(
+      { nutritionRepo: fakeRepo({ goal: goal() }), nutritionAlgorithmRegistry: registry },
+      { fallbackWeightKg: 80, now: NOW },
+    );
+    expect(s.coachPlan).toBeNull();
+    expect(s.targets?.source).toBe("algorithm");
   });
 
   it("derives macros from the goal when a community algorithm returns only kcal", async () => {

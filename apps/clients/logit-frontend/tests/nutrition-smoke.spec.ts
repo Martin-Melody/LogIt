@@ -144,3 +144,31 @@ test("nutrition personal flow", async ({ page }) => {
   await expect(page.getByText("Weight change")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/09-insights.png`, fullPage: true });
 });
+
+test("a coach-assigned plan supersedes the client's own target", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true }));
+    localStorage.setItem("logit:had_account", "1");
+    localStorage.setItem(
+      "logit:coachNutritionPlans:v1",
+      JSON.stringify({
+        cnplan_x: {
+          id: "cnplan_x",
+          name: "Coach targets",
+          kcalTarget: 1900,
+          proteinG: 175,
+          note: "Two weeks at a deficit, then we reassess.",
+          archived: false,
+          createdAtMs: 1,
+          updatedAtMs: 2,
+        },
+      }),
+    );
+  });
+  await page.goto("/nutrition");
+  await expect(page.getByText("From your coach")).toBeVisible();
+  await expect(page.getByText("Two weeks at a deficit")).toBeVisible();
+  await expect(page.getByText("1900")).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/11-coach-plan.png`, fullPage: true });
+});
