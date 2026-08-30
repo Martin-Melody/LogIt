@@ -32,6 +32,21 @@ public static class SyncEndpoints
 
         group.MapPost("/profile", PushProfile).RequireTier(UserTier.Pro);
         group.MapGet("/profile", PullProfile).RequireTier(UserTier.Pro);
+
+        // Nutrition. Diary, weight and goal flow to a Studio coach (Phase 3 dashboard), so an
+        // actively-coached Free client gets those — same rule as sessions/checkins. The
+        // custom-food and recipe libraries are whole-account multi-device sync → Pro-only.
+        var nutrition = group.MapGroup("/nutrition");
+        nutrition.MapPost("/days", PushNutritionDays).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        nutrition.MapGet("/days", PullNutritionDays).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        nutrition.MapPost("/weight", PushWeightEntries).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        nutrition.MapGet("/weight", PullWeightEntries).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        nutrition.MapPost("/goal", PushNutritionGoal).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        nutrition.MapGet("/goal", PullNutritionGoal).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        nutrition.MapPost("/custom-foods", PushCustomFoods).RequireTier(UserTier.Pro);
+        nutrition.MapGet("/custom-foods", PullCustomFoods).RequireTier(UserTier.Pro);
+        nutrition.MapPost("/recipes", PushRecipes).RequireTier(UserTier.Pro);
+        nutrition.MapGet("/recipes", PullRecipes).RequireTier(UserTier.Pro);
     }
 
     // ── Sessions ─────────────────────────────────────────────────────────────
@@ -417,6 +432,149 @@ public static class SyncEndpoints
 
         return authorized ? (clientId, null) : (null, Results.Forbid());
     }
+
+    // ── Nutrition ────────────────────────────────────────────────────────────
+    // Diary days, custom foods, recipes and weight entries all share ISyncedNutritionRow, so
+    // one generic push/pull pair covers them. Semantics match check-in submissions:
+    // last-write-wins by UpdatedAtMs, tombstone via DeletedAtMs, pull cursor on SyncedAt.
+
+    private static async Task<IResult> PushNutritionRows<T>(
+        Guid userId, List<NutritionRowDto> rows, DbSet<T> set, AppDbContext db)
+        where T : class, ISyncedNutritionRow, new()
+    {
+        if (rows.Count == 0) return Results.NoContent();
+
+        var clientIds = rows.Select(r => r.Id).ToList();
+        var existing = await set
+            .Where(s => s.UserId == userId && clientIds.Contains(s.ClientId))
+            .ToListAsync();
+        var existingMap = existing.ToDictionary(s => s.ClientId);
+
+        var toInsert = new List<T>();
+        foreach (var dto in rows)
+        {
+            if (existingMap.TryGetValue(dto.Id, out var stored))
+            {
+                if (dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                {
+                    stored.DeletedAtMs = dto.DeletedAtMs;
+                    stored.DataJson = string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+                else if (!dto.DeletedAtMs.HasValue && dto.UpdatedAtMs > stored.UpdatedAtMs)
+                {
+                    stored.UpdatedAtMs = dto.UpdatedAtMs;
+                    stored.DataJson = dto.DataJson ?? string.Empty;
+                    stored.SyncedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                toInsert.Add(new T
+                {
+                    ClientId = dto.Id,
+                    UserId = userId,
+                    CreatedAtMs = dto.CreatedAtMs,
+                    UpdatedAtMs = dto.UpdatedAtMs,
+                    DataJson = dto.DataJson ?? string.Empty,
+                    DeletedAtMs = dto.DeletedAtMs,
+                });
+            }
+        }
+
+        if (toInsert.Count > 0) set.AddRange(toInsert);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static Task<List<NutritionRowDto>> PullNutritionRows<T>(
+        Guid? userId, long since, DbSet<T> set)
+        where T : class, ISyncedNutritionRow
+    {
+        var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
+        return set
+            .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc)
+            .OrderBy(s => s.SyncedAt)
+            .Select(s => new NutritionRowDto(
+                s.ClientId, s.CreatedAtMs, s.UpdatedAtMs,
+                s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs))
+            .ToListAsync();
+    }
+
+    private static Task<IResult> PushNutritionDays(
+        [FromBody] PushNutritionDaysRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushNutritionRows(caller.GetUserId(), req.Days, db.SyncedNutritionDays, db);
+
+    private static async Task<IResult> PullNutritionDays(
+        [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
+        return Results.Ok(new { days = await PullNutritionRows(userId, since, db.SyncedNutritionDays) });
+    }
+
+    private static Task<IResult> PushWeightEntries(
+        [FromBody] PushWeightEntriesRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushNutritionRows(caller.GetUserId(), req.Entries, db.SyncedWeightEntries, db);
+
+    private static async Task<IResult> PullWeightEntries(
+        [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
+        return Results.Ok(new { entries = await PullNutritionRows(userId, since, db.SyncedWeightEntries) });
+    }
+
+    private static Task<IResult> PushCustomFoods(
+        [FromBody] PushCustomFoodsRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushNutritionRows(caller.GetUserId(), req.Foods, db.SyncedCustomFoods, db);
+
+    private static async Task<IResult> PullCustomFoods(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { foods = await PullNutritionRows(caller.GetUserId(), since, db.SyncedCustomFoods) });
+
+    private static Task<IResult> PushRecipes(
+        [FromBody] PushRecipesRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushNutritionRows(caller.GetUserId(), req.Recipes, db.SyncedRecipes, db);
+
+    private static async Task<IResult> PullRecipes(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { recipes = await PullNutritionRows(caller.GetUserId(), since, db.SyncedRecipes) });
+
+    // Goal — a singleton on User, synced like the profile blob.
+
+    private static async Task<IResult> PushNutritionGoal(
+        [FromBody] NutritionGoalDto dto, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var user = await db.Users.FindAsync(caller.GetUserId());
+        if (user is null) return Results.NotFound();
+
+        if (dto.UpdatedAtMs > user.NutritionGoalUpdatedAtMs)
+        {
+            user.NutritionGoalJson = dto.DataJson;
+            user.NutritionGoalUpdatedAtMs = dto.UpdatedAtMs;
+            await db.SaveChangesAsync();
+        }
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> PullNutritionGoal(
+        [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
+
+        var row = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.NutritionGoalJson, u.NutritionGoalUpdatedAtMs })
+            .FirstOrDefaultAsync();
+
+        if (row?.NutritionGoalJson is null)
+            return Results.Ok(new { goal = (NutritionGoalDto?)null });
+
+        return Results.Ok(new { goal = new NutritionGoalDto(row.NutritionGoalJson, row.NutritionGoalUpdatedAtMs) });
+    }
 }
 
 public record PushSessionsRequest(List<SessionDto> Sessions);
@@ -443,3 +601,15 @@ public record ProfileDto(
     string RestDefaultsJson,
     long UpdatedAtMs
 );
+
+/// One nutrition sync row — diary day, custom food, recipe or weight entry (see
+/// ISyncedNutritionRow). `Id` is the app-generated client id.
+public record NutritionRowDto(
+    string Id, long CreatedAtMs, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);
+
+public record PushNutritionDaysRequest(List<NutritionRowDto> Days);
+public record PushCustomFoodsRequest(List<NutritionRowDto> Foods);
+public record PushRecipesRequest(List<NutritionRowDto> Recipes);
+public record PushWeightEntriesRequest(List<NutritionRowDto> Entries);
+
+public record NutritionGoalDto(string DataJson, long UpdatedAtMs);

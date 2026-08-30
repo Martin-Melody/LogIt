@@ -383,6 +383,45 @@ namespace Logit.Api.Migrations
                     b.ToTable("SyncedCheckinSubmissions");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCustomFood", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedCustomFoods");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
                 {
                     b.Property<Guid>("Id")
@@ -416,6 +455,84 @@ namespace Logit.Api.Migrations
                     b.ToTable("SyncedExercises");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedNutritionDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedNutritionDays");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedRecipe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedRecipes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedSplit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -447,6 +564,45 @@ namespace Logit.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SyncedSplits");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedWeightEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedWeightEntries");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedWorkoutSession", b =>
@@ -504,6 +660,12 @@ namespace Logit.Api.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("NutritionGoalJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("NutritionGoalUpdatedAtMs")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("OnboardingCompleted")
                         .HasColumnType("INTEGER");
@@ -737,6 +899,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCustomFood", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
@@ -748,7 +921,40 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedNutritionDay", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedRecipe", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedSplit", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedWeightEntry", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany()
