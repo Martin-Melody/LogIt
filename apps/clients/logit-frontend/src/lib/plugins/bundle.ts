@@ -2,10 +2,15 @@ import type { Component } from "svelte";
 import type { PluginManifest, PluginFamily } from "./types";
 import type { ProgressionAlgorithm } from "@logit/core/domain/progression";
 import type { AnalyticsPlugin } from "@logit/core/domain/analytics";
+import type { NutritionAlgorithm } from "@logit/core/domain/nutritionAlgorithm";
+import type { NutritionAnalyticsPlugin } from "@logit/core/domain/nutritionAnalytics";
 
 export const PLUGIN_BUNDLE_FORMAT_VERSION = 1 as const;
 
-export type PluginBundleFamily = Extract<PluginFamily, "widget" | "progression-algorithm" | "analytics">;
+export type PluginBundleFamily = Extract<
+  PluginFamily,
+  "widget" | "progression-algorithm" | "analytics" | "nutrition-algorithm" | "nutrition-analytics"
+>;
 
 export type PluginBundleContract = {
   formatVersion: typeof PLUGIN_BUNDLE_FORMAT_VERSION;
@@ -22,14 +27,27 @@ export type PluginWidgetRenderer = {
   renderHtml: () => string;
 };
 
-type BundleEntry = Component | ProgressionAlgorithm | AnalyticsPlugin | PluginWidgetRenderer | unknown;
+type BundleEntry =
+  | Component
+  | ProgressionAlgorithm
+  | AnalyticsPlugin
+  | NutritionAlgorithm
+  | NutritionAnalyticsPlugin
+  | PluginWidgetRenderer
+  | unknown;
 
 function isString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 function isBundleFamily(value: unknown): value is PluginBundleFamily {
-  return value === "widget" || value === "progression-algorithm" || value === "analytics";
+  return (
+    value === "widget" ||
+    value === "progression-algorithm" ||
+    value === "analytics" ||
+    value === "nutrition-algorithm" ||
+    value === "nutrition-analytics"
+  );
 }
 
 export function isPluginBundleContract(value: unknown): value is PluginBundleContract {
@@ -105,6 +123,26 @@ export function isPluginAnalytics(value: unknown): value is AnalyticsPlugin {
     typeof (value as AnalyticsPlugin).compute === "function" &&
     "metricDefinitions" in value &&
     Array.isArray((value as AnalyticsPlugin).metricDefinitions)
+  );
+}
+
+export function isPluginNutritionAlgorithm(value: unknown): value is NutritionAlgorithm {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "computeTargets" in value &&
+    typeof (value as NutritionAlgorithm).computeTargets === "function"
+  );
+}
+
+export function isPluginNutritionAnalytics(value: unknown): value is NutritionAnalyticsPlugin {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "compute" in value &&
+    typeof (value as NutritionAnalyticsPlugin).compute === "function" &&
+    "metricDefinitions" in value &&
+    Array.isArray((value as NutritionAnalyticsPlugin).metricDefinitions)
   );
 }
 

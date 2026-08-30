@@ -2,7 +2,17 @@ import { browser } from "$app/environment";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
+import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
+import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import type { InstalledPlugin, PluginManifest } from "./types";
+
+const BUNDLED_BUNDLE_FAMILIES = new Set<PluginManifest["family"]>([
+  "widget",
+  "progression-algorithm",
+  "analytics",
+  "nutrition-algorithm",
+  "nutrition-analytics",
+]);
 
 const INSTALLED_STORAGE_KEY = "logit:plugins:installed:v1";
 const HOME_STORAGE_KEY = "logit:home-config:v1";
@@ -28,10 +38,7 @@ function saveInstalled(installed: InstalledPlugin[]): void {
 function validateInstallableManifest(manifest: PluginManifest): void {
   if (manifest.distribution.origin === "builtin") return;
 
-  if (
-    (manifest.family === "widget" || manifest.family === "progression-algorithm" || manifest.family === "analytics") &&
-    !manifest.distribution.bundleUrl
-  ) {
+  if (BUNDLED_BUNDLE_FAMILIES.has(manifest.family) && !manifest.distribution.bundleUrl) {
     throw new Error(
       `Plugin ${manifest.id} is missing a bundleUrl and cannot be installed yet.`,
     );
@@ -136,11 +143,41 @@ async function makeAnalyticsManifests(): Promise<PluginManifest[]> {
   }));
 }
 
+async function makeNutritionAlgorithmManifests(): Promise<PluginManifest[]> {
+  const algorithms = await createLocalNutritionAlgorithmRegistry().list();
+  return algorithms.map((algo) => ({
+    id: `builtin.nutrition-algorithm.${algo.id}`,
+    family: "nutrition-algorithm",
+    name: algo.name,
+    description: algo.description,
+    version: "1.0.0",
+    author: algo.author ?? "logit",
+    distribution: { origin: "builtin" },
+    capabilities: [{ family: "nutrition-algorithm", algorithmId: algo.id }],
+  }));
+}
+
+async function makeNutritionAnalyticsManifests(): Promise<PluginManifest[]> {
+  const plugins = await createLocalNutritionAnalyticsRegistry().list();
+  return plugins.map((plugin) => ({
+    id: `builtin.nutrition-analytics.${plugin.id}`,
+    family: "nutrition-analytics",
+    name: plugin.name,
+    description: plugin.description,
+    version: "1.0.0",
+    author: plugin.author ?? "logit",
+    distribution: { origin: "builtin" },
+    capabilities: [{ family: "nutrition-analytics", analyticsId: plugin.id }],
+  }));
+}
+
 export async function listBuiltinPluginManifests(): Promise<PluginManifest[]> {
   return [
     ...makeWidgetManifest(),
     ...(await makeProgressionManifests()),
     ...(await makeAnalyticsManifests()),
+    ...(await makeNutritionAlgorithmManifests()),
+    ...(await makeNutritionAnalyticsManifests()),
   ];
 }
 
