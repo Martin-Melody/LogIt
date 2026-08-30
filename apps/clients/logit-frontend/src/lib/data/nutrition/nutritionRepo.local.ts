@@ -113,6 +113,10 @@ export function createLocalNutritionRepo(): NutritionRepo {
         )
         .sort((a, b) => a.dateIso.localeCompare(b.dateIso));
     },
+    async getWeightEntry(id) {
+      const e = read<WeightEntry>(KEYS.weight)[id];
+      return e && !e.deletedAtMs ? e : null;
+    },
     async saveWeightEntry(entry) {
       put(KEYS.weight, entry.id, entry);
     },

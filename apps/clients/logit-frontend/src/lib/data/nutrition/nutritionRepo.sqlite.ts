@@ -149,6 +149,11 @@ export function createSqliteNutritionRepo(): NutritionRepo {
         params,
       );
     },
+    getWeightEntry: (id) =>
+      jsonRow<WeightEntry>(
+        `SELECT data_json FROM weight_entries WHERE id = ? AND (owner_id = ? OR owner_id IS NULL) AND deleted_at_ms IS NULL`,
+        [id, owner()],
+      ),
     saveWeightEntry: (e) =>
       upsert("weight_entries", e.id, e, e.createdAtMs, e.updatedAtMs, e.dateIso),
     deleteWeightEntry: (id) => tombstone("weight_entries", id),
