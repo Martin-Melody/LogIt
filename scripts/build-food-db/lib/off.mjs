@@ -4,14 +4,12 @@
 //   • the CSV export  (en.openfoodfacts.org.products.csv[.gz], tab-separated, ~1 GB gz)
 //   • the JSONL dump  (openfoodfacts-products.jsonl[.gz], one JSON product per line, ~9 GB gz)
 //
-// We stream it, keep products with a barcode + name + complete, plausible nutrition, apply
-// the tier's country and popularity filters, dedupe by barcode (best row wins), then rank
-// by scan popularity and cap at tier.maxProducts.
+// Streamed line by line. Memory stays bounded: we keep at most ~2× the tier's target and
+// prune the lowest-scoring rows whenever the working set grows past that.
 
 import { createReadStream } from "node:fs";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
-import { config } from "../config.mjs";
 import {
   acceptRow,
   buildServings,
@@ -19,6 +17,7 @@ import {
   clampKcal,
   clampMacro,
   completeness,
+  detach,
   r2,
 } from "./normalize.mjs";
 
@@ -36,21 +35,29 @@ function kcalFrom(kcalRaw, energyRaw) {
   return NaN;
 }
 
-/** OFF `popularity_tags` carries entries like "top-75-percent-scans-2020" when scan
- *  counts are absent from an export. Map that to a coarse ordinal. */
-function popularityFromTags(tags) {
+/** Real scan count. 0 for a missing / blank / unparseable value. */
+function scanCount(view) {
+  const raw = view.unique_scans_n ?? view.scans_n;
+  if (raw == null || String(raw).trim() === "") return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** OFF `popularity_tags` carries entries like "top-75-percent-scans-2020" (sometimes with a
+ *  language prefix). Map the best one to a 0–100 ordinal — used only for ranking. */
+function tagOrdinal(tags) {
   let best = 0;
-  for (const t of tags) {
-    const m = /^top-(\d+)-percent-scans/.exec(t);
+  for (const t of tags ?? []) {
+    const m = /top-(\d+)-percent-scans/.exec(t);
     if (m) best = Math.max(best, 101 - Number(m[1])); // top-5-percent -> 96
   }
   return best;
 }
 
-function popularityOf(view) {
-  const scans = Number(view.unique_scans_n ?? view.scans_n ?? 0);
-  if (Number.isFinite(scans) && scans > 0) return Math.round(scans);
-  return popularityFromTags(view.popularity_tags ?? []);
+/** Ranking weight: real scans when the product has any, else the tag ordinal (0–100). */
+function rankScore(view) {
+  const sc = scanCount(view);
+  return sc > 0 ? sc : tagOrdinal(view.popularity_tags);
 }
 
 /** @returns {FoodRow | null} */
@@ -68,20 +75,22 @@ export function normalizeOffProduct(view, tier) {
   if (!Number.isFinite(kcal)) return null;
 
   const servingGrams = Number(view.serving_quantity);
+  // detach() every retained string: `name` etc. may be slices of a multi-KB CSV line, and
+  // keeping ~250k of those alive pins ~250k full lines — an easy multi-GB leak.
   const row = {
-    id: `off:${barcode}`,
+    id: detach(`off:${barcode}`),
     source: "off",
-    name,
-    brand: cleanName(String(view.brands ?? "").split(",")[0]) || null,
-    barcode,
+    name: detach(name),
+    brand: detach(cleanName(String(view.brands ?? "").split(",")[0])) || null,
+    barcode: detach(barcode),
     kcal_100g: clampKcal(kcal),
     protein_100g: r2(clampMacro(view.proteins_100g ?? 0)),
     carb_100g: r2(clampMacro(view.carbohydrates_100g ?? 0)),
     fat_100g: r2(clampMacro(view.fat_100g ?? 0)),
-    popularity: popularityOf(view),
+    popularity: Math.round(Math.max(0, rankScore(view))),
     servings: buildServings(
       servingGrams > 0
-        ? [{ label: cleanName(view.serving_size) || "serving", grams: servingGrams }]
+        ? [{ label: detach(cleanName(view.serving_size)) || "serving", grams: servingGrams }]
         : [],
     ),
   };
@@ -89,6 +98,10 @@ export function normalizeOffProduct(view, tier) {
 }
 
 // ── format adapters: raw line -> a flat "view" normalizeOffProduct understands ────────────
+
+function splitTags(s) {
+  return String(s ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+}
 
 function viewFromJson(p) {
   const n = p.nutriments ?? {};
@@ -110,32 +123,55 @@ function viewFromJson(p) {
   };
 }
 
-function viewFromCsvRow(cols, idx) {
-  const get = (k) => (idx[k] != null ? cols[idx[k]] : undefined);
-  const splitTags = (s) => String(s ?? "").split(",").map((t) => t.trim()).filter(Boolean);
-  return {
-    code: get("code"),
-    product_name: get("product_name"),
-    brands: get("brands"),
-    countries_tags: splitTags(get("countries_tags")),
-    serving_quantity: get("serving_quantity"),
-    serving_size: get("serving_size"),
-    kcal_100g_raw: get("energy-kcal_100g"),
-    energy_100g_raw: get("energy_100g"),
-    proteins_100g: get("proteins_100g"),
-    carbohydrates_100g: get("carbohydrates_100g"),
-    fat_100g: get("fat_100g"),
-    unique_scans_n: get("unique_scans_n"),
-    scans_n: get("scans_n"),
-    popularity_tags: splitTags(get("popularity_tags")),
-  };
-}
-
+/** The OFF CSV columns we read (everything else is skipped without allocating). */
 const CSV_COLUMNS = [
   "code", "product_name", "brands", "countries_tags", "serving_quantity", "serving_size",
   "energy-kcal_100g", "energy_100g", "proteins_100g", "carbohydrates_100g", "fat_100g",
   "unique_scans_n", "scans_n", "popularity_tags",
 ];
+
+/**
+ * Pull just the wanted columns out of one tab-separated line in a single pass — an OFF CSV
+ * row has ~110 columns and some are multi-KB, so splitting the whole thing per line is the
+ * difference between a bounded build and an OOM.
+ * @param {string} line
+ * @param {number[]} wantAsc  column indices, ascending
+ * @returns {string[]}  values in the same order as `wantAsc`
+ */
+function pickTsv(line, wantAsc) {
+  const out = new Array(wantAsc.length);
+  let col = 0;
+  let start = 0;
+  let w = 0;
+  for (let i = 0; i <= line.length && w < wantAsc.length; i++) {
+    if (i === line.length || line.charCodeAt(i) === 9 /* \t */) {
+      if (col === wantAsc[w]) out[w++] = line.slice(start, i);
+      col++;
+      start = i + 1;
+    }
+  }
+  return out;
+}
+
+function viewFromCsvValues(values, slotOf) {
+  const at = (k) => (slotOf[k] != null ? values[slotOf[k]] : undefined);
+  return {
+    code: at("code"),
+    product_name: at("product_name"),
+    brands: at("brands"),
+    countries_tags: splitTags(at("countries_tags")),
+    serving_quantity: at("serving_quantity"),
+    serving_size: at("serving_size"),
+    kcal_100g_raw: at("energy-kcal_100g"),
+    energy_100g_raw: at("energy_100g"),
+    proteins_100g: at("proteins_100g"),
+    carbohydrates_100g: at("carbohydrates_100g"),
+    fat_100g: at("fat_100g"),
+    unique_scans_n: at("unique_scans_n"),
+    scans_n: at("scans_n"),
+    popularity_tags: splitTags(at("popularity_tags")),
+  };
+}
 
 /**
  * Stream an OFF export and return the curated set for one tier.
@@ -150,23 +186,38 @@ export async function loadOffExport(path, tier) {
   const rl = createInterface({ input: stream, crlfDelay: Infinity });
 
   /** @type {Map<string, { row: FoodRow, score: number }>} */
-  const best = new Map();
+  let best = new Map();
+  const pruneAt = Math.max(Math.round(tier.maxProducts * 1.5), 50_000);
+
   let seen = 0;
   let kept = 0;
-  /** @type {Record<string, number>|null} */
-  let csvIdx = null;
+
+  // CSV header state.
+  let wantAsc = null; // ascending column indices to extract
+  let slotOf = null; // column name -> its slot in the extracted array
+  let hasScanColumn = !isCsv; // JSONL products carry unique_scans_n when scanned
+
+  const prune = () => {
+    const rows = [...best.values()].sort((a, b) => b.score - a.score);
+    best = new Map(rows.slice(0, tier.maxProducts).map((e) => [e.row.barcode, e]));
+  };
 
   for await (const line of rl) {
     if (!line) continue;
 
-    if (isCsv && csvIdx === null) {
+    if (isCsv && wantAsc === null) {
       const header = line.split("\t");
-      csvIdx = {};
+      slotOf = {};
+      const idxs = [];
       for (const c of CSV_COLUMNS) {
         const i = header.indexOf(c);
-        if (i >= 0) csvIdx[c] = i;
+        if (i >= 0) idxs.push([c, i]);
       }
-      if (csvIdx.code == null || csvIdx.product_name == null) {
+      idxs.sort((a, b) => a[1] - b[1]);
+      wantAsc = idxs.map(([, i]) => i);
+      idxs.forEach(([c], slot) => (slotOf[c] = slot));
+      hasScanColumn = slotOf.unique_scans_n != null || slotOf.scans_n != null;
+      if (slotOf.code == null || slotOf.product_name == null) {
         throw new Error("OFF CSV: missing 'code' / 'product_name' columns — wrong file?");
       }
       continue;
@@ -181,7 +232,7 @@ export async function loadOffExport(path, tier) {
 
     let view;
     if (isCsv) {
-      view = viewFromCsvRow(line.split("\t"), csvIdx);
+      view = viewFromCsvValues(pickTsv(line, wantAsc), slotOf);
     } else {
       try {
         view = viewFromJson(JSON.parse(line));
@@ -190,26 +241,33 @@ export async function loadOffExport(path, tier) {
       }
     }
 
-    const pop = popularityOf(view);
-    if (pop < tier.minPopularityScans) continue;
+    // Popularity gate. Prefer real scan counts; fall back to the tag ordinal only when the
+    // export carries no scan column at all (so a scan-less export still yields something).
+    if (hasScanColumn) {
+      if (scanCount(view) < tier.minPopularityScans) continue;
+    } else if (tagOrdinal(view.popularity_tags) < 26) {
+      continue; // roughly: not in the top 75% by scan share
+    }
 
     const row = normalizeOffProduct(view, tier);
     if (!row) continue;
     kept++;
 
-    // Rank primarily by popularity, break ties toward the more complete row.
-    const score = pop * 10 + completeness(row);
+    // Rank by popularity, break ties toward the more complete row.
+    const score = Math.max(0, rankScore(view)) * 10 + completeness(row);
     const existing = best.get(row.barcode);
     if (!existing || score > existing.score) best.set(row.barcode, { row, score });
+
+    if (best.size > pruneAt) prune();
   }
 
+  prune();
   process.stderr.write(
     `  OFF: ${seen.toLocaleString()} products, ${kept.toLocaleString()} passed filters, ` +
-      `${best.size.toLocaleString()} unique\n`,
+      `${best.size.toLocaleString()} kept\n`,
   );
 
   return [...best.values()]
     .sort((a, b) => b.score - a.score)
-    .slice(0, tier.maxProducts)
     .map((x) => x.row);
 }

@@ -103,11 +103,15 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
       if (await hasFts()) {
         const match = ftsQuery(q);
         if (!match) return [];
+        // Blend BM25 relevance (`rank`, negative — lower is better) with a small bounded
+        // popularity nudge (≤2 rank-points), so a bare "banana" surfaces the generic entry
+        // ahead of an obscure branded "…Bananallama…" without letting a high-scan brand
+        // name swamp relevance. Generic USDA/CIQUAL foods carry popularity ~400.
         const rows = await query(
           `SELECT ${F_COLS} FROM foods_fts
            JOIN foods f ON f.rowid = foods_fts.rowid
            WHERE foods_fts MATCH ?${sourceClause}
-           ORDER BY rank, f.popularity DESC LIMIT ?`,
+           ORDER BY rank - (MIN(f.popularity, 800) / 400.0) LIMIT ?`,
           [match, ...sourceParam, limit],
         );
         return rows.map(toFoodRef);

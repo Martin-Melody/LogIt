@@ -11,16 +11,26 @@ app build.
 
 | Tier | Command | What's in it | Size | Ships as |
 |---|---|---|---|---|
-| **core** | `npm run build` | USDA + CIQUAL generics, plus the ~250k most-scanned packaged products across the EU + North America | ~55–70 MB on disk, **~18–25 MB zipped** | inside the app (`static` asset) |
-| **full** | `npm run build:full` | everything that passes the quality filter, worldwide (~1M products) | ~280 MB / ~75 MB zipped | optional on-demand download |
+| **core** | `npm run build` | USDA + CIQUAL generics (~11.5k), plus the packaged products scanned ≥3× across the EU + North America (~244k) | ~56 MB on disk, **~19 MB zipped** | inside the app (`static` asset) |
+| **full** | `npm run build:full` | everything that passes the quality filter, worldwide | ~larger | optional on-demand download |
 | sample | `npm run build:sample` | tiny build from `fixtures/` — for app dev + CI | a few KB | — |
+
+*(figures from the Nov-2025 exports: 255,655 foods total)*
 
 Anything beyond the installed tier is served live by the Open Food Facts API
 (`createOpenFoodFactsRepo`), and looked-up items are cached locally — so each user's DB
 effectively self-tailors to their diet over time.
 
 Tune coverage in `config.mjs`: `tiers.core.maxProducts`, `minPopularityScans`, the
-`CORE_COUNTRIES` list, and the `limits.*` plausibility filters.
+`CORE_COUNTRIES` list, and the `limits.*` plausibility filters. Lower `minPopularityScans`
+to 2 if the core tier comes in well under target.
+
+### Memory
+
+The OFF stream (~4.5M rows, ~9 GB inflated) is processed with a bounded working set — every
+retained string is copied off its source line (V8 `SlicedString`s would otherwise pin whole
+multi-KB rows alive), and the candidate set is pruned to the tier target. A core build peaks
+around **1 GB RSS**; `npm run build` still passes `--max-old-space-size=4096` for headroom.
 
 ## Prerequisites
 

@@ -56,8 +56,12 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
 
 **Remaining before ship:**
 
-- [ ] Run `scripts/build-food-db` (`npm run download && npm run build` + save the CIQUAL
-      CSV) and drop `dist/food.zip` into `static/assets/databases/` before the release build
+- [x] Run `scripts/build-food-db` — done 2026-08-30 against the Nov-2025 exports:
+      **255,655 foods** (244k OFF scanned ≥3× EU+NA, 8.1k USDA, 3.4k CIQUAL),
+      `food.zip` **19 MB**, copied into `static/assets/databases/`. Re-run to refresh.
+- [ ] Search-ranking quality pass: generic terms like "milk" / "apple" still surface
+      branded matches (Milka, Appletiser) over generics. Needs a curated common-foods
+      boost list + exact-token weighting, beyond the current BM25 + popularity blend.
 - [ ] On-device smoke test: bundled `food.zip` unpacks + FTS works on Android;
       `/sync/nutrition/*` round-trips with a Pro token; the barcode scanner gets camera
       access in the Capacitor webview (zxing via `getUserMedia` — no native plugin)

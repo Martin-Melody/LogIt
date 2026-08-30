@@ -39,6 +39,15 @@ export function cleanName(s) {
     .slice(0, 200);
 }
 
+/**
+ * Return a standalone copy of a string, not a V8 SlicedString that pins its (possibly
+ * multi-KB) parent line alive. Critical when retaining a handful of fields out of a giant
+ * streamed CSV row — see loadOffExport.
+ */
+export function detach(s) {
+  return s == null ? s : Buffer.from(String(s), "utf8").toString("utf8");
+}
+
 /** Always include a raw 100 g option; dedupe by gram weight. */
 export function buildServings(extra = []) {
   const out = [{ label: "100 g", grams: 100 }];

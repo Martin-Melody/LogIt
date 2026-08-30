@@ -5,8 +5,8 @@
   "description": "Builds the bundled food database (food.db) shipped with the app",
   "scripts": {
     "download": "node download.mjs",
-    "build": "node build.mjs",
-    "build:full": "node build.mjs --full",
+    "build": "node --max-old-space-size=4096 build.mjs",
+    "build:full": "node --max-old-space-size=8192 build.mjs --full",
     "build:sample": "node build.mjs --sample",
     "test": "node --test"
   },

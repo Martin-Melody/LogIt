@@ -53,8 +53,16 @@ const paths = sample
     };
 
 async function collectRows() {
-  const rows = [];
   const offTier = sample ? sampleTier : tier;
+
+  // Dedupe on id as we go; if two sources collide, keep the more complete row.
+  const byId = new Map();
+  const add = (list) => {
+    for (const r of list) {
+      const prev = byId.get(r.id);
+      if (!prev || completeness(r) > completeness(prev)) byId.set(r.id, r);
+    }
+  };
 
   for (const dir of paths.usda) {
     if (!existsSync(dir)) {
@@ -63,13 +71,13 @@ async function collectRows() {
     }
     const bundle = await loadUsdaBundle(dir);
     console.log(`  USDA ${dir.split("/").pop()}: ${bundle.length.toLocaleString()} foods`);
-    rows.push(...bundle);
+    add(bundle);
   }
 
   if (paths.ciqual && existsSync(paths.ciqual)) {
     const ciqual = await loadCiqualTable(paths.ciqual);
     console.log(`  CIQUAL: ${ciqual.length.toLocaleString()} foods`);
-    rows.push(...ciqual);
+    add(ciqual);
   } else {
     console.warn(`! skipping CIQUAL (not found): ${rel(paths.ciqual)}`);
   }
@@ -78,17 +86,11 @@ async function collectRows() {
     console.log(`  Open Food Facts: reading ${rel(paths.off)} …`);
     const off = await loadOffExport(paths.off, offTier);
     console.log(`  Open Food Facts: ${off.length.toLocaleString()} products (${offTier === sampleTier ? "sample" : tier.name} tier)`);
-    rows.push(...off);
+    add(off);
   } else {
     console.warn(`! skipping Open Food Facts (not found): run \`npm run download\``);
   }
 
-  // Dedupe on id; if two sources collide, keep the more complete row.
-  const byId = new Map();
-  for (const r of rows) {
-    const prev = byId.get(r.id);
-    if (!prev || completeness(r) > completeness(prev)) byId.set(r.id, r);
-  }
   return [...byId.values()];
 }
 
