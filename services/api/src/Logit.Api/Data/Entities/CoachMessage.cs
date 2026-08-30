@@ -19,6 +19,9 @@ public class CoachMessage
     public string Body { get; set; } = string.Empty;
     public long CreatedAtMs { get; set; }
 
+    /// When set (YYYY-MM-DD), this message is a comment on the client's diary for that date.
+    public string? ContextDateIso { get; set; }
+
     /// Set by the *recipient* when they've seen it (drives unread counts).
     public long? ReadAtMs { get; set; }
 

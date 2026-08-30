@@ -107,6 +107,9 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ContextDateIso")
+                        .HasColumnType("text");
+
                     b.Property<long>("CreatedAtMs")
                         .HasColumnType("bigint");
 

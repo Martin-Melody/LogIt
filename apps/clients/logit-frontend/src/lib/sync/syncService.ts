@@ -448,6 +448,7 @@ export async function pullAndMergeMessages(): Promise<void> {
         readAtMs: m.readAtMs,
         mine: m.mine,
         synced: true,
+        contextDateIso: m.contextDateIso ?? undefined,
       });
     }
     setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());
@@ -462,6 +463,7 @@ export function pushMessage(message: CoachMessage): void {
     messageId: message.id,
     body: message.body,
     createdAtMs: message.createdAtMs,
+    contextDateIso: message.contextDateIso,
   };
   messagesApi
     .send(dto)
@@ -481,6 +483,7 @@ export async function pushPendingMessages(): Promise<void> {
           messageId: m.id,
           body: m.body,
           createdAtMs: m.createdAtMs,
+          contextDateIso: m.contextDateIso,
         });
         await repo.markSynced(m.id);
       } catch {}

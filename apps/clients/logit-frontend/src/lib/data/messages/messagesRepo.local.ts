@@ -53,5 +53,10 @@ export function createLocalMessagesRepo(): MessagesRepo {
         (m) => !m.mine && m.readAtMs == null && (!relationshipId || m.relationshipId === relationshipId),
       ).length;
     },
+    async listCommentsForDate(dateIso: string): Promise<CoachMessage[]> {
+      return Object.values(readAll())
+        .filter((m) => m.contextDateIso === dateIso)
+        .sort((a, b) => a.createdAtMs - b.createdAtMs);
+    },
   };
 }

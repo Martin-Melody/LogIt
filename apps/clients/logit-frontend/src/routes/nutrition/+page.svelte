@@ -23,7 +23,8 @@
     type DiaryDay,
     type MealSlot,
   } from "@logit/core/domain/nutrition";
-  import { getNutritionRepo } from "$lib/data/repoProvider";
+  import { getNutritionRepo, getMessagesRepo } from "$lib/data/repoProvider";
+  import type { CoachMessage } from "@logit/core/domain/CoachMessage";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { pushNutritionDay } from "$lib/sync/syncService";
@@ -42,6 +43,7 @@
   let dateIso = $state(localDateIso());
   let day = $state<DiaryDay | null>(null);
   let nut = $state<NutritionState | null>(null);
+  let coachComments = $state<CoachMessage[]>([]);
 
   const unit = $derived(($profile.weightUnit ?? "kg") as WeightUnit);
   const consumed = $derived(totalsFor(day));
@@ -62,6 +64,9 @@
 
   async function loadDay() {
     day = (await getNutritionRepo().getDay(dateIso)) ?? null;
+    coachComments = await getMessagesRepo()
+      .listCommentsForDate(dateIso)
+      .catch(() => []);
   }
 
   async function load() {
@@ -70,10 +75,14 @@
     try {
       const repo = getNutritionRepo();
       const fallbackKg = $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
-      [day, nut] = await Promise.all([
+      const [d, n, comments] = await Promise.all([
         repo.getDay(dateIso),
         getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg }),
+        getMessagesRepo().listCommentsForDate(dateIso).catch(() => []),
       ]);
+      day = d;
+      nut = n;
+      coachComments = comments;
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load";
     } finally {
@@ -166,6 +175,18 @@
       {/if}
       <MacroBars consumed={consumed} target={nut?.targets?.macros ?? null} />
     </div>
+
+    {#if coachComments.length}
+      <div class="px-3 py-2.5 border-b border-border flex flex-col gap-1.5">
+        <span class="text-xs text-muted-foreground">Coach comments · {isToday ? "today" : dateIso}</span>
+        {#each coachComments as c (c.id)}
+          <div class="rounded bg-muted/50 px-2 py-1.5 text-[11px]">
+            <span class="text-muted-foreground">{c.mine ? "You" : "Coach"}</span>
+            <p class="whitespace-pre-line">{c.body}</p>
+          </div>
+        {/each}
+      </div>
+    {/if}
 
     {#if nut?.coachPlan?.meals?.length}
       <a href="/nutrition/plan" class="flex items-center gap-2 px-3 py-2.5 border-b border-border text-sm text-primary">

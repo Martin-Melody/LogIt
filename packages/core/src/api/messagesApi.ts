@@ -6,6 +6,7 @@ export interface RemoteMessage {
   createdAtMs: number;
   readAtMs: number | null;
   mine: boolean;
+  contextDateIso?: string | null;
 }
 
 export interface SendMessageInput {
@@ -13,6 +14,8 @@ export interface SendMessageInput {
   messageId: string;
   body: string;
   createdAtMs: number;
+  /** Optional — tags the message as a comment on the client's diary for this date. */
+  contextDateIso?: string;
 }
 
 export const messagesApi = {

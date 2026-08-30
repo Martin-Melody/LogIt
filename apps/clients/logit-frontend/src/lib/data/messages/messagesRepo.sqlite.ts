@@ -11,6 +11,7 @@ type Row = {
   read_at_ms: number | null;
   mine: number;
   synced: number;
+  context_date_iso: string | null;
 };
 
 function toMessage(r: Row): CoachMessage {
@@ -22,6 +23,7 @@ function toMessage(r: Row): CoachMessage {
     readAtMs: r.read_at_ms,
     mine: r.mine === 1,
     synced: r.synced === 1,
+    contextDateIso: r.context_date_iso ?? undefined,
   };
 }
 
@@ -41,9 +43,9 @@ export function createSqliteMessagesRepo(): MessagesRepo {
     async addOutgoing(m: CoachMessage): Promise<void> {
       const db = getDb();
       await db.run(
-        `INSERT OR IGNORE INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced)
-         VALUES(?, ?, ?, ?, ?, NULL, 1, 0)`,
-        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs],
+        `INSERT OR IGNORE INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso)
+         VALUES(?, ?, ?, ?, ?, NULL, 1, 0, ?)`,
+        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.contextDateIso ?? null],
       );
     },
 
@@ -55,13 +57,14 @@ export function createSqliteMessagesRepo(): MessagesRepo {
     async upsertFromRemote(m: CoachMessage): Promise<void> {
       const db = getDb();
       await db.run(
-        `INSERT INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced)
-         VALUES(?, ?, ?, ?, ?, ?, ?, 1)
+        `INSERT INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso)
+         VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?)
          ON CONFLICT(id) DO UPDATE SET
            body = excluded.body,
            read_at_ms = excluded.read_at_ms,
+           context_date_iso = excluded.context_date_iso,
            synced = 1`,
-        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.readAtMs ?? null, m.mine ? 1 : 0],
+        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.readAtMs ?? null, m.mine ? 1 : 0, m.contextDateIso ?? null],
       );
     },
 
@@ -100,6 +103,17 @@ export function createSqliteMessagesRepo(): MessagesRepo {
             [getActiveOwnerId()],
           );
       return Number((res.values?.[0] as { n: number } | undefined)?.n ?? 0);
+    },
+
+    async listCommentsForDate(dateIso: string): Promise<CoachMessage[]> {
+      const db = getDb();
+      const res = await db.query(
+        `SELECT * FROM coach_messages
+         WHERE (owner_id = ? OR owner_id IS NULL) AND context_date_iso = ?
+         ORDER BY created_at_ms ASC`,
+        [getActiveOwnerId(), dateIso],
+      );
+      return ((res.values ?? []) as Row[]).map(toMessage);
     },
   };
 }

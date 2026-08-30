@@ -12,9 +12,16 @@ export type CoachMessage = {
   mine: boolean;
   /** False until the server has acknowledged the send (optimistic local messages). */
   synced?: boolean;
+  /** When set, this message is a comment on the client's diary for that date (YYYY-MM-DD).
+   * The client surfaces it inline on /nutrition for that day; it still lives in the thread. */
+  contextDateIso?: string;
 };
 
-export function createOutgoingMessage(relationshipId: string, body: string): CoachMessage {
+export function createOutgoingMessage(
+  relationshipId: string,
+  body: string,
+  contextDateIso?: string,
+): CoachMessage {
   return {
     id: createId("msg"),
     relationshipId,
@@ -23,5 +30,6 @@ export function createOutgoingMessage(relationshipId: string, body: string): Coa
     readAtMs: null,
     mine: true,
     synced: false,
+    contextDateIso,
   };
 }

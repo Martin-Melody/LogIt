@@ -204,3 +204,35 @@ test("a coach-assigned plan supersedes the target and shows a meal plan", async 
   await page.goto("/nutrition");
   await expect(page.getByText(/Oats/).first()).toBeVisible();
 });
+
+test("a coach comment on a diary day shows inline on that day", async ({ page }) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await page.addInitScript(
+    (dateIso) => {
+      localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+      localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true }));
+      localStorage.setItem("logit:had_account", "1");
+      localStorage.setItem(
+        "logit:coachMessages:v1",
+        JSON.stringify({
+          msg_c1: {
+            id: "msg_c1",
+            relationshipId: "rel_1",
+            body: "Great protein hit today — keep the carbs up around training.",
+            createdAtMs: Date.now(),
+            readAtMs: null,
+            mine: false,
+            synced: true,
+            contextDateIso: dateIso,
+          },
+        }),
+      );
+    },
+    today,
+  );
+
+  await page.goto("/nutrition");
+  await expect(page.getByText(/Coach comments/)).toBeVisible();
+  await expect(page.getByText("Great protein hit today")).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/12-coach-comment.png`, fullPage: true });
+});
