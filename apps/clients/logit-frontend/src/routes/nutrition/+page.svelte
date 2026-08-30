@@ -87,12 +87,13 @@
   }
 
   const sourceBadge = $derived.by(() => {
-    if (!nut?.goal) return null;
+    if (!nut) return null;
+    if (!nut.goal && !nut.coachPlan) return null;
     if (!nut.targets) {
       return { label: nut.targetsHint ?? "Add height & birth date", variant: "outline" as const };
     }
-    const variant = nut.targets.sourceLabel === "Adaptive" ? ("secondary" as const) : ("outline" as const);
-    return { label: nut.targets.sourceLabel, variant };
+    const prominent = nut.targets.source === "coach" || nut.targets.sourceLabel === "Adaptive";
+    return { label: nut.targets.sourceLabel, variant: prominent ? ("secondary" as const) : ("outline" as const) };
   });
 
   onMount(() => void load());
@@ -136,7 +137,7 @@
   {:else}
     <!-- Targets -->
     <div class="px-3 py-3 border-b border-border">
-      {#if !nut?.goal}
+      {#if !nut?.goal && !nut?.coachPlan}
         <a href="/nutrition/goal" class="flex items-center gap-2 text-sm text-primary">
           <Target class="h-4 w-4" /> Set a goal for calorie &amp; macro targets
         </a>
@@ -145,6 +146,9 @@
           <span class="text-xs text-muted-foreground">Daily target</span>
           {#if sourceBadge}<Badge variant={sourceBadge.variant} class="text-[10px]">{sourceBadge.label}</Badge>{/if}
         </div>
+        {#if nut?.coachPlan?.note}
+          <p class="text-[11px] text-muted-foreground mb-2 whitespace-pre-line">{nut.coachPlan.note}</p>
+        {/if}
       {/if}
       <MacroBars consumed={consumed} target={nut?.targets?.macros ?? null} />
     </div>

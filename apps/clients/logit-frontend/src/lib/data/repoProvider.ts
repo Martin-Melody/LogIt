@@ -17,8 +17,11 @@ import { createSqliteNutritionRepo } from "$lib/data/nutrition/nutritionRepo.sql
 import { createLocalNutritionRepo } from "$lib/data/nutrition/nutritionRepo.local";
 import { createSqliteFoodDbRepo } from "$lib/data/nutrition/foodDbRepo.sqlite";
 import { createLocalFoodDbRepo } from "$lib/data/nutrition/foodDbRepo.local";
+import { createSqliteCoachNutritionPlanRepo } from "$lib/data/nutrition/coachNutritionPlanRepo.sqlite";
+import { createLocalCoachNutritionPlanRepo } from "$lib/data/nutrition/coachNutritionPlanRepo.local";
 import type { NutritionRepo } from "@logit/core/data/nutritionRepo";
 import type { FoodDbRepo } from "@logit/core/data/foodDbRepo";
+import type { AssignedNutritionPlanRepo } from "@logit/core/data/coachNutritionPlanRepo";
 
 import { createLocalWorkoutRepo } from "$lib/data/workoutRepo.local";
 import { createLocalSplitRepo } from "$lib/data/splitRepo.local";
@@ -66,6 +69,7 @@ let authoredCheckinRepo: AuthoredCheckinRepo | null = null;
 let messagesRepo: MessagesRepo | null = null;
 let nutritionRepo: NutritionRepo | null = null;
 let foodDbRepo: FoodDbRepo | null = null;
+let coachNutritionPlanRepo: AssignedNutritionPlanRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
 let analyticsRegistry: AnalyticsRegistry | null = null;
@@ -140,6 +144,7 @@ export async function initRepos(): Promise<void> {
     authoredCheckinRepo = createSqliteAuthoredCheckinRepo();
     messagesRepo = createSqliteMessagesRepo();
     nutritionRepo = createSqliteNutritionRepo();
+    coachNutritionPlanRepo = createSqliteCoachNutritionPlanRepo();
     progressionRepo = createSqliteProgressionRepo();
 
     // Bundled food DB is optional — open it if this build shipped one, else use the online
@@ -163,6 +168,7 @@ export async function initRepos(): Promise<void> {
   authoredCheckinRepo = createLocalAuthoredCheckinRepo();
   messagesRepo = createLocalMessagesRepo();
   nutritionRepo = createLocalNutritionRepo();
+  coachNutritionPlanRepo = createLocalCoachNutritionPlanRepo();
   foodDbRepo = createLocalFoodDbRepo();
   progressionRepo = createLocalProgressionRepo();
   didInit = true;
@@ -180,6 +186,7 @@ export function resetRepos(): void {
   authoredCheckinRepo = null;
   messagesRepo = null;
   nutritionRepo = null;
+  coachNutritionPlanRepo = null;
   foodDbRepo = null;
   progressionRepo = null;
 }
@@ -236,6 +243,12 @@ export function getNutritionRepo(): NutritionRepo {
   if (!nutritionRepo)
     throw new Error("NutritionRepo not initialized. Call initRepos() first.");
   return nutritionRepo;
+}
+
+export function getCoachNutritionPlanRepo(): AssignedNutritionPlanRepo {
+  if (!coachNutritionPlanRepo)
+    throw new Error("CoachNutritionPlanRepo not initialized. Call initRepos() first.");
+  return coachNutritionPlanRepo;
 }
 
 export function getFoodDbRepo(): FoodDbRepo {

@@ -2,6 +2,7 @@ import { writable } from "svelte/store";
 import { apiClient } from "@logit/core/api/client";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { coachProgramApi } from "@logit/core/api/coachProgramApi";
+import { coachNutritionPlanApi } from "@logit/core/api/coachNutritionPlanApi";
 import { checkinApi } from "@logit/core/api/checkinApi";
 import { messagesApi } from "@logit/core/api/messagesApi";
 import {
@@ -14,11 +15,13 @@ import {
   getAuthoredCheckinRepo,
   getMessagesRepo,
   getNutritionRepo,
+  getCoachNutritionPlanRepo,
 } from "$lib/data/repoProvider";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+import type { CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
 import type { CheckinSchedule, CheckinSubmission } from "@logit/core/domain/Checkin";
 import type { CoachMessage } from "@logit/core/domain/CoachMessage";
 import type { Exercise } from "@logit/core/domain/exercise";
@@ -37,6 +40,7 @@ const SESSIONS_LAST_PULLED_KEY = "logit:sync:sessionsLastPulledAt";
 const SPLITS_LAST_PULLED_KEY = "logit:sync:splitsLastPulledAt";
 const EXERCISES_LAST_PULLED_KEY = "logit:sync:exercisesLastPulledAt";
 const COACH_PROGRAMS_LAST_PULLED_KEY = "logit:sync:coachProgramsLastPulledAt";
+const COACH_NUTRITION_PLANS_LAST_PULLED_KEY = "logit:sync:coachNutritionPlansLastPulledAt";
 const CHECKIN_SCHEDULES_LAST_PULLED_KEY = "logit:sync:checkinSchedulesLastPulledAt";
 const CHECKIN_SUBMISSIONS_LAST_PULLED_KEY = "logit:sync:checkinSubmissionsLastPulledAt";
 const MESSAGES_LAST_PULLED_KEY = "logit:sync:messagesLastPulledAt";
@@ -255,6 +259,30 @@ export async function pullAndMergeCoachPrograms(): Promise<void> {
     }
 
     setTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
+/** Pull the nutrition plan(s) a coach has assigned into the local read-only mirror. */
+export async function pullAndMergeCoachNutritionPlan(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const since = getTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY);
+    const remote = await coachNutritionPlanApi.pullAssigned(since);
+    if (remote.length === 0) {
+      setTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY, Date.now());
+      return;
+    }
+    const repo = getCoachNutritionPlanRepo();
+    for (const entry of remote) {
+      if (entry.deletedAtMs || !entry.dataJson) {
+        await repo.removeFromRemote(entry.planId).catch(() => {});
+        continue;
+      }
+      try {
+        await repo.upsertFromRemote(JSON.parse(entry.dataJson) as CoachNutritionPlan);
+      } catch {}
+    }
+    setTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY, Date.now());
   } catch {}
 }
 
@@ -699,6 +727,7 @@ export async function syncAll(): Promise<void> {
     pullAndMergeSplits(),
     pullAndMergeExercises(),
     pullAndMergeCoachPrograms(),
+    pullAndMergeCoachNutritionPlan(),
     pullAndMergeCheckinSchedules(),
     pullAndMergeCheckinSubmissions(),
     pullAndMergeMessages(),

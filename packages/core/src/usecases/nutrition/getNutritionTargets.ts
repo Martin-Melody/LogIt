@@ -7,6 +7,7 @@ import {
   type NutritionGoal,
 } from "../../domain/nutrition";
 import type { NutritionAlgorithmMeta, DailyIntakePoint } from "../../domain/nutritionAlgorithm";
+import { planMacros, type CoachNutritionPlan } from "../../domain/CoachNutritionPlan";
 import type { NutritionRepo } from "../../data/nutritionRepo";
 import { macroTargets } from "../../nutrition/targets";
 import {
@@ -22,14 +23,16 @@ export type ResolvedTargets = {
   macros: MacroTotals;
   /** Estimated maintenance calories, if the algorithm reported one. */
   maintenanceKcal: number | null;
-  /** Short badge label, e.g. "Adaptive", "Calculated", "Manual". */
+  /** Short badge label, e.g. "Adaptive", "Calculated", "Manual", "From your coach". */
   sourceLabel: string;
-  source: "manual" | "algorithm";
+  source: "manual" | "algorithm" | "coach";
 };
 
 export type NutritionState = {
   goal: NutritionGoal | null;
   algorithm: NutritionAlgorithmMeta | null;
+  /** The coach-assigned plan, if one is active. Its targets are in effect. */
+  coachPlan: CoachNutritionPlan | null;
   targets: ResolvedTargets | null;
   /** When targets is null but the algorithm gave a reason (e.g. "Add height & birth date"). */
   targetsHint: string | null;
@@ -68,33 +71,61 @@ export async function recentDailyIntake(
  * algorithm if it returns them, otherwise from the goal's protein g/kg + fat %.
  */
 export async function getNutritionTargets(
-  deps: Pick<NutritionDeps, "nutritionRepo" | "nutritionAlgorithmRegistry">,
+  deps: Pick<
+    NutritionDeps,
+    "nutritionRepo" | "nutritionAlgorithmRegistry" | "assignedNutritionPlanRepo"
+  >,
   opts: { fallbackWeightKg?: number | null; now?: number } = {},
 ): Promise<NutritionState> {
   const { nutritionRepo: repo, nutritionAlgorithmRegistry: registry } = deps;
   const now = opts.now ?? Date.now();
 
-  const [goal, weightEntries] = await Promise.all([repo.getGoal(), repo.listWeightEntries()]);
+  const [goal, weightEntries, coachPlan] = await Promise.all([
+    repo.getGoal(),
+    repo.listWeightEntries(),
+    deps.assignedNutritionPlanRepo?.getAssignedPlan() ?? Promise.resolve(null),
+  ]);
   const trend = smoothWeightSeries(weightEntries);
   const currentWeightKg = trend.currentKg ?? opts.fallbackWeightKg ?? undefined;
-  const emptyProjection: GoalProjection = { etaIso: null, weeksRemaining: null };
 
-  if (!goal) {
+  const projection = goal
+    ? projectGoalDate({
+        currentKg: trend.currentKg,
+        targetKg: goal.targetWeightKg,
+        weeklyRateKg: trend.weeklyRateKg,
+      })
+    : ({ etaIso: null, weeksRemaining: null } as GoalProjection);
+
+  const base = { goal, coachPlan, trend, projection };
+
+  // A coach-assigned plan wins over everything — the client can't out-tweak their coach.
+  if (coachPlan) {
+    const kcal = Math.round(coachPlan.kcalTarget);
+    const set = planMacros(coachPlan);
+    // Fill any macro the coach left unset from the goal's split.
+    const filled = goal ? macrosFromGoal(kcal, currentWeightKg ?? 0, goal) : set;
     return {
-      goal: null,
+      ...base,
       algorithm: null,
-      targets: null,
+      targets: {
+        kcal,
+        macros: {
+          kcal,
+          proteinG: set.proteinG || filled.proteinG,
+          carbsG: set.carbsG || filled.carbsG,
+          fatG: set.fatG || filled.fatG,
+        },
+        maintenanceKcal: null,
+        sourceLabel: "From your coach",
+        source: "coach",
+      },
       targetsHint: null,
-      trend,
-      projection: emptyProjection,
     };
   }
 
-  const projection = projectGoalDate({
-    currentKg: trend.currentKg,
-    targetKg: goal.targetWeightKg,
-    weeklyRateKg: trend.weeklyRateKg,
-  });
+  if (!goal) {
+    return { ...base, algorithm: null, targets: null, targetsHint: null };
+  }
 
   const algorithmId = resolveAlgorithmId(goal);
   const algorithm = await registry.get(algorithmId);
@@ -107,11 +138,11 @@ export async function getNutritionTargets(
       }
     : null;
 
-  // Manual override wins regardless of the algorithm.
+  // Manual override wins over the algorithm (but not over a coach plan).
   if (goal.manualCalorieTarget != null && goal.manualCalorieTarget > 0) {
     const kcal = Math.round(goal.manualCalorieTarget);
     return {
-      goal,
+      ...base,
       algorithm: algorithmMeta,
       targets: {
         kcal,
@@ -121,19 +152,15 @@ export async function getNutritionTargets(
         source: "manual",
       },
       targetsHint: null,
-      trend,
-      projection,
     };
   }
 
   if (!algorithm) {
     return {
-      goal,
+      ...base,
       algorithm: null,
       targets: null,
       targetsHint: `Algorithm "${algorithmId}" is not installed`,
-      trend,
-      projection,
     };
   }
 
@@ -154,18 +181,16 @@ export async function getNutritionTargets(
 
   if (!out.kcal || out.kcal <= 0) {
     return {
-      goal,
+      ...base,
       algorithm: algorithmMeta,
       targets: null,
       targetsHint: out.sourceLabel ?? null,
-      trend,
-      projection,
     };
   }
 
   const kcal = Math.round(out.kcal);
   return {
-    goal,
+    ...base,
     algorithm: algorithmMeta,
     targets: {
       kcal,
@@ -175,7 +200,5 @@ export async function getNutritionTargets(
       source: "algorithm",
     },
     targetsHint: null,
-    trend,
-    projection,
   };
 }

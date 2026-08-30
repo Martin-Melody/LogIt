@@ -112,6 +112,7 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM recipes WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM weight_entries WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM nutrition_goal WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM coach_nutrition_plans WHERE owner_id = ?`, [ownerId]);
   await db.execute(`PRAGMA foreign_keys = ON`);
 }
 
@@ -139,6 +140,7 @@ export async function clearAllSqliteData(): Promise<void> {
     DELETE FROM recipes;
     DELETE FROM weight_entries;
     DELETE FROM nutrition_goal;
+    DELETE FROM coach_nutrition_plans;
     PRAGMA foreign_keys = ON;
   `);
 }
@@ -437,6 +439,17 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       data_json TEXT NOT NULL,
       updated_at_ms INTEGER NOT NULL
     );
+
+    -- Read-only mirror of nutrition plans a coach has assigned (PT Studio). Same shape as
+    -- coach_programs; the sync loop's pullAndMergeCoachNutritionPlan is the only writer.
+    CREATE TABLE IF NOT EXISTS coach_nutrition_plans (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      synced_at_ms INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_nutrition_plans_owner ON coach_nutrition_plans(owner_id);
   `);
 
   await migrateSessionSets(db);
