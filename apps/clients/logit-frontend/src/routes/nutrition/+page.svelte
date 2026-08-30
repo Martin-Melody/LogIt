@@ -9,6 +9,7 @@
     Target,
     Scale,
     Trash2,
+    UtensilsCrossed,
   } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
@@ -152,6 +153,13 @@
       {/if}
       <MacroBars consumed={consumed} target={nut?.targets?.macros ?? null} />
     </div>
+
+    {#if nut?.coachPlan?.meals?.length}
+      <a href="/nutrition/plan" class="flex items-center gap-2 px-3 py-2.5 border-b border-border text-sm text-primary">
+        <UtensilsCrossed class="h-4 w-4" /> Your coach's meal plan
+        <span class="ml-auto text-xs text-muted-foreground">{nut.coachPlan.meals.length} meals</span>
+      </a>
+    {/if}
 
     <!-- Meals -->
     {#each MEAL_SLOTS as meal (meal)}

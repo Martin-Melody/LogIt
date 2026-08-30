@@ -220,12 +220,18 @@
             oninput={(e) => editPlan({ note: e.currentTarget.value || undefined })}
           ></textarea>
         </label>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <Button size="sm" disabled={planSaving || !plan} onclick={savePlan}>
             {#if planSaving}<Spinner class="size-4" />{/if}
             {planSaved ? "Saved" : plan ? "Save targets" : "Set targets"}
           </Button>
-          {#if !plan}<span class="text-xs text-muted-foreground">Enter a calorie target to start.</span>{/if}
+          {#if !plan}
+            <span class="text-xs text-muted-foreground">Enter a calorie target to start.</span>
+          {:else}
+            <a href="/clients/{clientId}/nutrition?u={username}" class="text-xs text-primary hover:underline">
+              Edit meal plan{#if plan.meals?.length} ({plan.meals.length}){/if} &rarr;
+            </a>
+          {/if}
         </div>
       {/if}
 

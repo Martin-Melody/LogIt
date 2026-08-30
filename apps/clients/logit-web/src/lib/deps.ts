@@ -6,6 +6,7 @@ import { createRemoteExerciseRepo } from "@logit/core/data/remote/remoteExercise
 import { createRemoteProgressionRepo } from "@logit/core/data/remote/remoteProgressionRepo";
 import { createRemoteNutritionRepo } from "@logit/core/data/remote/remoteNutritionRepo";
 import { createRemoteCoachNutritionPlanRepo } from "@logit/core/data/remote/remoteCoachNutritionPlanRepo";
+import { createOpenFoodFactsRepo } from "@logit/core/data/remote/openFoodFactsRepo";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
@@ -65,21 +66,15 @@ export function getWebCoachNutritionPlanRepo() {
 export function getWebNutritionDeps(clientId: string): NutritionDeps {
   return {
     nutritionRepo: createRemoteNutritionRepo(clientId),
-    foodDbRepo: {
-      isOfflineAvailable: () => false,
-      async searchFoods() {
-        return [];
-      },
-      async getFood() {
-        return null;
-      },
-      async getFoodByBarcode() {
-        return null;
-      },
-    },
+    foodDbRepo: createOpenFoodFactsRepo(),
     nutritionAlgorithmRegistry: createLocalNutritionAlgorithmRegistry(),
     nutritionAnalyticsRegistry: createLocalNutritionAnalyticsRegistry(),
   };
+}
+
+/** Open Food Facts search — for the coach building a meal plan (no bundled food DB on web). */
+export function getWebFoodDbRepo() {
+  return createOpenFoodFactsRepo();
 }
 
 export { fetchClientCheckinSubmissions };
