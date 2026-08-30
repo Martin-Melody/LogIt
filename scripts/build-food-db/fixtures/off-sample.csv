@@ -1,0 +1,6 @@
+code	product_name	brands	countries_tags	serving_quantity	serving_size	energy-kcal_100g	energy_100g	proteins_100g	carbohydrates_100g	fat_100g	unique_scans_n	popularity_tags
+3017620422003	Nutella	Ferrero	en:france,en:united-kingdom,en:ireland	15	15 g	539	2252	6.3	57.5	30.9	41230	top-5-percent-scans-2020
+5449000000996	Coca-Cola	Coca-Cola	en:united-states,en:france	330	1 can (330 ml)	42	180	0	10.6	0	38900	top-5-percent-scans-2020
+0000000000000											0	
+8888888888888	Mystery kJ mislabel	Test	en:france			2010		8.1	59.4	24.1	9000	
+7777777777777	Obscure Local Snack	LocalBrand	en:japan			400	1673	5	50	18	20	

@@ -6,7 +6,9 @@
   "scripts": {
     "download": "node download.mjs",
     "build": "node build.mjs",
-    "build:sample": "node build.mjs --sample"
+    "build:full": "node build.mjs --full",
+    "build:sample": "node build.mjs --sample",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=22.5"

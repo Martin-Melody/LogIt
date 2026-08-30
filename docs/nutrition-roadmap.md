@@ -22,8 +22,8 @@ but the accuracy is unproven and it needs an always-online vision model. Out of 
 
 - **Offline-first.** All logging, targets and adaptive recalculation work with no network.
 - **Self-hostable.** No hard dependency on a paid third-party food API. The food database
-  ships bundled (USDA FoodData Central — public domain; curated Open Food Facts subset —
-  ODbL). An online Open Food Facts lookup is an optional fallback for barcode misses only.
+  ships bundled (USDA — public domain; CIQUAL — Etalab; curated Open Food Facts subset —
+  ODbL). An online Open Food Facts lookup is an optional fallback for the long tail.
 - **Same architecture as the rest of the app.** `@logit/core` domain + pure functions, the
   repo-interface pattern, local SQLite / localStorage, optional cloud sync gated at Pro.
 
@@ -40,9 +40,14 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
       target → macro split; weight-trend EMA smoothing + goal ETA
 - [x] `@logit/core` adaptive expenditure estimate (energy-balance method over a rolling
       window; graceful fallback to the calculated TDEE when data is thin)
-- [x] Bundled food database build pipeline (`scripts/build-food-db/`): USDA + curated Open
-      Food Facts → single SQLite file with FTS5 search + barcode index
-- [x] Local + SQLite repos; read-only food-DB repo; bundled `food.db` opened from app assets
+- [x] Bundled food database build pipeline (`scripts/build-food-db/`): USDA + **CIQUAL**
+      (EU generic foods) + Open Food Facts → SQLite + FTS5 + barcode index. Two tiers:
+      **core** (~250k EU+NA products, ships zipped in the app, ~20 MB) and **full**
+      (~1M, optional download). Streams the OFF **CSV** export (~1 GB, not the 9 GB dump);
+      4/4/9 energy-consistency filter; `popularity` search-rank column; dependency-free
+      ZIP writer. `npm test` covers the pipeline.
+- [x] Local + SQLite repos; read-only food-DB repo; bundled `food.zip` opened from app
+      assets (`static/assets/databases/`, unpacked by `copyFromAssets`)
 - [x] Cloud sync: new synced entities + dual migrations + `/sync/nutrition/*` endpoints,
       Pro-gated (diary/weight/goal also allowed for actively-coached Free clients)
 - [x] Mobile UI: Today (macro bars + meals), food search / manual barcode / quick-add,
@@ -51,10 +56,14 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
 
 **Remaining before ship:**
 
-- [ ] Run `scripts/build-food-db` and drop the real `food.db` into the release build
-- [ ] On-device smoke test: bundled `food.db` opens + FTS works on Android;
+- [ ] Run `scripts/build-food-db` (`npm run download && npm run build` + save the CIQUAL
+      CSV) and drop `dist/food.zip` into `static/assets/databases/` before the release build
+- [ ] On-device smoke test: bundled `food.zip` unpacks + FTS works on Android;
       `/sync/nutrition/*` round-trips with a Pro token; the barcode scanner gets camera
       access in the Capacitor webview (zxing via `getUserMedia` — no native plugin)
+- [ ] Optional "download full food database" flow (fetch `food-full.zip`, prompt + size +
+      WiFi-only, manage in Settings → Nutrition) — deferred, not needed for first ship
+- [ ] Cache online OFF lookups into the local DB so the offline set grows with use
 - [x] Barcode scanning — `@zxing/browser` live scanner + typed/pasted barcode fallback
       (verified in the build; on-device camera unverified)
 - [ ] Drop the `chore(api): pull in orActivelyCoached` commit when the web branch lands on main
@@ -132,9 +141,13 @@ Built on `feat/nutrition-coach-layer` → `feat/nutrition-meal-plans`.
 
 | Source | License | Use |
 |---|---|---|
-| USDA FoodData Central (Foundation + SR Legacy) | Public domain | Bundled — whole/generic foods, lab-verified |
+| USDA FoodData Central (Foundation + SR Legacy) | Public domain | Bundled — US/generic whole foods, lab-verified |
+| ANSES CIQUAL | Etalab Open Licence 2.0 (attribution) | Bundled — EU/generic whole foods, lab-verified |
 | Open Food Facts (curated subset) | ODbL (attribution + share-alike) | Bundled — packaged products + barcodes |
-| Open Food Facts API | ODbL | Optional online fallback for barcode misses |
+| Open Food Facts API | ODbL | Optional online fallback for the long tail / barcode misses |
+
+The `meta.attribution` string baked into `food.db` must be shown in the app's About /
+licences screen (ODbL requires it; so does the Etalab licence).
 
 Branded USDA data (~1.5M rows, US-centric) is deliberately excluded from the bundle. If a
 self-hoster or user wants deeper coverage, an optional downloadable pack or an API key slot

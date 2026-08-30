@@ -1,8 +1,11 @@
-// Builds dist/food.db from the downloaded USDA + Open Food Facts sources.
+// Builds the bundled food database from the downloaded USDA + CIQUAL + Open Food Facts
+// sources.
 //
-//   node build.mjs             full build from ./data (run download.mjs first)
+//   node build.mjs             core tier  -> dist/food.db      + dist/food.zip
+//   node build.mjs --full      full tier  -> dist/food-full.db + dist/food-full.zip
 //   node build.mjs --sample    tiny build from ./fixtures (for app development / CI)
 //
+// The core tier ships inside the app; the full tier is an optional on-demand download.
 // See README.md for the download step and data licensing.
 
 import { DatabaseSync } from "node:sqlite";
@@ -12,27 +15,50 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.mjs";
 import { loadUsdaBundle } from "./lib/usda.mjs";
+import { loadCiqualTable } from "./lib/ciqual.mjs";
 import { loadOffExport } from "./lib/off.mjs";
+import { completeness } from "./lib/normalize.mjs";
+import { writeZip } from "./lib/zip.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const sample = process.argv.includes("--sample");
+const full = process.argv.includes("--full");
+
+const tier = full
+  ? { name: "full", ...config.tiers.full }
+  : { name: "core", ...config.tiers.core };
+
+// The sample build always uses the fixtures and the core tier's knobs.
+const sampleTier = { ...config.tiers.core, countries: null, minPopularityScans: 0 };
+
+function firstExisting(...paths) {
+  return paths.find((p) => existsSync(p)) ?? null;
+}
 
 const paths = sample
   ? {
       usda: [join(HERE, "fixtures/usda-foundation-sample")],
+      ciqual: join(HERE, "fixtures/ciqual-sample.csv"),
       off: join(HERE, "fixtures/off-sample.jsonl"),
     }
   : {
       usda: [join(HERE, "data/usda/foundation"), join(HERE, "data/usda/sr_legacy")],
-      off: join(HERE, "data/off/openfoodfacts-products.jsonl.gz"),
+      ciqual: join(HERE, config.ciqual.csvPath),
+      off: firstExisting(
+        join(HERE, "data/off/en.openfoodfacts.org.products.csv.gz"),
+        join(HERE, "data/off/en.openfoodfacts.org.products.csv"),
+        join(HERE, "data/off/openfoodfacts-products.jsonl.gz"),
+        join(HERE, "data/off/openfoodfacts-products.jsonl"),
+      ),
     };
 
 async function collectRows() {
   const rows = [];
+  const offTier = sample ? sampleTier : tier;
 
   for (const dir of paths.usda) {
     if (!existsSync(dir)) {
-      console.warn(`! skipping USDA bundle (not found): ${dir}`);
+      console.warn(`! skipping USDA bundle (not found): ${rel(dir)}`);
       continue;
     }
     const bundle = await loadUsdaBundle(dir);
@@ -40,29 +66,47 @@ async function collectRows() {
     rows.push(...bundle);
   }
 
-  if (existsSync(paths.off)) {
-    const off = await loadOffExport(paths.off);
-    console.log(`  Open Food Facts: ${off.length.toLocaleString()} products (curated)`);
-    rows.push(...off);
+  if (paths.ciqual && existsSync(paths.ciqual)) {
+    const ciqual = await loadCiqualTable(paths.ciqual);
+    console.log(`  CIQUAL: ${ciqual.length.toLocaleString()} foods`);
+    rows.push(...ciqual);
   } else {
-    console.warn(`! skipping Open Food Facts (not found): ${paths.off}`);
+    console.warn(`! skipping CIQUAL (not found): ${rel(paths.ciqual)}`);
   }
 
-  // Last row wins on id collision (shouldn't happen across sources, but be safe).
+  if (paths.off && existsSync(paths.off)) {
+    console.log(`  Open Food Facts: reading ${rel(paths.off)} …`);
+    const off = await loadOffExport(paths.off, offTier);
+    console.log(`  Open Food Facts: ${off.length.toLocaleString()} products (${offTier === sampleTier ? "sample" : tier.name} tier)`);
+    rows.push(...off);
+  } else {
+    console.warn(`! skipping Open Food Facts (not found): run \`npm run download\``);
+  }
+
+  // Dedupe on id; if two sources collide, keep the more complete row.
   const byId = new Map();
-  for (const r of rows) byId.set(r.id, r);
+  for (const r of rows) {
+    const prev = byId.get(r.id);
+    if (!prev || completeness(r) > completeness(prev)) byId.set(r.id, r);
+  }
   return [...byId.values()];
 }
 
+function rel(p) {
+  return p ? p.replace(HERE + "/", "") : String(p);
+}
+
 async function main() {
-  console.log(sample ? "Building sample food.db from fixtures…" : "Building food.db…");
+  console.log(
+    sample ? "Building sample food.db from fixtures…" : `Building ${tier.name} food database…`,
+  );
   const rows = await collectRows();
   if (rows.length === 0) {
     console.error("No rows collected — run `npm run download` first, or use --sample.");
     process.exit(1);
   }
 
-  const outPath = join(HERE, config.output);
+  const outPath = join(HERE, sample ? config.tiers.core.output : tier.output);
   await mkdir(dirname(outPath), { recursive: true });
   await rm(outPath, { force: true });
 
@@ -71,8 +115,9 @@ async function main() {
   db.exec(await readFile(join(HERE, "schema.sql"), "utf8"));
 
   const insert = db.prepare(
-    `INSERT INTO foods (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, serving_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO foods
+       (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, popularity, serving_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   db.exec("BEGIN");
   let n = 0;
@@ -87,6 +132,7 @@ async function main() {
       r.protein_100g,
       r.carb_100g,
       r.fat_100g,
+      Math.round(r.popularity ?? 0),
       JSON.stringify(r.servings),
     );
     n++;
@@ -100,14 +146,16 @@ async function main() {
   const counts = db.prepare("SELECT source, COUNT(*) c FROM foods GROUP BY source").all();
   const meta = {
     built_at: new Date().toISOString(),
-    build_mode: sample ? "sample" : "full",
+    build_mode: sample ? "sample" : tier.name,
     total: String(n),
     sources: JSON.stringify(counts),
     attribution:
-      "Contains data from USDA FoodData Central (public domain) and Open Food Facts " +
-      "(Open Database License, ODbL v1.0 — https://opendatacommons.org/licenses/odbl/1-0/). " +
-      "Open Food Facts data and derived databases are made available under the ODbL; " +
-      "individual product content is under the Database Contents License.",
+      "Contains data from USDA FoodData Central (public domain); ANSES CIQUAL " +
+      "(Etalab Open Licence 2.0 — https://www.etalab.gouv.fr/licence-ouverte-open-licence); " +
+      "and Open Food Facts (Open Database License, ODbL v1.0 — " +
+      "https://opendatacommons.org/licenses/odbl/1-0/), individual product content under " +
+      "the Database Contents License. Adaptations of the Open Food Facts database that are " +
+      "publicly distributed must be offered under the ODbL.",
   };
   const setMeta = db.prepare("INSERT INTO meta(key, value) VALUES(?, ?)");
   for (const [k, v] of Object.entries(meta)) setMeta.run(k, v);
@@ -117,9 +165,22 @@ async function main() {
   db.close();
 
   const size = (await stat(outPath)).size;
-  console.log(`\n✓ ${outPath}`);
-  console.log(`  ${n.toLocaleString()} foods  ·  ${(size / 1024 / 1024).toFixed(1)} MB`);
+
+  // Compressed, shippable artifact. The app unpacks <name>.zip via copyFromAssets; the
+  // entry inside is <name>.db so the plugin names it <name>SQLite.db.
+  const zipPath = outPath.replace(/\.db$/, ".zip");
+  const dbBuf = await readFile(outPath);
+  await writeZip(zipPath, [{ name: outPath.split("/").pop(), data: dbBuf }]);
+  const zipSize = (await stat(zipPath)).size;
+
+  console.log(`\n✓ ${rel(outPath)}`);
+  console.log(`  ${n.toLocaleString()} foods  ·  ${mb(size)} on disk  ·  ${mb(zipSize)} zipped`);
   for (const c of counts) console.log(`  ${c.source}: ${c.c.toLocaleString()}`);
+  console.log(`\n✓ ${rel(zipPath)}  — ship this in apps/clients/logit-frontend static assets`);
+}
+
+function mb(bytes) {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 main().catch((err) => {
