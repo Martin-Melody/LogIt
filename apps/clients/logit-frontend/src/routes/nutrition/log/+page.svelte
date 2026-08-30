@@ -4,6 +4,7 @@
   import { ArrowLeft, Search, Barcode, Plus } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
+  import BarcodeScanner from "$lib/features/nutrition/BarcodeScanner.svelte";
   import {
     addDiaryItem,
     createDiaryDay,
@@ -32,6 +33,7 @@
   // quick add
   const quick = $state({ name: "", kcal: "", protein: "", carbs: "", fat: "" });
   let showQuick = $state(false);
+  let showScanner = $state(false);
 
   let searchTimer: ReturnType<typeof setTimeout>;
   function onInput() {
@@ -43,6 +45,11 @@
     const q = ui.query.trim();
     if (!q) {
       results = [];
+      return;
+    }
+    // A pasted/typed all-digits string of barcode length → treat it as a barcode.
+    if (/^\d{8,14}$/.test(q)) {
+      await lookupBarcode(q);
       return;
     }
     ui.searching = true;
@@ -69,9 +76,10 @@
     }
   }
 
-  async function lookupBarcode() {
-    const code = ui.query.trim().replace(/\D/g, "");
+  async function lookupBarcode(raw?: string) {
+    const code = (raw ?? ui.query).trim().replace(/\D/g, "");
     if (code.length < 6) return;
+    ui.query = code;
     ui.searching = true;
     try {
       const food = await getFoodDbRepo().getFoodByBarcode(code);
@@ -80,6 +88,11 @@
     } finally {
       ui.searching = false;
     }
+  }
+
+  function onScanned(code: string) {
+    showScanner = false;
+    void lookupBarcode(code);
   }
 
   function select(food: FoodRef) {
@@ -131,6 +144,10 @@
   }
 </script>
 
+{#if showScanner}
+  <BarcodeScanner onResult={onScanned} onClose={() => (showScanner = false)} />
+{/if}
+
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
     <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
@@ -147,7 +164,7 @@
       bind:value={ui.query}
       oninput={onInput}
     />
-    <button type="button" class="h-7 w-7 flex items-center justify-center text-muted-foreground" onclick={() => void lookupBarcode()} aria-label="Look up barcode">
+    <button type="button" class="h-7 w-7 flex items-center justify-center text-muted-foreground" onclick={() => (showScanner = true)} aria-label="Scan barcode">
       <Barcode class="h-4 w-4" />
     </button>
   </div>

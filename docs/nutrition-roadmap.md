@@ -53,8 +53,10 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
 
 - [ ] Run `scripts/build-food-db` and drop the real `food.db` into the release build
 - [ ] On-device smoke test: bundled `food.db` opens + FTS works on Android;
-      `/sync/nutrition/*` round-trips with a Pro token
-- [ ] Camera barcode scanning (needs a native plugin — `@capacitor-mlkit/barcode-scanning`)
+      `/sync/nutrition/*` round-trips with a Pro token; the barcode scanner gets camera
+      access in the Capacitor webview (zxing via `getUserMedia` — no native plugin)
+- [x] Barcode scanning — `@zxing/browser` live scanner + typed/pasted barcode fallback
+      (verified in the build; on-device camera unverified)
 - [ ] Drop the `chore(api): pull in orActivelyCoached` commit when the web branch lands on main
 
 **Goal:** a person can set a weight goal, get calorie/macro targets that adapt to their

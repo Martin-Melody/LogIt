@@ -49,6 +49,8 @@
     "@capawesome/capacitor-file-picker": "^8.0.2",
     "@logit/core": "*",
     "@react2svelte/swipeable": "^0.1.4",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "body-muscles": "^1.0.0",
     "capacitor-secure-storage-plugin": "^0.13.0",
     "d3-scale": "^4.0.2",
