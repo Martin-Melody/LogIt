@@ -70,6 +70,66 @@ export const algorithm = {
 };
 ```
 
+## Nutrition algorithm bundles
+
+For nutrition algorithm plugins (`family: "nutrition-algorithm"`), `entryExport`
+points to an object implementing `computeTargets(input)` — it turns a goal plus
+the user's real data into a daily calorie target.
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.example.pure-trend",
+  family: "nutrition-algorithm",
+  entryExport: "algorithm",
+} as const;
+
+export const algorithm = {
+  id: "com.example.pure-trend",
+  name: "Pure Trend",
+  description: "Sets the target from intake vs. weight trend.",
+  // optional: defaultPreferences + preferencesSchema (same field shape as
+  // progression algorithms — the app renders a settings screen)
+  computeTargets(input) {
+    // input: { goal, currentWeightKg, weightEntries, dailyIntakeKcal, userPreferences, now }
+    return { kcal: 2000, sourceLabel: "Trend" };
+    // may also return: macros, maintenanceKcal, notes
+  },
+};
+```
+
+The app owns two things the algorithm does not: a manual calorie override on the
+goal (always wins), and deriving macros from the goal's protein g/kg + fat % when
+the algorithm returns only `kcal`. Return `kcal: 0` to signal "not enough data".
+
+See `apps/clients/logit-frontend/static/sample-plugins/pure-trend/` for a full example.
+
+## Nutrition analytics bundles
+
+For nutrition analytics plugins (`family: "nutrition-analytics"`), `entryExport`
+points to an object with `metricDefinitions` and `compute(input)` — the same
+shape as the workout analytics contract.
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.example.weekly-recap",
+  family: "nutrition-analytics",
+  entryExport: "analytics",
+} as const;
+
+export const analytics = {
+  id: "com.example.weekly-recap",
+  name: "Weekly recap",
+  description: "…",
+  metricDefinitions: [{ id: "avgKcal", label: "Avg calories", unit: "kcal" }],
+  compute(input) {
+    // input: { days, weightEntries, goal, targets, range, now }
+    return { metrics: [], series: [], insights: [] };
+  },
+};
+```
+
 ## Compatibility
 
 The app still tolerates legacy bundles that export `widget`, `algorithm`, or

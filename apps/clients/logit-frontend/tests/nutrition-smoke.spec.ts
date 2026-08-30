@@ -81,10 +81,14 @@ test("nutrition personal flow", async ({ page }) => {
   await page.getByRole("button", { name: "male", exact: true }).click();
   await page.locator('input[type="date"]').fill("1994-06-15");
   await page.getByRole("button", { name: "lose", exact: true }).click();
+  // Algorithm section: the built-in is selected and exposes preference controls.
+  await expect(page.getByText("Standard adaptive")).toBeVisible();
+  await expect(page.getByText("Adaptive targets")).toBeVisible();
+  await expect(page.getByText("Trend window")).toBeVisible();
   await expect(page.getByText("Your target")).toBeVisible();
   await page.getByText("Your target").scrollIntoViewIfNeeded();
   await expect(page.getByText(/\d[\d,]* kcal/).first()).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/02-goal-with-preview.png`, fullPage: true });
+  await page.screenshot({ path: `${SHOTS}/02-goal-with-algorithm.png`, fullPage: true });
   await page.getByRole("button", { name: "Save goal" }).click();
   await page.waitForURL("**/nutrition");
 
@@ -131,4 +135,12 @@ test("nutrition personal flow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Recipe" })).toBeVisible();
   await page.getByRole("textbox").first().fill("Overnight oats");
   await page.screenshot({ path: `${SHOTS}/08-recipe-editor.png`, fullPage: true });
+
+  // ── Insights (nutrition-analytics plugin) ──
+  await page.goto("/nutrition/insights");
+  await expect(page.getByRole("heading", { name: "Insights" })).toBeVisible();
+  await expect(page.getByText("Avg calories (30d)")).toBeVisible();
+  await expect(page.getByText("On-target days")).toBeVisible();
+  await expect(page.getByText("Weight change")).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/09-insights.png`, fullPage: true });
 });
