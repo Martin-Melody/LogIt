@@ -37,9 +37,19 @@ function detectDelimiter(firstLine) {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 }
 
-/** Find the header index whose folded name contains every token in one of the candidates. */
+/**
+ * Locate a header column. Each candidate is either a string (exact folded-name match — tried
+ * first, across every candidate) or an array of tokens (folded name must contain them all).
+ * Exact wins so `alim_code` is not shadowed by `alim_grp_code`.
+ */
 function findColumn(foldedHeader, candidates) {
   for (const cand of candidates) {
+    if (typeof cand !== "string") continue;
+    const i = foldedHeader.indexOf(foldKey(cand));
+    if (i >= 0) return i;
+  }
+  for (const cand of candidates) {
+    if (typeof cand === "string") continue;
     const needles = cand.map(foldKey);
     const i = foldedHeader.findIndex((h) => needles.every((n) => h.includes(n)));
     if (i >= 0) return i;
@@ -61,13 +71,13 @@ export async function loadCiqualTable(path) {
   const folded = header.map(foldKey);
 
   const col = {
-    code: findColumn(folded, [["alim", "code"], ["code"]]),
-    nameEn: findColumn(folded, [["alim", "nom", "eng"], ["alim", "nom", "en"]]),
-    nameFr: findColumn(folded, [["alim", "nom", "fr"], ["alim", "nom"]]),
+    code: findColumn(folded, ["alim_code", ["alim", "code"]]),
+    nameEn: findColumn(folded, ["alim_nom_eng", "alim_nom_en", ["alim", "nom", "eng"]]),
+    nameFr: findColumn(folded, ["alim_nom_fr", ["alim", "nom", "fr"]]),
     kcal: findColumn(folded, [["energie", "kcal"], ["energy", "kcal"]]),
-    protein: findColumn(folded, [["proteine"], ["protein"]]),
-    carb: findColumn(folded, [["glucide"], ["carbohydrate"]]),
-    fat: findColumn(folded, [["lipide"], ["fat"], ["lipid"]]),
+    protein: findColumn(folded, [["proteines", "jones"], ["proteine"], ["protein"]]),
+    carb: findColumn(folded, [["glucides"], ["glucide"], ["carbohydrate"]]),
+    fat: findColumn(folded, [["lipides"], ["lipide"], ["fat"], ["lipid"]]),
   };
 
   const nameCol = col.nameEn >= 0 ? col.nameEn : col.nameFr;

@@ -101,11 +101,13 @@ test("loadOffExport reads the JSONL fixture", async () => {
 test("loadCiqualTable parses ;-delimited French export", async () => {
   const rows = await loadCiqualTable(join(HERE, "fixtures/ciqual-sample.csv"));
   const byName = Object.fromEntries(rows.map((r) => [r.name, r]));
-  assert.ok(byName["Banana, raw"]); // English name preferred
-  assert.equal(byName["Banana, raw"].kcal_100g, 89);
+  assert.ok(byName["Banana, raw"]); // English name preferred, not the "fruits" group name
+  assert.equal(byName["Banana, raw"].id, "ciqual:13000"); // alim_code, not alim_grp_code
+  assert.equal(byName["Banana, raw"].kcal_100g, 89); // the kcal column, not kJ
   assert.equal(byName["Banana, raw"].carb_100g, 20.5); // decimal comma
   assert.equal(byName["Chicken, roasted"].carb_100g, 0); // "traces" -> 0
   assert.ok(!byName["Tap water"]); // all-zero row dropped
+  assert.equal(rows.length, new Set(rows.map((r) => r.id)).size); // ids unique
   assert.equal(rows[0].source, "ciqual");
   assert.equal(rows[0].popularity, config.genericPopularity);
 });
