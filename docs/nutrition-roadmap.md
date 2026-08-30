@@ -76,26 +76,40 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 
 ## Phase 3 — PT / coach layer
 
-**Stage A — coach assigns nutrition targets (in progress, `feat/nutrition-coach-layer`):**
-- [ ] `CoachNutritionPlan` domain: kcal + macro targets + a note, authored by a coach.
-      Same coach→client assignment shape as `CoachProgram` (authored/template + assigned,
-      read-only client mirror, tombstones, Active-relationship-gated pull).
-- [ ] API: `CoachNutritionPlan` entity + dual migrations + `/coach/nutrition-plans`
-      (upsert, list, assigned-pull), `RequireTier(Studio)` on the authoring side.
-- [ ] core: `coachNutritionPlanApi.ts`, `data/coachNutritionPlanRepo.ts`.
-- [ ] Mobile: local/sqlite mirror + `pullAndMergeCoachNutritionPlans`; an assigned plan's
-      targets supersede the algorithm on `/nutrition` (badge "From your coach").
-- [ ] Studio (`logit-web`): author + assign a plan from the client page.
+Built on `feat/nutrition-coach-layer` → `feat/nutrition-meal-plans`.
 
-**Stage B — coach monitors the client (in progress):**
-- [ ] `createRemoteNutritionRepo(clientId)` in core (API-backed `NutritionRepo`).
-- [ ] `logit-web` `/clients/[id]/nutrition`: recent diary, weight trend, adherence % and
-      macro averages (reuse `getNutritionInsights` against the remote repo), current targets.
+**Stage A — coach assigns nutrition targets** ✅
+- [x] `CoachNutritionPlan` domain (kcal + macro targets + note), same coach→client
+      assignment shape as `CoachProgram` (authored/template + assigned, read-only client
+      mirror, tombstones, Active-relationship-gated pull).
+- [x] API: entity + dual migrations + `/coach/nutrition-plans` (upsert/list/assigned-pull),
+      `RequireTier(Studio)` on authoring.
+- [x] core `coachNutritionPlanApi.ts` + `data/coachNutritionPlanRepo.ts`.
+- [x] Mobile: sqlite/local mirror + `pullAndMergeCoachNutritionPlan`; an assigned plan's
+      targets supersede the algorithm AND the manual override (`source: "coach"`, badge
+      "From your coach", note shown).
+- [x] Studio: set kcal/P/C/F + a note from the client page.
 
-**Stage C — structured meal plans (later):** meal-by-meal foods, swaps, grocery list.
+**Stage B — coach monitors the client** ✅
+- [x] `createRemoteNutritionRepo(clientId)` — read-only `NutritionRepo` over a client's
+      synced data.
+- [x] `logit-web` client page: 30-day readout (avg kcal, adherence %, weight Δ, insights)
+      via `getNutritionInsights` against the remote repo.
 
-**Stage D — meal-photo journal + coach comments (later):** likely folds into check-ins /
-messages rather than a new surface.
+**Stage C — structured meal plans** ✅
+- [x] `CoachNutritionPlan.meals[]` — meals → foods, each with coach-approved swaps.
+      `groceryList`, `plannedFoodToLoggedItem`, `slotForMeal` helpers.
+- [x] Client `/nutrition/plan`: per-food Log / Swap, "Log meal", grocery list.
+- [x] Studio `/clients/[id]/nutrition`: meal editor with Open Food Facts search, swaps,
+      grocery preview.
+
+**Stage D — meal-photo journal + coach comments (next):**
+- [ ] Client attaches a photo when logging (`@capacitor/camera`, small jpeg → data URL on
+      the diary item).
+- [ ] Studio client-diary view shows the photos.
+- [ ] Coach comments: **can't** live on the client-owned diary row (one-directional
+      isolation) — needs a coach→client feedback channel (extend `CoachMessage`, or a new
+      `CoachFeedback` entity keyed to a diary date). Design call needed.
 
 ---
 

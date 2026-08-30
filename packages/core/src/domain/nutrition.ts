@@ -100,6 +100,9 @@ export type LoggedItem = {
   /** Human portion for display, e.g. "2 × medium (236 g)". */
   servingLabel?: string;
   computed: MacroTotals;
+  /** Optional meal photo (small jpeg data URL). Rides in the synced day blob; a coach sees
+   * it in the client's diary. */
+  photoDataUrl?: string;
 };
 
 export type DiaryDay = {

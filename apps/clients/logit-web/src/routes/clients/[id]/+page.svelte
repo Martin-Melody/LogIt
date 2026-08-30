@@ -15,6 +15,7 @@
   } from "@logit/core/domain/CoachNutritionPlan";
   import { getNutritionInsights } from "@logit/core/usecases/nutrition/getNutritionInsights";
   import type { NutritionInsightsView } from "@logit/core/usecases/nutrition/getNutritionInsights";
+  import { dayTotals, localDateIso, type DiaryDay } from "@logit/core/domain/nutrition";
   import {
     getWebCoachProgramRepo,
     getWebCheckinRepo,
@@ -36,6 +37,7 @@
   let planSaving = $state(false);
   let planSaved = $state(false);
   let insights = $state<NutritionInsightsView | null>(null);
+  let recentDiary = $state<DiaryDay[]>([]);
 
   async function load() {
     loading = true;
@@ -55,8 +57,14 @@
       loading = false;
     }
     // Client nutrition data — best-effort, don't block the page.
-    getNutritionInsights(getWebNutritionDeps(clientId), { rangeDays: 30 })
+    const nutDeps = getWebNutritionDeps(clientId);
+    getNutritionInsights(nutDeps, { rangeDays: 30 })
       .then((v) => (insights = v))
+      .catch(() => {});
+    const start = new Date(Date.now() - 7 * 86_400_000);
+    nutDeps.nutritionRepo
+      .listDaysInRange(localDateIso(start), localDateIso())
+      .then((d) => (recentDiary = d.slice().reverse()))
       .catch(() => {});
   }
 
@@ -257,4 +265,34 @@
       {/if}
     </Card.Content>
   </Card.Root>
+
+  {#if recentDiary.length}
+    <Card.Root>
+      <Card.Header class="pb-2">
+        <Card.Title>Recent diary</Card.Title>
+        <Card.Description>What this client logged over the last 7 days.</Card.Description>
+      </Card.Header>
+      <Card.Content class="pt-0 flex flex-col gap-3">
+        {#each recentDiary as d (d.id)}
+          <div>
+            <div class="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>{d.dateIso}</span>
+              <span class="tabular-nums">{dayTotals(d).kcal} kcal · P {Math.round(dayTotals(d).proteinG)}</span>
+            </div>
+            <ul class="flex flex-col gap-1 text-sm">
+              {#each d.items as it (it.id)}
+                <li class="flex items-center gap-2">
+                  {#if it.photoDataUrl}
+                    <img src={it.photoDataUrl} alt="" class="h-9 w-9 rounded object-cover shrink-0" />
+                  {/if}
+                  <span class="flex-1 truncate">{it.name}</span>
+                  <span class="text-xs text-muted-foreground tabular-nums">{it.computed.kcal} kcal</span>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
+      </Card.Content>
+    </Card.Root>
+  {/if}
 </div>
