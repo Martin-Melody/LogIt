@@ -109,11 +109,19 @@ export type DiaryDay = {
   items: LoggedItem[];
   createdAtMs: number;
   updatedAtMs: number;
+  /** Set when the day is cleared — kept (not hard-deleted) so the deletion syncs. */
+  deletedAtMs?: number;
 };
+
+/** The id is derived from the date so two devices logging the same day converge on one
+ * row instead of creating a duplicate. */
+export function diaryDayId(dateIso: string): string {
+  return `nday_${dateIso}`;
+}
 
 export function createDiaryDay(dateIso: string): DiaryDay {
   const now = nowMs();
-  return { id: createId("nday"), dateIso, items: [], createdAtMs: now, updatedAtMs: now };
+  return { id: diaryDayId(dateIso), dateIso, items: [], createdAtMs: now, updatedAtMs: now };
 }
 
 function touchDay(day: DiaryDay): DiaryDay {
@@ -137,6 +145,12 @@ export function updateDiaryItem(
 
 export function removeDiaryItem(day: DiaryDay, itemId: string): DiaryDay {
   return touchDay({ ...day, items: day.items.filter((it) => it.id !== itemId) });
+}
+
+/** Tombstone a day (clear all items). The row is kept so the deletion propagates on sync. */
+export function tombstoneDay(day: DiaryDay): DiaryDay {
+  const now = nowMs();
+  return { ...day, items: [], deletedAtMs: now, updatedAtMs: now };
 }
 
 /** Build a LoggedItem from a food and a chosen portion. */

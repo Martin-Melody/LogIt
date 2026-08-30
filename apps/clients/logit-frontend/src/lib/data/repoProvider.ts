@@ -9,8 +9,14 @@ import type { AnalyticsRegistry } from "@logit/core/domain/analytics";
 
 import { isNativePlatform } from "$lib/platform/isNative";
 
-import { initSqlite } from "$lib/data/db/sqlite";
+import { initSqlite, initFoodDb, getFoodDb } from "$lib/data/db/sqlite";
 import { createSqliteExerciseRepo } from "$lib/data/exercise/exerciseRepo.sqlite";
+import { createSqliteNutritionRepo } from "$lib/data/nutrition/nutritionRepo.sqlite";
+import { createLocalNutritionRepo } from "$lib/data/nutrition/nutritionRepo.local";
+import { createSqliteFoodDbRepo } from "$lib/data/nutrition/foodDbRepo.sqlite";
+import { createLocalFoodDbRepo } from "$lib/data/nutrition/foodDbRepo.local";
+import type { NutritionRepo } from "@logit/core/data/nutritionRepo";
+import type { FoodDbRepo } from "@logit/core/data/foodDbRepo";
 
 import { createLocalWorkoutRepo } from "$lib/data/workoutRepo.local";
 import { createLocalSplitRepo } from "$lib/data/splitRepo.local";
@@ -56,6 +62,8 @@ let authoredProgramRepo: AuthoredProgramRepo | null = null;
 let checkinRepo: AssignedCheckinRepo | null = null;
 let authoredCheckinRepo: AuthoredCheckinRepo | null = null;
 let messagesRepo: MessagesRepo | null = null;
+let nutritionRepo: NutritionRepo | null = null;
+let foodDbRepo: FoodDbRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
 let analyticsRegistry: AnalyticsRegistry | null = null;
@@ -125,7 +133,14 @@ export async function initRepos(): Promise<void> {
     checkinRepo = createSqliteCheckinRepo();
     authoredCheckinRepo = createSqliteAuthoredCheckinRepo();
     messagesRepo = createSqliteMessagesRepo();
+    nutritionRepo = createSqliteNutritionRepo();
     progressionRepo = createSqliteProgressionRepo();
+
+    // Bundled food DB is optional — open it if this build shipped one, else use the online
+    // (Open Food Facts) repo. Doesn't block repo init.
+    await initFoodDb().catch(() => {});
+    foodDbRepo = getFoodDb() ? createSqliteFoodDbRepo() : createLocalFoodDbRepo();
+
     didInit = true;
     return;
   }
@@ -141,6 +156,8 @@ export async function initRepos(): Promise<void> {
   checkinRepo = createLocalCheckinRepo();
   authoredCheckinRepo = createLocalAuthoredCheckinRepo();
   messagesRepo = createLocalMessagesRepo();
+  nutritionRepo = createLocalNutritionRepo();
+  foodDbRepo = createLocalFoodDbRepo();
   progressionRepo = createLocalProgressionRepo();
   didInit = true;
 }
@@ -156,6 +173,8 @@ export function resetRepos(): void {
   checkinRepo = null;
   authoredCheckinRepo = null;
   messagesRepo = null;
+  nutritionRepo = null;
+  foodDbRepo = null;
   progressionRepo = null;
 }
 
@@ -205,6 +224,18 @@ export function getMessagesRepo(): MessagesRepo {
   if (!messagesRepo)
     throw new Error("MessagesRepo not initialized. Call initRepos() first.");
   return messagesRepo;
+}
+
+export function getNutritionRepo(): NutritionRepo {
+  if (!nutritionRepo)
+    throw new Error("NutritionRepo not initialized. Call initRepos() first.");
+  return nutritionRepo;
+}
+
+export function getFoodDbRepo(): FoodDbRepo {
+  if (!foodDbRepo)
+    throw new Error("FoodDbRepo not initialized. Call initRepos() first.");
+  return foodDbRepo;
 }
 
 export function getProgressionRepo(): ProgressionRepo {
