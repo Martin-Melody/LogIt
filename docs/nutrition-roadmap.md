@@ -103,13 +103,13 @@ Built on `feat/nutrition-coach-layer` → `feat/nutrition-meal-plans`.
 - [x] Studio `/clients/[id]/nutrition`: meal editor with Open Food Facts search, swaps,
       grocery preview.
 
-**Stage D — meal-photo journal + coach comments (next):**
-- [ ] Client attaches a photo when logging (`@capacitor/camera`, small jpeg → data URL on
-      the diary item).
-- [ ] Studio client-diary view shows the photos.
-- [ ] Coach comments: **can't** live on the client-owned diary row (one-directional
-      isolation) — needs a coach→client feedback channel (extend `CoachMessage`, or a new
-      `CoachFeedback` entity keyed to a diary date). Design call needed.
+**Stage D — meal-photo journal + coach comments:**
+- [x] `LoggedItem.photoDataUrl` — client attaches a photo per diary item
+      (`@capacitor/camera`, small jpeg), thumbnail on `/nutrition`.
+- [x] Studio "Recent diary" card — last 7 days of the client's items + photo thumbnails.
+- [ ] **Coach comments** — can't live on the client-owned diary row (one-directional
+      isolation). Needs a coach→client feedback channel: extend `CoachMessage`, or a new
+      `CoachFeedback` entity keyed to a `(clientId, dateIso)`. **Design call needed.**
 
 ---
 
