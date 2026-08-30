@@ -136,7 +136,7 @@
     <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
       <ArrowLeft class="h-4 w-4" />
     </button>
-    <h1 class="text-sm font-semibold capitalize">Add to {meal}</h1>
+    <h1 class="text-sm font-semibold">Add to <span class="capitalize">{meal}</span></h1>
   </div>
 
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
