@@ -1,0 +1,5 @@
+id,fdc_id,seq_num,amount,measure_unit_id,portion_description,modifier,gram_weight,data_points
+101,1001,1,1,1000,"1 tbsp","tbsp",14.2,1
+102,1002,1,1,1000,"1 slice","slice",28,1
+103,1003,1,1,1000,"1 large","large",50,1
+104,1005,1,0.5,1000,"0.5 cup","cup",40.5,1

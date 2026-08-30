@@ -1,0 +1,14 @@
+{
+  "name": "@logit/build-food-db",
+  "private": true,
+  "type": "module",
+  "description": "Builds the bundled food database (food.db) shipped with the app",
+  "scripts": {
+    "download": "node download.mjs",
+    "build": "node build.mjs",
+    "build:sample": "node build.mjs --sample"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

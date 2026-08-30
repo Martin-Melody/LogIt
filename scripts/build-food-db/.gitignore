@@ -1,0 +1,3 @@
+# Downloaded source datasets (large — USDA zips, OFF jsonl.gz ~9 GB) and build output.
+data/
+dist/
