@@ -18,7 +18,10 @@ export type NutritionInsightsView = {
 export async function getNutritionInsights(
   deps: Pick<
     NutritionDeps,
-    "nutritionRepo" | "nutritionAlgorithmRegistry" | "nutritionAnalyticsRegistry"
+    | "nutritionRepo"
+    | "nutritionAlgorithmRegistry"
+    | "nutritionAnalyticsRegistry"
+    | "assignedNutritionPlanRepo"
   >,
   opts: { rangeDays?: number; fallbackWeightKg?: number | null; now?: number } = {},
 ): Promise<NutritionInsightsView> {

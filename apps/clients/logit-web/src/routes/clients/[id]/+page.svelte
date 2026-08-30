@@ -8,7 +8,19 @@
   import type { MyCheckinSchedule } from "@logit/core/data/checkinRepo";
   import { createCoachProgram } from "@logit/core/domain/CoachProgram";
   import { createCheckinSchedule } from "@logit/core/domain/Checkin";
-  import { getWebCoachProgramRepo, getWebCheckinRepo } from "$lib/deps";
+  import {
+    createCoachNutritionPlan,
+    updateCoachNutritionPlan,
+    type CoachNutritionPlan,
+  } from "@logit/core/domain/CoachNutritionPlan";
+  import { getNutritionInsights } from "@logit/core/usecases/nutrition/getNutritionInsights";
+  import type { NutritionInsightsView } from "@logit/core/usecases/nutrition/getNutritionInsights";
+  import {
+    getWebCoachProgramRepo,
+    getWebCheckinRepo,
+    getWebCoachNutritionPlanRepo,
+    getWebNutritionDeps,
+  } from "$lib/deps";
 
   const clientId = $derived(page.params.id!);
   const username = $derived(page.url.searchParams.get("u") ?? "");
@@ -19,20 +31,60 @@
   let programs = $state<MyCoachProgram[]>([]);
   let checkins = $state<MyCheckinSchedule[]>([]);
 
+  // Nutrition
+  let plan = $state<CoachNutritionPlan | null>(null);
+  let planSaving = $state(false);
+  let planSaved = $state(false);
+  let insights = $state<NutritionInsightsView | null>(null);
+
   async function load() {
     loading = true;
     error = null;
     try {
-      [programs, checkins] = await Promise.all([
+      const [progs, cks, myPlan] = await Promise.all([
         getWebCoachProgramRepo().listMyPrograms({ recipientId: clientId }),
         getWebCheckinRepo().listMySchedules({ recipientId: clientId }),
+        getWebCoachNutritionPlanRepo().getForRecipient(clientId),
       ]);
+      programs = progs;
+      checkins = cks;
+      plan = myPlan?.plan ?? null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load";
     } finally {
       loading = false;
     }
+    // Client nutrition data — best-effort, don't block the page.
+    getNutritionInsights(getWebNutritionDeps(clientId), { rangeDays: 30 })
+      .then((v) => (insights = v))
+      .catch(() => {});
   }
+
+  function editPlan(patch: Partial<CoachNutritionPlan>) {
+    plan = updateCoachNutritionPlan(plan ?? createCoachNutritionPlan(`${username}'s targets`), patch);
+    planSaved = false;
+  }
+
+  async function savePlan() {
+    if (!plan || planSaving || !username) return;
+    planSaving = true;
+    error = null;
+    try {
+      await getWebCoachNutritionPlanRepo().savePlan(plan, username);
+      planSaved = true;
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Failed to save plan";
+    } finally {
+      planSaving = false;
+    }
+  }
+
+  const metricLabel = (id: string) =>
+    insights?.plugin?.metricDefinitions.find((d) => d.id === id)?.label ?? id;
+  const metricValue = (id: string) => {
+    const m = insights?.output?.metrics.find((x) => x.id === id);
+    return m ? (m.formatted ?? String(m.value)) : "—";
+  };
 
   async function newProgram() {
     if (creating || !username) return;
@@ -127,6 +179,75 @@
             <span class="text-xs text-muted-foreground capitalize">{schedule.cadence} · {schedule.questions.length}q</span>
           </a>
         {/each}
+      {/if}
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root>
+    <Card.Header class="pb-2">
+      <Card.Title>Nutrition targets</Card.Title>
+      <Card.Description>
+        A daily calorie/macro target for this client. It shows in their app as “From your coach”
+        and overrides their own goal.
+      </Card.Description>
+    </Card.Header>
+    <Card.Content class="pt-0 flex flex-col gap-3">
+      {#if loading}
+        <p class="text-sm text-muted-foreground py-2">Loading…</p>
+      {:else}
+        {@const p = plan}
+        <div class="grid grid-cols-4 gap-2">
+          {#each [["kcal", "Calories", p?.kcalTarget], ["proteinG", "Protein (g)", p?.proteinG], ["carbsG", "Carbs (g)", p?.carbsG], ["fatG", "Fat (g)", p?.fatG]] as [key, label, value] (key)}
+            <label class="flex flex-col gap-1">
+              <span class="text-xs text-muted-foreground">{label}</span>
+              <input
+                type="number"
+                min="0"
+                class="h-8 rounded border border-border bg-background px-2 text-sm"
+                value={value ?? ""}
+                oninput={(e) =>
+                  editPlan({ [key as string]: Number(e.currentTarget.value) || undefined } as Partial<CoachNutritionPlan>)}
+              />
+            </label>
+          {/each}
+        </div>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-muted-foreground">Note to the client (optional)</span>
+          <textarea
+            rows="2"
+            class="rounded border border-border bg-background px-2 py-1.5 text-sm"
+            value={p?.note ?? ""}
+            oninput={(e) => editPlan({ note: e.currentTarget.value || undefined })}
+          ></textarea>
+        </label>
+        <div class="flex items-center gap-2">
+          <Button size="sm" disabled={planSaving || !plan} onclick={savePlan}>
+            {#if planSaving}<Spinner class="size-4" />{/if}
+            {planSaved ? "Saved" : plan ? "Save targets" : "Set targets"}
+          </Button>
+          {#if !plan}<span class="text-xs text-muted-foreground">Enter a calorie target to start.</span>{/if}
+        </div>
+      {/if}
+
+      {#if insights?.output}
+        <div class="mt-1 border-t border-border pt-3">
+          <p class="text-xs text-muted-foreground mb-2">Last 30 days</p>
+          <div class="grid grid-cols-3 gap-3 text-sm">
+            {#each ["avgKcal30", "adherence", "weightChange", "avgProtein", "weeklyRate"] as id (id)}
+              <div>
+                <div class="text-xs text-muted-foreground">{metricLabel(id)}</div>
+                <div class="font-medium tabular-nums">{metricValue(id)}</div>
+              </div>
+            {/each}
+          </div>
+          {#if insights.output.insights?.length}
+            <ul class="mt-2 flex flex-col gap-1">
+              {#each insights.output.insights as text (text)}
+                <li class="text-xs text-muted-foreground">{text}</li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {/if}
     </Card.Content>
   </Card.Root>

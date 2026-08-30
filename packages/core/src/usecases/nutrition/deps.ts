@@ -1,5 +1,6 @@
 import type { NutritionRepo } from "../../data/nutritionRepo";
 import type { FoodDbRepo } from "../../data/foodDbRepo";
+import type { AssignedNutritionPlanRepo } from "../../data/coachNutritionPlanRepo";
 import type { NutritionAlgorithmRegistry } from "../../domain/nutritionAlgorithm";
 import type { NutritionAnalyticsRegistry } from "../../domain/nutritionAnalytics";
 
@@ -10,4 +11,7 @@ export type NutritionDeps = {
   foodDbRepo: FoodDbRepo;
   nutritionAlgorithmRegistry: NutritionAlgorithmRegistry;
   nutritionAnalyticsRegistry: NutritionAnalyticsRegistry;
+  /** Coach-assigned nutrition plan mirror. Present on the mobile client; a coach-assigned
+   * plan supersedes the algorithm's target. Absent when there's no coach layer in play. */
+  assignedNutritionPlanRepo?: AssignedNutritionPlanRepo;
 };

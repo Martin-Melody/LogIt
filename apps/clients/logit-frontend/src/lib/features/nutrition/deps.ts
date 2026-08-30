@@ -4,6 +4,7 @@ import {
   getFoodDbRepo,
   getNutritionAlgorithmRegistry,
   getNutritionAnalyticsRegistry,
+  getCoachNutritionPlanRepo,
 } from "$lib/data/repoProvider";
 
 /** Repo + registry bundle for the @logit/core nutrition usecases — the same shape a
@@ -14,5 +15,6 @@ export function getNutritionDeps(): NutritionDeps {
     foodDbRepo: getFoodDbRepo(),
     nutritionAlgorithmRegistry: getNutritionAlgorithmRegistry(),
     nutritionAnalyticsRegistry: getNutritionAnalyticsRegistry(),
+    assignedNutritionPlanRepo: getCoachNutritionPlanRepo(),
   };
 }
