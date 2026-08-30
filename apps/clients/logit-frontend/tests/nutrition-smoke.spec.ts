@@ -109,6 +109,10 @@ test("nutrition personal flow", async ({ page }) => {
   await page.getByRole("button", { name: "Add", exact: true }).click();
   await page.waitForURL(/\/nutrition$/);
   await expect(page.getByText("Chicken & rice bowl")).toBeVisible();
+  // the per-item "add photo" control exists and doesn't blow up (headless: no camera)
+  await page.getByRole("button", { name: "Add photo" }).first().click();
+  await page.waitForTimeout(300);
+  await expect(page.getByText("Chicken & rice bowl")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/05-today-logged.png`, fullPage: true });
 
   // ── Weight trend ──

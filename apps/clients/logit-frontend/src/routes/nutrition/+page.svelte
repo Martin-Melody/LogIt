@@ -10,6 +10,7 @@
     Scale,
     Trash2,
     UtensilsCrossed,
+    Camera,
   } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
@@ -17,6 +18,7 @@
     localDateIso,
     mealTotals,
     removeDiaryItem,
+    updateDiaryItem,
     MEAL_SLOTS,
     type DiaryDay,
     type MealSlot,
@@ -82,6 +84,17 @@
   async function deleteItem(itemId: string) {
     if (!day) return;
     const next = removeDiaryItem(day, itemId);
+    day = next;
+    await getNutritionRepo().saveDay(next);
+    pushNutritionDay(next);
+  }
+
+  async function addPhoto(itemId: string) {
+    if (!day) return;
+    const { captureMealPhoto } = await import("$lib/features/nutrition/mealPhoto");
+    const photoDataUrl = await captureMealPhoto();
+    if (!photoDataUrl) return;
+    const next = updateDiaryItem(day, itemId, { photoDataUrl });
     day = next;
     await getNutritionRepo().saveDay(next);
     pushNutritionDay(next);
@@ -182,11 +195,17 @@
           <ul class="px-3 pb-2 flex flex-col gap-1">
             {#each items as it (it.id)}
               <li class="flex items-center gap-2 text-xs">
+                {#if it.photoDataUrl}
+                  <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded object-cover shrink-0" />
+                {/if}
                 <span class="flex-1 truncate">
                   {it.name}
                   {#if it.servingLabel}<span class="text-muted-foreground"> · {it.servingLabel}</span>{/if}
                 </span>
                 <span class="tabular-nums text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
+                <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void addPhoto(it.id)} aria-label="Add photo">
+                  <Camera class="h-3.5 w-3.5" />
+                </button>
                 <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteItem(it.id)} aria-label="Remove">
                   <Trash2 class="h-3.5 w-3.5" />
                 </button>
