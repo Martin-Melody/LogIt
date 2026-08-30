@@ -107,9 +107,11 @@ Built on `feat/nutrition-coach-layer` → `feat/nutrition-meal-plans`.
 - [x] `LoggedItem.photoDataUrl` — client attaches a photo per diary item
       (`@capacitor/camera`, small jpeg), thumbnail on `/nutrition`.
 - [x] Studio "Recent diary" card — last 7 days of the client's items + photo thumbnails.
-- [ ] **Coach comments** — can't live on the client-owned diary row (one-directional
-      isolation). Needs a coach→client feedback channel: extend `CoachMessage`, or a new
-      `CoachFeedback` entity keyed to a `(clientId, dateIso)`. **Design call needed.**
+- [x] **Coach comments** — a comment on a diary day rides on the existing coach↔client
+      message thread: `CoachMessage.contextDateIso` (YYYY-MM-DD). The message still lives in
+      the thread; when set, the client surfaces it inline on `/nutrition` for that day and
+      the Studio "Recent diary" card shows it + a per-day comment box. Chosen over a new
+      `CoachFeedback` entity — reuses the only bidirectional sync entity, zero new surface.
 
 ---
 

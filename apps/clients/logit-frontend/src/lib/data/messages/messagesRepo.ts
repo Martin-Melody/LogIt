@@ -13,4 +13,6 @@ export interface MessagesRepo {
   /** Locally mark the other party's messages in a thread as read up to a timestamp. */
   markThreadRead(relationshipId: string, upToMs: number): Promise<void>;
   unreadCount(relationshipId?: string): Promise<number>;
+  /** Messages tagged as comments on the client's diary for a given date (YYYY-MM-DD), oldest first. */
+  listCommentsForDate(dateIso: string): Promise<CoachMessage[]>;
 }

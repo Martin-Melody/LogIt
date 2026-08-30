@@ -379,7 +379,8 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       created_at_ms INTEGER NOT NULL,
       read_at_ms INTEGER NULL,
       mine INTEGER NOT NULL DEFAULT 0,
-      synced INTEGER NOT NULL DEFAULT 0
+      synced INTEGER NOT NULL DEFAULT 0,
+      context_date_iso TEXT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_coach_messages_thread
       ON coach_messages(owner_id, relationship_id, created_at_ms);
@@ -460,6 +461,7 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
   await migrateExerciseType(db);
   await migrateMachines(db);
   await migrateSessionFlags(db);
+  await migrateCoachMessageContext(db);
   await seedSetTypes(db);
   await seedExercises(db);
 }
@@ -483,6 +485,12 @@ async function migrateMachines(db: SQLiteDBConnection): Promise<void> {
 async function migrateSessionFlags(db: SQLiteDBConnection): Promise<void> {
   try {
     await db.run(`ALTER TABLE sessions ADD COLUMN exclude_from_progression INTEGER NOT NULL DEFAULT 0`, []);
+  } catch { /* column already exists */ }
+}
+
+async function migrateCoachMessageContext(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run(`ALTER TABLE coach_messages ADD COLUMN context_date_iso TEXT NULL`, []);
   } catch { /* column already exists */ }
 }
 

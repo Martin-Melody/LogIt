@@ -698,6 +698,7 @@ public static class CoachEndpoints
             SenderUserId = callerId,
             Body = body,
             CreatedAtMs = req.CreatedAtMs,
+            ContextDateIso = string.IsNullOrWhiteSpace(req.ContextDateIso) ? null : req.ContextDateIso,
         };
         db.CoachMessages.Add(message);
         await db.SaveChangesAsync();
@@ -721,7 +722,7 @@ public static class CoachEndpoints
             .Where(m => m.RelationshipId == relationshipId && m.SyncedAt > sinceUtc)
             .OrderBy(m => m.SyncedAt)
             .Select(m => new MessageDto(
-                m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId))
+                m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -744,7 +745,7 @@ public static class CoachEndpoints
                 && m.Relationship.Status == CoachClientStatus.Active)
             .OrderBy(m => m.SyncedAt)
             .Select(m => new ThreadMessageDto(
-                m.RelationshipId, m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId))
+                m.RelationshipId, m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -793,10 +794,10 @@ public static class CoachEndpoints
     }
 }
 
-public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs);
+public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs, string? ContextDateIso = null);
 public record MarkReadRequest(Guid RelationshipId, long UpToMs);
-public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine);
-public record ThreadMessageDto(Guid RelationshipId, string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine);
+public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null);
+public record ThreadMessageDto(Guid RelationshipId, string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null);
 
 public record UpsertProgramRequest(
     string ProgramId,

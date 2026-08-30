@@ -102,6 +102,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ContextDateIso")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("CreatedAtMs")
                         .HasColumnType("INTEGER");
 

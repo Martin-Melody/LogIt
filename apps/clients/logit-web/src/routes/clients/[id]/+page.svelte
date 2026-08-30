@@ -16,6 +16,8 @@
   import { getNutritionInsights } from "@logit/core/usecases/nutrition/getNutritionInsights";
   import type { NutritionInsightsView } from "@logit/core/usecases/nutrition/getNutritionInsights";
   import { dayTotals, localDateIso, type DiaryDay } from "@logit/core/domain/nutrition";
+  import { coachApi } from "@logit/core/api/coachApi";
+  import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
   import {
     getWebCoachProgramRepo,
     getWebCheckinRepo,
@@ -38,6 +40,52 @@
   let planSaved = $state(false);
   let insights = $state<NutritionInsightsView | null>(null);
   let recentDiary = $state<DiaryDay[]>([]);
+
+  // Per-day diary comments (ride on the coach↔client message thread).
+  let relationshipId = $state<string | null>(null);
+  let commentsByDate = $state<Record<string, RemoteMessage[]>>({});
+  let commentDraft = $state<Record<string, string>>({});
+  let commentSending = $state<string | null>(null);
+
+  async function loadComments() {
+    if (!relationshipId) return;
+    try {
+      const msgs = await messagesApi.list(relationshipId, 0);
+      const byDate: Record<string, RemoteMessage[]> = {};
+      for (const m of msgs) {
+        if (!m.contextDateIso) continue;
+        (byDate[m.contextDateIso] ??= []).push(m);
+      }
+      commentsByDate = byDate;
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  async function sendComment(dateIso: string) {
+    const body = (commentDraft[dateIso] ?? "").trim();
+    if (!body || !relationshipId || commentSending) return;
+    commentSending = dateIso;
+    try {
+      await messagesApi.send({
+        relationshipId,
+        messageId: crypto.randomUUID(),
+        body,
+        createdAtMs: Date.now(),
+        contextDateIso: dateIso,
+      });
+      commentDraft = { ...commentDraft, [dateIso]: "" };
+      await loadComments();
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Failed to post comment";
+    } finally {
+      commentSending = null;
+    }
+  }
+
+  function fmtTime(ms: number): string {
+    return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
 
   async function load() {
     loading = true;
@@ -65,6 +113,13 @@
     nutDeps.nutritionRepo
       .listDaysInRange(localDateIso(start), localDateIso())
       .then((d) => (recentDiary = d.slice().reverse()))
+      .catch(() => {});
+    coachApi
+      .listClients()
+      .then((cs) => {
+        relationshipId = cs.find((c) => c.client.id === clientId)?.relationshipId ?? null;
+        return loadComments();
+      })
       .catch(() => {});
   }
 
@@ -290,6 +345,39 @@
                 </li>
               {/each}
             </ul>
+
+            {#if commentsByDate[d.dateIso]?.length}
+              <ul class="mt-2 flex flex-col gap-1">
+                {#each commentsByDate[d.dateIso] as c (c.messageId)}
+                  <li class="text-xs rounded bg-muted/60 px-2 py-1">
+                    <span class="text-muted-foreground">{c.mine ? "You" : "Client"} · {fmtTime(c.createdAtMs)}</span>
+                    <p class="whitespace-pre-wrap break-words">{c.body}</p>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+            {#if relationshipId}
+              <form
+                class="mt-2 flex items-center gap-2"
+                onsubmit={(e) => { e.preventDefault(); void sendComment(d.dateIso); }}
+              >
+                <input
+                  type="text"
+                  placeholder="Comment on this day…"
+                  class="h-7 flex-1 rounded border border-border bg-background px-2 text-xs"
+                  value={commentDraft[d.dateIso] ?? ""}
+                  oninput={(e) => (commentDraft = { ...commentDraft, [d.dateIso]: e.currentTarget.value })}
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  disabled={commentSending === d.dateIso || !(commentDraft[d.dateIso] ?? "").trim()}
+                >
+                  Post
+                </Button>
+              </form>
+            {/if}
           </div>
         {/each}
       </Card.Content>
