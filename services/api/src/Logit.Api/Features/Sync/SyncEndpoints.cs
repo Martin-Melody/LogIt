@@ -13,22 +13,25 @@ public static class SyncEndpoints
     {
         // Sync is a Pro/Studio feature — Free accounts (mobile-app social only) don't get
         // cross-device sync or the data it feeds (web dashboard, analytics).
-        var group = app.MapGroup("/sync").WithTags("Sync").RequireAuthorization().RequireTier(UserTier.Pro);
+        var group = app.MapGroup("/sync").WithTags("Sync").RequireAuthorization();
 
-        group.MapPost("/sessions", PushSessions);
-        group.MapGet("/sessions", PullSessions);
+        // Sessions and check-in submissions also flow to a Studio coach, so an actively-coached
+        // Free client gets these two (and only these two) without paying — see RequireTier.
+        group.MapPost("/sessions", PushSessions).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        group.MapGet("/sessions", PullSessions).RequireTier(UserTier.Pro, orActivelyCoached: true);
 
-        group.MapPost("/splits", PushSplits);
-        group.MapGet("/splits", PullSplits);
+        group.MapPost("/checkins", PushCheckinSubmissions).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        group.MapGet("/checkins", PullCheckinSubmissions).RequireTier(UserTier.Pro, orActivelyCoached: true);
 
-        group.MapPost("/exercises", PushExercises);
-        group.MapGet("/exercises", PullExercises);
+        // Whole-library multi-device sync stays Pro/Studio-only.
+        group.MapPost("/splits", PushSplits).RequireTier(UserTier.Pro);
+        group.MapGet("/splits", PullSplits).RequireTier(UserTier.Pro);
 
-        group.MapPost("/profile", PushProfile);
-        group.MapGet("/profile", PullProfile);
+        group.MapPost("/exercises", PushExercises).RequireTier(UserTier.Pro);
+        group.MapGet("/exercises", PullExercises).RequireTier(UserTier.Pro);
 
-        group.MapPost("/checkins", PushCheckinSubmissions);
-        group.MapGet("/checkins", PullCheckinSubmissions);
+        group.MapPost("/profile", PushProfile).RequireTier(UserTier.Pro);
+        group.MapGet("/profile", PullProfile).RequireTier(UserTier.Pro);
     }
 
     // ── Sessions ─────────────────────────────────────────────────────────────
