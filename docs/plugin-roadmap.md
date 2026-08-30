@@ -10,6 +10,8 @@ Let the community build and share:
 - progression algorithms
 - exercise packs
 - analytics modules
+- nutrition algorithms (goal + weight trend + intake → calorie target)
+- nutrition analytics (weekly recaps, adherence, custom insights)
 
 The key design constraint is safety. Discovery can be federated, but installation should remain explicit and reviewable.
 

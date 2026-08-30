@@ -1,0 +1,21 @@
+{
+  "id": "sample.nutrition-algorithm.pure-trend",
+  "family": "nutrition-algorithm",
+  "name": "Pure Trend",
+  "description": "A sample nutrition algorithm. Ignores Mifflin–St Jeor — it sets the target purely from your recent intake vs. weight trend, so it only works once you have a couple of weeks of data.",
+  "version": "1.0.0",
+  "author": "Logit Samples",
+  "homepageUrl": "/sample-plugins/pure-trend/README.txt",
+  "sourceUrl": "/sample-plugins/pure-trend/manifest.json",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "/sample-plugins/pure-trend/manifest.json",
+    "bundleUrl": "/sample-plugins/pure-trend/bundle.js"
+  },
+  "capabilities": [
+    {
+      "family": "nutrition-algorithm",
+      "algorithmId": "sample.nutrition-algorithm.pure-trend"
+    }
+  ]
+}

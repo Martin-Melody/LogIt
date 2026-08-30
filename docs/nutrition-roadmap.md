@@ -93,7 +93,11 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 
 ## Phase 5 — Ecosystem & federation
 
-- [ ] Nutrition analytics as a plugin family (see `plugin-roadmap.md`)
+- [x] Pluggable calorie/macro target algorithm (`nutrition-algorithm` family) —
+      built-in "Standard adaptive" + community plugins, schema-driven preferences,
+      config on the synced goal blob
+- [x] Nutrition analytics as a plugin family (`nutrition-analytics`) — built-in
+      "Basic insights" + `/nutrition/insights` screen
 - [ ] Shareable recipe packs
 - [ ] Export / import
 - [ ] Optional contribution of user-created foods back to Open Food Facts
