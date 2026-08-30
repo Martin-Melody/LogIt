@@ -10,11 +10,13 @@ consistent with how programs and check-ins already flow coach→client in PT Stu
 - Nutrition is the weakest area of every major PT platform (Trainerize, Everfit, TrueCoach,
   PT Distinction) and the one they're investing in hardest — room to differentiate rather
   than catch up.
-- The current UX battleground is **AI photo logging** and **adaptive (trend-based) macro
-  targets** (MacroFactor). Adaptive targets are the natural nutrition analogue of Logit's
-  progression algorithms.
+- **Adaptive (trend-based) macro targets** (MacroFactor) are the natural nutrition analogue
+  of Logit's progression algorithms — and, like them, pluggable.
 - The personal and coached experiences share one data model: same logging engine, same food
   database, same recipe box. The coach layer only adds *assignment* and *monitoring*.
+
+**Not doing: AI photo logging.** The other platforms lean on meal-photo → macro estimation,
+but the accuracy is unproven and it needs an always-online vision model. Out of scope.
 
 ## Design constraints
 
@@ -72,26 +74,30 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 
 ## Phase 3 — PT / coach layer
 
-- [ ] `NutritionPlan` domain: targets + optional structured meals, authored by a coach
-- [ ] Assign coach→client (read-only client mirror — same shape as `CoachProgram` /
-      `CheckinSchedule`)
-- [ ] Coach dashboard: client diary, adherence %, macro-trend charts
-- [ ] Meal-photo journal with coach comments (may fold into check-ins / messages)
-- [ ] Client view of assigned targets + meal plan with swappable meals + grocery list
-- [ ] Tier gating consistent with Studio
+**Stage A — coach assigns nutrition targets (in progress, `feat/nutrition-coach-layer`):**
+- [ ] `CoachNutritionPlan` domain: kcal + macro targets + a note, authored by a coach.
+      Same coach→client assignment shape as `CoachProgram` (authored/template + assigned,
+      read-only client mirror, tombstones, Active-relationship-gated pull).
+- [ ] API: `CoachNutritionPlan` entity + dual migrations + `/coach/nutrition-plans`
+      (upsert, list, assigned-pull), `RequireTier(Studio)` on the authoring side.
+- [ ] core: `coachNutritionPlanApi.ts`, `data/coachNutritionPlanRepo.ts`.
+- [ ] Mobile: local/sqlite mirror + `pullAndMergeCoachNutritionPlans`; an assigned plan's
+      targets supersede the algorithm on `/nutrition` (badge "From your coach").
+- [ ] Studio (`logit-web`): author + assign a plan from the client page.
+
+**Stage B — coach monitors the client (in progress):**
+- [ ] `createRemoteNutritionRepo(clientId)` in core (API-backed `NutritionRepo`).
+- [ ] `logit-web` `/clients/[id]/nutrition`: recent diary, weight trend, adherence % and
+      macro averages (reuse `getNutritionInsights` against the remote repo), current targets.
+
+**Stage C — structured meal plans (later):** meal-by-meal foods, swaps, grocery list.
+
+**Stage D — meal-photo journal + coach comments (later):** likely folds into check-ins /
+messages rather than a new surface.
 
 ---
 
-## Phase 4 — AI photo logging
-
-- [ ] Cloud endpoint: meal photo → vision model → calorie/macro + ingredient estimate
-- [ ] Bring-your-own-key or cloud-tier feature (inherently online)
-- [ ] Client capture UI; coach-side review
-- [ ] Confidence display + one-tap correction
-
----
-
-## Phase 5 — Ecosystem & federation
+## Phase 4 — Ecosystem & federation
 
 - [x] Pluggable calorie/macro target algorithm (`nutrition-algorithm` family) —
       built-in "Standard adaptive" + community plugins, schema-driven preferences,
