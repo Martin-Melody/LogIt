@@ -5,8 +5,10 @@ import { createRemoteCheckinRepo, fetchClientCheckinSubmissions } from "@logit/c
 import { createRemoteExerciseRepo } from "@logit/core/data/remote/remoteExerciseRepo";
 import { createRemoteProgressionRepo } from "@logit/core/data/remote/remoteProgressionRepo";
 import { createRemoteNutritionRepo } from "@logit/core/data/remote/remoteNutritionRepo";
+import { createSyncedNutritionRepo } from "@logit/core/data/remote/syncedNutritionRepo";
 import { createRemoteCoachNutritionPlanRepo } from "@logit/core/data/remote/remoteCoachNutritionPlanRepo";
 import { createOpenFoodFactsRepo } from "@logit/core/data/remote/openFoodFactsRepo";
+import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
@@ -75,6 +77,26 @@ export function getWebNutritionDeps(clientId: string): NutritionDeps {
 /** Open Food Facts search — for the coach building a meal plan (no bundled food DB on web). */
 export function getWebFoodDbRepo() {
   return createOpenFoodFactsRepo();
+}
+
+/** Read+write nutrition deps for the logged-in user's OWN data — the personal
+ * `/nutrition` screens on the web. Writes push straight to `/sync/nutrition/*`.
+ * Not cached (cheap closures; a fresh repo per page load avoids stale caches). */
+export function getOwnNutritionDeps(): NutritionDeps {
+  return {
+    nutritionRepo: createSyncedNutritionRepo(),
+    foodDbRepo: createOpenFoodFactsRepo(),
+    nutritionAlgorithmRegistry: createLocalNutritionAlgorithmRegistry(),
+    nutritionAnalyticsRegistry: createLocalNutritionAnalyticsRegistry(),
+  };
+}
+
+/** The logged-in user's own synced profile (height / weight / units) — used to seed the
+ * nutrition goal form and pick a weight display unit. Cached for the session. */
+let profileCache: Promise<RemoteProfile | null> | null = null;
+export function getOwnProfile(): Promise<RemoteProfile | null> {
+  profileCache ??= syncApi.pullProfile().then(({ profile }) => profile).catch(() => null);
+  return profileCache;
 }
 
 export { fetchClientCheckinSubmissions };
