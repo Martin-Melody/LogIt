@@ -80,6 +80,26 @@ export function gramServing(): ServingOption {
   return { id: "g", label: "100 g", grams: 100 };
 }
 
+/** Raw amount units the diary accepts alongside named servings. Volume assumes a
+ * density of ~1 (g ≈ ml), the same assumption `per100g` already makes for liquids. */
+export const MEASURE_UNITS = ["g", "ml", "oz"] as const;
+export type MeasureUnit = (typeof MEASURE_UNITS)[number];
+
+const GRAMS_PER_UNIT: Record<MeasureUnit, number> = {
+  g: 1,
+  ml: 1,
+  oz: 28.349523125, // international avoirdupois ounce
+};
+
+export function isMeasureUnit(v: string): v is MeasureUnit {
+  return (MEASURE_UNITS as readonly string[]).includes(v);
+}
+
+/** Convert a raw amount in the given unit to grams for storage / macro scaling. */
+export function unitToGrams(amount: number, unit: MeasureUnit): number {
+  return amount * GRAMS_PER_UNIT[unit];
+}
+
 // ── Diary ─────────────────────────────────────────────────────────────────────
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";

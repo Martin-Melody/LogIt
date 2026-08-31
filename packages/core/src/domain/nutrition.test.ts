@@ -21,6 +21,8 @@ import {
   recomputeRecipe,
   removeDiaryItem,
   scaleMacros,
+  unitToGrams,
+  isMeasureUnit,
   tombstoneFavorite,
   type DiaryDay,
   type FoodRef,
@@ -44,6 +46,14 @@ describe("macro helpers", () => {
 
   it("kcalFromMacros uses 4/4/9", () => {
     expect(kcalFromMacros(20, 30, 10)).toBe(20 * 4 + 30 * 4 + 10 * 9);
+  });
+
+  it("unitToGrams converts g/ml/oz", () => {
+    expect(unitToGrams(64.5, "g")).toBe(64.5);
+    expect(unitToGrams(250, "ml")).toBe(250);
+    expect(unitToGrams(1, "oz")).toBeCloseTo(28.3495, 3);
+    expect(isMeasureUnit("oz")).toBe(true);
+    expect(isMeasureUnit("cup")).toBe(false);
   });
 });
 
