@@ -96,8 +96,8 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 
 - [x] `logit-web` personal nutrition views (read + edit) — `/nutrition` diary, `/nutrition/goal`,
       `/nutrition/weight`, `/nutrition/insights`, backed by `createSyncedNutritionRepo()`
-      (first user-data write path on the web). Recipes / favourites / meal templates / copy-
-      previous-day still mobile-only.
+      (first user-data write path on the web). Recipes / favourites / meal templates still
+      mobile-only; copy-previous-day + a recents quick-list are on the web too.
 - [x] Weekly summary, streaks, richer trend analytics — `/nutrition/insights` on web runs the
       nutrition-analytics plugin over 7/30/90 days (metrics, calorie sparkline, notes).
 - [x] Fast logging: **Recent** tab (derived from diary) + **Favourites** tab (synced
@@ -105,11 +105,17 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 - [x] Meal templates — bookmark any meal on the Today screen to save it; the log screen's
       "Meals" tab logs the whole set into a meal in one tap (synced `MealTemplate` entity)
 - [x] Drag diary items to reorder within a meal / move between meals (svelte-dnd-action)
-- [ ] Copy-previous-day, quick-add from history
+- [x] Copy-previous-day, quick-add from history — `copyDiaryItems()` domain helper; "Copy a
+      day" panel on the Today screen (mobile + web, defaults to yesterday). Quick-add from
+      history = the mobile Recent tab (one-tap re-log) + a Recent quick-list in the web add
+      dialog.
 - [x] Nutrition home widget — `TodaysNutritionWidget` + `WeightTrendWidget` on the mobile home
       screen, auto-enabled once a goal exists (`homeConfig.seedNutritionWidgets`).
-- [ ] Replace remaining native `<input type="date">` / `<select>` with shadcn Select +
-      a Calendar/Popover date picker (mobile mostly done; logit-web nutrition uses native)
+- [x] Replace remaining native `<input type="date">` / `<select>` with shadcn — done for the
+      mobile nutrition screens in the QoL pass (goal wizard `DateField` + `Select`, log serving
+      `Select`, weight-log `DateField`). logit-web nutrition keeps native date/select (no
+      Calendar component there, and native is fine on desktop). Non-nutrition coach screens
+      (`checkins`, `programs`) still have native `<select>` — separate cleanup.
 
 ---
 

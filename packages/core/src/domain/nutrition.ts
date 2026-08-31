@@ -180,6 +180,22 @@ export function moveDiaryItem(day: DiaryDay, itemId: string, meal: MealSlot): Di
   return updateDiaryItem(day, itemId, { meal });
 }
 
+/**
+ * Append copies of `items` into `day`, each with a fresh id and its meal slot kept.
+ * Meal photos are dropped — they belong to the original day's entry. Used by
+ * "copy a previous day" so a repeated day of eating is one tap, not a re-log per food.
+ * Optionally restrict to one meal slot.
+ */
+export function copyDiaryItems(day: DiaryDay, items: LoggedItem[], meal?: MealSlot): DiaryDay {
+  let next = day;
+  for (const it of items) {
+    if (meal && it.meal !== meal) continue;
+    const { id: _id, photoDataUrl: _photo, ...rest } = it;
+    next = addDiaryItem(next, rest);
+  }
+  return next;
+}
+
 /** Tombstone a day (clear all items). The row is kept so the deletion propagates on sync. */
 export function tombstoneDay(day: DiaryDay): DiaryDay {
   const now = nowMs();

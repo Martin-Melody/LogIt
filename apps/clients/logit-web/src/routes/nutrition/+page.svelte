@@ -5,11 +5,14 @@
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
   import {
+    copyDiaryItems,
     createDiaryDay,
     dayTotals,
     localDateIso,
     loggedItemFromFood,
+    loggedItemFromRecent,
     mealTotals,
+    recentFoodsFromDays,
     removeDiaryItem,
     addDiaryItem,
     roundMacros,
@@ -19,6 +22,7 @@
     type FoodRef,
     type MacroTotals,
     type MealSlot,
+    type RecentFood,
   } from "@logit/core/domain/nutrition";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { getOwnNutritionDeps, getOwnProfile } from "$lib/deps";
@@ -62,11 +66,19 @@
     day = (await deps.nutritionRepo.getDay(dateIso)) ?? null;
   }
 
+  let recents = $state<RecentFood[]>([]);
+  async function loadRecents() {
+    const end = localDateIso();
+    const start = localDateIso(new Date(Date.now() - 45 * 86_400_000));
+    const days = await deps.nutritionRepo.listDaysInRange(start, end);
+    recents = recentFoodsFromDays(days, 30);
+  }
+
   async function load() {
     loading = true;
     error = null;
     try {
-      await Promise.all([loadTargets(), loadDay()]);
+      await Promise.all([loadTargets(), loadDay(), loadRecents()]);
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load";
     } finally {
@@ -79,6 +91,42 @@
     d.setDate(d.getDate() + deltaDays);
     dateIso = localDateIso(d);
     void loadDay();
+  }
+
+  // ── Copy a previous day ──
+  let showCopy = $state(false);
+  let copyFrom = $state("");
+  let copyBusy = $state(false);
+  let copyMsg = $state<string | null>(null);
+
+  function dayBefore(iso: string): string {
+    const d = new Date(`${iso}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    return localDateIso(d);
+  }
+
+  function toggleCopy() {
+    showCopy = !showCopy;
+    copyMsg = null;
+    if (showCopy && !copyFrom) copyFrom = dayBefore(dateIso);
+  }
+
+  async function doCopy() {
+    if (!copyFrom || copyBusy) return;
+    copyBusy = true;
+    copyMsg = null;
+    try {
+      const src = await deps.nutritionRepo.getDay(copyFrom);
+      const items = src?.items ?? [];
+      if (items.length === 0) {
+        copyMsg = "Nothing logged on that day.";
+        return;
+      }
+      await persist(copyDiaryItems(day ?? createDiaryDay(dateIso), items));
+      showCopy = false;
+    } finally {
+      copyBusy = false;
+    }
   }
 
   async function persist(next: DiaryDay) {
@@ -141,6 +189,12 @@
     addMeal = null;
   }
 
+  async function logRecent(r: RecentFood) {
+    if (!addMeal) return;
+    await persist(addDiaryItem(day ?? createDiaryDay(dateIso), loggedItemFromRecent(r, addMeal)));
+    addMeal = null;
+  }
+
   async function addQuick() {
     if (!addMeal) return;
     const computed: MacroTotals = {
@@ -189,7 +243,22 @@
       <Button size="sm" variant="outline" class="h-7 px-2" onclick={() => shiftDate(-1)}>‹</Button>
       <span class="text-sm font-medium tabular-nums">{isToday ? "Today" : dateIso}</span>
       <Button size="sm" variant="outline" class="h-7 px-2" disabled={isToday} onclick={() => shiftDate(1)}>›</Button>
+      <button type="button" class="ml-auto text-xs text-muted-foreground hover:text-foreground" onclick={toggleCopy}>
+        Copy a day
+      </button>
     </div>
+
+    {#if showCopy}
+      <div class="flex flex-wrap items-end gap-2 rounded border border-border p-2">
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-muted-foreground">Copy meals from</span>
+          <input type="date" max={localDateIso()} class="h-8 rounded border border-border bg-background px-2 text-sm" bind:value={copyFrom} />
+        </label>
+        <button type="button" class="text-xs text-primary pb-2" onclick={() => (copyFrom = dayBefore(dateIso))}>Yesterday</button>
+        <Button size="sm" class="h-8" disabled={copyBusy} onclick={doCopy}>{copyBusy ? "Copying…" : "Copy"}</Button>
+        {#if copyMsg}<span class="text-xs text-muted-foreground pb-2">{copyMsg}</span>{/if}
+      </div>
+    {/if}
 
     <!-- Target -->
     <Card.Root>
@@ -308,6 +377,22 @@
               </li>
             {/each}
           </ul>
+        {:else if !query.trim() && recents.length}
+          <div class="flex flex-col">
+            <span class="text-xs text-muted-foreground">Recent</span>
+            <ul class="flex flex-col max-h-72 overflow-y-auto divide-y divide-border">
+              {#each recents as r (r.key)}
+                <li>
+                  <button type="button" class="w-full text-left py-2 text-sm" onclick={() => logRecent(r)}>
+                    {r.name}{#if r.brand}<span class="text-muted-foreground text-xs"> · {r.brand}</span>{/if}
+                    <span class="block text-xs text-muted-foreground tabular-nums">
+                      {fmtKcal(r.computed.kcal)} kcal{#if r.servingLabel} · {r.servingLabel}{/if}{#if r.count > 1} · ×{r.count}{/if}
+                    </span>
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          </div>
         {/if}
 
         <button type="button" class="text-xs text-primary self-start" onclick={() => (qa = { ...qa, open: true })}>
