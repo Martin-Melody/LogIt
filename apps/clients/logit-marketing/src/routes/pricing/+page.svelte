@@ -28,7 +28,7 @@
       <Card.Content class="flex flex-col gap-3 pt-1">
         <p class="text-2xl font-semibold">$0</p>
         <ul class="text-sm text-muted-foreground flex flex-col gap-1.5">
-          <li>· Full app, no feature limits</li>
+          <li>· Full app — training, nutrition, progression — no limits</li>
           <li>· Your own server, your own data</li>
           <li>· One command: <code class="text-xs bg-muted px-1 py-0.5 rounded">docker compose up</code></li>
         </ul>
@@ -54,8 +54,8 @@
         <p class="text-2xl font-semibold">{PRO_PRICE_LABEL}</p>
         <ul class="text-sm text-muted-foreground flex flex-col gap-1.5">
           <li>· No server to run or maintain</li>
-          <li>· Cloud sync across devices</li>
-          <li>· Same app, same data model</li>
+          <li>· Cloud sync across devices — workouts, nutrition, bodyweight</li>
+          <li>· Full web dashboard and analytics</li>
         </ul>
         <Button href="/signup?plan=pro" class="mt-2">Get started</Button>
       </Card.Content>
@@ -70,7 +70,8 @@
         <p class="text-2xl font-semibold">{STUDIO_PRICE_LABEL}</p>
         <ul class="text-sm text-muted-foreground flex flex-col gap-1.5">
           <li>· Everything in Pro</li>
-          <li>· Invite clients and view their training data</li>
+          <li>· Invite clients and view their training and nutrition</li>
+          <li>· Assign macro targets and meal plans, monitor adherence</li>
           <li>· Nothing is visible until a client accepts your invite</li>
         </ul>
         <Button href="/signup?plan=studio" class="mt-2">Get started</Button>
