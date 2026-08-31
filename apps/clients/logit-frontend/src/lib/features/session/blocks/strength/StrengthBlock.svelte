@@ -128,7 +128,9 @@
   }
 
   async function handleWeightChange(setId: string, weight: number) {
-    const safe = Number.isFinite(weight) ? Math.max(0, weight) : 0;
+    // Negative weight is meaningful: net assistance on a bodyweight / assisted-machine
+    // movement (e.g. −25 = bodyweight minus 25 kg on the assisted dip machine).
+    const safe = Number.isFinite(weight) ? weight : 0;
     await onMutate((s: WorkoutSession) => updateSet(s, blockId, setId, { weight: safe }));
   }
 
