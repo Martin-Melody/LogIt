@@ -1,17 +1,21 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/stores";
-  import { ArrowLeft, Search, Barcode, Plus, Star, History, UtensilsCrossed } from "lucide-svelte";
+  import { ArrowLeft, Search, Barcode, Plus, Star, History, UtensilsCrossed, ScanText } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Tabs from "$lib/components/ui/tabs";
   import * as Select from "$lib/components/ui/select";
   import BarcodeScanner from "$lib/features/nutrition/BarcodeScanner.svelte";
+  import { barcodeScanIsNative, scanBarcodeNative } from "$lib/features/nutrition/barcodeScan";
+  import { toast } from "$lib/components/ui/sonner";
+  import LabelScanner from "$lib/features/nutrition/LabelScanner.svelte";
+  import { labelOcrAvailable, type LabelScanResult } from "$lib/features/nutrition/labelOcr";
   import {
     addDiaryItem,
+    createCustomFood,
     createDiaryDay,
     createFavoriteFood,
-    gramServing,
     loggedItemFromFood,
     loggedItemFromRecent,
     mealTemplateToItems,
@@ -21,15 +25,17 @@
     scaleMacros,
     roundMacros,
     localDateIso,
+    MEASURE_UNITS,
+    isMeasureUnit,
+    unitToGrams,
     type FavoriteFood,
     type FoodRef,
     type MealSlot,
     type MealTemplate,
     type RecentFood,
-    type ServingOption,
   } from "@logit/core/domain/nutrition";
   import { getNutritionRepo, getFoodDbRepo } from "$lib/data/repoProvider";
-  import { pushNutritionDay, pushFavorite } from "$lib/sync/syncService";
+  import { pushNutritionDay, pushFavorite, pushCustomFood } from "$lib/sync/syncService";
   import { fmtKcal } from "$lib/features/nutrition/nutrition";
 
   const meal = ($page.url.searchParams.get("meal") ?? "breakfast") as MealSlot;
@@ -42,7 +48,36 @@
   let favorites = $state<FavoriteFood[]>([]);
   let mealTemplates = $state<MealTemplate[]>([]);
   let selected = $state<FoodRef | null>(null);
-  const pick = $state({ servingId: "g", quantity: 1 });
+  // portionId is a raw unit ("g" | "ml" | "oz") or a named serving id from the food;
+  // amount is how many of those (grams / ml / oz, or a count of the serving).
+  const pick = $state({ portionId: "g", amount: 100 });
+
+  type PortionOption = { id: string; label: string; grams: number | null };
+
+  const portionOptions = $derived.by<PortionOption[]>(() => {
+    const units: PortionOption[] = MEASURE_UNITS.map((u) => ({ id: u, label: u, grams: null }));
+    const named = (selected?.servings ?? [])
+      .filter((s) => s.id !== "g" && s.grams > 0)
+      .map((s) => ({ id: s.id, label: s.label, grams: s.grams }));
+    return [...units, ...named];
+  });
+
+  const activePortion = $derived(
+    portionOptions.find((o) => o.id === pick.portionId) ?? portionOptions[0],
+  );
+
+  function fmtAmount(n: number): string {
+    return Number(n.toFixed(2)).toString();
+  }
+
+  function portionLabel(): string {
+    const amt = Number(pick.amount) || 0;
+    const o = activePortion;
+    if (!o) return `${Math.round(grams)} g`;
+    if (o.grams === null) return `${fmtAmount(amt)} ${o.label}`;
+    const each = amt === 1 ? "" : `${fmtAmount(amt)} × `;
+    return `${each}${o.label} (${Math.round(grams)} g)`;
+  }
 
   const searching = $derived(ui.query.trim().length > 0);
   const favIds = $derived(new Set(favorites.map((f) => f.food.id)));
@@ -51,6 +86,25 @@
   const quick = $state({ name: "", kcal: "", protein: "", carbs: "", fat: "" });
   let showQuick = $state(false);
   let showScanner = $state(false);
+
+  // label scan (barcode not found → read the nutrition panel from a photo)
+  let showLabelScanner = $state(false);
+  const ocrReady = labelOcrAvailable();
+  let notFoundBarcode = $state<string | null>(null);
+  const labelDraft = $state({
+    open: false,
+    name: "",
+    brand: "",
+    basis: "100g" as "100g" | "serving",
+    servingG: "",
+    kcal: "",
+    protein: "",
+    carbs: "",
+    fat: "",
+    warnings: [] as string[],
+    raw: "",
+    showRaw: false,
+  });
 
   onMount(() => {
     void loadRecents();
@@ -85,6 +139,8 @@
 
   let searchTimer: ReturnType<typeof setTimeout>;
   function onInput() {
+    notFoundBarcode = null;
+    labelDraft.open = false;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => void runSearch(), 250);
   }
@@ -128,10 +184,16 @@
     if (code.length < 6) return;
     ui.query = code;
     ui.searching = true;
+    notFoundBarcode = null;
     try {
-      const food = await getFoodDbRepo().getFoodByBarcode(code);
+      // A custom food you saved from a label scan wins — it carries this barcode.
+      const mine = (await getNutritionRepo().listCustomFoods()).find(
+        (c) => c.food.barcode === code,
+      );
+      const food = mine?.food ?? (await getFoodDbRepo().getFoodByBarcode(code));
       results = food ? [food] : [];
       if (food) select(food);
+      else notFoundBarcode = code;
     } finally {
       ui.searching = false;
     }
@@ -142,28 +204,123 @@
     void lookupBarcode(code);
   }
 
-  function select(food: FoodRef) {
-    selected = food;
-    pick.servingId = food.servings[0]?.id ?? "g";
-    pick.quantity = 1;
+  async function openScanner() {
+    if (!barcodeScanIsNative()) {
+      showScanner = true;
+      return;
+    }
+    try {
+      const code = await scanBarcodeNative();
+      if (code) void lookupBarcode(code);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn("[barcode] native scan failed", e);
+      toast(
+        msg === "scanner-preparing"
+          ? "Preparing the scanner — try again in a moment."
+          : "Couldn't open the barcode scanner.",
+      );
+    }
   }
 
-  const chosenServing = $derived.by<ServingOption>(() => {
-    const s = selected?.servings.find((x) => x.id === pick.servingId);
-    return s ?? gramServing();
+  function onLabelScanned(r: LabelScanResult) {
+    showLabelScanner = false;
+    const m = r.per100g ?? r.perServing;
+    labelDraft.open = true;
+    labelDraft.name = "";
+    labelDraft.brand = "";
+    labelDraft.basis = r.per100g ? "100g" : "serving";
+    labelDraft.servingG = r.servingSizeG ? String(Math.round(r.servingSizeG)) : "";
+    labelDraft.kcal = m?.kcal ? String(Math.round(m.kcal)) : "";
+    labelDraft.protein = m ? String(round1(m.proteinG)) : "";
+    labelDraft.carbs = m ? String(round1(m.carbsG)) : "";
+    labelDraft.fat = m ? String(round1(m.fatG)) : "";
+    labelDraft.warnings = r.warnings;
+    labelDraft.raw = r.raw;
+    labelDraft.showRaw = false;
+  }
+
+  function round1(n: number): number {
+    return Math.round(n * 10) / 10;
+  }
+
+  /** Save the scanned label as a custom food (tagged with the barcode) and select it. */
+  async function saveLabelFood() {
+    const kcal = Number(labelDraft.kcal);
+    if (!labelDraft.name.trim() || !Number.isFinite(kcal) || kcal <= 0) return;
+
+    let per100g = {
+      kcal,
+      proteinG: Number(labelDraft.protein) || 0,
+      carbsG: Number(labelDraft.carbs) || 0,
+      fatG: Number(labelDraft.fat) || 0,
+    };
+    const servingG = Number(labelDraft.servingG);
+    const hasServing = Number.isFinite(servingG) && servingG > 0;
+    if (labelDraft.basis === "serving" && !hasServing) return; // need the serving size to rebase
+
+    // If the label only gave per-serving numbers, rebase them to per 100 g.
+    if (labelDraft.basis === "serving" && hasServing) {
+      const f = 100 / servingG;
+      per100g = {
+        kcal: Math.round(per100g.kcal * f),
+        proteinG: round1(per100g.proteinG * f),
+        carbsG: round1(per100g.carbsG * f),
+        fatG: round1(per100g.fatG * f),
+      };
+    }
+
+    const servings = [{ id: "g", label: "100 g", grams: 100 }];
+    if (hasServing) {
+      servings.push({ id: "serving", label: `serving (${Math.round(servingG)} g)`, grams: servingG });
+    }
+
+    const custom = createCustomFood({
+      name: labelDraft.name,
+      brand: labelDraft.brand.trim() || undefined,
+      barcode: notFoundBarcode ?? undefined,
+      per100g,
+      servings,
+    });
+    await getNutritionRepo().saveCustomFood(custom);
+    pushCustomFood(custom);
+
+    labelDraft.open = false;
+    notFoundBarcode = null;
+    results = [custom.food];
+    select(custom.food);
+  }
+
+  function select(food: FoodRef) {
+    selected = food;
+    // Default to the food's first real named serving (amount 1); otherwise raw grams.
+    const named = food.servings.find((s) => s.id !== "g" && s.grams > 0);
+    if (named) {
+      pick.portionId = named.id;
+      pick.amount = 1;
+    } else {
+      pick.portionId = "g";
+      pick.amount = 100;
+    }
+  }
+
+  const grams = $derived.by(() => {
+    const amt = Number(pick.amount) || 0;
+    if (amt <= 0) return 0;
+    const o = activePortion;
+    if (!o) return 0;
+    if (o.grams === null) {
+      return isMeasureUnit(o.id) ? unitToGrams(amt, o.id) : amt;
+    }
+    return amt * o.grams;
   });
-  const grams = $derived(chosenServing.grams * (Number(pick.quantity) || 0));
   const preview = $derived(selected ? roundMacros(scaleMacros(selected.per100g, grams)) : null);
 
   async function addSelected() {
     if (!selected || grams <= 0) return;
     const repo = getNutritionRepo();
     const existing = (await repo.getDay(dateIso)) ?? createDiaryDay(dateIso);
-    const label =
-      (Number(pick.quantity) !== 1 ? `${pick.quantity} × ` : "") +
-      `${chosenServing.label}` +
-      (chosenServing.id !== "g" ? ` (${Math.round(grams)} g)` : "");
-    const next = addDiaryItem(existing, loggedItemFromFood(selected, meal, grams, label));
+    const next = addDiaryItem(existing, loggedItemFromFood(selected, meal, grams, portionLabel()));
     await repo.saveDay(next);
     pushNutritionDay(next);
     back(`/nutrition`);
@@ -233,6 +390,9 @@
 {#if showScanner}
   <BarcodeScanner onResult={onScanned} onClose={() => (showScanner = false)} />
 {/if}
+{#if showLabelScanner}
+  <LabelScanner onResult={onLabelScanned} onClose={() => (showLabelScanner = false)} />
+{/if}
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
@@ -250,7 +410,7 @@
       bind:value={ui.query}
       oninput={onInput}
     />
-    <button type="button" class="h-7 w-7 flex items-center justify-center text-muted-foreground" onclick={() => (showScanner = true)} aria-label="Scan barcode">
+    <button type="button" class="h-7 w-7 flex items-center justify-center text-muted-foreground" onclick={openScanner} aria-label="Scan barcode">
       <Barcode class="h-4 w-4" />
     </button>
   </div>
@@ -283,6 +443,75 @@
     </div>
   {/if}
 
+  {#if notFoundBarcode && !labelDraft.open && !selected}
+    <div class="px-3 py-3 border-b border-border flex flex-col gap-2 bg-muted/30">
+      <p class="text-sm">
+        No match for barcode <span class="tabular-nums font-medium">{notFoundBarcode}</span>.
+      </p>
+      {#if ocrReady}
+        <button
+          type="button"
+          class="self-start rounded bg-primary text-primary-foreground text-sm px-3 py-1.5 flex items-center gap-1.5"
+          onclick={() => (showLabelScanner = true)}
+        >
+          <ScanText class="h-4 w-4" /> Scan the nutrition label
+        </button>
+        <p class="text-[11px] text-muted-foreground">
+          Reads the panel from a photo and saves it as a custom food tagged with this barcode,
+          so the next scan finds it.
+        </p>
+      {:else}
+        <p class="text-[11px] text-muted-foreground">Add it with Quick add, or create a custom food.</p>
+      {/if}
+    </div>
+  {/if}
+
+  {#if labelDraft.open}
+    <div class="px-3 py-3 border-b border-border flex flex-col gap-2 bg-muted/30">
+      <div class="flex items-center gap-1.5 text-sm font-medium">
+        <ScanText class="h-4 w-4" /> From the label — check and save
+        <button
+          type="button"
+          class="ml-auto text-xs text-primary font-normal"
+          onclick={() => (showLabelScanner = true)}
+        >
+          Rescan
+        </button>
+      </div>
+      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={labelDraft.name} />
+      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Brand (optional)" bind:value={labelDraft.brand} />
+      <div class="grid grid-cols-4 gap-2">
+        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="kcal" bind:value={labelDraft.kcal} />
+        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="P" bind:value={labelDraft.protein} />
+        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="C" bind:value={labelDraft.carbs} />
+        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="F" bind:value={labelDraft.fat} />
+      </div>
+      <div class="flex items-center gap-2 text-xs flex-wrap">
+        <span class="text-muted-foreground">Values per</span>
+        <button type="button" class="px-2 py-0.5 rounded {labelDraft.basis === '100g' ? 'bg-primary text-primary-foreground' : 'bg-muted'}" onclick={() => (labelDraft.basis = '100g')}>100 g</button>
+        <button type="button" class="px-2 py-0.5 rounded {labelDraft.basis === 'serving' ? 'bg-primary text-primary-foreground' : 'bg-muted'}" onclick={() => (labelDraft.basis = 'serving')}>serving</button>
+        {#if labelDraft.basis === 'serving'}
+          <input class="w-24 bg-muted rounded px-2 py-1 outline-none tabular-nums" inputmode="decimal" placeholder="g in a serving" bind:value={labelDraft.servingG} />
+        {/if}
+      </div>
+      {#each labelDraft.warnings as w (w)}
+        <p class="text-[11px] text-amber-600 dark:text-amber-500">{w}</p>
+      {/each}
+      {#if labelDraft.raw}
+        <button type="button" class="self-start text-[11px] text-muted-foreground underline" onclick={() => (labelDraft.showRaw = !labelDraft.showRaw)}>
+          {labelDraft.showRaw ? "Hide" : "Show"} what the scan read
+        </button>
+        {#if labelDraft.showRaw}
+          <pre class="text-[10px] leading-tight bg-muted rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">{labelDraft.raw}</pre>
+        {/if}
+      {/if}
+      <div class="flex gap-2">
+        <Button size="sm" onclick={() => void saveLabelFood()}>Save &amp; choose portion</Button>
+        <Button size="sm" variant="ghost" onclick={() => (labelDraft.open = false)}>Cancel</Button>
+      </div>
+    </div>
+  {/if}
+
   {#if selected}
     <div class="px-3 py-3 border-b border-border bg-muted/30 flex flex-col gap-2">
       <div class="flex items-start gap-2">
@@ -294,21 +523,27 @@
         </button>
       </div>
       <div class="flex gap-2">
-        <Select.Root type="single" bind:value={pick.servingId}>
+        <input
+          class="w-24 bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums"
+          inputmode="decimal"
+          aria-label="Amount"
+          bind:value={pick.amount}
+        />
+        <Select.Root type="single" bind:value={pick.portionId}>
           <Select.Trigger class="flex-1">
-            {selected.servings.find((s) => s.id === pick.servingId)?.label ?? "Serving"}
+            {activePortion?.label ?? "Unit"}
           </Select.Trigger>
           <Select.Content>
-            {#each selected.servings as s (s.id)}
-              <Select.Item value={s.id} label={s.label} />
+            {#each portionOptions as o (o.id)}
+              <Select.Item value={o.id} label={o.label} />
             {/each}
           </Select.Content>
         </Select.Root>
-        <input class="w-20 bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={pick.quantity} />
       </div>
       {#if preview}
         <div class="text-xs text-muted-foreground tabular-nums">
           {fmtKcal(preview.kcal)} kcal · P {Math.round(preview.proteinG)} · C {Math.round(preview.carbsG)} · F {Math.round(preview.fatG)}
+          {#if activePortion && activePortion.id !== "g"}<span class="opacity-70"> · {Math.round(grams)} g</span>{/if}
         </div>
       {/if}
       <div class="flex gap-2">

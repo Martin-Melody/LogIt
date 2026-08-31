@@ -30,6 +30,15 @@ repositories {
     }
 }
 
+// The @capacitor-mlkit/text-recognition plugin pulls in the ML Kit models for
+// every script; we only ever request Script.Latin, so drop the rest (~15 MB).
+configurations.all {
+    exclude group: 'com.google.mlkit', module: 'text-recognition-chinese'
+    exclude group: 'com.google.mlkit', module: 'text-recognition-devanagari'
+    exclude group: 'com.google.mlkit', module: 'text-recognition-japanese'
+    exclude group: 'com.google.mlkit', module: 'text-recognition-korean'
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"

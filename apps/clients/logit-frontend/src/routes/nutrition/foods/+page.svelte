@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Plus, Trash2, Pencil } from "lucide-svelte";
+  import { ArrowLeft, Plus, Trash2, Pencil, ScanText } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -14,12 +14,42 @@
   import { getNutritionRepo } from "$lib/data/repoProvider";
   import { pushCustomFood, pushRecipe } from "$lib/sync/syncService";
   import { fmtKcal } from "$lib/features/nutrition/nutrition";
+  import LabelScanner from "$lib/features/nutrition/LabelScanner.svelte";
+  import { labelOcrAvailable, type LabelScanResult } from "$lib/features/nutrition/labelOcr";
 
   const ui = $state({ loading: true, showNewFood: false });
   let foods = $state<CustomFood[]>([]);
   let recipes = $state<Recipe[]>([]);
+  let showLabelScanner = $state(false);
+  const ocrReady = labelOcrAvailable();
 
   const draft = $state({ name: "", kcal: "", protein: "", carbs: "", fat: "", serving: "" });
+
+  function round1(n: number): number {
+    return Math.round(n * 10) / 10;
+  }
+
+  function onLabelScanned(r: LabelScanResult) {
+    showLabelScanner = false;
+    ui.showNewFood = true;
+    const m = r.per100g ?? r.perServing;
+    if (r.per100g) {
+      draft.serving = r.servingSizeG ? String(Math.round(r.servingSizeG)) : draft.serving;
+    } else if (r.servingSizeG) {
+      // per-serving only — rebase to per 100 g using the serving size
+      const f = 100 / r.servingSizeG;
+      draft.kcal = m?.kcal ? String(Math.round(m.kcal * f)) : "";
+      draft.protein = m ? String(round1(m.proteinG * f)) : "";
+      draft.carbs = m ? String(round1(m.carbsG * f)) : "";
+      draft.fat = m ? String(round1(m.fatG * f)) : "";
+      draft.serving = String(Math.round(r.servingSizeG));
+      return;
+    }
+    draft.kcal = m?.kcal ? String(Math.round(m.kcal)) : "";
+    draft.protein = m ? String(round1(m.proteinG)) : "";
+    draft.carbs = m ? String(round1(m.carbsG)) : "";
+    draft.fat = m ? String(round1(m.fatG)) : "";
+  }
 
   async function load() {
     const repo = getNutritionRepo();
@@ -74,6 +104,10 @@
   onMount(() => void load());
 </script>
 
+{#if showLabelScanner}
+  <LabelScanner onResult={onLabelScanned} onClose={() => (showLabelScanner = false)} />
+{/if}
+
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
     <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
@@ -124,6 +158,15 @@
 
       {#if ui.showNewFood}
         <div class="px-3 py-3 border-y border-border flex flex-col gap-2 bg-muted/30">
+          {#if ocrReady}
+            <button
+              type="button"
+              class="self-start rounded border border-border text-sm px-3 py-1.5 flex items-center gap-1.5"
+              onclick={() => (showLabelScanner = true)}
+            >
+              <ScanText class="h-4 w-4" /> Scan nutrition label
+            </button>
+          {/if}
           <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={draft.name} />
           <div class="grid grid-cols-4 gap-2">
             <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="kcal" bind:value={draft.kcal} />
