@@ -2,11 +2,12 @@ import type { NutritionRepo } from "@logit/core/data/nutritionRepo";
 import type {
   CustomFood,
   DiaryDay,
+  FavoriteFood,
   NutritionGoal,
   Recipe,
   WeightEntry,
 } from "@logit/core/domain/nutrition";
-import { diaryDayId } from "@logit/core/domain/nutrition";
+import { diaryDayId, favoriteFoodId } from "@logit/core/domain/nutrition";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 
@@ -132,6 +133,12 @@ export function createSqliteNutritionRepo(): NutritionRepo {
     saveRecipe: (r) => upsert("recipes", r.id, r, r.createdAtMs, r.updatedAtMs),
     deleteRecipe: (id) => tombstone("recipes", id),
 
+    // ── Favourites ──
+    listFavorites: () => jsonRows<FavoriteFood>(live("favorite_foods"), [owner()]),
+    saveFavorite: (fav) =>
+      upsert("favorite_foods", favoriteFoodId(fav.food.id), fav, fav.createdAtMs, fav.updatedAtMs),
+    deleteFavorite: (foodRefId) => tombstone("favorite_foods", favoriteFoodId(foodRefId)),
+
     // ── Weight ──
     listWeightEntries: (startIso, endIso) => {
       const clauses = ["(owner_id = ? OR owner_id IS NULL)", "deleted_at_ms IS NULL"];
@@ -183,6 +190,11 @@ export function createSqliteNutritionRepo(): NutritionRepo {
     listRecipesForPush: () => jsonRows<Recipe>(forPush("recipes"), [owner()]),
     upsertRecipeFromRemote: (r) => upsert("recipes", r.id, r, r.createdAtMs, r.updatedAtMs),
     removeRecipeFromRemote: (id) => tombstone("recipes", id),
+
+    listFavoritesForPush: () => jsonRows<FavoriteFood>(forPush("favorite_foods"), [owner()]),
+    upsertFavoriteFromRemote: (fav) =>
+      upsert("favorite_foods", favoriteFoodId(fav.food.id), fav, fav.createdAtMs, fav.updatedAtMs),
+    removeFavoriteFromRemote: (id) => tombstone("favorite_foods", id),
 
     listWeightEntriesForPush: () => jsonRows<WeightEntry>(forPush("weight_entries"), [owner()]),
     upsertWeightEntryFromRemote: (e) =>

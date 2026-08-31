@@ -24,6 +24,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedNutritionDay> SyncedNutritionDays => Set<SyncedNutritionDay>();
     public DbSet<SyncedCustomFood> SyncedCustomFoods => Set<SyncedCustomFood>();
     public DbSet<SyncedRecipe> SyncedRecipes => Set<SyncedRecipe>();
+    public DbSet<SyncedFavoriteFood> SyncedFavoriteFoods => Set<SyncedFavoriteFood>();
     public DbSet<SyncedWeightEntry> SyncedWeightEntries => Set<SyncedWeightEntry>();
 
     protected override void OnModelCreating(ModelBuilder model)
@@ -196,6 +197,14 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         });
 
         model.Entity<SyncedRecipe>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<SyncedFavoriteFood>(e =>
         {
             e.HasIndex(s => new { s.UserId, s.SyncedAt });
             e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();

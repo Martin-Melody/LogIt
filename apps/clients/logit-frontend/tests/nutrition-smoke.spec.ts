@@ -115,6 +115,15 @@ test("nutrition personal flow", async ({ page }) => {
   await expect(page.getByText("Chicken & rice bowl")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/05-today-logged.png`, fullPage: true });
 
+  // ── Fast logging: the Recent tab re-logs a past food in one tap ──
+  await page.goto(`/nutrition/log?meal=dinner&date=${today}`);
+  await expect(page.getByRole("tab", { name: "Recent" })).toBeVisible();
+  await page.getByRole("button", { name: /Chicken & rice bowl/ }).click();
+  await page.waitForURL(/\/nutrition$/);
+  // now logged in both lunch (original) and dinner
+  await expect(page.getByText("Chicken & rice bowl")).toHaveCount(2);
+  await page.screenshot({ path: `${SHOTS}/05b-recent-relog.png`, fullPage: true });
+
   // ── Weight trend ──
   await page.goto("/nutrition/weight");
   await expect(page.getByRole("heading", { name: "Weight" })).toBeVisible();
@@ -235,4 +244,41 @@ test("a coach comment on a diary day shows inline on that day", async ({ page })
   await expect(page.getByText(/Coach comments/)).toBeVisible();
   await expect(page.getByText("Great protein hit today")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/12-coach-comment.png`, fullPage: true });
+});
+
+test("favourites tab lists pinned foods and logs one in a tap", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true }));
+    localStorage.setItem("logit:had_account", "1");
+    localStorage.setItem(
+      "logit:favoriteFoods:v1",
+      JSON.stringify({
+        fav_off_x: {
+          food: {
+            id: "off:x",
+            source: "off",
+            name: "Oatly Barista",
+            brand: "Oatly",
+            per100g: { kcal: 59, proteinG: 1.1, carbsG: 6.6, fatG: 3 },
+            servings: [{ id: "g", label: "100 g", grams: 100 }],
+          },
+          createdAtMs: 1,
+          updatedAtMs: 2,
+        },
+      }),
+    );
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  await page.goto("/nutrition"); // establish history so back() after logging works
+  await page.goto(`/nutrition/log?meal=breakfast&date=${today}`);
+  await page.getByRole("tab", { name: "Favourites" }).click();
+  await expect(page.getByText("Oatly Barista")).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/13-favourites.png`, fullPage: true });
+
+  await page.getByRole("button", { name: /Oatly Barista/ }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.waitForURL(/\/nutrition$/);
+  await expect(page.getByText("Oatly Barista")).toBeVisible();
 });

@@ -28,10 +28,12 @@ import type { Exercise } from "@logit/core/domain/exercise";
 import type {
   CustomFood,
   DiaryDay,
+  FavoriteFood,
   NutritionGoal,
   Recipe,
   WeightEntry,
 } from "@logit/core/domain/nutrition";
+import { favoriteFoodId } from "@logit/core/domain/nutrition";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 
 // ── localStorage keys ────────────────────────────────────────────────────────
@@ -48,6 +50,7 @@ const PROFILE_UPDATED_AT_KEY = "logit:sync:profileUpdatedAtMs";
 const NUTRITION_DAYS_LAST_PULLED_KEY = "logit:sync:nutritionDaysLastPulledAt";
 const CUSTOM_FOODS_LAST_PULLED_KEY = "logit:sync:customFoodsLastPulledAt";
 const RECIPES_LAST_PULLED_KEY = "logit:sync:recipesLastPulledAt";
+const FAVORITES_LAST_PULLED_KEY = "logit:sync:favoritesLastPulledAt";
 const WEIGHT_ENTRIES_LAST_PULLED_KEY = "logit:sync:weightEntriesLastPulledAt";
 
 function getTimestamp(key: string): number {
@@ -536,6 +539,12 @@ export function pushRecipe(recipe: Recipe): void {
   syncApi.pushRecipes([dto]).catch(() => enqueue({ type: "recipe", dto }));
 }
 
+export function pushFavorite(fav: FavoriteFood): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = nutritionRowDto(favoriteFoodId(fav.food.id), fav);
+  syncApi.pushFavorites([dto]).catch(() => enqueue({ type: "favoriteFood", dto }));
+}
+
 export function pushWeightEntry(entry: WeightEntry): void {
   if (!apiClient.isAuthenticated()) return;
   const dto = nutritionRowDto(entry.id, entry);
@@ -553,16 +562,19 @@ export async function pushAllNutrition(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
     const repo = getNutritionRepo();
-    const [days, foods, recipes, weights, goal] = await Promise.all([
+    const [days, foods, recipes, favorites, weights, goal] = await Promise.all([
       repo.listDaysForPush(),
       repo.listCustomFoodsForPush(),
       repo.listRecipesForPush(),
+      repo.listFavoritesForPush(),
       repo.listWeightEntriesForPush(),
       repo.getGoal(),
     ]);
     if (days.length) await syncApi.pushNutritionDays(days.map((d) => nutritionRowDto(d.id, d)));
     if (foods.length) await syncApi.pushCustomFoods(foods.map((f) => nutritionRowDto(f.food.id, f)));
     if (recipes.length) await syncApi.pushRecipes(recipes.map((r) => nutritionRowDto(r.id, r)));
+    if (favorites.length)
+      await syncApi.pushFavorites(favorites.map((f) => nutritionRowDto(favoriteFoodId(f.food.id), f)));
     if (weights.length) await syncApi.pushWeightEntries(weights.map((w) => nutritionRowDto(w.id, w)));
     if (goal) await syncApi.pushNutritionGoal({ dataJson: JSON.stringify(goal), updatedAtMs: goal.updatedAtMs });
   } catch {}
@@ -624,6 +636,25 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(RECIPES_LAST_PULLED_KEY, Date.now());
+  } catch {}
+
+  try {
+    const since = getTimestamp(FAVORITES_LAST_PULLED_KEY);
+    const { favorites } = await syncApi.pullFavorites(since);
+    const local = await repo.listFavorites();
+    for (const e of favorites) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeFavoriteFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const fav = JSON.parse(e.dataJson) as FavoriteFood;
+        const existing = local.find((f) => f.food.id === fav.food.id);
+        if (existing && existing.updatedAtMs >= fav.updatedAtMs) continue;
+        await repo.upsertFavoriteFromRemote(fav);
+      } catch {}
+    }
+    setTimestamp(FAVORITES_LAST_PULLED_KEY, Date.now());
   } catch {}
 
   try {

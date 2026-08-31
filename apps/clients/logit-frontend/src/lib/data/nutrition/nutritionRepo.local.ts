@@ -3,16 +3,18 @@ import type { NutritionRepo } from "@logit/core/data/nutritionRepo";
 import type {
   CustomFood,
   DiaryDay,
+  FavoriteFood,
   NutritionGoal,
   Recipe,
   WeightEntry,
 } from "@logit/core/domain/nutrition";
-import { diaryDayId } from "@logit/core/domain/nutrition";
+import { diaryDayId, favoriteFoodId } from "@logit/core/domain/nutrition";
 
 const KEYS = {
   days: "logit:nutritionDays:v1", // Record<id, DiaryDay>
   customFoods: "logit:customFoods:v1", // Record<id, CustomFood>
   recipes: "logit:recipes:v1", // Record<id, Recipe>
+  favorites: "logit:favoriteFoods:v1", // Record<favId, FavoriteFood>
   weight: "logit:weightEntries:v1", // Record<id, WeightEntry>
   goal: "logit:nutritionGoal:v1", // NutritionGoal | null
 } as const;
@@ -102,6 +104,17 @@ export function createLocalNutritionRepo(): NutritionRepo {
       tombstone<Recipe & Tombstoned>(KEYS.recipes, id);
     },
 
+    // ── Favourites ──
+    async listFavorites() {
+      return liveValues<FavoriteFood & Tombstoned>(KEYS.favorites);
+    },
+    async saveFavorite(fav) {
+      put(KEYS.favorites, favoriteFoodId(fav.food.id), fav);
+    },
+    async deleteFavorite(foodRefId) {
+      tombstone<FavoriteFood & Tombstoned>(KEYS.favorites, favoriteFoodId(foodRefId));
+    },
+
     // ── Weight ──
     async listWeightEntries(startIso, endIso) {
       return Object.values(read<WeightEntry>(KEYS.weight))
@@ -166,6 +179,16 @@ export function createLocalNutritionRepo(): NutritionRepo {
     },
     async removeRecipeFromRemote(id) {
       tombstone<Recipe & Tombstoned>(KEYS.recipes, id);
+    },
+
+    async listFavoritesForPush() {
+      return Object.values(read<FavoriteFood>(KEYS.favorites));
+    },
+    async upsertFavoriteFromRemote(fav) {
+      put(KEYS.favorites, favoriteFoodId(fav.food.id), fav);
+    },
+    async removeFavoriteFromRemote(id) {
+      tombstone<FavoriteFood & Tombstoned>(KEYS.favorites, id);
     },
 
     async listWeightEntriesForPush() {

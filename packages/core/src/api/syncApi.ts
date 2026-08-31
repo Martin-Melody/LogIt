@@ -71,6 +71,14 @@ export type RemoteRecipe = {
   deletedAtMs?: number | null;
 };
 
+export type RemoteFavoriteFood = {
+  id: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
+};
+
 export type RemoteWeightEntry = {
   id: string;
   createdAtMs: number;
@@ -185,6 +193,17 @@ export const syncApi = {
 
   pullRecipes(since: number): Promise<{ recipes: RemoteRecipe[] }> {
     return apiClient.fetch(`/sync/nutrition/recipes?since=${since}`);
+  },
+
+  pushFavorites(favorites: RemoteFavoriteFood[]): Promise<void> {
+    return apiClient.fetch("/sync/nutrition/favorites", {
+      method: "POST",
+      body: JSON.stringify({ favorites }),
+    });
+  },
+
+  pullFavorites(since: number): Promise<{ favorites: RemoteFavoriteFood[] }> {
+    return apiClient.fetch(`/sync/nutrition/favorites?since=${since}`);
   },
 
   pushWeightEntries(entries: RemoteWeightEntry[]): Promise<void> {

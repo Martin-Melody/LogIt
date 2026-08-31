@@ -84,6 +84,12 @@ export function createRemoteNutritionRepo(clientId: string): NutritionRepo {
     saveRecipe: unsupported,
     deleteRecipe: unsupported,
 
+    async listFavorites() {
+      return [];
+    },
+    saveFavorite: unsupported,
+    deleteFavorite: unsupported,
+
     async listWeightEntries(startIso, endIso) {
       const all = await fetchClientWeightLog(clientId);
       return all
@@ -110,6 +116,9 @@ export function createRemoteNutritionRepo(clientId: string): NutritionRepo {
     listRecipesForPush: unsupported,
     upsertRecipeFromRemote: unsupported,
     removeRecipeFromRemote: unsupported,
+    listFavoritesForPush: unsupported,
+    upsertFavoriteFromRemote: unsupported,
+    removeFavoriteFromRemote: unsupported,
     listWeightEntriesForPush: unsupported,
     upsertWeightEntryFromRemote: unsupported,
     removeWeightEntryFromRemote: unsupported,

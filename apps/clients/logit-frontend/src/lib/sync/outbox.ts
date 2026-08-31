@@ -6,6 +6,7 @@ import { messagesApi, type SendMessageInput } from "@logit/core/api/messagesApi"
 import type {
   RemoteCheckinSubmission,
   RemoteCustomFood,
+  RemoteFavoriteFood,
   RemoteNutritionDay,
   RemoteNutritionGoal,
   RemoteRecipe,
@@ -26,6 +27,7 @@ type OutboxEntry =
   | { type: "nutritionDay"; dto: RemoteNutritionDay }
   | { type: "customFood"; dto: RemoteCustomFood }
   | { type: "recipe"; dto: RemoteRecipe }
+  | { type: "favoriteFood"; dto: RemoteFavoriteFood }
   | { type: "weightEntry"; dto: RemoteWeightEntry }
   | { type: "nutritionGoal"; dto: RemoteNutritionGoal };
 
@@ -84,6 +86,9 @@ export async function flush(): Promise<void> {
   const recipes = entries
     .filter((e): e is Extract<OutboxEntry, { type: "recipe" }> => e.type === "recipe")
     .map((e) => e.dto);
+  const favoriteFoods = entries
+    .filter((e): e is Extract<OutboxEntry, { type: "favoriteFood" }> => e.type === "favoriteFood")
+    .map((e) => e.dto);
   const weightEntries = entries
     .filter((e): e is Extract<OutboxEntry, { type: "weightEntry" }> => e.type === "weightEntry")
     .map((e) => e.dto);
@@ -137,6 +142,10 @@ export async function flush(): Promise<void> {
   if (recipes.length) {
     try { await syncApi.pushRecipes(recipes); }
     catch { recipes.forEach((dto) => failed.push({ type: "recipe", dto })); }
+  }
+  if (favoriteFoods.length) {
+    try { await syncApi.pushFavorites(favoriteFoods); }
+    catch { favoriteFoods.forEach((dto) => failed.push({ type: "favoriteFood", dto })); }
   }
   if (weightEntries.length) {
     try { await syncApi.pushWeightEntries(weightEntries); }

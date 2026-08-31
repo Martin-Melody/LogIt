@@ -2,15 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
   addDiaryItem,
   createDiaryDay,
+  createFavoriteFood,
   createRecipe,
   dayTotals,
+  favoriteFoodId,
   kcalFromMacros,
   loggedItemFromFood,
+  loggedItemFromRecent,
   mealTotals,
+  recentFoodsFromDays,
   recipeAsFood,
   recomputeRecipe,
   removeDiaryItem,
   scaleMacros,
+  tombstoneFavorite,
+  type DiaryDay,
   type FoodRef,
   type Recipe,
 } from "./nutrition";
@@ -83,5 +89,57 @@ describe("recipes", () => {
     expect(food.per100g.kcal).toBe(440);
     expect(food.servings.map((s) => s.id)).toEqual(["serving", "whole"]);
     expect(food.servings[1]!.grams).toBe(200); // whole recipe == 2 servings
+  });
+});
+
+describe("favourites", () => {
+  it("derives a stable id from the food id and tombstones", () => {
+    const fav = createFavoriteFood(chicken);
+    expect(favoriteFoodId(fav.food.id)).toBe("fav_food_chicken");
+    expect(fav.deletedAtMs).toBeUndefined();
+    const gone = tombstoneFavorite(fav);
+    expect(gone.deletedAtMs).toBeGreaterThan(0);
+    expect(gone.updatedAtMs).toBe(gone.deletedAtMs);
+  });
+});
+
+describe("recents", () => {
+  function dayWith(dateIso: string, ...items: { name: string; meal: "lunch" | "dinner"; sourceId?: string; grams?: number }[]): DiaryDay {
+    let d = createDiaryDay(dateIso);
+    for (const it of items) {
+      d = addDiaryItem(d, {
+        meal: it.meal,
+        name: it.name,
+        sourceId: it.sourceId,
+        sourceKind: it.sourceId ? "food" : undefined,
+        grams: it.grams ?? 100,
+        computed: { kcal: 100, proteinG: 5, carbsG: 10, fatG: 2 },
+      });
+    }
+    return d;
+  }
+
+  it("rolls up distinct foods, most-recent-first, with a count", () => {
+    const days = [
+      dayWith("2026-01-10", { name: "Oats", meal: "lunch", sourceId: "off:1" }),
+      dayWith("2026-01-12", { name: "Oats", meal: "lunch", sourceId: "off:1" }, { name: "Eggs", meal: "dinner" }),
+      dayWith("2026-01-14", { name: "Eggs", meal: "dinner" }),
+    ];
+    const recent = recentFoodsFromDays(days);
+    expect(recent.map((r) => r.name)).toEqual(["Eggs", "Oats"]);
+    expect(recent[0]!.count).toBe(2);
+    expect(recent[0]!.lastLoggedIso).toBe("2026-01-14");
+    expect(recent.find((r) => r.name === "Oats")!.sourceId).toBe("off:1");
+  });
+
+  it("skips tombstoned days and re-logs a recent into a chosen meal", () => {
+    const alive = dayWith("2026-01-12", { name: "Rice", meal: "lunch", grams: 150 });
+    const dead: DiaryDay = { ...dayWith("2026-01-13", { name: "Ghost", meal: "dinner" }), deletedAtMs: 1 };
+    const [rice] = recentFoodsFromDays([alive, dead]);
+    expect(rice!.name).toBe("Rice");
+    const item = loggedItemFromRecent(rice!, "breakfast");
+    expect(item.meal).toBe("breakfast");
+    expect(item.grams).toBe(150);
+    expect(item.computed.kcal).toBe(100);
   });
 });
