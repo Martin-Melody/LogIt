@@ -160,6 +160,45 @@ test("nutrition personal flow", async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/09-insights.png`, fullPage: true });
 });
 
+test("home screen auto-adds the nutrition widgets once a goal exists", async ({ page }) => {
+  // Seed a goal directly (the beforeEach already seeds weight history + intake).
+  await page.addInitScript(() => {
+    if (localStorage.getItem("logit:nutritionGoal:v1") !== null) return;
+    localStorage.setItem(
+      "logit:nutritionGoal:v1",
+      JSON.stringify({
+        sex: "male",
+        birthDateIso: "1994-06-15",
+        heightCm: 180,
+        activityLevel: "moderate",
+        goalType: "lose",
+        targetRateKgPerWeek: 0.4,
+        targetWeightKg: 80,
+        proteinGPerKg: 2,
+        fatPct: 0.3,
+        adaptiveEnabled: true,
+        updatedAtMs: Date.now(),
+      }),
+    );
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible({ timeout: 20000 });
+
+  const nutWidget = page
+    .locator("div", { has: page.getByText("Today's Nutrition", { exact: true }) })
+    .first();
+  await expect(page.getByText("Today's Nutrition", { exact: true })).toBeVisible();
+  await expect(nutWidget.getByText(/kcal (left|over)/)).toBeVisible();
+  await expect(page.getByText("Weight Trend", { exact: true })).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/10-home-widgets.png`, fullPage: true });
+
+  // Both are listed on the customise screen too.
+  await page.goto("/home/customize");
+  await expect(page.getByText("Today's Nutrition", { exact: true })).toBeVisible();
+  await expect(page.getByText("Weight Trend", { exact: true })).toBeVisible();
+});
+
 test("a coach-assigned plan supersedes the target and shows a meal plan", async ({ page }) => {
   const f = (name: string, kcal: number, grams = 100) => ({
     id: `pf_${name}`,

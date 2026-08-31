@@ -7,6 +7,8 @@ import LastSessionWidget from "./components/LastSessionWidget.svelte";
 import ProgressionWidget from "./components/ProgressionWidget.svelte";
 import ActivityTrackerWidget from "./components/ActivityTrackerWidget.svelte";
 import MuscleMapWidget from "./components/MuscleMapWidget.svelte";
+import TodaysNutritionWidget from "./components/TodaysNutritionWidget.svelte";
+import WeightTrendWidget from "./components/WeightTrendWidget.svelte";
 
 const BUNDLED: WidgetDefinition[] = [
   {
@@ -56,6 +58,22 @@ const BUNDLED: WidgetDefinition[] = [
     component: MuscleMapWidget,
     defaultEnabled: true,
     defaultOrder: 5,
+  },
+  {
+    id: "todays-nutrition",
+    label: "Today's Nutrition",
+    description: "Calories & macros consumed vs your target. Auto-added once you set a nutrition goal.",
+    component: TodaysNutritionWidget,
+    defaultEnabled: false,
+    defaultOrder: 6,
+  },
+  {
+    id: "weight-trend",
+    label: "Weight Trend",
+    description: "Smoothed bodyweight trend and weekly rate. Auto-added once you set a nutrition goal.",
+    component: WeightTrendWidget,
+    defaultEnabled: false,
+    defaultOrder: 7,
   },
 ];
 

@@ -7,6 +7,11 @@ import type { PluginManifest, WidgetPluginCapability } from "$lib/plugins";
 
 const STORAGE_KEY = "logit:home-config:v1";
 
+// Widgets that stay off by default and are switched on once — the first time the user
+// has a nutrition goal. After that the user owns the toggle (disabling sticks).
+const NUTRITION_WIDGET_IDS = ["todays-nutrition", "weight-trend"];
+const NUTRITION_SEED_KEY = "logit:home-config:nutrition-seeded:v1";
+
 function defaultConfig(): HomeConfig {
   if (!localWidgetRegistry) return { slots: [] };
   const slots: WidgetSlot[] = localWidgetRegistry
@@ -132,7 +137,27 @@ function createHomeConfigStore() {
     await reconcileInstalledWidgets(store);
   }
 
-  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown, reconcilePlugins };
+  /** One-shot: enable the nutrition widgets the first time the user has a goal. */
+  function seedNutritionWidgets(hasGoal: boolean): void {
+    if (!browser || !hasGoal) return;
+    if (localStorage.getItem(NUTRITION_SEED_KEY)) return;
+    localStorage.setItem(NUTRITION_SEED_KEY, "1");
+    update((c) => ({
+      ...c,
+      slots: c.slots.map((s) =>
+        NUTRITION_WIDGET_IDS.includes(s.id) ? { ...s, enabled: true } : s,
+      ),
+    }));
+  }
+
+  return {
+    subscribe: store.subscribe,
+    toggleWidget,
+    moveUp,
+    moveDown,
+    reconcilePlugins,
+    seedNutritionWidgets,
+  };
 }
 
 export const homeConfig = createHomeConfigStore();
