@@ -12,13 +12,14 @@
     UtensilsCrossed,
     Camera,
   } from "lucide-svelte";
-  import { GripVertical } from "lucide-svelte";
+  import { GripVertical, BookmarkPlus } from "lucide-svelte";
   import { dragHandleZone, dragHandle } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
   import {
     localDateIso,
+    mealTemplateFromDay,
     mealTotals,
     removeDiaryItem,
     setDiaryItems,
@@ -32,7 +33,7 @@
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
-  import { pushNutritionDay } from "$lib/sync/syncService";
+  import { pushNutritionDay, pushMealTemplate } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
   import MacroBars from "$lib/features/nutrition/MacroBars.svelte";
   import WeightTrendChart from "$lib/features/nutrition/WeightTrendChart.svelte";
@@ -121,6 +122,27 @@
 
   function onConsider(meal: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
     dndItems[meal] = e.detail.items;
+  }
+
+  // ── Save a meal as a reusable template ──
+  let savingMeal = $state<MealSlot | null>(null);
+  let templateName = $state("");
+
+  function startSaveMeal(meal: MealSlot) {
+    savingMeal = meal;
+    templateName = `${mealLabels[meal]}`;
+  }
+
+  async function confirmSaveMeal() {
+    if (!day || !savingMeal) return;
+    const t = mealTemplateFromDay(day, savingMeal, templateName || mealLabels[savingMeal]);
+    if (t.items.length === 0) {
+      savingMeal = null;
+      return;
+    }
+    await getNutritionRepo().saveMealTemplate(t);
+    pushMealTemplate(t);
+    savingMeal = null;
   }
 
   async function onFinalize(meal: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
@@ -240,13 +262,38 @@
             <span class="text-xs font-semibold">{mealLabels[meal]}</span>
             {#if mt && mt.kcal > 0}<span class="text-[11px] text-muted-foreground tabular-nums">{fmtKcal(mt.kcal)} kcal</span>{/if}
           </div>
-          <a
-            href="/nutrition/log?meal={meal}&date={dateIso}"
-            class="h-7 px-2 flex items-center gap-1 text-xs text-primary"
-          >
-            <Plus class="h-3.5 w-3.5" /> Add
-          </a>
+          <div class="flex items-center gap-1">
+            {#if dndItems[meal].length > 0}
+              <button
+                type="button"
+                class="h-7 w-7 flex items-center justify-center text-muted-foreground"
+                aria-label="Save {mealLabels[meal]} as a meal"
+                onclick={() => (savingMeal === meal ? (savingMeal = null) : startSaveMeal(meal))}
+              >
+                <BookmarkPlus class="h-3.5 w-3.5" />
+              </button>
+            {/if}
+            <a
+              href="/nutrition/log?meal={meal}&date={dateIso}"
+              class="h-7 px-2 flex items-center gap-1 text-xs text-primary"
+            >
+              <Plus class="h-3.5 w-3.5" /> Add
+            </a>
+          </div>
         </div>
+        {#if savingMeal === meal}
+          <form
+            class="flex items-center gap-2 px-3 pb-2"
+            onsubmit={(e) => { e.preventDefault(); void confirmSaveMeal(); }}
+          >
+            <input
+              class="flex-1 bg-muted rounded px-2 py-1.5 text-xs outline-none"
+              placeholder="Meal name"
+              bind:value={templateName}
+            />
+            <button type="submit" class="text-xs text-primary px-2 py-1.5">Save meal</button>
+          </form>
+        {/if}
         <ul
           class="px-3 pb-2 flex flex-col gap-1 min-h-[10px]"
           use:dragHandleZone={{

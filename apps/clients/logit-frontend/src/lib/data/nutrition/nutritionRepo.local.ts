@@ -4,6 +4,7 @@ import type {
   CustomFood,
   DiaryDay,
   FavoriteFood,
+  MealTemplate,
   NutritionGoal,
   Recipe,
   WeightEntry,
@@ -15,6 +16,7 @@ const KEYS = {
   customFoods: "logit:customFoods:v1", // Record<id, CustomFood>
   recipes: "logit:recipes:v1", // Record<id, Recipe>
   favorites: "logit:favoriteFoods:v1", // Record<favId, FavoriteFood>
+  mealTemplates: "logit:mealTemplates:v1", // Record<id, MealTemplate>
   weight: "logit:weightEntries:v1", // Record<id, WeightEntry>
   goal: "logit:nutritionGoal:v1", // NutritionGoal | null
 } as const;
@@ -115,6 +117,17 @@ export function createLocalNutritionRepo(): NutritionRepo {
       tombstone<FavoriteFood & Tombstoned>(KEYS.favorites, favoriteFoodId(foodRefId));
     },
 
+    // ── Meal templates ──
+    async listMealTemplates() {
+      return liveValues<MealTemplate & Tombstoned>(KEYS.mealTemplates);
+    },
+    async saveMealTemplate(t) {
+      put(KEYS.mealTemplates, t.id, t);
+    },
+    async deleteMealTemplate(id) {
+      tombstone<MealTemplate & Tombstoned>(KEYS.mealTemplates, id);
+    },
+
     // ── Weight ──
     async listWeightEntries(startIso, endIso) {
       return Object.values(read<WeightEntry>(KEYS.weight))
@@ -189,6 +202,16 @@ export function createLocalNutritionRepo(): NutritionRepo {
     },
     async removeFavoriteFromRemote(id) {
       tombstone<FavoriteFood & Tombstoned>(KEYS.favorites, id);
+    },
+
+    async listMealTemplatesForPush() {
+      return Object.values(read<MealTemplate>(KEYS.mealTemplates));
+    },
+    async upsertMealTemplateFromRemote(t) {
+      put(KEYS.mealTemplates, t.id, t);
+    },
+    async removeMealTemplateFromRemote(id) {
+      tombstone<MealTemplate & Tombstoned>(KEYS.mealTemplates, id);
     },
 
     async listWeightEntriesForPush() {

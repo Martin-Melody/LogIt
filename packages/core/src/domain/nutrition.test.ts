@@ -7,8 +7,12 @@ import {
   dayTotals,
   favoriteFoodId,
   kcalFromMacros,
+  createMealTemplate,
   loggedItemFromFood,
   loggedItemFromRecent,
+  mealTemplateFromDay,
+  mealTemplateToItems,
+  mealTemplateTotals,
   mealTotals,
   moveDiaryItem,
   recentFoodsFromDays,
@@ -106,6 +110,36 @@ describe("recipes", () => {
     expect(food.per100g.kcal).toBe(440);
     expect(food.servings.map((s) => s.id)).toEqual(["serving", "whole"]);
     expect(food.servings[1]!.grams).toBe(200); // whole recipe == 2 servings
+  });
+});
+
+describe("meal templates", () => {
+  it("snapshots a meal from a day and expands it back into a chosen meal", () => {
+    let day = createDiaryDay("2026-02-01");
+    day = addDiaryItem(day, loggedItemFromFood(chicken, "lunch", 200));
+    day = addDiaryItem(day, {
+      meal: "lunch",
+      name: "Rice, cooked",
+      grams: 150,
+      computed: { kcal: 195, proteinG: 4, carbsG: 42, fatG: 0.5 },
+    });
+    day = addDiaryItem(day, loggedItemFromFood(chicken, "dinner", 100));
+
+    const t = mealTemplateFromDay(day, "lunch", "  Work lunch  ");
+    expect(t.name).toBe("Work lunch");
+    expect(t.items.map((i) => i.name)).toEqual(["Chicken breast, raw", "Rice, cooked"]);
+    expect(mealTemplateTotals(t).kcal).toBe(chicken.per100g.kcal * 2 + 195);
+
+    const items = mealTemplateToItems(t, "breakfast");
+    expect(items).toHaveLength(2);
+    expect(items.every((i) => i.meal === "breakfast")).toBe(true);
+    expect(items[1]!.grams).toBe(150);
+  });
+
+  it("createMealTemplate defaults a blank name and tombstones", () => {
+    const t = createMealTemplate("   ");
+    expect(t.name).toBe("Meal");
+    expect(t.items).toEqual([]);
   });
 });
 

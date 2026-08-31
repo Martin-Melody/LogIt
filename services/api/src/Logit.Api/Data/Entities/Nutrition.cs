@@ -64,6 +64,21 @@ public class SyncedFavoriteFood : ISyncedNutritionRow
     public DateTime SyncedAt { get; set; } = DateTime.UtcNow;
 }
 
+/// A saved set of foods the user can log into a meal in one tap (JSON blob).
+public class SyncedMealTemplate : ISyncedNutritionRow
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string ClientId { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+
+    public long CreatedAtMs { get; set; }
+    public long UpdatedAtMs { get; set; }
+    public string DataJson { get; set; } = string.Empty;
+    public long? DeletedAtMs { get; set; }
+    public DateTime SyncedAt { get; set; } = DateTime.UtcNow;
+}
+
 /// A user-authored recipe (ingredients + servings + cached per-serving macros).
 public class SyncedRecipe : ISyncedNutritionRow
 {

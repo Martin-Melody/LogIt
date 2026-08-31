@@ -195,6 +195,63 @@ export function mealTotals(day: DiaryDay, meal: MealSlot): MacroTotals {
     .reduce((acc, it) => addMacros(acc, it.computed), { ...ZERO_MACROS });
 }
 
+// ── Meal templates (a saved set of foods, logged in one tap) ──────────────────
+
+/** One food inside a meal template — a LoggedItem without the per-log fields. */
+export type MealTemplateItem = {
+  name: string;
+  brand?: string;
+  sourceId?: string;
+  sourceKind?: "food" | "recipe";
+  grams: number;
+  servingLabel?: string;
+  computed: MacroTotals;
+};
+
+export type MealTemplate = {
+  id: string;
+  name: string;
+  items: MealTemplateItem[];
+  createdAtMs: number;
+  updatedAtMs: number;
+  deletedAtMs?: number;
+};
+
+export function createMealTemplate(name: string, items: MealTemplateItem[] = []): MealTemplate {
+  const now = nowMs();
+  return { id: createId("mtpl"), name: name.trim() || "Meal", items, createdAtMs: now, updatedAtMs: now };
+}
+
+/** Snapshot a meal from a day as a reusable template. */
+export function mealTemplateFromDay(day: DiaryDay, meal: MealSlot, name: string): MealTemplate {
+  const items: MealTemplateItem[] = day.items
+    .filter((it) => it.meal === meal)
+    .map(({ name: n, brand, sourceId, sourceKind, grams, servingLabel, computed }) => ({
+      name: n,
+      brand,
+      sourceId,
+      sourceKind,
+      grams,
+      servingLabel,
+      computed,
+    }));
+  return createMealTemplate(name, items);
+}
+
+export function mealTemplateTotals(t: MealTemplate): MacroTotals {
+  return t.items.reduce((acc, it) => addMacros(acc, it.computed), { ...ZERO_MACROS });
+}
+
+export function tombstoneMealTemplate(t: MealTemplate): MealTemplate {
+  const now = nowMs();
+  return { ...t, deletedAtMs: now, updatedAtMs: now };
+}
+
+/** Expand a template into diary items for a chosen meal. */
+export function mealTemplateToItems(t: MealTemplate, meal: MealSlot): Omit<LoggedItem, "id">[] {
+  return t.items.map((it) => ({ ...it, meal }));
+}
+
 // ── Favourites & recents (fast logging) ───────────────────────────────────────
 
 /** A food the user pinned for one-tap access. Synced like CustomFood; the id derives from

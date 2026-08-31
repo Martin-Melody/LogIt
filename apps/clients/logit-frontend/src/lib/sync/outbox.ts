@@ -7,6 +7,7 @@ import type {
   RemoteCheckinSubmission,
   RemoteCustomFood,
   RemoteFavoriteFood,
+  RemoteMealTemplate,
   RemoteNutritionDay,
   RemoteNutritionGoal,
   RemoteRecipe,
@@ -28,6 +29,7 @@ type OutboxEntry =
   | { type: "customFood"; dto: RemoteCustomFood }
   | { type: "recipe"; dto: RemoteRecipe }
   | { type: "favoriteFood"; dto: RemoteFavoriteFood }
+  | { type: "mealTemplate"; dto: RemoteMealTemplate }
   | { type: "weightEntry"; dto: RemoteWeightEntry }
   | { type: "nutritionGoal"; dto: RemoteNutritionGoal };
 
@@ -89,6 +91,9 @@ export async function flush(): Promise<void> {
   const favoriteFoods = entries
     .filter((e): e is Extract<OutboxEntry, { type: "favoriteFood" }> => e.type === "favoriteFood")
     .map((e) => e.dto);
+  const mealTemplates = entries
+    .filter((e): e is Extract<OutboxEntry, { type: "mealTemplate" }> => e.type === "mealTemplate")
+    .map((e) => e.dto);
   const weightEntries = entries
     .filter((e): e is Extract<OutboxEntry, { type: "weightEntry" }> => e.type === "weightEntry")
     .map((e) => e.dto);
@@ -146,6 +151,10 @@ export async function flush(): Promise<void> {
   if (favoriteFoods.length) {
     try { await syncApi.pushFavorites(favoriteFoods); }
     catch { favoriteFoods.forEach((dto) => failed.push({ type: "favoriteFood", dto })); }
+  }
+  if (mealTemplates.length) {
+    try { await syncApi.pushMealTemplates(mealTemplates); }
+    catch { mealTemplates.forEach((dto) => failed.push({ type: "mealTemplate", dto })); }
   }
   if (weightEntries.length) {
     try { await syncApi.pushWeightEntries(weightEntries); }
