@@ -110,6 +110,7 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM nutrition_days WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM custom_foods WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM recipes WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM favorite_foods WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM weight_entries WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM nutrition_goal WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM coach_nutrition_plans WHERE owner_id = ?`, [ownerId]);
@@ -138,6 +139,7 @@ export async function clearAllSqliteData(): Promise<void> {
     DELETE FROM nutrition_days;
     DELETE FROM custom_foods;
     DELETE FROM recipes;
+    DELETE FROM favorite_foods;
     DELETE FROM weight_entries;
     DELETE FROM nutrition_goal;
     DELETE FROM coach_nutrition_plans;
@@ -422,6 +424,16 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       deleted_at_ms INTEGER NULL
     );
     CREATE INDEX IF NOT EXISTS idx_recipes_owner ON recipes(owner_id);
+
+    CREATE TABLE IF NOT EXISTS favorite_foods (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_favorite_foods_owner ON favorite_foods(owner_id);
 
     CREATE TABLE IF NOT EXISTS weight_entries (
       id TEXT PRIMARY KEY NOT NULL,

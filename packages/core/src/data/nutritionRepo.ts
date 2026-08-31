@@ -1,6 +1,7 @@
 import type {
   CustomFood,
   DiaryDay,
+  FavoriteFood,
   NutritionGoal,
   Recipe,
   WeightEntry,
@@ -34,6 +35,12 @@ export interface NutritionRepo {
   saveRecipe(recipe: Recipe): Promise<void>;
   deleteRecipe(id: string): Promise<void>;
 
+  // ── Favourites (pinned foods for fast logging) ──
+  listFavorites(): Promise<FavoriteFood[]>;
+  saveFavorite(fav: FavoriteFood): Promise<void>;
+  /** Tombstone by the favourite's food id. */
+  deleteFavorite(foodRefId: string): Promise<void>;
+
   // ── Bodyweight ──
   listWeightEntries(startIso?: string, endIso?: string): Promise<WeightEntry[]>;
   getWeightEntry(id: string): Promise<WeightEntry | null>;
@@ -56,6 +63,10 @@ export interface NutritionRepo {
   listRecipesForPush(): Promise<Recipe[]>;
   upsertRecipeFromRemote(recipe: Recipe): Promise<void>;
   removeRecipeFromRemote(id: string): Promise<void>;
+
+  listFavoritesForPush(): Promise<FavoriteFood[]>;
+  upsertFavoriteFromRemote(fav: FavoriteFood): Promise<void>;
+  removeFavoriteFromRemote(id: string): Promise<void>;
 
   listWeightEntriesForPush(): Promise<WeightEntry[]>;
   upsertWeightEntryFromRemote(entry: WeightEntry): Promise<void>;
