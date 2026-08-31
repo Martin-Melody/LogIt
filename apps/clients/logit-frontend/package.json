@@ -60,6 +60,7 @@
     "lucide-svelte": "^0.563.0",
     "mode-watcher": "^1.1.0",
     "nanoid": "^5.1.6",
+    "svelte-dnd-action": "^0.9.79",
     "svelte-sonner": "^1.1.0",
     "vaul-svelte": "^0.3.2"
   }

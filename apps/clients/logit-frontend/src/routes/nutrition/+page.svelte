@@ -12,15 +12,20 @@
     UtensilsCrossed,
     Camera,
   } from "lucide-svelte";
+  import { GripVertical } from "lucide-svelte";
+  import { dragHandleZone, dragHandle } from "svelte-dnd-action";
+  import { flip } from "svelte/animate";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
   import {
     localDateIso,
     mealTotals,
     removeDiaryItem,
+    setDiaryItems,
     updateDiaryItem,
     MEAL_SLOTS,
     type DiaryDay,
+    type LoggedItem,
     type MealSlot,
   } from "@logit/core/domain/nutrition";
   import { getNutritionRepo, getMessagesRepo } from "$lib/data/repoProvider";
@@ -93,6 +98,37 @@
   async function deleteItem(itemId: string) {
     if (!day) return;
     const next = removeDiaryItem(day, itemId);
+    day = next;
+    await getNutritionRepo().saveDay(next);
+    pushNutritionDay(next);
+  }
+
+  // ── Drag to reorder / move between meals (svelte-dnd-action handle zones) ──
+  const FLIP_MS = 150;
+  let dndItems = $state<Record<MealSlot, LoggedItem[]>>({
+    breakfast: [],
+    lunch: [],
+    dinner: [],
+    snack: [],
+  });
+
+  // Re-derive the drag zones from the day whenever it changes (load, day switch, finalize).
+  $effect(() => {
+    const next: Record<MealSlot, LoggedItem[]> = { breakfast: [], lunch: [], dinner: [], snack: [] };
+    for (const it of day?.items ?? []) next[it.meal].push({ ...it });
+    dndItems = next;
+  });
+
+  function onConsider(meal: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
+    dndItems[meal] = e.detail.items;
+  }
+
+  async function onFinalize(meal: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
+    dndItems[meal] = e.detail.items;
+    if (!day) return;
+    const items: LoggedItem[] = [];
+    for (const m of MEAL_SLOTS) for (const it of dndItems[m]) items.push({ ...it, meal: m });
+    const next = setDiaryItems(day, items);
     day = next;
     await getNutritionRepo().saveDay(next);
     pushNutritionDay(next);
@@ -195,10 +231,9 @@
       </a>
     {/if}
 
-    <!-- Meals -->
+    <!-- Meals — items drag to reorder within a meal or move between meals -->
     {#each MEAL_SLOTS as meal (meal)}
       {@const mt = day ? mealTotals(day, meal) : null}
-      {@const items = day?.items.filter((it) => it.meal === meal) ?? []}
       <div class="border-b border-border">
         <div class="flex items-center justify-between px-3 py-2">
           <div class="flex items-baseline gap-2">
@@ -212,28 +247,43 @@
             <Plus class="h-3.5 w-3.5" /> Add
           </a>
         </div>
-        {#if items.length > 0}
-          <ul class="px-3 pb-2 flex flex-col gap-1">
-            {#each items as it (it.id)}
-              <li class="flex items-center gap-2 text-xs">
-                {#if it.photoDataUrl}
-                  <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded object-cover shrink-0" />
-                {/if}
-                <span class="flex-1 truncate">
-                  {it.name}
-                  {#if it.servingLabel}<span class="text-muted-foreground"> · {it.servingLabel}</span>{/if}
-                </span>
-                <span class="tabular-nums text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
-                <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void addPhoto(it.id)} aria-label="Add photo">
-                  <Camera class="h-3.5 w-3.5" />
-                </button>
-                <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteItem(it.id)} aria-label="Remove">
-                  <Trash2 class="h-3.5 w-3.5" />
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+        <ul
+          class="px-3 pb-2 flex flex-col gap-1 min-h-[10px]"
+          use:dragHandleZone={{
+            items: dndItems[meal],
+            flipDurationMs: FLIP_MS,
+            type: "diary-item",
+            dropTargetStyle: { outline: "2px dashed rgb(148 163 184 / 0.45)", outlineOffset: "-3px", borderRadius: "6px" },
+          }}
+          onconsider={(e) => onConsider(meal, e)}
+          onfinalize={(e) => onFinalize(meal, e)}
+        >
+          {#each dndItems[meal] as it (it.id)}
+            <li animate:flip={{ duration: FLIP_MS }} class="flex items-center gap-1.5 text-xs">
+              <span
+                use:dragHandle
+                class="h-6 w-5 -ml-1 flex items-center justify-center text-muted-foreground/40 touch-none cursor-grab active:cursor-grabbing"
+                aria-label="Drag to move {it.name}"
+              >
+                <GripVertical class="h-3.5 w-3.5" />
+              </span>
+              {#if it.photoDataUrl}
+                <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded object-cover shrink-0" />
+              {/if}
+              <span class="flex-1 truncate">
+                {it.name}
+                {#if it.servingLabel}<span class="text-muted-foreground"> · {it.servingLabel}</span>{/if}
+              </span>
+              <span class="tabular-nums text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
+              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void addPhoto(it.id)} aria-label="Add photo">
+                <Camera class="h-3.5 w-3.5" />
+              </button>
+              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteItem(it.id)} aria-label="Remove">
+                <Trash2 class="h-3.5 w-3.5" />
+              </button>
+            </li>
+          {/each}
+        </ul>
       </div>
     {/each}
 

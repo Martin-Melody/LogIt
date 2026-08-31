@@ -10,7 +10,9 @@ import {
   loggedItemFromFood,
   loggedItemFromRecent,
   mealTotals,
+  moveDiaryItem,
   recentFoodsFromDays,
+  setDiaryItems,
   recipeAsFood,
   recomputeRecipe,
   removeDiaryItem,
@@ -54,6 +56,21 @@ describe("diary day", () => {
     day = removeDiaryItem(day, day.items[0]!.id);
     expect(day.items).toHaveLength(1);
     expect(dayTotals(day).kcal).toBe(180);
+  });
+
+  it("moves an item between meals and replaces items wholesale", () => {
+    let day = createDiaryDay("2026-01-15");
+    day = addDiaryItem(day, loggedItemFromFood(chicken, "lunch", 100));
+    const id = day.items[0]!.id;
+
+    day = moveDiaryItem(day, id, "dinner");
+    expect(mealTotals(day, "lunch").kcal).toBe(0);
+    expect(mealTotals(day, "dinner").kcal).toBe(120);
+
+    const reordered = [...day.items].reverse();
+    day = setDiaryItems(day, reordered);
+    expect(day.items).toEqual(reordered);
+    expect(dayTotals(day).kcal).toBe(120);
   });
 
   it("stamps a fresh updatedAtMs on mutation", () => {
