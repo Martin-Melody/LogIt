@@ -17,6 +17,8 @@ consistent with how programs and check-ins already flow coach→client in PT Stu
 
 **Not doing: AI photo logging.** The other platforms lean on meal-photo → macro estimation,
 but the accuracy is unproven and it needs an always-online vision model. Out of scope.
+(We *do* do on-device OCR of a printed nutrition label as a barcode-miss fallback — that's
+deterministic text extraction, not vision estimation of a plated meal.)
 
 ## Design constraints
 
@@ -62,18 +64,28 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
 - [ ] Search-ranking quality pass: generic terms like "milk" / "apple" still surface
       branded matches (Milka, Appletiser) over generics. Needs a curated common-foods
       boost list + exact-token weighting, beyond the current BM25 + popularity blend.
-- [ ] On-device smoke test: bundled `food.zip` unpacks + FTS works on Android;
-      `/sync/nutrition/*` round-trips with a Pro token; the barcode scanner gets camera
-      access in the Capacitor webview (zxing via `getUserMedia` — no native plugin)
+- [ ] On-device smoke test (partial): still need `food.zip` unpacks + FTS on Android and
+      `/sync/nutrition/*` round-trip with a Pro token. Label OCR confirmed on a Galaxy S23;
+      native barcode `scan()` built but not yet run on device.
 - [ ] Optional "download full food database" flow (fetch `food-full.zip`, prompt + size +
       WiFi-only, manage in Settings → Nutrition) — deferred, not needed for first ship
 - [x] Cache online OFF lookups into the local DB so the offline set grows with use
       (`createCachingFoodDbRepo` in core: bundled → local cache → online, writes every
       online hit back; `food_cache` table native / localStorage web). Also gives a
       bundled-DB build its first online fallback for barcode misses.
-- [x] Barcode scanning — `@zxing/browser` live scanner + typed/pasted barcode fallback
-      (verified in the build; on-device camera unverified)
-- [ ] Drop the `chore(api): pull in orActivelyCoached` commit when the web branch lands on main
+- [x] Barcode scanning — native `@capacitor-mlkit/barcode-scanning` `scan()` (Google code
+      scanner) on device, `@zxing/browser` overlay on web, typed/pasted barcode fallback.
+      Superseded the original zxing-only build after grainy `getUserMedia` frames caused
+      misreads on a Galaxy S23.
+- [x] Nutrition-label scanning — barcode miss → photograph the panel →
+      `@capacitor-mlkit/text-recognition` + `@logit/core/nutrition/labelParser` prefill a
+      custom food tagged with the barcode. (This is *not* the dropped meal-photo AI logging;
+      it's on-device OCR of the printed table.)
+- [x] Portion picker — g / ml / oz units + exact gram amounts, replacing the
+      serving × quantity multiplier that only did multiples of 100 g.
+- [x] `chore(api): pull in orActivelyCoached` (c82c6ee) — kept. `main` has no
+      `orActivelyCoached`, the nutrition sync endpoints need it, so this branch is now its
+      canonical source. If `wip/logit-web-shadcn-redesign` later lands, drop its copy there.
 
 **Goal:** a person can set a weight goal, get calorie/macro targets that adapt to their
 real trend, and log food quickly — entirely offline, syncing across devices on Pro.
