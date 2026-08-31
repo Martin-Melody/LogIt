@@ -86,7 +86,8 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 - [ ] Weekly summary, streaks, richer trend analytics
 - [x] Fast logging: **Recent** tab (derived from diary) + **Favourites** tab (synced
       `FavoriteFood` entity, star toggle) on the log screen
-- [ ] Meal templates ("save these foods as *My usual breakfast*", log the set in one tap)
+- [x] Meal templates — bookmark any meal on the Today screen to save it; the log screen's
+      "Meals" tab logs the whole set into a meal in one tap (synced `MealTemplate` entity)
 - [x] Drag diary items to reorder within a meal / move between meals (svelte-dnd-action)
 - [ ] Copy-previous-day, quick-add from history
 - [ ] Nutrition home widget
