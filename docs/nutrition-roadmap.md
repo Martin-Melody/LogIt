@@ -94,17 +94,22 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 
 ## Phase 2 — Web parity + polish
 
-- [ ] `logit-web` personal nutrition views (read + edit)
-- [ ] Weekly summary, streaks, richer trend analytics
+- [x] `logit-web` personal nutrition views (read + edit) — `/nutrition` diary, `/nutrition/goal`,
+      `/nutrition/weight`, `/nutrition/insights`, backed by `createSyncedNutritionRepo()`
+      (first user-data write path on the web). Recipes / favourites / meal templates / copy-
+      previous-day still mobile-only.
+- [x] Weekly summary, streaks, richer trend analytics — `/nutrition/insights` on web runs the
+      nutrition-analytics plugin over 7/30/90 days (metrics, calorie sparkline, notes).
 - [x] Fast logging: **Recent** tab (derived from diary) + **Favourites** tab (synced
       `FavoriteFood` entity, star toggle) on the log screen
 - [x] Meal templates — bookmark any meal on the Today screen to save it; the log screen's
       "Meals" tab logs the whole set into a meal in one tap (synced `MealTemplate` entity)
 - [x] Drag diary items to reorder within a meal / move between meals (svelte-dnd-action)
 - [ ] Copy-previous-day, quick-add from history
-- [ ] Nutrition home widget
+- [x] Nutrition home widget — `TodaysNutritionWidget` + `WeightTrendWidget` on the mobile home
+      screen, auto-enabled once a goal exists (`homeConfig.seedNutritionWidgets`).
 - [ ] Replace remaining native `<input type="date">` / `<select>` with shadcn Select +
-      a Calendar/Popover date picker
+      a Calendar/Popover date picker (mobile mostly done; logit-web nutrition uses native)
 
 ---
 
