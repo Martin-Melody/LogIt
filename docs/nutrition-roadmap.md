@@ -84,9 +84,14 @@ real trend, and log food quickly — entirely offline, syncing across devices on
 
 - [ ] `logit-web` personal nutrition views (read + edit)
 - [ ] Weekly summary, streaks, richer trend analytics
-- [ ] Favourites / recent / meal templates for fast logging
+- [x] Fast logging: **Recent** tab (derived from diary) + **Favourites** tab (synced
+      `FavoriteFood` entity, star toggle) on the log screen
+- [ ] Meal templates ("save these foods as *My usual breakfast*", log the set in one tap)
+- [x] Drag diary items to reorder within a meal / move between meals (svelte-dnd-action)
 - [ ] Copy-previous-day, quick-add from history
 - [ ] Nutrition home widget
+- [ ] Replace remaining native `<input type="date">` / `<select>` with shadcn Select +
+      a Calendar/Popover date picker
 
 ---
 
