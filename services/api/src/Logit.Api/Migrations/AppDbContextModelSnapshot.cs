@@ -541,6 +541,45 @@ namespace Logit.Api.Migrations
                     b.ToTable("SyncedFavoriteFoods");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedMealTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedMealTemplates");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedNutritionDay", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1033,6 +1072,17 @@ namespace Logit.Api.Migrations
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedFavoriteFood", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedMealTemplate", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany()

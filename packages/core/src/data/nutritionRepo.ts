@@ -2,6 +2,7 @@ import type {
   CustomFood,
   DiaryDay,
   FavoriteFood,
+  MealTemplate,
   NutritionGoal,
   Recipe,
   WeightEntry,
@@ -41,6 +42,11 @@ export interface NutritionRepo {
   /** Tombstone by the favourite's food id. */
   deleteFavorite(foodRefId: string): Promise<void>;
 
+  // ── Meal templates (a saved set of foods, logged in one tap) ──
+  listMealTemplates(): Promise<MealTemplate[]>;
+  saveMealTemplate(template: MealTemplate): Promise<void>;
+  deleteMealTemplate(id: string): Promise<void>;
+
   // ── Bodyweight ──
   listWeightEntries(startIso?: string, endIso?: string): Promise<WeightEntry[]>;
   getWeightEntry(id: string): Promise<WeightEntry | null>;
@@ -67,6 +73,10 @@ export interface NutritionRepo {
   listFavoritesForPush(): Promise<FavoriteFood[]>;
   upsertFavoriteFromRemote(fav: FavoriteFood): Promise<void>;
   removeFavoriteFromRemote(id: string): Promise<void>;
+
+  listMealTemplatesForPush(): Promise<MealTemplate[]>;
+  upsertMealTemplateFromRemote(template: MealTemplate): Promise<void>;
+  removeMealTemplateFromRemote(id: string): Promise<void>;
 
   listWeightEntriesForPush(): Promise<WeightEntry[]>;
   upsertWeightEntryFromRemote(entry: WeightEntry): Promise<void>;

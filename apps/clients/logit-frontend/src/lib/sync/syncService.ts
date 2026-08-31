@@ -29,6 +29,7 @@ import type {
   CustomFood,
   DiaryDay,
   FavoriteFood,
+  MealTemplate,
   NutritionGoal,
   Recipe,
   WeightEntry,
@@ -51,6 +52,7 @@ const NUTRITION_DAYS_LAST_PULLED_KEY = "logit:sync:nutritionDaysLastPulledAt";
 const CUSTOM_FOODS_LAST_PULLED_KEY = "logit:sync:customFoodsLastPulledAt";
 const RECIPES_LAST_PULLED_KEY = "logit:sync:recipesLastPulledAt";
 const FAVORITES_LAST_PULLED_KEY = "logit:sync:favoritesLastPulledAt";
+const MEAL_TEMPLATES_LAST_PULLED_KEY = "logit:sync:mealTemplatesLastPulledAt";
 const WEIGHT_ENTRIES_LAST_PULLED_KEY = "logit:sync:weightEntriesLastPulledAt";
 
 function getTimestamp(key: string): number {
@@ -545,6 +547,12 @@ export function pushFavorite(fav: FavoriteFood): void {
   syncApi.pushFavorites([dto]).catch(() => enqueue({ type: "favoriteFood", dto }));
 }
 
+export function pushMealTemplate(t: MealTemplate): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = nutritionRowDto(t.id, t);
+  syncApi.pushMealTemplates([dto]).catch(() => enqueue({ type: "mealTemplate", dto }));
+}
+
 export function pushWeightEntry(entry: WeightEntry): void {
   if (!apiClient.isAuthenticated()) return;
   const dto = nutritionRowDto(entry.id, entry);
@@ -562,11 +570,12 @@ export async function pushAllNutrition(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
     const repo = getNutritionRepo();
-    const [days, foods, recipes, favorites, weights, goal] = await Promise.all([
+    const [days, foods, recipes, favorites, templates, weights, goal] = await Promise.all([
       repo.listDaysForPush(),
       repo.listCustomFoodsForPush(),
       repo.listRecipesForPush(),
       repo.listFavoritesForPush(),
+      repo.listMealTemplatesForPush(),
       repo.listWeightEntriesForPush(),
       repo.getGoal(),
     ]);
@@ -575,6 +584,8 @@ export async function pushAllNutrition(): Promise<void> {
     if (recipes.length) await syncApi.pushRecipes(recipes.map((r) => nutritionRowDto(r.id, r)));
     if (favorites.length)
       await syncApi.pushFavorites(favorites.map((f) => nutritionRowDto(favoriteFoodId(f.food.id), f)));
+    if (templates.length)
+      await syncApi.pushMealTemplates(templates.map((t) => nutritionRowDto(t.id, t)));
     if (weights.length) await syncApi.pushWeightEntries(weights.map((w) => nutritionRowDto(w.id, w)));
     if (goal) await syncApi.pushNutritionGoal({ dataJson: JSON.stringify(goal), updatedAtMs: goal.updatedAtMs });
   } catch {}
@@ -655,6 +666,25 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(FAVORITES_LAST_PULLED_KEY, Date.now());
+  } catch {}
+
+  try {
+    const since = getTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY);
+    const { templates } = await syncApi.pullMealTemplates(since);
+    const local = await repo.listMealTemplates();
+    for (const e of templates) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeMealTemplateFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const t = JSON.parse(e.dataJson) as MealTemplate;
+        const existing = local.find((x) => x.id === t.id);
+        if (existing && existing.updatedAtMs >= t.updatedAtMs) continue;
+        await repo.upsertMealTemplateFromRemote(t);
+      } catch {}
+    }
+    setTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY, Date.now());
   } catch {}
 
   try {

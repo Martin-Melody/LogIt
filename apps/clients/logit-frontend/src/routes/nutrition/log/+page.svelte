@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/stores";
-  import { ArrowLeft, Search, Barcode, Plus, Star, History } from "lucide-svelte";
+  import { ArrowLeft, Search, Barcode, Plus, Star, History, UtensilsCrossed } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Tabs from "$lib/components/ui/tabs";
@@ -14,6 +14,8 @@
     gramServing,
     loggedItemFromFood,
     loggedItemFromRecent,
+    mealTemplateToItems,
+    mealTemplateTotals,
     recentFoodsFromDays,
     recipeAsFood,
     scaleMacros,
@@ -22,6 +24,7 @@
     type FavoriteFood,
     type FoodRef,
     type MealSlot,
+    type MealTemplate,
     type RecentFood,
     type ServingOption,
   } from "@logit/core/domain/nutrition";
@@ -33,10 +36,11 @@
   const dateIso = $page.url.searchParams.get("date") ?? localDateIso();
 
   const ui = $state({ query: "", searching: false, filter: "all" as "all" | "custom" | "recipes" });
-  let tab = $state<"recent" | "favorites">("recent");
+  let tab = $state<"recent" | "favorites" | "meals">("recent");
   let results = $state<FoodRef[]>([]);
   let recents = $state<RecentFood[]>([]);
   let favorites = $state<FavoriteFood[]>([]);
+  let mealTemplates = $state<MealTemplate[]>([]);
   let selected = $state<FoodRef | null>(null);
   const pick = $state({ servingId: "g", quantity: 1 });
 
@@ -51,7 +55,21 @@
   onMount(() => {
     void loadRecents();
     void loadFavorites();
+    void loadTemplates();
   });
+
+  async function loadTemplates() {
+    mealTemplates = await getNutritionRepo().listMealTemplates();
+  }
+
+  async function logTemplate(t: MealTemplate) {
+    const repo = getNutritionRepo();
+    let day = (await repo.getDay(dateIso)) ?? createDiaryDay(dateIso);
+    for (const item of mealTemplateToItems(t, meal)) day = addDiaryItem(day, item);
+    await repo.saveDay(day);
+    pushNutritionDay(day);
+    back(`/nutrition`);
+  }
 
   async function loadRecents() {
     const repo = getNutritionRepo();
@@ -328,6 +346,7 @@
       <Tabs.List class="mx-3 my-2 w-auto">
         <Tabs.Trigger value="recent"><History class="h-3.5 w-3.5" /> Recent</Tabs.Trigger>
         <Tabs.Trigger value="favorites"><Star class="h-3.5 w-3.5" /> Favourites</Tabs.Trigger>
+        <Tabs.Trigger value="meals"><UtensilsCrossed class="h-3.5 w-3.5" /> Meals</Tabs.Trigger>
       </Tabs.List>
 
       <Tabs.Content value="recent">
@@ -374,6 +393,32 @@
                 </button>
                 <button type="button" class="px-3 py-2 shrink-0" aria-label="Remove favourite" onclick={() => void toggleFavorite(fav.food)}>
                   <Star class="h-4 w-4 fill-amber-400 text-amber-400" />
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </Tabs.Content>
+
+      <Tabs.Content value="meals">
+        {#if mealTemplates.length === 0}
+          <p class="px-3 py-6 text-sm text-muted-foreground text-center">
+            Save a meal from the diary to reuse it here.
+          </p>
+        {:else}
+          <ul class="divide-y divide-border">
+            {#each mealTemplates as t (t.id)}
+              {@const totals = mealTemplateTotals(t)}
+              <li>
+                <button type="button" class="w-full text-left px-3 py-2.5" onclick={() => void logTemplate(t)}>
+                  <span class="block text-sm font-medium">{t.name}</span>
+                  <span class="block text-[11px] text-muted-foreground">
+                    {fmtKcal(totals.kcal)} kcal · P {Math.round(totals.proteinG)} ·
+                    {t.items.length} item{t.items.length === 1 ? "" : "s"}
+                  </span>
+                  <span class="block text-[11px] text-muted-foreground truncate mt-0.5">
+                    {t.items.map((i) => i.name).join(", ")}
+                  </span>
                 </button>
               </li>
             {/each}

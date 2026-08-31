@@ -284,6 +284,58 @@ test("diary items expose a drag handle, and a move persists", async ({ page }) =
   await page.screenshot({ path: `${SHOTS}/14-diary-drag-handles.png`, fullPage: true });
 });
 
+test("save a meal as a template, then log it into another meal in one tap", async ({ page }) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await page.addInitScript(
+    (dateIso) => {
+      const seed = (k: string, v: string) => {
+        if (localStorage.getItem(k) === null) localStorage.setItem(k, v);
+      };
+      seed("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+      seed("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
+      seed("logit:had_account", "1");
+      // add today's breakfast once; leave it alone on later navigations (so the meal we
+      // later log via the template isn't clobbered)
+      const days = JSON.parse(localStorage.getItem("logit:nutritionDays:v1") ?? "{}");
+      if (!days[`nday_${dateIso}`]) {
+        days[`nday_${dateIso}`] = {
+          id: `nday_${dateIso}`,
+          dateIso,
+          createdAtMs: 1,
+          updatedAtMs: 2,
+          items: [
+            { id: "b1", meal: "breakfast", name: "Oats", grams: 60, computed: { kcal: 220, proteinG: 8, carbsG: 38, fatG: 4 } },
+            { id: "b2", meal: "breakfast", name: "Blueberries", grams: 80, computed: { kcal: 46, proteinG: 0.6, carbsG: 11, fatG: 0.3 } },
+          ],
+        };
+        localStorage.setItem("logit:nutritionDays:v1", JSON.stringify(days));
+      }
+    },
+    today,
+  );
+
+  await page.goto("/nutrition");
+  await expect(page.getByText("Oats")).toBeVisible();
+  await page.getByRole("button", { name: /Save Breakfast as a meal/i }).click();
+  await page.getByPlaceholder("Meal name").fill("Usual breakfast");
+  await page.getByRole("button", { name: "Save meal" }).click();
+  await page.waitForTimeout(200);
+
+  await page.goto(`/nutrition/log?meal=dinner&date=${today}`);
+  await page.getByRole("tab", { name: "Meals" }).click();
+  await expect(page.getByText("Usual breakfast")).toBeVisible();
+  await page.getByRole("button", { name: /Usual breakfast/ }).click();
+  await page.waitForURL(/\/nutrition$/);
+
+  const day = await page.evaluate((dateIso) => {
+    const d = JSON.parse(localStorage.getItem("logit:nutritionDays:v1")!);
+    return d[`nday_${dateIso}`] as { items: { name: string; meal: string }[] };
+  }, today);
+  const dinnerItems = day.items.filter((i) => i.meal === "dinner").map((i) => i.name).sort();
+  expect(dinnerItems).toEqual(["Blueberries", "Oats"]);
+  await page.screenshot({ path: `${SHOTS}/15-meal-template.png`, fullPage: true });
+});
+
 test("favourites tab lists pinned foods and logs one in a tap", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));

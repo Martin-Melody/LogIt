@@ -49,6 +49,8 @@ public static class SyncEndpoints
         nutrition.MapGet("/recipes", PullRecipes).RequireTier(UserTier.Pro);
         nutrition.MapPost("/favorites", PushFavorites).RequireTier(UserTier.Pro);
         nutrition.MapGet("/favorites", PullFavorites).RequireTier(UserTier.Pro);
+        nutrition.MapPost("/meal-templates", PushMealTemplates).RequireTier(UserTier.Pro);
+        nutrition.MapGet("/meal-templates", PullMealTemplates).RequireTier(UserTier.Pro);
     }
 
     // ── Sessions ─────────────────────────────────────────────────────────────
@@ -551,6 +553,14 @@ public static class SyncEndpoints
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
         => Results.Ok(new { favorites = await PullNutritionRows(caller.GetUserId(), since, db.SyncedFavoriteFoods) });
 
+    private static Task<IResult> PushMealTemplates(
+        [FromBody] PushMealTemplatesRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushNutritionRows(caller.GetUserId(), req.Templates, db.SyncedMealTemplates, db);
+
+    private static async Task<IResult> PullMealTemplates(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { templates = await PullNutritionRows(caller.GetUserId(), since, db.SyncedMealTemplates) });
+
     // Goal — a singleton on User, synced like the profile blob.
 
     private static async Task<IResult> PushNutritionGoal(
@@ -621,6 +631,7 @@ public record PushNutritionDaysRequest(List<NutritionRowDto> Days);
 public record PushCustomFoodsRequest(List<NutritionRowDto> Foods);
 public record PushRecipesRequest(List<NutritionRowDto> Recipes);
 public record PushFavoritesRequest(List<NutritionRowDto> Favorites);
+public record PushMealTemplatesRequest(List<NutritionRowDto> Templates);
 public record PushWeightEntriesRequest(List<NutritionRowDto> Entries);
 
 public record NutritionGoalDto(string DataJson, long UpdatedAtMs);

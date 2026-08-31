@@ -3,6 +3,7 @@ import type {
   CustomFood,
   DiaryDay,
   FavoriteFood,
+  MealTemplate,
   NutritionGoal,
   Recipe,
   WeightEntry,
@@ -139,6 +140,11 @@ export function createSqliteNutritionRepo(): NutritionRepo {
       upsert("favorite_foods", favoriteFoodId(fav.food.id), fav, fav.createdAtMs, fav.updatedAtMs),
     deleteFavorite: (foodRefId) => tombstone("favorite_foods", favoriteFoodId(foodRefId)),
 
+    // ── Meal templates ──
+    listMealTemplates: () => jsonRows<MealTemplate>(live("meal_templates"), [owner()]),
+    saveMealTemplate: (t) => upsert("meal_templates", t.id, t, t.createdAtMs, t.updatedAtMs),
+    deleteMealTemplate: (id) => tombstone("meal_templates", id),
+
     // ── Weight ──
     listWeightEntries: (startIso, endIso) => {
       const clauses = ["(owner_id = ? OR owner_id IS NULL)", "deleted_at_ms IS NULL"];
@@ -195,6 +201,11 @@ export function createSqliteNutritionRepo(): NutritionRepo {
     upsertFavoriteFromRemote: (fav) =>
       upsert("favorite_foods", favoriteFoodId(fav.food.id), fav, fav.createdAtMs, fav.updatedAtMs),
     removeFavoriteFromRemote: (id) => tombstone("favorite_foods", id),
+
+    listMealTemplatesForPush: () => jsonRows<MealTemplate>(forPush("meal_templates"), [owner()]),
+    upsertMealTemplateFromRemote: (t) =>
+      upsert("meal_templates", t.id, t, t.createdAtMs, t.updatedAtMs),
+    removeMealTemplateFromRemote: (id) => tombstone("meal_templates", id),
 
     listWeightEntriesForPush: () => jsonRows<WeightEntry>(forPush("weight_entries"), [owner()]),
     upsertWeightEntryFromRemote: (e) =>
