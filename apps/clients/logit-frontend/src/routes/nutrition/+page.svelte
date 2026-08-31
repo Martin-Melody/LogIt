@@ -12,12 +12,14 @@
     UtensilsCrossed,
     Camera,
   } from "lucide-svelte";
-  import { GripVertical, BookmarkPlus } from "lucide-svelte";
+  import { GripVertical, BookmarkPlus, CopyPlus } from "lucide-svelte";
   import { dragHandleZone, dragHandle } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
   import {
+    copyDiaryItems,
+    createDiaryDay,
     localDateIso,
     mealTemplateFromDay,
     mealTotals,
@@ -29,6 +31,7 @@
     type LoggedItem,
     type MealSlot,
   } from "@logit/core/domain/nutrition";
+  import DateField from "$lib/components/ui/date-field";
   import { getNutritionRepo, getMessagesRepo } from "$lib/data/repoProvider";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
@@ -66,6 +69,46 @@
     d.setDate(d.getDate() + deltaDays);
     dateIso = localDateIso(d);
     void loadDay();
+  }
+
+  // ── Copy a previous day ──
+  let showCopy = $state(false);
+  let copyFromIso = $state("");
+  let copyBusy = $state(false);
+  let copyMsg = $state<string | null>(null);
+
+  function dayBefore(iso: string): string {
+    const d = new Date(`${iso}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    return localDateIso(d);
+  }
+
+  function toggleCopy() {
+    showCopy = !showCopy;
+    copyMsg = null;
+    if (showCopy && !copyFromIso) copyFromIso = dayBefore(dateIso);
+  }
+
+  async function doCopy() {
+    if (!copyFromIso || copyBusy) return;
+    copyBusy = true;
+    copyMsg = null;
+    try {
+      const repo = getNutritionRepo();
+      const src = await repo.getDay(copyFromIso);
+      const items = src?.items ?? [];
+      if (items.length === 0) {
+        copyMsg = "Nothing logged on that day.";
+        return;
+      }
+      const next = copyDiaryItems(day ?? createDiaryDay(dateIso), items);
+      day = next;
+      await repo.saveDay(next);
+      pushNutritionDay(next);
+      showCopy = false;
+    } finally {
+      copyBusy = false;
+    }
   }
 
   async function loadDay() {
@@ -252,6 +295,41 @@
         <span class="ml-auto text-xs text-muted-foreground">{nut.coachPlan.meals.length} meals</span>
       </a>
     {/if}
+
+    <!-- Copy a previous day -->
+    <div class="px-3 py-2 border-b border-border">
+      <button
+        type="button"
+        class="flex items-center gap-1.5 text-xs text-muted-foreground"
+        onclick={toggleCopy}
+      >
+        <CopyPlus class="h-3.5 w-3.5" /> Copy a day
+      </button>
+      {#if showCopy}
+        <div class="mt-2 flex flex-wrap items-end gap-2">
+          <label class="flex flex-col gap-1">
+            <span class="text-[11px] text-muted-foreground">Copy meals from</span>
+            <DateField bind:value={copyFromIso} maxIso={localDateIso()} aria-label="Copy from date" class="w-[9.5rem]" />
+          </label>
+          <button
+            type="button"
+            class="text-[11px] text-primary pb-1.5"
+            onclick={() => (copyFromIso = dayBefore(dateIso))}
+          >
+            Yesterday
+          </button>
+          <button
+            type="button"
+            class="rounded bg-primary text-primary-foreground text-xs px-3 py-1.5 disabled:opacity-50"
+            disabled={copyBusy}
+            onclick={() => void doCopy()}
+          >
+            {copyBusy ? "Copying…" : "Copy"}
+          </button>
+        </div>
+        {#if copyMsg}<p class="mt-1 text-[11px] text-muted-foreground">{copyMsg}</p>{/if}
+      {/if}
+    </div>
 
     <!-- Meals — items drag to reorder within a meal or move between meals -->
     {#each MEAL_SLOTS as meal (meal)}

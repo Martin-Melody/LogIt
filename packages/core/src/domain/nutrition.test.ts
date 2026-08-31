@@ -15,6 +15,7 @@ import {
   mealTemplateTotals,
   mealTotals,
   moveDiaryItem,
+  copyDiaryItems,
   recentFoodsFromDays,
   setDiaryItems,
   recipeAsFood,
@@ -91,6 +92,33 @@ describe("diary day", () => {
     const day = createDiaryDay("2026-01-15");
     const next = addDiaryItem(day, loggedItemFromFood(chicken, "lunch", 100));
     expect(next.updatedAtMs).toBeGreaterThanOrEqual(day.updatedAtMs);
+  });
+
+  it("copies items from another day with fresh ids, keeping meal slots", () => {
+    let src = createDiaryDay("2026-01-14");
+    src = addDiaryItem(src, { ...loggedItemFromFood(chicken, "lunch", 200), photoDataUrl: "data:x" });
+    src = addDiaryItem(src, loggedItemFromFood(chicken, "dinner", 150));
+
+    let target = createDiaryDay("2026-01-15");
+    target = addDiaryItem(target, loggedItemFromFood(chicken, "breakfast", 50));
+    target = copyDiaryItems(target, src.items);
+
+    expect(target.items).toHaveLength(3);
+    expect(mealTotals(target, "lunch").kcal).toBe(240);
+    expect(mealTotals(target, "dinner").kcal).toBe(180);
+    // fresh ids, no photo carried over
+    expect(new Set(target.items.map((i) => i.id)).size).toBe(3);
+    expect(target.items.some((i) => i.photoDataUrl)).toBe(false);
+  });
+
+  it("copyDiaryItems can restrict to one meal", () => {
+    let src = createDiaryDay("2026-01-14");
+    src = addDiaryItem(src, loggedItemFromFood(chicken, "lunch", 200));
+    src = addDiaryItem(src, loggedItemFromFood(chicken, "dinner", 150));
+
+    const target = copyDiaryItems(createDiaryDay("2026-01-15"), src.items, "dinner");
+    expect(target.items).toHaveLength(1);
+    expect(mealTotals(target, "dinner").kcal).toBe(180);
   });
 });
 

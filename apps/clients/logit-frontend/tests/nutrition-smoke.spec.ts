@@ -199,6 +199,25 @@ test("home screen auto-adds the nutrition widgets once a goal exists", async ({ 
   await expect(page.getByText("Weight Trend", { exact: true })).toBeVisible();
 });
 
+test("copy a previous day pulls yesterday's items into today", async ({ page }) => {
+  // beforeEach seeds 26 days of history (each with a "Seeded day" item in Dinner),
+  // so yesterday already has something to copy.
+  await page.goto("/nutrition");
+  await expect(page.getByRole("heading", { name: "Nutrition" })).toBeVisible();
+  await expect(page.getByText("Seeded day")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Copy a day" }).click();
+  // The date field defaults to yesterday; just confirm.
+  await page.getByRole("button", { name: "Copy", exact: true }).click();
+
+  await expect(page.getByText("Seeded day")).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/11-copy-day.png`, fullPage: true });
+
+  // Persisted: reloading the page still shows it.
+  await page.reload();
+  await expect(page.getByText("Seeded day")).toBeVisible();
+});
+
 test("a coach-assigned plan supersedes the target and shows a meal plan", async ({ page }) => {
   const f = (name: string, kcal: number, grams = 100) => ({
     id: `pf_${name}`,
