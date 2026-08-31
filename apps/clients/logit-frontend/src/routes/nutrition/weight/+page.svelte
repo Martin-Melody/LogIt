@@ -3,6 +3,7 @@
   import { ArrowLeft, Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
+  import DateField from "$lib/components/ui/date-field";
   import {
     createWeightEntry,
     localDateIso,
@@ -85,10 +86,10 @@
       <span class="text-[11px] text-muted-foreground">Weight ({unit})</span>
       <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={ui.value} />
     </label>
-    <label class="flex flex-col gap-1">
+    <div class="flex flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Date</span>
-      <input type="date" class="bg-muted rounded px-2 py-1.5 text-sm outline-none" bind:value={ui.dateIso} max={localDateIso()} />
-    </label>
+      <DateField bind:value={ui.dateIso} maxIso={localDateIso()} aria-label="Entry date" class="w-[9.5rem]" />
+    </div>
     <Button size="sm" onclick={() => void save()}>Log</Button>
   </div>
 

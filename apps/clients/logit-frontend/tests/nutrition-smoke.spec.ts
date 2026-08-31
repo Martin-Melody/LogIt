@@ -79,7 +79,9 @@ test("nutrition personal flow", async ({ page }) => {
   await page.goto("/nutrition/goal");
   await page.getByRole("button", { name: "male", exact: true }).click().catch(() => {});
   await page.getByRole("button", { name: "male", exact: true }).click();
-  await page.locator('input[type="date"]').fill("1994-06-15");
+  // birth date is a segmented DateField — focus the first segment and type M D Y
+  await page.getByRole("spinbutton").first().click();
+  await page.keyboard.type("06151994");
   await page.getByRole("button", { name: "lose", exact: true }).click();
   // Algorithm section: the built-in is selected and exposes preference controls.
   await expect(page.getByText("Standard adaptive")).toBeVisible();
