@@ -2,8 +2,13 @@
   import { goto } from "$app/navigation";
   import { apiClient, ApiError, type BillingStatus } from "@logit/core/api/client";
   import * as Card from "$lib/components/ui/card";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
+  import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
-  import { Spinner } from "$lib/components/ui/spinner";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import { Skeleton } from "$lib/components/ui/skeleton";
+  import { toast } from "$lib/components/ui/sonner";
 
   const user = $derived(apiClient.getUser());
   const isSelfHosted = apiClient.isSelfHosted();
@@ -45,15 +50,15 @@
   // --- Display name ---
   let displayName = $state(apiClient.getUser()?.displayName ?? "");
   let savingName = $state(false);
-  let nameSaved = $state(false);
 
   async function saveDisplayName() {
     if (!displayName.trim()) return;
     savingName = true;
-    nameSaved = false;
     try {
       await apiClient.updateDisplayName(displayName.trim());
-      nameSaved = true;
+      toast.success("Display name saved");
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Couldn't save your display name.");
     } finally {
       savingName = false;
     }
@@ -64,13 +69,11 @@
   let newPassword = $state("");
   let confirmPassword = $state("");
   let passwordError = $state<string | null>(null);
-  let passwordSaved = $state(false);
   let savingPassword = $state(false);
 
   async function changePassword(e: Event) {
     e.preventDefault();
     passwordError = null;
-    passwordSaved = false;
     if (newPassword !== confirmPassword) {
       passwordError = "Passwords don't match.";
       return;
@@ -81,7 +84,7 @@
       currentPassword = "";
       newPassword = "";
       confirmPassword = "";
-      passwordSaved = true;
+      toast.success("Password updated");
     } catch (e) {
       passwordError = e instanceof ApiError ? e.message : "Failed to update password.";
     } finally {
@@ -90,10 +93,17 @@
   }
 
   // --- Delete account ---
-  let confirmingDelete = $state(false);
+  let deleteOpen = $state(false);
   let deleting = $state(false);
   let deletePassword = $state("");
   let deleteError = $state<string | null>(null);
+
+  $effect(() => {
+    if (!deleteOpen) {
+      deletePassword = "";
+      deleteError = null;
+    }
+  });
 
   async function deleteAccount() {
     if (!deletePassword) return;
@@ -117,20 +127,12 @@
     </Card.Header>
     <Card.Content class="pt-0 pb-3 flex flex-col gap-2">
       <div class="flex flex-col gap-1.5 max-w-xs">
-        <label for="display-name" class="text-sm font-medium">Display name</label>
-        <input
-          id="display-name"
-          type="text"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          bind:value={displayName}
-        />
+        <Label for="display-name">Display name</Label>
+        <Input id="display-name" type="text" bind:value={displayName} />
       </div>
-      <div class="flex items-center gap-2">
-        <Button size="sm" disabled={savingName || !displayName.trim()} onclick={() => void saveDisplayName()}>
-          {savingName ? "Saving…" : "Save"}
-        </Button>
-        {#if nameSaved}<span class="text-xs text-muted-foreground">Saved.</span>{/if}
-      </div>
+      <Button size="sm" class="self-start" disabled={savingName || !displayName.trim()} onclick={() => void saveDisplayName()}>
+        {savingName ? "Saving…" : "Save"}
+      </Button>
     </Card.Content>
   </Card.Root>
 
@@ -142,18 +144,14 @@
       {#if isSelfHosted}
         <p class="text-sm text-muted-foreground">Self-hosted — full access, no billing.</p>
       {:else if billingLoading}
-        <Spinner class="size-4 text-muted-foreground" />
+        <Skeleton class="h-4 w-24" />
+        <Skeleton class="h-8 w-40" />
       {:else}
         <p class="text-sm">{user?.tier ?? "Free"} plan</p>
         {#if user?.tier === "Free"}
-          <a
-            href={PRICING_URL}
-            class="inline-flex items-center justify-center self-start rounded bg-primary text-primary-foreground text-sm font-medium px-3 py-2"
-          >
-            Upgrade to Pro or Studio
-          </a>
+          <Button href={PRICING_URL} size="sm" class="self-start">Upgrade to Pro or Studio</Button>
         {:else}
-          <Button size="sm" disabled={portalLoading} onclick={() => void openBillingPortal()}>
+          <Button size="sm" class="self-start" disabled={portalLoading} onclick={() => void openBillingPortal()}>
             {portalLoading ? "Opening…" : "Manage subscription"}
           </Button>
           {#if portalError}<p class="text-xs text-destructive">{portalError}</p>{/if}
@@ -168,29 +166,10 @@
     </Card.Header>
     <Card.Content class="pt-0 pb-3">
       <form class="flex flex-col gap-2 max-w-xs" onsubmit={changePassword}>
-        <input
-          type="password"
-          placeholder="Current password"
-          autocomplete="current-password"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          bind:value={currentPassword}
-        />
-        <input
-          type="password"
-          placeholder="New password"
-          autocomplete="new-password"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          bind:value={newPassword}
-        />
-        <input
-          type="password"
-          placeholder="Confirm new password"
-          autocomplete="new-password"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          bind:value={confirmPassword}
-        />
+        <Input type="password" placeholder="Current password" autocomplete="current-password" bind:value={currentPassword} />
+        <Input type="password" placeholder="New password" autocomplete="new-password" bind:value={newPassword} />
+        <Input type="password" placeholder="Confirm new password" autocomplete="new-password" bind:value={confirmPassword} />
         {#if passwordError}<p class="text-xs text-destructive">{passwordError}</p>{/if}
-        {#if passwordSaved}<p class="text-xs text-muted-foreground">Password updated.</p>{/if}
         <Button type="submit" size="sm" disabled={savingPassword || !currentPassword || !newPassword} class="self-start">
           {savingPassword ? "Saving…" : "Update password"}
         </Button>
@@ -203,45 +182,43 @@
       <Card.Title class="text-destructive">Danger zone</Card.Title>
     </Card.Header>
     <Card.Content class="pt-0 pb-3">
-      {#if !confirmingDelete}
-        <Button variant="outline" size="sm" onclick={() => (confirmingDelete = true)}>Delete account</Button>
-      {:else}
-        <div class="flex flex-col gap-2 max-w-xs">
-          <p class="text-sm text-muted-foreground">
-            This permanently deletes the account for <span class="font-medium text-foreground">@{user?.username}</span>
-            and all its synced data. This can't be undone.
-          </p>
-          <input
+      <AlertDialog.Root bind:open={deleteOpen}>
+        <AlertDialog.Trigger>
+          {#snippet child({ props })}
+            <Button {...props} variant="outline" size="sm">Delete account</Button>
+          {/snippet}
+        </AlertDialog.Trigger>
+        <AlertDialog.Content>
+          <AlertDialog.Header>
+            <AlertDialog.Title>Delete your account?</AlertDialog.Title>
+            <AlertDialog.Description>
+              This permanently deletes the account for @{user?.username} and all its synced data.
+              This can't be undone.
+            </AlertDialog.Description>
+          </AlertDialog.Header>
+          <Input
             type="password"
             placeholder="Confirm your password"
             autocomplete="current-password"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={deletePassword}
           />
-          {#if deleteError}<p class="text-xs text-destructive">{deleteError}</p>{/if}
-          <div class="flex items-center gap-2">
+          {#if deleteError}
+            <Alert.Root variant="destructive">
+              <Alert.Description>{deleteError}</Alert.Description>
+            </Alert.Root>
+          {/if}
+          <AlertDialog.Footer>
+            <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
             <Button
               variant="destructive"
-              size="sm"
               disabled={deleting || !deletePassword}
               onclick={() => void deleteAccount()}
             >
               {deleting ? "Deleting…" : "Yes, delete this account"}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={() => {
-                confirmingDelete = false;
-                deletePassword = "";
-                deleteError = null;
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      {/if}
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     </Card.Content>
   </Card.Root>
 </div>

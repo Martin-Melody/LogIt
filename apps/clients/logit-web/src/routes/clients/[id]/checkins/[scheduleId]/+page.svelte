@@ -2,8 +2,11 @@
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
+  import * as Alert from "$lib/components/ui/alert";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
+  import { Skeleton } from "$lib/components/ui/skeleton";
   import type { CheckinSchedule, CheckinCadence, CheckinQuestionType, CheckinSubmission } from "@logit/core/domain/Checkin";
   import * as C from "@logit/core/domain/Checkin";
   import { getWebCheckinRepo, fetchClientCheckinSubmissions } from "$lib/deps";
@@ -58,10 +61,16 @@
     }
   }
 
+  let confirmDeleteOpen = $state(false);
+
   async function removeSchedule() {
-    if (!confirm("Delete this check-in? This removes it for the client too.")) return;
-    await getWebCheckinRepo().deleteSchedule(scheduleId);
-    await goto(`/clients/${clientId}?u=${username}`);
+    confirmDeleteOpen = false;
+    try {
+      await getWebCheckinRepo().deleteSchedule(scheduleId);
+      await goto(`/clients/${clientId}?u=${username}`);
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Failed to delete";
+    }
   }
 
   function promptFor(qId: string): string {
@@ -90,14 +99,37 @@
   <div class="flex items-center justify-between">
     <a href="/clients/{clientId}?u={username}" class="text-xs text-muted-foreground hover:text-foreground">&larr; @{username}</a>
     {#if schedule}
-      <Button size="sm" variant="outline" class="text-destructive" onclick={removeSchedule}>Delete</Button>
+      <AlertDialog.Root bind:open={confirmDeleteOpen}>
+        <AlertDialog.Trigger>
+          {#snippet child({ props })}
+            <Button {...props} size="sm" variant="outline" class="text-destructive">Delete</Button>
+          {/snippet}
+        </AlertDialog.Trigger>
+        <AlertDialog.Content>
+          <AlertDialog.Header>
+            <AlertDialog.Title>Delete this check-in?</AlertDialog.Title>
+            <AlertDialog.Description>This removes it for the client too. This can't be undone.</AlertDialog.Description>
+          </AlertDialog.Header>
+          <AlertDialog.Footer>
+            <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+            <Button variant="destructive" onclick={() => void removeSchedule()}>Delete</Button>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     {/if}
   </div>
 
-  {#if error}<p class="text-sm text-destructive">{error}</p>{/if}
+  {#if error}
+    <Alert.Root variant="destructive">
+      <Alert.Description>{error}</Alert.Description>
+    </Alert.Root>
+  {/if}
 
   {#if loading}
-    <p class="text-sm text-muted-foreground">Loading…</p>
+    <div class="flex flex-col gap-2">
+      <Skeleton class="h-8 w-64" />
+      <Skeleton class="h-40 w-full" />
+    </div>
   {:else if !schedule}
     <p class="text-sm text-muted-foreground">Check-in not found.</p>
   {:else}
