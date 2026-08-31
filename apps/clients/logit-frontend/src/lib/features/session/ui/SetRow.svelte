@@ -113,9 +113,7 @@
     bind:this={weightEl}
     class="w-full rounded border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
     type="number"
-    min="0"
     step="0.5"
-    inputmode="decimal"
     placeholder="0"
     value={weight}
     {disabled}

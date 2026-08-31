@@ -56,7 +56,8 @@
     if (lastKey === key) return;
     lastKey = key;
     draft.reps = initial.reps > 0 ? initial.reps : null;
-    draft.weight = initial.weight > 0 ? initial.weight : null;
+    // Keep negatives — net assistance on bodyweight / assisted-machine movements.
+    draft.weight = initial.weight !== 0 ? initial.weight : null;
     draft.setType = initial.setType ?? "normal";
     draft.note = initial.note ?? null;
     draft.restDurationMs = initial.restDurationMs;
@@ -66,9 +67,10 @@
     noteExpanded = !!initial.note;
   });
 
-  function num(v: string): number {
+  function num(v: string, allowNegative = false): number {
     const n = Number(v);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
+    if (!Number.isFinite(n)) return 0;
+    return allowNegative ? n : Math.max(0, n);
   }
 
   // ── Rest timer ────────────────────────────────────────────────────────────
@@ -108,7 +110,7 @@
 
     const patch: Partial<Editable> = {
       reps: Math.max(0, draft.reps ?? 0),
-      weight: Math.max(0, draft.weight ?? 0),
+      weight: draft.weight ?? 0,
       setType: draft.setType,
       note: draft.note?.trim() || null,
       restDurationMs: draft.restDurationMs,
@@ -193,9 +195,7 @@
             <input
               id="es-weight"
               type="number"
-              min="0"
               step="0.5"
-              inputmode="decimal"
               placeholder="—"
               class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
               value={draft.weight ?? ""}
@@ -203,7 +203,7 @@
               onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
               oninput={(e) => {
                 const v = (e.currentTarget as HTMLInputElement).value;
-                draft.weight = v === "" ? null : num(v);
+                draft.weight = v === "" ? null : num(v, true);
               }}
             />
           </div>
