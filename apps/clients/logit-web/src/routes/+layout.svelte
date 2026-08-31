@@ -98,6 +98,7 @@
         <span class="text-sm font-semibold">LogIt</span>
         <nav class="flex items-center gap-3 text-sm text-muted-foreground">
           <a href="/" class="hover:text-foreground">Overview</a>
+          <a href="/nutrition" class="hover:text-foreground">Nutrition</a>
           {#if isStudio}
             <a href="/roster" class="hover:text-foreground">Roster</a>
           {/if}
