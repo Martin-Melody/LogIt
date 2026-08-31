@@ -4,8 +4,11 @@
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
+  import * as Select from "$lib/components/ui/select";
+  import DateField from "$lib/components/ui/date-field";
   import {
     defaultNutritionGoal,
+    localDateIso,
     resolveAlgorithmId,
     touchGoal,
     type ActivityLevel,
@@ -215,19 +218,26 @@
         <div class="grid grid-cols-2 gap-2">
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Birth date</span>
-            <input type="date" class="bg-muted rounded px-2 py-1.5 text-sm outline-none" bind:value={goal.birthDateIso} />
+            <DateField bind:value={goal.birthDateIso} maxIso={localDateIso()} aria-label="Birth date" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Height ({heightUnit})</span>
             <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={heightDisplay} />
           </label>
         </div>
-        <label class="flex flex-col gap-1">
+        <div class="flex flex-col gap-1">
           <span class="text-[11px] text-muted-foreground">Activity level</span>
-          <select class="bg-muted rounded px-2 py-1.5 text-sm outline-none" bind:value={goal.activityLevel}>
-            {#each ACTIVITY as a (a.value)}<option value={a.value}>{a.label}</option>{/each}
-          </select>
-        </label>
+          <Select.Root type="single" bind:value={goal.activityLevel}>
+            <Select.Trigger class="w-full">
+              {ACTIVITY.find((a) => a.value === goal.activityLevel)?.label ?? "Select"}
+            </Select.Trigger>
+            <Select.Content>
+              {#each ACTIVITY as a (a.value)}
+                <Select.Item value={a.value} label={a.label} />
+              {/each}
+            </Select.Content>
+          </Select.Root>
+        </div>
       </div>
 
       <!-- Goal -->

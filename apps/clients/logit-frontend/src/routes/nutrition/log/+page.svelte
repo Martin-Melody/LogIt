@@ -5,6 +5,7 @@
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Tabs from "$lib/components/ui/tabs";
+  import * as Select from "$lib/components/ui/select";
   import BarcodeScanner from "$lib/features/nutrition/BarcodeScanner.svelte";
   import {
     addDiaryItem,
@@ -275,9 +276,16 @@
         </button>
       </div>
       <div class="flex gap-2">
-        <select class="flex-1 bg-muted rounded px-2 py-1.5 text-sm outline-none" bind:value={pick.servingId}>
-          {#each selected.servings as s (s.id)}<option value={s.id}>{s.label}</option>{/each}
-        </select>
+        <Select.Root type="single" bind:value={pick.servingId}>
+          <Select.Trigger class="flex-1">
+            {selected.servings.find((s) => s.id === pick.servingId)?.label ?? "Serving"}
+          </Select.Trigger>
+          <Select.Content>
+            {#each selected.servings as s (s.id)}
+              <Select.Item value={s.id} label={s.label} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
         <input class="w-20 bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={pick.quantity} />
       </div>
       {#if preview}
