@@ -3,6 +3,9 @@
   import { goto } from "$app/navigation";
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
+  import { Skeleton } from "$lib/components/ui/skeleton";
+  import * as Alert from "$lib/components/ui/alert";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import type { CoachProgram } from "@logit/core/domain/CoachProgram";
   import * as P from "@logit/core/domain/CoachProgram";
   import type { SetType } from "@logit/core/domain/workout";
@@ -54,8 +57,10 @@
     }
   }
 
+  let confirmDeleteOpen = $state(false);
+
   async function removeProgram() {
-    if (!confirm("Delete this program? This removes it for the client too.")) return;
+    confirmDeleteOpen = false;
     try {
       await getWebCoachProgramRepo().deleteProgram(programId);
       await goto(`/clients/${clientId}?u=${username}`);
@@ -81,12 +86,37 @@
       &larr; @{username}
     </a>
     {#if program}
-      <Button size="sm" variant="outline" class="text-destructive" onclick={removeProgram}>Delete program</Button>
+      <AlertDialog.Root bind:open={confirmDeleteOpen}>
+        <AlertDialog.Trigger>
+          {#snippet child({ props })}
+            <Button {...props} size="sm" variant="outline" class="text-destructive">Delete program</Button>
+          {/snippet}
+        </AlertDialog.Trigger>
+        <AlertDialog.Content>
+          <AlertDialog.Header>
+            <AlertDialog.Title>Delete this program?</AlertDialog.Title>
+            <AlertDialog.Description>This removes it for the client too. This can't be undone.</AlertDialog.Description>
+          </AlertDialog.Header>
+          <AlertDialog.Footer>
+            <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+            <Button variant="destructive" onclick={() => void removeProgram()}>Delete program</Button>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     {/if}
   </div>
 
+  {#if error}
+    <Alert.Root variant="destructive">
+      <Alert.Description>{error}</Alert.Description>
+    </Alert.Root>
+  {/if}
+
   {#if loading}
-    <p class="text-sm text-muted-foreground">Loading…</p>
+    <div class="flex flex-col gap-2">
+      <Skeleton class="h-8 w-64" />
+      <Skeleton class="h-32 w-full" />
+    </div>
   {:else if !program}
     <p class="text-sm text-muted-foreground">Program not found.</p>
   {:else}

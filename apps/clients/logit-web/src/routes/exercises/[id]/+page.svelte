@@ -5,6 +5,10 @@
   import { page } from "$app/state";
   import * as Card from "$lib/components/ui/card";
   import * as Chart from "$lib/components/ui/chart";
+  import * as Table from "$lib/components/ui/table";
+  import * as Tabs from "$lib/components/ui/tabs";
+  import * as Alert from "$lib/components/ui/alert";
+  import { Skeleton } from "$lib/components/ui/skeleton";
   import { getWebDeps } from "$lib/deps";
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "@logit/core/usecases/progression/getExerciseAnalytics";
@@ -85,9 +89,15 @@
   </div>
 
   {#if loading}
-    <p class="text-sm text-muted-foreground">Loading…</p>
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <Skeleton class="h-72 xl:col-span-2" />
+      <Skeleton class="h-72" />
+      <Skeleton class="h-40 xl:col-span-3" />
+    </div>
   {:else if error}
-    <p class="text-sm text-destructive">{error}</p>
+    <Alert.Root variant="destructive">
+      <Alert.Description>{error}</Alert.Description>
+    </Alert.Root>
   {:else}
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
       <!-- Chart + metrics -->
@@ -110,17 +120,13 @@
             </div>
 
             {#if analytics.series.length > 1}
-              <div class="flex rounded border overflow-hidden text-xs mb-3 self-start">
-                {#each analytics.series as s (s.metricId)}
-                  <button
-                    type="button"
-                    class="px-3 py-1.5 transition-colors {activeSeries === s.metricId ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-                    onclick={() => (activeSeries = s.metricId)}
-                  >
-                    {s.label}
-                  </button>
-                {/each}
-              </div>
+              <Tabs.Root value={activeSeries} onValueChange={(v) => (activeSeries = v)} class="mb-3">
+                <Tabs.List>
+                  {#each analytics.series as s (s.metricId)}
+                    <Tabs.Trigger value={s.metricId}>{s.label}</Tabs.Trigger>
+                  {/each}
+                </Tabs.List>
+              </Tabs.Root>
             {/if}
 
             {#if chartData.length >= 2}
@@ -190,18 +196,18 @@
             <p class="text-sm text-muted-foreground py-2">No sessions yet.</p>
           {:else}
             <div class="overflow-x-auto">
-              <table class="w-full text-sm border-collapse">
-                <thead>
-                  <tr class="border-b border-border text-xs text-muted-foreground">
-                    <th class="text-left font-medium py-1.5 pr-4">Date</th>
-                    <th class="text-left font-medium py-1.5">Sets</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table.Root class="text-sm">
+                <Table.Header>
+                  <Table.Row class="text-xs text-muted-foreground">
+                    <Table.Head>Date</Table.Head>
+                    <Table.Head>Sets</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
                   {#each historyNewestFirst as entry (entry.sessionId)}
-                    <tr class="border-b last:border-0 border-border">
-                      <td class="py-1.5 pr-4 align-top whitespace-nowrap tabular-nums">{formatDate(entry.performedAtMs)}</td>
-                      <td class="py-1.5">
+                    <Table.Row>
+                      <Table.Cell class="align-top whitespace-nowrap tabular-nums">{formatDate(entry.performedAtMs)}</Table.Cell>
+                      <Table.Cell>
                         <div class="flex flex-wrap gap-1.5">
                           {#each entry.sets as set (set.id)}
                             <span class="text-xs px-1.5 py-0.5 rounded border border-border tabular-nums {set.setType !== 'normal' ? 'text-muted-foreground' : ''}">
@@ -209,11 +215,11 @@
                             </span>
                           {/each}
                         </div>
-                      </td>
-                    </tr>
+                      </Table.Cell>
+                    </Table.Row>
                   {/each}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table.Root>
             </div>
           {/if}
         </Card.Content>

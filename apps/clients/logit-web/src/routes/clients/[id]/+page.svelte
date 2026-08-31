@@ -2,6 +2,7 @@
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
+  import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
   import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
@@ -190,7 +191,9 @@
   </div>
 
   {#if error}
-    <p class="text-sm text-destructive">{error}</p>
+    <Alert.Root variant="destructive">
+      <Alert.Description>{error}</Alert.Description>
+    </Alert.Root>
   {/if}
 
   <Card.Root>

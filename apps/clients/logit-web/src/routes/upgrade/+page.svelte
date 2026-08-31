@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { apiClient, ApiError } from "@logit/core/api/client";
   import { Button } from "$lib/components/ui/button";
+  import * as Alert from "$lib/components/ui/alert";
 
   const user = $derived(apiClient.getUser());
 
@@ -50,7 +51,11 @@
         {checkoutLoading === "studio" ? "Starting…" : "Upgrade to Studio"}
       </Button>
     </div>
-    {#if checkoutError}<p class="text-xs text-destructive">{checkoutError}</p>{/if}
+    {#if checkoutError}
+      <Alert.Root variant="destructive" class="text-left">
+        <Alert.Description>{checkoutError}</Alert.Description>
+      </Alert.Root>
+    {/if}
 
     <a href={PRICING_URL} class="text-xs text-muted-foreground hover:text-foreground underline">
       Compare plans and pricing

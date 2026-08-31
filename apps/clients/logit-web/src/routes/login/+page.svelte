@@ -4,6 +4,10 @@
   import { getServerMode, setServerMode, getSelfHostUrl } from "@logit/core/api/serverConfig";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import * as Tabs from "$lib/components/ui/tabs";
+  import * as Alert from "$lib/components/ui/alert";
 
   // Marketing site owns plan selection + Stripe checkout; link there for plan comparison.
   // Falls back to the live Cloudflare Pages URL so this works out of the box; set
@@ -99,74 +103,39 @@
       </p>
     </div>
 
-    <div class="flex rounded border overflow-hidden text-sm">
-      <button
-        type="button"
-        class="flex-1 py-2 text-center transition-colors {mode === 'login' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-        onclick={() => switchMode("login")}
-      >
-        Log in
-      </button>
-      <button
-        type="button"
-        class="flex-1 py-2 text-center transition-colors {mode === 'register' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
-        onclick={() => switchMode("register")}
-      >
-        Sign up
-      </button>
-    </div>
+    <Tabs.Root value={mode} onValueChange={(v) => switchMode(v as Mode)}>
+      <Tabs.List class="w-full">
+        <Tabs.Trigger value="login" class="flex-1">Log in</Tabs.Trigger>
+        <Tabs.Trigger value="register" class="flex-1">Sign up</Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
 
     <form class="flex flex-col gap-3" onsubmit={submit}>
       {#if mode === "login"}
         <div class="flex flex-col gap-1.5">
-          <label for="identifier" class="text-sm font-medium">Username or email</label>
-          <input
-            id="identifier"
-            type="text"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={usernameOrEmail}
-            autocomplete="username"
-          />
+          <Label for="identifier">Username or email</Label>
+          <Input id="identifier" type="text" bind:value={usernameOrEmail} autocomplete="username" />
         </div>
       {:else}
         <div class="flex flex-col gap-1.5">
-          <label for="displayName" class="text-sm font-medium">Name</label>
-          <input
-            id="displayName"
-            type="text"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={displayName}
-            autocomplete="name"
-          />
+          <Label for="displayName">Name</Label>
+          <Input id="displayName" type="text" bind:value={displayName} autocomplete="name" />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label for="username" class="text-sm font-medium">Username</label>
-          <input
-            id="username"
-            type="text"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={username}
-            autocomplete="username"
-          />
+          <Label for="username">Username</Label>
+          <Input id="username" type="text" bind:value={username} autocomplete="username" />
         </div>
         <div class="flex flex-col gap-1.5">
-          <label for="email" class="text-sm font-medium">Email</label>
-          <input
-            id="email"
-            type="email"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={email}
-            autocomplete="email"
-          />
+          <Label for="email">Email</Label>
+          <Input id="email" type="email" bind:value={email} autocomplete="email" />
         </div>
       {/if}
 
       <div class="flex flex-col gap-1.5">
-        <label for="password" class="text-sm font-medium">Password</label>
-        <input
+        <Label for="password">Password</Label>
+        <Input
           id="password"
           type="password"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={password}
           autocomplete={mode === "login" ? "current-password" : "new-password"}
         />
@@ -174,13 +143,13 @@
 
       {#if mode === "register"}
         <div class="flex flex-col gap-1.5">
-          <label for="confirm-password" class="text-sm font-medium">Confirm password</label>
-          <input
+          <Label for="confirm-password">Confirm password</Label>
+          <Input
             id="confirm-password"
             type="password"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring {passwordMismatch ? 'border-destructive' : ''}"
             bind:value={confirmPassword}
             autocomplete="new-password"
+            aria-invalid={passwordMismatch}
           />
           {#if passwordMismatch}
             <p class="text-xs text-destructive">Passwords don't match.</p>
@@ -189,7 +158,9 @@
       {/if}
 
       {#if error}
-        <p class="text-sm text-destructive">{error}</p>
+        <Alert.Root variant="destructive">
+          <Alert.Description>{error}</Alert.Description>
+        </Alert.Root>
       {/if}
 
       <Button type="submit" disabled={!canSubmit} class="w-full">
@@ -220,20 +191,15 @@
     {#if showServerSetup}
       <div class="flex flex-col gap-2 rounded border border-border p-3">
         <div class="flex gap-2">
-          <input
+          <Input
             type="text"
             placeholder="https://your-server.example.com"
-            class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="flex-1 min-w-0"
             bind:value={selfHostUrl}
           />
-          <button
-            type="button"
-            class="shrink-0 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
-            disabled={!selfHostUrl.trim()}
-            onclick={saveServerUrl}
-          >
+          <Button type="button" size="sm" disabled={!selfHostUrl.trim()} onclick={saveServerUrl}>
             Save
-          </button>
+          </Button>
         </div>
         <button type="button" class="text-xs text-muted-foreground hover:text-foreground self-start" onclick={useCloud}>
           Use the managed cloud instead

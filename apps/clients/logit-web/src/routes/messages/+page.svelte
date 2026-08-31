@@ -2,6 +2,9 @@
   import { onDestroy, tick } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
+  import { Textarea } from "$lib/components/ui/textarea";
+  import { Skeleton } from "$lib/components/ui/skeleton";
+  import * as Alert from "$lib/components/ui/alert";
   import { coachApi } from "@logit/core/api/coachApi";
   import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
 
@@ -93,10 +96,14 @@
 
 <div class="flex flex-col gap-3">
   <h1 class="text-lg font-semibold">Messages</h1>
-  {#if error}<p class="text-sm text-destructive">{error}</p>{/if}
+  {#if error}
+    <Alert.Root variant="destructive">
+      <Alert.Description>{error}</Alert.Description>
+    </Alert.Root>
+  {/if}
 
   {#if loading}
-    <p class="text-sm text-muted-foreground">Loading…</p>
+    <Skeleton class="w-full" style="height: 70vh" />
   {:else if threads.length === 0}
     <p class="text-sm text-muted-foreground">No conversations yet.</p>
   {:else}
@@ -133,9 +140,9 @@
           </div>
           <form class="flex items-end gap-2 px-3 py-2 border-t border-border shrink-0"
             onsubmit={(e) => { e.preventDefault(); void send(); }}>
-            <textarea bind:value={draft} rows="1" placeholder="Message…"
-              class="flex-1 resize-none rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
-              onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }}></textarea>
+            <Textarea bind:value={draft} rows={1} placeholder="Message…"
+              class="flex-1 resize-none max-h-32 min-h-0"
+              onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
             <Button type="submit" size="sm" disabled={sending || !draft.trim()}>Send</Button>
           </form>
         {/if}

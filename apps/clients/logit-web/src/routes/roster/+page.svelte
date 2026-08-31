@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
+  import * as Table from "$lib/components/ui/table";
+  import * as Alert from "$lib/components/ui/alert";
   import { Badge } from "$lib/components/ui/badge";
+  import { Skeleton } from "$lib/components/ui/skeleton";
   import { coachApi, type RosterEntry } from "@logit/core/api/coachApi";
 
   let loading = $state(true);
@@ -94,33 +97,39 @@
   </div>
 
   {#if error}
-    <p class="text-sm text-destructive">{error}</p>
+    <Alert.Root variant="destructive">
+      <Alert.Description>{error}</Alert.Description>
+    </Alert.Root>
   {/if}
 
   <Card.Root>
     <Card.Content class="p-0">
       {#if loading}
-        <p class="text-sm text-muted-foreground p-4">Loading…</p>
+        <div class="flex flex-col gap-2 p-3">
+          {#each Array.from({ length: 5 }) as _, i (i)}
+            <Skeleton class="h-8 w-full" />
+          {/each}
+        </div>
       {:else if roster.length === 0}
         <p class="text-sm text-muted-foreground p-4">No active clients yet.</p>
       {:else}
         <div class="overflow-x-auto">
-          <table class="w-full text-sm border-collapse">
-            <thead>
-              <tr class="border-b border-border text-xs text-muted-foreground">
-                <th class="text-left font-medium py-2 px-3">Client</th>
-                <th class="text-left font-medium py-2 px-3">Last workout</th>
-                <th class="text-right font-medium py-2 px-3">7d</th>
-                <th class="text-right font-medium py-2 px-3">28d</th>
-                <th class="text-right font-medium py-2 px-3">Programs</th>
-                <th class="text-left font-medium py-2 px-3">Last check-in</th>
-                <th class="text-right font-medium py-2 px-3">Unread</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table.Root class="text-sm">
+            <Table.Header>
+              <Table.Row class="text-xs text-muted-foreground">
+                <Table.Head>Client</Table.Head>
+                <Table.Head>Last workout</Table.Head>
+                <Table.Head class="text-right">7d</Table.Head>
+                <Table.Head class="text-right">28d</Table.Head>
+                <Table.Head class="text-right">Programs</Table.Head>
+                <Table.Head>Last check-in</Table.Head>
+                <Table.Head class="text-right">Unread</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {#each rows as { e, status } (e.relationshipId)}
-                <tr class="border-b last:border-0 border-border hover:bg-muted/40">
-                  <td class="py-2 px-3">
+                <Table.Row class="hover:bg-muted/40">
+                  <Table.Cell>
                     <a
                       href="/clients/{e.client.id}?u={e.client.username}"
                       class="flex items-center gap-2 font-medium hover:underline"
@@ -128,31 +137,31 @@
                       <span class="size-2 rounded-full shrink-0 {dotClass[status]}"></span>
                       {e.client.displayName || e.client.username}
                     </a>
-                  </td>
-                  <td class="py-2 px-3 tabular-nums {daysSince(e.lastSessionAtMs) > 14 ? 'text-red-600 dark:text-red-400' : ''}">
+                  </Table.Cell>
+                  <Table.Cell class="tabular-nums {daysSince(e.lastSessionAtMs) > 14 ? 'text-red-600 dark:text-red-400' : ''}">
                     {ago(e.lastSessionAtMs)}
-                  </td>
-                  <td class="py-2 px-3 text-right tabular-nums">{e.sessions7d}</td>
-                  <td class="py-2 px-3 text-right tabular-nums text-muted-foreground">{e.sessions28d}</td>
-                  <td class="py-2 px-3 text-right tabular-nums text-muted-foreground">{e.programCount || "—"}</td>
-                  <td class="py-2 px-3 tabular-nums">
+                  </Table.Cell>
+                  <Table.Cell class="text-right tabular-nums">{e.sessions7d}</Table.Cell>
+                  <Table.Cell class="text-right tabular-nums text-muted-foreground">{e.sessions28d}</Table.Cell>
+                  <Table.Cell class="text-right tabular-nums text-muted-foreground">{e.programCount || "—"}</Table.Cell>
+                  <Table.Cell class="tabular-nums">
                     {#if e.checkinScheduleCount === 0}
                       <span class="text-muted-foreground">no check-in</span>
                     {:else}
                       {ago(e.lastCheckinSubmittedAtMs)}
                     {/if}
-                  </td>
-                  <td class="py-2 px-3 text-right">
+                  </Table.Cell>
+                  <Table.Cell class="text-right">
                     {#if e.unreadFromClient > 0}
                       <Badge class="text-xs px-1.5 py-0">{e.unreadFromClient}</Badge>
                     {:else}
                       <span class="text-muted-foreground">—</span>
                     {/if}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               {/each}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table.Root>
         </div>
       {/if}
     </Card.Content>

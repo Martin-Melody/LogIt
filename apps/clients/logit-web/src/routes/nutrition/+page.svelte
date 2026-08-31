@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
+  import * as Alert from "$lib/components/ui/alert";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
@@ -233,7 +234,9 @@
     </div>
   </div>
 
-  {#if error}<p class="text-sm text-destructive">{error}</p>{/if}
+  {#if error}
+    <Alert.Root variant="destructive" class="mb-1"><Alert.Description>{error}</Alert.Description></Alert.Root>
+  {/if}
 
   {#if loading}
     <div class="flex items-center gap-2 text-sm text-muted-foreground"><Spinner class="size-4" /> Loading…</div>

@@ -2,6 +2,9 @@
   import { apiClient, ApiError } from "@logit/core/api/client";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import * as Alert from "$lib/components/ui/alert";
 
   let email = $state("");
   let loading = $state(false);
@@ -34,18 +37,14 @@
 
     <form class="flex flex-col gap-3" onsubmit={submit}>
       <div class="flex flex-col gap-1.5">
-        <label for="email" class="text-sm font-medium">Email</label>
-        <input
-          id="email"
-          type="email"
-          autocomplete="email"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          bind:value={email}
-        />
+        <Label for="email">Email</Label>
+        <Input id="email" type="email" autocomplete="email" bind:value={email} />
       </div>
 
       {#if result}
-        <p class="text-sm {result.isError ? 'text-destructive' : 'text-muted-foreground'}">{result.message}</p>
+        <Alert.Root variant={result.isError ? "destructive" : "default"}>
+          <Alert.Description>{result.message}</Alert.Description>
+        </Alert.Root>
       {/if}
 
       <Button type="submit" disabled={loading || !email.trim()} class="w-full">

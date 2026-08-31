@@ -9,6 +9,10 @@
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
+  import { Input } from "$lib/components/ui/input";
+  import { Skeleton } from "$lib/components/ui/skeleton";
+  import * as Alert from "$lib/components/ui/alert";
+  import { toast } from "$lib/components/ui/sonner";
   import { viewingClient } from "$lib/viewingClient.svelte";
 
   const isStudio = $derived(apiClient.getUser()?.tier === "Studio");
@@ -59,6 +63,7 @@
     try {
       await coachApi.inviteClient(username);
       inviteUsername = "";
+      toast.success(`Invite sent to @${username}`);
       await load();
     } catch (e) {
       inviteError =
@@ -105,9 +110,14 @@
   <h1 class="text-lg font-semibold">Clients</h1>
 
   {#if loading}
-    <p class="text-sm text-muted-foreground">Loading…</p>
+    <div class="flex flex-col gap-3">
+      <Skeleton class="h-24 w-full" />
+      <Skeleton class="h-24 w-full" />
+    </div>
   {:else if error}
-    <p class="text-sm text-destructive">{error}</p>
+    <Alert.Root variant="destructive">
+      <Alert.Description>{error}</Alert.Description>
+    </Alert.Root>
   {:else}
     <Card.Root>
       <Card.Header class="pb-2">
@@ -175,10 +185,10 @@
           {/if}
 
           <form class="flex gap-2 pt-2" onsubmit={invite}>
-            <input
+            <Input
               type="text"
               placeholder="Client's username"
-              class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="flex-1 min-w-0"
               bind:value={inviteUsername}
             />
             <Button type="submit" size="sm" disabled={inviting || !inviteUsername.trim()}>

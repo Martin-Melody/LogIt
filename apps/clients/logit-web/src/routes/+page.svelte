@@ -4,6 +4,8 @@
   import { AreaChart } from "layerchart";
   import * as Card from "$lib/components/ui/card";
   import * as Chart from "$lib/components/ui/chart";
+  import * as Alert from "$lib/components/ui/alert";
+  import { Skeleton } from "$lib/components/ui/skeleton";
   import { getWebDeps } from "$lib/deps";
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { getExercises } from "@logit/core/domain/workout";
@@ -141,9 +143,15 @@
 </script>
 
 {#if loading}
-  <p class="text-sm text-muted-foreground">Loading…</p>
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+    <Skeleton class="h-48 xl:col-span-2" />
+    <Skeleton class="h-48" />
+    <Skeleton class="h-64 xl:col-span-3" />
+  </div>
 {:else if error}
-  <p class="text-sm text-destructive">{error}</p>
+  <Alert.Root variant="destructive">
+    <Alert.Description>{error}</Alert.Description>
+  </Alert.Root>
 {:else}
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
     <!-- Stats + heatmap -->
