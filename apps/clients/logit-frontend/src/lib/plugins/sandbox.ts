@@ -1,6 +1,5 @@
 import { browser } from "$app/environment";
-import { newQuickJSWASMModuleFromVariant, type QuickJSWASMModule } from "quickjs-emscripten-core";
-import variant from "@jitl/quickjs-singlefile-browser-release-sync";
+import type { QuickJSWASMModule } from "quickjs-emscripten-core";
 import {
   buildRunnerCode,
   parseEnvelope,
@@ -34,9 +33,17 @@ let modulePromise: Promise<QuickJSWASMModule> | null = null;
 
 function loadModule(): Promise<QuickJSWASMModule> {
   if (!modulePromise) {
-    modulePromise = newQuickJSWASMModuleFromVariant(
-      variant as Parameters<typeof newQuickJSWASMModuleFromVariant>[0],
-    );
+    // Dynamic import so the ~1 MB embedded-WASM engine is a separate chunk,
+    // loaded only when a sandboxed plugin first runs — not in the main bundle.
+    modulePromise = (async () => {
+      const [{ newQuickJSWASMModuleFromVariant }, variantMod] = await Promise.all([
+        import("quickjs-emscripten-core"),
+        import("@jitl/quickjs-singlefile-browser-release-sync"),
+      ]);
+      return newQuickJSWASMModuleFromVariant(
+        variantMod.default as Parameters<typeof newQuickJSWASMModuleFromVariant>[0],
+      );
+    })();
   }
   return modulePromise;
 }
