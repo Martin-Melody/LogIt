@@ -38,13 +38,14 @@ const COMMUNITY_REGISTRY_URL = import.meta.env.DEV
 const BUNDLED_REGISTRY_URL = "/sample-plugins/registry.json";
 
 export function builtinRegistrySources(): RegistrySource[] {
+  // Bundled first: it's same-origin, always reachable, and its entries win the
+  // de-dupe. The remote community registry is a bonus that must never gate the UI.
   const sources: RegistrySource[] = [
-    { url: COMMUNITY_REGISTRY_URL, label: "Logit registry", builtin: true },
+    { url: BUNDLED_REGISTRY_URL, label: "Bundled examples", builtin: true },
   ];
-  // In dev the community URL already points at the bundled file — don't list it
-  // twice.
+  // In dev the community URL already points at the bundled file — don't list it twice.
   if (BUNDLED_REGISTRY_URL !== COMMUNITY_REGISTRY_URL) {
-    sources.push({ url: BUNDLED_REGISTRY_URL, label: "Bundled examples", builtin: true });
+    sources.push({ url: COMMUNITY_REGISTRY_URL, label: "Logit registry", builtin: true });
   }
   return sources;
 }
