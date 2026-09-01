@@ -1,0 +1,14 @@
+{
+  "id": "com.demo.starter-pack",
+  "family": "exercise-pack",
+  "name": "Starter Pack",
+  "description": "Two odd-lift movements.",
+  "version": "1.0.0",
+  "integrity": "sha256-VprKzQNG51ZvQFETKv3ocDGXMz8uV8cflSJ8oL4j+gM=",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "plugins/starter-pack/manifest.json",
+    "bundleUrl": "plugins/starter-pack/exercises.json"
+  },
+  "capabilities": [{ "family": "exercise-pack", "exercisePackId": "com.demo.starter-pack" }]
+}

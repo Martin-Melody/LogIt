@@ -1,0 +1,10 @@
+{
+  "id": "com.demo.noimpl",
+  "family": "progression-algorithm",
+  "name": "No Impl",
+  "description": "valid manifest, wrong hash, bundle missing suggest()",
+  "version": "1.0.0",
+  "integrity": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  "distribution": { "origin": "url", "manifestUrl": "plugins/noimpl/manifest.json", "bundleUrl": "plugins/noimpl/bundle.js" },
+  "capabilities": [{ "family": "progression-algorithm", "algorithmId": "com.demo.noimpl" }]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "com.demo.linear",
+  "family": "progression-algorithm",
+  "name": "Linear Demo",
+  "description": "Adds a fixed increment each session.",
+  "version": "1.0.0",
+  "author": "Demo",
+  "integrity": "sha256-nUTvFylsepm3cJtTR4+JjhDZKwTrD5ENIf4Kx4LfNwM=",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "plugins/linear-demo/manifest.json",
+    "bundleUrl": "plugins/linear-demo/bundle.js"
+  },
+  "capabilities": [{ "family": "progression-algorithm", "algorithmId": "com.demo.linear" }]
+}

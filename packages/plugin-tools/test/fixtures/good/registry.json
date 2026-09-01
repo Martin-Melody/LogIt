@@ -1,0 +1,4 @@
+[
+  { "id": "com.demo.linear", "name": "Linear Demo", "description": "Adds a fixed increment each session.", "family": "progression-algorithm", "author": "Demo", "manifestUrl": "plugins/linear-demo/manifest.json" },
+  { "id": "com.demo.starter-pack", "name": "Starter Pack", "description": "Two odd-lift movements.", "family": "exercise-pack", "author": "Demo", "manifestUrl": "plugins/starter-pack/manifest.json" }
+]
