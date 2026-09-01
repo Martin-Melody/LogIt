@@ -17,6 +17,7 @@ import {
 } from "./lib/normalize.mjs";
 import { normalizeOffProduct, loadOffExport } from "./lib/off.mjs";
 import { loadCiqualTable } from "./lib/ciqual.mjs";
+import { resolveCommonFoods, scoreMatch } from "./lib/common.mjs";
 import { writeZip } from "./lib/zip.mjs";
 import { config } from "./config.mjs";
 
@@ -112,6 +113,58 @@ test("loadCiqualTable parses ;-delimited French export", async () => {
   assert.equal(rows[0].popularity, config.genericPopularity);
 });
 
+test("resolveCommonFoods picks the most generic match and stamps it curated", () => {
+  const mk = (id, source, name, macros = { kcal_100g: 100, protein_100g: 5, carb_100g: 10, fat_100g: 2 }) => ({
+    id, source, name, brand: null, barcode: null, ...macros,
+    popularity: config.genericPopularity, servings: [{ label: "100 g", grams: 100 }],
+  });
+  const rows = [
+    mk("usda:1", "usda", "Milk, whole, 3.25% milkfat, with added vitamin D", { kcal_100g: 61, protein_100g: 3.2, carb_100g: 4.8, fat_100g: 3.3 }),
+    mk("usda:2", "usda", "Milk chocolate, with added vitamin D"),
+    mk("off:1", "off", "Milka chocolate bar"), // wrong source — must be ignored
+    mk("ciqual:9", "ciqual", "Chicken, roasted", { kcal_100g: 223, protein_100g: 28.7, carb_100g: 0, fat_100g: 12.1 }),
+    mk("usda:3", "usda", "Chicken spread, canned"),
+  ];
+
+  const { rows: out, warnings } = resolveCommonFoods(
+    rows,
+    [
+      { name: "Milk, whole", match: "milk whole 3.25 milkfat vitamin d" },
+      { name: "Chicken, whole, roasted", match: "chicken roasted" },
+      { name: "Unicorn steak", match: "unicorn tenderloin" },
+    ],
+    { popularity: config.commonPopularity },
+  );
+
+  const milk = out.find((r) => r.id === "common:milk-whole");
+  assert.ok(milk);
+  assert.equal(milk.source, "usda");
+  assert.equal(milk.protein_100g, 3.2); // macros copied from the matched row
+  assert.equal(milk.curated, 1);
+  assert.equal(milk.popularity, config.commonPopularity); // list index 0
+
+  const chicken = out.find((r) => r.id === "common:chicken-whole-roasted");
+  assert.ok(chicken);
+  assert.equal(chicken.name, "Chicken, whole, roasted"); // clean display name, not "Chicken, roasted"
+  assert.equal(chicken.protein_100g, 28.7);
+  assert.equal(chicken.popularity, config.commonPopularity - 1); // list index 1 — later = lower
+  assert.ok(milk.popularity > chicken.popularity); // curated block keeps JSON order
+
+  assert.deepEqual(warnings, ["unicorn tenderloin"]); // no match -> warned, not emitted
+  assert.equal(out.length, 2);
+});
+
+test("scoreMatch rejects non-matches and rewards leading-token / generic names", () => {
+  const row = (name) => ({ name, kcal_100g: 1, protein_100g: 1, carb_100g: 1, fat_100g: 1 });
+  assert.equal(scoreMatch(["milk", "whole"], "milk", row("Whole grain bread")), null);
+  const leading = scoreMatch(["apple"], "apple", row("Apples, raw, with skin"));
+  const trailing = scoreMatch(["apple"], "apple", row("Crabapples, raw"));
+  assert.ok(leading > trailing);
+  // token must start at a word boundary — "apple" doesn't match "pineapple"
+  assert.equal(scoreMatch(["apple", "raw"], "apple", row("Pineapple, raw, all varieties")), null);
+  assert.ok(scoreMatch(["apple", "raw"], "apple", row("Apples, raw, without skin")) != null);
+});
+
 test("writeZip emits an archive node:sqlite can reopen after unzip", async () => {
   const tmpDb = join(HERE, "dist/_test.db");
   const tmpZip = join(HERE, "dist/_test.zip");
@@ -141,6 +194,7 @@ test("end-to-end: the sample build produces a queryable food.db", async () => {
   const db = new DatabaseSync(dbPath, { readOnly: true });
   const cols = db.prepare("PRAGMA table_info(foods)").all().map((c) => c.name);
   assert.ok(cols.includes("popularity"));
+  assert.ok(cols.includes("curated"));
   const hit = db.prepare(
     "SELECT f.name FROM foods_fts JOIN foods f ON f.rowid = foods_fts.rowid WHERE foods_fts MATCH ? ORDER BY rank, f.popularity DESC LIMIT 1",
   ).get("chick*");

@@ -17,6 +17,7 @@ CREATE TABLE foods (
   carb_100g    REAL NOT NULL,
   fat_100g     REAL NOT NULL,
   popularity   INTEGER NOT NULL DEFAULT 0,
+  curated      INTEGER NOT NULL DEFAULT 0,   -- 1 for hand-curated staples (see common-foods.json); sorted first
   serving_json TEXT NOT NULL DEFAULT '[]'
 );
 

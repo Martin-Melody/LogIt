@@ -18,6 +18,7 @@ import { loadUsdaBundle } from "./lib/usda.mjs";
 import { loadCiqualTable } from "./lib/ciqual.mjs";
 import { loadOffExport } from "./lib/off.mjs";
 import { completeness } from "./lib/normalize.mjs";
+import { resolveCommonFoods } from "./lib/common.mjs";
 import { writeZip } from "./lib/zip.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -91,6 +92,26 @@ async function collectRows() {
     console.warn(`! skipping Open Food Facts (not found): run \`npm run download\``);
   }
 
+  // Curated staples: resolve each against the loaded USDA/CIQUAL rows, then add as their own
+  // `curated` rows so the app can float them above brand noise for generic queries.
+  // Skipped for --sample (the fixture set is too small to resolve the real list).
+  const listPath = join(HERE, "common-foods.json");
+  if (!sample && existsSync(listPath)) {
+    const list = JSON.parse(await readFile(listPath, "utf8")).foods ?? [];
+    const { rows: common, warnings } = resolveCommonFoods([...byId.values()], list, {
+      popularity: config.commonPopularity,
+    });
+    for (const r of common) byId.set(r.id, r);
+    console.log(`  Common foods: ${common.length} curated of ${list.length}`);
+    if (warnings.length) {
+      console.warn(
+        `  ! ${warnings.length} common-foods entries had no match: ` +
+          warnings.slice(0, 10).join(" | ") +
+          (warnings.length > 10 ? " …" : ""),
+      );
+    }
+  }
+
   return [...byId.values()];
 }
 
@@ -118,8 +139,8 @@ async function main() {
 
   const insert = db.prepare(
     `INSERT INTO foods
-       (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, popularity, serving_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, popularity, curated, serving_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   db.exec("BEGIN");
   let n = 0;
@@ -135,6 +156,7 @@ async function main() {
       r.carb_100g,
       r.fat_100g,
       Math.round(r.popularity ?? 0),
+      r.curated ? 1 : 0,
       JSON.stringify(r.servings),
     );
     n++;
@@ -146,10 +168,13 @@ async function main() {
   db.exec("INSERT INTO foods_fts(foods_fts) VALUES('optimize')");
 
   const counts = db.prepare("SELECT source, COUNT(*) c FROM foods GROUP BY source").all();
+  const curatedCount = db.prepare("SELECT COUNT(*) c FROM foods WHERE curated = 1").get().c;
   const meta = {
     built_at: new Date().toISOString(),
     build_mode: sample ? "sample" : tier.name,
+    build_version: String(config.dbVersion),
     total: String(n),
+    curated: String(curatedCount),
     sources: JSON.stringify(counts),
     attribution:
       "Contains data from USDA FoodData Central (public domain); ANSES CIQUAL " +

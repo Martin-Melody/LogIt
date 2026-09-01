@@ -23,6 +23,11 @@ const CORE_COUNTRIES = [
 ];
 
 export const config = {
+  // Written to meta.build_version. Bump when a shipped DB change must reach devices that
+  // already unpacked an older copy — must match FOOD_DB_VERSION in the app's sqlite.ts.
+  // v2 = `curated` column + common-foods.json staples.
+  dbVersion: 2,
+
   usda: {
     // USDA FoodData Central CSV bundles. Public domain. Update these URLs when USDA
     // publishes a new release — https://fdc.nal.usda.gov/download-datasets
@@ -67,6 +72,12 @@ export const config = {
   // Baseline search-popularity for generic (unscanned) foods, so "banana" ranks the USDA
   // entry above a branded "Banana flavour drink". OFF rows use their real scan count.
   genericPopularity: 400,
+
+  // Base popularity for the hand-curated staples from common-foods.json — each entry gets
+  // `commonPopularity - listIndex`, so the block stays in the curator's order. Far above any
+  // real OFF scan count so curated rows also win the LIKE fallback (platforms without FTS5);
+  // the `curated` column is what separates them on the FTS path.
+  commonPopularity: 9_000_000,
 
   // Plausibility filters applied to every row (per 100 g).
   limits: {
