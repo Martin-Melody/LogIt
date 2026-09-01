@@ -6,7 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import { fetchRegistry, type RegistryEntry } from "$lib/plugins/registry";
   import {
-    installPlugin,
+    installPluginFromManifest,
     listInstalledPluginManifests,
     pluginSettings,
     isExecutablePluginFamily,
@@ -54,6 +54,8 @@
       case "progression-algorithm": return "Progression algorithm";
       case "exercise-pack": return "Exercise pack";
       case "analytics": return "Analytics module";
+      case "nutrition-algorithm": return "Nutrition algorithm";
+      case "nutrition-analytics": return "Nutrition insights";
       default: return family;
     }
   }
@@ -92,7 +94,7 @@
     installErrors = { ...installErrors, [entry.id]: "" };
     try {
       const manifest = await resolvePluginManifest({ kind: "url", url: entry.manifestUrl });
-      await installPlugin(manifest, true);
+      await installPluginFromManifest(manifest, true);
       await homeConfig.reconcilePlugins();
       installed = await listInstalledPluginManifests();
     } catch (error) {
@@ -163,6 +165,13 @@
           onclick={() => (familyFilter = "analytics")}
         >
           Analytics
+        </button>
+        <button
+          type="button"
+          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'exercise-pack' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          onclick={() => (familyFilter = "exercise-pack")}
+        >
+          Packs
         </button>
       </div>
     </div>

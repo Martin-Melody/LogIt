@@ -6,7 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import {
     getPluginManifest,
-    installPlugin,
+    installPluginFromManifest,
     listInstalledPluginManifests,
     pluginSettings,
     isExecutablePluginFamily,
@@ -84,7 +84,7 @@
     ui.error = null;
     ui.success = null;
     try {
-      await installPlugin(reviewed, true);
+      await installPluginFromManifest(reviewed, true);
       ui.success = `${reviewed.name} installed.`;
       await loadInstalled();
       await goto(`/plugins/${reviewed.id}`);

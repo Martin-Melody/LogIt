@@ -10,8 +10,10 @@
     uninstallPlugin,
     pluginSettings,
     isExecutablePluginFamily,
+    getStoredPack,
   } from "$lib/plugins";
   import { type InstalledPlugin, type PluginManifest } from "$lib/plugins";
+  import type { ExercisePack } from "@logit/core/plugins/exercisePack";
   import { enqueuePublish } from "$lib/plugins/publishQueue";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
 
@@ -29,6 +31,7 @@
 
   let manifest = $state<PluginManifest | null>(null);
   let installed = $state<InstalledPlugin | null>(null);
+  let pack = $state<ExercisePack | null>(null);
   let actorUrl = $state("");
 
   const isEnabled = $derived(installed?.enabled ?? false);
@@ -73,6 +76,8 @@
       ]);
       manifest = pluginManifest;
       installed = installedPlugin;
+      pack =
+        pluginManifest?.family === "exercise-pack" ? getStoredPack(pluginManifest.id) : null;
       actorUrl =
         pluginManifest?.fediverse?.actorUrl ??
         (pluginManifest?.distribution.origin === "activitypub"
@@ -234,6 +239,34 @@
               {/snippet}
             </ConfirmDialog>
             </div>
+          </Card.Content>
+        </Card.Root>
+      {/if}
+
+      <!-- Exercise pack contents -->
+      {#if pack}
+        <Card.Root class="w-full">
+          <Card.Header>
+            <Card.Title>Exercises</Card.Title>
+            <Card.Description>
+              {pack.exercises.length}
+              {pack.exercises.length === 1 ? "exercise" : "exercises"} added to your
+              catalog while this pack is enabled.
+            </Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <ul class="flex flex-col gap-1.5">
+              {#each pack.exercises as ex (ex.name)}
+                <li class="rounded border border-border px-2.5 py-2">
+                  <p class="text-sm font-medium">{ex.name}</p>
+                  {#if ex.primaryMuscles.length > 0}
+                    <p class="mt-0.5 text-xs text-muted-foreground capitalize">
+                      {ex.primaryMuscles.join(", ")}
+                    </p>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
           </Card.Content>
         </Card.Root>
       {/if}

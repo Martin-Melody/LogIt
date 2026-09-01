@@ -5,13 +5,17 @@ import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnaly
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import type { InstalledPlugin, PluginManifest } from "./types";
+import { removeStoredPack } from "./packStore";
 
+// Families that install from a fetched artifact (code bundle or pack data file)
+// and therefore need a bundleUrl on the manifest.
 const BUNDLED_BUNDLE_FAMILIES = new Set<PluginManifest["family"]>([
   "widget",
   "progression-algorithm",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
+  "exercise-pack",
 ]);
 
 const INSTALLED_STORAGE_KEY = "logit:plugins:installed:v1";
@@ -232,6 +236,9 @@ export async function uninstallPlugin(id: string): Promise<void> {
   saveInstalled(next);
   if (removed) {
     syncHomeWidgets(removed.manifest, "remove");
+    if (removed.manifest.family === "exercise-pack") {
+      removeStoredPack(id);
+    }
   }
 }
 

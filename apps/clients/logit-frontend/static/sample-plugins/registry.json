@@ -1,0 +1,40 @@
+[
+  {
+    "id": "sample.exercise-pack.calisthenics-starter",
+    "name": "Calisthenics Starter",
+    "description": "12 common bodyweight movements — push-ups, chin-ups, pistol squats, Nordic curls and core holds — added straight to your exercise catalogue.",
+    "family": "exercise-pack",
+    "author": "Logit Samples",
+    "manifestUrl": "/sample-plugins/calisthenics-starter/manifest.json",
+    "tags": ["exercises", "bodyweight", "calisthenics", "pack"],
+    "featured": true
+  },
+  {
+    "id": "sample.widget.focus-card",
+    "name": "Focus Card",
+    "description": "A sample home widget that renders a friendly highlight card.",
+    "family": "widget",
+    "author": "Logit Samples",
+    "manifestUrl": "/sample-plugins/focus-card/manifest.json",
+    "tags": ["widget", "home", "sample"],
+    "featured": true
+  },
+  {
+    "id": "sample.progression.linear-plus",
+    "name": "Linear Plus",
+    "description": "A community double-progression algorithm — fill the rep range, then add weight.",
+    "family": "progression-algorithm",
+    "author": "Logit Samples",
+    "manifestUrl": "/sample-plugins/linear-plus/manifest.json",
+    "tags": ["progression", "double-progression", "sample"]
+  },
+  {
+    "id": "sample.nutrition-algorithm.pure-trend",
+    "name": "Pure Trend",
+    "description": "A sample nutrition algorithm that sets your calorie target purely from intake vs. weight trend.",
+    "family": "nutrition-algorithm",
+    "author": "Logit Samples",
+    "manifestUrl": "/sample-plugins/pure-trend/manifest.json",
+    "tags": ["nutrition", "adaptive", "sample"]
+  }
+]

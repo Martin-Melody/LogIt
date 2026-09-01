@@ -91,6 +91,14 @@ export type PluginManifest = {
   fediverse?: PluginFederationIdentity;
   distribution: PluginDistribution;
   capabilities: PluginCapability[];
+  /**
+   * Subresource integrity for the installed artifact (bundle for code plugins,
+   * data file for content packs), as `sha256-<base64>`. Verified at install
+   * time. Optional today; required for registry publication later.
+   */
+  integrity?: string;
+  /** Minimum app version this plugin supports, e.g. "1.4.0". */
+  minAppVersion?: string;
 };
 
 export type InstalledPlugin = {
