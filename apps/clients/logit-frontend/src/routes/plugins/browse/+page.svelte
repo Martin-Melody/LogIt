@@ -27,6 +27,7 @@
 
   let entries = $state<RegistryEntry[]>([]);
   let registryErrors = $state<string[]>([]);
+  let registryStale = $state(false);
   let installed = $state<InstalledPlugin[]>([]);
   let query = $state("");
   let familyFilter = $state("all");
@@ -78,6 +79,7 @@
       ]);
       entries = registry.entries;
       registryErrors = registry.errors;
+      registryStale = registry.stale ?? false;
       installed = installedList;
     } catch (error) {
       ui.error = error instanceof Error ? error.message : "Failed to load registry";
@@ -214,6 +216,8 @@
           <p>{err}</p>
         {/each}
       </div>
+    {:else if registryStale}
+      <p class="px-1 text-xs text-muted-foreground">Still checking other registries…</p>
     {/if}
 
     <!-- Search + filter -->

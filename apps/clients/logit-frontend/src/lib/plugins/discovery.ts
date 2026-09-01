@@ -9,6 +9,7 @@ import type {
   ProgressionAlgorithmPluginCapability,
   WidgetPluginCapability,
 } from "./types";
+import { fetchWithTimeout } from "./net";
 
 export type PluginImportSource =
   | {
@@ -131,7 +132,7 @@ function isPluginDistribution(v: unknown): v is PluginDistribution {
 }
 
 async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: {
       Accept: "application/activity+json, application/ld+json, application/json",
     },
