@@ -14,19 +14,20 @@ At install time the bundle is fetched **once**, verified against the manifest's
 `integrity` hash (`sha256-<base64>`), and its source text stored locally — it
 runs offline afterwards and updates are an explicit, reviewable action.
 
-`progression-algorithm` bundles run inside an **interpreter sandbox**
-(QuickJS-WASM): a bare ES2020 environment with no DOM, no `fetch`, no storage,
-no timers. The plugin receives a frozen JSON input and must return a
+All pure-function families — `progression-algorithm`, `analytics`,
+`nutrition-algorithm`, `nutrition-analytics` — run inside an **interpreter
+sandbox** (QuickJS-WASM): a bare ES2020 environment with no DOM, no `fetch`, no
+storage, no timers. The plugin receives a frozen JSON input and must return a
 JSON-serialisable value within a hard wall-clock deadline (~300 ms). A fresh VM
 per call means no state leaks between runs — persist state through the
-contract's `nextState`, never in a module-level variable.
+contract's `nextState` (progression), never in a module-level variable.
 
 Because the sandbox has no module loader, **a bundle must be a single file with
 no `import` statements** (build with esbuild `--bundle --format=esm`). Top-level
 `export const` / `export function` / `export default` are supported.
 
-Other families (`widget`, and for now `analytics` / `nutrition-*`) still use the
-legacy dynamic-import loader and migrate to the sandbox in later releases.
+`widget` is the only family still on the legacy dynamic-import loader — it moves
+to a declarative compute/view model (see docs/plugin-roadmap.md, Decision 4).
 
 ## Required contract
 

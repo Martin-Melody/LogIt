@@ -86,4 +86,43 @@ describe("QuickJS sandbox", () => {
     const { envelope } = run(bad, "algorithm", { kind: "call", method: "suggest", input: {} });
     expect(envelope).toEqual({ ok: false, error: expect.stringMatching(/nope/) });
   });
+
+  it("runs an analytics plugin's compute() and exposes metricDefinitions via meta", () => {
+    const analytics = `
+export const pluginBundle = { formatVersion: 1, pluginId: "a", family: "analytics", entryExport: "analytics" };
+export const analytics = {
+  id: "a", name: "Vol", description: "d",
+  metricDefinitions: [{ id: "vol", label: "Volume", unit: "kg" }],
+  compute(input) {
+    const total = input.history.reduce((s, h) => s + h.sets.reduce((x, y) => x + y.weight * y.reps, 0), 0);
+    return { metrics: [{ id: "vol", value: total }], series: [], insights: [] };
+  },
+};`;
+    const meta = run(analytics, "analytics", { kind: "meta" });
+    expect(meta.envelope?.ok && (meta.envelope.value as { metricDefinitions: unknown[] }).metricDefinitions).toEqual([
+      { id: "vol", label: "Volume", unit: "kg" },
+    ]);
+
+    const out = run(analytics, "analytics", {
+      kind: "call",
+      method: "compute",
+      input: { exercise: { name: "x" }, history: [{ sets: [{ weight: 100, reps: 5 }] }] },
+    });
+    expect(out.envelope).toEqual({ ok: true, value: { metrics: [{ id: "vol", value: 500 }], series: [], insights: [] } });
+  });
+
+  it("runs a nutrition algorithm's computeTargets()", () => {
+    const nutri = `
+export const pluginBundle = { formatVersion: 1, pluginId: "n", family: "nutrition-algorithm", entryExport: "algorithm" };
+export const algorithm = {
+  id: "n", name: "Flat", description: "d",
+  computeTargets(input) { return { kcal: 2000 + (input.goal?.deficit ?? 0), sourceLabel: "Flat" }; },
+};`;
+    const out = run(nutri, "algorithm", {
+      kind: "call",
+      method: "computeTargets",
+      input: { goal: { deficit: -300 }, weightEntries: [], dailyIntakeKcal: [], userPreferences: {}, now: 0 },
+    });
+    expect(out.envelope).toEqual({ ok: true, value: { kcal: 1700, sourceLabel: "Flat" } });
+  });
 });

@@ -89,32 +89,64 @@
     import("@logit/core/domain/nutritionAlgorithm").NutritionAlgorithm | null
   >(null);
 
-  const preview = $derived.by(() => {
-    if (!previewAlgo) return null;
+  type Preview = {
+    kcal: number;
+    macros: import("@logit/core/domain/nutrition").MacroTotals;
+    sourceLabel: string;
+    maintenanceKcal: number | null;
+  };
+  let preview = $state<Preview | null>(null);
+
+  // computeTargets() may be async (community algorithms run in the sandbox), so
+  // the live preview is an effect, not a $derived. A run token drops stale
+  // results if inputs change mid-compute.
+  let previewRun = 0;
+  $effect(() => {
+    const algo = previewAlgo;
     const g = liveGoal();
-    const out = previewAlgo.computeTargets({
-      goal: g,
-      currentWeightKg: currentWeightKg ?? undefined,
-      weightEntries,
-      dailyIntakeKcal: dailyIntake,
-      userPreferences: algoPrefs,
-      now: Date.now(),
-    });
-    if (!out.kcal || out.kcal <= 0) return null;
-    const macros =
-      out.macros ??
-      macroTargets({
-        kcalTarget: out.kcal,
-        weightKg: currentWeightKg ?? 0,
-        proteinGPerKg: g.proteinGPerKg,
-        fatPct: g.fatPct,
+    const w = currentWeightKg;
+    const prefs = algoPrefs;
+    const entries = weightEntries;
+    const intake = dailyIntake;
+
+    if (!algo) {
+      preview = null;
+      return;
+    }
+    const token = ++previewRun;
+    void Promise.resolve(
+      algo.computeTargets({
+        goal: g,
+        currentWeightKg: w ?? undefined,
+        weightEntries: entries,
+        dailyIntakeKcal: intake,
+        userPreferences: prefs,
+        now: Date.now(),
+      }),
+    )
+      .then((out) => {
+        if (token !== previewRun) return;
+        if (!out.kcal || out.kcal <= 0) {
+          preview = null;
+          return;
+        }
+        preview = {
+          kcal: out.kcal,
+          macros:
+            out.macros ??
+            macroTargets({
+              kcalTarget: out.kcal,
+              weightKg: w ?? 0,
+              proteinGPerKg: g.proteinGPerKg,
+              fatPct: g.fatPct,
+            }),
+          sourceLabel: out.sourceLabel ?? "",
+          maintenanceKcal: out.maintenanceKcal ?? null,
+        };
+      })
+      .catch(() => {
+        if (token === previewRun) preview = null;
       });
-    return {
-      kcal: out.kcal,
-      macros,
-      sourceLabel: out.sourceLabel ?? "",
-      maintenanceKcal: out.maintenanceKcal ?? null,
-    };
   });
 
   async function loadAlgorithm(id: string) {

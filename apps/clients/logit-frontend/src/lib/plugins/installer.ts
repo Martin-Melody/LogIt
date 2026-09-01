@@ -1,7 +1,7 @@
 import { installPlugin } from "./catalog";
 import { fetchAndStoreExercisePack } from "./packStore";
-import { fetchAndStoreBundle } from "./bundleStore";
-import { isSandboxedFamily } from "./sandboxedPlugin";
+import { fetchAndStoreBundle, storeBundleMeta } from "./bundleStore";
+import { isSandboxedFamily, runSandboxMeta } from "./sandboxedPlugin";
 import type { PluginManifest } from "./types";
 
 /**
@@ -28,11 +28,12 @@ export async function installPluginFromManifest(
   if (manifest.family === "exercise-pack") {
     await fetchAndStoreExercisePack(manifest);
   } else if (isSandboxedFamily(manifest.family)) {
-    await fetchAndStoreBundle(manifest);
+    const source = await fetchAndStoreBundle(manifest);
+    // Cache the plugin's metadata now so listing it later needs no VM.
+    const meta = await runSandboxMeta(source, manifest.family);
+    if (meta) storeBundleMeta(manifest.id, meta);
   }
-  // Other executable families (widgets, and for now analytics/nutrition) still
-  // load their bundle lazily by URL — they move to fetch+verify+store as they
-  // migrate to the sandbox.
+  // Widgets still load their bundle lazily by URL — Phase 6.
 
   await installPlugin(manifest, enabled);
 }

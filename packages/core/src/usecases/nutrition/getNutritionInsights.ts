@@ -42,7 +42,7 @@ export async function getNutritionInsights(
 
   if (!plugin) return { plugin: null, output: null, range };
 
-  const output = plugin.compute({
+  const output = await plugin.compute({
     days,
     weightEntries,
     goal: state.goal,

@@ -26,6 +26,6 @@ export async function getExerciseAnalytics(
     exerciseType: exerciseData?.exerciseType,
   };
 
-  const output = plugin.compute({ exercise: exerciseWithType, history });
+  const output = await plugin.compute({ exercise: exerciseWithType, history });
   return { output, metricDefinitions: plugin.metricDefinitions };
 }

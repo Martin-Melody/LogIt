@@ -14,7 +14,12 @@ import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/ana
 import { listInstalledPluginManifests } from "./catalog";
 import { isCommunityPluginsEnabled } from "./settings";
 import { getStoredBundleSource } from "./bundleStore";
-import { sandboxedCall, sandboxedMeta } from "./sandboxedPlugin";
+import {
+  findSandboxedPlugin,
+  listSandboxedPlugins,
+  sandboxedCall,
+  sandboxedMeta,
+} from "./sandboxedPlugin";
 import {
   describePluginBundleContract,
   isPluginAlgorithm,
@@ -38,13 +43,20 @@ import type {
   ProgressionAlgorithmPluginCapability,
   WidgetPluginCapability,
 } from "./types";
-import type { AnalyticsPlugin, AnalyticsPluginMeta, AnalyticsRegistry } from "@logit/core/domain/analytics";
+import type {
+  AnalyticsOutput,
+  AnalyticsPlugin,
+  AnalyticsPluginMeta,
+  AnalyticsRegistry,
+} from "@logit/core/domain/analytics";
 import type {
   NutritionAlgorithm,
   NutritionAlgorithmMeta,
+  NutritionAlgorithmOutput,
   NutritionAlgorithmRegistry,
 } from "@logit/core/domain/nutritionAlgorithm";
 import type {
+  NutritionAnalyticsOutput,
   NutritionAnalyticsPlugin,
   NutritionAnalyticsPluginMeta,
   NutritionAnalyticsRegistry,
@@ -264,96 +276,78 @@ async function installedAlgorithmById(id: string): Promise<ProgressionAlgorithm 
 
 async function installedAnalyticsList(): Promise<AnalyticsPluginMeta[]> {
   const installed = await listInstalledPluginManifests();
-  const result: AnalyticsPluginMeta[] = [];
-
-  for (const plugin of installed) {
-    if (!plugin.enabled || plugin.manifest.family !== "analytics") continue;
-
-    const capability = getAnalyticsCapability(plugin.manifest);
-    if (!capability) continue;
-
-    const bundleUrl = getBundleUrl(plugin.manifest);
-    if (!bundleUrl) continue;
-
-    const module = await loadBundle(bundleUrl);
-    const contract = module ? resolvePluginBundleContract(module, plugin.manifest) : null;
-    const entry = module ? resolvePluginBundleEntry(module, contract) : null;
-    if (!isPluginAnalytics(entry)) continue;
-
-    result.push({
-      id: capability.analyticsId,
+  return listSandboxedPlugins(
+    installed,
+    "analytics",
+    (p) => !!getAnalyticsCapability(p.manifest),
+    (plugin, meta) => ({
+      id: getAnalyticsCapability(plugin.manifest)!.analyticsId,
       name: plugin.manifest.name,
       description: plugin.manifest.description,
       author: plugin.manifest.author,
-      metricDefinitions: entry.metricDefinitions,
-    });
-  }
-
-  return result;
+      metricDefinitions: (meta.metricDefinitions ?? []) as AnalyticsPluginMeta["metricDefinitions"],
+    }),
+  );
 }
 
 async function installedAnalyticsById(id: string): Promise<AnalyticsPlugin | null> {
   const installed = await listInstalledPluginManifests();
-  const plugin = installed.find(
-    (entry) =>
-      entry.enabled &&
-      entry.manifest.family === "analytics" &&
-      getAnalyticsCapability(entry.manifest)?.analyticsId === id,
+  const plugin = findSandboxedPlugin(
+    installed,
+    "analytics",
+    (p) => getAnalyticsCapability(p.manifest)?.analyticsId === id,
   );
-
   if (!plugin) return null;
 
-  const bundleUrl = getBundleUrl(plugin.manifest);
-  if (!bundleUrl) return null;
-
-  const module = await loadBundle(bundleUrl);
-  if (!module) return null;
-
-  const contract = resolvePluginBundleContract(module, plugin.manifest);
-  const entry = resolvePluginBundleEntry(module, contract);
-  return isPluginAnalytics(entry) ? entry : null;
+  const meta = await sandboxedMeta(plugin);
+  const compute = sandboxedCall<AnalyticsOutput>(plugin, "compute");
+  return {
+    id,
+    name: plugin.manifest.name,
+    description: plugin.manifest.description,
+    author: plugin.manifest.author,
+    metricDefinitions: (meta?.metricDefinitions ?? []) as AnalyticsPlugin["metricDefinitions"],
+    compute: (input) => compute(input),
+  };
 }
 
 // ── Nutrition algorithms ─────────────────────────────────────────────────────
 
 async function installedNutritionAlgorithms(): Promise<NutritionAlgorithmMeta[]> {
   const installed = await listInstalledPluginManifests();
-  const out: NutritionAlgorithmMeta[] = [];
-  for (const plugin of installed) {
-    if (!plugin.enabled || plugin.manifest.family !== "nutrition-algorithm") continue;
-    const capability = getNutritionAlgorithmCapability(plugin.manifest);
-    const bundleUrl = getBundleUrl(plugin.manifest);
-    if (!capability || !bundleUrl) continue;
-    const module = await loadBundle(bundleUrl);
-    const contract = module ? resolvePluginBundleContract(module, plugin.manifest) : null;
-    const entry = module ? resolvePluginBundleEntry(module, contract) : null;
-    if (!isPluginNutritionAlgorithm(entry)) continue;
-    out.push({
-      id: capability.algorithmId,
+  return listSandboxedPlugins(
+    installed,
+    "nutrition-algorithm",
+    (p) => !!getNutritionAlgorithmCapability(p.manifest),
+    (plugin) => ({
+      id: getNutritionAlgorithmCapability(plugin.manifest)!.algorithmId,
       name: plugin.manifest.name,
       description: plugin.manifest.description,
       author: plugin.manifest.author,
-    });
-  }
-  return out;
+    }),
+  );
 }
 
 async function installedNutritionAlgorithmById(id: string): Promise<NutritionAlgorithm | null> {
   const installed = await listInstalledPluginManifests();
-  const plugin = installed.find(
-    (p) =>
-      p.enabled &&
-      p.manifest.family === "nutrition-algorithm" &&
-      getNutritionAlgorithmCapability(p.manifest)?.algorithmId === id,
+  const plugin = findSandboxedPlugin(
+    installed,
+    "nutrition-algorithm",
+    (p) => getNutritionAlgorithmCapability(p.manifest)?.algorithmId === id,
   );
   if (!plugin) return null;
-  const bundleUrl = getBundleUrl(plugin.manifest);
-  if (!bundleUrl) return null;
-  const module = await loadBundle(bundleUrl);
-  if (!module) return null;
-  const contract = resolvePluginBundleContract(module, plugin.manifest);
-  const entry = resolvePluginBundleEntry(module, contract);
-  return isPluginNutritionAlgorithm(entry) ? entry : null;
+
+  const meta = await sandboxedMeta(plugin);
+  const computeTargets = sandboxedCall<NutritionAlgorithmOutput>(plugin, "computeTargets");
+  return {
+    id,
+    name: plugin.manifest.name,
+    description: plugin.manifest.description,
+    author: plugin.manifest.author,
+    defaultPreferences: meta?.defaultPreferences,
+    preferencesSchema: meta?.preferencesSchema as NutritionAlgorithm["preferencesSchema"],
+    computeTargets: (input) => computeTargets(input),
+  };
 }
 
 function nutritionAlgorithmRegistry(): NutritionAlgorithmRegistry {
@@ -372,43 +366,39 @@ function nutritionAlgorithmRegistry(): NutritionAlgorithmRegistry {
 
 async function installedNutritionAnalytics(): Promise<NutritionAnalyticsPluginMeta[]> {
   const installed = await listInstalledPluginManifests();
-  const out: NutritionAnalyticsPluginMeta[] = [];
-  for (const plugin of installed) {
-    if (!plugin.enabled || plugin.manifest.family !== "nutrition-analytics") continue;
-    const capability = getNutritionAnalyticsCapability(plugin.manifest);
-    const bundleUrl = getBundleUrl(plugin.manifest);
-    if (!capability || !bundleUrl) continue;
-    const module = await loadBundle(bundleUrl);
-    const contract = module ? resolvePluginBundleContract(module, plugin.manifest) : null;
-    const entry = module ? resolvePluginBundleEntry(module, contract) : null;
-    if (!isPluginNutritionAnalytics(entry)) continue;
-    out.push({
-      id: capability.analyticsId,
+  return listSandboxedPlugins(
+    installed,
+    "nutrition-analytics",
+    (p) => !!getNutritionAnalyticsCapability(p.manifest),
+    (plugin, meta) => ({
+      id: getNutritionAnalyticsCapability(plugin.manifest)!.analyticsId,
       name: plugin.manifest.name,
       description: plugin.manifest.description,
       author: plugin.manifest.author,
-      metricDefinitions: entry.metricDefinitions,
-    });
-  }
-  return out;
+      metricDefinitions: (meta.metricDefinitions ?? []) as NutritionAnalyticsPluginMeta["metricDefinitions"],
+    }),
+  );
 }
 
 async function installedNutritionAnalyticsById(id: string): Promise<NutritionAnalyticsPlugin | null> {
   const installed = await listInstalledPluginManifests();
-  const plugin = installed.find(
-    (p) =>
-      p.enabled &&
-      p.manifest.family === "nutrition-analytics" &&
-      getNutritionAnalyticsCapability(p.manifest)?.analyticsId === id,
+  const plugin = findSandboxedPlugin(
+    installed,
+    "nutrition-analytics",
+    (p) => getNutritionAnalyticsCapability(p.manifest)?.analyticsId === id,
   );
   if (!plugin) return null;
-  const bundleUrl = getBundleUrl(plugin.manifest);
-  if (!bundleUrl) return null;
-  const module = await loadBundle(bundleUrl);
-  if (!module) return null;
-  const contract = resolvePluginBundleContract(module, plugin.manifest);
-  const entry = resolvePluginBundleEntry(module, contract);
-  return isPluginNutritionAnalytics(entry) ? entry : null;
+
+  const meta = await sandboxedMeta(plugin);
+  const compute = sandboxedCall<NutritionAnalyticsOutput>(plugin, "compute");
+  return {
+    id,
+    name: plugin.manifest.name,
+    description: plugin.manifest.description,
+    author: plugin.manifest.author,
+    metricDefinitions: (meta?.metricDefinitions ?? []) as NutritionAnalyticsPlugin["metricDefinitions"],
+    compute: (input) => compute(input),
+  };
 }
 
 function nutritionAnalyticsRegistry(): NutritionAnalyticsRegistry {
