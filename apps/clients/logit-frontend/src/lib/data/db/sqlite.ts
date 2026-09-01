@@ -16,6 +16,11 @@ const DB_VERSION = 1;
  * the food repo falls back to the Open Food Facts API. */
 const FOOD_DB_NAME = "food";
 
+/** Bump when a shipped food.db change must reach devices that already unpacked an older
+ * copy (copyFromAssets skips DBs already in the app store). Must match `meta.build_version`
+ * written by scripts/build-food-db (config.dbVersion). v2 = curated common-foods column. */
+const FOOD_DB_VERSION = 2;
+
 let sqlite: SQLiteConnection | null = null;
 let db: SQLiteDBConnection | null = null;
 let foodDb: SQLiteDBConnection | null = null;
@@ -65,6 +70,24 @@ export async function initFoodDb(): Promise<void> {
   if (!browser || !isNative() || foodDb) return;
   if (!sqlite) sqlite = new SQLiteConnection(CapacitorSQLite);
 
+  const open = async (): Promise<SQLiteDBConnection> => {
+    const has = await sqlite!.isConnection(FOOD_DB_NAME, true);
+    const conn = has.result
+      ? await sqlite!.retrieveConnection(FOOD_DB_NAME, true)
+      : await sqlite!.createConnection(FOOD_DB_NAME, false, "no-encryption", 1, true);
+    await conn.open();
+    return conn;
+  };
+
+  const buildVersion = async (conn: SQLiteDBConnection): Promise<number> => {
+    try {
+      const r = await conn.query("SELECT value FROM meta WHERE key = 'build_version'");
+      return Number(r.values?.[0]?.value ?? 0);
+    } catch {
+      return 0; // pre-v2 DB — no meta.build_version row
+    }
+  };
+
   try {
     // Copies every *.db under assets/databases/ into the plugin store; no-op if the
     // directory is missing or the DBs are already there.
@@ -73,11 +96,17 @@ export async function initFoodDb(): Promise<void> {
     const exists = await sqlite.isDatabase(FOOD_DB_NAME);
     if (!exists.result) return;
 
-    const has = await sqlite.isConnection(FOOD_DB_NAME, true);
-    foodDb = has.result
-      ? await sqlite.retrieveConnection(FOOD_DB_NAME, true)
-      : await sqlite.createConnection(FOOD_DB_NAME, false, "no-encryption", 1, true);
-    await foodDb.open();
+    foodDb = await open();
+
+    // An older unpacked copy won't have been overwritten by copyFromAssets(false). If it's
+    // behind the version this build expects, force a re-copy from the APK asset.
+    if ((await buildVersion(foodDb)) < FOOD_DB_VERSION) {
+      console.warn("[nutrition] food.db is stale — re-copying from assets");
+      await sqlite.closeConnection(FOOD_DB_NAME, true).catch(() => {});
+      foodDb = null;
+      await sqlite.copyFromAssets(true);
+      foodDb = await open();
+    }
   } catch (err) {
     console.warn("[nutrition] bundled food.db unavailable:", err);
     foodDb = null;

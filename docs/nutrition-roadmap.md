@@ -61,9 +61,12 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
 - [x] Run `scripts/build-food-db` — done 2026-08-30 against the Nov-2025 exports:
       **255,655 foods** (244k OFF scanned ≥3× EU+NA, 8.1k USDA, 3.4k CIQUAL),
       `food.zip` **19 MB**, copied into `static/assets/databases/`. Re-run to refresh.
-- [ ] Search-ranking quality pass: generic terms like "milk" / "apple" still surface
-      branded matches (Milka, Appletiser) over generics. Needs a curated common-foods
-      boost list + exact-token weighting, beyond the current BM25 + popularity blend.
+- [x] Search-ranking quality pass: generic terms like "milk" / "apple" surfaced branded
+      matches (Milka, Appletiser) over generics. Fixed with a curated `common-foods.json`
+      (~125 staples) resolved to their best USDA/CIQUAL match at build time and written as
+      `curated = 1` rows with a clean display name; the app (`foodDbRepo.sqlite.ts`) sorts
+      `f.curated DESC` ahead of the BM25 + popularity blend. Incremental — add staples as
+      gaps show up and re-run `npm run build`.
 - [ ] On-device smoke test (partial): still need `food.zip` unpacks + FTS on Android and
       `/sync/nutrition/*` round-trip with a Pro token. Label OCR confirmed on a Galaxy S23;
       native barcode `scan()` built but not yet run on device.

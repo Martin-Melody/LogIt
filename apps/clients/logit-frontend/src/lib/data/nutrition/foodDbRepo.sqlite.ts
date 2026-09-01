@@ -71,6 +71,7 @@ const F_COLS = COL_LIST.map((c) => `f.${c}`).join(", ");
 export function createSqliteFoodDbRepo(): FoodDbRepo {
   // null = not probed yet
   let ftsOk: boolean | null = null;
+  let curatedOk: boolean | null = null;
 
   async function query(sql: string, params: unknown[]): Promise<FoodRow[]> {
     const db = getFoodDb();
@@ -90,6 +91,19 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
     return ftsOk;
   }
 
+  // `curated` was added to the bundled DB after first release. An older copy (copyFromAssets
+  // won't overwrite one already unpacked) lacks it — fall back to popularity-only ordering.
+  async function hasCurated(): Promise<boolean> {
+    if (curatedOk !== null) return curatedOk;
+    try {
+      await query("SELECT curated FROM foods LIMIT 1", []);
+      curatedOk = true;
+    } catch {
+      curatedOk = false;
+    }
+    return curatedOk;
+  }
+
   return {
     isOfflineAvailable: () => getFoodDb() !== null,
 
@@ -103,15 +117,20 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
       if (await hasFts()) {
         const match = ftsQuery(q);
         if (!match) return [];
-        // Blend BM25 relevance (`rank`, negative — lower is better) with a small bounded
-        // popularity nudge (≤2 rank-points), so a bare "banana" surfaces the generic entry
-        // ahead of an obscure branded "…Bananallama…" without letting a high-scan brand
-        // name swamp relevance. Generic USDA/CIQUAL foods carry popularity ~400.
+        // Hand-curated staples first (common-foods.json), in curator order (higher
+        // popularity = earlier in the list). Everything else blends BM25 relevance (`rank`,
+        // negative — lower is better) with a small bounded popularity nudge (≤2 rank-points),
+        // so a bare "banana" surfaces the generic entry ahead of an obscure branded
+        // "…Bananallama…" without letting a high-scan brand name swamp relevance. Generic
+        // USDA/CIQUAL foods carry popularity ~400.
+        const order = (await hasCurated())
+          ? "f.curated DESC, CASE WHEN f.curated = 1 THEN -f.popularity ELSE rank - (MIN(f.popularity, 800) / 400.0) END"
+          : "rank - (MIN(f.popularity, 800) / 400.0)";
         const rows = await query(
           `SELECT ${F_COLS} FROM foods_fts
            JOIN foods f ON f.rowid = foods_fts.rowid
            WHERE foods_fts MATCH ?${sourceClause}
-           ORDER BY rank - (MIN(f.popularity, 800) / 400.0) LIMIT ?`,
+           ORDER BY ${order} LIMIT ?`,
           [match, ...sourceParam, limit],
         );
         return rows.map(toFoodRef);
@@ -119,10 +138,11 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
 
       // LIKE fallback (platforms without FTS5).
       const like = `%${q.trim().replace(/[%_]/g, "")}%`;
+      const curatedFirst = (await hasCurated()) ? "curated DESC, " : "";
       const rows = await query(
         `SELECT ${COLS} FROM foods
          WHERE (name LIKE ? OR brand LIKE ?)${opts.source ? " AND source = ?" : ""}
-         ORDER BY popularity DESC, length(name) LIMIT ?`,
+         ORDER BY ${curatedFirst}popularity DESC, length(name) LIMIT ?`,
         [like, like, ...sourceParam, limit],
       );
       return rows.map(toFoodRef);
