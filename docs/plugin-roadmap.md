@@ -2,6 +2,11 @@
 
 Status: design doc. Supersedes the original phased roadmap on `feat/plugin-foundation-ui`.
 
+**Build progress** (branch `feat/plugin-content-packs`): Phase 1 (trust model), Phase 2
+(exercise packs end to end), and Phase 3 (multi-source registry) are implemented. Phase 4
+(sandbox + first pure-function plugin) is blocked on the sandbox-engine decision below.
+Not yet done in the Phase 2 line: "export as pack" from the custom-exercises UI.
+
 ## Goal
 
 Let the community build and share extensions to Logit:
