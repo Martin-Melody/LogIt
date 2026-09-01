@@ -58,6 +58,7 @@
       case "manual": return "Manual install";
       case "url": return "URL install";
       case "activitypub": return "Fediverse";
+      case "inline": return "File";
     }
   }
 

@@ -17,6 +17,12 @@ export async function installPluginFromManifest(
   manifest: PluginManifest,
   enabled = true,
 ): Promise<void> {
+  // Inline distribution embeds an artifact in the manifest — only ever allowed
+  // for content families, never executable code.
+  if (manifest.distribution.origin === "inline" && manifest.family !== "exercise-pack") {
+    throw new Error("Only exercise packs can be installed from an inline manifest.");
+  }
+
   if (manifest.family === "exercise-pack") {
     await fetchAndStoreExercisePack(manifest);
   }

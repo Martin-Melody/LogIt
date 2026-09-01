@@ -14,7 +14,7 @@
   import type { InstalledPlugin, PluginManifest } from "$lib/plugins";
   import { resolvePluginManifest, type PluginImportSource } from "$lib/plugins/discovery";
 
-  type ImportMode = "url" | "activitypub" | "json";
+  type ImportMode = "url" | "activitypub" | "json" | "file";
 
   const ui = $state({
     loading: false,
@@ -47,6 +47,18 @@
     if (mode === "url") return { kind: "url", url: manifestUrl.trim() };
     if (mode === "activitypub") return { kind: "activitypub", actorUrl: actorUrl.trim() };
     return { kind: "json", json: manifestJson };
+  }
+
+  async function onFilePicked(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    ui.error = null;
+    try {
+      manifestJson = await file.text();
+      await review();
+    } catch {
+      ui.error = "Could not read that file.";
+    }
   }
 
   async function loadInstalled() {
@@ -143,11 +155,20 @@
       <Card.Header>
         <Card.Title>Source</Card.Title>
         <Card.Description>
-          Paste a URL, a fediverse actor URL, or raw JSON. The app fetches and shows you the plugin details before installing anything.
+          Open a pack file, or paste a URL, a fediverse actor URL, or raw JSON. The app shows you the plugin details before installing anything.
         </Card.Description>
       </Card.Header>
       <Card.Content class="flex flex-col gap-4">
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
+          <Button
+            variant={mode === "file" ? "default" : "outline"}
+            size="sm"
+            class="gap-1.5"
+            onclick={() => { mode = "file"; resetReview(); }}
+          >
+            <FileJson class="h-3.5 w-3.5" />
+            File
+          </Button>
           <Button
             variant={mode === "url" ? "default" : "outline"}
             size="sm"
@@ -177,7 +198,21 @@
           </Button>
         </div>
 
-        {#if mode === "url"}
+        {#if mode === "file"}
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-muted-foreground" for="pack-file">Pack file (.json)</label>
+            <input
+              id="pack-file"
+              type="file"
+              accept=".json,application/json"
+              class="w-full rounded border bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs"
+              onchange={onFilePicked}
+            />
+            <p class="text-xs text-muted-foreground">
+              A <code>.logit-pack.json</code> file exported from the Exercises screen, or any plugin manifest.
+            </p>
+          </div>
+        {:else if mode === "url"}
           <div class="flex flex-col gap-1">
             <label class="text-xs text-muted-foreground" for="manifest-url">Manifest URL</label>
             <input

@@ -6,7 +6,7 @@ export type PluginFamily =
   | "nutrition-algorithm"
   | "nutrition-analytics";
 
-export type PluginOrigin = "builtin" | "manual" | "url" | "activitypub";
+export type PluginOrigin = "builtin" | "manual" | "url" | "activitypub" | "inline";
 
 export type PluginFederationIdentity = {
   handle?: string;
@@ -35,6 +35,15 @@ export type PluginDistribution =
       actorUrl: string;
       manifestUrl?: string;
       bundleUrl?: string;
+    }
+  | {
+      /**
+       * Self-contained: the artifact is embedded in the manifest. Content
+       * plugins only (exercise packs) — never executable code. Used by
+       * "export as pack" so one file is the whole thing.
+       */
+      origin: "inline";
+      data: unknown;
     };
 
 export type WidgetPluginCapability = {

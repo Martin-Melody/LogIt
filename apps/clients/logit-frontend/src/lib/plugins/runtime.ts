@@ -131,6 +131,8 @@ function getBundleUrl(manifest: PluginManifest): string | null {
       return manifest.distribution.bundleUrl ?? null;
     case "activitypub":
       return manifest.distribution.bundleUrl ?? null;
+    case "inline":
+      return null;
   }
 }
 

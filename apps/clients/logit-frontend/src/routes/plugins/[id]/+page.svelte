@@ -50,6 +50,7 @@
     : manifest?.distribution.origin === "manual" ? "Manual install"
     : manifest?.distribution.origin === "url" ? "URL install"
     : manifest?.distribution.origin === "activitypub" ? "Fediverse"
+    : manifest?.distribution.origin === "inline" ? "File import"
     : null
   );
 

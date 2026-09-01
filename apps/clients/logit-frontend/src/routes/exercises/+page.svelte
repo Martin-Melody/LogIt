@@ -1,12 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Plus, Search, X, ChevronRight, ArrowLeft } from "lucide-svelte";
+  import { Plus, Search, X, ChevronRight, ArrowLeft, Package } from "lucide-svelte";
   import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
   import type { Exercise, ExerciseType } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
+  import { buildExercisePack } from "@logit/core/plugins/exercisePack";
+  import { createId } from "@logit/core/domain/ids";
+  import { saveTextFile } from "$lib/platform/fileSave";
+  import type { PluginManifest } from "$lib/plugins";
   type Filter = "all" | "core" | "mine";
 
   let filter = $state<Filter>("all");
@@ -20,7 +24,67 @@
   let draftType = $state<ExerciseType>("normal");
   let saving = $state(false);
 
+  let exportOpen = $state(false);
+  let exportName = $state("");
+  let exporting = $state(false);
+  let exportError = $state<string | null>(null);
+
   const repo = getExerciseRepo();
+
+  // Genuinely user-authored exercises: created ids are `ex_<nanoid>`; core and
+  // core-overlay ids are `ex_core_*`, pack ids are `pack:*`.
+  const exportable = $derived(
+    allItems.filter((e) => e.id.startsWith("ex_") && !e.id.startsWith("ex_core_")),
+  );
+
+  function openExport() {
+    exportName = "";
+    exportError = null;
+    exportOpen = true;
+  }
+
+  async function exportPack() {
+    if (!exportName.trim() || exporting) return;
+    exporting = true;
+    exportError = null;
+    try {
+      const pluginId = `local.exercise-pack.${createId()}`;
+      const pack = buildExercisePack(
+        pluginId,
+        exportable.map((e) => ({
+          name: e.name,
+          primaryMuscles: e.primaryMuscles ?? [],
+          secondaryMuscles: e.secondaryMuscles ?? [],
+          exerciseType: e.exerciseType ?? "normal",
+          notes: e.notes ?? null,
+        })),
+      );
+      const manifest: PluginManifest = {
+        id: pluginId,
+        family: "exercise-pack",
+        name: exportName.trim(),
+        description: `${pack.exercises.length} exercises`,
+        version: "1.0.0",
+        distribution: { origin: "inline", data: pack },
+        capabilities: [
+          {
+            family: "exercise-pack",
+            exercisePackId: pluginId,
+            exerciseCount: pack.exercises.length,
+          },
+        ],
+      };
+      const slug =
+        exportName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ||
+        "pack";
+      await saveTextFile(`${slug}.logit-pack.json`, JSON.stringify(manifest, null, 2));
+      exportOpen = false;
+    } catch (e) {
+      exportError = e instanceof Error ? e.message : "Could not build the pack.";
+    } finally {
+      exporting = false;
+    }
+  }
 
   // Load all exercises once; filter/search are derived synchronously
   async function load() {
@@ -124,6 +188,17 @@
         {f === "all" ? "All" : f === "core" ? "Built-in" : "Mine"}
       </button>
     {/each}
+
+    {#if filter === "mine" && exportable.length > 0}
+      <button
+        type="button"
+        class="ml-auto flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+        onclick={openExport}
+      >
+        <Package class="h-3.5 w-3.5" />
+        Export as pack
+      </button>
+    {/if}
   </div>
 
   <!-- List -->
@@ -235,6 +310,51 @@
           onclick={() => void save()}
         >
           {saving ? "Saving…" : "Add exercise"}
+        </button>
+      </div>
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
+
+<Drawer.Root open={exportOpen} onOpenChange={(v) => (exportOpen = v)} shouldScaleBackground={false}>
+  <Drawer.Portal>
+    <Drawer.Overlay class="fixed inset-0 z-40 bg-black/40" />
+    <Drawer.Content class="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-xl border-t border-border bg-background max-h-[80vh]">
+      <span tabindex="0" aria-hidden="true" class="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"></span>
+      <div class="mx-auto mt-4 mb-2 h-1 w-[100px] shrink-0 rounded-full bg-muted"></div>
+
+      <div class="px-4 pb-2">
+        <p class="text-base font-semibold">Export as pack</p>
+        <p class="mt-1 text-xs text-muted-foreground">
+          Bundles your {exportable.length}
+          custom {exportable.length === 1 ? "exercise" : "exercises"} into one file
+          anyone can install from the plugins screen.
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-4 px-4 pb-6 overflow-y-auto">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium" for="pack-name">Pack name</label>
+          <input
+            id="pack-name"
+            type="text"
+            placeholder="e.g. My Gym's Machines"
+            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            bind:value={exportName}
+          />
+        </div>
+
+        {#if exportError}
+          <p class="text-xs text-destructive">{exportError}</p>
+        {/if}
+
+        <button
+          type="button"
+          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          disabled={!exportName.trim() || exporting}
+          onclick={() => void exportPack()}
+        >
+          {exporting ? "Exporting…" : "Download pack file"}
         </button>
       </div>
     </Drawer.Content>
