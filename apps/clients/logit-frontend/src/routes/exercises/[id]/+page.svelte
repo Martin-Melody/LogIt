@@ -13,6 +13,8 @@
   import { pushDeletedExercise } from "$lib/sync/syncService";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { createId } from "@logit/core/domain/ids";
+  import { Package } from "lucide-svelte";
+  import { exportExercisesAsPack, isUserExercise } from "$lib/plugins";
 
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);
@@ -116,6 +118,31 @@
       back("/exercises");
     } finally {
       view.deleting = false;
+    }
+  }
+
+  let exportOpen = $state(false);
+  let exportName = $state("");
+  let exporting = $state(false);
+  let exportError = $state<string | null>(null);
+
+  function openExport() {
+    exportName = view.exercise ? `${view.exercise.name} pack` : "";
+    exportError = null;
+    exportOpen = true;
+  }
+
+  async function doExport() {
+    if (!view.exercise || !exportName.trim() || exporting) return;
+    exporting = true;
+    exportError = null;
+    try {
+      await exportExercisesAsPack(exportName, [view.exercise]);
+      exportOpen = false;
+    } catch (e) {
+      exportError = e instanceof Error ? e.message : "Could not build the pack.";
+    } finally {
+      exporting = false;
     }
   }
 
@@ -426,6 +453,38 @@
         </button>
       </div>
     </div>
+
+    <!-- Export as pack (custom exercises only) -->
+    {#if isUserExercise(view.exercise)}
+      <div class="px-3 py-4 border-b border-border flex flex-col gap-2">
+        {#if exportOpen}
+          <span class="text-sm font-medium">Export as pack</span>
+          <p class="text-xs text-muted-foreground">
+            Saves this exercise as a <code>.logit-pack.json</code> file. Anyone can
+            install it from Plugins → Add → File.
+          </p>
+          <input
+            type="text"
+            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            placeholder="Pack name"
+            bind:value={exportName}
+          />
+          {#if exportError}
+            <p class="text-xs text-destructive">{exportError}</p>
+          {/if}
+          <div class="flex gap-2">
+            <Button size="sm" disabled={!exportName.trim() || exporting} onclick={() => void doExport()}>
+              {exporting ? "Exporting…" : "Download"}
+            </Button>
+            <Button size="sm" variant="outline" onclick={() => (exportOpen = false)}>Cancel</Button>
+          </div>
+        {:else}
+          <Button variant="outline" class="w-full" onclick={openExport}>
+            <Package class="h-4 w-4" /> Export as pack
+          </Button>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Reset progression -->
     <div class="px-3 py-4 flex flex-col gap-2">

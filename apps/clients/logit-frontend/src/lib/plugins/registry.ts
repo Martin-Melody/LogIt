@@ -24,20 +24,30 @@ export type RegistrySource = {
 };
 
 /**
- * A registry is just a static JSON array of entries. The app ships with one
- * default; users (and self-hosters) can point at more. Discovery never needs a
- * server — install-by-URL and install-by-paste always work with no registry at
- * all.
+ * A registry is just a static JSON array of entries. The app ships with two
+ * built-in sources — the community registry and a handful of bundled example
+ * plugins — and users (or self-hosters) can point at more. Discovery never
+ * needs a server: install-by-URL and install-by-paste always work with no
+ * registry at all.
  */
-export const DEFAULT_REGISTRY_URL = import.meta.env.DEV
+const COMMUNITY_REGISTRY_URL = import.meta.env.DEV
   ? "/sample-plugins/registry.json"
   : "https://martin-melody.github.io/logit-plugin-registry/registry.json";
 
-const DEFAULT_SOURCE: RegistrySource = {
-  url: DEFAULT_REGISTRY_URL,
-  label: "Logit registry",
-  builtin: true,
-};
+/** Bundled with the app — always reachable, works fully offline. */
+const BUNDLED_REGISTRY_URL = "/sample-plugins/registry.json";
+
+export function builtinRegistrySources(): RegistrySource[] {
+  const sources: RegistrySource[] = [
+    { url: COMMUNITY_REGISTRY_URL, label: "Logit registry", builtin: true },
+  ];
+  // In dev the community URL already points at the bundled file — don't list it
+  // twice.
+  if (BUNDLED_REGISTRY_URL !== COMMUNITY_REGISTRY_URL) {
+    sources.push({ url: BUNDLED_REGISTRY_URL, label: "Bundled examples", builtin: true });
+  }
+  return sources;
+}
 
 const STORAGE_KEY = "logit:plugins:registries:v1";
 
@@ -83,7 +93,7 @@ function hostLabel(url: string): string {
 }
 
 function createRegistrySourcesStore() {
-  const store = writable<RegistrySource[]>([DEFAULT_SOURCE, ...loadUserSources()]);
+  const store = writable<RegistrySource[]>([...builtinRegistrySources(), ...loadUserSources()]);
 
   function persist(all: RegistrySource[]) {
     saveUserSources(all.filter((s) => !s.builtin));
@@ -157,7 +167,7 @@ export type RegistryFetchResult = {
  * first source (default registry first) wins.
  */
 export async function fetchRegistry(sources?: RegistrySource[]): Promise<RegistryFetchResult> {
-  const list = sources ?? [DEFAULT_SOURCE, ...loadUserSources()];
+  const list = sources ?? [...builtinRegistrySources(), ...loadUserSources()];
   const settled = await Promise.allSettled(list.map(fetchOneRegistry));
 
   const seen = new Set<string>();
