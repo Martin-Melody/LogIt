@@ -8,6 +8,8 @@
     getPluginManifest,
     setPluginEnabled,
     uninstallPlugin,
+    pluginSettings,
+    isExecutablePluginFamily,
   } from "$lib/plugins";
   import { type InstalledPlugin, type PluginManifest } from "$lib/plugins";
   import { enqueuePublish } from "$lib/plugins/publishQueue";
@@ -198,7 +200,15 @@
           <Card.Header>
             <Card.Title>Manage</Card.Title>
           </Card.Header>
-          <Card.Content class="flex flex-wrap gap-2">
+          <Card.Content class="flex flex-col gap-2">
+            {#if isEnabled && isExecutablePluginFamily(manifest.family) && !$pluginSettings.communityPluginsEnabled}
+              <p class="w-full text-xs text-amber-600">
+                This plugin is enabled but not running — community plugins are
+                turned off.
+                <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins")}>Manage</button>
+              </p>
+            {/if}
+            <div class="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -223,6 +233,7 @@
                 </Button>
               {/snippet}
             </ConfirmDialog>
+            </div>
           </Card.Content>
         </Card.Root>
       {/if}

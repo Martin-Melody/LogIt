@@ -1,14 +1,24 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Compass, Plus, Send } from "lucide-svelte";
+  import { ArrowLeft, Compass, Plus, Send, ShieldAlert, ShieldCheck } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
+  import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import {
     listBuiltinPluginManifests,
     listInstalledPluginManifests,
+    pluginSettings,
+    isExecutablePluginFamily,
   } from "$lib/plugins";
   import type { InstalledPlugin, PluginManifest } from "$lib/plugins";
+
+  let enableDialogOpen = $state(false);
+
+  function turnOnCommunityPlugins() {
+    pluginSettings.enableCommunityPlugins();
+    enableDialogOpen = false;
+  }
 
   const ui = $state({
     loading: true,
@@ -102,6 +112,38 @@
       <p class="text-sm text-destructive">{ui.error}</p>
     {/if}
 
+    {#if !$pluginSettings.communityPluginsEnabled}
+      <Card.Root class="w-full border-amber-500/40 bg-amber-500/5">
+        <Card.Header>
+          <Card.Title class="flex items-center gap-2 text-base">
+            <ShieldAlert class="h-4 w-4 text-amber-600" />
+            Community plugins are off
+          </Card.Title>
+          <Card.Description>
+            Widgets, progression and analytics plugins from the community run code
+            inside the app. They stay disabled until you turn them on. Exercise and
+            food packs are plain data and always install.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <Button size="sm" onclick={() => (enableDialogOpen = true)}>
+            <ShieldCheck class="mr-1.5 h-3.5 w-3.5" />
+            Turn on community plugins
+          </Button>
+        </Card.Content>
+      </Card.Root>
+    {:else}
+      <div class="flex items-center justify-between gap-3 rounded border border-border px-3 py-2">
+        <div class="flex items-center gap-2 text-sm">
+          <ShieldCheck class="h-4 w-4 text-emerald-600" />
+          Community plugins enabled
+        </div>
+        <Button variant="ghost" size="sm" onclick={() => pluginSettings.disableCommunityPlugins()}>
+          Turn off
+        </Button>
+      </div>
+    {/if}
+
     <Card.Root class="w-full">
       <Card.Header>
         <Card.Title>Installed</Card.Title>
@@ -141,6 +183,11 @@
                     <p class="mt-1 text-xs text-muted-foreground/60">
                       {capabilityLabel(plugin.manifest)} · {originLabel(plugin.manifest)} · v{plugin.manifest.version}
                     </p>
+                    {#if plugin.enabled && isExecutablePluginFamily(plugin.manifest.family) && !$pluginSettings.communityPluginsEnabled}
+                      <p class="mt-1 text-xs text-amber-600">
+                        Not running — community plugins are off.
+                      </p>
+                    {/if}
                   </div>
                   <Button
                     variant="ghost"
@@ -249,3 +296,21 @@
     {/if}
   </div>
 </div>
+
+<Dialog.Root bind:open={enableDialogOpen}>
+  <Dialog.Content class="sm:max-w-[440px]">
+    <Dialog.Header>
+      <Dialog.Title>Turn on community plugins?</Dialog.Title>
+      <Dialog.Description>
+        Community widgets, progression algorithms and analytics modules run their
+        own code inside Logit. Only enable this if you trust the plugins you
+        install. You can turn it back off at any time, and each plugin still has
+        its own on/off switch.
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (enableDialogOpen = false)}>Cancel</Button>
+      <Button onclick={turnOnCommunityPlugins}>Turn on</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

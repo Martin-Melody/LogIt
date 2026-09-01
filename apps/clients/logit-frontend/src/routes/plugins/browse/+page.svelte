@@ -5,7 +5,14 @@
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import { fetchRegistry, type RegistryEntry } from "$lib/plugins/registry";
-  import { installPlugin, listInstalledPluginManifests } from "$lib/plugins";
+  import {
+    installPlugin,
+    listInstalledPluginManifests,
+    pluginSettings,
+    isExecutablePluginFamily,
+  } from "$lib/plugins";
+  import type { PluginFamily } from "$lib/plugins";
+  import { ShieldAlert } from "lucide-svelte";
   import { resolvePluginManifest } from "$lib/plugins/discovery";
   import { homeConfig } from "$lib/stores/homeConfig.store";
   import type { InstalledPlugin } from "$lib/plugins";
@@ -68,8 +75,19 @@
     }
   }
 
+  function blockedByRestrictedMode(family: PluginFamily): boolean {
+    return isExecutablePluginFamily(family) && !$pluginSettings.communityPluginsEnabled;
+  }
+
   async function install(entry: RegistryEntry) {
     if (installingIds[entry.id]) return;
+    if (blockedByRestrictedMode(entry.family)) {
+      installErrors = {
+        ...installErrors,
+        [entry.id]: "Turn on community plugins to install this.",
+      };
+      return;
+    }
     installingIds = { ...installingIds, [entry.id]: true };
     installErrors = { ...installErrors, [entry.id]: "" };
     try {
@@ -153,6 +171,18 @@
       <p class="text-sm text-destructive">{ui.error}</p>
     {/if}
 
+    {#if !$pluginSettings.communityPluginsEnabled}
+      <div class="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+        <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span>
+          Community plugins are off. Widgets, progression and analytics plugins
+          can't be installed until you
+          <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins")}>turn them on</button>.
+          Exercise and food packs still install.
+        </span>
+      </div>
+    {/if}
+
     {#if ui.loading}
       <p class="text-sm text-muted-foreground">Loading registry…</p>
     {:else if filtered.length === 0}
@@ -193,7 +223,11 @@
                           Open
                         </Button>
                       {:else}
-                        <Button size="sm" disabled={isInstalling} onclick={() => void install(entry)}>
+                        <Button
+                          size="sm"
+                          disabled={isInstalling || blockedByRestrictedMode(entry.family)}
+                          onclick={() => void install(entry)}
+                        >
                           {isInstalling ? "Installing…" : "Install"}
                         </Button>
                       {/if}
@@ -239,7 +273,11 @@
                           Open
                         </Button>
                       {:else}
-                        <Button size="sm" disabled={isInstalling} onclick={() => void install(entry)}>
+                        <Button
+                          size="sm"
+                          disabled={isInstalling || blockedByRestrictedMode(entry.family)}
+                          onclick={() => void install(entry)}
+                        >
                           {isInstalling ? "Installing…" : "Install"}
                         </Button>
                       {/if}

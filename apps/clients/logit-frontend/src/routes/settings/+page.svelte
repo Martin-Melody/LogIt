@@ -56,6 +56,7 @@
   } from "@logit/core/usecases/progression/getAnalyticsConfig";
   import type { AnalyticsConfigView } from "@logit/core/usecases/progression/getAnalyticsConfig";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import { pluginSettings } from "$lib/plugins";
 
   const isDev = import.meta.env.DEV;
 
@@ -883,7 +884,16 @@
         >Explore community-built widgets and algorithms.</Card.Description
       >
     </Card.Header>
-    <Card.Content>
+    <Card.Content class="flex flex-col gap-2">
+      <p class="text-xs text-muted-foreground">
+        Community plugins are
+        {#if $pluginSettings.communityPluginsEnabled}
+          <span class="font-medium text-emerald-600">on</span>
+        {:else}
+          <span class="font-medium text-amber-600">off</span> — widgets and
+          algorithms from the community won't run
+        {/if}.
+      </p>
       <Button
         variant="outline"
         size="sm"
