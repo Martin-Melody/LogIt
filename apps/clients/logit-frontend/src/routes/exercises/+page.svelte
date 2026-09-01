@@ -7,10 +7,7 @@
   import { Drawer } from "vaul-svelte";
   import type { Exercise, ExerciseType } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
-  import { buildExercisePack } from "@logit/core/plugins/exercisePack";
-  import { createId } from "@logit/core/domain/ids";
-  import { saveTextFile } from "$lib/platform/fileSave";
-  import type { PluginManifest } from "$lib/plugins";
+  import { exportExercisesAsPack, isUserExercise } from "$lib/plugins";
   type Filter = "all" | "core" | "mine";
 
   let filter = $state<Filter>("all");
@@ -31,11 +28,7 @@
 
   const repo = getExerciseRepo();
 
-  // Genuinely user-authored exercises: created ids are `ex_<nanoid>`; core and
-  // core-overlay ids are `ex_core_*`, pack ids are `pack:*`.
-  const exportable = $derived(
-    allItems.filter((e) => e.id.startsWith("ex_") && !e.id.startsWith("ex_core_")),
-  );
+  const exportable = $derived(allItems.filter(isUserExercise));
 
   function openExport() {
     exportName = "";
@@ -48,36 +41,7 @@
     exporting = true;
     exportError = null;
     try {
-      const pluginId = `local.exercise-pack.${createId()}`;
-      const pack = buildExercisePack(
-        pluginId,
-        exportable.map((e) => ({
-          name: e.name,
-          primaryMuscles: e.primaryMuscles ?? [],
-          secondaryMuscles: e.secondaryMuscles ?? [],
-          exerciseType: e.exerciseType ?? "normal",
-          notes: e.notes ?? null,
-        })),
-      );
-      const manifest: PluginManifest = {
-        id: pluginId,
-        family: "exercise-pack",
-        name: exportName.trim(),
-        description: `${pack.exercises.length} exercises`,
-        version: "1.0.0",
-        distribution: { origin: "inline", data: pack },
-        capabilities: [
-          {
-            family: "exercise-pack",
-            exercisePackId: pluginId,
-            exerciseCount: pack.exercises.length,
-          },
-        ],
-      };
-      const slug =
-        exportName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ||
-        "pack";
-      await saveTextFile(`${slug}.logit-pack.json`, JSON.stringify(manifest, null, 2));
+      await exportExercisesAsPack(exportName, exportable);
       exportOpen = false;
     } catch (e) {
       exportError = e instanceof Error ? e.message : "Could not build the pack.";
@@ -143,6 +107,17 @@
       <ArrowLeft class="h-4 w-4" />
     </button>
     <h1 class="text-base font-semibold flex-1">Exercises</h1>
+    {#if exportable.length > 0}
+      <button
+        type="button"
+        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        onclick={openExport}
+        aria-label="Export custom exercises as a pack"
+        title="Export as pack"
+      >
+        <Package class="h-4 w-4" />
+      </button>
+    {/if}
     <button
       type="button"
       class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
@@ -188,17 +163,6 @@
         {f === "all" ? "All" : f === "core" ? "Built-in" : "Mine"}
       </button>
     {/each}
-
-    {#if filter === "mine" && exportable.length > 0}
-      <button
-        type="button"
-        class="ml-auto flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
-        onclick={openExport}
-      >
-        <Package class="h-3.5 w-3.5" />
-        Export as pack
-      </button>
-    {/if}
   </div>
 
   <!-- List -->
