@@ -47,7 +47,11 @@ export async function exportExercisesAsPack(
   await saveTextFile(`${slug}.logit-pack.json`, JSON.stringify(manifest, null, 2));
 }
 
-/** Genuinely user-authored exercises — excludes core, core overlays, and pack items. */
+/**
+ * Genuinely user-authored exercises — excludes built-ins (and their edited
+ * overlays, which keep `isCore`) and installed exercise-pack items. Works
+ * across the localStorage repo (`ex_*` ids) and the SQLite repo (`exdb_*` ids).
+ */
 export function isUserExercise(e: Exercise): boolean {
-  return e.id.startsWith("ex_") && !e.id.startsWith("ex_core_");
+  return !e.isCore && !e.id.startsWith("pack:");
 }
