@@ -2,10 +2,10 @@
 
 Status: design doc. Supersedes the original phased roadmap on `feat/plugin-foundation-ui`.
 
-**Build progress** (branch `feat/plugin-content-packs`): Phase 1 (trust model), Phase 2
-(exercise packs end to end), and Phase 3 (multi-source registry) are implemented. Phase 4
-(sandbox + first pure-function plugin) is blocked on the sandbox-engine decision below.
-Not yet done in the Phase 2 line: "export as pack" from the custom-exercises UI.
+**Build progress** (branch `feat/plugin-content-packs`): Phases 1–3 implemented — trust model
+(Restricted Mode + `integrity`), exercise packs end to end (incl. "export as pack" via the
+new `inline` distribution origin), and multi-source static registry. **Sandbox engine
+decided: QuickJS-WASM.** Phase 4 (sandbox + `progression-algorithm` pilot) not yet started.
 
 ## Goal
 
@@ -352,10 +352,9 @@ access to storage or network.
 
 ## Open questions
 
-- **Sandbox engine** — QuickJS-WASM (recommended) vs Web Worker. Decides Phase 4
-  and everything downstream. See "Prior art" below: Obsidian ships *no* sandbox at
-  their scale with few incidents, but their plugins are open-source and note data
-  is a weaker exfil target than fitness history + sync tokens.
+- ~~**Sandbox engine**~~ — **decided: QuickJS-WASM** (`quickjs-emscripten`),
+  2026-09-01. Hard boundary, identical web/iOS/Android, clean for Apple 2.5.2.
+  The WASM + Capacitor wiring needs on-device verification.
 - **Registry hosting** — dedicated `registry.logit.ie` static site vs a
   `registry.json` in a public GitHub repo consumed via raw URL / Pages (the
   Obsidian model).
