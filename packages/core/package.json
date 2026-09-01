@@ -27,6 +27,8 @@
     "svelte": "^5.45.6"
   },
   "devDependencies": {
+    "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
+    "quickjs-emscripten-core": "^0.32.0",
     "vitest": "^4.1.11"
   }
 }

@@ -5,8 +5,28 @@ Logit community plugins are installed as two parts:
 1. a manifest, which describes identity, distribution, and capabilities
 2. a bundle, which provides the executable entry point
 
-The bundle is a JavaScript/TypeScript module that exports a `pluginBundle`
-descriptor with `formatVersion: 1`.
+The bundle is a JavaScript module that exports a `pluginBundle` descriptor with
+`formatVersion: 1`.
+
+## Execution model
+
+At install time the bundle is fetched **once**, verified against the manifest's
+`integrity` hash (`sha256-<base64>`), and its source text stored locally — it
+runs offline afterwards and updates are an explicit, reviewable action.
+
+`progression-algorithm` bundles run inside an **interpreter sandbox**
+(QuickJS-WASM): a bare ES2020 environment with no DOM, no `fetch`, no storage,
+no timers. The plugin receives a frozen JSON input and must return a
+JSON-serialisable value within a hard wall-clock deadline (~300 ms). A fresh VM
+per call means no state leaks between runs — persist state through the
+contract's `nextState`, never in a module-level variable.
+
+Because the sandbox has no module loader, **a bundle must be a single file with
+no `import` statements** (build with esbuild `--bundle --format=esm`). Top-level
+`export const` / `export function` / `export default` are supported.
+
+Other families (`widget`, and for now `analytics` / `nutrition-*`) still use the
+legacy dynamic-import loader and migrate to the sandbox in later releases.
 
 ## Required contract
 

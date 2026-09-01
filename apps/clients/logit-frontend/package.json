@@ -49,6 +49,7 @@
     "@capacitor/keyboard": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.2",
     "@capawesome/capacitor-file-picker": "^8.0.2",
+    "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
     "@logit/core": "*",
     "@react2svelte/swipeable": "^0.1.4",
     "@zxing/browser": "^0.2.1",
@@ -62,6 +63,7 @@
     "lucide-svelte": "^0.563.0",
     "mode-watcher": "^1.1.0",
     "nanoid": "^5.1.6",
+    "quickjs-emscripten-core": "^0.32.0",
     "svelte-dnd-action": "^0.9.79",
     "svelte-sonner": "^1.1.0",
     "vaul-svelte": "^0.3.2"

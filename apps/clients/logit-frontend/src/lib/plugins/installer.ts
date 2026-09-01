@@ -1,17 +1,19 @@
 import { installPlugin } from "./catalog";
 import { fetchAndStoreExercisePack } from "./packStore";
+import { fetchAndStoreBundle } from "./bundleStore";
+import { isSandboxedFamily } from "./sandboxedPlugin";
 import type { PluginManifest } from "./types";
 
 /**
  * Install a plugin from its manifest, doing whatever fetch/verify work the
- * family needs before the install is recorded.
+ * family needs before the install is recorded. Nothing is recorded if any step
+ * fails.
  *
  * - Content packs (`exercise-pack`): fetch the data file, verify its integrity,
- *   parse it, and store the parsed result. Nothing is recorded if any step
- *   fails.
- * - Code plugins: just record the manifest. The bundle is loaded lazily by the
- *   runtime, and only when Restricted Mode is off. (Bundle hash-verification at
- *   install time lands in a later slice.)
+ *   parse it, and store the parsed result.
+ * - Code plugins: fetch the bundle, verify its integrity, and store the source
+ *   text locally. It is only ever run inside the interpreter sandbox, and only
+ *   when Restricted Mode is off.
  */
 export async function installPluginFromManifest(
   manifest: PluginManifest,
@@ -25,6 +27,12 @@ export async function installPluginFromManifest(
 
   if (manifest.family === "exercise-pack") {
     await fetchAndStoreExercisePack(manifest);
+  } else if (isSandboxedFamily(manifest.family)) {
+    await fetchAndStoreBundle(manifest);
   }
+  // Other executable families (widgets, and for now analytics/nutrition) still
+  // load their bundle lazily by URL — they move to fetch+verify+store as they
+  // migrate to the sandbox.
+
   await installPlugin(manifest, enabled);
 }
