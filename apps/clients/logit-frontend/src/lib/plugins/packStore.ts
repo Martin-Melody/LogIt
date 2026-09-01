@@ -6,6 +6,7 @@ import {
   type ExercisePack,
 } from "@logit/core/plugins/exercisePack";
 import { verifyIntegrity } from "@logit/core/plugins/integrity";
+import { fetchWithTimeout } from "./net";
 import type { PluginManifest } from "./types";
 
 /**
@@ -69,7 +70,7 @@ async function downloadAndParsePack(manifest: PluginManifest): Promise<ExerciseP
     throw new Error("This exercise pack has no data file to install.");
   }
 
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  const res = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
     throw new Error(`Could not download the pack (${res.status}).`);
   }

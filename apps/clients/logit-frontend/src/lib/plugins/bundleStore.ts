@@ -1,5 +1,6 @@
 import { browser } from "$app/environment";
 import { verifyIntegrity } from "@logit/core/plugins/integrity";
+import { fetchWithTimeout } from "./net";
 import type { PluginManifest } from "./types";
 
 /**
@@ -55,7 +56,9 @@ export async function fetchAndStoreBundle(manifest: PluginManifest): Promise<str
   const url = bundleUrl(manifest);
   if (!url) throw new Error("This plugin has no code bundle to install.");
 
-  const res = await fetch(url, { headers: { Accept: "text/javascript, application/javascript" } });
+  const res = await fetchWithTimeout(url, {
+    headers: { Accept: "text/javascript, application/javascript" },
+  });
   if (!res.ok) throw new Error(`Could not download the plugin (${res.status}).`);
   const source = await res.text();
 
