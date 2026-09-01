@@ -1,7 +1,9 @@
 import { extractEntryExport } from "@logit/core/plugins/sandboxProtocol";
 import {
+  fetchAndStoreBundle,
   getStoredBundleMeta,
   getStoredBundleSource,
+  storeBundleMeta,
   type BundleMeta,
 } from "./bundleStore";
 import { runInSandbox } from "./sandbox";
@@ -30,6 +32,36 @@ function defaultEntry(family: PluginFamily): string {
 
 export type { BundleMeta };
 
+const healing = new Map<string, Promise<string | null>>();
+
+/**
+ * Return the plugin's stored bundle source, fetching + verifying + caching it on
+ * demand if it's missing — e.g. a plugin installed before its family moved to
+ * the sandbox. Needs network once; returns null on failure.
+ */
+async function ensureBundleSource(plugin: InstalledPlugin): Promise<string | null> {
+  const existing = getStoredBundleSource(plugin.manifest.id);
+  if (existing) return existing;
+
+  const cached = healing.get(plugin.manifest.id);
+  if (cached) return cached;
+
+  const job = (async () => {
+    try {
+      const source = await fetchAndStoreBundle(plugin.manifest);
+      const meta = await runSandboxMeta(source, plugin.manifest.family);
+      if (meta) storeBundleMeta(plugin.manifest.id, meta);
+      return source;
+    } catch {
+      return null;
+    } finally {
+      healing.delete(plugin.manifest.id);
+    }
+  })();
+  healing.set(plugin.manifest.id, job);
+  return job;
+}
+
 /** Run one `meta` call against a bundle source. Used at install to cache metadata. */
 export async function runSandboxMeta(
   source: string,
@@ -52,9 +84,9 @@ export async function sandboxedMeta(plugin: InstalledPlugin): Promise<BundleMeta
   if (!isCommunityPluginsEnabled()) return null;
   const cached = getStoredBundleMeta(plugin.manifest.id);
   if (cached) return cached;
-  const source = getStoredBundleSource(plugin.manifest.id);
+  const source = await ensureBundleSource(plugin);
   if (!source) return null;
-  return runSandboxMeta(source, plugin.manifest.family);
+  return getStoredBundleMeta(plugin.manifest.id) ?? runSandboxMeta(source, plugin.manifest.family);
 }
 
 /**
@@ -70,8 +102,8 @@ export function sandboxedCall<T>(
     if (!isCommunityPluginsEnabled()) {
       throw new Error("Community plugins are turned off.");
     }
-    const source = getStoredBundleSource(plugin.manifest.id);
-    if (!source) throw new Error(`${plugin.manifest.name} is not installed on this device.`);
+    const source = await ensureBundleSource(plugin);
+    if (!source) throw new Error(`${plugin.manifest.name}'s code isn't available on this device.`);
     const entry = extractEntryExport(source) ?? defaultEntry(plugin.manifest.family);
     return (await runInSandbox(source, entry, { kind: "call", method, input })) as T;
   };
@@ -93,9 +125,10 @@ export async function listSandboxedPlugins<T>(
   for (const plugin of installed) {
     if (!plugin.enabled || plugin.manifest.family !== family) continue;
     if (!hasCapability(plugin)) continue;
-    if (!getStoredBundleSource(plugin.manifest.id)) continue;
-    const meta = (await sandboxedMeta(plugin)) ?? {};
-    const built = build(plugin, meta);
+    // sandboxedMeta heals a missing bundle on demand; skip only if that fails.
+    const meta = await sandboxedMeta(plugin);
+    if (!meta && !getStoredBundleSource(plugin.manifest.id)) continue;
+    const built = build(plugin, meta ?? {});
     if (built) out.push(built);
   }
   return out;

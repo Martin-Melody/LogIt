@@ -13,7 +13,6 @@ import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/alg
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import { listInstalledPluginManifests } from "./catalog";
 import { isCommunityPluginsEnabled } from "./settings";
-import { getStoredBundleSource } from "./bundleStore";
 import {
   findSandboxedPlugin,
   listSandboxedPlugins,
@@ -225,35 +224,26 @@ async function installedWidgetDefinitions(): Promise<RuntimeWidgetDefinition[]> 
 }
 
 async function installedAlgorithms(): Promise<ProgressionAlgorithmMeta[]> {
-  if (!isCommunityPluginsEnabled()) return [];
   const installed = await listInstalledPluginManifests();
-  const algorithms: ProgressionAlgorithmMeta[] = [];
-
-  for (const plugin of installed) {
-    if (!plugin.enabled || plugin.manifest.family !== "progression-algorithm") continue;
-    const capability = getProgressionCapability(plugin.manifest);
-    if (!capability) continue;
-    if (!getStoredBundleSource(plugin.manifest.id)) continue;
-
-    algorithms.push({
-      id: capability.algorithmId,
+  return listSandboxedPlugins(
+    installed,
+    "progression-algorithm",
+    (p) => !!getProgressionCapability(p.manifest),
+    (plugin) => ({
+      id: getProgressionCapability(plugin.manifest)!.algorithmId,
       name: plugin.manifest.name,
       description: plugin.manifest.description,
       author: plugin.manifest.author,
-    });
-  }
-
-  return algorithms;
+    }),
+  );
 }
 
 async function installedAlgorithmById(id: string): Promise<ProgressionAlgorithm | null> {
-  if (!isCommunityPluginsEnabled()) return null;
   const installed = await listInstalledPluginManifests();
-  const plugin = installed.find(
-    (entry) =>
-      entry.enabled &&
-      entry.manifest.family === "progression-algorithm" &&
-      getProgressionCapability(entry.manifest)?.algorithmId === id,
+  const plugin = findSandboxedPlugin(
+    installed,
+    "progression-algorithm",
+    (p) => getProgressionCapability(p.manifest)?.algorithmId === id,
   );
   if (!plugin) return null;
 
