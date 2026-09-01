@@ -114,6 +114,7 @@ export function packExercises(enabledIds: ReadonlySet<string>): Exercise[] {
   const out: Exercise[] = [];
   for (const [pluginId, pack] of Object.entries(all)) {
     if (!enabledIds.has(pluginId)) continue;
+    if (!pack || !Array.isArray(pack.exercises)) continue; // tolerate a corrupt store
     for (const ex of pack.exercises) {
       out.push({
         id: packExerciseId(pluginId, ex.name),

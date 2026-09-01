@@ -185,6 +185,8 @@ export async function pullAndMergeSplits(): Promise<void> {
 export function pushExercise(exercise: Exercise): void {
   if (!apiClient.isAuthenticated()) return;
   if (exercise.isCore) return;
+  // Exercise-pack items are re-installable plugin content, not user data.
+  if (exercise.id.startsWith("pack:")) return;
   const dto = { id: exercise.id, createdAtMs: exercise.createdAtMs, dataJson: JSON.stringify(exercise) };
   syncApi.pushExercises([dto]).catch(() => enqueue({ type: "exercise", dto }));
 }
