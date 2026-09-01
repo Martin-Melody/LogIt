@@ -12,6 +12,7 @@
     "./data/*": "./src/data/*.ts",
     "./nutrition/*": "./src/nutrition/*.ts",
     "./plugins/*": "./src/plugins/*.ts",
+    "./plugins/builtinWidgets/*": "./src/plugins/builtinWidgets/*.ts",
     "./progression/*": "./src/progression/*.ts",
     "./usecases/progression/*": "./src/usecases/progression/*.ts",
     "./usecases/nutrition/*": "./src/usecases/nutrition/*.ts",
