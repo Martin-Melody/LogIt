@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Plus, Search, X, ChevronRight, ArrowLeft, Package } from "lucide-svelte";
+  import { Plus, Search, X, ChevronRight, ArrowLeft, Package, Check } from "lucide-svelte";
   import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
+  import { longpress } from "$lib/swipe";
   import type { Exercise, ExerciseType } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { exportExercisesAsPack, isUserExercise } from "$lib/plugins";
@@ -21,6 +22,14 @@
   let draftType = $state<ExerciseType>("normal");
   let saving = $state(false);
 
+  // Multi-select for "export as pack"
+  let selecting = $state(false);
+  let selectedIds = $state<string[]>([]);
+  const selectedCount = $derived(selectedIds.length);
+  const selectedExercises = $derived(allItems.filter((e) => selectedIds.includes(e.id)));
+  const exportable = $derived(allItems.filter(isUserExercise));
+  let suppressNextClick = false;
+
   let exportOpen = $state(false);
   let exportName = $state("");
   let exporting = $state(false);
@@ -28,7 +37,36 @@
 
   const repo = getExerciseRepo();
 
-  const exportable = $derived(allItems.filter(isUserExercise));
+  function startSelection(ex: Exercise) {
+    if (!isUserExercise(ex)) return;
+    suppressNextClick = true;
+    selecting = true;
+    if (!selectedIds.includes(ex.id)) selectedIds = [...selectedIds, ex.id];
+  }
+
+  function toggleSelect(ex: Exercise) {
+    if (!isUserExercise(ex)) return;
+    selectedIds = selectedIds.includes(ex.id)
+      ? selectedIds.filter((id) => id !== ex.id)
+      : [...selectedIds, ex.id];
+  }
+
+  function exitSelection() {
+    selecting = false;
+    selectedIds = [];
+  }
+
+  function onRowClick(ex: Exercise) {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      return;
+    }
+    if (selecting) {
+      toggleSelect(ex);
+      return;
+    }
+    void goto(`/exercises/${ex.id}`);
+  }
 
   function openExport() {
     exportName = "";
@@ -37,12 +75,13 @@
   }
 
   async function exportPack() {
-    if (!exportName.trim() || exporting) return;
+    if (!exportName.trim() || exporting || selectedExercises.length === 0) return;
     exporting = true;
     exportError = null;
     try {
-      await exportExercisesAsPack(exportName, exportable);
+      await exportExercisesAsPack(exportName, selectedExercises);
       exportOpen = false;
+      exitSelection();
     } catch (e) {
       exportError = e instanceof Error ? e.message : "Could not build the pack.";
     } finally {
@@ -98,35 +137,48 @@
 <div class="flex flex-col pb-24 min-h-full">
   <!-- Header -->
   <div class="flex items-center gap-1 px-1 py-3 border-b border-border">
-    <button
-      type="button"
-      class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
-      onclick={() => back("/profile")}
-      aria-label="Go back"
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-base font-semibold flex-1">Exercises</h1>
-    {#if exportable.length > 0}
+    {#if selecting}
       <button
         type="button"
         class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        onclick={exitSelection}
+        aria-label="Cancel selection"
+      >
+        <X class="h-4 w-4" />
+      </button>
+      <h1 class="text-base font-semibold flex-1">
+        {selectedCount} selected
+      </h1>
+      <button
+        type="button"
+        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-40 shrink-0"
         onclick={openExport}
-        aria-label="Export custom exercises as a pack"
+        disabled={selectedCount === 0}
+        aria-label="Export selected as a pack"
         title="Export as pack"
       >
         <Package class="h-4 w-4" />
       </button>
+    {:else}
+      <button
+        type="button"
+        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        onclick={() => back("/profile")}
+        aria-label="Go back"
+      >
+        <ArrowLeft class="h-4 w-4" />
+      </button>
+      <h1 class="text-base font-semibold flex-1">Exercises</h1>
+      <button
+        type="button"
+        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        onclick={openAdd}
+        aria-label="Add exercise"
+        data-tour="exercises-add"
+      >
+        <Plus class="h-5 w-5" />
+      </button>
     {/if}
-    <button
-      type="button"
-      class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
-      onclick={openAdd}
-      aria-label="Add exercise"
-      data-tour="exercises-add"
-    >
-      <Plus class="h-5 w-5" />
-    </button>
   </div>
 
   <!-- Search -->
@@ -173,14 +225,35 @@
       {query ? "No results." : filter === "mine" ? "No custom exercises yet." : "No exercises."}
     </p>
   {:else}
+    {#if !selecting && exportable.length > 0}
+      <p class="px-3 pb-1 text-[11px] text-muted-foreground/70">
+        Long-press a custom exercise to select several and export them as a pack.
+      </p>
+    {/if}
     <ul class="divide-y divide-border" data-tour="exercises-list">
       {#each items as ex (ex.id)}
+        {@const selectable = isUserExercise(ex)}
+        {@const checked = selectedIds.includes(ex.id)}
         <li>
           <button
             type="button"
-            class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors"
-            onclick={() => goto(`/exercises/${ex.id}`)}
+            class="w-full flex items-center gap-3 px-3 py-3 text-left transition-colors {selecting && !selectable
+              ? 'opacity-40'
+              : 'hover:bg-muted/40 active:bg-muted/60'} {checked ? 'bg-primary/5' : ''}"
+            onclick={() => onRowClick(ex)}
+            use:longpress={() => startSelection(ex)}
           >
+            {#if selecting}
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors {checked
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : selectable
+                    ? 'border-muted-foreground/40'
+                    : 'border-transparent'}"
+              >
+                {#if checked}<Check class="h-3.5 w-3.5" />{/if}
+              </span>
+            {/if}
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium truncate">{ex.name}</p>
               {#if ex.notes}
@@ -194,7 +267,9 @@
               {#if ex.isCore}
                 <span class="text-xs text-muted-foreground">Built-in</span>
               {/if}
-              <ChevronRight class="h-4 w-4 text-muted-foreground" />
+              {#if !selecting}
+                <ChevronRight class="h-4 w-4 text-muted-foreground" />
+              {/if}
             </div>
           </button>
         </li>
@@ -290,9 +365,9 @@
       <div class="px-4 pb-2">
         <p class="text-base font-semibold">Export as pack</p>
         <p class="mt-1 text-xs text-muted-foreground">
-          Bundles your {exportable.length}
-          custom {exportable.length === 1 ? "exercise" : "exercises"} into one file
-          anyone can install from the plugins screen.
+          Bundles {selectedCount}
+          {selectedCount === 1 ? "exercise" : "exercises"} into one file anyone can
+          install from Plugins → Add → File.
         </p>
       </div>
 

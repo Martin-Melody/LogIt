@@ -27,6 +27,67 @@ export function animateHeight(node: HTMLElement, duration = 200) {
   return { destroy: () => ro.disconnect() };
 }
 
+/**
+ * Svelte action — fires `handler` when the pointer is held still on `node` for
+ * `delay` ms. Cancels on move beyond a small threshold, or on pointer up/leave.
+ *
+ * Usage:
+ *   <li use:longpress={() => select(id)}>…</li>
+ */
+export function longpress(node: HTMLElement, handler: () => void, delay = 450) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let startX = 0;
+  let startY = 0;
+  const MOVE_CANCEL = 10;
+
+  function clear() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
+
+  function down(e: PointerEvent) {
+    startX = e.clientX;
+    startY = e.clientY;
+    clear();
+    timer = setTimeout(() => {
+      timer = null;
+      handler();
+    }, delay);
+  }
+
+  function move(e: PointerEvent) {
+    if (
+      timer &&
+      (Math.abs(e.clientX - startX) > MOVE_CANCEL ||
+        Math.abs(e.clientY - startY) > MOVE_CANCEL)
+    ) {
+      clear();
+    }
+  }
+
+  node.addEventListener("pointerdown", down);
+  node.addEventListener("pointermove", move);
+  node.addEventListener("pointerup", clear);
+  node.addEventListener("pointercancel", clear);
+  node.addEventListener("pointerleave", clear);
+
+  return {
+    update(next: () => void) {
+      handler = next;
+    },
+    destroy() {
+      clear();
+      node.removeEventListener("pointerdown", down);
+      node.removeEventListener("pointermove", move);
+      node.removeEventListener("pointerup", clear);
+      node.removeEventListener("pointercancel", clear);
+      node.removeEventListener("pointerleave", clear);
+    },
+  };
+}
+
 export interface SwipeHandlers {
   onpointerdown: (e: PointerEvent) => void;
   onpointerup: (e: PointerEvent) => void;
