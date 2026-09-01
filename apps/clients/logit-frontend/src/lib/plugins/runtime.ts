@@ -5,6 +5,7 @@ import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistr
 import type {
   ProgressionAlgorithm,
   ProgressionAlgorithmMeta,
+  ProgressionOutput,
 } from "@logit/core/domain/progression";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
@@ -12,6 +13,8 @@ import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/alg
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import { listInstalledPluginManifests } from "./catalog";
 import { isCommunityPluginsEnabled } from "./settings";
+import { getStoredBundleSource } from "./bundleStore";
+import { sandboxedCall, sandboxedMeta } from "./sandboxedPlugin";
 import {
   describePluginBundleContract,
   isPluginAlgorithm,
@@ -210,23 +213,15 @@ async function installedWidgetDefinitions(): Promise<RuntimeWidgetDefinition[]> 
 }
 
 async function installedAlgorithms(): Promise<ProgressionAlgorithmMeta[]> {
+  if (!isCommunityPluginsEnabled()) return [];
   const installed = await listInstalledPluginManifests();
   const algorithms: ProgressionAlgorithmMeta[] = [];
 
   for (const plugin of installed) {
     if (!plugin.enabled || plugin.manifest.family !== "progression-algorithm") continue;
-
     const capability = getProgressionCapability(plugin.manifest);
     if (!capability) continue;
-
-    const bundleUrl = getBundleUrl(plugin.manifest);
-    if (!bundleUrl) continue;
-
-    const module = await loadBundle(bundleUrl);
-    const contract = module ? resolvePluginBundleContract(module, plugin.manifest) : null;
-    const entry = module ? resolvePluginBundleEntry(module, contract) : null;
-    const algorithm = isPluginAlgorithm(entry) ? entry : null;
-    if (!algorithm) continue;
+    if (!getStoredBundleSource(plugin.manifest.id)) continue;
 
     algorithms.push({
       id: capability.algorithmId,
@@ -240,6 +235,7 @@ async function installedAlgorithms(): Promise<ProgressionAlgorithmMeta[]> {
 }
 
 async function installedAlgorithmById(id: string): Promise<ProgressionAlgorithm | null> {
+  if (!isCommunityPluginsEnabled()) return null;
   const installed = await listInstalledPluginManifests();
   const plugin = installed.find(
     (entry) =>
@@ -247,18 +243,23 @@ async function installedAlgorithmById(id: string): Promise<ProgressionAlgorithm 
       entry.manifest.family === "progression-algorithm" &&
       getProgressionCapability(entry.manifest)?.algorithmId === id,
   );
-
   if (!plugin) return null;
 
-  const bundleUrl = getBundleUrl(plugin.manifest);
-  if (!bundleUrl) return null;
+  const meta = await sandboxedMeta(plugin);
+  if (!meta) return null;
 
-  const module = await loadBundle(bundleUrl);
-  if (!module) return null;
+  const suggest = sandboxedCall<ProgressionOutput>(plugin, "suggest");
 
-  const contract = resolvePluginBundleContract(module, plugin.manifest);
-  const entry = resolvePluginBundleEntry(module, contract);
-  return isPluginAlgorithm(entry) ? entry : null;
+  return {
+    id,
+    name: plugin.manifest.name,
+    description: plugin.manifest.description,
+    author: plugin.manifest.author,
+    defaultState: meta.defaultState ?? {},
+    defaultPreferences: meta.defaultPreferences,
+    preferencesSchema: meta.preferencesSchema as ProgressionAlgorithm["preferencesSchema"],
+    suggest: (input) => suggest(input),
+  };
 }
 
 async function installedAnalyticsList(): Promise<AnalyticsPluginMeta[]> {

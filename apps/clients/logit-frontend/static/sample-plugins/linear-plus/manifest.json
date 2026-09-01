@@ -5,6 +5,7 @@
   "description": "A sample progression algorithm that increases the last working weight by a fixed amount.",
   "version": "1.0.0",
   "author": "Logit Samples",
+  "integrity": "sha256-Im+plqhjAXbRJ/9BvaSBTyx71PNwWsAZnm4slCsWwb4=",
   "homepageUrl": "/sample-plugins/linear-plus/README.txt",
   "sourceUrl": "/sample-plugins/linear-plus/manifest.json",
   "distribution": {

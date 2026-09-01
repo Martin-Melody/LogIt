@@ -2,10 +2,12 @@
 
 Status: design doc. Supersedes the original phased roadmap on `feat/plugin-foundation-ui`.
 
-**Build progress** (branch `feat/plugin-content-packs`): Phases 1–3 implemented — trust model
-(Restricted Mode + `integrity`), exercise packs end to end (incl. "export as pack" via the
-new `inline` distribution origin), and multi-source static registry. **Sandbox engine
-decided: QuickJS-WASM.** Phase 4 (sandbox + `progression-algorithm` pilot) not yet started.
+**Build progress**: Phases 1–3 merged to `main` — trust model (Restricted Mode + `integrity`),
+exercise packs end to end (incl. "export as pack" via the `inline` distribution origin),
+multi-source static registry. **Phase 4 in progress** (branch `feat/plugin-sandbox`):
+QuickJS-WASM interpreter sandbox + `progression-algorithm` routed through it
+(fetch → hash-verify → store bundle at install; `suggest()` runs in a fresh VM with a
+wall-clock deadline). Remaining pure-function families + widgets are Phase 5+.
 
 ## Goal
 

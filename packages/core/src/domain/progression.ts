@@ -79,7 +79,9 @@ export type ProgressionAlgorithm = ProgressionAlgorithmMeta & {
   defaultState: unknown;
   defaultPreferences?: unknown; // used as initial values when no stored prefs exist
   preferencesSchema?: AlgorithmPreferencesField[]; // if present, app renders a settings screen for this algorithm
-  suggest(input: ProgressionInput): ProgressionOutput;
+  // Built-in algorithms are synchronous; community algorithms run in the
+  // interpreter sandbox and resolve asynchronously. Callers must await.
+  suggest(input: ProgressionInput): ProgressionOutput | Promise<ProgressionOutput>;
 };
 
 export type ExerciseProgressionState = {
