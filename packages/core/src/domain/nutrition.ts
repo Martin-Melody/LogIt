@@ -221,6 +221,25 @@ export function loggedItemFromFood(
   };
 }
 
+/**
+ * Recover the per-100 g macro basis of a logged item from its stored grams + computed
+ * totals. Returns null for quick-adds (grams 0) where there is no basis — the caller then
+ * edits the absolute macros directly. Used by the item-edit screen to rescale when the
+ * amount changes without needing the source food.
+ */
+export function loggedItemPer100g(
+  item: Pick<LoggedItem, "grams" | "computed">,
+): MacroTotals | null {
+  if (!(item.grams > 0)) return null;
+  const f = 100 / item.grams;
+  return {
+    kcal: item.computed.kcal * f,
+    proteinG: item.computed.proteinG * f,
+    carbsG: item.computed.carbsG * f,
+    fatG: item.computed.fatG * f,
+  };
+}
+
 export function dayTotals(day: DiaryDay): MacroTotals {
   return day.items.reduce((acc, it) => addMacros(acc, it.computed), { ...ZERO_MACROS });
 }
@@ -414,6 +433,41 @@ export function createCustomFood(input: {
     createdAtMs: now,
     updatedAtMs: now,
   };
+}
+
+/**
+ * Edit a custom food in place — keeps its id and createdAtMs so diary items that reference
+ * it stay linked, bumps updatedAtMs for sync. Already-logged items keep the macros they
+ * snapshotted; only future logs use the new numbers. Pass `null` to clear brand/barcode.
+ */
+export function updateCustomFood(
+  existing: CustomFood,
+  patch: {
+    name?: string;
+    brand?: string | null;
+    barcode?: string | null;
+    per100g?: MacroTotals;
+    servings?: ServingOption[];
+  },
+): CustomFood {
+  const f = existing.food;
+  return {
+    ...existing,
+    food: {
+      ...f,
+      name: patch.name?.trim() || f.name,
+      brand: patch.brand === undefined ? f.brand : patch.brand?.trim() || undefined,
+      barcode: patch.barcode === undefined ? f.barcode : patch.barcode?.trim() || undefined,
+      per100g: patch.per100g ?? f.per100g,
+      servings: patch.servings ?? f.servings,
+    },
+    updatedAtMs: nowMs(),
+  };
+}
+
+export function tombstoneCustomFood(food: CustomFood): CustomFood {
+  const now = nowMs();
+  return { ...food, deletedAtMs: now, updatedAtMs: now };
 }
 
 // ── Recipes ───────────────────────────────────────────────────────────────────

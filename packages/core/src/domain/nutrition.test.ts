@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   addDiaryItem,
+  createCustomFood,
   createDiaryDay,
   createFavoriteFood,
   createRecipe,
   dayTotals,
+  loggedItemPer100g,
+  updateCustomFood,
+  tombstoneCustomFood,
+  ZERO_MACROS,
   favoriteFoodId,
   kcalFromMacros,
   createMealTemplate,
@@ -86,6 +91,17 @@ describe("diary day", () => {
     day = setDiaryItems(day, reordered);
     expect(day.items).toEqual(reordered);
     expect(dayTotals(day).kcal).toBe(120);
+  });
+
+  it("recovers the per-100g basis of a logged item, null for quick-adds", () => {
+    let day = createDiaryDay("2026-01-15");
+    day = addDiaryItem(day, loggedItemFromFood(chicken, "lunch", 200));
+    const basis = loggedItemPer100g(day.items[0]!);
+    expect(basis?.kcal).toBeCloseTo(120, 5);
+    expect(basis?.proteinG).toBeCloseTo(22.5, 5);
+
+    day = addDiaryItem(day, { meal: "snack", name: "Coffee", grams: 0, computed: { kcal: 5, proteinG: 0, carbsG: 1, fatG: 0 } });
+    expect(loggedItemPer100g(day.items[1]!)).toBeNull();
   });
 
   it("stamps a fresh updatedAtMs on mutation", () => {
@@ -178,6 +194,32 @@ describe("meal templates", () => {
     const t = createMealTemplate("   ");
     expect(t.name).toBe("Meal");
     expect(t.items).toEqual([]);
+  });
+});
+
+describe("custom foods", () => {
+  it("edits in place — keeps id/createdAtMs, bumps updatedAtMs, clears brand with null", () => {
+    const orig = createCustomFood({
+      name: "Protein shake",
+      brand: "Old",
+      per100g: { kcal: 100, proteinG: 20, carbsG: 3, fatG: 1 },
+    });
+    const edited = updateCustomFood(orig, {
+      name: "Protein shake v2",
+      brand: null,
+      per100g: { kcal: 110, proteinG: 22, carbsG: 3, fatG: 1 },
+    });
+    expect(edited.food.id).toBe(orig.food.id);
+    expect(edited.createdAtMs).toBe(orig.createdAtMs);
+    expect(edited.updatedAtMs).toBeGreaterThanOrEqual(orig.updatedAtMs);
+    expect(edited.food.name).toBe("Protein shake v2");
+    expect(edited.food.brand).toBeUndefined();
+    expect(edited.food.per100g.kcal).toBe(110);
+  });
+
+  it("tombstones a custom food", () => {
+    const t = tombstoneCustomFood(createCustomFood({ name: "x", per100g: ZERO_MACROS }));
+    expect(t.deletedAtMs).toBeTypeOf("number");
   });
 });
 
