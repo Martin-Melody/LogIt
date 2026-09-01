@@ -39,16 +39,31 @@ function writeAll(packs: StoredPacks): void {
 
 function artifactUrl(manifest: PluginManifest): string | null {
   const d = manifest.distribution;
-  if (d.origin === "url" || d.origin === "activitypub") return d.bundleUrl ?? null;
-  if (d.origin === "manual") return d.bundleUrl ?? null;
+  if (d.origin === "url" || d.origin === "activitypub" || d.origin === "manual") {
+    return d.bundleUrl ?? null;
+  }
   return null;
 }
 
 /**
- * Fetch, verify, parse, and store an exercise pack. Throws (leaving nothing
- * stored) if the artifact is missing, fails its integrity check, or is invalid.
+ * Verify, parse, and store an exercise pack. For `inline` packs the data is
+ * already in the manifest; otherwise the data file is fetched and, if the
+ * manifest carries an `integrity` hash, checked against it. Throws (leaving
+ * nothing stored) on any failure.
  */
 export async function fetchAndStoreExercisePack(manifest: PluginManifest): Promise<ExercisePack> {
+  const pack =
+    manifest.distribution.origin === "inline"
+      ? parseExercisePack(manifest.distribution.data, manifest.id)
+      : await downloadAndParsePack(manifest);
+
+  const all = readAll();
+  all[manifest.id] = pack;
+  writeAll(all);
+  return pack;
+}
+
+async function downloadAndParsePack(manifest: PluginManifest): Promise<ExercisePack> {
   const url = artifactUrl(manifest);
   if (!url) {
     throw new Error("This exercise pack has no data file to install.");
@@ -74,12 +89,7 @@ export async function fetchAndStoreExercisePack(manifest: PluginManifest): Promi
     throw new Error("Pack data file is not valid JSON.");
   }
 
-  const pack = parseExercisePack(json, manifest.id);
-
-  const all = readAll();
-  all[manifest.id] = pack;
-  writeAll(all);
-  return pack;
+  return parseExercisePack(json, manifest.id);
 }
 
 export function removeStoredPack(pluginId: string): void {

@@ -123,6 +123,8 @@ function isPluginDistribution(v: unknown): v is PluginDistribution {
       return isString(record.manifestUrl);
     case "activitypub":
       return isString(record.actorUrl);
+    case "inline":
+      return record.data !== undefined && record.data !== null;
     default:
       return false;
   }
@@ -211,6 +213,12 @@ export function normalizeImportedManifest(
   manifest: PluginManifest,
   source: PluginImportSource,
 ): PluginManifest {
+  // A self-contained inline pack carries its own data — never rewrite its
+  // distribution, no matter how it was imported.
+  if (manifest.distribution.origin === "inline") {
+    return manifest;
+  }
+
   if (source.kind === "url") {
     return {
       ...manifest,
@@ -348,5 +356,7 @@ export function describeInstalledPlugin(plugin: InstalledPlugin): string {
       return "Imported from URL";
     case "activitypub":
       return "Imported from fediverse";
+    case "inline":
+      return "Imported from file";
   }
 }

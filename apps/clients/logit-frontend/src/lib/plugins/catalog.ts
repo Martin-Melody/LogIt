@@ -41,6 +41,8 @@ function saveInstalled(installed: InstalledPlugin[]): void {
 
 function validateInstallableManifest(manifest: PluginManifest): void {
   if (manifest.distribution.origin === "builtin") return;
+  // Inline packs carry their data in the manifest — no artifact URL needed.
+  if (manifest.distribution.origin === "inline") return;
 
   if (BUNDLED_BUNDLE_FAMILIES.has(manifest.family) && !manifest.distribution.bundleUrl) {
     throw new Error(
