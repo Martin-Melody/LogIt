@@ -111,6 +111,26 @@ real trend, and log food quickly — entirely offline, syncing across devices on
       dialog.
 - [x] Nutrition home widget — `TodaysNutritionWidget` + `WeightTrendWidget` on the mobile home
       screen, auto-enabled once a goal exists (`homeConfig.seedNutritionWidgets`).
+- [x] Edit a logged diary entry — tap a food name on the Today screen → `/nutrition/entry/
+      [date]/[item]`: change amount / serving / meal, macro ring breakdown, save or delete.
+      Basis is the live source food when still in the library, else recovered from the
+      logged snapshot (`loggedItemPer100g`); quick-adds edit their absolute macros.
+- [x] Edit a custom food in place — `updateCustomFood()` keeps the food's id so diary links
+      survive; pencil on `/nutrition/foods` opens the prefilled form. Already-logged entries
+      keep their snapshotted values.
+- [x] Standalone food browsing — the "Foods" link in the Nutrition header opens `/nutrition/log`
+      itself in **browse mode** (no `meal` param): same search / Recent / Favourites / Meals
+      surface as logging, plus an "Adding to" meal picker and a "Manage" link. Adding a food
+      stays on the screen instead of returning to the diary.
+- [x] "Custom" tab on the log screen — browse your custom foods without searching (alongside
+      Recent / Favourites / Meals). `/nutrition/foods` is now the **management** screen only
+      (custom foods add/edit/delete, recipes, meal-template rename/delete), reachable via
+      "Manage" / "Add / edit".
+- [x] `/nutrition/food/[id]` — nutrition-facts view for any food (amount picker + macro ring +
+      add-to-meal), used from the manage screen's custom-food list.
+- Recipes vs Meals: kept as distinct concepts (Martin's call). Recipe = ingredients → N
+  servings → one diary line, scales, has an editor. Meal = saved set of foods → separate
+  editable diary lines, made by bookmarking a day's meal.
 - [x] Replace remaining native `<input type="date">` / `<select>` with shadcn — done for the
       mobile nutrition screens in the QoL pass (goal wizard `DateField` + `Select`, log serving
       `Select`, weight-log `DateField`). logit-web nutrition keeps native date/select (no

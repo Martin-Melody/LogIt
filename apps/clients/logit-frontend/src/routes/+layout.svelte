@@ -2,7 +2,6 @@
   import "./layout.css";
   import favicon from "$lib/assets/favicon.png";
   import BottomNav from "$lib/components/navigation/BottomNav/BottomNav.svelte";
-  import TopBar from "$lib/components/ui/TopBar/TopBar.svelte";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Toaster } from "$lib/components/ui/sonner/index";
   import { onMount } from "svelte";
@@ -74,11 +73,7 @@
     {@render children()}
   {:else}
     <div class="flex h-screen flex-col bg-background text-foreground">
-      <header>
-        <TopBar />
-      </header>
-
-      <main class="flex-1 overflow-y-auto overscroll-contain">
+      <main class="flex-1 overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)]">
         {@render children()}
       </main>
 

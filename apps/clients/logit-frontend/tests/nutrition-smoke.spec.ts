@@ -476,3 +476,134 @@ test("favourites tab lists pinned foods and logs one in a tap", async ({ page })
   await page.waitForURL(/\/nutrition$/);
   await expect(page.getByText("Oatly Barista")).toBeVisible();
 });
+
+test("tapping a diary item opens its detail page and editing the amount rescales it", async ({
+  page,
+}) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await page.addInitScript(
+    ({ iso }) => {
+      localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+      localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
+      localStorage.setItem("logit:had_account", "1");
+      localStorage.setItem(
+        "logit:nutritionDays:v1",
+        JSON.stringify({
+          [`nday_${iso}`]: {
+            id: `nday_${iso}`,
+            dateIso: iso,
+            createdAtMs: 1,
+            updatedAtMs: 2,
+            items: [
+              {
+                id: "nitem_rice",
+                meal: "lunch",
+                name: "Rice, cooked",
+                grams: 200,
+                servingLabel: "200 g",
+                computed: { kcal: 260, proteinG: 5.4, carbsG: 57, fatG: 0.6 },
+              },
+            ],
+          },
+        }),
+      );
+    },
+    { iso: today },
+  );
+
+  await page.goto("/nutrition");
+  await page.getByRole("link", { name: /Rice, cooked/ }).click();
+  await page.waitForURL(/\/nutrition\/entry\//);
+  await expect(page.getByRole("heading", { name: "Rice, cooked" })).toBeVisible();
+  await expect(page.getByText("260 kcal", { exact: false })).toBeVisible(); // ring centre
+
+  const amount = page.getByLabel("Amount");
+  await amount.fill("250");
+  await page.screenshot({ path: `${SHOTS}/16-edit-entry.png`, fullPage: true });
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.waitForURL(/\/nutrition$/);
+
+  // 200 g → 250 g rescales 260 kcal → 325
+  const row = page.getByRole("listitem").filter({ hasText: "Rice, cooked" });
+  await expect(row).toContainText("250 g");
+  await expect(row).toContainText("325");
+});
+
+test("the Foods link opens the log screen in browse mode with a Custom tab", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
+    localStorage.setItem("logit:had_account", "1");
+    localStorage.setItem(
+      "logit:customFoods:v1",
+      JSON.stringify({
+        food_skyr: {
+          food: {
+            id: "food_skyr",
+            source: "custom",
+            name: "Skyr, plain",
+            per100g: { kcal: 63, proteinG: 11, carbsG: 4, fatG: 0.2 },
+            servings: [{ id: "g", label: "100 g", grams: 100 }],
+          },
+          createdAtMs: 1,
+          updatedAtMs: 2,
+        },
+      }),
+    );
+  });
+
+  await page.goto("/nutrition");
+  await page.getByRole("link", { name: "Foods" }).click();
+  await page.waitForURL(/\/nutrition\/log$/);
+  await expect(page.getByRole("heading", { name: "Foods" })).toBeVisible();
+  await expect(page.getByText("Adding to")).toBeVisible();
+
+  // Custom tab lists the seeded custom food; tapping it opens the portion panel
+  await page.getByRole("tab", { name: "Custom" }).click();
+  await page.getByRole("button", { name: /Skyr, plain/ }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  // browse mode stays on the log screen after adding
+  await expect(page).toHaveURL(/\/nutrition\/log$/);
+
+  await page.goto("/nutrition");
+  await expect(page.getByText("Skyr, plain")).toBeVisible();
+});
+
+test("a custom food can be edited in place, keeping its id", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
+    localStorage.setItem("logit:had_account", "1");
+    localStorage.setItem(
+      "logit:customFoods:v1",
+      JSON.stringify({
+        food_shake: {
+          food: {
+            id: "food_shake",
+            source: "custom",
+            name: "Protein shake",
+            per100g: { kcal: 100, proteinG: 20, carbsG: 3, fatG: 1 },
+            servings: [{ id: "g", label: "100 g", grams: 100 }],
+          },
+          createdAtMs: 1,
+          updatedAtMs: 2,
+        },
+      }),
+    );
+  });
+
+  await page.goto("/nutrition/foods");
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByText("Edit custom food")).toBeVisible();
+  await page.getByPlaceholder("Name").fill("Protein shake v2");
+  await page.getByPlaceholder("kcal").fill("110");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Protein shake v2")).toBeVisible();
+  await expect(page.getByText("110/100g")).toBeVisible();
+
+  const stored = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("logit:customFoods:v1") ?? "{}"),
+  );
+  expect(Object.keys(stored)).toEqual(["food_shake"]);
+  expect(stored.food_shake.food.name).toBe("Protein shake v2");
+});

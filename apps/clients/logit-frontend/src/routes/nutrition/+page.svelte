@@ -11,6 +11,7 @@
     Trash2,
     UtensilsCrossed,
     Camera,
+    Carrot,
   } from "lucide-svelte";
   import { GripVertical, BookmarkPlus, CopyPlus } from "lucide-svelte";
   import { dragHandleZone, dragHandle } from "svelte-dnd-action";
@@ -237,17 +238,23 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/")}>
+    <button type="button" class="h-8 w-8 -ml-1.5 flex items-center justify-center" onclick={() => back("/")}>
       <ArrowLeft class="h-4 w-4" />
     </button>
     <h1 class="text-sm font-semibold">Nutrition</h1>
-    <a href="/nutrition/insights" class="ml-auto h-8 px-2 flex items-center gap-1 text-xs text-muted-foreground">
+  </div>
+
+  <nav class="flex items-center gap-1 px-2 py-1 border-b border-border text-xs text-muted-foreground">
+    <a href="/nutrition/log" class="h-8 px-2 flex items-center gap-1">
+      <Carrot class="h-4 w-4" /> Foods
+    </a>
+    <a href="/nutrition/insights" class="h-8 px-2 flex items-center gap-1">
       <ChartNoAxesColumn class="h-4 w-4" /> Insights
     </a>
-    <a href="/nutrition/goal" class="h-8 px-2 flex items-center gap-1 text-xs text-muted-foreground">
+    <a href="/nutrition/goal" class="h-8 px-2 flex items-center gap-1">
       <Target class="h-4 w-4" /> Goal
     </a>
-  </div>
+  </nav>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>{/if}
 
@@ -407,10 +414,10 @@
               {#if it.photoDataUrl}
                 <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded object-cover shrink-0" />
               {/if}
-              <span class="flex-1 truncate">
+              <a href="/nutrition/entry/{dateIso}/{it.id}" class="flex-1 truncate">
                 {it.name}
                 {#if it.servingLabel}<span class="text-muted-foreground"> · {it.servingLabel}</span>{/if}
-              </span>
+              </a>
               <span class="tabular-nums text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
               <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void addPhoto(it.id)} aria-label="Add photo">
                 <Camera class="h-3.5 w-3.5" />

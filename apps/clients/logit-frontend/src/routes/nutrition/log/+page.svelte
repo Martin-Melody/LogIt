@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/stores";
-  import { ArrowLeft, Search, Barcode, Plus, Star, History, UtensilsCrossed, ScanText } from "lucide-svelte";
+  import { ArrowLeft, Search, Barcode, Plus, Star, ScanText } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Tabs from "$lib/components/ui/tabs";
@@ -25,9 +25,11 @@
     scaleMacros,
     roundMacros,
     localDateIso,
+    MEAL_SLOTS,
     MEASURE_UNITS,
     isMeasureUnit,
     unitToGrams,
+    type CustomFood,
     type FavoriteFood,
     type FoodRef,
     type MealSlot,
@@ -38,14 +40,26 @@
   import { pushNutritionDay, pushFavorite, pushCustomFood } from "$lib/sync/syncService";
   import { fmtKcal } from "$lib/features/nutrition/nutrition";
 
-  const meal = ($page.url.searchParams.get("meal") ?? "breakfast") as MealSlot;
+  // No `meal` param → "browse" mode: search/inspect foods without committing to a meal yet
+  // (reached from the "Foods" link). The meal to add to is then chosen with a picker.
+  const mealParam = $page.url.searchParams.get("meal");
+  const browse = mealParam === null;
+  let meal = $state<MealSlot>((mealParam as MealSlot) ?? "breakfast");
   const dateIso = $page.url.searchParams.get("date") ?? localDateIso();
 
+  const mealLabels: Record<MealSlot, string> = {
+    breakfast: "Breakfast",
+    lunch: "Lunch",
+    dinner: "Dinner",
+    snack: "Snacks",
+  };
+
   const ui = $state({ query: "", searching: false, filter: "all" as "all" | "custom" | "recipes" });
-  let tab = $state<"recent" | "favorites" | "meals">("recent");
+  let tab = $state<"recent" | "favorites" | "custom" | "meals">("recent");
   let results = $state<FoodRef[]>([]);
   let recents = $state<RecentFood[]>([]);
   let favorites = $state<FavoriteFood[]>([]);
+  let customFoods = $state<CustomFood[]>([]);
   let mealTemplates = $state<MealTemplate[]>([]);
   let selected = $state<FoodRef | null>(null);
   // portionId is a raw unit ("g" | "ml" | "oz") or a named serving id from the food;
@@ -109,11 +123,29 @@
   onMount(() => {
     void loadRecents();
     void loadFavorites();
+    void loadCustomFoods();
     void loadTemplates();
   });
 
   async function loadTemplates() {
     mealTemplates = await getNutritionRepo().listMealTemplates();
+  }
+
+  async function loadCustomFoods() {
+    customFoods = (await getNutritionRepo().listCustomFoods()).filter((c) => !c.deletedAtMs);
+  }
+
+  /** After logging: in browse mode stay put (keep adding); otherwise return to the diary. */
+  function afterAdd() {
+    if (browse) {
+      toast(`Added to ${mealLabels[meal]}`);
+      selected = null;
+      ui.query = "";
+      results = [];
+      void loadRecents();
+    } else {
+      back("/nutrition");
+    }
   }
 
   async function logTemplate(t: MealTemplate) {
@@ -122,7 +154,7 @@
     for (const item of mealTemplateToItems(t, meal)) day = addDiaryItem(day, item);
     await repo.saveDay(day);
     pushNutritionDay(day);
-    back(`/nutrition`);
+    afterAdd();
   }
 
   async function loadRecents() {
@@ -323,7 +355,7 @@
     const next = addDiaryItem(existing, loggedItemFromFood(selected, meal, grams, portionLabel()));
     await repo.saveDay(next);
     pushNutritionDay(next);
-    back(`/nutrition`);
+    afterAdd();
   }
 
   /** One-tap re-log of a recent food, same portion as last time. */
@@ -333,7 +365,7 @@
     const next = addDiaryItem(existing, loggedItemFromRecent(r, meal));
     await repo.saveDay(next);
     pushNutritionDay(next);
-    back(`/nutrition`);
+    afterAdd();
   }
 
   async function toggleFavorite(food: FoodRef) {
@@ -374,7 +406,7 @@
     });
     await repo.saveDay(next);
     pushNutritionDay(next);
-    back(`/nutrition`);
+    afterAdd();
   }
 
   function relDay(iso: string): string {
@@ -399,8 +431,27 @@
     <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
       <ArrowLeft class="h-4 w-4" />
     </button>
-    <h1 class="text-sm font-semibold">Add to <span class="capitalize">{meal}</span></h1>
+    <h1 class="text-sm font-semibold">
+      {#if browse}Foods{:else}Add to <span class="capitalize">{meal}</span>{/if}
+    </h1>
+    {#if browse}
+      <a href="/nutrition/foods" class="ml-auto text-xs text-muted-foreground">Manage</a>
+    {/if}
   </div>
+
+  {#if browse}
+    <div class="flex items-center justify-between px-3 py-2 border-b border-border">
+      <span class="text-xs text-muted-foreground">Adding to</span>
+      <Select.Root type="single" bind:value={meal}>
+        <Select.Trigger class="w-36">{mealLabels[meal]}</Select.Trigger>
+        <Select.Content>
+          {#each MEAL_SLOTS as m (m)}
+            <Select.Item value={m} label={mealLabels[m]} />
+          {/each}
+        </Select.Content>
+      </Select.Root>
+    </div>
+  {/if}
 
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
     <Search class="h-4 w-4 text-muted-foreground shrink-0" />
@@ -579,9 +630,10 @@
   {:else}
     <Tabs.Root bind:value={tab} class="gap-0">
       <Tabs.List class="mx-3 my-2 w-auto">
-        <Tabs.Trigger value="recent"><History class="h-3.5 w-3.5" /> Recent</Tabs.Trigger>
-        <Tabs.Trigger value="favorites"><Star class="h-3.5 w-3.5" /> Favourites</Tabs.Trigger>
-        <Tabs.Trigger value="meals"><UtensilsCrossed class="h-3.5 w-3.5" /> Meals</Tabs.Trigger>
+        <Tabs.Trigger value="recent">Recent</Tabs.Trigger>
+        <Tabs.Trigger value="favorites">Favourites</Tabs.Trigger>
+        <Tabs.Trigger value="custom">Custom</Tabs.Trigger>
+        <Tabs.Trigger value="meals">Meals</Tabs.Trigger>
       </Tabs.List>
 
       <Tabs.Content value="recent">
@@ -628,6 +680,35 @@
                 </button>
                 <button type="button" class="px-3 py-2 shrink-0" aria-label="Remove favourite" onclick={() => void toggleFavorite(fav.food)}>
                   <Star class="h-4 w-4 fill-amber-400 text-amber-400" />
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </Tabs.Content>
+
+      <Tabs.Content value="custom">
+        <div class="flex items-center justify-between px-3 py-1.5 text-xs">
+          <span class="text-muted-foreground">Your custom foods</span>
+          <a href="/nutrition/foods" class="text-primary">Add / edit</a>
+        </div>
+        {#if customFoods.length === 0}
+          <p class="px-3 py-6 text-sm text-muted-foreground text-center">
+            No custom foods yet. Add one from Manage, or scan a label.
+          </p>
+        {:else}
+          <ul class="divide-y divide-border">
+            {#each customFoods as c (c.food.id)}
+              <li class="flex items-center">
+                <button type="button" class="flex-1 min-w-0 text-left px-3 py-2 flex items-center gap-2" onclick={() => select(c.food)}>
+                  <span class="flex-1 min-w-0">
+                    <span class="block text-sm truncate">{c.food.name}</span>
+                    {#if c.food.brand}<span class="block text-[11px] text-muted-foreground truncate">{c.food.brand}</span>{/if}
+                  </span>
+                  <span class="text-xs text-muted-foreground tabular-nums shrink-0">{fmtKcal(c.food.per100g.kcal)}/100g</span>
+                </button>
+                <button type="button" class="px-3 py-2 shrink-0" aria-label="Toggle favourite" onclick={() => void toggleFavorite(c.food)}>
+                  <Star class="h-4 w-4 {favIds.has(c.food.id) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50'}" />
                 </button>
               </li>
             {/each}
