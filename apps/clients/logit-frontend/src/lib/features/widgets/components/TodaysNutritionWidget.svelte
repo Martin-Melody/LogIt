@@ -10,6 +10,7 @@
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { profile } from "$lib/stores/profile.store";
+  import { onForeground } from "$lib/lifecycle";
   import MacroBars from "$lib/features/nutrition/MacroBars.svelte";
   import { fmtKcal, totalsFor, type NutritionState } from "$lib/features/nutrition/nutrition";
 
@@ -17,7 +18,9 @@
   let nut = $state<NutritionState | null>(null);
   let day = $state<DiaryDay | null>(null);
 
-  const dateIso = localDateIso();
+  // Recomputed on every load, not once at mount — otherwise the widget keeps showing
+  // yesterday after midnight while the home screen stays mounted in the background.
+  let dateIso = $state(localDateIso());
   const consumed = $derived(totalsFor(day));
   const hasTarget = $derived(!!nut?.goal || !!nut?.coachPlan);
   const kcalLeft = $derived(
@@ -34,7 +37,8 @@
     };
   });
 
-  onMount(async () => {
+  async function load() {
+    dateIso = localDateIso();
     try {
       const fallbackKg =
         $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
@@ -49,6 +53,13 @@
     } finally {
       loading = false;
     }
+  }
+
+  onMount(() => {
+    void load();
+    // Re-pull when the app returns to the foreground so the day rolls over and any
+    // meals logged elsewhere show up without navigating away and back.
+    return onForeground(() => void load());
   });
 </script>
 

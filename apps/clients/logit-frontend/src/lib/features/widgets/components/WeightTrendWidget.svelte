@@ -7,6 +7,7 @@
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { profile } from "$lib/stores/profile.store";
+  import { onForeground } from "$lib/lifecycle";
   import WeightTrendChart from "$lib/features/nutrition/WeightTrendChart.svelte";
   import { fmtWeight, type NutritionState, type WeightUnit } from "$lib/features/nutrition/nutrition";
 
@@ -21,7 +22,7 @@
     return `${r > 0 ? "+" : ""}${r.toFixed(2)} ${unit}/wk`;
   });
 
-  onMount(async () => {
+  async function load() {
     try {
       const fallbackKg =
         $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
@@ -31,6 +32,11 @@
     } finally {
       loading = false;
     }
+  }
+
+  onMount(() => {
+    void load();
+    return onForeground(() => void load());
   });
 </script>
 

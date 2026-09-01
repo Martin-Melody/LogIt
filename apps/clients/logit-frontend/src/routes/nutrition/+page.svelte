@@ -35,6 +35,7 @@
   import { getNutritionRepo, getMessagesRepo } from "$lib/data/repoProvider";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
+  import { onForeground } from "$lib/lifecycle";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { pushNutritionDay, pushMealTemplate } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
@@ -64,10 +65,15 @@
     snack: "Snacks",
   };
 
+  // Stays true while the user is looking at "today" — so a midnight rollover while the
+  // app is backgrounded advances the view, but we don't yank them off a day they picked.
+  let followingToday = $state(true);
+
   function shiftDate(deltaDays: number) {
     const d = new Date(`${dateIso}T12:00:00`);
     d.setDate(d.getDate() + deltaDays);
     dateIso = localDateIso(d);
+    followingToday = dateIso === localDateIso();
     void loadDay();
   }
 
@@ -220,7 +226,13 @@
     return { label: nut.targets.sourceLabel, variant: prominent ? ("secondary" as const) : ("outline" as const) };
   });
 
-  onMount(() => void load());
+  onMount(() => {
+    void load();
+    return onForeground(() => {
+      if (followingToday && dateIso !== localDateIso()) dateIso = localDateIso();
+      void load();
+    });
+  });
 </script>
 
 <div class="flex flex-col pb-24">
