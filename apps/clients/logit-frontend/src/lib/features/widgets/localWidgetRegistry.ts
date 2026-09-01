@@ -6,9 +6,10 @@ import TodaysPlanWidget from "./components/TodaysPlanWidget.svelte";
 import LastSessionWidget from "./components/LastSessionWidget.svelte";
 import ProgressionWidget from "./components/ProgressionWidget.svelte";
 import ActivityTrackerWidget from "./components/ActivityTrackerWidget.svelte";
-import MuscleMapWidget from "./components/MuscleMapWidget.svelte";
 import TodaysNutritionWidget from "./components/TodaysNutritionWidget.svelte";
 import WeightTrendWidget from "./components/WeightTrendWidget.svelte";
+import WidgetCard from "./render/WidgetCard.svelte";
+import { muscleFocusWidget } from "@logit/core/plugins/builtinWidgets/muscleFocus";
 
 const BUNDLED: WidgetDefinition[] = [
   {
@@ -52,10 +53,13 @@ const BUNDLED: WidgetDefinition[] = [
     defaultOrder: 4,
   },
   {
+    // First built-in on the WidgetView model — a sandboxed compute() returning
+    // a declarative view the host renders. See @logit/core/plugins/widgetView.
     id: "muscle-map",
     label: "Muscle Focus",
     description: "Body map showing which muscles you've trained this week.",
-    component: MuscleMapWidget,
+    component: WidgetCard,
+    props: { plugin: muscleFocusWidget },
     defaultEnabled: true,
     defaultOrder: 5,
   },

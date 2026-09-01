@@ -2,13 +2,23 @@
 
 Status: design doc. Supersedes the original phased roadmap on `feat/plugin-foundation-ui`.
 
-**Build progress**: Phases 1–4 merged to `main` — trust model (Restricted Mode + `integrity`),
-exercise packs end to end (incl. "export as pack" via the `inline` distribution origin),
-multi-source static registry, and the QuickJS-WASM interpreter sandbox with
-`progression-algorithm` routed through it. **Phase 5** (branch `feat/plugin-sandbox-phase5`):
-`analytics`, `nutrition-algorithm`, `nutrition-analytics` migrated to the same sandbox — all
-pure-function families now fetch → hash-verify → store their bundle at install and run in a
-fresh VM. `widget` is the only family left on the legacy loader (Phase 6 — Decision 4).
+**Build progress** (merged to `main`):
+
+- **Trust model** — Restricted Mode (community code off by default), `integrity` hashes.
+- **Content packs** — `exercise-pack` end to end, "export as pack" via the `inline`
+  distribution origin, `.logit-pack.json` file import.
+- **Registry** — multi-source, per-source timeout + soft deadline + cache, bundled-first.
+- **Sandbox** — QuickJS-WASM (embedded, lazy-loaded). All four pure-function families
+  (`progression-algorithm`, `analytics`, `nutrition-algorithm`, `nutrition-analytics`)
+  fetch → hash-verify → store their bundle at install and run `suggest()`/`compute()`/
+  `computeTargets()` in a fresh VM.
+- **Publishing v0** — `packages/plugin-tools` registry linter + `registry-template/` +
+  `docs/publishing-plugins.md`.
+
+**In progress** (branch `feat/plugin-widgets`) — widgets on the compute/view model
+(Decision 4). Contract in `@logit/core/plugins/widgetView.ts`; `Muscle Focus` is the
+first built-in ported (pilot). Remaining: port the other 7 built-ins, wire community
+widgets through the sandbox, delete `renderHtml()` + the widget legacy loader.
 
 ## Goal
 

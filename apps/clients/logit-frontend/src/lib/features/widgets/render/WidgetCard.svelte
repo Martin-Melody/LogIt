@@ -1,0 +1,45 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import * as Card from "$lib/components/ui/card";
+  import type { WidgetPlugin, WidgetView } from "@logit/core/plugins/widgetView";
+  import { onForeground } from "$lib/lifecycle";
+  import { gatherWidgetInput } from "./widgetInput";
+  import WidgetViewRenderer from "./WidgetViewRenderer.svelte";
+
+  /**
+   * Hosts a WidgetView widget on the home screen: gathers the data it needs,
+   * runs its compute() (a plain call for built-ins, a sandbox call for
+   * community widgets), and renders the result.
+   */
+  const { plugin }: { plugin: WidgetPlugin } = $props();
+
+  let view = $state<WidgetView | null>(null);
+  let error = $state(false);
+
+  async function load() {
+    try {
+      const input = await gatherWidgetInput(plugin.needs);
+      view = await plugin.compute(input);
+      error = false;
+    } catch (e) {
+      console.warn("[widget]", plugin.id, "failed", e);
+      error = true;
+    }
+  }
+
+  onMount(() => {
+    void load();
+    return onForeground(() => void load());
+  });
+</script>
+
+{#if view}
+  <WidgetViewRenderer {view} />
+{:else if error}
+  <Card.Root class="w-full">
+    <Card.Header>
+      <Card.Title>{plugin.name}</Card.Title>
+      <Card.Description>This widget couldn't load.</Card.Description>
+    </Card.Header>
+  </Card.Root>
+{/if}
