@@ -199,6 +199,52 @@ test("home screen auto-adds the nutrition widgets once a goal exists", async ({ 
   await expect(page.getByText("Weight Trend", { exact: true })).toBeVisible();
 });
 
+test("Today's Nutrition widget rolls over to the new day when the app returns to the foreground", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-06-15T23:55:00"));
+  await page.addInitScript(() => {
+    localStorage.setItem("logit:home-config:nutrition-seeded:v1", "1");
+    localStorage.setItem(
+      "logit:home-config:v1",
+      JSON.stringify({ slots: [{ id: "todays-nutrition", enabled: true, orderIndex: 0 }] }),
+    );
+    localStorage.setItem(
+      "logit:nutritionGoal:v1",
+      JSON.stringify({
+        sex: "male", birthDateIso: "1994-06-15", heightCm: 180, activityLevel: "moderate",
+        goalType: "maintain", targetRateKgPerWeek: 0, proteinGPerKg: 2, fatPct: 0.3,
+        adaptiveEnabled: false, updatedAtMs: 1,
+      }),
+    );
+    localStorage.setItem(
+      "logit:nutritionDays:v1",
+      JSON.stringify({
+        "nday_2026-06-15": {
+          id: "nday_2026-06-15", dateIso: "2026-06-15", createdAtMs: 1, updatedAtMs: 1,
+          items: [{ id: "x", meal: "lunch", name: "Big Lunch", grams: 0, computed: { kcal: 1800, proteinG: 100, carbsG: 150, fatG: 60 } }],
+        },
+      }),
+    );
+  });
+
+  await page.goto("/");
+  const widget = page
+    .locator("div", { has: page.getByText("Today's Nutrition", { exact: true }) })
+    .first();
+  await expect(widget.getByText(/kcal (left|over)/)).toBeVisible({ timeout: 20000 });
+  const kcalLeft = (t: string) => Number((t.match(/([\d,]+)\s*kcal/)?.[1] ?? "").replace(/,/g, ""));
+  const before = kcalLeft((await widget.getByText(/kcal (left|over)/).textContent()) ?? "");
+  expect(before).toBeGreaterThan(0); // 1800 eaten against a ~2800 target
+
+  // Midnight passes while backgrounded, then the app comes back — no navigation, no reload.
+  await page.clock.setFixedTime(new Date("2026-06-16T00:10:00"));
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+
+  // 2026-06-16 has nothing logged → the whole target is available again.
+  await expect
+    .poll(async () => kcalLeft((await widget.getByText(/kcal (left|over)/).textContent()) ?? ""))
+    .toBeGreaterThan(before + 1000);
+});
+
 test("copy a previous day pulls yesterday's items into today", async ({ page }) => {
   // beforeEach seeds 26 days of history (each with a "Seeded day" item in Dinner),
   // so yesterday already has something to copy.
