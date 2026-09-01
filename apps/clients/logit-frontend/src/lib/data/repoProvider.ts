@@ -48,6 +48,7 @@ import { createSqliteProgressionRepo } from "$lib/data/progressionRepo.sqlite";
 import { createSqliteWorkoutRepo } from "./workouts/workoutRepo.sqlite";
 import { createSqliteSplitRepo } from "./splts/splitRepo.sqlite";
 import { pluginRuntime } from "$lib/plugins";
+import { withExercisePacks } from "$lib/plugins/exercisePackRepo";
 import { loadActiveOwnerId, getActiveOwnerId, setActiveOwnerId } from "$lib/data/activeOwner";
 import {
   createLocalAccount,
@@ -139,7 +140,7 @@ export async function initRepos(): Promise<void> {
     }
 
     workoutRepo = createSqliteWorkoutRepo();
-    exerciseRepo = createSqliteExerciseRepo();
+    exerciseRepo = withExercisePacks(createSqliteExerciseRepo());
     splitRepo = createSqliteSplitRepo();
     coachProgramRepo = createSqliteCoachProgramRepo();
     authoredProgramRepo = createSqliteAuthoredProgramRepo();
@@ -167,7 +168,7 @@ export async function initRepos(): Promise<void> {
   loadActiveOwnerId();
 
   workoutRepo = createLocalWorkoutRepo();
-  exerciseRepo = createLocalExerciseRepo();
+  exerciseRepo = withExercisePacks(createLocalExerciseRepo());
   splitRepo = createLocalSplitRepo();
   coachProgramRepo = createLocalCoachProgramRepo();
   authoredProgramRepo = createLocalAuthoredProgramRepo();

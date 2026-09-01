@@ -105,7 +105,9 @@ function isPluginFamily(v: unknown): v is PluginFamily {
     v === "widget" ||
     v === "progression-algorithm" ||
     v === "exercise-pack" ||
-    v === "analytics"
+    v === "analytics" ||
+    v === "nutrition-algorithm" ||
+    v === "nutrition-analytics"
   );
 }
 
@@ -164,12 +166,26 @@ function isAnalyticsCapability(v: unknown): v is AnalyticsPluginCapability {
   return record.family === "analytics" && isString(record.analyticsId);
 }
 
+function isNutritionAlgorithmCapability(v: unknown): boolean {
+  if (!v || typeof v !== "object") return false;
+  const record = v as Record<string, unknown>;
+  return record.family === "nutrition-algorithm" && isString(record.algorithmId);
+}
+
+function isNutritionAnalyticsCapability(v: unknown): boolean {
+  if (!v || typeof v !== "object") return false;
+  const record = v as Record<string, unknown>;
+  return record.family === "nutrition-analytics" && isString(record.analyticsId);
+}
+
 function isPluginCapability(v: unknown): v is PluginCapability {
   return (
     isWidgetCapability(v) ||
     isProgressionCapability(v) ||
     isExercisePackCapability(v) ||
-    isAnalyticsCapability(v)
+    isAnalyticsCapability(v) ||
+    isNutritionAlgorithmCapability(v) ||
+    isNutritionAnalyticsCapability(v)
   );
 }
 
@@ -182,6 +198,9 @@ export function isPluginManifest(v: unknown): v is PluginManifest {
     isString(record.name) &&
     isString(record.description) &&
     isString(record.version) &&
+    (record.integrity === undefined ||
+      (typeof record.integrity === "string" && record.integrity.startsWith("sha256-"))) &&
+    (record.minAppVersion === undefined || isString(record.minAppVersion)) &&
     isPluginDistribution(record.distribution) &&
     Array.isArray(record.capabilities) &&
     record.capabilities.every(isPluginCapability)

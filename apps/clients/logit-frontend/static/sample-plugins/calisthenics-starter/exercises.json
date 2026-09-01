@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "pluginId": "sample.exercise-pack.calisthenics-starter",
+  "exercises": [
+    { "name": "Push-Up", "primaryMuscles": ["chest"], "secondaryMuscles": ["triceps", "shoulders", "core"], "exerciseType": "bodyweight" },
+    { "name": "Pike Push-Up", "primaryMuscles": ["shoulders"], "secondaryMuscles": ["triceps", "core"], "exerciseType": "bodyweight" },
+    { "name": "Chin-Up", "primaryMuscles": ["biceps", "back"], "secondaryMuscles": ["forearms", "core"], "exerciseType": "bodyweight" },
+    { "name": "Ring Row", "primaryMuscles": ["back"], "secondaryMuscles": ["biceps", "shoulders"], "exerciseType": "bodyweight" },
+    { "name": "Bulgarian Split Squat", "primaryMuscles": ["quads", "glutes"], "secondaryMuscles": ["hamstrings", "core"], "exerciseType": "bodyweight" },
+    { "name": "Pistol Squat", "primaryMuscles": ["quads"], "secondaryMuscles": ["glutes", "hamstrings", "core"], "exerciseType": "bodyweight" },
+    { "name": "Nordic Hamstring Curl", "primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "calves"], "exerciseType": "bodyweight" },
+    { "name": "Glute Bridge", "primaryMuscles": ["glutes"], "secondaryMuscles": ["hamstrings"], "exerciseType": "bodyweight" },
+    { "name": "Hollow Body Hold", "primaryMuscles": ["core"], "secondaryMuscles": [], "exerciseType": "bodyweight" },
+    { "name": "Superman Hold", "primaryMuscles": ["back"], "secondaryMuscles": ["glutes", "hamstrings"], "exerciseType": "bodyweight" },
+    { "name": "Bird Dog", "primaryMuscles": ["core"], "secondaryMuscles": ["glutes", "back"], "exerciseType": "bodyweight" },
+    { "name": "Calf Raise (Single Leg)", "primaryMuscles": ["calves"], "secondaryMuscles": [], "exerciseType": "bodyweight" }
+  ]
+}
