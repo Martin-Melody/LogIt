@@ -1,0 +1,12 @@
+{
+  "name": "logit-plugin-registry",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "node scripts/lint.mjs ."
+  },
+  "devDependencies": {
+    "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
+    "quickjs-emscripten-core": "^0.32.0"
+  }
+}

@@ -307,12 +307,16 @@ Deliverable: a user can build a pack in-app, share the file, and another user ca
 install it with no server involved. Exercises the whole
 manifest/registry/install/offline pipeline with zero sandbox risk.
 
-### Phase 3 — Static registry
+### Phase 3 — Static registry  ✅
 
 - `registry.json` schema + a static deploy on Cloudflare Pages.
 - Default registry URL baked into the client.
 - "Add registry URL" in settings; multi-registry merge in browse.
 - Publishing v0: PR to the registry repo, with a manifest linter in CI.
+  Shipped as `packages/plugin-tools` — `validateRegistry` (manifest shape,
+  integrity hashes, pack parsing, and a real QuickJS load of every code
+  bundle) + a bundled CLI + `registry-template/` (repo scaffold + CI
+  workflow). Author guide: `docs/publishing-plugins.md`.
 
 Deliverable: discovery works for self-host and hosted from the same static file.
 

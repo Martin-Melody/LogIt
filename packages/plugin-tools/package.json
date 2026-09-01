@@ -1,0 +1,27 @@
+{
+  "name": "@logit/plugin-tools",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "logit-plugin-lint": "./dist/lint.mjs"
+  },
+  "scripts": {
+    "build": "esbuild src/bin.ts --bundle --platform=node --format=esm --target=node20 --external:quickjs-emscripten-core --external:@jitl/* --outfile=dist/lint.mjs --banner:js='#!/usr/bin/env node' && cp dist/lint.mjs registry-template/scripts/lint.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logit/core": "*"
+  },
+  "peerDependencies": {
+    "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
+    "quickjs-emscripten-core": "^0.32.0"
+  },
+  "devDependencies": {
+    "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
+    "esbuild": "^0.25.0",
+    "quickjs-emscripten-core": "^0.32.0",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "com.demo.broken",
+  "family": "progression-algorithm",
+  "name": "Broken",
+  "description": "Missing suggest(), has an import, wrong hash.",
+  "version": "1",
+  "integrity": "sha256-deadbeef",
+  "distribution": { "origin": "url", "manifestUrl": "plugins/broken/manifest.json", "bundleUrl": "plugins/broken/bundle.js" },
+  "capabilities": [{ "family": "widget", "algorithmId": "com.demo.WRONG" }]
+}

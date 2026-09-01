@@ -1,0 +1,11 @@
+[
+  {
+    "id": "com.demo.linear",
+    "name": "Linear Demo",
+    "description": "Example progression algorithm — adds a fixed increment each session.",
+    "family": "progression-algorithm",
+    "author": "Demo",
+    "manifestUrl": "plugins/example-progression/manifest.json",
+    "tags": ["example"]
+  }
+]

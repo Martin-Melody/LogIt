@@ -1,0 +1,4 @@
+[
+  { "id": "com.demo.broken", "name": "Broken", "description": "x", "family": "progression-algorithm", "manifestUrl": "plugins/broken/manifest.json" },
+  { "id": "com.demo.broken", "name": "Dup", "description": "x", "family": "progression-algorithm", "manifestUrl": "plugins/missing/manifest.json" }
+]

@@ -1,0 +1,8 @@
+{
+  "formatVersion": 1,
+  "pluginId": "com.demo.starter-pack",
+  "exercises": [
+    { "name": "Zercher Squat", "primaryMuscles": ["quads"], "secondaryMuscles": ["core"] },
+    { "name": "Jefferson Deadlift", "primaryMuscles": ["glutes", "quads"], "secondaryMuscles": [] }
+  ]
+}
