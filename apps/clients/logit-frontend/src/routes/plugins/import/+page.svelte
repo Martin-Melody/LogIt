@@ -24,10 +24,11 @@
     success: null as string | null,
   });
 
-  let mode = $state<ImportMode>("url");
+  let mode = $state<ImportMode>("file");
   let manifestUrl = $state("");
   let actorUrl = $state("");
   let manifestJson = $state("");
+  let fileName = $state("");
   let reviewed = $state<PluginManifest | null>(null);
   let installed = $state<InstalledPlugin[]>([]);
 
@@ -50,14 +51,32 @@
   }
 
   async function onFilePicked(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    // Allow picking the same file again later.
+    input.value = "";
     if (!file) return;
+
+    fileName = file.name;
     ui.error = null;
+    reviewed = null;
+
+    let text: string;
     try {
-      manifestJson = await file.text();
-      await review();
+      text = await file.text();
     } catch {
-      ui.error = "Could not read that file.";
+      ui.error = `Couldn't read "${file.name}".`;
+      return;
+    }
+    if (!text.trim()) {
+      ui.error = `"${file.name}" is empty.`;
+      return;
+    }
+
+    manifestJson = text;
+    await review();
+    if (reviewed) {
+      document.getElementById("review-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
@@ -199,15 +218,23 @@
         </div>
 
         {#if mode === "file"}
-          <div class="flex flex-col gap-1">
-            <label class="text-xs text-muted-foreground" for="pack-file">Pack file (.json)</label>
+          <div class="flex flex-col gap-2">
+            <label
+              for="pack-file"
+              class="flex cursor-pointer items-center justify-center gap-2 rounded border border-dashed border-border bg-background px-3 py-4 text-sm text-muted-foreground hover:bg-muted/40"
+            >
+              <FileJson class="h-4 w-4" />
+              {fileName || "Choose a pack file"}
+            </label>
             <input
               id="pack-file"
               type="file"
-              accept=".json,application/json"
-              class="w-full rounded border bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs"
+              class="sr-only"
               onchange={onFilePicked}
             />
+            {#if ui.reviewing}
+              <p class="text-xs text-muted-foreground">Reading {fileName}…</p>
+            {/if}
             <p class="text-xs text-muted-foreground">
               A <code>.logit-pack.json</code> file exported from the Exercises screen, or any plugin manifest.
             </p>
@@ -250,22 +277,24 @@
           </div>
         {/if}
 
-        <div class="flex flex-wrap gap-2">
-          <Button
-            disabled={
-              ui.reviewing
-              || (mode === "url" ? !manifestUrl.trim() : mode === "activitypub" ? !actorUrl.trim() : !manifestJson.trim())
-            }
-            onclick={() => void review()}
-          >
-            {ui.reviewing ? "Loading…" : "Review"}
-          </Button>
-        </div>
+        {#if mode !== "file"}
+          <div class="flex flex-wrap gap-2">
+            <Button
+              disabled={
+                ui.reviewing
+                || (mode === "url" ? !manifestUrl.trim() : mode === "activitypub" ? !actorUrl.trim() : !manifestJson.trim())
+              }
+              onclick={() => void review()}
+            >
+              {ui.reviewing ? "Loading…" : "Review"}
+            </Button>
+          </div>
+        {/if}
       </Card.Content>
     </Card.Root>
 
     {#if reviewed}
-      <Card.Root class="w-full">
+      <Card.Root class="w-full" id="review-card">
         <Card.Header>
           <Card.Title>{reviewed.name}</Card.Title>
           <Card.Description>{reviewed.description}</Card.Description>
