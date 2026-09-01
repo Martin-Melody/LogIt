@@ -11,6 +11,7 @@ import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnaly
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import { listInstalledPluginManifests } from "./catalog";
+import { isCommunityPluginsEnabled } from "./settings";
 import {
   describePluginBundleContract,
   isPluginAlgorithm,
@@ -135,6 +136,11 @@ function getBundleUrl(manifest: PluginManifest): string | null {
 
 async function loadBundle(url: string): Promise<PluginBundleModule | null> {
   if (!browser) return null;
+
+  // Restricted Mode: never execute a non-builtin bundle unless the user has
+  // explicitly enabled community plugins. This is the hard trust gate — every
+  // community code path (widgets, algorithms, analytics) funnels through here.
+  if (!isCommunityPluginsEnabled()) return null;
 
   const cached = moduleCache.get(url);
   if (cached) return cached;

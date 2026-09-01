@@ -1,13 +1,15 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { ArrowLeft, CheckCircle2, FileJson, Link2, Globe2 } from "lucide-svelte";
+  import { ArrowLeft, CheckCircle2, FileJson, Link2, Globe2, ShieldAlert } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
     getPluginManifest,
     installPlugin,
     listInstalledPluginManifests,
+    pluginSettings,
+    isExecutablePluginFamily,
   } from "$lib/plugins";
   import type { InstalledPlugin, PluginManifest } from "$lib/plugins";
   import { resolvePluginManifest, type PluginImportSource } from "$lib/plugins/discovery";
@@ -34,6 +36,11 @@
     reviewedId
       ? installed.find((plugin) => plugin.manifest.id === reviewedId) ?? null
       : null,
+  );
+  const restrictedModeBlocks = $derived(
+    !!reviewed &&
+      isExecutablePluginFamily(reviewed.family) &&
+      !$pluginSettings.communityPluginsEnabled,
   );
 
   function source(): PluginImportSource {
@@ -67,6 +74,10 @@
     if (!reviewed) return;
     if (alreadyInstalled) {
       ui.success = "This plugin is already installed.";
+      return;
+    }
+    if (restrictedModeBlocks) {
+      ui.error = "Turn on community plugins before installing this.";
       return;
     }
     ui.installing = true;
@@ -246,8 +257,23 @@
             </p>
           {/if}
 
+          {#if restrictedModeBlocks}
+            <div class="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+              <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                This is a {capabilityLabel(reviewed).toLowerCase()} — it runs code
+                in the app. Turn on community plugins on the
+                <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins")}>plugins page</button>
+                to install it.
+              </span>
+            </div>
+          {/if}
+
           <div class="flex gap-2">
-            <Button disabled={ui.installing || !!alreadyInstalled} onclick={() => void install()}>
+            <Button
+              disabled={ui.installing || !!alreadyInstalled || restrictedModeBlocks}
+              onclick={() => void install()}
+            >
               <CheckCircle2 class="mr-1.5 h-3.5 w-3.5" />
               {ui.installing ? "Installing…" : "Install"}
             </Button>
