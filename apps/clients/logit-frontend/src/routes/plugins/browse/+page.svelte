@@ -1,10 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Search } from "lucide-svelte";
+  import { ArrowLeft, Search, ShieldAlert, Plus, X, Server } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
-  import { fetchRegistry, type RegistryEntry } from "$lib/plugins/registry";
+  import {
+    fetchRegistry,
+    registrySources,
+    type RegistryEntry,
+  } from "$lib/plugins/registry";
   import {
     installPluginFromManifest,
     listInstalledPluginManifests,
@@ -12,7 +16,6 @@
     isExecutablePluginFamily,
   } from "$lib/plugins";
   import type { PluginFamily } from "$lib/plugins";
-  import { ShieldAlert } from "lucide-svelte";
   import { resolvePluginManifest } from "$lib/plugins/discovery";
   import { homeConfig } from "$lib/stores/homeConfig.store";
   import type { InstalledPlugin } from "$lib/plugins";
@@ -23,11 +26,16 @@
   });
 
   let entries = $state<RegistryEntry[]>([]);
+  let registryErrors = $state<string[]>([]);
   let installed = $state<InstalledPlugin[]>([]);
   let query = $state("");
   let familyFilter = $state("all");
   let installingIds = $state<Record<string, boolean>>({});
   let installErrors = $state<Record<string, string>>({});
+
+  let showSources = $state(false);
+  let newRegistryUrl = $state("");
+  let sourceError = $state<string | null>(null);
 
   const installedIds = $derived(new Set(installed.map((p) => p.manifest.id)));
 
@@ -65,16 +73,33 @@
     ui.error = null;
     try {
       const [registry, installedList] = await Promise.all([
-        fetchRegistry(),
+        fetchRegistry($registrySources),
         listInstalledPluginManifests(),
       ]);
-      entries = registry;
+      entries = registry.entries;
+      registryErrors = registry.errors;
       installed = installedList;
     } catch (error) {
       ui.error = error instanceof Error ? error.message : "Failed to load registry";
     } finally {
       ui.loading = false;
     }
+  }
+
+  async function addRegistry() {
+    sourceError = null;
+    try {
+      registrySources.add(newRegistryUrl);
+      newRegistryUrl = "";
+      await load();
+    } catch (e) {
+      sourceError = e instanceof Error ? e.message : "Could not add that registry.";
+    }
+  }
+
+  async function removeRegistry(url: string) {
+    registrySources.remove(url);
+    await load();
   }
 
   function blockedByRestrictedMode(family: PluginFamily): boolean {
@@ -122,9 +147,75 @@
       <ArrowLeft class="h-4 w-4" />
     </Button>
     <span class="text-sm font-semibold">Browse plugins</span>
+    <Button
+      variant="ghost"
+      size="sm"
+      class="ml-auto gap-1.5"
+      onclick={() => (showSources = !showSources)}
+    >
+      <Server class="h-3.5 w-3.5" />
+      {$registrySources.length} {$registrySources.length === 1 ? "source" : "sources"}
+    </Button>
   </div>
 
   <div class="flex flex-col gap-3 p-3">
+    {#if showSources}
+      <Card.Root class="w-full">
+        <Card.Header>
+          <Card.Title class="text-base">Registries</Card.Title>
+          <Card.Description>
+            Registries are plain JSON files. Add community or self-hosted ones —
+            the default Logit registry can't be removed.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content class="flex flex-col gap-2">
+          <ul class="flex flex-col gap-1.5">
+            {#each $registrySources as src (src.url)}
+              <li class="flex items-center gap-2 rounded border border-border px-2.5 py-2">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium">{src.label}</p>
+                  <p class="truncate text-xs text-muted-foreground">{src.url}</p>
+                </div>
+                {#if !src.builtin}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-7 w-7 shrink-0"
+                    title="Remove registry"
+                    onclick={() => void removeRegistry(src.url)}
+                  >
+                    <X class="h-3.5 w-3.5" />
+                  </Button>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+          <div class="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://example.com/registry.json"
+              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              bind:value={newRegistryUrl}
+            />
+            <Button size="sm" disabled={!newRegistryUrl.trim()} onclick={() => void addRegistry()}>
+              <Plus class="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          {#if sourceError}
+            <p class="text-xs text-destructive">{sourceError}</p>
+          {/if}
+        </Card.Content>
+      </Card.Root>
+    {/if}
+
+    {#if registryErrors.length > 0}
+      <div class="rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+        {#each registryErrors as err (err)}
+          <p>{err}</p>
+        {/each}
+      </div>
+    {/if}
+
     <!-- Search + filter -->
     <div class="flex flex-col gap-2">
       <div class="relative">
@@ -223,7 +314,7 @@
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
                       <p class="mt-1 text-xs text-muted-foreground/60">
-                        {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}
+                        {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
                     </div>
                     <div class="flex shrink-0 flex-col gap-1.5 items-end">
@@ -273,7 +364,7 @@
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
                       <p class="mt-1 text-xs text-muted-foreground/60">
-                        {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}
+                        {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
                     </div>
                     <div class="flex shrink-0 flex-col gap-1.5 items-end">
