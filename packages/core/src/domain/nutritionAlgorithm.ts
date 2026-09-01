@@ -53,7 +53,11 @@ export type NutritionAlgorithm = NutritionAlgorithmMeta & {
   defaultPreferences?: unknown;
   /** If present, the app renders a settings screen for this algorithm. */
   preferencesSchema?: AlgorithmPreferencesField[];
-  computeTargets(input: NutritionAlgorithmInput): NutritionAlgorithmOutput;
+  // Built-in algorithms are synchronous; community ones run in the interpreter
+  // sandbox and resolve asynchronously. Callers must await.
+  computeTargets(
+    input: NutritionAlgorithmInput,
+  ): NutritionAlgorithmOutput | Promise<NutritionAlgorithmOutput>;
 };
 
 export type UserNutritionAlgorithmConfig = {

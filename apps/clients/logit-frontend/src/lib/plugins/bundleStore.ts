@@ -10,15 +10,29 @@ import type { PluginManifest } from "./types";
  * afterwards and updates are an explicit, reviewable action.
  *
  * The source is only ever handed to the interpreter sandbox, never evaluated in
- * the app context.
+ * the app context. Alongside it we cache the plugin's metadata (one sandbox
+ * `meta` call at install time) so listing plugins doesn't spin up a VM per entry.
  */
 
 const STORAGE_KEY = "logit:plugins:bundles:v1";
+
+/** Metadata read from a plugin at install time — see sandboxProtocol's `meta` op. */
+export type BundleMeta = {
+  id?: string;
+  name?: string;
+  description?: string;
+  author?: string;
+  defaultState?: unknown;
+  defaultPreferences?: unknown;
+  preferencesSchema?: unknown;
+  metricDefinitions?: unknown;
+};
 
 type StoredBundle = {
   source: string;
   integrity?: string;
   fetchedAtMs: number;
+  meta?: BundleMeta;
 };
 
 type StoredBundles = Record<string, StoredBundle>;
@@ -73,6 +87,18 @@ export async function fetchAndStoreBundle(manifest: PluginManifest): Promise<str
   all[manifest.id] = { source, integrity: manifest.integrity, fetchedAtMs: Date.now() };
   writeAll(all);
   return source;
+}
+
+export function storeBundleMeta(pluginId: string, meta: BundleMeta): void {
+  const all = readAll();
+  const existing = all[pluginId];
+  if (!existing) return;
+  all[pluginId] = { ...existing, meta };
+  writeAll(all);
+}
+
+export function getStoredBundleMeta(pluginId: string): BundleMeta | null {
+  return readAll()[pluginId]?.meta ?? null;
 }
 
 export function getStoredBundleSource(pluginId: string): string | null {

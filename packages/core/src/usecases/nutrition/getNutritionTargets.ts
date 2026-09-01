@@ -170,7 +170,7 @@ export async function getNutritionTargets(
     ...algorithmPrefsFor(goal, algorithmId),
   };
 
-  const out = algorithm.computeTargets({
+  const out = await algorithm.computeTargets({
     goal,
     currentWeightKg,
     weightEntries,

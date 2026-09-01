@@ -47,7 +47,9 @@ export type AnalyticsPluginMeta = {
 };
 
 export type AnalyticsPlugin = AnalyticsPluginMeta & {
-  compute(input: AnalyticsInput): AnalyticsOutput;
+  // Built-in plugins are synchronous; community plugins run in the interpreter
+  // sandbox and resolve asynchronously. Callers must await.
+  compute(input: AnalyticsInput): AnalyticsOutput | Promise<AnalyticsOutput>;
 };
 
 export interface AnalyticsRegistry {

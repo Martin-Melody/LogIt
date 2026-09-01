@@ -2,12 +2,13 @@
 
 Status: design doc. Supersedes the original phased roadmap on `feat/plugin-foundation-ui`.
 
-**Build progress**: Phases 1–3 merged to `main` — trust model (Restricted Mode + `integrity`),
+**Build progress**: Phases 1–4 merged to `main` — trust model (Restricted Mode + `integrity`),
 exercise packs end to end (incl. "export as pack" via the `inline` distribution origin),
-multi-source static registry. **Phase 4 in progress** (branch `feat/plugin-sandbox`):
-QuickJS-WASM interpreter sandbox + `progression-algorithm` routed through it
-(fetch → hash-verify → store bundle at install; `suggest()` runs in a fresh VM with a
-wall-clock deadline). Remaining pure-function families + widgets are Phase 5+.
+multi-source static registry, and the QuickJS-WASM interpreter sandbox with
+`progression-algorithm` routed through it. **Phase 5** (branch `feat/plugin-sandbox-phase5`):
+`analytics`, `nutrition-algorithm`, `nutrition-analytics` migrated to the same sandbox — all
+pure-function families now fetch → hash-verify → store their bundle at install and run in a
+fresh VM. `widget` is the only family left on the legacy loader (Phase 6 — Decision 4).
 
 ## Goal
 

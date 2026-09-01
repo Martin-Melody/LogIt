@@ -42,7 +42,11 @@ export type NutritionAnalyticsPluginMeta = {
 };
 
 export type NutritionAnalyticsPlugin = NutritionAnalyticsPluginMeta & {
-  compute(input: NutritionAnalyticsInput): NutritionAnalyticsOutput;
+  // Built-in plugins are synchronous; community plugins run in the interpreter
+  // sandbox and resolve asynchronously. Callers must await.
+  compute(
+    input: NutritionAnalyticsInput,
+  ): NutritionAnalyticsOutput | Promise<NutritionAnalyticsOutput>;
 };
 
 export type UserNutritionAnalyticsConfig = {
