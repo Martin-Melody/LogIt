@@ -30,7 +30,7 @@ export const recentSessionsWidget: WidgetPlugin = {
       return {
         title: "Recent Sessions",
         body: [],
-        empty: { text: "No sessions yet — log your first workout.", action: { navigate: "/session/new" } },
+        empty: { text: "No sessions yet — log your first workout.", action: { startEmptyWorkout: true } },
       };
     }
 

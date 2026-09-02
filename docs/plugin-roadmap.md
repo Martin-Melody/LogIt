@@ -15,10 +15,15 @@ Status: design doc. Supersedes the original phased roadmap on `feat/plugin-found
 - **Publishing v0** — `packages/plugin-tools` registry linter + `registry-template/` +
   `docs/publishing-plugins.md`.
 
-**In progress** (branch `feat/plugin-widgets`) — widgets on the compute/view model
-(Decision 4). Contract in `@logit/core/plugins/widgetView.ts`; `Muscle Focus` is the
-first built-in ported (pilot). Remaining: port the other 7 built-ins, wire community
-widgets through the sandbox, delete `renderHtml()` + the widget legacy loader.
+- **Widgets** — the compute/view model (Decision 4). Contract in
+  `@logit/core/plugins/widgetView.ts`. All 8 built-ins are pure `compute()` functions
+  in `@logit/core/plugins/builtinWidgets/`; community widgets run their `compute()` in
+  the sandbox via the same `WidgetCard` host. `renderHtml()`, `WidgetHost.svelte`,
+  `bundle.ts` and the `import(url)` loader are **deleted** — every family now runs in
+  QuickJS.
+
+**The plugin system is feature-complete.** What's left is polish: bundle-update flow,
+`food-pack`, registry signing/trust badges, an end-user widget builder, a web editor.
 
 ## Goal
 

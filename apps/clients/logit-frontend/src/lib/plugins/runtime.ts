@@ -1,4 +1,3 @@
-import { browser } from "$app/environment";
 import type { WidgetDefinition } from "$lib/features/widgets/widget";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
 import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
@@ -19,20 +18,12 @@ import {
   sandboxedCall,
   sandboxedMeta,
 } from "./sandboxedPlugin";
-import {
-  describePluginBundleContract,
-  isPluginAlgorithm,
-  isPluginAnalytics,
-  isPluginNutritionAlgorithm,
-  isPluginNutritionAnalytics,
-  isPluginWidgetComponent,
-  isPluginWidgetRenderer,
-  resolvePluginBundleContract,
-  resolvePluginBundleEntry,
-  type PluginBundleContract,
-  type PluginBundleModule,
-} from "./bundle";
-import WidgetHost from "./WidgetHost.svelte";
+import WidgetCard from "$lib/features/widgets/render/WidgetCard.svelte";
+import type {
+  WidgetDataNeed,
+  WidgetPlugin,
+  WidgetView,
+} from "@logit/core/plugins/widgetView";
 import type {
   AnalyticsPluginCapability,
   NutritionAlgorithmPluginCapability,
@@ -64,24 +55,7 @@ import type {
 export type RuntimeWidgetDefinition = WidgetDefinition & {
   source: "builtin" | "installed";
   pluginEnabled: boolean;
-  bundleContract: PluginBundleContract | null;
 };
-
-export type BundleInspection = {
-  bundleUrl: string | null;
-  contract: PluginBundleContract | null;
-  loadable: boolean;
-  entryType:
-    | "widget"
-    | "progression-algorithm"
-    | "analytics"
-    | "nutrition-algorithm"
-    | "nutrition-analytics"
-    | "unknown"
-    | null;
-};
-
-const moduleCache = new Map<string, Promise<PluginBundleModule | null>>();
 
 function isWidgetCapability(
   capability: PluginCapability,
@@ -135,92 +109,55 @@ function getNutritionAnalyticsCapability(
   );
 }
 
-function getBundleUrl(manifest: PluginManifest): string | null {
-  switch (manifest.distribution.origin) {
-    case "builtin":
-      return null;
-    case "manual":
-      return manifest.distribution.bundleUrl ?? null;
-    case "url":
-      return manifest.distribution.bundleUrl ?? null;
-    case "activitypub":
-      return manifest.distribution.bundleUrl ?? null;
-    case "inline":
-      return null;
-  }
-}
-
-async function loadBundle(url: string): Promise<PluginBundleModule | null> {
-  if (!browser) return null;
-
-  // Restricted Mode: never execute a non-builtin bundle unless the user has
-  // explicitly enabled community plugins. This is the hard trust gate — every
-  // community code path (widgets, algorithms, analytics) funnels through here.
-  if (!isCommunityPluginsEnabled()) return null;
-
-  const cached = moduleCache.get(url);
-  if (cached) return cached;
-
-  const promise = import(/* @vite-ignore */ url)
-    .then((module) => module as PluginBundleModule)
-    .catch((error) => {
-      console.warn("[plugin-runtime] failed to load bundle", url, error);
-      return null;
-    });
-
-  moduleCache.set(url, promise);
-  return promise;
-}
-
 function builtinWidgets(): RuntimeWidgetDefinition[] {
   return localWidgetRegistry.list().map((widget) => ({
     ...widget,
     source: "builtin",
     pluginEnabled: true,
-    bundleContract: null,
   }));
 }
 
+const WIDGET_NEEDS: ReadonlySet<WidgetDataNeed> = new Set([
+  "workouts",
+  "exercises",
+  "session",
+  "todaysPlan",
+  "progressionTargets",
+  "nutrition",
+  "bodyweight",
+]);
+
 async function installedWidgetDefinitions(): Promise<RuntimeWidgetDefinition[]> {
   const installed = await listInstalledPluginManifests();
-  const widgets: RuntimeWidgetDefinition[] = [];
-
-  for (const plugin of installed) {
-    if (plugin.manifest.family !== "widget") continue;
-
-    const capability = getWidgetCapability(plugin.manifest);
-    if (!capability) continue;
-
-    const bundleUrl = getBundleUrl(plugin.manifest);
-    if (!bundleUrl) continue;
-
-    const module = await loadBundle(bundleUrl);
-    if (!module) continue;
-
-    const contract = resolvePluginBundleContract(module, plugin.manifest);
-    const entry = resolvePluginBundleEntry(module, contract);
-    const component = isPluginWidgetComponent(entry)
-      ? entry
-      : isPluginWidgetRenderer(entry)
-        ? WidgetHost
-        : null;
-    if (!component) continue;
-
-    widgets.push({
-      id: capability.widgetId,
-      label: plugin.manifest.name,
-      description: plugin.manifest.description,
-      component,
-      props: isPluginWidgetRenderer(entry) ? { renderHtml: entry.renderHtml } : undefined,
-      defaultEnabled: capability.defaultEnabled,
-      defaultOrder: capability.defaultOrder,
-      source: "installed",
-      pluginEnabled: plugin.enabled,
-      bundleContract: contract,
-    });
-  }
-
-  return widgets;
+  return listSandboxedPlugins(
+    installed,
+    "widget",
+    (p) => !!getWidgetCapability(p.manifest),
+    (plugin, meta): RuntimeWidgetDefinition => {
+      const cap = getWidgetCapability(plugin.manifest)!;
+      const compute = sandboxedCall<WidgetView>(plugin, "compute");
+      const widgetPlugin: WidgetPlugin = {
+        id: cap.widgetId,
+        name: plugin.manifest.name,
+        description: plugin.manifest.description,
+        needs: (Array.isArray(meta.needs) ? meta.needs : []).filter(
+          (n): n is WidgetDataNeed => typeof n === "string" && WIDGET_NEEDS.has(n as WidgetDataNeed),
+        ),
+        compute: (input) => compute(input),
+      };
+      return {
+        id: cap.widgetId,
+        label: plugin.manifest.name,
+        description: plugin.manifest.description,
+        component: WidgetCard,
+        props: { plugin: widgetPlugin },
+        defaultEnabled: cap.defaultEnabled,
+        defaultOrder: cap.defaultOrder,
+        source: "installed",
+        pluginEnabled: plugin.enabled,
+      };
+    },
+  );
 }
 
 async function installedAlgorithms(): Promise<ProgressionAlgorithmMeta[]> {
@@ -435,53 +372,6 @@ function algorithmRegistry(): AlgorithmRegistry {
   };
 }
 
-export async function inspectPluginBundle(
-  manifest: PluginManifest,
-): Promise<BundleInspection> {
-  const bundleUrl = getBundleUrl(manifest);
-  if (!bundleUrl) {
-    return {
-      bundleUrl: null,
-      contract: null,
-      loadable: false,
-      entryType: null,
-    };
-  }
-
-  const module = await loadBundle(bundleUrl);
-  if (!module) {
-    return {
-      bundleUrl,
-      contract: null,
-      loadable: false,
-      entryType: null,
-    };
-  }
-
-  const contract = resolvePluginBundleContract(module, manifest);
-  const entry = resolvePluginBundleEntry(module, contract);
-  const entryType = isPluginWidgetComponent(entry)
-    ? "widget"
-    : isPluginWidgetRenderer(entry)
-      ? "widget"
-    : isPluginAlgorithm(entry)
-      ? "progression-algorithm"
-    : isPluginAnalytics(entry)
-      ? "analytics"
-    : isPluginNutritionAlgorithm(entry)
-      ? "nutrition-algorithm"
-    : isPluginNutritionAnalytics(entry)
-      ? "nutrition-analytics"
-      : contract?.family ?? "unknown";
-
-  return {
-    bundleUrl,
-    contract,
-    loadable: true,
-    entryType,
-  };
-}
-
 export function createPluginRuntime() {
   return {
     listWidgets: async (): Promise<RuntimeWidgetDefinition[]> => [
@@ -499,8 +389,6 @@ export function createPluginRuntime() {
     analytics: analyticsRegistry(),
     nutritionAlgorithms: nutritionAlgorithmRegistry(),
     nutritionAnalytics: nutritionAnalyticsRegistry(),
-    describeBundle: describePluginBundleContract,
-    inspectPluginBundle,
   };
 }
 

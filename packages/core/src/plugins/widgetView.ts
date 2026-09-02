@@ -93,6 +93,7 @@ export type WidgetInput = {
 export type WidgetAction =
   | { navigate: string }
   | { startEmptyWorkout: true }
+  | { startPlannedWorkout: true }
   | { resumeWorkout: true };
 
 export type WidgetTextNode = {

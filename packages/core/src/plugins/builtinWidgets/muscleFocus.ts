@@ -47,7 +47,7 @@ export const muscleFocusWidget: WidgetPlugin = {
         title: "Muscle Focus",
         subtitle: "Sets logged this week",
         body: [],
-        empty: { text: "No sets logged this week yet.", action: { navigate: "/session/new" } },
+        empty: { text: "No sets logged this week yet.", action: { startEmptyWorkout: true } },
       };
     }
 

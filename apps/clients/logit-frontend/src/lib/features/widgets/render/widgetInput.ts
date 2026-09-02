@@ -18,7 +18,15 @@ import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 import { getNutritionDeps } from "$lib/features/nutrition/deps";
 import { totalsFor } from "$lib/features/nutrition/nutrition";
 import { profile } from "$lib/stores/profile.store";
+import { currentSession } from "$lib/stores/currentSession.store";
+import { activeSplit } from "$lib/stores/activeSplit.store";
+import { selectedDayOverride } from "$lib/stores/todaysPlan.store";
+import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
 import { get } from "svelte/store";
+
+function dayLabel(idx: number, name?: string): string {
+  return name ? `Day ${idx + 1} — ${name}` : `Day ${idx + 1}`;
+}
 
 function formatTarget(o: ProgressionOutput): string {
   const first = o.sets[0];
@@ -44,13 +52,47 @@ export async function gatherWidgetInput(needs: WidgetDataNeed[]): Promise<Widget
     prefs: { weightUnit: (p.weightUnit as "kg" | "lbs") ?? "kg" },
   };
 
+  if (want.has("session") || want.has("todaysPlan")) {
+    const split = get(activeSplit);
+    const scheduled = split ? getTodaySplitDay(split) : null;
+    const override = get(selectedDayOverride);
+    const day =
+      split && override?.splitId === split.id
+        ? (split.days.find((d) => d.id === override.dayId) ?? scheduled)
+        : scheduled;
+
+    if (want.has("session")) {
+      input.session = {
+        active: get(currentSession) !== null,
+        hasPlan: !!scheduled,
+        plannedDayLabel: day ? dayLabel(day.orderIndex, day.name) : undefined,
+      };
+    }
+    if (want.has("todaysPlan")) {
+      const blocks = day ? [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) : [];
+      input.todaysPlan = {
+        dayLabel: day ? dayLabel(day.orderIndex, day.name) : undefined,
+        scheduled: !!(day && scheduled && day.id === scheduled.id),
+        exercises: blocks.map((b) =>
+          b.type === "strength" ? b.exerciseName : b.activityName,
+        ),
+      };
+    }
+  }
+
   const tasks: Promise<void>[] = [];
 
   if (want.has("workouts")) {
     tasks.push(
       getWorkoutRepo()
         .listAllSessions()
-        .then((sessions) => {
+        .then((all) => {
+          // Bound what we hand widgets (and serialise into the sandbox):
+          // recent history only.
+          const cutoff = Date.now() - 200 * 24 * 60 * 60 * 1000;
+          const sessions = all
+            .filter((s) => (s.endedAtMs ?? s.startedAtMs) >= cutoff)
+            .slice(0, 150);
           input.workouts = sessions.map(
             (s): WidgetWorkout => ({
               id: s.id,

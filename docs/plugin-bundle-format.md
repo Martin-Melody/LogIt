@@ -26,8 +26,17 @@ Because the sandbox has no module loader, **a bundle must be a single file with
 no `import` statements** (build with esbuild `--bundle --format=esm`). Top-level
 `export const` / `export function` / `export default` are supported.
 
-`widget` is the only family still on the legacy dynamic-import loader — it moves
-to a declarative compute/view model (see docs/plugin-roadmap.md, Decision 4).
+`widget` bundles export a `compute(input) => WidgetView` — a pure function, run
+in the same sandbox. The plugin declares `needs: [...]` (which data slices the
+host loads) and returns a declarative view built from a fixed primitive
+vocabulary (`text`, `stat-grid`, `list`, `progress-rings`, `bar`, `line`,
+`muscle-map`, `calendar-heatmap`, `button-row`). No markup, no components — see
+`@logit/core/plugins/widgetView`. Actions are a host allow-list (`navigate`,
+`startEmptyWorkout`, …), so a widget can't navigate or run arbitrary code.
+`static/sample-plugins/week-recap` is a full example.
+
+There is no longer any `import(url)` of remote code — every family runs in the
+QuickJS sandbox.
 
 ## Required contract
 

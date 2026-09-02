@@ -27,7 +27,7 @@ export const activityWidget: WidgetPlugin = {
         title: "Activity",
         subtitle,
         body: [],
-        empty: { text: "No workouts logged this month yet.", action: { navigate: "/session/new" } },
+        empty: { text: "No workouts logged this month yet.", action: { startEmptyWorkout: true } },
       };
     }
 

@@ -1,7 +1,0 @@
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "/sample-plugins/focus-card/outbox.json",
-  "type": "OrderedCollection",
-  "totalItems": 1,
-  "first": "/sample-plugins/focus-card/outbox-page-1.json"
-}
