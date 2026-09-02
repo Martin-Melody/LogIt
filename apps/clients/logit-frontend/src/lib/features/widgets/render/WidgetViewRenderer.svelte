@@ -3,6 +3,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Plus, Pencil, ChevronLeft, ChevronRight } from "lucide-svelte";
   import type { WidgetView } from "@logit/core/plugins/widgetView";
+  import { createSwipeHandlers } from "$lib/swipe";
   import { runWidgetAction } from "./widgetAction";
   import TextNode from "./nodes/TextNode.svelte";
   import StatGridNode from "./nodes/StatGridNode.svelte";
@@ -17,9 +18,18 @@
   const { view }: { view: WidgetView } = $props();
 
   const bodyClickable = $derived(!!view.action);
+
+  const swipe = $derived(
+    view.swipe
+      ? createSwipeHandlers(
+          () => view.swipe && runWidgetAction(view.swipe.left),
+          () => view.swipe && runWidgetAction(view.swipe.right),
+        )
+      : null,
+  );
 </script>
 
-<Card.Root class="w-full">
+<Card.Root class="w-full" {...(swipe ?? {})}>
   <Card.Header>
     <div class="flex items-start justify-between gap-2">
       <div class="min-w-0">

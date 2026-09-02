@@ -216,6 +216,8 @@ export type WidgetView = {
   headerActions?: WidgetHeaderAction[];
   /** Dot pager under the header, e.g. which split day is shown. */
   pager?: { count: number; index: number };
+  /** Horizontal swipe on the card triggers these (e.g. cycle split days). */
+  swipe?: { left: WidgetAction; right: WidgetAction };
   /** Shown instead of body when the widget has nothing yet. */
   empty?: { text: string; action?: WidgetAction };
 };
