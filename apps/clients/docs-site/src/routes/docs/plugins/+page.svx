@@ -1,0 +1,38 @@
+---
+title: Plugins
+---
+
+A LogIt plugin extends the app with one of six things:
+
+| Family | What it does | Runs as |
+|---|---|---|
+| `exercise-pack` | Adds exercises to the catalogue | Pure data — not code |
+| `progression-algorithm` | Suggests your next sets for an exercise | `suggest(input)` in the sandbox |
+| `analytics` | Custom charts/metrics for an exercise | `compute(input)` in the sandbox |
+| `nutrition-algorithm` | Turns your goal + data into a calorie target | `computeTargets(input)` in the sandbox |
+| `nutrition-analytics` | Weekly recaps, adherence, custom insights | `compute(input)` in the sandbox |
+| `widget` | A home-screen card | `compute(input) => WidgetView` in the sandbox |
+
+## How it works
+
+A plugin is **a manifest plus one artifact** — a `bundle.js` for code plugins,
+or an `exercises.json` for packs. You publish both to a registry (a static JSON
+file), or hand someone the manifest directly.
+
+On install the app fetches the artifact **once**, checks its SHA-256 against the
+manifest, and stores it locally. From then on it runs entirely offline. Code is
+only ever executed inside a [QuickJS-WASM sandbox](/docs/plugins/trust) — a bare
+JavaScript environment with no DOM, no `fetch`, no storage, no timers.
+
+## What you need
+
+- **Node + esbuild** to build a bundle (one file, no imports).
+- The types from `@logit/core` for editor help — `@logit/core/domain/progression`,
+  `@logit/core/plugins/widgetView`, etc.
+- Nothing else. There's no SDK to install and no build server.
+
+Start with the family you want:
+[exercise packs](/docs/plugins/exercise-packs) ·
+[progression](/docs/plugins/progression) ·
+[nutrition](/docs/plugins/nutrition) ·
+[widgets](/docs/plugins/widgets)

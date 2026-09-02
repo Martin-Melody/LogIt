@@ -1,0 +1,77 @@
+---
+title: Nutrition algorithms
+---
+
+## nutrition-algorithm
+
+Turns the user's goal plus their real intake and weight data into a daily
+calorie target. Picked in **Nutrition → Goal → Algorithm**.
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.you.pure-trend",
+  family: "nutrition-algorithm",
+  entryExport: "algorithm",
+} as const;
+
+export const algorithm = {
+  id: "com.you.pure-trend",
+  name: "Pure Trend",
+  description: "Sets the target from intake vs. weight trend.",
+
+  computeTargets(input) {
+    // input: { goal, currentWeightKg, weightEntries, dailyIntakeKcal, userPreferences, now }
+    const intake = input.dailyIntakeKcal;
+    if (intake.length < 10) return { kcal: 0 };   // 0 = "not enough data"
+
+    const avgIntake = intake.reduce((s, d) => s + d.kcal, 0) / intake.length;
+    const rateKgPerWeek = input.goal.targetRateKgPerWeek ?? 0;
+    const adjust = rateKgPerWeek * 1100; // ~7700 kcal/kg over a week
+
+    return {
+      kcal: Math.round(avgIntake + adjust),
+      sourceLabel: "Trend",
+      maintenanceKcal: Math.round(avgIntake),
+    };
+  },
+};
+```
+
+### Output
+
+```ts
+type NutritionAlgorithmOutput = {
+  kcal: number;                    // 0 signals "not enough data"
+  macros?: { proteinG; carbsG; fatG };  // omit → app derives from the goal
+  maintenanceKcal?: number;
+  sourceLabel?: string;            // short badge, e.g. "Adaptive"
+  notes?: string;
+};
+```
+
+The app owns two things the algorithm doesn't: a manual calorie override on the
+goal (always wins), and deriving macros from the goal's protein g/kg + fat % when
+you return only `kcal`.
+
+`preferencesSchema` / `defaultPreferences` work exactly as in
+[progression](/docs/plugins/progression).
+
+## nutrition-analytics
+
+Same shape as [analytics](/docs/plugins/analytics) —
+`compute(input) => { metrics, series, insights }` — but over a window of diary
+days + weight entries:
+
+```ts
+compute(input) {
+  // input: { days, weightEntries, goal, targets, range, now }
+  const avgKcal =
+    input.days.reduce((s, d) => s + (d.totals?.kcal ?? 0), 0) / (input.days.length || 1);
+  return {
+    metrics: [{ id: "avgKcal", value: Math.round(avgKcal) }],
+    series: [],
+    insights: [],
+  };
+}
+```

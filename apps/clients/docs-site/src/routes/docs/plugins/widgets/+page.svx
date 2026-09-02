@@ -1,0 +1,111 @@
+---
+title: Widgets
+---
+
+<script>
+  import Demo from "$lib/docs/Demo.svelte";
+</script>
+
+A widget is a home-screen card. It's a pure function that returns a
+**description** of what to show — the app renders it from a fixed set of
+[primitives](/docs/plugins/primitives). No markup, no components.
+
+## The contract
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.you.week-recap",
+  family: "widget",
+  entryExport: "widget",
+} as const;
+
+export const widget = {
+  id: "com.you.week-recap",
+  name: "Week Recap",
+  description: "Sessions, sets and volume in the last 7 days.",
+  needs: ["workouts"],
+
+  compute(input) {
+    const since = input.now - 7 * 864e5;
+    let sessions = 0, sets = 0, tonnage = 0;
+    for (const w of input.workouts ?? []) {
+      if (!w.endedAtMs || w.endedAtMs < since) continue;
+      sessions++;
+      for (const ex of w.exercises)
+        for (const s of ex.sets) { sets++; tonnage += s.weight * s.reps; }
+    }
+
+    if (sessions === 0) {
+      return {
+        title: "Week Recap",
+        body: [],
+        empty: { text: "Nothing logged in the last 7 days.", action: { startEmptyWorkout: true } },
+      };
+    }
+
+    return {
+      title: "Week Recap",
+      subtitle: "Last 7 days",
+      body: [{
+        kind: "stat-grid",
+        stats: [
+          { label: "Sessions", value: String(sessions) },
+          { label: "Sets", value: String(sets) },
+          { label: "Volume", value: Math.round(tonnage).toLocaleString() + " kg" },
+        ],
+      }],
+      action: { navigate: "/sessions" },
+    };
+  },
+};
+```
+
+<Demo title="What that renders" node={{ kind: "stat-grid", stats: [
+  { label: "Sessions", value: "3" },
+  { label: "Sets", value: "42" },
+  { label: "Volume", value: "18,400 kg" },
+]}} />
+
+## Declaring `needs`
+
+The host only loads the data slices you ask for, and only serialises those into
+the sandbox. Ask for the minimum.
+
+| Need | You get |
+|---|---|
+| `workouts` | recent sessions (capped ~200 days / 150), each with exercises + sets |
+| `exercises` | the exercise catalogue with muscle groups |
+| `session` | `{ active, hasPlan, plannedDayLabel? }` |
+| `todaysPlan` | `{ splitId?, dayLabel?, scheduled, dayIndex?, dayCount?, exercises: string[] }` |
+| `progressionTargets` | `{ exerciseName, target }[]` — the host runs the algorithm |
+| `nutrition` | `{ hasGoal, targetKcal?, consumedKcal?, targetMacros?, consumedMacros? }` |
+| `bodyweight` | `{ currentKg?, weeklyRateKg?, targetKg?, trendPoints }` |
+
+Full input type: `@logit/core/plugins/widgetView` → `WidgetInput`.
+
+## The view
+
+```ts
+type WidgetView = {
+  title: string;
+  subtitle?: string;
+  body: WidgetNode[];             // stacked primitives
+  action?: WidgetAction;          // tap the card
+  headerActions?: { icon: "add" | "edit" | "prev" | "next"; label; action }[];
+  pager?: { count: number; index: number };
+  swipe?: { left: WidgetAction; right: WidgetAction };
+  empty?: { text: string; action?: WidgetAction };  // shown instead of body
+};
+```
+
+## Actions
+
+Widgets can't navigate freely or run code. `WidgetAction` is an allow-list:
+
+- `{ navigate: "/some/app/path" }` — internal routes only
+- `{ startEmptyWorkout: true }` · `{ startPlannedWorkout: true }` · `{ resumeWorkout: true }`
+- `{ cycleDay: -1 | 1 }` — move the previewed split day
+
+See the [primitive gallery](/docs/plugins/primitives) for every node type with
+live examples.

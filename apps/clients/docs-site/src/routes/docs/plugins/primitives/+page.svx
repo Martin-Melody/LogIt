@@ -1,0 +1,96 @@
+---
+title: Widget primitives
+---
+
+<script>
+  import Demo from "$lib/docs/Demo.svelte";
+</script>
+
+Every `WidgetView.body` entry is one of these. The previews below are rendered
+by the same logic the app uses.
+
+## text
+
+A line of copy. `tone`: `default` · `muted` · `primary`.
+
+<Demo node={{ kind: "text", text: "3 workouts this week — one short of your target.", tone: "muted" }} />
+
+## stat-grid
+
+Up to three headline numbers.
+
+<Demo node={{ kind: "stat-grid", stats: [
+  { label: "This week", value: "12,480 kg" },
+  { label: "Sets", value: "48" },
+  { label: "PRs", value: "2" },
+]}} />
+
+## list
+
+Rows with an optional sublabel, trailing text, and a tap action.
+
+<Demo node={{ kind: "list", items: [
+  { label: "Mon 31 Aug", sublabel: "Top: Bench 3×80", trailing: "42m", action: { navigate: "/sessions/x" } },
+  { label: "Fri 28 Aug", sublabel: "Top: Squat 5×100", trailing: "51m", action: { navigate: "/sessions/y" } },
+], emptyText: "No sessions yet." }} />
+
+## progress-rings
+
+One ring per target.
+
+<Demo node={{ kind: "progress-rings", rings: [
+  { label: "Calories", value: 1450, max: 2200, unit: "kcal" },
+  { label: "Protein", value: 90, max: 160, unit: "g" },
+]}} />
+
+## bar
+
+Horizontal bars. `sublabel` overrides the value text; `tone`: `primary` ·
+`protein` · `carbs` · `fat`.
+
+<Demo node={{ kind: "bar", bars: [
+  { label: "Calories", value: 1450, max: 2200, sublabel: "1450 / 2200 kcal", tone: "primary" },
+  { label: "Protein", value: 90, max: 160, sublabel: "90 / 160 g", tone: "protein" },
+  { label: "Carbs", value: 140, max: 240, sublabel: "140 / 240 g", tone: "carbs" },
+  { label: "Fat", value: 55, max: 70, sublabel: "55 / 70 g", tone: "fat" },
+]}} />
+
+## line
+
+A trend line with an optional horizontal `reference` (e.g. a goal weight).
+
+<Demo node={{ kind: "line", reference: 78, points: [
+  { x: 0, y: 82 }, { x: 1, y: 81.4 }, { x: 2, y: 81 }, { x: 3, y: 80.6 },
+  { x: 4, y: 80.1 }, { x: 5, y: 79.6 }, { x: 6, y: 79.2 },
+]}} />
+
+## muscle-map
+
+A front/back body map. `values` is effort per muscle group; `scale` is the three
+band thresholds (default `[1, 5, 12]`).
+
+<Demo node={{ kind: "muscle-map", scale: [1, 5, 12], values: {
+  chest: 14, triceps: 7, shoulders: 4, back: 2, biceps: 1,
+}}} />
+
+## calendar-heatmap
+
+A month grid; `days` are the days with activity.
+
+<Demo node={{ kind: "calendar-heatmap", month: "2026-09", days: [
+  { day: 2 }, { day: 4 }, { day: 7 }, { day: 9 }, { day: 12 }, { day: 15 }, { day: 18 }, { day: 21 },
+]}} />
+
+## button-row
+
+Full-width stacked buttons. `primary` fills one.
+
+<Demo node={{ kind: "button-row", buttons: [
+  { label: "Start today's plan", action: { startPlannedWorkout: true }, primary: true },
+  { label: "Start unplanned", action: { startEmptyWorkout: true } },
+]}} />
+
+---
+
+Need a primitive that isn't here? The vocabulary is deliberately small — open an
+issue with the use case.

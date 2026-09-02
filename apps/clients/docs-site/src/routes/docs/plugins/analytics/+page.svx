@@ -1,0 +1,69 @@
+---
+title: Analytics
+---
+
+An analytics plugin computes custom metrics, charts and insights for a single
+exercise over its whole history. The user picks one in **Settings → Analytics**;
+it renders on the exercise detail page.
+
+## The contract
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.you.volume",
+  family: "analytics",
+  entryExport: "analytics",
+} as const;
+
+export const analytics = {
+  id: "com.you.volume",
+  name: "Weekly Volume",
+  description: "Total tonnage per week.",
+  metricDefinitions: [
+    { id: "weeklyVolume", label: "Weekly volume", unit: "kg" },
+  ],
+
+  compute(input) {
+    const byWeek = new Map();
+    for (const entry of input.history) {
+      const wk = Math.floor(entry.performedAtMs / (7 * 864e5));
+      const vol = entry.sets.reduce((s, x) => s + x.weight * x.reps, 0);
+      byWeek.set(wk, (byWeek.get(wk) ?? 0) + vol);
+    }
+    const points = [...byWeek.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([wk, v]) => ({ date: wk * 7 * 864e5, value: v }));
+
+    return {
+      metrics: [{ id: "weeklyVolume", value: points.at(-1)?.value ?? 0 }],
+      series: [{ metricId: "weeklyVolume", label: "Weekly volume", points }],
+      insights: points.length > 1 && points.at(-1).value > points.at(-2).value
+        ? ["Volume up week over week"]
+        : [],
+    };
+  },
+};
+```
+
+## Input & output
+
+`compute(input: AnalyticsInput)` — `@logit/core/domain/analytics`.
+
+- **`input.history`** — `ExerciseHistoryEntry[]`, **oldest first**, all available.
+- **`input.exercise`** — `{ name, id?, exerciseType? }`.
+
+```ts
+type AnalyticsOutput = {
+  metrics: { id: string; value: number | string; formatted?: string }[];
+  series: { metricId: string; label: string; points: { date: number; value: number }[] }[];
+  insights?: string[];
+  label?: string;
+};
+```
+
+`metricDefinitions` (id + label + optional `unit` / `higherIsBetter`) is read
+from a `meta` call at install and shown in the picker.
+
+Nutrition analytics ([`nutrition-analytics`](/docs/plugins/nutrition)) has the
+same shape over diary + weight data.

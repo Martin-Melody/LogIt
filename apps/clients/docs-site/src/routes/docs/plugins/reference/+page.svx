@@ -1,0 +1,72 @@
+---
+title: API reference
+---
+
+Import types from `@logit/core` for editor help. These are the shapes as of the
+current release.
+
+## Manifest
+
+```ts
+type PluginManifest = {
+  id: string;
+  family: "exercise-pack" | "progression-algorithm" | "analytics"
+        | "nutrition-algorithm" | "nutrition-analytics" | "widget";
+  name: string;
+  description: string;
+  version: string;                 // semver, bump every change
+  author?: string;
+  integrity?: string;              // sha256-<base64> of the artifact — required to publish
+  minAppVersion?: string;
+  homepageUrl?: string;
+  distribution:
+    | { origin: "url"; manifestUrl: string; bundleUrl: string }
+    | { origin: "inline"; data: unknown };   // exercise-pack only
+  capabilities: Array<{ family: string /* = manifest.family */; [idField]: string /* = manifest.id */ }>;
+};
+```
+
+Capability id field by family: `exercisePackId`, `algorithmId` (progression &
+nutrition), `analyticsId` (analytics & nutrition-analytics), `widgetId`.
+
+## Bundle descriptor
+
+Every code bundle exports this:
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: string,                // = manifest.id
+  family: string,                  // = manifest.family
+  entryExport: string,             // name of the export below, e.g. "algorithm"
+} as const;
+```
+
+A bundle is **one file, no `import` statements** — build with
+`esbuild --bundle --format=esm`.
+
+## Entry exports
+
+| Family | Export shape |
+|---|---|
+| `progression-algorithm` | `{ id, name, description, defaultState, defaultPreferences?, preferencesSchema?, suggest(input) }` |
+| `analytics` | `{ id, name, description, metricDefinitions, compute(input) }` |
+| `nutrition-algorithm` | `{ id, name, description, defaultPreferences?, preferencesSchema?, computeTargets(input) }` |
+| `nutrition-analytics` | `{ id, name, description, metricDefinitions, compute(input) }` |
+| `widget` | `{ id, name, description, needs: string[], compute(input) }` |
+
+## Input / output types
+
+- **Progression** — `@logit/core/domain/progression`: `ProgressionInput`, `ProgressionOutput`
+- **Analytics** — `@logit/core/domain/analytics`: `AnalyticsInput`, `AnalyticsOutput`
+- **Nutrition algorithm** — `@logit/core/domain/nutritionAlgorithm`
+- **Nutrition analytics** — `@logit/core/domain/nutritionAnalytics`
+- **Widget** — `@logit/core/plugins/widgetView`: `WidgetInput`, `WidgetView`, `WidgetNode`, `WidgetAction`
+
+## Sandbox limits
+
+- ~300 ms wall-clock deadline per call
+- 32 MB memory
+- no DOM / `fetch` / storage / timers
+- fresh VM per call — persist nothing in module scope
+- input and output must be JSON-serialisable
