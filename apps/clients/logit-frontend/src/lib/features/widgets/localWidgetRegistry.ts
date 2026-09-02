@@ -10,6 +10,7 @@ import { activityWidget } from "@logit/core/plugins/builtinWidgets/activity";
 import { progressionWidget } from "@logit/core/plugins/builtinWidgets/progression";
 import { todaysNutritionWidget } from "@logit/core/plugins/builtinWidgets/todaysNutrition";
 import { weightTrendWidget } from "@logit/core/plugins/builtinWidgets/weightTrend";
+import { habitsWidget } from "@logit/core/plugins/builtinWidgets/habits";
 
 const BUNDLED: WidgetDefinition[] = [
   {
@@ -86,6 +87,15 @@ const BUNDLED: WidgetDefinition[] = [
     props: { plugin: weightTrendWidget },
     defaultEnabled: false,
     defaultOrder: 7,
+  },
+  {
+    id: "habits",
+    label: "Habits",
+    description: "Today's habits with a tap-to-check-off list. Auto-added once you create a habit.",
+    component: WidgetCard,
+    props: { plugin: habitsWidget },
+    defaultEnabled: false,
+    defaultOrder: 8,
   },
 ];
 

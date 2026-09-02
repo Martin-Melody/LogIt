@@ -522,6 +522,28 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
       cached_at_ms INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_food_cache_barcode ON food_cache(barcode) WHERE barcode IS NOT NULL;
+
+    -- ── Habits (client-owned) ─────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS habits (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_habits_owner ON habits(owner_id);
+
+    CREATE TABLE IF NOT EXISTS habit_entries (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      habit_id TEXT NOT NULL,
+      date_iso TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_habit_entries_owner_habit_date
+      ON habit_entries(owner_id, habit_id, date_iso) WHERE deleted_at_ms IS NULL;
   `);
 
   await migrateSessionSets(db);
