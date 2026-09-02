@@ -17,7 +17,9 @@ import type { MuscleGroup } from "../domain/exercise";
 export type WidgetDataNeed =
   | "workouts"
   | "exercises"
+  | "session"
   | "todaysPlan"
+  | "progressionTargets"
   | "nutrition"
   | "bodyweight";
 
@@ -56,9 +58,22 @@ export type WidgetInput = {
   };
   workouts?: WidgetWorkout[];
   exercises?: WidgetExercise[];
-  todaysPlan?: { exerciseName: string; sets?: number; reps?: string }[];
+  /** Whether a workout is currently in progress + today's planned day, if any. */
+  session?: {
+    active: boolean;
+    hasPlan: boolean;
+    plannedDayLabel?: string;
+  };
+  todaysPlan?: {
+    dayLabel?: string;
+    scheduled: boolean;
+    exercises: string[];
+  };
+  /** Current targets per tracked exercise — the host runs the algorithm. */
+  progressionTargets?: { exerciseName: string; target: string }[];
   nutrition?: {
     hasGoal: boolean;
+    sourceLabel?: string;
     targetKcal?: number;
     consumedKcal?: number;
     targetMacros?: { proteinG: number; carbsG: number; fatG: number };
@@ -67,6 +82,7 @@ export type WidgetInput = {
   bodyweight?: {
     currentKg?: number;
     weeklyRateKg?: number;
+    targetKg?: number;
     trendPoints: { dateIso: string; kg: number }[];
   };
 };
@@ -121,9 +137,26 @@ export type WidgetProgressRingsNode = {
   rings: WidgetProgressRing[];
 };
 
+export type WidgetBarTone = "primary" | "protein" | "carbs" | "fat";
+
 export type WidgetBarNode = {
   kind: "bar";
-  bars: { label: string; value: number; max?: number }[];
+  bars: {
+    label: string;
+    value: number;
+    max?: number;
+    /** e.g. "120 / 150 g" */
+    sublabel?: string;
+    tone?: WidgetBarTone;
+  }[];
+};
+
+export type WidgetCalendarHeatmapNode = {
+  kind: "calendar-heatmap";
+  /** "YYYY-MM" — the month to render. */
+  month: string;
+  /** One entry per day that has activity; value drives the shade. */
+  days: { day: number; value: number; action?: WidgetAction }[];
 };
 
 export type WidgetLineNode = {
@@ -155,6 +188,7 @@ export type WidgetNode =
   | WidgetBarNode
   | WidgetLineNode
   | WidgetMuscleMapNode
+  | WidgetCalendarHeatmapNode
   | WidgetButtonRowNode;
 
 export type WidgetView = {
