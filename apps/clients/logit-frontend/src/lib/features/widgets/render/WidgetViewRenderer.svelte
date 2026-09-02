@@ -11,6 +11,7 @@
   import ProgressRingsNode from "./nodes/ProgressRingsNode.svelte";
   import BarNode from "./nodes/BarNode.svelte";
   import LineNode from "./nodes/LineNode.svelte";
+  import CalendarHeatmapNode from "./nodes/CalendarHeatmapNode.svelte";
   import ButtonRowNode from "./nodes/ButtonRowNode.svelte";
 
   const { view }: { view: WidgetView } = $props();
@@ -68,6 +69,8 @@
             <BarNode {node} />
           {:else if node.kind === "line"}
             <LineNode {node} />
+          {:else if node.kind === "calendar-heatmap"}
+            <CalendarHeatmapNode {node} />
           {:else if node.kind === "button-row"}
             <ButtonRowNode {node} />
           {/if}

@@ -3,13 +3,13 @@ import type { WidgetRegistry } from "./widgetRegistry";
 
 import QuickStartWidget from "./components/QuickStartWidget.svelte";
 import TodaysPlanWidget from "./components/TodaysPlanWidget.svelte";
-import LastSessionWidget from "./components/LastSessionWidget.svelte";
-import ProgressionWidget from "./components/ProgressionWidget.svelte";
-import ActivityTrackerWidget from "./components/ActivityTrackerWidget.svelte";
-import TodaysNutritionWidget from "./components/TodaysNutritionWidget.svelte";
-import WeightTrendWidget from "./components/WeightTrendWidget.svelte";
 import WidgetCard from "./render/WidgetCard.svelte";
 import { muscleFocusWidget } from "@logit/core/plugins/builtinWidgets/muscleFocus";
+import { recentSessionsWidget } from "@logit/core/plugins/builtinWidgets/recentSessions";
+import { activityWidget } from "@logit/core/plugins/builtinWidgets/activity";
+import { progressionWidget } from "@logit/core/plugins/builtinWidgets/progression";
+import { todaysNutritionWidget } from "@logit/core/plugins/builtinWidgets/todaysNutrition";
+import { weightTrendWidget } from "@logit/core/plugins/builtinWidgets/weightTrend";
 
 const BUNDLED: WidgetDefinition[] = [
   {
@@ -28,11 +28,15 @@ const BUNDLED: WidgetDefinition[] = [
     defaultEnabled: true,
     defaultOrder: 1,
   },
+  // WidgetView model — a compute() returning a declarative view the host
+  // renders. See @logit/core/plugins/widgetView. Community widgets use the same
+  // WidgetCard, with a sandboxed plugin.
   {
     id: "last-session",
     label: "Recent Sessions",
     description: "Jump back into a recent session.",
-    component: LastSessionWidget,
+    component: WidgetCard,
+    props: { plugin: recentSessionsWidget },
     defaultEnabled: true,
     defaultOrder: 2,
   },
@@ -40,7 +44,8 @@ const BUNDLED: WidgetDefinition[] = [
     id: "progression",
     label: "Progression",
     description: "Current targets for your tracked exercises.",
-    component: ProgressionWidget,
+    component: WidgetCard,
+    props: { plugin: progressionWidget },
     defaultEnabled: true,
     defaultOrder: 3,
   },
@@ -48,13 +53,12 @@ const BUNDLED: WidgetDefinition[] = [
     id: "activity-tracker",
     label: "Activity Tracker",
     description: "Monthly workout calendar. Tap for a full year view.",
-    component: ActivityTrackerWidget,
+    component: WidgetCard,
+    props: { plugin: activityWidget },
     defaultEnabled: true,
     defaultOrder: 4,
   },
   {
-    // First built-in on the WidgetView model — a sandboxed compute() returning
-    // a declarative view the host renders. See @logit/core/plugins/widgetView.
     id: "muscle-map",
     label: "Muscle Focus",
     description: "Body map showing which muscles you've trained this week.",
@@ -67,7 +71,8 @@ const BUNDLED: WidgetDefinition[] = [
     id: "todays-nutrition",
     label: "Today's Nutrition",
     description: "Calories & macros consumed vs your target. Auto-added once you set a nutrition goal.",
-    component: TodaysNutritionWidget,
+    component: WidgetCard,
+    props: { plugin: todaysNutritionWidget },
     defaultEnabled: false,
     defaultOrder: 6,
   },
@@ -75,7 +80,8 @@ const BUNDLED: WidgetDefinition[] = [
     id: "weight-trend",
     label: "Weight Trend",
     description: "Smoothed bodyweight trend and weekly rate. Auto-added once you set a nutrition goal.",
-    component: WeightTrendWidget,
+    component: WidgetCard,
+    props: { plugin: weightTrendWidget },
     defaultEnabled: false,
     defaultOrder: 7,
   },
