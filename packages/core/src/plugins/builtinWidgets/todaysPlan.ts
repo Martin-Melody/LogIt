@@ -8,10 +8,14 @@ export const todaysPlanWidget: WidgetPlugin = {
 
   compute(input: WidgetInput): WidgetView {
     const plan = input.todaysPlan;
+    const subtitle =
+      [plan?.dayLabel, plan?.scheduled ? "Scheduled" : null].filter(Boolean).join(" · ") ||
+      undefined;
 
     if (!plan || plan.exercises.length === 0) {
       return {
         title: "Today's plan",
+        subtitle,
         body: [],
         empty: {
           text: plan ? "No exercises planned for this day." : "Set up a split to see your plan here.",
@@ -22,7 +26,7 @@ export const todaysPlanWidget: WidgetPlugin = {
 
     return {
       title: "Today's plan",
-      subtitle: [plan.dayLabel, plan.scheduled ? "Scheduled" : null].filter(Boolean).join(" · ") || undefined,
+      subtitle,
       body: [
         {
           kind: "list",

@@ -5,10 +5,10 @@
   const { node }: { node: WidgetButtonRowNode } = $props();
 </script>
 
-<div class="flex flex-wrap gap-2">
+<div class="flex flex-col gap-2">
   {#each node.buttons as btn (btn.label)}
     <Button
-      size="sm"
+      class="w-full"
       variant={btn.primary ? "default" : "outline"}
       onclick={() => runWidgetAction(btn.action)}
     >
