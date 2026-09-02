@@ -69,10 +69,14 @@ export async function gatherWidgetInput(needs: WidgetDataNeed[]): Promise<Widget
       };
     }
     if (want.has("todaysPlan")) {
+      const sortedDays = split ? [...split.days].sort((a, b) => a.orderIndex - b.orderIndex) : [];
       const blocks = day ? [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) : [];
       input.todaysPlan = {
+        splitId: split?.id,
         dayLabel: day ? dayLabel(day.orderIndex, day.name) : undefined,
         scheduled: !!(day && scheduled && day.id === scheduled.id),
+        dayIndex: day ? sortedDays.findIndex((d) => d.id === day.id) : undefined,
+        dayCount: sortedDays.length,
         exercises: blocks.map((b) =>
           b.type === "strength" ? b.exerciseName : b.activityName,
         ),

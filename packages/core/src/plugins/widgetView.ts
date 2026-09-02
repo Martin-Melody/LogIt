@@ -65,8 +65,12 @@ export type WidgetInput = {
     plannedDayLabel?: string;
   };
   todaysPlan?: {
+    splitId?: string;
     dayLabel?: string;
     scheduled: boolean;
+    /** 0-based position of the shown day, and how many days the split has. */
+    dayIndex?: number;
+    dayCount?: number;
     exercises: string[];
   };
   /** Current targets per tracked exercise — the host runs the algorithm. */
@@ -94,7 +98,9 @@ export type WidgetAction =
   | { navigate: string }
   | { startEmptyWorkout: true }
   | { startPlannedWorkout: true }
-  | { resumeWorkout: true };
+  | { resumeWorkout: true }
+  /** Move the previewed split day (Today's Plan). -1 = previous, 1 = next. */
+  | { cycleDay: -1 | 1 };
 
 export type WidgetTextNode = {
   kind: "text";
@@ -192,6 +198,13 @@ export type WidgetNode =
   | WidgetCalendarHeatmapNode
   | WidgetButtonRowNode;
 
+export type WidgetHeaderAction = {
+  /** Which glyph the host draws. */
+  icon: "add" | "edit" | "prev" | "next";
+  label: string;
+  action: WidgetAction;
+};
+
 export type WidgetView = {
   title: string;
   subtitle?: string;
@@ -199,8 +212,10 @@ export type WidgetView = {
   body: WidgetNode[];
   /** Tapping the card body (outside interactive nodes) goes here. */
   action?: WidgetAction;
-  /** Small icon-button in the card header, e.g. "log weight". */
-  headerAction?: { label: string; action: WidgetAction };
+  /** Icon-buttons in the card header, e.g. prev/next day, "log food". */
+  headerActions?: WidgetHeaderAction[];
+  /** Dot pager under the header, e.g. which split day is shown. */
+  pager?: { count: number; index: number };
   /** Shown instead of body when the widget has nothing yet. */
   empty?: { text: string; action?: WidgetAction };
 };

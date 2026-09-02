@@ -47,7 +47,7 @@ export const weightTrendWidget: WidgetPlugin = {
           reference: bw.targetKg,
         },
       ],
-      headerAction: { label: "Log weight", action: { navigate: "/nutrition/weight" } },
+      headerActions: [{ icon: "add", label: "Log weight", action: { navigate: "/nutrition/weight" } }],
       action: { navigate: "/nutrition/weight" },
     };
   },
