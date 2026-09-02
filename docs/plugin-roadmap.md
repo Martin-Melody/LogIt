@@ -393,30 +393,18 @@ Everything above shipped to `main` (2026-09-02). What's left is additive polish:
 - **Web playground / editor** — client-side Monaco + in-browser esbuild + live
   preview against sample `WidgetInput` / `ProgressionInput`. Entirely static,
   hostable on the docs site.
-- **Docs site with a Plugins section** — see below.
 - **Community registry** — re-scaffold `Martin-Melody/logit-plugin-registry`
   from `packages/plugin-tools/registry-template/` and wire its CI. Until then the
   app falls back to bundled examples.
 
-### Docs site — a real "build a plugin" section
+### Docs site — DONE (2026-09-02)
 
-The repo `docs/*.md` files are the design record; plugin *authors* need something
-browsable with live examples, closer to how shadcn documents components.
-
-- **Stay on-stack.** `apps/clients/docs-site` is already SvelteKit + Cloudflare
-  Pages. Add `mdsvex` (markdown that can embed Svelte components) + a sidebar doc
-  tree + `shiki` for code blocks. Don't introduce Astro/Starlight or Next/Fumadocs
-  — the monorepo deliberately standardises on SvelteKit (see
-  [[project_hosting_deployment]] on stack-drift).
-- **Content:** overview + trust model → per-family authoring guide, each with a
-  complete copy-pasteable example → **the WidgetView primitive gallery with live
-  previews** (import the real node renderers from the frontend and render each
-  primitive next to the JSON that produced it — this is the shadcn-style payoff)
-  → contract API reference (`WidgetInput`, `WidgetView`, `ProgressionInput`, …,
-  generated or hand-kept) → "how to publish" (fold in `docs/publishing-plugins.md`).
-- **Sizing:** the `mdsvex` + sidebar + highlighting scaffold is ~half a day; the
-  content and the live gallery are the real work (a session or two). Worth doing
-  once the plugin ecosystem is meant to grow beyond the samples.
+`apps/clients/docs-site` (SvelteKit + Cloudflare Pages) has a `/docs` section:
+`mdsvex` + `shiki` (dual-theme) + sidebar. Pages: overview, plugin intro, trust
+& the sandbox, per-family guides, widgets, **the primitive gallery** (every
+`WidgetNode` rendered live next to its JSON via `lib/docs/WidgetNodePreview` —
+a compact mirror of the app's renderers), publishing, API reference. Not deployed
+yet — `wrangler pages deploy` when ready.
 
 ## Open questions
 
