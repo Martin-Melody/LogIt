@@ -4,7 +4,6 @@ export * from "./catalog";
 export * from "./installer";
 export * from "./packStore";
 export * from "./exportPack";
-export * from "./bundle";
 export * from "./runtime";
 export * from "./publish";
 export * from "./publishQueue";

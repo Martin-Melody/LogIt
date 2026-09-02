@@ -26,6 +26,8 @@ export type BundleMeta = {
   defaultPreferences?: unknown;
   preferencesSchema?: unknown;
   metricDefinitions?: unknown;
+  /** widget: declared data needs. */
+  needs?: unknown;
 };
 
 type StoredBundle = {

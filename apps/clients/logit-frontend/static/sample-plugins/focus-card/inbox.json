@@ -1,7 +1,0 @@
-{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "/sample-plugins/focus-card/inbox.json",
-  "type": "OrderedCollection",
-  "totalItems": 0,
-  "first": null
-}

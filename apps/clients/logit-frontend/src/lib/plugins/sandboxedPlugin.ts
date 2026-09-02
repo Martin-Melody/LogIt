@@ -20,6 +20,7 @@ export const SANDBOXED_FAMILIES: ReadonlySet<PluginFamily> = new Set([
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
+  "widget",
 ]);
 
 export function isSandboxedFamily(family: PluginFamily): boolean {

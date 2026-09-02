@@ -1,9 +1,9 @@
 import type { WidgetDefinition, WidgetId } from "./widget";
 import type { WidgetRegistry } from "./widgetRegistry";
 
-import QuickStartWidget from "./components/QuickStartWidget.svelte";
-import TodaysPlanWidget from "./components/TodaysPlanWidget.svelte";
 import WidgetCard from "./render/WidgetCard.svelte";
+import { quickStartWidget } from "@logit/core/plugins/builtinWidgets/quickStart";
+import { todaysPlanWidget } from "@logit/core/plugins/builtinWidgets/todaysPlan";
 import { muscleFocusWidget } from "@logit/core/plugins/builtinWidgets/muscleFocus";
 import { recentSessionsWidget } from "@logit/core/plugins/builtinWidgets/recentSessions";
 import { activityWidget } from "@logit/core/plugins/builtinWidgets/activity";
@@ -16,7 +16,8 @@ const BUNDLED: WidgetDefinition[] = [
     id: "quick-start",
     label: "Quick Start",
     description: "Start or continue a workout.",
-    component: QuickStartWidget,
+    component: WidgetCard,
+    props: { plugin: quickStartWidget },
     defaultEnabled: true,
     defaultOrder: 0,
   },
@@ -24,7 +25,8 @@ const BUNDLED: WidgetDefinition[] = [
     id: "todays-plan",
     label: "Today's Plan",
     description: "See today's exercises from your active split.",
-    component: TodaysPlanWidget,
+    component: WidgetCard,
+    props: { plugin: todaysPlanWidget },
     defaultEnabled: true,
     defaultOrder: 1,
   },

@@ -111,6 +111,30 @@ export const analytics = {
     expect(out.envelope).toEqual({ ok: true, value: { metrics: [{ id: "vol", value: 500 }], series: [], insights: [] } });
   });
 
+  it("runs a widget's compute() and returns a WidgetView", () => {
+    const widget = `
+export const pluginBundle = { formatVersion: 1, pluginId: "w", family: "widget", entryExport: "widget" };
+export const widget = {
+  id: "w", name: "Count", description: "d", needs: ["workouts"],
+  compute(input) {
+    const n = (input.workouts || []).length;
+    return { title: "Count", body: [{ kind: "text", text: n + " workouts" }] };
+  },
+};`;
+    const meta = run(widget, "widget", { kind: "meta" });
+    expect(meta.envelope?.ok && (meta.envelope.value as { needs: unknown }).needs).toEqual(["workouts"]);
+
+    const out = run(widget, "widget", {
+      kind: "call",
+      method: "compute",
+      input: { now: 0, prefs: { weightUnit: "kg" }, workouts: [{}, {}, {}] },
+    });
+    expect(out.envelope).toEqual({
+      ok: true,
+      value: { title: "Count", body: [{ kind: "text", text: "3 workouts" }] },
+    });
+  });
+
   it("runs a nutrition algorithm's computeTargets()", () => {
     const nutri = `
 export const pluginBundle = { formatVersion: 1, pluginId: "n", family: "nutrition-algorithm", entryExport: "algorithm" };
