@@ -1,0 +1,77 @@
+---
+title: Exercise packs
+---
+
+An exercise pack adds a list of exercises to the catalogue. It's pure JSON — no
+code, no sandbox — so it installs regardless of Restricted Mode.
+
+## The fast path: export from the app
+
+You don't have to write anything. In the app: **Exercises → long-press a custom
+exercise → select a few → Export as pack**. You get a self-contained
+`<name>.logit-pack.json` file that anyone can install from **Plugins → Add →
+File**.
+
+To publish it in a registry, split it into a manifest + data file (below), or
+keep it inline.
+
+## The pack file
+
+```json
+{
+  "formatVersion": 1,
+  "pluginId": "com.you.my-pack",
+  "exercises": [
+    {
+      "name": "Zercher Squat",
+      "primaryMuscles": ["quads"],
+      "secondaryMuscles": ["core", "glutes"],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Nordic Hamstring Curl",
+      "primaryMuscles": ["hamstrings"],
+      "secondaryMuscles": ["calves"],
+      "exerciseType": "bodyweight"
+    }
+  ]
+}
+```
+
+- **Muscle groups** must be from: `chest`, `back`, `shoulders`, `biceps`,
+  `triceps`, `quads`, `hamstrings`, `glutes`, `calves`, `core`, `forearms`.
+- **`exerciseType`** (optional): `normal`, `assisted`, or `bodyweight`.
+- Max 500 exercises. In-pack duplicate names are dropped.
+
+## The manifest
+
+```json
+{
+  "id": "com.you.my-pack",
+  "family": "exercise-pack",
+  "name": "My Pack",
+  "description": "A few odd-lift movements.",
+  "version": "1.0.0",
+  "author": "You",
+  "integrity": "sha256-…",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "plugins/my-pack/manifest.json",
+    "bundleUrl": "plugins/my-pack/exercises.json"
+  },
+  "capabilities": [
+    { "family": "exercise-pack", "exercisePackId": "com.you.my-pack" }
+  ]
+}
+```
+
+`capabilities[0].exercisePackId` must equal the manifest `id`.
+
+## What happens on install
+
+Pack exercises appear in the catalogue with namespaced ids
+(`pack:<id>:<slug>`). A core or user exercise with the same name always wins.
+Disabling or uninstalling the pack removes them cleanly. Pack contents are
+device-local — they are not synced to your account.
+
+Next: [publishing](/docs/plugins/publishing).

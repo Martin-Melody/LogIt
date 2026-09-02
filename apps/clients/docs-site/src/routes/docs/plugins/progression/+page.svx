@@ -1,0 +1,93 @@
+---
+title: Progression algorithms
+---
+
+A progression algorithm decides your next sets for an exercise, given its
+history. The user picks one in **Settings → Progression**; the app calls it
+every time it needs a suggestion.
+
+## The contract
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.you.my-algorithm",
+  family: "progression-algorithm",
+  entryExport: "algorithm",
+} as const;
+
+export const algorithm = {
+  id: "com.you.my-algorithm",
+  name: "My Algorithm",
+  description: "Double progression — fill the rep range, then add weight.",
+  defaultState: { increment: 2.5 },
+
+  suggest(input) {
+    const inc = Number(input.state?.increment ?? 2.5);
+    const last = input.history[0]?.sets ?? [];
+    const topReps = Math.max(0, ...last.map((s) => s.reps));
+    const lastWeight = last[0]?.weight ?? 20;
+
+    const addWeight = topReps >= 8;
+    return {
+      sets: [{ reps: addWeight ? 5 : [5, 8], weight: addWeight ? lastWeight + inc : lastWeight }],
+      nextState: input.state,
+      notes: addWeight ? `Add ${inc}kg` : "Add a rep",
+    };
+  },
+};
+```
+
+## Input
+
+`suggest(input: ProgressionInput)` — see `@logit/core/domain/progression`.
+
+| Field | Notes |
+|---|---|
+| `exercise` | `{ name, id?, primaryMuscles?, exerciseType? }` |
+| `history` | `ExerciseHistoryEntry[]`, **most recent first**. Each has `sets`, `performedAtMs`, optional `planned`. |
+| `state` | Your algorithm's own opaque value — whatever you returned as `nextState` last time. Starts as `defaultState`. |
+| `userPreferences` | Values the user set, if you declare a `preferencesSchema` (see below). |
+| `plannedTargets` | Sets/reps/weight from the user's split, if any. |
+| `sessionContext` | Preceding exercises this session + their effort, for fatigue-aware logic. |
+
+## Output
+
+```ts
+type ProgressionOutput = {
+  sets: { reps: number | [min, max]; weight: number; setType?: string; note?: string }[];
+  nextState: unknown;      // persisted by the app, handed back next call
+  label?: string;
+  notes?: string;
+  displayMode?: "summary" | "block";
+};
+```
+
+**State lives in the return value, not in your module.** Every call gets a fresh
+VM.
+
+## Preferences
+
+Add a settings screen by exporting a schema:
+
+```ts
+export const algorithm = {
+  // …
+  defaultPreferences: { increment: 2.5, repRange: [5, 8] },
+  preferencesSchema: [
+    { key: "increment", label: "Weight increment (kg)", type: "number", default: 2.5, min: 0.5, step: 0.5 },
+    { key: "repRange", label: "Rep range", type: "range", default: [5, 8], min: 1, max: 20 },
+  ],
+};
+```
+
+The values arrive as `input.userPreferences`.
+
+## Build & test
+
+```bash
+npx esbuild src/index.ts --bundle --format=esm --outfile=bundle.js
+```
+
+Test `suggest` as a plain function — it's pure. Then
+[publish](/docs/plugins/publishing).

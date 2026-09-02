@@ -1,0 +1,60 @@
+---
+title: Publishing
+---
+
+Discovery is just a static `registry.json` — an array of catalogue entries. There
+are three ways to get a plugin to users.
+
+## 1. Community registry
+
+Fork [`logit-plugin-registry`](https://github.com/Martin-Melody/logit-plugin-registry),
+add your plugin, open a PR.
+
+```
+registry.json                    array of entries
+plugins/<plugin-id>/
+  manifest.json
+  bundle.js                      (or exercises.json for packs)
+```
+
+`manifestUrl` and `distribution.bundleUrl` are **repo-relative paths**
+(`plugins/<id>/...`), not URLs.
+
+Run the linter before opening the PR — CI runs the same check:
+
+```bash
+npm install && npm run lint
+```
+
+It validates every entry and manifest, verifies integrity hashes, parses packs,
+and loads every code bundle in a real sandbox to confirm it exposes the method
+its family needs. First submissions get a human review; version bumps after that
+are lighter.
+
+## 2. Your own registry
+
+Host a `registry.json` anywhere static. Users add its URL in
+**Plugins → Browse → Sources**. A self-hosted LogIt instance can point its
+default there. Entry shape:
+
+```json
+{
+  "id": "com.you.my-plugin",
+  "name": "My Plugin",
+  "description": "One sentence.",
+  "family": "progression-algorithm",
+  "author": "You",
+  "manifestUrl": "https://you.example/plugins/my-plugin/manifest.json",
+  "tags": ["progression"]
+}
+```
+
+## 3. No registry
+
+Send someone the manifest URL, the `.logit-pack.json` file, or the raw JSON.
+**Plugins → Add** accepts all three.
+
+## Updating
+
+Bump `version` in the manifest, regenerate the `integrity` hash, submit again.
+Users get a reviewable "update available" prompt.

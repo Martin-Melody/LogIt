@@ -1,0 +1,60 @@
+---
+title: Trust & the sandbox
+---
+
+Installing a plugin should never be a security decision you have to think hard
+about. LogIt's plugin model is built around that.
+
+## Restricted Mode
+
+Community plugins that run code are **off by default**. The app ships and works
+with only its built-in extension points until you explicitly turn them on, with
+a one-time warning. Content packs (exercise packs) are pure data and always
+install.
+
+## Install once, verify, run local
+
+On install the app:
+
+1. Fetches the artifact once.
+2. Computes its SHA-256 and compares it to `manifest.integrity`
+   (`sha256-<base64>`). A mismatch is refused.
+3. Stores the artifact locally.
+
+After that it runs offline. Updates are an explicit, reviewable action — a new
+`version` and a new hash.
+
+Generate the hash for your artifact:
+
+```bash
+printf 'sha256-%s\n' "$(openssl dgst -sha256 -binary bundle.js | openssl base64)"
+```
+
+## The sandbox
+
+Code plugins run inside **QuickJS compiled to WebAssembly** — the same on web,
+iOS and Android. Inside it a plugin gets a bare ES2020 environment:
+
+- **no DOM**, no `document`, no `window`
+- **no `fetch`**, no network of any kind
+- **no storage** — `localStorage`, `IndexedDB`, cookies are all absent
+- **no timers** — `setTimeout`, `setInterval` don't exist
+- a **fresh VM per call** — nothing persists between runs
+- a **hard wall-clock deadline** (~300 ms) — an infinite loop is killed
+
+Your plugin receives a frozen JSON input and must return a JSON-serialisable
+value. That's the entire interface. State (for progression) is threaded through
+the return value — never a module-level variable.
+
+## Why LogIt can do this
+
+Every code-plugin type is a **pure function**: it takes data and returns data.
+It doesn't render UI, register commands, or integrate with the app's internals —
+so there's nothing it needs the wider app for, and everything can be sandboxed.
+Widgets are the same: a widget returns a *description* of what to show, and the
+app draws it.
+
+This is a deliberate trade-off, the same one Apple WidgetKit and Android Glance
+make: a plugin can only compose the primitives the host ships. In exchange, you
+never have to trust plugin code with your training history or your sync
+credentials.

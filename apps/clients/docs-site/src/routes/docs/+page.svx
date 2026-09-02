@@ -1,0 +1,19 @@
+---
+title: Documentation
+---
+
+LogIt is an offline-first, self-hostable workout and nutrition tracker. This is
+the technical documentation.
+
+## Sections
+
+- **[Self-hosting](/self-hosting)** — run your own LogIt backend.
+- **[Plugins](/docs/plugins)** — build and share progression algorithms,
+  nutrition algorithms, analytics modules, home-screen widgets, and exercise
+  packs. Everything runs in a sandbox; nothing you install can touch your data
+  or the network.
+
+## Source
+
+Everything is on [GitHub](https://github.com/Martin-Melody/LogIt). The app is
+SvelteKit + Capacitor; shared logic lives in `@logit/core`.
