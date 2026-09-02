@@ -90,6 +90,18 @@ Full-width stacked buttons. `primary` fills one.
   { label: "Start unplanned", action: { startEmptyWorkout: true } },
 ]}} />
 
+## checklist
+
+Tap-to-toggle rows. Each item carries its own `action` (usually
+`{ toggleHabit: id }`); `checked` strikes the label, `muted` dims a row that
+isn't relevant today, `sublabel` shows a streak or weekly count.
+
+<Demo node={{ kind: "checklist", items: [
+  { id: "a", label: "Drink water", checked: true, sublabel: "6 days streak" },
+  { id: "b", label: "Stretch", checked: false, sublabel: "2 / 3 this week" },
+  { id: "c", label: "Cold shower", checked: false, muted: true, sublabel: "Not due today" },
+]}} />
+
 ---
 
 Need a primitive that isn't here? The vocabulary is deliberately small — open an

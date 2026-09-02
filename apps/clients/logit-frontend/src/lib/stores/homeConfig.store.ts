@@ -12,6 +12,9 @@ const STORAGE_KEY = "logit:home-config:v1";
 const NUTRITION_WIDGET_IDS = ["todays-nutrition", "weight-trend"];
 const NUTRITION_SEED_KEY = "logit:home-config:nutrition-seeded:v1";
 
+// Same one-shot deal for the Habits widget — on the first time the user has a habit.
+const HABITS_SEED_KEY = "logit:home-config:habits-seeded:v1";
+
 function defaultConfig(): HomeConfig {
   if (!localWidgetRegistry) return { slots: [] };
   const slots: WidgetSlot[] = localWidgetRegistry
@@ -150,6 +153,17 @@ function createHomeConfigStore() {
     }));
   }
 
+  /** One-shot: enable the Habits widget the first time the user has a habit. */
+  function seedHabitsWidget(hasHabit: boolean): void {
+    if (!browser || !hasHabit) return;
+    if (localStorage.getItem(HABITS_SEED_KEY)) return;
+    localStorage.setItem(HABITS_SEED_KEY, "1");
+    update((c) => ({
+      ...c,
+      slots: c.slots.map((s) => (s.id === "habits" ? { ...s, enabled: true } : s)),
+    }));
+  }
+
   return {
     subscribe: store.subscribe,
     toggleWidget,
@@ -157,6 +171,7 @@ function createHomeConfigStore() {
     moveDown,
     reconcilePlugins,
     seedNutritionWidgets,
+    seedHabitsWidget,
   };
 }
 

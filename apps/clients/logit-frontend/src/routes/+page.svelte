@@ -10,7 +10,7 @@
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
   import { authStore } from "$lib/api/authStore.svelte";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
-  import { getNutritionRepo } from "$lib/data/repoProvider";
+  import { getNutritionRepo, getHabitRepo } from "$lib/data/repoProvider";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
 
   let widgets = $state<RuntimeWidgetDefinition[]>(
@@ -37,6 +37,10 @@
     void getNutritionRepo()
       .getGoal()
       .then((goal) => homeConfig.seedNutritionWidgets(goal != null))
+      .catch(() => {});
+    void getHabitRepo()
+      .listHabits()
+      .then((habits) => homeConfig.seedHabitsWidget(habits.length > 0))
       .catch(() => {});
     void pluginRuntime.listWidgets().then((loaded) => {
       widgets = loaded;

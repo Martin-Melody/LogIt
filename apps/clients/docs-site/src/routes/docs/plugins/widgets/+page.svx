@@ -81,6 +81,7 @@ the sandbox. Ask for the minimum.
 | `progressionTargets` | `{ exerciseName, target }[]` — the host runs the algorithm |
 | `nutrition` | `{ hasGoal, targetKcal?, consumedKcal?, targetMacros?, consumedMacros? }` |
 | `bodyweight` | `{ currentKg?, weeklyRateKg?, targetKg?, trendPoints }` |
+| `habits` | `{ id, name, icon?, dueToday, doneToday, streak, weekProgress? }[]` |
 
 Full input type: `@logit/core/plugins/widgetView` → `WidgetInput`.
 
@@ -106,6 +107,7 @@ Widgets can't navigate freely or run code. `WidgetAction` is an allow-list:
 - `{ navigate: "/some/app/path" }` — internal routes only
 - `{ startEmptyWorkout: true }` · `{ startPlannedWorkout: true }` · `{ resumeWorkout: true }`
 - `{ cycleDay: -1 | 1 }` — move the previewed split day
+- `{ toggleHabit: id }` — check today's habit off (id must be a real habit)
 
 See the [primitive gallery](/docs/plugins/primitives) for every node type with
 live examples.
