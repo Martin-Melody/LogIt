@@ -3,6 +3,9 @@
   import * as Card from "$lib/components/ui/card";
   import type { WidgetPlugin, WidgetView } from "@logit/core/plugins/widgetView";
   import { onForeground } from "$lib/lifecycle";
+  import { activeSplit } from "$lib/stores/activeSplit.store";
+  import { selectedDayOverride } from "$lib/stores/todaysPlan.store";
+  import { currentSession } from "$lib/stores/currentSession.store";
   import { gatherWidgetInput } from "./widgetInput";
   import WidgetViewRenderer from "./WidgetViewRenderer.svelte";
 
@@ -12,6 +15,10 @@
    * community widgets), and renders the result.
    */
   const { plugin }: { plugin: WidgetPlugin } = $props();
+
+  const reactive = $derived(
+    plugin.needs.includes("session") || plugin.needs.includes("todaysPlan"),
+  );
 
   let view = $state<WidgetView | null>(null);
   let error = $state(false);
@@ -27,10 +34,18 @@
     }
   }
 
-  onMount(() => {
+  // Runs on mount, then again whenever a reactive widget's inputs change
+  // (split day switched, a session started/finished).
+  $effect(() => {
+    if (reactive) {
+      void $activeSplit;
+      void $selectedDayOverride;
+      void $currentSession;
+    }
     void load();
-    return onForeground(() => void load());
   });
+
+  onMount(() => onForeground(() => void load()));
 </script>
 
 {#if view}

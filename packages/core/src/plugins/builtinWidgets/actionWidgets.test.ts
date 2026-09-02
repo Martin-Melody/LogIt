@@ -50,6 +50,32 @@ describe("todaysPlanWidget", () => {
     expect(view.empty?.text).toMatch(/Set up a split/);
   });
 
+  it("shows a day pager + prev/next/edit actions for a multi-day split", () => {
+    const view = todaysPlanWidget.compute({
+      ...base,
+      todaysPlan: {
+        splitId: "s1",
+        dayLabel: "Day 2",
+        scheduled: false,
+        dayIndex: 1,
+        dayCount: 3,
+        exercises: ["Row"],
+      },
+    });
+    expect(view.pager).toEqual({ count: 3, index: 1 });
+    expect(view.headerActions?.map((h) => h.icon)).toEqual(["prev", "next", "edit"]);
+    expect(view.headerActions?.[0].action).toEqual({ cycleDay: -1 });
+  });
+
+  it("has no pager for a single-day split", () => {
+    const view = todaysPlanWidget.compute({
+      ...base,
+      todaysPlan: { splitId: "s1", scheduled: true, dayIndex: 0, dayCount: 1, exercises: ["Row"] },
+    });
+    expect(view.pager).toBeUndefined();
+    expect(view.headerActions?.map((h) => h.icon)).toEqual(["edit"]);
+  });
+
   it("truncates long days", () => {
     const view = todaysPlanWidget.compute({
       ...base,

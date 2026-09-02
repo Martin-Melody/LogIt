@@ -3,7 +3,11 @@ import { goto } from "$app/navigation";
 import type { WidgetAction } from "@logit/core/plugins/widgetView";
 import { currentSession } from "$lib/stores/currentSession.store";
 import { activeSplit } from "$lib/stores/activeSplit.store";
-import { selectedDayOverride, clearDayOverride } from "$lib/stores/todaysPlan.store";
+import {
+  selectedDayOverride,
+  selectDayOverride,
+  clearDayOverride,
+} from "$lib/stores/todaysPlan.store";
 import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
 import { getScheduleMode, advanceRotation } from "$lib/usecases/Splits/splitRotation";
 
@@ -19,6 +23,21 @@ export function runWidgetAction(action: WidgetAction): void {
 
   if ("resumeWorkout" in action) {
     void goto("/session/current");
+    return;
+  }
+
+  if ("cycleDay" in action) {
+    const split = get(activeSplit);
+    if (!split || split.days.length < 2) return;
+    const days = [...split.days].sort((a, b) => a.orderIndex - b.orderIndex);
+    const override = get(selectedDayOverride);
+    const current =
+      override?.splitId === split.id
+        ? days.findIndex((d) => d.id === override.dayId)
+        : days.findIndex((d) => d.id === (getTodaySplitDay(split)?.id ?? ""));
+    const from = current < 0 ? 0 : current;
+    const next = days[(from + action.cycleDay + days.length) % days.length]!;
+    selectDayOverride(split.id, next.id);
     return;
   }
 

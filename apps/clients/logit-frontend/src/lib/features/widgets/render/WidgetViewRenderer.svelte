@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
-  import { Plus } from "lucide-svelte";
+  import { Plus, Pencil, ChevronLeft, ChevronRight } from "lucide-svelte";
   import type { WidgetView } from "@logit/core/plugins/widgetView";
   import { runWidgetAction } from "./widgetAction";
   import TextNode from "./nodes/TextNode.svelte";
@@ -28,18 +28,35 @@
           <Card.Description>{view.subtitle}</Card.Description>
         {/if}
       </div>
-      {#if view.headerAction}
-        <Button
-          variant="ghost"
-          size="icon"
-          class="h-7 w-7 shrink-0"
-          aria-label={view.headerAction.label}
-          onclick={() => runWidgetAction(view.headerAction!.action)}
-        >
-          <Plus class="h-4 w-4" />
-        </Button>
+      {#if view.headerActions?.length}
+        <div class="flex shrink-0 items-center gap-0.5">
+          {#each view.headerActions as ha (ha.label)}
+            <Button
+              variant="ghost"
+              size={ha.icon === "edit" ? "sm" : "icon"}
+              class={ha.icon === "edit" ? "h-7 px-2 text-xs" : "h-7 w-7"}
+              aria-label={ha.label}
+              onclick={() => runWidgetAction(ha.action)}
+            >
+              {#if ha.icon === "add"}<Plus class="h-4 w-4" />
+              {:else if ha.icon === "prev"}<ChevronLeft class="h-4 w-4" />
+              {:else if ha.icon === "next"}<ChevronRight class="h-4 w-4" />
+              {:else if ha.icon === "edit"}Edit
+              {/if}
+            </Button>
+          {/each}
+        </div>
       {/if}
     </div>
+    {#if view.pager && view.pager.count > 1}
+      <div class="flex items-center gap-1 pt-1">
+        {#each Array(view.pager.count) as _, i (i)}
+          <div
+            class="h-1.5 rounded-full transition-all {i === view.pager.index ? 'w-4 bg-primary' : 'w-1.5 bg-border'}"
+          ></div>
+        {/each}
+      </div>
+    {/if}
   </Card.Header>
 
   <Card.Content>

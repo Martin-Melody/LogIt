@@ -52,7 +52,7 @@ export const todaysNutritionWidget: WidgetPlugin = {
       subtitle:
         left >= 0 ? `${left} kcal left` + (n.sourceLabel ? ` · ${n.sourceLabel}` : "") : `${-left} kcal over`,
       body: [bars],
-      headerAction: { label: "Log food", action: { navigate: "/nutrition/log" } },
+      headerActions: [{ icon: "add", label: "Log food", action: { navigate: "/nutrition/log" } }],
       action: { navigate: "/nutrition" },
     };
   },
