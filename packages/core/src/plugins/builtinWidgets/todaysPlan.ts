@@ -38,12 +38,17 @@ export const todaysPlanWidget: WidgetPlugin = {
         ? { count: plan.dayCount!, index: plan.dayIndex }
         : undefined;
 
+    const swipe = multiDay
+      ? ({ left: { cycleDay: 1 }, right: { cycleDay: -1 } } as const)
+      : undefined;
+
     if (!plan || plan.exercises.length === 0) {
       return {
         title: "Today's plan",
         subtitle,
         headerActions: headerActions.length ? headerActions : undefined,
         pager,
+        swipe,
         body: [],
         empty: {
           text: plan ? "No exercises planned for this day." : "Set up a split to see your plan here.",
@@ -57,6 +62,7 @@ export const todaysPlanWidget: WidgetPlugin = {
       subtitle,
       headerActions: headerActions.length ? headerActions : undefined,
       pager,
+      swipe,
       body: [
         {
           kind: "list",
