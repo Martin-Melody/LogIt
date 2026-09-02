@@ -372,6 +372,52 @@ access to storage or network.
 - ActivityPub plugin actor, announcement posts, update notifications from
   federated sources (build on the existing `discovery.ts` adapter).
 
+## Post-1.0 backlog (none started, no fixed order)
+
+Everything above shipped to `main` (2026-09-02). What's left is additive polish:
+
+- **Bundle-update flow** — the app checks each registry for a newer `version`
+  than what's installed, shows a reviewable "update available" (changelog + new
+  integrity hash), installs on confirm. The manifest + `bundleStore` already
+  version bundles; this is the missing UI + a per-plugin "check for updates".
+- **`food-pack` family** — the nutrition equivalent of `exercise-pack`: a JSON
+  list of foods (name + macros + serving) merged into the food DB. Reuses the
+  whole content-pack pipeline (`packStore`, `withExercisePacks`-style decorator,
+  "export as pack" from custom foods). Small.
+- **Registry trust signals** — a `signature` field (registry-issued, verified
+  client-side), plus install count / "verified author" / reported badges surfaced
+  in Browse. Needs the hosted registry to actually issue signatures.
+- **No-code widget builder** — a form in the app: pick a data source, a metric,
+  a primitive → emits the same `WidgetView` a `compute()` returns, no code. Rides
+  entirely on the existing primitive vocabulary.
+- **Web playground / editor** — client-side Monaco + in-browser esbuild + live
+  preview against sample `WidgetInput` / `ProgressionInput`. Entirely static,
+  hostable on the docs site.
+- **Docs site with a Plugins section** — see below.
+- **Community registry** — re-scaffold `Martin-Melody/logit-plugin-registry`
+  from `packages/plugin-tools/registry-template/` and wire its CI. Until then the
+  app falls back to bundled examples.
+
+### Docs site — a real "build a plugin" section
+
+The repo `docs/*.md` files are the design record; plugin *authors* need something
+browsable with live examples, closer to how shadcn documents components.
+
+- **Stay on-stack.** `apps/clients/docs-site` is already SvelteKit + Cloudflare
+  Pages. Add `mdsvex` (markdown that can embed Svelte components) + a sidebar doc
+  tree + `shiki` for code blocks. Don't introduce Astro/Starlight or Next/Fumadocs
+  — the monorepo deliberately standardises on SvelteKit (see
+  [[project_hosting_deployment]] on stack-drift).
+- **Content:** overview + trust model → per-family authoring guide, each with a
+  complete copy-pasteable example → **the WidgetView primitive gallery with live
+  previews** (import the real node renderers from the frontend and render each
+  primitive next to the JSON that produced it — this is the shadcn-style payoff)
+  → contract API reference (`WidgetInput`, `WidgetView`, `ProgressionInput`, …,
+  generated or hand-kept) → "how to publish" (fold in `docs/publishing-plugins.md`).
+- **Sizing:** the `mdsvex` + sidebar + highlighting scaffold is ~half a day; the
+  content and the live gallery are the real work (a session or two). Worth doing
+  once the plugin ecosystem is meant to grow beyond the samples.
+
 ## Open questions
 
 - ~~**Sandbox engine**~~ — **decided: QuickJS-WASM** (`quickjs-emscripten`),
