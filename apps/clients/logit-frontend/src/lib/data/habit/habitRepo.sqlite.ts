@@ -78,6 +78,13 @@ export function createSqliteHabitRepo(): HabitRepo {
       if (h) await saveHabitRow({ ...h, archived: true, updatedAtMs: Date.now() });
     },
 
+    async unarchiveHabit(id) {
+      const db = getDb();
+      const res = await db.query(`SELECT data_json FROM habits WHERE id = ?`, [id]);
+      const h = parse<Habit>((res.values?.[0] as { data_json?: string })?.data_json ?? "");
+      if (h) await saveHabitRow({ ...h, archived: false, updatedAtMs: Date.now() });
+    },
+
     async deleteHabit(id) {
       const db = getDb();
       const now = Date.now();

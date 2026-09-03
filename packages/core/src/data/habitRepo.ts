@@ -18,6 +18,7 @@ export interface HabitRepo {
   getHabit(id: string): Promise<Habit | null>;
   saveHabit(habit: Habit): Promise<void>;
   archiveHabit(id: string): Promise<void>;
+  unarchiveHabit(id: string): Promise<void>;
   deleteHabit(id: string): Promise<void>;
 
   listEntries(opts?: ListEntriesOptions): Promise<HabitEntry[]>;

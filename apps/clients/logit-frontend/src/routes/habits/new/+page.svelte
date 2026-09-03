@@ -36,5 +36,5 @@
     <h1 class="text-sm font-semibold">New habit</h1>
   </div>
 
-  <HabitEditor onsave={save} oncancel={() => back("/habits")} />
+  <HabitEditor onsave={save} />
 </div>
