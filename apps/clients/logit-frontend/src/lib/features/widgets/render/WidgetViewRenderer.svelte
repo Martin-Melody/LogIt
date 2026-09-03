@@ -2,7 +2,7 @@
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import { Plus, Pencil, ChevronLeft, ChevronRight } from "lucide-svelte";
-  import type { WidgetView } from "@logit/core/plugins/widgetView";
+  import type { WidgetNode, WidgetView } from "@logit/core/plugins/widgetView";
   import { createSwipeHandlers } from "$lib/swipe";
   import { runWidgetAction } from "./widgetAction";
   import TextNode from "./nodes/TextNode.svelte";
@@ -19,6 +19,18 @@
   const { view }: { view: WidgetView } = $props();
 
   const bodyClickable = $derived(!!view.action);
+
+  /**
+   * Nodes that carry their own tap targets. When the whole card body is
+   * clickable (`view.action`), these must sit *above* the navigation overlay so
+   * tapping a row runs the row's action instead of opening the card.
+   */
+  const INTERACTIVE_KINDS = new Set([
+    "checklist",
+    "button-row",
+    "list",
+    "calendar-heatmap",
+  ]);
 
   const swipe = $derived(
     view.swipe
@@ -81,43 +93,50 @@
         {view.empty.text}
       </button>
     {:else}
-      {#snippet bodyNodes()}
-        {#each view.body as node, i (i)}
-          {#if node.kind === "text"}
-            <TextNode {node} />
-          {:else if node.kind === "stat-grid"}
-            <StatGridNode {node} />
-          {:else if node.kind === "muscle-map"}
-            <MuscleMapNode {node} />
-          {:else if node.kind === "list"}
-            <ListNode {node} />
-          {:else if node.kind === "progress-rings"}
-            <ProgressRingsNode {node} />
-          {:else if node.kind === "bar"}
-            <BarNode {node} />
-          {:else if node.kind === "line"}
-            <LineNode {node} />
-          {:else if node.kind === "calendar-heatmap"}
-            <CalendarHeatmapNode {node} />
-          {:else if node.kind === "button-row"}
-            <ButtonRowNode {node} />
-          {:else if node.kind === "checklist"}
-            <ChecklistNode {node} />
-          {/if}
-        {/each}
+      {#snippet nodeView(node: WidgetNode)}
+        {#if node.kind === "text"}
+          <TextNode {node} />
+        {:else if node.kind === "stat-grid"}
+          <StatGridNode {node} />
+        {:else if node.kind === "muscle-map"}
+          <MuscleMapNode {node} />
+        {:else if node.kind === "list"}
+          <ListNode {node} />
+        {:else if node.kind === "progress-rings"}
+          <ProgressRingsNode {node} />
+        {:else if node.kind === "bar"}
+          <BarNode {node} />
+        {:else if node.kind === "line"}
+          <LineNode {node} />
+        {:else if node.kind === "calendar-heatmap"}
+          <CalendarHeatmapNode {node} />
+        {:else if node.kind === "button-row"}
+          <ButtonRowNode {node} />
+        {:else if node.kind === "checklist"}
+          <ChecklistNode {node} />
+        {/if}
       {/snippet}
 
       {#if bodyClickable}
-        <button
-          type="button"
-          class="flex w-full cursor-pointer flex-col gap-3 text-left"
-          onclick={() => runWidgetAction(view.action!)}
-        >
-          {@render bodyNodes()}
-        </button>
+        <!-- Full-body tap opens the card; interactive rows sit above the overlay. -->
+        <div class="relative flex w-full flex-col gap-3">
+          <button
+            type="button"
+            class="absolute inset-0 z-0 cursor-pointer"
+            aria-label={view.title}
+            onclick={() => runWidgetAction(view.action!)}
+          ></button>
+          {#each view.body as node, i (i)}
+            <div class={INTERACTIVE_KINDS.has(node.kind) ? "relative z-10" : ""}>
+              {@render nodeView(node)}
+            </div>
+          {/each}
+        </div>
       {:else}
         <div class="flex w-full flex-col gap-3">
-          {@render bodyNodes()}
+          {#each view.body as node, i (i)}
+            {@render nodeView(node)}
+          {/each}
         </div>
       {/if}
     {/if}
