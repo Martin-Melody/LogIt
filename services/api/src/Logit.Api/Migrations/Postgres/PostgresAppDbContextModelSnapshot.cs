@@ -546,6 +546,84 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("SyncedFavoriteFoods");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedHabit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedHabits");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedHabitEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedHabitEntries");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedMealTemplate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1077,6 +1155,28 @@ namespace Logit.Api.Migrations.Postgres
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedFavoriteFood", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedHabit", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedHabitEntry", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany()

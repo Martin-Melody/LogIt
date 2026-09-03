@@ -27,6 +27,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedFavoriteFood> SyncedFavoriteFoods => Set<SyncedFavoriteFood>();
     public DbSet<SyncedMealTemplate> SyncedMealTemplates => Set<SyncedMealTemplate>();
     public DbSet<SyncedWeightEntry> SyncedWeightEntries => Set<SyncedWeightEntry>();
+    public DbSet<SyncedHabit> SyncedHabits => Set<SyncedHabit>();
+    public DbSet<SyncedHabitEntry> SyncedHabitEntries => Set<SyncedHabitEntry>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -222,6 +224,23 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         });
 
         model.Entity<SyncedWeightEntry>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Personal habits + their check-offs — same shape (see Data/Entities/Habits.cs).
+        model.Entity<SyncedHabit>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<SyncedHabitEntry>(e =>
         {
             e.HasIndex(s => new { s.UserId, s.SyncedAt });
             e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();

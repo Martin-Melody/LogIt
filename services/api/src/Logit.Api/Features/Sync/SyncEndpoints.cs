@@ -51,6 +51,14 @@ public static class SyncEndpoints
         nutrition.MapGet("/favorites", PullFavorites).RequireTier(UserTier.Pro);
         nutrition.MapPost("/meal-templates", PushMealTemplates).RequireTier(UserTier.Pro);
         nutrition.MapGet("/meal-templates", PullMealTemplates).RequireTier(UserTier.Pro);
+
+        // Habits — personal, whole-account multi-device sync → Pro-only. Coach-assigned
+        // habits (which a client would get for free, like check-ins) are a separate future
+        // entity.
+        group.MapPost("/habits", PushHabits).RequireTier(UserTier.Pro);
+        group.MapGet("/habits", PullHabits).RequireTier(UserTier.Pro);
+        group.MapPost("/habit-entries", PushHabitEntries).RequireTier(UserTier.Pro);
+        group.MapGet("/habit-entries", PullHabitEntries).RequireTier(UserTier.Pro);
     }
 
     // ── Sessions ─────────────────────────────────────────────────────────────
@@ -437,14 +445,14 @@ public static class SyncEndpoints
         return authorized ? (clientId, null) : (null, Results.Forbid());
     }
 
-    // ── Nutrition ────────────────────────────────────────────────────────────
-    // Diary days, custom foods, recipes and weight entries all share ISyncedNutritionRow, so
-    // one generic push/pull pair covers them. Semantics match check-in submissions:
+    // ── Generic client-owned rows ────────────────────────────────────────────
+    // Nutrition rows, habits and habit entries all implement ISyncedClientRow, so one
+    // generic push/pull pair covers them. Semantics match check-in submissions:
     // last-write-wins by UpdatedAtMs, tombstone via DeletedAtMs, pull cursor on SyncedAt.
 
-    private static async Task<IResult> PushNutritionRows<T>(
-        Guid userId, List<NutritionRowDto> rows, DbSet<T> set, AppDbContext db)
-        where T : class, ISyncedNutritionRow, new()
+    private static async Task<IResult> PushSyncRows<T>(
+        Guid userId, List<SyncRowDto> rows, DbSet<T> set, AppDbContext db)
+        where T : class, ISyncedClientRow, new()
     {
         if (rows.Count == 0) return Results.NoContent();
 
@@ -491,15 +499,15 @@ public static class SyncEndpoints
         return Results.NoContent();
     }
 
-    private static Task<List<NutritionRowDto>> PullNutritionRows<T>(
+    private static Task<List<SyncRowDto>> PullSyncRows<T>(
         Guid? userId, long since, DbSet<T> set)
-        where T : class, ISyncedNutritionRow
+        where T : class, ISyncedClientRow
     {
         var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
         return set
             .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc)
             .OrderBy(s => s.SyncedAt)
-            .Select(s => new NutritionRowDto(
+            .Select(s => new SyncRowDto(
                 s.ClientId, s.CreatedAtMs, s.UpdatedAtMs,
                 s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs))
             .ToListAsync();
@@ -507,59 +515,80 @@ public static class SyncEndpoints
 
     private static Task<IResult> PushNutritionDays(
         [FromBody] PushNutritionDaysRequest req, ClaimsPrincipal caller, AppDbContext db)
-        => PushNutritionRows(caller.GetUserId(), req.Days, db.SyncedNutritionDays, db);
+        => PushSyncRows(caller.GetUserId(), req.Days, db.SyncedNutritionDays, db);
 
     private static async Task<IResult> PullNutritionDays(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
         var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
         if (forbidden is not null) return forbidden;
-        return Results.Ok(new { days = await PullNutritionRows(userId, since, db.SyncedNutritionDays) });
+        return Results.Ok(new { days = await PullSyncRows(userId, since, db.SyncedNutritionDays) });
     }
 
     private static Task<IResult> PushWeightEntries(
         [FromBody] PushWeightEntriesRequest req, ClaimsPrincipal caller, AppDbContext db)
-        => PushNutritionRows(caller.GetUserId(), req.Entries, db.SyncedWeightEntries, db);
+        => PushSyncRows(caller.GetUserId(), req.Entries, db.SyncedWeightEntries, db);
 
     private static async Task<IResult> PullWeightEntries(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
         var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
         if (forbidden is not null) return forbidden;
-        return Results.Ok(new { entries = await PullNutritionRows(userId, since, db.SyncedWeightEntries) });
+        return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedWeightEntries) });
     }
 
     private static Task<IResult> PushCustomFoods(
         [FromBody] PushCustomFoodsRequest req, ClaimsPrincipal caller, AppDbContext db)
-        => PushNutritionRows(caller.GetUserId(), req.Foods, db.SyncedCustomFoods, db);
+        => PushSyncRows(caller.GetUserId(), req.Foods, db.SyncedCustomFoods, db);
 
     private static async Task<IResult> PullCustomFoods(
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { foods = await PullNutritionRows(caller.GetUserId(), since, db.SyncedCustomFoods) });
+        => Results.Ok(new { foods = await PullSyncRows(caller.GetUserId(), since, db.SyncedCustomFoods) });
 
     private static Task<IResult> PushRecipes(
         [FromBody] PushRecipesRequest req, ClaimsPrincipal caller, AppDbContext db)
-        => PushNutritionRows(caller.GetUserId(), req.Recipes, db.SyncedRecipes, db);
+        => PushSyncRows(caller.GetUserId(), req.Recipes, db.SyncedRecipes, db);
 
     private static async Task<IResult> PullRecipes(
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { recipes = await PullNutritionRows(caller.GetUserId(), since, db.SyncedRecipes) });
+        => Results.Ok(new { recipes = await PullSyncRows(caller.GetUserId(), since, db.SyncedRecipes) });
 
     private static Task<IResult> PushFavorites(
         [FromBody] PushFavoritesRequest req, ClaimsPrincipal caller, AppDbContext db)
-        => PushNutritionRows(caller.GetUserId(), req.Favorites, db.SyncedFavoriteFoods, db);
+        => PushSyncRows(caller.GetUserId(), req.Favorites, db.SyncedFavoriteFoods, db);
 
     private static async Task<IResult> PullFavorites(
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { favorites = await PullNutritionRows(caller.GetUserId(), since, db.SyncedFavoriteFoods) });
+        => Results.Ok(new { favorites = await PullSyncRows(caller.GetUserId(), since, db.SyncedFavoriteFoods) });
 
     private static Task<IResult> PushMealTemplates(
         [FromBody] PushMealTemplatesRequest req, ClaimsPrincipal caller, AppDbContext db)
-        => PushNutritionRows(caller.GetUserId(), req.Templates, db.SyncedMealTemplates, db);
+        => PushSyncRows(caller.GetUserId(), req.Templates, db.SyncedMealTemplates, db);
 
     private static async Task<IResult> PullMealTemplates(
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { templates = await PullNutritionRows(caller.GetUserId(), since, db.SyncedMealTemplates) });
+        => Results.Ok(new { templates = await PullSyncRows(caller.GetUserId(), since, db.SyncedMealTemplates) });
+
+    // ── Habits ───────────────────────────────────────────────────────────────
+    // Personal habits + check-offs, same ISyncedClientRow semantics as the nutrition rows.
+    // The ?clientId= coach path is deliberately not wired here — coach-assigned habits are
+    // a separate future entity.
+
+    private static Task<IResult> PushHabits(
+        [FromBody] PushHabitsRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushSyncRows(caller.GetUserId(), req.Habits, db.SyncedHabits, db);
+
+    private static async Task<IResult> PullHabits(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { habits = await PullSyncRows(caller.GetUserId(), since, db.SyncedHabits) });
+
+    private static Task<IResult> PushHabitEntries(
+        [FromBody] PushHabitEntriesRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushSyncRows(caller.GetUserId(), req.Entries, db.SyncedHabitEntries, db);
+
+    private static async Task<IResult> PullHabitEntries(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { entries = await PullSyncRows(caller.GetUserId(), since, db.SyncedHabitEntries) });
 
     // Goal — a singleton on User, synced like the profile blob.
 
@@ -622,16 +651,18 @@ public record ProfileDto(
     long UpdatedAtMs
 );
 
-/// One nutrition sync row — diary day, custom food, recipe or weight entry (see
-/// ISyncedNutritionRow). `Id` is the app-generated client id.
-public record NutritionRowDto(
+/// One client-owned sync row — nutrition row, habit or habit entry (see ISyncedClientRow).
+/// `Id` is the app-generated client id.
+public record SyncRowDto(
     string Id, long CreatedAtMs, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);
 
-public record PushNutritionDaysRequest(List<NutritionRowDto> Days);
-public record PushCustomFoodsRequest(List<NutritionRowDto> Foods);
-public record PushRecipesRequest(List<NutritionRowDto> Recipes);
-public record PushFavoritesRequest(List<NutritionRowDto> Favorites);
-public record PushMealTemplatesRequest(List<NutritionRowDto> Templates);
-public record PushWeightEntriesRequest(List<NutritionRowDto> Entries);
+public record PushNutritionDaysRequest(List<SyncRowDto> Days);
+public record PushCustomFoodsRequest(List<SyncRowDto> Foods);
+public record PushRecipesRequest(List<SyncRowDto> Recipes);
+public record PushFavoritesRequest(List<SyncRowDto> Favorites);
+public record PushMealTemplatesRequest(List<SyncRowDto> Templates);
+public record PushWeightEntriesRequest(List<SyncRowDto> Entries);
+public record PushHabitsRequest(List<SyncRowDto> Habits);
+public record PushHabitEntriesRequest(List<SyncRowDto> Entries);
 
 public record NutritionGoalDto(string DataJson, long UpdatedAtMs);

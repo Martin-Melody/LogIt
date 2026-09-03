@@ -6,6 +6,7 @@
   import type { Habit } from "@logit/core/domain/habit";
   import { bumpHabits } from "$lib/features/habits/store";
   import { homeConfig } from "$lib/stores/homeConfig.store";
+  import { pushHabit } from "$lib/sync/syncService";
   import HabitEditor from "$lib/features/habits/HabitEditor.svelte";
 
   let saving = $state(false);
@@ -15,6 +16,7 @@
     saving = true;
     try {
       await getHabitRepo().saveHabit(habit);
+      pushHabit(habit);
       bumpHabits();
       homeConfig.seedHabitsWidget(true);
       await goto("/habits", { replaceState: true });

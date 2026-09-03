@@ -16,6 +16,7 @@
     type HabitEntry,
   } from "@logit/core/domain/habit";
   import { bumpHabits } from "$lib/features/habits/store";
+  import { pushHabit, pushHabitDeletion } from "$lib/sync/syncService";
   import HabitEditor from "$lib/features/habits/HabitEditor.svelte";
 
   const id = $derived($page.params.id ?? "");
@@ -51,19 +52,27 @@
   // Edit mode auto-saves: persist and stay put (the back arrow leaves).
   async function save(next: Habit) {
     await getHabitRepo().saveHabit(next);
+    pushHabit(next);
     bumpHabits();
+    habit = next;
   }
 
   async function archive() {
     if (!habit) return;
-    await getHabitRepo().archiveHabit(habit.id);
+    const repo = getHabitRepo();
+    await repo.archiveHabit(habit.id);
+    const updated = await repo.getHabit(habit.id);
+    if (updated) pushHabit(updated);
     bumpHabits();
     await goto("/habits", { replaceState: true });
   }
 
   async function unarchive() {
     if (!habit) return;
-    await getHabitRepo().unarchiveHabit(habit.id);
+    const repo = getHabitRepo();
+    await repo.unarchiveHabit(habit.id);
+    const updated = await repo.getHabit(habit.id);
+    if (updated) pushHabit(updated);
     bumpHabits();
     await goto("/habits", { replaceState: true });
   }
@@ -72,7 +81,11 @@
     if (!habit) return;
     ui.deleting = true;
     try {
-      await getHabitRepo().deleteHabit(habit.id);
+      const repo = getHabitRepo();
+      const doomed = habit;
+      const its = await repo.listEntries({ habitId: doomed.id });
+      await repo.deleteHabit(doomed.id);
+      pushHabitDeletion(doomed, its);
       bumpHabits();
       await goto("/habits", { replaceState: true });
     } finally {
