@@ -36,6 +36,10 @@ android/*.iml
 android/.idea/
 *.keystore
 *.jks
+keystore.properties
+
+# iOS (Capacitor): the project is kept; build/local files are ignored by the
+# Capacitor-generated apps/clients/logit-frontend/ios/.gitignore.
 
 # Playwright
 test-results/

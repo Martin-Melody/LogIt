@@ -43,6 +43,7 @@
     type ServerMode,
   } from "@logit/core/api/serverConfig";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
+  import { PRIVACY_URL, TERMS_URL } from "$lib/constants/urls";
   import {
     getProgressionConfig,
     setProgressionAlgorithm,
@@ -1059,4 +1060,30 @@
       </Card.Content>
     </Card.Root>
   {/if}
+
+  <!-- About -->
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>About</Card.Title>
+      <Card.Description>LogIt is open source. Self-hosting is always free.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-2">
+      <a
+        href={PRIVACY_URL}
+        target="_blank"
+        rel="noreferrer"
+        class="flex items-center justify-between text-sm hover:text-foreground text-muted-foreground"
+      >
+        Privacy Policy <ChevronRight class="h-3.5 w-3.5" />
+      </a>
+      <a
+        href={TERMS_URL}
+        target="_blank"
+        rel="noreferrer"
+        class="flex items-center justify-between text-sm hover:text-foreground text-muted-foreground"
+      >
+        Terms of Service <ChevronRight class="h-3.5 w-3.5" />
+      </a>
+    </Card.Content>
+  </Card.Root>
 </div>
