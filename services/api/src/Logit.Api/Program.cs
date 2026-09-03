@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Logit.Api.Data;
 using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
@@ -66,6 +68,27 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+// Basic abuse control on social writes (post/comment/follow/block/report):
+// per-authenticated-user token bucket, falls back to per-IP for anonymous.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("social-write", ctx =>
+    {
+        var key = ctx.User.Identity?.IsAuthenticated == true
+            ? ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "anon"
+            : ctx.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        return RateLimitPartition.GetTokenBucketLimiter(key, _ => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 20,
+            TokensPerPeriod = 20,
+            ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true,
+        });
+    });
+});
+
 Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
 var app = builder.Build();
@@ -86,10 +109,13 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapSocialEndpoints();
+app.MapModerationEndpoints();
+app.MapNotificationEndpoints();
 app.MapAdminEndpoints(builder.Configuration);
 app.MapSyncEndpoints();
 app.MapBillingEndpoints();

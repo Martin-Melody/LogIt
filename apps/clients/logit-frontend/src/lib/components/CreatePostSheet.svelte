@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     X, Dumbbell, Trophy, MessageSquare, CalendarDays,
-    Activity, Cpu, LayoutDashboard,
+    Activity, Cpu, LayoutDashboard, Paperclip,
   } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ApiPost, type PostType } from "@logit/core/api/socialApi";
@@ -34,6 +34,7 @@
   // ── Form state ───────────────────────────────────────────────────────────────
 
   let attachmentType = $state<AttachmentType>("none");
+  let showAttach = $state(false);
   let body = $state("");
   let error = $state<string | null>(null);
   let submitting = $state(false);
@@ -84,6 +85,7 @@
 
     // Reset form
     body = "";
+    showAttach = false;
     error = null;
     submitting = false;
     prs = [];
@@ -302,8 +304,19 @@
         bind:value={body}
       ></textarea>
 
+      <!-- Attachment: collapsed by default so a plain post is the norm -->
+      {#if !prefillSession && !showAttach && attachmentType === "none"}
+        <button
+          type="button"
+          class="self-start flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-full border border-border px-3 py-1.5 shrink-0"
+          onclick={() => (showAttach = true)}
+        >
+          <Paperclip class="h-3 w-3" /> Attach a workout, PR, split…
+        </button>
+      {/if}
+
       <!-- Attachment type pills (hidden if prefill locks to workout) -->
-      {#if !prefillSession}
+      {#if !prefillSession && (showAttach || attachmentType !== "none")}
         <div class="flex gap-1.5 overflow-x-auto pb-1 shrink-0 -mx-4 px-4">
           {#each ATTACHMENT_TYPES as { type, label, icon: Icon } (type)}
             <button

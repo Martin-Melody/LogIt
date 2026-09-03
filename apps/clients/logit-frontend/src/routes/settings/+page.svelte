@@ -44,6 +44,7 @@
   } from "@logit/core/api/serverConfig";
   import ImportExportPanel from "$lib/features/importExport/ImportExportPanel.svelte";
   import { PRIVACY_URL, TERMS_URL } from "$lib/constants/urls";
+  import BlockedAccounts from "$lib/components/social/BlockedAccounts.svelte";
   import {
     getProgressionConfig,
     setProgressionAlgorithm,
@@ -824,6 +825,9 @@
 
   <!-- Backup & Restore -->
   <ImportExportPanel />
+
+  <!-- Blocked accounts (social) -->
+  <BlockedAccounts />
 
   <!-- App Tour -->
   <Card.Root>

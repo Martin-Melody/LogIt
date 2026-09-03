@@ -24,6 +24,9 @@ public static class AdminEndpoints
         api.MapDelete("/users/{id:guid}", DeleteUser);
         api.MapDelete("/users/{id:guid}/tokens", RevokeTokens);
         api.MapPost("/users/{id:guid}/reset-password", ResetPassword);
+
+        api.MapGet("/reports", GetReports);
+        api.MapPost("/reports/{id:guid}/resolve", ResolveReport);
     }
 
     private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminKeyFilter(string key) =>
@@ -175,6 +178,84 @@ public static class AdminEndpoints
         foreach (var t in tokens) t.RevokedAt = now;
         await db.SaveChangesAsync();
         return Results.Ok(new { revokedCount = tokens.Count });
+    }
+
+    private static async Task<IResult> GetReports(AppDbContext db, string status = "Open")
+    {
+        var query = db.Reports.AsQueryable();
+        if (Enum.TryParse<ReportStatus>(status, ignoreCase: true, out var s))
+            query = query.Where(r => r.Status == s);
+
+        var reports = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(200)
+            .Select(r => new
+            {
+                r.Id,
+                TargetType = r.TargetType.ToString(),
+                r.TargetId,
+                Reason = r.Reason.ToString(),
+                r.Note,
+                Status = r.Status.ToString(),
+                r.CreatedAt,
+                Reporter = new { r.Reporter.Id, r.Reporter.Username, r.Reporter.DisplayName },
+            })
+            .ToListAsync();
+
+        // Target previews, fetched per type.
+        var postIds = await db.Reports.Where(r => r.TargetType == ReportTargetType.Post).Select(r => r.TargetId).ToListAsync();
+        var previews = new Dictionary<Guid, object>();
+        foreach (var p in await db.Posts.Where(p => postIds.Contains(p.Id))
+                     .Select(p => new { p.Id, p.Body, p.DeletedAt, Author = p.Author.Username }).ToListAsync())
+            previews[p.Id] = new { kind = "post", p.Body, deleted = p.DeletedAt != null, p.Author };
+
+        var commentIds = await db.Reports.Where(r => r.TargetType == ReportTargetType.Comment).Select(r => r.TargetId).ToListAsync();
+        foreach (var c in await db.Comments.Where(c => commentIds.Contains(c.Id))
+                     .Select(c => new { c.Id, c.Body, c.DeletedAt, Author = c.Author.Username }).ToListAsync())
+            previews[c.Id] = new { kind = "comment", c.Body, deleted = c.DeletedAt != null, c.Author };
+
+        return Results.Ok(new { reports, previews });
+    }
+
+    private record ResolveReportRequest(string Action); // dismiss | delete-target
+
+    private static async Task<IResult> ResolveReport(Guid id, ResolveReportRequest req, AppDbContext db)
+    {
+        var report = await db.Reports.FindAsync(id);
+        if (report is null) return Results.NotFound();
+
+        var now = DateTime.UtcNow;
+
+        if (req.Action == "delete-target")
+        {
+            switch (report.TargetType)
+            {
+                case ReportTargetType.Post:
+                    var post = await db.Posts.FindAsync(report.TargetId);
+                    if (post is not null) post.DeletedAt = now;
+                    break;
+                case ReportTargetType.Comment:
+                    var comment = await db.Comments.FindAsync(report.TargetId);
+                    if (comment is not null) comment.DeletedAt = now;
+                    break;
+            }
+            report.Status = ReportStatus.Actioned;
+        }
+        else
+        {
+            report.Status = ReportStatus.Dismissed;
+        }
+
+        report.ReviewedAt = now;
+        // Close any sibling open reports on the same target.
+        var siblings = await db.Reports
+            .Where(r => r.Id != id && r.Status == ReportStatus.Open
+                     && r.TargetType == report.TargetType && r.TargetId == report.TargetId)
+            .ToListAsync();
+        foreach (var sib in siblings) { sib.Status = report.Status; sib.ReviewedAt = now; }
+
+        await db.SaveChangesAsync();
+        return Results.NoContent();
     }
 
     private record AdminResetPasswordRequest(string NewPassword);
