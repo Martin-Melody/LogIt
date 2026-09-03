@@ -14,7 +14,11 @@
   <main class="flex-1">
     {@render children?.()}
   </main>
-  <footer class="border-t border-border px-4 py-3 text-xs text-muted-foreground text-center">
-    LogIt is open source. Self-hosting is always free.
+  <footer class="border-t border-border px-4 py-3 text-xs text-muted-foreground text-center flex flex-col gap-1 sm:flex-row sm:justify-center sm:gap-4">
+    <span>LogIt is open source. Self-hosting is always free.</span>
+    <span class="flex justify-center gap-4">
+      <a href="/privacy" class="hover:text-foreground">Privacy</a>
+      <a href="/terms" class="hover:text-foreground">Terms</a>
+    </span>
   </footer>
 </div>
