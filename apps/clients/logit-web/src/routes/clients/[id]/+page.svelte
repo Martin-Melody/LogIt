@@ -7,8 +7,10 @@
   import { Spinner } from "$lib/components/ui/spinner";
   import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
   import type { MyCheckinSchedule } from "@logit/core/data/checkinRepo";
+  import type { MyCoachHabit } from "@logit/core/data/coachHabitRepo";
   import { createCoachProgram } from "@logit/core/domain/CoachProgram";
   import { createCheckinSchedule } from "@logit/core/domain/Checkin";
+  import { createCoachHabit } from "@logit/core/domain/CoachHabit";
   import {
     createCoachNutritionPlan,
     updateCoachNutritionPlan,
@@ -23,6 +25,7 @@
     getWebCoachProgramRepo,
     getWebCheckinRepo,
     getWebCoachNutritionPlanRepo,
+    getWebCoachHabitRepo,
     getWebNutritionDeps,
   } from "$lib/deps";
 
@@ -34,6 +37,7 @@
   let error = $state<string | null>(null);
   let programs = $state<MyCoachProgram[]>([]);
   let checkins = $state<MyCheckinSchedule[]>([]);
+  let habits = $state<MyCoachHabit[]>([]);
 
   // Nutrition
   let plan = $state<CoachNutritionPlan | null>(null);
@@ -92,14 +96,16 @@
     loading = true;
     error = null;
     try {
-      const [progs, cks, myPlan] = await Promise.all([
+      const [progs, cks, myPlan, habs] = await Promise.all([
         getWebCoachProgramRepo().listMyPrograms({ recipientId: clientId }),
         getWebCheckinRepo().listMySchedules({ recipientId: clientId }),
         getWebCoachNutritionPlanRepo().getForRecipient(clientId),
+        getWebCoachHabitRepo().listForRecipient(clientId),
       ]);
       programs = progs;
       checkins = cks;
       plan = myPlan?.plan ?? null;
+      habits = habs;
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load";
     } finally {
@@ -178,6 +184,27 @@
     }
   }
 
+  async function newHabit() {
+    if (creating || !username) return;
+    creating = true;
+    error = null;
+    try {
+      const h = createCoachHabit("Habit");
+      await getWebCoachHabitRepo().saveHabit(h, username);
+      await goto(`/clients/${clientId}/habits/${h.id}?u=${username}`);
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Failed to create habit";
+      creating = false;
+    }
+  }
+
+  function habitCadenceLabel(h: MyCoachHabit["habit"]): string {
+    if (h.cadence.kind === "daily") return "Every day";
+    if (h.cadence.kind === "weekly") return `${h.cadence.timesPerWeek}×/week`;
+    const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return h.cadence.days.slice().sort((a, b) => a - b).map((d) => names[d]).join(" · ");
+  }
+
   $effect(() => {
     void clientId;
     void load();
@@ -243,6 +270,33 @@
             class="flex items-center justify-between py-2 border-b last:border-0 border-border text-sm hover:bg-muted/40 -mx-2 px-2 rounded">
             <span class="font-medium">{schedule.name}</span>
             <span class="text-xs text-muted-foreground capitalize">{schedule.cadence} · {schedule.questions.length}q</span>
+          </a>
+        {/each}
+      {/if}
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root>
+    <Card.Header class="pb-2 flex-row items-start justify-between">
+      <div>
+        <Card.Title>Habits</Card.Title>
+        <Card.Description>Daily habits this client checks off. Shown in their app under “From your coach”.</Card.Description>
+      </div>
+      <Button size="sm" variant="outline" disabled={creating} onclick={newHabit}>New</Button>
+    </Card.Header>
+    <Card.Content class="pt-0 pb-2">
+      {#if loading}
+        <p class="text-sm text-muted-foreground py-2">Loading…</p>
+      {:else if habits.length === 0}
+        <p class="text-sm text-muted-foreground py-2">No habits yet.</p>
+      {:else}
+        {#each habits as { habit } (habit.id)}
+          <a href="/clients/{clientId}/habits/{habit.id}?u={username}"
+            class="flex items-center justify-between py-2 border-b last:border-0 border-border text-sm hover:bg-muted/40 -mx-2 px-2 rounded">
+            <span class="font-medium">{#if habit.icon}{habit.icon} {/if}{habit.name}</span>
+            <span class="text-xs text-muted-foreground">
+              {habitCadenceLabel(habit)}{#if habit.target} · {habit.target.value}{habit.target.unit ? ` ${habit.target.unit}` : ""}{/if}
+            </span>
           </a>
         {/each}
       {/if}

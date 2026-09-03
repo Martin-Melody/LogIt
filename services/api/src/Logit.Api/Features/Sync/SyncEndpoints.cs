@@ -52,9 +52,11 @@ public static class SyncEndpoints
         nutrition.MapPost("/meal-templates", PushMealTemplates).RequireTier(UserTier.Pro);
         nutrition.MapGet("/meal-templates", PullMealTemplates).RequireTier(UserTier.Pro);
 
-        // Habits — personal, whole-account multi-device sync → Pro-only. Coach-assigned
-        // habits (which a client would get for free, like check-ins) are a separate future
-        // entity.
+        // Habits — personal, whole-account multi-device sync → Pro-only. The GET side also
+        // serves a Studio coach reading an Active client's rows via ?clientId= (habit
+        // definitions + check-offs, for adherence review). A Free coached client keeps
+        // habits locally but doesn't sync them, so the coach only sees Pro/Studio clients'
+        // adherence for now — a dedicated assigned-only feed could lift that later.
         group.MapPost("/habits", PushHabits).RequireTier(UserTier.Pro);
         group.MapGet("/habits", PullHabits).RequireTier(UserTier.Pro);
         group.MapPost("/habit-entries", PushHabitEntries).RequireTier(UserTier.Pro);
@@ -571,24 +573,32 @@ public static class SyncEndpoints
 
     // ── Habits ───────────────────────────────────────────────────────────────
     // Personal habits + check-offs, same ISyncedClientRow semantics as the nutrition rows.
-    // The ?clientId= coach path is deliberately not wired here — coach-assigned habits are
-    // a separate future entity.
+    // GET takes ?clientId= so a coach can read an Active client's habit definitions and
+    // check-offs for adherence review (see ResolveTargetUserId).
 
     private static Task<IResult> PushHabits(
         [FromBody] PushHabitsRequest req, ClaimsPrincipal caller, AppDbContext db)
         => PushSyncRows(caller.GetUserId(), req.Habits, db.SyncedHabits, db);
 
     private static async Task<IResult> PullHabits(
-        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { habits = await PullSyncRows(caller.GetUserId(), since, db.SyncedHabits) });
+        [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
+        return Results.Ok(new { habits = await PullSyncRows(userId, since, db.SyncedHabits) });
+    }
 
     private static Task<IResult> PushHabitEntries(
         [FromBody] PushHabitEntriesRequest req, ClaimsPrincipal caller, AppDbContext db)
         => PushSyncRows(caller.GetUserId(), req.Entries, db.SyncedHabitEntries, db);
 
     private static async Task<IResult> PullHabitEntries(
-        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { entries = await PullSyncRows(caller.GetUserId(), since, db.SyncedHabitEntries) });
+        [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        if (forbidden is not null) return forbidden;
+        return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedHabitEntries) });
+    }
 
     // Goal — a singleton on User, synced like the profile blob.
 

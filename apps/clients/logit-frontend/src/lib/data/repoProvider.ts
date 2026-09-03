@@ -47,6 +47,9 @@ import { createLocalProgressionRepo } from "$lib/data/progressionRepo.local";
 import { createSqliteHabitRepo } from "$lib/data/habit/habitRepo.sqlite";
 import { createLocalHabitRepo } from "$lib/data/habit/habitRepo.local";
 import type { HabitRepo } from "@logit/core/data/habitRepo";
+import { createSqliteAssignedHabitRepo } from "$lib/data/habit/assignedHabitRepo.sqlite";
+import { createLocalAssignedHabitRepo } from "$lib/data/habit/assignedHabitRepo.local";
+import type { AssignedHabitRepo } from "@logit/core/data/coachHabitRepo";
 import { createSqliteProgressionRepo } from "$lib/data/progressionRepo.sqlite";
 import { createSqliteWorkoutRepo } from "./workouts/workoutRepo.sqlite";
 import { createSqliteSplitRepo } from "./splts/splitRepo.sqlite";
@@ -79,6 +82,7 @@ let foodDbRepo: FoodDbRepo | null = null;
 let coachNutritionPlanRepo: AssignedNutritionPlanRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
 let habitRepo: HabitRepo | null = null;
+let assignedHabitRepo: AssignedHabitRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
 let analyticsRegistry: AnalyticsRegistry | null = null;
 let nutritionAlgorithmRegistry: NutritionAlgorithmRegistry | null = null;
@@ -155,6 +159,7 @@ export async function initRepos(): Promise<void> {
     coachNutritionPlanRepo = createSqliteCoachNutritionPlanRepo();
     progressionRepo = createSqliteProgressionRepo();
     habitRepo = createSqliteHabitRepo();
+    assignedHabitRepo = createSqliteAssignedHabitRepo();
 
     // Bundled food DB is optional. Whether or not this build shipped one, layer the online
     // Open Food Facts lookup on top and cache its hits locally for offline reuse.
@@ -189,6 +194,7 @@ export async function initRepos(): Promise<void> {
   });
   progressionRepo = createLocalProgressionRepo();
   habitRepo = createLocalHabitRepo();
+  assignedHabitRepo = createLocalAssignedHabitRepo();
   didInit = true;
 }
 
@@ -208,6 +214,7 @@ export function resetRepos(): void {
   foodDbRepo = null;
   progressionRepo = null;
   habitRepo = null;
+  assignedHabitRepo = null;
 }
 
 export function getWorkoutRepo(): WorkoutRepo {
@@ -279,6 +286,12 @@ export function getFoodDbRepo(): FoodDbRepo {
 export function getHabitRepo(): HabitRepo {
   if (!habitRepo) throw new Error("HabitRepo not initialized. Call initRepos() first.");
   return habitRepo;
+}
+
+export function getAssignedHabitRepo(): AssignedHabitRepo {
+  if (!assignedHabitRepo)
+    throw new Error("AssignedHabitRepo not initialized. Call initRepos() first.");
+  return assignedHabitRepo;
 }
 
 export function getProgressionRepo(): ProgressionRepo {

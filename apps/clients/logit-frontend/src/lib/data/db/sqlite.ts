@@ -144,6 +144,9 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM weight_entries WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM nutrition_goal WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM coach_nutrition_plans WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM habits WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM habit_entries WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM coach_habits WHERE owner_id = ?`, [ownerId]);
   await db.execute(`PRAGMA foreign_keys = ON`);
 }
 
@@ -174,6 +177,9 @@ export async function clearAllSqliteData(): Promise<void> {
     DELETE FROM weight_entries;
     DELETE FROM nutrition_goal;
     DELETE FROM coach_nutrition_plans;
+    DELETE FROM habits;
+    DELETE FROM habit_entries;
+    DELETE FROM coach_habits;
     DELETE FROM food_cache;
     PRAGMA foreign_keys = ON;
   `);
@@ -544,6 +550,17 @@ async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_habit_entries_owner_habit_date
       ON habit_entries(owner_id, habit_id, date_iso) WHERE deleted_at_ms IS NULL;
+
+    -- Read-only mirror of habits a coach has assigned (PT Studio). Same shape as
+    -- coach_nutrition_plans; the sync loop's pullAndMergeAssignedHabits is the only writer.
+    CREATE TABLE IF NOT EXISTS coach_habits (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      synced_at_ms INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_habits_owner ON coach_habits(owner_id);
   `);
 
   await migrateSessionSets(db);
