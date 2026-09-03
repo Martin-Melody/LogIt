@@ -65,8 +65,13 @@ public static class UserEndpoints
         var callerId = caller.GetUserId();
         var search = q.Trim().ToLowerInvariant();
 
+        var blocked = await db.Blocks
+            .Where(b => b.BlockerId == callerId || b.BlockedId == callerId)
+            .Select(b => b.BlockerId == callerId ? b.BlockedId : b.BlockerId)
+            .ToListAsync();
+
         var results = await db.Users
-            .Where(u => u.Id != callerId && (
+            .Where(u => u.Id != callerId && !blocked.Contains(u.Id) && (
                 u.Username.Contains(search) ||
                 u.DisplayName.Contains(search)))
             .OrderBy(u => u.Username.StartsWith(search) ? 0 : 1)
@@ -102,7 +107,13 @@ public static class UserEndpoints
             var callerId = caller.GetUserId();
             isSelf = callerId == user.Id;
             if (!isSelf)
+            {
+                if (await db.Blocks.AnyAsync(b =>
+                        (b.BlockerId == callerId && b.BlockedId == user.Id) ||
+                        (b.BlockerId == user.Id && b.BlockedId == callerId)))
+                    return Results.NotFound();
                 isFollowing = await db.Follows.AnyAsync(f => f.FollowerId == callerId && f.FollowedId == user.Id);
+            }
         }
 
         return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing));

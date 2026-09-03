@@ -12,6 +12,9 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Like> Likes => Set<Like>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<Block> Blocks => Set<Block>();
+    public DbSet<Report> Reports => Set<Report>();
+    public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<CoachClientRelationship> CoachClientRelationships => Set<CoachClientRelationship>();
     public DbSet<SyncedWorkoutSession> SyncedWorkoutSessions => Set<SyncedWorkoutSession>();
     public DbSet<SyncedSplit> SyncedSplits => Set<SyncedSplit>();
@@ -104,6 +107,44 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(c => c.Author)
              .WithMany(u => u.Comments)
              .HasForeignKey(c => c.AuthorId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<Block>(e =>
+        {
+            e.HasKey(b => new { b.BlockerId, b.BlockedId });
+            e.HasIndex(b => b.BlockedId);
+            e.HasOne(b => b.Blocker)
+             .WithMany()
+             .HasForeignKey(b => b.BlockerId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(b => b.Blocked)
+             .WithMany()
+             .HasForeignKey(b => b.BlockedId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<Report>(e =>
+        {
+            e.HasIndex(r => r.Status);
+            e.HasIndex(r => new { r.TargetType, r.TargetId });
+            e.HasOne(r => r.Reporter)
+             .WithMany()
+             .HasForeignKey(r => r.ReporterId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<Notification>(e =>
+        {
+            e.HasIndex(n => new { n.UserId, n.CreatedAt });
+            e.HasIndex(n => new { n.UserId, n.ReadAt });
+            e.HasOne(n => n.User)
+             .WithMany()
+             .HasForeignKey(n => n.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(n => n.Actor)
+             .WithMany()
+             .HasForeignKey(n => n.ActorId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 
