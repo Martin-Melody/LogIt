@@ -56,6 +56,14 @@ export function createLocalHabitRepo(): HabitRepo {
       }
     },
 
+    async unarchiveHabit(id) {
+      const map = read<Habit>(HABITS_KEY);
+      if (map[id]) {
+        map[id] = { ...map[id]!, archived: false, updatedAtMs: Date.now() };
+        write(HABITS_KEY, map);
+      }
+    },
+
     async deleteHabit(id) {
       tombstone(HABITS_KEY, id);
       // also tombstone its entries

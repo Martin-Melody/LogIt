@@ -10,17 +10,19 @@
   } from "@logit/core/domain/habit";
 
   /**
-   * Create / edit form for a personal habit. Emits a fully-built `Habit` via
-   * `onsave`; the parent route owns persistence.
+   * Create / edit form for a personal habit.
+   *
+   * - **Create** shows a single "Create habit" button; the parent persists on `onsave`.
+   * - **Edit** has no buttons — every valid change is committed straight away via
+   *   `onsave` (matches the exercise editor). The parent's `onsave` should just
+   *   persist and stay on the page.
    */
   const {
     habit,
     onsave,
-    oncancel,
   }: {
     habit?: Habit;
     onsave: (h: Habit) => void;
-    oncancel: () => void;
   } = $props();
 
   type Mode = "daily" | "days" | "weekly";
@@ -35,6 +37,7 @@
 
   // The form seeds from the habit once; edits after that are the form's own state.
   const seed = untrack(() => habit);
+  const isEdit = !!seed;
 
   let name = $state(seed?.name ?? "");
   let icon = $state(seed?.icon ?? "");
@@ -76,10 +79,9 @@
     return { kind: "daily" };
   }
 
-  function save(): void {
-    if (!canSave) return;
-    const base = habit ?? createHabit(name);
-    const next: Habit = {
+  function buildHabit(): Habit {
+    const base = seed ?? createHabit(name);
+    return {
       ...base,
       name: name.trim(),
       icon: icon.trim() || undefined,
@@ -90,8 +92,29 @@
         : undefined,
       updatedAtMs: Date.now(),
     };
-    onsave(next);
   }
+
+  /** Everything that defines a habit except its mutation timestamp. */
+  function fingerprint(h: Habit): string {
+    const { updatedAtMs: _drop, ...rest } = h;
+    return JSON.stringify(rest);
+  }
+
+  function create(): void {
+    if (canSave) onsave(buildHabit());
+  }
+
+  // Edit mode: auto-commit any valid change. `savedFp` guards against the
+  // initial run and no-op re-saves.
+  let savedFp = seed ? fingerprint(seed) : "";
+  $effect(() => {
+    if (!isEdit || !canSave) return;
+    const next = buildHabit();
+    const fp = fingerprint(next);
+    if (fp === savedFp) return;
+    savedFp = fp;
+    onsave(next);
+  });
 </script>
 
 <div class="flex flex-col gap-5 px-3 py-4">
@@ -191,10 +214,7 @@
     {/if}
   </div>
 
-  <div class="flex gap-2 pt-2">
-    <Button class="flex-1" disabled={!canSave} onclick={save}>
-      {habit ? "Save" : "Create habit"}
-    </Button>
-    <Button variant="outline" onclick={oncancel}>Cancel</Button>
-  </div>
+  {#if !isEdit}
+    <Button class="w-full" disabled={!canSave} onclick={create}>Create habit</Button>
+  {/if}
 </div>
