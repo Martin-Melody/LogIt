@@ -34,8 +34,8 @@
     if (post) {
       comments = [];
       loading = true;
-      socialApi.getComments(post.id).then((c) => {
-        comments = c;
+      socialApi.getComments(post.id).then((page) => {
+        comments = page.comments;
         loading = false;
       }).catch(() => {
         loading = false;
