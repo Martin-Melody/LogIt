@@ -6,6 +6,7 @@
   import { activeSplit } from "$lib/stores/activeSplit.store";
   import { selectedDayOverride } from "$lib/stores/todaysPlan.store";
   import { currentSession } from "$lib/stores/currentSession.store";
+  import { habitsRevision } from "$lib/features/habits/store";
   import { gatherWidgetInput } from "./widgetInput";
   import WidgetViewRenderer from "./WidgetViewRenderer.svelte";
 
@@ -41,6 +42,9 @@
       void $activeSplit;
       void $selectedDayOverride;
       void $currentSession;
+    }
+    if (plugin.needs.includes("habits")) {
+      void $habitsRevision;
     }
     void load();
   });

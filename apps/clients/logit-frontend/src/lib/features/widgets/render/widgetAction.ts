@@ -10,6 +10,11 @@ import {
 } from "$lib/stores/todaysPlan.store";
 import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
 import { getScheduleMode, advanceRotation } from "$lib/usecases/Splits/splitRotation";
+import { getHabitRepo } from "$lib/data/repoProvider";
+import { localDateIso } from "@logit/core/domain/nutrition";
+import { createHabitEntry, isSatisfied } from "@logit/core/domain/habit";
+import { bumpHabits } from "$lib/features/habits/store";
+import { pushHabitEntry } from "$lib/sync/syncService";
 
 /**
  * Host allow-list for widget actions. Community widgets can only trigger these
@@ -23,6 +28,31 @@ export function runWidgetAction(action: WidgetAction): void {
 
   if ("resumeWorkout" in action) {
     void goto("/session/current");
+    return;
+  }
+
+  if ("toggleHabit" in action) {
+    void (async () => {
+      const repo = getHabitRepo();
+      const today = localDateIso();
+      const [habit, entry] = await Promise.all([
+        repo.getHabit(action.toggleHabit),
+        repo.getEntry(action.toggleHabit, today),
+      ]);
+      if (!habit) return;
+      const satisfied = isSatisfied(habit, entry ?? undefined);
+      const next = habit.target
+        ? // Numeric habits: one tap logs the full target; tapping again clears it.
+          createHabitEntry(habit.id, today, {
+            ...(entry ?? {}),
+            done: !satisfied,
+            value: satisfied ? 0 : habit.target.value,
+          })
+        : createHabitEntry(habit.id, today, { ...(entry ?? {}), done: !satisfied });
+      await repo.saveEntry(next);
+      pushHabitEntry(next);
+      bumpHabits();
+    })();
     return;
   }
 

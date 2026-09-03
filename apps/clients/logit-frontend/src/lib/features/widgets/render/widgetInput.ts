@@ -7,9 +7,12 @@ import { getExercises } from "@logit/core/domain/workout";
 import { localDateIso } from "@logit/core/domain/nutrition";
 import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
 import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
+import { computeStreak, dueOn, isSatisfied, weekProgress } from "@logit/core/domain/habit";
+import { addDays } from "@logit/core/domain/dateIso";
 import type { ProgressionOutput } from "@logit/core/domain/progression";
 import {
   getExerciseRepo,
+  getHabitRepo,
   getNutritionRepo,
   getProgressionRepo,
   getWorkoutRepo,
@@ -191,6 +194,43 @@ export async function gatherWidgetInput(needs: WidgetDataNeed[]): Promise<Widget
             trendPoints: nut.trend.points.map((pt) => ({ dateIso: pt.dateIso, kg: pt.smoothedKg })),
           };
         }
+      })(),
+    );
+  }
+
+  if (want.has("habits")) {
+    tasks.push(
+      (async () => {
+        const repo = getHabitRepo();
+        const habits = await repo.listHabits();
+        if (habits.length === 0) {
+          input.habits = [];
+          return;
+        }
+        const today = localDateIso();
+        // Streaks need history; 100 days back covers any realistic run.
+        const fromIso = addDays(today, -100);
+        const entries = await repo.listEntries({ fromIso, toIso: today });
+        const byHabit = new Map<string, typeof entries>();
+        for (const e of entries) {
+          const list = byHabit.get(e.habitId) ?? [];
+          list.push(e);
+          byHabit.set(e.habitId, list);
+        }
+        input.habits = habits.map((h) => {
+          const hEntries = byHabit.get(h.id) ?? [];
+          const todayEntry = hEntries.find((e) => e.dateIso === today);
+          const wp = weekProgress(h, hEntries, today);
+          return {
+            id: h.id,
+            name: h.name,
+            icon: h.icon,
+            dueToday: dueOn(h, today),
+            doneToday: isSatisfied(h, todayEntry),
+            streak: computeStreak(h, hEntries, today),
+            weekProgress: wp ?? undefined,
+          };
+        });
       })(),
     );
   }

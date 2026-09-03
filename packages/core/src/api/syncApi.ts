@@ -100,6 +100,26 @@ export type RemoteNutritionGoal = {
   updatedAtMs: number;
 };
 
+// ── Habits ───────────────────────────────────────────────────────────────────
+// Personal habits + their per-day check-offs. Client-owned, last-write-wins by
+// updatedAtMs, tombstoned via deletedAtMs — same shape as the nutrition rows.
+
+export type RemoteHabit = {
+  id: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
+};
+
+export type RemoteHabitEntry = {
+  id: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
+};
+
 export const syncApi = {
   pushSessions(sessions: RemoteSession[]): Promise<void> {
     return apiClient.fetch("/sync/sessions", {
@@ -250,5 +270,34 @@ export const syncApi = {
   pullNutritionGoal(clientId?: string): Promise<{ goal: RemoteNutritionGoal | null }> {
     const suffix = clientId ? `?clientId=${clientId}` : "";
     return apiClient.fetch(`/sync/nutrition/goal${suffix}`);
+  },
+
+  // ── Habits ─────────────────────────────────────────────────────────────────
+
+  pushHabits(habits: RemoteHabit[]): Promise<void> {
+    return apiClient.fetch("/sync/habits", {
+      method: "POST",
+      body: JSON.stringify({ habits }),
+    });
+  },
+
+  pullHabits(since: number, clientId?: string): Promise<{ habits: RemoteHabit[] }> {
+    const suffix = clientId ? `&clientId=${clientId}` : "";
+    return apiClient.fetch(`/sync/habits?since=${since}${suffix}`);
+  },
+
+  pushHabitEntries(entries: RemoteHabitEntry[]): Promise<void> {
+    return apiClient.fetch("/sync/habit-entries", {
+      method: "POST",
+      body: JSON.stringify({ entries }),
+    });
+  },
+
+  pullHabitEntries(
+    since: number,
+    clientId?: string,
+  ): Promise<{ entries: RemoteHabitEntry[] }> {
+    const suffix = clientId ? `&clientId=${clientId}` : "";
+    return apiClient.fetch(`/sync/habit-entries?since=${since}${suffix}`);
   },
 };

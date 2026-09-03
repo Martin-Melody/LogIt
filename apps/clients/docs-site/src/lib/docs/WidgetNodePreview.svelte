@@ -143,6 +143,21 @@
         <button class="w-full rounded border px-3 py-2 text-sm {b.primary ? 'bg-primary text-primary-foreground' : 'border-border'}">{b.label}</button>
       {/each}
     </div>
+
+  {:else if node.kind === "checklist"}
+    <ul class="flex flex-col divide-y divide-border">
+      {#each node.items as it (it.id)}
+        <li class="flex w-full items-center gap-3 py-2 {it.muted ? 'opacity-45' : ''}">
+          <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] {it.checked ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/40'}">
+            {#if it.checked}✓{/if}
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium {it.checked ? 'text-muted-foreground line-through' : ''}">{it.label}</p>
+            {#if it.sublabel}<p class="truncate text-xs text-muted-foreground">{it.sublabel}</p>{/if}
+          </div>
+        </li>
+      {/each}
+    </ul>
   {/if}
 </div>
 

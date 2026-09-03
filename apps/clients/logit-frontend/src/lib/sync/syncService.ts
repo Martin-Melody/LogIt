@@ -3,6 +3,7 @@ import { apiClient } from "@logit/core/api/client";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { coachProgramApi } from "@logit/core/api/coachProgramApi";
 import { coachNutritionPlanApi } from "@logit/core/api/coachNutritionPlanApi";
+import { coachHabitApi } from "@logit/core/api/coachHabitApi";
 import { checkinApi } from "@logit/core/api/checkinApi";
 import { messagesApi } from "@logit/core/api/messagesApi";
 import {
@@ -16,6 +17,8 @@ import {
   getMessagesRepo,
   getNutritionRepo,
   getCoachNutritionPlanRepo,
+  getHabitRepo,
+  getAssignedHabitRepo,
 } from "$lib/data/repoProvider";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -35,6 +38,8 @@ import type {
   WeightEntry,
 } from "@logit/core/domain/nutrition";
 import { favoriteFoodId } from "@logit/core/domain/nutrition";
+import type { Habit, HabitEntry } from "@logit/core/domain/habit";
+import type { CoachHabit } from "@logit/core/domain/CoachHabit";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 
 // ── localStorage keys ────────────────────────────────────────────────────────
@@ -54,6 +59,9 @@ const RECIPES_LAST_PULLED_KEY = "logit:sync:recipesLastPulledAt";
 const FAVORITES_LAST_PULLED_KEY = "logit:sync:favoritesLastPulledAt";
 const MEAL_TEMPLATES_LAST_PULLED_KEY = "logit:sync:mealTemplatesLastPulledAt";
 const WEIGHT_ENTRIES_LAST_PULLED_KEY = "logit:sync:weightEntriesLastPulledAt";
+const HABITS_LAST_PULLED_KEY = "logit:sync:habitsLastPulledAt";
+const HABIT_ENTRIES_LAST_PULLED_KEY = "logit:sync:habitEntriesLastPulledAt";
+const COACH_HABITS_LAST_PULLED_KEY = "logit:sync:coachHabitsLastPulledAt";
 
 function getTimestamp(key: string): number {
   try { return parseInt(localStorage.getItem(key) ?? "0", 10) || 0; } catch { return 0; }
@@ -719,6 +727,131 @@ export async function pullAndMergeNutrition(): Promise<void> {
   } catch {}
 }
 
+// ── Habits ───────────────────────────────────────────────────────────────────
+// Personal habits + per-day check-offs. Client-owned, LWW by updatedAtMs, tombstoned.
+// Entry ids are derived from (habit, day) so two devices converge on one row.
+
+type HabitRow = { createdAtMs: number; updatedAtMs: number; deletedAtMs?: number };
+
+function habitRowDto(id: string, row: HabitRow) {
+  return {
+    id,
+    createdAtMs: row.createdAtMs,
+    updatedAtMs: row.updatedAtMs,
+    dataJson: row.deletedAtMs ? null : JSON.stringify(row),
+    deletedAtMs: row.deletedAtMs,
+  };
+}
+
+export function pushHabit(habit: Habit): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = habitRowDto(habit.id, habit);
+  syncApi.pushHabits([dto]).catch(() => enqueue({ type: "habit", dto }));
+}
+
+export function pushHabitEntry(entry: HabitEntry): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = habitRowDto(entry.id, entry);
+  syncApi.pushHabitEntries([dto]).catch(() => enqueue({ type: "habitEntry", dto }));
+}
+
+/** Push a tombstone for a habit and every check-off it just took down with it. */
+export function pushHabitDeletion(habit: Habit, entries: HabitEntry[]): void {
+  if (!apiClient.isAuthenticated()) return;
+  const now = Date.now();
+  const habitDto = habitRowDto(habit.id, { ...habit, updatedAtMs: now, deletedAtMs: now });
+  syncApi.pushHabits([habitDto]).catch(() => enqueue({ type: "habit", dto: habitDto }));
+  if (entries.length) {
+    const dtos = entries.map((e) => habitRowDto(e.id, { ...e, updatedAtMs: now, deletedAtMs: now }));
+    syncApi
+      .pushHabitEntries(dtos)
+      .catch(() => dtos.forEach((dto) => enqueue({ type: "habitEntry", dto })));
+  }
+}
+
+/** Push every local habit + entry — called once when sync newly becomes available. */
+export async function pushAllHabits(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const repo = getHabitRepo();
+    const [habits, entries] = await Promise.all([
+      repo.listHabitsForPush(),
+      repo.listEntriesForPush(),
+    ]);
+    if (habits.length) await syncApi.pushHabits(habits.map((h) => habitRowDto(h.id, h)));
+    if (entries.length)
+      await syncApi.pushHabitEntries(entries.map((e) => habitRowDto(e.id, e)));
+  } catch {}
+}
+
+export async function pullAndMergeHabits(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  const repo = getHabitRepo();
+
+  try {
+    const since = getTimestamp(HABITS_LAST_PULLED_KEY);
+    const { habits } = await syncApi.pullHabits(since);
+    for (const e of habits) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeHabitFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const habit = JSON.parse(e.dataJson) as Habit;
+        const existing = await repo.getHabit(habit.id);
+        if (existing && existing.updatedAtMs >= habit.updatedAtMs) continue;
+        await repo.upsertHabitFromRemote(habit);
+      } catch {}
+    }
+    setTimestamp(HABITS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+
+  try {
+    const since = getTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY);
+    const { entries } = await syncApi.pullHabitEntries(since);
+    for (const e of entries) {
+      if (e.deletedAtMs || !e.dataJson) {
+        await repo.removeEntryFromRemote(e.id).catch(() => {});
+        continue;
+      }
+      try {
+        const entry = JSON.parse(e.dataJson) as HabitEntry;
+        const existing = await repo.getEntry(entry.habitId, entry.dateIso);
+        if (existing && existing.updatedAtMs >= entry.updatedAtMs) continue;
+        await repo.upsertEntryFromRemote(entry);
+      } catch {}
+    }
+    setTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
+/** Pull the habits a coach has assigned into the local read-only mirror. */
+export async function pullAndMergeAssignedHabits(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const since = getTimestamp(COACH_HABITS_LAST_PULLED_KEY);
+    const remote = await coachHabitApi.pullAssigned(since);
+    if (remote.length === 0) {
+      setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
+      return;
+    }
+    const repo = getAssignedHabitRepo();
+    for (const entry of remote) {
+      if (entry.deletedAtMs || !entry.dataJson) {
+        await repo.removeFromRemote(entry.habitId).catch(() => {});
+        continue;
+      }
+      try {
+        const habit = JSON.parse(entry.dataJson) as CoachHabit;
+        const existing = await repo.getAssignedHabit(habit.id);
+        if (existing && existing.updatedAtMs >= habit.updatedAtMs) continue;
+        await repo.upsertFromRemote(habit);
+      } catch {}
+    }
+    setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
 // ── Profile ───────────────────────────────────────────────────────────────────
 
 export function getProfileUpdatedAtMs(): number {
@@ -781,6 +914,7 @@ export async function pushAllLocalData(): Promise<void> {
     pushAllAuthoredCheckinSchedules(),
     pushPendingMessages(),
     pushAllNutrition(),
+    pushAllHabits(),
   ]);
 }
 
@@ -798,6 +932,8 @@ export async function syncAll(): Promise<void> {
     pullAndMergeCheckinSubmissions(),
     pullAndMergeMessages(),
     pullAndMergeNutrition(),
+    pullAndMergeHabits(),
+    pullAndMergeAssignedHabits(),
     pullAndApplyProfile(),
   ]);
   const now = Date.now();
