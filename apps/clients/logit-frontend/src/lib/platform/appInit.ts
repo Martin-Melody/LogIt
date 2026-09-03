@@ -9,6 +9,7 @@ import { splits } from "$lib/stores/splits.store";
 import { exercisesStore } from "$lib/stores/exercises.store";
 import { navConfig } from "$lib/stores/navConfig.store";
 import { setupKeyboard } from "./keyboard";
+import { setupNativeShell } from "./nativeShell";
 import { syncAll } from "$lib/sync/syncService";
 
 let didInit = false;
@@ -73,5 +74,10 @@ export async function appInit(): Promise<void> {
     appInitError.set(msg);
   } finally {
     appReady.set(true);
+    // Runs even if startup failed, so the native splash always yields to the
+    // web layer (the error screen included) rather than hanging.
+    setupNativeShell().catch((e) =>
+      console.warn("[appInit] native shell setup failed (continuing)", e),
+    );
   }
 }
