@@ -6,6 +6,7 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { Dumbbell, MoreHorizontal } from "lucide-svelte";
   import { navConfig, NAV_ITEM_DEFS } from "$lib/stores/navConfig.store";
+  import { unreadNotifications } from "$lib/stores/notifications.store";
   import MoreSheet from "./MoreSheet.svelte";
 
   let showMore = $state(false);
@@ -28,21 +29,28 @@
   }
 </script>
 
+{#snippet barItem(item: NonNullable<(typeof visibleBar)[number]>)}
+  <a
+    href={item.href}
+    data-tour={item.tourId}
+    aria-current={isActive(item.href) ? "page" : undefined}
+    class="relative flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
+      {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}"
+  >
+    <item.icon size={22} strokeWidth={isActive(item.href) ? 2.5 : 2} />
+    {#if item.id === "social" && $unreadNotifications > 0}
+      <span class="absolute top-1 right-2 h-2 w-2 rounded-full bg-rose-500 border border-background"></span>
+    {/if}
+    <span>{item.label}</span>
+  </a>
+{/snippet}
+
 {#if !hidden}
   <nav class="flex items-end justify-around px-2 pt-0.5 pb-2" aria-label="Main navigation">
 
     <!-- Left bar slots (indices 0 and 1) -->
     {#each visibleBar.slice(0, 2) as item}
-      <a
-        href={item.href}
-        data-tour={item.tourId}
-        aria-current={isActive(item.href) ? "page" : undefined}
-        class="flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
-          {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}"
-      >
-        <item.icon size={22} strokeWidth={isActive(item.href) ? 2.5 : 2} />
-        <span>{item.label}</span>
-      </a>
+      {@render barItem(item)}
     {/each}
 
     <!-- FAB: Start / Resume session (fixed center) -->
@@ -65,17 +73,7 @@
 
     <!-- Right bar slot (index 2) -->
     {#if visibleBar[2]}
-      {@const item = visibleBar[2]}
-      <a
-        href={item.href}
-        data-tour={item.tourId}
-        aria-current={isActive(item.href) ? "page" : undefined}
-        class="flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
-          {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}"
-      >
-        <item.icon size={22} strokeWidth={isActive(item.href) ? 2.5 : 2} />
-        <span>{item.label}</span>
-      </a>
+      {@render barItem(visibleBar[2])}
     {/if}
 
     <!-- More (fixed rightmost) -->

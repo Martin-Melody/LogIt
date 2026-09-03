@@ -49,6 +49,7 @@ export async function appInit(): Promise<void> {
           return;
         }
         void syncAll();
+        void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.start());
 
         // Periodic background sync
         setInterval(() => { if (authStore.isAuthenticated) void syncAll(); }, 5 * 60 * 1000);
