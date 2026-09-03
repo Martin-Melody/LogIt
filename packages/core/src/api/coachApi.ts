@@ -25,6 +25,7 @@ export interface RosterEntry {
   sessions28d: number;
   programCount: number;
   checkinScheduleCount: number;
+  assignedHabitCount: number;
   lastCheckinSubmittedAtMs: number | null;
   unreadFromClient: number;
 }

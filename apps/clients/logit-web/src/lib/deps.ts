@@ -7,6 +7,10 @@ import { createRemoteProgressionRepo } from "@logit/core/data/remote/remoteProgr
 import { createRemoteNutritionRepo } from "@logit/core/data/remote/remoteNutritionRepo";
 import { createSyncedNutritionRepo } from "@logit/core/data/remote/syncedNutritionRepo";
 import { createRemoteCoachNutritionPlanRepo } from "@logit/core/data/remote/remoteCoachNutritionPlanRepo";
+import {
+  createRemoteCoachHabitRepo,
+  fetchClientHabitEntries,
+} from "@logit/core/data/remote/remoteCoachHabitRepo";
 import { createOpenFoodFactsRepo } from "@logit/core/data/remote/openFoodFactsRepo";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
@@ -63,6 +67,11 @@ export function getWebCoachNutritionPlanRepo() {
   return createRemoteCoachNutritionPlanRepo();
 }
 
+/** Coach-side authoring of a client's assigned habits. */
+export function getWebCoachHabitRepo() {
+  return createRemoteCoachHabitRepo();
+}
+
 /** Read-only nutrition usecase deps scoped to one client's data — for the coach's
  * monitoring view (diary / weight / adherence). */
 export function getWebNutritionDeps(clientId: string): NutritionDeps {
@@ -99,4 +108,4 @@ export function getOwnProfile(): Promise<RemoteProfile | null> {
   return profileCache;
 }
 
-export { fetchClientCheckinSubmissions };
+export { fetchClientCheckinSubmissions, fetchClientHabitEntries };

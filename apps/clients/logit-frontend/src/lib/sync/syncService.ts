@@ -3,6 +3,7 @@ import { apiClient } from "@logit/core/api/client";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { coachProgramApi } from "@logit/core/api/coachProgramApi";
 import { coachNutritionPlanApi } from "@logit/core/api/coachNutritionPlanApi";
+import { coachHabitApi } from "@logit/core/api/coachHabitApi";
 import { checkinApi } from "@logit/core/api/checkinApi";
 import { messagesApi } from "@logit/core/api/messagesApi";
 import {
@@ -17,6 +18,7 @@ import {
   getNutritionRepo,
   getCoachNutritionPlanRepo,
   getHabitRepo,
+  getAssignedHabitRepo,
 } from "$lib/data/repoProvider";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -37,6 +39,7 @@ import type {
 } from "@logit/core/domain/nutrition";
 import { favoriteFoodId } from "@logit/core/domain/nutrition";
 import type { Habit, HabitEntry } from "@logit/core/domain/habit";
+import type { CoachHabit } from "@logit/core/domain/CoachHabit";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
 
 // ── localStorage keys ────────────────────────────────────────────────────────
@@ -58,6 +61,7 @@ const MEAL_TEMPLATES_LAST_PULLED_KEY = "logit:sync:mealTemplatesLastPulledAt";
 const WEIGHT_ENTRIES_LAST_PULLED_KEY = "logit:sync:weightEntriesLastPulledAt";
 const HABITS_LAST_PULLED_KEY = "logit:sync:habitsLastPulledAt";
 const HABIT_ENTRIES_LAST_PULLED_KEY = "logit:sync:habitEntriesLastPulledAt";
+const COACH_HABITS_LAST_PULLED_KEY = "logit:sync:coachHabitsLastPulledAt";
 
 function getTimestamp(key: string): number {
   try { return parseInt(localStorage.getItem(key) ?? "0", 10) || 0; } catch { return 0; }
@@ -821,6 +825,33 @@ export async function pullAndMergeHabits(): Promise<void> {
   } catch {}
 }
 
+/** Pull the habits a coach has assigned into the local read-only mirror. */
+export async function pullAndMergeAssignedHabits(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const since = getTimestamp(COACH_HABITS_LAST_PULLED_KEY);
+    const remote = await coachHabitApi.pullAssigned(since);
+    if (remote.length === 0) {
+      setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
+      return;
+    }
+    const repo = getAssignedHabitRepo();
+    for (const entry of remote) {
+      if (entry.deletedAtMs || !entry.dataJson) {
+        await repo.removeFromRemote(entry.habitId).catch(() => {});
+        continue;
+      }
+      try {
+        const habit = JSON.parse(entry.dataJson) as CoachHabit;
+        const existing = await repo.getAssignedHabit(habit.id);
+        if (existing && existing.updatedAtMs >= habit.updatedAtMs) continue;
+        await repo.upsertFromRemote(habit);
+      } catch {}
+    }
+    setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
+  } catch {}
+}
+
 // ── Profile ───────────────────────────────────────────────────────────────────
 
 export function getProfileUpdatedAtMs(): number {
@@ -902,6 +933,7 @@ export async function syncAll(): Promise<void> {
     pullAndMergeMessages(),
     pullAndMergeNutrition(),
     pullAndMergeHabits(),
+    pullAndMergeAssignedHabits(),
     pullAndApplyProfile(),
   ]);
   const now = Date.now();

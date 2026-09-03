@@ -29,6 +29,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedWeightEntry> SyncedWeightEntries => Set<SyncedWeightEntry>();
     public DbSet<SyncedHabit> SyncedHabits => Set<SyncedHabit>();
     public DbSet<SyncedHabitEntry> SyncedHabitEntries => Set<SyncedHabitEntry>();
+    public DbSet<CoachHabit> CoachHabits => Set<CoachHabit>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -246,6 +247,25 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Coach-assigned habits — coach→client, same shape as CheckinSchedule.
+        model.Entity<CoachHabit>(e =>
+        {
+            e.HasIndex(h => new { h.CoachId, h.HabitId }).IsUnique();
+            e.HasIndex(h => new { h.RecipientUserId, h.SyncedAt });
+            e.HasOne(h => h.Coach)
+             .WithMany()
+             .HasForeignKey(h => h.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(h => h.Recipient)
+             .WithMany()
+             .HasForeignKey(h => h.RecipientUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(h => h.Relationship)
+             .WithMany()
+             .HasForeignKey(h => h.RelationshipId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         model.Entity<CoachMessage>(e =>

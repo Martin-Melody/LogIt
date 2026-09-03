@@ -122,6 +122,7 @@
                 <Table.Head class="text-right">7d</Table.Head>
                 <Table.Head class="text-right">28d</Table.Head>
                 <Table.Head class="text-right">Programs</Table.Head>
+                <Table.Head class="text-right">Habits</Table.Head>
                 <Table.Head>Last check-in</Table.Head>
                 <Table.Head class="text-right">Unread</Table.Head>
               </Table.Row>
@@ -144,6 +145,7 @@
                   <Table.Cell class="text-right tabular-nums">{e.sessions7d}</Table.Cell>
                   <Table.Cell class="text-right tabular-nums text-muted-foreground">{e.sessions28d}</Table.Cell>
                   <Table.Cell class="text-right tabular-nums text-muted-foreground">{e.programCount || "—"}</Table.Cell>
+                  <Table.Cell class="text-right tabular-nums text-muted-foreground">{e.assignedHabitCount || "—"}</Table.Cell>
                   <Table.Cell class="tabular-nums">
                     {#if e.checkinScheduleCount === 0}
                       <span class="text-muted-foreground">no check-in</span>
