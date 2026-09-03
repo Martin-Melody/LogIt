@@ -95,13 +95,15 @@ export function createLocalHabitRepo(): HabitRepo {
     },
 
     async saveEntry(entry) {
-      const map = read<HabitEntry>(ENTRIES_KEY);
-      // one entry per (habit, day)
-      const existing = Object.values(map).find(
-        (e) => e.habitId === entry.habitId && e.dateIso === entry.dateIso,
-      );
-      const id = existing?.id ?? entry.id;
-      map[id] = { ...entry, id, updatedAtMs: Date.now() };
+      const map = read<HabitEntry & Tombstoned>(ENTRIES_KEY);
+      // One entry per (habit, day). The id is derived from that natural key
+      // (habitEntryId), so drop any legacy row for the same slot under a different id.
+      for (const [k, e] of Object.entries(map)) {
+        if (k !== entry.id && e.habitId === entry.habitId && e.dateIso === entry.dateIso) {
+          delete map[k];
+        }
+      }
+      map[entry.id] = { ...entry, updatedAtMs: Date.now() };
       write(ENTRIES_KEY, map);
     },
 
@@ -121,6 +123,10 @@ export function createLocalHabitRepo(): HabitRepo {
     },
     async upsertEntryFromRemote(e) {
       const map = read<HabitEntry & Tombstoned>(ENTRIES_KEY);
+      // Collapse any legacy same-slot row under a different id (see saveEntry).
+      for (const [k, v] of Object.entries(map)) {
+        if (k !== e.id && v.habitId === e.habitId && v.dateIso === e.dateIso) delete map[k];
+      }
       const cur = map[e.id];
       if (!cur || e.updatedAtMs >= cur.updatedAtMs) map[e.id] = e;
       write(ENTRIES_KEY, map);

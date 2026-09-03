@@ -61,6 +61,16 @@ export function createHabit(name: string, patch: Partial<Habit> = {}): Habit {
   };
 }
 
+/**
+ * A check-off is one-per-(habit, day), so its id is derived from that natural key
+ * rather than random. Two devices that tick the same habit on the same day offline
+ * then produce the *same* id, so the server's last-write-wins collapses them to one
+ * row instead of leaving a duplicate (same reasoning as `diaryDayId` for nutrition).
+ */
+export function habitEntryId(habitId: string, dateIso: string): string {
+  return `hen_${habitId}_${dateIso}`;
+}
+
 export function createHabitEntry(
   habitId: string,
   dateIso: string,
@@ -68,7 +78,7 @@ export function createHabitEntry(
 ): HabitEntry {
   const now = nowMs();
   return {
-    id: createId("hen"),
+    id: habitEntryId(habitId, dateIso),
     habitId,
     dateIso,
     done: true,

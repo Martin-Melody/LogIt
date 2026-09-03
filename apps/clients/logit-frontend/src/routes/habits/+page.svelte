@@ -17,6 +17,7 @@
     type HabitEntry,
   } from "@logit/core/domain/habit";
   import { bumpHabits } from "$lib/features/habits/store";
+  import { pushHabit, pushHabitEntry } from "$lib/sync/syncService";
 
   type Row = {
     habit: Habit;
@@ -73,13 +74,18 @@
     const next = !row.satisfied;
     const patch: Partial<HabitEntry> = { ...(row.entry ?? {}), done: next };
     if (row.habit.target) patch.value = next ? row.habit.target.value : 0;
-    await repo.saveEntry(createHabitEntry(row.habit.id, today, patch));
+    const entry = createHabitEntry(row.habit.id, today, patch);
+    await repo.saveEntry(entry);
+    pushHabitEntry(entry);
     bumpHabits();
     await load();
   }
 
   async function restore(h: Habit) {
-    await getHabitRepo().unarchiveHabit(h.id);
+    const repo = getHabitRepo();
+    await repo.unarchiveHabit(h.id);
+    const updated = await repo.getHabit(h.id);
+    if (updated) pushHabit(updated);
     bumpHabits();
     await load();
   }

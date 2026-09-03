@@ -11,6 +11,12 @@ function parse<T>(json: string): T | null {
   }
 }
 
+/** Fold the row's tombstone column into the parsed blob so `*ForPush` rows carry it. */
+function withDeleted<T>(row: T | null, deletedAtMs: number | null): T | null {
+  if (!row || deletedAtMs == null) return row;
+  return { ...row, deletedAtMs };
+}
+
 export function createSqliteHabitRepo(): HabitRepo {
   const owner = () => getActiveOwnerId();
 
@@ -152,18 +158,18 @@ export function createSqliteHabitRepo(): HabitRepo {
         `SELECT data_json, deleted_at_ms FROM habits WHERE owner_id = ? OR owner_id IS NULL`,
         [owner()],
       );
-      return ((res.values ?? []) as { data_json: string }[])
-        .map((r) => parse<Habit>(r.data_json))
+      return ((res.values ?? []) as { data_json: string; deleted_at_ms: number | null }[])
+        .map((r) => withDeleted(parse<Habit>(r.data_json), r.deleted_at_ms))
         .filter((h): h is Habit => h !== null);
     },
     async listEntriesForPush() {
       const db = getDb();
       const res = await db.query(
-        `SELECT data_json FROM habit_entries WHERE owner_id = ? OR owner_id IS NULL`,
+        `SELECT data_json, deleted_at_ms FROM habit_entries WHERE owner_id = ? OR owner_id IS NULL`,
         [owner()],
       );
-      return ((res.values ?? []) as { data_json: string }[])
-        .map((r) => parse<HabitEntry>(r.data_json))
+      return ((res.values ?? []) as { data_json: string; deleted_at_ms: number | null }[])
+        .map((r) => withDeleted(parse<HabitEntry>(r.data_json), r.deleted_at_ms))
         .filter((e): e is HabitEntry => e !== null);
     },
   };
