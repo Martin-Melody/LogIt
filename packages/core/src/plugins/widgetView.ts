@@ -21,7 +21,8 @@ export type WidgetDataNeed =
   | "todaysPlan"
   | "progressionTargets"
   | "nutrition"
-  | "bodyweight";
+  | "bodyweight"
+  | "habits";
 
 export type WidgetWorkoutSet = {
   weight: number;
@@ -89,6 +90,16 @@ export type WidgetInput = {
     targetKg?: number;
     trendPoints: { dateIso: string; kg: number }[];
   };
+  habits?: {
+    id: string;
+    name: string;
+    icon?: string;
+    dueToday: boolean;
+    doneToday: boolean;
+    streak: number;
+    /** "2 / 3 this week" for weekly-cadence habits. */
+    weekProgress?: { done: number; target: number };
+  }[];
 };
 
 // ── View ─────────────────────────────────────────────────────────────────────
@@ -100,7 +111,9 @@ export type WidgetAction =
   | { startPlannedWorkout: true }
   | { resumeWorkout: true }
   /** Move the previewed split day (Today's Plan). -1 = previous, 1 = next. */
-  | { cycleDay: -1 | 1 };
+  | { cycleDay: -1 | 1 }
+  /** Toggle today's check-off for a habit (id must be a real habit). */
+  | { toggleHabit: string };
 
 export type WidgetTextNode = {
   kind: "text";
@@ -187,6 +200,20 @@ export type WidgetButtonRowNode = {
   buttons: { label: string; action: WidgetAction; primary?: boolean }[];
 };
 
+export type WidgetChecklistNode = {
+  kind: "checklist";
+  items: {
+    id: string;
+    label: string;
+    checked: boolean;
+    sublabel?: string;
+    /** Tapping the row runs this — e.g. `{ toggleHabit: id }`. */
+    action?: WidgetAction;
+    /** Dim the row (e.g. a habit not due today). */
+    muted?: boolean;
+  }[];
+};
+
 export type WidgetNode =
   | WidgetTextNode
   | WidgetStatGridNode
@@ -196,7 +223,8 @@ export type WidgetNode =
   | WidgetLineNode
   | WidgetMuscleMapNode
   | WidgetCalendarHeatmapNode
-  | WidgetButtonRowNode;
+  | WidgetButtonRowNode
+  | WidgetChecklistNode;
 
 export type WidgetHeaderAction = {
   /** Which glyph the host draws. */

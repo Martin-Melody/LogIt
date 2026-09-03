@@ -7,6 +7,8 @@ import type {
   RemoteCheckinSubmission,
   RemoteCustomFood,
   RemoteFavoriteFood,
+  RemoteHabit,
+  RemoteHabitEntry,
   RemoteMealTemplate,
   RemoteNutritionDay,
   RemoteNutritionGoal,
@@ -31,7 +33,9 @@ type OutboxEntry =
   | { type: "favoriteFood"; dto: RemoteFavoriteFood }
   | { type: "mealTemplate"; dto: RemoteMealTemplate }
   | { type: "weightEntry"; dto: RemoteWeightEntry }
-  | { type: "nutritionGoal"; dto: RemoteNutritionGoal };
+  | { type: "nutritionGoal"; dto: RemoteNutritionGoal }
+  | { type: "habit"; dto: RemoteHabit }
+  | { type: "habitEntry"; dto: RemoteHabitEntry };
 
 function load(): OutboxEntry[] {
   try { return JSON.parse(localStorage.getItem(KEY) ?? "[]"); } catch { return []; }
@@ -101,6 +105,12 @@ export async function flush(): Promise<void> {
     .filter((e): e is Extract<OutboxEntry, { type: "nutritionGoal" }> => e.type === "nutritionGoal")
     .map((e) => e.dto)
     .at(-1); // singleton — last write wins
+  const habits = entries
+    .filter((e): e is Extract<OutboxEntry, { type: "habit" }> => e.type === "habit")
+    .map((e) => e.dto);
+  const habitEntries = entries
+    .filter((e): e is Extract<OutboxEntry, { type: "habitEntry" }> => e.type === "habitEntry")
+    .map((e) => e.dto);
 
   const failed: OutboxEntry[] = [];
 
@@ -163,6 +173,14 @@ export async function flush(): Promise<void> {
   if (nutritionGoal) {
     try { await syncApi.pushNutritionGoal(nutritionGoal); }
     catch { failed.push({ type: "nutritionGoal", dto: nutritionGoal }); }
+  }
+  if (habits.length) {
+    try { await syncApi.pushHabits(habits); }
+    catch { habits.forEach((dto) => failed.push({ type: "habit", dto })); }
+  }
+  if (habitEntries.length) {
+    try { await syncApi.pushHabitEntries(habitEntries); }
+    catch { habitEntries.forEach((dto) => failed.push({ type: "habitEntry", dto })); }
   }
 
   if (failed.length > 0) {

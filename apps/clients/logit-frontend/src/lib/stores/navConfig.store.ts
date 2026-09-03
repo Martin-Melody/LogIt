@@ -12,6 +12,7 @@ import {
   Sparkles,
   MessagesSquare,
   Apple,
+  CircleCheckBig,
 } from "lucide-svelte";
 export type NavItemId =
   | "home"
@@ -23,6 +24,7 @@ export type NavItemId =
   | "progress"
   | "exercises"
   | "nutrition"
+  | "habits"
   | "settings"
   | "plugins";
 
@@ -46,6 +48,7 @@ export const NAV_ITEM_DEFS: NavItemDef[] = [
   { id: "progress",  href: "/progress",   label: "Progress",  icon: ChartNoAxesColumn, authRequired: false                        },
   { id: "exercises", href: "/exercises",  label: "Exercises", icon: Dumbbell,          authRequired: false                        },
   { id: "nutrition", href: "/nutrition",  label: "Nutrition", icon: Apple,             authRequired: false                        },
+  { id: "habits",    href: "/habits",     label: "Habits",    icon: CircleCheckBig,    authRequired: false                        },
   { id: "settings",  href: "/settings",   label: "Settings",  icon: Settings,          authRequired: false                        },
   { id: "plugins",   href: "/plugins",    label: "Plugins",   icon: Sparkles,          authRequired: false                        },
 ];
@@ -65,7 +68,7 @@ const ALL_IDS = NAV_ITEM_DEFS.map((d) => d.id);
 function defaultConfig(): NavConfig {
   return {
     bar: ["home", "social", "profile"],
-    more: ["messages", "sessions", "splits", "progress", "exercises", "nutrition", "settings", "plugins"],
+    more: ["messages", "sessions", "splits", "progress", "exercises", "nutrition", "habits", "settings", "plugins"],
   };
 }
 

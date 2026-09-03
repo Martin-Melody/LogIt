@@ -41,6 +41,12 @@ public static class CoachEndpoints
         group.MapGet("/checkins", GetMyCheckinSchedules).RequireTier(UserTier.Studio);
         group.MapGet("/checkins/assigned", GetAssignedCheckinSchedules);
 
+        // Coach-assigned habits — same shape/rules. The client checks them off as ordinary
+        // HabitEntry rows (coach-readable via ?clientId= on /sync/habit-entries).
+        group.MapPost("/habits", UpsertCoachHabit).RequireTier(UserTier.Studio);
+        group.MapGet("/habits", GetMyCoachHabits).RequireTier(UserTier.Studio);
+        group.MapGet("/habits/assigned", GetAssignedCoachHabits);
+
         // Coach↔client messaging — bidirectional within an Active relationship, open to any
         // tier (a Free client can reply to their coach). Append-only.
         group.MapPost("/messages", SendMessage);
@@ -141,6 +147,13 @@ public static class CoachEndpoints
             .Select(g => new { UserId = g.Key, N = g.Count() })
             .ToListAsync()).ToDictionary(x => x.UserId, x => x.N);
 
+        var habitCounts = (await db.CoachHabits
+            .Where(h => h.CoachId == coachId && h.DeletedAtMs == null && h.RecipientUserId != null
+                && clientIds.Contains(h.RecipientUserId.Value))
+            .GroupBy(h => h.RecipientUserId!.Value)
+            .Select(g => new { UserId = g.Key, N = g.Count() })
+            .ToListAsync()).ToDictionary(x => x.UserId, x => x.N);
+
         var unread = (await db.CoachMessages
             .Where(m => m.SenderUserId != coachId && m.ReadAtMs == null
                 && m.Relationship.CoachId == coachId && m.Relationship.Status == CoachClientStatus.Active)
@@ -191,6 +204,7 @@ public static class CoachEndpoints
                 sessions28d = s?.C28 ?? 0,
                 programCount = programCounts.GetValueOrDefault(r.ClientId, 0),
                 checkinScheduleCount = scheduleCounts.GetValueOrDefault(r.ClientId, 0),
+                assignedHabitCount = habitCounts.GetValueOrDefault(r.ClientId, 0),
                 lastCheckinSubmittedAtMs = LatestSubmittedCheckin(r.ClientId),
                 unreadFromClient = unread.GetValueOrDefault(r.ClientId, 0),
             };
@@ -660,6 +674,124 @@ public static class CoachEndpoints
         return Results.Ok(new { schedules });
     }
 
+    // ── Coach-assigned habits ─────────────────────────────────────────────────
+    // Structurally identical to check-in schedules; parallel handlers to match the
+    // per-entity style rather than a shared abstraction.
+
+    private static async Task<IResult> UpsertCoachHabit(
+        [FromBody] UpsertCoachHabitRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var coachId = caller.GetUserId();
+        if (string.IsNullOrWhiteSpace(req.HabitId))
+            return Results.BadRequest(new { error = "habitId is required." });
+
+        Guid? recipientUserId = null;
+        Guid? relationshipId = null;
+
+        if (!string.IsNullOrWhiteSpace(req.RecipientUsername))
+        {
+            var recipient = await db.Users
+                .FirstOrDefaultAsync(u => u.Username == req.RecipientUsername.ToLowerInvariant());
+            if (recipient is null) return Results.NotFound(new { error = "Client not found." });
+
+            var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
+                r.CoachId == coachId && r.ClientId == recipient.Id && r.Status == CoachClientStatus.Active);
+            if (relationship is null)
+                return Results.Json(
+                    new { error = "No active coaching relationship with that client." },
+                    statusCode: StatusCodes.Status403Forbidden);
+
+            recipientUserId = recipient.Id;
+            relationshipId = relationship.Id;
+        }
+
+        var stored = await db.CoachHabits
+            .FirstOrDefaultAsync(h => h.CoachId == coachId && h.HabitId == req.HabitId);
+
+        if (stored is null)
+        {
+            stored = new CoachHabit
+            {
+                HabitId = req.HabitId,
+                CoachId = coachId,
+                RecipientUserId = recipientUserId,
+                RelationshipId = relationshipId,
+                UpdatedAtMs = req.UpdatedAtMs,
+                DataJson = req.DeletedAtMs.HasValue ? string.Empty : req.DataJson,
+                DeletedAtMs = req.DeletedAtMs,
+            };
+            db.CoachHabits.Add(stored);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { id = stored.Id, habitId = stored.HabitId, updatedAtMs = stored.UpdatedAtMs });
+        }
+
+        if (req.UpdatedAtMs <= stored.UpdatedAtMs)
+            return Results.Ok(new { id = stored.Id, habitId = stored.HabitId, updatedAtMs = stored.UpdatedAtMs });
+
+        stored.UpdatedAtMs = req.UpdatedAtMs;
+        stored.DeletedAtMs = req.DeletedAtMs;
+        stored.DataJson = req.DeletedAtMs.HasValue ? string.Empty : req.DataJson;
+        stored.SyncedAt = DateTime.UtcNow;
+        if (recipientUserId.HasValue)
+        {
+            stored.RecipientUserId = recipientUserId;
+            stored.RelationshipId = relationshipId;
+        }
+
+        await db.SaveChangesAsync();
+        return Results.Ok(new { id = stored.Id, habitId = stored.HabitId, updatedAtMs = stored.UpdatedAtMs });
+    }
+
+    private static async Task<IResult> GetMyCoachHabits(
+        [FromQuery] Guid? recipientId,
+        [FromQuery] bool? templates,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var coachId = caller.GetUserId();
+        var query = db.CoachHabits.AsNoTracking().Where(h => h.CoachId == coachId);
+        if (templates == true) query = query.Where(h => h.RecipientUserId == null);
+        else if (recipientId is not null) query = query.Where(h => h.RecipientUserId == recipientId);
+
+        var habits = await query
+            .OrderByDescending(h => h.UpdatedAtMs)
+            .Select(h => new CoachHabitDto(
+                h.HabitId,
+                h.UpdatedAtMs,
+                h.DeletedAtMs == null ? h.DataJson : null,
+                h.DeletedAtMs,
+                h.RecipientUserId))
+            .ToListAsync();
+
+        return Results.Ok(new { habits });
+    }
+
+    private static async Task<IResult> GetAssignedCoachHabits(
+        [FromQuery] long since,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
+
+        var habits = await db.CoachHabits
+            .AsNoTracking()
+            .Where(h => h.RecipientUserId == userId && h.SyncedAt > sinceUtc)
+            .Where(h => db.CoachClientRelationships.Any(r =>
+                r.CoachId == h.CoachId && r.ClientId == userId && r.Status == CoachClientStatus.Active))
+            .OrderBy(h => h.SyncedAt)
+            .Select(h => new AssignedCoachHabitDto(
+                h.HabitId,
+                h.UpdatedAtMs,
+                h.DeletedAtMs == null ? h.DataJson : null,
+                h.DeletedAtMs))
+            .ToListAsync();
+
+        return Results.Ok(new { habits });
+    }
+
     // ── Messaging ─────────────────────────────────────────────────────────────
 
     /// The Active relationship the caller participates in, or null (not found / not a
@@ -844,6 +976,26 @@ public record UpsertNutritionPlanRequest(
     string DataJson,
     long UpdatedAtMs,
     string? RecipientUsername,
+    long? DeletedAtMs);
+
+public record UpsertCoachHabitRequest(
+    string HabitId,
+    string DataJson,
+    long UpdatedAtMs,
+    string? RecipientUsername = null,
+    long? DeletedAtMs = null);
+
+public record CoachHabitDto(
+    string HabitId,
+    long UpdatedAtMs,
+    string? DataJson,
+    long? DeletedAtMs,
+    Guid? RecipientUserId);
+
+public record AssignedCoachHabitDto(
+    string HabitId,
+    long UpdatedAtMs,
+    string? DataJson,
     long? DeletedAtMs);
 
 public record NutritionPlanDto(
