@@ -4,6 +4,12 @@ public class User
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Username { get; set; } = string.Empty;
+
+    /// The instance a user belongs to. Null = this (local) instance. Non-null =
+    /// a remote actor mirrored here once federation ships (Phase 3). Username is
+    /// unique per Origin, not globally. See docs/social-federation-design.md.
+    public string? Origin { get; set; }
+
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;

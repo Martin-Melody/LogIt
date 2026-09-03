@@ -22,6 +22,24 @@ namespace Logit.Api.Migrations.Postgres
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Block", b =>
+                {
+                    b.Property<Guid>("BlockerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlockedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("BlockerId", "BlockedId");
+
+                    b.HasIndex("BlockedId");
+
+                    b.ToTable("Blocks");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -343,6 +361,44 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("Likes");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CommentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("UserId", "ReadAt");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.PasswordResetToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -441,6 +497,50 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Report", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ReporterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TargetType", "TargetId");
+
+                    b.ToTable("Reports");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
@@ -922,6 +1022,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool>("OnboardingCompleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Origin")
+                        .HasColumnType("text");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -960,6 +1063,25 @@ namespace Logit.Api.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Block", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Blocked")
+                        .WithMany()
+                        .HasForeignKey("BlockedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Blocker")
+                        .WithMany()
+                        .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Blocked");
+
+                    b.Navigation("Blocker");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
@@ -1157,6 +1279,25 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Notification", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.PasswordResetToken", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
@@ -1188,6 +1329,17 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Report", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reporter");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
