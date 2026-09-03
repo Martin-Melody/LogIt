@@ -11,20 +11,21 @@ public static class SocialEndpoints
     public static void MapSocialEndpoints(this IEndpointRouteBuilder app)
     {
         var follows = app.MapGroup("/users").WithTags("Social");
-        follows.MapPost("/{username}/follow", Follow).RequireAuthorization();
+        follows.MapPost("/{username}/follow", Follow).RequireAuthorization().RequireRateLimiting("social-write");
         follows.MapDelete("/{username}/follow", Unfollow).RequireAuthorization();
         follows.MapGet("/{username}/followers", GetFollowers);
         follows.MapGet("/{username}/following", GetFollowing);
 
         var posts = app.MapGroup("/posts").WithTags("Posts");
         posts.MapGet("/feed", GetFeed).RequireAuthorization();
-        posts.MapPost("/", CreatePost).RequireAuthorization();
+        posts.MapGet("/{id:guid}", GetPost).RequireAuthorization();
+        posts.MapPost("/", CreatePost).RequireAuthorization().RequireRateLimiting("social-write");
         posts.MapDelete("/{id:guid}", DeletePost).RequireAuthorization();
         posts.MapPatch("/{id:guid}", EditPost).RequireAuthorization();
         posts.MapPost("/{id:guid}/like", LikePost).RequireAuthorization();
         posts.MapDelete("/{id:guid}/like", UnlikePost).RequireAuthorization();
         posts.MapGet("/{id:guid}/comments", GetComments);
-        posts.MapPost("/{id:guid}/comments", AddComment).RequireAuthorization();
+        posts.MapPost("/{id:guid}/comments", AddComment).RequireAuthorization().RequireRateLimiting("social-write");
         posts.MapPatch("/{id:guid}/comments/{commentId:guid}", EditComment).RequireAuthorization();
         posts.MapDelete("/{id:guid}/comments/{commentId:guid}", DeleteComment).RequireAuthorization();
 
@@ -42,6 +43,7 @@ public static class SocialEndpoints
         if (exists) return Results.Conflict(new { error = "Already following." });
 
         db.Follows.Add(new Follow { FollowerId = followerId, FollowedId = target.Id });
+        db.AddFollow(followerId, target.Id);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
@@ -82,12 +84,19 @@ public static class SocialEndpoints
         AppDbContext db,
         ClaimsPrincipal caller,
         [FromQuery] int limit = 20,
-        [FromQuery] DateTime? before = null)
+        [FromQuery] string? cursor = null)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
         if (user is null) return Results.NotFound();
 
         Guid? callerId = caller.Identity?.IsAuthenticated == true ? caller.GetUserId() : null;
+        if (callerId is not null && await db.Blocks.AnyAsync(b =>
+                (b.BlockerId == callerId && b.BlockedId == user.Id) ||
+                (b.BlockerId == user.Id && b.BlockedId == callerId)))
+            return Results.NotFound();
+
+        limit = Math.Clamp(limit, 1, 50);
+        var before = SocialQueryHelpers.DecodeCursor(cursor);
 
         var query = db.Posts
             .Include(p => p.Author)
@@ -95,15 +104,10 @@ public static class SocialEndpoints
             .Include(p => p.Comments)
             .Where(p => p.AuthorId == user.Id && p.DeletedAt == null);
 
-        if (before.HasValue)
-            query = query.Where(p => p.CreatedAt < before.Value);
+        if (before is not null)
+            query = query.Where(p => p.CreatedAt < before);
 
-        var posts = await query
-            .OrderByDescending(p => p.CreatedAt)
-            .Take(Math.Min(limit, 50))
-            .ToListAsync();
-
-        return Results.Ok(posts.Select(p => p.ToDto(callerId)));
+        return Results.Ok(await PageAsync(query, limit, callerId));
     }
 
     private static async Task<IResult> LikePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
@@ -116,6 +120,7 @@ public static class SocialEndpoints
         if (exists) return Results.Conflict(new { error = "Already liked." });
 
         db.Likes.Add(new Like { UserId = userId, PostId = id });
+        await db.AddLikeAsync(userId, post);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
@@ -135,31 +140,44 @@ public static class SocialEndpoints
         ClaimsPrincipal caller,
         AppDbContext db,
         [FromQuery] int limit = 20,
-        [FromQuery] DateTime? before = null)
+        [FromQuery] string? cursor = null)
     {
         var userId = caller.GetUserId();
+        limit = Math.Clamp(limit, 1, 50);
+        var before = SocialQueryHelpers.DecodeCursor(cursor);
+
         var followedIds = await db.Follows
             .Where(f => f.FollowerId == userId)
             .Select(f => f.FollowedId)
             .ToListAsync();
-
         followedIds.Add(userId); // include own posts in feed
+
+        var blocked = await db.BlockedUserIdsAsync(userId);
 
         var query = db.Posts
             .Include(p => p.Author)
             .Include(p => p.Likes)
             .Include(p => p.Comments)
-            .Where(p => followedIds.Contains(p.AuthorId) && p.DeletedAt == null);
+            .Where(p => followedIds.Contains(p.AuthorId) && !blocked.Contains(p.AuthorId) && p.DeletedAt == null);
 
-        if (before.HasValue)
-            query = query.Where(p => p.CreatedAt < before.Value);
+        if (before is not null)
+            query = query.Where(p => p.CreatedAt < before);
 
-        var posts = await query
-            .OrderByDescending(p => p.CreatedAt)
-            .Take(Math.Min(limit, 50))
-            .ToListAsync();
+        return Results.Ok(await PageAsync(query, limit, userId));
+    }
 
-        return Results.Ok(posts.Select(p => p.ToDto(userId)));
+    /// Shared: order newest-first, take limit+1 to detect a next page, project to
+    /// DTOs, and hand back an opaque cursor.
+    private static async Task<object> PageAsync(IQueryable<Post> query, int limit, Guid? callerId)
+    {
+        var rows = await query.OrderByDescending(p => p.CreatedAt).Take(limit + 1).ToListAsync();
+        string? nextCursor = null;
+        if (rows.Count > limit)
+        {
+            nextCursor = SocialQueryHelpers.EncodeCursor(rows[limit - 1].CreatedAt);
+            rows = rows.Take(limit).ToList();
+        }
+        return new { posts = rows.Select(p => p.ToDto(callerId)), nextCursor };
     }
 
     private static async Task<IResult> CreatePost(
@@ -217,28 +235,59 @@ public static class SocialEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> GetPost(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var post = await db.Posts
+            .Include(p => p.Author)
+            .Include(p => p.Likes)
+            .Include(p => p.Comments)
+            .FirstOrDefaultAsync(p => p.Id == id && p.DeletedAt == null);
+        if (post is null) return Results.NotFound();
+
+        if (await db.Blocks.AnyAsync(b =>
+                (b.BlockerId == userId && b.BlockedId == post.AuthorId) ||
+                (b.BlockerId == post.AuthorId && b.BlockedId == userId)))
+            return Results.NotFound();
+
+        return Results.Ok(post.ToDto(userId));
+    }
+
     private static async Task<IResult> GetComments(
         Guid id,
+        ClaimsPrincipal caller,
         AppDbContext db,
         [FromQuery] int limit = 50,
-        [FromQuery] DateTime? before = null)
+        [FromQuery] string? cursor = null)
     {
         var post = await db.Posts.FindAsync(id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
+
+        limit = Math.Clamp(limit, 1, 100);
+        var after = SocialQueryHelpers.DecodeCursor(cursor);
 
         var query = db.Comments
             .Include(c => c.Author)
             .Where(c => c.PostId == id && c.DeletedAt == null);
 
-        if (before.HasValue)
-            query = query.Where(c => c.CreatedAt < before.Value);
+        if (caller.Identity?.IsAuthenticated == true)
+        {
+            var blocked = await db.BlockedUserIdsAsync(caller.GetUserId());
+            query = query.Where(c => !blocked.Contains(c.AuthorId));
+        }
 
-        var comments = await query
-            .OrderBy(c => c.CreatedAt)
-            .Take(Math.Min(limit, 100))
-            .ToListAsync();
+        if (after is not null)
+            query = query.Where(c => c.CreatedAt > after);
 
-        return Results.Ok(comments.Select(c => c.ToDto()));
+        var rows = await query.OrderBy(c => c.CreatedAt).Take(limit + 1).ToListAsync();
+        string? nextCursor = null;
+        if (rows.Count > limit)
+        {
+            nextCursor = SocialQueryHelpers.EncodeCursor(rows[limit - 1].CreatedAt);
+            rows = rows.Take(limit).ToList();
+        }
+
+        return Results.Ok(new { comments = rows.Select(c => c.ToDto()), nextCursor });
     }
 
     private static async Task<IResult> AddComment(
@@ -260,6 +309,7 @@ public static class SocialEndpoints
         };
 
         db.Comments.Add(comment);
+        db.AddComment(caller.GetUserId(), post, comment.Id);
         await db.SaveChangesAsync();
         await db.Entry(comment).Reference(c => c.Author).LoadAsync();
 

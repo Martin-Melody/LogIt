@@ -31,14 +31,20 @@ Get paying customers before building the complex stuff.
 
 Build it centralised and working before adding federation complexity.
 
-- [ ] Post types already exist — wire them to a proper feed server
-- [ ] Follow/unfollow, follower graph
-- [ ] Feed endpoint (already partially built in the API)
-- [ ] Notifications (likes, comments, follows)
-- [ ] Content moderation basics (report, block user)
-- [ ] Profile pages (public workout stats, active split, PRs)
+- [x] Post types wired to a feed server (7 types + payload cards)
+- [x] Follow/unfollow, follower graph
+- [x] Feed endpoint (cursor-paginated, block-aware)
+- [x] Notifications (likes, comments, follows) — `feat/social-redesign`
+- [x] Content moderation basics (report, block user, admin reports queue,
+      rate limiting) — `feat/social-redesign`
+- [x] Profile pages (public workout stats, active split, PRs)
+- [ ] Mobile UX redesign toward familiar social-app patterns (feed as a real
+      destination, unified profile, post detail route, notifications screen) —
+      in progress on `feat/social-redesign`
 
 **Goal:** Logit Cloud users can follow each other and share workouts. No federation yet.
+
+Federation design is written up in `docs/social-federation-design.md`.
 
 ---
 

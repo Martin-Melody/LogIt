@@ -168,8 +168,15 @@ public static class AdminHtml
               <div class="stat"><span class="stat-val" id="stat-posts">—</span><span class="stat-label">Posts</span></div>
               <div class="stat"><span class="stat-val" id="stat-tokens">—</span><span class="stat-label">Active logins</span></div>
               <div class="stat"><span class="stat-val" id="stat-workouts">—</span><span class="stat-label">Workouts</span></div>
+              <div class="stat" style="cursor:pointer" onclick="toggleReports()"><span class="stat-val" id="stat-reports">—</span><span class="stat-label">Open reports</span></div>
             </div>
             <button class="topbar-logout" onclick="logout()">Sign out</button>
+          </div>
+
+          <!-- Reports panel -->
+          <div id="reports-panel" style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);max-height:40vh;overflow-y:auto">
+            <h3 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Open reports</h3>
+            <div id="reports-list"></div>
           </div>
 
           <div class="main">
@@ -327,7 +334,7 @@ public static class AdminHtml
           }
 
           async function loadAll() {
-            await Promise.all([loadStats(), loadUsers()]);
+            await Promise.all([loadStats(), loadUsers(), loadReports()]);
           }
 
           async function loadStats() {
@@ -336,6 +343,39 @@ public static class AdminHtml
             document.getElementById('stat-posts').textContent = s.postCount.toLocaleString();
             document.getElementById('stat-tokens').textContent = s.activeTokens.toLocaleString();
             document.getElementById('stat-workouts').textContent = s.workoutCount.toLocaleString();
+          }
+
+          let reports = [], reportPreviews = {};
+          async function loadReports() {
+            const data = await api('/reports?status=Open');
+            reports = data.reports; reportPreviews = data.previews || {};
+            document.getElementById('stat-reports').textContent = reports.length.toLocaleString();
+            renderReports();
+          }
+          function toggleReports() {
+            const p = document.getElementById('reports-panel');
+            p.style.display = p.style.display === 'none' ? 'block' : 'none';
+          }
+          function renderReports() {
+            const el = document.getElementById('reports-list');
+            if (!reports.length) { el.innerHTML = '<div class="empty">No open reports.</div>'; return; }
+            el.innerHTML = reports.map(r => {
+              const pv = reportPreviews[r.targetId];
+              const preview = pv ? `<div style="color:var(--muted);font-size:12px;margin-top:2px">${pv.kind} by @${pv.author}: ${(pv.body||'').slice(0,140).replace(/</g,'&lt;')}${pv.deleted ? ' <em>(already deleted)</em>' : ''}</div>` : '';
+              return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+                <div><strong>${r.reason}</strong> · ${r.targetType} · reported by @${r.reporter.username} · ${new Date(r.createdAt).toLocaleString()}</div>
+                ${r.note ? `<div style="font-size:12px;margin-top:2px">${r.note.replace(/</g,'&lt;')}</div>` : ''}
+                ${preview}
+                <div style="margin-top:6px;display:flex;gap:6px">
+                  <button class="btn-danger" onclick="resolveReport('${r.id}','delete-target')">Delete ${r.targetType.toLowerCase()}</button>
+                  <button class="btn-warn" onclick="resolveReport('${r.id}','dismiss')">Dismiss</button>
+                </div>
+              </div>`;
+            }).join('');
+          }
+          async function resolveReport(id, action) {
+            await api(`/reports/${id}/resolve`, { method: 'POST', body: JSON.stringify({ action }) });
+            await loadReports();
           }
 
           async function loadUsers(search = '') {

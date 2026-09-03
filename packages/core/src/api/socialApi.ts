@@ -92,16 +92,57 @@ export interface ApiComment {
   editedAt: string | null;
 }
 
+export interface CommentPage {
+  comments: ApiComment[];
+  nextCursor: string | null;
+}
+
+export interface BlockedUser {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  createdAt: string;
+}
+
+export type ReportTargetType = "Post" | "Comment" | "User";
+export type ReportReason =
+  | "Spam" | "Harassment" | "HateSpeech" | "Violence"
+  | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
+
+export type NotificationKind = "Like" | "Comment" | "Follow";
+
+export interface ApiNotification {
+  id: string;
+  type: NotificationKind;
+  createdAt: string;
+  readAt: string | null;
+  actor: { id: string; username: string; displayName: string; avatarUrl: string | null };
+  postId: string | null;
+  commentId: string | null;
+  postBody: string | null;
+}
+
+export interface NotificationPage {
+  notifications: ApiNotification[];
+  nextCursor: string | null;
+}
+
+/** Opaque cursor pagination: pass the previous page's `nextCursor` to get the next. */
+function pageParams(limit: number, cursor?: string): string {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set("cursor", cursor);
+  return params.toString();
+}
+
 export const socialApi = {
   // Feed
-  async getFeed(limit = 20, before?: string): Promise<FeedPage> {
-    const params = new URLSearchParams({ limit: String(limit) });
-    if (before) params.set("before", before);
-    const posts = await apiClient.fetch<ApiPost[]>(`/posts/feed?${params}`);
-    return {
-      posts,
-      nextCursor: posts.length === limit ? posts[posts.length - 1].createdAt : null,
-    };
+  async getFeed(limit = 20, cursor?: string): Promise<FeedPage> {
+    return apiClient.fetch<FeedPage>(`/posts/feed?${pageParams(limit, cursor)}`);
+  },
+
+  async getPost(id: string): Promise<ApiPost> {
+    return apiClient.fetch(`/posts/${id}`);
   },
 
   // Posts
@@ -165,10 +206,8 @@ export const socialApi = {
   },
 
   // Comments
-  async getComments(postId: string, before?: string): Promise<ApiComment[]> {
-    const params = new URLSearchParams({ limit: "50" });
-    if (before) params.set("before", before);
-    return apiClient.fetch(`/posts/${postId}/comments?${params}`);
+  async getComments(postId: string, cursor?: string): Promise<CommentPage> {
+    return apiClient.fetch(`/posts/${postId}/comments?${pageParams(50, cursor)}`);
   },
 
   async addComment(postId: string, body: string): Promise<ApiComment> {
@@ -189,13 +228,51 @@ export const socialApi = {
     return apiClient.fetch(`/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
   },
 
-  async getUserPosts(username: string, limit = 20, before?: string): Promise<FeedPage> {
-    const params = new URLSearchParams({ limit: String(limit) });
-    if (before) params.set("before", before);
-    const posts = await apiClient.fetch<ApiPost[]>(`/users/${username}/posts?${params}`);
-    return {
-      posts,
-      nextCursor: posts.length === limit ? posts[posts.length - 1].createdAt : null,
-    };
+  async getUserPosts(username: string, limit = 20, cursor?: string): Promise<FeedPage> {
+    return apiClient.fetch<FeedPage>(`/users/${username}/posts?${pageParams(limit, cursor)}`);
+  },
+
+  // Moderation
+  async blockUser(username: string): Promise<void> {
+    return apiClient.fetch(`/users/${username}/block`, { method: "POST" });
+  },
+
+  async unblockUser(username: string): Promise<void> {
+    return apiClient.fetch(`/users/${username}/block`, { method: "DELETE" });
+  },
+
+  async getBlockedUsers(): Promise<BlockedUser[]> {
+    return apiClient.fetch(`/users/me/blocks`);
+  },
+
+  async reportContent(
+    targetType: ReportTargetType,
+    targetId: string,
+    reason: ReportReason,
+    note?: string,
+  ): Promise<void> {
+    return apiClient.fetch(`/reports`, {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetId, reason, note }),
+    });
+  },
+};
+
+export const notificationsApi = {
+  async list(cursor?: string): Promise<NotificationPage> {
+    return apiClient.fetch(`/notifications?${pageParams(30, cursor)}`);
+  },
+
+  async unreadCount(): Promise<number> {
+    const res = await apiClient.fetch<{ count: number }>(`/notifications/unread-count`);
+    return res.count;
+  },
+
+  /** Mark specific notifications read, or all unread when `ids` is omitted. */
+  async markRead(ids?: string[]): Promise<void> {
+    await apiClient.fetch(`/notifications/read`, {
+      method: "POST",
+      body: JSON.stringify({ ids: ids ?? null }),
+    });
   },
 };
