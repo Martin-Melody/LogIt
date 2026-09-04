@@ -40,6 +40,10 @@ export type RemoteProfile = {
   blocksCollapsedByDefault: boolean;
   restDefaultsJson: string;
   navConfigJson: string | null;
+  /** Home screen widget layout (which widgets, enabled state, order). Same rationale as
+   * navConfigJson — this was local-only (a single, un-namespaced localStorage key, not even
+   * synced or per-profile-scoped) until this field existed at all. */
+  homeConfigJson: string | null;
   /**
    * Which split the user has picked as "active". The server stores this whole DTO as one
    * replace-on-write blob (no per-field merge), so every push — even one only editing, say,

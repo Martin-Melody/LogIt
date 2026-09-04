@@ -666,6 +666,7 @@ public record ProfileDto(
     bool BlocksCollapsedByDefault,
     string RestDefaultsJson,
     string? NavConfigJson,
+    string? HomeConfigJson,
     string? ActiveSplitId,
     long UpdatedAtMs
 );

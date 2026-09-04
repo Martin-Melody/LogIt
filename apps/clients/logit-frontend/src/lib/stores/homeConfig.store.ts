@@ -31,24 +31,26 @@ function getWidgetCapability(manifest: PluginManifest): WidgetPluginCapability |
   );
 }
 
+/** Merge in any widget the local registry knows about that `slots` doesn't have yet. */
+function mergeWithRegistry(slots: WidgetSlot[]): HomeConfig {
+  const known = localWidgetRegistry.list();
+  const existing = new Set(slots.map((s) => s.id));
+  const merged = [...slots];
+  let nextOrder = merged.length;
+  for (const w of known) {
+    if (!existing.has(w.id)) {
+      merged.push({ id: w.id, enabled: w.defaultEnabled, orderIndex: nextOrder++ });
+    }
+  }
+  return { slots: merged };
+}
+
 function load(): HomeConfig {
   if (!browser) return { slots: [] };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
-    const parsed = JSON.parse(raw) as HomeConfig;
-
-    // merge in any new widgets the registry knows about
-    const known = localWidgetRegistry.list();
-    const existing = new Set(parsed.slots.map((s) => s.id));
-    const merged = [...parsed.slots];
-    let nextOrder = merged.length;
-    for (const w of known) {
-      if (!existing.has(w.id)) {
-        merged.push({ id: w.id, enabled: w.defaultEnabled, orderIndex: nextOrder++ });
-      }
-    }
-    return { slots: merged };
+    return mergeWithRegistry((JSON.parse(raw) as HomeConfig).slots);
   } catch {
     return defaultConfig();
   }
@@ -94,8 +96,20 @@ function save(config: HomeConfig) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 }
 
+// Same pattern as navConfig.store.ts: push the whole profile (this config rides along on
+// it) after a local edit, so widget layout changes reach the server, not just local storage.
+function scheduleProfilePush() {
+  if (!browser) return;
+  void import("$lib/sync/syncService").then(({ pushNavConfig }) => pushNavConfig());
+}
+
+// Track current value synchronously for getHomeConfigJson() — same pattern as
+// navConfig.store.ts's _current/getNavConfigJson().
+let _current: HomeConfig = { slots: [] };
+
 function createHomeConfigStore() {
   const store = writable<HomeConfig>(load());
+  store.subscribe((c) => { _current = c; });
 
   if (browser) {
     void reconcileInstalledWidgets(store);
@@ -105,6 +119,7 @@ function createHomeConfigStore() {
     store.update((c) => {
       const next = fn(c);
       save(next);
+      scheduleProfilePush();
       return next;
     });
   }
@@ -164,6 +179,13 @@ function createHomeConfigStore() {
     }));
   }
 
+  /** Applied by pullAndApplyProfile() (syncService.ts) when a newer remote config lands. */
+  function applyRemote(config: HomeConfig) {
+    const merged = mergeWithRegistry(config.slots);
+    save(merged);
+    store.set(merged);
+  }
+
   return {
     subscribe: store.subscribe,
     toggleWidget,
@@ -172,7 +194,12 @@ function createHomeConfigStore() {
     reconcilePlugins,
     seedNutritionWidgets,
     seedHabitsWidget,
+    applyRemote,
   };
 }
 
 export const homeConfig = createHomeConfigStore();
+
+export function getHomeConfigJson(): string {
+  return JSON.stringify(_current);
+}
