@@ -867,14 +867,20 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
   syncApi.pushProfile(remoteProfile).catch(() => enqueue({ type: "profile", dto: remoteProfile }));
 }
 
-/** Builds the current local profile as a RemoteProfile DTO, ready to push. */
-async function buildRemoteProfile(): Promise<RemoteProfile> {
+/**
+ * Builds the current local profile as a RemoteProfile DTO, ready to push. Always build the
+ * DTO through this — the server stores it as one replace-on-write blob (no per-field merge),
+ * so a hand-built literal that leaves out a field (e.g. activeSplitId) silently wipes that
+ * field out for the next puller, not just leaves it unchanged.
+ */
+export async function buildRemoteProfile(): Promise<RemoteProfile> {
   const { get } = await import("svelte/store");
   const [{ profile }, { getNavConfigJson }] = await Promise.all([
     import("$lib/stores/profile.store"),
     import("$lib/stores/navConfig.store"),
   ]);
   const p = get(profile);
+  const activeSplitId = await getSplitRepo().getActiveSplitId().catch(() => null);
   return {
     displayName: p.name,
     bio: p.bio,
@@ -886,6 +892,7 @@ async function buildRemoteProfile(): Promise<RemoteProfile> {
     blocksCollapsedByDefault: p.blocksCollapsedByDefault,
     restDefaultsJson: JSON.stringify(p.restDefaults),
     navConfigJson: getNavConfigJson(),
+    activeSplitId,
     updatedAtMs: Date.now(),
   };
 }
@@ -997,6 +1004,13 @@ export async function pullAndApplyProfile(): Promise<void> {
         const { navConfig } = await import("$lib/stores/navConfig.store");
         navConfig.applyRemote(JSON.parse(remote.navConfigJson));
       } catch {}
+    }
+
+    // Which split is "active" was previously a local-only meta-table entry with no sync
+    // path at all — every fresh install/re-login lost it even though the split data itself
+    // (days/blocks) synced fine, forcing the user to re-pick it by hand every time.
+    if (remote.activeSplitId !== undefined) {
+      await getSplitRepo().setActiveSplitId(remote.activeSplitId).catch(() => {});
     }
 
     let restDefaults: Record<string, number | undefined> = {};
