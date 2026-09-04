@@ -12,6 +12,7 @@
   import { toast } from "svelte-sonner";
   import PostAttachment from "./PostAttachment.svelte";
   import ReportSheet from "./ReportSheet.svelte";
+  import { copyAlgorithmToMine, copyWidgetToMine, type AlgorithmFamily } from "$lib/features/social/copyToMine";
 
   interface Props {
     post: ApiPost;
@@ -40,6 +41,33 @@
   let savingEdit = $state(false);
   let confirmDelete = $state(false);
   let deleting = $state(false);
+  let copying = $state(false);
+
+  // "Copy to mine" — cheap tier (Algorithm/Widget, id-reference only). See
+  // docs/architecture/profile-progress-redesign.md P3/P4 and copyToMine.ts.
+  const copyable = $derived(p.type === "Algorithm" || p.type === "Widget");
+
+  async function handleCopy() {
+    if (copying || !p.payloadJson) return;
+    copying = true;
+    try {
+      const payload = JSON.parse(p.payloadJson) as { id?: string; family?: string };
+      if (!payload.id) throw new Error("missing id");
+      if (p.type === "Algorithm") {
+        await copyAlgorithmToMine(payload.id, (payload.family ?? "progression") as AlgorithmFamily);
+        toast.success("Added to your settings");
+      } else if (p.type === "Widget") {
+        const applied = copyWidgetToMine(payload.id);
+        toast[applied ? "success" : "error"](
+          applied ? "Widget enabled on your profile" : "Couldn't copy — that widget isn't available on your device",
+        );
+      }
+    } catch {
+      toast.error("Couldn't copy this");
+    } finally {
+      copying = false;
+    }
+  }
 
   $effect(() => {
     if (menuOpen) { openOverlay(); return () => closeOverlay(); }
@@ -186,7 +214,7 @@
       {#if p.body}
         <p class="text-sm whitespace-pre-wrap break-words">{p.body}</p>
       {/if}
-      <PostAttachment post={p} />
+      <PostAttachment post={p} oncopy={copyable ? handleCopy : undefined} {copying} />
     </div>
   {/if}
 
