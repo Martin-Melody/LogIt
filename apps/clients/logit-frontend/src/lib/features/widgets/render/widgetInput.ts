@@ -14,7 +14,6 @@ import {
   getExerciseRepo,
   getHabitRepo,
   getNutritionRepo,
-  getProgressionRepo,
   getWorkoutRepo,
 } from "$lib/data/repoProvider";
 import { getProgressionDeps } from "$lib/usecases/progressionDeps";
@@ -138,16 +137,30 @@ export async function gatherWidgetInput(needs: WidgetDataNeed[]): Promise<Widget
   if (want.has("progressionTargets")) {
     tasks.push(
       (async () => {
-        const states = await getProgressionRepo().listExerciseStates();
-        const top = [...states].sort((a, b) => b.updatedAtMs - a.updatedAtMs).slice(0, 6);
         const deps = getProgressionDeps();
+        // Which exercises to show: the most recently *trained* ones, from real session
+        // history — not progression_states, which only gets a row once a session finishes
+        // *after* an algorithm was already configured. A user with plenty of existing
+        // history and a freshly-picked (or freshly-defaulted) algorithm should see
+        // suggestions immediately, using getSuggestion()'s own history-based fallback for an
+        // exercise it's never explicitly tracked state for — not be told to start from
+        // scratch just because the state cache is still empty.
+        const recentSessions = await getWorkoutRepo().listRecentSessions({ limit: 20 });
+        const seen = new Set<string>();
+        const candidates: { id?: string; name: string }[] = [];
+        outer: for (const session of recentSessions) {
+          for (const ex of getExercises(session)) {
+            const key = ex.exerciseId ?? ex.exerciseName.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            candidates.push({ id: ex.exerciseId, name: ex.exerciseName });
+            if (candidates.length >= 6) break outer;
+          }
+        }
         const rows = await Promise.all(
-          top.map(async (s) => {
-            const out = await getSuggestion(
-              { id: s.exerciseId, name: s.exerciseName },
-              deps,
-            ).catch(() => null);
-            return out ? { exerciseName: s.exerciseName, target: formatTarget(out) } : null;
+          candidates.map(async (c) => {
+            const out = await getSuggestion({ id: c.id, name: c.name }, deps).catch(() => null);
+            return out ? { exerciseName: c.name, target: formatTarget(out) } : null;
           }),
         );
         input.progressionTargets = rows.filter((r): r is NonNullable<typeof r> => r !== null);
