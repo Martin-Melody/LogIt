@@ -7,6 +7,7 @@
   import { selectedDayOverride } from "$lib/stores/todaysPlan.store";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { habitsRevision } from "$lib/features/habits/store";
+  import { lastSyncedAt } from "$lib/sync/syncService";
   import { gatherWidgetInput } from "./widgetInput";
   import WidgetViewRenderer from "./WidgetViewRenderer.svelte";
 
@@ -35,9 +36,13 @@
     }
   }
 
-  // Runs on mount, then again whenever a reactive widget's inputs change
-  // (split day switched, a session started/finished).
+  // Runs on mount, then again whenever a reactive widget's inputs change (split day switched,
+  // a session started/finished), and whenever a background sync completes — otherwise a
+  // widget mounted before login's sync finishes (or before any later background sync lands)
+  // just sits on stale/empty data until the user leaves the Home screen and comes back,
+  // which is the only other thing that currently re-triggers load() (onForeground below).
   $effect(() => {
+    void $lastSyncedAt;
     if (reactive) {
       void $activeSplit;
       void $selectedDayOverride;
