@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#1D2035</color>
+    <!-- Must match the LogIt staircase mark's background (scripts/brand-mark.png) —
+         update this whenever the mark's background color changes. Also reused as the
+         Android 12+ splash screen background (styles.xml) so the OS-native splash and the
+         mark's own baked-in background are the same tone, not two different ones. -->
+    <color name="ic_launcher_background">#0e0e10</color>
 </resources>
