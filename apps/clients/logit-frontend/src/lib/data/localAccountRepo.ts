@@ -8,6 +8,10 @@ export interface LocalAccount {
   displayName: string;
   bio: string;
   avatarDataUrl: string | null;
+  /** A single current progress photo — distinct from the identity avatar. Same storage pattern
+   * (client-resized base64 data-URL, no object storage). See docs/architecture/
+   * profile-progress-redesign.md — V1 is one photo, not a gallery/timeline. */
+  progressPhotoDataUrl: string | null;
   height: number | null;
   heightUnit: "cm" | "in";
   weight: number | null;
@@ -42,6 +46,7 @@ function rowToAccount(r: any): LocalAccount {
     displayName: r.display_name ?? "",
     bio: r.bio ?? "",
     avatarDataUrl: r.avatar_data_url ?? null,
+    progressPhotoDataUrl: r.progress_photo_data_url ?? null,
     height: r.height ?? null,
     heightUnit: (r.height_unit as "cm" | "in") ?? "cm",
     weight: r.weight ?? null,
@@ -68,6 +73,7 @@ export async function createLocalAccount(
     displayName: opts.displayName ?? opts.username,
     bio: opts.bio ?? "",
     avatarDataUrl: opts.avatarDataUrl ?? null,
+    progressPhotoDataUrl: opts.progressPhotoDataUrl ?? null,
     height: opts.height ?? null,
     heightUnit: opts.heightUnit ?? "cm",
     weight: opts.weight ?? null,
@@ -83,15 +89,16 @@ export async function createLocalAccount(
 
   await db.run(
     `INSERT INTO local_accounts(
-       id, username, display_name, bio, avatar_data_url,
+       id, username, display_name, bio, avatar_data_url, progress_photo_data_url,
        height, height_unit, weight, weight_unit,
        blocks_collapsed_by_default, rest_defaults_json,
        password_hash, server_user_id,
        onboarding_completed, onboarding_step,
        created_at_ms
-     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       account.id, account.username, account.displayName, account.bio, account.avatarDataUrl,
+      account.progressPhotoDataUrl,
       account.height, account.heightUnit, account.weight, account.weightUnit,
       account.blocksCollapsedByDefault ? 1 : 0, account.restDefaultsJson,
       account.passwordHash, account.serverUserId,
@@ -151,6 +158,7 @@ export async function updateLocalAccount(
   if (patch.displayName !== undefined)              { sets.push("display_name = ?");                params.push(patch.displayName); }
   if (patch.bio !== undefined)                      { sets.push("bio = ?");                         params.push(patch.bio); }
   if (patch.avatarDataUrl !== undefined)            { sets.push("avatar_data_url = ?");             params.push(patch.avatarDataUrl); }
+  if (patch.progressPhotoDataUrl !== undefined)     { sets.push("progress_photo_data_url = ?");     params.push(patch.progressPhotoDataUrl); }
   if (patch.height !== undefined)                   { sets.push("height = ?");                      params.push(patch.height); }
   if (patch.heightUnit !== undefined)               { sets.push("height_unit = ?");                 params.push(patch.heightUnit); }
   if (patch.weight !== undefined)                   { sets.push("weight = ?");                      params.push(patch.weight); }

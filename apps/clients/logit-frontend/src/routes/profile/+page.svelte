@@ -18,11 +18,8 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { getServerMode } from "@logit/core/api/serverConfig";
   import { socialApi, type ApiProfile, type ApiPost } from "@logit/core/api/socialApi";
-  import { apiClient } from "@logit/core/api/client";
   import { formatDistanceToNow } from "$lib/utils";
-  import { activeSplit } from "$lib/stores/activeSplit.store";
-  import { getPersonalRecords } from "$lib/usecases/getPersonalRecords";
-  import { get } from "svelte/store";
+  import { pushPublicProfileSnapshot } from "$lib/features/profileWidgets/publicProfileSync";
 
   // --- Profile editing ---
   let editing = $state(false);
@@ -81,57 +78,10 @@
     void syncPublicProfile();
   }
 
-  async function syncPublicProfile() {
-    if (!authStore.isAuthenticated) return;
-    try {
-      const profileSnap = get(profile);
-      const configSnap = get(profileConfig);
-      const split = await activeSplit.load();
-      const records = await getPersonalRecords(10);
-
-      const widgetSlots = configSnap.slots.map((s) => ({
-        id: s.id,
-        enabled: s.enabled,
-        order: s.orderIndex,
-      }));
-
-      await apiClient.fetch("/users/me", {
-        method: "PATCH",
-        body: JSON.stringify({
-          displayName: profileSnap.name || undefined,
-          bio: profileSnap.bio || undefined,
-          avatarUrl: profileSnap.avatarDataUrl || undefined,
-          publicProfileJson: JSON.stringify({
-            widgets: widgetSlots,
-            bodyStats: {
-              height: profileSnap.height,
-              heightUnit: profileSnap.heightUnit,
-              weight: profileSnap.weight,
-              weightUnit: profileSnap.weightUnit,
-            },
-            activeSplit: split
-              ? {
-                  name: split.name,
-                  days: split.days.map((d) => ({
-                    name: d.name ?? `Day ${d.orderIndex + 1}`,
-                    exercises: d.blocks
-                      .filter((b) => b.type === "strength")
-                      .map((b) => (b as { exerciseName: string }).exerciseName),
-                  })),
-                }
-              : null,
-            personalRecords: records.map((r) => ({
-              exerciseName: r.exerciseName,
-              weight: r.weight,
-              reps: r.reps,
-            })),
-          }),
-        }),
-      });
-    } catch {
-      // non-fatal
-    }
-  }
+  // Delegates to the shared function (publicProfileSync.ts) rather than building the PATCH
+  // inline — extracted out so it survives the planned self-page/ProfileView unification
+  // unchanged. Kept as a local wrapper so existing call sites below don't need renaming.
+  const syncPublicProfile = pushPublicProfileSnapshot;
 
   async function loadMorePosts() {
     if (!authStore.user || !nextCursor || loadingMore) return;

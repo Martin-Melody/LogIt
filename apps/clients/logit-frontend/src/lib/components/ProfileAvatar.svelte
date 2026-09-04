@@ -3,6 +3,7 @@
   import * as Avatar from "$lib/components/ui/avatar";
   import { profile } from "$lib/stores/profile.store";
   import { pickImageFile } from "$lib/platform/filePick";
+  import { resizeImageFile } from "$lib/platform/imageResize";
 
   let {
     name = "",
@@ -27,31 +28,12 @@
       .join("");
   }
 
-  function resizeImage(file: File, maxPx: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(maxPx / img.width, maxPx / img.height, 1);
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-        URL.revokeObjectURL(img.src);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
   async function pick() {
     if (!editable || picking) return;
     picking = true;
     try {
       const file = await pickImageFile();
-      const dataUrl = await resizeImage(file, 512);
+      const dataUrl = await resizeImageFile(file, 512);
       profile.save({ avatarDataUrl: dataUrl });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
