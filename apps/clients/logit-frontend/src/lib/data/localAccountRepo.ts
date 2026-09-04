@@ -159,6 +159,44 @@ export async function updateLocalAccount(
   await db.run(`UPDATE local_accounts SET ${sets.join(", ")} WHERE id = ?`, params);
 }
 
+/**
+ * Where the `/accounts` switcher should send the user right after activating a profile.
+ * `loginOfflineAccount()` only ever flips the local `owner_id` — there's no per-profile stored
+ * server session to restore (`apiClient` holds one global token, not one per profile; see
+ * docs/bugs/account-switching.md #1), so a profile that was previously synced lands back in
+ * offline mode. Route straight to sign-in with that username prefilled instead of landing on
+ * "/" and letting the user discover it's not actually synced.
+ */
+export function postSwitchDestination(account: Pick<LocalAccount, "serverUserId" | "username">): string {
+  return account.serverUserId ? `/auth?resume=${encodeURIComponent(account.username)}` : "/";
+}
+
+/**
+ * Decide who should receive any row still sitting at `owner_id IS NULL` right before a new
+ * local profile is created. Every sqlite repo's read queries fall back to `owner_id IS NULL`
+ * (`WHERE owner_id = ? OR owner_id IS NULL`) — see docs/architecture/account-model.md §5 — so
+ * leaving a row orphaned here would leak into the *new* profile's view the moment it reads
+ * anything, regardless of who (if anyone) later calls {@link claimOrphanedData}. There are
+ * exactly two safe outcomes, never a third:
+ *
+ * - True first launch (no accounts existed before this one): give them to the new profile
+ *   itself — this is the one legitimate use of the sweep, adopting pre-multi-profile legacy
+ *   data (docs/architecture/account-model.md §3 row 1).
+ * - Any later "add a profile": give them to whichever profile was active immediately before
+ *   this one was created — never to the new profile, which must start with a clean slate
+ *   (§3 row 2; this is what closes docs/bugs/account-switching.md #2).
+ *
+ * Returns null when there's no one to claim for (a later profile created with no prior active
+ * owner — shouldn't happen in practice, but there's nothing safe to do about it here).
+ */
+export function orphanClaimTarget(
+  accountsBeforeCreate: number,
+  activeOwnerIdBeforeCreate: string | null,
+  newAccountId: string,
+): string | null {
+  return accountsBeforeCreate === 0 ? newAccountId : activeOwnerIdBeforeCreate;
+}
+
 export async function claimOrphanedData(ownerId: string): Promise<void> {
   const db = getDb();
   await db.run(`UPDATE sessions SET owner_id = ? WHERE owner_id IS NULL`, [ownerId]);
