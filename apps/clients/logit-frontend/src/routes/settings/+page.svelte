@@ -15,6 +15,7 @@
     Users,
   } from "lucide-svelte";
   import { goto } from "$app/navigation";
+  import { toast } from "svelte-sonner";
   import { back } from "$lib/navigation";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
@@ -73,7 +74,8 @@
       // Also push everything local, not just pull — covers accounts that signed in
       // before local history was ever fully backfilled to the server.
       await pushAllLocalData();
-      await syncAll();
+      const ok = await syncAll();
+      if (!ok) toast.error("Couldn't sync — some data didn't reach the server. Try again shortly.");
     } finally {
       syncing = false;
     }
@@ -414,25 +416,30 @@
           </p>
         </div>
 
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-          disabled={syncing || serverMode === "offline"}
-          onclick={() => void manualSync()}>
-          <span class="flex items-center gap-2">
-            <RefreshCw class="h-3.5 w-3.5 {syncing ? 'animate-spin' : ''}" />
-            {syncing ? "Syncing…" : "Sync now"}
-          </span>
-          <span class="flex items-center gap-1.5 text-xs">
-            <ConnectionDot />
-            {formatLastSynced($lastSyncedAt)}
-          </span>
-        </button>
+        {#if authStore.user.tier !== "Free"}
+          <button type="button"
+            class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            disabled={syncing || serverMode === "offline"}
+            onclick={() => void manualSync()}>
+            <span class="flex items-center gap-2">
+              <RefreshCw class="h-3.5 w-3.5 {syncing ? 'animate-spin' : ''}" />
+              {syncing ? "Syncing…" : "Sync now"}
+            </span>
+            <span class="flex items-center gap-1.5 text-xs">
+              <ConnectionDot />
+              {formatLastSynced($lastSyncedAt)}
+            </span>
+          </button>
+        {/if}
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onclick={() => goto("/clients")}>
           <span class="flex items-center gap-2">
-            <Users class="h-3.5 w-3.5" />
-            Coaching
+            <Users class="h-3.5 w-3.5 shrink-0" />
+            <span class="text-left">
+              <span class="block">Coaching</span>
+              <span class="block text-xs text-muted-foreground/70">View invites, or manage clients on a Studio plan</span>
+            </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
