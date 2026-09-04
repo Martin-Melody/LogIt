@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { ApiPost } from "@logit/core/api/socialApi";
-  import { Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard } from "lucide-svelte";
+  import { Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard, Download, Loader2 } from "lucide-svelte";
 
-  const { post }: { post: ApiPost } = $props();
+  const {
+    post,
+    oncopy,
+    copying = false,
+  }: { post: ApiPost; oncopy?: () => void; copying?: boolean } = $props();
 
   const payload = $derived.by(() => {
     if (!post.payloadJson) return null;
@@ -41,7 +45,7 @@
     : post.type === "PersonalRecord" ? "Personal record"
     : post.type === "Split" ? "Split"
     : post.type === "Exercise" ? "Exercise"
-    : post.type === "Algorithm" ? "Progression"
+    : post.type === "Algorithm" ? "Algorithm"
     : post.type === "Widget" ? "Widget"
     : null,
   );
@@ -95,6 +99,18 @@
     {:else if post.type === "Widget" && payload.name}
       <span class="text-sm font-medium text-foreground">{payload.name}</span>
       {#if payload.description}<span class="text-muted-foreground">{payload.description}</span>{/if}
+    {/if}
+
+    {#if oncopy}
+      <button
+        type="button"
+        class="mt-1 self-start flex items-center gap-1.5 rounded border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
+        disabled={copying}
+        onclick={(e) => { e.stopPropagation(); oncopy?.(); }}
+      >
+        {#if copying}<Loader2 class="h-3 w-3 animate-spin" />{:else}<Download class="h-3 w-3" />{/if}
+        Copy to mine
+      </button>
     {/if}
   </div>
 {/if}

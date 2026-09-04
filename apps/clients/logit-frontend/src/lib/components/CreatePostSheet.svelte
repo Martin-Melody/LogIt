@@ -12,7 +12,10 @@
   import { getPersonalRecords, type PersonalRecord } from "$lib/usecases/getPersonalRecords";
   import { getProgressionConfig } from "@logit/core/usecases/progression/getProgressionConfig";
   import { getAnalyticsConfig } from "@logit/core/usecases/progression/getAnalyticsConfig";
+  import { getNutritionAlgorithmConfig } from "@logit/core/usecases/nutrition/getNutritionAlgorithmConfig";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import { getNutritionDeps } from "$lib/features/nutrition/deps";
+  import { getNutritionRepo } from "$lib/data/repoProvider";
   import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
   import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -59,7 +62,7 @@
   let exercisesLoading = $state(false);
 
   // Algorithm
-  type AlgoEntry = { id: string; name: string; description: string; family: "progression" | "analytics"; author?: string };
+  type AlgoEntry = { id: string; name: string; description: string; family: "progression" | "analytics" | "nutrition"; author?: string };
   let algorithms = $state<AlgoEntry[]>([]);
   let algorithmsLoading = $state(false);
   let selectedAlgo = $state<AlgoEntry | null>(null);
@@ -121,10 +124,15 @@
 
     algorithmsLoading = true;
     const progressionDeps = getProgressionDeps();
-    Promise.all([getProgressionConfig(progressionDeps), getAnalyticsConfig(progressionDeps)]).then(([prog, analytics]) => {
+    Promise.all([
+      getProgressionConfig(progressionDeps),
+      getAnalyticsConfig(progressionDeps),
+      getNutritionRepo().getGoal().then((goal) => getNutritionAlgorithmConfig(goal, getNutritionDeps())),
+    ]).then(([prog, analytics, nutrition]) => {
       algorithms = [
         ...prog.algorithms.map((a): AlgoEntry => ({ ...a, family: "progression" })),
         ...analytics.plugins.map((a): AlgoEntry => ({ ...a, family: "analytics" })),
+        ...nutrition.algorithms.map((a): AlgoEntry => ({ ...a, family: "nutrition" })),
       ];
       algorithmsLoading = false;
     }).catch(() => { algorithmsLoading = false; });
