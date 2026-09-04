@@ -64,11 +64,14 @@ function createAuthStore() {
     let account = await getLocalAccountByServerUserId(serverUser.id);
 
     if (account) {
-      // Known server user — switch to their local account
+      // Known server user — switch to their local account. Re-sync onboarding status from
+      // the server every time, not just on first link: it's the source of truth (e.g. they
+      // could have completed onboarding on a different device since this one last saw them).
       setActiveOwnerId(account.id);
       await updateLocalAccount(account.id, {
         displayName: serverUser.displayName ?? account.displayName,
         serverUserId: serverUser.id,
+        onboardingCompleted: serverUser.onboardingCompleted,
       });
     } else {
       // Try to link the currently active unlinked local account (e.g. created during onboarding)
@@ -80,8 +83,12 @@ function createAuthStore() {
             serverUserId: serverUser.id,
             // Prefer the name the user already set locally; fall back to server if blank
             displayName: current.displayName.trim() || serverUser.displayName || current.displayName,
+            // The local-only account defaults to onboardingCompleted: false — without this,
+            // logging into an already-onboarded server account from a fresh/local-only
+            // profile sent the user through onboarding again every time.
+            onboardingCompleted: serverUser.onboardingCompleted,
           });
-          account = { ...current, serverUserId: serverUser.id };
+          account = { ...current, serverUserId: serverUser.id, onboardingCompleted: serverUser.onboardingCompleted };
         }
       }
 
