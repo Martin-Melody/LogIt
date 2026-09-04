@@ -648,6 +648,13 @@ public record ExerciseDto(string Id, long CreatedAtMs, string? DataJson, long? D
 public record PushCheckinSubmissionsRequest(List<CheckinSubmissionDto> Submissions);
 public record CheckinSubmissionDto(string Id, long CreatedAtMs, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);
 
+// NOTE: this record must have a property for every field the client's RemoteProfile
+// (packages/core/src/api/syncApi.ts) sends — System.Text.Json silently drops any JSON
+// property with no matching constructor parameter here rather than erroring, so a client
+// field with nothing to land on here round-trips through push and pull as if it were never
+// sent. That's exactly how NavConfigJson went unsynced for a long time before this comment
+// was added: the client always built and sent it, this record just never had anywhere to
+// put it.
 public record ProfileDto(
     string DisplayName,
     string Bio,
@@ -658,6 +665,8 @@ public record ProfileDto(
     string WeightUnit,
     bool BlocksCollapsedByDefault,
     string RestDefaultsJson,
+    string? NavConfigJson,
+    string? ActiveSplitId,
     long UpdatedAtMs
 );
 
