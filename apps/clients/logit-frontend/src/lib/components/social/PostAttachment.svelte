@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ApiPost } from "@logit/core/api/socialApi";
-  import { Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard, Download, Loader2 } from "lucide-svelte";
+  import { Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard, Flame, Download, Loader2 } from "lucide-svelte";
 
   const {
     post,
@@ -19,11 +19,12 @@
         unit?: string;
         reps?: number;
         name?: string;
-        days?: { name?: string }[];
+        days?: { name?: string; blocks?: unknown[] }[];
         notes?: string;
         family?: string;
         description?: string;
         author?: string;
+        cadence?: { kind: "daily" } | { kind: "days"; days: number[] } | { kind: "weekly"; timesPerWeek: number };
       };
     } catch {
       return null;
@@ -37,6 +38,7 @@
     : post.type === "Exercise" ? Activity
     : post.type === "Algorithm" ? Cpu
     : post.type === "Widget" ? LayoutDashboard
+    : post.type === "Habit" ? Flame
     : null,
   );
 
@@ -47,8 +49,15 @@
     : post.type === "Exercise" ? "Exercise"
     : post.type === "Algorithm" ? "Algorithm"
     : post.type === "Widget" ? "Widget"
+    : post.type === "Habit" ? "Habit"
     : null,
   );
+
+  function cadenceLabel(c: NonNullable<NonNullable<typeof payload>["cadence"]>): string {
+    if (c.kind === "daily") return "Every day";
+    if (c.kind === "weekly") return `${c.timesPerWeek}x per week`;
+    return `${c.days.length} day${c.days.length === 1 ? "" : "s"}/week`;
+  }
 </script>
 
 {#if payload && icon && label}
@@ -79,7 +88,9 @@
     {:else if post.type === "Split" && payload.name}
       <span class="text-sm font-medium text-foreground">{payload.name}</span>
       {#if payload.days?.length}
-        <span class="text-muted-foreground">{payload.days.map((d) => d.name).filter(Boolean).join(" · ")}</span>
+        <span class="text-muted-foreground">
+          {payload.days.map((d) => `${d.name ?? "Day"}${d.blocks?.length ? ` (${d.blocks.length})` : ""}`).join(" · ")}
+        </span>
       {/if}
 
     {:else if post.type === "Exercise" && payload.name}
@@ -99,6 +110,10 @@
     {:else if post.type === "Widget" && payload.name}
       <span class="text-sm font-medium text-foreground">{payload.name}</span>
       {#if payload.description}<span class="text-muted-foreground">{payload.description}</span>{/if}
+
+    {:else if post.type === "Habit" && payload.name}
+      <span class="text-sm font-medium text-foreground">{payload.name}</span>
+      {#if payload.cadence}<span class="text-muted-foreground">{cadenceLabel(payload.cadence)}</span>{/if}
     {/if}
 
     {#if oncopy}

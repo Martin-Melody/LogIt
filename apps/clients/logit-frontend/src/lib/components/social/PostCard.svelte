@@ -12,7 +12,10 @@
   import { toast } from "svelte-sonner";
   import PostAttachment from "./PostAttachment.svelte";
   import ReportSheet from "./ReportSheet.svelte";
-  import { copyAlgorithmToMine, copyWidgetToMine, type AlgorithmFamily } from "$lib/features/social/copyToMine";
+  import {
+    copyAlgorithmToMine, copyWidgetToMine, copySplitToMine, copyExerciseToMine, copyHabitToMine,
+    type AlgorithmFamily, type CopyableSplit, type CopyableExercise, type CopyableHabit,
+  } from "$lib/features/social/copyToMine";
 
   interface Props {
     post: ApiPost;
@@ -43,24 +46,37 @@
   let deleting = $state(false);
   let copying = $state(false);
 
-  // "Copy to mine" — cheap tier (Algorithm/Widget, id-reference only). See
-  // docs/architecture/profile-progress-redesign.md P3/P4 and copyToMine.ts.
-  const copyable = $derived(p.type === "Algorithm" || p.type === "Widget");
+  // "Copy to mine" — see docs/architecture/profile-progress-redesign.md P3/P4 and
+  // copyToMine.ts. Algorithm/Widget are id-reference only (P3); Split/Exercise/Habit carry
+  // full-fidelity payloads (P4).
+  const copyable = $derived(
+    p.type === "Algorithm" || p.type === "Widget" || p.type === "Split" || p.type === "Exercise" || p.type === "Habit",
+  );
 
   async function handleCopy() {
     if (copying || !p.payloadJson) return;
     copying = true;
     try {
-      const payload = JSON.parse(p.payloadJson) as { id?: string; family?: string };
-      if (!payload.id) throw new Error("missing id");
+      const payload = JSON.parse(p.payloadJson) as Record<string, unknown> & { id?: string; family?: string };
       if (p.type === "Algorithm") {
+        if (!payload.id) throw new Error("missing id");
         await copyAlgorithmToMine(payload.id, (payload.family ?? "progression") as AlgorithmFamily);
         toast.success("Added to your settings");
       } else if (p.type === "Widget") {
+        if (!payload.id) throw new Error("missing id");
         const applied = copyWidgetToMine(payload.id);
         toast[applied ? "success" : "error"](
           applied ? "Widget enabled on your profile" : "Couldn't copy — that widget isn't available on your device",
         );
+      } else if (p.type === "Split") {
+        await copySplitToMine(payload as unknown as CopyableSplit);
+        toast.success("Split added to your splits");
+      } else if (p.type === "Exercise") {
+        await copyExerciseToMine(payload as unknown as CopyableExercise);
+        toast.success("Exercise added to your library");
+      } else if (p.type === "Habit") {
+        await copyHabitToMine(payload as unknown as CopyableHabit);
+        toast.success("Habit added to your habits");
       }
     } catch {
       toast.error("Couldn't copy this");
