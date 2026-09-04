@@ -67,4 +67,27 @@ describe("muscleFocusWidget", () => {
     const node = view.body[0];
     if (node.kind === "muscle-map") expect(node.values.quads).toBe(1);
   });
+
+  it("falls back to name when the exercise has an id that doesn't resolve", () => {
+    // Reproduces a real bug: core exercises used to get a fresh random id every time a
+    // device's local exercise table was seeded from empty (a new install/device), so a
+    // session logged elsewhere and synced in routinely carries an exerciseId the current
+    // install never generated — "stale-id_not_in_current_table" stands in for that. Only
+    // the name ("Squat") is actually stable across devices; this must still count it.
+    const view = muscleFocusWidget.compute(
+      input({
+        workouts: [
+          {
+            id: "w",
+            startedAtMs: NOW - DAY,
+            endedAtMs: NOW - DAY,
+            exercises: [{ exerciseId: "stale-id_not_in_current_table", name: "Squat", sets: [{ weight: 100, reps: 5 }] }],
+          },
+        ],
+      }),
+    );
+    const node = view.body[0];
+    expect(node?.kind).toBe("muscle-map");
+    if (node?.kind === "muscle-map") expect(node.values.quads).toBe(1);
+  });
 });

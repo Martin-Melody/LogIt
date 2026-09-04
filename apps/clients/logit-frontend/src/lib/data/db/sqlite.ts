@@ -788,6 +788,18 @@ const CORE_EXERCISE_DATA: CoreExerciseData[] = [
   { name: "Dips",                   primary: ["chest", "triceps"],   secondary: ["shoulders"] },
 ];
 
+/**
+ * Deterministic id for a core (bundled) exercise, same on every device — never
+ * createId()'s random one. A session logged on one install and synced to another (or a
+ * fresh reinstall of the same account) needs "Bench Press" to resolve to the *same* id
+ * everywhere; a random id per-seed meant every fresh install/new device generated its own,
+ * permanently breaking the exerciseId on any already-synced history the moment it landed
+ * (muscle-map/progression-history lookups match by id first — see muscleFocus.ts).
+ */
+function coreExerciseId(name: string): string {
+  return `core_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")}`;
+}
+
 async function seedExercises(db: SQLiteDBConnection): Promise<void> {
   const res = await db.query(`SELECT 1 FROM exercises LIMIT 1`, []);
   if ((res.values?.length ?? 0) > 0) {
@@ -805,7 +817,7 @@ async function seedExercises(db: SQLiteDBConnection): Promise<void> {
     await db.run(
       `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, primary_muscles, secondary_muscles)
        VALUES(?, ?, NULL, 1, 0, ?, ?)`,
-      [createId("exdb"), ex.name, JSON.stringify(ex.primary), JSON.stringify(ex.secondary)],
+      [coreExerciseId(ex.name), ex.name, JSON.stringify(ex.primary), JSON.stringify(ex.secondary)],
     );
   }
 }
