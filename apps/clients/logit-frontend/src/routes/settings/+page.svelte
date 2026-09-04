@@ -58,6 +58,7 @@
   } from "@logit/core/usecases/progression/getAnalyticsConfig";
   import type { AnalyticsConfigView } from "@logit/core/usecases/progression/getAnalyticsConfig";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import { bumpProgression } from "$lib/progression/store";
   import { pluginSettings } from "$lib/plugins";
 
   const isDev = import.meta.env.DEV;
@@ -208,6 +209,10 @@
     try {
       await setProgressionAlgorithm(id, getProgressionDeps());
       view = { ...view, config: id ? { algorithmId: id } : null };
+      // The save itself worked fine without this — but nothing told the Home screen's
+      // Progression widget to reload, so it kept showing its empty state until some
+      // unrelated thing (background sync, app foreground) happened to refresh it.
+      bumpProgression();
     } catch (e) {
       progUi.error = e instanceof Error ? e.message : "Failed to save setting";
     } finally {
