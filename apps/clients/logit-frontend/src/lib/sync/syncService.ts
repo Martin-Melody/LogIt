@@ -885,9 +885,10 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
  */
 export async function buildRemoteProfile(): Promise<RemoteProfile> {
   const { get } = await import("svelte/store");
-  const [{ profile }, { getNavConfigJson }] = await Promise.all([
+  const [{ profile }, { getNavConfigJson }, { getHomeConfigJson }] = await Promise.all([
     import("$lib/stores/profile.store"),
     import("$lib/stores/navConfig.store"),
+    import("$lib/stores/homeConfig.store"),
   ]);
   const p = get(profile);
   const activeSplitId = await getSplitRepo().getActiveSplitId().catch(() => null);
@@ -902,12 +903,19 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     blocksCollapsedByDefault: p.blocksCollapsedByDefault,
     restDefaultsJson: JSON.stringify(p.restDefaults),
     navConfigJson: getNavConfigJson(),
+    homeConfigJson: getHomeConfigJson(),
     activeSplitId,
     updatedAtMs: Date.now(),
   };
 }
 
-/** Called by navConfig.store when the user changes their nav layout. */
+/**
+ * Push the current full profile (built via buildRemoteProfile(), so it's never a partial
+ * blob). Called whenever a local edit happens to something that rides along on the profile
+ * sync blob but isn't part of profile.store.ts itself — nav layout (navConfig.store.ts) and
+ * home widget layout (homeConfig.store.ts) both call this after an edit, the same way
+ * profile.store.ts's own save() pushes after its edits.
+ */
 export async function pushNavConfig(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
@@ -1027,6 +1035,15 @@ export async function pullAndApplyProfile(): Promise<void> {
       try {
         const { navConfig } = await import("$lib/stores/navConfig.store");
         navConfig.applyRemote(JSON.parse(remote.navConfigJson));
+      } catch {}
+    }
+
+    // Home widget layout was previously a single, un-namespaced localStorage key — not
+    // synced, and not even per-profile-scoped locally. Every fresh install/re-login lost it.
+    if (remote.homeConfigJson) {
+      try {
+        const { homeConfig } = await import("$lib/stores/homeConfig.store");
+        homeConfig.applyRemote(JSON.parse(remote.homeConfigJson));
       } catch {}
     }
 
