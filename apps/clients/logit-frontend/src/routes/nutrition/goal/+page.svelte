@@ -30,7 +30,7 @@
   import type { WeightEntry } from "@logit/core/domain/nutrition";
   import { getNutritionRepo } from "$lib/data/repoProvider";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
-  import { pushNutritionGoal } from "$lib/sync/syncService";
+  import { pushNutritionGoal, lastSyncedAt } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
   import AlgorithmPreferencesForm from "$lib/components/AlgorithmPreferencesForm.svelte";
   import {
@@ -189,6 +189,38 @@
     await loadAlgorithm(resolveAlgorithmId(goal));
     ui.loading = false;
   }
+
+  /**
+   * Re-pull just the weight history/trend — not the goal fields, which the user may be
+   * mid-edit on this screen. Login's background sync can still be pulling weight entries
+   * down when this page is first opened, which left the preview stuck on "add a recent
+   * weight" until the next full reload; this refreshes that as soon as sync catches up.
+   */
+  async function refreshWeightHistory() {
+    const repo = getNutritionRepo();
+    const [weights, intake] = await Promise.all([
+      repo.listWeightEntries(),
+      recentDailyIntake(repo, 35, Date.now()),
+    ]);
+    weightEntries = weights;
+    dailyIntake = intake;
+    const trend = smoothWeightSeries(weights);
+    currentWeightKg =
+      trend.currentKg ?? ($profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null);
+  }
+
+  let lastSyncSeen = $state<number | null>(null);
+  $effect(() => {
+    const t = $lastSyncedAt;
+    if (lastSyncSeen === null) {
+      lastSyncSeen = t;
+      return;
+    }
+    if (t !== lastSyncSeen) {
+      lastSyncSeen = t;
+      if (!ui.loading) void refreshWeightHistory();
+    }
+  });
 
   async function selectAlgorithm(id: string) {
     goal = setNutritionAlgorithm(goal, id);
