@@ -106,13 +106,16 @@ export async function pushAllSessions(): Promise<void> {
   } catch {}
 }
 
-export async function pullAndMergeSessions(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+/** Returns false when the pull itself failed (network/auth rejection) — syncAll() uses this
+ * to decide whether it's honest to report the sync as having succeeded. A per-item merge
+ * hiccup below is not a pull failure and stays non-fatal. */
+export async function pullAndMergeSessions(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(SESSIONS_LAST_PULLED_KEY);
     const { sessions: remote } = await syncApi.pullSessions(since);
 
-    if (remote.length === 0) return;
+    if (remote.length === 0) return true;
 
     const repo = getWorkoutRepo();
     const existing = await repo.listAllSessions();
@@ -131,7 +134,10 @@ export async function pullAndMergeSessions(): Promise<void> {
     }
 
     setTimestamp(SESSIONS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Splits ────────────────────────────────────────────────────────────────────
@@ -169,13 +175,13 @@ export async function pushAllSplits(): Promise<void> {
   } catch {}
 }
 
-export async function pullAndMergeSplits(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeSplits(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(SPLITS_LAST_PULLED_KEY);
     const { splits: remote } = await syncApi.pullSplits(since);
 
-    if (remote.length === 0) return;
+    if (remote.length === 0) return true;
 
     const repo = getSplitRepo();
     const existing = await repo.getListSplits({ limit: 1000, includeArchived: true });
@@ -195,7 +201,10 @@ export async function pullAndMergeSplits(): Promise<void> {
     }
 
     setTimestamp(SPLITS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Exercises ─────────────────────────────────────────────────────────────────
@@ -226,13 +235,13 @@ export async function pushAllExercises(): Promise<void> {
   } catch {}
 }
 
-export async function pullAndMergeExercises(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeExercises(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(EXERCISES_LAST_PULLED_KEY);
     const { exercises: remote } = await syncApi.pullExercises(since);
 
-    if (remote.length === 0) return;
+    if (remote.length === 0) return true;
 
     const repo = getExerciseRepo();
     const existing = await repo.list({ filter: "all", limit: 2000 });
@@ -251,21 +260,24 @@ export async function pullAndMergeExercises(): Promise<void> {
     }
 
     setTimestamp(EXERCISES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Coach programs (read-only mirror) ─────────────────────────────────────────
 
 /** Pull programs a coach has assigned to this account into the local read-only mirror.
  * One-directional: the user never edits these, so there's no push counterpart here. */
-export async function pullAndMergeCoachPrograms(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeCoachPrograms(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY);
     const remote = await coachProgramApi.pullAssigned(since);
     if (remote.length === 0) {
       setTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY, Date.now());
-      return;
+      return true;
     }
 
     const repo = getCoachProgramRepo();
@@ -284,18 +296,21 @@ export async function pullAndMergeCoachPrograms(): Promise<void> {
     }
 
     setTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Pull the nutrition plan(s) a coach has assigned into the local read-only mirror. */
-export async function pullAndMergeCoachNutritionPlan(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeCoachNutritionPlan(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY);
     const remote = await coachNutritionPlanApi.pullAssigned(since);
     if (remote.length === 0) {
       setTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY, Date.now());
-      return;
+      return true;
     }
     const repo = getCoachNutritionPlanRepo();
     for (const entry of remote) {
@@ -308,7 +323,10 @@ export async function pullAndMergeCoachNutritionPlan(): Promise<void> {
       } catch {}
     }
     setTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Coach programs (authoring — push) ────────────────────────────────────────
@@ -353,8 +371,8 @@ export async function pushAllAuthoredPrograms(): Promise<void> {
 // ── Check-ins ────────────────────────────────────────────────────────────────
 
 /** Pull coach check-in schedules into the local read-only mirror (like coach programs). */
-export async function pullAndMergeCheckinSchedules(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeCheckinSchedules(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(CHECKIN_SCHEDULES_LAST_PULLED_KEY);
     const remote = await checkinApi.pullAssigned(since);
@@ -372,12 +390,15 @@ export async function pullAndMergeCheckinSchedules(): Promise<void> {
       } catch {}
     }
     setTimestamp(CHECKIN_SCHEDULES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Pull this account's own check-in submissions back (multi-device), like sessions. */
-export async function pullAndMergeCheckinSubmissions(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeCheckinSubmissions(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY);
     const { submissions } = await syncApi.pullCheckinSubmissions(since);
@@ -395,7 +416,10 @@ export async function pullAndMergeCheckinSubmissions(): Promise<void> {
       } catch {}
     }
     setTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function pushCheckinSubmission(sub: CheckinSubmission, deleted = false): void {
@@ -458,8 +482,8 @@ export async function pushAllAuthoredCheckinSchedules(): Promise<void> {
 // ── Messaging ────────────────────────────────────────────────────────────────
 
 /** Pull every message across all active threads into the local mirror. */
-export async function pullAndMergeMessages(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeMessages(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(MESSAGES_LAST_PULLED_KEY);
     const remote = await messagesApi.listAll(since);
@@ -477,7 +501,10 @@ export async function pullAndMergeMessages(): Promise<void> {
       });
     }
     setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Send one message: optimistic local insert already done by the caller; this pushes it. */
@@ -611,9 +638,13 @@ export async function pushAllNutrition(): Promise<void> {
   } catch {}
 }
 
-export async function pullAndMergeNutrition(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeNutrition(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   const repo = getNutritionRepo();
+  // Seven independent pulls, each already isolated by its own try/catch (a network hiccup on
+  // one shouldn't skip the rest) — ok tracks whether every one of them actually completed, so
+  // this can report honestly even though it never throws itself.
+  let ok = true;
 
   try {
     const since = getTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY);
@@ -631,7 +662,9 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
 
   try {
     const since = getTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY);
@@ -649,7 +682,9 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
 
   try {
     const since = getTimestamp(RECIPES_LAST_PULLED_KEY);
@@ -667,7 +702,9 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(RECIPES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
 
   try {
     const since = getTimestamp(FAVORITES_LAST_PULLED_KEY);
@@ -686,7 +723,9 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(FAVORITES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
 
   try {
     const since = getTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY);
@@ -705,7 +744,9 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
 
   try {
     const since = getTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY);
@@ -723,7 +764,9 @@ export async function pullAndMergeNutrition(): Promise<void> {
       } catch {}
     }
     setTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
 
   try {
     const { goal } = await syncApi.pullNutritionGoal();
@@ -734,7 +777,11 @@ export async function pullAndMergeNutrition(): Promise<void> {
         await repo.upsertGoalFromRemote(remoteGoal);
       }
     }
-  } catch {}
+  } catch {
+    ok = false;
+  }
+
+  return ok;
 }
 
 // ── Habits ───────────────────────────────────────────────────────────────────
@@ -794,9 +841,10 @@ export async function pushAllHabits(): Promise<void> {
   } catch {}
 }
 
-export async function pullAndMergeHabits(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeHabits(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   const repo = getHabitRepo();
+  let ok = true;
 
   try {
     const since = getTimestamp(HABITS_LAST_PULLED_KEY);
@@ -814,7 +862,9 @@ export async function pullAndMergeHabits(): Promise<void> {
       } catch {}
     }
     setTimestamp(HABITS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
 
   try {
     const since = getTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY);
@@ -832,18 +882,22 @@ export async function pullAndMergeHabits(): Promise<void> {
       } catch {}
     }
     setTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY, Date.now());
-  } catch {}
+  } catch {
+    ok = false;
+  }
+
+  return ok;
 }
 
 /** Pull the habits a coach has assigned into the local read-only mirror. */
-export async function pullAndMergeAssignedHabits(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndMergeAssignedHabits(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(COACH_HABITS_LAST_PULLED_KEY);
     const remote = await coachHabitApi.pullAssigned(since);
     if (remote.length === 0) {
       setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
-      return;
+      return true;
     }
     const repo = getAssignedHabitRepo();
     for (const entry of remote) {
@@ -859,7 +913,10 @@ export async function pullAndMergeAssignedHabits(): Promise<void> {
       } catch {}
     }
     setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Profile ───────────────────────────────────────────────────────────────────
@@ -980,11 +1037,14 @@ export async function pushAllLocalData(): Promise<void> {
   ]);
 }
 
-export async function syncAll(): Promise<void> {
+/** Runs every pull in parallel and only reports (and timestamps) success when all of them
+ * actually completed — a Free-tier account whose pulls all 403 must not see a clean "synced"
+ * state (see docs/bugs/social-smoke-test-findings.md #3). Returns false if any pull failed. */
+export async function syncAll(): Promise<boolean> {
   // Flush any writes queued while offline before pulling, so the server has the
   // latest local state before we merge its response back.
   await flushOutbox();
-  await Promise.all([
+  const results = await Promise.all([
     pullAndMergeSessions(),
     pullAndMergeSplits(),
     pullAndMergeExercises(),
@@ -998,19 +1058,23 @@ export async function syncAll(): Promise<void> {
     pullAndMergeAssignedHabits(),
     pullAndApplyProfile(),
   ]);
-  const now = Date.now();
-  setTimestamp(LAST_SYNCED_AT_KEY, now);
-  lastSyncedAt.set(now);
+  const ok = results.every(Boolean);
+  if (ok) {
+    const now = Date.now();
+    setTimestamp(LAST_SYNCED_AT_KEY, now);
+    lastSyncedAt.set(now);
+  }
+  return ok;
 }
 
-export async function pullAndApplyProfile(): Promise<void> {
-  if (!apiClient.isAuthenticated()) return;
+export async function pullAndApplyProfile(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
   try {
     const { profile: remote } = await syncApi.pullProfile();
-    if (!remote) return;
+    if (!remote) return true;
 
     const localUpdatedAtMs = getProfileUpdatedAtMs();
-    if (remote.updatedAtMs <= localUpdatedAtMs) return;
+    if (remote.updatedAtMs <= localUpdatedAtMs) return true;
 
     if (isNativePlatform()) {
       const { updateLocalAccount } = await import("$lib/data/localAccountRepo");
@@ -1075,5 +1139,8 @@ export async function pullAndApplyProfile(): Promise<void> {
     });
 
     setProfileUpdatedAtMs(remote.updatedAtMs);
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
