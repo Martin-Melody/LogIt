@@ -185,7 +185,10 @@ export async function clearAllSqliteData(): Promise<void> {
   `);
 }
 
-async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
+/** Exported so unit tests can build the real schema against a non-Capacitor
+ * SQLiteDBConnection-shaped test double (see tests/unit/support/nodeSqliteDb.ts) — this is
+ * the single source of truth for the schema, tests must never duplicate it. */
+export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void> {
   await db.execute(`
     PRAGMA foreign_keys = ON;
 

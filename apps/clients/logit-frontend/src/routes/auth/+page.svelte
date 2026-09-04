@@ -17,11 +17,16 @@
 
   const redirectTo = $derived(page.url.searchParams.get("redirect") ?? "/");
 
+  // Set when the accounts switcher sends us here for a profile that's linked to a server
+  // account but has no restorable session (see authStore.loginOfflineAccount) — prefill the
+  // username and explain why sign-in is needed again instead of leaving it a mystery.
+  const resumeUsername = page.url.searchParams.get("resume") ?? "";
+
   let mode = $state<Mode>(page.url.searchParams.get("mode") === "register" ? "register" : "login");
   let showPassword = $state(false);
   let showConfirmPassword = $state(false);
 
-  const form = $state({ username: "", email: "", password: "", confirmPassword: "" });
+  const form = $state({ username: resumeUsername, email: "", password: "", confirmPassword: "" });
   let authError = $state<string | null>(null);
   let authLoading = $state(false);
 
@@ -208,6 +213,12 @@
     {#if mode === "register" && hasLocalData}
       <p class="text-xs text-muted-foreground mb-4 rounded border border-border px-3 py-2">
         Your workouts on this device stay put — they'll sync to your new account.
+      </p>
+    {/if}
+
+    {#if mode === "login" && resumeUsername}
+      <p class="text-xs text-muted-foreground mb-4 rounded border border-border px-3 py-2">
+        Sign in as <span class="font-medium text-foreground">{resumeUsername}</span> to resume syncing this profile.
       </p>
     {/if}
 

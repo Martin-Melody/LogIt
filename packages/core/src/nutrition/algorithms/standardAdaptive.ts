@@ -82,9 +82,21 @@ export const standardAdaptive: NutritionAlgorithm = {
 
     const base = computeTargets(goal, { weightKg: input.currentWeightKg, now });
     if (!base) {
-      // Not enough profile data (birth date / height / weight). kcal 0 → the usecase shows
-      // the "incomplete" state unless a manual override is set.
-      return { kcal: 0, sourceLabel: "Add height & birth date" };
+      // Not enough data to compute a BMR — could be missing profile fields, a missing
+      // current weight (e.g. weight history hasn't synced down yet after a fresh login),
+      // or both. Say exactly what's missing rather than always blaming height/birth date —
+      // those are commonly already set when this fires. kcal 0 → the usecase shows the
+      // "incomplete" state unless a manual override is set.
+      const missingProfile =
+        goal.heightCm == null || goal.heightCm <= 0 || goal.birthDateIso == null;
+      const missingWeight = !(input.currentWeightKg != null && input.currentWeightKg > 0);
+      const sourceLabel =
+        missingProfile && missingWeight
+          ? "Add height, birth date & a recent weight"
+          : missingProfile
+            ? "Add height & birth date"
+            : "Log a recent weight";
+      return { kcal: 0, sourceLabel };
     }
 
     if (prefs.adaptive) {
