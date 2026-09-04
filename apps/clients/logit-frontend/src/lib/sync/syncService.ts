@@ -152,9 +152,19 @@ export async function pushAllSplits(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
     const repo = getSplitRepo();
-    const all = await repo.getListSplits({ limit: 500, includeArchived: true });
-    if (all.length === 0) return;
-    const remote = all.map((s) => ({ id: s.id, updatedAtMs: s.updatedAtMs, dataJson: JSON.stringify(s) }));
+    // getListSplits() is a lightweight index for list screens — it returns each day with
+    // blocks hardcoded to [] rather than querying planned_blocks, deliberately, to avoid
+    // loading full split data just to show a day count (see its own comment in
+    // splitRepo.sqlite.ts). Pushing that stub straight to JSON — as this function used to —
+    // wipes every day's exercises server-side on every single login, since pushAllLocalData()
+    // runs this unconditionally. exportData.ts already does this correctly: use the list only
+    // for the id, then getSplit(id) for the real, fully-populated object.
+    const stubs = await repo.getListSplits({ limit: 500, includeArchived: true });
+    if (stubs.length === 0) return;
+    const full = await Promise.all(stubs.map((s) => repo.getSplit(s.id)));
+    const remote = full
+      .filter((s): s is NonNullable<typeof s> => s !== null)
+      .map((s) => ({ id: s.id, updatedAtMs: s.updatedAtMs, dataJson: JSON.stringify(s) }));
     await syncApi.pushSplits(remote);
   } catch {}
 }
@@ -909,14 +919,26 @@ export async function pushNavConfig(): Promise<void> {
 
 /**
  * Push whatever profile data (name, bio, avatar, height/weight, rest-timer defaults, nav
- * layout) already exists locally. Needed alongside every other pushAllXxx() in
- * pushAllLocalData() below — without it, profile fields entered before the user ever signed
- * in (the common case: onboarding runs fully offline-first, see
- * project_auth_app_first_redo memory) never reach the server until the user happens to edit
- * their profile again post-login. profile.store.ts's save() only pushes on an active edit —
- * it can't push what was set before an authenticated session existed to push it *to*.
+ * layout, active split) currently exists locally. Needed alongside every other pushAllXxx()
+ * — without it, profile fields entered before the user ever signed in (the common case:
+ * onboarding runs fully offline-first, see project_auth_app_first_redo memory) never reach
+ * the server until the user happens to edit their profile again post-login.
+ * profile.store.ts's save() only pushes on an active edit — it can't push what was set
+ * before an authenticated session existed to push it *to*.
+ *
+ * Deliberately NOT part of pushAllLocalData() below, unlike every other pushAllXxx() —
+ * call it only *after* syncAll() has pulled first (see login()/register() in
+ * authStore.svelte.ts). Every other data type here is a list, so pushAllXxx() has a natural
+ * "nothing local yet" guard (`if (all.length === 0) return`) that makes push-before-pull
+ * safe. Profile is a single always-present object with no such guard — on every fresh
+ * install its fields start out blank, and since this always builds a fresh (newer)
+ * updatedAtMs, a naive push-before-pull would silently overwrite a real, already-synced
+ * profile with blanks on every single re-login. Pulling first means a real server profile
+ * lands locally before this ever runs, so it just pushes that back (a harmless no-op),
+ * while a genuinely pre-login, never-yet-synced local profile (nothing to pull) still
+ * reaches the server correctly.
  */
-async function pushCurrentProfile(): Promise<void> {
+export async function pushCurrentProfile(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
     const remote = await buildRemoteProfile();
@@ -931,6 +953,9 @@ async function pushCurrentProfile(): Promise<void> {
  * (login, register) — otherwise only records created/edited *after* that moment ever
  * reach the server, silently leaving pre-existing local history (the common case: a
  * user who's been logging offline and only later signs in) without a cloud copy at all.
+ *
+ * Profile is NOT included here — see pushCurrentProfile()'s comment for why it must run
+ * after syncAll() pulls, not alongside these.
  */
 export async function pushAllLocalData(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
@@ -944,7 +969,6 @@ export async function pushAllLocalData(): Promise<void> {
     pushPendingMessages(),
     pushAllNutrition(),
     pushAllHabits(),
-    pushCurrentProfile(),
   ]);
 }
 
