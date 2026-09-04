@@ -57,6 +57,8 @@ function createAuthStore() {
       updateLocalAccount,
       claimOrphanedData,
       getLocalAccount,
+      listLocalAccounts,
+      orphanClaimTarget,
     } = await import("$lib/data/localAccountRepo");
 
     let account = await getLocalAccountByServerUserId(serverUser.id);
@@ -84,7 +86,10 @@ function createAuthStore() {
       }
 
       if (!account) {
-        // First time this server user has logged in on this device — create a fresh local account
+        // First time this server user has logged in on this device — create a fresh local
+        // account. See orphanClaimTarget() for why any owner_id-IS-NULL rows go to whichever
+        // profile was active before this one (currentId), not to the new account.
+        const accountsBeforeCreate = (await listLocalAccounts()).length;
         account = await createLocalAccount({
           username: serverUser.username,
           displayName: serverUser.displayName ?? "",
@@ -92,7 +97,8 @@ function createAuthStore() {
           onboardingCompleted: serverUser.onboardingCompleted,
         });
         setActiveOwnerId(account.id);
-        await claimOrphanedData(account.id);
+        const claimTarget = orphanClaimTarget(accountsBeforeCreate, currentId, account.id);
+        if (claimTarget) await claimOrphanedData(claimTarget);
       }
     }
 
@@ -141,10 +147,12 @@ function createAuthStore() {
     user = null;
     await apiClient.clearLocal();
 
-    const { createLocalAccount, listLocalAccounts, claimOrphanedData } = await import("$lib/data/localAccountRepo");
+    const { createLocalAccount, listLocalAccounts, claimOrphanedData, orphanClaimTarget } =
+      await import("$lib/data/localAccountRepo");
 
     const effectivePassword = password.trim() || undefined;
 
+    const activeOwnerIdBeforeCreate = getActiveOwnerId();
     const all = await listLocalAccounts();
     const slug = displayName.trim().toLowerCase().replace(/\s+/g, "_") || "local";
     const uniqueSlug = all.some((a) => a.username === slug) ? `${slug}_${Date.now()}` : slug;
@@ -155,7 +163,12 @@ function createAuthStore() {
       password: effectivePassword,
     });
     setActiveOwnerId(account.id);
-    await claimOrphanedData(account.id);
+    // See orphanClaimTarget(): true first-launch adopts orphaned (owner_id IS NULL) rows
+    // itself; every later "Add another profile" hands them to whoever was active instead —
+    // never to the new profile, which must start with a clean slate. Without this, a second
+    // profile silently inherited the first profile's un-migrated splits/workouts.
+    const claimTarget = orphanClaimTarget(all.length, activeOwnerIdBeforeCreate, account.id);
+    if (claimTarget) await claimOrphanedData(claimTarget);
     await switchActiveOwner(false);
   }
 

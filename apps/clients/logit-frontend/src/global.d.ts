@@ -6,13 +6,7 @@ declare module "d3-shape" {
   export const curveNatural: any;
 }
 
-declare module "vitest" {
-  export const describe: (name: string, fn: () => void) => void;
-  export const it: (name: string, fn: () => void) => void;
-  export const expect: (value: unknown) => {
-    toBe(expected: unknown): void;
-    toEqual(expected: unknown): void;
-    toHaveLength(length: number): void;
-    toBeNull(): void;
-  };
-}
+// vitest is now a real devDependency (see package.json) — its own types are used instead of a
+// hand-rolled ambient stub. That stub previously shadowed the real ones and meant
+// src/lib/domain/test/workout/workout.test.ts type-checked but was never actually run by any
+// script; it's now included by vitest.config.ts and genuinely executed by `npm run test:unit`.
