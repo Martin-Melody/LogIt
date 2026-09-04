@@ -1057,8 +1057,12 @@ export async function pullAndApplyProfile(): Promise<void> {
     let restDefaults: Record<string, number | undefined> = {};
     try { restDefaults = JSON.parse(remote.restDefaultsJson); } catch {}
 
+    // applyRemote(), not save() — save() always re-pushes with a fresh timestamp, which
+    // would make every routine pull look like a brand-new edit and could race with (and
+    // win against) a real one made around the same time. A pull only ever updates local
+    // state; see applyRemote()'s own comment (profile.store.ts) for the full story.
     const { profile } = await import("$lib/stores/profile.store");
-    profile.save({
+    profile.applyRemote({
       name: remote.displayName,
       bio: remote.bio,
       avatarDataUrl: remote.avatarDataUrl ?? undefined,

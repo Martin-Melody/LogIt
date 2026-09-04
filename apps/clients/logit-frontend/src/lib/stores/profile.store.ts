@@ -94,40 +94,15 @@ function createProfileStore() {
     },
 
     save(patch: Partial<UserProfile>) {
-      store.update((p) => {
-        const next = { ...p, ...patch };
-
-        if (browser) {
-          if (isNativePlatform() && _nativeRepo && _getOwnerId) {
-            const ownerId = _getOwnerId();
-            if (ownerId) {
-              const accountPatch: Record<string, unknown> = {};
-              if (patch.name !== undefined)                    accountPatch.displayName = patch.name;
-              if (patch.bio !== undefined)                     accountPatch.bio = patch.bio;
-              if (patch.avatarDataUrl !== undefined)           accountPatch.avatarDataUrl = patch.avatarDataUrl;
-              if (patch.height !== undefined)                  accountPatch.height = patch.height;
-              if (patch.heightUnit !== undefined)              accountPatch.heightUnit = patch.heightUnit;
-              if (patch.weight !== undefined)                  accountPatch.weight = patch.weight;
-              if (patch.weightUnit !== undefined)              accountPatch.weightUnit = patch.weightUnit;
-              if (patch.blocksCollapsedByDefault !== undefined) accountPatch.blocksCollapsedByDefault = patch.blocksCollapsedByDefault;
-              if (patch.restDefaults !== undefined)            accountPatch.restDefaultsJson = JSON.stringify(patch.restDefaults);
-
-              _nativeRepo.updateLocalAccount(ownerId, accountPatch as Parameters<typeof _nativeRepo.updateLocalAccount>[1]).catch(console.error);
-            }
-          } else {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-          }
-        }
-
-        return next;
-      });
+      applyLocally(patch);
 
       if (browser) {
-        // Async, so after store.update() above — buildRemoteProfile() reads the store via
-        // get(profile), which must see `next`, not the pre-patch value. Built through the
-        // shared builder (not a one-off literal here) because the server stores this as one
-        // replace-on-write blob: a literal missing a field (e.g. activeSplitId, which this
-        // patch knows nothing about) would silently wipe that field for the next puller.
+        // Async, so after applyLocally()'s store.update() above — buildRemoteProfile() reads
+        // the store via get(profile), which must see the patched value, not the pre-patch
+        // one. Built through the shared builder (not a one-off literal here) because the
+        // server stores this as one replace-on-write blob: a literal missing a field (e.g.
+        // activeSplitId, which this patch knows nothing about) would silently wipe that
+        // field for the next puller.
         void (async () => {
           const remote = await buildRemoteProfile();
           pushProfile(remote);
@@ -135,7 +110,52 @@ function createProfileStore() {
         })();
       }
     },
+
+    /**
+     * Apply a profile pulled from the server, without pushing it straight back.
+     * pullAndApplyProfile() (syncService.ts) used to call save() for this, which — like
+     * every local edit — always re-pushes with a fresh Date.now() timestamp. That meant
+     * every routine background sync silently re-pushed the *just-downloaded* data stamped as
+     * if it were newer, which could race with and clobber a real edit made around the same
+     * time (this is exactly what let a widget-layout toggle vanish after a reinstall: a
+     * background sync's pull-triggered re-push landed with a newer timestamp than the
+     * user's own edit, using the state a moment before it). A pull should only ever update
+     * local state — never fabricate a new "edit."
+     */
+    applyRemote(patch: Partial<UserProfile>) {
+      applyLocally(patch);
+    },
   };
+
+  function applyLocally(patch: Partial<UserProfile>): void {
+    store.update((p) => {
+      const next = { ...p, ...patch };
+
+      if (browser) {
+        if (isNativePlatform() && _nativeRepo && _getOwnerId) {
+          const ownerId = _getOwnerId();
+          if (ownerId) {
+            const accountPatch: Record<string, unknown> = {};
+            if (patch.name !== undefined)                    accountPatch.displayName = patch.name;
+            if (patch.bio !== undefined)                     accountPatch.bio = patch.bio;
+            if (patch.avatarDataUrl !== undefined)           accountPatch.avatarDataUrl = patch.avatarDataUrl;
+            if (patch.height !== undefined)                  accountPatch.height = patch.height;
+            if (patch.heightUnit !== undefined)              accountPatch.heightUnit = patch.heightUnit;
+            if (patch.weight !== undefined)                  accountPatch.weight = patch.weight;
+            if (patch.weightUnit !== undefined)              accountPatch.weightUnit = patch.weightUnit;
+            if (patch.blocksCollapsedByDefault !== undefined) accountPatch.blocksCollapsedByDefault = patch.blocksCollapsedByDefault;
+            if (patch.restDefaults !== undefined)            accountPatch.restDefaultsJson = JSON.stringify(patch.restDefaults);
+
+            _nativeRepo.updateLocalAccount(ownerId, accountPatch as Parameters<typeof _nativeRepo.updateLocalAccount>[1]).catch(console.error);
+          }
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        }
+      }
+
+      return next;
+    });
+  }
 }
 
 export const profile = createProfileStore();
