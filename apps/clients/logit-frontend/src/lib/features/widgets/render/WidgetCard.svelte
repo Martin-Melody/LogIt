@@ -84,7 +84,7 @@
     interpolate-size: allow-keywords;
     overflow: hidden;
     transition:
-      height 260ms cubic-bezier(0.22, 1, 0.36, 1),
-      width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+      height 550ms cubic-bezier(0.22, 1, 0.36, 1),
+      width 550ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 </style>
