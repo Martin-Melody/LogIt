@@ -21,9 +21,13 @@
     username: string;
     /** Rendered under the header (e.g. an Edit button on your own profile). */
     headerActions?: import("svelte").Snippet;
+    /** `data-tour` id for the avatar element — only the self-profile page passes this
+     * (its onboarding tour needs a stable target); left unset for every other caller so a
+     * visited profile never carries a self-page tour tag. */
+    avatarTourId?: string;
   }
 
-  const { username, headerActions }: Props = $props();
+  const { username, headerActions, avatarTourId }: Props = $props();
 
   let profile = $state<ApiProfile | null>(null);
   let profileError = $state<string | null>(null);
@@ -166,7 +170,7 @@
 {:else if profile}
   <!-- Header -->
   <div class="flex flex-col items-center gap-3 px-4 pt-6 pb-5 border-b border-border">
-    <div class="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-xl font-semibold overflow-hidden">
+    <div data-tour={avatarTourId} class="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-xl font-semibold overflow-hidden">
       {#if profile.avatarUrl}
         <img src={profile.avatarUrl} alt={profile.displayName} class="h-full w-full object-cover" />
       {:else}

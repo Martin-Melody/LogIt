@@ -1,15 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import {
-    Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell, Cloud, Server, Rss,
-    Trophy, MessageSquare, CalendarDays, Activity, Cpu, LayoutDashboard,
-    Heart, PenSquare, Loader2, MessageCircle, Trash2,
-  } from "lucide-svelte";
-  import CommentSheet from "$lib/components/CommentSheet.svelte";
-  import PostCard from "$lib/components/social/PostCard.svelte";
+  import { Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell, Rss, Cloud, Server, PenSquare } from "lucide-svelte";
   import { startProfileTour } from "$lib/tour/index";
   import ProfileAvatar from "$lib/components/ProfileAvatar.svelte";
+  import ProfileView from "$lib/components/social/ProfileView.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import { Button } from "$lib/components/ui/button";
   import { profile } from "$lib/stores/profile.store";
@@ -17,13 +12,20 @@
   import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
   import { authStore } from "$lib/api/authStore.svelte";
   import { getServerMode } from "@logit/core/api/serverConfig";
-  import { socialApi, type ApiProfile, type ApiPost } from "@logit/core/api/socialApi";
-  import { formatDistanceToNow } from "$lib/utils";
   import { pushPublicProfileSnapshot } from "$lib/features/profileWidgets/publicProfileSync";
 
-  // --- Profile editing ---
+  // --- Profile editing (shared by both the authenticated-via-ProfileView header below and
+  // the bespoke unauthenticated one — the underlying local profile.store edit is identical
+  // either way, only the surrounding chrome differs). ---
   let editing = $state(false);
   const draft = $state({ name: "", bio: "" });
+  let showCreatePost = $state(false);
+
+  // Bumped after anything that changes what the *public* snapshot should show (a save, an
+  // avatar change, a new post) — remounts <ProfileView> below, forcing a refetch. ProfileView
+  // has no external "refresh" hook, so this is the same trick used for {#key username} on
+  // social/[username]/+page.svelte.
+  let refreshKey = $state(0);
 
   function openEdit() {
     draft.name = $profile.name;
@@ -34,8 +36,13 @@
   function saveEdit() {
     profile.save({ name: draft.name.trim(), bio: draft.bio.trim() });
     editing = false;
-    void syncPublicProfile();
+    void syncPublicProfile().then(() => refreshKey++);
   }
+
+  // Delegates to the shared function (publicProfileSync.ts) rather than building the PATCH
+  // inline here — extracted out precisely so this page could be rewritten (this rewrite)
+  // without having to move it.
+  const syncPublicProfile = pushPublicProfileSnapshot;
 
   const serverMode = getServerMode();
 
@@ -50,73 +57,54 @@
       .filter((x): x is { slot: typeof x.slot; def: NonNullable<typeof x.def> } => x.def !== undefined),
   );
 
-  // --- Social data (only when authenticated) ---
-  let socialProfile = $state<ApiProfile | null>(null);
-  let posts = $state<ApiPost[]>([]);
-  let postsLoading = $state(false);
-  let nextCursor = $state<string | null>(null);
-  let loadingMore = $state(false);
-  let showCreatePost = $state(false);
-  let commentPost = $state<ApiPost | null>(null);
-
-  async function loadSocialData() {
-    if (!authStore.isAuthenticated || !authStore.user) return;
-    try {
-      const [p, page] = await Promise.all([
-        socialApi.getProfile(authStore.user.username),
-        socialApi.getUserPosts(authStore.user.username, 20),
-      ]);
-      socialProfile = p;
-      posts = page.posts;
-      nextCursor = page.nextCursor;
-    } catch {
-      // non-fatal
-    } finally {
-      postsLoading = false;
-    }
-    // background sync of widget data — fire and forget
-    void syncPublicProfile();
-  }
-
-  // Delegates to the shared function (publicProfileSync.ts) rather than building the PATCH
-  // inline — extracted out so it survives the planned self-page/ProfileView unification
-  // unchanged. Kept as a local wrapper so existing call sites below don't need renaming.
-  const syncPublicProfile = pushPublicProfileSnapshot;
-
-  async function loadMorePosts() {
-    if (!authStore.user || !nextCursor || loadingMore) return;
-    loadingMore = true;
-    try {
-      const page = await socialApi.getUserPosts(authStore.user.username, 20, nextCursor);
-      posts = [...posts, ...page.posts];
-      nextCursor = page.nextCursor;
-    } catch {
-      // ignore
-    } finally {
-      loadingMore = false;
-    }
-  }
-
-
   let _lastAvatarUrl = $state<string | undefined>(undefined);
 
   $effect(() => {
     const current = $profile.avatarDataUrl;
     if (authStore.isAuthenticated && current && current !== _lastAvatarUrl) {
       _lastAvatarUrl = current;
-      void syncPublicProfile();
+      void syncPublicProfile().then(() => refreshKey++);
     }
   });
 
   onMount(() => {
     void startProfileTour();
     if (authStore.isAuthenticated) {
-      postsLoading = true;
-      _lastAvatarUrl = $profile.avatarDataUrl; // seed so effect doesn't double-fire on load
-      void loadSocialData();
+      _lastAvatarUrl = $profile.avatarDataUrl; // seed so the effect above doesn't double-fire
+      void syncPublicProfile(); // picks up anything (incl. new widgets) enabled since last push
     }
   });
 </script>
+
+{#snippet editForm()}
+  <div class="w-full max-w-xs flex flex-col gap-3 items-center">
+    <ProfileAvatar name={$profile.name} avatarDataUrl={$profile.avatarDataUrl} editable class="h-20 w-20" />
+    <div class="w-full flex flex-col gap-1">
+      <label class="text-xs text-muted-foreground" for="p-name">Name</label>
+      <input
+        id="p-name"
+        type="text"
+        autocomplete="name"
+        class="w-full rounded border bg-background px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+        bind:value={draft.name}
+      />
+    </div>
+    <div class="w-full flex flex-col gap-1">
+      <label class="text-xs text-muted-foreground" for="p-bio">Bio</label>
+      <textarea
+        id="p-bio"
+        rows={3}
+        placeholder="Something about yourself…"
+        class="w-full rounded border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+        bind:value={draft.bio}
+      ></textarea>
+    </div>
+    <div class="flex gap-2 justify-center">
+      <Button size="sm" onclick={saveEdit}><Check class="h-3.5 w-3.5 mr-1" /> Save</Button>
+      <Button size="sm" variant="outline" onclick={() => (editing = false)}><X class="h-3.5 w-3.5 mr-1" /> Cancel</Button>
+    </div>
+  </div>
+{/snippet}
 
 <div class="flex flex-col pb-24">
 
@@ -127,85 +115,50 @@
     </Button>
   </div>
 
-  <!-- Profile header -->
-  <div class="flex flex-col items-center gap-3 px-4 pt-2 pb-6">
-    <!-- Avatar -->
-    <div data-tour="profile-avatar">
-      <ProfileAvatar
-        name={$profile.name}
-        avatarDataUrl={$profile.avatarDataUrl}
-        editable={!editing}
-        class="h-24 w-24"
-      />
-    </div>
-
-    <!-- Name + bio / edit form -->
-    {#if editing}
-      <div class="w-full max-w-xs flex flex-col gap-3">
-        <div class="flex flex-col gap-1">
-          <label class="text-xs text-muted-foreground" for="p-name">Name</label>
-          <input
-            id="p-name"
-            type="text"
-            autocomplete="name"
-            class="w-full rounded border bg-background px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={draft.name}
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-xs text-muted-foreground" for="p-bio">Bio</label>
-          <textarea
-            id="p-bio"
-            rows={3}
-            placeholder="Something about yourself…"
-            class="w-full rounded border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-            bind:value={draft.bio}
-          ></textarea>
-        </div>
-        <div class="flex gap-2 justify-center">
-          <Button size="sm" onclick={saveEdit}><Check class="h-3.5 w-3.5 mr-1" /> Save</Button>
-          <Button size="sm" variant="outline" onclick={() => (editing = false)}><X class="h-3.5 w-3.5 mr-1" /> Cancel</Button>
-        </div>
-      </div>
-    {:else}
-      <div class="text-center flex flex-col gap-1">
-        <h1 class="text-xl font-bold">{$profile.name || "Your Name"}</h1>
-        {#if authStore.isAuthenticated && authStore.user}
-          <p class="text-sm text-muted-foreground">@{authStore.user.username}</p>
-        {/if}
-        {#if $profile.bio}
-          <p class="text-sm text-muted-foreground max-w-xs mt-0.5">{$profile.bio}</p>
-        {:else}
-          <p class="text-sm text-muted-foreground/50 italic mt-0.5">Add a bio…</p>
-        {/if}
+  {#if authStore.isAuthenticated && authStore.user}
+    {#key refreshKey}
+      <ProfileView username={authStore.user.username} avatarTourId="profile-avatar">
+        {#snippet headerActions()}
+          {#if editing}
+            {@render editForm()}
+          {:else}
+            <div class="flex items-center gap-2">
+              <Button variant="outline" size="sm" onclick={openEdit} data-tour="profile-edit">
+                <Pencil class="h-3.5 w-3.5 mr-1.5" /> Edit profile
+              </Button>
+              <Button variant="outline" size="sm" onclick={() => (showCreatePost = true)}>
+                <PenSquare class="h-3.5 w-3.5 mr-1.5" /> New post
+              </Button>
+            </div>
+          {/if}
+        {/snippet}
+      </ProfileView>
+    {/key}
+  {:else}
+    <!-- Fully local — no server round-trip, works offline. ProfileView can't render here
+         (it's 100% server-backed), so this stays its own small implementation. -->
+    <div class="flex flex-col items-center gap-3 px-4 pt-2 pb-6">
+      <div data-tour="profile-avatar">
+        <ProfileAvatar name={$profile.name} avatarDataUrl={$profile.avatarDataUrl} editable={!editing} class="h-24 w-24" />
       </div>
 
-      <!-- Follower / following counts (only when social profile loaded) -->
-      {#if socialProfile}
-        <div class="flex items-center gap-5 text-sm">
-          <div class="text-center">
-            <p class="font-semibold tabular-nums">{socialProfile.followerCount}</p>
-            <p class="text-xs text-muted-foreground">followers</p>
-          </div>
-          <div class="text-center">
-            <p class="font-semibold tabular-nums">{socialProfile.followingCount}</p>
-            <p class="text-xs text-muted-foreground">following</p>
-          </div>
+      {#if editing}
+        {@render editForm()}
+      {:else}
+        <div class="text-center flex flex-col gap-1">
+          <h1 class="text-xl font-bold">{$profile.name || "Your Name"}</h1>
+          {#if $profile.bio}
+            <p class="text-sm text-muted-foreground max-w-xs mt-0.5">{$profile.bio}</p>
+          {:else}
+            <p class="text-sm text-muted-foreground/50 italic mt-0.5">Add a bio…</p>
+          {/if}
         </div>
-      {/if}
-
-      <div class="flex items-center gap-2">
         <Button variant="outline" size="sm" onclick={openEdit} data-tour="profile-edit">
           <Pencil class="h-3.5 w-3.5 mr-1.5" /> Edit profile
         </Button>
-        {#if authStore.isAuthenticated}
-          <Button variant="outline" size="sm" onclick={() => (showCreatePost = true)}>
-            <PenSquare class="h-3.5 w-3.5 mr-1.5" /> New post
-          </Button>
-        {/if}
-      </div>
-    {/if}
-  </div>
+      {/if}
+    </div>
+  {/if}
 
   <!-- Account status bar -->
   <div class="mx-3 mb-1">
@@ -239,7 +192,9 @@
     {/if}
   </div>
 
-  <!-- Profile widgets -->
+  <!-- Local profile widgets (personalisation — plugin-facing, see
+       feedback_design_for_plugins; distinct from the synced "Training stats" ProfileView
+       renders above, which read a snapshot rather than local data live). -->
   <div class="flex flex-col gap-3 px-3" data-tour="profile-widgets">
     {#each enabledWidgets as { def } (def.id)}
       <svelte:component this={def.component} {...(def.props ?? {})} />
@@ -263,62 +218,10 @@
     {/if}
   </div>
 
-  <!-- Posts (only when authenticated) -->
-  {#if authStore.isAuthenticated}
-    <div class="mt-4 border-t border-border">
-      <div class="flex items-center justify-between px-4 py-3">
-        <p class="text-sm font-semibold">Posts</p>
-      </div>
-
-      {#if postsLoading}
-        <div class="flex justify-center py-8">
-          <Loader2 class="h-4 w-4 animate-spin text-muted-foreground" />
-        </div>
-      {:else if posts.length === 0}
-        <p class="text-sm text-muted-foreground text-center py-8 px-6">No posts yet. Share a workout or write something!</p>
-      {:else}
-        <div class="flex flex-col divide-y divide-border">
-          {#each posts as post (post.id)}
-            <PostCard
-              {post}
-              onopencomments={(p) => (commentPost = p)}
-              onchange={(next) => { posts = next ? posts.map((p) => p.id === post.id ? next : p) : posts.filter((p) => p.id !== post.id); }}
-            />
-          {/each}
-        </div>
-
-        {#if nextCursor}
-          <div class="flex justify-center py-4">
-            <button
-              type="button"
-              class="text-sm text-muted-foreground flex items-center gap-1.5 disabled:opacity-50"
-              disabled={loadingMore}
-              onclick={() => void loadMorePosts()}
-            >
-              {#if loadingMore}
-                <Loader2 class="h-3.5 w-3.5 animate-spin" /> Loading…
-              {:else}
-                Load more
-              {/if}
-            </button>
-          </div>
-        {/if}
-      {/if}
-    </div>
-  {/if}
-
 </div>
 
 <CreatePostSheet
   open={showCreatePost}
-  onposted={(post) => { posts = [post, ...posts]; if (socialProfile) socialProfile = { ...socialProfile }; }}
+  onposted={() => { showCreatePost = false; refreshKey++; }}
   onclose={() => (showCreatePost = false)}
-/>
-
-<CommentSheet
-  post={commentPost}
-  onclose={() => (commentPost = null)}
-  oncommentcountchange={(id, delta) => {
-    posts = posts.map((p) => p.id === id ? { ...p, commentCount: p.commentCount + delta } : p);
-  }}
 />
