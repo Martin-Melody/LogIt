@@ -15,7 +15,14 @@ export async function updateExercise(id: string, patch: ExercisePatch): Promise<
 
   if (!patch.name) return;
 
-  const splits = await splitRepo.getListSplits({ limit: 200 });
+  // getListSplits() is a lightweight index for list screens — it hardcodes every day's
+  // blocks to [] rather than querying them (see splitRepo.sqlite.ts), so iterating its
+  // result here never actually found a matching block: this rename never propagated to any
+  // split, silently. Look up the id list, then fetch each split's real data via getSplit().
+  const stubs = await splitRepo.getListSplits({ limit: 200 });
+  const splits = (await Promise.all(stubs.map((s) => splitRepo.getSplit(s.id)))).filter(
+    (s): s is NonNullable<typeof s> => s !== null,
+  );
   for (const split of splits) {
     let changed = false;
     const days = split.days.map((day) => {

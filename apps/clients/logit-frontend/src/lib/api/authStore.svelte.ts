@@ -6,7 +6,7 @@ import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
 import { navConfig } from "$lib/stores/navConfig.store";
-import { syncAll, pushAllLocalData } from "$lib/sync/syncService";
+import { syncAll, pushAllLocalData, pushCurrentProfile } from "$lib/sync/syncService";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
 async function switchActiveOwner(isOnlineAccount: boolean): Promise<void> {
@@ -39,15 +39,17 @@ function createAuthStore() {
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
     // Push this device's existing local history first — otherwise only records
     // created after this sign-in ever reach the server, and everything logged
-    // offline up to now stays without a cloud copy.
-    void pushAllLocalData().then(() => syncAll());
+    // offline up to now stays without a cloud copy. Profile pushes only *after* syncAll()
+    // pulls — see pushCurrentProfile()'s comment for why it can't safely run alongside
+    // pushAllLocalData() like everything else here.
+    void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
   }
 
   async function register(username: string, email: string, password: string, displayName: string) {
     const serverUser = await apiClient.register(username, email, password, displayName);
     user = serverUser;
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
-    void pushAllLocalData().then(() => syncAll());
+    void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
   }
 
   async function linkOrCreateLocalAccount(serverUser: AuthUser) {
