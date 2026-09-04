@@ -30,9 +30,14 @@ export const muscleFocusWidget: WidgetPlugin = {
     for (const workout of input.workouts ?? []) {
       if (!workout.endedAtMs || workout.endedAtMs < since) continue;
       for (const ex of workout.exercises) {
-        const def = ex.exerciseId
-          ? exercisesById.get(ex.exerciseId)
-          : exercisesByName.get(ex.name.toLowerCase());
+        // Fall back to a name match whenever the id doesn't resolve — don't just accept
+        // "not found" when an id was present. Core (bundled) exercises used to get a fresh
+        // random id every time the local exercise table was seeded from empty (a new
+        // install, a new device), so a session logged on one install and synced to another
+        // routinely carries an exerciseId the *current* install never generated. The name is
+        // the only thing actually stable across that.
+        const def = (ex.exerciseId && exercisesById.get(ex.exerciseId))
+          ?? exercisesByName.get(ex.name.toLowerCase());
         if (!def) continue;
         const n = ex.sets.length;
         if (n === 0) continue;
