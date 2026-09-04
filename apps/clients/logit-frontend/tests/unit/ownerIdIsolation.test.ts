@@ -10,11 +10,10 @@
 // ensureLocalAccount() — that pulls in the full repoProvider/appInit import graph (nutrition,
 // habits, plugins, network client, Svelte stores), which needs a browser-like environment this
 // suite doesn't set up. Instead each test reproduces the exact sequence of calls those
-// functions make (createLocalAccount → setActiveOwnerId → claimOrphanedData, or not), which is
-// what actually exercises the bug. If you fix bug #2 by extracting a shared
-// `shouldClaimOrphanedData()` guard (the account-model doc's recommended fix), add a focused
-// unit test for that guard directly — it's a much cheaper regression test than this file once
-// it exists, since it needs no SQLite at all.
+// functions make (createLocalAccount → setActiveOwnerId → orphanClaimTarget → claimOrphanedData,
+// or not), which is what actually exercises the bug. orphanClaimTarget() itself — the guard
+// that decides who (if anyone) should receive orphaned rows — is pure and DB-free; see
+// orphanClaimTarget.test.ts for its focused unit tests.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 import { createNodeSqliteDb } from "./support/nodeSqliteDb";
@@ -58,15 +57,21 @@ describe("owner_id data isolation across local profiles", () => {
     expect(splits.map((s) => s.id)).toContain("legacy-split");
   });
 
-  // Currently RED — this is the actual bug from docs/bugs/account-switching.md #2. It should
-  // go green once createOfflineAccount() (authStore.svelte.ts ~line 132-158) is fixed to only
-  // call claimOrphanedData() when listLocalAccounts() was empty *before* the new profile was
-  // created, the same guard ensureLocalAccount() already uses (repoProvider.ts ~line 112-121).
-  // Left failing on purpose rather than skipped, so `npm run test:unit` visibly tracks whether
-  // this specific bug is still open.
+  // Fixed: authStore.createOfflineAccount() and linkOrCreateLocalAccount()'s fresh-account
+  // branch (authStore.svelte.ts) now both route through localAccountRepo.orphanClaimTarget()
+  // before calling claimOrphanedData(). This test calls that real (pure, DB-free) function
+  // directly — see the file header for why it doesn't call authStore itself — so it exercises
+  // the actual production guard and stays a regression test for #2.
+  //
+  // Gating claimOrphanedData() alone isn't sufficient: every read query in the sqlite repos
+  // also falls back to `owner_id IS NULL` (docs/architecture/account-model.md §5), so an
+  // orphan left unclaimed by *anyone* would still leak into the new profile's reads. The fix
+  // has to actively sweep any stray orphan to the previously-active owner, not just skip
+  // claiming it for the new one.
   it("row 2: a second profile must NOT steal the first profile's still-unclaimed data", async () => {
-    const { createLocalAccount, claimOrphanedData } = await import("$lib/data/localAccountRepo");
-    const { setActiveOwnerId } = await import("$lib/data/activeOwner");
+    const { createLocalAccount, claimOrphanedData, listLocalAccounts, orphanClaimTarget } =
+      await import("$lib/data/localAccountRepo");
+    const { setActiveOwnerId, getActiveOwnerId } = await import("$lib/data/activeOwner");
     const { createSqliteSplitRepo } = await import("$lib/data/splts/splitRepo.sqlite");
     const repo = createSqliteSplitRepo();
 
@@ -80,13 +85,15 @@ describe("owner_id data isolation across local profiles", () => {
       ["pro-split", "Pro PPL", 0, 1, 1],
     );
 
-    // This mirrors authStore.createOfflineAccount()'s current body exactly (authStore.svelte.ts
-    // ~line 132-158): create → setActiveOwnerId → claimOrphanedData, with NO guard for
-    // "is this actually the first profile on the device." Once that call site is fixed to skip
-    // the claim here, this line becomes a no-op and the assertions below start passing.
+    // Mirrors authStore.createOfflineAccount()'s fixed body exactly: capture who's active and
+    // how many accounts exist *before* creating the new profile, then let orphanClaimTarget()
+    // decide who (if anyone) should receive any stray orphaned rows.
+    const activeOwnerIdBeforeCreate = getActiveOwnerId();
+    const accountsBeforeCreate = (await listLocalAccounts()).length;
     const profileB = await createLocalAccount({ username: "free_account" });
     setActiveOwnerId(profileB.id);
-    await claimOrphanedData(profileB.id);
+    const claimTarget = orphanClaimTarget(accountsBeforeCreate, activeOwnerIdBeforeCreate, profileB.id);
+    if (claimTarget) await claimOrphanedData(claimTarget);
 
     const bSplits = await repo.getListSplits({});
     expect(bSplits.map((s) => s.id)).not.toContain("pro-split"); // B must not see A's data
