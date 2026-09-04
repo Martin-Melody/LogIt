@@ -1,9 +1,7 @@
 import { browser } from "$app/environment";
 import { writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
-import { pushProfile, setProfileUpdatedAtMs } from "$lib/sync/syncService";
-import { getNavConfigJson } from "$lib/stores/navConfig.store";
-import type { RemoteProfile } from "@logit/core/api/syncApi";
+import { pushProfile, setProfileUpdatedAtMs, buildRemoteProfile } from "$lib/sync/syncService";
 
 export type UserProfile = {
   name: string;
@@ -121,27 +119,21 @@ function createProfileStore() {
           }
         }
 
-        if (browser) {
-          const updatedAtMs = Date.now();
-          const remote: RemoteProfile = {
-            displayName: next.name,
-            bio: next.bio,
-            avatarDataUrl: next.avatarDataUrl ?? null,
-            height: next.height,
-            heightUnit: next.heightUnit,
-            weight: next.weight,
-            weightUnit: next.weightUnit,
-            blocksCollapsedByDefault: next.blocksCollapsedByDefault,
-            restDefaultsJson: JSON.stringify(next.restDefaults),
-            navConfigJson: getNavConfigJson(),
-            updatedAtMs,
-          };
-          pushProfile(remote);
-          setProfileUpdatedAtMs(updatedAtMs);
-        }
-
         return next;
       });
+
+      if (browser) {
+        // Async, so after store.update() above — buildRemoteProfile() reads the store via
+        // get(profile), which must see `next`, not the pre-patch value. Built through the
+        // shared builder (not a one-off literal here) because the server stores this as one
+        // replace-on-write blob: a literal missing a field (e.g. activeSplitId, which this
+        // patch knows nothing about) would silently wipe that field for the next puller.
+        void (async () => {
+          const remote = await buildRemoteProfile();
+          pushProfile(remote);
+          setProfileUpdatedAtMs(remote.updatedAtMs);
+        })();
+      }
     },
   };
 }

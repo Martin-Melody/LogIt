@@ -40,6 +40,13 @@ export type RemoteProfile = {
   blocksCollapsedByDefault: boolean;
   restDefaultsJson: string;
   navConfigJson: string | null;
+  /**
+   * Which split the user has picked as "active". The server stores this whole DTO as one
+   * replace-on-write blob (no per-field merge), so every push — even one only editing, say,
+   * bio — must include the current value or it silently wipes it out for the next puller.
+   * Always build this via syncService.ts's buildRemoteProfile(), never a one-off literal.
+   */
+  activeSplitId: string | null;
   updatedAtMs: number;
 };
 
