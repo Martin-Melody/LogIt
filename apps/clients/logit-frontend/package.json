@@ -13,6 +13,7 @@
     "android:live": "LOCAL_IP=$(ip -4 addr show scope global | grep inet | head -1 | awk '{print $2}' | cut -d/ -f1) && npx cap run android --live-reload --host $LOCAL_IP --port 3000",
     "android:sync": "npm run build && npx cap sync android",
     "android:install": "npm run android:sync && cd android && ./gradlew assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk",
+    "android:reinstall": "./scripts/reinstall-android.sh",
     "android:dev": "npm run dev -- --host 0.0.0.0 --port 3000",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"
