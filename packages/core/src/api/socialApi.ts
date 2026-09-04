@@ -92,7 +92,7 @@ export interface ApiProfile {
   publicProfileJson: string | null;
 }
 
-export type PostType = "Text" | "WorkoutSession" | "PersonalRecord" | "Split" | "Exercise" | "Algorithm" | "Widget";
+export type PostType = "Text" | "WorkoutSession" | "PersonalRecord" | "Split" | "Exercise" | "Algorithm" | "Widget" | "Habit";
 
 export interface ApiPost {
   id: string;

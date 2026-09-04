@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     X, Dumbbell, Trophy, MessageSquare, CalendarDays,
-    Activity, Cpu, LayoutDashboard, Paperclip,
+    Activity, Cpu, LayoutDashboard, Paperclip, Flame,
   } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ApiPost, type PostType } from "@logit/core/api/socialApi";
@@ -15,7 +15,9 @@
   import { getNutritionAlgorithmConfig } from "@logit/core/usecases/nutrition/getNutritionAlgorithmConfig";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
-  import { getNutritionRepo } from "$lib/data/repoProvider";
+  import { getNutritionRepo, getSplitRepo, getExerciseRepo, getHabitRepo } from "$lib/data/repoProvider";
+  import type { Exercise } from "@logit/core/domain/exercise";
+  import type { Habit } from "@logit/core/domain/habit";
   import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
   import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -32,7 +34,7 @@
     prefillSession?: WorkoutSession | null;
   }>();
 
-  type AttachmentType = "none" | "workout" | "pr" | "split" | "exercise" | "algorithm" | "widget";
+  type AttachmentType = "none" | "workout" | "pr" | "split" | "exercise" | "algorithm" | "widget" | "habit";
 
   // ── Form state ───────────────────────────────────────────────────────────────
 
@@ -74,6 +76,12 @@
   ].filter((w, i, arr) => arr.findIndex((x) => x.id === w.id) === i);
   let selectedWidgetId = $state<string | null>(null);
 
+  // Habit
+  let habits = $state<Habit[]>([]);
+  let habitsLoading = $state(false);
+  let selectedHabitId = $state<string | null>(null);
+  const selectedHabit = $derived(habits.find((h) => h.id === selectedHabitId) ?? null);
+
   // ── Reset and load on open ───────────────────────────────────────────────────
 
   $effect(() => {
@@ -99,6 +107,7 @@
     selectedExerciseId = null;
     selectedAlgo = null;
     selectedWidgetId = null;
+    selectedHabitId = null;
     if (prefillSession) {
       selectedSession = prefillSession;
       attachmentType = "workout";
@@ -115,6 +124,9 @@
 
     splitsLoading = true;
     splits.refresh().then(() => { splitsLoading = false; }).catch(() => { splitsLoading = false; });
+
+    habitsLoading = true;
+    getHabitRepo().listHabits().then((hs) => { habits = hs; habitsLoading = false; }).catch(() => { habitsLoading = false; });
 
     exercisesLoading = true;
     exercisesStore.refresh().then(() => { exercisesLoading = false; }).catch(() => { exercisesLoading = false; });
@@ -159,7 +171,7 @@
 
   // ── Payload builders ─────────────────────────────────────────────────────────
 
-  function buildPayload(): string | undefined {
+  async function buildPayload(): Promise<string | undefined> {
     switch (attachmentType) {
       case "workout": {
         if (!selectedSession) return undefined;
@@ -183,19 +195,54 @@
       }
       case "split": {
         if (!selectedSplit) return undefined;
+        // selectedSplit comes from the splits picker, which lists via getListSplits() — a
+        // lightweight index with every day's blocks hardcoded to [] (see splitRepo.sqlite.ts /
+        // the comment on pushAllSplits() in syncService.ts). Re-fetch the real, fully-populated
+        // split before building a "full fidelity" payload, or every field below is empty.
+        const full = await getSplitRepo().getSplit(selectedSplit.id);
+        if (!full) return undefined;
+
+        // A block may reference an exercise the *copier* doesn't have — embed full definitions
+        // of every non-core exercise this split uses so copyToMine.ts can recreate them
+        // locally. Core/bundled exercises are seeded with the same id everywhere, so those
+        // need no embedding — matched by id (or name, as a fallback) on the copying side.
+        const exerciseRepo = getExerciseRepo();
+        const customExercises = new Map<string, Exercise>();
+        for (const day of full.days) {
+          for (const block of day.blocks) {
+            if (block.type !== "strength") continue;
+            const ex = block.exerciseId
+              ? await exerciseRepo.getById(block.exerciseId)
+              : await exerciseRepo.getByName(block.exerciseName);
+            if (ex && !ex.isCore) customExercises.set(ex.name, ex);
+          }
+        }
+
         return JSON.stringify({
-          name: selectedSplit.name,
-          days: selectedSplit.days.map((d) => ({
+          name: full.name,
+          days: full.days.map((d) => ({
             name: d.name,
-            exercises: d.blocks
-              .filter((b) => b.type === "strength")
-              .map((b) => (b as { exerciseName: string }).exerciseName),
+            orderIndex: d.orderIndex,
+            blocks: d.blocks.map((b) =>
+              b.type === "strength"
+                ? { type: "strength", orderIndex: b.orderIndex, exerciseName: b.exerciseName, exerciseId: b.exerciseId, targets: b.targets }
+                : { type: "cardio", orderIndex: b.orderIndex, activityName: b.activityName },
+            ),
           })),
+          customExercises: [...customExercises.values()],
         });
       }
       case "exercise": {
         if (!selectedExercise) return undefined;
-        return JSON.stringify({ name: selectedExercise.name, notes: selectedExercise.notes ?? undefined });
+        return JSON.stringify({
+          name: selectedExercise.name,
+          notes: selectedExercise.notes ?? undefined,
+          primaryMuscles: selectedExercise.primaryMuscles,
+          secondaryMuscles: selectedExercise.secondaryMuscles,
+          exerciseType: selectedExercise.exerciseType,
+          machines: selectedExercise.machines,
+          defaultMachineId: selectedExercise.defaultMachineId,
+        });
       }
       case "algorithm": {
         if (!selectedAlgo) return undefined;
@@ -212,6 +259,16 @@
         if (!w) return undefined;
         return JSON.stringify({ id: w.id, name: w.label, description: w.description });
       }
+      case "habit": {
+        if (!selectedHabit) return undefined;
+        return JSON.stringify({
+          name: selectedHabit.name,
+          cadence: selectedHabit.cadence,
+          target: selectedHabit.target,
+          icon: selectedHabit.icon,
+          tone: selectedHabit.tone,
+        });
+      }
       default:
         return undefined;
     }
@@ -226,6 +283,7 @@
       exercise: "Exercise",
       algorithm: "Algorithm",
       widget: "Widget",
+      habit: "Habit",
     };
     return map[attachmentType];
   }
@@ -238,7 +296,8 @@
     (attachmentType !== "split" || selectedSplit !== null) &&
     (attachmentType !== "exercise" || selectedExercise !== null) &&
     (attachmentType !== "algorithm" || selectedAlgo !== null) &&
-    (attachmentType !== "widget" || selectedWidgetId !== null),
+    (attachmentType !== "widget" || selectedWidgetId !== null) &&
+    (attachmentType !== "habit" || selectedHabit !== null),
   );
 
   async function submit() {
@@ -249,7 +308,7 @@
       const post = await socialApi.createPost(
         resolvePostType(),
         body.trim() || undefined,
-        buildPayload(),
+        await buildPayload(),
       );
       onposted?.(post);
       onclose();
@@ -270,6 +329,7 @@
     { type: "exercise",  label: "Exercise",  icon: Activity },
     { type: "algorithm", label: "Algorithm", icon: Cpu },
     { type: "widget",    label: "Widget",    icon: LayoutDashboard },
+    { type: "habit",     label: "Habit",     icon: Flame },
   ];
 </script>
 
@@ -480,6 +540,34 @@
                   >
                     <span class="font-medium">{ex.name}</span>
                     {#if ex.notes}<span class="ml-2 text-muted-foreground">{ex.notes}</span>{/if}
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
+
+      <!-- ── Habit picker ───────────────────────────────────────────────── -->
+      {#if attachmentType === "habit"}
+        <div class="flex flex-col gap-1.5 shrink-0">
+          <p class="text-xs font-medium text-muted-foreground">Pick a habit</p>
+          {#if habitsLoading}
+            <p class="text-xs text-muted-foreground py-2">Loading…</p>
+          {:else if habits.length === 0}
+            <p class="text-xs text-muted-foreground py-2">No habits yet. Add one first.</p>
+          {:else}
+            <ul class="flex flex-col gap-1 max-h-44 overflow-y-auto">
+              {#each habits as habit (habit.id)}
+                <li>
+                  <button type="button"
+                    class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                      {selectedHabitId === habit.id
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"
+                    onclick={() => (selectedHabitId = habit.id)}
+                  >
+                    <span class="font-medium">{habit.name}</span>
                   </button>
                 </li>
               {/each}
