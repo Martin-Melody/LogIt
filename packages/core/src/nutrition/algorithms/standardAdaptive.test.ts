@@ -77,6 +77,36 @@ describe("standardAdaptive", () => {
     expect(out.sourceLabel).toMatch(/height/i);
   });
 
+  it("signals a missing current weight distinctly from a missing profile", () => {
+    // A fully-set goal (height + birth date) but no resolvable current weight — e.g. weight
+    // history hasn't synced down to this device yet. Shouldn't blame height/birth date.
+    const out = standardAdaptive.computeTargets({
+      goal: goal(),
+      currentWeightKg: undefined,
+      weightEntries: [],
+      dailyIntakeKcal: [],
+      userPreferences: standardAdaptive.defaultPreferences,
+      now: NOW,
+    });
+    expect(out.kcal).toBe(0);
+    expect(out.sourceLabel).toMatch(/weight/i);
+    expect(out.sourceLabel).not.toMatch(/height/i);
+  });
+
+  it("signals both a missing profile and a missing weight together", () => {
+    const out = standardAdaptive.computeTargets({
+      goal: goal({ birthDateIso: undefined }),
+      currentWeightKg: undefined,
+      weightEntries: [],
+      dailyIntakeKcal: [],
+      userPreferences: standardAdaptive.defaultPreferences,
+      now: NOW,
+    });
+    expect(out.kcal).toBe(0);
+    expect(out.sourceLabel).toMatch(/height/i);
+    expect(out.sourceLabel).toMatch(/weight/i);
+  });
+
   it("uses the adaptive estimate once there's enough weight + intake data", () => {
     // Eating 2000, losing 0.5 kg/wk => true maintenance ~2550 => lose target ~2000.
     const out = run({

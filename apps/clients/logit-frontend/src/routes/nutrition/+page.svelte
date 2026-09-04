@@ -38,7 +38,7 @@
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { onForeground } from "$lib/lifecycle";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
-  import { pushNutritionDay, pushMealTemplate } from "$lib/sync/syncService";
+  import { pushNutritionDay, pushMealTemplate, lastSyncedAt } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
   import MacroBars from "$lib/features/nutrition/MacroBars.svelte";
   import WeightTrendChart from "$lib/features/nutrition/WeightTrendChart.svelte";
@@ -225,6 +225,24 @@
     }
     const prominent = nut.targets.source === "coach" || nut.targets.sourceLabel === "Adaptive";
     return { label: nut.targets.sourceLabel, variant: prominent ? ("secondary" as const) : ("outline" as const) };
+  });
+
+  // Login kicks off a background sync (authStore.login() doesn't wait for it — otherwise
+  // the sign-in screen would sit on a spinner for however long a full sync takes). If this
+  // page mounts before that sync lands, targets can look "incomplete" (e.g. weight history
+  // not pulled yet) even though the goal is fully set. Reload once the sync that's already
+  // in flight actually finishes, instead of leaving the stale/incomplete state on screen.
+  let lastSyncSeen = $state<number | null>(null);
+  $effect(() => {
+    const t = $lastSyncedAt;
+    if (lastSyncSeen === null) {
+      lastSyncSeen = t;
+      return;
+    }
+    if (t !== lastSyncSeen) {
+      lastSyncSeen = t;
+      void load();
+    }
   });
 
   onMount(() => {
