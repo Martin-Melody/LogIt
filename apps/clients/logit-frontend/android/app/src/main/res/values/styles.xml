@@ -17,6 +17,18 @@
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <!-- android:background is the pre-Android-12 path (Capacitor's own drawable/splash.png,
+             already correctly colored to match the mark). On API 31+, Theme.SplashScreen
+             ignores that and uses the OS-native splash instead — but only if
+             windowSplashScreenBackground/AnimatedIcon are actually set. Left unset, it silently
+             falls back to ?android:colorBackground (unrelated to the brand at all), which is
+             what produced two visibly different background tones behind the same icon. -->
         <item name="android:background">@drawable/splash</item>
+        <!-- Custom attrs from androidx.core.splashscreen (no android: prefix — its own
+             per-API-level style overlays translate these into the real platform attribute on
+             API 31+, or a compat drawable on older versions; setting the android:-prefixed
+             name directly here would bypass that and only take effect on 31+ verbatim). -->
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
     </style>
 </resources>
