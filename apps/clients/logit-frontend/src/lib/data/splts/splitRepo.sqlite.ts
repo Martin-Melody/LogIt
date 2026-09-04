@@ -12,7 +12,13 @@ export function createSqliteSplitRepo(): SplitRepo {
   return {
     async saveSplit(split: WorkoutSplit): Promise<void> {
       const db = getDb();
-      const updatedAt = nowMs();
+      // Use the caller's timestamp, don't stamp our own nowMs() here. Live edits already
+      // arrive pre-stamped by touchSplit() (usecases/Splits/saveSplit.ts calls it before this),
+      // so that's a no-op either way — but pullAndMergeSplits() calls this too, passing the
+      // split exactly as pulled from the server. Overwriting *that* with "now" made every
+      // pulled split look freshly-locally-edited, which is what let a later, blocks-stripped
+      // pushAllSplits() (see that fix) always win the next last-write-wins comparison.
+      const updatedAt = split.updatedAtMs ?? nowMs();
 
       await db.run(
         `
@@ -80,11 +86,6 @@ export function createSqliteSplitRepo(): SplitRepo {
           }
         }
       }
-
-      await db.run(`UPDATE splits SET updated_at_ms = ? WHERE id = ?`, [
-        updatedAt,
-        split.id,
-      ]);
     },
 
     async getSplit(id: string): Promise<WorkoutSplit | null> {
