@@ -57,13 +57,34 @@
   onMount(() => onForeground(() => void load()));
 </script>
 
-{#if view}
-  <WidgetViewRenderer {view} />
-{:else if error}
-  <Card.Root class="w-full">
-    <Card.Header>
-      <Card.Title>{plugin.name}</Card.Title>
-      <Card.Description>This widget couldn't load.</Card.Description>
-    </Card.Header>
-  </Card.Root>
-{/if}
+
+<!--
+  Wrapper stays mounted across every state (empty → loaded, or one view swapped for a
+  differently-sized one after a sync); only what's *inside* it changes. That's what lets
+  `transition: height/width` actually play — a transition needs the same element present on
+  both sides of the change, not a node that simply didn't exist a moment ago. `interpolate-size:
+  allow-keywords` is what makes an intrinsic (auto) height/width transitionable at all here;
+  without it this box-sizing pattern wouldn't animate anything, height would still just snap.
+-->
+<div class="widget-card-animate">
+  {#if view}
+    <WidgetViewRenderer {view} />
+  {:else if error}
+    <Card.Root class="w-full">
+      <Card.Header>
+        <Card.Title>{plugin.name}</Card.Title>
+        <Card.Description>This widget couldn't load.</Card.Description>
+      </Card.Header>
+    </Card.Root>
+  {/if}
+</div>
+
+<style>
+  .widget-card-animate {
+    interpolate-size: allow-keywords;
+    overflow: hidden;
+    transition:
+      height 260ms cubic-bezier(0.22, 1, 0.36, 1),
+      width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+</style>
