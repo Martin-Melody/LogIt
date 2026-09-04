@@ -100,6 +100,18 @@ export async function createLocalAccount(
     ],
   );
 
+  // Seed the bundled core algorithm as this profile's progression default — it ships with
+  // the app, so a brand-new profile shouldn't start with the Progression widget (and Today's
+  // Plan/Quick Start's suggestions) sitting empty until the user finds Settings and picks
+  // one themselves. Written once, here, rather than defaulted at read time in getConfig() —
+  // that would make Settings' "Disable suggestions" (which deletes this row) a no-op, since
+  // the next read would just re-apply the same default and look identical to "never chosen."
+  // Seeding it as a real row means disabling it later is a real, respected, persisted choice.
+  await db.run(
+    `INSERT INTO progression_config(owner_id, data) VALUES(?, ?)`,
+    [account.id, JSON.stringify({ algorithmId: "linear-progression" })],
+  );
+
   // Permanent marker so ensureLocalAccount() knows this device has had at least one
   // account and won't auto-create a new one after the user deletes all accounts.
   localStorage.setItem("logit:had_account", "1");
