@@ -210,6 +210,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       display_name TEXT NOT NULL DEFAULT '',
       bio TEXT NOT NULL DEFAULT '',
       avatar_data_url TEXT NULL,
+      progress_photo_data_url TEXT NULL,
       height REAL NULL,
       height_unit TEXT NOT NULL DEFAULT 'cm',
       weight REAL NULL,
@@ -575,8 +576,15 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateMachines(db);
   await migrateSessionFlags(db);
   await migrateCoachMessageContext(db);
+  await migrateProgressPhoto(db);
   await seedSetTypes(db);
   await seedExercises(db);
+}
+
+async function migrateProgressPhoto(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run(`ALTER TABLE local_accounts ADD COLUMN progress_photo_data_url TEXT NULL`, []);
+  } catch { /* column already exists */ }
 }
 
 async function migrateExerciseType(db: SQLiteDBConnection): Promise<void> {

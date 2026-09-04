@@ -29,11 +29,45 @@ export interface PublicPersonalRecord {
   reps: number;
 }
 
+/** V1 is one current photo, not a gallery/timeline — no object storage exists yet. See
+ * docs/architecture/profile-progress-redesign.md. */
+export interface PublicProgressPhoto {
+  dataUrl: string;
+  updatedAtMs: number;
+}
+
+export interface PublicWeightTrendPoint {
+  dateIso: string;
+  kg: number;
+}
+
+export interface PublicWeightTrend {
+  points: PublicWeightTrendPoint[];
+}
+
+/** Consecutive-calendar-day training streak. "Current" allows today to be still-open (a rest
+ * day today doesn't break it until tomorrow with no session logged). */
+export interface PublicStreak {
+  currentDays: number;
+  bestDays: number;
+}
+
+/** A small, explicitly bounded v1 badge set — not an open achievement system. Recomputed live
+ * from existing data each time, not a persisted earn-log, so there's no earnedAtMs. */
+export interface PublicBadge {
+  id: string;
+  label: string;
+}
+
 export interface PublicProfileData {
   widgets: PublicWidgetSlot[];
   bodyStats?: PublicBodyStats;
   activeSplit?: PublicActiveSplit | null;
   personalRecords?: PublicPersonalRecord[];
+  progressPhoto?: PublicProgressPhoto | null;
+  weightTrend?: PublicWeightTrend;
+  streak?: PublicStreak;
+  badges?: PublicBadge[];
 }
 
 export interface UserSearchResult {

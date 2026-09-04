@@ -13,6 +13,9 @@
   import PostCard from "./PostCard.svelte";
   import ReportSheet from "./ReportSheet.svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
+  import WeightTrendWidget from "$lib/features/profileWidgets/components/WeightTrendWidget.svelte";
+  import StreakWidget from "$lib/features/profileWidgets/components/StreakWidget.svelte";
+  import MilestoneBadgesWidget from "$lib/features/profileWidgets/components/MilestoneBadgesWidget.svelte";
 
   interface Props {
     username: string;
@@ -127,10 +130,14 @@
     const d = publicData;
     if (!d) return [];
     const enabled = new Set(d.widgets.filter((w) => w.enabled).map((w) => w.id));
-    const out: { key: string; render: "body" | "split" | "prs" }[] = [];
+    const out: { key: string; render: "body" | "split" | "prs" | "photo" | "weight" | "streak" | "badges" }[] = [];
     if (enabled.has("profile-body-stats") && d.bodyStats) out.push({ key: "body", render: "body" });
     if (enabled.has("profile-active-split") && d.activeSplit) out.push({ key: "split", render: "split" });
     if (enabled.has("profile-personal-records") && d.personalRecords?.length) out.push({ key: "prs", render: "prs" });
+    if (enabled.has("profile-progress-photo") && d.progressPhoto) out.push({ key: "photo", render: "photo" });
+    if (enabled.has("profile-weight-trend") && d.weightTrend?.points.length) out.push({ key: "weight", render: "weight" });
+    if (enabled.has("profile-streak") && d.streak) out.push({ key: "streak", render: "streak" });
+    if (enabled.has("profile-milestones") && d.badges?.length) out.push({ key: "badges", render: "badges" });
     return out;
   });
 
@@ -256,6 +263,21 @@
                   {/each}
                 </ul>
               </div>
+            {:else if s.render === "photo" && publicData.progressPhoto}
+              <div class="rounded-lg border border-border p-3">
+                <p class="text-xs font-semibold mb-1.5">Progress photo</p>
+                <img
+                  src={publicData.progressPhoto.dataUrl}
+                  alt="{profile.displayName}'s current progress photo"
+                  class="w-full rounded-md object-cover aspect-square"
+                />
+              </div>
+            {:else if s.render === "weight" && publicData.weightTrend}
+              <WeightTrendWidget data={publicData.weightTrend} />
+            {:else if s.render === "streak" && publicData.streak}
+              <StreakWidget data={publicData.streak} />
+            {:else if s.render === "badges" && publicData.badges}
+              <MilestoneBadgesWidget data={publicData.badges} />
             {/if}
           {/each}
         </div>

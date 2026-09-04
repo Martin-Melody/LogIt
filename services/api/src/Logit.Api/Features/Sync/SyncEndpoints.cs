@@ -659,6 +659,7 @@ public record ProfileDto(
     string DisplayName,
     string Bio,
     string? AvatarDataUrl,
+    string? ProgressPhotoDataUrl,
     double? Height,
     string HeightUnit,
     double? Weight,
