@@ -867,32 +867,54 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
   syncApi.pushProfile(remoteProfile).catch(() => enqueue({ type: "profile", dto: remoteProfile }));
 }
 
+/** Builds the current local profile as a RemoteProfile DTO, ready to push. */
+async function buildRemoteProfile(): Promise<RemoteProfile> {
+  const { get } = await import("svelte/store");
+  const [{ profile }, { getNavConfigJson }] = await Promise.all([
+    import("$lib/stores/profile.store"),
+    import("$lib/stores/navConfig.store"),
+  ]);
+  const p = get(profile);
+  return {
+    displayName: p.name,
+    bio: p.bio,
+    avatarDataUrl: p.avatarDataUrl ?? null,
+    height: p.height,
+    heightUnit: p.heightUnit,
+    weight: p.weight,
+    weightUnit: p.weightUnit,
+    blocksCollapsedByDefault: p.blocksCollapsedByDefault,
+    restDefaultsJson: JSON.stringify(p.restDefaults),
+    navConfigJson: getNavConfigJson(),
+    updatedAtMs: Date.now(),
+  };
+}
+
 /** Called by navConfig.store when the user changes their nav layout. */
 export async function pushNavConfig(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
-    const { get } = await import("svelte/store");
-    const [{ profile }, { getNavConfigJson }] = await Promise.all([
-      import("$lib/stores/profile.store"),
-      import("$lib/stores/navConfig.store"),
-    ]);
-    const p = get(profile);
-    const updatedAtMs = Date.now();
-    const remote: RemoteProfile = {
-      displayName: p.name,
-      bio: p.bio,
-      avatarDataUrl: p.avatarDataUrl ?? null,
-      height: p.height,
-      heightUnit: p.heightUnit,
-      weight: p.weight,
-      weightUnit: p.weightUnit,
-      blocksCollapsedByDefault: p.blocksCollapsedByDefault,
-      restDefaultsJson: JSON.stringify(p.restDefaults),
-      navConfigJson: getNavConfigJson(),
-      updatedAtMs,
-    };
-    setProfileUpdatedAtMs(updatedAtMs);
+    const remote = await buildRemoteProfile();
+    setProfileUpdatedAtMs(remote.updatedAtMs);
     syncApi.pushProfile(remote).catch(() => enqueue({ type: "profile", dto: remote }));
+  } catch {}
+}
+
+/**
+ * Push whatever profile data (name, bio, avatar, height/weight, rest-timer defaults, nav
+ * layout) already exists locally. Needed alongside every other pushAllXxx() in
+ * pushAllLocalData() below — without it, profile fields entered before the user ever signed
+ * in (the common case: onboarding runs fully offline-first, see
+ * project_auth_app_first_redo memory) never reach the server until the user happens to edit
+ * their profile again post-login. profile.store.ts's save() only pushes on an active edit —
+ * it can't push what was set before an authenticated session existed to push it *to*.
+ */
+async function pushCurrentProfile(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const remote = await buildRemoteProfile();
+    setProfileUpdatedAtMs(remote.updatedAtMs);
+    await syncApi.pushProfile(remote);
   } catch {}
 }
 
@@ -915,6 +937,7 @@ export async function pushAllLocalData(): Promise<void> {
     pushPendingMessages(),
     pushAllNutrition(),
     pushAllHabits(),
+    pushCurrentProfile(),
   ]);
 }
 
