@@ -174,10 +174,12 @@
     </div>
 
   {:else}
-    <div
-      use:pullToRefresh
-      style="transform: translateY({pullDist}px); transition: {dragging ? 'none' : 'transform 200ms ease-out'};"
-    >
+    <div use:pullToRefresh>
+      <!-- No transform here (not even translateY(0)) — a CSS transform on this wrapper would
+           make it the containing block for every `position: fixed` descendant (PostCard's
+           overflow menu, its confirm dialogs, ReportSheet, …), anchoring them to this div's
+           box instead of the viewport. The height-animated box below already pushes the list
+           down through normal layout, which is all the rubber-band effect needs. -->
       <div
         class="flex justify-center overflow-hidden"
         style="height: {refreshing ? 40 : pullDist}px; transition: {dragging ? 'none' : 'height 200ms ease-out'};"
