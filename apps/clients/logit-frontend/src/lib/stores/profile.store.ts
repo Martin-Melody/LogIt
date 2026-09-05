@@ -7,6 +7,7 @@ export type UserProfile = {
   name: string;
   bio: string;
   avatarDataUrl?: string;
+  progressPhotoDataUrl?: string;
   height: number | null;
   heightUnit: "cm" | "in";
   weight: number | null;
@@ -67,6 +68,7 @@ function createProfileStore() {
       displayName: string;
       bio: string;
       avatarDataUrl: string | null;
+      progressPhotoDataUrl: string | null;
       height: number | null;
       heightUnit: "cm" | "in";
       weight: number | null;
@@ -84,6 +86,7 @@ function createProfileStore() {
         name: account.displayName,
         bio: account.bio,
         avatarDataUrl: account.avatarDataUrl ?? undefined,
+        progressPhotoDataUrl: account.progressPhotoDataUrl ?? undefined,
         height: account.height,
         heightUnit: account.heightUnit,
         weight: account.weight,
@@ -139,6 +142,7 @@ function createProfileStore() {
             if (patch.name !== undefined)                    accountPatch.displayName = patch.name;
             if (patch.bio !== undefined)                     accountPatch.bio = patch.bio;
             if (patch.avatarDataUrl !== undefined)           accountPatch.avatarDataUrl = patch.avatarDataUrl;
+            if (patch.progressPhotoDataUrl !== undefined)    accountPatch.progressPhotoDataUrl = patch.progressPhotoDataUrl;
             if (patch.height !== undefined)                  accountPatch.height = patch.height;
             if (patch.heightUnit !== undefined)              accountPatch.heightUnit = patch.heightUnit;
             if (patch.weight !== undefined)                  accountPatch.weight = patch.weight;

@@ -33,6 +33,10 @@ export type RemoteProfile = {
   displayName: string;
   bio: string;
   avatarDataUrl: string | null;
+  /** A single current progress photo, distinct from the identity avatar. Same storage
+   * pattern (client-resized base64 data-URL) — see docs/architecture/
+   * profile-progress-redesign.md, V1 is one photo, not a gallery/timeline. */
+  progressPhotoDataUrl: string | null;
   height: number | null;
   heightUnit: "cm" | "in";
   weight: number | null;
