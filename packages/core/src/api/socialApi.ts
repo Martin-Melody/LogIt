@@ -90,6 +90,8 @@ export interface ApiComment {
   body: string;
   createdAt: string;
   editedAt: string | null;
+  likeCount: number;
+  isLikedByMe: boolean;
 }
 
 export interface CommentPage {
@@ -226,6 +228,14 @@ export const socialApi = {
 
   async deleteComment(postId: string, commentId: string): Promise<void> {
     return apiClient.fetch(`/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
+  },
+
+  async likeComment(postId: string, commentId: string): Promise<void> {
+    return apiClient.fetch(`/posts/${postId}/comments/${commentId}/like`, { method: "POST" });
+  },
+
+  async unlikeComment(postId: string, commentId: string): Promise<void> {
+    return apiClient.fetch(`/posts/${postId}/comments/${commentId}/like`, { method: "DELETE" });
   },
 
   async getUserPosts(username: string, limit = 20, cursor?: string): Promise<FeedPage> {

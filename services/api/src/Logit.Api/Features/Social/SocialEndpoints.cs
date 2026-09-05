@@ -28,6 +28,8 @@ public static class SocialEndpoints
         posts.MapPost("/{id:guid}/comments", AddComment).RequireAuthorization().RequireRateLimiting("social-write");
         posts.MapPatch("/{id:guid}/comments/{commentId:guid}", EditComment).RequireAuthorization();
         posts.MapDelete("/{id:guid}/comments/{commentId:guid}", DeleteComment).RequireAuthorization();
+        posts.MapPost("/{id:guid}/comments/{commentId:guid}/like", LikeComment).RequireAuthorization();
+        posts.MapDelete("/{id:guid}/comments/{commentId:guid}/like", UnlikeComment).RequireAuthorization();
 
         follows.MapGet("/{username}/posts", GetUserPosts);
     }
@@ -266,13 +268,16 @@ public static class SocialEndpoints
         limit = Math.Clamp(limit, 1, 100);
         var after = SocialQueryHelpers.DecodeCursor(cursor);
 
+        Guid? callerId = caller.Identity?.IsAuthenticated == true ? caller.GetUserId() : null;
+
         var query = db.Comments
             .Include(c => c.Author)
+            .Include(c => c.Likes)
             .Where(c => c.PostId == id && c.DeletedAt == null);
 
-        if (caller.Identity?.IsAuthenticated == true)
+        if (callerId is not null)
         {
-            var blocked = await db.BlockedUserIdsAsync(caller.GetUserId());
+            var blocked = await db.BlockedUserIdsAsync(callerId.Value);
             query = query.Where(c => !blocked.Contains(c.AuthorId));
         }
 
@@ -287,7 +292,7 @@ public static class SocialEndpoints
             rows = rows.Take(limit).ToList();
         }
 
-        return Results.Ok(new { comments = rows.Select(c => c.ToDto()), nextCursor });
+        return Results.Ok(new { comments = rows.Select(c => c.ToDto(callerId)), nextCursor });
     }
 
     private static async Task<IResult> AddComment(
@@ -348,6 +353,35 @@ public static class SocialEndpoints
         if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
 
         comment.DeletedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> LikeComment(Guid id, Guid commentId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var comment = await db.Comments.FirstOrDefaultAsync(c => c.Id == commentId && c.PostId == id);
+        if (comment is null || comment.DeletedAt is not null) return Results.NotFound();
+        // Matches the Instagram-style UX this mirrors: you can't like your own comment — the
+        // heart doesn't even render client-side for your own comments, this is defense in depth.
+        if (comment.AuthorId == userId) return Results.BadRequest(new { error = "Cannot like your own comment." });
+
+        var exists = await db.CommentLikes.AnyAsync(l => l.UserId == userId && l.CommentId == commentId);
+        if (exists) return Results.Conflict(new { error = "Already liked." });
+
+        db.CommentLikes.Add(new CommentLike { UserId = userId, CommentId = commentId });
+        await db.AddCommentLikeAsync(userId, comment);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> UnlikeComment(Guid id, Guid commentId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var like = await db.CommentLikes.FindAsync(userId, commentId);
+        if (like is null) return Results.NotFound();
+
+        db.CommentLikes.Remove(like);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
