@@ -53,8 +53,9 @@
     return t === "Like" ? Heart : t === "Comment" ? MessageCircle : UserPlus;
   }
 
-  function verb(t: ApiNotification["type"]) {
-    return t === "Like" ? "liked your post" : t === "Comment" ? "commented on your post" : "followed you";
+  function verb(n: ApiNotification) {
+    if (n.type === "Like") return n.commentId ? "liked your comment" : "liked your post";
+    return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
   function target(n: ApiNotification) {
@@ -108,7 +109,7 @@
             <div class="min-w-0 flex-1">
               <p class="text-sm leading-snug">
                 <span class="font-semibold">{n.actor.displayName}</span>
-                <span class="text-muted-foreground"> {verb(n.type)}</span>
+                <span class="text-muted-foreground"> {verb(n)}</span>
               </p>
               {#if n.postBody}
                 <p class="text-xs text-muted-foreground truncate mt-0.5">{n.postBody}</p>

@@ -26,6 +26,24 @@ public static class Notifications
         });
     }
 
+    public static async Task AddCommentLikeAsync(this AppDbContext db, Guid actorId, Comment comment)
+    {
+        if (comment.AuthorId == actorId) return;
+        var exists = await db.Notifications.AnyAsync(n =>
+            n.UserId == comment.AuthorId && n.ActorId == actorId &&
+            n.Type == NotificationType.Like && n.CommentId == comment.Id);
+        if (exists) return;
+
+        db.Notifications.Add(new Notification
+        {
+            UserId = comment.AuthorId,
+            ActorId = actorId,
+            Type = NotificationType.Like,
+            PostId = comment.PostId,
+            CommentId = comment.Id,
+        });
+    }
+
     public static void AddComment(this AppDbContext db, Guid actorId, Post post, Guid commentId)
     {
         if (post.AuthorId == actorId) return;

@@ -13,7 +13,7 @@ public record ProfileDto(
 
 public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount);
 
-public record CommentDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Body, DateTime CreatedAt, DateTime? EditedAt);
+public record CommentDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Body, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe);
 
 public static class MappingExtensions
 {
@@ -32,7 +32,9 @@ public static class MappingExtensions
             callerId.HasValue && post.Likes.Any(l => l.UserId == callerId.Value),
             post.Comments.Count(c => c.DeletedAt == null));
 
-    public static CommentDto ToDto(this Comment comment) =>
+    public static CommentDto ToDto(this Comment comment, Guid? callerId = null) =>
         new(comment.Id, comment.AuthorId, comment.Author.Username, comment.Author.DisplayName,
-            comment.Author.AvatarUrl, comment.Body, comment.CreatedAt, comment.EditedAt);
+            comment.Author.AvatarUrl, comment.Body, comment.CreatedAt, comment.EditedAt,
+            comment.Likes.Count,
+            callerId.HasValue && comment.Likes.Any(l => l.UserId == callerId.Value));
 }

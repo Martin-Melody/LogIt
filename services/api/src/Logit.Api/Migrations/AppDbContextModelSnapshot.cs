@@ -320,6 +320,24 @@ namespace Logit.Api.Migrations
                     b.ToTable("Comments");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CommentLike", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CommentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "CommentId");
+
+                    b.HasIndex("CommentId");
+
+                    b.ToTable("CommentLikes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.Property<Guid>("FollowerId")
@@ -1236,6 +1254,25 @@ namespace Logit.Api.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CommentLike", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Comment", "Comment")
+                        .WithMany("Likes")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany("CommentLikes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Followed")
@@ -1469,6 +1506,11 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
+                {
+                    b.Navigation("Likes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
                 {
                     b.Navigation("Comments");
@@ -1481,6 +1523,8 @@ namespace Logit.Api.Migrations
                     b.Navigation("ClientRelationships");
 
                     b.Navigation("CoachRelationships");
+
+                    b.Navigation("CommentLikes");
 
                     b.Navigation("Comments");
 

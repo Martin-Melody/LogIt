@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Like> Likes => Set<Like>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
     public DbSet<Block> Blocks => Set<Block>();
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -107,6 +108,19 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(c => c.Author)
              .WithMany(u => u.Comments)
              .HasForeignKey(c => c.AuthorId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CommentLike>(e =>
+        {
+            e.HasKey(l => new { l.UserId, l.CommentId });
+            e.HasOne(l => l.User)
+             .WithMany(u => u.CommentLikes)
+             .HasForeignKey(l => l.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.Comment)
+             .WithMany(c => c.Likes)
+             .HasForeignKey(l => l.CommentId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -37,6 +37,7 @@ public class User
     public ICollection<CoachClientRelationship> ClientRelationships { get; set; } = [];
     public ICollection<Like> Likes { get; set; } = [];
     public ICollection<Comment> Comments { get; set; } = [];
+    public ICollection<CommentLike> CommentLikes { get; set; } = [];
 }
 
 public enum UserTier { Free, Pro, Studio }
