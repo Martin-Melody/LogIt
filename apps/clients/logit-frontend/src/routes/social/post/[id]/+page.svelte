@@ -2,13 +2,12 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { ArrowLeft, Loader2, Send, Trash2, Pencil, Check, X, Flag } from "lucide-svelte";
+  import { ArrowLeft, Loader2, Send } from "lucide-svelte";
   import { socialApi, type ApiPost, type ApiComment } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { formatDistanceToNow } from "$lib/utils";
   import PostCard from "$lib/components/social/PostCard.svelte";
-  import ReportSheet from "$lib/components/social/ReportSheet.svelte";
+  import CommentList from "$lib/components/social/CommentList.svelte";
 
   const id = $derived(page.params.id ?? "");
 
@@ -23,12 +22,6 @@
 
   let draft = $state("");
   let submitting = $state(false);
-  let editingId = $state<string | null>(null);
-  let editDraft = $state("");
-  let savingEditId = $state<string | null>(null);
-  let pendingDeleteId = $state<string | null>(null);
-  let deletingId = $state<string | null>(null);
-  let reportComment = $state<ApiComment | null>(null);
 
   onMount(() => {
     void loadPost();
@@ -79,34 +72,6 @@
     }
   }
 
-  async function saveEdit(c: ApiComment) {
-    if (!editDraft.trim() || savingEditId === c.id) return;
-    savingEditId = c.id;
-    try {
-      const updated = await socialApi.editComment(id, c.id, editDraft.trim());
-      comments = comments.map((x) => (x.id === c.id ? updated : x));
-      editingId = null;
-    } catch {
-      // keep open
-    } finally {
-      savingEditId = null;
-    }
-  }
-
-  async function remove(c: ApiComment) {
-    if (deletingId === c.id) return;
-    deletingId = c.id;
-    try {
-      await socialApi.deleteComment(id, c.id);
-      comments = comments.filter((x) => x.id !== c.id);
-      if (post) post = { ...post, commentCount: Math.max(0, post.commentCount - 1) };
-      pendingDeleteId = null;
-    } catch {
-      // ignore
-    } finally {
-      deletingId = null;
-    }
-  }
 </script>
 
 <div class="flex flex-col min-h-full">
@@ -132,72 +97,12 @@
     <!-- Comments -->
     {#if commentsLoading}
       <div class="flex justify-center py-8"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
-    {:else if comments.length === 0}
-      <p class="text-sm text-muted-foreground text-center py-8">No comments yet. Be the first.</p>
     {:else}
-      <ul class="divide-y divide-border">
-        {#each comments as c (c.id)}
-          <li class="px-4 py-3 flex gap-2.5">
-            <button
-              type="button"
-              class="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden"
-              onclick={() => goto(`/social/${c.authorUsername}`)}
-            >
-              {#if c.authorAvatarUrl}
-                <img src={c.authorAvatarUrl} alt={c.authorDisplayName} class="h-full w-full object-cover" />
-              {:else}
-                {c.authorDisplayName.charAt(0).toUpperCase()}
-              {/if}
-            </button>
-            <div class="min-w-0 flex-1">
-              <p class="text-xs">
-                <span class="font-semibold">{c.authorDisplayName}</span>
-                <span class="text-muted-foreground"> @{c.authorUsername} · {formatDistanceToNow(new Date(c.createdAt))}</span>
-                {#if c.editedAt}<span class="text-[10px] text-muted-foreground/60 italic"> · edited</span>{/if}
-              </p>
-
-              {#if editingId === c.id}
-                <div class="flex items-end gap-2 mt-1">
-                  <textarea
-                    bind:value={editDraft}
-                    rows={2}
-                    class="flex-1 resize-none rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                  ></textarea>
-                  <button type="button" class="h-8 w-8 flex items-center justify-center rounded bg-primary text-primary-foreground disabled:opacity-50" disabled={!editDraft.trim() || savingEditId === c.id} onclick={() => saveEdit(c)}>
-                    {#if savingEditId === c.id}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Check class="h-3.5 w-3.5" />{/if}
-                  </button>
-                  <button type="button" class="h-8 w-8 flex items-center justify-center rounded border border-border text-muted-foreground" onclick={() => (editingId = null)}>
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              {:else}
-                <p class="text-sm whitespace-pre-wrap break-words mt-0.5">{c.body}</p>
-                <div class="flex items-center gap-3 mt-1">
-                  {#if c.authorId === authStore.user?.id}
-                    <button type="button" class="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1" onclick={() => { editingId = c.id; editDraft = c.body; }}>
-                      <Pencil class="h-3 w-3" /> Edit
-                    </button>
-                    {#if pendingDeleteId === c.id}
-                      <button type="button" class="text-[11px] text-destructive font-medium" disabled={deletingId === c.id} onclick={() => remove(c)}>
-                        {#if deletingId === c.id}<Loader2 class="h-3 w-3 animate-spin" />{:else}Confirm delete{/if}
-                      </button>
-                      <button type="button" class="text-[11px] text-muted-foreground" onclick={() => (pendingDeleteId = null)}>Cancel</button>
-                    {:else}
-                      <button type="button" class="text-[11px] text-muted-foreground hover:text-destructive flex items-center gap-1" onclick={() => (pendingDeleteId = c.id)}>
-                        <Trash2 class="h-3 w-3" /> Delete
-                      </button>
-                    {/if}
-                  {:else}
-                    <button type="button" class="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1" onclick={() => (reportComment = c)}>
-                      <Flag class="h-3 w-3" /> Report
-                    </button>
-                  {/if}
-                </div>
-              {/if}
-            </div>
-          </li>
-        {/each}
-      </ul>
+      <CommentList
+        bind:comments
+        postId={id}
+        oncountchange={(d) => { if (post) post = { ...post, commentCount: Math.max(0, post.commentCount + d) }; }}
+      />
       {#if nextCursor}
         <button type="button" class="w-full text-xs text-muted-foreground py-3 disabled:opacity-50" disabled={loadingMore} onclick={() => loadComments(true)}>
           {loadingMore ? "Loading…" : "Load older comments"}
@@ -223,11 +128,3 @@
     </div>
   {/if}
 </div>
-
-<ReportSheet
-  open={reportComment !== null}
-  targetType="Comment"
-  targetId={reportComment?.id ?? ""}
-  what="comment"
-  onclose={() => (reportComment = null)}
-/>
