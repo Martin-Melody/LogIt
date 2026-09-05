@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import {
     Heart, MessageCircle, MoreHorizontal, Loader2, Check, X,
-    Link2, Flag, Ban, Pencil, Trash2,
+    Link2, Flag, Ban, Pencil, Trash2, Repeat2,
   } from "lucide-svelte";
   import { socialApi, type ApiPost } from "@logit/core/api/socialApi";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -11,6 +11,7 @@
   import { MARKETING_URL } from "$lib/constants/urls";
   import { toast } from "svelte-sonner";
   import PostAttachment from "./PostAttachment.svelte";
+  import MentionText from "./MentionText.svelte";
   import ReportSheet from "./ReportSheet.svelte";
   import {
     copyAlgorithmToMine, copyWidgetToMine, copySplitToMine, copyExerciseToMine, copyHabitToMine,
@@ -44,6 +45,7 @@
   let savingEdit = $state(false);
   let confirmDelete = $state(false);
   let deleting = $state(false);
+  let reposting = $state(false);
   let copying = $state(false);
 
   // "Copy to mine" — see docs/architecture/profile-progress-redesign.md P3/P4 and
@@ -154,6 +156,20 @@
     }
   }
 
+  async function doRepost() {
+    if (reposting) return;
+    reposting = true;
+    try {
+      await socialApi.repost(p.id);
+      toast.success("Reposted to your profile");
+    } catch {
+      toast.error("Couldn't repost this");
+    } finally {
+      reposting = false;
+      menuOpen = false;
+    }
+  }
+
   async function doBlock() {
     if (blocking) return;
     blocking = true;
@@ -172,6 +188,16 @@
 </script>
 
 <article class="px-4 py-3 flex flex-col gap-2">
+  {#if p.repostOf}
+    <button
+      type="button"
+      class="flex items-center gap-1.5 text-xs text-muted-foreground -mb-1 self-start hover:text-foreground transition-colors"
+      onclick={(e) => { e.stopPropagation(); void goto(`/social/${p.repostOf!.authorUsername}`); }}
+    >
+      <Repeat2 class="h-3.5 w-3.5" /> Reposted from @{p.repostOf.authorUsername}
+    </button>
+  {/if}
+
   <!-- Author row -->
   <div class="flex items-center gap-2.5">
     <button
@@ -227,10 +253,16 @@
       onclick={openCard}
       onkeydown={(e) => { if (href && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCard(); } }}
     >
-      {#if p.body}
-        <p class="text-sm whitespace-pre-wrap break-words">{p.body}</p>
+      {#if p.repostOf?.deleted}
+        <p class="text-sm text-muted-foreground italic">Original post was deleted.</p>
+      {:else}
+        {#if p.body}
+          <MentionText text={p.body} class="text-sm whitespace-pre-wrap break-words" />
+        {:else if p.repostOf?.body}
+          <MentionText text={p.repostOf.body} class="text-sm whitespace-pre-wrap break-words" />
+        {/if}
+        <PostAttachment post={p} oncopy={copyable ? handleCopy : undefined} {copying} />
       {/if}
-      <PostAttachment post={p} oncopy={copyable ? handleCopy : undefined} {copying} />
     </div>
   {/if}
 
@@ -265,6 +297,12 @@
       <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={copyLink}>
         <Link2 class="h-4 w-4 text-muted-foreground" /> Copy link
       </button>
+      {#if !isOwn}
+        <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50 disabled:opacity-50" disabled={reposting} onclick={() => void doRepost()}>
+          {#if reposting}<Loader2 class="h-4 w-4 text-muted-foreground animate-spin" />{:else}<Repeat2 class="h-4 w-4 text-muted-foreground" />{/if}
+          Repost
+        </button>
+      {/if}
       {#if isOwn}
         <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={startEdit}>
           <Pencil class="h-4 w-4 text-muted-foreground" /> Edit post

@@ -5,6 +5,7 @@
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { formatDistanceToNow } from "$lib/utils";
   import ReportSheet from "./social/ReportSheet.svelte";
+  import MentionText from "./social/MentionText.svelte";
 
   interface Props {
     post: ApiPost | null;
@@ -257,7 +258,7 @@
                     </div>
                   </div>
                 {:else}
-                  <p class="text-sm mt-0.5 break-words">{comment.body}</p>
+                  <MentionText text={comment.body} class="text-sm mt-0.5 break-words" />
                 {/if}
               </div>
 

@@ -11,6 +11,12 @@ public class Post
     public DateTime? EditedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
 
+    /// Set when this post is a repost — points at the post it was reposted from. Nullable
+    /// self-reference, SetNull on delete: the repost keeps its own copied content (Type/
+    /// PayloadJson) and just loses the attribution link if the original is later deleted.
+    public Guid? RepostOfId { get; set; }
+    public Post? RepostOf { get; set; }
+
     public User Author { get; set; } = null!;
     public ICollection<Like> Likes { get; set; } = [];
     public ICollection<Comment> Comments { get; set; } = [];
