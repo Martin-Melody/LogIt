@@ -11,7 +11,12 @@ public record ProfileDto(
     // (tier, onboarding state) against server truth on boot. Null for other users.
     string? Tier = null, bool? OnboardingCompleted = null);
 
-public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount);
+public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount, RepostSourceDto? RepostOf);
+
+/// A minimal snapshot of the post a repost points at — deliberately not a full PostDto (no
+/// like/comment counts of its own; those belong to the *original*, not the repost, and this
+/// is display-only attribution, not a second interactive post card).
+public record RepostSourceDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, bool Deleted);
 
 public record CommentDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Body, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe);
 
@@ -30,7 +35,18 @@ public static class MappingExtensions
             post.Type.ToString(), post.Body, post.PayloadJson, post.CreatedAt, post.EditedAt,
             post.Likes.Count,
             callerId.HasValue && post.Likes.Any(l => l.UserId == callerId.Value),
-            post.Comments.Count(c => c.DeletedAt == null));
+            post.Comments.Count(c => c.DeletedAt == null),
+            post.RepostOf?.ToRepostSourceDto());
+
+    /// The original may have been soft-deleted since this repost was made — still show
+    /// attribution (who it was from), just marked Deleted so the client can grey it out
+    /// instead of rendering now-gone Body/PayloadJson content.
+    public static RepostSourceDto ToRepostSourceDto(this Post post) =>
+        new(post.Id, post.AuthorId, post.Author.Username, post.Author.DisplayName, post.Author.AvatarUrl,
+            post.Type.ToString(),
+            post.DeletedAt is null ? post.Body : null,
+            post.DeletedAt is null ? post.PayloadJson : null,
+            post.CreatedAt, post.DeletedAt is not null);
 
     public static CommentDto ToDto(this Comment comment, Guid? callerId = null) =>
         new(comment.Id, comment.AuthorId, comment.Author.Username, comment.Author.DisplayName,

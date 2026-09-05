@@ -1,0 +1,50 @@
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace Logit.Api.Migrations.Postgres
+{
+    /// <inheritdoc />
+    public partial class AddPostRepost : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<Guid>(
+                name: "RepostOfId",
+                table: "Posts",
+                type: "uuid",
+                nullable: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Posts_RepostOfId",
+                table: "Posts",
+                column: "RepostOfId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Posts_Posts_RepostOfId",
+                table: "Posts",
+                column: "RepostOfId",
+                principalTable: "Posts",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.SetNull);
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropForeignKey(
+                name: "FK_Posts_Posts_RepostOfId",
+                table: "Posts");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Posts_RepostOfId",
+                table: "Posts");
+
+            migrationBuilder.DropColumn(
+                name: "RepostOfId",
+                table: "Posts");
+        }
+    }
+}

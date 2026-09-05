@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Loader2, Heart, MessageCircle, UserPlus, Bell } from "lucide-svelte";
+  import { ArrowLeft, Loader2, Heart, MessageCircle, UserPlus, Bell, AtSign } from "lucide-svelte";
   import { notificationsApi, type ApiNotification } from "@logit/core/api/socialApi";
   import { unreadNotifications } from "$lib/stores/notifications.store";
   import { formatDistanceToNow } from "$lib/utils";
@@ -50,11 +50,12 @@
   });
 
   function icon(t: ApiNotification["type"]) {
-    return t === "Like" ? Heart : t === "Comment" ? MessageCircle : UserPlus;
+    return t === "Like" ? Heart : t === "Comment" ? MessageCircle : t === "Mention" ? AtSign : UserPlus;
   }
 
   function verb(n: ApiNotification) {
     if (n.type === "Like") return n.commentId ? "liked your comment" : "liked your post";
+    if (n.type === "Mention") return n.commentId ? "mentioned you in a comment" : "mentioned you in a post";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
