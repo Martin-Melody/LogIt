@@ -36,7 +36,10 @@
   });
 
   const copyable = $derived(
-    !!source && ["Split", "Exercise", "Algorithm", "Habit", "Widget"].includes(source.type),
+    !!source
+    && ["Split", "Exercise", "Algorithm", "Habit", "Widget"].includes(source.type)
+    // No point copying your own content to yourself.
+    && source.authorUsername !== authStore.user?.username,
   );
 
   const meta = $derived.by(() => {

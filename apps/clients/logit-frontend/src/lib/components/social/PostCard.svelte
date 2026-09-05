@@ -5,6 +5,7 @@
     Link2, Flag, Ban, Pencil, Trash2, Repeat2,
   } from "lucide-svelte";
   import { socialApi, type ApiPost } from "@logit/core/api/socialApi";
+  import { ApiError } from "@logit/core/api/client";
   import { authStore } from "$lib/api/authStore.svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { formatDistanceToNow } from "$lib/utils";
@@ -118,8 +119,10 @@
     try {
       await socialApi.repost(p.id);
       toast.success("Reposted to your profile");
-    } catch {
-      toast.error("Couldn't repost this");
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) toast.error("Your session expired — sign in again");
+      else if (e instanceof ApiError && e.message) toast.error(e.message);
+      else toast.error("Couldn't repost this");
     } finally {
       reposting = false;
       menuOpen = false;
