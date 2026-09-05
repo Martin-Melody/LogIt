@@ -25,4 +25,8 @@ public enum PostType
     Exercise,
     Algorithm,
     Widget,
+    // Added at the end deliberately — EF Core stores this enum as its underlying int by
+    // default, so a new member must go last to avoid renumbering (and thus reinterpreting)
+    // every existing row's stored value.
+    Habit,
 }
