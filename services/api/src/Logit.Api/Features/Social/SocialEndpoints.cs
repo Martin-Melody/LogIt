@@ -117,6 +117,9 @@ public static class SocialEndpoints
         var userId = caller.GetUserId();
         var post = await db.Posts.FindAsync(id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
+        // Matches CommentLike's self-like guard — client already disables the heart for your
+        // own post, this is defense in depth.
+        if (post.AuthorId == userId) return Results.BadRequest(new { error = "Cannot like your own post." });
 
         var exists = await db.Likes.AnyAsync(l => l.UserId == userId && l.PostId == id);
         if (exists) return Results.Conflict(new { error = "Already liked." });
