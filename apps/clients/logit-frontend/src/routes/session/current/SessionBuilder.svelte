@@ -31,7 +31,21 @@
 
   onMount(() => {
     setTimeout(() => startSessionTour(), 600);
+    void getWorkoutRepo()
+      .listRecentSessions({ limit: 1 })
+      .then((s) => (hasPreviousSession = s.length > 0))
+      .catch(() => {});
   });
+
+  async function repeatLast() {
+    if (ui.finishing) return;
+    destroyActiveTour();
+    try {
+      await currentSession.repeatLast();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't repeat the last workout");
+    }
+  }
 
   const ui = $state({
     saving: false,
@@ -47,6 +61,7 @@
 
   let recapSession = $state<WorkoutSession | null>(null);
   let shareSession = $state<WorkoutSession | null>(null);
+  let hasPreviousSession = $state(false);
   let finishBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
   let addButtonBottom = $state(0);
@@ -354,7 +369,12 @@
 
   {#if !ui.finishing}
     {#if liveOrderedBlocks.length === 0}
-      <EmptySessionCard onAddBlock={openAddBlock} />
+      <EmptySessionCard
+        canRepeat={hasPreviousSession}
+        busy={ui.saving || ui.finishing}
+        onAddBlock={openAddBlock}
+        onRepeatLast={repeatLast}
+      />
     {:else}
       <div bind:this={blocksListEl}>
         {#each liveOrderedBlocks as block, i (block.id)}
