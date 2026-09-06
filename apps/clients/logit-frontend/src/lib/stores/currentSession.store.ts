@@ -2,7 +2,7 @@ import { get, writable } from "svelte/store";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import { startSession } from "$lib/usecases/startSession";
 import { loadDraftSession } from "$lib/usecases/loadDraftSession";
-import { finishCurrentSession } from "$lib/usecases/finnishCurrentSession";
+import { finishCurrentSession } from "$lib/usecases/finishCurrentSession";
 import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 import type { ProgramDay } from "@logit/core/domain/CoachProgram";
 import { startSessionFromSplitDay } from "$lib/usecases/startSessionFromSplitDay";
