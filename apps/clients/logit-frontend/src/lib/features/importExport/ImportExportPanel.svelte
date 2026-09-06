@@ -129,7 +129,7 @@
   <Card.Header>
     <Card.Title>Backup & Restore</Card.Title>
     <Card.Description>
-      Export all your data to a file and import it back when needed.
+      Export your training data to a file and import it back when needed.
     </Card.Description>
   </Card.Header>
 
@@ -155,6 +155,10 @@
           {phase === "exporting" ? "Exporting…" : "Download backup file"}
         {/if}
       </Button>
+      <p class="text-xs text-muted-foreground">
+        Includes your profile, exercise library, splits, workout history and
+        progression settings. Nutrition, habits and plugins aren't included yet.
+      </p>
     </div>
 
     <div class="border-t border-border" />

@@ -26,6 +26,14 @@ const SEED = () => {
     "logit:onboarding:v1",
     JSON.stringify({ completed: true, step: 0 }),
   );
+  // Suppress the coach-mark tours so they don't cover the screenshots.
+  localStorage.setItem(
+    "logit:tours:v1",
+    JSON.stringify({
+      home: true, session: true, splits: true, splitDetail: true,
+      splitDay: true, exercises: true, profile: true,
+    }),
+  );
 };
 
 const SHOTS = [
@@ -45,8 +53,8 @@ const page = await ctx.newPage();
 
 for (const shot of SHOTS) {
   try {
-    await page.goto(BASE + shot.path, { waitUntil: "networkidle", timeout: 15000 });
-    await page.waitForTimeout(1200);
+    await page.goto(BASE + shot.path, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.waitForTimeout(1800);
     await page.screenshot({ path: join(outDir, `${shot.name}.png`) });
     console.log("captured", shot.name);
   } catch (e) {
