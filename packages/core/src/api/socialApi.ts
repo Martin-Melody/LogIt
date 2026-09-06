@@ -108,6 +108,22 @@ export interface ApiPost {
   isLikedByMe: boolean;
   commentCount: number;
   editedAt: string | null;
+  repostOf: RepostSource | null;
+}
+
+/** Display-only snapshot of the post a repost points at — not a full ApiPost (no like/comment
+ * counts of its own; those belong to the original, not the repost). */
+export interface RepostSource {
+  id: string;
+  authorId: string;
+  authorUsername: string;
+  authorDisplayName: string;
+  authorAvatarUrl: string | null;
+  type: PostType;
+  body: string | null;
+  payloadJson: string | null;
+  createdAt: string;
+  deleted: boolean;
 }
 
 export interface FeedPage {
@@ -146,7 +162,7 @@ export type ReportReason =
   | "Spam" | "Harassment" | "HateSpeech" | "Violence"
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
-export type NotificationKind = "Like" | "Comment" | "Follow";
+export type NotificationKind = "Like" | "Comment" | "Follow" | "Mention";
 
 export interface ApiNotification {
   id: string;
@@ -206,6 +222,10 @@ export const socialApi = {
 
   async unlikePost(id: string): Promise<void> {
     return apiClient.fetch(`/posts/${id}/like`, { method: "DELETE" });
+  },
+
+  async repost(id: string): Promise<ApiPost> {
+    return apiClient.fetch(`/posts/${id}/repost`, { method: "POST" });
   },
 
   // Follow

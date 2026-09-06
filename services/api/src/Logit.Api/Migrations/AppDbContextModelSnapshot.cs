@@ -468,6 +468,9 @@ namespace Logit.Api.Migrations
                     b.Property<string>("PayloadJson")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("RepostOfId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
@@ -476,6 +479,8 @@ namespace Logit.Api.Migrations
                     b.HasIndex("AuthorId");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("RepostOfId");
 
                     b.ToTable("Posts");
                 });
@@ -1349,7 +1354,14 @@ namespace Logit.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Logit.Api.Data.Entities.Post", "RepostOf")
+                        .WithMany()
+                        .HasForeignKey("RepostOfId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Author");
+
+                    b.Navigation("RepostOf");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.RefreshToken", b =>

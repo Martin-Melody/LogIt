@@ -1,12 +1,16 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
+  import { ChevronRight, Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard, Flame } from "lucide-svelte";
   import type { ApiPost } from "@logit/core/api/socialApi";
-  import { Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard, Flame, Download, Loader2 } from "lucide-svelte";
 
-  const {
-    post,
-    oncopy,
-    copying = false,
-  }: { post: ApiPost; oncopy?: () => void; copying?: boolean } = $props();
+  const { post }: { post: ApiPost } = $props();
+
+  // The card is a preview — tapping opens the full breakdown (and the "Copy to mine" button
+  // lives there now, not inline here).
+  function openDetail(e: MouseEvent) {
+    e.stopPropagation();
+    void goto(`/social/post/${post.id}/content`);
+  }
 
   const payload = $derived.by(() => {
     if (!post.payloadJson) return null;
@@ -62,10 +66,17 @@
 
 {#if payload && icon && label}
   {@const Icon = icon}
-  <div class="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs flex flex-col gap-1">
-    <div class="flex items-center gap-1.5 text-muted-foreground">
-      <Icon class="h-3 w-3" />
-      <span class="uppercase tracking-wide text-[10px] font-medium">{label}</span>
+  <button
+    type="button"
+    class="w-full text-left rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs flex flex-col gap-1 hover:bg-muted/50 transition-colors"
+    onclick={openDetail}
+  >
+    <div class="flex items-center justify-between gap-1.5 text-muted-foreground">
+      <span class="flex items-center gap-1.5">
+        <Icon class="h-3 w-3" />
+        <span class="uppercase tracking-wide text-[10px] font-medium">{label}</span>
+      </span>
+      <ChevronRight class="h-3.5 w-3.5 shrink-0" />
     </div>
 
     {#if post.type === "WorkoutSession"}
@@ -115,17 +126,5 @@
       <span class="text-sm font-medium text-foreground">{payload.name}</span>
       {#if payload.cadence}<span class="text-muted-foreground">{cadenceLabel(payload.cadence)}</span>{/if}
     {/if}
-
-    {#if oncopy}
-      <button
-        type="button"
-        class="mt-1 self-start flex items-center gap-1.5 rounded border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
-        disabled={copying}
-        onclick={(e) => { e.stopPropagation(); oncopy?.(); }}
-      >
-        {#if copying}<Loader2 class="h-3 w-3 animate-spin" />{:else}<Download class="h-3 w-3" />{/if}
-        Copy to mine
-      </button>
-    {/if}
-  </div>
+  </button>
 {/if}
