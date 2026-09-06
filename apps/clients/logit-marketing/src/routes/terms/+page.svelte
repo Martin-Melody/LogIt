@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { CONTACT_EMAIL } from "$lib/site";
   const UPDATED = "3 September 2026";
-  const CONTACT = "martinmel218@gmail.com";
+  const CONTACT = CONTACT_EMAIL;
 </script>
 
 <svelte:head>
