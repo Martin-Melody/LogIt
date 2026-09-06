@@ -5,6 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
+  import MachineWeightEditor from "$lib/features/exercise/components/MachineWeightEditor.svelte";
   import type { Exercise, ExercisePatch, ExerciseType, Machine } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { updateExercise } from "$lib/usecases/updateExercise";
@@ -38,11 +39,6 @@
   let draftType = $state<ExerciseType>("normal");
 
   let newMachineName = $state("");
-  let newMachineIncrement = $state(2.5);
-
-  let editingMachineId = $state<string | null>(null);
-  let editMachineName = $state("");
-  let editMachineIncrement = $state(2.5);
 
   function formatDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -148,50 +144,30 @@
 
   async function addMachine() {
     if (!view.exercise || !newMachineName.trim()) return;
-    const machine: Machine = { id: createId("mach"), name: newMachineName.trim(), incrementKg: newMachineIncrement };
+    const machine: Machine = { id: createId("mach"), name: newMachineName.trim(), incrementKg: 2.5 };
     const patch: ExercisePatch = { machines: [...(view.exercise.machines ?? []), machine] };
     await updateExercise(view.exercise.id, patch);
     view.exercise = { ...view.exercise, ...patch };
     newMachineName = "";
-    newMachineIncrement = 2.5;
   }
-
-  let removingMachineId = $state<string | null>(null);
 
   async function removeMachine(machineId: string) {
     if (!view.exercise) return;
-    removingMachineId = machineId;
-    try {
-      const patch: ExercisePatch = { machines: (view.exercise.machines ?? []).filter((m) => m.id !== machineId) };
-      if (view.exercise.defaultMachineId === machineId) patch.defaultMachineId = undefined;
-      await updateExercise(view.exercise.id, patch);
-      view.exercise = { ...view.exercise, ...patch };
-    } finally {
-      removingMachineId = null;
-    }
+    const patch: ExercisePatch = { machines: (view.exercise.machines ?? []).filter((m) => m.id !== machineId) };
+    if (view.exercise.defaultMachineId === machineId) patch.defaultMachineId = undefined;
+    await updateExercise(view.exercise.id, patch);
+    view.exercise = { ...view.exercise, ...patch };
   }
 
-  function startEditMachine(m: Machine) {
-    editingMachineId = m.id;
-    editMachineName = m.name;
-    editMachineIncrement = m.incrementKg;
-  }
-
-  function cancelEditMachine() {
-    editingMachineId = null;
-  }
-
-  async function saveMachineEdit() {
-    if (!view.exercise || !editingMachineId || !editMachineName.trim()) return;
-    const id = editingMachineId;
+  async function updateMachine(machineId: string, machinePatch: Partial<Machine>) {
+    if (!view.exercise) return;
     const patch: ExercisePatch = {
       machines: (view.exercise.machines ?? []).map((m) =>
-        m.id === id ? { ...m, name: editMachineName.trim(), incrementKg: editMachineIncrement } : m,
+        m.id === machineId ? { ...m, ...machinePatch } : m,
       ),
     };
     await updateExercise(view.exercise.id, patch);
     view.exercise = { ...view.exercise, ...patch };
-    editingMachineId = null;
   }
 
   async function setDefaultMachine(machineId: string) {
@@ -357,91 +333,31 @@
 
     <!-- Machines -->
     <div class="px-3 py-4 border-b border-border flex flex-col gap-3">
-      <span class="text-sm font-medium">Machines</span>
-      {#if (view.exercise.machines ?? []).length > 0}
-        <div class="flex flex-col gap-1.5">
-          {#each view.exercise.machines ?? [] as m (m.id)}
-            {#if editingMachineId === m.id}
-              <div class="flex flex-col gap-2 rounded border border-border px-3 py-2">
-                <div class="flex gap-2 min-w-0">
-                  <input
-                    type="text"
-                    class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                    bind:value={editMachineName}
-                  />
-                  <input
-                    type="number"
-                    min="0.25"
-                    max="20"
-                    step="0.25"
-                    class="w-16 shrink-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                    bind:value={editMachineIncrement}
-                  />
-                </div>
-                <div class="flex gap-2 justify-end">
-                  <button type="button" class="px-3 py-1.5 rounded border text-xs" onclick={cancelEditMachine}>Cancel</button>
-                  <button
-                    type="button"
-                    class="px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
-                    disabled={!editMachineName.trim()}
-                    onclick={() => void saveMachineEdit()}
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            {:else}
-              <div class="flex items-center justify-between gap-2 rounded border border-border px-3 py-2">
-                <button type="button" class="flex-1 min-w-0 text-left text-sm truncate" onclick={() => void setDefaultMachine(m.id)}>
-                  {m.name} <span class="text-muted-foreground text-xs">· {m.incrementKg}kg</span>
-                  {#if view.exercise.defaultMachineId === m.id}<span class="text-primary text-xs ml-1">(default)</span>{/if}
-                </button>
-                <button
-                  type="button"
-                  class="text-muted-foreground hover:text-foreground shrink-0"
-                  aria-label="Edit machine"
-                  onclick={() => startEditMachine(m)}
-                >
-                  <Pencil class="h-3.5 w-3.5" />
-                </button>
-                <ConfirmDialog
-                  title={`Delete "${m.name}"?`}
-                  description="Removes this machine from the exercise. Sets logged against it keep their history."
-                  confirmLabel="Delete"
-                  cancelLabel="Cancel"
-                  saving={removingMachineId === m.id}
-                  onConfirm={() => removeMachine(m.id)}
-                >
-                  {#snippet child({ props })}
-                    <button
-                      {...props}
-                      type="button"
-                      class="text-muted-foreground hover:text-destructive text-xs shrink-0"
-                      aria-label="Delete machine"
-                    >
-                      ✕
-                    </button>
-                  {/snippet}
-                </ConfirmDialog>
-              </div>
-            {/if}
-          {/each}
-        </div>
-      {/if}
+      <div>
+        <span class="text-sm font-medium">Machines</span>
+        <p class="text-xs text-muted-foreground">
+          Set each machine's real weight settings so suggestions land on numbers
+          you can actually select.
+        </p>
+      </div>
+
+      {#each view.exercise.machines ?? [] as m (m.id)}
+        <MachineWeightEditor
+          machine={m}
+          isDefault={view.exercise.defaultMachineId === m.id}
+          onChange={(patch) => void updateMachine(m.id, patch)}
+          onDelete={() => void removeMachine(m.id)}
+          onMakeDefault={() => void setDefaultMachine(m.id)}
+        />
+      {/each}
+
       <div class="flex gap-2 min-w-0">
         <input
           type="text"
-          placeholder="Machine name"
+          placeholder="Add a machine…"
           class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={newMachineName}
-        />
-        <input
-          type="number"
-          min="0.25"
-          max="20"
-          step="0.25"
-          class="w-16 shrink-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          bind:value={newMachineIncrement}
+          onkeydown={(e) => { if (e.key === "Enter") void addMachine(); }}
         />
         <button
           type="button"
