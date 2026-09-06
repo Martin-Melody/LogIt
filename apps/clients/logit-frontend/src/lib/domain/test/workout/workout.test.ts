@@ -2,7 +2,9 @@ import {
   createSession, addExercise, addSet, updateSet, removeSet, removeExercise,
   getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
   SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
+  groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
 } from "@logit/core/domain/workout";
+import type { StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
 
 function seedSession() {
@@ -144,6 +146,69 @@ describe("workout domain", () => {
     s = swapExercise(s, "nope", { exerciseName: "Squat" });
     expect(JSON.stringify(s)).toBe(before);
   });
+});
+
+describe("supersets", () => {
+  function seedThree() {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "A" });
+    s = addExercise(s, { exerciseName: "B" });
+    s = addExercise(s, { exerciseName: "C" });
+    return { s, ids: getExercises(s).map((e) => e.id) };
+  }
+
+  it("groups two blocks under a shared id and makes them contiguous", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[2]]); // group A and C (non-adjacent)
+
+    const members = supersetMembers(s, superId(s, ids[0]));
+    expect(members.map((m) => (m.data as StrengthBlockData).exerciseName)).toEqual(["A", "C"]);
+    // A, C now sit together; B is pushed out.
+    const order = getExercises(s).map((e) => e.exerciseName);
+    expect(order).toEqual(["A", "C", "B"]);
+  });
+
+  it("needs at least two blocks", () => {
+    let { s, ids } = seedThree();
+    const before = JSON.stringify(s);
+    s = groupIntoSuperset(s, [ids[0]]);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it("addSupersetRound appends one set to every strength member", () => {
+    let { s, ids } = seedThree();
+    s = addSet(s, ids[0], { reps: 8, weight: 50 });
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const supersetId = superId(s, ids[0]);
+
+    s = addSupersetRound(s, supersetId);
+
+    const [a, b] = getExercises(s);
+    expect(a.sets).toHaveLength(2);
+    expect(a.sets[1].weight).toBe(50); // carried from the previous set
+    expect(b.sets).toHaveLength(1);
+  });
+
+  it("ungroupSuperset clears the tag", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const supersetId = superId(s, ids[0]);
+    s = ungroupSuperset(s, supersetId);
+    expect(supersetMembers(s, supersetId)).toHaveLength(0);
+  });
+
+  it("removing a member down to one dissolves the superset", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const supersetId = superId(s, ids[0]);
+    s = removeExercise(s, ids[1]);
+    expect(supersetMembers(s, supersetId)).toHaveLength(0);
+  });
+
+  function superId(s: ReturnType<typeof createSession>, blockId: string): string {
+    const block = s.blocks.find((b) => b.id === blockId)!;
+    return (block.data as StrengthBlockData).superset!.id;
+  }
 });
 
 describe("set types", () => {

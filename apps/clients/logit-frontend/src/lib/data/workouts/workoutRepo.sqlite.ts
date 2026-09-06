@@ -12,6 +12,7 @@ function parseBlockData(type: string, dataJson: string): unknown {
     return {
       exerciseName: raw.exerciseName ?? "",
       exerciseId: raw.exerciseId ?? undefined,
+      superset: raw.superset ?? undefined,
       sets: (raw.sets ?? []).map((s: any) => ({
         id: s.id,
         setType: (s.setType ?? "normal") as SetType,

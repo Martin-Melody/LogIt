@@ -406,6 +406,37 @@ test.describe("managing sets", () => {
   });
 });
 
+// ── Supersets ─────────────────────────────────────────────────────────────────
+
+test.describe("supersets", () => {
+  test("linking two exercises makes a superset; add round appends a set to each", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+        makeStrengthBlock("b2", 1, "Row", [makeSet("s2", 0, 8, 40)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+
+    await expect(page.getByText("SUPERSET")).toBeVisible();
+    await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
+
+    await page.getByRole("button", { name: "Add round" }).click();
+
+    // Each exercise now has 2 set rows.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
+    await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
+
+    // Ungroup restores plain blocks.
+    await page.getByRole("button", { name: "Ungroup" }).click();
+    await expect(page.getByText("SUPERSET")).not.toBeVisible();
+    await expect(page.getByText("Bench Press")).toBeVisible();
+    await expect(page.getByText("Row", { exact: true })).toBeVisible();
+  });
+});
+
 // ── Block drag to reorder ─────────────────────────────────────────────────────
 
 test.describe("block reorder", () => {
