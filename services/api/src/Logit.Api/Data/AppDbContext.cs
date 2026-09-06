@@ -82,6 +82,10 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .WithMany(u => u.Posts)
              .HasForeignKey(p => p.AuthorId)
              .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.RepostOf)
+             .WithMany()
+             .HasForeignKey(p => p.RepostOfId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         model.Entity<Like>(e =>

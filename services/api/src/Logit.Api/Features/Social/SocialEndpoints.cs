@@ -24,6 +24,7 @@ public static class SocialEndpoints
         posts.MapPatch("/{id:guid}", EditPost).RequireAuthorization();
         posts.MapPost("/{id:guid}/like", LikePost).RequireAuthorization();
         posts.MapDelete("/{id:guid}/like", UnlikePost).RequireAuthorization();
+        posts.MapPost("/{id:guid}/repost", RepostPost).RequireAuthorization().RequireRateLimiting("social-write");
         posts.MapGet("/{id:guid}/comments", GetComments);
         posts.MapPost("/{id:guid}/comments", AddComment).RequireAuthorization().RequireRateLimiting("social-write");
         posts.MapPatch("/{id:guid}/comments/{commentId:guid}", EditComment).RequireAuthorization();
@@ -104,6 +105,7 @@ public static class SocialEndpoints
             .Include(p => p.Author)
             .Include(p => p.Likes)
             .Include(p => p.Comments)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
             .Where(p => p.AuthorId == user.Id && p.DeletedAt == null);
 
         if (before is not null)
@@ -141,6 +143,39 @@ public static class SocialEndpoints
         return Results.NoContent();
     }
 
+    /// Reposts a post "as your own" (Martin's framing) — a real new Post row you author,
+    /// carrying the original's Type/PayloadJson so it renders identically, plus a RepostOfId
+    /// attribution link. Deliberately no caption of your own on the repost itself (Body is
+    /// left null) — copying the original author's Body onto a post *you* authored would read
+    /// as if you wrote their caption yourself; the original caption is still visible via
+    /// RepostOf.Body in the attribution block.
+    private static async Task<IResult> RepostPost(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var original = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
+        if (original is null || original.DeletedAt is not null) return Results.NotFound();
+        if (original.AuthorId == userId) return Results.BadRequest(new { error = "Cannot repost your own post." });
+
+        var repost = new Post
+        {
+            AuthorId = userId,
+            Type = original.Type,
+            Body = null,
+            PayloadJson = original.PayloadJson,
+            RepostOfId = original.Id,
+            RepostOf = original,
+        };
+
+        db.Posts.Add(repost);
+        db.AddRepost(userId, original);
+        await db.SaveChangesAsync();
+
+        await db.Entry(repost).Reference(p => p.Author).LoadAsync();
+        await db.Entry(repost).Collection(p => p.Likes).LoadAsync();
+        await db.Entry(repost).Collection(p => p.Comments).LoadAsync();
+        return Results.Created($"/posts/{repost.Id}", repost.ToDto(userId));
+    }
+
     private static async Task<IResult> GetFeed(
         ClaimsPrincipal caller,
         AppDbContext db,
@@ -163,6 +198,7 @@ public static class SocialEndpoints
             .Include(p => p.Author)
             .Include(p => p.Likes)
             .Include(p => p.Comments)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
             .Where(p => followedIds.Contains(p.AuthorId) && !blocked.Contains(p.AuthorId) && p.DeletedAt == null);
 
         if (before is not null)
@@ -199,6 +235,7 @@ public static class SocialEndpoints
         };
 
         db.Posts.Add(post);
+        await db.AddMentionsAsync(post.AuthorId, post.Body, post.Id);
         await db.SaveChangesAsync();
 
         await db.Entry(post).Reference(p => p.Author).LoadAsync();
@@ -217,6 +254,7 @@ public static class SocialEndpoints
             .Include(p => p.Author)
             .Include(p => p.Likes)
             .Include(p => p.Comments)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
             .FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
         if (post.AuthorId != caller.GetUserId()) return Results.Forbid();
@@ -247,6 +285,7 @@ public static class SocialEndpoints
             .Include(p => p.Author)
             .Include(p => p.Likes)
             .Include(p => p.Comments)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
             .FirstOrDefaultAsync(p => p.Id == id && p.DeletedAt == null);
         if (post is null) return Results.NotFound();
 
@@ -318,6 +357,7 @@ public static class SocialEndpoints
 
         db.Comments.Add(comment);
         db.AddComment(caller.GetUserId(), post, comment.Id);
+        await db.AddMentionsAsync(comment.AuthorId, comment.Body, post.Id, comment.Id);
         await db.SaveChangesAsync();
         await db.Entry(comment).Reference(c => c.Author).LoadAsync();
 
