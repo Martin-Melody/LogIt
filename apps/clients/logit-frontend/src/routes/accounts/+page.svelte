@@ -99,7 +99,7 @@
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{account.displayName || account.username}</p>
                 <p class="text-[10px] text-muted-foreground">
-                  {account.serverUserId ? "Synced account" : account.passwordHash ? "Password protected" : "Local only"}
+                  {account.serverUserId ? "Linked account" : account.passwordHash ? "Password protected" : "Local only"}
                 </p>
               </div>
               {#if account.id === activeId}
