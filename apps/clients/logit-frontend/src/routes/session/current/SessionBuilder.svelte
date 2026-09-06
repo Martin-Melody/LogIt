@@ -11,7 +11,7 @@
   import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import type { WorkoutSession, SessionBlock } from "@logit/core/domain/workout";
-  import { addExercise, addCardioBlock, removeExercise, getExercises } from "@logit/core/domain/workout";
+  import { addExercise, addCardioBlock, removeExercise, getExercises, setSessionNote } from "@logit/core/domain/workout";
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
@@ -63,6 +63,11 @@
   let recapSession = $state<WorkoutSession | null>(null);
   let shareSession = $state<WorkoutSession | null>(null);
   let hasPreviousSession = $state(false);
+  let noteOpen = $state(false);
+
+  async function saveNote(value: string) {
+    await onMutate((s) => setSessionNote(s, value));
+  }
   let finishBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
   let addButtonBottom = $state(0);
@@ -437,6 +442,28 @@
             </div>
           {/if}
         {/each}
+      </div>
+
+      <!-- Session note -->
+      <div class="px-3 py-3 border-t border-border/50">
+        {#if noteOpen || $currentSession?.note}
+          <textarea
+            rows="2"
+            placeholder="Session note — how it felt, sleep, anything…"
+            class="w-full rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+            value={$currentSession?.note ?? ""}
+            disabled={ui.saving || ui.finishing}
+            onblur={(e) => void saveNote((e.currentTarget as HTMLTextAreaElement).value)}
+          ></textarea>
+        {:else}
+          <button
+            type="button"
+            class="text-xs text-muted-foreground hover:text-foreground"
+            onclick={() => (noteOpen = true)}
+          >
+            + Session note
+          </button>
+        {/if}
       </div>
     {/if}
   {/if}

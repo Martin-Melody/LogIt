@@ -547,6 +547,23 @@ test.describe("finish session", () => {
     await expect(page.getByText("Workout complete")).toBeVisible();
   });
 
+  test("a session note is saved and shown on the recap", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "+ Session note" }).click();
+    const note = page.locator('textarea[placeholder^="Session note"]');
+    await note.fill("felt strong today");
+    await note.blur();
+
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("felt strong today")).toBeVisible();
+  });
+
   test("recap screen shows session stats", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([
