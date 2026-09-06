@@ -80,15 +80,18 @@ public static class Notifications
         });
     }
 
-    public static void AddRepost(this AppDbContext db, Guid actorId, Post original)
+    /// Notify the original author that their post was reposted. Pass `quote` when it's a
+    /// quote repost — the notification then points at the quote (so the author can read the
+    /// commentary) rather than back at their own post.
+    public static void AddRepost(this AppDbContext db, Guid actorId, Post original, Post? quote = null)
     {
         if (original.AuthorId == actorId) return;
         db.Notifications.Add(new Notification
         {
             UserId = original.AuthorId,
             ActorId = actorId,
-            Type = NotificationType.Repost,
-            PostId = original.Id,
+            Type = quote is not null ? NotificationType.Quote : NotificationType.Repost,
+            PostId = quote?.Id ?? original.Id,
         });
     }
 

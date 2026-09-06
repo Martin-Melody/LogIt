@@ -103,4 +103,59 @@ test.describe("social redesign - requires API", () => {
     await page.goto("/social");
     await expect(page.getByText("redesigned feed smoke test")).toHaveCount(0);
   });
+
+  test("repost + quote: feed rendering, dedup guard, notifications", async ({ page }) => {
+    const alice = await register(uniq("rp_alice"));
+    const bob = await register(uniq("rp_bob"));
+    await fetch(`${API}/users/${alice.user.username}/follow`, { method: "POST", headers: authed(bob.accessToken) });
+
+    const original = await (await fetch(`${API}/posts`, {
+      method: "POST", headers: authed(alice.accessToken),
+      body: JSON.stringify({
+        type: "PersonalRecord", body: "new squat PR",
+        payloadJson: JSON.stringify({ exerciseName: "Squat", weight: 150, unit: "kg", reps: 1 }),
+      }),
+    })).json();
+
+    // ---- Plain repost: a new Text row that carries no payload of its own ----
+    const repost = await (await fetch(`${API}/posts/${original.id}/repost`, {
+      method: "POST", headers: authed(bob.accessToken), body: JSON.stringify({ body: null }),
+    })).json();
+    expect(repost.type).toBe("Text");
+    expect(repost.payloadJson).toBeNull();
+    expect(repost.repostOf.id).toBe(original.id);
+
+    // ---- One plain repost per post ----
+    const dup = await fetch(`${API}/posts/${original.id}/repost`, {
+      method: "POST", headers: authed(bob.accessToken), body: JSON.stringify({ body: null }),
+    });
+    expect(dup.status).toBe(409);
+
+    // ---- Quote repost: your commentary + the original as a nested card ----
+    const quote = await (await fetch(`${API}/posts/${original.id}/repost`, {
+      method: "POST", headers: authed(bob.accessToken), body: JSON.stringify({ body: "huge lift @" + alice.user.username }),
+    })).json();
+    expect(quote.body).toContain("huge lift");
+    expect(quote.repostOf.id).toBe(original.id);
+
+    // ---- Bob's own feed shows both, and the reposted PR still renders as a PR card ----
+    await asUser(page, bob);
+    await page.goto("/social");
+    await expect(page.getByText("You reposted")).toBeVisible();
+    await expect(page.getByText("huge lift", { exact: false })).toBeVisible();
+    await expect(page.getByText("PERSONAL RECORD").first()).toBeVisible();
+
+    // ---- Alice is notified for the repost, the quote, and the mention inside the quote ----
+    await page.context().clearCookies();
+    await asUser(page, alice);
+    await page.goto("/social/notifications");
+    await expect(page.getByText(/reposted your post/i)).toBeVisible();
+    await expect(page.getByText(/quoted your post/i)).toBeVisible();
+
+    // ---- Quoting a plain repost attributes to the original, not the empty repost row ----
+    const requote = await (await fetch(`${API}/posts/${repost.id}/repost`, {
+      method: "POST", headers: authed(alice.accessToken), body: JSON.stringify({ body: "quoting the repost" }),
+    })).json();
+    expect(requote.repostOf.id).toBe(original.id);
+  });
 });

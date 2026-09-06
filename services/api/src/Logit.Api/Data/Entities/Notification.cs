@@ -2,7 +2,9 @@ namespace Logit.Api.Data.Entities;
 
 // Mention/Repost appended at the end deliberately — stored as a plain int, a member inserted
 // elsewhere would renumber (and thus reinterpret) every existing row's stored value.
-public enum NotificationType { Like, Comment, Follow, Mention, Repost }
+// Stored as its underlying int (EF default) — new members go at the end so existing
+// rows keep their meaning.
+public enum NotificationType { Like, Comment, Follow, Mention, Repost, Quote }
 
 /// An in-app notification for a user — someone liked/commented on their post, or
 /// followed them. Created as a side effect of the corresponding social action.

@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import {
     Heart, MessageCircle, MoreHorizontal, Loader2, Check, X,
-    Link2, Flag, Ban, Pencil, Trash2, Repeat2,
+    Link2, Flag, Ban, Pencil, Trash2, Repeat2, Quote,
   } from "lucide-svelte";
   import { socialApi, type ApiPost } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
@@ -14,6 +14,8 @@
   import PostAttachment from "./PostAttachment.svelte";
   import MentionText from "./MentionText.svelte";
   import ReportSheet from "./ReportSheet.svelte";
+  import QuotedPost from "./QuotedPost.svelte";
+  import QuoteSheet from "./QuoteSheet.svelte";
 
   interface Props {
     post: ApiPost;
@@ -43,6 +45,7 @@
   let confirmDelete = $state(false);
   let deleting = $state(false);
   let reposting = $state(false);
+  let quoteOpen = $state(false);
 
   $effect(() => {
     if (menuOpen) { openOverlay(); return () => closeOverlay(); }
@@ -121,6 +124,7 @@
       toast.success("Reposted to your profile");
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) toast.error("Your session expired — sign in again");
+      else if (e instanceof ApiError && e.status === 409) toast.info("You've already reposted this");
       else if (e instanceof ApiError && e.message) toast.error(e.message);
       else toast.error("Couldn't repost this");
     } finally {
@@ -146,14 +150,28 @@
   }
 </script>
 
-<article class="px-4 py-3 flex flex-col gap-2">
+{#snippet content()}
   {#if p.repostOf}
+    {#if p.body}
+      <MentionText text={p.body} class="text-sm whitespace-pre-wrap break-words" />
+    {/if}
+    <QuotedPost source={p.repostOf} />
+  {:else}
+    {#if p.body}
+      <MentionText text={p.body} class="text-sm whitespace-pre-wrap break-words" />
+    {/if}
+    <PostAttachment post={p} />
+  {/if}
+{/snippet}
+
+<article class="px-4 py-3 flex flex-col gap-2">
+  {#if p.repostOf && !p.body}
     <button
       type="button"
       class="flex items-center gap-1.5 text-xs text-muted-foreground -mb-1 self-start hover:text-foreground transition-colors"
-      onclick={(e) => { e.stopPropagation(); void goto(`/social/${p.repostOf!.authorUsername}`); }}
+      onclick={(e) => { e.stopPropagation(); void goto(`/social/${p.authorUsername}`); }}
     >
-      <Repeat2 class="h-3.5 w-3.5" /> Reposted from @{p.repostOf.authorUsername}
+      <Repeat2 class="h-3.5 w-3.5" /> {isOwn ? "You reposted" : `${p.authorDisplayName} reposted`}
     </button>
   {/if}
 
@@ -204,25 +222,18 @@
         </button>
       </div>
     </div>
-  {:else}
+  {:else if href}
     <div
-      class="flex flex-col gap-2 {href ? 'cursor-pointer' : ''}"
-      role={href ? "link" : undefined}
-      tabindex={href ? 0 : undefined}
+      class="flex flex-col gap-2 cursor-pointer"
+      role="link"
+      tabindex="0"
       onclick={openCard}
-      onkeydown={(e) => { if (href && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCard(); } }}
+      onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCard(); } }}
     >
-      {#if p.repostOf?.deleted}
-        <p class="text-sm text-muted-foreground italic">Original post was deleted.</p>
-      {:else}
-        {#if p.body}
-          <MentionText text={p.body} class="text-sm whitespace-pre-wrap break-words" />
-        {:else if p.repostOf?.body}
-          <MentionText text={p.repostOf.body} class="text-sm whitespace-pre-wrap break-words" />
-        {/if}
-        <PostAttachment post={p} />
-      {/if}
+      {@render content()}
     </div>
+  {:else}
+    <div class="flex flex-col gap-2">{@render content()}</div>
   {/if}
 
   <!-- Actions -->
@@ -262,6 +273,9 @@
           Repost
         </button>
       {/if}
+      <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={() => { menuOpen = false; quoteOpen = true; }}>
+        <Quote class="h-4 w-4 text-muted-foreground" /> Quote
+      </button>
       {#if isOwn}
         <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={startEdit}>
           <Pencil class="h-4 w-4 text-muted-foreground" /> Edit post
@@ -288,6 +302,8 @@
   what="post"
   onclose={() => (reportOpen = false)}
 />
+
+<QuoteSheet open={quoteOpen} post={p} onclose={() => (quoteOpen = false)} />
 
 <!-- Block confirm -->
 {#if confirmBlock}
