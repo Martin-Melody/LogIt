@@ -4,8 +4,10 @@
   import { AreaChart } from "layerchart";
   import * as Chart from "$lib/components/ui/chart";
   import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "@logit/core/usecases/progression/getExerciseAnalytics";
+  import { getExerciseProgressStory, type ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
   import type { AnalyticsSeries } from "@logit/core/domain/analytics";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import ProgressStatusChip from "./ProgressStatusChip.svelte";
 
   const { exercise }: { exercise: { id?: string; name: string } } = $props();
 
@@ -15,6 +17,7 @@
 
   let loading = $state(true);
   let analyticsResult = $state<ExerciseAnalyticsResult | null>(null);
+  let story = $state<ExerciseProgressStory | null>(null);
   let activeSeries = $state<string>("");
 
   const analytics = $derived(analyticsResult?.output ?? null);
@@ -36,12 +39,15 @@
     void key;
     loading = true;
     analyticsResult = null;
+    story = null;
     activeSeries = "";
-    void getExerciseAnalytics(exercise, getProgressionDeps()).then((result) => {
+    const deps = getProgressionDeps();
+    void getExerciseAnalytics(exercise, deps).then((result) => {
       analyticsResult = result;
       activeSeries = result?.output.series[0]?.metricId ?? "";
       loading = false;
     });
+    void getExerciseProgressStory(exercise, deps).then((s) => (story = s)).catch(() => {});
   });
 </script>
 
@@ -51,6 +57,31 @@
   {:else if !analytics}
     <p class="text-sm text-muted-foreground py-6 text-center">No history yet — log a set to see progression.</p>
   {:else}
+    <!-- Progress story — status + the actual next-session decision -->
+    {#if story}
+      <div class="flex flex-col gap-2 rounded-lg border border-border px-3 py-3">
+        <div class="flex items-center justify-between gap-2">
+          <ProgressStatusChip status={story.status} />
+          <span class="text-xs text-muted-foreground">{story.statusDetail}</span>
+        </div>
+        {#if story.nextTarget}
+          <p class="text-sm">
+            <span class="text-muted-foreground">Next session:</span>
+            <span class="font-medium">{story.nextTarget}</span>
+          </p>
+        {/if}
+        {#if story.nextNote}
+          <p class="text-xs text-amber-600 dark:text-amber-400">{story.nextNote}</p>
+        {/if}
+        {#if story.lastPr}
+          <p class="text-xs text-muted-foreground">
+            Last PR {story.lastPr.value} ·
+            {new Date(story.lastPr.whenMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+          </p>
+        {/if}
+      </div>
+    {/if}
+
     <!-- Metrics grid — rendered from whatever the algorithm returns -->
     <div class="grid gap-2" style="grid-template-columns: repeat({Math.min(analytics.metrics.length, 4)}, 1fr)">
       {#each analytics.metrics as metric (metric.id)}

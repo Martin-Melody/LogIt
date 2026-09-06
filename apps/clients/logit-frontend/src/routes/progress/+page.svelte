@@ -2,14 +2,14 @@
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
+  import ProgressStatusChip from "$lib/features/exercise/components/ProgressStatusChip.svelte";
+  import Sparkline from "$lib/features/exercise/components/Sparkline.svelte";
   import { getProgressData } from "@logit/core/usecases/progression/getProgressData";
   import type { ExerciseProgressData } from "@logit/core/usecases/progression/getProgressData";
+  import { classifyTrend, type ProgressStatus } from "@logit/core/domain/progression";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 
-  const ui = $state({
-    loading: true,
-    error: null as string | null,
-  });
+  const ui = $state({ loading: true, error: null as string | null });
 
   let exercises = $state<ExerciseProgressData[]>([]);
   let selected = $state<string | null>(null);
@@ -18,22 +18,52 @@
     exercises.find((e) => e.exerciseName === selected) ?? null,
   );
 
+  // Attention rank — stuck / declining lifts float to the top of the list.
+  const STATUS_RANK: Record<ProgressStatus, number> = {
+    regressing: 0, plateaued: 1, detraining: 2, progressing: 3, new: 4,
+  };
+
+  type Row = ExerciseProgressData & {
+    status: ProgressStatus;
+    detail: string;
+    spark: number[];
+    lastMs: number;
+    headline: string;
+  };
+
+  const rows = $derived.by<Row[]>(() => {
+    const now = Date.now();
+    return exercises
+      .map((ex) => {
+        const spark = ex.dataPoints.map((p) => p.maxWeight);
+        const lastMs = ex.dataPoints[ex.dataPoints.length - 1]?.date ?? 0;
+        const t = classifyTrend({ values: spark, lastTrainedMs: lastMs, nowMs: now });
+        const detail =
+          t.status === "progressing"
+            ? t.sessionsSincePr <= 1 ? "New best last session" : `≈ +${t.slopePctPerSession.toFixed(1)}% / session`
+            : t.status === "regressing"
+              ? `≈ ${t.slopePctPerSession.toFixed(1)}% / session`
+              : t.status === "plateaued"
+                ? `No new best in ${t.sessionsSincePr} sessions`
+                : t.status === "detraining"
+                  ? `${Math.round((now - lastMs) / 86_400_000)} days since`
+                  : `${ex.dataPoints.length} sessions`;
+        return {
+          ...ex,
+          status: t.status,
+          detail,
+          spark,
+          lastMs,
+          headline: `${spark[spark.length - 1]}kg`,
+        };
+      })
+      .sort((a, b) =>
+        STATUS_RANK[a.status] - STATUS_RANK[b.status] || b.lastMs - a.lastMs,
+      );
+  });
+
   function formatDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
-  }
-
-  function trend(data: ExerciseProgressData): "up" | "down" | "flat" {
-    const pts = data.dataPoints;
-    if (pts.length < 2) return "flat";
-    const first = pts[0].maxWeight;
-    const last = pts[pts.length - 1].maxWeight;
-    if (last > first) return "up";
-    if (last < first) return "down";
-    return "flat";
-  }
-
-  function selectExercise(name: string) {
-    selected = name;
   }
 
   async function load() {
@@ -41,9 +71,7 @@
     ui.error = null;
     try {
       exercises = await getProgressData(getProgressionDeps());
-      if (exercises.length > 0) {
-        selectExercise(exercises[0].exerciseName);
-      }
+      if (exercises.length > 0 && !selected) selected = rows[0]?.exerciseName ?? exercises[0].exerciseName;
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load progress";
     } finally {
@@ -56,19 +84,9 @@
 
 <div class="p-3 flex flex-col gap-3 pb-32">
   {#if ui.loading}
-    <Card.Root>
-      <Card.Content class="pt-6">
-        <p class="text-sm text-muted-foreground">Loading…</p>
-      </Card.Content>
-    </Card.Root>
-
+    <Card.Root><Card.Content class="pt-6"><p class="text-sm text-muted-foreground">Loading…</p></Card.Content></Card.Root>
   {:else if ui.error}
-    <Card.Root>
-      <Card.Content class="pt-6">
-        <p class="text-sm text-destructive">{ui.error}</p>
-      </Card.Content>
-    </Card.Root>
-
+    <Card.Root><Card.Content class="pt-6"><p class="text-sm text-destructive">{ui.error}</p></Card.Content></Card.Root>
   {:else if exercises.length === 0}
     <Card.Root>
       <Card.Header>
@@ -78,9 +96,7 @@
         </Card.Description>
       </Card.Header>
     </Card.Root>
-
   {:else}
-    <!-- Detail panel -->
     {#if selectedExercise}
       <Card.Root>
         <Card.Header class="pb-2">
@@ -92,48 +108,37 @@
               </Card.Description>
             </div>
             {#if selectedExercise.exerciseId}
-              <a
-                href="/exercises/{selectedExercise.exerciseId}"
-                class="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground shrink-0 pt-0.5"
-              >
+              <a href="/exercises/{selectedExercise.exerciseId}" class="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground shrink-0 pt-0.5">
                 View details
               </a>
             {/if}
           </div>
         </Card.Header>
-
         <Card.Content>
-          <ExerciseProgressionPanel
-            exercise={{ id: selectedExercise.exerciseId, name: selectedExercise.exerciseName }}
-          />
+          <ExerciseProgressionPanel exercise={{ id: selectedExercise.exerciseId, name: selectedExercise.exerciseName }} />
         </Card.Content>
       </Card.Root>
     {/if}
 
-    <!-- Exercise list -->
     <Card.Root>
-      <Card.Header class="pb-2">
-        <Card.Title>Exercises</Card.Title>
-      </Card.Header>
+      <Card.Header class="pb-2"><Card.Title>Exercises</Card.Title></Card.Header>
       <Card.Content class="pt-0">
-        {#each exercises as ex (ex.exerciseName)}
-          {@const t = trend(ex)}
+        {#each rows as ex (ex.exerciseName)}
           {@const isSelected = selected === ex.exerciseName}
           <button
             type="button"
-            class="flex items-center justify-between w-full py-3 border-b last:border-0 border-border text-left transition-opacity {isSelected ? 'opacity-100' : 'opacity-60'}"
-            onclick={() => selectExercise(ex.exerciseName)}
+            class="flex items-center gap-3 w-full py-3 border-b last:border-0 border-border text-left transition-opacity {isSelected ? 'opacity-100' : 'opacity-70 hover:opacity-100'}"
+            onclick={() => (selected = ex.exerciseName)}
           >
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <p class="text-sm font-medium truncate">{ex.exerciseName}</p>
-              <p class="text-xs text-muted-foreground">
-                {ex.dataPoints[ex.dataPoints.length - 1].maxWeight}kg · {ex.dataPoints.length} sessions
-              </p>
+              <div class="flex items-center gap-2 mt-1">
+                <ProgressStatusChip status={ex.status} />
+                <span class="text-xs text-muted-foreground truncate">{ex.detail}</span>
+              </div>
             </div>
-            <span class="text-xs shrink-0 ml-3 {t === 'up' ? 'text-chart-1' : t === 'down' ? 'text-destructive' : 'text-muted-foreground'}">
-              {#if t === "up"}↑{:else if t === "down"}↓{:else}—{/if}
-              {formatDate(ex.dataPoints[ex.dataPoints.length - 1].date)}
-            </span>
+            <Sparkline values={ex.spark} class="shrink-0" />
+            <span class="text-sm font-semibold tabular-nums shrink-0 w-14 text-right">{ex.headline}</span>
           </button>
         {/each}
       </Card.Content>
