@@ -9,6 +9,7 @@
   import type { Machine } from "@logit/core/domain/exercise";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
+  import { snapToMachine, machineWeightsKg } from "@logit/core/domain/machine";
   import SetTypePicker from "./SetTypePicker.svelte";
 
   type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">;
@@ -59,6 +60,23 @@
   let noteExpanded = $state(false);
   let moreOpen = $state(false);
   let lastKey = $state<string | null>(null);
+
+  const activeMachine = $derived(machines.find((m: Machine) => m.id === draft.machineId));
+  const machineHasWeights = $derived(!!activeMachine && !!machineWeightsKg(activeMachine));
+
+  /** kg <-> display for the weight input, rounding to the current unit. */
+  function toInput(kg: number): number {
+    return roundDisplayWeight(toDisplayWeight(kg, weightUnit), weightUnit);
+  }
+
+  function pickMachine(id: string) {
+    draft.machineId = id;
+    const m = machines.find((mm: Machine) => mm.id === id);
+    if (m && machineWeightsKg(m) && draft.weight != null) {
+      // Snap the entered weight to something this machine can actually be set to.
+      draft.weight = toInput(snapToMachine(m, fromDisplayWeight(draft.weight, weightUnit)).kg);
+    }
+  }
 
   $effect(() => {
     if (!open || !initial) return;
@@ -129,9 +147,14 @@
     e.preventDefault();
     if (disabled) return;
 
+    let weightKg = draft.weight != null ? fromDisplayWeight(draft.weight, weightUnit) : 0;
+    if (activeMachine && machineWeightsKg(activeMachine)) {
+      weightKg = snapToMachine(activeMachine, weightKg).kg;
+    }
+
     const patch: Partial<Editable> = {
       reps: Math.max(0, draft.reps ?? 0),
-      weight: draft.weight != null ? fromDisplayWeight(draft.weight, weightUnit) : 0,
+      weight: weightKg,
       setType: draft.setType,
       note: draft.note?.trim() || null,
       restDurationMs: draft.restDurationMs,
@@ -262,16 +285,21 @@
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
                     {disabled}
-                    onclick={() => (draft.machineId = m.id)}
+                    onclick={() => pickMachine(m.id)}
                   >
                     {m.name}
                   </button>
                 {/each}
               </div>
             {/if}
+            {#if machineHasWeights}
+              <p class="text-xs text-muted-foreground">
+                Weight snaps to {activeMachine?.name}'s settings.
+              </p>
+            {/if}
             {#if exerciseId}
               <a href="/exercises/{exerciseId}" class="text-xs text-muted-foreground underline hover:text-foreground self-start">
-                {machines.length > 0 ? "Add another machine" : "No machines set up for this exercise yet — add one"}
+                {machines.length > 0 ? "Edit machines" : "No machines set up for this exercise yet — add one"}
               </a>
             {/if}
           </div>

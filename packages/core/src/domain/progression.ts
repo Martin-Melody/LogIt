@@ -103,10 +103,15 @@ export function exerciseKey(exercise: { id?: string; name: string }): string {
 
 // historyNewestFirst must be sorted newest-first (matches getSuggestion.ts's ordering,
 // which differs from getExerciseHistory.ts's oldest-first — don't mix the two).
-export function resolveExerciseIncrement(
+
+/**
+ * The machine most relevant to this exercise right now: the one used in the most
+ * recent logged set, else the exercise's default machine.
+ */
+export function resolveExerciseMachine(
   exercise: { machines?: Machine[]; defaultMachineId?: string },
   historyNewestFirst: ExerciseHistoryEntry[],
-): number | undefined {
+): Machine | undefined {
   const machines = exercise.machines ?? [];
   if (machines.length === 0) return undefined;
 
@@ -114,9 +119,16 @@ export function resolveExerciseIncrement(
     for (const set of entry.sets) {
       if (!set.machineId) continue;
       const m = machines.find((mm) => mm.id === set.machineId);
-      if (m) return m.incrementKg;
+      if (m) return m;
     }
   }
 
-  return machines.find((m) => m.id === exercise.defaultMachineId)?.incrementKg;
+  return machines.find((m) => m.id === exercise.defaultMachineId);
+}
+
+export function resolveExerciseIncrement(
+  exercise: { machines?: Machine[]; defaultMachineId?: string },
+  historyNewestFirst: ExerciseHistoryEntry[],
+): number | undefined {
+  return resolveExerciseMachine(exercise, historyNewestFirst)?.incrementKg;
 }
