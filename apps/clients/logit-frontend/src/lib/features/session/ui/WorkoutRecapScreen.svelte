@@ -4,8 +4,13 @@
   import type { WorkoutSession, CardioBlockData } from "@logit/core/domain/workout";
   import { getExercises, getTopSetHighlight } from "@logit/core/domain/workout";
   import { formatDuration } from "@logit/core/domain/time";
+  import { toDisplayWeight, formatWeight } from "@logit/core/domain/units";
+  import { get } from "svelte/store";
 
   import { authStore } from "$lib/api/authStore.svelte";
+  import { profile } from "$lib/stores/profile.store";
+
+  const weightUnit = get(profile).weightUnit;
 
   const { session, onDone, onCancel, onShare }: {
     session: WorkoutSession;
@@ -41,7 +46,9 @@
     { label: "Duration", value: formatDuration(durationMs) },
     { label: "Blocks", value: String(session.blocks.length) },
     ...(totalSets > 0 ? [{ label: "Sets", value: String(totalSets) }] : []),
-    ...(totalVolume > 0 ? [{ label: "Volume", value: `${totalVolume.toLocaleString()} kg` }] : []),
+    ...(totalVolume > 0
+      ? [{ label: "Volume", value: `${Math.round(toDisplayWeight(totalVolume, weightUnit)).toLocaleString()} ${weightUnit}` }]
+      : []),
     ...(totalCardioDistanceM > 0 ? [{ label: "Distance", value: formatDistance(totalCardioDistanceM) }] : []),
     ...(totalCardioDurationMs > 0 ? [{ label: "Cardio time", value: formatDuration(totalCardioDurationMs) }] : []),
   ];
@@ -74,7 +81,7 @@
       <p class="text-sm font-semibold mt-0.5">
         {topSet.exerciseName}
         <span class="font-normal text-muted-foreground">
-          · {topSet.reps} reps @ {topSet.weight} kg
+          · {topSet.reps} reps @ {formatWeight(topSet.weight, weightUnit)}
         </span>
       </p>
     </div>

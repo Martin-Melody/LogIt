@@ -534,3 +534,46 @@ test.describe("finish session", () => {
     expect(draft).toBeNull();
   });
 });
+
+// ── Discard session ───────────────────────────────────────────────────────────
+
+test.describe("discard session", () => {
+  test("'Discard workout' asks for confirmation before discarding", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Discard workout" }).click();
+
+    // Confirm dialog — the draft is untouched until the user confirms
+    await expect(page.getByText("Discard this workout?")).toBeVisible();
+    const draftStillThere = await page.evaluate(() => localStorage.getItem("logit:draft:v1"));
+    expect(draftStillThere).not.toBeNull();
+
+    await page.getByRole("button", { name: "Keep going" }).click();
+    await expect(page.getByText("Discard this workout?")).not.toBeVisible();
+    await expect(page.getByText("Bench Press")).toBeVisible();
+  });
+
+  test("confirming discard clears the draft and navigates home", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Discard workout" }).click();
+    await page.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });
+
+    await page.waitForFunction(
+      () => localStorage.getItem("logit:draft:v1") === null,
+      { timeout: 5000 },
+    );
+  });
+});

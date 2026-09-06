@@ -4,6 +4,8 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { ProgressionOutput, SuggestedSet } from "@logit/core/domain/progression";
   import type { GripAction } from "$lib/features/session/blocks/types";
+  import type { WeightUnit } from "@logit/core/domain/units";
+  import { formatWeight } from "@logit/core/domain/units";
 
   const {
     exerciseName = "",
@@ -12,6 +14,7 @@
     collapsed = false,
     hasActiveTimer = false,
     suggestion = null,
+    weightUnit = "kg",
     gripAction,
     onAddSet = () => {},
     onRename = () => {},
@@ -25,6 +28,7 @@
     collapsed?: boolean;
     hasActiveTimer?: boolean;
     suggestion?: ProgressionOutput | null;
+    weightUnit?: WeightUnit;
     gripAction: GripAction;
     onAddSet?: () => void | Promise<void>;
     onRename?: (nextName: string) => void | Promise<void>;
@@ -44,9 +48,10 @@
     const allSame = sets.every(
       (x) => x.weight === first.weight && JSON.stringify(x.reps) === JSON.stringify(first.reps),
     );
+    const w = (kg: number) => formatWeight(kg, weightUnit, { space: false });
     const setsStr = allSame
-      ? `${sets.length}×${formatReps(first.reps)} @ ${first.weight}kg`
-      : sets.map((x) => `${formatReps(x.reps)}@${x.weight}kg`).join(", ");
+      ? `${sets.length}×${formatReps(first.reps)} @ ${w(first.weight)}`
+      : sets.map((x) => `${formatReps(x.reps)}@${w(x.weight)}`).join(", ");
     return s.label ? `${setsStr} · ${s.label}` : setsStr;
   }
 

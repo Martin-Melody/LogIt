@@ -1,12 +1,15 @@
 <script lang="ts">
   import { Check, GripVertical } from "lucide-svelte";
   import type { GripAction } from "$lib/features/session/blocks/types";
+  import type { WeightUnit } from "@logit/core/domain/units";
+  import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
 
   const {
     setNumber = 1,
     setType = "normal",
     reps = 0,
     weight = 0,
+    weightUnit = "kg",
     completed = false,
     disabled = false,
     gripAction,
@@ -18,6 +21,7 @@
     setType?: string;
     reps?: number;
     weight?: number;
+    weightUnit?: WeightUnit;
     completed?: boolean;
     disabled?: boolean;
     gripAction: GripAction;
@@ -25,6 +29,11 @@
     onWeightChange?: (weight: number) => void | Promise<void>;
     onComplete?: () => void | Promise<void>;
   }>();
+
+  // Weight is stored in kg; show it in the user's unit and convert edits back.
+  const displayWeight = $derived(
+    weight === 0 ? 0 : roundDisplayWeight(toDisplayWeight(weight, weightUnit), weightUnit),
+  );
 
   let repsEl = $state<HTMLInputElement | null>(null);
   let weightEl = $state<HTMLInputElement | null>(null);
@@ -113,13 +122,16 @@
     bind:this={weightEl}
     class="w-full rounded border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
     type="number"
-    step="0.5"
+    step={weightUnit === "lbs" ? "1" : "0.5"}
     placeholder="0"
-    value={weight}
+    value={displayWeight}
     {disabled}
     onfocus={selectAll}
     onkeydown={onWeightKeydown}
-    onchange={(e) => void onWeightChange(num((e.currentTarget as HTMLInputElement).value))}
+    onchange={(e) =>
+      void onWeightChange(
+        fromDisplayWeight(num((e.currentTarget as HTMLInputElement).value), weightUnit),
+      )}
   />
 
   <button
