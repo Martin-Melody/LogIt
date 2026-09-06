@@ -8,6 +8,7 @@
     blockId,
     data,
     saving,
+    grouped = false,
     gripAction,
     onDelete,
     onMutate,
@@ -16,6 +17,7 @@
     blockId: string;
     data: unknown;
     saving: boolean;
+    grouped?: boolean;
     gripAction: GripAction;
     onDelete: () => void | Promise<void>;
     onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
@@ -30,6 +32,7 @@
     {blockId}
     {data}
     {saving}
+    {grouped}
     {gripAction}
     {onDelete}
     {onMutate}

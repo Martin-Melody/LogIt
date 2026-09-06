@@ -23,6 +23,7 @@
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
   import BlockPickerSheet from "$lib/features/session/ui/BlockPickerSheet.svelte";
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
+  import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
 
@@ -219,29 +220,32 @@
   let blockDragId = $state<string | null>(null);
   let blockDragFromIdx = $state(-1);
   let blockDragToIdx = $state(-1);
+  let blockDragSpan = $state(1);
   let blockDragStartY = $state(0);
 
   function liveBlockOrder(sorted: SessionBlock[]): SessionBlock[] {
     if (!blockDragId || blockDragFromIdx === blockDragToIdx) return sorted;
     const result = [...sorted];
-    const [item] = result.splice(blockDragFromIdx, 1);
-    result.splice(blockDragToIdx, 0, item!);
+    const moving = result.splice(blockDragFromIdx, blockDragSpan);
+    result.splice(blockDragToIdx, 0, ...moving);
     return result;
   }
 
   async function commitBlockDrag() {
     const from = blockDragFromIdx;
     const to = blockDragToIdx;
+    const span = blockDragSpan;
     blockDragId = null;
     blockDragFromIdx = -1;
     blockDragToIdx = -1;
+    blockDragSpan = 1;
     if (from === to || from === -1) return;
 
     await onMutate((s) => {
       const sorted = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
       const reordered = [...sorted];
-      const [item] = reordered.splice(from, 1);
-      reordered.splice(to, 0, item!);
+      const moving = reordered.splice(from, span);
+      reordered.splice(to, 0, ...moving);
       return {
         ...s,
         blocks: s.blocks.map((b) => {
@@ -259,7 +263,7 @@
     } catch {}
   }
 
-  function makeBlockGripAction(blockId: string) {
+  function makeBlockGripAction(blockId: string, span = 1) {
     return (node: HTMLElement) => {
       function startDrag(clientY: number) {
         const s = get(currentSession);
@@ -270,6 +274,7 @@
         blockDragId = blockId;
         blockDragFromIdx = idx;
         blockDragToIdx = idx;
+        blockDragSpan = span;
         blockDragStartY = clientY;
         void hapticLight();
         return true;
@@ -284,7 +289,7 @@
           : 64;
         const newIdx = Math.max(
           0,
-          Math.min(total - 1, Math.round(blockDragFromIdx + (clientY - blockDragStartY) / rowH)),
+          Math.min(total - blockDragSpan, Math.round(blockDragFromIdx + (clientY - blockDragStartY) / rowH)),
         );
         if (newIdx !== blockDragToIdx) blockDragToIdx = newIdx;
       }
@@ -348,6 +353,36 @@
   );
 
   const liveOrderedBlocks = $derived(liveBlockOrder(sortedBlocks));
+
+  // Fold runs of consecutive blocks that share a superset id into one group.
+  type RenderItem =
+    | { kind: "block"; block: SessionBlock }
+    | { kind: "superset"; supersetId: string; blocks: SessionBlock[] };
+
+  function supersetIdOf(b: SessionBlock): string | undefined {
+    return (b.data as { superset?: { id: string } } | undefined)?.superset?.id;
+  }
+
+  const renderItems = $derived.by<RenderItem[]>(() => {
+    const items: RenderItem[] = [];
+    const blocks = liveOrderedBlocks;
+    let i = 0;
+    while (i < blocks.length) {
+      const sid = supersetIdOf(blocks[i]!);
+      if (sid) {
+        const group: SessionBlock[] = [];
+        while (i < blocks.length && supersetIdOf(blocks[i]!) === sid) group.push(blocks[i++]!);
+        if (group.length >= 2) {
+          items.push({ kind: "superset", supersetId: sid, blocks: group });
+          continue;
+        }
+        items.push({ kind: "block", block: group[0]! });
+        continue;
+      }
+      items.push({ kind: "block", block: blocks[i++]! });
+    }
+    return items;
+  });
 </script>
 
 <div
@@ -377,18 +412,30 @@
       />
     {:else}
       <div bind:this={blocksListEl}>
-        {#each liveOrderedBlocks as block, i (block.id)}
-          <div class="transition-opacity {blockDragId === block.id ? 'opacity-50' : ''}">
-            <BlockHost
-              type={block.type}
-              blockId={block.id}
-              data={block.data}
+        {#each renderItems as item (item.kind === "superset" ? item.supersetId : item.block.id)}
+          {#if item.kind === "superset"}
+            <SupersetGroup
+              supersetId={item.supersetId}
+              blocks={item.blocks}
               saving={ui.saving || ui.finishing}
-              gripAction={makeBlockGripAction(block.id)}
-              onDelete={() => onDeleteBlock(block.id)}
+              dragging={blockDragId === item.blocks[0].id}
+              groupGripAction={makeBlockGripAction(item.blocks[0].id, item.blocks.length)}
+              onDeleteBlock={onDeleteBlock}
               {onMutate}
             />
-          </div>
+          {:else}
+            <div class="transition-opacity {blockDragId === item.block.id ? 'opacity-50' : ''}">
+              <BlockHost
+                type={item.block.type}
+                blockId={item.block.id}
+                data={item.block.data}
+                saving={ui.saving || ui.finishing}
+                gripAction={makeBlockGripAction(item.block.id)}
+                onDelete={() => onDeleteBlock(item.block.id)}
+                {onMutate}
+              />
+            </div>
+          {/if}
         {/each}
       </div>
     {/if}

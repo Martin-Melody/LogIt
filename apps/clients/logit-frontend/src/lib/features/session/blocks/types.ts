@@ -7,6 +7,8 @@ export interface BlockBaseProps<T = unknown> {
   blockId: string;
   data: T;
   saving: boolean;
+  /** True when this block is rendered inside a superset / circuit group. */
+  grouped?: boolean;
   gripAction: GripAction;
   onDelete: () => void | Promise<void>;
   onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;

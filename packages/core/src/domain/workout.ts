@@ -116,11 +116,20 @@ export type SetEntry = {
   rpe?: number | null;
 };
 
+/**
+ * Marks a block as part of a superset / circuit. Blocks sharing an `id` are
+ * performed together, one set from each per round. Stored inside block `data`
+ * (not on the block) so it round-trips through the JSON `session_blocks.data`
+ * column with no schema change.
+ */
+export type SupersetInfo = { id: string; label?: string };
+
 // Data payload for a strength (exercise + sets) block
 export type StrengthBlockData = {
   exerciseName: string;
   exerciseId?: string;
   sets: SetEntry[];
+  superset?: SupersetInfo;
 };
 
 export type CardioInterval = {
@@ -134,6 +143,7 @@ export type CardioInterval = {
 export type CardioBlockData = {
   activityName: string;
   intervals: CardioInterval[];
+  superset?: SupersetInfo;
 };
 
 // Generic session block — data is typed per block type
@@ -220,7 +230,25 @@ export function removeExercise(
 ): WorkoutSession {
   const filtered = session.blocks.filter((b) => b.id !== exerciseEntryId);
   const reindexed = filtered.map((b, i) => ({ ...b, orderIndex: i }));
-  return { ...session, blocks: reindexed };
+  return normalizeSupersets({ ...session, blocks: reindexed });
+}
+
+/** Drop superset tags that ended up with fewer than two members. */
+export function normalizeSupersets(session: WorkoutSession): WorkoutSession {
+  const counts = new Map<string, number>();
+  for (const b of session.blocks) {
+    const s = blockSuperset(b);
+    if (s) counts.set(s.id, (counts.get(s.id) ?? 0) + 1);
+  }
+  const lonely = new Set([...counts].filter(([, n]) => n < 2).map(([id]) => id));
+  if (lonely.size === 0) return session;
+  return {
+    ...session,
+    blocks: session.blocks.map((b) => {
+      const s = blockSuperset(b);
+      return s && lonely.has(s.id) ? setBlockSuperset(b, undefined) : b;
+    }),
+  };
 }
 
 export function addSet(
@@ -380,6 +408,91 @@ export function swapExercise(
     exerciseName: next.exerciseName.trim(),
     exerciseId: next.exerciseId,
   }));
+}
+
+// ── Supersets / circuits ─────────────────────────────────────────────────────
+
+function blockSuperset(b: SessionBlock): SupersetInfo | undefined {
+  return (b.data as { superset?: SupersetInfo } | undefined)?.superset;
+}
+
+function setBlockSuperset(b: SessionBlock, superset: SupersetInfo | undefined): SessionBlock {
+  const data = { ...(b.data as Record<string, unknown>) };
+  if (superset) data.superset = superset;
+  else delete data.superset;
+  return { ...b, data };
+}
+
+/** Blocks in the given superset, in session order. */
+export function supersetMembers(session: WorkoutSession, supersetId: string): SessionBlock[] {
+  return [...session.blocks]
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .filter((b) => blockSuperset(b)?.id === supersetId);
+}
+
+/**
+ * Group two or more blocks into a superset: they get a shared superset id and
+ * are pulled together so they sit contiguously, at the position of the first.
+ * If any block is already in a superset, everything merges into one.
+ */
+export function groupIntoSuperset(
+  session: WorkoutSession,
+  blockIds: string[],
+  label?: string,
+): WorkoutSession {
+  const ids = new Set(blockIds);
+  const targets = session.blocks.filter((b) => ids.has(b.id));
+  if (targets.length < 2) return session;
+
+  // Reuse an existing superset id among the targets, else mint one.
+  const existingId = targets.map(blockSuperset).find((s) => s)?.id;
+  const supersetId = existingId ?? createId("superset");
+  const info: SupersetInfo = { id: supersetId, ...(label ? { label } : {}) };
+
+  // Also fold in any blocks that already shared an id with a target.
+  const foldedIds = new Set(blockIds);
+  for (const b of session.blocks) {
+    const s = blockSuperset(b);
+    if (s && targets.some((t) => blockSuperset(t)?.id === s.id)) foldedIds.add(b.id);
+  }
+
+  const sorted = [...session.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const members = sorted.filter((b) => foldedIds.has(b.id)).map((b) => setBlockSuperset(b, info));
+  const rest = sorted.filter((b) => !foldedIds.has(b.id));
+
+  const anchor = Math.min(...members.map((m) => sorted.findIndex((b) => b.id === m.id)));
+  const reordered = [...rest.slice(0, anchor), ...members, ...rest.slice(anchor)];
+
+  return {
+    ...session,
+    blocks: reordered.map((b, i) => ({ ...b, orderIndex: i })),
+  };
+}
+
+/** Break a superset apart — the blocks stay where they are, just ungrouped. */
+export function ungroupSuperset(session: WorkoutSession, supersetId: string): WorkoutSession {
+  return {
+    ...session,
+    blocks: session.blocks.map((b) =>
+      blockSuperset(b)?.id === supersetId ? setBlockSuperset(b, undefined) : b,
+    ),
+  };
+}
+
+/** Add one more round: appends a fresh set to every strength member of the group. */
+export function addSupersetRound(session: WorkoutSession, supersetId: string): WorkoutSession {
+  let next = session;
+  for (const member of supersetMembers(session, supersetId)) {
+    if (member.type !== "strength") continue;
+    const sets = (member.data as StrengthBlockData).sets;
+    const last = sets[sets.length - 1];
+    next = addSet(next, member.id, {
+      reps: 0,
+      weight: last?.weight ?? 0,
+      setType: "normal",
+    });
+  }
+  return next;
 }
 
 function updateStrengthBlock(

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight } from "lucide-svelte";
+  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2 } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { ProgressionOutput, SuggestedSet } from "@logit/core/domain/progression";
   import type { GripAction } from "$lib/features/session/blocks/types";
@@ -15,10 +15,13 @@
     hasActiveTimer = false,
     suggestion = null,
     weightUnit = "kg",
+    grouped = false,
+    canSuperset = false,
     gripAction,
     onAddSet = () => {},
     onOpenDetail = () => {},
     onSwap = () => {},
+    onSuperset = () => {},
     onDelete = () => {},
     onToggleCollapse = () => {},
     children,
@@ -30,10 +33,13 @@
     hasActiveTimer?: boolean;
     suggestion?: ProgressionOutput | null;
     weightUnit?: WeightUnit;
+    grouped?: boolean;
+    canSuperset?: boolean;
     gripAction: GripAction;
     onAddSet?: () => void | Promise<void>;
     onOpenDetail?: () => void;
     onSwap?: () => void;
+    onSuperset?: () => void | Promise<void>;
     onDelete?: () => void | Promise<void>;
     onToggleCollapse?: () => void;
     children?: import("svelte").Snippet;
@@ -62,18 +68,20 @@
 <!-- Exercise section header -->
 <div class="border-t border-border bg-muted/20" data-tour="session-exercise-header">
   <div class="flex items-center gap-2 px-3 py-2">
-    <!-- Grip handle -->
-    <button
-      type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-      style="touch-action: none"
-      use:gripAction
-      aria-label="Drag to reorder"
-      tabindex="-1"
-      disabled={saving}
-    >
-      <GripVertical class="h-3.5 w-3.5" />
-    </button>
+    {#if !grouped}
+      <!-- Grip handle -->
+      <button
+        type="button"
+        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        style="touch-action: none"
+        use:gripAction
+        aria-label="Drag to reorder"
+        tabindex="-1"
+        disabled={saving}
+      >
+        <GripVertical class="h-3.5 w-3.5" />
+      </button>
+    {/if}
 
     <!-- Collapse toggle -->
     <button
@@ -108,6 +116,18 @@
       <span class="shrink-0 flex items-center text-primary animate-pulse" aria-label="Rest timer active">
         <Timer class="h-3.5 w-3.5" />
       </span>
+    {/if}
+
+    {#if canSuperset}
+      <button
+        type="button"
+        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-primary"
+        onclick={() => void onSuperset()}
+        disabled={saving}
+        aria-label="Superset with next exercise"
+      >
+        <Link2 class="h-3.5 w-3.5" />
+      </button>
     {/if}
 
     <button
