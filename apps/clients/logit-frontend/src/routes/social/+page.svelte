@@ -22,6 +22,59 @@
   let commentPost = $state<ApiPost | null>(null);
   let sentinel = $state<HTMLDivElement | null>(null);
 
+  // Pull-to-refresh: `refreshing` above was already scaffolded (drives the spinner) but nothing
+  // ever called load("refresh") — this action wires up the actual gesture.
+  let pullDist = $state(0);
+  let dragging = $state(false);
+  const PULL_THRESHOLD = 60;
+  const PULL_MAX = 80;
+
+  function pullToRefresh(node: HTMLElement) {
+    let startY = 0;
+    let tracking = false;
+
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length !== 1 || refreshing) return;
+      // Only arm at the top of the actual scroll container (src/routes/+layout.svelte's
+      // <main>, not this page's own div) — otherwise a mid-scroll drag would fire it.
+      const mainEl = node.closest("main");
+      if (!mainEl || mainEl.scrollTop > 0) return;
+      startY = e.touches[0]!.clientY;
+      tracking = true;
+      dragging = true;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!tracking) return;
+      const dy = e.touches[0]!.clientY - startY;
+      if (dy <= 0) { pullDist = 0; return; }
+      e.preventDefault();
+      pullDist = Math.min(dy * 0.5, PULL_MAX);
+    }
+
+    function onTouchEnd() {
+      if (!tracking) return;
+      tracking = false;
+      dragging = false;
+      if (pullDist > PULL_THRESHOLD) void load("refresh");
+      pullDist = 0;
+    }
+
+    node.addEventListener("touchstart", onTouchStart, { passive: true });
+    node.addEventListener("touchmove", onTouchMove, { passive: false });
+    node.addEventListener("touchend", onTouchEnd);
+    node.addEventListener("touchcancel", onTouchEnd);
+
+    return {
+      destroy() {
+        node.removeEventListener("touchstart", onTouchStart);
+        node.removeEventListener("touchmove", onTouchMove);
+        node.removeEventListener("touchend", onTouchEnd);
+        node.removeEventListener("touchcancel", onTouchEnd);
+      },
+    };
+  }
+
   async function load(mode: "initial" | "refresh" | "more" = "initial") {
     if (!authStore.isAuthenticated) return;
     if (mode === "initial") loading = true;
@@ -50,6 +103,10 @@
       return;
     }
     void load("initial");
+    // The bell/nav badge otherwise only updates on a 60s poll or app-visibility change — stale
+    // if a notification arrived while already elsewhere in the app (see
+    // docs/bugs/social-smoke-test-findings.md #2).
+    void unreadNotifications.refresh();
   });
 
   // Infinite scroll
@@ -117,19 +174,32 @@
     </div>
 
   {:else}
-    {#if refreshing}
-      <div class="flex justify-center py-2"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
-    {/if}
-    <div class="divide-y divide-border">
-      {#each posts as post (post.id)}
-        <PostCard {post} onopencomments={(p) => (commentPost = p)} onchange={(next) => onPostChange(post.id, next)} />
-      {/each}
-    </div>
+    <div use:pullToRefresh>
+      <!-- No transform here (not even translateY(0)) — a CSS transform on this wrapper would
+           make it the containing block for every `position: fixed` descendant (PostCard's
+           overflow menu, its confirm dialogs, ReportSheet, …), anchoring them to this div's
+           box instead of the viewport. The height-animated box below already pushes the list
+           down through normal layout, which is all the rubber-band effect needs. -->
+      <div
+        class="flex justify-center overflow-hidden"
+        style="height: {refreshing ? 40 : pullDist}px; transition: {dragging ? 'none' : 'height 200ms ease-out'};"
+      >
+        <Loader2
+          class="h-4 w-4 my-2 text-muted-foreground {refreshing ? 'animate-spin' : ''}"
+          style="opacity: {refreshing ? 1 : Math.min(pullDist / PULL_THRESHOLD, 1)};"
+        />
+      </div>
+      <div class="divide-y divide-border">
+        {#each posts as post (post.id)}
+          <PostCard {post} onopencomments={(p) => (commentPost = p)} onchange={(next) => onPostChange(post.id, next)} />
+        {/each}
+      </div>
 
-    <div bind:this={sentinel} class="h-px"></div>
-    {#if loadingMore}
-      <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
-    {/if}
+      <div bind:this={sentinel} class="h-px"></div>
+      {#if loadingMore}
+        <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+      {/if}
+    </div>
   {/if}
 </div>
 
