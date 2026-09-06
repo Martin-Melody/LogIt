@@ -3,16 +3,103 @@ import { nowMs } from "./time";
 
 export const DEFAULT_REST_MS = 90_000;
 
-export type SetType = "normal" | "warmup" | "dropset" | "amrap" | "failure";
+export type SetType =
+  | "normal"
+  | "warmup"
+  | "dropset"
+  | "amrap"
+  | "failure"
+  | "rest-pause"
+  | "myo-reps";
+
+export type SetTypeMeta = {
+  type: string;
+  /** Full label — pickers, settings, history. */
+  label: string;
+  /** Short glyph for the compact row badge. Empty for "normal" (no badge). */
+  short: string;
+  /** Tailwind classes for the badge pill. Written literally so JIT keeps them. */
+  badgeClass: string;
+  /** One-line explanation shown in the set-type picker. */
+  hint: string;
+  /**
+   * True for sets that continue the previous working set rather than standing
+   * on their own (drop sets, rest-pause, myo-reps). The UI groups these under
+   * their lead set and progression ignores them as separate working sets.
+   */
+  continuation?: boolean;
+  /** Placeholder for the reps input, e.g. "Max" for AMRAP. */
+  repsPlaceholder?: string;
+};
 
 // Exported as a mutable array so plugins can push new entries at runtime.
-export const SET_TYPE_META: { type: string; label: string }[] = [
-  { type: "normal",  label: "Normal"  },
-  { type: "warmup",  label: "Warm-up" },
-  { type: "dropset", label: "Drop set" },
-  { type: "amrap",   label: "AMRAP"   },
-  { type: "failure", label: "Failure" },
+export const SET_TYPE_META: SetTypeMeta[] = [
+  {
+    type: "normal",
+    label: "Normal",
+    short: "",
+    badgeClass: "",
+    hint: "A standard working set.",
+  },
+  {
+    type: "warmup",
+    label: "Warm-up",
+    short: "W",
+    badgeClass: "text-muted-foreground border-border",
+    hint: "Preparation set — not counted as working volume.",
+  },
+  {
+    type: "amrap",
+    label: "AMRAP",
+    short: "A",
+    badgeClass: "text-amber-600 dark:text-amber-400 border-amber-500/40",
+    hint: "As many reps as possible — take it to technical failure.",
+    repsPlaceholder: "Max",
+  },
+  {
+    type: "failure",
+    label: "To failure",
+    short: "F",
+    badgeClass: "text-rose-600 dark:text-rose-400 border-rose-500/40",
+    hint: "Go until you cannot complete another rep.",
+    repsPlaceholder: "Fail",
+  },
+  {
+    type: "dropset",
+    label: "Drop set",
+    short: "D",
+    badgeClass: "text-violet-600 dark:text-violet-400 border-violet-500/40",
+    hint: "Immediately reduce the weight and keep repping.",
+    continuation: true,
+  },
+  {
+    type: "rest-pause",
+    label: "Rest-pause",
+    short: "RP",
+    badgeClass: "text-sky-600 dark:text-sky-400 border-sky-500/40",
+    hint: "Rest 10–20s, then squeeze out more reps at the same weight.",
+    continuation: true,
+    repsPlaceholder: "+reps",
+  },
+  {
+    type: "myo-reps",
+    label: "Myo-reps",
+    short: "M",
+    badgeClass: "text-teal-600 dark:text-teal-400 border-teal-500/40",
+    hint: "Short rest, then mini-sets of a few reps to failure.",
+    continuation: true,
+    repsPlaceholder: "+reps",
+  },
 ];
+
+export function setTypeMeta(type: string): SetTypeMeta {
+  return SET_TYPE_META.find((m) => m.type === type) ?? SET_TYPE_META[0]!;
+}
+
+/** True for sets that continue the previous working set (drop / rest-pause / myo). */
+export function isContinuationSet(type: string): boolean {
+  return setTypeMeta(type).continuation ?? false;
+}
 
 export type SetEntry = {
   id: string;

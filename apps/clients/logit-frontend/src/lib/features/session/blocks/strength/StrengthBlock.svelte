@@ -7,6 +7,7 @@
     updateSet,
     removeSet,
     updateExerciseName,
+    isContinuationSet,
     DEFAULT_REST_MS,
   } from "@logit/core/domain/workout";
   import { createId } from "@logit/core/domain/ids";
@@ -233,17 +234,17 @@
     let i = 0;
     while (i < sorted.length) {
       const set = sorted[i]!;
-      if (set.setType === "dropset" && groups.length > 0) {
+      if (isContinuationSet(set.setType) && groups.length > 0) {
         groups[groups.length - 1]!.drops.push(set);
         i++;
-      } else if (set.setType === "dropset") {
+      } else if (isContinuationSet(set.setType)) {
         groups.push({ lead: null, leadNum: 0, drops: [set] });
         i++;
       } else {
         leadCount++;
         const drops: SetEntry[] = [];
         i++;
-        while (i < sorted.length && sorted[i]!.setType === "dropset") {
+        while (i < sorted.length && isContinuationSet(sorted[i]!.setType)) {
           drops.push(sorted[i]!);
           i++;
         }
@@ -278,7 +279,9 @@
 
   const noopGripAction: GripAction = (_node) => ({ destroy() {} });
 
-  const workingSetCount = $derived(data.sets.filter((s) => s.setType !== "warmup").length);
+  const workingSetCount = $derived(
+    data.sets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)).length,
+  );
   const hasActiveTimer = $derived(data.sets.some((s) => typeof s.restStartedAtMs === "number"));
 
   // ── Set-level drag-to-reorder ─────────────────────────────────────────────

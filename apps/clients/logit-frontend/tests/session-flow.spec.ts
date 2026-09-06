@@ -530,8 +530,11 @@ test.describe("finish session", () => {
 
     await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });
 
-    const draft = await page.evaluate(() => localStorage.getItem("logit:draft:v1"));
-    expect(draft).toBeNull();
+    // finish() clears the draft asynchronously after navigation — poll for it.
+    await page.waitForFunction(
+      () => localStorage.getItem("logit:draft:v1") === null,
+      { timeout: 5000 },
+    );
   });
 });
 
