@@ -11,17 +11,47 @@ function notifId(setId: string): number {
   return h || 1;
 }
 
+const REST_CHANNEL_ID = "rest-timer";
+let channelReady: Promise<void> | null = null;
+
+/**
+ * A MAX-importance channel so the "rest done" alert pops as a heads-up with
+ * sound + vibration even when the app is backgrounded — a normal-importance
+ * notification is easy to miss mid-set.
+ */
+async function ensureRestChannel(): Promise<void> {
+  channelReady ??= (async () => {
+    try {
+      const { LocalNotifications } = await import("@capacitor/local-notifications");
+      if (!LocalNotifications.createChannel) return; // iOS / web
+      await LocalNotifications.createChannel({
+        id: REST_CHANNEL_ID,
+        name: "Rest timer",
+        description: "Alerts when a rest period finishes",
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+        sound: undefined, // default alarm/notification sound
+      });
+    } catch {}
+  })();
+  return channelReady;
+}
+
 async function scheduleOsNotification(setId: string, restMs: number) {
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
     const perm = await LocalNotifications.requestPermissions();
     if (perm.display !== "granted") return;
+    await ensureRestChannel();
     await LocalNotifications.schedule({
       notifications: [
         {
           id: notifId(setId),
           title: "Rest complete",
           body: "Time to start your next set!",
+          channelId: REST_CHANNEL_ID,
+          smallIcon: "ic_stat_logit",
           schedule: { at: new Date(Date.now() + restMs), allowWhileIdle: true },
         },
       ],

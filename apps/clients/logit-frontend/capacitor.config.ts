@@ -26,6 +26,11 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: false,
     },
+    LocalNotifications: {
+      // App-branded status-bar icon (white dumbbell) instead of the generic bell.
+      smallIcon: "ic_stat_logit",
+      iconColor: "#5C6BC0",
+    },
   },
 };
 
