@@ -6,6 +6,8 @@
 
   import type { SetEntry, SetType } from "@logit/core/domain/workout";
   import type { Machine } from "@logit/core/domain/exercise";
+  import type { WeightUnit } from "@logit/core/domain/units";
+  import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
   import SetTypePicker from "./SetTypePicker.svelte";
 
   type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">;
@@ -17,6 +19,7 @@
     machines = [],
     defaultMachineId = undefined,
     exerciseId = undefined,
+    weightUnit = "kg",
     onOpenChange = () => {},
     onSave = async () => {},
   } = $props<{
@@ -26,6 +29,7 @@
     machines?: Machine[];
     defaultMachineId?: string;
     exerciseId?: string;
+    weightUnit?: WeightUnit;
     onOpenChange?: (v: boolean) => void;
     onSave?: (patch: Partial<Editable>) => void | Promise<void>;
   }>();
@@ -57,7 +61,11 @@
     lastKey = key;
     draft.reps = initial.reps > 0 ? initial.reps : null;
     // Keep negatives — net assistance on bodyweight / assisted-machine movements.
-    draft.weight = initial.weight !== 0 ? initial.weight : null;
+    // `draft.weight` is in the user's display unit; storage is always kg.
+    draft.weight =
+      initial.weight !== 0
+        ? roundDisplayWeight(toDisplayWeight(initial.weight, weightUnit), weightUnit)
+        : null;
     draft.setType = initial.setType ?? "normal";
     draft.note = initial.note ?? null;
     draft.restDurationMs = initial.restDurationMs;
@@ -110,7 +118,7 @@
 
     const patch: Partial<Editable> = {
       reps: Math.max(0, draft.reps ?? 0),
-      weight: draft.weight ?? 0,
+      weight: draft.weight != null ? fromDisplayWeight(draft.weight, weightUnit) : 0,
       setType: draft.setType,
       note: draft.note?.trim() || null,
       restDurationMs: draft.restDurationMs,
@@ -191,11 +199,11 @@
           </div>
 
           <div class="flex flex-col gap-2">
-            <Label for="es-weight">Weight <span class="text-muted-foreground font-normal">(kg)</span></Label>
+            <Label for="es-weight">Weight <span class="text-muted-foreground font-normal">({weightUnit})</span></Label>
             <input
               id="es-weight"
               type="number"
-              step="0.5"
+              step={weightUnit === "lbs" ? "1" : "0.5"}
               placeholder="—"
               class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
               value={draft.weight ?? ""}

@@ -323,6 +323,11 @@
     };
   }
 
+  const sessionExercises = $derived($currentSession ? getExercises($currentSession) : []);
+  const loggedSetCount = $derived(
+    sessionExercises.reduce((n, ex) => n + ex.sets.length, 0),
+  );
+
   const sortedBlocks = $derived(
     $currentSession ? [...$currentSession.blocks].sort((a, b) => a.orderIndex - b.orderIndex) : [],
   );
@@ -341,7 +346,11 @@
     }
   }}
 >
-  <CurrentSessionHeader saving={ui.saving || ui.finishing} error={ui.error} />
+  <CurrentSessionHeader
+    saving={ui.saving || ui.finishing}
+    error={ui.error}
+    startedAtMs={$currentSession?.startedAtMs ?? null}
+  />
 
   {#if !ui.finishing}
     {#if liveOrderedBlocks.length === 0}
@@ -424,8 +433,10 @@
       class="fixed left-0 right-0 bottom-0 border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
       <FinishWorkoutCard
-        canFinish={!!$currentSession && !$currentSession.endedAtMs && getExercises($currentSession).length > 0}
+        canFinish={!!$currentSession && !$currentSession.endedAtMs && sessionExercises.length > 0}
         saving={ui.saving || ui.finishing}
+        exerciseCount={sessionExercises.length}
+        {loggedSetCount}
         onFinish={showRecap}
         onDiscard={discardSession}
       />

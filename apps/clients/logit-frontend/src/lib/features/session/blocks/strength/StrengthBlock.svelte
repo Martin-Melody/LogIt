@@ -404,6 +404,7 @@
   {suggestion}
   {collapsed}
   {hasActiveTimer}
+  weightUnit={$profile.weightUnit}
   {gripAction}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
@@ -411,7 +412,7 @@
   {onDelete}
 >
   {#if data.sets.length > 0}
-    <SetsTableHeader />
+    <SetsTableHeader weightUnit={$profile.weightUnit} />
     {@const sortedSets = [...data.sets].sort(sortByOrderIndex)}
     {@const liveSets = liveSetOrder(sortedSets)}
     {@const liveGroups = buildSetGroups(liveSets)}
@@ -430,6 +431,7 @@
               setType={lead.setType}
               reps={lead.reps}
               weight={lead.weight}
+              weightUnit={$profile.weightUnit}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
               gripAction={(node) => setGripAction(node, lead.id)}
@@ -462,6 +464,7 @@
                   setType={drop.setType}
                   reps={drop.reps}
                   weight={drop.weight}
+                  weightUnit={$profile.weightUnit}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
                   gripAction={noopGripAction}
@@ -510,6 +513,7 @@
   machines={exerciseData?.machines ?? []}
   defaultMachineId={exerciseData?.defaultMachineId}
   exerciseId={exerciseData?.id}
+  weightUnit={$profile.weightUnit}
   onOpenChange={(v) => (editSet.open = v)}
   onSave={saveSetPatch}
 />
