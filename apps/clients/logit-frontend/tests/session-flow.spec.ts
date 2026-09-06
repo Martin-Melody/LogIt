@@ -121,8 +121,28 @@ test.describe("session loads", () => {
     await seedSession(page, { session: makeSession([]) });
     await goToSession(page);
 
-    await expect(page.getByText("No exercises yet.")).toBeVisible();
-    await expect(page.getByText("Add first exercise")).toBeVisible();
+    await expect(page.getByText("Nothing logged yet.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add exercise" })).toBeVisible();
+  });
+
+  test("'Repeat last workout' clones the previous session's exercises into an empty draft", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([]),
+      history: [
+        makeCompletedSession("Bench Press", [
+          makeSet("ps1", 0, 5, 100),
+          makeSet("ps2", 1, 5, 100),
+        ]),
+      ],
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Repeat last workout" }).click();
+
+    await expect(page.getByText("Bench Press")).toBeVisible();
+    // Two sets carried over, none marked complete.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(2);
+    await expect(page.locator('[aria-label="Mark incomplete"]')).toHaveCount(0);
   });
 
   test("session with one exercise shows the exercise block", async ({ page }) => {
@@ -359,7 +379,7 @@ test.describe("managing sets", () => {
     await page.getByRole("button", { name: "Remove" }).click();
 
     await expect(page.getByText("Bench Press")).not.toBeVisible();
-    await expect(page.getByText("No exercises yet.")).toBeVisible();
+    await expect(page.getByText("Nothing logged yet.")).toBeVisible();
   });
 });
 
