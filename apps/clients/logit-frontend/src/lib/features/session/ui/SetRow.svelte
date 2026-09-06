@@ -3,6 +3,7 @@
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
+  import { setTypeMeta } from "@logit/core/domain/workout";
 
   const {
     setNumber = 1,
@@ -62,21 +63,8 @@
     }
   }
 
-  const typeLabel = $derived(() => {
-    switch (setType) {
-      case "warmup": return "W";
-      case "dropset": return "D";
-      case "amrap": return "A";
-      case "failure": return "F";
-      default: return null;
-    }
-  });
-
-  const repsPlaceholder = $derived(() => {
-    if (setType === "amrap") return "Max";
-    if (setType === "failure") return "Fail";
-    return "0";
-  });
+  const meta = $derived(setTypeMeta(setType));
+  const repsPlaceholder = $derived(meta.repsPlaceholder ?? "0");
 </script>
 
 <div
@@ -95,13 +83,16 @@
     {disabled}
   >
     <GripVertical class="h-3 w-3 shrink-0" />
-    <span class="text-xs w-4 text-right tabular-nums">
-      {#if typeLabel()}
-        <span class="font-semibold text-foreground">{typeLabel()}</span>
-      {:else}
-        {setNumber}
-      {/if}
-    </span>
+    {#if meta.short}
+      <span
+        class="text-[10px] font-bold leading-none px-1 py-0.5 rounded border tabular-nums {meta.badgeClass}"
+        title={meta.label}
+      >
+        {meta.short}
+      </span>
+    {:else}
+      <span class="text-xs w-4 text-right tabular-nums">{setNumber}</span>
+    {/if}
   </button>
 
   <input
@@ -110,7 +101,7 @@
     type="number"
     min="0"
     inputmode="numeric"
-    placeholder={repsPlaceholder()}
+    placeholder={repsPlaceholder}
     value={reps}
     {disabled}
     onfocus={selectAll}

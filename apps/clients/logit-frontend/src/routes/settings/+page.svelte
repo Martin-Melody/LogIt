@@ -36,6 +36,7 @@
   import { setMode, userPrefersMode } from "mode-watcher";
   import { authStore } from "$lib/api/authStore.svelte";
   import { apiClient, ApiError } from "@logit/core/api/client";
+  import { SET_TYPE_META } from "@logit/core/domain/workout";
   import { syncAll, pushAllLocalData, lastSyncedAt } from "$lib/sync/syncService";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
@@ -265,13 +266,9 @@
   }
 
   // --- Session preferences ---
-  const SET_TYPE_LABELS: Record<string, string> = {
-    normal: "Normal",
-    warmup: "Warm-up",
-    dropset: "Drop set",
-    amrap: "AMRAP",
-    failure: "To failure",
-  };
+  // Rest defaults are configurable per set type; the list is the single source
+  // of truth in @logit/core so plugin-registered types show up here too.
+  const restDefaultTypes = SET_TYPE_META.map((m) => ({ type: m.type, label: m.label }));
 
   function toggleRestDefault(type: string) {
     const current = $profile.restDefaults[type];
@@ -793,7 +790,7 @@
         <p class="text-xs text-muted-foreground mb-1">
           Enable and set the default rest duration for each set type.
         </p>
-        {#each Object.keys(SET_TYPE_LABELS) as type (type)}
+        {#each restDefaultTypes as { type, label } (type)}
           {@const enabled = $profile.restDefaults[type] !== undefined}
           {@const seconds = enabled
             ? Math.round(($profile.restDefaults[type] ?? 90_000) / 1000)
@@ -814,7 +811,7 @@
                   : 'translate-x-0'}"
               ></span>
             </button>
-            <span class="text-sm w-24">{SET_TYPE_LABELS[type]}</span>
+            <span class="text-sm w-24">{label}</span>
             {#if enabled}
               <div class="flex items-center gap-1.5 ml-auto">
                 <input

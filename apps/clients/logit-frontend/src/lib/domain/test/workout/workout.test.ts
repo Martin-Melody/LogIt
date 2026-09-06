@@ -1,6 +1,7 @@
 import {
   createSession, addExercise, addSet, updateSet, removeSet, removeExercise,
   getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
+  SET_TYPE_META, setTypeMeta, isContinuationSet,
 } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
 
@@ -118,5 +119,33 @@ describe("workout domain", () => {
   it("getTopSetHighlight returns null if there are no sets", () => {
     const s = createSession(1_000);
     expect(getTopSetHighlight(s)).toBeNull();
+  });
+});
+
+describe("set types", () => {
+  it("every meta entry has a label and hint", () => {
+    for (const m of SET_TYPE_META) {
+      expect(m.label.length).toBeGreaterThan(0);
+      expect(m.hint.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("setTypeMeta falls back to normal for an unknown type", () => {
+    expect(setTypeMeta("does-not-exist").type).toBe("normal");
+  });
+
+  it("drop / rest-pause / myo-reps are continuation sets, others are not", () => {
+    expect(isContinuationSet("dropset")).toBe(true);
+    expect(isContinuationSet("rest-pause")).toBe(true);
+    expect(isContinuationSet("myo-reps")).toBe(true);
+    expect(isContinuationSet("normal")).toBe(false);
+    expect(isContinuationSet("warmup")).toBe(false);
+    expect(isContinuationSet("amrap")).toBe(false);
+  });
+
+  it("normal has no badge glyph; the rest do", () => {
+    expect(setTypeMeta("normal").short).toBe("");
+    expect(setTypeMeta("warmup").short).toBe("W");
+    expect(setTypeMeta("rest-pause").short).toBe("RP");
   });
 });
