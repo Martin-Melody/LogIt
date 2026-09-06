@@ -91,7 +91,7 @@
 
   async function toggleLike(e: MouseEvent) {
     e.stopPropagation();
-    if (liking) return;
+    if (liking || isOwn) return;
     if (!authStore.isAuthenticated) { void goto("/auth?mode=login&redirect=/social"); return; }
     liking = true;
     const wasLiked = p.isLikedByMe;
@@ -239,7 +239,8 @@
     <button
       type="button"
       class="flex items-center gap-1.5 text-xs transition-colors disabled:opacity-40 {p.isLikedByMe ? 'text-rose-500' : 'text-muted-foreground hover:text-rose-500'}"
-      disabled={liking}
+      disabled={liking || isOwn}
+      aria-label={isOwn ? "Your post" : p.isLikedByMe ? "Unlike" : "Like"}
       onclick={toggleLike}
     >
       <Heart class="h-4 w-4 {p.isLikedByMe ? 'fill-rose-500' : ''}" />
