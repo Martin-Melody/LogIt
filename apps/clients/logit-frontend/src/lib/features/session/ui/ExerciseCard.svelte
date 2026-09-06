@@ -6,6 +6,7 @@
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { formatWeight } from "@logit/core/domain/units";
+  import { reveal } from "$lib/transitions";
 
   const {
     exerciseName = "",
@@ -193,6 +194,8 @@
 
 <!-- Sets -->
 {#if !collapsed}
-  {@render children?.()}
+  <div transition:reveal>
+    {@render children?.()}
+  </div>
 {/if}
 </div>

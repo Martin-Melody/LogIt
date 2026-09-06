@@ -15,6 +15,7 @@
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
+  import { reveal } from "$lib/transitions";
   import { startSessionTour, destroyActiveTour } from "$lib/tour/index";
 
   import { listBlockDefs } from "$lib/features/session/blocks/index";
@@ -419,17 +420,22 @@
       <div bind:this={blocksListEl}>
         {#each renderItems as item (item.kind === "superset" ? item.supersetId : item.block.id)}
           {#if item.kind === "superset"}
-            <SupersetGroup
-              supersetId={item.supersetId}
-              blocks={item.blocks}
-              saving={ui.saving || ui.finishing}
-              dragging={blockDragId === item.blocks[0].id}
-              groupGripAction={makeBlockGripAction(item.blocks[0].id, item.blocks.length)}
-              onDeleteBlock={onDeleteBlock}
-              {onMutate}
-            />
+            <div transition:reveal>
+              <SupersetGroup
+                supersetId={item.supersetId}
+                blocks={item.blocks}
+                saving={ui.saving || ui.finishing}
+                dragging={blockDragId === item.blocks[0].id}
+                groupGripAction={makeBlockGripAction(item.blocks[0].id, item.blocks.length)}
+                onDeleteBlock={onDeleteBlock}
+                {onMutate}
+              />
+            </div>
           {:else}
-            <div class="transition-opacity {blockDragId === item.block.id ? 'opacity-50' : ''}">
+            <div
+              class="transition-opacity {blockDragId === item.block.id ? 'opacity-50' : ''}"
+              transition:reveal
+            >
               <BlockHost
                 type={item.block.type}
                 blockId={item.block.id}
@@ -450,6 +456,7 @@
           <textarea
             rows="2"
             placeholder="Session note — how it felt, sleep, anything…"
+            transition:reveal
             class="w-full rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             value={$currentSession?.note ?? ""}
             disabled={ui.saving || ui.finishing}

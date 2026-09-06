@@ -25,6 +25,7 @@
   import { get } from "svelte/store";
   import { profile } from "$lib/stores/profile.store";
   import { startRestTimer, cancelRestTimer, hasRestTimerFired } from "$lib/services/restTimerService";
+  import { reveal } from "$lib/transitions";
   import ExerciseCard from "$lib/features/session/ui/ExerciseCard.svelte";
   import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
@@ -494,6 +495,7 @@
     {@const liveGroups = buildSetGroups(liveSets)}
     <div bind:this={setsListEl}>
       {#each liveGroups as group (group.lead?.id ?? group.drops[0]?.id)}
+        <div transition:reveal>
         {#if group.lead}
           {@const lead = group.lead}
           <SwipeRevealRow
@@ -519,12 +521,14 @@
             />
           </SwipeRevealRow>
           {#if typeof lead.restStartedAtMs === "number"}
-            <RestProgressBar
-              restStartedAtMs={lead.restStartedAtMs}
-              restDurationMs={lead.restDurationMs ?? $profile.restDefaults[lead.setType] ?? DEFAULT_REST_MS}
-              onDone={() => handleRestDone(lead.id)}
-              onDismiss={() => handleDismissRest(lead.id)}
-            />
+            <div transition:reveal>
+              <RestProgressBar
+                restStartedAtMs={lead.restStartedAtMs}
+                restDurationMs={lead.restDurationMs ?? $profile.restDefaults[lead.setType] ?? DEFAULT_REST_MS}
+                onDone={() => handleRestDone(lead.id)}
+                onDismiss={() => handleDismissRest(lead.id)}
+              />
+            </div>
           {/if}
         {/if}
 
@@ -553,12 +557,14 @@
                 />
               </SwipeRevealRow>
               {#if typeof drop.restStartedAtMs === "number"}
-                <RestProgressBar
-                  restStartedAtMs={drop.restStartedAtMs}
-                  restDurationMs={drop.restDurationMs ?? $profile.restDefaults[drop.setType] ?? DEFAULT_REST_MS}
-                  onDone={() => handleRestDone(drop.id)}
-                  onDismiss={() => handleDismissRest(drop.id)}
-                />
+                <div transition:reveal>
+                  <RestProgressBar
+                    restStartedAtMs={drop.restStartedAtMs}
+                    restDurationMs={drop.restDurationMs ?? $profile.restDefaults[drop.setType] ?? DEFAULT_REST_MS}
+                    onDone={() => handleRestDone(drop.id)}
+                    onDismiss={() => handleDismissRest(drop.id)}
+                  />
+                </div>
               {/if}
             {/each}
             <button
@@ -571,6 +577,7 @@
             </button>
           </div>
         {/if}
+        </div>
       {/each}
     </div>
   {:else}

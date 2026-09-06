@@ -4,6 +4,7 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import Textarea from "$lib/components/ui/textarea/textarea.svelte";
   import { ChevronDown, ChevronRight } from "lucide-svelte";
+  import { reveal } from "$lib/transitions";
 
   import type { SetEntry, SetType } from "@logit/core/domain/workout";
   import type { Machine } from "@logit/core/domain/exercise";
@@ -270,7 +271,7 @@
         </button>
 
         {#if moreOpen}
-        <div class="flex flex-col gap-4 border-l border-border pl-3">
+        <div class="flex flex-col gap-4 border-l border-border pl-3" transition:reveal>
 
         <!-- Machine -->
         {#if machines.length > 0 || exerciseId}
@@ -337,7 +338,7 @@
 
           <!-- Stepper — only when a time is set -->
           {#if draft.restDurationMs !== undefined}
-            <div class="flex items-center justify-between gap-2 rounded border border-border px-3 py-2">
+            <div class="flex items-center justify-between gap-2 rounded border border-border px-3 py-2" transition:reveal>
               <button
                 type="button"
                 class="h-7 w-7 flex items-center justify-center rounded text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
@@ -362,7 +363,7 @@
         <!-- Note — collapsed until expanded -->
         <div>
           {#if noteExpanded}
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-2" transition:reveal>
               <div class="flex items-center justify-between">
                 <Label for="es-note">Note</Label>
                 {#if !draft.note?.trim()}
