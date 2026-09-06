@@ -11,9 +11,12 @@ public class Post
     public DateTime? EditedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
 
-    /// Set when this post is a repost — points at the post it was reposted from. Nullable
-    /// self-reference, SetNull on delete: the repost keeps its own copied content (Type/
-    /// PayloadJson) and just loses the attribution link if the original is later deleted.
+    /// Set when this post is a repost — points at the post it was reposted from. A repost is
+    /// always a Text row: a plain repost has a null Body (client renders the quoted original
+    /// with a "reposted" marker), a quote repost carries the reposter's own commentary in Body.
+    /// Either way the shared content lives on the original and is reached via RepostOf. The
+    /// original is soft-deleted, not removed, so this link survives and the client greys the
+    /// quoted card out; SetNull is only a safety net for a hard delete.
     public Guid? RepostOfId { get; set; }
     public Post? RepostOf { get; set; }
 

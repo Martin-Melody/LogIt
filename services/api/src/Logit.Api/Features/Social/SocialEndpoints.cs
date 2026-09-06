@@ -143,31 +143,59 @@ public static class SocialEndpoints
         return Results.NoContent();
     }
 
-    /// Reposts a post "as your own" (Martin's framing) — a real new Post row you author,
-    /// carrying the original's Type/PayloadJson so it renders identically, plus a RepostOfId
-    /// attribution link. Deliberately no caption of your own on the repost itself (Body is
-    /// left null) — copying the original author's Body onto a post *you* authored would read
-    /// as if you wrote their caption yourself; the original caption is still visible via
-    /// RepostOf.Body in the attribution block.
-    private static async Task<IResult> RepostPost(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    /// Reposts a post — a real new Post row you author, linked to the original via RepostOfId.
+    /// Two flavours, both through here (Twitter/X model):
+    ///   • plain repost  — no body; the client renders it as the quoted original with a
+    ///     "reposted" marker.
+    ///   • quote repost  — Body is *your* caption about the original; the original renders as
+    ///     a nested quoted card beneath it.
+    /// The repost never carries a copy of the original's Type/PayloadJson: that content is
+    /// display-only attribution and belongs to the original, reached via RepostOf. The repost
+    /// itself is always a Text post whose "attachment" is the quoted card.
+    private static async Task<IResult> RepostPost(
+        Guid id,
+        [FromBody] RepostRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
     {
         var userId = caller.GetUserId();
-        var original = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
-        if (original is null || original.DeletedAt is not null) return Results.NotFound();
-        if (original.AuthorId == userId) return Results.BadRequest(new { error = "Cannot repost your own post." });
+        var target = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
+        if (target is null || target.DeletedAt is not null) return Results.NotFound();
+
+        // Reposting a *plain* repost (one with no commentary of its own) attributes to what it
+        // actually shares — the underlying original — so the quoted card never resolves to an
+        // empty intermediate row and quote-chains stay one level deep.
+        if (target.RepostOfId is not null && string.IsNullOrEmpty(target.Body))
+        {
+            target = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == target.RepostOfId);
+            if (target is null || target.DeletedAt is not null) return Results.NotFound();
+        }
+
+        var body = req.Body?.Trim();
+        if (string.IsNullOrEmpty(body)) body = null;
+
+        // You can quote your own post (adding commentary), but a plain repost of it is a no-op.
+        if (target.AuthorId == userId && body is null)
+            return Results.BadRequest(new { error = "Cannot repost your own post." });
+
+        // One plain repost per post — a second is a no-op (quote reposts are unlimited).
+        if (body is null && await db.Posts.AnyAsync(p =>
+                p.AuthorId == userId && p.RepostOfId == target.Id && p.Body == null && p.DeletedAt == null))
+            return Results.Conflict(new { error = "You've already reposted this." });
 
         var repost = new Post
         {
             AuthorId = userId,
-            Type = original.Type,
-            Body = null,
-            PayloadJson = original.PayloadJson,
-            RepostOfId = original.Id,
-            RepostOf = original,
+            Type = PostType.Text,
+            Body = body,
+            PayloadJson = null,
+            RepostOfId = target.Id,
+            RepostOf = target,
         };
 
         db.Posts.Add(repost);
-        db.AddRepost(userId, original);
+        db.AddRepost(userId, target, body is null ? null : repost);
+        await db.AddMentionsAsync(repost.AuthorId, repost.Body, repost.Id);
         await db.SaveChangesAsync();
 
         await db.Entry(repost).Reference(p => p.Author).LoadAsync();
@@ -431,5 +459,6 @@ public static class SocialEndpoints
 }
 
 public record CreatePostRequest(PostType Type, string? Body, string? PayloadJson);
+public record RepostRequest(string? Body);
 public record AddCommentRequest(string Body);
 public record EditBodyRequest(string Body);
