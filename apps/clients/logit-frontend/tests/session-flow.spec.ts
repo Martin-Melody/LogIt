@@ -583,6 +583,20 @@ test.describe("finish session", () => {
     await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
   });
 
+  test("recap celebrates a weight PR against history", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 3, 110)]),
+      ]),
+      history: [makeCompletedSession("Bench Press", [makeSet("ps1", 0, 5, 100)])],
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByText("Bench Press Weight PR")).toBeVisible();
+  });
+
   test("'Back to workout' cancels the recap and returns to session", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
