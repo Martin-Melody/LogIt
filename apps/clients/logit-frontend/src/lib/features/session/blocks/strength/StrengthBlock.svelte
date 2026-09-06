@@ -1,12 +1,13 @@
 <script lang="ts">
   import { toast } from "$lib/components/ui/sonner/index";
+  import { goto } from "$app/navigation";
 
   import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
   import {
     addSet,
     updateSet,
     removeSet,
-    updateExerciseName,
+    swapExercise,
     isContinuationSet,
     DEFAULT_REST_MS,
   } from "@logit/core/domain/workout";
@@ -29,6 +30,7 @@
   import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
   import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
+  import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
 
   const {
     blockId,
@@ -54,6 +56,31 @@
     open: false,
     setId: null as string | null,
   });
+
+  let swapOpen = $state(false);
+
+  async function openDetail() {
+    if (data.exerciseId) await goto(`/exercises/${data.exerciseId}`);
+  }
+
+  async function handleSwap(selection: { name: string; exerciseId?: string }) {
+    const trimmed = selection.name.trim();
+    if (!trimmed) return;
+    try {
+      let exerciseId = selection.exerciseId;
+      if (!exerciseId) {
+        const ex = await getExerciseRepo().create(trimmed);
+        exerciseId = ex.id;
+      }
+      // Let a block-mode suggestion for the new exercise auto-apply if empty.
+      blockAutoApplied = false;
+      await onMutate((s: WorkoutSession) =>
+        swapExercise(s, blockId, { exerciseName: trimmed, exerciseId }),
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't swap the exercise");
+    }
+  }
 
   $effect(() => {
     const name = data.exerciseName;
@@ -432,7 +459,8 @@
   {gripAction}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
-  onRename={(name) => onMutate((s: WorkoutSession) => updateExerciseName(s, blockId, name))}
+  onOpenDetail={openDetail}
+  onSwap={() => (swapOpen = true)}
   {onDelete}
 >
   {#if data.sets.length > 0}
@@ -532,6 +560,15 @@
     </button>
   {/if}
 </ExerciseCard>
+
+<AddExerciseDialog
+  open={swapOpen}
+  saving={saving}
+  title="Swap exercise"
+  description="Pick a different exercise — your logged sets stay."
+  onOpenChange={(v) => (swapOpen = v)}
+  onSubmit={handleSwap}
+/>
 
 <EditSetDialog
   open={editSet.open}

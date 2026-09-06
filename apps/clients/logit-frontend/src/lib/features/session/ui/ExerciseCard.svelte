@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import { Plus, X, Check, Trash2, ChevronDown, ChevronRight, GripVertical, Timer } from "lucide-svelte";
+  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { ProgressionOutput, SuggestedSet } from "@logit/core/domain/progression";
   import type { GripAction } from "$lib/features/session/blocks/types";
@@ -17,7 +17,8 @@
     weightUnit = "kg",
     gripAction,
     onAddSet = () => {},
-    onRename = () => {},
+    onOpenDetail = () => {},
+    onSwap = () => {},
     onDelete = () => {},
     onToggleCollapse = () => {},
     children,
@@ -31,7 +32,8 @@
     weightUnit?: WeightUnit;
     gripAction: GripAction;
     onAddSet?: () => void | Promise<void>;
-    onRename?: (nextName: string) => void | Promise<void>;
+    onOpenDetail?: () => void;
+    onSwap?: () => void;
     onDelete?: () => void | Promise<void>;
     onToggleCollapse?: () => void;
     children?: import("svelte").Snippet;
@@ -54,133 +56,102 @@
       : sets.map((x) => `${formatReps(x.reps)}@${w(x.weight)}`).join(", ");
     return s.label ? `${setsStr} · ${s.label}` : setsStr;
   }
-
-  const ui = $state({ editing: false, draftName: "" });
-  let inputEl = $state<HTMLInputElement | null>(null);
-
-  $effect(() => { if (ui.editing) inputEl?.focus(); });
-
-  function startEdit() {
-    ui.draftName = exerciseName;
-    ui.editing = true;
-  }
-
-  async function commit() {
-    const next = ui.draftName.trim();
-    ui.editing = false;
-    if (!next || next === exerciseName) return;
-    await onRename(next);
-  }
-
-  function cancel() {
-    ui.editing = false;
-    ui.draftName = exerciseName;
-  }
 </script>
 
 <div class="border-b border-border/50">
 <!-- Exercise section header -->
 <div class="border-t border-border bg-muted/20" data-tour="session-exercise-header">
   <div class="flex items-center gap-2 px-3 py-2">
-    {#if ui.editing}
-      <input
-        bind:this={inputEl}
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
-        bind:value={ui.draftName}
-        disabled={saving}
-        onkeydown={(e) => {
-          if (e.key === "Enter") void commit();
-          if (e.key === "Escape") cancel();
-        }}
-        onblur={() => void commit()}
-      />
-      <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={cancel}>
-        <X class="h-3.5 w-3.5" />
-      </Button>
-      <Button size="icon" class="h-7 w-7 shrink-0" onclick={() => void commit()}>
-        <Check class="h-3.5 w-3.5" />
-      </Button>
-    {:else}
-      <!-- Grip handle -->
-      <button
-        type="button"
-        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-        style="touch-action: none"
-        use:gripAction
-        aria-label="Drag to reorder"
-        tabindex="-1"
-        disabled={saving}
-      >
-        <GripVertical class="h-3.5 w-3.5" />
-      </button>
+    <!-- Grip handle -->
+    <button
+      type="button"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+      style="touch-action: none"
+      use:gripAction
+      aria-label="Drag to reorder"
+      tabindex="-1"
+      disabled={saving}
+    >
+      <GripVertical class="h-3.5 w-3.5" />
+    </button>
 
-      <!-- Collapse toggle -->
-      <button
-        type="button"
-        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
-        onclick={onToggleCollapse}
-        aria-label={collapsed ? "Expand exercise" : "Collapse exercise"}
-        disabled={saving}
-      >
-        {#if collapsed}
-          <ChevronRight class="h-3.5 w-3.5" />
-        {:else}
-          <ChevronDown class="h-3.5 w-3.5" />
-        {/if}
-      </button>
+    <!-- Collapse toggle -->
+    <button
+      type="button"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      onclick={onToggleCollapse}
+      aria-label={collapsed ? "Expand exercise" : "Collapse exercise"}
+      disabled={saving}
+    >
+      {#if collapsed}
+        <ChevronRight class="h-3.5 w-3.5" />
+      {:else}
+        <ChevronDown class="h-3.5 w-3.5" />
+      {/if}
+    </button>
 
-      <button
-        type="button"
-        class="flex-1 min-w-0 text-left"
-        onclick={startEdit}
-        disabled={saving}
-      >
-        <span class="text-sm font-semibold truncate block">{exerciseName}</span>
-      </button>
+    <button
+      type="button"
+      class="flex-1 min-w-0 text-left"
+      onclick={onOpenDetail}
+      disabled={saving}
+      aria-label="{exerciseName} — open details"
+    >
+      <span class="text-sm font-semibold truncate block">{exerciseName}</span>
+    </button>
 
-      <span class="text-xs text-muted-foreground shrink-0">
-        {setCount} set{setCount === 1 ? "" : "s"}
+    <span class="text-xs text-muted-foreground shrink-0">
+      {setCount} set{setCount === 1 ? "" : "s"}
+    </span>
+
+    {#if collapsed && hasActiveTimer}
+      <span class="shrink-0 flex items-center text-primary animate-pulse" aria-label="Rest timer active">
+        <Timer class="h-3.5 w-3.5" />
       </span>
-
-      {#if collapsed && hasActiveTimer}
-        <span class="shrink-0 flex items-center text-primary animate-pulse" aria-label="Rest timer active">
-          <Timer class="h-3.5 w-3.5" />
-        </span>
-      {/if}
-
-      {#if !collapsed}
-        <Button
-          size="icon"
-          class="h-7 w-7 shrink-0"
-          onclick={() => void onAddSet()}
-          disabled={saving}
-          aria-label="Add set"
-        >
-          <Plus class="h-3.5 w-3.5" />
-        </Button>
-      {/if}
-
-      <ConfirmDialog
-        title="Remove exercise?"
-        description="Removes this exercise and all its sets from the session."
-        confirmLabel="Remove"
-        {saving}
-        onConfirm={onDelete}
-      >
-        {#snippet child({ props })}
-          <Button
-            {...props}
-            size="icon"
-            variant="ghost"
-            class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-            disabled={saving}
-            aria-label="Delete exercise"
-          >
-            <Trash2 class="h-3.5 w-3.5" />
-          </Button>
-        {/snippet}
-      </ConfirmDialog>
     {/if}
+
+    <button
+      type="button"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      onclick={onSwap}
+      disabled={saving}
+      aria-label="Swap exercise"
+    >
+      <ArrowLeftRight class="h-3.5 w-3.5" />
+    </button>
+
+    {#if !collapsed}
+      <Button
+        size="icon"
+        class="h-7 w-7 shrink-0"
+        onclick={() => void onAddSet()}
+        disabled={saving}
+        aria-label="Add set"
+      >
+        <Plus class="h-3.5 w-3.5" />
+      </Button>
+    {/if}
+
+    <ConfirmDialog
+      title="Remove exercise?"
+      description="Removes this exercise and all its sets from the session."
+      confirmLabel="Remove"
+      {saving}
+      onConfirm={onDelete}
+    >
+      {#snippet child({ props })}
+        <Button
+          {...props}
+          size="icon"
+          variant="ghost"
+          class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+          disabled={saving}
+          aria-label="Delete exercise"
+        >
+          <Trash2 class="h-3.5 w-3.5" />
+        </Button>
+      {/snippet}
+    </ConfirmDialog>
   </div>
 
   {#if !collapsed && suggestion && suggestion.sets.length > 0}

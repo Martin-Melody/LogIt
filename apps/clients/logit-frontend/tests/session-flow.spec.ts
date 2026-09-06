@@ -368,6 +368,29 @@ test.describe("managing sets", () => {
     await expect(page.locator('[aria-label="Mark complete"]').first()).toBeVisible();
   });
 
+  test("swapping an exercise keeps the logged sets", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [
+          makeSet("s1", 0, 8, 60),
+          makeSet("s2", 1, 8, 60),
+        ]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Swap exercise"]').first().click();
+    const input = page.locator('input[placeholder="e.g. Bench Press"]');
+    await expect(input).toBeVisible();
+    await input.fill("Incline Bench Press");
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText("Incline Bench Press")).toBeVisible();
+    await expect(page.getByText("Bench Press", { exact: true })).not.toBeVisible();
+    // Both sets still there.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(2);
+  });
+
   test("deleting an exercise removes it from the session", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),

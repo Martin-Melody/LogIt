@@ -365,6 +365,23 @@ export function updateExerciseName(
   }));
 }
 
+/**
+ * Swap the exercise a strength block tracks, keeping the logged sets in place.
+ * This is the "I meant to do incline, not flat" move — distinct from add+remove,
+ * which loses the sets and their order.
+ */
+export function swapExercise(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  next: { exerciseName: string; exerciseId?: string },
+): WorkoutSession {
+  return updateStrengthBlock(session, exerciseEntryId, (data) => ({
+    ...data,
+    exerciseName: next.exerciseName.trim(),
+    exerciseId: next.exerciseId,
+  }));
+}
+
 function updateStrengthBlock(
   session: WorkoutSession,
   blockId: string,

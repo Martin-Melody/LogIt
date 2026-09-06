@@ -1,7 +1,7 @@
 import {
   createSession, addExercise, addSet, updateSet, removeSet, removeExercise,
   getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
-  SET_TYPE_META, setTypeMeta, isContinuationSet,
+  SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
 } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
 
@@ -119,6 +119,30 @@ describe("workout domain", () => {
   it("getTopSetHighlight returns null if there are no sets", () => {
     const s = createSession(1_000);
     expect(getTopSetHighlight(s)).toBeNull();
+  });
+
+  it("swapExercise changes the exercise but keeps the sets", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Flat Bench", exerciseId: "ex-flat" });
+    const blockId = getExercises(s)[0].id;
+    s = addSet(s, blockId, { reps: 8, weight: 60 });
+    s = addSet(s, blockId, { reps: 8, weight: 60 });
+
+    s = swapExercise(s, blockId, { exerciseName: " Incline Bench ", exerciseId: "ex-incline" });
+
+    const ex = getExercises(s)[0];
+    expect(ex.id).toBe(blockId); // same block
+    expect(ex.exerciseName).toBe("Incline Bench");
+    expect(ex.exerciseId).toBe("ex-incline");
+    expect(ex.sets.map((x) => [x.reps, x.weight])).toEqual([[8, 60], [8, 60]]);
+  });
+
+  it("swapExercise is a no-op for an unknown block", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Bench" });
+    const before = JSON.stringify(s);
+    s = swapExercise(s, "nope", { exerciseName: "Squat" });
+    expect(JSON.stringify(s)).toBe(before);
   });
 });
 
