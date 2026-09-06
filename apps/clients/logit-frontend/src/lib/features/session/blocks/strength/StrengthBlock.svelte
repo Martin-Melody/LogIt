@@ -35,7 +35,7 @@
     gripAction,
     onDelete,
     onMutate,
-  } = $props<BlockBaseProps<StrengthBlockData>>();
+  }: BlockBaseProps<StrengthBlockData> = $props();
 
   let suggestion = $state<ProgressionOutput | null>(null);
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
