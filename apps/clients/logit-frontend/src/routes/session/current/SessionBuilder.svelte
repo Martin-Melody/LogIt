@@ -26,8 +26,8 @@
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
 
-  import CurrentSessionHeader from "./Commponents/CurrentSessionHeader.svelte";
-  import FinishWorkoutCard from "./Commponents/FinishWorkoutCard.svelte";
+  import CurrentSessionHeader from "./Components/CurrentSessionHeader.svelte";
+  import FinishWorkoutCard from "./Components/FinishWorkoutCard.svelte";
 
   onMount(() => {
     setTimeout(() => startSessionTour(), 600);
