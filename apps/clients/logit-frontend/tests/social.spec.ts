@@ -157,5 +157,15 @@ test.describe("social redesign - requires API", () => {
       method: "POST", headers: authed(alice.accessToken), body: JSON.stringify({ body: "quoting the repost" }),
     })).json();
     expect(requote.repostOf.id).toBe(original.id);
+
+    // ---- Your own post: a plain repost is a no-op, but a quote (with commentary) is fine ----
+    const selfPlain = await fetch(`${API}/posts/${original.id}/repost`, {
+      method: "POST", headers: authed(alice.accessToken), body: JSON.stringify({ body: null }),
+    });
+    expect(selfPlain.status).toBe(400);
+    const selfQuote = await fetch(`${API}/posts/${original.id}/repost`, {
+      method: "POST", headers: authed(alice.accessToken), body: JSON.stringify({ body: "still my favourite lift" }),
+    });
+    expect(selfQuote.status).toBe(201);
   });
 });
