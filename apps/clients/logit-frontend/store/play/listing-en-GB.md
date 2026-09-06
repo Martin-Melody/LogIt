@@ -36,7 +36,7 @@ HABITS
 
 YOURS TO KEEP
 • Works completely offline
-• Export your data any time
+• Export your training data to a file any time
 • Open source — self-host the sync server on your own machine with one command,
   free forever
 • Optional account adds cross-device sync, a social feed, and coach/client
@@ -45,7 +45,7 @@ YOURS TO KEEP
 LogIt is a tracking and planning tool, not medical advice. Check with a qualified
 professional before starting a new training or nutrition programme.
 
-Privacy policy: https://logit.ie/privacy  (update to the live URL before submitting)
+Privacy policy: https://logit-marketing.pages.dev/privacy  (placeholder until logit.ie is bought; see below)
 
 ## Category
 Health & Fitness
@@ -54,11 +54,13 @@ Health & Fitness
 workout tracker, gym log, nutrition tracker, calorie counter, habit tracker
 
 ## Contact details
-Email: martinmel218@gmail.com
-Website: https://logit.ie  (or the live Cloudflare Pages URL until the domain is bought)
+Email: <your real inbox> — Play needs an address Google can actually reach.
+  Use your personal address for now; switch to hello@logit.ie once the domain
+  and its mailbox exist (the website/privacy/terms pages already point there).
+Website: https://logit-marketing.pages.dev  (placeholder until logit.ie is bought)
 Phone: (optional)
 
 ## External privacy policy URL (required)
-https://logit.ie/privacy
-Until logit.ie is live, use the deployed logit-marketing URL, e.g.
-https://<project>.pages.dev/privacy
+https://logit-marketing.pages.dev/privacy
+Swap to https://logit.ie/privacy once the domain is attached to the
+logit-marketing Cloudflare Pages project.
