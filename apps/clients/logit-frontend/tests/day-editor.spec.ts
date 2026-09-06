@@ -16,10 +16,10 @@ const testSplit = {
       id: DAY_ID,
       orderIndex: 0,
       name: "Test Day",
-      exercises: [
-        { id: "pex-1", orderIndex: 0, exerciseName: "Squat",       targets: {} },
-        { id: "pex-2", orderIndex: 1, exerciseName: "Bench Press", targets: {} },
-        { id: "pex-3", orderIndex: 2, exerciseName: "Deadlift",    targets: {} },
+      blocks: [
+        { type: "strength", id: "pex-1", orderIndex: 0, exerciseName: "Squat",       targets: {} },
+        { type: "strength", id: "pex-2", orderIndex: 1, exerciseName: "Bench Press", targets: {} },
+        { type: "strength", id: "pex-3", orderIndex: 2, exerciseName: "Deadlift",    targets: {} },
       ],
     },
   ],
@@ -31,6 +31,14 @@ async function seedLocalStorage(page: Page) {
   await page.addInitScript((split) => {
     localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
     localStorage.setItem("logit:splits:v1", JSON.stringify([split]));
+    // Suppress the driver.js coach-mark tours — their overlay intercepts pointer events.
+    localStorage.setItem(
+      "logit:tours:v1",
+      JSON.stringify({
+        home: true, session: true, splits: true, splitDetail: true,
+        splitDay: true, exercises: true, profile: true,
+      }),
+    );
   }, testSplit);
 }
 
@@ -44,6 +52,12 @@ async function goToDayEditor(page: Page) {
 
 function exerciseNames(page: Page) {
   return page.locator("main ul li span.truncate");
+}
+
+/** Opens the "add block" picker and switches to the exercise-search field. */
+async function openExerciseAdd(page: Page) {
+  await page.locator('[aria-label="Add block"]').click();
+  await page.getByRole("button", { name: "Exercise", exact: true }).click();
 }
 
 // ── Drag to reorder ──────────────────────────────────────────────────────────
@@ -121,17 +135,17 @@ test.describe("add new exercise", () => {
   test("Add button appears for unknown exercise name", async ({ page }, testInfo) => {
     await goToDayEditor(page);
 
-    await page.locator('[aria-label="Add exercise"]').click();
+    await openExerciseAdd(page);
     await page.waitForTimeout(200);
 
     const input = page.locator('input[placeholder="Search or add exercise…"]');
-    await input.fill("Lat Pulldown");
+    await input.fill("Landmine Press");
     await page.waitForTimeout(600);
 
     const shot = await page.screenshot();
     await testInfo.attach("after-typing", { body: shot, contentType: "image/png" });
 
-    const addBtn = page.locator('button').filter({ hasText: /Add "Lat Pulldown"/ });
+    const addBtn = page.locator('button').filter({ hasText: /Add "Landmine Press"/ });
     await expect(addBtn).toBeVisible();
 
     const box = await addBtn.boundingBox();
@@ -141,17 +155,17 @@ test.describe("add new exercise", () => {
   test("clicking Add button adds the exercise (mouse click)", async ({ page }, testInfo) => {
     await goToDayEditor(page);
 
-    await page.locator('[aria-label="Add exercise"]').click();
+    await openExerciseAdd(page);
     await page.waitForTimeout(200);
 
     const input = page.locator('input[placeholder="Search or add exercise…"]');
-    await input.fill("Lat Pulldown");
+    await input.fill("Landmine Press");
     await page.waitForTimeout(600);
 
     const beforeShot = await page.screenshot();
     await testInfo.attach("before-click", { body: beforeShot, contentType: "image/png" });
 
-    const addBtn = page.locator('button').filter({ hasText: /Add "Lat Pulldown"/ });
+    const addBtn = page.locator('button').filter({ hasText: /Add "Landmine Press"/ });
     await expect(addBtn).toBeVisible();
 
     // Standard click — this is what a desktop browser user does
@@ -164,20 +178,20 @@ test.describe("add new exercise", () => {
     const names = await exerciseNames(page).allTextContents();
     console.log("Exercises after add:", names);
 
-    await expect(exerciseNames(page).filter({ hasText: "Lat Pulldown" })).toBeVisible();
+    await expect(exerciseNames(page).filter({ hasText: "Landmine Press" })).toBeVisible();
   });
 
   test("Add button works via pointerdown (simulates Android tap-before-blur)", async ({ page }, testInfo) => {
     await goToDayEditor(page);
 
-    await page.locator('[aria-label="Add exercise"]').click();
+    await openExerciseAdd(page);
     await page.waitForTimeout(200);
 
     const input = page.locator('input[placeholder="Search or add exercise…"]');
-    await input.fill("Overhead Press");
+    await input.fill("Meadows Row");
     await page.waitForTimeout(600);
 
-    const addBtn = page.locator('button').filter({ hasText: /Add "Overhead Press"/ });
+    const addBtn = page.locator('button').filter({ hasText: /Add "Meadows Row"/ });
     await expect(addBtn).toBeVisible();
 
     // Simulate Android: fire pointerdown, then blur the input, then pointerup
@@ -202,7 +216,7 @@ test.describe("add new exercise", () => {
     const names = await exerciseNames(page).allTextContents();
     console.log("Exercises after pointerdown add:", names);
 
-    await expect(exerciseNames(page).filter({ hasText: "Overhead Press" })).toBeVisible();
+    await expect(exerciseNames(page).filter({ hasText: "Meadows Row" })).toBeVisible();
   });
 
 });
