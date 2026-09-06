@@ -11,6 +11,7 @@
     reps = 0,
     weight = 0,
     weightUnit = "kg",
+    rpe = null,
     completed = false,
     disabled = false,
     gripAction,
@@ -23,6 +24,7 @@
     reps?: number;
     weight?: number;
     weightUnit?: WeightUnit;
+    rpe?: number | null;
     completed?: boolean;
     disabled?: boolean;
     gripAction: GripAction;
@@ -92,6 +94,9 @@
       </span>
     {:else}
       <span class="text-xs w-4 text-right tabular-nums">{setNumber}</span>
+    {/if}
+    {#if rpe != null}
+      <span class="text-[10px] text-muted-foreground tabular-nums" title="RPE {rpe}">@{rpe}</span>
     {/if}
   </button>
 

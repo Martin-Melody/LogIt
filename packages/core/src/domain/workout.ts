@@ -112,6 +112,8 @@ export type SetEntry = {
   restDurationMs?: number;
   restStartedAtMs?: number | null;
   machineId?: string | null;
+  /** Rate of perceived exertion, 6–10 (RPE) or left unset. */
+  rpe?: number | null;
 };
 
 // Data payload for a strength (exercise + sets) block
@@ -244,7 +246,7 @@ export function updateSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
-  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId">>,
+  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId" | "rpe">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => ({
     ...data,

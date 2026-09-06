@@ -148,4 +148,18 @@ describe("set types", () => {
     expect(setTypeMeta("warmup").short).toBe("W");
     expect(setTypeMeta("rest-pause").short).toBe("RP");
   });
+
+  it("updateSet can record and clear an RPE", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Bench" });
+    const exId = getExercises(s)[0].id;
+    s = addSet(s, exId, { weight: 100, reps: 5 });
+    const setId = getExercises(s)[0].sets[0].id;
+
+    s = updateSet(s, exId, setId, { rpe: 8.5 });
+    expect(getExercises(s)[0].sets[0].rpe).toBe(8.5);
+
+    s = updateSet(s, exId, setId, { rpe: null });
+    expect(getExercises(s)[0].sets[0].rpe).toBeNull();
+  });
 });
