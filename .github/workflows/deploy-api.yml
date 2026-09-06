@@ -1,0 +1,74 @@
+name: Deploy API + web dashboard (AWS App Runner)
+
+# Manual only. Builds the Docker image(s), pushes :latest to ECR; App Runner has
+# auto_deployments_enabled so the push is the deploy. The API runs its EF Core
+# migrations against prod RDS Postgres on startup, so this workflow gates on the
+# SQLite/Postgres migration-sync check first.
+#
+# Auth — either set up GitHub OIDC (preferred) and provide:
+#   AWS_DEPLOY_ROLE_ARN   an IAM role trusting this repo's OIDC, with ECR push
+#                         + apprunner:StartDeployment
+# or fall back to static keys:
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+# Optional:
+#   AWS_REGION            defaults to eu-west-1
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "What to deploy"
+        type: choice
+        options: [api, web, all]
+        default: api
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  migration-check:
+    if: github.event.inputs.target != 'web'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Migration histories in sync (SQLite + Postgres)
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+          "$GITHUB_WORKSPACE/scripts/check-migrations-sync.sh"
+
+  deploy:
+    needs: [migration-check]
+    # run even if migration-check was skipped (target=web)
+    if: always() && (needs.migration-check.result == 'success' || needs.migration-check.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        if: ${{ vars.AWS_AUTH != 'keys' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-west-1' }}
+
+      - name: Configure AWS credentials (static keys)
+        if: ${{ vars.AWS_AUTH == 'keys' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-west-1' }}
+
+      - name: Deploy
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+        run: ./scripts/deploy.sh ${{ github.event.inputs.target }}

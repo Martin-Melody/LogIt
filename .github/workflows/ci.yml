@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  DOTNET_VERSION: "8.0.x"
+
+jobs:
+  api:
+    name: API (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore services/api/Logit.Api.sln
+
+      - name: Build
+        run: dotnet build services/api/Logit.Api.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test services/api/Logit.Api.sln -c Release --no-build --verbosity normal
+
+      - name: Migration histories in sync (SQLite + Postgres)
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+          "$GITHUB_WORKSPACE/scripts/check-migrations-sync.sh"
+
+  web:
+    name: Web (core / frontend / marketing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: core — unit tests
+        run: npm run test --workspace @logit/core
+
+      - name: frontend — build
+        working-directory: apps/clients/logit-frontend
+        run: npm run build
+
+      - name: frontend — unit tests
+        working-directory: apps/clients/logit-frontend
+        run: npm run test:unit
+
+      - name: frontend — svelte-check (informational)
+        id: sveltecheck
+        working-directory: apps/clients/logit-frontend
+        run: npm run check
+        continue-on-error: true
+
+      - name: marketing — build + svelte-check
+        working-directory: apps/clients/logit-marketing
+        run: npm run build && npm run check
+
+      - name: docs-site — build
+        working-directory: apps/clients/docs-site
+        run: npm run build
+
+      - name: Note svelte-check status
+        if: steps.sveltecheck.outcome == 'failure'
+        run: echo "::warning::frontend 'npm run check' has known pre-existing errors — tracked separately, not blocking yet."
+
+  e2e:
+    name: E2E (Playwright, social)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: apps/clients/logit-frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Start API (SQLite, self-host mode, background)
+        working-directory: services/api/src/Logit.Api
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://127.0.0.1:5118
+          # self-host mode disables paid-tier gating so /sync is reachable without Stripe
+          Deployment__SelfHosted: "true"
+          ConnectionStrings__Default: "Data Source=ci-e2e.db"
+          Jwt__Secret: "ci-e2e-secret-at-least-32-characters-long"
+        run: |
+          nohup dotnet run --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:5118/health && break
+            sleep 1
+          done
+
+      # Only social.spec.ts runs in CI today — it guards the merged social feature and is
+      # green. day-editor / progression / session-flow / nutrition-smoke have pre-existing
+      # failures tracked separately; add them here (or switch to `npx playwright test`) as
+      # they're fixed.
+      - name: Run Playwright tests (social)
+        working-directory: apps/clients/logit-frontend
+        run: npx playwright test tests/social.spec.ts
+
+      - name: API log on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log" || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/clients/logit-frontend/playwright-report/
+          retention-days: 7

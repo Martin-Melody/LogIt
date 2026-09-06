@@ -1,0 +1,138 @@
+name: Android release
+
+# Builds a signed release AAB (+ APK) and, when a Play service account is
+# configured, uploads the AAB to the Play "internal" testing track.
+#
+# Triggers:
+#   • push a tag like v1.2.0        → versionName from the tag, versionCode from the run number
+#   • manual "Run workflow"         → provide version_name; versionCode from the run number
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64     base64 of the upload keystore .jks   (base64 -w0 logit-upload.jks)
+#   ANDROID_KEYSTORE_PASSWORD   keystore store password
+#   ANDROID_KEY_ALIAS           key alias (e.g. logit-upload)
+#   ANDROID_KEY_PASSWORD        key password
+#   PLAY_SERVICE_ACCOUNT_JSON   (optional) Google Play service-account JSON; omit to skip upload
+# Optional repo variable:
+#   MARKETING_URL               baked into the build (default: https://logit-marketing.pages.dev)
+#
+# Without the keystore secrets the build still runs and produces a debug-signed
+# artifact you can smoke-test, but it can't be uploaded to Play.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "versionName (e.g. 1.2.0)"
+        required: true
+        default: "1.0.0"
+      play_track:
+        description: "Play track to upload to (empty = build only)"
+        required: false
+        default: "internal"
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            name="${GITHUB_REF_NAME#v}"
+          else
+            name="${{ github.event.inputs.version_name }}"
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "Building versionName=$name versionCode=${{ github.run_number }}"
+
+      - name: Install
+        run: npm ci
+
+      - name: Build web bundle
+        working-directory: apps/clients/logit-frontend
+        env:
+          VITE_MARKETING_URL: ${{ vars.MARKETING_URL || 'https://logit-marketing.pages.dev' }}
+        run: npm run build
+
+      - name: Capacitor sync
+        working-directory: apps/clients/logit-frontend
+        run: npx cap sync android
+
+      - name: Decode keystore
+        id: keystore
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "play=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANDROID_KEYSTORE_BASE64 not set — building with the debug key (not uploadable to Play)."
+            exit 0
+          fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/logit-upload.jks"
+          cat > apps/clients/logit-frontend/android/keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/logit-upload.jks
+          storePassword=$KS_PASSWORD
+          keyAlias=$KS_ALIAS
+          keyPassword=$KS_KEY_PASSWORD
+          EOF
+          echo "present=true" >> "$GITHUB_OUTPUT"
+          if [ -n "$PLAY_JSON" ]; then echo "play=true" >> "$GITHUB_OUTPUT"; else echo "play=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Build AAB + APK
+        working-directory: apps/clients/logit-frontend/android
+        run: |
+          ./gradlew --no-daemon \
+            -PversionName=${{ steps.ver.outputs.name }} \
+            -PversionCode=${{ steps.ver.outputs.code }} \
+            bundleRelease assembleRelease
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ steps.ver.outputs.name }}
+          path: |
+            apps/clients/logit-frontend/android/app/build/outputs/bundle/release/*.aab
+            apps/clients/logit-frontend/android/app/build/outputs/apk/release/*.apk
+            apps/clients/logit-frontend/android/app/build/outputs/mapping/release/mapping.txt
+          retention-days: 30
+
+      - name: Upload to Play (internal track)
+        if: >
+          steps.keystore.outputs.present == 'true' &&
+          steps.keystore.outputs.play == 'true' &&
+          (github.ref_type == 'tag' || github.event.inputs.play_track != '')
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ie.logit.app
+          releaseFiles: apps/clients/logit-frontend/android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ github.event.inputs.play_track || 'internal' }}
+          status: completed
+          mappingFile: apps/clients/logit-frontend/android/app/build/outputs/mapping/release/mapping.txt
