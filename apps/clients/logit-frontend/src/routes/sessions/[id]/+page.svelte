@@ -20,7 +20,7 @@
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);
 
-  const state = $state({
+  const vm = $state({
     loading: true,
     saving: false,
     error: null as string | null,
@@ -37,7 +37,7 @@
     setId: null as string | null,
   });
 
-  const displaySession = $derived(edit.active && edit.draft ? edit.draft : state.session);
+  const displaySession = $derived(edit.active && edit.draft ? edit.draft : vm.session);
 
   let editMachines: Machine[] = $state([]);
   let editDefaultMachineId: string | undefined = $state(undefined);
@@ -101,41 +101,41 @@
   const ended = $derived(displaySession?.endedAtMs ?? displaySession?.startedAtMs ?? null);
 
   const durationLabel = $derived(
-    state.session?.endedAtMs && state.session?.startedAtMs
-      ? formatDuration(durationMs(state.session.startedAtMs, state.session.endedAtMs))
+    vm.session?.endedAtMs && vm.session?.startedAtMs
+      ? formatDuration(durationMs(vm.session.startedAtMs, vm.session.endedAtMs))
       : null,
   );
 
   async function load() {
-    state.loading = true;
-    state.error = null;
+    vm.loading = true;
+    vm.error = null;
     try {
-      state.session = await getSession(id);
+      vm.session = await getSession(id);
     } catch (e) {
-      state.error = e instanceof Error ? e.message : "Failed to load session";
-      state.session = null;
+      vm.error = e instanceof Error ? e.message : "Failed to load session";
+      vm.session = null;
     } finally {
-      state.loading = false;
+      vm.loading = false;
     }
   }
 
   async function deleteThisSession() {
     if (!id) return;
-    state.deleting = true;
-    state.error = null;
+    vm.deleting = true;
+    vm.error = null;
     try {
       await deleteSession(id);
       back("/sessions");
     } catch (e) {
-      state.error = e instanceof Error ? e.message : "Failed to delete session";
+      vm.error = e instanceof Error ? e.message : "Failed to delete session";
     } finally {
-      state.deleting = false;
+      vm.deleting = false;
     }
   }
 
   function startEditing() {
-    if (!state.session) return;
-    edit.draft = JSON.parse(JSON.stringify(state.session)) as WorkoutSession;
+    if (!vm.session) return;
+    edit.draft = JSON.parse(JSON.stringify(vm.session)) as WorkoutSession;
     edit.active = true;
   }
 
@@ -147,17 +147,17 @@
 
   async function saveEditing() {
     if (!edit.draft) return;
-    state.saving = true;
-    state.error = null;
+    vm.saving = true;
+    vm.error = null;
     try {
       await editSession(edit.draft);
-      state.session = edit.draft;
+      vm.session = edit.draft;
       edit.draft = null;
       edit.active = false;
     } catch (e) {
-      state.error = e instanceof Error ? e.message : "Failed to save changes";
+      vm.error = e instanceof Error ? e.message : "Failed to save changes";
     } finally {
-      state.saving = false;
+      vm.saving = false;
     }
   }
 
@@ -193,7 +193,7 @@
         variant="ghost"
         size="sm"
         class="h-8 px-2 text-sm text-muted-foreground"
-        disabled={state.saving}
+        disabled={vm.saving}
         onclick={discardEditing}
       >
         Cancel
@@ -207,10 +207,10 @@
         variant="ghost"
         size="sm"
         class="h-8 px-2 text-sm font-semibold"
-        disabled={state.saving}
+        disabled={vm.saving}
         onclick={() => void saveEditing()}
       >
-        {state.saving ? "Saving…" : "Save"}
+        {vm.saving ? "Saving…" : "Save"}
       </Button>
     {:else}
       <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/sessions")}>
@@ -228,9 +228,9 @@
           variant="ghost"
           size="icon"
           class="h-7 w-7 text-muted-foreground"
-          disabled={state.loading || !state.session}
+          disabled={vm.loading || !vm.session}
           aria-label="Share session"
-          onclick={() => (state.sharing = true)}
+          onclick={() => (vm.sharing = true)}
         >
           <Share2 class="h-3.5 w-3.5" />
         </Button>
@@ -240,7 +240,7 @@
         variant="ghost"
         size="icon"
         class="h-7 w-7 text-muted-foreground"
-        disabled={state.loading || !state.session}
+        disabled={vm.loading || !vm.session}
         aria-label="Edit session"
         onclick={startEditing}
       >
@@ -252,7 +252,7 @@
         description="Permanently removes this session. Cannot be undone."
         confirmLabel="Delete"
         cancelLabel="Cancel"
-        saving={state.deleting}
+        saving={vm.deleting}
         onConfirm={deleteThisSession}
       >
         {#snippet child({ props })}
@@ -261,7 +261,7 @@
             variant="ghost"
             size="icon"
             class="h-7 w-7 text-muted-foreground hover:text-destructive"
-            disabled={state.loading || !state.session || state.deleting}
+            disabled={vm.loading || !vm.session || vm.deleting}
             aria-label="Delete session"
           >
             <Trash class="h-3.5 w-3.5" />
@@ -271,11 +271,11 @@
     {/if}
   </div>
 
-  {#if state.error}
-    <p class="px-3 py-2 text-sm text-destructive border-b border-border">{state.error}</p>
+  {#if vm.error}
+    <p class="px-3 py-2 text-sm text-destructive border-b border-border">{vm.error}</p>
   {/if}
 
-  {#if state.loading}
+  {#if vm.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
   {:else if !displaySession}
     <p class="px-3 py-4 text-sm text-muted-foreground">Session not found.</p>
@@ -402,7 +402,7 @@
 
 <EditSetDialog
   open={edit.dialogOpen}
-  disabled={state.saving}
+  disabled={vm.saving}
   initial={getEditingSet()}
   machines={editMachines}
   defaultMachineId={editDefaultMachineId}
@@ -412,7 +412,7 @@
 />
 
 <CreatePostSheet
-  open={state.sharing}
-  prefillSession={state.session}
-  onclose={() => (state.sharing = false)}
+  open={vm.sharing}
+  prefillSession={vm.session}
+  onclose={() => (vm.sharing = false)}
 />

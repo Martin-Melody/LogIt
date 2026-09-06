@@ -15,7 +15,7 @@
     gripAction,
     onDelete,
     onMutate,
-  } = $props<BlockBaseProps<CardioBlockData>>();
+  }: BlockBaseProps<CardioBlockData> = $props();
 
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
 

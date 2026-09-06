@@ -103,7 +103,7 @@ async function goToSession(page: Page) {
 async function getTargetText(page: Page): Promise<string> {
   const el = page.getByText(/Target:/);
   await expect(el).toBeVisible({ timeout: 5_000 });
-  return el.textContent() ?? "";
+  return (await el.textContent()) ?? "";
 }
 
 // ── History lookup — name fallback ────────────────────────────────────────────
