@@ -23,6 +23,7 @@ function parseBlockData(type: string, dataJson: string): unknown {
         restDurationMs: s.restDurationMs ?? undefined,
         restStartedAtMs: s.restStartedAtMs ?? null,
         machineId: s.machineId ?? undefined,
+        rpe: s.rpe ?? null,
       })),
     } satisfies StrengthBlockData;
   }

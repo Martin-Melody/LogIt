@@ -11,7 +11,9 @@
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
   import SetTypePicker from "./SetTypePicker.svelte";
 
-  type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">;
+  type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">;
+
+  const RPE_OPTIONS = [7, 7.5, 8, 8.5, 9, 9.5, 10];
 
   const {
     open = false,
@@ -43,6 +45,7 @@
     note: string | null;
     restDurationMs: number | undefined;
     machineId: string | null;
+    rpe: number | null;
   }>({
     reps: null,
     weight: null,
@@ -50,6 +53,7 @@
     note: null,
     restDurationMs: undefined,
     machineId: null,
+    rpe: null,
   });
 
   let noteExpanded = $state(false);
@@ -58,7 +62,7 @@
 
   $effect(() => {
     if (!open || !initial) return;
-    const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}|${initial.restDurationMs ?? ""}|${initial.machineId ?? ""}|${defaultMachineId ?? ""}`;
+    const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}|${initial.restDurationMs ?? ""}|${initial.machineId ?? ""}|${defaultMachineId ?? ""}|${initial.rpe ?? ""}`;
     if (lastKey === key) return;
     lastKey = key;
     draft.reps = initial.reps > 0 ? initial.reps : null;
@@ -70,6 +74,7 @@
         : null;
     draft.setType = initial.setType ?? "normal";
     draft.note = initial.note ?? null;
+    draft.rpe = initial.rpe ?? null;
     draft.restDurationMs = initial.restDurationMs;
     // No machine explicitly logged for this set yet — default to the exercise's
     // usual machine; the user only needs to touch this if they're on a different one.
@@ -131,6 +136,7 @@
       note: draft.note?.trim() || null,
       restDurationMs: draft.restDurationMs,
       machineId: draft.machineId ?? undefined,
+      rpe: draft.rpe,
     };
 
     await onSave(patch);
@@ -194,6 +200,35 @@
                 draft.weight = v === "" ? null : num(v, true);
               }}
             />
+          </div>
+        </div>
+
+        <!-- RPE -->
+        <div class="flex flex-col gap-2">
+          <Label>RPE <span class="text-muted-foreground font-normal">(optional)</span></Label>
+          <div class="flex gap-1.5">
+            <button
+              type="button"
+              class="flex-1 py-1.5 text-xs rounded border transition-colors {draft.rpe == null
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              {disabled}
+              onclick={() => (draft.rpe = null)}
+            >
+              —
+            </button>
+            {#each RPE_OPTIONS as v (v)}
+              <button
+                type="button"
+                class="flex-1 py-1.5 text-xs rounded border tabular-nums transition-colors {draft.rpe === v
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                {disabled}
+                onclick={() => (draft.rpe = v)}
+              >
+                {v}
+              </button>
+            {/each}
           </div>
         </div>
 

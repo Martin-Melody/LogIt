@@ -156,11 +156,12 @@
       // not just the raw per-set override (which is undefined until explicitly edited).
       restDurationMs: set.restDurationMs ?? get(profile).restDefaults[set.setType],
       machineId: set.machineId ?? undefined,
+      rpe: set.rpe ?? null,
     };
   }
 
   async function saveSetPatch(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">>,
+    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
   ) {
     if (!editSet.setId) return;
     const setId = editSet.setId;
@@ -435,6 +436,7 @@
               reps={lead.reps}
               weight={lead.weight}
               weightUnit={$profile.weightUnit}
+              rpe={lead.rpe ?? null}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
               gripAction={(node) => setGripAction(node, lead.id)}
@@ -468,6 +470,7 @@
                   reps={drop.reps}
                   weight={drop.weight}
                   weightUnit={$profile.weightUnit}
+                  rpe={drop.rpe ?? null}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
                   gripAction={noopGripAction}
