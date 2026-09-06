@@ -13,7 +13,9 @@ YES (HTTPS).
 
 ## Do you provide a way for users to request that their data be deleted?
 YES — in-app: Settings → Account → Delete account. Also by email.
-Deletion URL (for the form): https://logit.ie/privacy
+Deletion URL (for the form): https://logit-marketing.pages.dev/privacy
+  (swap to https://logit.ie/privacy once the domain is live — the privacy page's
+  "Your rights and choices" section covers both the in-app and email routes)
 
 ---
 

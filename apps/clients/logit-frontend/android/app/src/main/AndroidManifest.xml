@@ -46,15 +46,17 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Camera plugin: take a photo -->
+
+    <!-- Camera plugin: take a photo (avatar, progress photo, meal photo, nutrition-label OCR).
+         Gallery selection goes through the Android photo picker (PickVisualMedia) which needs
+         no storage/media permission, so READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE are
+         deliberately NOT declared — Google Play's Photo and Video Permissions policy wants
+         infrequent, user-initiated image access to use the picker rather than a broad grant. -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Camera plugin: read from gallery (API 33+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!-- Camera plugin: read from gallery (API < 33) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <!-- Exact alarm permissions for rest timer notifications -->
-    <!-- USE_EXACT_ALARM auto-grants on API 33+ for timer-style apps, no user action needed -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <!-- SCHEDULE_EXACT_ALARM covers API 31-32; may require user to grant via Special App Access -->
+
+    <!-- Rest-timer fallback notification when the app is backgrounded. SCHEDULE_EXACT_ALARM is
+         also declared by @capacitor/local-notifications; on API 33 it is granted by default, on
+         API 34+ the timer falls back to an inexact alarm unless the user grants it. USE_EXACT_ALARM
+         is deliberately NOT declared — Play restricts it to alarm-clock / timer / calendar apps. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>

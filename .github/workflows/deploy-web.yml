@@ -1,0 +1,99 @@
+name: Deploy web (Cloudflare Pages)
+
+# Deploys the static SvelteKit sites to Cloudflare Pages on every push to main.
+# logit-marketing depends on packages/core, so it also redeploys when that changes.
+#
+# Required repo secrets:
+#   CLOUDFLARE_API_TOKEN    token with "Cloudflare Pages: Edit"
+#   CLOUDFLARE_ACCOUNT_ID   the account id (wrangler whoami)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/clients/logit-marketing/**"
+      - "apps/clients/docs-site/**"
+      - "packages/core/**"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      marketing: ${{ steps.f.outputs.marketing }}
+      docs: ${{ steps.f.outputs.docs }}
+      configured: ${{ steps.secret.outputs.configured }}
+    steps:
+      - name: Check Cloudflare secret
+        id: secret
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CF_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLOUDFLARE_API_TOKEN not set — skipping Cloudflare Pages deploy. Deploy manually with 'wrangler pages deploy' or add the secret."
+          fi
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: f
+        run: |
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null; then base="HEAD~1"; fi
+          changed=$(git diff --name-only "$base" HEAD || true)
+          echo "$changed"
+          if echo "$changed" | grep -qE '^(apps/clients/logit-marketing/|packages/core/)' || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "marketing=true" >> "$GITHUB_OUTPUT"; else echo "marketing=false" >> "$GITHUB_OUTPUT"; fi
+          if echo "$changed" | grep -qE '^apps/clients/docs-site/' || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "docs=true" >> "$GITHUB_OUTPUT"; else echo "docs=false" >> "$GITHUB_OUTPUT"; fi
+
+  marketing:
+    needs: changes
+    if: needs.changes.outputs.marketing == 'true' && needs.changes.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Build
+        working-directory: apps/clients/logit-marketing
+        run: npm run build
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/clients/logit-marketing
+          command: pages deploy .svelte-kit/cloudflare --project-name logit-marketing --branch main
+
+  docs:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true' && needs.changes.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Build
+        working-directory: apps/clients/docs-site
+        run: npm run build
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/clients/docs-site
+          command: pages deploy .svelte-kit/cloudflare --project-name docs-site --branch main
