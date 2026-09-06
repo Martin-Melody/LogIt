@@ -4,6 +4,7 @@
   import { addSupersetRound, ungroupSuperset } from "@logit/core/domain/workout";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
+  import { reveal } from "$lib/transitions";
 
   const {
     supersetId,
@@ -64,16 +65,18 @@
 
   <div class="ml-3 border-l-2 border-primary/30">
     {#each blocks as block (block.id)}
-      <BlockHost
-        type={block.type}
-        blockId={block.id}
-        data={block.data}
-        {saving}
-        grouped
-        gripAction={noopGrip}
-        onDelete={() => onDeleteBlock(block.id)}
-        {onMutate}
-      />
+      <div transition:reveal>
+        <BlockHost
+          type={block.type}
+          blockId={block.id}
+          data={block.data}
+          {saving}
+          grouped
+          gripAction={noopGrip}
+          onDelete={() => onDeleteBlock(block.id)}
+          {onMutate}
+        />
+      </div>
     {/each}
   </div>
 
