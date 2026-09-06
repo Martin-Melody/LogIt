@@ -269,7 +269,8 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY NOT NULL,
       started_at_ms INTEGER NOT NULL,
-      ended_at_ms INTEGER NULL
+      ended_at_ms INTEGER NULL,
+      note TEXT NULL
     );
 
     CREATE TABLE IF NOT EXISTS session_exercises (
@@ -575,6 +576,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateExerciseType(db);
   await migrateMachines(db);
   await migrateSessionFlags(db);
+  await migrateSessionNote(db);
   await migrateCoachMessageContext(db);
   await migrateProgressPhoto(db);
   await seedSetTypes(db);
@@ -606,6 +608,12 @@ async function migrateMachines(db: SQLiteDBConnection): Promise<void> {
 async function migrateSessionFlags(db: SQLiteDBConnection): Promise<void> {
   try {
     await db.run(`ALTER TABLE sessions ADD COLUMN exclude_from_progression INTEGER NOT NULL DEFAULT 0`, []);
+  } catch { /* column already exists */ }
+}
+
+async function migrateSessionNote(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run(`ALTER TABLE sessions ADD COLUMN note TEXT NULL`, []);
   } catch { /* column already exists */ }
 }
 

@@ -3,6 +3,7 @@ import {
   getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
   SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
   groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
+  setSessionNote,
 } from "@logit/core/domain/workout";
 import type { StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
@@ -137,6 +138,14 @@ describe("workout domain", () => {
     expect(ex.exerciseName).toBe("Incline Bench");
     expect(ex.exerciseId).toBe("ex-incline");
     expect(ex.sets.map((x) => [x.reps, x.weight])).toEqual([[8, 60], [8, 60]]);
+  });
+
+  it("setSessionNote trims and clears", () => {
+    let s = createSession(1_000);
+    s = setSessionNote(s, "  felt strong  ");
+    expect(s.note).toBe("felt strong");
+    s = setSessionNote(s, "   ");
+    expect(s.note).toBeNull();
   });
 
   it("swapExercise is a no-op for an unknown block", () => {

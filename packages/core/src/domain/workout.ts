@@ -169,7 +169,13 @@ export type WorkoutSession = {
   endedAtMs?: number;
   blocks: SessionBlock[];
   excludeFromProgression?: boolean;
+  /** Free-text note for the whole session ("slept badly", "great energy"). */
+  note?: string | null;
 };
+
+export function setSessionNote(session: WorkoutSession, note: string | null): WorkoutSession {
+  return { ...session, note: note?.trim() || null };
+}
 
 export type SessionSummary = {
   id: string;

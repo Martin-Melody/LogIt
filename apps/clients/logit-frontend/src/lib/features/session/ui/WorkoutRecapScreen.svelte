@@ -74,6 +74,14 @@
     {/each}
   </div>
 
+  <!-- Session note -->
+  {#if session.note}
+    <div class="mx-4 mt-2 rounded border border-border px-4 py-3">
+      <p class="text-xs text-muted-foreground">Note</p>
+      <p class="text-sm mt-0.5 whitespace-pre-wrap">{session.note}</p>
+    </div>
+  {/if}
+
   <!-- Top set highlight -->
   {#if topSet}
     <div class="mx-4 mt-2 rounded border border-border px-4 py-3">

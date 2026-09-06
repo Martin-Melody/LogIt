@@ -167,7 +167,7 @@
     edit.dialogOpen = true;
   }
 
-  function handleSetSave(patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">>) {
+  function handleSetSave(patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>) {
     if (!edit.draft || !edit.exerciseEntryId || !edit.setId) return;
     edit.draft = updateSet(edit.draft, edit.exerciseEntryId, edit.setId, patch);
   }
@@ -296,6 +296,10 @@
         <span class="text-amber-500 dark:text-amber-400">Excluded from progression</span>
       {/if}
     </div>
+
+    {#if displaySession.note && !edit.active}
+      <p class="px-3 py-2 border-b border-border text-sm whitespace-pre-wrap">{displaySession.note}</p>
+    {/if}
 
     <!-- Date/time edit + exclude from progression toggle (edit mode only) -->
     {#if edit.active && edit.draft}
