@@ -3,6 +3,7 @@
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import Textarea from "$lib/components/ui/textarea/textarea.svelte";
+  import { ChevronDown, ChevronRight } from "lucide-svelte";
 
   import type { SetEntry, SetType } from "@logit/core/domain/workout";
   import type { Machine } from "@logit/core/domain/exercise";
@@ -52,6 +53,7 @@
   });
 
   let noteExpanded = $state(false);
+  let moreOpen = $state(false);
   let lastKey = $state<string | null>(null);
 
   $effect(() => {
@@ -73,6 +75,12 @@
     // usual machine; the user only needs to touch this if they're on a different one.
     draft.machineId = initial.machineId ?? defaultMachineId ?? null;
     noteExpanded = !!initial.note;
+    // Auto-open "More" when the set already carries a non-default extra so the
+    // user sees it without hunting; otherwise keep the dialog minimal.
+    moreOpen =
+      !!initial.note ||
+      initial.restDurationMs !== undefined ||
+      (initial.machineId != null && initial.machineId !== (defaultMachineId ?? null));
   });
 
   function num(v: string, allowNegative = false): number {
@@ -137,7 +145,7 @@
         <Dialog.Title>Edit set</Dialog.Title>
       </Dialog.Header>
 
-      <div class="flex flex-col gap-5 py-4">
+      <div class="flex flex-col gap-4 py-4">
 
         <!-- Set type -->
         <div class="flex flex-col gap-2">
@@ -148,34 +156,6 @@
             onchange={(t) => (draft.setType = t)}
           />
         </div>
-
-        <!-- Machine -->
-        {#if machines.length > 0 || exerciseId}
-          <div class="flex flex-col gap-2">
-            <Label>Machine</Label>
-            {#if machines.length > 0}
-              <div class="flex gap-1.5 flex-wrap">
-                {#each machines as m (m.id)}
-                  <button
-                    type="button"
-                    class="px-2.5 py-1.5 text-xs rounded border transition-colors {draft.machineId === m.id
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
-                    {disabled}
-                    onclick={() => (draft.machineId = m.id)}
-                  >
-                    {m.name}
-                  </button>
-                {/each}
-              </div>
-            {/if}
-            {#if exerciseId}
-              <a href="/exercises/{exerciseId}" class="text-xs text-muted-foreground underline hover:text-foreground self-start">
-                {machines.length > 0 ? "Add another machine" : "No machines set up for this exercise yet — add one"}
-              </a>
-            {/if}
-          </div>
-        {/if}
 
         <!-- Reps + Weight -->
         <div class="grid grid-cols-2 gap-3">
@@ -216,6 +196,51 @@
             />
           </div>
         </div>
+
+        <!-- More options — machine / rest / note, hidden until needed -->
+        <button
+          type="button"
+          class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground self-start"
+          onclick={() => (moreOpen = !moreOpen)}
+        >
+          {#if moreOpen}
+            <ChevronDown class="h-3.5 w-3.5" />
+          {:else}
+            <ChevronRight class="h-3.5 w-3.5" />
+          {/if}
+          More options
+        </button>
+
+        {#if moreOpen}
+        <div class="flex flex-col gap-4 border-l border-border pl-3">
+
+        <!-- Machine -->
+        {#if machines.length > 0 || exerciseId}
+          <div class="flex flex-col gap-2">
+            <Label>Machine</Label>
+            {#if machines.length > 0}
+              <div class="flex gap-1.5 flex-wrap">
+                {#each machines as m (m.id)}
+                  <button
+                    type="button"
+                    class="px-2.5 py-1.5 text-xs rounded border transition-colors {draft.machineId === m.id
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                    {disabled}
+                    onclick={() => (draft.machineId = m.id)}
+                  >
+                    {m.name}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+            {#if exerciseId}
+              <a href="/exercises/{exerciseId}" class="text-xs text-muted-foreground underline hover:text-foreground self-start">
+                {machines.length > 0 ? "Add another machine" : "No machines set up for this exercise yet — add one"}
+              </a>
+            {/if}
+          </div>
+        {/if}
 
         <!-- Rest timer -->
         <div class="flex flex-col gap-2">
@@ -306,6 +331,9 @@
             </button>
           {/if}
         </div>
+
+        </div>
+        {/if}
 
       </div>
 
