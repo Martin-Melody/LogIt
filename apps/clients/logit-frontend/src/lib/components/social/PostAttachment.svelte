@@ -1,9 +1,13 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { ChevronRight, Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard, Flame } from "lucide-svelte";
-  import type { ApiPost } from "@logit/core/api/socialApi";
+  import type { ApiPost, PostType } from "@logit/core/api/socialApi";
 
-  const { post }: { post: ApiPost } = $props();
+  // Structural subset satisfied by both ApiPost and RepostSource (the quoted-card case) —
+  // all this component needs is the type, the payload and an id to deep-link to.
+  type Attachable = Pick<ApiPost, "id" | "payloadJson"> & { type: PostType };
+
+  const { post }: { post: Attachable } = $props();
 
   // The card is a preview — tapping opens the full breakdown (and the "Copy to mine" button
   // lives there now, not inline here).

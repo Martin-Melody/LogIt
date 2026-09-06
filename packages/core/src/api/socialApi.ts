@@ -162,7 +162,7 @@ export type ReportReason =
   | "Spam" | "Harassment" | "HateSpeech" | "Violence"
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
-export type NotificationKind = "Like" | "Comment" | "Follow" | "Mention";
+export type NotificationKind = "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote";
 
 export interface ApiNotification {
   id: string;
@@ -224,8 +224,12 @@ export const socialApi = {
     return apiClient.fetch(`/posts/${id}/like`, { method: "DELETE" });
   },
 
-  async repost(id: string): Promise<ApiPost> {
-    return apiClient.fetch(`/posts/${id}/repost`, { method: "POST" });
+  /** Plain repost (no `body`) or quote repost (with your caption about the original). */
+  async repost(id: string, body?: string): Promise<ApiPost> {
+    return apiClient.fetch(`/posts/${id}/repost`, {
+      method: "POST",
+      body: JSON.stringify({ body: body?.trim() || null }),
+    });
   },
 
   // Follow
