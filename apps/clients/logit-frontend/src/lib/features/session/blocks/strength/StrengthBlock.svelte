@@ -12,6 +12,7 @@
   } from "@logit/core/domain/workout";
   import { createId } from "@logit/core/domain/ids";
   import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
+  import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { currentSession } from "$lib/stores/currentSession.store";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
@@ -42,6 +43,12 @@
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
   let blockAutoApplied = $state(false);
   let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string } | null>(null);
+  // Last time this exercise was performed — shown as a "prev" hint per set row.
+  let prevSets = $state<SetEntry[] | null>(null);
+
+  const prevLeadSets = $derived(
+    prevSets ? prevSets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)) : [],
+  );
 
   const editSet = $state({
     open: false,
@@ -58,7 +65,20 @@
     const exId = data.exerciseId;
     const name = data.exerciseName;
     void loadExerciseData(exId, name);
+    void loadPrevSets(name, exId);
   });
+
+  async function loadPrevSets(name: string, exerciseId?: string) {
+    try {
+      const { history } = await getExerciseHistory({ id: exerciseId, name }, getProgressionDeps());
+      const last = history.at(-1);
+      prevSets = last
+        ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
+        : null;
+    } catch {
+      prevSets = null;
+    }
+  }
 
   async function loadExerciseData(exerciseId?: string, name?: string) {
     try {
@@ -437,6 +457,7 @@
               weight={lead.weight}
               weightUnit={$profile.weightUnit}
               rpe={lead.rpe ?? null}
+              prev={prevLeadSets[group.leadNum - 1] ?? null}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
               gripAction={(node) => setGripAction(node, lead.id)}

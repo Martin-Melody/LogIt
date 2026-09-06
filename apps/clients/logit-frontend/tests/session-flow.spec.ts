@@ -285,6 +285,24 @@ test.describe("managing sets", () => {
     await expect(page.locator('[aria-label="Add set"]')).toBeVisible();
   });
 
+  test("set rows show the previous session's reps/weight as a placeholder", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
+      history: [
+        makeCompletedSession("Bench Press", [
+          makeSet("ps1", 0, 6, 90),
+          makeSet("ps2", 1, 6, 90),
+        ]),
+      ],
+    });
+    await goToSession(page);
+
+    await page.getByText("+ Add first set").click();
+
+    const weightInput = page.locator('input[step="0.5"]').first();
+    await expect(weightInput).toHaveJSProperty("placeholder", "90");
+  });
+
   test("add set button uses suggestion weight as default", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
