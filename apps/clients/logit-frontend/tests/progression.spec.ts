@@ -519,6 +519,14 @@ async function goToProgress(page: Page, exerciseName: string) {
   }
 }
 
+/** The value shown in the analytics metric tile with the given label. */
+function metricTile(page: Page, label: string) {
+  return page
+    .locator("div.text-center", { has: page.getByText(label, { exact: true }) })
+    .locator("p")
+    .first();
+}
+
 async function seedHistory(page: Page, opts: { history: object[]; exercises?: object[] }) {
   await page.addInitScript((o) => {
     localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
@@ -549,8 +557,11 @@ test.describe("analytics — excluded sessions", () => {
     await seedHistory(page, { history: [validSession, excludedSession] });
     await goToProgress(page, "Bench Press");
 
-    await expect(page.getByText("100kg")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("120kg")).not.toBeVisible();
+    // The excluded 120kg session must not lift Max weight (would be 120kg) or
+    // the Sessions count (would be 2). Est. 1RM legitimately reads 120kg here
+    // (Epley of 100kg × 6), so assert the tiles rather than raw text.
+    await expect(metricTile(page, "Max weight")).toHaveText("100kg");
+    await expect(metricTile(page, "Sessions")).toHaveText("1");
   });
 });
 
@@ -594,8 +605,8 @@ test.describe("analytics — bodyweight exercise", () => {
     await goToProgress(page, "Pull-Up");
 
     // Should show "Max reps" metric and rep trend, not "Est. 1RM"
-    await expect(page.getByText("Max reps", { exact: false })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(/\+\d+ reps/)).toBeVisible({ timeout: 5_000 });
+    await expect(metricTile(page, "Max reps")).toHaveText("12 reps");
+    await expect(page.getByText(/Up \d+ reps from last session/)).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Est. 1RM")).not.toBeVisible();
   });
 });
