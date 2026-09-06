@@ -391,6 +391,31 @@ test.describe("managing sets", () => {
     await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(2);
   });
 
+  test("swap search stays usable on an exercise added mid-session", async ({ page }) => {
+    // Regression: the swap dialog lives inside StrengthBlock, which mounts while
+    // the draft autosave is in flight. AddExerciseDialog used to read `saving`
+    // non-reactively, freezing it `true` for the life of that block and leaving
+    // the swap search input permanently disabled.
+    await seedSession(page, { session: makeSession([]) });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Add block"]').click();
+    await page.getByText("Strength exercise").click();
+    const addInput = page.locator('input[placeholder="e.g. Bench Press"]');
+    await addInput.fill("Overhead Press");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Overhead Press")).toBeVisible();
+
+    await page.locator('[aria-label="Swap exercise"]').first().click();
+    const swapInput = page.locator('input[placeholder="e.g. Bench Press"]');
+    await expect(swapInput).toBeVisible();
+    await expect(swapInput).toBeEnabled();
+    await swapInput.fill("Incline Bench Press");
+    await expect(swapInput).toHaveValue("Incline Bench Press");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Incline Bench Press")).toBeVisible();
+  });
+
   test("deleting an exercise removes it from the session", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),

@@ -3,7 +3,15 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
 
-  const props = $props<{
+  const {
+    open = false,
+    saving = false,
+    title = "Add exercise",
+    description = "Search your library or type a new name.",
+    placeholder = "e.g. Bench Press",
+    onOpenChange = (_v: boolean) => {},
+    onSubmit = async (_s: { name: string; exerciseId?: string }) => {},
+  } = $props<{
     open?: boolean;
     saving?: boolean;
     title?: string;
@@ -13,18 +21,11 @@
     onSubmit?: (selection: { name: string; exerciseId?: string }) => void | Promise<void>;
   }>();
 
-  const saving = props.saving ?? false;
-  const title = props.title ?? "Add exercise";
-  const description = props.description ?? "Search your library or type a new name.";
-  const placeholder = props.placeholder ?? "e.g. Bench Press";
-  const onOpenChange = props.onOpenChange ?? ((_v: boolean) => {});
-  const onSubmit = props.onSubmit ?? (async (_s: { name: string; exerciseId?: string }) => {});
+  let searchInput = $state<ReturnType<typeof ExerciseSearchInput> | null>(null);
 
   $effect(() => {
-    if (!props.open) searchInput?.clear();
+    if (!open) searchInput?.clear();
   });
-
-  let searchInput = $state<ReturnType<typeof ExerciseSearchInput> | null>(null);
 
   async function handleConfirm(selection: { name: string; exerciseId?: string }) {
     try {
@@ -35,7 +36,7 @@
   }
 </script>
 
-<Dialog.Root open={props.open ?? false} {onOpenChange}>
+<Dialog.Root {open} {onOpenChange}>
   <Dialog.Content class="sm:max-w-[420px]">
     <Dialog.Header>
       <Dialog.Title>{title}</Dialog.Title>
@@ -44,11 +45,16 @@
       </Dialog.Description>
     </Dialog.Header>
 
+    <!--
+      Note: the search field is deliberately NOT disabled while `saving` — a
+      background draft-autosave shouldn't lock the user out of typing. The submit
+      path (handleConfirm → onSubmit) is already serialized through the session
+      mutate queue, so a racing save is harmless.
+    -->
     <ExerciseSearchInput
       bind:this={searchInput}
       {placeholder}
-      disabled={saving}
-      autofocus={props.open}
+      autofocus={open}
       onConfirm={handleConfirm}
     />
 
