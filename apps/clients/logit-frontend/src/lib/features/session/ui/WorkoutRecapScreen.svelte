@@ -4,8 +4,8 @@
   import { backOut } from "svelte/easing";
   import { Check, Trophy, Sparkles } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
-  import type { WorkoutSession, CardioBlockData } from "@logit/core/domain/workout";
-  import { getExercises, getTopSetHighlight } from "@logit/core/domain/workout";
+  import type { WorkoutSession, CardioBlockData, ExerciseEntry } from "@logit/core/domain/workout";
+  import { getExercises, getTopSetHighlight, foldSupersets, setTypeMeta } from "@logit/core/domain/workout";
   import { formatDuration } from "@logit/core/domain/time";
   import { toDisplayWeight, formatWeight } from "@logit/core/domain/units";
   import { getSessionPRs, type SessionPR } from "@logit/core/usecases/progression/getSessionPRs";
@@ -92,6 +92,17 @@
     if (pr.kind === "first") return "First time";
     if (pr.kind === "reps") return "Rep PR";
     return "Weight PR";
+  }
+
+  // Per-exercise breakdown — superset members folded into a bracketed group.
+  const breakdown = foldSupersets(exercises);
+
+  function exerciseVolume(ex: ExerciseEntry): number {
+    const kg = ex.sets.reduce((v, s) => v + s.reps * s.weight, 0);
+    return Math.round(toDisplayWeight(kg, weightUnit));
+  }
+  function workingSets(ex: ExerciseEntry): number {
+    return ex.sets.filter((s) => s.setType !== "warmup").length;
   }
 </script>
 
@@ -181,6 +192,53 @@
     <div class="mx-4 mt-3 rounded-lg border border-border px-4 py-3" in:fade={{ duration: 300, delay: 850 }}>
       <p class="text-xs text-muted-foreground">Note</p>
       <p class="text-sm mt-0.5 whitespace-pre-wrap">{session.note}</p>
+    </div>
+  {/if}
+
+  <!-- Per-exercise breakdown -->
+  {#if breakdown.length > 0}
+    {#snippet exerciseRow(ex: ExerciseEntry)}
+      <div class="px-3 py-2">
+        <div class="flex items-baseline justify-between gap-2">
+          <span class="text-sm font-medium truncate">{ex.exerciseName}</span>
+          <span class="text-xs text-muted-foreground tabular-nums shrink-0">
+            {workingSets(ex)} set{workingSets(ex) === 1 ? "" : "s"}{exerciseVolume(ex) > 0 ? ` · ${exerciseVolume(ex).toLocaleString()} ${weightUnit}` : ""}
+          </span>
+        </div>
+        {#if ex.sets.length > 0}
+          <div class="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+            {#each ex.sets as s (s.id)}
+              {@const meta = setTypeMeta(s.setType)}
+              <span class={s.setType === "warmup" ? "opacity-50" : ""}>
+                {#if meta.short}<span class="text-[10px] font-bold">{meta.short}</span>{/if}
+                {s.reps}×{formatWeight(s.weight, weightUnit, { withUnit: false })}
+              </span>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/snippet}
+
+    <div class="mx-4 mt-4" in:fade={{ duration: 300, delay: 880 }}>
+      <p class="text-xs font-medium text-muted-foreground mb-1.5">What you did</p>
+      <div class="rounded-lg border border-border divide-y divide-border overflow-hidden">
+        {#each breakdown as group (group.kind === "superset" ? group.id : group.exercise.id)}
+          {#if group.kind === "superset"}
+            <div class="bg-primary/[0.03]">
+              <p class="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                {group.label ?? "Superset"}
+              </p>
+              <div class="ml-3 border-l-2 border-primary/30 divide-y divide-border">
+                {#each group.exercises as ex (ex.id)}
+                  {@render exerciseRow(ex)}
+                {/each}
+              </div>
+            </div>
+          {:else}
+            {@render exerciseRow(group.exercise)}
+          {/if}
+        {/each}
+      </div>
     </div>
   {/if}
 

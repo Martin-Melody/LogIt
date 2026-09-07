@@ -631,6 +631,31 @@ test.describe("finish session", () => {
     // "Sets" stat label in recap (exact match avoids "2 sets" exercise count chip)
     await expect(page.getByText("Sets", { exact: true })).toBeVisible();
     await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
+
+    // Per-exercise breakdown lists what was done.
+    await expect(page.getByText("What you did")).toBeVisible();
+    await expect(page.getByText("5×100").first()).toBeVisible();
+  });
+
+  test("recap brackets superset exercises in the breakdown", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+        makeStrengthBlock("b2", 1, "Row", [makeSet("s2", 0, 8, 40)]),
+      ]),
+    });
+    await goToSession(page);
+    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await expect(page.getByText("SUPERSET")).toBeVisible();
+
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    // The breakdown shows a "Superset" bracket over both members.
+    const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
+    await expect(breakdown.getByText("Superset")).toBeVisible();
+    await expect(breakdown.getByText("Bench Press")).toBeVisible();
+    await expect(breakdown.getByText("Row", { exact: true })).toBeVisible();
   });
 
   test("recap celebrates a weight PR against history", async ({ page }) => {

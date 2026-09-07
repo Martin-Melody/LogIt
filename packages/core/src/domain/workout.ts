@@ -161,6 +161,8 @@ export type ExerciseEntry = {
   exerciseName: string;
   orderIndex: number;
   sets: SetEntry[];
+  /** Present when this exercise is part of a superset / circuit. */
+  superset?: SupersetInfo;
 };
 
 export type WorkoutSession = {
@@ -202,7 +204,36 @@ export function getExercises(session: WorkoutSession): ExerciseEntry[] {
       exerciseId: b.data.exerciseId,
       orderIndex: b.orderIndex,
       sets: b.data.sets,
+      ...(b.data.superset ? { superset: b.data.superset } : {}),
     }));
+}
+
+/**
+ * A superset/circuit group, or a lone exercise — for history/recap rendering.
+ * Consecutive entries sharing a `superset.id` fold into one `superset` item.
+ */
+export type ExerciseGroup =
+  | { kind: "single"; exercise: ExerciseEntry }
+  | { kind: "superset"; id: string; label?: string; exercises: ExerciseEntry[] };
+
+export function foldSupersets(entries: ExerciseEntry[]): ExerciseGroup[] {
+  const out: ExerciseGroup[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const sid = entries[i]!.superset?.id;
+    if (!sid) {
+      out.push({ kind: "single", exercise: entries[i]! });
+      continue;
+    }
+    const members: ExerciseEntry[] = [];
+    while (i < entries.length && entries[i]!.superset?.id === sid) members.push(entries[i++]!);
+    i--;
+    if (members.length >= 2) {
+      out.push({ kind: "superset", id: sid, label: members[0]!.superset?.label, exercises: members });
+    } else {
+      for (const m of members) out.push({ kind: "single", exercise: m });
+    }
+  }
+  return out;
 }
 
 export function createSession(startedAtMs: number = nowMs()): WorkoutSession {
