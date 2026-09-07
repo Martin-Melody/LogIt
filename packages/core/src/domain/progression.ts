@@ -103,10 +103,15 @@ export function exerciseKey(exercise: { id?: string; name: string }): string {
 
 // historyNewestFirst must be sorted newest-first (matches getSuggestion.ts's ordering,
 // which differs from getExerciseHistory.ts's oldest-first — don't mix the two).
-export function resolveExerciseIncrement(
+
+/**
+ * The machine most relevant to this exercise right now: the one used in the most
+ * recent logged set, else the exercise's default machine.
+ */
+export function resolveExerciseMachine(
   exercise: { machines?: Machine[]; defaultMachineId?: string },
   historyNewestFirst: ExerciseHistoryEntry[],
-): number | undefined {
+): Machine | undefined {
   const machines = exercise.machines ?? [];
   if (machines.length === 0) return undefined;
 
@@ -114,9 +119,81 @@ export function resolveExerciseIncrement(
     for (const set of entry.sets) {
       if (!set.machineId) continue;
       const m = machines.find((mm) => mm.id === set.machineId);
-      if (m) return m.incrementKg;
+      if (m) return m;
     }
   }
 
-  return machines.find((m) => m.id === exercise.defaultMachineId)?.incrementKg;
+  return machines.find((m) => m.id === exercise.defaultMachineId);
+}
+
+export function resolveExerciseIncrement(
+  exercise: { machines?: Machine[]; defaultMachineId?: string },
+  historyNewestFirst: ExerciseHistoryEntry[],
+): number | undefined {
+  return resolveExerciseMachine(exercise, historyNewestFirst)?.incrementKg;
+}
+
+// ── Trend classification ─────────────────────────────────────────────────────
+
+export type ProgressStatus =
+  | "new"
+  | "progressing"
+  | "plateaued"
+  | "regressing"
+  | "detraining";
+
+const DETRAINING_MS = 21 * 24 * 60 * 60 * 1000;
+const TREND_WINDOW = 8;
+
+/**
+ * Classify how an exercise is trending from its primary metric series
+ * (e1RM or max weight), oldest→newest. Deliberately simple and explainable —
+ * least-squares slope over a recent window, plus a "sessions since PR" count.
+ */
+export function classifyTrend(params: {
+  values: number[];
+  lastTrainedMs: number;
+  nowMs: number;
+}): { status: ProgressStatus; slopePctPerSession: number; sessionsSincePr: number } {
+  const { values, lastTrainedMs, nowMs } = params;
+
+  // Sessions since the last all-time best in the series.
+  let runningMax = -Infinity;
+  let lastPrIdx = -1;
+  values.forEach((v, i) => {
+    if (v > runningMax) {
+      runningMax = v;
+      lastPrIdx = i;
+    }
+  });
+  const sessionsSincePr = lastPrIdx === -1 ? values.length : values.length - 1 - lastPrIdx;
+
+  if (values.length < 3) {
+    return { status: "new", slopePctPerSession: 0, sessionsSincePr };
+  }
+  if (nowMs - lastTrainedMs > DETRAINING_MS) {
+    return { status: "detraining", slopePctPerSession: 0, sessionsSincePr };
+  }
+
+  const window = values.slice(-TREND_WINDOW);
+  const n = window.length;
+  const meanX = (n - 1) / 2;
+  const meanY = window.reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let den = 0;
+  window.forEach((y, x) => {
+    num += (x - meanX) * (y - meanY);
+    den += (x - meanX) ** 2;
+  });
+  const slope = den === 0 ? 0 : num / den;
+  const slopePctPerSession = meanY === 0 ? 0 : (slope / meanY) * 100;
+
+  const prRecently = sessionsSincePr <= 1;
+  if (prRecently || slopePctPerSession > 0.4) {
+    return { status: "progressing", slopePctPerSession, sessionsSincePr };
+  }
+  if (slopePctPerSession < -1) {
+    return { status: "regressing", slopePctPerSession, sessionsSincePr };
+  }
+  return { status: "plateaued", slopePctPerSession, sessionsSincePr };
 }

@@ -1,6 +1,5 @@
 import type { WorkoutRepo, ListRecentSessionsOptions } from "../workoutRepo";
 import type { WorkoutSession } from "../../domain/workout";
-import type { SetTypeOption } from "../types";
 import { syncApi } from "../../api/syncApi";
 
 const NOT_SUPPORTED = "Not supported in read-only remote mode.";
@@ -67,16 +66,6 @@ export function createRemoteWorkoutRepo(clientId?: string): WorkoutRepo {
 
     async clearDraftSession(): Promise<void> {
       throw new Error(NOT_SUPPORTED);
-    },
-
-    async getSetTypes(): Promise<SetTypeOption[]> {
-      return [
-        { id: "normal", code: "normal", label: "Normal" },
-        { id: "warmup", code: "warmup", label: "Warm-up" },
-        { id: "dropset", code: "dropset", label: "Drop set" },
-        { id: "amrap", code: "amrap", label: "AMRAP" },
-        { id: "failure", code: "failure", label: "To failure" },
-      ];
     },
   };
 }

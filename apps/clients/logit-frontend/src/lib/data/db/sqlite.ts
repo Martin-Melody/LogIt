@@ -5,7 +5,6 @@ import {
   SQLiteConnection,
   type SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { createId } from "@logit/core/domain/ids";
 import { nowMs } from "@logit/core/domain/time";
 
 const DB_NAME = "logit";
@@ -197,13 +196,6 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       value TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS set_types (
-      id TEXT PRIMARY KEY NOT NULL,
-      code TEXT NOT NULL UNIQUE,
-      label TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS local_accounts (
       id TEXT PRIMARY KEY NOT NULL,
       username TEXT NOT NULL UNIQUE,
@@ -269,7 +261,8 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY NOT NULL,
       started_at_ms INTEGER NOT NULL,
-      ended_at_ms INTEGER NULL
+      ended_at_ms INTEGER NULL,
+      note TEXT NULL
     );
 
     CREATE TABLE IF NOT EXISTS session_exercises (
@@ -575,9 +568,9 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateExerciseType(db);
   await migrateMachines(db);
   await migrateSessionFlags(db);
+  await migrateSessionNote(db);
   await migrateCoachMessageContext(db);
   await migrateProgressPhoto(db);
-  await seedSetTypes(db);
   await seedExercises(db);
 }
 
@@ -606,6 +599,12 @@ async function migrateMachines(db: SQLiteDBConnection): Promise<void> {
 async function migrateSessionFlags(db: SQLiteDBConnection): Promise<void> {
   try {
     await db.run(`ALTER TABLE sessions ADD COLUMN exclude_from_progression INTEGER NOT NULL DEFAULT 0`, []);
+  } catch { /* column already exists */ }
+}
+
+async function migrateSessionNote(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run(`ALTER TABLE sessions ADD COLUMN note TEXT NULL`, []);
   } catch { /* column already exists */ }
 }
 
@@ -732,26 +731,6 @@ async function migrateSessionSets(db: SQLiteDBConnection): Promise<void> {
     } catch {
       // Column already exists — safe to ignore
     }
-  }
-}
-
-async function seedSetTypes(db: SQLiteDBConnection): Promise<void> {
-  const res = await db.query(`SELECT 1 FROM set_types LIMIT 1`, []);
-  if ((res.values?.length ?? 0) > 0) return;
-
-  const rows = [
-    { code: "normal", label: "Normal", sort: 0 },
-    { code: "warmup", label: "Warm-up", sort: 1 },
-    { code: "dropset", label: "Drop set", sort: 2 },
-    { code: "amrap", label: "AMRAP", sort: 3 },
-    { code: "failure", label: "To failure", sort: 4 },
-  ] as const;
-
-  for (const r of rows) {
-    await db.run(
-      `INSERT INTO set_types(id, code, label, sort_order) VALUES(?, ?, ?, ?)`,
-      [createId("settype"), r.code, r.label, r.sort],
-    );
   }
 }
 

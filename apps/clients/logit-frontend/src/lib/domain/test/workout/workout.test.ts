@@ -1,7 +1,11 @@
 import {
   createSession, addExercise, addSet, updateSet, removeSet, removeExercise,
-  getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
+  getSessionDurationMs, finishSession, getTopSetHighlight, getExercises, getSessionVolumeKg, getSessionSetCount,
+  SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
+  groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
+  setSessionNote, foldSupersets,
 } from "@logit/core/domain/workout";
+import type { StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
 
 function seedSession() {
@@ -118,5 +122,170 @@ describe("workout domain", () => {
   it("getTopSetHighlight returns null if there are no sets", () => {
     const s = createSession(1_000);
     expect(getTopSetHighlight(s)).toBeNull();
+  });
+
+  it("getSessionVolumeKg / getSessionSetCount total the strength work", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Bench" });
+    const id = getExercises(s)[0].id;
+    s = addSet(s, id, { weight: 100, reps: 5 }); // 500
+    s = addSet(s, id, { weight: 60, reps: 10, setType: "warmup" }); // 600, not a working set
+    expect(getSessionVolumeKg(s)).toBe(1100);
+    expect(getSessionSetCount(s)).toBe(1);
+  });
+
+  it("swapExercise changes the exercise but keeps the sets", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Flat Bench", exerciseId: "ex-flat" });
+    const blockId = getExercises(s)[0].id;
+    s = addSet(s, blockId, { reps: 8, weight: 60 });
+    s = addSet(s, blockId, { reps: 8, weight: 60 });
+
+    s = swapExercise(s, blockId, { exerciseName: " Incline Bench ", exerciseId: "ex-incline" });
+
+    const ex = getExercises(s)[0];
+    expect(ex.id).toBe(blockId); // same block
+    expect(ex.exerciseName).toBe("Incline Bench");
+    expect(ex.exerciseId).toBe("ex-incline");
+    expect(ex.sets.map((x) => [x.reps, x.weight])).toEqual([[8, 60], [8, 60]]);
+  });
+
+  it("setSessionNote trims and clears", () => {
+    let s = createSession(1_000);
+    s = setSessionNote(s, "  felt strong  ");
+    expect(s.note).toBe("felt strong");
+    s = setSessionNote(s, "   ");
+    expect(s.note).toBeNull();
+  });
+
+  it("swapExercise is a no-op for an unknown block", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Bench" });
+    const before = JSON.stringify(s);
+    s = swapExercise(s, "nope", { exerciseName: "Squat" });
+    expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+describe("supersets", () => {
+  function seedThree() {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "A" });
+    s = addExercise(s, { exerciseName: "B" });
+    s = addExercise(s, { exerciseName: "C" });
+    return { s, ids: getExercises(s).map((e) => e.id) };
+  }
+
+  it("groups two blocks under a shared id and makes them contiguous", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[2]]); // group A and C (non-adjacent)
+
+    const members = supersetMembers(s, superId(s, ids[0]));
+    expect(members.map((m) => (m.data as StrengthBlockData).exerciseName)).toEqual(["A", "C"]);
+    // A, C now sit together; B is pushed out.
+    const order = getExercises(s).map((e) => e.exerciseName);
+    expect(order).toEqual(["A", "C", "B"]);
+  });
+
+  it("needs at least two blocks", () => {
+    let { s, ids } = seedThree();
+    const before = JSON.stringify(s);
+    s = groupIntoSuperset(s, [ids[0]]);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it("addSupersetRound appends one set to every strength member", () => {
+    let { s, ids } = seedThree();
+    s = addSet(s, ids[0], { reps: 8, weight: 50 });
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const supersetId = superId(s, ids[0]);
+
+    s = addSupersetRound(s, supersetId);
+
+    const [a, b] = getExercises(s);
+    expect(a.sets).toHaveLength(2);
+    expect(a.sets[1].weight).toBe(50); // carried from the previous set
+    expect(b.sets).toHaveLength(1);
+  });
+
+  it("ungroupSuperset clears the tag", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const supersetId = superId(s, ids[0]);
+    s = ungroupSuperset(s, supersetId);
+    expect(supersetMembers(s, supersetId)).toHaveLength(0);
+  });
+
+  it("removing a member down to one dissolves the superset", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const supersetId = superId(s, ids[0]);
+    s = removeExercise(s, ids[1]);
+    expect(supersetMembers(s, supersetId)).toHaveLength(0);
+  });
+
+  function superId(s: ReturnType<typeof createSession>, blockId: string): string {
+    const block = s.blocks.find((b) => b.id === blockId)!;
+    return (block.data as StrengthBlockData).superset!.id;
+  }
+
+  it("getExercises carries the superset tag", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const [a, , c] = getExercises(s);
+    expect(a.superset?.id).toBe(superId(s, ids[0]));
+    expect(c.superset).toBeUndefined();
+  });
+
+  it("foldSupersets brackets consecutive members and leaves singles alone", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const groups = foldSupersets(getExercises(s));
+    expect(groups.map((g) => g.kind)).toEqual(["superset", "single"]);
+    const first = groups[0];
+    if (first.kind !== "superset") throw new Error("expected superset");
+    expect(first.exercises.map((e) => e.exerciseName)).toEqual(["A", "B"]);
+  });
+});
+
+describe("set types", () => {
+  it("every meta entry has a label and hint", () => {
+    for (const m of SET_TYPE_META) {
+      expect(m.label.length).toBeGreaterThan(0);
+      expect(m.hint.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("setTypeMeta falls back to normal for an unknown type", () => {
+    expect(setTypeMeta("does-not-exist").type).toBe("normal");
+  });
+
+  it("drop / rest-pause / myo-reps are continuation sets, others are not", () => {
+    expect(isContinuationSet("dropset")).toBe(true);
+    expect(isContinuationSet("rest-pause")).toBe(true);
+    expect(isContinuationSet("myo-reps")).toBe(true);
+    expect(isContinuationSet("normal")).toBe(false);
+    expect(isContinuationSet("warmup")).toBe(false);
+    expect(isContinuationSet("amrap")).toBe(false);
+  });
+
+  it("normal has no badge glyph; the rest do", () => {
+    expect(setTypeMeta("normal").short).toBe("");
+    expect(setTypeMeta("warmup").short).toBe("W");
+    expect(setTypeMeta("rest-pause").short).toBe("RP");
+  });
+
+  it("updateSet can record and clear an RPE", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Bench" });
+    const exId = getExercises(s)[0].id;
+    s = addSet(s, exId, { weight: 100, reps: 5 });
+    const setId = getExercises(s)[0].sets[0].id;
+
+    s = updateSet(s, exId, setId, { rpe: 8.5 });
+    expect(getExercises(s)[0].sets[0].rpe).toBe(8.5);
+
+    s = updateSet(s, exId, setId, { rpe: null });
+    expect(getExercises(s)[0].sets[0].rpe).toBeNull();
   });
 });

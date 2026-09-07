@@ -64,11 +64,9 @@ jobs:
         working-directory: apps/clients/logit-frontend
         run: npm run test:unit
 
-      - name: frontend — svelte-check (informational)
-        id: sveltecheck
+      - name: frontend — svelte-check
         working-directory: apps/clients/logit-frontend
         run: npm run check
-        continue-on-error: true
 
       - name: marketing — build + svelte-check
         working-directory: apps/clients/logit-marketing
@@ -78,12 +76,8 @@ jobs:
         working-directory: apps/clients/docs-site
         run: npm run build
 
-      - name: Note svelte-check status
-        if: steps.sveltecheck.outcome == 'failure'
-        run: echo "::warning::frontend 'npm run check' has known pre-existing errors — tracked separately, not blocking yet."
-
   e2e:
-    name: E2E (Playwright, social)
+    name: E2E (Playwright)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -120,13 +114,12 @@ jobs:
             sleep 1
           done
 
-      # Only social.spec.ts runs in CI today — it guards the merged social feature and is
-      # green. day-editor / progression / session-flow / nutrition-smoke have pre-existing
-      # failures tracked separately; add them here (or switch to `npx playwright test`) as
-      # they're fixed.
-      - name: Run Playwright tests (social)
+      # Playwright serves a production build (see playwright.config.ts webServer).
+      # The API-dependent specs (auth-flow, onboarding, social, sync) rely on the
+      # local API started above at :5118.
+      - name: Run Playwright tests
         working-directory: apps/clients/logit-frontend
-        run: npx playwright test tests/social.spec.ts
+        run: npx playwright test
 
       - name: API log on failure
         if: failure()

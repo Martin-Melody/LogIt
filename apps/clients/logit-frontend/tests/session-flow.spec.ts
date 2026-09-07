@@ -121,8 +121,28 @@ test.describe("session loads", () => {
     await seedSession(page, { session: makeSession([]) });
     await goToSession(page);
 
-    await expect(page.getByText("No exercises yet.")).toBeVisible();
-    await expect(page.getByText("Add first exercise")).toBeVisible();
+    await expect(page.getByText("Nothing logged yet.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add exercise" })).toBeVisible();
+  });
+
+  test("'Repeat last workout' clones the previous session's exercises into an empty draft", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([]),
+      history: [
+        makeCompletedSession("Bench Press", [
+          makeSet("ps1", 0, 5, 100),
+          makeSet("ps2", 1, 5, 100),
+        ]),
+      ],
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Repeat last workout" }).click();
+
+    await expect(page.getByText("Bench Press")).toBeVisible();
+    // Two sets carried over, none marked complete.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(2);
+    await expect(page.locator('[aria-label="Mark incomplete"]')).toHaveCount(0);
   });
 
   test("session with one exercise shows the exercise block", async ({ page }) => {
@@ -285,6 +305,24 @@ test.describe("managing sets", () => {
     await expect(page.locator('[aria-label="Add set"]')).toBeVisible();
   });
 
+  test("set rows show the previous session's reps/weight as a placeholder", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
+      history: [
+        makeCompletedSession("Bench Press", [
+          makeSet("ps1", 0, 6, 90),
+          makeSet("ps2", 1, 6, 90),
+        ]),
+      ],
+    });
+    await goToSession(page);
+
+    await page.getByText("+ Add first set").click();
+
+    const weightInput = page.locator('input[step="0.5"]').first();
+    await expect(weightInput).toHaveJSProperty("placeholder", "90");
+  });
+
   test("add set button uses suggestion weight as default", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
@@ -330,6 +368,54 @@ test.describe("managing sets", () => {
     await expect(page.locator('[aria-label="Mark complete"]').first()).toBeVisible();
   });
 
+  test("swapping an exercise keeps the logged sets", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [
+          makeSet("s1", 0, 8, 60),
+          makeSet("s2", 1, 8, 60),
+        ]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Swap exercise"]').first().click();
+    const input = page.locator('input[placeholder="e.g. Bench Press"]');
+    await expect(input).toBeVisible();
+    await input.fill("Incline Bench Press");
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText("Incline Bench Press")).toBeVisible();
+    await expect(page.getByText("Bench Press", { exact: true })).not.toBeVisible();
+    // Both sets still there.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(2);
+  });
+
+  test("swap search stays usable on an exercise added mid-session", async ({ page }) => {
+    // Regression: the swap dialog lives inside StrengthBlock, which mounts while
+    // the draft autosave is in flight. AddExerciseDialog used to read `saving`
+    // non-reactively, freezing it `true` for the life of that block and leaving
+    // the swap search input permanently disabled.
+    await seedSession(page, { session: makeSession([]) });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Add block"]').click();
+    await page.getByText("Strength exercise").click();
+    const addInput = page.locator('input[placeholder="e.g. Bench Press"]');
+    await addInput.fill("Overhead Press");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Overhead Press")).toBeVisible();
+
+    await page.locator('[aria-label="Swap exercise"]').first().click();
+    const swapInput = page.locator('input[placeholder="e.g. Bench Press"]');
+    await expect(swapInput).toBeVisible();
+    await expect(swapInput).toBeEnabled();
+    await swapInput.fill("Incline Bench Press");
+    await expect(swapInput).toHaveValue("Incline Bench Press");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Incline Bench Press")).toBeVisible();
+  });
+
   test("deleting an exercise removes it from the session", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
@@ -341,7 +427,63 @@ test.describe("managing sets", () => {
     await page.getByRole("button", { name: "Remove" }).click();
 
     await expect(page.getByText("Bench Press")).not.toBeVisible();
-    await expect(page.getByText("No exercises yet.")).toBeVisible();
+    await expect(page.getByText("Nothing logged yet.")).toBeVisible();
+  });
+});
+
+// ── Supersets ─────────────────────────────────────────────────────────────────
+
+test.describe("supersets", () => {
+  test("linking two exercises makes a superset; add round appends a set to each", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+        makeStrengthBlock("b2", 1, "Row", [makeSet("s2", 0, 8, 40)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+
+    await expect(page.getByText("SUPERSET")).toBeVisible();
+    await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
+
+    await page.getByRole("button", { name: "Add round" }).click();
+
+    // Each exercise now has 2 set rows.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
+    await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
+
+    // Ungroup restores plain blocks.
+    await page.getByRole("button", { name: "Ungroup" }).click();
+    await expect(page.getByText("SUPERSET")).not.toBeVisible();
+    await expect(page.getByText("Bench Press")).toBeVisible();
+    await expect(page.getByText("Row", { exact: true })).toBeVisible();
+  });
+
+  test("rest starts only after the last exercise of a superset round", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [
+          { id: "s1", setType: "normal", reps: 8, weight: 60, orderIndex: 0, restDurationMs: 90_000 },
+        ]),
+        makeStrengthBlock("b2", 1, "Row", [
+          { id: "s2", setType: "normal", reps: 8, weight: 40, orderIndex: 0, restDurationMs: 90_000 },
+        ]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await expect(page.getByText("SUPERSET")).toBeVisible();
+
+    // First member — completing it flows straight on, no rest.
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+
+    // Anchor (last member) — completing starts the one shared round rest.
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
   });
 });
 
@@ -455,6 +597,23 @@ test.describe("finish session", () => {
     await expect(page.getByText("Workout complete")).toBeVisible();
   });
 
+  test("a session note is saved and shown on the recap", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "+ Session note" }).click();
+    const note = page.locator('textarea[placeholder^="Session note"]');
+    await note.fill("felt strong today");
+    await note.blur();
+
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("felt strong today")).toBeVisible();
+  });
+
   test("recap screen shows session stats", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([
@@ -472,6 +631,45 @@ test.describe("finish session", () => {
     // "Sets" stat label in recap (exact match avoids "2 sets" exercise count chip)
     await expect(page.getByText("Sets", { exact: true })).toBeVisible();
     await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
+
+    // Per-exercise breakdown lists what was done.
+    await expect(page.getByText("What you did")).toBeVisible();
+    await expect(page.getByText("5×100").first()).toBeVisible();
+  });
+
+  test("recap brackets superset exercises in the breakdown", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+        makeStrengthBlock("b2", 1, "Row", [makeSet("s2", 0, 8, 40)]),
+      ]),
+    });
+    await goToSession(page);
+    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await expect(page.getByText("SUPERSET")).toBeVisible();
+
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    // The breakdown shows a "Superset" bracket over both members.
+    const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
+    await expect(breakdown.getByText("Superset")).toBeVisible();
+    await expect(breakdown.getByText("Bench Press")).toBeVisible();
+    await expect(breakdown.getByText("Row", { exact: true })).toBeVisible();
+  });
+
+  test("recap celebrates a weight PR against history", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 3, 110)]),
+      ]),
+      history: [makeCompletedSession("Bench Press", [makeSet("ps1", 0, 5, 100)])],
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByText("Bench Press Weight PR")).toBeVisible();
   });
 
   test("'Back to workout' cancels the recap and returns to session", async ({ page }) => {
@@ -530,7 +728,53 @@ test.describe("finish session", () => {
 
     await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });
 
-    const draft = await page.evaluate(() => localStorage.getItem("logit:draft:v1"));
-    expect(draft).toBeNull();
+    // finish() clears the draft asynchronously after navigation — poll for it.
+    await page.waitForFunction(
+      () => localStorage.getItem("logit:draft:v1") === null,
+      { timeout: 5000 },
+    );
+  });
+});
+
+// ── Discard session ───────────────────────────────────────────────────────────
+
+test.describe("discard session", () => {
+  test("'Discard workout' asks for confirmation before discarding", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Discard workout" }).click();
+
+    // Confirm dialog — the draft is untouched until the user confirms
+    await expect(page.getByText("Discard this workout?")).toBeVisible();
+    const draftStillThere = await page.evaluate(() => localStorage.getItem("logit:draft:v1"));
+    expect(draftStillThere).not.toBeNull();
+
+    await page.getByRole("button", { name: "Keep going" }).click();
+    await expect(page.getByText("Discard this workout?")).not.toBeVisible();
+    await expect(page.getByText("Bench Press")).toBeVisible();
+  });
+
+  test("confirming discard clears the draft and navigates home", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "Discard workout" }).click();
+    await page.getByRole("button", { name: "Discard", exact: true }).click();
+
+    await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });
+
+    await page.waitForFunction(
+      () => localStorage.getItem("logit:draft:v1") === null,
+      { timeout: 5000 },
+    );
   });
 });

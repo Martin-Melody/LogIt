@@ -1,5 +1,6 @@
 import type { ProgressionOutput, ExerciseHistoryEntry, PrecedingExercise } from "../../domain/progression";
-import { exerciseKey, resolveExerciseIncrement } from "../../domain/progression";
+import { exerciseKey, resolveExerciseIncrement, resolveExerciseMachine } from "../../domain/progression";
+import { snapToMachine } from "../../domain/machine";
 import { getExercises } from "../../domain/workout";
 import type { WorkoutSession } from "../../domain/workout";
 import { nowMs } from "../../domain/time";
@@ -117,7 +118,7 @@ export async function getSuggestion(
   const storedPrefs = await progressionRepo.getAlgorithmPreferences(config.algorithmId);
   const userPreferences = storedPrefs ?? algorithm.defaultPreferences ?? {};
 
-  return algorithm.suggest({
+  const output = await algorithm.suggest({
     exercise: exerciseWithMuscles,
     history,
     state,
@@ -126,6 +127,18 @@ export async function getSuggestion(
     incrementOverride,
     sessionContext,
   });
+
+  // If the exercise is done on a machine with a known set of achievable weights,
+  // round the suggested weights to what the machine can actually be set to.
+  const machine = resolveExerciseMachine(exerciseData ?? {}, history);
+  if (machine?.weights && output.sets.length > 0) {
+    return {
+      ...output,
+      sets: output.sets.map((s) => ({ ...s, weight: snapToMachine(machine, s.weight).kg })),
+    };
+  }
+
+  return output;
 }
 
 export async function refreshProgressionState(

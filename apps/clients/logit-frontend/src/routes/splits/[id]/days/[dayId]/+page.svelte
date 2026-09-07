@@ -4,9 +4,13 @@
 
   import { Button } from "$lib/components/ui/button";
 
-  import type { WorkoutSplit, SplitDay, PlannedBlock, PlannedStrength, PlannedCardio } from "@logit/core/domain/WorkoutSplit";
-  import { touchSplit } from "@logit/core/domain/WorkoutSplit";
+  import type { WorkoutSplit, SplitDay, PlannedBlock, PlannedStrength, PlannedCardio, PlannedTargets } from "@logit/core/domain/WorkoutSplit";
+  import { touchSplit, setPlannedTargets } from "@logit/core/domain/WorkoutSplit";
   import { createId } from "@logit/core/domain/ids";
+  import { profile } from "$lib/stores/profile.store";
+  import { formatWeight, toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
+  import { reveal } from "$lib/transitions";
+  import { fade } from "svelte/transition";
 
   import { getSplit } from "$lib/usecases/Splits/getSplit";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
@@ -60,6 +64,61 @@
 
   function blockLabel(block: PlannedBlock): string {
     return block.type === "strength" ? block.exerciseName : block.activityName;
+  }
+
+  const weightUnit = $derived($profile.weightUnit);
+
+  let expandedId = $state<string | null>(null);
+  // Draft targets for the currently-expanded strength block, in display units.
+  let targetDraft = $state<{ sets: number | null; reps: number | null; weight: number | null }>({
+    sets: null, reps: null, weight: null,
+  });
+
+  function toggleExpanded(block: PlannedBlock) {
+    if (block.type !== "strength") return;
+    if (expandedId === block.id) {
+      expandedId = null;
+      return;
+    }
+    expandedId = block.id;
+    const t = block.targets ?? {};
+    targetDraft = {
+      sets: t.sets ?? null,
+      reps: t.reps ?? null,
+      weight: t.weight != null ? roundDisplayWeight(toDisplayWeight(t.weight, weightUnit), weightUnit) : null,
+    };
+  }
+
+  function targetSummary(t?: PlannedTargets): string | null {
+    if (!t) return null;
+    const parts: string[] = [];
+    if (t.sets && t.reps) parts.push(`${t.sets}×${t.reps}`);
+    else if (t.sets) parts.push(`${t.sets} sets`);
+    else if (t.reps) parts.push(`${t.reps} reps`);
+    if (t.weight) parts.push(formatWeight(t.weight, weightUnit));
+    return parts.length ? parts.join(" · ") : null;
+  }
+
+  let targetQueue: Promise<void> = Promise.resolve();
+
+  /** Persist the whole draft for the expanded block; serialized so rapid edits don't race. */
+  function commitTargetDraft(blockId: string) {
+    const snapshot = { ...targetDraft };
+    targetQueue = targetQueue.then(async () => {
+      if (!split || !day) return;
+      await persist(
+        setPlannedTargets(split, day.id, blockId, {
+          sets: snapshot.sets ?? undefined,
+          reps: snapshot.reps ?? undefined,
+          weight: snapshot.weight != null ? fromDisplayWeight(snapshot.weight, weightUnit) : undefined,
+        }),
+      );
+    });
+  }
+
+  function clearTargets(blockId: string) {
+    targetDraft = { sets: null, reps: null, weight: null };
+    commitTargetDraft(blockId);
   }
 
   async function load() {
@@ -405,7 +464,7 @@
 
   <!-- Block type picker -->
   {#if ui.addMode === "picker"}
-    <div class="flex gap-2 px-3 py-2 border-b border-border bg-muted/30">
+    <div class="flex gap-2 px-3 py-2 border-b border-border bg-muted/30" transition:reveal>
       <button
         type="button"
         class="flex-1 flex items-center gap-2 rounded border border-border px-3 py-2 text-sm hover:bg-muted/50"
@@ -430,7 +489,7 @@
 
   <!-- Exercise search -->
   {#if ui.addMode === "exercise"}
-    <div class="px-3 py-2 border-b border-border bg-muted/30">
+    <div class="px-3 py-2 border-b border-border bg-muted/30" transition:reveal>
       <ExerciseSearchInput
         placeholder="Search or add exercise…"
         disabled={ui.saving}
@@ -473,39 +532,88 @@
     <ul bind:this={listEl} class="divide-y divide-border">
       {#each ordered as block, i (block.id)}
         {@const isDragging = dragId === block.id}
-        <li class="relative flex items-center py-2.5 pr-3 transition-colors {isDragging ? 'bg-primary/15' : ''}">
-          <button
-            type="button"
-            class="absolute left-0 top-0 bottom-0 flex items-center gap-1 pl-3 pr-2 cursor-grab active:cursor-grabbing"
-            style="touch-action: none; background: rgba(99,102,241,0.15); border-right: 2px solid rgba(99,102,241,0.4);"
-            use:gripAction={block.id}
-            aria-label="Drag to reorder"
-            tabindex="-1"
-            disabled={ui.saving}
-          >
-            <GripVertical class="h-4 w-4 text-indigo-500" />
-            <span class="text-xs w-5 text-right text-indigo-500 font-medium">{i + 1}</span>
-          </button>
+        {@const summary = block.type === "strength" ? targetSummary(block.targets) : null}
+        {@const isExpanded = expandedId === block.id}
+        <li class="transition-colors {isDragging ? 'bg-primary/[0.06]' : ''}">
+          <div class="relative flex items-center py-2.5 pr-2">
+            <button
+              type="button"
+              class="absolute left-0 top-0 bottom-0 flex items-center gap-1 px-3 cursor-grab active:cursor-grabbing bg-primary/[0.06] border-r border-primary/20 text-primary/70"
+              style="touch-action: none;"
+              use:gripAction={block.id}
+              aria-label="Drag to reorder"
+              tabindex="-1"
+              disabled={ui.saving}
+            >
+              <GripVertical class="h-4 w-4" />
+              <span class="text-xs w-4 text-right font-medium tabular-nums">{i + 1}</span>
+            </button>
 
-          <div class="flex-1 min-w-0 pl-16 flex items-center gap-2">
-            {#if block.type === "cardio"}
-              <Timer class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            {:else}
-              <Dumbbell class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            {/if}
-            <span class="text-sm truncate">{blockLabel(block)}</span>
+            <button
+              type="button"
+              class="flex-1 min-w-0 pl-[4.25rem] pr-2 flex items-center gap-2 text-left disabled:opacity-100"
+              disabled={block.type !== "strength"}
+              onclick={() => toggleExpanded(block)}
+            >
+              {#if block.type === "cardio"}
+                <Timer class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              {:else}
+                <Dumbbell class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              {/if}
+              <span class="text-sm truncate">{blockLabel(block)}</span>
+              {#if summary}
+                <span class="text-xs text-muted-foreground tabular-nums shrink-0">· {summary}</span>
+              {:else if block.type === "strength"}
+                <span class="text-xs text-muted-foreground/60 shrink-0">· add targets</span>
+              {/if}
+            </button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+              disabled={ui.saving}
+              onclick={() => void deleteBlock(block.id)}
+              aria-label="Remove {blockLabel(block)}"
+            >
+              <X class="h-3.5 w-3.5" />
+            </Button>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            class="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-            disabled={ui.saving}
-            onclick={() => void deleteBlock(block.id)}
-            aria-label="Remove {blockLabel(block)}"
-          >
-            <X class="h-3.5 w-3.5" />
-          </Button>
+          {#if isExpanded && block.type === "strength"}
+            <div class="pl-[4.25rem] pr-3 pb-3 pt-1" transition:reveal>
+              <div class="grid grid-cols-3 gap-2">
+                {#each [["Sets", "sets"], ["Reps", "reps"], [`Weight (${weightUnit})`, "weight"]] as [label, key] (key)}
+                  <label class="flex flex-col gap-1">
+                    <span class="text-[11px] text-muted-foreground">{label}</span>
+                    <input
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      placeholder="—"
+                      class="w-full rounded border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                      value={targetDraft[key as "sets" | "reps" | "weight"] ?? ""}
+                      disabled={ui.saving}
+                      oninput={(e) => {
+                        const v = (e.currentTarget as HTMLInputElement).value;
+                        targetDraft[key as "sets" | "reps" | "weight"] = v === "" ? null : Math.max(0, Number(v));
+                        commitTargetDraft(block.id);
+                      }}
+                    />
+                  </label>
+                {/each}
+              </div>
+              {#if summary}
+                <button
+                  type="button"
+                  class="mt-2 text-xs text-muted-foreground hover:text-destructive"
+                  onclick={() => clearTargets(block.id)}
+                >
+                  Clear targets
+                </button>
+              {/if}
+            </div>
+          {/if}
         </li>
       {/each}
     </ul>

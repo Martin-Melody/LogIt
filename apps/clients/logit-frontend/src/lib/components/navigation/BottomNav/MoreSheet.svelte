@@ -3,6 +3,8 @@
   import { page } from "$app/stores";
   import { authStore } from "$lib/api/authStore.svelte";
   import { navConfig, NAV_ITEM_DEFS } from "$lib/stores/navConfig.store";
+  import { fade } from "svelte/transition";
+  import { sheetUp } from "$lib/transitions";
 
   const { open, onclose }: { open: boolean; onclose: () => void } = $props();
 
@@ -29,9 +31,13 @@
     class="fixed inset-0 z-40 bg-black/40"
     role="presentation"
     onclick={onclose}
+    transition:fade={{ duration: 150 }}
   ></div>
 
-  <div class="fixed inset-x-0 bottom-0 z-50 rounded-t-xl border-t border-border bg-background pb-[env(safe-area-inset-bottom)]">
+  <div
+    class="fixed inset-x-0 bottom-0 z-50 rounded-t-xl border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
+    transition:sheetUp
+  >
     <!-- Handle -->
     <div class="flex justify-center pt-2.5 pb-1">
       <div class="h-1 w-10 rounded-full bg-muted-foreground/20"></div>

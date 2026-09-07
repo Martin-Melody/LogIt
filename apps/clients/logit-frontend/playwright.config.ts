@@ -18,10 +18,14 @@ export default defineConfig({
     trace: isCI ? "on-first-retry" : "off",
   },
   webServer: {
-    command: "npm run dev",
+    // Serve a production build, not `vite dev`. The dev server compiles each
+    // route on first navigation, which under parallel workers pushed heavy
+    // routes (/session, /progress) past the test timeout intermittently.
+    // `vite preview` serves precompiled assets — consistent and fast.
+    command: "npm run build && npm run preview -- --port 5173 --strictPort",
     port: 5173,
     reuseExistingServer: !isCI,
-    // Cold `vite dev` in CI does a full svelte-kit sync + first compile.
-    timeout: 120_000,
+    // `npm run build` is the long pole here (~35s cold, more in CI).
+    timeout: 180_000,
   },
 });

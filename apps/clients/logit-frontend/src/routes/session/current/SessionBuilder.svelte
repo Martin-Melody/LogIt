@@ -11,10 +11,11 @@
   import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import type { WorkoutSession, SessionBlock } from "@logit/core/domain/workout";
-  import { addExercise, addCardioBlock, removeExercise, getExercises } from "@logit/core/domain/workout";
+  import { addExercise, addCardioBlock, removeExercise, getExercises, setSessionNote } from "@logit/core/domain/workout";
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
+  import { reveal } from "$lib/transitions";
   import { startSessionTour, destroyActiveTour } from "$lib/tour/index";
 
   import { listBlockDefs } from "$lib/features/session/blocks/index";
@@ -23,15 +24,30 @@
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
   import BlockPickerSheet from "$lib/features/session/ui/BlockPickerSheet.svelte";
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
+  import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
 
-  import CurrentSessionHeader from "./Commponents/CurrentSessionHeader.svelte";
-  import FinishWorkoutCard from "./Commponents/FinishWorkoutCard.svelte";
+  import CurrentSessionHeader from "./Components/CurrentSessionHeader.svelte";
+  import FinishWorkoutCard from "./Components/FinishWorkoutCard.svelte";
 
   onMount(() => {
     setTimeout(() => startSessionTour(), 600);
+    void getWorkoutRepo()
+      .listRecentSessions({ limit: 1 })
+      .then((s) => (hasPreviousSession = s.length > 0))
+      .catch(() => {});
   });
+
+  async function repeatLast() {
+    if (ui.finishing) return;
+    destroyActiveTour();
+    try {
+      await currentSession.repeatLast();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't repeat the last workout");
+    }
+  }
 
   const ui = $state({
     saving: false,
@@ -47,6 +63,12 @@
 
   let recapSession = $state<WorkoutSession | null>(null);
   let shareSession = $state<WorkoutSession | null>(null);
+  let hasPreviousSession = $state(false);
+  let noteOpen = $state(false);
+
+  async function saveNote(value: string) {
+    await onMutate((s) => setSessionNote(s, value));
+  }
   let finishBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
   let addButtonBottom = $state(0);
@@ -204,29 +226,32 @@
   let blockDragId = $state<string | null>(null);
   let blockDragFromIdx = $state(-1);
   let blockDragToIdx = $state(-1);
+  let blockDragSpan = $state(1);
   let blockDragStartY = $state(0);
 
   function liveBlockOrder(sorted: SessionBlock[]): SessionBlock[] {
     if (!blockDragId || blockDragFromIdx === blockDragToIdx) return sorted;
     const result = [...sorted];
-    const [item] = result.splice(blockDragFromIdx, 1);
-    result.splice(blockDragToIdx, 0, item!);
+    const moving = result.splice(blockDragFromIdx, blockDragSpan);
+    result.splice(blockDragToIdx, 0, ...moving);
     return result;
   }
 
   async function commitBlockDrag() {
     const from = blockDragFromIdx;
     const to = blockDragToIdx;
+    const span = blockDragSpan;
     blockDragId = null;
     blockDragFromIdx = -1;
     blockDragToIdx = -1;
+    blockDragSpan = 1;
     if (from === to || from === -1) return;
 
     await onMutate((s) => {
       const sorted = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
       const reordered = [...sorted];
-      const [item] = reordered.splice(from, 1);
-      reordered.splice(to, 0, item!);
+      const moving = reordered.splice(from, span);
+      reordered.splice(to, 0, ...moving);
       return {
         ...s,
         blocks: s.blocks.map((b) => {
@@ -244,7 +269,7 @@
     } catch {}
   }
 
-  function makeBlockGripAction(blockId: string) {
+  function makeBlockGripAction(blockId: string, span = 1) {
     return (node: HTMLElement) => {
       function startDrag(clientY: number) {
         const s = get(currentSession);
@@ -255,6 +280,7 @@
         blockDragId = blockId;
         blockDragFromIdx = idx;
         blockDragToIdx = idx;
+        blockDragSpan = span;
         blockDragStartY = clientY;
         void hapticLight();
         return true;
@@ -269,7 +295,7 @@
           : 64;
         const newIdx = Math.max(
           0,
-          Math.min(total - 1, Math.round(blockDragFromIdx + (clientY - blockDragStartY) / rowH)),
+          Math.min(total - blockDragSpan, Math.round(blockDragFromIdx + (clientY - blockDragStartY) / rowH)),
         );
         if (newIdx !== blockDragToIdx) blockDragToIdx = newIdx;
       }
@@ -323,11 +349,46 @@
     };
   }
 
+  const sessionExercises = $derived($currentSession ? getExercises($currentSession) : []);
+  const loggedSetCount = $derived(
+    sessionExercises.reduce((n, ex) => n + ex.sets.length, 0),
+  );
+
   const sortedBlocks = $derived(
     $currentSession ? [...$currentSession.blocks].sort((a, b) => a.orderIndex - b.orderIndex) : [],
   );
 
   const liveOrderedBlocks = $derived(liveBlockOrder(sortedBlocks));
+
+  // Fold runs of consecutive blocks that share a superset id into one group.
+  type RenderItem =
+    | { kind: "block"; block: SessionBlock }
+    | { kind: "superset"; supersetId: string; blocks: SessionBlock[] };
+
+  function supersetIdOf(b: SessionBlock): string | undefined {
+    return (b.data as { superset?: { id: string } } | undefined)?.superset?.id;
+  }
+
+  const renderItems = $derived.by<RenderItem[]>(() => {
+    const items: RenderItem[] = [];
+    const blocks = liveOrderedBlocks;
+    let i = 0;
+    while (i < blocks.length) {
+      const sid = supersetIdOf(blocks[i]!);
+      if (sid) {
+        const group: SessionBlock[] = [];
+        while (i < blocks.length && supersetIdOf(blocks[i]!) === sid) group.push(blocks[i++]!);
+        if (group.length >= 2) {
+          items.push({ kind: "superset", supersetId: sid, blocks: group });
+          continue;
+        }
+        items.push({ kind: "block", block: group[0]! });
+        continue;
+      }
+      items.push({ kind: "block", block: blocks[i++]! });
+    }
+    return items;
+  });
 </script>
 
 <div
@@ -341,26 +402,75 @@
     }
   }}
 >
-  <CurrentSessionHeader saving={ui.saving || ui.finishing} error={ui.error} />
+  <CurrentSessionHeader
+    saving={ui.saving || ui.finishing}
+    error={ui.error}
+    startedAtMs={$currentSession?.startedAtMs ?? null}
+  />
 
   {#if !ui.finishing}
     {#if liveOrderedBlocks.length === 0}
-      <EmptySessionCard onAddBlock={openAddBlock} />
+      <EmptySessionCard
+        canRepeat={hasPreviousSession}
+        busy={ui.saving || ui.finishing}
+        onAddBlock={openAddBlock}
+        onRepeatLast={repeatLast}
+      />
     {:else}
       <div bind:this={blocksListEl}>
-        {#each liveOrderedBlocks as block, i (block.id)}
-          <div class="transition-opacity {blockDragId === block.id ? 'opacity-50' : ''}">
-            <BlockHost
-              type={block.type}
-              blockId={block.id}
-              data={block.data}
-              saving={ui.saving || ui.finishing}
-              gripAction={makeBlockGripAction(block.id)}
-              onDelete={() => onDeleteBlock(block.id)}
-              {onMutate}
-            />
-          </div>
+        {#each renderItems as item (item.kind === "superset" ? item.supersetId : item.block.id)}
+          {#if item.kind === "superset"}
+            <div transition:reveal>
+              <SupersetGroup
+                supersetId={item.supersetId}
+                blocks={item.blocks}
+                saving={ui.saving || ui.finishing}
+                dragging={blockDragId === item.blocks[0].id}
+                groupGripAction={makeBlockGripAction(item.blocks[0].id, item.blocks.length)}
+                onDeleteBlock={onDeleteBlock}
+                {onMutate}
+              />
+            </div>
+          {:else}
+            <div
+              class="transition-opacity {blockDragId === item.block.id ? 'opacity-50' : ''}"
+              transition:reveal
+            >
+              <BlockHost
+                type={item.block.type}
+                blockId={item.block.id}
+                data={item.block.data}
+                saving={ui.saving || ui.finishing}
+                gripAction={makeBlockGripAction(item.block.id)}
+                onDelete={() => onDeleteBlock(item.block.id)}
+                {onMutate}
+              />
+            </div>
+          {/if}
         {/each}
+      </div>
+
+      <!-- Session note -->
+      <div class="px-3 py-3 border-t border-border/50">
+        {#if noteOpen || $currentSession?.note}
+          <textarea
+            rows="2"
+            placeholder="Session note — how it felt, sleep, anything…"
+            transition:reveal
+            class="w-full rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+            value={$currentSession?.note ?? ""}
+            disabled={ui.saving || ui.finishing}
+            onblur={(e) => void saveNote((e.currentTarget as HTMLTextAreaElement).value)}
+          ></textarea>
+        {:else}
+          <button
+            type="button"
+            class="text-xs text-muted-foreground hover:text-foreground"
+            onclick={() => (noteOpen = true)}
+          >
+            + Session note
+          </button>
+        {/if}
       </div>
     {/if}
   {/if}
@@ -424,8 +534,10 @@
       class="fixed left-0 right-0 bottom-0 border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
       <FinishWorkoutCard
-        canFinish={!!$currentSession && !$currentSession.endedAtMs && getExercises($currentSession).length > 0}
+        canFinish={!!$currentSession && !$currentSession.endedAtMs && sessionExercises.length > 0}
         saving={ui.saving || ui.finishing}
+        exerciseCount={sessionExercises.length}
+        {loggedSetCount}
         onFinish={showRecap}
         onDiscard={discardSession}
       />
