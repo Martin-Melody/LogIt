@@ -3,7 +3,7 @@ import {
   getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
   SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
   groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
-  setSessionNote,
+  setSessionNote, foldSupersets,
 } from "@logit/core/domain/workout";
 import type { StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
@@ -218,6 +218,24 @@ describe("supersets", () => {
     const block = s.blocks.find((b) => b.id === blockId)!;
     return (block.data as StrengthBlockData).superset!.id;
   }
+
+  it("getExercises carries the superset tag", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const [a, , c] = getExercises(s);
+    expect(a.superset?.id).toBe(superId(s, ids[0]));
+    expect(c.superset).toBeUndefined();
+  });
+
+  it("foldSupersets brackets consecutive members and leaves singles alone", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    const groups = foldSupersets(getExercises(s));
+    expect(groups.map((g) => g.kind)).toEqual(["superset", "single"]);
+    const first = groups[0];
+    if (first.kind !== "superset") throw new Error("expected superset");
+    expect(first.exercises.map((e) => e.exerciseName)).toEqual(["A", "B"]);
+  });
 });
 
 describe("set types", () => {
