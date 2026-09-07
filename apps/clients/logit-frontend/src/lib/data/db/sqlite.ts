@@ -5,7 +5,6 @@ import {
   SQLiteConnection,
   type SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import { createId } from "@logit/core/domain/ids";
 import { nowMs } from "@logit/core/domain/time";
 
 const DB_NAME = "logit";
@@ -195,13 +194,6 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
     CREATE TABLE IF NOT EXISTS meta (
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS set_types (
-      id TEXT PRIMARY KEY NOT NULL,
-      code TEXT NOT NULL UNIQUE,
-      label TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS local_accounts (
@@ -579,7 +571,6 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateSessionNote(db);
   await migrateCoachMessageContext(db);
   await migrateProgressPhoto(db);
-  await seedSetTypes(db);
   await seedExercises(db);
 }
 
@@ -740,26 +731,6 @@ async function migrateSessionSets(db: SQLiteDBConnection): Promise<void> {
     } catch {
       // Column already exists — safe to ignore
     }
-  }
-}
-
-async function seedSetTypes(db: SQLiteDBConnection): Promise<void> {
-  const res = await db.query(`SELECT 1 FROM set_types LIMIT 1`, []);
-  if ((res.values?.length ?? 0) > 0) return;
-
-  const rows = [
-    { code: "normal", label: "Normal", sort: 0 },
-    { code: "warmup", label: "Warm-up", sort: 1 },
-    { code: "dropset", label: "Drop set", sort: 2 },
-    { code: "amrap", label: "AMRAP", sort: 3 },
-    { code: "failure", label: "To failure", sort: 4 },
-  ] as const;
-
-  for (const r of rows) {
-    await db.run(
-      `INSERT INTO set_types(id, code, label, sort_order) VALUES(?, ?, ?, ?)`,
-      [createId("settype"), r.code, r.label, r.sort],
-    );
   }
 }
 
