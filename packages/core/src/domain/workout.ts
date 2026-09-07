@@ -331,6 +331,29 @@ export function removeSet(
   });
 }
 
+/**
+ * Prepend a warm-up ramp to a strength block — the warm-ups land before every
+ * existing set and everything is reindexed. A no-op if `warmups` is empty.
+ */
+export function addWarmupSets(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  warmups: { weight: number; reps: number }[],
+): WorkoutSession {
+  if (warmups.length === 0) return session;
+  return updateStrengthBlock(session, exerciseEntryId, (data) => {
+    const warmSets: SetEntry[] = warmups.map((w, i) => ({
+      id: createId("set"),
+      setType: "warmup",
+      reps: w.reps,
+      weight: w.weight,
+      orderIndex: i,
+    }));
+    const shifted = data.sets.map((s) => ({ ...s, orderIndex: s.orderIndex + warmSets.length }));
+    return { ...data, sets: [...warmSets, ...shifted] };
+  });
+}
+
 export function finishSession(
   session: WorkoutSession,
   endedAtMs: number = nowMs(),

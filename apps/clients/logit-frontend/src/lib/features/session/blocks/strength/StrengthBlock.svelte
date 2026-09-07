@@ -4,6 +4,7 @@
   import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
   import {
     addSet,
+    addWarmupSets,
     updateSet,
     removeSet,
     swapExercise,
@@ -11,6 +12,10 @@
     isContinuationSet,
     DEFAULT_REST_MS,
   } from "@logit/core/domain/workout";
+  import { warmupSets } from "@logit/core/domain/warmup";
+  import { platesPerSide } from "@logit/core/domain/plates";
+  import { machineWeightsKg, snapToMachine } from "@logit/core/domain/machine";
+  import { equipment } from "$lib/stores/equipment.store";
   import { createId } from "@logit/core/domain/ids";
   import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
   import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
@@ -173,6 +178,28 @@
     await onMutate((s: WorkoutSession) =>
       addSet(s, blockId, { reps: 0, weight: suggestedSet?.weight ?? 0, machineId: exerciseData?.defaultMachineId }),
     );
+    if (collapsed) collapsed = false;
+  }
+
+  const hasWarmup = $derived(data.sets.some((s) => s.setType === "warmup"));
+  const warmupWorkingKg = $derived.by(() => {
+    const logged = data.sets.find((s) => s.setType !== "warmup" && s.weight > 0)?.weight;
+    return logged ?? suggestion?.sets.find((s) => (s.weight ?? 0) > 0)?.weight ?? 0;
+  });
+  const canWarmup = $derived(!hasWarmup && warmupWorkingKg > 0);
+
+  async function handleAddWarmup() {
+    const workingKg = warmupWorkingKg;
+    if (workingKg <= 0) return;
+    const machine = exerciseData?.machines.find((m) => m.id === exerciseData?.defaultMachineId);
+    const bar = get(equipment).barbell;
+    const snap =
+      machine && machineWeightsKg(machine)
+        ? (kg: number) => snapToMachine(machine, kg).kg
+        : (kg: number) => platesPerSide(kg, bar).achievableKg;
+    const ramp = warmupSets(workingKg, { minKg: machine ? 0 : bar.barKg, snap });
+    if (ramp.length === 0) return;
+    await onMutate((s: WorkoutSession) => addWarmupSets(s, blockId, ramp));
     if (collapsed) collapsed = false;
   }
 
@@ -493,6 +520,17 @@
   {onDelete}
 >
   {#if data.sets.length > 0}
+    {#if canWarmup}
+      <button
+        type="button"
+        class="w-full px-3 py-1.5 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40 border-b border-border/50"
+        disabled={saving}
+        onclick={handleAddWarmup}
+        transition:reveal
+      >
+        + Warm-up ramp
+      </button>
+    {/if}
     <SetsTableHeader weightUnit={$profile.weightUnit} />
     {@const sortedSets = [...data.sets].sort(sortByOrderIndex)}
     {@const liveSets = liveSetOrder(sortedSets)}
@@ -593,6 +631,17 @@
     >
       + Add first set
     </button>
+    {#if canWarmup}
+      <button
+        type="button"
+        class="w-full px-3 pb-3 -mt-1 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
+        disabled={saving}
+        onclick={handleAddWarmup}
+        transition:reveal
+      >
+        + Warm-up ramp
+      </button>
+    {/if}
   {/if}
 </ExerciseCard>
 

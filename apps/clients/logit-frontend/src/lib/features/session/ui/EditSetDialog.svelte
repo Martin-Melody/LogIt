@@ -12,6 +12,7 @@
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
   import { snapToMachine, machineWeightsKg, stepMachineWeight } from "@logit/core/domain/machine";
   import SetTypePicker from "./SetTypePicker.svelte";
+  import PlateBreakdown from "./PlateBreakdown.svelte";
 
   type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">;
 
@@ -277,6 +278,9 @@
                   draft.weight = v === "" ? null : num(v, true);
                 }}
               />
+            {/if}
+            {#if !activeMachine && draft.weight != null && draft.weight > 0}
+              <PlateBreakdown weightKg={fromDisplayWeight(draft.weight, weightUnit)} {weightUnit} />
             {/if}
           </div>
         </div>
