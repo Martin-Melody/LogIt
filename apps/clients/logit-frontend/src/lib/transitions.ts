@@ -42,6 +42,20 @@ export function reveal(
   };
 }
 
+/** Bottom-sheet / drawer slide-up. Fades in place when reduced motion is on. */
+export function sheetUp(
+  node: Element,
+  params: { duration?: number } = {},
+): TransitionConfig {
+  const duration = params.duration ?? 220;
+  if (!motionOK()) return { duration: Math.min(duration, 120), css: (t) => `opacity: ${t}` };
+  return {
+    duration,
+    easing: cubicOut,
+    css: (t) => `opacity: ${t}; transform: translateY(${(1 - t) * 100}%)`,
+  };
+}
+
 /**
  * Quick fade + tiny rise — for list items appearing/leaving (set rows, superset
  * members) and small chips. Pair with `animate:flip` on the `{#each}` for

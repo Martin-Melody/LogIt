@@ -1,6 +1,5 @@
 <script lang="ts">
   import { toast } from "$lib/components/ui/sonner/index";
-  import { goto } from "$app/navigation";
 
   import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
   import {
@@ -33,6 +32,7 @@
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
   import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
+  import ExerciseDetailSheet from "$lib/features/exercise/components/ExerciseDetailSheet.svelte";
 
   const {
     blockId,
@@ -62,9 +62,10 @@
   });
 
   let swapOpen = $state(false);
+  let detailExerciseId = $state<string | null>(null);
 
-  async function openDetail() {
-    if (data.exerciseId) await goto(`/exercises/${data.exerciseId}`);
+  function openDetail() {
+    if (data.exerciseId) detailExerciseId = data.exerciseId;
   }
 
   // "Link with next" — starts (or extends) a superset with the block below.
@@ -614,4 +615,14 @@
   weightUnit={$profile.weightUnit}
   onOpenChange={(v) => (editSet.open = v)}
   onSave={saveSetPatch}
+/>
+
+<ExerciseDetailSheet
+  exerciseId={detailExerciseId}
+  onClose={() => {
+    detailExerciseId = null;
+    // Pick up any edits (machines, name) made in the sheet.
+    void loadExerciseData(data.exerciseId, data.exerciseName);
+    void loadSuggestion(data.exerciseName, data.exerciseId);
+  }}
 />
