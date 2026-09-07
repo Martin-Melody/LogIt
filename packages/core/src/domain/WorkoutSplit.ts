@@ -133,6 +133,49 @@ export function addPlannedCardio(
   return touchSplit({ ...split, days: nextDays });
 }
 
+/** Patch a planned block in place (targets, exercise identity, activity name). */
+export function updatePlannedBlock(
+  split: WorkoutSplit,
+  dayId: string,
+  blockId: string,
+  patch: Partial<Omit<PlannedStrength, "id" | "type" | "orderIndex">> &
+    Partial<Omit<PlannedCardio, "id" | "type" | "orderIndex">>,
+): WorkoutSplit {
+  const dayIdx = split.days.findIndex((d) => d.id === dayId);
+  if (dayIdx === -1) return split;
+  const day = split.days[dayIdx]!;
+  if (!day.blocks.some((b) => b.id === blockId)) return split;
+
+  const nextDay: SplitDay = {
+    ...day,
+    blocks: day.blocks.map((b) =>
+      b.id === blockId ? ({ ...b, ...patch } as PlannedBlock) : b,
+    ),
+  };
+  return touchSplit({
+    ...split,
+    days: split.days.map((d, i) => (i === dayIdx ? nextDay : d)),
+  });
+}
+
+/**
+ * Set (or clear) the planned targets on a strength block. Empty / zero fields
+ * are dropped; if nothing is left, `targets` is removed entirely.
+ */
+export function setPlannedTargets(
+  split: WorkoutSplit,
+  dayId: string,
+  blockId: string,
+  targets: PlannedTargets,
+): WorkoutSplit {
+  const clean: PlannedTargets = {};
+  if (targets.sets && targets.sets > 0) clean.sets = targets.sets;
+  if (targets.reps && targets.reps > 0) clean.reps = targets.reps;
+  if (targets.weight != null && targets.weight !== 0) clean.weight = targets.weight;
+  const next = Object.keys(clean).length > 0 ? clean : undefined;
+  return updatePlannedBlock(split, dayId, blockId, { targets: next });
+}
+
 export function reorderDays(
   split: WorkoutSplit,
   fromIndex: number,
