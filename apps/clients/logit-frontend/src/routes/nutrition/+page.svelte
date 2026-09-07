@@ -16,6 +16,7 @@
   import { GripVertical, BookmarkPlus, CopyPlus } from "lucide-svelte";
   import { dragHandleZone, dragHandle } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
+  import { reveal, popIn } from "$lib/transitions";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
   import {
@@ -343,7 +344,7 @@
         <CopyPlus class="h-3.5 w-3.5" /> Copy a day
       </button>
       {#if showCopy}
-        <div class="mt-2 flex flex-wrap items-end gap-2">
+        <div class="mt-2 flex flex-wrap items-end gap-2" transition:reveal>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Copy meals from</span>
             <DateField bind:value={copyFromIso} maxIso={localDateIso()} aria-label="Copy from date" class="w-[9.5rem]" />
@@ -421,7 +422,7 @@
           onfinalize={(e) => onFinalize(meal, e)}
         >
           {#each dndItems[meal] as it (it.id)}
-            <li animate:flip={{ duration: FLIP_MS }} class="flex items-center gap-1.5 text-xs">
+            <li animate:flip={{ duration: FLIP_MS }} transition:popIn class="flex items-center gap-1.5 text-xs">
               <span
                 use:dragHandle
                 class="h-6 w-5 -ml-1 flex items-center justify-center text-muted-foreground/40 touch-none cursor-grab active:cursor-grabbing"
