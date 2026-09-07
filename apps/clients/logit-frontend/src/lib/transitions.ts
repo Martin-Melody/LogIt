@@ -63,13 +63,14 @@ export function sheetUp(
  */
 export function popIn(
   node: Element,
-  params: { duration?: number; y?: number } = {},
+  params: { duration?: number; y?: number; delay?: number } = {},
 ): TransitionConfig {
   if (!motionOK()) return { duration: 0 };
   const duration = params.duration ?? 140;
   const y = params.y ?? 4;
   return {
     duration,
+    delay: params.delay ?? 0,
     easing: cubicOut,
     css: (t) => `opacity: ${t}; transform: translateY(${(1 - t) * y}px)`,
   };

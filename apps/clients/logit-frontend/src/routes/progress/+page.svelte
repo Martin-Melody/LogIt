@@ -8,6 +8,8 @@
   import type { ExerciseProgressData } from "@logit/core/usecases/progression/getProgressData";
   import { classifyTrend, type ProgressStatus } from "@logit/core/domain/progression";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import { reveal, popIn } from "$lib/transitions";
+  import { fade } from "svelte/transition";
 
   const ui = $state({ loading: true, error: null as string | null });
 
@@ -97,8 +99,11 @@
       </Card.Header>
     </Card.Root>
   {:else}
+    <div class="flex flex-col gap-3" in:fade={{ duration: 160 }}>
     {#if selectedExercise}
+      {#key selected}
       <Card.Root>
+        <div in:reveal>
         <Card.Header class="pb-2">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
@@ -117,16 +122,19 @@
         <Card.Content>
           <ExerciseProgressionPanel exercise={{ id: selectedExercise.exerciseId, name: selectedExercise.exerciseName }} />
         </Card.Content>
+        </div>
       </Card.Root>
+      {/key}
     {/if}
 
     <Card.Root>
       <Card.Header class="pb-2"><Card.Title>Exercises</Card.Title></Card.Header>
       <Card.Content class="pt-0">
-        {#each rows as ex (ex.exerciseName)}
+        {#each rows as ex, i (ex.exerciseName)}
           {@const isSelected = selected === ex.exerciseName}
           <button
             type="button"
+            in:popIn={{ duration: 200, delay: Math.min(i * 30, 240) }}
             class="flex items-center gap-3 w-full py-3 border-b last:border-0 border-border text-left transition-opacity {isSelected ? 'opacity-100' : 'opacity-70 hover:opacity-100'}"
             onclick={() => (selected = ex.exerciseName)}
           >
@@ -143,5 +151,6 @@
         {/each}
       </Card.Content>
     </Card.Root>
+    </div>
   {/if}
 </div>
