@@ -10,7 +10,7 @@
   import type { Machine } from "@logit/core/domain/exercise";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
-  import { snapToMachine, machineWeightsKg } from "@logit/core/domain/machine";
+  import { snapToMachine, machineWeightsKg, stepMachineWeight } from "@logit/core/domain/machine";
   import SetTypePicker from "./SetTypePicker.svelte";
 
   type Editable = Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">;
@@ -77,6 +77,21 @@
       // Snap the entered weight to something this machine can actually be set to.
       draft.weight = toInput(snapToMachine(m, fromDisplayWeight(draft.weight, weightUnit)).kg);
     }
+  }
+
+  /** +/- one achievable rung on the selected machine (or one increment). */
+  function stepWeight(dir: 1 | -1) {
+    if (!activeMachine) return;
+    const currentKg = draft.weight != null ? fromDisplayWeight(draft.weight, weightUnit) : 0;
+    draft.weight = toInput(stepMachineWeight(activeMachine, currentKg, dir));
+  }
+
+  /** After a free-typed value, snap it to a real rung (weight-list machines only). */
+  function snapDraftWeight() {
+    if (!activeMachine || !machineWeightsKg(activeMachine) || draft.weight == null) return;
+    draft.weight = toInput(
+      snapToMachine(activeMachine, fromDisplayWeight(draft.weight, weightUnit)).kg,
+    );
   }
 
   $effect(() => {
@@ -210,20 +225,59 @@
 
           <div class="flex flex-col gap-2">
             <Label for="es-weight">Weight <span class="text-muted-foreground font-normal">({weightUnit})</span></Label>
-            <input
-              id="es-weight"
-              type="number"
-              step={weightUnit === "lbs" ? "1" : "0.5"}
-              placeholder="—"
-              class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
-              value={draft.weight ?? ""}
-              {disabled}
-              onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
-              oninput={(e) => {
-                const v = (e.currentTarget as HTMLInputElement).value;
-                draft.weight = v === "" ? null : num(v, true);
-              }}
-            />
+            {#if activeMachine}
+              <!-- Machine selected → step through its real weights; typing still snaps on blur. -->
+              <div class="flex items-stretch gap-1.5">
+                <button
+                  type="button"
+                  class="w-9 shrink-0 rounded border border-border text-base leading-none text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                  {disabled}
+                  onclick={() => stepWeight(-1)}
+                  aria-label="Lighter"
+                >
+                  −
+                </button>
+                <input
+                  id="es-weight"
+                  type="number"
+                  step={weightUnit === "lbs" ? "1" : "0.5"}
+                  placeholder="—"
+                  class="min-w-0 flex-1 rounded border bg-background px-2 py-2 text-sm tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={draft.weight ?? ""}
+                  {disabled}
+                  onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+                  oninput={(e) => {
+                    const v = (e.currentTarget as HTMLInputElement).value;
+                    draft.weight = v === "" ? null : num(v, true);
+                  }}
+                  onblur={snapDraftWeight}
+                />
+                <button
+                  type="button"
+                  class="w-9 shrink-0 rounded border border-border text-base leading-none text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                  {disabled}
+                  onclick={() => stepWeight(1)}
+                  aria-label="Heavier"
+                >
+                  +
+                </button>
+              </div>
+            {:else}
+              <input
+                id="es-weight"
+                type="number"
+                step={weightUnit === "lbs" ? "1" : "0.5"}
+                placeholder="—"
+                class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                value={draft.weight ?? ""}
+                {disabled}
+                onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+                oninput={(e) => {
+                  const v = (e.currentTarget as HTMLInputElement).value;
+                  draft.weight = v === "" ? null : num(v, true);
+                }}
+              />
+            {/if}
           </div>
         </div>
 
