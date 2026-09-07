@@ -64,7 +64,7 @@
   </div>
 
   <div class="ml-3 border-l-2 border-primary/30">
-    {#each blocks as block (block.id)}
+    {#each blocks as block, i (block.id)}
       <div transition:reveal>
         <BlockHost
           type={block.type}
@@ -72,6 +72,7 @@
           data={block.data}
           {saving}
           grouped
+          restsOnComplete={i === blocks.length - 1}
           gripAction={noopGrip}
           onDelete={() => onDeleteBlock(block.id)}
           {onMutate}

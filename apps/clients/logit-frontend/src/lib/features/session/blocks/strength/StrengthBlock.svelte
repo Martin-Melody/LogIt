@@ -39,6 +39,7 @@
     data,
     saving,
     grouped = false,
+    restsOnComplete = true,
     gripAction,
     onDelete,
     onMutate,
@@ -251,18 +252,20 @@
     const wasCompleted = !!set.completed;
     // Explicit per-set override takes priority; fall back to per-type default.
     const effectiveRest = set.restDurationMs ?? get(profile).restDefaults[set.setType];
-    const hasTimer = effectiveRest !== undefined;
+    // In a superset, only the anchor (last member of the round) starts a rest —
+    // the others flow straight into the next exercise.
+    const startsRest = restsOnComplete && effectiveRest !== undefined;
 
     await onMutate((s: WorkoutSession) =>
       updateSet(s, blockId, setId, {
         completed: !wasCompleted,
-        restStartedAtMs: !wasCompleted && hasTimer ? Date.now() : null,
+        restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
       }),
     );
 
     if (!wasCompleted) {
       void triggerHaptic();
-      if (hasTimer) startRestTimer(setId, effectiveRest!);
+      if (startsRest) startRestTimer(setId, effectiveRest!);
     } else {
       cancelRestTimer(setId);
     }

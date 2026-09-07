@@ -9,6 +9,7 @@
     data,
     saving,
     grouped = false,
+    restsOnComplete = true,
     gripAction,
     onDelete,
     onMutate,
@@ -18,6 +19,7 @@
     data: unknown;
     saving: boolean;
     grouped?: boolean;
+    restsOnComplete?: boolean;
     gripAction: GripAction;
     onDelete: () => void | Promise<void>;
     onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
@@ -33,6 +35,7 @@
     {data}
     {saving}
     {grouped}
+    {restsOnComplete}
     {gripAction}
     {onDelete}
     {onMutate}

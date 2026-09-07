@@ -460,6 +460,31 @@ test.describe("supersets", () => {
     await expect(page.getByText("Bench Press")).toBeVisible();
     await expect(page.getByText("Row", { exact: true })).toBeVisible();
   });
+
+  test("rest starts only after the last exercise of a superset round", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [
+          { id: "s1", setType: "normal", reps: 8, weight: 60, orderIndex: 0, restDurationMs: 90_000 },
+        ]),
+        makeStrengthBlock("b2", 1, "Row", [
+          { id: "s2", setType: "normal", reps: 8, weight: 40, orderIndex: 0, restDurationMs: 90_000 },
+        ]),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await expect(page.getByText("SUPERSET")).toBeVisible();
+
+    // First member — completing it flows straight on, no rest.
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+
+    // Anchor (last member) — completing starts the one shared round rest.
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
+  });
 });
 
 // ── Block drag to reorder ─────────────────────────────────────────────────────
