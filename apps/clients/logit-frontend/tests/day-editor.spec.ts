@@ -220,3 +220,36 @@ test.describe("add new exercise", () => {
   });
 
 });
+
+test.describe("planned targets", () => {
+  test("setting sets/reps/weight shows a summary and writes to storage", async ({ page }) => {
+    await goToDayEditor(page);
+
+    // Tap the first exercise row to expand its target editor.
+    await page.getByRole("button", { name: /Squat/ }).first().click();
+    const sets = page.getByLabel("Sets");
+    await expect(sets).toBeVisible();
+
+    await sets.fill("3");
+    await page.getByLabel("Reps").fill("5");
+    await page.getByLabel(/^Weight/).fill("100");
+    await page.getByLabel(/^Weight/).blur();
+
+    await expect(page.locator("main")).toContainText("3×5", { timeout: 10_000 });
+    await expect(page.locator("main")).toContainText("100 kg");
+
+    // Persisted to the split store (kg canonical).
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const split = JSON.parse(localStorage.getItem("logit:splits:v1") ?? "[]")[0];
+          return split?.days?.[0]?.blocks?.[0]?.targets ?? null;
+        }),
+      )
+      .toEqual({ sets: 3, reps: 5, weight: 100 });
+
+    // Clearing removes it.
+    await page.getByText("Clear targets").click();
+    await expect(page.locator("main")).toContainText("Squat · add targets");
+  });
+});

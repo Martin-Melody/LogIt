@@ -12,7 +12,9 @@
   import { assignedPrograms } from "$lib/stores/assignedPrograms.store";
 
   import { createSplit } from "@logit/core/domain/WorkoutSplit";
+  import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
   import { getCurrentWeek } from "@logit/core/domain/CoachProgram";
+  import { reveal, popIn } from "$lib/transitions";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import { getCheckinRepo } from "$lib/data/repoProvider";
 
@@ -26,10 +28,20 @@
   });
 
   function formatDate(ms: number): string {
-    return new Date(ms).toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-    });
+    const days = Math.floor((Date.now() - ms) / 86_400_000);
+    if (days <= 0) return "today";
+    if (days === 1) return "yesterday";
+    if (days < 7) return `${days}d ago`;
+    return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+
+  function splitPreview(s: WorkoutSplit): string {
+    const names = [...s.days]
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((d) => d.name?.trim() || `Day ${d.orderIndex + 1}`);
+    if (names.length === 0) return "No days yet";
+    const shown = names.slice(0, 3).join(" · ");
+    return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
   }
 
   async function load() {
@@ -151,8 +163,11 @@
     </div>
   {:else}
     <ul class="divide-y divide-border">
-      {#each $splits as s (s.id)}
-        <li class="flex items-center hover:bg-muted/40 active:bg-muted/60 transition-colors">
+      {#each $splits as s, i (s.id)}
+        <li
+          class="flex items-center hover:bg-muted/40 active:bg-muted/60 transition-colors {$activeSplit?.id === s.id ? 'bg-primary/[0.04]' : ''}"
+          in:popIn={{ duration: 200, delay: Math.min(i * 30, 200) }}
+        >
           <button
             type="button"
             class="flex-1 min-w-0 flex items-center gap-3 px-3 py-3 text-left"
@@ -165,9 +180,10 @@
                   <Badge variant="secondary" class="text-xs px-1.5 py-0 shrink-0">Active</Badge>
                 {/if}
               </div>
-              <p class="text-xs text-muted-foreground mt-0.5">
-                {s.days.length} day{s.days.length === 1 ? "" : "s"} · updated {formatDate(s.updatedAtMs)}
+              <p class="text-xs text-muted-foreground mt-0.5 truncate">
+                {s.days.length} day{s.days.length === 1 ? "" : "s"} · {splitPreview(s)}
               </p>
+              <p class="text-[11px] text-muted-foreground/70 mt-0.5">updated {formatDate(s.updatedAtMs)}</p>
             </div>
           </button>
 

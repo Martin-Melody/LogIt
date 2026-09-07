@@ -20,6 +20,17 @@
   import { ArrowLeft, Trash, Check, X, Plus, GripVertical } from "lucide-svelte";
   import { startSplitDetailTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import { reveal, popIn } from "$lib/transitions";
+  import type { PlannedBlock } from "@logit/core/domain/WorkoutSplit";
+
+  function dayPreview(blocks: PlannedBlock[]): string {
+    if (blocks.length === 0) return "Empty";
+    const names = [...blocks]
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((b) => (b.type === "strength" ? b.exerciseName : b.activityName));
+    const shown = names.slice(0, 3).join(" · ");
+    return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
+  }
 
   const props = $props<{ params: { id: string } }>();
   const splitId = $derived(props.params.id);
@@ -363,7 +374,10 @@
       <ul bind:this={listEl} class="divide-y divide-border">
         {#each ordered as d, i (d.id)}
           {@const isDragging = dragId === d.id}
-          <li class="relative flex items-center transition-colors {isDragging ? 'opacity-50' : ''}">
+          <li
+            class="relative flex items-center transition-colors {isDragging ? 'opacity-50' : ''}"
+            in:popIn={{ duration: 200, delay: Math.min(i * 30, 200) }}
+          >
             <button
               type="button"
               class="shrink-0 flex items-center gap-1 pl-3 pr-2 self-stretch cursor-grab active:cursor-grabbing"
@@ -385,8 +399,8 @@
                 <p class="text-sm font-medium">
                   Day {i + 1}{d.name ? ` — ${d.name}` : ""}
                 </p>
-                <p class="text-xs text-muted-foreground mt-0.5">
-                  {d.blocks.length} item{d.blocks.length === 1 ? "" : "s"}
+                <p class="text-xs text-muted-foreground mt-0.5 truncate">
+                  {dayPreview(d.blocks)}
                 </p>
               </div>
               <span class="text-muted-foreground text-sm shrink-0">›</span>
