@@ -118,24 +118,29 @@ test.describe("sync API — requires live API", () => {
       expect(matches).toHaveLength(1);
     });
 
-    test("pull with since timestamp only returns sessions started after that time", async () => {
-      const past = Date.now() - 10_000;
-      const future = Date.now() + 10_000;
+    test("pull with since only returns sessions synced after that cursor", async () => {
+      // The `since` cursor filters on server sync time, not the (immutable)
+      // session start time — that's what makes incremental sync work when an
+      // edit is pushed long after the session was first recorded.
+      await fetch(`${API_BASE}/sync/sessions`, {
+        method: "POST",
+        headers: authHeaders(tokens.accessToken),
+        body: JSON.stringify({ sessions: [makeSessionPayload("sess-old", Date.now() - 10_000)] }),
+      });
+
+      // Snapshot the cursor between the two pushes, with a gap so server sync
+      // timestamps land on either side of it.
+      await new Promise((r) => setTimeout(r, 1_100));
+      const cursor = Date.now();
+      await new Promise((r) => setTimeout(r, 1_100));
 
       await fetch(`${API_BASE}/sync/sessions`, {
         method: "POST",
         headers: authHeaders(tokens.accessToken),
-        body: JSON.stringify({
-          sessions: [
-            makeSessionPayload("sess-old", past),
-            makeSessionPayload("sess-new", future),
-          ],
-        }),
+        body: JSON.stringify({ sessions: [makeSessionPayload("sess-new", Date.now() + 10_000)] }),
       });
 
-      // Pull with since = now — only the future-dated one should come back
-      const since = Date.now();
-      const pullRes = await fetch(`${API_BASE}/sync/sessions?since=${since}`, {
+      const pullRes = await fetch(`${API_BASE}/sync/sessions?since=${cursor}`, {
         headers: authHeaders(tokens.accessToken),
       });
       const { sessions } = await pullRes.json();

@@ -8,6 +8,8 @@
   import type { CardioBlockData, CardioInterval, WorkoutSession } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
 
+  // `grouped` is accepted by the block contract but cardio doesn't customise its
+  // chrome for supersets yet.
   const {
     blockId,
     data,
@@ -15,7 +17,7 @@
     gripAction,
     onDelete,
     onMutate,
-  } = $props<BlockBaseProps<CardioBlockData>>();
+  }: BlockBaseProps<CardioBlockData> = $props();
 
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
 

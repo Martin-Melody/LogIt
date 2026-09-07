@@ -6,11 +6,14 @@
     addSet,
     updateSet,
     removeSet,
-    updateExerciseName,
+    swapExercise,
+    groupIntoSuperset,
+    isContinuationSet,
     DEFAULT_REST_MS,
   } from "@logit/core/domain/workout";
   import { createId } from "@logit/core/domain/ids";
   import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
+  import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { currentSession } from "$lib/stores/currentSession.store";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
@@ -21,31 +24,87 @@
   import { get } from "svelte/store";
   import { profile } from "$lib/stores/profile.store";
   import { startRestTimer, cancelRestTimer, hasRestTimerFired } from "$lib/services/restTimerService";
+  import { reveal } from "$lib/transitions";
   import ExerciseCard from "$lib/features/session/ui/ExerciseCard.svelte";
   import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
   import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
   import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
+  import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
+  import ExerciseDetailSheet from "$lib/features/exercise/components/ExerciseDetailSheet.svelte";
 
   const {
     blockId,
     data,
     saving,
+    grouped = false,
+    restsOnComplete = true,
     gripAction,
     onDelete,
     onMutate,
-  } = $props<BlockBaseProps<StrengthBlockData>>();
+  }: BlockBaseProps<StrengthBlockData> = $props();
 
   let suggestion = $state<ProgressionOutput | null>(null);
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
   let blockAutoApplied = $state(false);
   let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string } | null>(null);
+  // Last time this exercise was performed — shown as a "prev" hint per set row.
+  let prevSets = $state<SetEntry[] | null>(null);
+
+  const prevLeadSets = $derived(
+    prevSets ? prevSets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)) : [],
+  );
 
   const editSet = $state({
     open: false,
     setId: null as string | null,
   });
+
+  let swapOpen = $state(false);
+  let detailExerciseId = $state<string | null>(null);
+
+  function openDetail() {
+    if (data.exerciseId) detailExerciseId = data.exerciseId;
+  }
+
+  // "Link with next" — starts (or extends) a superset with the block below.
+  const canSuperset = $derived.by(() => {
+    if (grouped) return false;
+    const s = $currentSession;
+    if (!s) return false;
+    const sorted = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const idx = sorted.findIndex((b) => b.id === blockId);
+    return idx !== -1 && idx < sorted.length - 1;
+  });
+
+  async function linkWithNext() {
+    await onMutate((s: WorkoutSession) => {
+      const sorted = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+      const idx = sorted.findIndex((b) => b.id === blockId);
+      const next = sorted[idx + 1];
+      return next ? groupIntoSuperset(s, [blockId, next.id]) : s;
+    });
+  }
+
+  async function handleSwap(selection: { name: string; exerciseId?: string }) {
+    const trimmed = selection.name.trim();
+    if (!trimmed) return;
+    try {
+      let exerciseId = selection.exerciseId;
+      if (!exerciseId) {
+        const ex = await getExerciseRepo().create(trimmed);
+        exerciseId = ex.id;
+      }
+      // Let a block-mode suggestion for the new exercise auto-apply if empty.
+      blockAutoApplied = false;
+      await onMutate((s: WorkoutSession) =>
+        swapExercise(s, blockId, { exerciseName: trimmed, exerciseId }),
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't swap the exercise");
+    }
+  }
 
   $effect(() => {
     const name = data.exerciseName;
@@ -57,7 +116,20 @@
     const exId = data.exerciseId;
     const name = data.exerciseName;
     void loadExerciseData(exId, name);
+    void loadPrevSets(name, exId);
   });
+
+  async function loadPrevSets(name: string, exerciseId?: string) {
+    try {
+      const { history } = await getExerciseHistory({ id: exerciseId, name }, getProgressionDeps());
+      const last = history.at(-1);
+      prevSets = last
+        ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
+        : null;
+    } catch {
+      prevSets = null;
+    }
+  }
 
   async function loadExerciseData(exerciseId?: string, name?: string) {
     try {
@@ -155,11 +227,12 @@
       // not just the raw per-set override (which is undefined until explicitly edited).
       restDurationMs: set.restDurationMs ?? get(profile).restDefaults[set.setType],
       machineId: set.machineId ?? undefined,
+      rpe: set.rpe ?? null,
     };
   }
 
   async function saveSetPatch(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId">>,
+    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
   ) {
     if (!editSet.setId) return;
     const setId = editSet.setId;
@@ -180,18 +253,20 @@
     const wasCompleted = !!set.completed;
     // Explicit per-set override takes priority; fall back to per-type default.
     const effectiveRest = set.restDurationMs ?? get(profile).restDefaults[set.setType];
-    const hasTimer = effectiveRest !== undefined;
+    // In a superset, only the anchor (last member of the round) starts a rest —
+    // the others flow straight into the next exercise.
+    const startsRest = restsOnComplete && effectiveRest !== undefined;
 
     await onMutate((s: WorkoutSession) =>
       updateSet(s, blockId, setId, {
         completed: !wasCompleted,
-        restStartedAtMs: !wasCompleted && hasTimer ? Date.now() : null,
+        restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
       }),
     );
 
     if (!wasCompleted) {
       void triggerHaptic();
-      if (hasTimer) startRestTimer(setId, effectiveRest!);
+      if (startsRest) startRestTimer(setId, effectiveRest!);
     } else {
       cancelRestTimer(setId);
     }
@@ -233,17 +308,17 @@
     let i = 0;
     while (i < sorted.length) {
       const set = sorted[i]!;
-      if (set.setType === "dropset" && groups.length > 0) {
+      if (isContinuationSet(set.setType) && groups.length > 0) {
         groups[groups.length - 1]!.drops.push(set);
         i++;
-      } else if (set.setType === "dropset") {
+      } else if (isContinuationSet(set.setType)) {
         groups.push({ lead: null, leadNum: 0, drops: [set] });
         i++;
       } else {
         leadCount++;
         const drops: SetEntry[] = [];
         i++;
-        while (i < sorted.length && sorted[i]!.setType === "dropset") {
+        while (i < sorted.length && isContinuationSet(sorted[i]!.setType)) {
           drops.push(sorted[i]!);
           i++;
         }
@@ -278,7 +353,9 @@
 
   const noopGripAction: GripAction = (_node) => ({ destroy() {} });
 
-  const workingSetCount = $derived(data.sets.filter((s) => s.setType !== "warmup").length);
+  const workingSetCount = $derived(
+    data.sets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)).length,
+  );
   const hasActiveTimer = $derived(data.sets.some((s) => typeof s.restStartedAtMs === "number"));
 
   // ── Set-level drag-to-reorder ─────────────────────────────────────────────
@@ -404,19 +481,25 @@
   {suggestion}
   {collapsed}
   {hasActiveTimer}
+  weightUnit={$profile.weightUnit}
+  {grouped}
+  {canSuperset}
   {gripAction}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
-  onRename={(name) => onMutate((s: WorkoutSession) => updateExerciseName(s, blockId, name))}
+  onOpenDetail={openDetail}
+  onSwap={() => (swapOpen = true)}
+  onSuperset={linkWithNext}
   {onDelete}
 >
   {#if data.sets.length > 0}
-    <SetsTableHeader />
+    <SetsTableHeader weightUnit={$profile.weightUnit} />
     {@const sortedSets = [...data.sets].sort(sortByOrderIndex)}
     {@const liveSets = liveSetOrder(sortedSets)}
     {@const liveGroups = buildSetGroups(liveSets)}
     <div bind:this={setsListEl}>
       {#each liveGroups as group (group.lead?.id ?? group.drops[0]?.id)}
+        <div transition:reveal>
         {#if group.lead}
           {@const lead = group.lead}
           <SwipeRevealRow
@@ -430,6 +513,9 @@
               setType={lead.setType}
               reps={lead.reps}
               weight={lead.weight}
+              weightUnit={$profile.weightUnit}
+              rpe={lead.rpe ?? null}
+              prev={prevLeadSets[group.leadNum - 1] ?? null}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
               gripAction={(node) => setGripAction(node, lead.id)}
@@ -439,12 +525,14 @@
             />
           </SwipeRevealRow>
           {#if typeof lead.restStartedAtMs === "number"}
-            <RestProgressBar
-              restStartedAtMs={lead.restStartedAtMs}
-              restDurationMs={lead.restDurationMs ?? $profile.restDefaults[lead.setType] ?? DEFAULT_REST_MS}
-              onDone={() => handleRestDone(lead.id)}
-              onDismiss={() => handleDismissRest(lead.id)}
-            />
+            <div transition:reveal>
+              <RestProgressBar
+                restStartedAtMs={lead.restStartedAtMs}
+                restDurationMs={lead.restDurationMs ?? $profile.restDefaults[lead.setType] ?? DEFAULT_REST_MS}
+                onDone={() => handleRestDone(lead.id)}
+                onDismiss={() => handleDismissRest(lead.id)}
+              />
+            </div>
           {/if}
         {/if}
 
@@ -462,6 +550,8 @@
                   setType={drop.setType}
                   reps={drop.reps}
                   weight={drop.weight}
+                  weightUnit={$profile.weightUnit}
+                  rpe={drop.rpe ?? null}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
                   gripAction={noopGripAction}
@@ -471,12 +561,14 @@
                 />
               </SwipeRevealRow>
               {#if typeof drop.restStartedAtMs === "number"}
-                <RestProgressBar
-                  restStartedAtMs={drop.restStartedAtMs}
-                  restDurationMs={drop.restDurationMs ?? $profile.restDefaults[drop.setType] ?? DEFAULT_REST_MS}
-                  onDone={() => handleRestDone(drop.id)}
-                  onDismiss={() => handleDismissRest(drop.id)}
-                />
+                <div transition:reveal>
+                  <RestProgressBar
+                    restStartedAtMs={drop.restStartedAtMs}
+                    restDurationMs={drop.restDurationMs ?? $profile.restDefaults[drop.setType] ?? DEFAULT_REST_MS}
+                    onDone={() => handleRestDone(drop.id)}
+                    onDismiss={() => handleDismissRest(drop.id)}
+                  />
+                </div>
               {/if}
             {/each}
             <button
@@ -489,6 +581,7 @@
             </button>
           </div>
         {/if}
+        </div>
       {/each}
     </div>
   {:else}
@@ -503,6 +596,15 @@
   {/if}
 </ExerciseCard>
 
+<AddExerciseDialog
+  open={swapOpen}
+  saving={saving}
+  title="Swap exercise"
+  description="Pick a different exercise — your logged sets stay."
+  onOpenChange={(v) => (swapOpen = v)}
+  onSubmit={handleSwap}
+/>
+
 <EditSetDialog
   open={editSet.open}
   disabled={saving}
@@ -510,6 +612,17 @@
   machines={exerciseData?.machines ?? []}
   defaultMachineId={exerciseData?.defaultMachineId}
   exerciseId={exerciseData?.id}
+  weightUnit={$profile.weightUnit}
   onOpenChange={(v) => (editSet.open = v)}
   onSave={saveSetPatch}
+/>
+
+<ExerciseDetailSheet
+  exerciseId={detailExerciseId}
+  onClose={() => {
+    detailExerciseId = null;
+    // Pick up any edits (machines, name) made in the sheet.
+    void loadExerciseData(data.exerciseId, data.exerciseName);
+    void loadSuggestion(data.exerciseName, data.exerciseId);
+  }}
 />

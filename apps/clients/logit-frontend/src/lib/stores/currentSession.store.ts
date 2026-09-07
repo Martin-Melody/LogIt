@@ -2,11 +2,12 @@ import { get, writable } from "svelte/store";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import { startSession } from "$lib/usecases/startSession";
 import { loadDraftSession } from "$lib/usecases/loadDraftSession";
-import { finishCurrentSession } from "$lib/usecases/finnishCurrentSession";
+import { finishCurrentSession } from "$lib/usecases/finishCurrentSession";
 import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 import type { ProgramDay } from "@logit/core/domain/CoachProgram";
 import { startSessionFromSplitDay } from "$lib/usecases/startSessionFromSplitDay";
 import { startSessionFromProgramDay } from "$lib/usecases/startSessionFromProgramDay";
+import { repeatLastSession } from "$lib/usecases/repeatLastSession";
 
 type CurrentSessionState = {
   session: WorkoutSession | null;
@@ -20,6 +21,7 @@ type CurrentSessionStore = {
   start: () => Promise<WorkoutSession>;
   startFromSplitDay: (day: SplitDay) => Promise<WorkoutSession>;
   startFromProgramDay: (day: ProgramDay) => Promise<WorkoutSession>;
+  repeatLast: () => Promise<WorkoutSession | null>;
   loadDraft: () => Promise<WorkoutSession | null>;
   finish: () => Promise<WorkoutSession | null>;
 
@@ -68,6 +70,12 @@ function createCurrentSessionStore(): CurrentSessionStore {
     async startFromProgramDay(day: ProgramDay) {
       const session = await startSessionFromProgramDay(day);
       store.set({ session, transitioning: false });
+      return session;
+    },
+
+    async repeatLast() {
+      const session = await repeatLastSession();
+      if (session) store.set({ session, transitioning: false });
       return session;
     },
 

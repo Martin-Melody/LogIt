@@ -8,6 +8,8 @@
     blockId,
     data,
     saving,
+    grouped = false,
+    restsOnComplete = true,
     gripAction,
     onDelete,
     onMutate,
@@ -16,6 +18,8 @@
     blockId: string;
     data: unknown;
     saving: boolean;
+    grouped?: boolean;
+    restsOnComplete?: boolean;
     gripAction: GripAction;
     onDelete: () => void | Promise<void>;
     onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
@@ -30,6 +34,8 @@
     {blockId}
     {data}
     {saving}
+    {grouped}
+    {restsOnComplete}
     {gripAction}
     {onDelete}
     {onMutate}

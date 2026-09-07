@@ -36,6 +36,8 @@
   import { setMode, userPrefersMode } from "mode-watcher";
   import { authStore } from "$lib/api/authStore.svelte";
   import { apiClient, ApiError } from "@logit/core/api/client";
+  import { SET_TYPE_META } from "@logit/core/domain/workout";
+  import { reveal } from "$lib/transitions";
   import { syncAll, pushAllLocalData, lastSyncedAt } from "$lib/sync/syncService";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
@@ -264,14 +266,24 @@
     }
   }
 
+  // --- Section quick-nav ---
+  const sections = [
+    { id: "sec-account", label: "Account" },
+    { id: "sec-appearance", label: "Appearance" },
+    { id: "sec-units", label: "Units" },
+    { id: "sec-progression", label: "Progression" },
+    { id: "sec-session", label: "Session" },
+    { id: "sec-plugins", label: "Plugins" },
+    { id: "sec-danger", label: "Danger" },
+  ];
+  function jumpTo(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   // --- Session preferences ---
-  const SET_TYPE_LABELS: Record<string, string> = {
-    normal: "Normal",
-    warmup: "Warm-up",
-    dropset: "Drop set",
-    amrap: "AMRAP",
-    failure: "To failure",
-  };
+  // Rest defaults are configurable per set type; the list is the single source
+  // of truth in @logit/core so plugin-registered types show up here too.
+  const restDefaultTypes = SET_TYPE_META.map((m) => ({ type: m.type, label: m.label }));
 
   function toggleRestDefault(type: string) {
     const current = $profile.restDefaults[type];
@@ -377,8 +389,21 @@
     <h1 class="text-base font-semibold">Settings</h1>
   </div>
 
+  <!-- Section quick-nav -->
+  <div class="flex gap-1.5 overflow-x-auto -mx-3 px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    {#each sections as s (s.id)}
+      <button
+        type="button"
+        class="shrink-0 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+        onclick={() => jumpTo(s.id)}
+      >
+        {s.label}
+      </button>
+    {/each}
+  </div>
+
   <!-- Account -->
-  <Card.Root>
+  <Card.Root id="sec-account" class="scroll-mt-3">
     <Card.Header>
       <Card.Title>Account</Card.Title>
       <Card.Description
@@ -453,7 +478,7 @@
           <ChevronRight class="h-4 w-4 shrink-0 transition-transform {showOnlinePasswordForm ? 'rotate-90' : ''}" />
         </button>
         {#if showOnlinePasswordForm}
-          <div class="flex flex-col gap-2 pb-2 pt-1">
+          <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             <input type="password" placeholder="Current password" autocomplete="current-password"
               class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.current} />
@@ -521,7 +546,7 @@
           <ChevronRight class="h-4 w-4 shrink-0 transition-transform {showPasswordForm ? 'rotate-90' : ''}" />
         </button>
         {#if showPasswordForm}
-          <div class="flex flex-col gap-2 pb-2 pt-1">
+          <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             {#if localAccountHasPassword}
               <input type="password" placeholder="Current password" autocomplete="current-password"
                 class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -573,7 +598,7 @@
   </Card.Root>
 
   <!-- Appearance -->
-  <Card.Root>
+  <Card.Root id="sec-appearance" class="scroll-mt-3">
     <Card.Header>
       <Card.Title>Appearance</Card.Title>
       <Card.Description>Choose how the app looks.</Card.Description>
@@ -604,8 +629,53 @@
     </Card.Content>
   </Card.Root>
 
+  <!-- Units -->
+  <Card.Root id="sec-units" class="scroll-mt-3">
+    <Card.Header>
+      <Card.Title>Units</Card.Title>
+      <Card.Description>How weights and measurements are shown.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-4">
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm font-medium">Weight</p>
+        <div class="flex rounded border overflow-hidden text-sm">
+          {#each [["kg", "kg"], ["lbs", "lb"]] as ["kg" | "lbs", string][] as [value, label] (value)}
+            <button
+              type="button"
+              class="px-4 py-1.5 transition-colors {$profile.weightUnit === value
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              onclick={() => profile.save({ weightUnit: value })}
+            >
+              {label}
+            </button>
+          {/each}
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm font-medium">Height</p>
+        <div class="flex rounded border overflow-hidden text-sm">
+          {#each [["cm", "cm"], ["in", "in"]] as ["cm" | "in", string][] as [value, label] (value)}
+            <button
+              type="button"
+              class="px-4 py-1.5 transition-colors {$profile.heightUnit === value
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              onclick={() => profile.save({ heightUnit: value })}
+            >
+              {label}
+            </button>
+          {/each}
+        </div>
+      </div>
+      <p class="text-xs text-muted-foreground">
+        Weights are always stored in kilograms — this only changes what you see and type.
+      </p>
+    </Card.Content>
+  </Card.Root>
+
   <!-- Progression -->
-  <Card.Root>
+  <Card.Root id="sec-progression" class="scroll-mt-3">
     <Card.Header>
       <Card.Title>Progression</Card.Title>
       <Card.Description
@@ -755,7 +825,7 @@
   </Card.Root>
 
   <!-- Session -->
-  <Card.Root>
+  <Card.Root id="sec-session" class="scroll-mt-3">
     <Card.Header>
       <Card.Title>Session</Card.Title>
       <Card.Description>Behaviour during a workout.</Card.Description>
@@ -793,7 +863,7 @@
         <p class="text-xs text-muted-foreground mb-1">
           Enable and set the default rest duration for each set type.
         </p>
-        {#each Object.keys(SET_TYPE_LABELS) as type (type)}
+        {#each restDefaultTypes as { type, label } (type)}
           {@const enabled = $profile.restDefaults[type] !== undefined}
           {@const seconds = enabled
             ? Math.round(($profile.restDefaults[type] ?? 90_000) / 1000)
@@ -814,9 +884,9 @@
                   : 'translate-x-0'}"
               ></span>
             </button>
-            <span class="text-sm w-24">{SET_TYPE_LABELS[type]}</span>
+            <span class="text-sm w-24">{label}</span>
             {#if enabled}
-              <div class="flex items-center gap-1.5 ml-auto">
+              <div class="flex items-center gap-1.5 ml-auto" transition:reveal={{ axis: "x" }}>
                 <input
                   type="number"
                   min="5"
@@ -894,7 +964,7 @@
   </Card.Root>
 
   <!-- Plugins -->
-  <Card.Root>
+  <Card.Root id="sec-plugins" class="scroll-mt-3">
     <Card.Header>
       <Card.Title>Plugins</Card.Title>
       <Card.Description
@@ -923,7 +993,7 @@
   </Card.Root>
 
   <!-- Danger zone -->
-  <Card.Root class="border-destructive/40">
+  <Card.Root id="sec-danger" class="border-destructive/40 scroll-mt-3">
     <Card.Header>
       <Card.Title class="text-destructive">Danger zone</Card.Title>
       <Card.Description>Irreversible and destructive actions.</Card.Description>

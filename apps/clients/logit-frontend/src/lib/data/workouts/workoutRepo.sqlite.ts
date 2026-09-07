@@ -1,6 +1,5 @@
 import type { WorkoutRepo, ListRecentSessionsOptions } from "@logit/core/data/workoutRepo";
 import type { WorkoutSession, SessionBlock, StrengthBlockData, SetType } from "@logit/core/domain/workout";
-import type { SetTypeOption } from "@logit/core/data/types";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 
@@ -12,6 +11,7 @@ function parseBlockData(type: string, dataJson: string): unknown {
     return {
       exerciseName: raw.exerciseName ?? "",
       exerciseId: raw.exerciseId ?? undefined,
+      superset: raw.superset ?? undefined,
       sets: (raw.sets ?? []).map((s: any) => ({
         id: s.id,
         setType: (s.setType ?? "normal") as SetType,
@@ -23,6 +23,7 @@ function parseBlockData(type: string, dataJson: string): unknown {
         restDurationMs: s.restDurationMs ?? undefined,
         restStartedAtMs: s.restStartedAtMs ?? null,
         machineId: s.machineId ?? undefined,
+        rpe: s.rpe ?? null,
       })),
     } satisfies StrengthBlockData;
   }
@@ -58,23 +59,20 @@ async function readBlocks(db: ReturnType<typeof getDb>, sessionId: string): Prom
   }));
 }
 
-function isSetType(v: unknown): v is SetType {
-  return v === "normal" || v === "warmup" || v === "dropset" || v === "amrap" || v === "failure";
-}
-
 export function createSqliteWorkoutRepo(): WorkoutRepo {
   return {
     async saveSession(session: WorkoutSession): Promise<void> {
       const db = getDb();
 
       await db.run(
-        `INSERT INTO sessions(id, started_at_ms, ended_at_ms, owner_id, exclude_from_progression)
-         VALUES(?, ?, ?, ?, ?)
+        `INSERT INTO sessions(id, started_at_ms, ended_at_ms, owner_id, exclude_from_progression, note)
+         VALUES(?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            started_at_ms = excluded.started_at_ms,
            ended_at_ms   = excluded.ended_at_ms,
-           exclude_from_progression = excluded.exclude_from_progression`,
-        [session.id, session.startedAtMs, session.endedAtMs ?? null, getActiveOwnerId(), session.excludeFromProgression ? 1 : 0],
+           exclude_from_progression = excluded.exclude_from_progression,
+           note = excluded.note`,
+        [session.id, session.startedAtMs, session.endedAtMs ?? null, getActiveOwnerId(), session.excludeFromProgression ? 1 : 0, session.note ?? null],
       );
 
       await writeBlocks(db, session);
@@ -85,7 +83,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
       const ownerId = getActiveOwnerId();
       const baseRes = await db.query(
-        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression
+        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note
          FROM sessions WHERE id = ? AND (owner_id = ? OR owner_id IS NULL)`,
         [id, ownerId],
       );
@@ -97,6 +95,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         startedAtMs: base.startedAtMs,
         endedAtMs: base.endedAtMs ?? undefined,
         excludeFromProgression: base.exclude_from_progression === 1 ? true : undefined,
+        note: base.note ?? null,
         blocks: await readBlocks(db, id),
       };
     },
@@ -106,7 +105,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
       const ownerId = getActiveOwnerId();
       const sessionRes = await db.query(
-        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression
+        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note
          FROM sessions
          WHERE ended_at_ms IS NOT NULL AND (owner_id = ? OR owner_id IS NULL)
          ORDER BY ended_at_ms DESC
@@ -147,6 +146,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         startedAtMs: r.startedAtMs,
         endedAtMs: r.endedAtMs ?? undefined,
         excludeFromProgression: r.exclude_from_progression === 1 ? true : undefined,
+        note: r.note ?? null,
         blocks: blocksBySessionId.get(r.id) ?? [],
       }));
     },
@@ -156,7 +156,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
       const ownerId = getActiveOwnerId();
       const sessionRes = await db.query(
-        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression
+        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note
          FROM sessions
          WHERE owner_id = ? OR owner_id IS NULL
          ORDER BY COALESCE(ended_at_ms, started_at_ms) DESC`,
@@ -195,6 +195,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         startedAtMs: r.startedAtMs,
         endedAtMs: r.endedAtMs ?? undefined,
         excludeFromProgression: r.exclude_from_progression === 1 ? true : undefined,
+        note: r.note ?? null,
         blocks: blocksBySessionId.get(r.id) ?? [],
       }));
     },
@@ -234,17 +235,6 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       const db = getDb();
       const key = `draft_session_id:${getActiveOwnerId() ?? "default"}`;
       await db.run(`DELETE FROM meta WHERE key=?`, [key]);
-    },
-
-    async getSetTypes(): Promise<SetTypeOption[]> {
-      const db = getDb();
-      const res = await db.query(
-        `SELECT id, code, label FROM set_types ORDER BY sort_order ASC`,
-        [],
-      );
-      return ((res.values ?? []) as any[])
-        .filter((r) => isSetType(r.code))
-        .map((r) => ({ id: String(r.id), code: r.code as SetType, label: String(r.label) }));
     },
   };
 }
