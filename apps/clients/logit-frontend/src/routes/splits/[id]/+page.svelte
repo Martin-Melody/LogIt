@@ -17,11 +17,20 @@
   import { deleteSplit } from "$lib/usecases/Splits/deleteSplit";
   import { createId } from "@logit/core/domain/ids";
 
-  import { ArrowLeft, Trash, Check, X, Plus, GripVertical } from "lucide-svelte";
+  import { ArrowLeft, Trash, Check, X, Plus, GripVertical, Play } from "lucide-svelte";
   import { startSplitDetailTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { reveal, popIn } from "$lib/transitions";
   import type { PlannedBlock } from "@logit/core/domain/WorkoutSplit";
+  import { currentSession } from "$lib/stores/currentSession.store";
+
+  let pendingStartDay = $state<SplitDay | null>(null);
+
+  async function startDay(d: SplitDay) {
+    if (d.blocks.length === 0) return;
+    await currentSession.startFromSplitDay(d);
+    await goto("/session/current");
+  }
 
   function dayPreview(blocks: PlannedBlock[]): string {
     if (blocks.length === 0) return "Empty";
@@ -405,9 +414,38 @@
               </div>
               <span class="text-muted-foreground text-sm shrink-0">›</span>
             </button>
+
+            {#if d.blocks.length > 0}
+              <button
+                type="button"
+                class="shrink-0 mr-2 flex items-center gap-1 rounded-full border border-primary/40 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors disabled:opacity-40"
+                disabled={ui.saving}
+                aria-label="Start a workout from {d.name || `Day ${i + 1}`}"
+                onclick={() => {
+                  if ($currentSession) pendingStartDay = d;
+                  else void startDay(d);
+                }}
+              >
+                <Play class="h-3 w-3" fill="currentColor" /> Start
+              </button>
+            {/if}
           </li>
         {/each}
       </ul>
     {/if}
   {/if}
 </div>
+
+<ConfirmDialog
+  open={pendingStartDay !== null}
+  onOpenChange={(v) => { if (!v) pendingStartDay = null; }}
+  title="Replace your current workout?"
+  description="You have an unfinished workout. Starting this day will discard it."
+  confirmLabel="Start this day"
+  cancelLabel="Keep current"
+  onConfirm={async () => {
+    const d = pendingStartDay;
+    pendingStartDay = null;
+    if (d) await startDay(d);
+  }}
+/>
