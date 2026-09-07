@@ -11,6 +11,9 @@
 		saving = false,
 		onConfirm = async () => {},
 		child,
+		// Controlled mode: pass `open` + `onOpenChange` and omit `child`.
+		open = undefined,
+		onOpenChange = undefined,
 	} = $props<{
 		title?: string;
 		description?: string;
@@ -18,21 +21,30 @@
 		cancelLabel?: string;
 		saving?: boolean;
 		onConfirm?: () => void | Promise<void>;
-		child?: Snippet<[{
-			props: Record<string, unknown>;
-		}]>;
+		child?: Snippet<[{ props: Record<string, unknown> }]>;
+		open?: boolean;
+		onOpenChange?: (v: boolean) => void;
 	}>();
 
+  const controlled = $derived(open !== undefined);
   const ui = $state({ open: false });
+  const isOpen = $derived(controlled ? !!open : ui.open);
+
+  function setOpen(v: boolean) {
+    if (controlled) onOpenChange?.(v);
+    else ui.open = v;
+  }
 
   async function confirm() {
     await onConfirm();
-    ui.open = false;
+    setOpen(false);
   }
 </script>
 
-<Dialog.Root bind:open={ui.open}>
-  <Dialog.Trigger {child} />
+<Dialog.Root open={isOpen} onOpenChange={setOpen}>
+  {#if child}
+    <Dialog.Trigger {child} />
+  {/if}
 
   <Dialog.Content class="sm:max-w-[420px]">
     <Dialog.Header>
@@ -43,7 +55,7 @@
     <Dialog.Footer>
       <Button
         variant="outline"
-        onclick={() => (ui.open = false)}
+        onclick={() => setOpen(false)}
         disabled={saving}
       >
         {cancelLabel}

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
+  import { sheetUp } from "$lib/transitions";
   import { goto } from "$app/navigation";
   import { X, Search, UserPlus, UserCheck, Loader2 } from "lucide-svelte";
   import { socialApi, type UserSearchResult } from "@logit/core/api/socialApi";
@@ -101,10 +103,14 @@
     class="fixed inset-0 z-40 bg-black/50"
     role="presentation"
     onclick={onclose}
+    transition:fade={{ duration: 150 }}
   ></div>
 
   <!-- Sheet -->
-  <div class="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-background border-t border-border rounded-t-xl max-h-[90dvh]">
+  <div
+    class="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-background border-t border-border rounded-t-xl max-h-[90dvh]"
+    transition:sheetUp
+  >
     <!-- Handle -->
     <div class="flex justify-center pt-2.5 pb-1 shrink-0">
       <div class="h-1 w-10 rounded-full bg-muted-foreground/20"></div>

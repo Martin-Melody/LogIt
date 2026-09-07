@@ -10,6 +10,7 @@
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
   import { authStore } from "$lib/api/authStore.svelte";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
+  import { popIn } from "$lib/transitions";
   import { getNutritionRepo, getHabitRepo } from "$lib/data/repoProvider";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
 
@@ -77,8 +78,10 @@
     </div>
   </div>
 
-  {#each activeWidgets as widget (widget.id)}
+  {#each activeWidgets as widget, i (widget.id)}
     {@const WidgetComponent = widget.component}
-    <WidgetComponent {...(widget.props ?? {})} />
+    <div in:popIn={{ duration: 220, delay: Math.min(i * 40, 320) }}>
+      <WidgetComponent {...(widget.props ?? {})} />
+    </div>
   {/each}
 </div>

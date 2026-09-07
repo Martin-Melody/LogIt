@@ -16,9 +16,18 @@
   import {
     parseExportFile,
     importData,
+    availableCategories,
     type ImportCategories,
   } from "$lib/usecases/importData";
   import { pickTextFile } from "$lib/platform/filePick";
+
+  const ALL_ON: ImportCategories = {
+    profile: true, exercises: true, splits: true, sessions: true,
+    progression: true, nutrition: true, habits: true, plugins: true,
+  };
+
+  /** Categories that MERGE rather than fully replace (no bulk-clear on the repo). */
+  const MERGE_CATEGORIES: (keyof ImportCategories)[] = ["nutrition", "habits"];
 
   type Phase =
     | "idle"
@@ -34,13 +43,9 @@
   let errorMsg = $state("");
   let parsedData = $state<ExportData | null>(null);
 
-  let categories = $state<ImportCategories>({
-    profile: true,
-    exercises: true,
-    splits: true,
-    sessions: true,
-    progression: true,
-  });
+  let categories = $state<ImportCategories>({ ...ALL_ON });
+  /** Which categories the picked file actually carries. */
+  let present = $state<ImportCategories>({ ...ALL_ON });
 
   async function handleExport() {
     phase = "exporting";
@@ -66,13 +71,8 @@
       const text = await pickTextFile();
       const data = parseExportFile(text);
       parsedData = data;
-      categories = {
-        profile: true,
-        exercises: true,
-        splits: true,
-        sessions: true,
-        progression: true,
-      };
+      present = availableCategories(data);
+      categories = { ...present }; // default-select everything the file has
       phase = "confirming";
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not read file.";
@@ -109,11 +109,18 @@
   }
 
   function countSummary(data: ExportData) {
-    return [
-      `${data.exercises.length} exercise${data.exercises.length !== 1 ? "s" : ""}`,
-      `${data.splits.splits.length} split${data.splits.splits.length !== 1 ? "s" : ""}`,
-      `${data.sessions.length} session${data.sessions.length !== 1 ? "s" : ""}`,
-    ].join(", ");
+    const parts = [
+      `${data.exercises?.length ?? 0} exercise${data.exercises?.length !== 1 ? "s" : ""}`,
+      `${data.splits?.splits.length ?? 0} split${data.splits?.splits.length !== 1 ? "s" : ""}`,
+      `${data.sessions?.length ?? 0} session${data.sessions?.length !== 1 ? "s" : ""}`,
+    ];
+    const days = data.nutrition?.days?.length ?? 0;
+    if (days) parts.push(`${days} nutrition day${days !== 1 ? "s" : ""}`);
+    const habits = data.habits?.habits?.length ?? 0;
+    if (habits) parts.push(`${habits} habit${habits !== 1 ? "s" : ""}`);
+    const plugins = data.plugins ? Object.keys(data.plugins).length : 0;
+    if (plugins) parts.push("plugins");
+    return parts.join(", ");
   }
 
   const categoryLabels: Record<keyof ImportCategories, string> = {
@@ -122,6 +129,9 @@
     splits: "Training splits",
     sessions: "Workout history",
     progression: "Progression settings",
+    nutrition: "Nutrition (diary, foods, weight, goal)",
+    habits: "Habits",
+    plugins: "Installed plugins",
   };
 </script>
 
@@ -156,12 +166,12 @@
         {/if}
       </Button>
       <p class="text-xs text-muted-foreground">
-        Includes your profile, exercise library, splits, workout history and
-        progression settings. Nutrition, habits and plugins aren't included yet.
+        Includes your profile, exercise library, splits, workout history,
+        progression settings, nutrition, habits and installed plugins.
       </p>
     </div>
 
-    <div class="border-t border-border" />
+    <div class="border-t border-border"></div>
 
     <!-- Import -->
     <div class="flex flex-col gap-2">
@@ -189,8 +199,8 @@
           >
             <AlertTriangle class="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
             <p class="text-xs text-amber-600 dark:text-amber-400">
-              Each selected category will fully replace your current data. This
-              cannot be undone.
+              Most categories replace your current data outright. Nutrition and
+              habits are merged in (kept alongside what you have). Can't be undone.
             </p>
           </div>
 
@@ -199,17 +209,19 @@
           <ul class="flex flex-col gap-2">
             {#each Object.keys(categoryLabels) as key (key)}
               {@const k = key as keyof ImportCategories}
-              <li class="flex items-center gap-2">
-                <input
-                  id="cat-{k}"
-                  type="checkbox"
-                  class="h-4 w-4 accent-primary"
-                  bind:checked={categories[k]}
-                />
-                <label for="cat-{k}" class="text-sm cursor-pointer select-none">
-                  {categoryLabels[k]}
-                </label>
-              </li>
+              {#if present[k]}
+                <li class="flex items-center gap-2">
+                  <input
+                    id="cat-{k}"
+                    type="checkbox"
+                    class="h-4 w-4 accent-primary"
+                    bind:checked={categories[k]}
+                  />
+                  <label for="cat-{k}" class="text-sm cursor-pointer select-none">
+                    {categoryLabels[k]}{#if MERGE_CATEGORIES.includes(k)}<span class="text-muted-foreground"> · merged</span>{/if}
+                  </label>
+                </li>
+              {/if}
             {/each}
           </ul>
 
