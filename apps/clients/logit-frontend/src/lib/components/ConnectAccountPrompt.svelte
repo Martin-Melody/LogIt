@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
+  import { sheetUp } from "$lib/transitions";
   import { goto } from "$app/navigation";
   import { X } from "lucide-svelte";
 
@@ -28,10 +30,14 @@
     class="fixed inset-0 z-40 bg-black/40"
     aria-label="Close"
     onclick={onclose}
+    transition:fade={{ duration: 150 }}
   ></button>
 
   <!-- Sheet -->
-  <div class="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border rounded-t-2xl px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+  <div
+    class="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border rounded-t-2xl px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+    transition:sheetUp
+  >
     <div class="flex items-start justify-between mb-4">
       <div>
         <h2 class="text-base font-semibold">Account required</h2>
