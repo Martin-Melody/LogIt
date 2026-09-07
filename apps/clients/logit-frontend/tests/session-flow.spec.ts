@@ -338,6 +338,25 @@ test.describe("managing sets", () => {
     await expect(weightInput).toHaveValue("80");
   });
 
+  test("warm-up ramp prepends warm-up sets before the working set", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Squat", [makeSet("s1", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(1);
+    await page.getByText("+ Warm-up ramp").click();
+
+    // bar 20 + 40/60/80% of 100 → 4 warm-ups, then the working set = 5 rows.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(5);
+    // First row is a warm-up (W badge).
+    await expect(page.locator("main").getByText("W", { exact: true }).first()).toBeVisible();
+    // Offer is gone once warm-ups exist.
+    await expect(page.getByText("+ Warm-up ramp")).toHaveCount(0);
+  });
+
   test("marking a set complete toggles its visual state", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
+  import { sheetUp } from "$lib/transitions";
   import { X, Loader2 } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ApiPost, type RepostSource } from "@logit/core/api/socialApi";
@@ -68,9 +70,9 @@
 </script>
 
 {#if open}
-  <button type="button" aria-label="Close" class="fixed inset-0 z-50 bg-black/40" onclick={onclose}></button>
+  <button type="button" aria-label="Close" class="fixed inset-0 z-50 bg-black/40" onclick={onclose} transition:fade={{ duration: 150 }}></button>
 
-  <div class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl max-h-[85dvh] pb-[env(safe-area-inset-bottom)]">
+  <div class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl max-h-[85dvh] pb-[env(safe-area-inset-bottom)]" transition:sheetUp>
     <div class="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border shrink-0">
       <button type="button" class="p-1 -ml-1 text-muted-foreground" onclick={onclose}>
         <X class="h-5 w-5" />

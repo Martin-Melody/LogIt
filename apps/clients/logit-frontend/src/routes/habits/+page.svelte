@@ -19,6 +19,7 @@
   import { coachHabitAsHabit } from "@logit/core/domain/CoachHabit";
   import { bumpHabits } from "$lib/features/habits/store";
   import { pushHabit, pushHabitEntry } from "$lib/sync/syncService";
+  import { reveal, popIn } from "$lib/transitions";
 
   type Row = {
     habit: Habit;
@@ -137,7 +138,7 @@
   {/if}
 
   {#snippet habitRow(row: Row, readonly: boolean)}
-    <li class="flex items-center gap-3 px-3 py-3 {row.due ? '' : 'opacity-45'}">
+    <li transition:popIn class="flex items-center gap-3 px-3 py-3 {row.due ? '' : 'opacity-45'}">
       <button
         type="button"
         aria-label={row.satisfied ? "Mark not done" : "Mark done"}
@@ -254,7 +255,7 @@
         />
       </button>
       {#if ui.showArchived}
-        <ul class="divide-y divide-border">
+        <ul class="divide-y divide-border" transition:reveal>
           {#each archived as h (h.id)}
             <li class="flex items-center gap-3 px-3 py-3">
               <button

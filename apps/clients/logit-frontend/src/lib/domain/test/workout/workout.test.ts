@@ -3,7 +3,7 @@ import {
   getSessionDurationMs, finishSession, getTopSetHighlight, getExercises, getSessionVolumeKg, getSessionSetCount,
   SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
   groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
-  setSessionNote, foldSupersets,
+  setSessionNote, foldSupersets, addWarmupSets,
 } from "@logit/core/domain/workout";
 import type { StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
@@ -122,6 +122,29 @@ describe("workout domain", () => {
   it("getTopSetHighlight returns null if there are no sets", () => {
     const s = createSession(1_000);
     expect(getTopSetHighlight(s)).toBeNull();
+  });
+
+  it("addWarmupSets prepends warm-ups and reindexes", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Squat" });
+    const id = getExercises(s)[0].id;
+    s = addSet(s, id, { reps: 5, weight: 100 });
+    s = addWarmupSets(s, id, [{ weight: 20, reps: 10 }, { weight: 60, reps: 3 }]);
+    const sets = getExercises(s)[0].sets;
+    expect(sets.map((x) => [x.setType, x.weight, x.orderIndex])).toEqual([
+      ["warmup", 20, 0],
+      ["warmup", 60, 1],
+      ["normal", 100, 2],
+    ]);
+  });
+
+  it("addWarmupSets is a no-op for an empty ramp", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Squat" });
+    const id = getExercises(s)[0].id;
+    const before = JSON.stringify(s);
+    s = addWarmupSets(s, id, []);
+    expect(JSON.stringify(s)).toBe(before);
   });
 
   it("getSessionVolumeKg / getSessionSetCount total the strength work", () => {

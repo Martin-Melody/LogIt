@@ -3,6 +3,8 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { socialApi, type ApiComment, type ApiPost } from "@logit/core/api/socialApi";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
+  import { fade } from "svelte/transition";
+  import { sheetUp } from "$lib/transitions";
   import CommentList from "./social/CommentList.svelte";
 
   interface Props {
@@ -62,10 +64,14 @@
     class="fixed inset-0 bg-black/40 z-40"
     onclick={onclose}
     aria-label="Close"
+    transition:fade={{ duration: 150 }}
   ></button>
 
   <!-- Sheet -->
-  <div class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl border-t border-border max-h-[80dvh]">
+  <div
+    class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl border-t border-border max-h-[80dvh]"
+    transition:sheetUp
+  >
     <div class="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border shrink-0">
       <p class="text-sm font-semibold">Comments</p>
       <button type="button" class="p-1 text-muted-foreground" onclick={onclose}>

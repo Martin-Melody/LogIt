@@ -38,6 +38,9 @@
   import { apiClient, ApiError } from "@logit/core/api/client";
   import { SET_TYPE_META } from "@logit/core/domain/workout";
   import { reveal } from "$lib/transitions";
+  import { equipment } from "$lib/stores/equipment.store";
+  import { DEFAULT_BARBELL } from "@logit/core/domain/plates";
+  import { toDisplayWeight, fromDisplayWeight } from "@logit/core/domain/units";
   import { syncAll, pushAllLocalData, lastSyncedAt } from "$lib/sync/syncService";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
@@ -278,6 +281,40 @@
   ];
   function jumpTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // --- Barbell / plates (drives the plate calculator + warm-up ramp) ---
+  const trimNum = (n: number) => Number(n.toFixed(2)).toString();
+  const barWeightDisplay = $derived(trimNum(toDisplayWeight($equipment.barbell.barKg, $profile.weightUnit)));
+  const platesDisplay = $derived(
+    $equipment.barbell.platesKg
+      .map((p) => trimNum(toDisplayWeight(p, $profile.weightUnit)))
+      .join(", "),
+  );
+  function saveBarWeight(v: string) {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return;
+    equipment.save({ barbell: { ...$equipment.barbell, barKg: fromDisplayWeight(n, $profile.weightUnit) } });
+  }
+  function savePlates(v: string) {
+    const list = v
+      .split(/[\s,]+/)
+      .map((x) => Number(x))
+      .filter((n) => Number.isFinite(n) && n > 0)
+      .map((n) => fromDisplayWeight(n, $profile.weightUnit));
+    if (list.length === 0) return;
+    equipment.save({ barbell: { ...$equipment.barbell, platesKg: list } });
+  }
+  function applyBarPreset(kind: "kg" | "lb") {
+    equipment.save({
+      barbell:
+        kind === "kg"
+          ? { barKg: 20, platesKg: [...DEFAULT_BARBELL.platesKg] }
+          : {
+              barKg: fromDisplayWeight(45, "lbs"),
+              platesKg: [45, 35, 25, 10, 5, 2.5].map((p) => fromDisplayWeight(p, "lbs")),
+            },
+    });
   }
 
   // --- Session preferences ---
@@ -671,6 +708,40 @@
       <p class="text-xs text-muted-foreground">
         Weights are always stored in kilograms — this only changes what you see and type.
       </p>
+
+      <!-- Barbell — drives the plate calculator + warm-up ramp -->
+      <div class="flex flex-col gap-2 border-t border-border pt-3">
+        <p class="text-sm font-medium">Barbell</p>
+        <p class="text-xs text-muted-foreground -mt-1">
+          Used for the plate breakdown and warm-up ramps. Values in {$profile.weightUnit}.
+        </p>
+        <div class="flex items-center justify-between gap-3">
+          <label class="text-sm" for="bar-weight">Bar weight</label>
+          <input
+            id="bar-weight"
+            type="number"
+            min="1"
+            class="w-24 rounded border bg-background px-2 py-1 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            value={barWeightDisplay}
+            onchange={(e) => saveBarWeight((e.currentTarget as HTMLInputElement).value)}
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm" for="bar-plates">Plates ({$profile.weightUnit}, comma-separated)</label>
+          <input
+            id="bar-plates"
+            type="text"
+            inputmode="decimal"
+            class="w-full rounded border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            value={platesDisplay}
+            onchange={(e) => savePlates((e.currentTarget as HTMLInputElement).value)}
+          />
+        </div>
+        <div class="flex gap-2">
+          <Button size="sm" variant="outline" class="h-7 text-xs" onclick={() => applyBarPreset("kg")}>kg preset</Button>
+          <Button size="sm" variant="outline" class="h-7 text-xs" onclick={() => applyBarPreset("lb")}>lb preset</Button>
+        </div>
+      </div>
     </Card.Content>
   </Card.Root>
 
