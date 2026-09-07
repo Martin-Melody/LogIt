@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
+  import { sheetUp } from "$lib/transitions";
   import {
     X, Dumbbell, Trophy, MessageSquare, CalendarDays,
     Activity, Cpu, LayoutDashboard, Paperclip, Flame,
@@ -340,10 +342,14 @@
     aria-label="Close"
     class="fixed inset-0 z-50 bg-black/40"
     onclick={onclose}
+    transition:fade={{ duration: 150 }}
   ></button>
 
   <!-- Sheet -->
-  <div class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl max-h-[85dvh] pb-[env(safe-area-inset-bottom)]">
+  <div
+    class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl max-h-[85dvh] pb-[env(safe-area-inset-bottom)]"
+    transition:sheetUp
+  >
 
     <!-- Header -->
     <div class="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border shrink-0">
