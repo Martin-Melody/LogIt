@@ -343,6 +343,24 @@ export function getSessionDurationMs(session: WorkoutSession): number | null {
   return Math.max(0, session.endedAtMs - session.startedAtMs);
 }
 
+/** Total tonnage (Σ reps × weight, kg) across every strength set in the session. */
+export function getSessionVolumeKg(session: WorkoutSession): number {
+  let vol = 0;
+  for (const ex of getExercises(session)) {
+    for (const set of ex.sets) vol += set.reps * set.weight;
+  }
+  return vol;
+}
+
+/** Working-set count (excludes warm-ups) across the session. */
+export function getSessionSetCount(session: WorkoutSession): number {
+  let n = 0;
+  for (const ex of getExercises(session)) {
+    for (const set of ex.sets) if (set.setType !== "warmup") n++;
+  }
+  return n;
+}
+
 export function getTopSetHighlight(session: WorkoutSession): TopSetHighlight | null {
   let best: { exerciseName: string; set: SetEntry } | null = null;
 

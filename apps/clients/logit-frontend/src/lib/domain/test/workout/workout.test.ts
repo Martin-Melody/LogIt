@@ -1,6 +1,6 @@
 import {
   createSession, addExercise, addSet, updateSet, removeSet, removeExercise,
-  getSessionDurationMs, finishSession, getTopSetHighlight, getExercises,
+  getSessionDurationMs, finishSession, getTopSetHighlight, getExercises, getSessionVolumeKg, getSessionSetCount,
   SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
   groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
   setSessionNote, foldSupersets,
@@ -122,6 +122,16 @@ describe("workout domain", () => {
   it("getTopSetHighlight returns null if there are no sets", () => {
     const s = createSession(1_000);
     expect(getTopSetHighlight(s)).toBeNull();
+  });
+
+  it("getSessionVolumeKg / getSessionSetCount total the strength work", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Bench" });
+    const id = getExercises(s)[0].id;
+    s = addSet(s, id, { weight: 100, reps: 5 }); // 500
+    s = addSet(s, id, { weight: 60, reps: 10, setType: "warmup" }); // 600, not a working set
+    expect(getSessionVolumeKg(s)).toBe(1100);
+    expect(getSessionSetCount(s)).toBe(1);
   });
 
   it("swapExercise changes the exercise but keeps the sets", () => {

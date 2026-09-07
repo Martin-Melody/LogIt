@@ -2,9 +2,12 @@
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
-  import type { WorkoutSession, SetEntry } from "@logit/core/domain/workout";
-  import { getExercises, updateSet } from "@logit/core/domain/workout";
+  import type { WorkoutSession, SetEntry, ExerciseEntry } from "@logit/core/domain/workout";
+  import { getExercises, updateSet, foldSupersets, setTypeMeta, getSessionVolumeKg } from "@logit/core/domain/workout";
   import { durationMs, formatDuration } from "@logit/core/domain/time";
+  import { formatWeight } from "@logit/core/domain/units";
+  import { profile } from "$lib/stores/profile.store";
+  import { reveal } from "$lib/transitions";
   import { getSession } from "$lib/usecases/getSession";
   import { deleteSession } from "$lib/usecases/deleteSession";
   import { editSession } from "$lib/usecases/editSession";
@@ -86,17 +89,13 @@
     return a.orderIndex - b.orderIndex;
   }
 
+  const weightUnit = $derived($profile.weightUnit);
+
   function countSets(s: WorkoutSession): number {
     return getExercises(s).reduce((n, ex) => n + ex.sets.length, 0);
   }
 
-  function totalVolume(s: WorkoutSession): number {
-    let v = 0;
-    for (const ex of getExercises(s))
-      for (const set of ex.sets)
-        v += (Number.isFinite(set.reps) ? set.reps : 0) * (Number.isFinite(set.weight) ? set.weight : 0);
-    return v;
-  }
+  const groups = $derived(displaySession ? foldSupersets(getExercises(displaySession)) : []);
 
   const ended = $derived(displaySession?.endedAtMs ?? displaySession?.startedAtMs ?? null);
 
@@ -289,8 +288,10 @@
       <span>{getExercises(displaySession).length} exercise{getExercises(displaySession).length === 1 ? "" : "s"}</span>
       <span>·</span>
       <span>{countSets(displaySession)} sets</span>
-      <span>·</span>
-      <span>{totalVolume(displaySession).toLocaleString()} kg</span>
+      {#if getSessionVolumeKg(displaySession) > 0}
+        <span>·</span>
+        <span>{formatWeight(getSessionVolumeKg(displaySession), weightUnit)}</span>
+      {/if}
       {#if displaySession.excludeFromProgression}
         <span>·</span>
         <span class="text-amber-500 dark:text-amber-400">Excluded from progression</span>
@@ -347,57 +348,72 @@
     {/if}
 
     <!-- Exercises -->
-    {#if getExercises(displaySession).length === 0}
-      <p class="px-3 py-6 text-sm text-muted-foreground text-center">No exercises recorded.</p>
-    {:else}
-      {#each getExercises(displaySession) as ex (ex.id)}
-        <div class="border-t border-border bg-muted/20 px-3 py-2 flex items-center justify-between gap-3">
-          <span class="text-sm font-semibold truncate">{ex.exerciseName}</span>
-          <span class="text-xs text-muted-foreground shrink-0">
-            {ex.sets.length} set{ex.sets.length === 1 ? "" : "s"}
-          </span>
+    {#snippet exerciseBlock(ex: ExerciseEntry)}
+      <div class="border-t border-border bg-muted/20 px-3 py-2 flex items-center justify-between gap-3">
+        <span class="text-sm font-semibold truncate">{ex.exerciseName}</span>
+        <span class="text-xs text-muted-foreground shrink-0">
+          {ex.sets.length} set{ex.sets.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {#if ex.sets.length > 0}
+        <div class="grid grid-cols-[2.25rem_1fr_1fr{edit.active ? '_1.5rem' : ''}] gap-2 px-3 py-1 text-xs text-muted-foreground border-b border-border">
+          <span>#</span>
+          <span>Reps</span>
+          <span>Weight ({weightUnit})</span>
+          {#if edit.active}<span></span>{/if}
         </div>
 
-        {#if ex.sets.length > 0}
-          <div class="grid grid-cols-[2rem_1fr_1fr{edit.active ? '_1.5rem' : ''}] gap-2 px-3 py-1 text-xs text-muted-foreground border-b border-border">
-            <span>#</span>
-            <span>Reps</span>
-            <span>Weight</span>
-            {#if edit.active}<span></span>{/if}
-          </div>
+        {#each [...ex.sets].sort(sortByOrder) as set, i (set.id)}
+          {@const meta = setTypeMeta(set.setType)}
+          {#snippet cells()}
+            <span class="flex items-center gap-1">
+              {#if meta.short}
+                <span class="text-[10px] font-bold leading-none px-1 py-0.5 rounded border {meta.badgeClass}" title={meta.label}>{meta.short}</span>
+              {:else}
+                <span class="text-xs text-muted-foreground tabular-nums">{i + 1}</span>
+              {/if}
+            </span>
+            <span class="text-sm tabular-nums">
+              {set.reps}{#if set.rpe != null}<span class="text-xs text-muted-foreground"> @{set.rpe}</span>{/if}
+            </span>
+            <span class="text-sm tabular-nums">{formatWeight(set.weight, weightUnit, { withUnit: false })}</span>
+          {/snippet}
+          {#if edit.active}
+            <button
+              type="button"
+              class="w-full grid grid-cols-[2.25rem_1fr_1fr_1.5rem] gap-2 items-center px-3 py-1.5 border-b border-border/50 hover:bg-muted/40 active:bg-muted/60 transition-colors text-left"
+              onclick={() => openSetDialog(ex.id, set.id)}
+            >
+              {@render cells()}
+              <Pencil class="h-3 w-3 text-muted-foreground" />
+            </button>
+          {:else}
+            <div class="grid grid-cols-[2.25rem_1fr_1fr] gap-2 items-center px-3 py-1.5 border-b border-border/50">
+              {@render cells()}
+            </div>
+          {/if}
+        {/each}
+      {/if}
+    {/snippet}
 
-          {#each [...ex.sets].sort(sortByOrder) as set, i (set.id)}
-            {#if edit.active}
-              <button
-                type="button"
-                class="w-full grid grid-cols-[2rem_1fr_1fr_1.5rem] gap-2 items-center px-3 py-1.5 border-b border-border/50 hover:bg-muted/40 active:bg-muted/60 transition-colors text-left"
-                onclick={() => openSetDialog(ex.id, set.id)}
-              >
-                <span class="text-xs text-muted-foreground">
-                  {#if set.setType && set.setType !== "normal"}
-                    <span class="font-medium text-foreground">{set.setType.slice(0, 1).toUpperCase()}</span>
-                  {:else}
-                    {i + 1}
-                  {/if}
-                </span>
-                <span class="text-sm tabular-nums">{set.reps}</span>
-                <span class="text-sm tabular-nums">{set.weight} kg</span>
-                <Pencil class="h-3 w-3 text-muted-foreground" />
-              </button>
-            {:else}
-              <div class="grid grid-cols-[2rem_1fr_1fr] gap-2 items-center px-3 py-1.5 border-b border-border/50">
-                <span class="text-xs text-muted-foreground">
-                  {#if set.setType && set.setType !== "normal"}
-                    <span class="font-medium text-foreground">{set.setType.slice(0, 1).toUpperCase()}</span>
-                  {:else}
-                    {i + 1}
-                  {/if}
-                </span>
-                <span class="text-sm tabular-nums">{set.reps}</span>
-                <span class="text-sm tabular-nums">{set.weight} kg</span>
-              </div>
-            {/if}
-          {/each}
+    {#if groups.length === 0}
+      <p class="px-3 py-6 text-sm text-muted-foreground text-center">No exercises recorded.</p>
+    {:else}
+      {#each groups as group (group.kind === "superset" ? group.id : group.exercise.id)}
+        {#if group.kind === "superset"}
+          <div class="border-t border-primary/30 bg-primary/[0.03]" transition:reveal>
+            <p class="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              {group.label ?? "Superset"}
+            </p>
+            <div class="ml-3 border-l-2 border-primary/30">
+              {#each group.exercises as ex (ex.id)}
+                {@render exerciseBlock(ex)}
+              {/each}
+            </div>
+          </div>
+        {:else}
+          {@render exerciseBlock(group.exercise)}
         {/if}
       {/each}
     {/if}
@@ -411,6 +427,7 @@
   machines={editMachines}
   defaultMachineId={editDefaultMachineId}
   exerciseId={editExerciseId}
+  weightUnit={weightUnit}
   onOpenChange={(v) => (edit.dialogOpen = v)}
   onSave={handleSetSave}
 />
