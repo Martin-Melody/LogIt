@@ -1,6 +1,5 @@
 import type { WorkoutRepo, ListRecentSessionsOptions } from "@logit/core/data/workoutRepo";
 import type { WorkoutSession, SessionBlock, StrengthBlockData, SetType } from "@logit/core/domain/workout";
-import type { SetTypeOption } from "@logit/core/data/types";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 
@@ -58,10 +57,6 @@ async function readBlocks(db: ReturnType<typeof getDb>, sessionId: string): Prom
     orderIndex: row.order_index as number,
     data: parseBlockData(row.block_type, row.data),
   }));
-}
-
-function isSetType(v: unknown): v is SetType {
-  return v === "normal" || v === "warmup" || v === "dropset" || v === "amrap" || v === "failure";
 }
 
 export function createSqliteWorkoutRepo(): WorkoutRepo {
@@ -240,17 +235,6 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       const db = getDb();
       const key = `draft_session_id:${getActiveOwnerId() ?? "default"}`;
       await db.run(`DELETE FROM meta WHERE key=?`, [key]);
-    },
-
-    async getSetTypes(): Promise<SetTypeOption[]> {
-      const db = getDb();
-      const res = await db.query(
-        `SELECT id, code, label FROM set_types ORDER BY sort_order ASC`,
-        [],
-      );
-      return ((res.values ?? []) as any[])
-        .filter((r) => isSetType(r.code))
-        .map((r) => ({ id: String(r.id), code: r.code as SetType, label: String(r.label) }));
     },
   };
 }
