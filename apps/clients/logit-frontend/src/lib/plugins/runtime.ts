@@ -7,6 +7,7 @@ import type {
   ProgressionOutput,
 } from "@logit/core/domain/progression";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
+import { createLocalMobilityAlgorithmRegistry } from "$lib/progression/localMobilityAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
@@ -26,6 +27,7 @@ import type {
 } from "@logit/core/plugins/widgetView";
 import type {
   AnalyticsPluginCapability,
+  MobilityProgressionAlgorithmPluginCapability,
   NutritionAlgorithmPluginCapability,
   NutritionAnalyticsPluginCapability,
   PluginCapability,
@@ -51,6 +53,12 @@ import type {
   NutritionAnalyticsPluginMeta,
   NutritionAnalyticsRegistry,
 } from "@logit/core/domain/nutritionAnalytics";
+import type {
+  MobilityProgressionAlgorithm,
+  MobilityProgressionAlgorithmMeta,
+  MobilityProgressionAlgorithmRegistry,
+  MobilityProgressionOutput,
+} from "@logit/core/domain/mobilityProgression";
 
 export type RuntimeWidgetDefinition = WidgetDefinition & {
   source: "builtin" | "installed";
@@ -77,6 +85,16 @@ function getProgressionCapability(
   manifest: PluginManifest,
 ): ProgressionAlgorithmPluginCapability | null {
   return manifest.capabilities.find(isProgressionCapability) ?? null;
+}
+
+function getMobilityProgressionCapability(
+  manifest: PluginManifest,
+): MobilityProgressionAlgorithmPluginCapability | null {
+  return (
+    (manifest.capabilities.find(
+      (c) => c.family === "mobility-progression",
+    ) as MobilityProgressionAlgorithmPluginCapability | undefined) ?? null
+  );
 }
 
 function isAnalyticsCapability(
@@ -125,6 +143,7 @@ const WIDGET_NEEDS: ReadonlySet<WidgetDataNeed> = new Set([
   "progressionTargets",
   "nutrition",
   "bodyweight",
+  "mobility",
 ]);
 
 async function installedWidgetDefinitions(): Promise<RuntimeWidgetDefinition[]> {
@@ -340,6 +359,62 @@ function nutritionAnalyticsRegistry(): NutritionAnalyticsRegistry {
   };
 }
 
+// ── Mobility progression algorithms ──────────────────────────────────────────
+
+async function installedMobilityAlgorithms(): Promise<MobilityProgressionAlgorithmMeta[]> {
+  const installed = await listInstalledPluginManifests();
+  return listSandboxedPlugins(
+    installed,
+    "mobility-progression",
+    (p) => !!getMobilityProgressionCapability(p.manifest),
+    (plugin) => ({
+      id: getMobilityProgressionCapability(plugin.manifest)!.algorithmId,
+      name: plugin.manifest.name,
+      description: plugin.manifest.description,
+      author: plugin.manifest.author,
+    }),
+  );
+}
+
+async function installedMobilityAlgorithmById(
+  id: string,
+): Promise<MobilityProgressionAlgorithm | null> {
+  const installed = await listInstalledPluginManifests();
+  const plugin = findSandboxedPlugin(
+    installed,
+    "mobility-progression",
+    (p) => getMobilityProgressionCapability(p.manifest)?.algorithmId === id,
+  );
+  if (!plugin) return null;
+
+  const meta = await sandboxedMeta(plugin);
+  if (!meta) return null;
+
+  const suggest = sandboxedCall<MobilityProgressionOutput>(plugin, "suggest");
+  return {
+    id,
+    name: plugin.manifest.name,
+    description: plugin.manifest.description,
+    author: plugin.manifest.author,
+    defaultState: meta.defaultState ?? {},
+    defaultPreferences: meta.defaultPreferences,
+    preferencesSchema: meta.preferencesSchema as MobilityProgressionAlgorithm["preferencesSchema"],
+    suggest: (input) => suggest(input),
+  };
+}
+
+function mobilityAlgorithmRegistry(): MobilityProgressionAlgorithmRegistry {
+  const builtin = createLocalMobilityAlgorithmRegistry();
+  return {
+    async list() {
+      return [...(await builtin.list()), ...(await installedMobilityAlgorithms())];
+    },
+    async get(id: string) {
+      return (await builtin.get(id)) ?? installedMobilityAlgorithmById(id);
+    },
+  };
+}
+
 function analyticsRegistry(): AnalyticsRegistry {
   const builtin = createLocalAnalyticsRegistry();
 
@@ -389,6 +464,7 @@ export function createPluginRuntime() {
     analytics: analyticsRegistry(),
     nutritionAlgorithms: nutritionAlgorithmRegistry(),
     nutritionAnalytics: nutritionAnalyticsRegistry(),
+    mobilityAlgorithms: mobilityAlgorithmRegistry(),
   };
 }
 

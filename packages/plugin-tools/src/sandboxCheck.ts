@@ -17,6 +17,7 @@ import type { PluginFamily } from "./manifest.js";
 
 const METHOD_BY_FAMILY: Partial<Record<PluginFamily, string>> = {
   "progression-algorithm": "suggest",
+  "mobility-progression": "suggest",
   analytics: "compute",
   "nutrition-algorithm": "computeTargets",
   "nutrition-analytics": "compute",

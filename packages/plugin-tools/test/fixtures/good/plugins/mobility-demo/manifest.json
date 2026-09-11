@@ -1,0 +1,15 @@
+{
+  "id": "com.demo.mobility",
+  "family": "mobility-progression",
+  "name": "Mobility Demo",
+  "description": "Adds a few seconds of hold time each session.",
+  "version": "1.0.0",
+  "author": "Demo",
+  "integrity": "sha256-QGhbl4ae4YBQrYrny4Yhsn5YXU3JjgCs/V8vLSpWRPw=",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "plugins/mobility-demo/manifest.json",
+    "bundleUrl": "plugins/mobility-demo/bundle.js"
+  },
+  "capabilities": [{ "family": "mobility-progression", "algorithmId": "com.demo.mobility" }]
+}

@@ -1,5 +1,6 @@
 import type { ExerciseHistoryEntry } from "./progression";
 import type { ExerciseType } from "./exercise";
+import type { MobilityHistoryEntry } from "./mobilityProgression";
 
 export type AnalyticsMetricDefinition = {
   id: string;
@@ -26,9 +27,21 @@ export type AnalyticsSeries = {
   points: AnalyticsDataPoint[];
 };
 
+export type MobilitySessionSummary = MobilityHistoryEntry & {
+  drillName: string;
+  metric: "hold" | "reps";
+  perSide: boolean;
+};
+
 export type AnalyticsInput = {
   exercise: { id?: string; name: string; exerciseType?: ExerciseType };
   history: ExerciseHistoryEntry[]; // oldest first, all available history
+  /**
+   * All mobility drills the user has logged (oldest first), across every drill —
+   * present so an analytics plugin can correlate stretching with training. Only
+   * populated for the whole-history analytics view.
+   */
+  mobilitySessions?: MobilitySessionSummary[];
 };
 
 export type AnalyticsOutput = {

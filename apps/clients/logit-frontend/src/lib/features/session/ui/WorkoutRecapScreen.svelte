@@ -4,7 +4,7 @@
   import { backOut } from "svelte/easing";
   import { Check, Trophy, Sparkles } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
-  import type { WorkoutSession, CardioBlockData, ExerciseEntry } from "@logit/core/domain/workout";
+  import type { WorkoutSession, CardioBlockData, MobilityBlockData, ExerciseEntry } from "@logit/core/domain/workout";
   import { getExercises, getTopSetHighlight, foldSupersets, setTypeMeta } from "@logit/core/domain/workout";
   import { formatDuration } from "@logit/core/domain/time";
   import { toDisplayWeight, formatWeight } from "@logit/core/domain/units";
@@ -50,6 +50,17 @@
     return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${m} m`;
   }
 
+  const mobilityBlocks = session.blocks.filter((b) => b.type === "mobility");
+  const blockCount = exercises.length + cardioBlocks.length + mobilityBlocks.length;
+  const totalMobilityHoldSec = mobilityBlocks.reduce((sum, b) => {
+    const data = b.data as MobilityBlockData;
+    return sum + data.sets.reduce((s, set) => s + (set.durationSec ?? 0), 0);
+  }, 0);
+  const totalMobilityReps = mobilityBlocks.reduce((sum, b) => {
+    const data = b.data as MobilityBlockData;
+    return sum + data.sets.reduce((s, set) => s + (set.reps ?? 0), 0);
+  }, 0);
+
   // Hero stats — the two or three numbers that matter, count up on reveal.
   type HeroStat = { label: string; value: number; fmt: (n: number) => string; noCount?: boolean };
   const heroStats: HeroStat[] = [
@@ -60,10 +71,17 @@
     { label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true },
   ];
 
+  function formatHold(s: number): string {
+    const m = Math.floor(s / 60);
+    return m > 0 ? `${m}:${String(s % 60).padStart(2, "0")}` : `${s}s`;
+  }
+
   const secondaryStats: { label: string; value: string }[] = [
-    { label: "Exercises", value: String(exercises.length + cardioBlocks.length) },
+    { label: "Exercises", value: String(exercises.length + cardioBlocks.length + mobilityBlocks.length) },
     ...(totalCardioDistanceM > 0 ? [{ label: "Distance", value: formatDistance(totalCardioDistanceM) }] : []),
     ...(totalCardioDurationMs > 0 ? [{ label: "Cardio time", value: formatDuration(totalCardioDurationMs) }] : []),
+    ...(totalMobilityHoldSec > 0 ? [{ label: "Time under tension", value: formatHold(totalMobilityHoldSec) }] : []),
+    ...(totalMobilityReps > 0 ? [{ label: "Mobility reps", value: String(totalMobilityReps) }] : []),
   ];
 
   let prs = $state<SessionPR[]>([]);
@@ -121,7 +139,7 @@
       <div in:fly={{ y: 12, duration: 380, delay: 220 }}>
         <h1 class="text-2xl font-bold tracking-tight">Workout complete</h1>
         <p class="text-sm text-muted-foreground mt-1">
-          {formatDuration(durationMs)} · {exercises.length + cardioBlocks.length} exercise{exercises.length + cardioBlocks.length === 1 ? "" : "s"}
+          {formatDuration(durationMs)} · {blockCount} exercise{blockCount === 1 ? "" : "s"}
         </p>
       </div>
     </div>

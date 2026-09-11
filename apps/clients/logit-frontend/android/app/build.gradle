@@ -39,6 +39,14 @@ android {
         }
     }
     buildTypes {
+        // Debug installs get their own applicationId so a dev/test build sits
+        // side by side with a release install of LogIt — separate package,
+        // separate WebView storage + SQLite DB, no risk to real workout data.
+        // Overridden app label + URL scheme live in src/debug/res/.
+        debug {
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+        }
         release {
             minifyEnabled true
             shrinkResources true

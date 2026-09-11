@@ -10,6 +10,7 @@ import type { PluginFamily } from "./types";
 const EXECUTABLE_FAMILIES: ReadonlySet<PluginFamily> = new Set([
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",

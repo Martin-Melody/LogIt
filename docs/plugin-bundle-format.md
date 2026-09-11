@@ -14,13 +14,25 @@ At install time the bundle is fetched **once**, verified against the manifest's
 `integrity` hash (`sha256-<base64>`), and its source text stored locally — it
 runs offline afterwards and updates are an explicit, reviewable action.
 
-All pure-function families — `progression-algorithm`, `analytics`,
-`nutrition-algorithm`, `nutrition-analytics` — run inside an **interpreter
-sandbox** (QuickJS-WASM): a bare ES2020 environment with no DOM, no `fetch`, no
-storage, no timers. The plugin receives a frozen JSON input and must return a
-JSON-serialisable value within a hard wall-clock deadline (~300 ms). A fresh VM
-per call means no state leaks between runs — persist state through the
-contract's `nextState` (progression), never in a module-level variable.
+All pure-function families — `progression-algorithm`, `mobility-progression`,
+`analytics`, `nutrition-algorithm`, `nutrition-analytics` — run inside an
+**interpreter sandbox** (QuickJS-WASM): a bare ES2020 environment with no DOM, no
+`fetch`, no storage, no timers. The plugin receives a frozen JSON input and must
+return a JSON-serialisable value within a hard wall-clock deadline (~300 ms). A
+fresh VM per call means no state leaks between runs — persist state through the
+contract's `nextState` (progression / mobility-progression), never in a
+module-level variable.
+
+`mobility-progression` is the stretching counterpart of `progression-algorithm`:
+`suggest(input) => { sets, nextState, label?, notes? }`, where a suggested set
+carries `durationSec` (holds) or `reps` + optional `loadKg`, and an optional
+`side` (`"left"` / `"right"`) for unilateral drills. See
+`@logit/core/domain/mobilityProgression` and `static/sample-plugins/mobility-plus`.
+
+Content families are pure JSON, no code: `exercise-pack` (catalog exercises) and
+`mobility-pack` (Mobility-block drills — name, `area`, `defaultMetric`,
+`perSide`, `cues`). See `@logit/core/plugins/mobilityPack` and
+`static/sample-plugins/hip-rehab-pack`.
 
 Because the sandbox has no module loader, **a bundle must be a single file with
 no `import` statements** (build with esbuild `--bundle --format=esm`). Top-level
@@ -30,7 +42,8 @@ no `import` statements** (build with esbuild `--bundle --format=esm`). Top-level
 in the same sandbox. The plugin declares `needs: [...]` (which data slices the
 host loads) and returns a declarative view built from a fixed primitive
 vocabulary (`text`, `stat-grid`, `list`, `progress-rings`, `bar`, `line`,
-`muscle-map`, `calendar-heatmap`, `button-row`). No markup, no components — see
+`muscle-map`, `calendar-heatmap`, `button-row`, `checklist`, `gauge`). No markup,
+no components — see
 `@logit/core/plugins/widgetView`. Actions are a host allow-list (`navigate`,
 `startEmptyWorkout`, …), so a widget can't navigate or run arbitrary code.
 `static/sample-plugins/week-recap` is a full example.

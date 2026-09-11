@@ -135,6 +135,37 @@ export const widget = {
     });
   });
 
+  it("runs a mobility progression plugin's suggest()", () => {
+    const mob = `
+export const pluginBundle = { formatVersion: 1, pluginId: "m", family: "mobility-progression", entryExport: "algorithm" };
+export const algorithm = {
+  id: "m", name: "Mob", description: "d", defaultState: { step: 5 },
+  suggest(input) {
+    const step = Number(input.state?.step ?? 5);
+    const last = Number(input.history?.[0]?.sets?.[0]?.durationSec ?? 20);
+    return { sets: [{ durationSec: last + step }], nextState: input.state, label: "n" };
+  },
+};`;
+    const meta = run(mob, "algorithm", { kind: "meta" });
+    expect(meta.envelope?.ok && (meta.envelope.value as { defaultState: unknown }).defaultState).toEqual({ step: 5 });
+
+    const out = run(mob, "algorithm", {
+      kind: "call",
+      method: "suggest",
+      input: {
+        drill: { name: "d", metric: "hold", perSide: false },
+        history: [{ sets: [{ durationSec: 40 }] }],
+        state: { step: 5 },
+        userPreferences: {},
+        now: 0,
+      },
+    });
+    expect(out.envelope).toEqual({
+      ok: true,
+      value: { sets: [{ durationSec: 45 }], nextState: { step: 5 }, label: "n" },
+    });
+  });
+
   it("runs a nutrition algorithm's computeTargets()", () => {
     const nutri = `
 export const pluginBundle = { formatVersion: 1, pluginId: "n", family: "nutrition-algorithm", entryExport: "algorithm" };

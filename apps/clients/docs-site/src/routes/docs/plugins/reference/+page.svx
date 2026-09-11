@@ -50,6 +50,7 @@ A bundle is **one file, no `import` statements** — build with
 | Family | Export shape |
 |---|---|
 | `progression-algorithm` | `{ id, name, description, defaultState, defaultPreferences?, preferencesSchema?, suggest(input) }` |
+| `mobility-progression` | `{ id, name, description, defaultState, defaultPreferences?, preferencesSchema?, suggest(input) }` |
 | `analytics` | `{ id, name, description, metricDefinitions, compute(input) }` |
 | `nutrition-algorithm` | `{ id, name, description, defaultPreferences?, preferencesSchema?, computeTargets(input) }` |
 | `nutrition-analytics` | `{ id, name, description, metricDefinitions, compute(input) }` |
@@ -58,6 +59,7 @@ A bundle is **one file, no `import` statements** — build with
 ## Input / output types
 
 - **Progression** — `@logit/core/domain/progression`: `ProgressionInput`, `ProgressionOutput`
+- **Mobility progression** — `@logit/core/domain/mobilityProgression`: `MobilityProgressionInput`, `MobilityProgressionOutput`
 - **Analytics** — `@logit/core/domain/analytics`: `AnalyticsInput`, `AnalyticsOutput`
 - **Nutrition algorithm** — `@logit/core/domain/nutritionAlgorithm`
 - **Nutrition analytics** — `@logit/core/domain/nutritionAnalytics`

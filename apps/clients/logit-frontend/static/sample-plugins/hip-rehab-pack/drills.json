@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "pluginId": "sample.mobility-pack.hip-rehab-pack",
+  "drills": [
+    { "name": "Standing Banded Hip Flexion", "area": "hip-flexors", "defaultMetric": "reps", "perSide": true, "cues": ["Stand tall against a wall", "Drive the knee up without leaning back"], "notes": "The leg-raises-around-an-object rehab drill." },
+    { "name": "Side-Lying Hip Abduction", "area": "glutes", "defaultMetric": "reps", "perSide": true, "cues": ["Stack the hips", "Lead with the heel, toes slightly down"] },
+    { "name": "Clamshell", "area": "glutes", "defaultMetric": "reps", "perSide": true, "cues": ["Feet together", "Keep the pelvis still"] },
+    { "name": "Adductor Rock-Back", "area": "adductors", "defaultMetric": "hold", "perSide": true, "cues": ["Long spine", "Rock the hips back to tolerance"] },
+    { "name": "Prone Hip Internal Rotation", "area": "hips", "defaultMetric": "hold", "perSide": true, "cues": ["Knees wide, shins fall in", "Relax into the range"] },
+    { "name": "Half-Kneeling Hip Flexor Stretch", "area": "hip-flexors", "defaultMetric": "hold", "perSide": true, "cues": ["Posterior pelvic tilt", "Squeeze the down-side glute"] },
+    { "name": "Bridge Hold", "area": "glutes", "defaultMetric": "hold", "perSide": false, "cues": ["Ribs down", "Drive through the heels"] },
+    { "name": "90/90 Hip Lift-Off", "area": "hips", "defaultMetric": "reps", "perSide": true, "cues": ["Both sit bones down", "Lift the front shin a few cm and hold briefly"] }
+  ]
+}

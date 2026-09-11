@@ -18,6 +18,8 @@ export interface LocalAccount {
   weightUnit: "kg" | "lbs";
   blocksCollapsedByDefault: boolean;
   restDefaultsJson: string;
+  /** Which side leads for unilateral mobility drills — "left" | "right". */
+  mobilityLeadSide: "left" | "right";
   passwordHash: string | null;
   serverUserId: string | null;
   onboardingCompleted: boolean;
@@ -53,6 +55,7 @@ function rowToAccount(r: any): LocalAccount {
     weightUnit: (r.weight_unit as "kg" | "lbs") ?? "kg",
     blocksCollapsedByDefault: r.blocks_collapsed_by_default === 1,
     restDefaultsJson: r.rest_defaults_json ?? "{}",
+    mobilityLeadSide: r.mobility_lead_side === "right" ? "right" : "left",
     passwordHash: r.password_hash ?? null,
     serverUserId: r.server_user_id ?? null,
     onboardingCompleted: r.onboarding_completed === 1,
@@ -80,6 +83,7 @@ export async function createLocalAccount(
     weightUnit: opts.weightUnit ?? "kg",
     blocksCollapsedByDefault: opts.blocksCollapsedByDefault ?? true,
     restDefaultsJson: opts.restDefaultsJson ?? "{}",
+    mobilityLeadSide: opts.mobilityLeadSide ?? "left",
     passwordHash,
     serverUserId: opts.serverUserId ?? null,
     onboardingCompleted: opts.onboardingCompleted ?? false,
@@ -91,16 +95,16 @@ export async function createLocalAccount(
     `INSERT INTO local_accounts(
        id, username, display_name, bio, avatar_data_url, progress_photo_data_url,
        height, height_unit, weight, weight_unit,
-       blocks_collapsed_by_default, rest_defaults_json,
+       blocks_collapsed_by_default, rest_defaults_json, mobility_lead_side,
        password_hash, server_user_id,
        onboarding_completed, onboarding_step,
        created_at_ms
-     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       account.id, account.username, account.displayName, account.bio, account.avatarDataUrl,
       account.progressPhotoDataUrl,
       account.height, account.heightUnit, account.weight, account.weightUnit,
-      account.blocksCollapsedByDefault ? 1 : 0, account.restDefaultsJson,
+      account.blocksCollapsedByDefault ? 1 : 0, account.restDefaultsJson, account.mobilityLeadSide,
       account.passwordHash, account.serverUserId,
       account.onboardingCompleted ? 1 : 0, account.onboardingStep,
       account.createdAtMs,
@@ -165,6 +169,7 @@ export async function updateLocalAccount(
   if (patch.weightUnit !== undefined)               { sets.push("weight_unit = ?");                 params.push(patch.weightUnit); }
   if (patch.blocksCollapsedByDefault !== undefined) { sets.push("blocks_collapsed_by_default = ?"); params.push(patch.blocksCollapsedByDefault ? 1 : 0); }
   if (patch.restDefaultsJson !== undefined)         { sets.push("rest_defaults_json = ?");          params.push(patch.restDefaultsJson); }
+  if (patch.mobilityLeadSide !== undefined)         { sets.push("mobility_lead_side = ?");          params.push(patch.mobilityLeadSide); }
   if (patch.serverUserId !== undefined)             { sets.push("server_user_id = ?");              params.push(patch.serverUserId); }
   if (patch.onboardingCompleted !== undefined)      { sets.push("onboarding_completed = ?");         params.push(patch.onboardingCompleted ? 1 : 0); }
   if (patch.onboardingStep !== undefined)           { sets.push("onboarding_step = ?");              params.push(patch.onboardingStep); }

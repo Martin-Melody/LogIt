@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Debug/dev build overrides — keeps the side-by-side install visually
+         distinct and off the release app's deep-link scheme. -->
+    <string name="app_name">LogIt Dev</string>
+    <string name="title_activity_main">LogIt Dev</string>
+    <string name="package_name">ie.logit.app.dev</string>
+    <string name="custom_url_scheme">ie.logit.app.dev</string>
+</resources>

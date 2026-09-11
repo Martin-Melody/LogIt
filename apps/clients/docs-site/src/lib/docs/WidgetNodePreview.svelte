@@ -158,6 +158,34 @@
         </li>
       {/each}
     </ul>
+
+  {:else if node.kind === "gauge"}
+    {@const ratio = node.target > 0 ? Math.max(0, Number(node.value)) / Number(node.target) : 0}
+    {@const clamped = Math.min(1, ratio)}
+    <div class="flex items-center gap-3">
+      {#if node.style !== "linear"}
+        <svg width="72" height="72" viewBox="0 0 72 72" class="shrink-0">
+          <g transform="rotate(135 36 36)">
+            <circle cx="36" cy="36" r="26" fill="none" stroke="var(--border)" stroke-width="6" stroke-linecap="round" stroke-dasharray="{2 * Math.PI * 26 * 0.75} {2 * Math.PI * 26}" />
+            <circle cx="36" cy="36" r="26" fill="none" stroke="var(--primary)" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="{2 * Math.PI * 26 * 0.75} {2 * Math.PI * 26}"
+              stroke-dashoffset="{2 * Math.PI * 26 * 0.75 * (1 - clamped)}" />
+          </g>
+          <text x="36" y="39" text-anchor="middle" class="fill-foreground text-[11px] font-semibold">{Math.round(ratio * 100)}%</text>
+        </svg>
+      {/if}
+      <div class="min-w-0 flex-1">
+        <div class="flex justify-between gap-2 text-xs">
+          <span class="text-muted-foreground truncate">{node.label}</span>
+          <span class="font-medium shrink-0">{node.sublabel ?? `${Math.round(Number(node.value))} / ${Math.round(Number(node.target))}${node.unit ? ` ${node.unit}` : ""}`}</span>
+        </div>
+        {#if node.style === "linear"}
+          <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
+            <div class="h-full rounded-full bg-primary" style="width: {clamped * 100}%"></div>
+          </div>
+        {/if}
+      </div>
+    </div>
   {/if}
 </div>
 
