@@ -15,6 +15,7 @@
   import CalendarHeatmapNode from "./nodes/CalendarHeatmapNode.svelte";
   import ButtonRowNode from "./nodes/ButtonRowNode.svelte";
   import ChecklistNode from "./nodes/ChecklistNode.svelte";
+  import GaugeNode from "./nodes/GaugeNode.svelte";
 
   const { view }: { view: WidgetView } = $props();
 
@@ -114,6 +115,8 @@
           <ButtonRowNode {node} />
         {:else if node.kind === "checklist"}
           <ChecklistNode {node} />
+        {:else if node.kind === "gauge"}
+          <GaugeNode {node} />
         {/if}
       {/snippet}
 

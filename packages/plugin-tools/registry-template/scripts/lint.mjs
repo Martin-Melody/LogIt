@@ -114,18 +114,109 @@ function parseExercisePack(raw, expectedPluginId) {
   };
 }
 
+// ../core/src/domain/mobilityDrill.ts
+var MOBILITY_AREAS = [
+  "neck",
+  "shoulders",
+  "t-spine",
+  "lower-back",
+  "wrists",
+  "hips",
+  "hip-flexors",
+  "glutes",
+  "hamstrings",
+  "quads",
+  "adductors",
+  "calves",
+  "ankles",
+  "full-body"
+];
+
+// ../core/src/plugins/mobilityPack.ts
+var MOBILITY_PACK_FORMAT_VERSION = 1;
+var MAX_PACK_DRILLS = 500;
+var AREAS = new Set(MOBILITY_AREAS);
+var METRICS = /* @__PURE__ */ new Set(["hold", "reps"]);
+function isObject2(v) {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+function isNonEmptyString2(v) {
+  return typeof v === "string" && v.trim().length > 0;
+}
+function coerceCues(raw, drillName) {
+  if (raw === void 0 || raw === null) return [];
+  if (!Array.isArray(raw)) {
+    throw new Error(`Drill "${drillName}": cues must be an array of strings.`);
+  }
+  return raw.filter((c) => typeof c === "string" && c.trim().length > 0).map((c) => c.trim()).slice(0, 6);
+}
+function parseMobilityPack(raw, expectedPluginId) {
+  if (!isObject2(raw)) {
+    throw new Error("Mobility pack must be a JSON object.");
+  }
+  if (raw.formatVersion !== MOBILITY_PACK_FORMAT_VERSION) {
+    throw new Error(`Unsupported mobility pack format (expected ${MOBILITY_PACK_FORMAT_VERSION}).`);
+  }
+  if (!isNonEmptyString2(raw.pluginId)) {
+    throw new Error("Mobility pack is missing a pluginId.");
+  }
+  if (expectedPluginId && raw.pluginId !== expectedPluginId) {
+    throw new Error(
+      `Mobility pack pluginId "${raw.pluginId}" does not match manifest "${expectedPluginId}".`
+    );
+  }
+  if (!Array.isArray(raw.drills) || raw.drills.length === 0) {
+    throw new Error("Mobility pack has no drills.");
+  }
+  if (raw.drills.length > MAX_PACK_DRILLS) {
+    throw new Error(`Mobility pack exceeds the ${MAX_PACK_DRILLS}-drill limit.`);
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const drills = [];
+  for (const entry of raw.drills) {
+    if (!isObject2(entry) || !isNonEmptyString2(entry.name)) {
+      throw new Error("Every drill needs a non-empty name.");
+    }
+    const name = entry.name.trim();
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (typeof entry.area !== "string" || !AREAS.has(entry.area)) {
+      throw new Error(`Drill "${name}": unknown area "${String(entry.area)}".`);
+    }
+    const defaultMetric = entry.defaultMetric === void 0 ? "hold" : typeof entry.defaultMetric === "string" && METRICS.has(entry.defaultMetric) ? entry.defaultMetric : (() => {
+      throw new Error(`Drill "${name}": defaultMetric must be "hold" or "reps".`);
+    })();
+    drills.push({
+      name,
+      area: entry.area,
+      defaultMetric,
+      perSide: entry.perSide === true,
+      cues: coerceCues(entry.cues, name),
+      notes: isNonEmptyString2(entry.notes) ? entry.notes.trim() : null
+    });
+  }
+  if (drills.length === 0) {
+    throw new Error("Mobility pack has no usable drills.");
+  }
+  return { formatVersion: MOBILITY_PACK_FORMAT_VERSION, pluginId: raw.pluginId, drills };
+}
+
 // src/manifest.ts
 var PLUGIN_FAMILIES = [
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
-  "exercise-pack"
+  "exercise-pack",
+  "mobility-pack"
 ];
 var CODE_FAMILIES = /* @__PURE__ */ new Set([
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics"
@@ -135,10 +226,12 @@ var isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 var CAPABILITY_ID_FIELD = {
   widget: "widgetId",
   "progression-algorithm": "algorithmId",
+  "mobility-progression": "algorithmId",
   analytics: "analyticsId",
   "nutrition-algorithm": "algorithmId",
   "nutrition-analytics": "analyticsId",
-  "exercise-pack": "exercisePackId"
+  "exercise-pack": "exercisePackId",
+  "mobility-pack": "mobilityPackId"
 };
 function validateManifest(raw) {
   const errors = [];
@@ -262,7 +355,8 @@ function buildRunnerCode(source, entryExport, op) {
            defaultState: __e.defaultState,
            defaultPreferences: __e.defaultPreferences,
            preferencesSchema: __e.preferencesSchema,
-           metricDefinitions: __e.metricDefinitions
+           metricDefinitions: __e.metricDefinitions,
+           needs: __e.needs
          } };` : `var __fn = __e[${JSON.stringify(op.method)}];
          if (typeof __fn !== "function") return { __error: "plugin has no ${op.method}()" };
          return { __ok: __fn.call(__e, ${JSON.stringify(op.input)}) };`;
@@ -286,6 +380,7 @@ globalThis.${SANDBOX_RESULT_GLOBAL} = JSON.stringify((function () {
 // src/sandboxCheck.ts
 var METHOD_BY_FAMILY = {
   "progression-algorithm": "suggest",
+  "mobility-progression": "suggest",
   analytics: "compute",
   "nutrition-algorithm": "computeTargets",
   "nutrition-analytics": "compute"
@@ -372,10 +467,12 @@ async function checkBundleInSandbox(source, family, pluginId) {
 var KNOWN_FAMILIES = /* @__PURE__ */ new Set([
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
-  "exercise-pack"
+  "exercise-pack",
+  "mobility-pack"
 ]);
 var isStr2 = (v) => typeof v === "string" && v.trim().length > 0;
 function localPath(root, url) {
@@ -450,7 +547,8 @@ async function validateRegistry(registryDir, opts = {}) {
     const dist = manifest.distribution;
     if (dist.origin === "inline") {
       try {
-        parseExercisePack(dist.data, manifest.id);
+        if (manifest.family === "mobility-pack") parseMobilityPack(dist.data, manifest.id);
+        else parseExercisePack(dist.data, manifest.id);
       } catch (err) {
         problems.push({ where: e.manifestUrl, message: `inline pack invalid: ${err.message}` });
       }
@@ -482,10 +580,15 @@ async function validateRegistry(registryDir, opts = {}) {
     }
     if (manifest.family === "exercise-pack") {
       try {
-        const parsed = JSON.parse(artifact);
-        parseExercisePack(parsed, manifest.id);
+        parseExercisePack(JSON.parse(artifact), manifest.id);
       } catch (err) {
         problems.push({ where: dist.bundleUrl, message: `exercise pack invalid: ${err.message}` });
+      }
+    } else if (manifest.family === "mobility-pack") {
+      try {
+        parseMobilityPack(JSON.parse(artifact), manifest.id);
+      } catch (err) {
+        problems.push({ where: dist.bundleUrl, message: `mobility pack invalid: ${err.message}` });
       }
     } else if (CODE_FAMILIES.has(manifest.family) && !opts.skipSandbox) {
       const result = await checkBundleInSandbox(artifact, manifest.family, manifest.id);

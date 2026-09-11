@@ -1,11 +1,13 @@
 import { browser } from "$app/environment";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
+import { createLocalMobilityAlgorithmRegistry } from "$lib/progression/localMobilityAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import type { InstalledPlugin, PluginManifest } from "./types";
 import { removeStoredPack } from "./packStore";
+import { removeStoredMobilityPack } from "./mobilityPackStore";
 import { removeStoredBundle } from "./bundleStore";
 
 // Families that install from a fetched artifact (code bundle or pack data file)
@@ -13,10 +15,12 @@ import { removeStoredBundle } from "./bundleStore";
 const BUNDLED_BUNDLE_FAMILIES = new Set<PluginManifest["family"]>([
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
   "exercise-pack",
+  "mobility-pack",
 ]);
 
 const INSTALLED_STORAGE_KEY = "logit:plugins:installed:v1";
@@ -134,6 +138,20 @@ async function makeProgressionManifests(): Promise<PluginManifest[]> {
   }));
 }
 
+async function makeMobilityProgressionManifests(): Promise<PluginManifest[]> {
+  const algorithms = await createLocalMobilityAlgorithmRegistry().list();
+  return algorithms.map((algo) => ({
+    id: `builtin.mobility-progression.${algo.id}`,
+    family: "mobility-progression",
+    name: algo.name,
+    description: algo.description,
+    version: "1.0.0",
+    author: algo.author ?? "logit",
+    distribution: { origin: "builtin" },
+    capabilities: [{ family: "mobility-progression", algorithmId: algo.id }],
+  }));
+}
+
 async function makeAnalyticsManifests(): Promise<PluginManifest[]> {
   const registry = createLocalAnalyticsRegistry();
   const plugins = await registry.list();
@@ -182,6 +200,7 @@ export async function listBuiltinPluginManifests(): Promise<PluginManifest[]> {
   return [
     ...makeWidgetManifest(),
     ...(await makeProgressionManifests()),
+    ...(await makeMobilityProgressionManifests()),
     ...(await makeAnalyticsManifests()),
     ...(await makeNutritionAlgorithmManifests()),
     ...(await makeNutritionAnalyticsManifests()),
@@ -241,6 +260,8 @@ export async function uninstallPlugin(id: string): Promise<void> {
     syncHomeWidgets(removed.manifest, "remove");
     if (removed.manifest.family === "exercise-pack") {
       removeStoredPack(id);
+    } else if (removed.manifest.family === "mobility-pack") {
+      removeStoredMobilityPack(id);
     } else {
       removeStoredBundle(id);
     }

@@ -17,6 +17,7 @@ import type { InstalledPlugin, PluginFamily } from "./types";
  */
 export const SANDBOXED_FAMILIES: ReadonlySet<PluginFamily> = new Set([
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",

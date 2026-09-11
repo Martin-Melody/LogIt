@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
 import { computeIntegrity } from "@logit/core/plugins/integrity";
 import { parseExercisePack } from "@logit/core/plugins/exercisePack";
+import { parseMobilityPack } from "@logit/core/plugins/mobilityPack";
 import { CODE_FAMILIES, validateManifest, type PluginFamily } from "./manifest.js";
 import { checkBundleInSandbox } from "./sandboxCheck.js";
 
@@ -16,10 +17,12 @@ export type ValidateOptions = {
 const KNOWN_FAMILIES = new Set<PluginFamily>([
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
   "exercise-pack",
+  "mobility-pack",
 ]);
 
 const isStr = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
@@ -123,7 +126,8 @@ export async function validateRegistry(
     const dist = manifest.distribution as Record<string, unknown>;
     if (dist.origin === "inline") {
       try {
-        parseExercisePack(dist.data, manifest.id);
+        if (manifest.family === "mobility-pack") parseMobilityPack(dist.data, manifest.id);
+        else parseExercisePack(dist.data, manifest.id);
       } catch (err) {
         problems.push({ where: e.manifestUrl, message: `inline pack invalid: ${(err as Error).message}` });
       }
@@ -161,10 +165,15 @@ export async function validateRegistry(
     // family-specific artifact validation
     if (manifest.family === "exercise-pack") {
       try {
-        const parsed = JSON.parse(artifact);
-        parseExercisePack(parsed, manifest.id);
+        parseExercisePack(JSON.parse(artifact), manifest.id);
       } catch (err) {
         problems.push({ where: dist.bundleUrl, message: `exercise pack invalid: ${(err as Error).message}` });
+      }
+    } else if (manifest.family === "mobility-pack") {
+      try {
+        parseMobilityPack(JSON.parse(artifact), manifest.id);
+      } catch (err) {
+        problems.push({ where: dist.bundleUrl, message: `mobility pack invalid: ${(err as Error).message}` });
       }
     } else if (CODE_FAMILIES.has(manifest.family) && !opts.skipSandbox) {
       const result = await checkBundleInSandbox(artifact, manifest.family, manifest.id);
