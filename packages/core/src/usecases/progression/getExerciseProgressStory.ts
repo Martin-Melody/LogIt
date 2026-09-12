@@ -3,6 +3,7 @@ import { classifyTrend, exerciseKey } from "../../domain/progression";
 import type { Reasoning } from "../../domain/reasoning";
 import { nowMs } from "../../domain/time";
 import type { AnalyticsSeries } from "../../domain/analytics";
+import type { MuscleGroup } from "../../domain/exercise";
 import { isWithinTrainingBlockTag } from "../../domain/trainingBlockTag";
 import { getExerciseAnalytics } from "./getExerciseAnalytics";
 import { getSuggestion } from "./getSuggestion";
@@ -26,6 +27,14 @@ export type ExerciseProgressStory = {
   /** A dismissible ask from the algorithm (e.g. "vary session order to help
    * calibrate") — already filtered for prior dismissal by getSuggestion. */
   nudge?: ProgressionNudge;
+  /** §10.3.2 plateau-diagnosis orchestration — once linear-progression's
+   * rep-range ladder (§10.3.1) is exhausted with no real difference found,
+   * surfaces the remaining hypotheses worth trying next (muscle-group
+   * volume/frequency, §5; nutrition timing, §9) rather than deciding for
+   * the user which one to run — Martin's "present options, don't impose an
+   * order" decision. Undefined until the ladder actually reaches its cap;
+   * the UI decides where each option actually links to. */
+  plateauNextSteps?: { muscleGroup?: MuscleGroup };
 };
 
 const PRIMARY_METRIC_PRIORITY = ["estimated_1rm", "max_weight", "min_assist", "max_reps"];
@@ -102,6 +111,18 @@ function combineComparable(
 ): (boolean | undefined)[] | undefined {
   if (!a && !b) return undefined;
   return Array.from({ length }, (_, i) => (a?.[i] === false || b?.[i] === false ? false : undefined));
+}
+
+// §10.3.2 — must match linearProgression.ts's MAX_LADDER_RUNGS (bespoke read,
+// same known v1 scope boundary as everything else in this file that peeks at
+// linear-progression's own state shape). The ladder gives up once every rung
+// up to the cap concluded without a win — that's the "cheapest test
+// exhausted" trigger the plateau-diagnosis orchestration watches for.
+const REP_RANGE_LADDER_CAP = 3;
+
+function isRepRangeLadderExhausted(ladder: LinearTrialState["repRangeLadder"] | undefined): boolean {
+  if (!ladder || ladder.length < REP_RANGE_LADDER_CAP) return false;
+  return ladder.every((r) => r.status === "concluded" && r.result?.switched === false);
 }
 
 /** Exported for reuse by anything that needs "the one series that best represents
@@ -181,6 +202,14 @@ export async function getExerciseProgressStory(
   const headlineMetric = analytics.output.metrics.find((m) => m.id === primary.metricId)
     ?? analytics.output.metrics[0];
 
+  let plateauNextSteps: ExerciseProgressStory["plateauNextSteps"];
+  if (isRepRangeLadderExhausted(ladder)) {
+    const data = exercise.id
+      ? await deps.exerciseRepo.getById(exercise.id)
+      : await deps.exerciseRepo.getByName(exercise.name);
+    plateauNextSteps = { muscleGroup: data?.primaryMuscles?.[0] };
+  }
+
   return {
     exerciseName: exercise.name,
     exerciseId: exercise.id,
@@ -204,5 +233,6 @@ export async function getExerciseProgressStory(
     trendReasoning,
     suggestionReasoning: suggestion?.reasoning,
     nudge: suggestion?.nudge,
+    plateauNextSteps,
   };
 }

@@ -1,6 +1,7 @@
 # Adaptive progression & analytics engine — design doc
 
-**Status:** Draft, not yet implemented. Written 2026-09-12, superseding the "Roadmap (not in
+**Status:** All of §1-10 shipped as of 2026-09-12 (round 2) — see §11's sequencing for what
+landed when and in PR #66 vs. round 2. Written 2026-09-12, superseding the "Roadmap (not in
 v1)" section of `docs/progression-analytics-rethink.md` (that doc's v1 — `getExerciseProgressStory`,
 `classifyTrend`, the `/progress` reskin — already shipped in PR #63 and stands as-is; this doc
 is what comes after it). Part of the session overhaul's parked Phase C
@@ -128,7 +129,9 @@ hand, not because it's the only one worth modeling.
 
 ## 5. Personalized volume/frequency landmarks per muscle group
 
-**Status: v1 (option A) shipped** (branch `feat/progression-reasoning-trace`, PR #66) — a "Muscle
+**Status: shipped, options A and B both** (round 2, 2026-09-12 — see the "Decision" note under
+option B below for what B actually shipped as). Option A first (branch
+`feat/progression-reasoning-trace`, PR #66) — a "Muscle
 groups" tab on `/progress` showing, per muscle group: current week's sets, average weekly
 sets/frequency, a worst-of status aggregated from the group's primary-tagged exercises, and —
 only once there's real statistical support — a volume correlation ("sessions tend to improve
@@ -208,6 +211,8 @@ plausibly untagged or sloppily tagged. Two concrete things to build alongside 5,
 
 ## 6. Program library (the guided on-ramp)
 
+**Status: shipped** (round 2, 2026-09-12 — see the "Decision" note below).
+
 A small set of built-in "series" — day-by-day, week-by-week starter programs a solo user can
 pick and follow with zero exposure to §3-5, reusing `CoachProgram`'s existing template mode
 (currently only reachable via a coach relationship). Scope for v1: **built-in starter programs
@@ -232,6 +237,8 @@ plugin registry and mobility-pack, deferred deliberately rather than designed no
 
 ## 7. Autoregulation — still plugin-first, still separate
 
+**Status: shipped** (round 2, 2026-09-12) — contract accommodation only, as scoped below.
+
 Recovery/fatigue-driven target adjustment (RPE-based, readiness-based, or otherwise) stays a
 progression-algorithm plugin, not a built-in opinion — of everything in this doc it's the most
 contested/personal, and the best candidate to be the flagship "build your own to suit yourself"
@@ -248,7 +255,9 @@ recap shows it next to each PR and the "best lift" card whenever reps > 1 (at 1 
 the raw weight already on screen, so a second figure would be redundant). Community plugins can
 now import the same helper instead of reimplementing the formula.
 
-## 9. Nutrition × training correlation (raised, not started — 2026-09-12)
+## 9. Nutrition × training correlation
+
+**Status: shipped, full build** (round 2, 2026-09-12 — see the "Decision" note below).
 
 Martin's idea: since nutrition logging and workout logging already live in the same app, real
 signal could plausibly be found correlating what someone ate around a session against how that
@@ -575,22 +584,48 @@ finer-grained, reasoned, per-exercise version.
 build order chosen to respect real dependencies and to front-load the smallest/most
 self-contained pieces:
 
-1. §7 Autoregulation input widening — contract accommodation only, no dependencies, smallest
-   piece.
-2. §10.3.1 Sequential rep-range search — extends the already-shipped rep-range trial mechanism
-   directly, same files/patterns fresh from PR #66.
-3. §10.3.3 Tag training blocks — generalizes the §10.1 `comparableToCurrent` pattern; independent
-   of 1-2 but touches the same trend-exclusion machinery, done adjacently.
-4. §5 option B — pluggable muscle-group-insight family, mirroring `mobility-progression`.
-5. §6 Program library — built-in starter programs + onboarding/browse entry points; independent
-   of 1-4, can land in any order relative to them.
-6. §9 Nutrition × training correlation — full build (day-level + `loggedAtMs` + meal-timing);
-   independent of 1-5.
-7. §10.3.2 Plateau-diagnosis ladder (options-not-order) — **last**, depends on 4, 5, and 2 all
-   being in place.
+1. ~~§7 Autoregulation input widening~~ — **shipped** (2026-09-12). Contract accommodation only:
+   `ProgressionInput.liveInput?: { rpe?; readiness? }`, threaded through `getSuggestion.ts`. No
+   built-in algorithm reads it; no capture UI exists yet either — that's the eventual plugin
+   author's problem, per §7's own framing.
+2. ~~§10.3.1 Sequential rep-range search~~ — **shipped** (2026-09-12). `repRangeTrial` (single
+   record) → `repRangeLadder` (array); up to 2 more rungs after the first (3 attempts total),
+   upward only, then permanently gives up. Muscle-group-aware across the whole ladder, not just
+   the first rung — `siblingRuledOutRepRanges` (new `ProgressionInput` field) lets one exercise's
+   ladder climb past a range a sibling's ladder already ruled out.
+3. ~~§10.3.3 Tag training blocks~~ — **shipped** (2026-09-12). New `TrainingBlockTag` domain type +
+   repo (sqlite/local, logit-frontend only — not exposed via the coach remote API, same precedent
+   as rep-range experimentation); fixed reason taxonomy (injury / tempo-technique-change /
+   deliberate-variation / other) + free text; creatable from both the exercise detail page and
+   session edit. Generalizes §10.1's `comparableToCurrent` exclusion — surfaced as
+   `excludedForTaggedBlock` alongside `excludedForRegimeChange`.
+4. ~~§5 option B~~ — **shipped** (2026-09-12). Full pluggable `muscle-group-insight` family,
+   mirroring `mobility-progression`'s contract + registry + settings-picker shape exactly: global
+   single picker, v1's learned median-split logic becomes the built-in algorithm
+   (`learnedMuscleGroupInsight`), `getMuscleGroupInsights.ts` keeps the generic plumbing and
+   delegates the correlation itself. Every plugin-system file that knew about
+   `mobility-progression` was checked and updated for parity.
+5. ~~§6 Program library~~ — **shipped** (2026-09-12). Four built-in starter programs (full-body
+   3x, upper/lower 4x, PPL 6x, 5x5 strength) as `CoachProgram` template records, one representative
+   week each (manual start, no auto-dated arc — these are repeating routines). Both entry points:
+   onboarding step 2 offers a guided program alongside the existing split presets; a permanent
+   `/programs/browse` page (linked from Splits) plus `/programs/builtin/[id]` mirror the existing
+   coach-program detail/start flow, with a "Stop following" action.
+6. ~~§9 Nutrition × training correlation~~ — **shipped** (2026-09-12), full build as decided (not
+   deferred). `LoggedItem.loggedAtMs` (additive, stamped only when logging to *today's* diary —
+   backfilled days deliberately get none). Day-level: median-split on daily protein vs. session
+   volume improving on the one before. Meal-timing: a qualifying carb item (≥20g) logged 30-60min
+   pre-session vs. not. Stricter gates than §5's (20 sessions minimum, 6/bucket, 20-point rate-diff
+   threshold) and confidence capped at "medium" — never "high" — per the extra-caution call.
+7. ~~§10.3.2 Plateau-diagnosis ladder~~ — **shipped** (2026-09-12), last, once 2/4/6 above landed.
+   Scope narrowed per Martin's decision to "detect exhausted + enumerate, don't decide for the
+   user": once an exercise's rep-range ladder (§10.3.1) exhausts all 3 rungs with no win,
+   `ExerciseProgressStory.plateauNextSteps` surfaces the remaining hypotheses (this muscle's
+   volume/frequency, §5; nutrition timing, §9) as plain links into the existing `/progress` tabs —
+   no new orchestration engine, no imposed order.
 
-Docs/marketing debt (§13) update happens once this round ships, per Martin's standing "batch it,
-don't chase it per-slice" call — not before.
+**All items in this round are now shipped.** Docs/marketing debt (§13) update is the next and
+last item — batching per Martin's standing "don't chase it per-slice" call, not before.
 
 ## 12. Extension points recap
 
@@ -614,22 +649,28 @@ marketing copy or docs-site per slice** — batch the update once the engine's s
 enough that it isn't described three different ways in three commits. Update this list as things
 ship; do the actual external-facing pass later, deliberately, not reactively.
 
-**Not yet reflected anywhere external, as of PR #66 (§1-3, 5, 6, 10 all shipped):**
+**Not yet reflected anywhere external, as of round 2 (2026-09-12) — §1-10 all shipped now:**
 - `apps/clients/docs-site/src/routes/docs/plugins/reference/+page.svx` — still describes
   `ProgressionInput`/`ProgressionOutput` generically (line ~61); doesn't mention `reasoning`,
   `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), the widened `sessionPositions` and
   `comparableToCurrent` parameters on `classifyTrend`, the `nudge`/`ProgressionNudge`/dismissal
-  contract, or the `actionLabel`/`actionData`/`exclusive`/`activeExperiment` additions from
-  rep-range experimentation (§10). A plugin author reading this today wouldn't know any of this
-  exists, let alone that reasoning is expected of a marketplace-quality algorithm.
-- No docs-site page for the muscle-group insight (`getMuscleGroupInsights`) — comparable pages
-  exist for mobility (`docs/plugins/mobility-progression`, `mobility-packs`); this doesn't have
-  one yet, and shouldn't until §5's option B (the pluggable version) exists — document the real
-  contract, not the v1 insight-only shape that's meant to be superseded.
-- Marketing site (`apps/clients/logit-marketing`) makes no claims about progression
-  intelligence specifically yet, so nothing there is actively *wrong* — but "shows its reasoning,
-  not just a verdict" and "e1RM everywhere" are both genuine differentiators worth copy once the
-  bigger pieces (§5 option B, §10) land and the story is more complete.
+  contract, the `actionLabel`/`actionData`/`exclusive`/`activeExperiment` additions from rep-range
+  experimentation (§10), `liveInput` (§7), or `siblingRuledOutRepRanges` (§10.3.1). A plugin author
+  reading this today wouldn't know any of this exists, let alone that reasoning is expected of a
+  marketplace-quality algorithm.
+- No docs-site page for the **new** `muscle-group-insight` plugin family (§5 option B) — comparable
+  pages exist for mobility (`docs/plugins/mobility-progression`, `mobility-packs`); this family
+  (contract, registry, `analyze()` entry point) has no page at all yet.
+- No docs-site page for `TrainingBlockTag` (§10.3.3) or the program-library content model (§6) —
+  neither existed before this round.
+- Marketing site (`apps/clients/logit-marketing`) makes no claims about progression intelligence
+  specifically yet, so nothing there is actively *wrong* — but the story is now genuinely complete
+  ("shows its reasoning, not just a verdict"; "e1RM everywhere"; personalized muscle-group volume;
+  a program library for people who don't want the engine at all; nutrition-correlation hypotheses)
+  and worth a real copy pass.
 
-**Update this list, in this section, every time something in §11's sequencing ships** — that's
-the trigger for eventually queuing the actual marketing/docs-site pass, not a reason to do it now.
+**This round's sequencing (§11) is fully shipped — this is the trigger Martin's standing rule
+pointed at.** The actual external-facing pass (docs-site plugin reference rewrite, new
+muscle-group-insight/training-block-tag docs-site pages, marketing copy) is queued as real,
+scoped follow-up work — still deliberate, not reactive, but no longer blocked on anything landing
+first.

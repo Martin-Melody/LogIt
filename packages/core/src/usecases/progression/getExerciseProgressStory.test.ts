@@ -272,4 +272,77 @@ describe("getExerciseProgressStory", () => {
       expect(story!.trendReasoning.inputs.excludedForTaggedBlock).toBeUndefined();
     });
   });
+
+  describe("plateau-diagnosis orchestration (§10.3.2)", () => {
+    function depsWithLadder(ladder: unknown, history: WorkoutSession[]): ProgressionDeps {
+      return {
+        workoutRepo: { listAllSessions: async () => history, listRecentSessions: async () => history },
+        exerciseRepo: {
+          getById: async () => null,
+          getByName: async (name: string) =>
+            name === "Bench" ? { id: "bench", name, primaryMuscles: ["chest"], secondaryMuscles: [] } : null,
+        },
+        progressionRepo: {
+          getAnalyticsConfig: async () => null,
+          getConfig: async () => ({ algorithmId: "linear-progression" }),
+          getExerciseState: async () => ({
+            key: "bench",
+            exerciseName: "Bench",
+            algorithmId: "linear-progression",
+            state: { repRange: [5, 8], repRangeLadder: ladder },
+            updatedAtMs: 0,
+          }),
+          getAlgorithmPreferences: async () => null,
+          listExerciseStates: async () => [],
+        },
+        algorithmRegistry: {
+          get: async () => ({
+            id: "linear-progression",
+            name: "Linear",
+            description: "test double",
+            defaultState: null,
+            suggest: (input: { state: unknown }) => ({ sets: [], nextState: input.state }),
+          }),
+        },
+        analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+        trainingBlockTagRepo: { listForExercise: async () => [] },
+      } as unknown as ProgressionDeps;
+    }
+
+    const rejectedRung = (trialRepRange: [number, number]) => ({
+      trialRepRange,
+      baselineRepRange: [5, 8],
+      startedAtMs: 0,
+      status: "concluded",
+      result: { trialSlopePctPerSession: 0, baselineSlopePctPerSession: 0, switched: false, concludedAtMs: 0 },
+    });
+
+    const history = Array.from({ length: 8 }, (_, i) => session("Bench", 100 + i, 1, now - (8 - i) * DAY));
+
+    it("surfaces next steps once the rep-range ladder is exhausted with no win", async () => {
+      const ladder = [rejectedRung([8, 15]), rejectedRung([15, 22]), rejectedRung([22, 29])];
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(ladder, history));
+      expect(story!.plateauNextSteps).toEqual({ muscleGroup: "chest" });
+    });
+
+    it("stays undefined while the ladder still has rungs left to try", async () => {
+      const ladder = [rejectedRung([8, 15])]; // only 1 of 3
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(ladder, history));
+      expect(story!.plateauNextSteps).toBeUndefined();
+    });
+
+    it("stays undefined when the ladder ended in a win, not exhaustion", async () => {
+      const ladder = [
+        rejectedRung([8, 15]),
+        { ...rejectedRung([15, 22]), result: { ...rejectedRung([15, 22]).result, switched: true } },
+      ];
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(ladder, history));
+      expect(story!.plateauNextSteps).toBeUndefined();
+    });
+
+    it("stays undefined when there's no ladder at all", async () => {
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(undefined, history));
+      expect(story!.plateauNextSteps).toBeUndefined();
+    });
+  });
 });
