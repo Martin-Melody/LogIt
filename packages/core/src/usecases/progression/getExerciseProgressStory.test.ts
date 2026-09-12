@@ -43,6 +43,7 @@ describe("getExerciseProgressStory", () => {
     expect(story!.spark.length).toBe(3);
     expect(story!.headline.value.length).toBeGreaterThan(0);
     expect(story!.lastPr).toBeDefined();
+    expect(story!.trendReasoning.verdict).toBe("progressing");
   });
 
   it("returns null when there is no history", async () => {

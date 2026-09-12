@@ -1,5 +1,6 @@
 import type { ProgressStatus } from "../../domain/progression";
 import { classifyTrend } from "../../domain/progression";
+import type { Reasoning } from "../../domain/reasoning";
 import { nowMs } from "../../domain/time";
 import type { AnalyticsSeries } from "../../domain/analytics";
 import { getExerciseAnalytics } from "./getExerciseAnalytics";
@@ -17,6 +18,10 @@ export type ExerciseProgressStory = {
   nextNote?: string;
   lastTrainedMs: number;
   spark: number[];
+  /** Why the trend classifier landed on `status` — see domain/reasoning.ts. */
+  trendReasoning: Reasoning;
+  /** Why the algorithm landed on `nextTarget`/`nextNote`, when it supplied one. */
+  suggestionReasoning?: Reasoning;
 };
 
 const PRIMARY_METRIC_PRIORITY = ["estimated_1rm", "max_weight", "min_assist", "max_reps"];
@@ -103,5 +108,7 @@ export async function getExerciseProgressStory(
     nextNote: suggestion?.notes ?? undefined,
     lastTrainedMs,
     spark: values,
+    trendReasoning: trend.reasoning,
+    suggestionReasoning: suggestion?.reasoning,
   };
 }
