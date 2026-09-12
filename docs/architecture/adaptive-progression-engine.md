@@ -325,3 +325,28 @@ without a way to generate the variation.
 See also: `docs/progression-analytics-rethink.md` (v1, shipped), [[project_session_overhaul]],
 [[project_plugin_architecture]], [[feedback_design_for_plugins]], [[project_pt_studio_roadmap]]
 (source of `CoachProgram`/template mode reused in §2/§6).
+
+## 13. Marketing/docs debt (track, don't update piecemeal)
+
+Martin's call (2026-09-12): note every shipped item here as it lands, but **don't chase
+marketing copy or docs-site per slice** — batch the update once the engine's shape has settled
+enough that it isn't described three different ways in three commits. Update this list as things
+ship; do the actual external-facing pass later, deliberately, not reactively.
+
+**Not yet reflected anywhere external, as of PR #66 (§1-3, 6 shipped):**
+- `apps/clients/docs-site/src/routes/docs/plugins/reference/+page.svx` — still describes
+  `ProgressionInput`/`ProgressionOutput` generically (line ~61); doesn't mention `reasoning`,
+  `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), or the widened `sessionPositions`
+  parameter on `classifyTrend`. A plugin author reading this today wouldn't know the reasoning
+  contract exists at all, let alone that it's expected of a marketplace-quality algorithm.
+- No docs-site page for the muscle-group insight (`getMuscleGroupInsights`) — comparable pages
+  exist for mobility (`docs/plugins/mobility-progression`, `mobility-packs`); this doesn't have
+  one yet, and shouldn't until §5's option B (the pluggable version) exists — document the real
+  contract, not the v1 insight-only shape that's meant to be superseded.
+- Marketing site (`apps/clients/logit-marketing`) makes no claims about progression
+  intelligence specifically yet, so nothing there is actively *wrong* — but "shows its reasoning,
+  not just a verdict" and "e1RM everywhere" are both genuine differentiators worth copy once the
+  bigger pieces (§5 option B, §10) land and the story is more complete.
+
+**Update this list, in this section, every time something in §11's sequencing ships** — that's
+the trigger for eventually queuing the actual marketing/docs-site pass, not a reason to do it now.
