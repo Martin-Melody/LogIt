@@ -1,5 +1,6 @@
 import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "@logit/core/domain/progression";
 import type { MuscleGroup } from "@logit/core/domain/exercise";
+import type { Reasoning, ReasoningConfidence } from "@logit/core/domain/reasoning";
 
 type LinearState = {
   workingWeight: number;
@@ -162,10 +163,19 @@ function performanceScore(entry: ExerciseHistoryEntry, repCeiling: number): numb
   return avgReps / repCeiling;
 }
 
+type FatigueCalibration = {
+  sensitivity: number;
+  freshSamples: number;
+  fatiguedSamples: number;
+  calibrated: boolean;
+};
+
 // Derives a personal fatigue sensitivity multiplier from history by comparing
 // performance when the exercise was done first vs. later in a session.
-// Returns 1.0 (no change to default discount) until MIN_CALIBRATION_SAMPLES
-// sessions exist in both groups.
+// Returns sensitivity 1.0 (no change to default discount), calibrated: false,
+// until MIN_CALIBRATION_SAMPLES sessions exist in both groups — the sample
+// counts are surfaced so callers can report confidence honestly rather than
+// applying a personalized multiplier with the same authority as a guess.
 //
 // A user who shows no rep degradation when fatigued gets a lower multiplier
 // (smaller discount); one who degrades more than the 10% baseline gets a
@@ -173,25 +183,29 @@ function performanceScore(entry: ExerciseHistoryEntry, repCeiling: number): numb
 function calibrateSensitivity(
   history: ProgressionInput["history"],
   repCeiling: number,
-): number {
+): FatigueCalibration {
   const fresh = history.filter((h) => (h.sessionPosition ?? 0) === 0);
   const fatigued = history.filter((h) => (h.sessionPosition ?? 0) > 0);
+  const freshSamples = fresh.length;
+  const fatiguedSamples = fatigued.length;
 
-  if (fresh.length < MIN_CALIBRATION_SAMPLES || fatigued.length < MIN_CALIBRATION_SAMPLES) {
-    return 1.0;
+  if (freshSamples < MIN_CALIBRATION_SAMPLES || fatiguedSamples < MIN_CALIBRATION_SAMPLES) {
+    return { sensitivity: 1.0, freshSamples, fatiguedSamples, calibrated: false };
   }
 
-  const freshAvg = fresh.reduce((s, h) => s + performanceScore(h, repCeiling), 0) / fresh.length;
-  const fatiguedAvg = fatigued.reduce((s, h) => s + performanceScore(h, repCeiling), 0) / fatigued.length;
+  const freshAvg = fresh.reduce((s, h) => s + performanceScore(h, repCeiling), 0) / freshSamples;
+  const fatiguedAvg = fatigued.reduce((s, h) => s + performanceScore(h, repCeiling), 0) / fatiguedSamples;
 
-  if (freshAvg <= 0) return 1.0;
+  if (freshAvg <= 0) {
+    return { sensitivity: 1.0, freshSamples, fatiguedSamples, calibrated: true };
+  }
 
   // How much do reps drop, relative to the fresh baseline?
   const degradation = Math.max(0, (freshAvg - fatiguedAvg) / freshAvg);
   // Normalise: 10% degradation maps to a sensitivity of 1.0 (the default).
-  const sensitivity = degradation / 0.1;
+  const sensitivity = Math.max(0.1, Math.min(2.0, degradation / 0.1));
 
-  return Math.max(0.1, Math.min(2.0, sensitivity));
+  return { sensitivity, freshSamples, fatiguedSamples, calibrated: true };
 }
 
 // Returns true when the exercise has been performed in the same session slot
@@ -246,6 +260,12 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       sets: makeWorkingSets(seeded.workingWeight, seeded.repRange, prefs.workingSets),
       nextState: seeded,
       displayMode: prefs.suggestionDetail,
+      reasoning: {
+        inputs: { historySessions: 0, plannedTargetWeight: input.plannedTargets?.weight ?? "none" },
+        computed: { seedWeight: seeded.workingWeight },
+        confidence: "low",
+        verdict: "seeded — no logged history for this exercise yet",
+      },
     };
   }
 
@@ -259,6 +279,12 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       sets: makeWorkingSets(state.workingWeight, state.repRange, prefs.workingSets),
       nextState: state,
       displayMode: prefs.suggestionDetail,
+      reasoning: {
+        inputs: { historySessions: input.history.length, lastSessionWorkingSets: 0 },
+        computed: { repeatWeight: state.workingWeight },
+        confidence: "low",
+        verdict: "repeated last weight — last session had no working sets to read",
+      },
     };
   }
 
@@ -297,8 +323,8 @@ function suggest(input: ProgressionInput): ProgressionOutput {
 
   // Personal sensitivity: how much do *this user's* reps actually drop when fatigued?
   // Calibrated from their history; defaults to 1.0 until enough data exists.
-  const sensitivity = calibrateSensitivity(input.history, repCeiling);
-  const effectiveDiscount = MAX_FATIGUE_DISCOUNT * sensitivity;
+  const calibration = calibrateSensitivity(input.history, repCeiling);
+  const effectiveDiscount = MAX_FATIGUE_DISCOUNT * calibration.sensitivity;
 
   const suggestedWeight =
     fatigueScore > 0
@@ -320,12 +346,42 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     ? "Try varying where this exercise falls in your session to improve fatigue estimates."
     : undefined;
 
+  // Not calibrated at all → low (the discount is the generic 15% baseline, not personal).
+  // Calibrated but from a thin sample → medium. Calibrated from a solid sample → high.
+  const fatigueConfidence: ReasoningConfidence = !calibration.calibrated
+    ? "low"
+    : calibration.freshSamples >= 6 && calibration.fatiguedSamples >= 6
+      ? "high"
+      : "medium";
+
+  const reasoning: Reasoning = {
+    inputs: {
+      historySessions: input.history.length,
+      allSetsHitCeiling: allHitCeiling,
+      anySetMissedFloor: anyMissedFloor,
+      consecutiveFailedAttemptsBefore: state.failedAttempts,
+      precedingExercisesThisSession: preceding.length,
+      fatigueCalibrationSamples: `${calibration.freshSamples} fresh / ${calibration.fatiguedSamples} fatigued`,
+      fatigueCalibrated: calibration.calibrated,
+    },
+    computed: {
+      workingWeightBeforeFatigueDiscount: state.workingWeight,
+      fatigueScore: Math.round(fatigueScore * 100) / 100,
+      fatigueSensitivityMultiplier: Math.round(calibration.sensitivity * 100) / 100,
+      fatigueDiscountPct: discountPct,
+      suggestedWeight,
+    },
+    confidence: fatigueConfidence,
+    verdict: progressionLabel ?? "hold — still within rep range",
+  };
+
   return {
     sets: makeWorkingSets(suggestedWeight, state.repRange, prefs.workingSets),
     nextState,
     label,
     notes,
     displayMode: prefs.suggestionDetail,
+    reasoning,
   };
 }
 

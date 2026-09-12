@@ -8,6 +8,7 @@
   import type { AnalyticsSeries } from "@logit/core/domain/analytics";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import ProgressStatusChip from "./ProgressStatusChip.svelte";
+  import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
 
   const { exercise }: { exercise: { id?: string; name: string } } = $props();
 
@@ -61,14 +62,22 @@
     {#if story}
       <div class="flex flex-col gap-2 rounded-lg border border-border px-3 py-3">
         <div class="flex items-center justify-between gap-2">
-          <ProgressStatusChip status={story.status} />
+          <div class="flex items-center gap-2">
+            <ProgressStatusChip status={story.status} />
+            <ReasoningDialog reasoning={story.trendReasoning} />
+          </div>
           <span class="text-xs text-muted-foreground">{story.statusDetail}</span>
         </div>
         {#if story.nextTarget}
-          <p class="text-sm">
-            <span class="text-muted-foreground">Next session:</span>
-            <span class="font-medium">{story.nextTarget}</span>
-          </p>
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-sm">
+              <span class="text-muted-foreground">Next session:</span>
+              <span class="font-medium">{story.nextTarget}</span>
+            </p>
+            {#if story.suggestionReasoning}
+              <ReasoningDialog reasoning={story.suggestionReasoning} />
+            {/if}
+          </div>
         {/if}
         {#if story.nextNote}
           <p class="text-xs text-amber-600 dark:text-amber-400">{story.nextNote}</p>
