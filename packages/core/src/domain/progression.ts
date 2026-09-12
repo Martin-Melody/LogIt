@@ -146,6 +146,18 @@ export type ProgressStatus =
   | "regressing"
   | "detraining";
 
+/** Attention-first ordering: regressing needs eyes on it soonest, "new" (no data yet)
+ * least. Shared by anything that ranks/sorts several statuses together (the /progress
+ * list, muscle-group insights) so "which one is worse" means the same thing everywhere
+ * rather than each screen inventing its own ranking. */
+export const PROGRESS_STATUS_ATTENTION_ORDER: ProgressStatus[] = [
+  "regressing",
+  "plateaued",
+  "detraining",
+  "progressing",
+  "new",
+];
+
 const DETRAINING_MS = 21 * 24 * 60 * 60 * 1000;
 const TREND_WINDOW = 8;
 

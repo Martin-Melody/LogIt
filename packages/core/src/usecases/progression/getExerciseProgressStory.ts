@@ -26,7 +26,10 @@ export type ExerciseProgressStory = {
 
 const PRIMARY_METRIC_PRIORITY = ["estimated_1rm", "max_weight", "min_assist", "max_reps"];
 
-function pickPrimarySeries(series: AnalyticsSeries[]): AnalyticsSeries | undefined {
+/** Exported for reuse by anything that needs "the one series that best represents
+ * progress" for an exercise — e.g. getMuscleGroupInsights, which correlates the same
+ * primary metric against weekly training volume rather than just its own trend. */
+export function pickPrimarySeries(series: AnalyticsSeries[]): AnalyticsSeries | undefined {
   for (const id of PRIMARY_METRIC_PRIORITY) {
     const s = series.find((x) => x.metricId === id);
     if (s && s.points.length > 0) return s;
