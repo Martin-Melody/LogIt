@@ -56,6 +56,14 @@ export type ProgressionInput = {
   // which has the cross-exercise repo access this otherwise-per-exercise input
   // wouldn't. Undefined until this feature generalizes beyond linear-progression.
   suggestedTrialRepRange?: [number, number];
+  // Contract accommodation for autoregulation plugins (adaptive-progression-engine.md
+  // §7) — an optional live, today-only signal alongside `history`, sourced from
+  // wherever the caller gets it (no capture UI exists yet; this is the plugin-side
+  // half of the accommodation). No built-in algorithm reads this. `rpe` mirrors the
+  // existing 6-10 `SetEntry.rpe` scale; `readiness` is deliberately unscaled/opaque —
+  // a plugin defines its own meaning (e.g. 1-10 self-rated, a wearable-derived score)
+  // rather than the core contract picking one.
+  liveInput?: { rpe?: number; readiness?: number };
 };
 
 export type SuggestedSet = {

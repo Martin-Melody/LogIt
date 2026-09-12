@@ -20,6 +20,7 @@ export async function getSuggestion(
   deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo">,
   plannedTargets?: PlannedTargets,
   currentSession?: WorkoutSession,
+  liveInput?: { rpe?: number; readiness?: number },
 ): Promise<ProgressionOutput | null> {
   const { progressionRepo, workoutRepo, exerciseRepo, algorithmRegistry: registry } = deps;
 
@@ -140,6 +141,7 @@ export async function getSuggestion(
     incrementOverride,
     sessionContext,
     suggestedTrialRepRange,
+    liveInput,
   });
 
   // An algorithm decides *whether* to ask for help generating signal; whether the

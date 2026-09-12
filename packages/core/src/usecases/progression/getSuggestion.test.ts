@@ -291,3 +291,40 @@ describe("getSuggestion — history isn't diluted by other exercises' more recen
     expect(output?.label).toBe("history:10");
   });
 });
+
+describe("getSuggestion — liveInput passthrough (§7 autoregulation accommodation)", () => {
+  const echoLiveInputAlgorithm: ProgressionAlgorithm = {
+    id: "test-algorithm",
+    name: "Test",
+    description: "Echoes liveInput back so the passthrough can be asserted on.",
+    defaultState: null,
+    suggest: (input) => ({
+      sets: [],
+      nextState: null,
+      label: input.liveInput ? `live:${input.liveInput.rpe ?? "-"}:${input.liveInput.readiness ?? "-"}` : undefined,
+    }),
+  };
+
+  function deps(): ProgressionDeps {
+    return {
+      workoutRepo: { listRecentSessions: async () => [], listAllSessions: async () => [] },
+      exerciseRepo: { getById: async () => null, getByName: async () => null },
+      progressionRepo: {
+        getConfig: async () => ({ algorithmId: "test-algorithm" }),
+        getExerciseState: async () => null,
+        getAlgorithmPreferences: async () => null,
+      },
+      algorithmRegistry: { get: async () => echoLiveInputAlgorithm },
+    } as unknown as ProgressionDeps;
+  }
+
+  it("is undefined by default — a built-in/plugin algorithm that ignores it sees nothing", async () => {
+    const output = await getSuggestion({ name: "Bench" }, deps());
+    expect(output?.label).toBeUndefined();
+  });
+
+  it("passes rpe/readiness straight through to the algorithm untouched", async () => {
+    const output = await getSuggestion({ name: "Bench" }, deps(), undefined, undefined, { rpe: 8, readiness: 6 });
+    expect(output?.label).toBe("live:8:6");
+  });
+});
