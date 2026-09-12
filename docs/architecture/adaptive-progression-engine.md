@@ -365,6 +365,21 @@ different treatments, not one shared UI:
     `calibrateSensitivity` scores history against) — noted as an accepted limitation in code,
     expected to be rare in practice.
 
+  **Real, pre-existing bug found and fixed while device-testing this (2026-09-12):**
+  `getSuggestion.ts` fetched "the most recent `HISTORY_WINDOW` (20) sessions **across every
+  exercise**, then filtered to this one" — not new code, but every threshold this doc's features
+  introduced (6 sessions for the order-variety nudge, 8 for a rep-range offer) assumes it's
+  looking at a meaningful chunk of *that exercise's own* history. Anyone training more than a
+  handful of different exercises regularly would have that single exercise's history diluted
+  down by everyone else's more-recent sessions, silently starving these features (and the
+  existing fatigue calibration) well before 20 of *its own* sessions had actually accumulated.
+  Verified live against the device via its own DevTools connection (not guessed) before fixing.
+  Fixed by reusing `getExerciseHistory` (already fetches uncapped, per-exercise, oldest-first —
+  the same logic `getSuggestion.ts` was duplicating and getting wrong) and capping *that* result
+  to the window size, instead of capping the shared session list first. Covered by a regression
+  test building 25 other exercises' more-recent sessions against 10 of the target exercise's own,
+  asserting all 10 remain visible.
+
 ## 11. Sequencing
 
 1. ~~Reasoning-trace contract + generic "Why?" UI (§3)~~ — **shipped**, PR #66.

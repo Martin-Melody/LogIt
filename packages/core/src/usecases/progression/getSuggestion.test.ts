@@ -19,7 +19,7 @@ const testAlgorithm: ProgressionAlgorithm = {
 
 function deps(dismissedNudges: string[] | undefined): ProgressionDeps {
   return {
-    workoutRepo: { listRecentSessions: async () => [] },
+    workoutRepo: { listRecentSessions: async () => [], listAllSessions: async () => [] },
     exerciseRepo: { getById: async () => null, getByName: async () => null },
     progressionRepo: {
       getConfig: async () => ({ algorithmId: "test-algorithm" }),
@@ -71,7 +71,7 @@ const exclusiveAlgorithm: ProgressionAlgorithm = {
 describe("getSuggestion — exclusive nudge suppression", () => {
   function depsWithStates(states: { key: string; activeExperiment?: { id: string; startedAtMs: number } }[]) {
     return {
-      workoutRepo: { listRecentSessions: async () => [] },
+      workoutRepo: { listRecentSessions: async () => [], listAllSessions: async () => [] },
       exerciseRepo: { getById: async () => null, getByName: async () => null },
       progressionRepo: {
         getConfig: async () => ({ algorithmId: "test-algorithm" }),
@@ -121,7 +121,7 @@ describe("getSuggestion — rep-range trial muscle-group warm start", () => {
     };
 
     return {
-      workoutRepo: { listRecentSessions: async () => [] },
+      workoutRepo: { listRecentSessions: async () => [], listAllSessions: async () => [] },
       exerciseRepo: {
         getById: async (id: string) => {
           if (id === "bench") return { id, name: "Bench", primaryMuscles: ["chest"], secondaryMuscles: [] };
@@ -228,5 +228,66 @@ describe("applySessionProgression", () => {
       d,
     );
     expect((d._saved.state as { activeExperiment?: unknown }).activeExperiment).toBeUndefined();
+  });
+});
+
+// Regression test for a real bug found on-device: history used to be fetched as
+// "the most recent HISTORY_WINDOW sessions overall, then filtered to this
+// exercise" — so a user training several exercises regularly could see a single
+// exercise's own history diluted down to almost nothing, well below what
+// calibration/trial thresholds need, even though that exercise itself had plenty
+// of history. Fixed by fetching per-exercise (via getExerciseHistory) and capping
+// *that*, not the shared cross-exercise session list.
+describe("getSuggestion — history isn't diluted by other exercises' more recent sessions", () => {
+  it("still sees an exercise's own full history even when many other exercises trained more recently", async () => {
+    const echoAlgorithm: ProgressionAlgorithm = {
+      id: "test-algorithm",
+      name: "Test",
+      description: "Echoes history.length back so the test can assert on it.",
+      defaultState: null,
+      suggest: (input) => ({ sets: [], nextState: null, label: `history:${input.history.length}` }),
+    };
+
+    const { createSession, addExercise, addSet, finishSession } = await import("../../domain/workout");
+    const now = Date.now();
+    const DAY = 86_400_000;
+
+    // Bench: 10 real sessions, all a few months back — nothing unusual.
+    const benchSessions = Array.from({ length: 10 }, (_, i) => {
+      let s = createSession(now - (200 - i * 5) * DAY);
+      s = addExercise(s, { exerciseName: "Bench" });
+      s = addSet(s, s.blocks[0]!.id, { weight: 100, reps: 5, setType: "normal" });
+      return finishSession(s, now - (200 - i * 5) * DAY + 3_600_000);
+    });
+
+    // 25 OTHER exercises' sessions, all more recent than every Bench session —
+    // enough to fill (and overflow) the old global HISTORY_WINDOW cap on their own.
+    const otherSessions = Array.from({ length: 25 }, (_, i) => {
+      const at = now - (24 - i) * DAY;
+      let s = createSession(at);
+      s = addExercise(s, { exerciseName: `Other ${i}` });
+      s = addSet(s, s.blocks[0]!.id, { weight: 50, reps: 8, setType: "normal" });
+      return finishSession(s, at + 3_600_000);
+    });
+
+    const allSessions = [...benchSessions, ...otherSessions];
+    const d = {
+      workoutRepo: {
+        listRecentSessions: async () => allSessions,
+        listAllSessions: async () => allSessions,
+      },
+      exerciseRepo: { getById: async () => null, getByName: async () => null },
+      progressionRepo: {
+        getConfig: async () => ({ algorithmId: "test-algorithm" }),
+        getExerciseState: async () => null,
+        getAlgorithmPreferences: async () => null,
+      },
+      algorithmRegistry: { get: async () => echoAlgorithm },
+    } as unknown as ProgressionDeps;
+
+    const output = await getSuggestion({ name: "Bench" }, d);
+    // All 10 of Bench's own sessions should be visible, not just whatever
+    // fraction survived a global "most recent 20 overall" cut.
+    expect(output?.label).toBe("history:10");
   });
 });

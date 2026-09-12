@@ -19,7 +19,7 @@ function fakeAlgorithm(nudge: ProgressionNudge | undefined): ProgressionAlgorith
 function deps(existing: ExerciseProgressionState, nudge: ProgressionNudge | undefined) {
   const saved: { state: ExerciseProgressionState } = { state: existing };
   return {
-    workoutRepo: { listRecentSessions: async () => [] },
+    workoutRepo: { listRecentSessions: async () => [], listAllSessions: async () => [] },
     exerciseRepo: { getById: async () => null, getByName: async () => null },
     progressionRepo: {
       getConfig: async () => ({ algorithmId: "linear-progression" }),
