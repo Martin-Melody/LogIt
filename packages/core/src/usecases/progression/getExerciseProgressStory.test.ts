@@ -101,7 +101,7 @@ describe("getExerciseProgressStory", () => {
 
   describe("rep-range trial confound", () => {
     // A fake linear-progression algorithm that just echoes the saved state back
-    // unchanged as nextState — lets the test control repRangeTrial directly
+    // unchanged as nextState — lets the test control repRangeLadder directly
     // without going through the real trial state machine.
     function depsWithTrial(trialState: unknown, history: WorkoutSession[]): ProgressionDeps {
       return {
@@ -149,13 +149,15 @@ describe("getExerciseProgressStory", () => {
       ];
       const trialState = {
         repRange: [10, 15],
-        repRangeTrial: {
-          trialRepRange: [10, 15],
-          baselineRepRange: [5, 8],
-          startedAtMs,
-          status: "concluded",
-          result: { trialSlopePctPerSession: 0.8, baselineSlopePctPerSession: 0.4, switched: true, concludedAtMs: now - 7 * DAY },
-        },
+        repRangeLadder: [
+          {
+            trialRepRange: [10, 15],
+            baselineRepRange: [5, 8],
+            startedAtMs,
+            status: "concluded",
+            result: { trialSlopePctPerSession: 0.8, baselineSlopePctPerSession: 0.4, switched: true, concludedAtMs: now - 7 * DAY },
+          },
+        ],
       };
 
       const withFix = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
@@ -179,7 +181,7 @@ describe("getExerciseProgressStory", () => {
       ];
       const trialState = {
         repRange: [10, 15],
-        repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs, status: "active" },
+        repRangeLadder: [{ trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs, status: "active" }],
       };
 
       const story = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
@@ -203,13 +205,15 @@ describe("getExerciseProgressStory", () => {
       ];
       const trialState = {
         repRange: [5, 8],
-        repRangeTrial: {
-          trialRepRange: [10, 15],
-          baselineRepRange: [5, 8],
-          startedAtMs,
-          status: "concluded",
-          result: { trialSlopePctPerSession: -0.2, baselineSlopePctPerSession: 0.6, switched: false, concludedAtMs },
-        },
+        repRangeLadder: [
+          {
+            trialRepRange: [10, 15],
+            baselineRepRange: [5, 8],
+            startedAtMs,
+            status: "concluded",
+            result: { trialSlopePctPerSession: -0.2, baselineSlopePctPerSession: 0.6, switched: false, concludedAtMs },
+          },
+        ],
       };
 
       const story = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));

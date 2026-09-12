@@ -29,46 +29,49 @@ export type ExerciseProgressStory = {
 
 const PRIMARY_METRIC_PRIORITY = ["estimated_1rm", "max_weight", "min_assist", "max_reps"];
 
-// Bespoke to linear-progression's rep-range trial (§10) — same v1 scope boundary
-// as the warm-start lookup in getSuggestion.ts. A rep-range switch is a genuine
-// LEVEL SHIFT in e1RM (different rep range, different Epley accuracy, different
-// achievable load), not a real change in how hard the lift is progressing — left
-// unhandled, the overall trend classifier would misread it as regressing or
-// progressing depending on which way the switch went. Read straight off
-// `suggestion.nextState` (already computed by getSuggestion above) rather than a
-// second repo fetch. This is the first concrete case of a more general "tag a
-// training block so it doesn't leave an undifferentiated mark on trend history"
-// need Martin's floated (injury, tempo change, etc.) — tracked as a follow-up in
-// the design doc rather than generalized here.
+// Bespoke to linear-progression's rep-range ladder (§10, §10.3.1) — same v1
+// scope boundary as the warm-start lookup in getSuggestion.ts. A rep-range
+// switch is a genuine LEVEL SHIFT in e1RM (different rep range, different
+// Epley accuracy, different achievable load), not a real change in how hard
+// the lift is progressing — left unhandled, the overall trend classifier
+// would misread it as regressing or progressing depending on which way the
+// switch went. Read straight off `suggestion.nextState` (already computed by
+// getSuggestion above) rather than a second repo fetch. This is the first
+// concrete case of a more general "tag a training block so it doesn't leave
+// an undifferentiated mark on trend history" need (§10.3.3, tag training
+// blocks) — that feature's exclusion generalizes this pattern rather than
+// replacing it.
 type LinearTrialState = {
-  repRangeTrial?: {
+  repRangeLadder?: {
     startedAtMs: number;
     status: "active" | "concluded";
     result?: { switched: boolean; concludedAtMs: number };
-  };
+  }[];
 };
 
+// Generalizes the single-trial four-case rule to a whole ladder: at most one
+// rung ever wins (the ladder stops climbing the moment one does, so a win is
+// always the last entry), and everything from its start onward is the current
+// regime. Every OTHER rung — rejected, or still active and unproven — excludes
+// just its own window, wherever it falls, the same way a single trial did.
 function computeComparableToCurrent(
   points: { date: number }[],
-  trial: LinearTrialState["repRangeTrial"] | undefined,
+  ladder: LinearTrialState["repRangeLadder"] | undefined,
 ): (boolean | undefined)[] | undefined {
-  if (!trial) return undefined;
-  if (trial.status === "active") {
-    // Mid-trial: the trial hasn't proven itself yet and might get abandoned, so
-    // don't let its (as yet inconclusive) readings drive the headline trend —
-    // keep classifying off the established pre-trial regime until it concludes.
-    return points.map((p) => p.date < trial.startedAtMs);
-  }
-  if (trial.result?.switched) {
-    // Switched for good: the trial range IS the current regime now — the old
-    // baseline readings are the ones that no longer represent "current".
-    return points.map((p) => p.date >= trial.startedAtMs);
-  }
-  // Concluded but reverted: current regime is the baseline, both before the
-  // trial started and after it was abandoned — only the trial window itself
-  // (a different regime that didn't stick) is excluded.
-  const concludedAtMs = trial.result?.concludedAtMs ?? trial.startedAtMs;
-  return points.map((p) => p.date < trial.startedAtMs || p.date >= concludedAtMs);
+  if (!ladder || ladder.length === 0) return undefined;
+
+  const lastSwitch = ladder.find((r) => r.status === "concluded" && r.result?.switched);
+  const regimeStartMs = lastSwitch?.startedAtMs ?? -Infinity;
+
+  return points.map((p) => {
+    if (p.date < regimeStartMs) return false; // before the sustained regime began, if any
+    for (const rung of ladder) {
+      if (rung === lastSwitch) continue; // this window IS the current regime, not excluded
+      const endMs = rung.status === "concluded" ? (rung.result?.concludedAtMs ?? Infinity) : Infinity;
+      if (p.date >= rung.startedAtMs && p.date < endMs) return false;
+    }
+    return true;
+  });
 }
 
 /** Exported for reuse by anything that needs "the one series that best represents
@@ -124,8 +127,8 @@ export async function getExerciseProgressStory(
   const sessionPositions = points.map((p) => p.sessionPosition);
   const lastTrainedMs = points[points.length - 1]!.date;
 
-  const trial = (suggestion?.nextState as LinearTrialState | null)?.repRangeTrial;
-  const comparableToCurrent = computeComparableToCurrent(points, trial);
+  const ladder = (suggestion?.nextState as LinearTrialState | null)?.repRangeLadder;
+  const comparableToCurrent = computeComparableToCurrent(points, ladder);
   const trend = classifyTrend({ values, sessionPositions, comparableToCurrent, lastTrainedMs, nowMs: nowMs() });
 
   // Last PR in the primary series.

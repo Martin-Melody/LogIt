@@ -149,10 +149,12 @@ describe("getSuggestion — rep-range trial muscle-group warm start", () => {
                   exerciseName: "Incline Press",
                   algorithmId: "linear-progression",
                   state: {
-                    repRangeTrial: {
-                      trialRepRange: [10, 15],
-                      result: { switched: siblingTrial.switched },
-                    },
+                    repRangeLadder: [
+                      {
+                        trialRepRange: [10, 15],
+                        result: { switched: siblingTrial.switched },
+                      },
+                    ],
                   },
                   updatedAtMs: 0,
                 },
@@ -207,11 +209,11 @@ describe("applySessionProgression", () => {
     ]);
   });
 
-  it("derives activeExperiment from an active rep-range trial in nextState", async () => {
+  it("derives activeExperiment from an active rung in the rep-range ladder", async () => {
     const d = deps(null);
     await applySessionProgression(
       { name: "Bench" },
-      { sets: [], nextState: { repRange: [5, 8], repRangeTrial: { status: "active", startedAtMs: 123 } } },
+      { sets: [], nextState: { repRange: [5, 8], repRangeLadder: [{ status: "active", startedAtMs: 123 }] } },
       d,
     );
     expect((d._saved.state as { activeExperiment: { id: string; startedAtMs: number } }).activeExperiment).toEqual({
@@ -220,11 +222,11 @@ describe("applySessionProgression", () => {
     });
   });
 
-  it("clears activeExperiment once the trial is no longer active (e.g. concluded)", async () => {
+  it("clears activeExperiment once no rung is active (e.g. all concluded)", async () => {
     const d = deps(null);
     await applySessionProgression(
       { name: "Bench" },
-      { sets: [], nextState: { repRange: [5, 8], repRangeTrial: { status: "concluded", startedAtMs: 123 } } },
+      { sets: [], nextState: { repRange: [5, 8], repRangeLadder: [{ status: "concluded", startedAtMs: 123 }] } },
       d,
     );
     expect((d._saved.state as { activeExperiment?: unknown }).activeExperiment).toBeUndefined();

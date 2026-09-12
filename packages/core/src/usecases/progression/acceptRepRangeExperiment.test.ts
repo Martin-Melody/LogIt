@@ -57,10 +57,13 @@ describe("acceptRepRangeExperiment", () => {
 
     await acceptRepRangeExperiment({ name: "Bench" }, OFFER_ID, d);
 
-    const state = d._saved.state.state as { repRangeTrial: { status: string; trialRepRange: number[]; baselineRepRange: number[] } };
-    expect(state.repRangeTrial.status).toBe("active");
-    expect(state.repRangeTrial.trialRepRange).toEqual([10, 15]);
-    expect(state.repRangeTrial.baselineRepRange).toEqual([5, 8]);
+    const state = d._saved.state.state as {
+      repRangeLadder: { status: string; trialRepRange: number[]; baselineRepRange: number[] }[];
+    };
+    const rung = state.repRangeLadder[state.repRangeLadder.length - 1]!;
+    expect(rung.status).toBe("active");
+    expect(rung.trialRepRange).toEqual([10, 15]);
+    expect(rung.baselineRepRange).toEqual([5, 8]);
     expect(d._saved.state.activeExperiment?.id).toBe("rep-range-trial");
   });
 
@@ -74,7 +77,15 @@ describe("acceptRepRangeExperiment", () => {
         failedAttempts: 0,
         increment: 2.5,
         repRange: [5, 8],
-        repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: 0, status: "concluded" },
+        repRangeLadder: [
+          {
+            trialRepRange: [10, 15],
+            baselineRepRange: [5, 8],
+            startedAtMs: 0,
+            status: "concluded",
+            result: { switched: true },
+          },
+        ],
       },
       updatedAtMs: 0,
     };
