@@ -1,4 +1,4 @@
-import type { ProgressStatus } from "../../domain/progression";
+import type { ProgressStatus, ProgressionNudge } from "../../domain/progression";
 import { classifyTrend } from "../../domain/progression";
 import type { Reasoning } from "../../domain/reasoning";
 import { nowMs } from "../../domain/time";
@@ -22,6 +22,9 @@ export type ExerciseProgressStory = {
   trendReasoning: Reasoning;
   /** Why the algorithm landed on `nextTarget`/`nextNote`, when it supplied one. */
   suggestionReasoning?: Reasoning;
+  /** A dismissible ask from the algorithm (e.g. "vary session order to help
+   * calibrate") — already filtered for prior dismissal by getSuggestion. */
+  nudge?: ProgressionNudge;
 };
 
 const PRIMARY_METRIC_PRIORITY = ["estimated_1rm", "max_weight", "min_assist", "max_reps"];
@@ -114,5 +117,6 @@ export async function getExerciseProgressStory(
     spark: values,
     trendReasoning: trend.reasoning,
     suggestionReasoning: suggestion?.reasoning,
+    nudge: suggestion?.nudge,
   };
 }

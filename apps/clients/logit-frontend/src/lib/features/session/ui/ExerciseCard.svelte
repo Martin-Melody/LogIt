@@ -26,6 +26,7 @@
     onSuperset = () => {},
     onDelete = () => {},
     onToggleCollapse = () => {},
+    onDismissNudge = () => {},
     children,
   } = $props<{
     exerciseName?: string;
@@ -44,6 +45,7 @@
     onSuperset?: () => void | Promise<void>;
     onDelete?: () => void | Promise<void>;
     onToggleCollapse?: () => void;
+    onDismissNudge?: (nudgeId: string) => void | Promise<void>;
     children?: import("svelte").Snippet;
   }>();
 
@@ -194,6 +196,18 @@
     </div>
     {#if suggestion.notes}
       <p class="px-3 pb-1.5 text-xs text-amber-600 dark:text-amber-400 -mt-1">{suggestion.notes}</p>
+    {/if}
+    {#if suggestion.nudge}
+      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
+        <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{suggestion.nudge.message}</p>
+        <button
+          type="button"
+          class="shrink-0 text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+          onclick={() => onDismissNudge(suggestion.nudge!.id)}
+        >
+          Got it
+        </button>
+      </div>
     {/if}
   {/if}
 </div>

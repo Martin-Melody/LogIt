@@ -18,6 +18,7 @@
   import { equipment } from "$lib/stores/equipment.store";
   import { createId } from "@logit/core/domain/ids";
   import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
+  import { dismissProgressionNudge } from "@logit/core/usecases/progression/dismissProgressionNudge";
   import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { currentSession } from "$lib/stores/currentSession.store";
@@ -166,6 +167,15 @@
     } catch {
       suggestion = null;
     }
+  }
+
+  async function handleDismissNudge(nudgeId: string) {
+    await dismissProgressionNudge(
+      { id: data.exerciseId, name: data.exerciseName },
+      nudgeId,
+      getProgressionDeps(),
+    );
+    await loadSuggestion(data.exerciseName, data.exerciseId);
   }
 
   function sortByOrderIndex(a: { orderIndex: number }, b: { orderIndex: number }) {
@@ -518,6 +528,7 @@
   onSwap={() => (swapOpen = true)}
   onSuperset={linkWithNext}
   {onDelete}
+  onDismissNudge={handleDismissNudge}
 >
   {#if data.sets.length > 0}
     {#if canWarmup}

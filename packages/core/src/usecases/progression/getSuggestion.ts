@@ -113,7 +113,7 @@ export async function getSuggestion(
   const storedPrefs = await progressionRepo.getAlgorithmPreferences(config.algorithmId);
   const userPreferences = storedPrefs ?? algorithm.defaultPreferences ?? {};
 
-  const output = await algorithm.suggest({
+  let output = await algorithm.suggest({
     exercise: exerciseWithMuscles,
     history,
     state,
@@ -122,6 +122,14 @@ export async function getSuggestion(
     incrementOverride,
     sessionContext,
   });
+
+  // An algorithm decides *whether* to ask for help generating signal; whether the
+  // user has already seen and dismissed that specific ask is a generic concern the
+  // algorithm shouldn't need to implement itself — so it's filtered here, once, for
+  // every algorithm (built-in or plugin).
+  if (output.nudge && saved?.dismissedNudges?.includes(output.nudge.id)) {
+    output = { ...output, nudge: undefined };
+  }
 
   // If the exercise is done on a machine with a known set of achievable weights,
   // round the suggested weights to what the machine can actually be set to.

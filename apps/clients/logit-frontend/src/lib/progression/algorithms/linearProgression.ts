@@ -96,9 +96,10 @@ const MAX_FATIGUE_DISCOUNT = 0.15;
 const REFERENCE_SETS = 3;
 // Minimum sessions in each group (fresh / fatigued) before calibration kicks in.
 const MIN_CALIBRATION_SAMPLES = 3;
-// If >85% of sessions placed this exercise in the same slot, suggest mixing order.
-const VARIETY_THRESHOLD = 0.85;
-const VARIETY_MIN_SESSIONS = 10;
+// Don't ask for help calibrating until there's been enough history to make the
+// ask meaningful — no point nagging on session #2.
+const MIN_SESSIONS_BEFORE_ASKING = 6;
+const ORDER_VARIETY_NUDGE_ID = "linear-progression:order-variety";
 
 function makeWorkingSets(weight: number, repRange: [number, number], count: number): SuggestedSet[] {
   return Array.from({ length: count }, () => ({
@@ -206,21 +207,6 @@ function calibrateSensitivity(
   const sensitivity = Math.max(0.1, Math.min(2.0, degradation / 0.1));
 
   return { sensitivity, freshSamples, fatiguedSamples, calibrated: true };
-}
-
-// Returns true when the exercise has been performed in the same session slot
-// for >VARIETY_THRESHOLD of the last VARIETY_MIN_SESSIONS sessions.
-// Consistent ordering means calibration data is sparse: without variance in
-// position, fresh vs. fatigued comparisons can't converge.
-function shouldSuggestVariety(history: ProgressionInput["history"]): boolean {
-  if (history.length < VARIETY_MIN_SESSIONS) return false;
-  const counts: Record<number, number> = {};
-  for (const h of history) {
-    const pos = h.sessionPosition ?? 0;
-    counts[pos] = (counts[pos] ?? 0) + 1;
-  }
-  const maxCount = Math.max(...Object.values(counts));
-  return maxCount / history.length > VARIETY_THRESHOLD;
 }
 
 function suggest(input: ProgressionInput): ProgressionOutput {
@@ -342,9 +328,21 @@ function suggest(input: ProgressionInput): ProgressionOutput {
 
   const label = [progressionLabel, fatigueLabel].filter(Boolean).join(" · ") || undefined;
 
-  const notes = shouldSuggestVariety(input.history)
-    ? "Try varying where this exercise falls in your session to improve fatigue estimates."
-    : undefined;
+  // Ask for help calibrating — but only once there's enough history to make the ask
+  // meaningful, and driven by the SAME calibrated flag the reasoning reports, not a
+  // separate heuristic that could disagree with it (a previous version used an
+  // independent ">85% same slot" check here, which could fall silent or keep
+  // nagging out of step with what calibrateSensitivity actually needed).
+  // Whether this has already been dismissed is handled generically, not here —
+  // see getSuggestion.ts.
+  const nudge =
+    !calibration.calibrated && input.history.length >= MIN_SESSIONS_BEFORE_ASKING
+      ? {
+          id: ORDER_VARIETY_NUDGE_ID,
+          message:
+            "Still learning your fatigue pattern for this exercise — try training it at a different point in your session sometime soon.",
+        }
+      : undefined;
 
   // Not calibrated at all → low (the discount is the generic 15% baseline, not personal).
   // Calibrated but from a thin sample → medium. Calibrated from a solid sample → high.
@@ -379,9 +377,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     sets: makeWorkingSets(suggestedWeight, state.repRange, prefs.workingSets),
     nextState,
     label,
-    notes,
     displayMode: prefs.suggestionDetail,
     reasoning,
+    nudge,
   };
 }
 

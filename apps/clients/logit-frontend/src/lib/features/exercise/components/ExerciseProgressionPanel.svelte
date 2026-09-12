@@ -5,6 +5,7 @@
   import * as Chart from "$lib/components/ui/chart";
   import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "@logit/core/usecases/progression/getExerciseAnalytics";
   import { getExerciseProgressStory, type ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
+  import { dismissProgressionNudge } from "@logit/core/usecases/progression/dismissProgressionNudge";
   import type { AnalyticsSeries } from "@logit/core/domain/analytics";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import ProgressStatusChip from "./ProgressStatusChip.svelte";
@@ -35,6 +36,15 @@
     })) ?? [],
   );
 
+  async function refreshStory() {
+    story = await getExerciseProgressStory(exercise, getProgressionDeps()).catch(() => null);
+  }
+
+  async function handleDismissNudge(nudgeId: string) {
+    await dismissProgressionNudge(exercise, nudgeId, getProgressionDeps());
+    await refreshStory();
+  }
+
   $effect(() => {
     const key = exercise.id ?? exercise.name;
     void key;
@@ -48,7 +58,7 @@
       activeSeries = result?.output.series[0]?.metricId ?? "";
       loading = false;
     });
-    void getExerciseProgressStory(exercise, deps).then((s) => (story = s)).catch(() => {});
+    void refreshStory();
   });
 </script>
 
@@ -81,6 +91,18 @@
         {/if}
         {#if story.nextNote}
           <p class="text-xs text-amber-600 dark:text-amber-400">{story.nextNote}</p>
+        {/if}
+        {#if story.nudge}
+          <div class="flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
+            <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{story.nudge.message}</p>
+            <button
+              type="button"
+              class="shrink-0 text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+              onclick={() => handleDismissNudge(story!.nudge!.id)}
+            >
+              Got it
+            </button>
+          </div>
         {/if}
         {#if story.lastPr}
           <p class="text-xs text-muted-foreground">

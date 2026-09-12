@@ -128,4 +128,45 @@ describe("linearProgression", () => {
       expect(out.reasoning?.computed.suggestedWeight).toBe(out.sets[0]!.weight);
     });
   });
+
+  describe("order-variety nudge", () => {
+    it("doesn't ask with too little history, even though it's uncalibrated", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: { workingWeight: 100, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+          history: [historyEntry(), historyEntry(), historyEntry()], // 3 < the 6-session minimum
+        }),
+      );
+      expect(out.reasoning?.inputs.fatigueCalibrated).toBe(false);
+      expect(out.nudge).toBeUndefined();
+    });
+
+    it("asks once there's enough history but still no position variety to calibrate from", async () => {
+      const history = Array.from({ length: 8 }, () => historyEntry()); // all sessionPosition undefined/0
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: { workingWeight: 100, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+          history,
+        }),
+      );
+      expect(out.reasoning?.inputs.fatigueCalibrated).toBe(false);
+      expect(out.nudge?.id).toBe("linear-progression:order-variety");
+      expect(out.nudge?.message).toMatch(/different point in your session/);
+    });
+
+    it("stops asking once calibrated, regardless of how much history exists", async () => {
+      const fresh = Array.from({ length: 6 }, () => historyEntry({ sessionPosition: 0 }));
+      const fatigued = Array.from({ length: 6 }, () =>
+        historyEntry({ sessionPosition: 1, sets: [set({ reps: 6 })] }),
+      );
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: { workingWeight: 100, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+          history: [...fatigued, ...fresh],
+        }),
+      );
+      expect(out.reasoning?.inputs.fatigueCalibrated).toBe(true);
+      expect(out.nudge).toBeUndefined();
+    });
+  });
 });
