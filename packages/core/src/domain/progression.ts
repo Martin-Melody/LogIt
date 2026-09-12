@@ -1,6 +1,7 @@
 import type { SetEntry, SetType } from "./workout";
 import type { PlannedTargets } from "./WorkoutSplit";
 import type { MuscleGroup, Machine, ExerciseType } from "./exercise";
+import type { Reasoning, ReasoningConfidence } from "./reasoning";
 
 export type AlgorithmPreferencesField = {
   key: string;
@@ -49,6 +50,12 @@ export type ProgressionInput = {
     timeBudgetMs?: number;
     avgExerciseDurationMs?: Record<string, number>;
   };
+  // Bespoke to the rep-range-experimentation feature (adaptive-progression-engine.md
+  // §10) — a warm-start value for a new trial, informed by what's already worked for
+  // other exercises sharing this one's primary muscle. Computed by getSuggestion.ts,
+  // which has the cross-exercise repo access this otherwise-per-exercise input
+  // wouldn't. Undefined until this feature generalizes beyond linear-progression.
+  suggestedTrialRepRange?: [number, number];
 };
 
 export type SuggestedSet = {
@@ -56,6 +63,30 @@ export type SuggestedSet = {
   weight: number;
   setType?: SetType;
   note?: string;
+};
+
+/**
+ * A dismissible, trackable ask — distinct from `notes` (a static free-text line
+ * with no identity). `id` must be stable per algorithm+kind (e.g.
+ * "linear-progression:order-variety") so the generic dismissal layer
+ * (getSuggestion.ts) can recognise a previously-dismissed nudge and suppress it,
+ * without the algorithm needing to manage that state itself.
+ */
+export type ProgressionNudge = {
+  id: string;
+  message: string;
+  /** If present, this nudge proposes a concrete action beyond passive awareness —
+   * the UI shows an accept button with this label, alongside the existing dismiss.
+   * What "accept" does is bespoke to whichever usecase recognises `id`. */
+  actionLabel?: string;
+  /** Data the accept-action needs to actually apply this nudge (e.g. the specific
+   * rep range being proposed) — opaque here, interpreted by whatever accepts it. */
+  actionData?: unknown;
+  /** True if accepting this nudge starts something that should only run for one
+   * exercise at a time across the whole account (see ExerciseProgressionState.
+   * activeExperiment) — checked generically in getSuggestion.ts without it needing
+   * to know what the experiment actually is. */
+  exclusive?: boolean;
 };
 
 export type ProgressionOutput = {
@@ -66,6 +97,14 @@ export type ProgressionOutput = {
   // "summary": render sets collapsed as e.g. "3×5-8 @ 20kg". "block": show each set as its own row.
   // Algorithms that return uniform sets should omit this or use "summary"; varied prescriptions use "block".
   displayMode?: "summary" | "block";
+  // Optional structured "show your work" — see domain/reasoning.ts. Not required so
+  // existing/third-party algorithms keep working unchanged; the built-in ones populate it.
+  reasoning?: Reasoning;
+  // Optional dismissible ask for help generating learning signal (e.g. "vary where
+  // this lands in your session"). The algorithm decides *whether* to ask; whether
+  // it's actually shown (i.e. hasn't already been dismissed) is handled generically,
+  // not by the algorithm — see getSuggestion.ts and dismissProgressionNudge.ts.
+  nudge?: ProgressionNudge;
 };
 
 export type ProgressionAlgorithmMeta = {
@@ -91,6 +130,15 @@ export type ExerciseProgressionState = {
   algorithmId: string;
   state: unknown;
   updatedAtMs: number;
+  // Nudge ids (ProgressionNudge.id) the user has dismissed for this exercise —
+  // app-owned, not part of the algorithm's own opaque `state`, so a plugin
+  // algorithm gets dismissal handling for free instead of implementing its own.
+  dismissedNudges?: string[];
+  // Set by an algorithm running a deliberate experiment on this exercise (e.g. a
+  // rep-range trial, adaptive-progression-engine.md §10) so the generic layer can
+  // enforce "only one experiment across all exercises at a time" (via an `exclusive`
+  // nudge) without needing to understand what kind of experiment it is.
+  activeExperiment?: { id: string; startedAtMs: number };
 };
 
 export type UserProgressionConfig = {
@@ -142,20 +190,119 @@ export type ProgressStatus =
   | "regressing"
   | "detraining";
 
+/** Attention-first ordering: regressing needs eyes on it soonest, "new" (no data yet)
+ * least. Shared by anything that ranks/sorts several statuses together (the /progress
+ * list, muscle-group insights) so "which one is worse" means the same thing everywhere
+ * rather than each screen inventing its own ranking. */
+export const PROGRESS_STATUS_ATTENTION_ORDER: ProgressStatus[] = [
+  "regressing",
+  "plateaued",
+  "detraining",
+  "progressing",
+  "new",
+];
+
 const DETRAINING_MS = 21 * 24 * 60 * 60 * 1000;
 const TREND_WINDOW = 8;
+
+const PROGRESSING_SLOPE_THRESHOLD = 0.4;
+const REGRESSING_SLOPE_THRESHOLD = -1;
+const MIN_SESSIONS = 3;
+// Minimum sessions in each group (position 0 / position > 0) before the fatigue
+// adjustment below kicks in — mirrors MIN_CALIBRATION_SAMPLES in linearProgression.ts,
+// a deliberate parallel rather than shared code (that one calibrates from rep
+// performance for a weight suggestion; this one calibrates directly from the metric
+// series being trended, which is what a trend classifier actually has on hand).
+const MIN_FATIGUE_CALIBRATION_SAMPLES = 3;
+
+// Confidence for the slope-based verdicts (progressing/plateaued/regressing) scales
+// with how many points the least-squares fit actually had to work with — a 3-point
+// slope and an 8-point slope shouldn't be presented with equal certainty. "new" and
+// "detraining" are simple facts (session count, days since last trained), not
+// statistical inference from noisy data, so they're always "high".
+function trendConfidence(pointsConsidered: number): ReasoningConfidence {
+  if (pointsConsidered >= 6) return "high";
+  if (pointsConsidered >= 4) return "medium";
+  return "low";
+}
+
+type FatigueDiscount = {
+  discountPct: number; // 0-1, how much lower a position>0 reading runs vs. position 0
+  calibrated: boolean;
+  freshSamples: number;
+  fatiguedSamples: number;
+};
+
+// Compares readings taken when this exercise was done first that session (position 0)
+// against readings taken later (position > 0), directly on the metric series being
+// trended — no rep/weight breakdown needed, since e1RM/max-weight already bakes any
+// fatigue-driven performance drop in. Returns discountPct: 0 (uncalibrated) until
+// both groups have enough samples, so a thin history doesn't get a confident-looking
+// adjustment applied to it.
+function calibrateFatigueDiscount(
+  window: number[],
+  windowPositions: (number | undefined)[],
+): FatigueDiscount {
+  const fresh: number[] = [];
+  const fatigued: number[] = [];
+  window.forEach((v, i) => {
+    const pos = windowPositions[i];
+    if (pos === undefined) return; // unknown position — excluded from calibration either way
+    if (pos === 0) fresh.push(v);
+    else fatigued.push(v);
+  });
+
+  if (fresh.length < MIN_FATIGUE_CALIBRATION_SAMPLES || fatigued.length < MIN_FATIGUE_CALIBRATION_SAMPLES) {
+    return { discountPct: 0, calibrated: false, freshSamples: fresh.length, fatiguedSamples: fatigued.length };
+  }
+
+  const freshMean = fresh.reduce((a, b) => a + b, 0) / fresh.length;
+  const fatiguedMean = fatigued.reduce((a, b) => a + b, 0) / fatigued.length;
+  if (freshMean <= 0) {
+    return { discountPct: 0, calibrated: true, freshSamples: fresh.length, fatiguedSamples: fatigued.length };
+  }
+
+  const discountPct = Math.max(0, (freshMean - fatiguedMean) / freshMean);
+  return { discountPct, calibrated: true, freshSamples: fresh.length, fatiguedSamples: fatigued.length };
+}
 
 /**
  * Classify how an exercise is trending from its primary metric series
  * (e1RM or max weight), oldest→newest. Deliberately simple and explainable —
  * least-squares slope over a recent window, plus a "sessions since PR" count.
+ *
+ * When `sessionPositions` is supplied (index-aligned with `values`) and there's
+ * enough history in both groups, readings taken later in a session are credited
+ * back toward what they'd likely have been done fresh before the slope is fit —
+ * so a lift that's reliably done last doesn't read as regressing just because
+ * that's when it's always logged. See docs/architecture/adaptive-progression-engine.md §4.
+ *
+ * When `comparableToCurrent` is supplied (index-aligned with `values`), a point
+ * marked `false` is dropped entirely before anything else runs — it was measured
+ * under a different regime (e.g. a different rep range mid an experiment) that
+ * the metric itself isn't reliably comparable across, unlike the fatigue
+ * adjustment above, which can credit a value back with a learned discount. There's
+ * no safe way to "convert" an e1RM reading between regimes, so excluding is the
+ * honest move rather than guessing. See §10 and the "tag a training block" idea
+ * in the design doc — this is the first concrete case of a more general need.
  */
 export function classifyTrend(params: {
   values: number[];
+  sessionPositions?: (number | undefined)[];
+  comparableToCurrent?: (boolean | undefined)[];
   lastTrainedMs: number;
   nowMs: number;
-}): { status: ProgressStatus; slopePctPerSession: number; sessionsSincePr: number } {
-  const { values, lastTrainedMs, nowMs } = params;
+}): {
+  status: ProgressStatus;
+  slopePctPerSession: number;
+  sessionsSincePr: number;
+  reasoning: Reasoning;
+} {
+  const keep = params.values.map((_, i) => params.comparableToCurrent?.[i] !== false);
+  const values = params.values.filter((_, i) => keep[i]);
+  const sessionPositions = params.sessionPositions?.filter((_, i) => keep[i]);
+  const excludedCount = params.values.length - values.length;
+  const { lastTrainedMs, nowMs } = params;
 
   // Sessions since the last all-time best in the series.
   let runningMax = -Infinity;
@@ -168,32 +315,111 @@ export function classifyTrend(params: {
   });
   const sessionsSincePr = lastPrIdx === -1 ? values.length : values.length - 1 - lastPrIdx;
 
-  if (values.length < 3) {
-    return { status: "new", slopePctPerSession: 0, sessionsSincePr };
+  if (values.length < MIN_SESSIONS) {
+    return {
+      status: "new",
+      slopePctPerSession: 0,
+      sessionsSincePr,
+      reasoning: {
+        inputs: {
+          sessionsAvailable: values.length,
+          minSessionsRequired: MIN_SESSIONS,
+          excludedForRegimeChange: excludedCount,
+        },
+        computed: {},
+        confidence: "high",
+        verdict: "new",
+      },
+    };
   }
+
+  const daysSinceLastTrained = Math.round((nowMs - lastTrainedMs) / 86_400_000);
   if (nowMs - lastTrainedMs > DETRAINING_MS) {
-    return { status: "detraining", slopePctPerSession: 0, sessionsSincePr };
+    return {
+      status: "detraining",
+      slopePctPerSession: 0,
+      sessionsSincePr,
+      reasoning: {
+        inputs: {
+          daysSinceLastTrained,
+          detrainingThresholdDays: Math.round(DETRAINING_MS / 86_400_000),
+          excludedForRegimeChange: excludedCount,
+        },
+        computed: {},
+        confidence: "high",
+        verdict: "detraining",
+      },
+    };
   }
 
   const window = values.slice(-TREND_WINDOW);
   const n = window.length;
-  const meanX = (n - 1) / 2;
-  const meanY = window.reduce((a, b) => a + b, 0) / n;
-  let num = 0;
-  let den = 0;
-  window.forEach((y, x) => {
-    num += (x - meanX) * (y - meanY);
-    den += (x - meanX) ** 2;
+  const windowPositions = (sessionPositions ?? []).slice(-TREND_WINDOW);
+
+  // Calibrate from ALL available history, not just the trend window — the window is
+  // sized for a responsive slope fit, but the fresh-vs-later split needs a bigger
+  // sample than 8 points to tell a real position effect from noise (same reasoning
+  // as calibrateSensitivity in linearProgression.ts using its full history window).
+  const fatigue = calibrateFatigueDiscount(values, sessionPositions ?? []);
+  // Credit position>0 readings back toward their fresh-equivalent before fitting the
+  // slope. Position 0 and unknown-position readings pass through unchanged.
+  const adjustedWindow = window.map((v, i) => {
+    if (!fatigue.calibrated || fatigue.discountPct === 0) return v;
+    const pos = windowPositions[i];
+    if (pos === undefined || pos === 0) return v;
+    return v / (1 - fatigue.discountPct);
   });
-  const slope = den === 0 ? 0 : num / den;
-  const slopePctPerSession = meanY === 0 ? 0 : (slope / meanY) * 100;
+
+  function fitSlopePct(series: number[]): { slopePctPerSession: number; meanY: number } {
+    const m = series.length;
+    const meanX = (m - 1) / 2;
+    const meanY = series.reduce((a, b) => a + b, 0) / m;
+    let num = 0;
+    let den = 0;
+    series.forEach((y, x) => {
+      num += (x - meanX) * (y - meanY);
+      den += (x - meanX) ** 2;
+    });
+    const slope = den === 0 ? 0 : num / den;
+    return { slopePctPerSession: meanY === 0 ? 0 : (slope / meanY) * 100, meanY };
+  }
+
+  const raw = fitSlopePct(window);
+  const adjusted = fitSlopePct(adjustedWindow);
+  const slopePctPerSession = adjusted.slopePctPerSession;
 
   const prRecently = sessionsSincePr <= 1;
-  if (prRecently || slopePctPerSession > 0.4) {
-    return { status: "progressing", slopePctPerSession, sessionsSincePr };
-  }
-  if (slopePctPerSession < -1) {
-    return { status: "regressing", slopePctPerSession, sessionsSincePr };
-  }
-  return { status: "plateaued", slopePctPerSession, sessionsSincePr };
+  const status: ProgressStatus =
+    prRecently || slopePctPerSession > PROGRESSING_SLOPE_THRESHOLD
+      ? "progressing"
+      : slopePctPerSession < REGRESSING_SLOPE_THRESHOLD
+        ? "regressing"
+        : "plateaued";
+
+  return {
+    status,
+    slopePctPerSession,
+    sessionsSincePr,
+    reasoning: {
+      inputs: {
+        pointsConsidered: n,
+        sessionsAvailable: values.length,
+        sessionsSincePr,
+        prInLastSession: prRecently,
+        progressingAboveSlopePct: PROGRESSING_SLOPE_THRESHOLD,
+        regressingBelowSlopePct: REGRESSING_SLOPE_THRESHOLD,
+        fatigueCalibrated: fatigue.calibrated,
+        fatigueCalibrationSamples: `${fatigue.freshSamples} fresh / ${fatigue.fatiguedSamples} later-in-session`,
+        excludedForRegimeChange: excludedCount,
+      },
+      computed: {
+        slopePctPerSession: Math.round(adjusted.slopePctPerSession * 100) / 100,
+        rawSlopePctPerSession: Math.round(raw.slopePctPerSession * 100) / 100,
+        fatigueDiscountPct: Math.round(fatigue.discountPct * 100),
+        windowMeanValue: Math.round(adjusted.meanY * 100) / 100,
+      },
+      confidence: trendConfidence(n),
+      verdict: status,
+    },
+  };
 }

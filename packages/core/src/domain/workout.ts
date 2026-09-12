@@ -270,6 +270,25 @@ export function getExercises(session: WorkoutSession): ExerciseEntry[] {
 }
 
 /**
+ * Where this exercise fell among the session's strength blocks (0-based), or -1 if it
+ * wasn't done that session. Matches by exerciseId when both sides have one, else by
+ * name. Shared by getSuggestion (live "preceding exercises" context) and
+ * getExerciseHistory (historical position, for fatigue/order-effect calibration) so
+ * both use the exact same matching rule.
+ */
+export function findExerciseIndexInSession(
+  session: WorkoutSession,
+  exercise: { id?: string; name: string },
+): number {
+  const lowerName = exercise.name.toLowerCase();
+  return getExercises(session).findIndex(
+    (e) =>
+      (exercise.id && e.exerciseId === exercise.id) ||
+      e.exerciseName.toLowerCase() === lowerName,
+  );
+}
+
+/**
  * A superset/circuit group, or a lone exercise — for history/recap rendering.
  * Consecutive entries sharing a `superset.id` fold into one `superset` item.
  */
