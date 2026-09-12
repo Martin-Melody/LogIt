@@ -13,6 +13,11 @@ export type AnalyticsDataPoint = {
   date: number; // ms timestamp
   value: number;
   label?: string;
+  // 0-based position of this exercise in its session (see ExerciseHistoryEntry).
+  // Carried through so a trend classifier can tell "done last, as usual" apart
+  // from a real drop. Undefined for series a plugin builds without per-session
+  // history (e.g. aggregated data).
+  sessionPosition?: number;
 };
 
 export type AnalyticsMetric = {

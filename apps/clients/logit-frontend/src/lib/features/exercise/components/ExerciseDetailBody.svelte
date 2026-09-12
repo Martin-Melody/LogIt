@@ -279,12 +279,18 @@
     {#if stats.loading}
       <p class="text-sm text-muted-foreground text-center py-2">Loading stats…</p>
     {:else if stats.data}
-      <div class="grid grid-cols-3 gap-2">
+      <div class="grid grid-cols-2 gap-y-3 gap-x-2">
         <div class="text-center">
           <p class="text-base font-semibold tabular-nums">
             {stats.data.bestSet ? `${stats.data.bestSet.weight}kg × ${stats.data.bestSet.reps}` : "—"}
           </p>
           <p class="text-xs text-muted-foreground mt-0.5">Best set</p>
+        </div>
+        <div class="text-center">
+          <p class="text-base font-semibold tabular-nums">
+            {stats.data.bestEstimated1RM ? `${stats.data.bestEstimated1RM}kg` : "—"}
+          </p>
+          <p class="text-xs text-muted-foreground mt-0.5">Est. 1RM</p>
         </div>
         <div class="text-center">
           <p class="text-base font-semibold tabular-nums">{stats.data.totalSessions}</p>

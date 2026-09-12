@@ -5,9 +5,12 @@
   import * as Chart from "$lib/components/ui/chart";
   import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "@logit/core/usecases/progression/getExerciseAnalytics";
   import { getExerciseProgressStory, type ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
+  import { dismissProgressionNudge } from "@logit/core/usecases/progression/dismissProgressionNudge";
+  import { acceptRepRangeExperiment } from "@logit/core/usecases/progression/acceptRepRangeExperiment";
   import type { AnalyticsSeries } from "@logit/core/domain/analytics";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import ProgressStatusChip from "./ProgressStatusChip.svelte";
+  import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
 
   const { exercise }: { exercise: { id?: string; name: string } } = $props();
 
@@ -34,6 +37,22 @@
     })) ?? [],
   );
 
+  const currentDef = $derived(metricDefs.find((d) => d.id === activeSeries));
+
+  async function refreshStory() {
+    story = await getExerciseProgressStory(exercise, getProgressionDeps()).catch(() => null);
+  }
+
+  async function handleDismissNudge(nudgeId: string) {
+    await dismissProgressionNudge(exercise, nudgeId, getProgressionDeps());
+    await refreshStory();
+  }
+
+  async function handleAcceptNudge(nudgeId: string) {
+    await acceptRepRangeExperiment(exercise, nudgeId, getProgressionDeps());
+    await refreshStory();
+  }
+
   $effect(() => {
     const key = exercise.id ?? exercise.name;
     void key;
@@ -47,7 +66,7 @@
       activeSeries = result?.output.series[0]?.metricId ?? "";
       loading = false;
     });
-    void getExerciseProgressStory(exercise, deps).then((s) => (story = s)).catch(() => {});
+    void refreshStory();
   });
 </script>
 
@@ -61,17 +80,48 @@
     {#if story}
       <div class="flex flex-col gap-2 rounded-lg border border-border px-3 py-3">
         <div class="flex items-center justify-between gap-2">
-          <ProgressStatusChip status={story.status} />
+          <div class="flex items-center gap-2">
+            <ProgressStatusChip status={story.status} />
+            <ReasoningDialog reasoning={story.trendReasoning} />
+          </div>
           <span class="text-xs text-muted-foreground">{story.statusDetail}</span>
         </div>
         {#if story.nextTarget}
-          <p class="text-sm">
-            <span class="text-muted-foreground">Next session:</span>
-            <span class="font-medium">{story.nextTarget}</span>
-          </p>
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-sm">
+              <span class="text-muted-foreground">Next session:</span>
+              <span class="font-medium">{story.nextTarget}</span>
+            </p>
+            {#if story.suggestionReasoning}
+              <ReasoningDialog reasoning={story.suggestionReasoning} />
+            {/if}
+          </div>
         {/if}
         {#if story.nextNote}
           <p class="text-xs text-amber-600 dark:text-amber-400">{story.nextNote}</p>
+        {/if}
+        {#if story.nudge}
+          <div class="flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
+            <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{story.nudge.message}</p>
+            <div class="flex shrink-0 items-center gap-2">
+              {#if story.nudge.actionLabel}
+                <button
+                  type="button"
+                  class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2"
+                  onclick={() => handleAcceptNudge(story!.nudge!.id)}
+                >
+                  {story.nudge.actionLabel}
+                </button>
+              {/if}
+              <button
+                type="button"
+                class="text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+                onclick={() => handleDismissNudge(story!.nudge!.id)}
+              >
+                {story.nudge.actionLabel ? "Not now" : "Got it"}
+              </button>
+            </div>
+          </div>
         {/if}
         {#if story.lastPr}
           <p class="text-xs text-muted-foreground">
@@ -116,7 +166,6 @@
           x="date"
           xScale={scaleUtc()}
           series={[{ key: "value", label: currentSeries?.label ?? "", color: chartConfig.value.color }]}
-          axis="x"
           props={{
             area: {
               curve: curveNatural,
@@ -127,6 +176,11 @@
             xAxis: {
               format: (v: Date) =>
                 v.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+            },
+            yAxis: {
+              label: currentDef?.unit ? `${currentSeries?.label ?? ""} (${currentDef.unit})` : currentSeries?.label,
+              format: (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
+              ticks: 4,
             },
           }}
         >

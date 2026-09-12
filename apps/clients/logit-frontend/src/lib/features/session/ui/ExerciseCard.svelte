@@ -2,6 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2 } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import type { ProgressionOutput, SuggestedSet } from "@logit/core/domain/progression";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
@@ -25,6 +26,8 @@
     onSuperset = () => {},
     onDelete = () => {},
     onToggleCollapse = () => {},
+    onDismissNudge = () => {},
+    onAcceptNudge = () => {},
     children,
   } = $props<{
     exerciseName?: string;
@@ -43,6 +46,8 @@
     onSuperset?: () => void | Promise<void>;
     onDelete?: () => void | Promise<void>;
     onToggleCollapse?: () => void;
+    onDismissNudge?: (nudgeId: string) => void | Promise<void>;
+    onAcceptNudge?: (nudgeId: string) => void | Promise<void>;
     children?: import("svelte").Snippet;
   }>();
 
@@ -176,18 +181,46 @@
   </div>
 
   {#if !collapsed && suggestion && suggestion.sets.length > 0}
-    {#if suggestion.displayMode === "block"}
-      {#if suggestion.label}
-        <p class="px-3 pb-1.5 text-xs text-muted-foreground/60 -mt-1">{suggestion.label}</p>
+    <div class="px-3 pb-1.5 -mt-1 flex items-center gap-2 flex-wrap">
+      {#if suggestion.displayMode === "block"}
+        {#if suggestion.label}
+          <p class="text-xs text-muted-foreground/60">{suggestion.label}</p>
+        {/if}
+      {:else}
+        <!-- Summary mode (default) -->
+        <p class="text-xs text-muted-foreground">
+          Target: {formatTarget(suggestion)}
+        </p>
       {/if}
-    {:else}
-      <!-- Summary mode (default) -->
-      <p class="px-3 pb-1.5 text-xs text-muted-foreground -mt-1">
-        Target: {formatTarget(suggestion)}
-      </p>
-    {/if}
+      {#if suggestion.reasoning}
+        <ReasoningDialog reasoning={suggestion.reasoning} />
+      {/if}
+    </div>
     {#if suggestion.notes}
       <p class="px-3 pb-1.5 text-xs text-amber-600 dark:text-amber-400 -mt-1">{suggestion.notes}</p>
+    {/if}
+    {#if suggestion.nudge}
+      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
+        <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{suggestion.nudge.message}</p>
+        <div class="flex shrink-0 items-center gap-2">
+          {#if suggestion.nudge.actionLabel}
+            <button
+              type="button"
+              class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2"
+              onclick={() => onAcceptNudge(suggestion.nudge!.id)}
+            >
+              {suggestion.nudge.actionLabel}
+            </button>
+          {/if}
+          <button
+            type="button"
+            class="text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+            onclick={() => onDismissNudge(suggestion.nudge!.id)}
+          >
+            {suggestion.nudge.actionLabel ? "Not now" : "Got it"}
+          </button>
+        </div>
+      </div>
     {/if}
   {/if}
 </div>
