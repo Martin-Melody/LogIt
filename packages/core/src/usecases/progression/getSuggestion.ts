@@ -1,12 +1,18 @@
-import type { ProgressionOutput, ExerciseHistoryEntry, PrecedingExercise } from "../../domain/progression";
+import type { ProgressionOutput, PrecedingExercise } from "../../domain/progression";
 import { exerciseKey, resolveExerciseIncrement, resolveExerciseMachine } from "../../domain/progression";
 import { snapToMachine } from "../../domain/machine";
-import { getExercises, findExerciseIndexInSession } from "../../domain/workout";
+import { getExercises } from "../../domain/workout";
 import type { WorkoutSession } from "../../domain/workout";
 import { nowMs } from "../../domain/time";
 import type { PlannedTargets } from "../../domain/WorkoutSplit";
+import { getExerciseHistory } from "./getExerciseHistory";
 import type { ProgressionDeps } from "./deps";
 
+// How many of *this exercise's own* most recent sessions the algorithm sees —
+// not a global cap across every exercise (that was the bug: fetching "the last
+// 20 sessions total, then filtering" silently starved anyone who trains several
+// different exercises regularly, diluting a single exercise's own history below
+// what calibration/trial thresholds need long before 20 of ITS sessions existed).
 const HISTORY_WINDOW = 20;
 
 export async function getSuggestion(
@@ -37,29 +43,12 @@ export async function getSuggestion(
       ? saved.state
       : algorithm.defaultState;
 
-  const recentSessions = await workoutRepo.listRecentSessions({ limit: HISTORY_WINDOW });
-
-  const history: ExerciseHistoryEntry[] = recentSessions
-    .filter((session) => !session.excludeFromProgression)
-    .flatMap((session) => {
-      const matchIndex = findExerciseIndexInSession(session, exercise);
-      if (matchIndex === -1) return [];
-      const match = getExercises(session)[matchIndex]!;
-      return [
-        {
-          sessionId: session.id,
-          performedAtMs: session.endedAtMs ?? session.startedAtMs,
-          sets: match.sets,
-          sessionPosition: matchIndex,
-        } satisfies ExerciseHistoryEntry,
-      ];
-    })
-    .sort((a, b) => b.performedAtMs - a.performedAtMs);
-
-  // Build session context from exercises that appear before this one in the current session
-  const exerciseData = exercise.id
-    ? await exerciseRepo.getById(exercise.id)
-    : await exerciseRepo.getByName(exercise.name);
+  // Same fetch/match logic getExerciseHistory already uses (uncapped, oldest
+  // first) — reused rather than re-implemented, then capped to this exercise's
+  // own most recent HISTORY_WINDOW and reversed to the newest-first order this
+  // usecase has always returned.
+  const { history: fullHistory, exerciseData } = await getExerciseHistory(exercise, { workoutRepo, exerciseRepo });
+  const history = fullHistory.slice(-HISTORY_WINDOW).reverse();
 
   const exerciseWithMuscles = {
     ...exercise,
