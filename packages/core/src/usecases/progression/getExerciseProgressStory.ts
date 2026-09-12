@@ -73,9 +73,10 @@ export async function getExerciseProgressStory(
 
   const points = [...primary.points].sort((a, b) => a.date - b.date);
   const values = points.map((p) => p.value);
+  const sessionPositions = points.map((p) => p.sessionPosition);
   const lastTrainedMs = points[points.length - 1]!.date;
 
-  const trend = classifyTrend({ values, lastTrainedMs, nowMs: nowMs() });
+  const trend = classifyTrend({ values, sessionPositions, lastTrainedMs, nowMs: nowMs() });
 
   // Last PR in the primary series.
   let runningMax = -Infinity;

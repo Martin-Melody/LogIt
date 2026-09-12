@@ -28,9 +28,9 @@ function computeNormal(input: AnalyticsInput): AnalyticsOutput {
     if (best1RM > allTimeBest1RM) allTimeBest1RM = best1RM;
     allTimeVolume += totalVolume;
 
-    maxWeightPoints.push({ date: entry.performedAtMs, value: maxWeight });
-    volumePoints.push({ date: entry.performedAtMs, value: totalVolume });
-    estimated1RMPoints.push({ date: entry.performedAtMs, value: Math.round(best1RM * 10) / 10 });
+    maxWeightPoints.push({ date: entry.performedAtMs, value: maxWeight, sessionPosition: entry.sessionPosition });
+    volumePoints.push({ date: entry.performedAtMs, value: totalVolume, sessionPosition: entry.sessionPosition });
+    estimated1RMPoints.push({ date: entry.performedAtMs, value: Math.round(best1RM * 10) / 10, sessionPosition: entry.sessionPosition });
   }
 
   const sessionCount = maxWeightPoints.length;
@@ -82,8 +82,8 @@ function computeAssisted(input: AnalyticsInput): AnalyticsOutput {
     if (minAssist < lowestAssist) lowestAssist = minAssist;
     allTimeReps += totalReps;
 
-    assistPoints.push({ date: entry.performedAtMs, value: minAssist });
-    repsPoints.push({ date: entry.performedAtMs, value: totalReps });
+    assistPoints.push({ date: entry.performedAtMs, value: minAssist, sessionPosition: entry.sessionPosition });
+    repsPoints.push({ date: entry.performedAtMs, value: totalReps, sessionPosition: entry.sessionPosition });
   }
 
   const sessionCount = assistPoints.length;
@@ -142,10 +142,10 @@ function computeBodyweight(input: AnalyticsInput): AnalyticsOutput {
     allTimeReps += totalReps;
     if (maxExtraLoad > 0) hasExtraLoad = true;
 
-    maxRepsPoints.push({ date: entry.performedAtMs, value: maxReps });
-    totalRepsPoints.push({ date: entry.performedAtMs, value: totalReps });
+    maxRepsPoints.push({ date: entry.performedAtMs, value: maxReps, sessionPosition: entry.sessionPosition });
+    totalRepsPoints.push({ date: entry.performedAtMs, value: totalReps, sessionPosition: entry.sessionPosition });
     if (maxExtraLoad > 0) {
-      extraLoadPoints.push({ date: entry.performedAtMs, value: maxExtraLoad });
+      extraLoadPoints.push({ date: entry.performedAtMs, value: maxExtraLoad, sessionPosition: entry.sessionPosition });
     }
   }
 

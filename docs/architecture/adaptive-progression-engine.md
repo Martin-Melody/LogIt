@@ -93,6 +93,22 @@ one-off "why" mechanisms.
 
 ## 4. Context-adjusted expectation (the order-effect problem)
 
+**Status: shipped** (branch `feat/progression-reasoning-trace`, PR #66). Turned out to be a
+smaller lift than expected: `linearProgression.ts` already tempered *suggested weight* by session
+position (`computeFatigueScore`/`calibrateSensitivity`) before this doc was written — it just
+never reported confidence or showed its work, which §3 fixed. What was actually missing was the
+*trend classifier* side: `classifyTrend` now takes an optional `sessionPositions` array
+(index-aligned with `values`) and, once both a "done first" and a "done later" group have enough
+samples (mirroring the same `MIN_CALIBRATION_SAMPLES` threshold), credits later-in-session
+readings back toward their fresh-equivalent before fitting the slope — so a lift that's reliably
+logged last doesn't read as regressing purely because that's when it's always trained.
+`sessionPosition` now flows end-to-end: `findExerciseIndexInSession` (new shared helper in
+`domain/workout.ts`, deduping what `getSuggestion`/`getExerciseHistory` each computed separately)
+→ `ExerciseHistoryEntry.sessionPosition` → `AnalyticsDataPoint.sessionPosition` (new field,
+threaded through `basicAnalytics.ts`) → `classifyTrend`. Both the raw and fatigue-adjusted slope
+are kept in `Reasoning.computed` (`rawSlopePctPerSession` vs `slopePctPerSession`) so the "Why?"
+view can show the correction happened, not just its result.
+
 Every session block already carries `orderIndex`; nothing new needs capturing. The model: learn,
 per user per exercise, an expected performance discount as a function of session position —
 e.g. "bench 4th-or-later in your session historically runs ~6% below bench 1st." Two
@@ -171,12 +187,10 @@ sequencing below.
 
 ## 9. Sequencing
 
-1. Reasoning-trace contract + generic "Why?" UI (§3) — foundation, nothing else should be built
-   without it.
-2. Context-adjusted per-exercise suggestions (§4) — first real consumer, smallest personalization
-   surface, validates the contract.
-3. Personalized volume/frequency landmarks (§5) — second consumer, larger (per-muscle-group,
-   whole-programme view).
+1. ~~Reasoning-trace contract + generic "Why?" UI (§3)~~ — **shipped**, PR #66.
+2. ~~Context-adjusted per-exercise suggestions (§4)~~ — **shipped**, PR #66.
+3. Personalized volume/frequency landmarks (§5) — next up. Second consumer, larger
+   (per-muscle-group, whole-programme view).
 4. Program library (§6) — independent of 1-3, can build in parallel; it's the on-ramp, not the
    engine.
 5. Autoregulation input widening (§7) — contract accommodation only; the actual plugin is

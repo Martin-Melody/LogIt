@@ -1,4 +1,4 @@
-import { getExercises } from "../../domain/workout";
+import { getExercises, findExerciseIndexInSession } from "../../domain/workout";
 import type { ExerciseHistoryEntry } from "../../domain/progression";
 import type { Exercise } from "../../domain/exercise";
 import type { ProgressionDeps } from "./deps";
@@ -19,20 +19,17 @@ export async function getExerciseHistory(
       : deps.exerciseRepo.getByName(exercise.name),
   ]);
 
-  const lowerName = exercise.name.toLowerCase();
-
   const history: ExerciseHistoryEntry[] = sessions
     .filter((session) => !session.excludeFromProgression)
     .flatMap((session) => {
-      const match = getExercises(session).find((e) =>
-        (exercise.id && e.exerciseId === exercise.id) ||
-        e.exerciseName.toLowerCase() === lowerName,
-      );
-      if (!match) return [];
+      const sessionPosition = findExerciseIndexInSession(session, exercise);
+      if (sessionPosition === -1) return [];
+      const match = getExercises(session)[sessionPosition]!;
       return [{
         sessionId: session.id,
         performedAtMs: session.endedAtMs ?? session.startedAtMs,
         sets: match.sets,
+        sessionPosition,
       } satisfies ExerciseHistoryEntry];
     })
     .sort((a, b) => a.performedAtMs - b.performedAtMs); // oldest first
