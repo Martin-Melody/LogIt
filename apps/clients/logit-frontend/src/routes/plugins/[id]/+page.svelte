@@ -66,6 +66,7 @@
       case "analytics": return "Analytics module";
       case "nutrition-algorithm": return "Nutrition algorithm";
       case "nutrition-analytics": return "Nutrition insights";
+      case "muscle-group-insight": return "Muscle-group insight";
     }
   }
 

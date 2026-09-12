@@ -110,7 +110,8 @@ function isPluginFamily(v: unknown): v is PluginFamily {
     v === "mobility-pack" ||
     v === "analytics" ||
     v === "nutrition-algorithm" ||
-    v === "nutrition-analytics"
+    v === "nutrition-analytics" ||
+    v === "muscle-group-insight"
   );
 }
 
@@ -195,6 +196,12 @@ function isNutritionAnalyticsCapability(v: unknown): boolean {
   return record.family === "nutrition-analytics" && isString(record.analyticsId);
 }
 
+function isMuscleGroupInsightCapability(v: unknown): boolean {
+  if (!v || typeof v !== "object") return false;
+  const record = v as Record<string, unknown>;
+  return record.family === "muscle-group-insight" && isString(record.algorithmId);
+}
+
 function isPluginCapability(v: unknown): v is PluginCapability {
   return (
     isWidgetCapability(v) ||
@@ -204,7 +211,8 @@ function isPluginCapability(v: unknown): v is PluginCapability {
     isMobilityPackCapability(v) ||
     isAnalyticsCapability(v) ||
     isNutritionAlgorithmCapability(v) ||
-    isNutritionAnalyticsCapability(v)
+    isNutritionAnalyticsCapability(v) ||
+    isMuscleGroupInsightCapability(v)
   );
 }
 

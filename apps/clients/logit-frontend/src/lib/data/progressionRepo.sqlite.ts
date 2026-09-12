@@ -2,6 +2,7 @@ import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
 import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
 import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 import type { UserMobilityProgressionConfig } from "@logit/core/domain/mobilityProgression";
+import type { UserMuscleGroupInsightConfig } from "@logit/core/domain/muscleGroupInsight";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { nowMs } from "@logit/core/domain/time";
@@ -13,6 +14,9 @@ function owner(): string {
 // Reuses the algorithm_preferences KV table under a reserved key, so no schema
 // migration is needed for the mobility algorithm choice.
 const MOBILITY_CONFIG_KEY = "__mobility_progression_config__";
+// Same trick, same table, for the muscle-group-insight algorithm choice (§5
+// option B) — one more reserved key, not a new table.
+const MUSCLE_GROUP_INSIGHT_CONFIG_KEY = "__muscle_group_insight_config__";
 
 export function createSqliteProgressionRepo(): ProgressionRepo {
   return {
@@ -66,6 +70,34 @@ export function createSqliteProgressionRepo(): ProgressionRepo {
       await db.run(
         `DELETE FROM algorithm_preferences WHERE owner_id = ? AND algorithm_id = ?`,
         [owner(), MOBILITY_CONFIG_KEY],
+      );
+    },
+
+    async getMuscleGroupInsightConfig(): Promise<UserMuscleGroupInsightConfig | null> {
+      const db = getDb();
+      const res = await db.query(
+        `SELECT data FROM algorithm_preferences WHERE owner_id = ? AND algorithm_id = ?`,
+        [owner(), MUSCLE_GROUP_INSIGHT_CONFIG_KEY],
+      );
+      const row = res.values?.[0] as { data: string } | undefined;
+      if (!row) return null;
+      try { return JSON.parse(row.data) as UserMuscleGroupInsightConfig; } catch { return null; }
+    },
+
+    async saveMuscleGroupInsightConfig(config: UserMuscleGroupInsightConfig): Promise<void> {
+      const db = getDb();
+      await db.run(
+        `INSERT INTO algorithm_preferences(owner_id, algorithm_id, data) VALUES(?, ?, ?)
+         ON CONFLICT(owner_id, algorithm_id) DO UPDATE SET data = excluded.data`,
+        [owner(), MUSCLE_GROUP_INSIGHT_CONFIG_KEY, JSON.stringify(config)],
+      );
+    },
+
+    async clearMuscleGroupInsightConfig(): Promise<void> {
+      const db = getDb();
+      await db.run(
+        `DELETE FROM algorithm_preferences WHERE owner_id = ? AND algorithm_id = ?`,
+        [owner(), MUSCLE_GROUP_INSIGHT_CONFIG_KEY],
       );
     },
 

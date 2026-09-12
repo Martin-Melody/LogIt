@@ -2,22 +2,21 @@ import { getExercises } from "../../domain/workout";
 import type { WorkoutSession, ExerciseEntry } from "../../domain/workout";
 import type { MuscleGroup } from "../../domain/exercise";
 import { classifyTrend, PROGRESS_STATUS_ATTENTION_ORDER, type ProgressStatus } from "../../domain/progression";
-import type { Reasoning, ReasoningConfidence } from "../../domain/reasoning";
+import type { Reasoning } from "../../domain/reasoning";
+import type {
+  MuscleGroupInsightContributingExercise,
+  MuscleGroupInsightWeek,
+  MuscleGroupVolumeInsight,
+} from "../../domain/muscleGroupInsight";
 import { weekBucket, nowMs } from "../../domain/time";
 import { getExerciseAnalytics } from "./getExerciseAnalytics";
 import { pickPrimarySeries } from "./getExerciseProgressStory";
+import { DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID } from "./getMuscleGroupInsightConfig";
 import type { ProgressionDeps } from "./deps";
 
 // A secondary-muscle set counts for 40% of a primary one — same convention as
 // computeFatigueScore (linearProgression.ts): assistive load, not maximal.
 const SECONDARY_MUSCLE_WEIGHT = 0.4;
-
-// Correlation (the "suggested range" part of this insight) only runs with real
-// support behind it — see docs/architecture/adaptive-progression-engine.md §5.
-const MIN_WEEKS_FOR_CORRELATION = 8;
-const MIN_SAMPLES_PER_BUCKET = 4;
-const HIGH_CONFIDENCE_SAMPLES_PER_BUCKET = 8;
-const IMPROVE_RATE_DIFF_THRESHOLD = 0.15; // 15 percentage points
 
 export type MuscleGroupContributingExercise = {
   exerciseId?: string;
@@ -25,12 +24,7 @@ export type MuscleGroupContributingExercise = {
   status: ProgressStatus;
 };
 
-export type MuscleGroupVolumeInsight = {
-  direction: "higher" | "lower"; // which side of thresholdSets correlates with more improved sessions
-  thresholdSets: number; // the median weekly volume the split was made at
-  improveRateAbove: number; // 0-1
-  improveRateBelow: number; // 0-1
-};
+export type { MuscleGroupVolumeInsight };
 
 export type MuscleGroupInsight = {
   muscleGroup: MuscleGroup;
@@ -55,12 +49,6 @@ export type MuscleGroupInsightsResult = {
 type WeekAgg = { weightedSets: number; sessionIds: Set<string> };
 type ExerciseRef = { exerciseId?: string; exerciseName: string };
 
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
-}
-
 function worstStatus(statuses: ProgressStatus[]): ProgressStatus {
   for (const s of PROGRESS_STATUS_ATTENTION_ORDER) {
     if (statuses.includes(s)) return s;
@@ -68,10 +56,27 @@ function worstStatus(statuses: ProgressStatus[]): ProgressStatus {
   return "new";
 }
 
+/**
+ * Fetches every session, resolves muscle tags, and builds each muscle
+ * group's weekly volume series + per-exercise trend statuses — the generic
+ * plumbing a §5-option-B algorithm needs but shouldn't have to fetch itself
+ * (the same role getSuggestion.ts/getMobilitySuggestion.ts play for their
+ * families). What the resolved series actually *means* — is there a real
+ * volume/frequency correlation, and how confident is that — is delegated to
+ * whichever `MuscleGroupInsightAlgorithm` is configured
+ * (adaptive-progression-engine.md §5 option B), not decided here.
+ */
 export async function getMuscleGroupInsights(
-  deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry">,
+  deps: Pick<
+    ProgressionDeps,
+    "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry" | "muscleGroupInsightAlgorithmRegistry"
+  >,
 ): Promise<MuscleGroupInsightsResult> {
   const sessions: WorkoutSession[] = await deps.workoutRepo.listAllSessions();
+
+  const config = await deps.progressionRepo.getMuscleGroupInsightConfig();
+  const algorithmId = config?.algorithmId ?? DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID;
+  const algorithm = await deps.muscleGroupInsightAlgorithmRegistry.get(algorithmId);
 
   // Resolve each distinct exercise's muscle tags exactly once, however many
   // sessions it appears in.
@@ -143,19 +148,18 @@ export async function getMuscleGroupInsights(
     const exerciseRefs = exercisesByGroup.get(group);
     if (!exerciseRefs || exerciseRefs.size === 0) continue;
 
-    const weeks = [...weekMap.entries()].sort((a, b) => a[0] - b[0]);
-    const weeksWithData = weeks.length;
+    const weeksSorted = [...weekMap.entries()].sort((a, b) => a[0] - b[0]);
+    const weeksWithData = weeksSorted.length;
     const currentWeekSets = Math.round((weekMap.get(currentWeek)?.weightedSets ?? 0) * 10) / 10;
     const avgWeeklySets =
-      Math.round((weeks.reduce((s, [, v]) => s + v.weightedSets, 0) / weeksWithData) * 10) / 10;
+      Math.round((weeksSorted.reduce((s, [, v]) => s + v.weightedSets, 0) / weeksWithData) * 10) / 10;
     const avgWeeklyFrequency =
-      Math.round((weeks.reduce((s, [, v]) => s + v.sessionIds.size, 0) / weeksWithData) * 10) / 10;
+      Math.round((weeksSorted.reduce((s, [, v]) => s + v.sessionIds.size, 0) / weeksWithData) * 10) / 10;
 
     // Per-exercise trend, reusing the same analytics + classifier the exercise's own
-    // page uses — and the exercise-level primary series, kept around for the volume
-    // correlation below.
-    const contributingExercises: MuscleGroupContributingExercise[] = [];
-    const exerciesSeries: { points: { date: number; value: number; sessionPosition?: number }[] }[] = [];
+    // page uses — feeds both this group's status and, via seriesPoints, whatever the
+    // configured algorithm wants to correlate volume against.
+    const contributingExercises: MuscleGroupInsightContributingExercise[] = [];
 
     for (const ref of exerciseRefs.values()) {
       const analytics = await getExerciseAnalytics({ id: ref.exerciseId, name: ref.exerciseName }, deps);
@@ -176,68 +180,36 @@ export async function getMuscleGroupInsights(
         exerciseId: ref.exerciseId,
         exerciseName: ref.exerciseName,
         status: trend.status,
+        seriesPoints: points.map((p) => ({ date: p.date, value: p.value })),
       });
-      exerciesSeries.push({ points });
     }
 
     if (contributingExercises.length === 0) continue;
 
     const status = worstStatus(contributingExercises.map((c) => c.status));
 
-    // Volume correlation: does this muscle group's weekly volume tend to be higher
-    // or lower in weeks where its exercises' sessions improved on the one before?
-    // See adaptive-progression-engine.md §5 — deliberately not a fixed formula, and
-    // deliberately silent unless there's real support for a claim.
-    let volumeInsight: MuscleGroupVolumeInsight | undefined;
-    let confidence: ReasoningConfidence = "low";
-    let correlationVerdict = "not enough weeks of varied training yet to tell what volume works best";
-    let samplesAbove = 0;
-    let samplesBelow = 0;
-    let improvedAbove = 0;
-    let improvedBelow = 0;
+    const weeks: MuscleGroupInsightWeek[] = weeksSorted.map(([bucket, v]) => ({
+      weekBucket: bucket,
+      weightedSets: v.weightedSets,
+      sessionCount: v.sessionIds.size,
+    }));
 
-    if (weeksWithData >= MIN_WEEKS_FOR_CORRELATION) {
-      const thresholdSets = median(weeks.map(([, v]) => v.weightedSets));
-
-      for (const { points } of exerciesSeries) {
-        for (let i = 1; i < points.length; i++) {
-          const improved = points[i]!.value > points[i - 1]!.value;
-          const weekOfPoint = weekBucket(points[i]!.date);
-          const setsThatWeek = weekMap.get(weekOfPoint)?.weightedSets ?? 0;
-          if (setsThatWeek >= thresholdSets) {
-            samplesAbove++;
-            if (improved) improvedAbove++;
-          } else {
-            samplesBelow++;
-            if (improved) improvedBelow++;
-          }
-        }
-      }
-
-      if (samplesAbove >= MIN_SAMPLES_PER_BUCKET && samplesBelow >= MIN_SAMPLES_PER_BUCKET) {
-        const rateAbove = improvedAbove / samplesAbove;
-        const rateBelow = improvedBelow / samplesBelow;
-        const diff = rateAbove - rateBelow;
-
-        if (Math.abs(diff) >= IMPROVE_RATE_DIFF_THRESHOLD) {
-          volumeInsight = {
-            direction: diff > 0 ? "higher" : "lower",
-            thresholdSets: Math.round(thresholdSets * 10) / 10,
-            improveRateAbove: Math.round(rateAbove * 100) / 100,
-            improveRateBelow: Math.round(rateBelow * 100) / 100,
-          };
-          confidence =
-            samplesAbove >= HIGH_CONFIDENCE_SAMPLES_PER_BUCKET && samplesBelow >= HIGH_CONFIDENCE_SAMPLES_PER_BUCKET
-              ? "high"
-              : "medium";
-          correlationVerdict = `sessions tend to improve more in weeks with ${diff > 0 ? "≥" : "<"}${volumeInsight.thresholdSets} sets`;
-        } else {
-          correlationVerdict = "enough data, but no clear volume pattern found yet";
-        }
-      } else {
-        correlationVerdict = "not enough varied-volume weeks yet to compare";
-      }
-    }
+    // Delegates "what does this volume pattern mean" to the configured algorithm
+    // (§5 option B) — see adaptive-progression-engine.md §5.1: deliberately not a
+    // fixed formula, silent unless there's real support for a claim. v1's built-in
+    // is stateless (recomputes fresh from `weeks`/`contributingExercises` every
+    // call), so nextState isn't persisted here yet — tracked for whenever an
+    // algorithm actually needs cross-call memory.
+    const output = algorithm
+      ? await algorithm.analyze({
+          muscleGroup: group,
+          weeks,
+          contributingExercises,
+          state: null,
+          userPreferences: {},
+          now: nowMs(),
+        })
+      : null;
 
     insights.push({
       muscleGroup: group,
@@ -246,30 +218,17 @@ export async function getMuscleGroupInsights(
       avgWeeklyFrequency,
       weeksWithData,
       status,
-      contributingExercises,
-      volumeInsight,
-      reasoning: {
-        inputs: {
-          weeksWithData,
-          contributingExerciseCount: contributingExercises.length,
-          volumeCorrelationSamplesAbove: samplesAbove,
-          volumeCorrelationSamplesBelow: samplesBelow,
-          minWeeksRequired: MIN_WEEKS_FOR_CORRELATION,
-        },
-        computed: {
-          currentWeekSets,
-          avgWeeklySets,
-          avgWeeklyFrequency,
-          ...(volumeInsight
-            ? {
-                thresholdSets: volumeInsight.thresholdSets,
-                improveRateAbovePct: Math.round(volumeInsight.improveRateAbove * 100),
-                improveRateBelowPct: Math.round(volumeInsight.improveRateBelow * 100),
-              }
-            : {}),
-        },
-        confidence,
-        verdict: correlationVerdict,
+      contributingExercises: contributingExercises.map(({ exerciseId, exerciseName, status: s }) => ({
+        exerciseId,
+        exerciseName,
+        status: s,
+      })),
+      volumeInsight: output?.volumeInsight,
+      reasoning: output?.reasoning ?? {
+        inputs: { weeksWithData, contributingExerciseCount: contributingExercises.length },
+        computed: { currentWeekSets, avgWeeklySets, avgWeeklyFrequency },
+        confidence: "low",
+        verdict: "no muscle-group-insight algorithm configured",
       },
     });
   }

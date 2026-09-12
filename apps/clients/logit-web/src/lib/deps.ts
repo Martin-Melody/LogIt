@@ -21,6 +21,7 @@ import type { ProgressionDeps } from "@logit/core/usecases/progression/deps";
 import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
 import type { MobilityProgressionAlgorithmRegistry } from "@logit/core/domain/mobilityProgression";
 import type { TrainingBlockTagRepo } from "@logit/core/data/trainingBlockTagRepo";
+import type { MuscleGroupInsightAlgorithmRegistry } from "@logit/core/domain/muscleGroupInsight";
 
 // Progression *suggestions* (what weight to lift next) are a mobile-only workflow —
 // out of scope for this read-only web dashboard. This stub satisfies ProgressionDeps
@@ -55,6 +56,15 @@ const stubTrainingBlockTagRepo: TrainingBlockTagRepo = {
   async delete() {},
 };
 
+const stubMuscleGroupInsightAlgorithmRegistry: MuscleGroupInsightAlgorithmRegistry = {
+  async list() {
+    return [];
+  },
+  async get() {
+    return null;
+  },
+};
+
 /** Repos/registries scoped to whichever account the token belongs to (default), or to a
  * specific client's data when `clientId` is given — a Studio-tier coach viewing a client
  * uses the exact same analytics usecases this way, no new analytics logic needed. Not
@@ -69,6 +79,7 @@ export function getWebDeps(clientId?: string): ProgressionDeps {
     analyticsRegistry: createLocalAnalyticsRegistry(),
     mobilityAlgorithmRegistry: stubMobilityAlgorithmRegistry,
     trainingBlockTagRepo: stubTrainingBlockTagRepo,
+    muscleGroupInsightAlgorithmRegistry: stubMuscleGroupInsightAlgorithmRegistry,
   };
 }
 

@@ -5,6 +5,7 @@ import type { AlgorithmRegistry } from "../../progression/algorithmRegistry";
 import type { AnalyticsRegistry } from "../../domain/analytics";
 import type { MobilityProgressionAlgorithmRegistry } from "../../domain/mobilityProgression";
 import type { TrainingBlockTagRepo } from "../../data/trainingBlockTagRepo";
+import type { MuscleGroupInsightAlgorithmRegistry } from "../../domain/muscleGroupInsight";
 
 /** Full set of repos/registries the progression usecases can draw from.
  * Each usecase only requires the subset it needs (via Pick) — callers can
@@ -17,4 +18,5 @@ export type ProgressionDeps = {
   analyticsRegistry: AnalyticsRegistry;
   mobilityAlgorithmRegistry: MobilityProgressionAlgorithmRegistry;
   trainingBlockTagRepo: TrainingBlockTagRepo;
+  muscleGroupInsightAlgorithmRegistry: MuscleGroupInsightAlgorithmRegistry;
 };

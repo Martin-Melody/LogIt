@@ -9,6 +9,7 @@ import type { AnalyticsRegistry } from "@logit/core/domain/analytics";
 import type { NutritionAlgorithmRegistry } from "@logit/core/domain/nutritionAlgorithm";
 import type { NutritionAnalyticsRegistry } from "@logit/core/domain/nutritionAnalytics";
 import type { MobilityProgressionAlgorithmRegistry } from "@logit/core/domain/mobilityProgression";
+import type { MuscleGroupInsightAlgorithmRegistry } from "@logit/core/domain/muscleGroupInsight";
 
 import { isNativePlatform } from "$lib/platform/isNative";
 
@@ -93,6 +94,7 @@ let analyticsRegistry: AnalyticsRegistry | null = null;
 let nutritionAlgorithmRegistry: NutritionAlgorithmRegistry | null = null;
 let nutritionAnalyticsRegistry: NutritionAnalyticsRegistry | null = null;
 let mobilityAlgorithmRegistry: MobilityProgressionAlgorithmRegistry | null = null;
+let muscleGroupInsightAlgorithmRegistry: MuscleGroupInsightAlgorithmRegistry | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -141,6 +143,7 @@ export async function initRepos(): Promise<void> {
   nutritionAlgorithmRegistry = pluginRuntime.nutritionAlgorithms;
   nutritionAnalyticsRegistry = pluginRuntime.nutritionAnalytics;
   mobilityAlgorithmRegistry = pluginRuntime.mobilityAlgorithms;
+  muscleGroupInsightAlgorithmRegistry = pluginRuntime.muscleGroupInsightAlgorithms;
 
   if (isNativePlatform()) {
     await withTimeout(initSqlite(), 10_000, "initSqlite");
@@ -344,4 +347,10 @@ export function getMobilityAlgorithmRegistry(): MobilityProgressionAlgorithmRegi
   if (!mobilityAlgorithmRegistry)
     throw new Error("MobilityProgressionAlgorithmRegistry not initialized. Call initRepos() first.");
   return mobilityAlgorithmRegistry;
+}
+
+export function getMuscleGroupInsightAlgorithmRegistry(): MuscleGroupInsightAlgorithmRegistry {
+  if (!muscleGroupInsightAlgorithmRegistry)
+    throw new Error("MuscleGroupInsightAlgorithmRegistry not initialized. Call initRepos() first.");
+  return muscleGroupInsightAlgorithmRegistry;
 }
