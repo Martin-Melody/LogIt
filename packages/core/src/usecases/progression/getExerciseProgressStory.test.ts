@@ -98,4 +98,123 @@ describe("getExerciseProgressStory", () => {
     // confirms the adjustment is doing something, not a no-op.
     expect(story!.trendReasoning.computed.rawSlopePctPerSession).toBeLessThan(-1);
   });
+
+  describe("rep-range trial confound", () => {
+    // A fake linear-progression algorithm that just echoes the saved state back
+    // unchanged as nextState — lets the test control repRangeTrial directly
+    // without going through the real trial state machine.
+    function depsWithTrial(trialState: unknown, history: WorkoutSession[]): ProgressionDeps {
+      return {
+        workoutRepo: { listAllSessions: async () => history, listRecentSessions: async () => history },
+        exerciseRepo: { getById: async () => null, getByName: async () => null },
+        progressionRepo: {
+          getAnalyticsConfig: async () => null,
+          getConfig: async () => ({ algorithmId: "linear-progression" }),
+          getExerciseState: async () => ({
+            key: "bench",
+            exerciseName: "Bench",
+            algorithmId: "linear-progression",
+            state: trialState,
+            updatedAtMs: 0,
+          }),
+          getAlgorithmPreferences: async () => null,
+          listExerciseStates: async () => [],
+        },
+        algorithmRegistry: {
+          get: async () => ({
+            id: "linear-progression",
+            name: "Linear",
+            description: "test double",
+            defaultState: null,
+            suggest: (input: { state: unknown }) => ({ sets: [], nextState: input.state }),
+          }),
+        },
+        analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+      } as unknown as ProgressionDeps;
+    }
+
+    it("doesn't call it 'regressing' when a permanent rep-range switch level-shifts e1RM downward", async () => {
+      const startedAtMs = now - 10 * DAY;
+      const history = [
+        session("Bench", 100, 1, now - 40 * DAY),
+        session("Bench", 102, 1, now - 33 * DAY),
+        session("Bench", 104, 1, now - 26 * DAY),
+        session("Bench", 106, 1, now - 19 * DAY),
+        // Switched to a higher rep range at startedAtMs — the achievable load (and
+        // so e1RM) drops, then holds flat/rising under the new regime.
+        session("Bench", 80, 1, startedAtMs),
+        session("Bench", 80, 1, now - 7 * DAY),
+        session("Bench", 81, 1, now - 4 * DAY),
+        session("Bench", 82, 1, now - 1 * DAY),
+      ];
+      const trialState = {
+        repRange: [10, 15],
+        repRangeTrial: {
+          trialRepRange: [10, 15],
+          baselineRepRange: [5, 8],
+          startedAtMs,
+          status: "concluded",
+          result: { trialSlopePctPerSession: 0.8, baselineSlopePctPerSession: 0.4, switched: true, concludedAtMs: now - 7 * DAY },
+        },
+      };
+
+      const withFix = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
+      const withoutFix = await getExerciseProgressStory({ name: "Bench" }, deps(history));
+
+      // Same raw series, naively read, falls as a straight line across the switch.
+      expect(withoutFix!.status).toBe("regressing");
+      expect(withFix!.status).not.toBe("regressing");
+      expect(withFix!.trendReasoning.inputs.excludedForRegimeChange).toBe(4);
+    });
+
+    it("excludes the in-progress trial window (not yet concluded) rather than trusting inconclusive data", async () => {
+      const startedAtMs = now - 10 * DAY;
+      const history = [
+        session("Bench", 100, 1, now - 40 * DAY),
+        session("Bench", 102, 1, now - 33 * DAY),
+        session("Bench", 104, 1, now - 26 * DAY),
+        session("Bench", 106, 1, now - 19 * DAY),
+        // Mid-trial reading, sharply lower — shouldn't be trusted yet.
+        session("Bench", 60, 1, startedAtMs),
+      ];
+      const trialState = {
+        repRange: [10, 15],
+        repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs, status: "active" },
+      };
+
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
+      expect(story!.trendReasoning.inputs.excludedForRegimeChange).toBe(1);
+      expect(story!.status).not.toBe("regressing");
+    });
+
+    it("excludes only the abandoned trial window when the trial concluded without switching", async () => {
+      const startedAtMs = now - 20 * DAY;
+      const concludedAtMs = now - 10 * DAY;
+      const history = [
+        session("Bench", 100, 1, now - 40 * DAY),
+        session("Bench", 102, 1, now - 33 * DAY),
+        session("Bench", 104, 1, now - 26 * DAY),
+        // Trial window — abandoned, shouldn't count.
+        session("Bench", 60, 1, startedAtMs + 1 * DAY),
+        session("Bench", 61, 1, startedAtMs + 4 * DAY),
+        // Reverted back to baseline, continuing the earlier rise.
+        session("Bench", 106, 1, concludedAtMs + 1 * DAY),
+        session("Bench", 108, 1, now - 1 * DAY),
+      ];
+      const trialState = {
+        repRange: [5, 8],
+        repRangeTrial: {
+          trialRepRange: [10, 15],
+          baselineRepRange: [5, 8],
+          startedAtMs,
+          status: "concluded",
+          result: { trialSlopePctPerSession: -0.2, baselineSlopePctPerSession: 0.6, switched: false, concludedAtMs },
+        },
+      };
+
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
+      expect(story!.trendReasoning.inputs.excludedForRegimeChange).toBe(2);
+      expect(story!.status).toBe("progressing");
+    });
+  });
 });

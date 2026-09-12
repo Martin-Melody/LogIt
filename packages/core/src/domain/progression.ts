@@ -276,10 +276,20 @@ function calibrateFatigueDiscount(
  * back toward what they'd likely have been done fresh before the slope is fit —
  * so a lift that's reliably done last doesn't read as regressing just because
  * that's when it's always logged. See docs/architecture/adaptive-progression-engine.md §4.
+ *
+ * When `comparableToCurrent` is supplied (index-aligned with `values`), a point
+ * marked `false` is dropped entirely before anything else runs — it was measured
+ * under a different regime (e.g. a different rep range mid an experiment) that
+ * the metric itself isn't reliably comparable across, unlike the fatigue
+ * adjustment above, which can credit a value back with a learned discount. There's
+ * no safe way to "convert" an e1RM reading between regimes, so excluding is the
+ * honest move rather than guessing. See §10 and the "tag a training block" idea
+ * in the design doc — this is the first concrete case of a more general need.
  */
 export function classifyTrend(params: {
   values: number[];
   sessionPositions?: (number | undefined)[];
+  comparableToCurrent?: (boolean | undefined)[];
   lastTrainedMs: number;
   nowMs: number;
 }): {
@@ -288,7 +298,11 @@ export function classifyTrend(params: {
   sessionsSincePr: number;
   reasoning: Reasoning;
 } {
-  const { values, sessionPositions, lastTrainedMs, nowMs } = params;
+  const keep = params.values.map((_, i) => params.comparableToCurrent?.[i] !== false);
+  const values = params.values.filter((_, i) => keep[i]);
+  const sessionPositions = params.sessionPositions?.filter((_, i) => keep[i]);
+  const excludedCount = params.values.length - values.length;
+  const { lastTrainedMs, nowMs } = params;
 
   // Sessions since the last all-time best in the series.
   let runningMax = -Infinity;
@@ -307,7 +321,11 @@ export function classifyTrend(params: {
       slopePctPerSession: 0,
       sessionsSincePr,
       reasoning: {
-        inputs: { sessionsAvailable: values.length, minSessionsRequired: MIN_SESSIONS },
+        inputs: {
+          sessionsAvailable: values.length,
+          minSessionsRequired: MIN_SESSIONS,
+          excludedForRegimeChange: excludedCount,
+        },
         computed: {},
         confidence: "high",
         verdict: "new",
@@ -325,6 +343,7 @@ export function classifyTrend(params: {
         inputs: {
           daysSinceLastTrained,
           detrainingThresholdDays: Math.round(DETRAINING_MS / 86_400_000),
+          excludedForRegimeChange: excludedCount,
         },
         computed: {},
         confidence: "high",
@@ -391,6 +410,7 @@ export function classifyTrend(params: {
         regressingBelowSlopePct: REGRESSING_SLOPE_THRESHOLD,
         fatigueCalibrated: fatigue.calibrated,
         fatigueCalibrationSamples: `${fatigue.freshSamples} fresh / ${fatigue.fatiguedSamples} later-in-session`,
+        excludedForRegimeChange: excludedCount,
       },
       computed: {
         slopePctPerSession: Math.round(adjusted.slopePctPerSession * 100) / 100,

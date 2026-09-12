@@ -29,6 +29,48 @@ export type ExerciseProgressStory = {
 
 const PRIMARY_METRIC_PRIORITY = ["estimated_1rm", "max_weight", "min_assist", "max_reps"];
 
+// Bespoke to linear-progression's rep-range trial (§10) — same v1 scope boundary
+// as the warm-start lookup in getSuggestion.ts. A rep-range switch is a genuine
+// LEVEL SHIFT in e1RM (different rep range, different Epley accuracy, different
+// achievable load), not a real change in how hard the lift is progressing — left
+// unhandled, the overall trend classifier would misread it as regressing or
+// progressing depending on which way the switch went. Read straight off
+// `suggestion.nextState` (already computed by getSuggestion above) rather than a
+// second repo fetch. This is the first concrete case of a more general "tag a
+// training block so it doesn't leave an undifferentiated mark on trend history"
+// need Martin's floated (injury, tempo change, etc.) — tracked as a follow-up in
+// the design doc rather than generalized here.
+type LinearTrialState = {
+  repRangeTrial?: {
+    startedAtMs: number;
+    status: "active" | "concluded";
+    result?: { switched: boolean; concludedAtMs: number };
+  };
+};
+
+function computeComparableToCurrent(
+  points: { date: number }[],
+  trial: LinearTrialState["repRangeTrial"] | undefined,
+): (boolean | undefined)[] | undefined {
+  if (!trial) return undefined;
+  if (trial.status === "active") {
+    // Mid-trial: the trial hasn't proven itself yet and might get abandoned, so
+    // don't let its (as yet inconclusive) readings drive the headline trend —
+    // keep classifying off the established pre-trial regime until it concludes.
+    return points.map((p) => p.date < trial.startedAtMs);
+  }
+  if (trial.result?.switched) {
+    // Switched for good: the trial range IS the current regime now — the old
+    // baseline readings are the ones that no longer represent "current".
+    return points.map((p) => p.date >= trial.startedAtMs);
+  }
+  // Concluded but reverted: current regime is the baseline, both before the
+  // trial started and after it was abandoned — only the trial window itself
+  // (a different regime that didn't stick) is excluded.
+  const concludedAtMs = trial.result?.concludedAtMs ?? trial.startedAtMs;
+  return points.map((p) => p.date < trial.startedAtMs || p.date >= concludedAtMs);
+}
+
 /** Exported for reuse by anything that needs "the one series that best represents
  * progress" for an exercise — e.g. getMuscleGroupInsights, which correlates the same
  * primary metric against weekly training volume rather than just its own trend. */
@@ -82,7 +124,9 @@ export async function getExerciseProgressStory(
   const sessionPositions = points.map((p) => p.sessionPosition);
   const lastTrainedMs = points[points.length - 1]!.date;
 
-  const trend = classifyTrend({ values, sessionPositions, lastTrainedMs, nowMs: nowMs() });
+  const trial = (suggestion?.nextState as LinearTrialState | null)?.repRangeTrial;
+  const comparableToCurrent = computeComparableToCurrent(points, trial);
+  const trend = classifyTrend({ values, sessionPositions, comparableToCurrent, lastTrainedMs, nowMs: nowMs() });
 
   // Last PR in the primary series.
   let runningMax = -Infinity;
