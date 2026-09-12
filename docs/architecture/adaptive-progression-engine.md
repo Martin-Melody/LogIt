@@ -180,10 +180,12 @@ reasoning-trace widening should account for even though the built-in engine won'
 
 ## 8. e1RM everywhere
 
-Unrelated to the above — pure infrastructure, no design decision. Already computed (Epley) in
-`getExerciseAnalytics`; expose the helper from `@logit/core` and use it consistently in the
-recap and exercise header so plugins share one formula. Fine to do any time, independent of
-sequencing below.
+**Status: shipped.** New `domain/oneRepMax.ts` exports `estimated1RM` (the same Epley formula
+`basicAnalytics.ts` used to compute privately); `getExerciseStats` gained `bestEstimated1RM`,
+shown in the exercise detail header alongside best set/sessions/last performed; the workout
+recap shows it next to each PR and the "best lift" card whenever reps > 1 (at 1 rep it equals
+the raw weight already on screen, so a second figure would be redundant). Community plugins can
+now import the same helper instead of reimplementing the formula.
 
 ## 9. Sequencing
 
@@ -195,7 +197,7 @@ sequencing below.
    engine.
 5. Autoregulation input widening (§7) — contract accommodation only; the actual plugin is
    someone's (possibly Martin's own) later work, not core-team-built.
-6. e1RM everywhere (§8) — cheap, do whenever convenient.
+6. ~~e1RM everywhere (§8)~~ — **shipped**, PR #66.
 
 ## 10. Extension points recap
 

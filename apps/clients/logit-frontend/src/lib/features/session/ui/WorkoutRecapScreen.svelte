@@ -8,6 +8,7 @@
   import { getExercises, getTopSetHighlight, foldSupersets, setTypeMeta } from "@logit/core/domain/workout";
   import { formatDuration } from "@logit/core/domain/time";
   import { toDisplayWeight, formatWeight } from "@logit/core/domain/units";
+  import { estimated1RM } from "@logit/core/domain/oneRepMax";
   import { getSessionPRs, type SessionPR } from "@logit/core/usecases/progression/getSessionPRs";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { get } from "svelte/store";
@@ -106,6 +107,13 @@
     })();
   });
 
+  // Only worth showing alongside the raw set once reps > 1 — at 1 rep the estimate
+  // equals the weight already on screen, so a second "≈ Xkg 1RM" would be redundant.
+  function e1rmLabel(weight: number, reps: number): string | null {
+    if (reps <= 1) return null;
+    return `≈${formatWeight(estimated1RM(weight, reps), weightUnit)} 1RM`;
+  }
+
   function prLabel(pr: SessionPR): string {
     if (pr.kind === "first") return "First time";
     if (pr.kind === "reps") return "Rep PR";
@@ -180,6 +188,9 @@
             </p>
             <p class="text-xs text-muted-foreground tabular-nums">
               {pr.reps} reps @ {formatWeight(pr.weight, weightUnit)}
+              {#if e1rmLabel(pr.weight, pr.reps)}
+                <span class="text-muted-foreground/70"> · {e1rmLabel(pr.weight, pr.reps)}</span>
+              {/if}
             </p>
           </div>
           <Sparkles class="ml-auto h-4 w-4 shrink-0 text-amber-500/70" />
@@ -192,6 +203,9 @@
       <p class="text-sm font-semibold mt-0.5">
         {topSet.exerciseName}
         <span class="font-normal text-muted-foreground"> · {topSet.reps} reps @ {formatWeight(topSet.weight, weightUnit)}</span>
+        {#if e1rmLabel(topSet.weight, topSet.reps)}
+          <span class="font-normal text-muted-foreground/70"> · {e1rmLabel(topSet.weight, topSet.reps)}</span>
+        {/if}
       </p>
     </div>
   {/if}
