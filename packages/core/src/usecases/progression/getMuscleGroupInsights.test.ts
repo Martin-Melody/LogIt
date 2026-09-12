@@ -183,7 +183,7 @@ describe("getMuscleGroupInsights", () => {
   it("falls back to a low-confidence reasoning when no algorithm is configured", async () => {
     const sessions = [2, 1, 0].map((w) => sessionAtWeek(w, [{ name: "Bench", weight: 100, reps: 5 }]));
     const d = deps(sessions, { bench: { primaryMuscles: ["chest"] } });
-    (d.muscleGroupInsightAlgorithmRegistry as { get: () => Promise<null> }).get = async () => null;
+    d.muscleGroupInsightAlgorithmRegistry = { list: async () => [], get: async () => null };
 
     const { insights } = await getMuscleGroupInsights(d);
     const chest = insights.find((i) => i.muscleGroup === "chest")!;
