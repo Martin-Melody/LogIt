@@ -59,6 +59,18 @@ export type SuggestedSet = {
   note?: string;
 };
 
+/**
+ * A dismissible, trackable ask — distinct from `notes` (a static free-text line
+ * with no identity). `id` must be stable per algorithm+kind (e.g.
+ * "linear-progression:order-variety") so the generic dismissal layer
+ * (getSuggestion.ts) can recognise a previously-dismissed nudge and suppress it,
+ * without the algorithm needing to manage that state itself.
+ */
+export type ProgressionNudge = {
+  id: string;
+  message: string;
+};
+
 export type ProgressionOutput = {
   sets: SuggestedSet[];
   nextState: unknown;
@@ -70,6 +82,11 @@ export type ProgressionOutput = {
   // Optional structured "show your work" — see domain/reasoning.ts. Not required so
   // existing/third-party algorithms keep working unchanged; the built-in ones populate it.
   reasoning?: Reasoning;
+  // Optional dismissible ask for help generating learning signal (e.g. "vary where
+  // this lands in your session"). The algorithm decides *whether* to ask; whether
+  // it's actually shown (i.e. hasn't already been dismissed) is handled generically,
+  // not by the algorithm — see getSuggestion.ts and dismissProgressionNudge.ts.
+  nudge?: ProgressionNudge;
 };
 
 export type ProgressionAlgorithmMeta = {
@@ -95,6 +112,10 @@ export type ExerciseProgressionState = {
   algorithmId: string;
   state: unknown;
   updatedAtMs: number;
+  // Nudge ids (ProgressionNudge.id) the user has dismissed for this exercise —
+  // app-owned, not part of the algorithm's own opaque `state`, so a plugin
+  // algorithm gets dismissal handling for free instead of implementing its own.
+  dismissedNudges?: string[];
 };
 
 export type UserProgressionConfig = {

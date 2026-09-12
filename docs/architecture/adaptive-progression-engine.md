@@ -259,42 +259,45 @@ low-value signal on its own; doing this right needs wearable/platform integratio
 HealthKit, Google/Android Health Connect, etc.), which is a substantial *separate* integration
 project, not an extension of this progression-engine work. Not tracked further in this doc.
 
-## 10. Deliberate signal-generation UX (raised, not started — 2026-09-12)
+## 10. Deliberate signal-generation UX
 
 Two separate conversations converged on the same underlying gap: **some learning signal doesn't
-occur naturally and has to be deliberately asked for.**
+occur naturally and has to be deliberately asked for.** They turned out to need genuinely
+different treatments, not one shared UI:
 
-- **Order-effect calibration (§4)** already has a first, weak version of this: `linearProgression`
-  emits a note — *"Try varying where this exercise falls in your session to improve fatigue
-  estimates"* — when an exercise has sat in the same session slot for >85% of its last 10
-  sessions (`shouldSuggestVariety`). It works, but it's a single muted line of text with no
-  explicit action and no tracking of whether the user acted on it.
-- **Personalized set/rep prescription per exercise** (raised by Martin testing this branch —
-  the in-session "Target: 3×5-8" is a fixed global preference today, not learned per exercise;
-  see below) has a harder version of the *same* problem: set count and rep range don't vary
-  organically at all today (every exercise gets the identical global prescription), so there's
-  no incidental data to learn from the way session position at least sometimes varies on its
-  own. Passive learning alone won't get there — it needs the app to occasionally ask for
-  variation on purpose.
-
-**Decided:** treat this as one shared mechanism rather than two separate features — an explicit,
-trackable "help us learn this" prompt (e.g. "Move this to the start of your next session" / "try
-4 sets this time"), not a muted note, so the app knows whether the ask was followed and can stop
-once it has enough data. Not scoped or designed yet — real open questions before building:
-exactly what it looks like across the two use cases, how pushy it should be, and how it avoids
-feeling arbitrary/buggy when the prescription changes for no reason the user can already see
-(the reasoning-trace "Why?" view is presumably how it explains itself, extending §3 rather than
-inventing new UI). Fold into the next design pass alongside whichever of §5-option-B / §6 / §7
-comes next.
-
-**Context on the set/rep prescription gap this surfaced:** `workingSets`/`repRange` live in
-`linearProgression`'s `LinearPreferences`, stored in the single `algorithm_preferences` row keyed
-by algorithm id only (`getAlgorithmPreferences(algorithmId)`) — one prescription for every
-exercise, not per-exercise. Verified by reading the actual query path, not assumed. Learning it
-per exercise would reuse the same "correlate a variable against outcome from the user's own
-history" pattern as §5, just at exercise granularity and keyed on set-count/rep-range instead of
-weekly volume — blocked on this section's UX resolving first, since there's nothing to correlate
-without a way to generate the variation.
+- **Order-variation nudge — status: shipped** (branch `feat/progression-reasoning-trace`). Low
+  stakes: it's a request about something already happening, not a change to any prescribed
+  number. `ProgressionOutput` gained a `nudge?: ProgressionNudge` field (`{ id, message }`) —
+  distinct from the old free-text `notes`, because it needs an *identity* to be dismissible.
+  `linearProgression` emits it keyed off `!calibration.calibrated` directly (the same flag the
+  reasoning already reports) rather than the old separate `shouldSuggestVariety` heuristic
+  (">85% same slot in last 10 sessions"), which could disagree with what `calibrateSensitivity`
+  actually needed — same bug shape as the `/progress`-list drift found earlier, avoided by
+  construction this time. Dismissal is generic, not algorithm-specific: `getSuggestion.ts` filters
+  a `nudge` against `ExerciseProgressionState.dismissedNudges` (new field, additive — rides the
+  existing JSON blob storage, no migration) before returning, so a plugin algorithm gets dismissal
+  handling for free rather than implementing its own. New `dismissProgressionNudge` usecase writes
+  the dismissal immediately (not gated on finishing a workout, unlike the algorithm's own `state`).
+  Surfaced in both places Martin asked for: the in-session suggestion (`ExerciseCard.svelte`) and
+  the `/progress` exercise detail panel (`ExerciseProgressionPanel.svelte`), each with a "Got it"
+  dismiss control. Auto-stops asking the moment `calibrated` flips true — nothing to track for
+  that path, it falls out of the same data the reasoning already reports.
+- **Personalized set/rep prescription per exercise — not started.** Genuinely higher stakes: the
+  in-session "Target: 3×5-8" is a fixed global preference today (`LinearPreferences`, stored in
+  the single `algorithm_preferences` row keyed by algorithm id only — one prescription for every
+  exercise, not per-exercise; verified against the actual query path, not assumed), and there's no
+  organic variation to learn from at all — every exercise gets the identical prescription, unlike
+  session position which at least sometimes varies on its own. Generating signal here means the
+  algorithm has to *proactively change what it prescribes*, on purpose, for a while — a real
+  change to the number the user follows, not just a suggestion about structure. Decided: **opt-in**
+  (a settings toggle, off by default — "Let LogIt experiment with your set/rep scheme to
+  personalize it"), varying **one variable at a time** so results stay attributable, explained
+  live through the same reasoning-trace machinery (§3) rather than new UI, with its own defined
+  sample size / stop condition mirroring `calibrateSensitivity`'s approach rather than inventing a
+  new one. Not scoped yet — real open questions remain: how many sessions per trial, how to avoid
+  confusing someone mid-experiment, whether more than one exercise's experiment should ever run at
+  once. Reuses the same `nudge`/dismissal infra from the order-variation piece where it applies
+  (e.g. an opt-in prompt), but the experiment itself is new work.
 
 ## 11. Sequencing
 
@@ -308,8 +311,8 @@ without a way to generate the variation.
    someone's (possibly Martin's own) later work, not core-team-built.
 6. ~~e1RM everywhere (§8)~~ — **shipped**, PR #66.
 7. Nutrition × training correlation (§9) — raised, not scoped/sequenced yet; likely after §5.
-8. Deliberate signal-generation UX (§10) — raised, not scoped; needs a design pass before any of
-   it is built. Unblocks personalized set/rep prescription (also not scoped) once resolved.
+8. ~~Deliberate signal-generation UX — order-variation nudge (§10)~~ — **shipped**. The set/rep
+   experimentation half of §10 is still not scoped/built — opt-in, needs its own design pass.
 
 ## 12. Extension points recap
 
@@ -333,12 +336,13 @@ marketing copy or docs-site per slice** — batch the update once the engine's s
 enough that it isn't described three different ways in three commits. Update this list as things
 ship; do the actual external-facing pass later, deliberately, not reactively.
 
-**Not yet reflected anywhere external, as of PR #66 (§1-3, 6 shipped):**
+**Not yet reflected anywhere external, as of PR #66 (§1-3, 6, 10-order-nudge shipped):**
 - `apps/clients/docs-site/src/routes/docs/plugins/reference/+page.svx` — still describes
   `ProgressionInput`/`ProgressionOutput` generically (line ~61); doesn't mention `reasoning`,
-  `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), or the widened `sessionPositions`
-  parameter on `classifyTrend`. A plugin author reading this today wouldn't know the reasoning
-  contract exists at all, let alone that it's expected of a marketplace-quality algorithm.
+  `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), the widened `sessionPositions`
+  parameter on `classifyTrend`, or the new `nudge`/`ProgressionNudge`/dismissal contract (§10). A
+  plugin author reading this today wouldn't know any of this exists, let alone that reasoning is
+  expected of a marketplace-quality algorithm.
 - No docs-site page for the muscle-group insight (`getMuscleGroupInsights`) — comparable pages
   exist for mobility (`docs/plugins/mobility-progression`, `mobility-packs`); this doesn't have
   one yet, and shouldn't until §5's option B (the pluggable version) exists — document the real
