@@ -1,9 +1,5 @@
 import type { AnalyticsPlugin, AnalyticsInput, AnalyticsOutput } from "../../domain/analytics";
-
-// Epley formula: estimated 1RM = weight × (1 + reps / 30)
-function epley1RM(weight: number, reps: number): number {
-  return reps === 1 ? weight : weight * (1 + reps / 30);
-}
+import { estimated1RM } from "../../domain/oneRepMax";
 
 function computeNormal(input: AnalyticsInput): AnalyticsOutput {
   const maxWeightPoints = [];
@@ -22,7 +18,7 @@ function computeNormal(input: AnalyticsInput): AnalyticsOutput {
 
     const maxWeight = Math.max(...workingSets.map((s) => s.weight));
     const totalVolume = workingSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
-    const best1RM = Math.max(...workingSets.map((s) => epley1RM(s.weight, s.reps)));
+    const best1RM = Math.max(...workingSets.map((s) => estimated1RM(s.weight, s.reps)));
 
     if (maxWeight > allTimeMax) allTimeMax = maxWeight;
     if (best1RM > allTimeBest1RM) allTimeBest1RM = best1RM;
