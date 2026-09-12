@@ -37,6 +37,8 @@
     })) ?? [],
   );
 
+  const currentDef = $derived(metricDefs.find((d) => d.id === activeSeries));
+
   async function refreshStory() {
     story = await getExerciseProgressStory(exercise, getProgressionDeps()).catch(() => null);
   }
@@ -164,7 +166,6 @@
           x="date"
           xScale={scaleUtc()}
           series={[{ key: "value", label: currentSeries?.label ?? "", color: chartConfig.value.color }]}
-          axis="x"
           props={{
             area: {
               curve: curveNatural,
@@ -175,6 +176,11 @@
             xAxis: {
               format: (v: Date) =>
                 v.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+            },
+            yAxis: {
+              label: currentDef?.unit ? `${currentSeries?.label ?? ""} (${currentDef.unit})` : currentSeries?.label,
+              format: (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
+              ticks: 4,
             },
           }}
         >

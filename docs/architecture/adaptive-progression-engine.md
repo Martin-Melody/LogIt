@@ -365,6 +365,16 @@ different treatments, not one shared UI:
     `calibrateSensitivity` scores history against) — noted as an accepted limitation in code,
     expected to be rare in practice.
 
+  **Second real bug found while device-testing this (2026-09-12):** the "trial finished — switch
+  permanently?" nudge only fired in the exact `suggest()` call where a trial transitioned from
+  `active` to `concluded` — any later view (state already saved as `concluded`) hit no matching
+  branch and silently fell through to the order-variety nudge instead, so the result was only ever
+  visible for one instant. Found by seeding a pre-concluded trial and observing the wrong nudge
+  render live on-device. Fixed by extracting the nudge-building logic into a `resultNudge()`
+  helper and adding a `concluded` branch that re-derives the same message from the stored
+  `result` on every view, with an `alreadySwitched` check (current `repRange` already matches
+  `trialRepRange`) so it stops re-asking once the switch has actually been taken.
+
   **Real, pre-existing bug found and fixed while device-testing this (2026-09-12):**
   `getSuggestion.ts` fetched "the most recent `HISTORY_WINDOW` (20) sessions **across every
   exercise**, then filtered to this one" — not new code, but every threshold this doc's features
@@ -380,6 +390,102 @@ different treatments, not one shared UI:
   test building 25 other exercises' more-recent sessions against 10 of the target exercise's own,
   asserting all 10 remain visible.
 
+### 10.1 Confound: a rep-range switch reads as false regression/progression — status: fixed (2026-09-12)
+
+Raised by Martin: if the trial switches an exercise's rep range for good, the achievable load (and
+so its e1RM, since Epley's multiplier itself depends on reps) genuinely level-shifts at the switch
+point — that's not the same thing as the exercise actually getting harder or easier, but the
+overall trend classifier (§4's `classifyTrend`, used for the exercise's headline status everywhere
+it's shown — session screen, `/progress`, exercise detail) had no way to tell the difference. This
+is distinct from the trial's own internal comparison (`blockTrend` in §10 above), which was always
+correct — it only ever compares trial-block-vs-baseline-block on their own terms. The bug was in
+the *outer* trend, which read straight through a switch as one continuous series.
+
+**Fix, same shape as §4's fatigue adjustment, deliberately not the same mechanism:** `classifyTrend`
+gained a `comparableToCurrent?: (boolean | undefined)[]` parameter, index-aligned with `values`
+exactly like §4's `sessionPositions`. Unlike the fatigue adjustment, which *credits back* a
+fatigued reading toward its fresh-equivalent value, a point marked `false` here is dropped
+entirely before anything else runs (slope fit, PR tracking, everything) — there's no honest way to
+convert an e1RM reading from one rep-range regime into another's terms, so exclusion is the right
+move, not a discount.
+
+What counts as "not comparable to current" is computed bespoke in `getExerciseProgressStory.ts`
+(same known v1 scope boundary as the warm-start/exclusivity logic above — only linear-progression's
+`repRangeTrial` shape is understood), read straight off `suggestion.nextState` with no extra repo
+fetch, by a four-case rule:
+
+- **No trial ever run:** nothing excluded.
+- **Trial active, not yet concluded:** only pre-trial points count as "current" — the trial's own
+  readings haven't proven anything yet and might get abandoned, so they shouldn't drive the
+  headline trend before the trial itself has a verdict.
+- **Concluded, reverted (didn't switch):** pre-trial points AND everything after the trial ended
+  count as "current" (both are the same baseline regime) — only the abandoned trial window itself
+  is excluded.
+- **Concluded, switched for good:** only points from the switch onward count as "current" — the
+  old baseline history is the regime that's no longer active.
+
+Surfaced in `Reasoning.inputs.excludedForRegimeChange` (a count) on every `classifyTrend` result,
+same transparency bar as §4's `fatigueCalibrated`/`fatigueCalibrationSamples` — the "Why?" dialog
+shows when and how many points the classifier chose to ignore, not just the final slope. Covered by
+unit tests on `classifyTrend` directly (`domain/progression.trend.test.ts`) and integration tests
+through `getExerciseProgressStory` for all three trial states (switched, reverted, still-active).
+
+This is also the first concrete case of a more general need — see §10.3's "tag training blocks"
+item below, which this fix's shape was deliberately built to generalize toward rather than being a
+one-off patch.
+
+### 10.2 Y-axis added to the exercise progression chart (2026-09-12)
+
+Small, unrelated polish item raised in passing: `ExerciseProgressionPanel.svelte`'s chart
+(`layerchart` `AreaChart`) was rendering with `axis="x"` — date labels only, no way to read actual
+values off the chart itself, only the tooltip. Removed the override (layerchart's default `axis`
+renders both) and added a `yAxis` label (metric name + unit, e.g. "Estimated 1RM (kg)") and a
+whole/1-decimal value formatter. No contract change, no new data — purely a chart-config fix.
+
+### 10.3 Raised but not built (2026-09-12)
+
+Three follow-on ideas came out of the same conversation as the confound fix above — real, worth
+designing properly, but none are launch blockers for v1 rep-range experimentation. Noted here so
+they aren't lost, not scoped or sequenced yet.
+
+**1. Sequential rep-range search, not a single one-shot trial.** v1 tries exactly one alternative
+range per exercise (the muscle-group warm start, or `+7` reps above the current ceiling as a
+fallback) and then permanently stops offering more — the mere presence of a `repRangeTrial` record
+blocks a second trial on that exercise (§10 above, "known v1 compromise"). Martin's question: if
+10-15 shows no real difference over a 5-8 baseline, should the next offer be 15-30? And should
+exploration ever try *lower* than the baseline, not just higher — v1's fallback direction
+(`+7`) is an arbitrary first guess, not a principled one. A real ladder needs to decide: how many
+rungs before giving up, whether the ladder itself can be muscle-group-informed the same way the
+first trial's warm start is, and how to avoid re-litigating a range that's already been ruled out
+for a sibling exercise. Tracked for after v1's single-trial version has proven out in practice.
+
+**2. A plateau-diagnosis ladder across the three existing hypothesis-testing mechanisms.** This
+doc already has three independent ways of testing "why has this stalled" — rep-range (§10),
+muscle-group volume/frequency (§5), and nutrition (§9) — and none of them currently talk to each
+other. Martin's question: if rep-range experimentation (once #1 above exists) exhausts its ladder
+with no real difference, should the system suggest a volume change next (§5) — and if that also
+doesn't move the needle, prompt a nutrition check (§9)? This is a genuinely separate feature from
+any one of the three: an orchestration layer sitting *above* them deciding "what to try next", not
+another way of testing one variable. Depends on §5's option B and §9 actually landing first — not
+scoped.
+
+**3. Tag training blocks (Martin's idea).** A general, user-facing mechanism to mark a period of
+training with a reason — injured, deliberately changing tempo, or "just different, no particular
+reason" — so that period doesn't leave an undifferentiated mark on the exercise's trend history.
+This is the *same underlying need* as the §10.1 confound fix, generalized: that fix already
+established the pattern (a per-point "is this comparable to the current regime" flag feeding
+`classifyTrend`'s new `comparableToCurrent` parameter) — but it's derived automatically, and only
+for the one case an algorithm already tracks (a linear-progression rep-range trial). A real tagging
+feature would let the user say so explicitly, for any reason, on any exercise, not just that one
+case. `WorkoutSession.excludeFromProgression` is the existing, coarser precedent — a plain
+whole-session boolean, no reason recorded, nothing finer-grained than "this whole session doesn't
+count." A proper version would want: a reason/tag (so the exercise detail view can show *why* a
+gap exists — "recovering from shoulder strain, Aug-Sept" — rather than silently omitting sessions),
+scoping finer than a whole session where only one exercise was actually affected, and feeding into
+`comparableToCurrent`-style exclusion generically rather than every feature growing its own bespoke
+version of the same idea. Not scoped or estimated — a real connected idea worth designing properly,
+likely after the current launch-blocking items in §11.
+
 ## 11. Sequencing
 
 1. ~~Reasoning-trace contract + generic "Why?" UI (§3)~~ — **shipped**, PR #66.
@@ -393,7 +499,10 @@ different treatments, not one shared UI:
 6. ~~e1RM everywhere (§8)~~ — **shipped**, PR #66.
 7. Nutrition × training correlation (§9) — raised, not scoped/sequenced yet; likely after §5.
 8. ~~Deliberate signal-generation UX — order-variation nudge + rep-range experimentation (§10)~~
-   — **both shipped**. §5's option B, §6, and §7 are the remaining undone items.
+   — **both shipped**, including the rep-range/e1RM confound fix (§10.1). §5's option B, §6, and
+   §7 are the remaining undone items — plus three newly-raised, not-yet-scoped ideas: sequential
+   rep-range search (§10.3.1), a cross-mechanism plateau-diagnosis ladder (§10.3.2), and a general
+   "tag training blocks" mechanism (§10.3.3).
 
 ## 12. Extension points recap
 
@@ -420,11 +529,11 @@ ship; do the actual external-facing pass later, deliberately, not reactively.
 **Not yet reflected anywhere external, as of PR #66 (§1-3, 5, 6, 10 all shipped):**
 - `apps/clients/docs-site/src/routes/docs/plugins/reference/+page.svx` — still describes
   `ProgressionInput`/`ProgressionOutput` generically (line ~61); doesn't mention `reasoning`,
-  `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), the widened `sessionPositions`
-  parameter on `classifyTrend`, the `nudge`/`ProgressionNudge`/dismissal contract, or the
-  `actionLabel`/`actionData`/`exclusive`/`activeExperiment` additions from rep-range
-  experimentation (§10). A plugin author reading this today wouldn't know any of this exists, let
-  alone that reasoning is expected of a marketplace-quality algorithm.
+  `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), the widened `sessionPositions` and
+  `comparableToCurrent` parameters on `classifyTrend`, the `nudge`/`ProgressionNudge`/dismissal
+  contract, or the `actionLabel`/`actionData`/`exclusive`/`activeExperiment` additions from
+  rep-range experimentation (§10). A plugin author reading this today wouldn't know any of this
+  exists, let alone that reasoning is expected of a marketplace-quality algorithm.
 - No docs-site page for the muscle-group insight (`getMuscleGroupInsights`) — comparable pages
   exist for mobility (`docs/plugins/mobility-progression`, `mobility-packs`); this doesn't have
   one yet, and shouldn't until §5's option B (the pluggable version) exists — document the real

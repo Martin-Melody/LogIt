@@ -138,4 +138,67 @@ describe("classifyTrend", () => {
       expect(r.status).not.toBe("regressing");
     });
   });
+
+  describe("comparableToCurrent regime filtering", () => {
+    it("does not filter anything when comparableToCurrent is omitted", () => {
+      const values = [100, 102, 104, 106, 108];
+      const r = classifyTrend({ values, lastTrainedMs: recent, nowMs: NOW });
+      expect(r.reasoning.inputs.excludedForRegimeChange).toBe(0);
+    });
+
+    it("excludes points marked false before fitting the slope or counting PRs", () => {
+      // A big e1RM drop at a rep-range switch (index 3) — a real level shift, not
+      // regression. Marked incomparable; the two points either side of it (both
+      // in the "current" regime) are flat, so the trend should read plateaued,
+      // not regressing.
+      const values = [120, 121, 120, 90, 91, 90];
+      const comparableToCurrent = [false, false, false, true, true, true];
+      const r = classifyTrend({ values, comparableToCurrent, lastTrainedMs: recent, nowMs: NOW });
+      expect(r.status).not.toBe("regressing");
+      expect(r.reasoning.inputs.excludedForRegimeChange).toBe(3);
+    });
+
+    it("actually flips a false 'regressing' read caused entirely by a rep-range switch", () => {
+      // Rising e1RM at the old rep range, then a switch drops the reading (lower
+      // reps → less accurate/lower Epley estimate at the same true effort), then
+      // flat-to-rising again at the new range. Naively this reads as a steep fall.
+      const beforeSwitch = [100, 102, 104, 106];
+      const afterSwitch = [85, 85, 86, 87, 88];
+      const values = [...beforeSwitch, ...afterSwitch];
+      // Switched for good — only the pre-switch points are the "different regime".
+      const comparableToCurrent = [false, false, false, false, true, true, true, true, true];
+
+      const withoutContext = classifyTrend({ values, lastTrainedMs: recent, nowMs: NOW });
+      const withContext = classifyTrend({ values, comparableToCurrent, lastTrainedMs: recent, nowMs: NOW });
+
+      expect(withoutContext.status).toBe("regressing");
+      expect(withContext.status).not.toBe("regressing");
+    });
+
+    it("sessionPositions stays index-aligned with the filtered values, not the original array", () => {
+      // Position-fatigue adjustment and regime filtering must compose: excluded
+      // points' positions shouldn't shift the remaining points' alignment.
+      const values = [100, 999, 90, 100, 90, 100, 90, 100, 90];
+      const sessionPositions = [0, 0, 0, 1, 0, 1, 0, 1, 0];
+      const comparableToCurrent = [true, false, true, true, true, true, true, true, true];
+
+      const r = classifyTrend({
+        values,
+        sessionPositions,
+        comparableToCurrent,
+        lastTrainedMs: recent,
+        nowMs: NOW,
+      });
+      // The excluded 999 outlier shouldn't be able to masquerade as a PR or drag
+      // the slope — behaviour should match the same series with it simply absent.
+      const equivalent = classifyTrend({
+        values: [100, 90, 100, 90, 100, 90, 100, 90],
+        sessionPositions: [0, 0, 1, 0, 1, 0, 1, 0],
+        lastTrainedMs: recent,
+        nowMs: NOW,
+      });
+      expect(r.status).toBe(equivalent.status);
+      expect(r.reasoning.computed.slopePctPerSession).toBeCloseTo(equivalent.reasoning.computed.slopePctPerSession, 5);
+    });
+  });
 });
