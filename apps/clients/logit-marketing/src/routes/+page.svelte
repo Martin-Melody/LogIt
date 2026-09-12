@@ -18,7 +18,7 @@
 
   <div class="flex flex-col gap-4">
     <h2 class="text-lg font-semibold">What you get</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <Card.Root>
         <Card.Header>
           <Card.Title>Training</Card.Title>
@@ -26,7 +26,8 @@
         </Card.Header>
         <Card.Content class="text-sm text-muted-foreground pt-1">
           Log sessions freeform or from a split you define. Plate math, supersets, RPE, rest
-          timers, full history and progress charts.
+          timers, full history and progress charts. Track stretching and mobility work as its own
+          progressive discipline, and daily habits alongside your lifts.
         </Card.Content>
       </Card.Root>
 
@@ -40,6 +41,18 @@
           scan, recipes and saved meals. Calorie and macro targets that adapt to your weight
           trend. See whether your lifts trend better on the days you hit your targets, surfaced
           as a hypothesis with its own confidence, not a flat claim. Works offline.
+        </Card.Content>
+      </Card.Root>
+
+      <Card.Root>
+        <Card.Header>
+          <Card.Title>Social</Card.Title>
+          <Card.Description>Follow real training, not influencers</Card.Description>
+        </Card.Header>
+        <Card.Content class="text-sm text-muted-foreground pt-1">
+          Post your sessions, follow people, like and comment, repost with your own take. Profile
+          pages show real progress widgets pulled from logged data — copy one to your own
+          program with one tap.
         </Card.Content>
       </Card.Root>
 

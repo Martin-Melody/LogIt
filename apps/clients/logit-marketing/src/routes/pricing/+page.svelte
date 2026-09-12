@@ -54,7 +54,7 @@
         <p class="text-2xl font-semibold">{PRO_PRICE_LABEL}</p>
         <ul class="text-sm text-muted-foreground flex flex-col gap-1.5">
           <li>· No server to run or maintain</li>
-          <li>· Cloud sync across devices — workouts, nutrition, bodyweight</li>
+          <li>· Cloud sync across devices — workouts, nutrition, habits, bodyweight</li>
           <li>· Full web dashboard and analytics</li>
         </ul>
         <Button href="/signup?plan=pro" class="mt-2">Get started</Button>
@@ -70,8 +70,8 @@
         <p class="text-2xl font-semibold">{STUDIO_PRICE_LABEL}</p>
         <ul class="text-sm text-muted-foreground flex flex-col gap-1.5">
           <li>· Everything in Pro</li>
-          <li>· Invite clients and view their training and nutrition</li>
-          <li>· Assign macro targets and meal plans, monitor adherence</li>
+          <li>· Invite clients and view their training, nutrition, and habits</li>
+          <li>· Assign macro targets, meal plans, and programs; monitor adherence</li>
           <li>· Nothing is visible until a client accepts your invite</li>
         </ul>
         <Button href="/signup?plan=studio" class="mt-2">Get started</Button>
