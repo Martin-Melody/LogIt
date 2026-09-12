@@ -113,6 +113,35 @@ export async function getSuggestion(
   const storedPrefs = await progressionRepo.getAlgorithmPreferences(config.algorithmId);
   const userPreferences = storedPrefs ?? algorithm.defaultPreferences ?? {};
 
+  // Bespoke to the rep-range-experimentation feature (§10) — a warm-start value for
+  // a *new* trial, informed by what's already worked for other exercises sharing
+  // this one's primary muscle. Only linear-progression's state shape is understood
+  // here; this whole computation is a known v1 compromise, tracked to generalize
+  // once the feature proves out beyond one built-in algorithm.
+  let suggestedTrialRepRange: [number, number] | undefined;
+  let allStates: Awaited<ReturnType<typeof progressionRepo.listExerciseStates>> | undefined;
+  if (config.algorithmId === "linear-progression" && exerciseWithMuscles.primaryMuscles.length > 0) {
+    allStates = await progressionRepo.listExerciseStates();
+    for (const other of allStates) {
+      if (other.key === key || other.algorithmId !== "linear-progression") continue;
+      const otherState = other.state as {
+        repRangeTrial?: { trialRepRange: [number, number]; result?: { switched?: boolean } };
+      } | null;
+      const trial = otherState?.repRangeTrial;
+      if (!trial?.result?.switched) continue;
+      const otherExercise = other.exerciseId
+        ? await exerciseRepo.getById(other.exerciseId)
+        : await exerciseRepo.getByName(other.exerciseName);
+      const sharesMuscle = otherExercise?.primaryMuscles?.some((m) =>
+        exerciseWithMuscles.primaryMuscles.includes(m),
+      );
+      if (sharesMuscle) {
+        suggestedTrialRepRange = trial.trialRepRange;
+        break;
+      }
+    }
+  }
+
   let output = await algorithm.suggest({
     exercise: exerciseWithMuscles,
     history,
@@ -121,6 +150,7 @@ export async function getSuggestion(
     plannedTargets,
     incrementOverride,
     sessionContext,
+    suggestedTrialRepRange,
   });
 
   // An algorithm decides *whether* to ask for help generating signal; whether the
@@ -129,6 +159,15 @@ export async function getSuggestion(
   // every algorithm (built-in or plugin).
   if (output.nudge && saved?.dismissedNudges?.includes(output.nudge.id)) {
     output = { ...output, nudge: undefined };
+  }
+
+  // A nudge marked `exclusive` (e.g. "start a new experiment") only makes sense if
+  // no OTHER exercise already has one running — checked generically here via
+  // `activeExperiment`, without needing to know what kind of experiment it is.
+  if (output.nudge?.exclusive) {
+    allStates ??= await progressionRepo.listExerciseStates();
+    const anotherActive = allStates.some((s) => s.key !== key && s.activeExperiment);
+    if (anotherActive) output = { ...output, nudge: undefined };
   }
 
   // If the exercise is done on a machine with a known set of achievable weights,
@@ -164,6 +203,24 @@ export async function applySessionProgression(
 
   const key = exerciseKey(exercise);
 
+  // dismissedNudges is app-managed, not something suggest() computes — must be
+  // carried forward explicitly, or a completed session would silently wipe it
+  // (saveExerciseState replaces the whole row, not a per-field merge).
+  const existing = await progressionRepo.getExerciseState(key);
+
+  // activeExperiment is a generic mirror of "does this algorithm's own opaque
+  // state have an experiment running", re-derived on every save rather than
+  // trusted from before — bespoke to linear-progression's repRangeTrial shape for
+  // now (§10), same known v1 compromise as the warm-start lookup above.
+  let activeExperiment: { id: string; startedAtMs: number } | undefined;
+  if (config.algorithmId === "linear-progression") {
+    const trial = (output.nextState as { repRangeTrial?: { status: string; startedAtMs: number } } | null)
+      ?.repRangeTrial;
+    if (trial?.status === "active") {
+      activeExperiment = { id: "rep-range-trial", startedAtMs: trial.startedAtMs };
+    }
+  }
+
   await progressionRepo.saveExerciseState({
     key,
     exerciseId: exercise.id,
@@ -171,5 +228,7 @@ export async function applySessionProgression(
     algorithmId: config.algorithmId,
     state: output.nextState,
     updatedAtMs: nowMs(),
+    dismissedNudges: existing?.dismissedNudges,
+    activeExperiment,
   });
 }

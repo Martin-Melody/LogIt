@@ -169,4 +169,165 @@ describe("linearProgression", () => {
       expect(out.nudge).toBeUndefined();
     });
   });
+
+  describe("rep-range experimentation", () => {
+    const OFFER_ID = "linear-progression:rep-range-trial-offer";
+    const RESULT_ID = "linear-progression:rep-range-trial-result";
+
+    // Calibrated on fatigue (6 fresh / 6 fatigued) so the order-variety nudge never
+    // fires here — isolates these assertions to the rep-range nudge specifically.
+    const calibratedHistory = [
+      ...Array.from({ length: 6 }, () => historyEntry({ sessionPosition: 0 })),
+      ...Array.from({ length: 6 }, () => historyEntry({ sessionPosition: 1, sets: [set({ reps: 6 })] })),
+    ];
+
+    it("offers a trial once enabled with enough history and none already run", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: { workingWeight: 100, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+          history: calibratedHistory,
+          userPreferences: { repRangeExperimentsEnabled: true },
+        }),
+      );
+      expect(out.nudge?.id).toBe(OFFER_ID);
+      expect(out.nudge?.actionLabel).toBe("Try it");
+      expect(out.nudge?.exclusive).toBe(true);
+      expect(out.nudge?.actionData).toEqual({ trialRepRange: [8, 15], baselineRepRange: [5, 8] });
+    });
+
+    it("doesn't offer when the feature is disabled", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: { workingWeight: 100, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+          history: calibratedHistory,
+          userPreferences: { repRangeExperimentsEnabled: false },
+        }),
+      );
+      expect(out.nudge).toBeUndefined();
+    });
+
+    it("uses a muscle-group warm-start value when provided, instead of the default heuristic", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: { workingWeight: 100, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+          history: calibratedHistory,
+          userPreferences: { repRangeExperimentsEnabled: true },
+          suggestedTrialRepRange: [10, 15],
+        }),
+      );
+      expect(out.nudge?.actionData).toEqual({ trialRepRange: [10, 15], baselineRepRange: [5, 8] });
+    });
+
+    it("doesn't offer a second trial once one has already run, regardless of its result", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8],
+            repRangeTrial: {
+              trialRepRange: [10, 15],
+              baselineRepRange: [5, 8],
+              startedAtMs: 0,
+              status: "concluded",
+              result: { trialSlopePctPerSession: 0, baselineSlopePctPerSession: 0, switched: false, concludedAtMs: 0 },
+            },
+          },
+          history: calibratedHistory,
+          userPreferences: { repRangeExperimentsEnabled: true },
+        }),
+      );
+      expect(out.nudge?.id).not.toBe(OFFER_ID);
+    });
+
+    it("prescribes the trial range while a trial is active but not yet concluded", async () => {
+      const now = Date.now();
+      const trialStart = now - 2 * 86_400_000;
+      const history = [
+        historyEntry({ performedAtMs: trialStart + 1000 }), // 1 trial session so far — below the block size
+        ...Array.from({ length: 4 }, (_, i) => historyEntry({ performedAtMs: trialStart - (i + 1) * 86_400_000 })),
+      ];
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8],
+            repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" },
+          },
+          history,
+        }),
+      );
+      expect(out.sets[0]!.reps).toEqual([10, 15]);
+      expect(out.nudge).toBeUndefined(); // mid-trial — nothing to report yet
+      expect((out.nextState as { repRangeTrial: { status: string } }).repRangeTrial.status).toBe("active");
+    });
+
+    it("concludes a trial once enough sessions are logged and proposes switching when it clearly wins", async () => {
+      const now = Date.now();
+      const trialStart = now - 10 * 86_400_000;
+      // Rising e1RM across the trial block; flat across the baseline block.
+      const trialEntries = Array.from({ length: 4 }, (_, i) =>
+        historyEntry({
+          performedAtMs: trialStart + (i + 1) * 86_400_000,
+          sets: [set({ weight: 100 + i * 10, reps: 10 })],
+        }),
+      );
+      const baselineEntries = Array.from({ length: 4 }, (_, i) =>
+        historyEntry({
+          performedAtMs: trialStart - (i + 1) * 86_400_000,
+          sets: [set({ weight: 100, reps: 6 })],
+        }),
+      );
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8],
+            repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" },
+          },
+          history: [...trialEntries, ...baselineEntries],
+        }),
+      );
+      const nextTrial = (out.nextState as { repRangeTrial: { status: string; result: { switched: boolean } } })
+        .repRangeTrial;
+      expect(nextTrial.status).toBe("concluded");
+      expect(nextTrial.result.switched).toBe(true);
+      expect(out.nudge?.id).toBe(RESULT_ID);
+      expect(out.nudge?.actionLabel).toBe("Switch");
+      expect(out.nudge?.actionData).toEqual({ repRange: [10, 15] });
+      // Reverts to the baseline range for this suggestion, pending the user's decision.
+      expect(out.sets[0]!.reps).toEqual([5, 8]);
+    });
+
+    it("reports no meaningful difference (and offers no action) when the trial doesn't clearly beat baseline", async () => {
+      const now = Date.now();
+      const trialStart = now - 10 * 86_400_000;
+      const trialEntries = Array.from({ length: 4 }, (_, i) =>
+        historyEntry({ performedAtMs: trialStart + (i + 1) * 86_400_000, sets: [set({ weight: 100, reps: 10 })] }),
+      );
+      const baselineEntries = Array.from({ length: 4 }, (_, i) =>
+        historyEntry({ performedAtMs: trialStart - (i + 1) * 86_400_000, sets: [set({ weight: 100, reps: 6 })] }),
+      );
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8],
+            repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" },
+          },
+          history: [...trialEntries, ...baselineEntries],
+        }),
+      );
+      const nextTrial = (out.nextState as { repRangeTrial: { result: { switched: boolean } } }).repRangeTrial;
+      expect(nextTrial.result.switched).toBe(false);
+      expect(out.nudge?.actionLabel).toBeUndefined();
+    });
+  });
 });

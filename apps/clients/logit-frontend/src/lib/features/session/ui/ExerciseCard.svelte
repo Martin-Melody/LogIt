@@ -27,6 +27,7 @@
     onDelete = () => {},
     onToggleCollapse = () => {},
     onDismissNudge = () => {},
+    onAcceptNudge = () => {},
     children,
   } = $props<{
     exerciseName?: string;
@@ -46,6 +47,7 @@
     onDelete?: () => void | Promise<void>;
     onToggleCollapse?: () => void;
     onDismissNudge?: (nudgeId: string) => void | Promise<void>;
+    onAcceptNudge?: (nudgeId: string) => void | Promise<void>;
     children?: import("svelte").Snippet;
   }>();
 
@@ -200,13 +202,24 @@
     {#if suggestion.nudge}
       <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
         <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{suggestion.nudge.message}</p>
-        <button
-          type="button"
-          class="shrink-0 text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
-          onclick={() => onDismissNudge(suggestion.nudge!.id)}
-        >
-          Got it
-        </button>
+        <div class="flex shrink-0 items-center gap-2">
+          {#if suggestion.nudge.actionLabel}
+            <button
+              type="button"
+              class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2"
+              onclick={() => onAcceptNudge(suggestion.nudge!.id)}
+            >
+              {suggestion.nudge.actionLabel}
+            </button>
+          {/if}
+          <button
+            type="button"
+            class="text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+            onclick={() => onDismissNudge(suggestion.nudge!.id)}
+          >
+            {suggestion.nudge.actionLabel ? "Not now" : "Got it"}
+          </button>
+        </div>
       </div>
     {/if}
   {/if}

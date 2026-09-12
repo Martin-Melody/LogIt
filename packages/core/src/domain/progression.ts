@@ -50,6 +50,12 @@ export type ProgressionInput = {
     timeBudgetMs?: number;
     avgExerciseDurationMs?: Record<string, number>;
   };
+  // Bespoke to the rep-range-experimentation feature (adaptive-progression-engine.md
+  // §10) — a warm-start value for a new trial, informed by what's already worked for
+  // other exercises sharing this one's primary muscle. Computed by getSuggestion.ts,
+  // which has the cross-exercise repo access this otherwise-per-exercise input
+  // wouldn't. Undefined until this feature generalizes beyond linear-progression.
+  suggestedTrialRepRange?: [number, number];
 };
 
 export type SuggestedSet = {
@@ -69,6 +75,18 @@ export type SuggestedSet = {
 export type ProgressionNudge = {
   id: string;
   message: string;
+  /** If present, this nudge proposes a concrete action beyond passive awareness —
+   * the UI shows an accept button with this label, alongside the existing dismiss.
+   * What "accept" does is bespoke to whichever usecase recognises `id`. */
+  actionLabel?: string;
+  /** Data the accept-action needs to actually apply this nudge (e.g. the specific
+   * rep range being proposed) — opaque here, interpreted by whatever accepts it. */
+  actionData?: unknown;
+  /** True if accepting this nudge starts something that should only run for one
+   * exercise at a time across the whole account (see ExerciseProgressionState.
+   * activeExperiment) — checked generically in getSuggestion.ts without it needing
+   * to know what the experiment actually is. */
+  exclusive?: boolean;
 };
 
 export type ProgressionOutput = {
@@ -116,6 +134,11 @@ export type ExerciseProgressionState = {
   // app-owned, not part of the algorithm's own opaque `state`, so a plugin
   // algorithm gets dismissal handling for free instead of implementing its own.
   dismissedNudges?: string[];
+  // Set by an algorithm running a deliberate experiment on this exercise (e.g. a
+  // rep-range trial, adaptive-progression-engine.md §10) so the generic layer can
+  // enforce "only one experiment across all exercises at a time" (via an `exclusive`
+  // nudge) without needing to understand what kind of experiment it is.
+  activeExperiment?: { id: string; startedAtMs: number };
 };
 
 export type UserProgressionConfig = {

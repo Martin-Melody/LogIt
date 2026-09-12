@@ -1,12 +1,36 @@
 import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "@logit/core/domain/progression";
+import { classifyTrend } from "@logit/core/domain/progression";
 import type { MuscleGroup } from "@logit/core/domain/exercise";
 import type { Reasoning, ReasoningConfidence } from "@logit/core/domain/reasoning";
+import { estimated1RM } from "@logit/core/domain/oneRepMax";
+import { nowMs } from "@logit/core/domain/time";
+
+// A single-variable-at-a-time experiment on this exercise's rep range — see
+// docs/architecture/adaptive-progression-engine.md §10. Once concluded, this
+// record is kept (not cleared) even if the trial value was rejected — its
+// presence is what stops a second trial ever being offered on the same exercise
+// (a v1 scope boundary, not a permanent design decision), and a *successful*
+// one is read by other exercises sharing this muscle as a warm-start (see
+// getSuggestion.ts).
+type RepRangeTrial = {
+  trialRepRange: [number, number];
+  baselineRepRange: [number, number];
+  startedAtMs: number;
+  status: "active" | "concluded";
+  result?: {
+    trialSlopePctPerSession: number;
+    baselineSlopePctPerSession: number;
+    switched: boolean;
+    concludedAtMs: number;
+  };
+};
 
 type LinearState = {
   workingWeight: number;
   failedAttempts: number;
   increment: number;
   repRange: [number, number];
+  repRangeTrial?: RepRangeTrial;
 };
 
 type LinearPreferences = {
@@ -15,6 +39,7 @@ type LinearPreferences = {
   workingSets: number;
   increment: number;
   suggestionDetail: "summary" | "block";
+  repRangeExperimentsEnabled: boolean;
 };
 
 const DEFAULT_PREFERENCES: LinearPreferences = {
@@ -23,6 +48,7 @@ const DEFAULT_PREFERENCES: LinearPreferences = {
   workingSets: 3,
   increment: 2.5,
   suggestionDetail: "summary",
+  repRangeExperimentsEnabled: false,
 };
 
 const PREFERENCES_SCHEMA: AlgorithmPreferencesField[] = [
@@ -81,6 +107,14 @@ const PREFERENCES_SCHEMA: AlgorithmPreferencesField[] = [
       { value: "block", label: "Full block (each set as its own row)" },
     ],
   },
+  {
+    key: "repRangeExperimentsEnabled",
+    label: "Rep range experiments",
+    description:
+      "Let LogIt occasionally try a different rep range on an exercise, for a few sessions, to see if you respond better — and tell you the result either way. Off by default; you'll still be asked before any specific exercise is changed.",
+    type: "boolean",
+    default: false,
+  },
 ];
 
 const DEFAULT_STATE: LinearState = {
@@ -100,6 +134,20 @@ const MIN_CALIBRATION_SAMPLES = 3;
 // ask meaningful — no point nagging on session #2.
 const MIN_SESSIONS_BEFORE_ASKING = 6;
 const ORDER_VARIETY_NUDGE_ID = "linear-progression:order-variety";
+
+// Rep-range experimentation (§10) — a single-variable, one-at-a-time trial.
+const REP_RANGE_TRIAL_OFFER_NUDGE_ID = "linear-progression:rep-range-trial-offer";
+const REP_RANGE_TRIAL_RESULT_NUDGE_ID = "linear-progression:rep-range-trial-result";
+// Need enough of an exercise's own history before even offering a trial — twice
+// the block size, so a full baseline block is available for comparison.
+const TRIAL_BLOCK_SESSIONS = 4;
+const MIN_HISTORY_BEFORE_TRIAL_OFFER = TRIAL_BLOCK_SESSIONS * 2;
+// How much higher the trial block's slope needs to be than the baseline block's
+// to call it a real difference worth switching for, not noise. Same order of
+// magnitude as PROGRESSING_SLOPE_THRESHOLD in domain/progression.ts, chosen
+// independently since this compares two blocks against each other rather than a
+// single series against zero.
+const TRIAL_SWITCH_SLOPE_MARGIN = 0.5;
 
 function makeWorkingSets(weight: number, repRange: [number, number], count: number): SuggestedSet[] {
   return Array.from({ length: count }, () => ({
@@ -162,6 +210,31 @@ function performanceScore(entry: ExerciseHistoryEntry, repCeiling: number): numb
   if (working.length === 0) return 0;
   const avgReps = working.reduce((sum, s) => sum + s.reps, 0) / working.length;
   return avgReps / repCeiling;
+}
+
+// Best estimated 1RM across a session's working sets — the same per-session value
+// classifyTrend/getMuscleGroupInsights use, so block comparisons here read the
+// same way as everything else built on it.
+function sessionValue(entry: ExerciseHistoryEntry): number {
+  const working = entry.sets.filter((s) => s.setType === "normal" || !s.setType);
+  if (working.length === 0) return 0;
+  return Math.max(...working.map((s) => estimated1RM(s.weight, s.reps)));
+}
+
+// How this exercise trended across a block of sessions (oldest→newest) — reuses
+// classifyTrend's own slope fit rather than a bespoke calculator, so a trial's
+// "did this help" reads on the exact same scale as every status chip elsewhere.
+// lastTrainedMs/nowMs are both pinned to the block's own last session: this is a
+// retrospective read of history that already happened, not "is this stale now".
+function blockTrend(entries: ExerciseHistoryEntry[]): { slopePctPerSession: number } {
+  const chronological = [...entries].sort((a, b) => a.performedAtMs - b.performedAtMs);
+  const values = chronological.map(sessionValue);
+  const asOf = chronological[chronological.length - 1]?.performedAtMs ?? 0;
+  return classifyTrend({ values, lastTrainedMs: asOf, nowMs: asOf });
+}
+
+function fmtSlope(pct: number): string {
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
 
 type FatigueCalibration = {
@@ -274,7 +347,74 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     };
   }
 
-  const [repFloor, repCeiling] = state.repRange;
+  // ── Rep-range experimentation (§10) ────────────────────────────────────────
+  // Resolves which rep range is actually in force this session — the trial range
+  // while one's running, else the persisted baseline (state.repRange) — and steps
+  // the trial's own state machine forward. state.repRange itself is never touched
+  // here; it only changes via an explicit "switch" decision after a trial
+  // concludes (see acceptRepRangeExperiment.ts).
+  //
+  // Known v1 simplification: doesn't correct for a rep-range trial's fatigue
+  // calibration confound (calibrateSensitivity below scores every history entry
+  // against *today's* rep ceiling, which is only strictly right for entries
+  // logged under that same ceiling) — acceptable for now since both features
+  // running on the same exercise at the same time is expected to be rare.
+  let repRangeTrial = state.repRangeTrial;
+  let activeRepRange = state.repRange;
+  let trialNudge: ProgressionOutput["nudge"];
+
+  if (repRangeTrial?.status === "active") {
+    activeRepRange = repRangeTrial.trialRepRange;
+    const trialEntries = input.history.filter((h) => h.performedAtMs >= repRangeTrial!.startedAtMs);
+
+    if (trialEntries.length >= TRIAL_BLOCK_SESSIONS) {
+      // history is most-recent-first, so this slice is the N most recent
+      // pre-trial sessions — the baseline block to compare against.
+      const baselineEntries = input.history
+        .filter((h) => h.performedAtMs < repRangeTrial!.startedAtMs)
+        .slice(0, TRIAL_BLOCK_SESSIONS);
+      const trial = blockTrend(trialEntries.slice(0, TRIAL_BLOCK_SESSIONS));
+      const baseline = blockTrend(baselineEntries);
+      const switched = trial.slopePctPerSession - baseline.slopePctPerSession > TRIAL_SWITCH_SLOPE_MARGIN;
+
+      repRangeTrial = {
+        ...repRangeTrial,
+        status: "concluded",
+        result: {
+          trialSlopePctPerSession: Math.round(trial.slopePctPerSession * 100) / 100,
+          baselineSlopePctPerSession: Math.round(baseline.slopePctPerSession * 100) / 100,
+          switched,
+          concludedAtMs: nowMs(),
+        },
+      };
+      trialNudge = {
+        id: REP_RANGE_TRIAL_RESULT_NUDGE_ID,
+        message: switched
+          ? `Trial finished — you progressed faster at ${repRangeTrial.trialRepRange[0]}-${repRangeTrial.trialRepRange[1]} reps (${fmtSlope(trial.slopePctPerSession)}/session) than your usual ${repRangeTrial.baselineRepRange[0]}-${repRangeTrial.baselineRepRange[1]} (${fmtSlope(baseline.slopePctPerSession)}/session). Switch permanently?`
+          : `Trial finished — no meaningful difference at ${repRangeTrial.trialRepRange[0]}-${repRangeTrial.trialRepRange[1]} reps. Keeping your usual ${repRangeTrial.baselineRepRange[0]}-${repRangeTrial.baselineRepRange[1]}.`,
+        actionLabel: switched ? "Switch" : undefined,
+        actionData: switched ? { repRange: repRangeTrial.trialRepRange } : undefined,
+      };
+      // The just-concluded trial no longer sets today's target — back to
+      // baseline until/unless the user accepts the switch above.
+      activeRepRange = repRangeTrial.baselineRepRange;
+    }
+  } else if (
+    !repRangeTrial &&
+    prefs.repRangeExperimentsEnabled &&
+    input.history.length >= MIN_HISTORY_BEFORE_TRIAL_OFFER
+  ) {
+    const trialRepRange = input.suggestedTrialRepRange ?? ([state.repRange[1], state.repRange[1] + 7] as [number, number]);
+    trialNudge = {
+      id: REP_RANGE_TRIAL_OFFER_NUDGE_ID,
+      message: `Try ${trialRepRange[0]}-${trialRepRange[1]} reps instead of your usual ${state.repRange[0]}-${state.repRange[1]} for ${TRIAL_BLOCK_SESSIONS} sessions to see how you respond?`,
+      actionLabel: "Try it",
+      actionData: { trialRepRange, baselineRepRange: state.repRange },
+      exclusive: true,
+    };
+  }
+
+  const [repFloor, repCeiling] = activeRepRange;
   const allHitCeiling = workingSets.every((s) => s.reps >= repCeiling);
   const anyMissedFloor = workingSets.some((s) => s.reps < repFloor);
 
@@ -300,7 +440,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     }
   }
 
-  const nextState: LinearState = { ...state, workingWeight: nextWeight, failedAttempts };
+  const nextState: LinearState = { ...state, workingWeight: nextWeight, failedAttempts, repRangeTrial };
 
   // Fatigue discount doesn't apply to assisted exercises (assistance is machine-controlled)
   const targetPrimary = (input.exercise.primaryMuscles ?? []) as MuscleGroup[];
@@ -335,7 +475,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   // nagging out of step with what calibrateSensitivity actually needed).
   // Whether this has already been dismissed is handled generically, not here —
   // see getSuggestion.ts.
-  const nudge =
+  const orderVarietyNudge =
     !calibration.calibrated && input.history.length >= MIN_SESSIONS_BEFORE_ASKING
       ? {
           id: ORDER_VARIETY_NUDGE_ID,
@@ -343,6 +483,11 @@ function suggest(input: ProgressionInput): ProgressionOutput {
             "Still learning your fatigue pattern for this exercise — try training it at a different point in your session sometime soon.",
         }
       : undefined;
+
+  // A rep-range trial starting, concluding, or offering to start takes priority
+  // over the (passive, non-time-sensitive) order-variety nudge — only one nudge
+  // is shown at a time.
+  const nudge = trialNudge ?? orderVarietyNudge;
 
   // Not calibrated at all → low (the discount is the generic 15% baseline, not personal).
   // Calibrated but from a thin sample → medium. Calibrated from a solid sample → high.
@@ -361,6 +506,12 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       precedingExercisesThisSession: preceding.length,
       fatigueCalibrationSamples: `${calibration.freshSamples} fresh / ${calibration.fatiguedSamples} fatigued`,
       fatigueCalibrated: calibration.calibrated,
+      ...(repRangeTrial
+        ? {
+            repRangeTrialStatus: repRangeTrial.status,
+            repRangeTrialRange: `${repRangeTrial.trialRepRange[0]}-${repRangeTrial.trialRepRange[1]}`,
+          }
+        : {}),
     },
     computed: {
       workingWeightBeforeFatigueDiscount: state.workingWeight,
@@ -374,7 +525,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   };
 
   return {
-    sets: makeWorkingSets(suggestedWeight, state.repRange, prefs.workingSets),
+    sets: makeWorkingSets(suggestedWeight, activeRepRange, prefs.workingSets),
     nextState,
     label,
     displayMode: prefs.suggestionDetail,
