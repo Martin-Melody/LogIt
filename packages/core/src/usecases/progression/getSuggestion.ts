@@ -1,7 +1,7 @@
 import type { ProgressionOutput, ExerciseHistoryEntry, PrecedingExercise } from "../../domain/progression";
 import { exerciseKey, resolveExerciseIncrement, resolveExerciseMachine } from "../../domain/progression";
 import { snapToMachine } from "../../domain/machine";
-import { getExercises } from "../../domain/workout";
+import { getExercises, findExerciseIndexInSession } from "../../domain/workout";
 import type { WorkoutSession } from "../../domain/workout";
 import { nowMs } from "../../domain/time";
 import type { PlannedTargets } from "../../domain/WorkoutSplit";
@@ -39,17 +39,12 @@ export async function getSuggestion(
 
   const recentSessions = await workoutRepo.listRecentSessions({ limit: HISTORY_WINDOW });
 
-  const lowerName = exercise.name.toLowerCase();
   const history: ExerciseHistoryEntry[] = recentSessions
     .filter((session) => !session.excludeFromProgression)
     .flatMap((session) => {
-      const allExercises = getExercises(session);
-      const matchIndex = allExercises.findIndex((e) =>
-        (exercise.id && e.exerciseId && e.exerciseId === exercise.id) ||
-        e.exerciseName.toLowerCase() === lowerName,
-      );
+      const matchIndex = findExerciseIndexInSession(session, exercise);
       if (matchIndex === -1) return [];
-      const match = allExercises[matchIndex]!;
+      const match = getExercises(session)[matchIndex]!;
       return [
         {
           sessionId: session.id,
