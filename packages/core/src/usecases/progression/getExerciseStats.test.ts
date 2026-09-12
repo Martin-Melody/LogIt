@@ -15,7 +15,7 @@ function deps(history: WorkoutSession[]): Pick<ProgressionDeps, "workoutRepo" | 
   return {
     workoutRepo: { listAllSessions: async () => history, listRecentSessions: async () => history },
     exerciseRepo: { getById: async () => null, getByName: async () => null },
-  };
+  } as unknown as Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo">;
 }
 
 describe("getExerciseStats", () => {

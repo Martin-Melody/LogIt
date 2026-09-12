@@ -1,68 +1,38 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
+  import * as Tabs from "$lib/components/ui/tabs";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
   import ProgressStatusChip from "$lib/features/exercise/components/ProgressStatusChip.svelte";
+  import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import Sparkline from "$lib/features/exercise/components/Sparkline.svelte";
-  import { getProgressData } from "@logit/core/usecases/progression/getProgressData";
-  import type { ExerciseProgressData } from "@logit/core/usecases/progression/getProgressData";
-  import { classifyTrend, type ProgressStatus } from "@logit/core/domain/progression";
+  import MuscleGroupInsightsPanel from "$lib/features/exercise/components/MuscleGroupInsightsPanel.svelte";
+  import { getAllExerciseProgressStories } from "@logit/core/usecases/progression/getAllExerciseProgressStories";
+  import type { ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
+  import { PROGRESS_STATUS_ATTENTION_ORDER, type ProgressStatus } from "@logit/core/domain/progression";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { reveal, popIn } from "$lib/transitions";
   import { fade } from "svelte/transition";
 
   const ui = $state({ loading: true, error: null as string | null });
 
-  let exercises = $state<ExerciseProgressData[]>([]);
+  let stories = $state<ExerciseProgressStory[]>([]);
   let selected = $state<string | null>(null);
+  let tab = $state("exercises");
 
-  const selectedExercise = $derived(
-    exercises.find((e) => e.exerciseName === selected) ?? null,
+  const selectedStory = $derived(
+    stories.find((s) => s.exerciseName === selected) ?? null,
   );
 
-  // Attention rank — stuck / declining lifts float to the top of the list.
-  const STATUS_RANK: Record<ProgressStatus, number> = {
-    regressing: 0, plateaued: 1, detraining: 2, progressing: 3, new: 4,
-  };
+  const STATUS_RANK: Record<ProgressStatus, number> = Object.fromEntries(
+    PROGRESS_STATUS_ATTENTION_ORDER.map((s, i) => [s, i]),
+  ) as Record<ProgressStatus, number>;
 
-  type Row = ExerciseProgressData & {
-    status: ProgressStatus;
-    detail: string;
-    spark: number[];
-    lastMs: number;
-    headline: string;
-  };
-
-  const rows = $derived.by<Row[]>(() => {
-    const now = Date.now();
-    return exercises
-      .map((ex) => {
-        const spark = ex.dataPoints.map((p) => p.maxWeight);
-        const lastMs = ex.dataPoints[ex.dataPoints.length - 1]?.date ?? 0;
-        const t = classifyTrend({ values: spark, lastTrainedMs: lastMs, nowMs: now });
-        const detail =
-          t.status === "progressing"
-            ? t.sessionsSincePr <= 1 ? "New best last session" : `≈ +${t.slopePctPerSession.toFixed(1)}% / session`
-            : t.status === "regressing"
-              ? `≈ ${t.slopePctPerSession.toFixed(1)}% / session`
-              : t.status === "plateaued"
-                ? `No new best in ${t.sessionsSincePr} sessions`
-                : t.status === "detraining"
-                  ? `${Math.round((now - lastMs) / 86_400_000)} days since`
-                  : `${ex.dataPoints.length} sessions`;
-        return {
-          ...ex,
-          status: t.status,
-          detail,
-          spark,
-          lastMs,
-          headline: `${spark[spark.length - 1]}kg`,
-        };
-      })
-      .sort((a, b) =>
-        STATUS_RANK[a.status] - STATUS_RANK[b.status] || b.lastMs - a.lastMs,
-      );
-  });
+  const rows = $derived.by<ExerciseProgressStory[]>(() =>
+    [...stories].sort(
+      (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || b.lastTrainedMs - a.lastTrainedMs,
+    ),
+  );
 
   function formatDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -72,8 +42,8 @@
     ui.loading = true;
     ui.error = null;
     try {
-      exercises = await getProgressData(getProgressionDeps());
-      if (exercises.length > 0 && !selected) selected = rows[0]?.exerciseName ?? exercises[0].exerciseName;
+      stories = await getAllExerciseProgressStories(getProgressionDeps());
+      if (stories.length > 0 && !selected) selected = rows[0]?.exerciseName ?? stories[0].exerciseName;
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load progress";
     } finally {
@@ -89,7 +59,7 @@
     <Card.Root><Card.Content class="pt-6"><p class="text-sm text-muted-foreground">Loading…</p></Card.Content></Card.Root>
   {:else if ui.error}
     <Card.Root><Card.Content class="pt-6"><p class="text-sm text-destructive">{ui.error}</p></Card.Content></Card.Root>
-  {:else if exercises.length === 0}
+  {:else if stories.length === 0}
     <Card.Root>
       <Card.Header>
         <Card.Title>Progress</Card.Title>
@@ -99,58 +69,78 @@
       </Card.Header>
     </Card.Root>
   {:else}
-    <div class="flex flex-col gap-3" in:fade={{ duration: 160 }}>
-    {#if selectedExercise}
-      {#key selected}
-      <Card.Root>
-        <div in:reveal>
-        <Card.Header class="pb-2">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <Card.Title class="text-base truncate">{selectedExercise.exerciseName}</Card.Title>
-              <Card.Description>
-                Last trained {formatDate(selectedExercise.dataPoints[selectedExercise.dataPoints.length - 1].date)}
-              </Card.Description>
-            </div>
-            {#if selectedExercise.exerciseId}
-              <a href="/exercises/{selectedExercise.exerciseId}" class="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground shrink-0 pt-0.5">
-                View details
-              </a>
-            {/if}
-          </div>
-        </Card.Header>
-        <Card.Content>
-          <ExerciseProgressionPanel exercise={{ id: selectedExercise.exerciseId, name: selectedExercise.exerciseName }} />
-        </Card.Content>
-        </div>
-      </Card.Root>
-      {/key}
-    {/if}
+    <div in:fade={{ duration: 160 }}>
+    <Tabs.Root bind:value={tab} class="gap-3">
+      <Tabs.List class="w-full">
+        <Tabs.Trigger value="exercises" class="flex-1">Exercises</Tabs.Trigger>
+        <Tabs.Trigger value="muscles" class="flex-1">Muscle groups</Tabs.Trigger>
+      </Tabs.List>
 
-    <Card.Root>
-      <Card.Header class="pb-2"><Card.Title>Exercises</Card.Title></Card.Header>
-      <Card.Content class="pt-0">
-        {#each rows as ex, i (ex.exerciseName)}
-          {@const isSelected = selected === ex.exerciseName}
-          <button
-            type="button"
-            in:popIn={{ duration: 200, delay: Math.min(i * 30, 240) }}
-            class="flex items-center gap-3 w-full py-3 border-b last:border-0 border-border text-left transition-opacity {isSelected ? 'opacity-100' : 'opacity-70 hover:opacity-100'}"
-            onclick={() => (selected = ex.exerciseName)}
-          >
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium truncate">{ex.exerciseName}</p>
-              <div class="flex items-center gap-2 mt-1">
-                <ProgressStatusChip status={ex.status} />
-                <span class="text-xs text-muted-foreground truncate">{ex.detail}</span>
+      <Tabs.Content value="exercises">
+        <div class="flex flex-col gap-3">
+        {#if selectedStory}
+          {#key selected}
+          <Card.Root>
+            <div in:reveal>
+            <Card.Header class="pb-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <Card.Title class="text-base truncate">{selectedStory.exerciseName}</Card.Title>
+                  <Card.Description>
+                    Last trained {formatDate(selectedStory.lastTrainedMs)}
+                  </Card.Description>
+                </div>
+                {#if selectedStory.exerciseId}
+                  <a href="/exercises/{selectedStory.exerciseId}" class="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground shrink-0 pt-0.5">
+                    View details
+                  </a>
+                {/if}
               </div>
+            </Card.Header>
+            <Card.Content>
+              <ExerciseProgressionPanel exercise={{ id: selectedStory.exerciseId, name: selectedStory.exerciseName }} />
+            </Card.Content>
             </div>
-            <Sparkline values={ex.spark} class="shrink-0" />
-            <span class="text-sm font-semibold tabular-nums shrink-0 w-14 text-right">{ex.headline}</span>
-          </button>
-        {/each}
-      </Card.Content>
-    </Card.Root>
+          </Card.Root>
+          {/key}
+        {/if}
+
+        <Card.Root>
+          <Card.Header class="pb-2"><Card.Title>Exercises</Card.Title></Card.Header>
+          <Card.Content class="pt-0">
+            {#each rows as ex, i (ex.exerciseName)}
+              {@const isSelected = selected === ex.exerciseName}
+              <div
+                in:popIn={{ duration: 200, delay: Math.min(i * 30, 240) }}
+                class="flex items-center gap-3 w-full py-3 border-b last:border-0 border-border transition-opacity {isSelected ? 'opacity-100' : 'opacity-70 hover:opacity-100'}"
+              >
+                <button
+                  type="button"
+                  class="min-w-0 flex-1 text-left"
+                  onclick={() => (selected = ex.exerciseName)}
+                >
+                  <p class="text-sm font-medium truncate">{ex.exerciseName}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <ProgressStatusChip status={ex.status} />
+                    <span class="text-xs text-muted-foreground truncate">{ex.statusDetail}</span>
+                  </div>
+                </button>
+                <!-- Sibling, not nested in the button above — ReasoningDialog renders
+                     its own trigger button, and buttons can't nest. -->
+                <ReasoningDialog reasoning={ex.trendReasoning} triggerLabel="Why?" />
+                <Sparkline values={ex.spark} class="shrink-0" />
+                <span class="text-sm font-semibold tabular-nums shrink-0 w-14 text-right">{ex.headline.value}</span>
+              </div>
+            {/each}
+          </Card.Content>
+        </Card.Root>
+        </div>
+      </Tabs.Content>
+
+      <Tabs.Content value="muscles">
+        <MuscleGroupInsightsPanel />
+      </Tabs.Content>
+    </Tabs.Root>
     </div>
   {/if}
 </div>
