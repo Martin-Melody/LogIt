@@ -1,0 +1,86 @@
+---
+title: Mobility progression
+---
+
+A mobility progression algorithm decides your next targets for a **stretching /
+mobility drill**, given its history — the stretching counterpart of a
+[progression algorithm](/docs/plugins/progression). The user picks one in
+**Settings → Mobility progression**; the app calls it whenever a Mobility block
+needs a suggestion, and persists the returned `nextState` per drill after a
+session.
+
+The key difference from strength progression: a drill is measured by **hold
+time** or by **reps** (± load), and unilateral drills progress **each side
+independently** — so sets and history carry an optional `side`.
+
+## The contract
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.you.my-mobility",
+  family: "mobility-progression",
+  entryExport: "algorithm",
+} as const;
+
+export const algorithm = {
+  id: "com.you.my-mobility",
+  name: "My Mobility Scheme",
+  description: "Add 5s to a hold, or a rep, each session you meet the target.",
+  defaultState: {},
+
+  suggest(input) {
+    const isHold = input.drill.metric === "hold";
+    const sides = input.drill.perSide ? ["left", "right"] : [null];
+    const last = input.history[0];
+
+    const sets = [];
+    for (const side of sides) {
+      const sideSets = (last?.sets ?? []).filter((s) => (side ? s.side === side : !s.side));
+      const best = Math.max(0, ...sideSets.map((s) => (isHold ? s.durationSec : s.reps) ?? 0));
+      const next = isHold ? (best || 15) + 5 : (best || 5) + 1;
+      for (let i = 0; i < 3; i++) {
+        sets.push(side
+          ? (isHold ? { side, durationSec: next } : { side, reps: next })
+          : (isHold ? { durationSec: next } : { reps: next }));
+      }
+    }
+    return { sets, nextState: {}, label: `Try ${isHold ? "+5s" : "+1 rep"}` };
+  },
+};
+```
+
+## Input — `MobilityProgressionInput`
+
+See `@logit/core/domain/mobilityProgression`.
+
+| Field | Notes |
+|---|---|
+| `drill` | `{ name, id?, metric: "hold" \| "reps", perSide, area? }` |
+| `history` | `MobilityHistoryEntry[]`, **most recent first**. Each entry's `sets` carry `side?`, `durationSec?`, `reps?`, `loadKg?`, `targetSec?`, `depth?` (1–5), `completed?`. |
+| `state` | Your opaque value — whatever you returned as `nextState` last time. Starts as `defaultState`. |
+| `userPreferences` | Values the user set, if you declare a `preferencesSchema`. |
+| `plannedTargets` | `{ sets?, durationSec?, reps?, loadKg? }` from a template, if any. |
+| `now` | Epoch ms, passed in so the algorithm stays pure. |
+
+## Output — `MobilityProgressionOutput`
+
+```ts
+type MobilityProgressionOutput = {
+  sets: { side?: "left" | "right"; durationSec?: number; reps?: number; loadKg?: number; note?: string }[];
+  nextState: unknown;   // persisted by the app, handed back next call
+  label?: string;       // shown in the block header, e.g. "Last: 45s L · 40s R → try 50s"
+  notes?: string;
+};
+```
+
+Prescribe one entry per set (per side, for unilateral drills). The app prefills
+each logged set's `targetSec` from your `durationSec` so the hold timer has a
+goal.
+
+## Preferences, build & test
+
+Identical to [progression algorithms](/docs/plugins/progression): export a
+`preferencesSchema`, bundle with esbuild, test `suggest` as a pure function, then
+[publish](/docs/plugins/publishing). Sample:
+`static/sample-plugins/mobility-plus`.

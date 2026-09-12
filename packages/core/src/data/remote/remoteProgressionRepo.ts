@@ -20,6 +20,16 @@ export function createRemoteProgressionRepo(): ProgressionRepo {
       throw new Error(NOT_SUPPORTED);
     },
 
+    async getMobilityConfig() {
+      return null;
+    },
+    async saveMobilityConfig() {
+      throw new Error(NOT_SUPPORTED);
+    },
+    async clearMobilityConfig() {
+      throw new Error(NOT_SUPPORTED);
+    },
+
     async getAnalyticsConfig() {
       return null;
     },

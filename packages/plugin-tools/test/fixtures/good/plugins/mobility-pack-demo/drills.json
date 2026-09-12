@@ -1,0 +1,8 @@
+{
+  "formatVersion": 1,
+  "pluginId": "com.demo.mobility-pack",
+  "drills": [
+    { "name": "Couch Stretch", "area": "hip-flexors", "defaultMetric": "hold", "perSide": true },
+    { "name": "Banded Hip Raise", "area": "hip-flexors", "defaultMetric": "reps", "perSide": true }
+  ]
+}

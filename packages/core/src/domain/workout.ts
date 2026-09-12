@@ -146,6 +146,67 @@ export type CardioBlockData = {
   superset?: SupersetInfo;
 };
 
+// ── Mobility / stretching ────────────────────────────────────────────────────
+
+/** How a mobility drill is measured: a timed hold, or counted reps. */
+export type MobilityMetric = "hold" | "reps";
+export type MobilitySide = "left" | "right";
+
+/**
+ * One logged effort of a mobility drill. `side` is set only when the parent
+ * block is `perSide` — unilateral drills store left and right as separate
+ * entries (a flat list, like `SetEntry[]`), paired for display by order.
+ */
+export type MobilitySet = {
+  id: string;
+  orderIndex: number;
+  side?: MobilitySide;
+  /** metric === "hold" — seconds held. */
+  durationSec?: number;
+  /** metric === "reps" — reps completed. */
+  reps?: number;
+  /** Optional added load, stored kg (the UI converts, like SetEntry.weight). */
+  loadKg?: number;
+  /** Optional hold goal for this set, prefilled from the progression suggestion. */
+  targetSec?: number | null;
+  /** Optional 1–5 "how deep did it feel" — the stretch analog of RPE. */
+  depth?: number | null;
+  completed?: boolean;
+  note?: string | null;
+  /** Per-set rest override (ms). Falls back to the block's `restBetweenSetsMs`. */
+  restDurationMs?: number;
+  /** Set when a rest timer is running after this set — mirrors `SetEntry`. */
+  restStartedAtMs?: number | null;
+  /**
+   * Per-set override of which side leads (perSide only). Falls back to the
+   * block's `leadSide`, then "left". Only affects display / interaction order.
+   */
+  leadSide?: MobilitySide;
+};
+
+export type MobilityBlockData = {
+  drillName: string;
+  /** Catalog reference; undefined for a free-text drill. */
+  drillId?: string;
+  metric: MobilityMetric;
+  perSide: boolean;
+  sets: MobilitySet[];
+  superset?: SupersetInfo;
+  note?: string | null;
+  /**
+   * Rest to run after each completed set / side, in ms. Undefined = no rest
+   * (the default for mobility work). Set from the drill's edit sheet.
+   */
+  restBetweenSetsMs?: number;
+  /** Which side leads by default when `perSide` (seeded from the user setting). */
+  leadSide?: MobilitySide;
+  /**
+   * Sides parked when `perSide` is toggled off, so their data can be restored
+   * on toggling back on. Keyed by set number (1-based). Never rendered.
+   */
+  stashedSides?: { setNumber: number; set: MobilitySet }[];
+};
+
 // Generic session block — data is typed per block type
 export type SessionBlock<T = unknown> = {
   id: string;
@@ -415,6 +476,316 @@ export function addCardioBlock(
     },
   };
   return { ...session, blocks: [...session.blocks, block] };
+}
+
+// ── Mobility block helpers ───────────────────────────────────────────────────
+
+const MOBILITY_SET_PATCH_KEYS = [
+  "side",
+  "durationSec",
+  "reps",
+  "loadKg",
+  "targetSec",
+  "depth",
+  "completed",
+  "note",
+  "restDurationMs",
+  "restStartedAtMs",
+  "leadSide",
+] as const;
+
+export type MobilitySetPatch = Partial<Pick<MobilitySet, (typeof MOBILITY_SET_PATCH_KEYS)[number]>>;
+
+function reindexMobilitySets(sets: MobilitySet[]): MobilitySet[] {
+  return [...sets]
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((s, i) => ({ ...s, orderIndex: i }));
+}
+
+function newMobilitySet(orderIndex: number, side?: MobilitySide): MobilitySet {
+  return { id: createId("mset"), orderIndex, ...(side ? { side } : {}) };
+}
+
+export function addMobilityBlock(
+  session: WorkoutSession,
+  opts: {
+    drillName: string;
+    drillId?: string;
+    metric?: MobilityMetric;
+    perSide?: boolean;
+    leadSide?: MobilitySide;
+  },
+): WorkoutSession {
+  const perSide = opts.perSide ?? false;
+  const block: SessionBlock<MobilityBlockData> = {
+    id: createId("mob"),
+    type: "mobility",
+    orderIndex: session.blocks.length,
+    data: {
+      drillName: opts.drillName.trim(),
+      ...(opts.drillId ? { drillId: opts.drillId } : {}),
+      metric: opts.metric ?? "hold",
+      perSide,
+      ...(opts.leadSide && opts.leadSide !== "left" ? { leadSide: opts.leadSide } : {}),
+      sets: perSide
+        ? [newMobilitySet(0, "left"), newMobilitySet(1, "right")]
+        : [newMobilitySet(0)],
+    },
+  };
+  return { ...session, blocks: [...session.blocks, block] };
+}
+
+/** Append one set — or an L/R pair when the block is per-side. */
+export function addMobilitySet(session: WorkoutSession, blockId: string): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => {
+    const n = data.sets.length;
+    const added = data.perSide
+      ? [newMobilitySet(n, "left"), newMobilitySet(n + 1, "right")]
+      : [newMobilitySet(n)];
+    return { ...data, sets: reindexMobilitySets([...data.sets, ...added]) };
+  });
+}
+
+export function updateMobilitySet(
+  session: WorkoutSession,
+  blockId: string,
+  setId: string,
+  patch: MobilitySetPatch,
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => ({
+    ...data,
+    sets: data.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
+  }));
+}
+
+/** Remove a set — or the whole L/R pair it belongs to when the block is per-side. */
+export function removeMobilitySet(
+  session: WorkoutSession,
+  blockId: string,
+  setId: string,
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => {
+    const sorted = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+    const pos = sorted.findIndex((s) => s.id === setId);
+    if (pos === -1) return data;
+    const drop = new Set<string>([setId]);
+    if (data.perSide) {
+      const pairStart = pos - (pos % 2);
+      for (const s of sorted.slice(pairStart, pairStart + 2)) drop.add(s.id);
+    }
+    return { ...data, sets: reindexMobilitySets(sorted.filter((s) => !drop.has(s.id))) };
+  });
+}
+
+export function setMobilityMetric(
+  session: WorkoutSession,
+  blockId: string,
+  metric: MobilityMetric,
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => ({ ...data, metric }));
+}
+
+/** Set (or clear, with `undefined`) the drill's rest-between-sets default. */
+export function setMobilityRestBetweenSets(
+  session: WorkoutSession,
+  blockId: string,
+  restMs: number | undefined,
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => {
+    const next = { ...data };
+    if (restMs && restMs > 0) next.restBetweenSetsMs = restMs;
+    else delete next.restBetweenSetsMs;
+    return next;
+  });
+}
+
+/**
+ * Toggle unilateral tracking without losing work.
+ *
+ * Turning it **on** rebuilds each single set as an L/R pair: the existing set
+ * becomes `left`, and `right` is restored from `stashedSides` (parked by an
+ * earlier toggle-off) when a matching set number exists, otherwise blank.
+ *
+ * Turning it **off** collapses each pair to its `left` entry and parks the
+ * `right` entry in `stashedSides`, so toggling back on brings the right side's
+ * data with it.
+ */
+export function setMobilityPerSide(
+  session: WorkoutSession,
+  blockId: string,
+  perSide: boolean,
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => {
+    if (data.perSide === perSide) return data;
+
+    if (perSide) {
+      const singles = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+      const stash = data.stashedSides ?? [];
+      const next: MobilitySet[] = [];
+      singles.forEach((s, i) => {
+        const setNumber = i + 1;
+        const { leadSide: _lead, ...bare } = s;
+        next.push({ ...bare, side: "left" });
+        const parked = stash.find((x) => x.setNumber === setNumber);
+        next.push(
+          parked
+            ? { ...parked.set, id: createId("mset"), orderIndex: 0, side: "right" }
+            : newMobilitySet(0, "right"),
+        );
+      });
+      const rebuilt =
+        next.length > 0 ? next : [newMobilitySet(0, "left"), newMobilitySet(1, "right")];
+      const out = { ...data, perSide, sets: reindexMobilitySets(rebuilt) };
+      delete out.stashedSides;
+      return out;
+    }
+
+    // perSide → off: keep the left of each pair, stash the right.
+    const groups = mobilitySetGroups(data);
+    const kept: MobilitySet[] = [];
+    const stashedSides: { setNumber: number; set: MobilitySet }[] = [];
+    for (const g of groups) {
+      if (g.kind !== "pair") continue;
+      const keep = g.left ?? g.right;
+      const park = g.left ? g.right : undefined;
+      if (keep) {
+        const { side: _s, leadSide: _l, ...bare } = keep;
+        kept.push(bare);
+      }
+      if (park) {
+        const { side: _s, leadSide: _l, restStartedAtMs: _r, ...bare } = park;
+        stashedSides.push({ setNumber: g.setNumber, set: bare });
+      }
+    }
+    const sets = reindexMobilitySets(kept.length ? kept : [newMobilitySet(0)]);
+    const out: MobilityBlockData = { ...data, perSide, sets };
+    if (stashedSides.some((x) => mobilitySetHasData(x.set))) out.stashedSides = stashedSides;
+    else delete out.stashedSides;
+    return out;
+  });
+}
+
+/** True when a set carries any logged effort worth preserving. */
+function mobilitySetHasData(s: MobilitySet): boolean {
+  return (
+    (s.durationSec ?? 0) > 0 ||
+    (s.reps ?? 0) > 0 ||
+    (s.loadKg ?? 0) > 0 ||
+    (s.depth ?? 0) > 0 ||
+    !!s.completed ||
+    !!s.note?.trim()
+  );
+}
+
+export function updateMobilityDrill(
+  session: WorkoutSession,
+  blockId: string,
+  next: { drillName: string; drillId?: string },
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => {
+    const d = { ...data, drillName: next.drillName.trim() };
+    if (next.drillId) d.drillId = next.drillId;
+    else delete d.drillId;
+    return d;
+  });
+}
+
+/**
+ * Set (or clear) this block's default lead side — e.g. from the drill's detail
+ * sheet, applying a per-drill preference to the session already in progress.
+ */
+export function setMobilityLeadSide(
+  session: WorkoutSession,
+  blockId: string,
+  leadSide: MobilitySide | undefined,
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => {
+    const next = { ...data };
+    if (leadSide) next.leadSide = leadSide;
+    else delete next.leadSide;
+    return next;
+  });
+}
+
+/** A mobility set, or an L/R pair — for rendering rows grouped as "Set N". */
+export type MobilitySetGroup =
+  | { setNumber: number; kind: "single"; set: MobilitySet }
+  | {
+      setNumber: number;
+      kind: "pair";
+      left?: MobilitySet;
+      right?: MobilitySet;
+      /** Which side to render / interact with first. */
+      lead: MobilitySide;
+    };
+
+export function mobilitySetGroups(data: MobilityBlockData): MobilitySetGroup[] {
+  const sorted = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+  if (!data.perSide) {
+    return sorted.map((set, i) => ({ setNumber: i + 1, kind: "single" as const, set }));
+  }
+  const blockLead: MobilitySide = data.leadSide ?? "left";
+  const out: MobilitySetGroup[] = [];
+  for (let i = 0; i < sorted.length; i += 2) {
+    const a = sorted[i];
+    const b = sorted[i + 1];
+    const left = [a, b].find((s) => s?.side === "left") ?? a;
+    const right = [a, b].find((s) => s?.side === "right") ?? (left === a ? b : a);
+    const lead = left?.leadSide ?? right?.leadSide ?? blockLead;
+    out.push({ setNumber: out.length + 1, kind: "pair", left, right, lead });
+  }
+  return out;
+}
+
+/**
+ * Move a set group (a single, or an L/R pair) to an arbitrary position — the
+ * mobility analog of drag-to-reorder. `fromIndex` / `toIndex` are 0-based
+ * positions into `mobilitySetGroups(data)`.
+ */
+export function moveMobilitySetGroup(
+  session: WorkoutSession,
+  blockId: string,
+  fromIndex: number,
+  toIndex: number,
+): WorkoutSession {
+  return updateMobilityBlock(session, blockId, (data) => {
+    const groups = mobilitySetGroups(data);
+    if (
+      fromIndex < 0 ||
+      fromIndex >= groups.length ||
+      toIndex < 0 ||
+      toIndex >= groups.length ||
+      fromIndex === toIndex
+    ) {
+      return data;
+    }
+    const reordered = [...groups];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved!);
+    const flat: MobilitySet[] = [];
+    for (const g of reordered) {
+      if (g.kind === "single") flat.push(g.set);
+      else {
+        if (g.left) flat.push(g.left);
+        if (g.right) flat.push(g.right);
+      }
+    }
+    // Assign orderIndex from the new positions — don't reindex (which re-sorts
+    // by the *old* orderIndex and would undo the move).
+    return { ...data, sets: flat.map((s, i) => ({ ...s, orderIndex: i })) };
+  });
+}
+
+function updateMobilityBlock(
+  session: WorkoutSession,
+  blockId: string,
+  updater: (data: MobilityBlockData) => MobilityBlockData,
+): WorkoutSession {
+  const idx = session.blocks.findIndex((b) => b.id === blockId && b.type === "mobility");
+  if (idx === -1) return session;
+  const block = session.blocks[idx] as SessionBlock<MobilityBlockData>;
+  const updated = { ...block, data: updater(block.data) };
+  return { ...session, blocks: session.blocks.map((b, i) => (i === idx ? updated : b)) };
 }
 
 export function moveExercise(

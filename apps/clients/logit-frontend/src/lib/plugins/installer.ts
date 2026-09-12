@@ -1,5 +1,6 @@
 import { installPlugin } from "./catalog";
 import { fetchAndStoreExercisePack } from "./packStore";
+import { fetchAndStoreMobilityPack } from "./mobilityPackStore";
 import { fetchAndStoreBundle, storeBundleMeta } from "./bundleStore";
 import { isSandboxedFamily, runSandboxMeta } from "./sandboxedPlugin";
 import type { PluginManifest } from "./types";
@@ -21,12 +22,16 @@ export async function installPluginFromManifest(
 ): Promise<void> {
   // Inline distribution embeds an artifact in the manifest — only ever allowed
   // for content families, never executable code.
-  if (manifest.distribution.origin === "inline" && manifest.family !== "exercise-pack") {
-    throw new Error("Only exercise packs can be installed from an inline manifest.");
+  const isContentPack =
+    manifest.family === "exercise-pack" || manifest.family === "mobility-pack";
+  if (manifest.distribution.origin === "inline" && !isContentPack) {
+    throw new Error("Only content packs can be installed from an inline manifest.");
   }
 
   if (manifest.family === "exercise-pack") {
     await fetchAndStoreExercisePack(manifest);
+  } else if (manifest.family === "mobility-pack") {
+    await fetchAndStoreMobilityPack(manifest);
   } else if (isSandboxedFamily(manifest.family)) {
     const source = await fetchAndStoreBundle(manifest);
     // Cache the plugin's metadata now so listing it later needs no VM.

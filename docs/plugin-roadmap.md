@@ -86,8 +86,8 @@ one mechanism for all of them.**
 
 | Tier | Families | Payload | Sandbox | Authoring |
 |---|---|---|---|---|
-| **Content** | `exercise-pack`, `food-pack` (new), `split-pack` (new) | Pure JSON | None — it is not code | In-app "export as pack" |
-| **Pure function** | `progression-algorithm`, `nutrition-algorithm`, `analytics`, `nutrition-analytics` | JS module, `(input) => output`, deterministic, no I/O | Interpreter sandbox (see below) | Template repo + build step, or a formula DSL |
+| **Content** | `exercise-pack`, `mobility-pack`, `food-pack` (new), `split-pack` (new) | Pure JSON | None — it is not code | In-app "export as pack" |
+| **Pure function** | `progression-algorithm`, `mobility-progression`, `nutrition-algorithm`, `analytics`, `nutrition-analytics` | JS module, `(input) => output`, deterministic, no I/O | Interpreter sandbox (see below) | Template repo + build step, or a formula DSL |
 | **UI** | `widget` | `compute(input) => WidgetView` — a pure function returning a declarative view tree | Same interpreter sandbox as pure-function tier | Same as pure-function tier, plus an end-user widget builder |
 
 Why this works: the pure-function contracts are *already* pure —
@@ -233,9 +233,12 @@ export const widget = {
 ```
 
 Primitive vocabulary (host-rendered, themed, accessible, offline): `stat-grid`,
-`bar`, `line`, `sparkline`, `progress-ring`, `calendar-heatmap`, `heatmap`,
-`muscle-map`, `list`, `table`, `text`, `button` (with an action from a fixed
-allow-list). Every current builtin widget maps onto this set:
+`bar`, `line`, `sparkline`, `progress-ring`, `gauge`, `calendar-heatmap`,
+`heatmap`, `muscle-map`, `list`, `table`, `text`, `button` (with an action from a
+fixed allow-list). `gauge` (value vs. target, radial or linear — added with the
+Mobility block for hold-time / ROM / milestone progress) is the reference for
+"add a primitive when the vocabulary genuinely can't express something." Every
+current builtin widget maps onto this set:
 
 | Builtin widget | Primitives |
 |---|---|
@@ -384,6 +387,16 @@ Everything above shipped to `main` (2026-09-02). What's left is additive polish:
   list of foods (name + macros + serving) merged into the food DB. Reuses the
   whole content-pack pipeline (`packStore`, `withExercisePacks`-style decorator,
   "export as pack" from custom foods). Small.
+- **"Export as pack" for `mobility-pack`** — the pipeline (`mobilityPackStore`,
+  `getMobilityDrillCatalog`, `parseMobilityPack`, `buildMobilityPack`) and the
+  `hip-rehab-pack` sample already exist; what's missing is a custom-drill CRUD UI
+  to export *from*. Mirror the custom-exercise "export as pack" flow once that UI
+  lands.
+- **Mobility widget + `mobility` data need** — shipped: a builtin "Mobility"
+  widget (streak + `gauge`) and `WidgetInput.mobility`, so community widgets can
+  build on stretching data. `mobility-analytics` (a dedicated analytics family
+  for drills) is still open — for now mobility history rides along in
+  `AnalyticsInput.mobilitySessions`.
 - **Registry trust signals** — a `signature` field (registry-issued, verified
   client-side), plus install count / "verified author" / reported badges surfaced
   in Browse. Needs the hosted registry to actually issue signatures.

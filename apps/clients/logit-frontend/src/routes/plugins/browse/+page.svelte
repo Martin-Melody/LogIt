@@ -61,7 +61,9 @@
     switch (family) {
       case "widget": return "Home widget";
       case "progression-algorithm": return "Progression algorithm";
+      case "mobility-progression": return "Mobility progression";
       case "exercise-pack": return "Exercise pack";
+      case "mobility-pack": return "Mobility pack";
       case "analytics": return "Analytics module";
       case "nutrition-algorithm": return "Nutrition algorithm";
       case "nutrition-analytics": return "Nutrition insights";

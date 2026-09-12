@@ -52,5 +52,34 @@
       "home",
       "sample"
     ]
+  },
+  {
+    "id": "sample.mobility-progression.mobility-plus",
+    "name": "Mobility Plus",
+    "description": "A community mobility progression scheme — add hold time or reps each session, per side.",
+    "family": "mobility-progression",
+    "author": "Logit Samples",
+    "manifestUrl": "/sample-plugins/mobility-plus/manifest.json",
+    "tags": [
+      "mobility",
+      "stretching",
+      "progression",
+      "sample"
+    ]
+  },
+  {
+    "id": "sample.mobility-pack.hip-rehab-pack",
+    "name": "Hip Rehab Pack",
+    "description": "Eight hip prehab / rehab drills for the Mobility block — banded hip flexion, clamshells, 90/90 lift-offs and more.",
+    "family": "mobility-pack",
+    "author": "Logit Samples",
+    "manifestUrl": "/sample-plugins/hip-rehab-pack/manifest.json",
+    "tags": [
+      "mobility",
+      "hips",
+      "rehab",
+      "pack"
+    ],
+    "featured": true
   }
 ]

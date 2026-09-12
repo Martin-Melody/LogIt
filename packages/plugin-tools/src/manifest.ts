@@ -7,10 +7,12 @@
 export const PLUGIN_FAMILIES = [
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
   "exercise-pack",
+  "mobility-pack",
 ] as const;
 export type PluginFamily = (typeof PLUGIN_FAMILIES)[number];
 
@@ -18,6 +20,7 @@ export type PluginFamily = (typeof PLUGIN_FAMILIES)[number];
 export const CODE_FAMILIES: ReadonlySet<PluginFamily> = new Set([
   "widget",
   "progression-algorithm",
+  "mobility-progression",
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
@@ -45,10 +48,12 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
 const CAPABILITY_ID_FIELD: Record<PluginFamily, string> = {
   widget: "widgetId",
   "progression-algorithm": "algorithmId",
+  "mobility-progression": "algorithmId",
   analytics: "analyticsId",
   "nutrition-algorithm": "algorithmId",
   "nutrition-analytics": "analyticsId",
   "exercise-pack": "exercisePackId",
+  "mobility-pack": "mobilityPackId",
 };
 
 export type ManifestCheck = {

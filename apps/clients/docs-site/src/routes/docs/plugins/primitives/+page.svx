@@ -102,6 +102,17 @@ isn't relevant today, `sublabel` shows a streak or weekly count.
   { id: "c", label: "Cold shower", checked: false, muted: true, sublabel: "Not due today" },
 ]}} />
 
+## gauge
+
+One value against a target — a hold-time goal, a range-of-motion reading, a
+milestone. `style: "radial"` (default) draws a 270° dial; `"linear"` draws a
+meter. `value` may exceed `target` (the host shows a "beaten" state). `tone`
+reuses the bar tones; `sublabel` overrides the auto `"45 / 60 s"` text.
+
+<Demo node={{ kind: "gauge", label: "Couch stretch", value: 48, target: 60, unit: "s", sublabel: "48s / 60s hold" }} />
+
+<Demo node={{ kind: "gauge", style: "linear", label: "Front split", value: 12, target: 20, unit: "cm to floor" }} />
+
 ---
 
 Need a primitive that isn't here? The vocabulary is deliberately small — open an

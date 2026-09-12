@@ -1,0 +1,14 @@
+{
+  "id": "com.demo.mobility-pack",
+  "family": "mobility-pack",
+  "name": "Mobility Pack Demo",
+  "description": "Two hip drills.",
+  "version": "1.0.0",
+  "integrity": "sha256-sQ88dnA8utifvsP4Q7IcrQSvd6uMBNm0/s4ncMO4jAM=",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "plugins/mobility-pack-demo/manifest.json",
+    "bundleUrl": "plugins/mobility-pack-demo/drills.json"
+  },
+  "capabilities": [{ "family": "mobility-pack", "mobilityPackId": "com.demo.mobility-pack" }]
+}

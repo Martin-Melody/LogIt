@@ -1,7 +1,9 @@
 export type PluginFamily =
   | "widget"
   | "progression-algorithm"
+  | "mobility-progression"
   | "exercise-pack"
+  | "mobility-pack"
   | "analytics"
   | "nutrition-algorithm"
   | "nutrition-analytics";
@@ -59,10 +61,21 @@ export type ProgressionAlgorithmPluginCapability = {
   algorithmId: string;
 };
 
+export type MobilityProgressionAlgorithmPluginCapability = {
+  family: "mobility-progression";
+  algorithmId: string;
+};
+
 export type ExercisePackPluginCapability = {
   family: "exercise-pack";
   exercisePackId: string;
   exerciseCount?: number;
+};
+
+export type MobilityPackPluginCapability = {
+  family: "mobility-pack";
+  mobilityPackId: string;
+  drillCount?: number;
 };
 
 export type AnalyticsPluginCapability = {
@@ -83,7 +96,9 @@ export type NutritionAnalyticsPluginCapability = {
 export type PluginCapability =
   | WidgetPluginCapability
   | ProgressionAlgorithmPluginCapability
+  | MobilityProgressionAlgorithmPluginCapability
   | ExercisePackPluginCapability
+  | MobilityPackPluginCapability
   | AnalyticsPluginCapability
   | NutritionAlgorithmPluginCapability
   | NutritionAnalyticsPluginCapability;

@@ -14,6 +14,8 @@ export type UserProfile = {
   weightUnit: "kg" | "lbs";
   blocksCollapsedByDefault: boolean;
   restDefaults: Record<string, number | undefined>;
+  /** Which side leads for unilateral mobility drills. */
+  mobilityLeadSide: "left" | "right";
 };
 
 const STORAGE_KEY = "logit:profile:v1";
@@ -35,6 +37,7 @@ export const defaultProfile: UserProfile = {
   weightUnit: "kg",
   blocksCollapsedByDefault: true,
   restDefaults: defaultRestDefaults,
+  mobilityLeadSide: "left",
 };
 
 function loadFromStorage(): UserProfile {
@@ -47,6 +50,7 @@ function loadFromStorage(): UserProfile {
       ...defaultProfile,
       ...parsed,
       restDefaults: { ...defaultRestDefaults, ...(parsed.restDefaults ?? {}) },
+      mobilityLeadSide: parsed.mobilityLeadSide === "right" ? "right" : "left",
     };
   } catch {
     return { ...defaultProfile };
@@ -75,6 +79,7 @@ function createProfileStore() {
       weightUnit: "kg" | "lbs";
       blocksCollapsedByDefault: boolean;
       restDefaultsJson: string;
+      mobilityLeadSide: "left" | "right";
     }, nativeRepo: typeof import("$lib/data/localAccountRepo"), getOwnerId: () => string | null) {
       _nativeRepo = nativeRepo;
       _getOwnerId = getOwnerId;
@@ -93,6 +98,7 @@ function createProfileStore() {
         weightUnit: account.weightUnit,
         blocksCollapsedByDefault: account.blocksCollapsedByDefault,
         restDefaults,
+        mobilityLeadSide: account.mobilityLeadSide ?? "left",
       });
     },
 
@@ -149,6 +155,7 @@ function createProfileStore() {
             if (patch.weightUnit !== undefined)              accountPatch.weightUnit = patch.weightUnit;
             if (patch.blocksCollapsedByDefault !== undefined) accountPatch.blocksCollapsedByDefault = patch.blocksCollapsedByDefault;
             if (patch.restDefaults !== undefined)            accountPatch.restDefaultsJson = JSON.stringify(patch.restDefaults);
+            if (patch.mobilityLeadSide !== undefined)        accountPatch.mobilityLeadSide = patch.mobilityLeadSide;
 
             _nativeRepo.updateLocalAccount(ownerId, accountPatch as Parameters<typeof _nativeRepo.updateLocalAccount>[1]).catch(console.error);
           }

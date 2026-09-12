@@ -1,6 +1,7 @@
 import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
 import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
 import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
+import type { UserMobilityProgressionConfig } from "@logit/core/domain/mobilityProgression";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { nowMs } from "@logit/core/domain/time";
@@ -8,6 +9,10 @@ import { nowMs } from "@logit/core/domain/time";
 function owner(): string {
   return getActiveOwnerId() ?? "default";
 }
+
+// Reuses the algorithm_preferences KV table under a reserved key, so no schema
+// migration is needed for the mobility algorithm choice.
+const MOBILITY_CONFIG_KEY = "__mobility_progression_config__";
 
 export function createSqliteProgressionRepo(): ProgressionRepo {
   return {
@@ -34,6 +39,34 @@ export function createSqliteProgressionRepo(): ProgressionRepo {
     async clearConfig(): Promise<void> {
       const db = getDb();
       await db.run(`DELETE FROM progression_config WHERE owner_id = ?`, [owner()]);
+    },
+
+    async getMobilityConfig(): Promise<UserMobilityProgressionConfig | null> {
+      const db = getDb();
+      const res = await db.query(
+        `SELECT data FROM algorithm_preferences WHERE owner_id = ? AND algorithm_id = ?`,
+        [owner(), MOBILITY_CONFIG_KEY],
+      );
+      const row = res.values?.[0] as { data: string } | undefined;
+      if (!row) return null;
+      try { return JSON.parse(row.data) as UserMobilityProgressionConfig; } catch { return null; }
+    },
+
+    async saveMobilityConfig(config: UserMobilityProgressionConfig): Promise<void> {
+      const db = getDb();
+      await db.run(
+        `INSERT INTO algorithm_preferences(owner_id, algorithm_id, data) VALUES(?, ?, ?)
+         ON CONFLICT(owner_id, algorithm_id) DO UPDATE SET data = excluded.data`,
+        [owner(), MOBILITY_CONFIG_KEY, JSON.stringify(config)],
+      );
+    },
+
+    async clearMobilityConfig(): Promise<void> {
+      const db = getDb();
+      await db.run(
+        `DELETE FROM algorithm_preferences WHERE owner_id = ? AND algorithm_id = ?`,
+        [owner(), MOBILITY_CONFIG_KEY],
+      );
     },
 
     async getAnalyticsConfig(): Promise<UserAnalyticsConfig | null> {

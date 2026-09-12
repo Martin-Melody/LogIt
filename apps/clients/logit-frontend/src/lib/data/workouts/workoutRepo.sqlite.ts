@@ -1,5 +1,13 @@
 import type { WorkoutRepo, ListRecentSessionsOptions } from "@logit/core/data/workoutRepo";
-import type { WorkoutSession, SessionBlock, StrengthBlockData, SetType } from "@logit/core/domain/workout";
+import type {
+  WorkoutSession,
+  SessionBlock,
+  StrengthBlockData,
+  SetType,
+  MobilityBlockData,
+  MobilityMetric,
+  MobilitySide,
+} from "@logit/core/domain/workout";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 
@@ -26,6 +34,46 @@ function parseBlockData(type: string, dataJson: string): unknown {
         rpe: s.rpe ?? null,
       })),
     } satisfies StrengthBlockData;
+  }
+
+  if (type === "mobility") {
+    const n = (v: any): number | undefined => {
+      const x = Number(v);
+      return Number.isFinite(x) && x >= 0 ? x : undefined;
+    };
+    const side = (v: any): MobilitySide | undefined =>
+      v === "left" || v === "right" ? v : undefined;
+    const mobSet = (s: any) => ({
+      id: s.id,
+      orderIndex: s.orderIndex ?? 0,
+      side: side(s.side),
+      durationSec: n(s.durationSec),
+      reps: n(s.reps),
+      loadKg: n(s.loadKg),
+      targetSec: s.targetSec == null ? null : n(s.targetSec) ?? null,
+      depth: s.depth == null ? null : Math.min(5, Math.max(1, Math.round(Number(s.depth)))) || null,
+      completed: !!s.completed,
+      note: s.note ?? null,
+      restDurationMs: n(s.restDurationMs),
+      restStartedAtMs: s.restStartedAtMs == null ? null : n(s.restStartedAtMs) ?? null,
+      leadSide: side(s.leadSide),
+    });
+    return {
+      drillName: raw.drillName ?? "",
+      drillId: raw.drillId ?? undefined,
+      metric: (raw.metric === "reps" ? "reps" : "hold") as MobilityMetric,
+      perSide: !!raw.perSide,
+      superset: raw.superset ?? undefined,
+      note: raw.note ?? null,
+      restBetweenSetsMs: n(raw.restBetweenSetsMs),
+      leadSide: side(raw.leadSide),
+      stashedSides: Array.isArray(raw.stashedSides)
+        ? raw.stashedSides
+            .filter((x: any) => x && typeof x.setNumber === "number" && x.set)
+            .map((x: any) => ({ setNumber: x.setNumber, set: mobSet(x.set) }))
+        : undefined,
+      sets: (raw.sets ?? []).map(mobSet),
+    } satisfies MobilityBlockData;
   }
 
   return raw;
