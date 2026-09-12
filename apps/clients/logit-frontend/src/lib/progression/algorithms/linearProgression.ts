@@ -237,6 +237,23 @@ function fmtSlope(pct: number): string {
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
 
+// Deterministically rebuilds the "trial finished" nudge from a concluded trial's
+// stored result — used both at the moment of conclusion and on every later call
+// while it's still awaiting a decision, so the two never drift into describing
+// the same trial two different ways.
+function resultNudge(trial: RepRangeTrial): NonNullable<ProgressionOutput["nudge"]> {
+  const result = trial.result!;
+  const switched = result.switched;
+  return {
+    id: REP_RANGE_TRIAL_RESULT_NUDGE_ID,
+    message: switched
+      ? `Trial finished — you progressed faster at ${trial.trialRepRange[0]}-${trial.trialRepRange[1]} reps (${fmtSlope(result.trialSlopePctPerSession)}/session) than your usual ${trial.baselineRepRange[0]}-${trial.baselineRepRange[1]} (${fmtSlope(result.baselineSlopePctPerSession)}/session). Switch permanently?`
+      : `Trial finished — no meaningful difference at ${trial.trialRepRange[0]}-${trial.trialRepRange[1]} reps. Keeping your usual ${trial.baselineRepRange[0]}-${trial.baselineRepRange[1]}.`,
+    actionLabel: switched ? "Switch" : undefined,
+    actionData: switched ? { repRange: trial.trialRepRange } : undefined,
+  };
+}
+
 type FatigueCalibration = {
   sensitivity: number;
   freshSamples: number;
@@ -387,18 +404,25 @@ function suggest(input: ProgressionInput): ProgressionOutput {
           concludedAtMs: nowMs(),
         },
       };
-      trialNudge = {
-        id: REP_RANGE_TRIAL_RESULT_NUDGE_ID,
-        message: switched
-          ? `Trial finished — you progressed faster at ${repRangeTrial.trialRepRange[0]}-${repRangeTrial.trialRepRange[1]} reps (${fmtSlope(trial.slopePctPerSession)}/session) than your usual ${repRangeTrial.baselineRepRange[0]}-${repRangeTrial.baselineRepRange[1]} (${fmtSlope(baseline.slopePctPerSession)}/session). Switch permanently?`
-          : `Trial finished — no meaningful difference at ${repRangeTrial.trialRepRange[0]}-${repRangeTrial.trialRepRange[1]} reps. Keeping your usual ${repRangeTrial.baselineRepRange[0]}-${repRangeTrial.baselineRepRange[1]}.`,
-        actionLabel: switched ? "Switch" : undefined,
-        actionData: switched ? { repRange: repRangeTrial.trialRepRange } : undefined,
-      };
+      trialNudge = resultNudge(repRangeTrial);
       // The just-concluded trial no longer sets today's target — back to
       // baseline until/unless the user accepts the switch above.
       activeRepRange = repRangeTrial.baselineRepRange;
     }
+  } else if (repRangeTrial?.status === "concluded" && repRangeTrial.result) {
+    // Re-propose the SAME result every call — not just at the moment of
+    // conclusion — otherwise a user who doesn't act on it immediately would
+    // never see it again (viewing/re-suggesting doesn't persist anything;
+    // only a completed session does, via applySessionProgression). Whether
+    // this has already been dismissed ("keep usual") is handled generically,
+    // same as any other nudge. "Switch" is different: accepting it actually
+    // changes state.repRange, so re-checking that here (rather than a second
+    // dismissal-style flag) is what stops it nagging forever after the fact.
+    const alreadySwitched =
+      repRangeTrial.result.switched &&
+      state.repRange[0] === repRangeTrial.trialRepRange[0] &&
+      state.repRange[1] === repRangeTrial.trialRepRange[1];
+    if (!alreadySwitched) trialNudge = resultNudge(repRangeTrial);
   } else if (
     !repRangeTrial &&
     prefs.repRangeExperimentsEnabled &&

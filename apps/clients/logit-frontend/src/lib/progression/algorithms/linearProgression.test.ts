@@ -329,5 +329,77 @@ describe("linearProgression", () => {
       expect(nextTrial.result.switched).toBe(false);
       expect(out.nudge?.actionLabel).toBeUndefined();
     });
+
+    // Regression coverage: a concluded trial used to only get a nudge in the
+    // exact call where it transitioned from active — viewing it again later
+    // (with no session logged in between, so nothing new persisted) showed
+    // nothing at all, silently losing the "want to switch?" decision.
+    it("keeps proposing a winning trial's result on later views, not just the moment it concluded", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8], // baseline — not yet switched
+            repRangeTrial: {
+              trialRepRange: [10, 15],
+              baselineRepRange: [5, 8],
+              startedAtMs: 0,
+              status: "concluded",
+              result: { trialSlopePctPerSession: 2, baselineSlopePctPerSession: 0.3, switched: true, concludedAtMs: 0 },
+            },
+          },
+          history: calibratedHistory,
+        }),
+      );
+      expect(out.nudge?.id).toBe(RESULT_ID);
+      expect(out.nudge?.actionLabel).toBe("Switch");
+    });
+
+    it("stops proposing a switch once state.repRange already matches the trial range (i.e. already switched)", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [10, 15], // already matches trialRepRange — the switch already happened
+            repRangeTrial: {
+              trialRepRange: [10, 15],
+              baselineRepRange: [5, 8],
+              startedAtMs: 0,
+              status: "concluded",
+              result: { trialSlopePctPerSession: 2, baselineSlopePctPerSession: 0.3, switched: true, concludedAtMs: 0 },
+            },
+          },
+          history: calibratedHistory,
+        }),
+      );
+      expect(out.nudge?.id).not.toBe(RESULT_ID);
+    });
+
+    it("keeps proposing a 'no difference' result too, until dismissed", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8],
+            repRangeTrial: {
+              trialRepRange: [10, 15],
+              baselineRepRange: [5, 8],
+              startedAtMs: 0,
+              status: "concluded",
+              result: { trialSlopePctPerSession: 0.3, baselineSlopePctPerSession: 0.3, switched: false, concludedAtMs: 0 },
+            },
+          },
+          history: calibratedHistory,
+        }),
+      );
+      expect(out.nudge?.id).toBe(RESULT_ID);
+      expect(out.nudge?.actionLabel).toBeUndefined();
+    });
   });
 });
