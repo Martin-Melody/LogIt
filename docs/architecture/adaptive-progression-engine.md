@@ -649,28 +649,32 @@ marketing copy or docs-site per slice** — batch the update once the engine's s
 enough that it isn't described three different ways in three commits. Update this list as things
 ship; do the actual external-facing pass later, deliberately, not reactively.
 
-**Not yet reflected anywhere external, as of round 2 (2026-09-12) — §1-10 all shipped now:**
-- `apps/clients/docs-site/src/routes/docs/plugins/reference/+page.svx` — still describes
-  `ProgressionInput`/`ProgressionOutput` generically (line ~61); doesn't mention `reasoning`,
-  `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), the widened `sessionPositions` and
-  `comparableToCurrent` parameters on `classifyTrend`, the `nudge`/`ProgressionNudge`/dismissal
-  contract, the `actionLabel`/`actionData`/`exclusive`/`activeExperiment` additions from rep-range
-  experimentation (§10), `liveInput` (§7), or `siblingRuledOutRepRanges` (§10.3.1). A plugin author
-  reading this today wouldn't know any of this exists, let alone that reasoning is expected of a
-  marketplace-quality algorithm.
-- No docs-site page for the **new** `muscle-group-insight` plugin family (§5 option B) — comparable
-  pages exist for mobility (`docs/plugins/mobility-progression`, `mobility-packs`); this family
-  (contract, registry, `analyze()` entry point) has no page at all yet.
-- No docs-site page for `TrainingBlockTag` (§10.3.3) or the program-library content model (§6) —
-  neither existed before this round.
-- Marketing site (`apps/clients/logit-marketing`) makes no claims about progression intelligence
-  specifically yet, so nothing there is actively *wrong* — but the story is now genuinely complete
-  ("shows its reasoning, not just a verdict"; "e1RM everywhere"; personalized muscle-group volume;
-  a program library for people who don't want the engine at all; nutrition-correlation hypotheses)
-  and worth a real copy pass.
+**External-facing pass done (2026-09-12), branch `docs/progression-engine-round2-debt`:**
+- ~~`apps/clients/docs-site/src/routes/docs/plugins/reference/+page.svx`~~ — fixed. Also caught
+  and fixed a bigger pre-existing gap while there: the `family` union and capability-id-field line
+  had never listed `mobility-progression`, `mobility-pack`, or `muscle-group-insight` at all (not
+  just missing this round's additions) — the whole family list was stale, not just this round's
+  delta. Added a `Reasoning`/`ReasoningConfidence` entry to the input/output types list.
+- ~~`docs/plugins/progression/+page.svx`~~ — added a "Reasoning and nudges" section documenting
+  `reasoning`/`ProgressionNudge` on the output, and `liveInput`/`suggestedTrialRepRange`/
+  `siblingRuledOutRepRanges` on the input.
+- ~~New `docs/plugins/muscle-group-insight/+page.svx`~~ — written to the same shape as the
+  `mobility-progression` page (contract, input/output tables, built-in algorithm description).
+- ~~`docs/plugins/+page.svx` family index~~ — was already missing `mobility-progression` and
+  `mobility-pack` (pre-existing, not just this round's gap); added those plus `muscle-group-insight`
+  together, "six things" → "nine things".
+- **`TrainingBlockTag` (§10.3.3) and the program-library content model (§6) deliberately did NOT
+  get docs-site pages** — checked first: docs-site only has two sections ever, self-hosting and
+  plugin authoring (`docs/+page.svx`), and neither feature is a plugin extension point (no
+  algorithm reads a `TrainingBlockTag`; a program is authored the same way a coach's `CoachProgram`
+  already is, nothing new for a plugin author to hook into). Adding a page for either would be a
+  new, unprecedented "user-facing feature docs" section on a site that has never had one — bigger
+  scope than this debt pass warrants. Covered via marketing copy instead (below), same as every
+  other user-facing feature (habits, social, etc.) that also has no docs-site page.
+- Marketing site (`apps/clients/logit-marketing/src/routes/+page.svelte`) — "What you get" grid
+  updated: `Algorithms` card now says "shows its reasoning, not just a verdict" + per-muscle-group
+  volume/rep-range learning + e1RM; `Nutrition` card gained the training-correlation hypothesis
+  line; new `Programs` card covers the built-in program library as the explicit alternative for
+  people who don't want the engine at all. Grid widened to 4 columns (`lg:grid-cols-4`) to fit it.
 
-**This round's sequencing (§11) is fully shipped — this is the trigger Martin's standing rule
-pointed at.** The actual external-facing pass (docs-site plugin reference rewrite, new
-muscle-group-insight/training-block-tag docs-site pages, marketing copy) is queued as real,
-scoped follow-up work — still deliberate, not reactive, but no longer blocked on anything landing
-first.
+**This round's sequencing (§11) and its docs/marketing debt (§13) are both fully shipped.**

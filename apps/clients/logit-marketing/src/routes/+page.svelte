@@ -18,7 +18,7 @@
 
   <div class="flex flex-col gap-4">
     <h2 class="text-lg font-semibold">What you get</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card.Root>
         <Card.Header>
           <Card.Title>Training</Card.Title>
@@ -38,18 +38,33 @@
         <Card.Content class="text-sm text-muted-foreground pt-1">
           Log food against a bundled database of 250,000+ foods — barcode scan, nutrition-label
           scan, recipes and saved meals. Calorie and macro targets that adapt to your weight
-          trend. Works offline.
+          trend. See whether your lifts trend better on the days you hit your targets, surfaced
+          as a hypothesis with its own confidence, not a flat claim. Works offline.
         </Card.Content>
       </Card.Root>
 
       <Card.Root>
         <Card.Header>
           <Card.Title>Algorithms</Card.Title>
-          <Card.Description>Plug and play</Card.Description>
+          <Card.Description>Shows its reasoning, not just a verdict</Card.Description>
         </Card.Header>
         <Card.Content class="text-sm text-muted-foreground pt-1">
-          Progression and adaptive-macro algorithms are pluggable. Pick one from the registry
-          or write your own — it reads your history and gives you the next target.
+          Progression algorithms are pluggable — pick one from the registry or write your own.
+          The built-in engine explains every suggestion, learns your personal volume and
+          rep-range sweet spots per muscle group and exercise from your own training history,
+          and tracks e1RM everywhere.
+        </Card.Content>
+      </Card.Root>
+
+      <Card.Root>
+        <Card.Header>
+          <Card.Title>Programs</Card.Title>
+          <Card.Description>Or skip the engine entirely</Card.Description>
+        </Card.Header>
+        <Card.Content class="text-sm text-muted-foreground pt-1">
+          Don't want to think about progression at all? Start from a built-in program —
+          full-body, upper/lower, push/pull/legs, or a 5×5 strength template — and just follow
+          the days. Switch to an algorithm, or a different program, whenever you want.
         </Card.Content>
       </Card.Root>
     </div>
