@@ -14,6 +14,7 @@ const EXECUTABLE_FAMILIES: ReadonlySet<PluginFamily> = new Set([
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
+  "muscle-group-insight",
 ]);
 
 export function isExecutablePluginFamily(family: PluginFamily): boolean {

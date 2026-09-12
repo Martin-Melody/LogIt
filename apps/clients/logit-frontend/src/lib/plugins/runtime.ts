@@ -8,6 +8,7 @@ import type {
 } from "@logit/core/domain/progression";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
 import { createLocalMobilityAlgorithmRegistry } from "$lib/progression/localMobilityAlgorithmRegistry";
+import { createLocalMuscleGroupInsightAlgorithmRegistry } from "$lib/progression/localMuscleGroupInsightAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
@@ -28,6 +29,7 @@ import type {
 import type {
   AnalyticsPluginCapability,
   MobilityProgressionAlgorithmPluginCapability,
+  MuscleGroupInsightAlgorithmPluginCapability,
   NutritionAlgorithmPluginCapability,
   NutritionAnalyticsPluginCapability,
   PluginCapability,
@@ -59,6 +61,12 @@ import type {
   MobilityProgressionAlgorithmRegistry,
   MobilityProgressionOutput,
 } from "@logit/core/domain/mobilityProgression";
+import type {
+  MuscleGroupInsightAlgorithm,
+  MuscleGroupInsightAlgorithmMeta,
+  MuscleGroupInsightAlgorithmRegistry,
+  MuscleGroupInsightOutput,
+} from "@logit/core/domain/muscleGroupInsight";
 
 export type RuntimeWidgetDefinition = WidgetDefinition & {
   source: "builtin" | "installed";
@@ -94,6 +102,16 @@ function getMobilityProgressionCapability(
     (manifest.capabilities.find(
       (c) => c.family === "mobility-progression",
     ) as MobilityProgressionAlgorithmPluginCapability | undefined) ?? null
+  );
+}
+
+function getMuscleGroupInsightCapability(
+  manifest: PluginManifest,
+): MuscleGroupInsightAlgorithmPluginCapability | null {
+  return (
+    (manifest.capabilities.find(
+      (c) => c.family === "muscle-group-insight",
+    ) as MuscleGroupInsightAlgorithmPluginCapability | undefined) ?? null
   );
 }
 
@@ -415,6 +433,62 @@ function mobilityAlgorithmRegistry(): MobilityProgressionAlgorithmRegistry {
   };
 }
 
+// ── Muscle-group-insight algorithms (§5 option B) ────────────────────────────
+
+async function installedMuscleGroupInsightAlgorithms(): Promise<MuscleGroupInsightAlgorithmMeta[]> {
+  const installed = await listInstalledPluginManifests();
+  return listSandboxedPlugins(
+    installed,
+    "muscle-group-insight",
+    (p) => !!getMuscleGroupInsightCapability(p.manifest),
+    (plugin) => ({
+      id: getMuscleGroupInsightCapability(plugin.manifest)!.algorithmId,
+      name: plugin.manifest.name,
+      description: plugin.manifest.description,
+      author: plugin.manifest.author,
+    }),
+  );
+}
+
+async function installedMuscleGroupInsightAlgorithmById(
+  id: string,
+): Promise<MuscleGroupInsightAlgorithm | null> {
+  const installed = await listInstalledPluginManifests();
+  const plugin = findSandboxedPlugin(
+    installed,
+    "muscle-group-insight",
+    (p) => getMuscleGroupInsightCapability(p.manifest)?.algorithmId === id,
+  );
+  if (!plugin) return null;
+
+  const meta = await sandboxedMeta(plugin);
+  if (!meta) return null;
+
+  const analyze = sandboxedCall<MuscleGroupInsightOutput>(plugin, "analyze");
+  return {
+    id,
+    name: plugin.manifest.name,
+    description: plugin.manifest.description,
+    author: plugin.manifest.author,
+    defaultState: meta.defaultState ?? {},
+    defaultPreferences: meta.defaultPreferences,
+    preferencesSchema: meta.preferencesSchema as MuscleGroupInsightAlgorithm["preferencesSchema"],
+    analyze: (input) => analyze(input),
+  };
+}
+
+function muscleGroupInsightAlgorithmRegistry(): MuscleGroupInsightAlgorithmRegistry {
+  const builtin = createLocalMuscleGroupInsightAlgorithmRegistry();
+  return {
+    async list() {
+      return [...(await builtin.list()), ...(await installedMuscleGroupInsightAlgorithms())];
+    },
+    async get(id: string) {
+      return (await builtin.get(id)) ?? installedMuscleGroupInsightAlgorithmById(id);
+    },
+  };
+}
+
 function analyticsRegistry(): AnalyticsRegistry {
   const builtin = createLocalAnalyticsRegistry();
 
@@ -465,6 +539,7 @@ export function createPluginRuntime() {
     nutritionAlgorithms: nutritionAlgorithmRegistry(),
     nutritionAnalytics: nutritionAnalyticsRegistry(),
     mobilityAlgorithms: mobilityAlgorithmRegistry(),
+    muscleGroupInsightAlgorithms: muscleGroupInsightAlgorithmRegistry(),
   };
 }
 

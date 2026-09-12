@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDiaryItem,
+  localDateIso,
   createCustomFood,
   createDiaryDay,
   createFavoriteFood,
@@ -272,5 +273,30 @@ describe("recents", () => {
     expect(item.meal).toBe("breakfast");
     expect(item.grams).toBe(150);
     expect(item.computed.kcal).toBe(100);
+  });
+});
+
+describe("addDiaryItem loggedAtMs (§9 nutrition x training correlation)", () => {
+  it("stamps loggedAtMs when adding to today's diary", () => {
+    const today = createDiaryDay(localDateIso());
+    const before = Date.now();
+    const withItem = addDiaryItem(today, {
+      meal: "lunch",
+      name: "Rice",
+      grams: 150,
+      computed: { kcal: 100, proteinG: 5, carbsG: 10, fatG: 2 },
+    });
+    expect(withItem.items[0]!.loggedAtMs).toBeGreaterThanOrEqual(before);
+  });
+
+  it("leaves loggedAtMs unset when backfilling a past day", () => {
+    const past = createDiaryDay("2020-01-01");
+    const withItem = addDiaryItem(past, {
+      meal: "lunch",
+      name: "Rice",
+      grams: 150,
+      computed: { kcal: 100, proteinG: 5, carbsG: 10, fatG: 2 },
+    });
+    expect(withItem.items[0]!.loggedAtMs).toBeUndefined();
   });
 });

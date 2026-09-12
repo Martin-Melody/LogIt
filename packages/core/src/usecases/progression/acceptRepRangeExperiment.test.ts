@@ -6,18 +6,22 @@ import type { ProgressionDeps } from "./deps";
 const OFFER_ID = "linear-progression:rep-range-trial-offer";
 const RESULT_ID = "linear-progression:rep-range-trial-result";
 
-function fakeAlgorithm(nudge: ProgressionNudge | undefined): ProgressionAlgorithm {
+function fakeAlgorithm(nudge: ProgressionNudge | undefined, nextState: unknown = null): ProgressionAlgorithm {
   return {
     id: "linear-progression",
     name: "Linear Progression",
     description: "test double",
     defaultState: null,
-    suggest: () => ({ sets: [], nextState: null, nudge }),
+    suggest: () => ({ sets: [], nextState, nudge }),
   };
 }
 
-function deps(existing: ExerciseProgressionState, nudge: ProgressionNudge | undefined) {
-  const saved: { state: ExerciseProgressionState } = { state: existing };
+function deps(
+  existing: ExerciseProgressionState | null,
+  nudge: ProgressionNudge | undefined,
+  nextState: unknown = null,
+) {
+  const saved: { state: ExerciseProgressionState | null } = { state: existing };
   return {
     workoutRepo: { listRecentSessions: async () => [], listAllSessions: async () => [] },
     exerciseRepo: { getById: async () => null, getByName: async () => null },
@@ -30,10 +34,10 @@ function deps(existing: ExerciseProgressionState, nudge: ProgressionNudge | unde
       },
       listExerciseStates: async () => [],
     },
-    algorithmRegistry: { get: async () => fakeAlgorithm(nudge) },
+    algorithmRegistry: { get: async () => fakeAlgorithm(nudge, nextState) },
     _saved: saved,
   } as unknown as Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo"> & {
-    _saved: { state: ExerciseProgressionState };
+    _saved: { state: ExerciseProgressionState | null };
   };
 }
 
@@ -57,10 +61,13 @@ describe("acceptRepRangeExperiment", () => {
 
     await acceptRepRangeExperiment({ name: "Bench" }, OFFER_ID, d);
 
-    const state = d._saved.state.state as { repRangeTrial: { status: string; trialRepRange: number[]; baselineRepRange: number[] } };
-    expect(state.repRangeTrial.status).toBe("active");
-    expect(state.repRangeTrial.trialRepRange).toEqual([10, 15]);
-    expect(state.repRangeTrial.baselineRepRange).toEqual([5, 8]);
+    const state = d._saved.state.state as {
+      repRangeLadder: { status: string; trialRepRange: number[]; baselineRepRange: number[] }[];
+    };
+    const rung = state.repRangeLadder[state.repRangeLadder.length - 1]!;
+    expect(rung.status).toBe("active");
+    expect(rung.trialRepRange).toEqual([10, 15]);
+    expect(rung.baselineRepRange).toEqual([5, 8]);
     expect(d._saved.state.activeExperiment?.id).toBe("rep-range-trial");
   });
 
@@ -74,7 +81,15 @@ describe("acceptRepRangeExperiment", () => {
         failedAttempts: 0,
         increment: 2.5,
         repRange: [5, 8],
-        repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: 0, status: "concluded" },
+        repRangeLadder: [
+          {
+            trialRepRange: [10, 15],
+            baselineRepRange: [5, 8],
+            startedAtMs: 0,
+            status: "concluded",
+            result: { switched: true },
+          },
+        ],
       },
       updatedAtMs: 0,
     };
@@ -91,6 +106,34 @@ describe("acceptRepRangeExperiment", () => {
     const state = d._saved.state.state as { repRange: number[] };
     expect(state.repRange).toEqual([10, 15]);
     expect(d._saved.state.activeExperiment).toBeUndefined();
+  });
+
+  it("starts a trial from the freshly-seeded state when no progression state has ever been persisted", async () => {
+    // An exercise can be offered a nudge without ever having a saved row —
+    // getSuggestion seeds state fresh (algorithm.defaultState + history)
+    // whenever nothing's been saved, e.g. an exercise trained for months
+    // before linear-progression was picked as the active algorithm.
+    const nudge: ProgressionNudge = {
+      id: OFFER_ID,
+      message: "Try it?",
+      actionLabel: "Try it",
+      actionData: { trialRepRange: [10, 15] },
+      exclusive: true,
+    };
+    const freshlySeededState = { workingWeight: 100, failedAttempts: 0, increment: 2.5, repRange: [5, 8] };
+    const d = deps(null, nudge, freshlySeededState);
+
+    await acceptRepRangeExperiment({ name: "Squat" }, OFFER_ID, d);
+
+    expect(d._saved.state).not.toBeNull();
+    const state = d._saved.state!.state as {
+      repRangeLadder: { status: string; trialRepRange: number[]; baselineRepRange: number[] }[];
+    };
+    const rung = state.repRangeLadder[state.repRangeLadder.length - 1]!;
+    expect(rung.status).toBe("active");
+    expect(rung.trialRepRange).toEqual([10, 15]);
+    expect(rung.baselineRepRange).toEqual([5, 8]);
+    expect(d._saved.state!.activeExperiment?.id).toBe("rep-range-trial");
   });
 
   it("is a no-op if the fresh suggestion no longer carries this nudge", async () => {

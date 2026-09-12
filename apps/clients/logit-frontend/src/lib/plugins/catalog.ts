@@ -2,6 +2,7 @@ import { browser } from "$app/environment";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
 import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
 import { createLocalMobilityAlgorithmRegistry } from "$lib/progression/localMobilityAlgorithmRegistry";
+import { createLocalMuscleGroupInsightAlgorithmRegistry } from "$lib/progression/localMuscleGroupInsightAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
@@ -21,6 +22,7 @@ const BUNDLED_BUNDLE_FAMILIES = new Set<PluginManifest["family"]>([
   "nutrition-analytics",
   "exercise-pack",
   "mobility-pack",
+  "muscle-group-insight",
 ]);
 
 const INSTALLED_STORAGE_KEY = "logit:plugins:installed:v1";
@@ -168,6 +170,20 @@ async function makeAnalyticsManifests(): Promise<PluginManifest[]> {
   }));
 }
 
+async function makeMuscleGroupInsightManifests(): Promise<PluginManifest[]> {
+  const algorithms = await createLocalMuscleGroupInsightAlgorithmRegistry().list();
+  return algorithms.map((algo) => ({
+    id: `builtin.muscle-group-insight.${algo.id}`,
+    family: "muscle-group-insight",
+    name: algo.name,
+    description: algo.description,
+    version: "1.0.0",
+    author: algo.author ?? "logit",
+    distribution: { origin: "builtin" },
+    capabilities: [{ family: "muscle-group-insight", algorithmId: algo.id }],
+  }));
+}
+
 async function makeNutritionAlgorithmManifests(): Promise<PluginManifest[]> {
   const algorithms = await createLocalNutritionAlgorithmRegistry().list();
   return algorithms.map((algo) => ({
@@ -204,6 +220,7 @@ export async function listBuiltinPluginManifests(): Promise<PluginManifest[]> {
     ...(await makeAnalyticsManifests()),
     ...(await makeNutritionAlgorithmManifests()),
     ...(await makeNutritionAnalyticsManifests()),
+    ...(await makeMuscleGroupInsightManifests()),
   ];
 }
 

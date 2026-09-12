@@ -11,6 +11,7 @@
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import ProgressStatusChip from "./ProgressStatusChip.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
+  import TrainingBlockTagDialog from "./TrainingBlockTagDialog.svelte";
 
   const { exercise }: { exercise: { id?: string; name: string } } = $props();
 
@@ -129,6 +130,29 @@
             {new Date(story.lastPr.whenMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
           </p>
         {/if}
+        {#if story.plateauNextSteps}
+          <!-- §10.3.2 — the rep-range ladder ran out of rungs with no real
+               difference. Presents the remaining hypotheses as options, not
+               a decision made for the user (Martin's call). -->
+          <div class="rounded border border-border px-2 py-1.5">
+            <p class="text-xs text-muted-foreground mb-1">
+              Rep-range experiments didn't find a difference here. Worth checking next:
+            </p>
+            <div class="flex flex-wrap gap-3">
+              {#if story.plateauNextSteps.muscleGroup}
+                <a href="/progress?tab=muscles" class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2">
+                  {story.plateauNextSteps.muscleGroup} volume/frequency
+                </a>
+              {/if}
+              <a href="/progress?tab=nutrition" class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2">
+                Nutrition timing
+              </a>
+            </div>
+          </div>
+        {/if}
+        <div class="flex justify-end">
+          <TrainingBlockTagDialog {exercise} triggerVariant="ghost" onSaved={refreshStory} />
+        </div>
       </div>
     {/if}
 

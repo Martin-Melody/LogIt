@@ -149,10 +149,12 @@ describe("getSuggestion — rep-range trial muscle-group warm start", () => {
                   exerciseName: "Incline Press",
                   algorithmId: "linear-progression",
                   state: {
-                    repRangeTrial: {
-                      trialRepRange: [10, 15],
-                      result: { switched: siblingTrial.switched },
-                    },
+                    repRangeLadder: [
+                      {
+                        trialRepRange: [10, 15],
+                        result: { switched: siblingTrial.switched },
+                      },
+                    ],
                   },
                   updatedAtMs: 0,
                 },
@@ -207,11 +209,11 @@ describe("applySessionProgression", () => {
     ]);
   });
 
-  it("derives activeExperiment from an active rep-range trial in nextState", async () => {
+  it("derives activeExperiment from an active rung in the rep-range ladder", async () => {
     const d = deps(null);
     await applySessionProgression(
       { name: "Bench" },
-      { sets: [], nextState: { repRange: [5, 8], repRangeTrial: { status: "active", startedAtMs: 123 } } },
+      { sets: [], nextState: { repRange: [5, 8], repRangeLadder: [{ status: "active", startedAtMs: 123 }] } },
       d,
     );
     expect((d._saved.state as { activeExperiment: { id: string; startedAtMs: number } }).activeExperiment).toEqual({
@@ -220,11 +222,11 @@ describe("applySessionProgression", () => {
     });
   });
 
-  it("clears activeExperiment once the trial is no longer active (e.g. concluded)", async () => {
+  it("clears activeExperiment once no rung is active (e.g. all concluded)", async () => {
     const d = deps(null);
     await applySessionProgression(
       { name: "Bench" },
-      { sets: [], nextState: { repRange: [5, 8], repRangeTrial: { status: "concluded", startedAtMs: 123 } } },
+      { sets: [], nextState: { repRange: [5, 8], repRangeLadder: [{ status: "concluded", startedAtMs: 123 }] } },
       d,
     );
     expect((d._saved.state as { activeExperiment?: unknown }).activeExperiment).toBeUndefined();
@@ -289,5 +291,42 @@ describe("getSuggestion — history isn't diluted by other exercises' more recen
     // All 10 of Bench's own sessions should be visible, not just whatever
     // fraction survived a global "most recent 20 overall" cut.
     expect(output?.label).toBe("history:10");
+  });
+});
+
+describe("getSuggestion — liveInput passthrough (§7 autoregulation accommodation)", () => {
+  const echoLiveInputAlgorithm: ProgressionAlgorithm = {
+    id: "test-algorithm",
+    name: "Test",
+    description: "Echoes liveInput back so the passthrough can be asserted on.",
+    defaultState: null,
+    suggest: (input) => ({
+      sets: [],
+      nextState: null,
+      label: input.liveInput ? `live:${input.liveInput.rpe ?? "-"}:${input.liveInput.readiness ?? "-"}` : undefined,
+    }),
+  };
+
+  function deps(): ProgressionDeps {
+    return {
+      workoutRepo: { listRecentSessions: async () => [], listAllSessions: async () => [] },
+      exerciseRepo: { getById: async () => null, getByName: async () => null },
+      progressionRepo: {
+        getConfig: async () => ({ algorithmId: "test-algorithm" }),
+        getExerciseState: async () => null,
+        getAlgorithmPreferences: async () => null,
+      },
+      algorithmRegistry: { get: async () => echoLiveInputAlgorithm },
+    } as unknown as ProgressionDeps;
+  }
+
+  it("is undefined by default — a built-in/plugin algorithm that ignores it sees nothing", async () => {
+    const output = await getSuggestion({ name: "Bench" }, deps());
+    expect(output?.label).toBeUndefined();
+  });
+
+  it("passes rpe/readiness straight through to the algorithm untouched", async () => {
+    const output = await getSuggestion({ name: "Bench" }, deps(), undefined, undefined, { rpe: 8, readiness: 6 });
+    expect(output?.label).toBe("live:8:6");
   });
 });

@@ -14,11 +14,19 @@
   import { createSplit } from "@logit/core/domain/WorkoutSplit";
   import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
   import { getCurrentWeek } from "@logit/core/domain/CoachProgram";
+  import { getBuiltinProgram, isBuiltinProgramId } from "@logit/core/domain/builtinPrograms";
   import { reveal, popIn } from "$lib/transitions";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
-  import { getCheckinRepo } from "$lib/data/repoProvider";
+  import { getCheckinRepo, getCoachProgramRepo } from "$lib/data/repoProvider";
 
   let checkinCount = $state(0);
+  // A solo-started built-in program (§6) — separate from $assignedPrograms
+  // (coach-assigned), since it's tracked via the generic "active program id"
+  // slot rather than a coach relationship.
+  let activeBuiltinProgramId = $state<string | null>(null);
+  const activeBuiltinProgram = $derived(
+    activeBuiltinProgramId ? getBuiltinProgram(activeBuiltinProgramId) : null,
+  );
 
   const ui = $state({
     loading: true,
@@ -53,6 +61,10 @@
         activeSplit.load(),
         assignedPrograms.refresh(),
         getCheckinRepo().listAssignedSchedules().then((s) => (checkinCount = s.length)).catch(() => {}),
+        getCoachProgramRepo()
+          .getActiveProgramId()
+          .then((id) => { activeBuiltinProgramId = id && isBuiltinProgramId(id) ? id : null; })
+          .catch(() => {}),
       ]);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load splits";
@@ -100,14 +112,38 @@
 <div class="flex flex-col pb-24">
   <div class="flex items-center justify-between px-3 py-3 border-b border-border">
     <h1 class="text-base font-semibold">Splits</h1>
-    <Button size="sm" disabled={ui.creating} data-tour="splits-new" onclick={() => void newSplit()}>
-      <Plus class="h-3.5 w-3.5 mr-1" />
-      New
-    </Button>
+    <div class="flex items-center gap-2">
+      <Button size="sm" variant="outline" onclick={() => goto("/programs/browse")}>
+        Browse programs
+      </Button>
+      <Button size="sm" disabled={ui.creating} data-tour="splits-new" onclick={() => void newSplit()}>
+        <Plus class="h-3.5 w-3.5 mr-1" />
+        New
+      </Button>
+    </div>
   </div>
 
   {#if ui.error}
     <p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>
+  {/if}
+
+  {#if !ui.loading && activeBuiltinProgram}
+    <div class="border-b border-border">
+      <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Your program
+      </p>
+      <button
+        type="button"
+        class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors"
+        onclick={() => goto(`/programs/builtin/${activeBuiltinProgram!.id}`)}
+      >
+        <div class="min-w-0 flex-1">
+          <span class="text-sm font-medium truncate">{activeBuiltinProgram.name}</span>
+          <p class="text-xs text-muted-foreground mt-0.5">Guided program</p>
+        </div>
+        <span class="text-muted-foreground text-sm shrink-0">›</span>
+      </button>
+    </div>
   {/if}
 
   {#if !ui.loading && (($assignedPrograms.length > 0) || checkinCount > 0)}

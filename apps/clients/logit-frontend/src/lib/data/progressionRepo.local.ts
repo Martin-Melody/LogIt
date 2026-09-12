@@ -3,10 +3,12 @@ import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
 import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
 import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 import type { UserMobilityProgressionConfig } from "@logit/core/domain/mobilityProgression";
+import type { UserMuscleGroupInsightConfig } from "@logit/core/domain/muscleGroupInsight";
 
 const STORAGE_KEYS = {
   config: "logit:progression:config:v1",
   mobilityConfig: "logit:mobility-progression:config:v1",
+  muscleGroupInsightConfig: "logit:muscle-group-insight:config:v1",
   states: "logit:progression:states:v1",
   analyticsConfig: "logit:analytics:config:v1",
   algorithmPrefs: "logit:progression:prefs:v1",
@@ -58,6 +60,19 @@ export function createLocalProgressionRepo(): ProgressionRepo {
     async clearMobilityConfig(): Promise<void> {
       ensureBrowser();
       localStorage.removeItem(STORAGE_KEYS.mobilityConfig);
+    },
+
+    async getMuscleGroupInsightConfig(): Promise<UserMuscleGroupInsightConfig | null> {
+      return readJson<UserMuscleGroupInsightConfig | null>(STORAGE_KEYS.muscleGroupInsightConfig, null);
+    },
+
+    async saveMuscleGroupInsightConfig(config: UserMuscleGroupInsightConfig): Promise<void> {
+      writeJson(STORAGE_KEYS.muscleGroupInsightConfig, config);
+    },
+
+    async clearMuscleGroupInsightConfig(): Promise<void> {
+      ensureBrowser();
+      localStorage.removeItem(STORAGE_KEYS.muscleGroupInsightConfig);
     },
 
     async getExerciseState(key: string): Promise<ExerciseProgressionState | null> {

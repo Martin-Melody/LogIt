@@ -55,7 +55,7 @@ const STORAGE_KEY = "logit:plugins:registries:v1";
 const KNOWN_FAMILIES: ReadonlySet<string> = new Set<PluginFamily>([
   "widget", "progression-algorithm", "mobility-progression",
   "exercise-pack", "mobility-pack", "analytics",
-  "nutrition-algorithm", "nutrition-analytics",
+  "nutrition-algorithm", "nutrition-analytics", "muscle-group-insight",
 ]);
 
 // ── User registry sources ────────────────────────────────────────────────────

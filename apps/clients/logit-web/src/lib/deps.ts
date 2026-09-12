@@ -19,11 +19,44 @@ import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/ana
 import type { NutritionDeps } from "@logit/core/usecases/nutrition/deps";
 import type { ProgressionDeps } from "@logit/core/usecases/progression/deps";
 import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
+import type { MobilityProgressionAlgorithmRegistry } from "@logit/core/domain/mobilityProgression";
+import type { TrainingBlockTagRepo } from "@logit/core/data/trainingBlockTagRepo";
+import type { MuscleGroupInsightAlgorithmRegistry } from "@logit/core/domain/muscleGroupInsight";
 
 // Progression *suggestions* (what weight to lift next) are a mobile-only workflow —
 // out of scope for this read-only web dashboard. This stub satisfies ProgressionDeps
 // without pretending any algorithm is actually available.
 const stubAlgorithmRegistry: AlgorithmRegistry = {
+  async list() {
+    return [];
+  },
+  async get() {
+    return null;
+  },
+};
+
+const stubMobilityAlgorithmRegistry: MobilityProgressionAlgorithmRegistry = {
+  async list() {
+    return [];
+  },
+  async get() {
+    return null;
+  },
+};
+
+// Training-block tags (§10.3.3) are created from the mobile app's exercise
+// detail / session-edit surfaces — not a web dashboard concern yet. Stubbed
+// read-only/no-op rather than wired to a real store.
+const stubTrainingBlockTagRepo: TrainingBlockTagRepo = {
+  async listForExercise() {
+    return [];
+  },
+  async create() {},
+  async update() {},
+  async delete() {},
+};
+
+const stubMuscleGroupInsightAlgorithmRegistry: MuscleGroupInsightAlgorithmRegistry = {
   async list() {
     return [];
   },
@@ -44,6 +77,9 @@ export function getWebDeps(clientId?: string): ProgressionDeps {
     exerciseRepo: createRemoteExerciseRepo(clientId),
     algorithmRegistry: stubAlgorithmRegistry,
     analyticsRegistry: createLocalAnalyticsRegistry(),
+    mobilityAlgorithmRegistry: stubMobilityAlgorithmRegistry,
+    trainingBlockTagRepo: stubTrainingBlockTagRepo,
+    muscleGroupInsightAlgorithmRegistry: stubMuscleGroupInsightAlgorithmRegistry,
   };
 }
 

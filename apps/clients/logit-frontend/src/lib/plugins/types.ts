@@ -6,7 +6,8 @@ export type PluginFamily =
   | "mobility-pack"
   | "analytics"
   | "nutrition-algorithm"
-  | "nutrition-analytics";
+  | "nutrition-analytics"
+  | "muscle-group-insight";
 
 export type PluginOrigin = "builtin" | "manual" | "url" | "activitypub" | "inline";
 
@@ -66,6 +67,11 @@ export type MobilityProgressionAlgorithmPluginCapability = {
   algorithmId: string;
 };
 
+export type MuscleGroupInsightAlgorithmPluginCapability = {
+  family: "muscle-group-insight";
+  algorithmId: string;
+};
+
 export type ExercisePackPluginCapability = {
   family: "exercise-pack";
   exercisePackId: string;
@@ -101,7 +107,8 @@ export type PluginCapability =
   | MobilityPackPluginCapability
   | AnalyticsPluginCapability
   | NutritionAlgorithmPluginCapability
-  | NutritionAnalyticsPluginCapability;
+  | NutritionAnalyticsPluginCapability
+  | MuscleGroupInsightAlgorithmPluginCapability;
 
 export type PluginManifest = {
   id: string;

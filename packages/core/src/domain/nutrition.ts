@@ -123,6 +123,13 @@ export type LoggedItem = {
   /** Optional meal photo (small jpeg data URL). Rides in the synced day blob; a coach sees
    * it in the client's diary. */
   photoDataUrl?: string;
+  /** Epoch ms this item was actually logged, set only when logged to *today's* diary
+   * (see addDiaryItem) -- a backfilled/corrected past day deliberately gets no timestamp,
+   * since "now" would misrepresent when it was really eaten. Additive: entries logged
+   * before this field existed simply lack it and can't be used for the meal-timing
+   * correlation (adaptive-progression-engine.md §9) that needs real clock time; the
+   * day-level correlation only needs dateIso and works regardless. */
+  loggedAtMs?: number;
 };
 
 export type DiaryDay = {
@@ -152,7 +159,8 @@ function touchDay(day: DiaryDay): DiaryDay {
 }
 
 export function addDiaryItem(day: DiaryDay, item: Omit<LoggedItem, "id">): DiaryDay {
-  return touchDay({ ...day, items: [...day.items, { ...item, id: createId("nitem") }] });
+  const loggedAtMs = day.dateIso === localDateIso() ? nowMs() : item.loggedAtMs;
+  return touchDay({ ...day, items: [...day.items, { ...item, loggedAtMs, id: createId("nitem") }] });
 }
 
 export function updateDiaryItem(

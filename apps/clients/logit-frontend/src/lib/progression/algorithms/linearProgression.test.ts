@@ -189,7 +189,7 @@ describe("linearProgression", () => {
           userPreferences: { repRangeExperimentsEnabled: true },
         }),
       );
-      expect(out.nudge?.id).toBe(OFFER_ID);
+      expect(out.nudge?.id).toBe(`${OFFER_ID}:rung0`);
       expect(out.nudge?.actionLabel).toBe("Try it");
       expect(out.nudge?.exclusive).toBe(true);
       expect(out.nudge?.actionData).toEqual({ trialRepRange: [8, 15], baselineRepRange: [5, 8] });
@@ -218,7 +218,7 @@ describe("linearProgression", () => {
       expect(out.nudge?.actionData).toEqual({ trialRepRange: [10, 15], baselineRepRange: [5, 8] });
     });
 
-    it("doesn't offer a second trial once one has already run, regardless of its result", async () => {
+    it("offers the next rung once the first concludes without a real difference (§10.3.1 ladder)", async () => {
       const out = await linearProgression.suggest(
         baseInput({
           state: {
@@ -226,19 +226,76 @@ describe("linearProgression", () => {
             failedAttempts: 0,
             increment: 2.5,
             repRange: [5, 8],
-            repRangeTrial: {
-              trialRepRange: [10, 15],
-              baselineRepRange: [5, 8],
-              startedAtMs: 0,
-              status: "concluded",
-              result: { trialSlopePctPerSession: 0, baselineSlopePctPerSession: 0, switched: false, concludedAtMs: 0 },
-            },
+            repRangeLadder: [
+              {
+                trialRepRange: [10, 15],
+                baselineRepRange: [5, 8],
+                startedAtMs: 0,
+                status: "concluded",
+                result: { trialSlopePctPerSession: 0, baselineSlopePctPerSession: 0, switched: false, concludedAtMs: 0 },
+              },
+            ],
           },
           history: calibratedHistory,
           userPreferences: { repRangeExperimentsEnabled: true },
         }),
       );
-      expect(out.nudge?.id).not.toBe(OFFER_ID);
+      expect(out.nudge?.id).toBe(`${OFFER_ID}:rung1`);
+      expect(out.nudge?.actionLabel).toBe("Try it");
+      // Climbs from the previous rung's own ceiling (15), not back to the original baseline.
+      expect(out.nudge?.actionData).toEqual({ trialRepRange: [15, 22], baselineRepRange: [5, 8] });
+    });
+
+    it("gives up after MAX_LADDER_RUNGS attempts with no real difference, and stops offering more", async () => {
+      const rejected = (trialRepRange: [number, number]) => ({
+        trialRepRange,
+        baselineRepRange: [5, 8] as [number, number],
+        startedAtMs: 0,
+        status: "concluded" as const,
+        result: { trialSlopePctPerSession: 0, baselineSlopePctPerSession: 0, switched: false, concludedAtMs: 0 },
+      });
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8],
+            repRangeLadder: [rejected([8, 15]), rejected([15, 22]), rejected([22, 29])],
+          },
+          history: calibratedHistory,
+          userPreferences: { repRangeExperimentsEnabled: true },
+        }),
+      );
+      expect(out.nudge?.id).toBe(`${RESULT_ID}:rung2`);
+      expect(out.nudge?.actionLabel).toBeUndefined();
+      expect(out.nudge?.message).toContain("keeping your usual 5-8");
+    });
+
+    it("climbs past a sibling's already-ruled-out range instead of re-litigating it", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          state: {
+            workingWeight: 100,
+            failedAttempts: 0,
+            increment: 2.5,
+            repRange: [5, 8],
+            repRangeLadder: [
+              {
+                trialRepRange: [10, 15],
+                baselineRepRange: [5, 8],
+                startedAtMs: 0,
+                status: "concluded",
+                result: { trialSlopePctPerSession: 0, baselineSlopePctPerSession: 0, switched: false, concludedAtMs: 0 },
+              },
+            ],
+          },
+          history: calibratedHistory,
+          userPreferences: { repRangeExperimentsEnabled: true },
+          siblingRuledOutRepRanges: [[15, 22]],
+        }),
+      );
+      expect(out.nudge?.actionData).toEqual({ trialRepRange: [22, 29], baselineRepRange: [5, 8] });
     });
 
     it("prescribes the trial range while a trial is active but not yet concluded", async () => {
@@ -255,14 +312,15 @@ describe("linearProgression", () => {
             failedAttempts: 0,
             increment: 2.5,
             repRange: [5, 8],
-            repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" },
+            repRangeLadder: [{ trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" }],
           },
           history,
         }),
       );
       expect(out.sets[0]!.reps).toEqual([10, 15]);
       expect(out.nudge).toBeUndefined(); // mid-trial — nothing to report yet
-      expect((out.nextState as { repRangeTrial: { status: string } }).repRangeTrial.status).toBe("active");
+      const ladder = (out.nextState as { repRangeLadder: { status: string }[] }).repRangeLadder;
+      expect(ladder[ladder.length - 1]!.status).toBe("active");
     });
 
     it("concludes a trial once enough sessions are logged and proposes switching when it clearly wins", async () => {
@@ -288,16 +346,17 @@ describe("linearProgression", () => {
             failedAttempts: 0,
             increment: 2.5,
             repRange: [5, 8],
-            repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" },
+            repRangeLadder: [{ trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" }],
           },
           history: [...trialEntries, ...baselineEntries],
         }),
       );
-      const nextTrial = (out.nextState as { repRangeTrial: { status: string; result: { switched: boolean } } })
-        .repRangeTrial;
+      const ladder = (out.nextState as { repRangeLadder: { status: string; result: { switched: boolean } }[] })
+        .repRangeLadder;
+      const nextTrial = ladder[ladder.length - 1]!;
       expect(nextTrial.status).toBe("concluded");
       expect(nextTrial.result.switched).toBe(true);
-      expect(out.nudge?.id).toBe(RESULT_ID);
+      expect(out.nudge?.id).toBe(`${RESULT_ID}:rung0`);
       expect(out.nudge?.actionLabel).toBe("Switch");
       expect(out.nudge?.actionData).toEqual({ repRange: [10, 15] });
       // Reverts to the baseline range for this suggestion, pending the user's decision.
@@ -320,14 +379,17 @@ describe("linearProgression", () => {
             failedAttempts: 0,
             increment: 2.5,
             repRange: [5, 8],
-            repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" },
+            repRangeLadder: [{ trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs: trialStart, status: "active" }],
           },
           history: [...trialEntries, ...baselineEntries],
         }),
       );
-      const nextTrial = (out.nextState as { repRangeTrial: { result: { switched: boolean } } }).repRangeTrial;
-      expect(nextTrial.result.switched).toBe(false);
-      expect(out.nudge?.actionLabel).toBeUndefined();
+      const ladder = (out.nextState as { repRangeLadder: { result: { switched: boolean } }[] }).repRangeLadder;
+      expect(ladder[ladder.length - 1]!.result.switched).toBe(false);
+      // No real difference, but the ladder isn't at its cap yet — offers the
+      // next rung rather than a dead-end FYI.
+      expect(out.nudge?.actionLabel).toBe("Try it");
+      expect(out.nudge?.id).toBe(`${OFFER_ID}:rung1`);
     });
 
     // Regression coverage: a concluded trial used to only get a nudge in the
@@ -342,18 +404,20 @@ describe("linearProgression", () => {
             failedAttempts: 0,
             increment: 2.5,
             repRange: [5, 8], // baseline — not yet switched
-            repRangeTrial: {
-              trialRepRange: [10, 15],
-              baselineRepRange: [5, 8],
-              startedAtMs: 0,
-              status: "concluded",
-              result: { trialSlopePctPerSession: 2, baselineSlopePctPerSession: 0.3, switched: true, concludedAtMs: 0 },
-            },
+            repRangeLadder: [
+              {
+                trialRepRange: [10, 15],
+                baselineRepRange: [5, 8],
+                startedAtMs: 0,
+                status: "concluded",
+                result: { trialSlopePctPerSession: 2, baselineSlopePctPerSession: 0.3, switched: true, concludedAtMs: 0 },
+              },
+            ],
           },
           history: calibratedHistory,
         }),
       );
-      expect(out.nudge?.id).toBe(RESULT_ID);
+      expect(out.nudge?.id).toBe(`${RESULT_ID}:rung0`);
       expect(out.nudge?.actionLabel).toBe("Switch");
     });
 
@@ -365,21 +429,24 @@ describe("linearProgression", () => {
             failedAttempts: 0,
             increment: 2.5,
             repRange: [10, 15], // already matches trialRepRange — the switch already happened
-            repRangeTrial: {
-              trialRepRange: [10, 15],
-              baselineRepRange: [5, 8],
-              startedAtMs: 0,
-              status: "concluded",
-              result: { trialSlopePctPerSession: 2, baselineSlopePctPerSession: 0.3, switched: true, concludedAtMs: 0 },
-            },
+            repRangeLadder: [
+              {
+                trialRepRange: [10, 15],
+                baselineRepRange: [5, 8],
+                startedAtMs: 0,
+                status: "concluded",
+                result: { trialSlopePctPerSession: 2, baselineSlopePctPerSession: 0.3, switched: true, concludedAtMs: 0 },
+              },
+            ],
           },
           history: calibratedHistory,
         }),
       );
-      expect(out.nudge?.id).not.toBe(RESULT_ID);
+      expect(out.nudge?.id).not.toBe(`${RESULT_ID}:rung0`);
+      expect(out.nudge).toBeUndefined();
     });
 
-    it("keeps proposing a 'no difference' result too, until dismissed", async () => {
+    it("keeps proposing the next-rung offer too, until dismissed or accepted", async () => {
       const out = await linearProgression.suggest(
         baseInput({
           state: {
@@ -387,19 +454,22 @@ describe("linearProgression", () => {
             failedAttempts: 0,
             increment: 2.5,
             repRange: [5, 8],
-            repRangeTrial: {
-              trialRepRange: [10, 15],
-              baselineRepRange: [5, 8],
-              startedAtMs: 0,
-              status: "concluded",
-              result: { trialSlopePctPerSession: 0.3, baselineSlopePctPerSession: 0.3, switched: false, concludedAtMs: 0 },
-            },
+            repRangeLadder: [
+              {
+                trialRepRange: [10, 15],
+                baselineRepRange: [5, 8],
+                startedAtMs: 0,
+                status: "concluded",
+                result: { trialSlopePctPerSession: 0.3, baselineSlopePctPerSession: 0.3, switched: false, concludedAtMs: 0 },
+              },
+            ],
           },
           history: calibratedHistory,
         }),
       );
-      expect(out.nudge?.id).toBe(RESULT_ID);
-      expect(out.nudge?.actionLabel).toBeUndefined();
+      expect(out.nudge?.id).toBe(`${OFFER_ID}:rung1`);
+      expect(out.nudge?.actionLabel).toBe("Try it");
+      expect(out.nudge?.message).toContain("No meaningful difference at 10-15 reps");
     });
   });
 });

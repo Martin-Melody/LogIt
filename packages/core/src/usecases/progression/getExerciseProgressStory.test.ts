@@ -23,7 +23,7 @@ function sessionWithFillerFirst(name: string, weight: number, reps: number, ende
   return finishSession(s, endedAtMs);
 }
 
-function deps(history: WorkoutSession[]): ProgressionDeps {
+function deps(history: WorkoutSession[], tags: unknown[] = []): ProgressionDeps {
   return {
     workoutRepo: {
       listAllSessions: async () => history,
@@ -35,6 +35,7 @@ function deps(history: WorkoutSession[]): ProgressionDeps {
       getConfig: async () => null, // → getSuggestion returns null, story still builds
     },
     analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+    trainingBlockTagRepo: { listForExercise: async () => tags },
   } as unknown as ProgressionDeps;
 }
 
@@ -101,7 +102,7 @@ describe("getExerciseProgressStory", () => {
 
   describe("rep-range trial confound", () => {
     // A fake linear-progression algorithm that just echoes the saved state back
-    // unchanged as nextState — lets the test control repRangeTrial directly
+    // unchanged as nextState — lets the test control repRangeLadder directly
     // without going through the real trial state machine.
     function depsWithTrial(trialState: unknown, history: WorkoutSession[]): ProgressionDeps {
       return {
@@ -130,6 +131,7 @@ describe("getExerciseProgressStory", () => {
           }),
         },
         analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+        trainingBlockTagRepo: { listForExercise: async () => [] },
       } as unknown as ProgressionDeps;
     }
 
@@ -149,13 +151,15 @@ describe("getExerciseProgressStory", () => {
       ];
       const trialState = {
         repRange: [10, 15],
-        repRangeTrial: {
-          trialRepRange: [10, 15],
-          baselineRepRange: [5, 8],
-          startedAtMs,
-          status: "concluded",
-          result: { trialSlopePctPerSession: 0.8, baselineSlopePctPerSession: 0.4, switched: true, concludedAtMs: now - 7 * DAY },
-        },
+        repRangeLadder: [
+          {
+            trialRepRange: [10, 15],
+            baselineRepRange: [5, 8],
+            startedAtMs,
+            status: "concluded",
+            result: { trialSlopePctPerSession: 0.8, baselineSlopePctPerSession: 0.4, switched: true, concludedAtMs: now - 7 * DAY },
+          },
+        ],
       };
 
       const withFix = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
@@ -179,7 +183,7 @@ describe("getExerciseProgressStory", () => {
       ];
       const trialState = {
         repRange: [10, 15],
-        repRangeTrial: { trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs, status: "active" },
+        repRangeLadder: [{ trialRepRange: [10, 15], baselineRepRange: [5, 8], startedAtMs, status: "active" }],
       };
 
       const story = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
@@ -203,18 +207,142 @@ describe("getExerciseProgressStory", () => {
       ];
       const trialState = {
         repRange: [5, 8],
-        repRangeTrial: {
-          trialRepRange: [10, 15],
-          baselineRepRange: [5, 8],
-          startedAtMs,
-          status: "concluded",
-          result: { trialSlopePctPerSession: -0.2, baselineSlopePctPerSession: 0.6, switched: false, concludedAtMs },
-        },
+        repRangeLadder: [
+          {
+            trialRepRange: [10, 15],
+            baselineRepRange: [5, 8],
+            startedAtMs,
+            status: "concluded",
+            result: { trialSlopePctPerSession: -0.2, baselineSlopePctPerSession: 0.6, switched: false, concludedAtMs },
+          },
+        ],
       };
 
       const story = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
       expect(story!.trendReasoning.inputs.excludedForRegimeChange).toBe(2);
       expect(story!.status).toBe("progressing");
+    });
+  });
+
+  describe("tag training blocks (§10.3.3)", () => {
+    it("excludes readings inside a tagged window from the headline trend", async () => {
+      const tagStart = now - 20 * DAY;
+      const tagEnd = now - 10 * DAY;
+      const history = [
+        session("Bench", 100, 1, now - 40 * DAY),
+        session("Bench", 102, 1, now - 33 * DAY),
+        session("Bench", 104, 1, now - 26 * DAY),
+        session("Bench", 106, 1, now - 23 * DAY),
+        // Tagged window — an injury layoff with two bad readings that shouldn't count.
+        session("Bench", 60, 1, tagStart + 1 * DAY),
+        session("Bench", 61, 1, tagStart + 5 * DAY),
+        // Back to normal, resuming near the pre-injury level (below its max, so this
+        // isn't a new PR masking the slope via the "PR recently" shortcut).
+        session("Bench", 104, 1, tagEnd + 1 * DAY),
+        session("Bench", 105, 1, now - 1 * DAY),
+      ];
+      const tags = [{ startMs: tagStart, endMs: tagEnd, reason: "injury" }];
+
+      const withoutTag = await getExerciseProgressStory({ name: "Bench" }, deps(history));
+      const withTag = await getExerciseProgressStory({ name: "Bench" }, deps(history, tags));
+
+      expect(withoutTag!.status).toBe("regressing");
+      expect(withTag!.status).not.toBe("regressing");
+      expect(withTag!.trendReasoning.inputs.excludedForTaggedBlock).toBe(2);
+    });
+
+    it("treats an open-ended tag (no endMs) as still in effect through today", async () => {
+      const tagStart = now - 15 * DAY;
+      const history = [
+        session("Bench", 100, 1, now - 40 * DAY),
+        session("Bench", 102, 1, now - 33 * DAY),
+        session("Bench", 104, 1, now - 26 * DAY),
+        session("Bench", 60, 1, tagStart + 1 * DAY),
+        session("Bench", 58, 1, now - 1 * DAY),
+      ];
+      const tags = [{ startMs: tagStart, reason: "injury" }];
+
+      const story = await getExerciseProgressStory({ name: "Bench" }, deps(history, tags));
+      expect(story!.trendReasoning.inputs.excludedForTaggedBlock).toBe(2);
+    });
+
+    it("doesn't add excludedForTaggedBlock when there are no tags", async () => {
+      const history = [session("Bench", 100, 1, now - 10 * DAY), session("Bench", 105, 1, now - 1 * DAY)];
+      const story = await getExerciseProgressStory({ name: "Bench" }, deps(history));
+      expect(story!.trendReasoning.inputs.excludedForTaggedBlock).toBeUndefined();
+    });
+  });
+
+  describe("plateau-diagnosis orchestration (§10.3.2)", () => {
+    function depsWithLadder(ladder: unknown, history: WorkoutSession[]): ProgressionDeps {
+      return {
+        workoutRepo: { listAllSessions: async () => history, listRecentSessions: async () => history },
+        exerciseRepo: {
+          getById: async () => null,
+          getByName: async (name: string) =>
+            name === "Bench" ? { id: "bench", name, primaryMuscles: ["chest"], secondaryMuscles: [] } : null,
+        },
+        progressionRepo: {
+          getAnalyticsConfig: async () => null,
+          getConfig: async () => ({ algorithmId: "linear-progression" }),
+          getExerciseState: async () => ({
+            key: "bench",
+            exerciseName: "Bench",
+            algorithmId: "linear-progression",
+            state: { repRange: [5, 8], repRangeLadder: ladder },
+            updatedAtMs: 0,
+          }),
+          getAlgorithmPreferences: async () => null,
+          listExerciseStates: async () => [],
+        },
+        algorithmRegistry: {
+          get: async () => ({
+            id: "linear-progression",
+            name: "Linear",
+            description: "test double",
+            defaultState: null,
+            suggest: (input: { state: unknown }) => ({ sets: [], nextState: input.state }),
+          }),
+        },
+        analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+        trainingBlockTagRepo: { listForExercise: async () => [] },
+      } as unknown as ProgressionDeps;
+    }
+
+    const rejectedRung = (trialRepRange: [number, number]) => ({
+      trialRepRange,
+      baselineRepRange: [5, 8],
+      startedAtMs: 0,
+      status: "concluded",
+      result: { trialSlopePctPerSession: 0, baselineSlopePctPerSession: 0, switched: false, concludedAtMs: 0 },
+    });
+
+    const history = Array.from({ length: 8 }, (_, i) => session("Bench", 100 + i, 1, now - (8 - i) * DAY));
+
+    it("surfaces next steps once the rep-range ladder is exhausted with no win", async () => {
+      const ladder = [rejectedRung([8, 15]), rejectedRung([15, 22]), rejectedRung([22, 29])];
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(ladder, history));
+      expect(story!.plateauNextSteps).toEqual({ muscleGroup: "chest" });
+    });
+
+    it("stays undefined while the ladder still has rungs left to try", async () => {
+      const ladder = [rejectedRung([8, 15])]; // only 1 of 3
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(ladder, history));
+      expect(story!.plateauNextSteps).toBeUndefined();
+    });
+
+    it("stays undefined when the ladder ended in a win, not exhaustion", async () => {
+      const ladder = [
+        rejectedRung([8, 15]),
+        { ...rejectedRung([15, 22]), result: { ...rejectedRung([15, 22]).result, switched: true } },
+      ];
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(ladder, history));
+      expect(story!.plateauNextSteps).toBeUndefined();
+    });
+
+    it("stays undefined when there's no ladder at all", async () => {
+      const story = await getExerciseProgressStory({ name: "Bench" }, depsWithLadder(undefined, history));
+      expect(story!.plateauNextSteps).toBeUndefined();
     });
   });
 });

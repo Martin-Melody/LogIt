@@ -62,6 +62,12 @@
     DEFAULT_MOBILITY_ALGORITHM_ID,
   } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
   import type { MobilityProgressionConfigView } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
+  import {
+    getMuscleGroupInsightConfig,
+    setMuscleGroupInsightAlgorithm,
+    DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID,
+  } from "@logit/core/usecases/progression/getMuscleGroupInsightConfig";
+  import type { MuscleGroupInsightConfigView } from "@logit/core/usecases/progression/getMuscleGroupInsightConfig";
   import { Settings2 } from "lucide-svelte";
   import {
     getAnalyticsConfig,
@@ -275,6 +281,48 @@
     }
   }
 
+  // --- Muscle group insight (§5 option B) ---
+  const muscleGroupInsightUi = $state({
+    loading: true,
+    saving: false,
+    error: null as string | null,
+  });
+  let muscleGroupInsightView = $state<MuscleGroupInsightConfigView>({
+    config: null,
+    activeAlgorithmId: DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID,
+    algorithms: [],
+  });
+
+  async function loadMuscleGroupInsight() {
+    muscleGroupInsightUi.loading = true;
+    muscleGroupInsightUi.error = null;
+    try {
+      muscleGroupInsightView = await getMuscleGroupInsightConfig(getProgressionDeps());
+    } catch (e) {
+      muscleGroupInsightUi.error = e instanceof Error ? e.message : "Failed to load settings";
+    } finally {
+      muscleGroupInsightUi.loading = false;
+    }
+  }
+
+  async function selectMuscleGroupInsightAlgorithm(id: string) {
+    if (muscleGroupInsightUi.saving) return;
+    muscleGroupInsightUi.saving = true;
+    muscleGroupInsightUi.error = null;
+    try {
+      await setMuscleGroupInsightAlgorithm(id, getProgressionDeps());
+      muscleGroupInsightView = {
+        ...muscleGroupInsightView,
+        config: id && id !== DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID ? { algorithmId: id } : null,
+        activeAlgorithmId: id || DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID,
+      };
+    } catch (e) {
+      muscleGroupInsightUi.error = e instanceof Error ? e.message : "Failed to save setting";
+    } finally {
+      muscleGroupInsightUi.saving = false;
+    }
+  }
+
   // --- Analytics ---
   const analyticsUi = $state({
     loading: true,
@@ -324,6 +372,7 @@
     { id: "sec-units", label: "Units" },
     { id: "sec-progression", label: "Progression" },
     { id: "sec-mobility-progression", label: "Mobility" },
+    { id: "sec-muscle-group-insight", label: "Muscle groups" },
     { id: "sec-session", label: "Session" },
     { id: "sec-plugins", label: "Plugins" },
     { id: "sec-danger", label: "Danger" },
@@ -457,6 +506,7 @@
   onMount(() => {
     void loadProgression();
     void loadMobilityProgression();
+    void loadMuscleGroupInsight();
     void loadAnalytics();
     if (authStore.isAuthenticated) connectionStatus.startPolling();
   });
@@ -953,6 +1003,63 @@
           {/each}
         </div>
       </div>
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Muscle group insight (§5 option B) -->
+  <Card.Root id="sec-muscle-group-insight" class="scroll-mt-3">
+    <Card.Header>
+      <Card.Title>Muscle groups</Card.Title>
+      <Card.Description>How the app learns your personal volume/frequency sweet spot per muscle group.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-3">
+      {#if muscleGroupInsightUi.error}
+        <p class="text-sm text-destructive">{muscleGroupInsightUi.error}</p>
+      {/if}
+      {#if muscleGroupInsightUi.loading}
+        <p class="text-sm text-muted-foreground">Loading…</p>
+      {:else if muscleGroupInsightView.algorithms.length === 0}
+        <p class="text-sm text-muted-foreground">No algorithms available.</p>
+      {:else}
+        <ul class="flex flex-col gap-2">
+          {#each muscleGroupInsightView.algorithms as algo (algo.id)}
+            {@const isActive = muscleGroupInsightView.activeAlgorithmId === algo.id}
+            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium">{algo.name}</p>
+                    {#if isActive}
+                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                    {/if}
+                  </div>
+                  <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
+                  {#if algo.author}
+                    <p class="mt-1 text-xs text-muted-foreground/60">by {algo.author}</p>
+                  {/if}
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  {#if algo.hasPreferences}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure"
+                      onclick={() => goto(`/settings/muscle-group-insight/${algo.id}`)}
+                    >
+                      <Settings2 class="h-4 w-4" />
+                    </Button>
+                  {/if}
+                  {#if !isActive}
+                    <Button size="sm" variant="outline" disabled={muscleGroupInsightUi.saving}
+                      onclick={() => void selectMuscleGroupInsightAlgorithm(algo.id)}>Select</Button>
+                  {/if}
+                </div>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </Card.Content>
   </Card.Root>
 

@@ -104,7 +104,7 @@ test.describe("name step", () => {
     await page.locator('input[id="name"]').fill("Martin");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pick a plan, or don't" })).toBeVisible();
 
     const profile = await page.evaluate(() => {
       const raw = localStorage.getItem("logit:profile:v1");
@@ -119,7 +119,7 @@ test.describe("name step", () => {
 
     await page.getByRole("button", { name: "Skip for now" }).click();
 
-    await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pick a plan, or don't" })).toBeVisible();
 
     const profile = await page.evaluate(() => {
       const raw = localStorage.getItem("logit:profile:v1");
@@ -223,6 +223,57 @@ test.describe("split step", () => {
   });
 });
 
+// ── Guided program option (§6 program library) ──────────────────────────────
+
+test.describe("guided program option", () => {
+  test("shows all four built-in programs alongside the split presets", async ({ page }) => {
+    await seedAtStep(page, 2);
+    await goToOnboarding(page);
+
+    await expect(page.getByText("Full-Body 3x/week")).toBeVisible();
+    await expect(page.getByText("Upper/Lower 4x/week")).toBeVisible();
+    await expect(page.getByText("Push/Pull/Legs 6x/week")).toBeVisible();
+    await expect(page.getByText("5x5 Strength")).toBeVisible();
+  });
+
+  test("picking a program deselects any chosen split, and vice versa", async ({ page }) => {
+    await seedAtStep(page, 2);
+    await goToOnboarding(page);
+
+    await page.getByText("Push / Pull / Legs").click();
+    await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
+
+    await page.getByText("Full-Body 3x/week").click();
+    await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
+
+    // Re-selecting the split should still work (mutually exclusive, not stuck).
+    await page.getByText("Push / Pull / Legs").click();
+    await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
+  });
+
+  test("continuing with a guided program sets it active and completes onboarding without saving a split", async ({ page }) => {
+    await seedAtStep(page, 2);
+    await goToOnboarding(page);
+
+    await page.getByText("5x5 Strength").click();
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 8000 });
+
+    const activeProgramId = await page.evaluate(() => localStorage.getItem("logit:activeCoachProgramId:v1"));
+    expect(activeProgramId).toBe("builtin-strength-5x5");
+
+    const splits = await page.evaluate(() => localStorage.getItem("logit:splits:v1"));
+    expect(splits).toBeNull();
+
+    const state = await page.evaluate(() => {
+      const raw = localStorage.getItem("logit:onboarding:v1");
+      return raw ? JSON.parse(raw) : null;
+    });
+    expect(state?.completed).toBe(true);
+  });
+});
+
 // ── Full first-run path (offline, no account) ────────────────────────────────
 
 test.describe("full first-run path", () => {
@@ -235,7 +286,7 @@ test.describe("full first-run path", () => {
     await page.locator('input[id="name"]').fill("Martin");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pick a plan, or don't" })).toBeVisible();
     await page.getByText("Push / Pull / Legs").click();
     await page.getByRole("button", { name: "Continue" }).click();
 
@@ -255,7 +306,7 @@ test.describe("full first-run path", () => {
 
     await page.getByRole("button", { name: "Get started" }).click();
     await page.getByRole("button", { name: "Skip for now" }).click(); // name
-    await expect(page.getByRole("heading", { name: "Choose a training split" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pick a plan, or don't" })).toBeVisible();
     await page.getByRole("button", { name: "Skip for now" }).click(); // split
 
     await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 8000 });
