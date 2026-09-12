@@ -259,7 +259,44 @@ low-value signal on its own; doing this right needs wearable/platform integratio
 HealthKit, Google/Android Health Connect, etc.), which is a substantial *separate* integration
 project, not an extension of this progression-engine work. Not tracked further in this doc.
 
-## 10. Sequencing
+## 10. Deliberate signal-generation UX (raised, not started — 2026-09-12)
+
+Two separate conversations converged on the same underlying gap: **some learning signal doesn't
+occur naturally and has to be deliberately asked for.**
+
+- **Order-effect calibration (§4)** already has a first, weak version of this: `linearProgression`
+  emits a note — *"Try varying where this exercise falls in your session to improve fatigue
+  estimates"* — when an exercise has sat in the same session slot for >85% of its last 10
+  sessions (`shouldSuggestVariety`). It works, but it's a single muted line of text with no
+  explicit action and no tracking of whether the user acted on it.
+- **Personalized set/rep prescription per exercise** (raised by Martin testing this branch —
+  the in-session "Target: 3×5-8" is a fixed global preference today, not learned per exercise;
+  see below) has a harder version of the *same* problem: set count and rep range don't vary
+  organically at all today (every exercise gets the identical global prescription), so there's
+  no incidental data to learn from the way session position at least sometimes varies on its
+  own. Passive learning alone won't get there — it needs the app to occasionally ask for
+  variation on purpose.
+
+**Decided:** treat this as one shared mechanism rather than two separate features — an explicit,
+trackable "help us learn this" prompt (e.g. "Move this to the start of your next session" / "try
+4 sets this time"), not a muted note, so the app knows whether the ask was followed and can stop
+once it has enough data. Not scoped or designed yet — real open questions before building:
+exactly what it looks like across the two use cases, how pushy it should be, and how it avoids
+feeling arbitrary/buggy when the prescription changes for no reason the user can already see
+(the reasoning-trace "Why?" view is presumably how it explains itself, extending §3 rather than
+inventing new UI). Fold into the next design pass alongside whichever of §5-option-B / §6 / §7
+comes next.
+
+**Context on the set/rep prescription gap this surfaced:** `workingSets`/`repRange` live in
+`linearProgression`'s `LinearPreferences`, stored in the single `algorithm_preferences` row keyed
+by algorithm id only (`getAlgorithmPreferences(algorithmId)`) — one prescription for every
+exercise, not per-exercise. Verified by reading the actual query path, not assumed. Learning it
+per exercise would reuse the same "correlate a variable against outcome from the user's own
+history" pattern as §5, just at exercise granularity and keyed on set-count/rep-range instead of
+weekly volume — blocked on this section's UX resolving first, since there's nothing to correlate
+without a way to generate the variation.
+
+## 11. Sequencing
 
 1. ~~Reasoning-trace contract + generic "Why?" UI (§3)~~ — **shipped**, PR #66.
 2. ~~Context-adjusted per-exercise suggestions (§4)~~ — **shipped**, PR #66.
@@ -271,8 +308,10 @@ project, not an extension of this progression-engine work. Not tracked further i
    someone's (possibly Martin's own) later work, not core-team-built.
 6. ~~e1RM everywhere (§8)~~ — **shipped**, PR #66.
 7. Nutrition × training correlation (§9) — raised, not scoped/sequenced yet; likely after §5.
+8. Deliberate signal-generation UX (§10) — raised, not scoped; needs a design pass before any of
+   it is built. Unblocks personalized set/rep prescription (also not scoped) once resolved.
 
-## 11. Extension points recap
+## 12. Extension points recap
 
 - §3's `Reasoning` shape, §4's per-exercise contract, and §5's per-muscle-group contract are all
   core contracts, same status as the existing `ProgressionAlgorithm` interface — a plugin can
