@@ -128,6 +128,15 @@ hand, not because it's the only one worth modeling.
 
 ## 5. Personalized volume/frequency landmarks per muscle group
 
+**Scope decided 2026-09-12:** ship as a **read-only insight first** (option A) — a "muscle
+groups" panel showing current weekly volume/frequency per group plus a suggested range with
+honest confidence, reusing `classifyTrend` + the reasoning contract, no new plugin architecture
+yet. A full pluggable family (option B — a proper contract + registry + settings picker,
+mirroring `mobility-progression`, so e.g. an RP-style fixed-table algorithm can be swapped in) is
+**explicitly required before this ships to real users/launch** — A is allowed to prove the
+learning logic works on real data first, but B is not an optional nice-to-have, it's a tracked
+launch blocker. Don't let A quietly become the permanent implementation.
+
 Exercises already carry `primaryMuscles`/`secondaryMuscles`; nothing new needs tagging. The
 model: track, per user per muscle group, how historical sets×frequency correlates with the
 trend outcome from `classifyTrend` (§4-adjusted), and converge on a personal sweet spot —
@@ -160,6 +169,20 @@ converged one. This is a harder bar than the existing classifier meets today, an
 to precisely because these two features are more consequential than a status chip — they adjust
 what weight gets suggested and what training frequency gets recommended.
 
+### 5.4 Depends on muscle-tag data quality (Martin's concern, 2026-09-12)
+
+This whole feature is only as good as `primaryMuscles`/`secondaryMuscles` tagging — an untagged
+or wrongly-tagged exercise doesn't corrupt a muscle group's numbers, it just silently excludes
+that volume, which is arguably worse (looks confidently complete when it isn't). Built-in
+exercises are app-authored and presumably fine; user-created custom exercises are the real risk —
+plausibly untagged or sloppily tagged. Two concrete things to build alongside 5, not deferred:
+- Fold tag *coverage* into the reasoning's confidence, not just sample size over time — e.g. a
+  meaningful fraction of a muscle group's real weekly sets coming from untagged exercises should
+  cap confidence, and the "Why?" view should say so explicitly ("12 sets from untagged exercises
+  this week weren't counted").
+- A lightweight nudge (settings or the exercise list) flagging custom exercises with empty
+  `primaryMuscles` as needing attention, surfaced before this feature is trusted.
+
 ## 6. Program library (the guided on-ramp)
 
 A small set of built-in "series" — day-by-day, week-by-week starter programs a solo user can
@@ -187,19 +210,58 @@ recap shows it next to each PR and the "best lift" card whenever reps > 1 (at 1 
 the raw weight already on screen, so a second figure would be redundant). Community plugins can
 now import the same helper instead of reimplementing the formula.
 
-## 9. Sequencing
+## 9. Nutrition × training correlation (raised, not started — 2026-09-12)
+
+Martin's idea: since nutrition logging and workout logging already live in the same app, real
+signal could plausibly be found correlating what someone ate around a session against how that
+session went — the concrete example given was "your lifts were better when you ate carbs 30-60
+minutes before training." Architecturally this is not a new paradigm — it's the same "learn from
+the user's own history, show your work, be honest about confidence" machinery from §3-5 applied
+to a second data source (the nutrition diary) correlated against the same outcome signal
+(session performance / `classifyTrend`-style trend).
+
+**Concrete blocker found checking feasibility:** `LoggedItem` (the nutrition diary's per-food
+entry, `domain/nutrition.ts`) has no per-item timestamp — only a coarse `meal` slot
+(breakfast/lunch/dinner/snack) and the day-level `dateIso`. That's nowhere near precise enough to
+correlate against a workout's actual start time; "30-60 minutes before" needs real clock time.
+Good news: `DiaryDay` is stored as a JSON blob (same pattern as `session_blocks`), so adding an
+optional `loggedAtMs` to `LoggedItem` is additive — no migration, but existing historical entries
+logged before this ships simply won't have it and can't be used for timing correlations.
+
+Two tiers this splits into:
+- **Day-level correlation** (buildable without any data model change): e.g. "sessions on days
+  you hit your protein target trend better than days you don't." Coarser, but usable today.
+- **Meal-timing correlation** (the actual "30-60 min before" example) — needs `LoggedItem.loggedAtMs`
+  added first, then correlates logged time against `session.startedAtMs`.
+
+**Extra caution warranted, more than §4/§5:** a single person's diet-vs-performance correlation is
+noisier than the fatigue/position work — logging compliance varies session to session, and sleep/
+stress/training-load confounds exist that nutrition data alone can't separate out. This is a good
+candidate to be honest about in the UI as a *hypothesis being tested*, not a delivered fact — "you
+tend to lift better when X" with a visible confidence and sample size, never "you lift better when
+X" stated flatly. Not scoped/sequenced yet — logged here so it isn't lost, to be designed properly
+(likely after §5 ships) rather than folded in now.
+
+**Sleep — deliberately out of scope.** Martin's own read, agreed: self-reported sleep is
+low-value signal on its own; doing this right needs wearable/platform integration (Apple
+HealthKit, Google/Android Health Connect, etc.), which is a substantial *separate* integration
+project, not an extension of this progression-engine work. Not tracked further in this doc.
+
+## 10. Sequencing
 
 1. ~~Reasoning-trace contract + generic "Why?" UI (§3)~~ — **shipped**, PR #66.
 2. ~~Context-adjusted per-exercise suggestions (§4)~~ — **shipped**, PR #66.
 3. Personalized volume/frequency landmarks (§5) — next up. Second consumer, larger
-   (per-muscle-group, whole-programme view).
+   (per-muscle-group, whole-programme view). v1 = read-only insight; the full pluggable family
+   is a tracked launch blocker, not optional (§5 status line).
 4. Program library (§6) — independent of 1-3, can build in parallel; it's the on-ramp, not the
    engine.
 5. Autoregulation input widening (§7) — contract accommodation only; the actual plugin is
    someone's (possibly Martin's own) later work, not core-team-built.
 6. ~~e1RM everywhere (§8)~~ — **shipped**, PR #66.
+7. Nutrition × training correlation (§9) — raised, not scoped/sequenced yet; likely after §5.
 
-## 10. Extension points recap
+## 11. Extension points recap
 
 - §3's `Reasoning` shape, §4's per-exercise contract, and §5's per-muscle-group contract are all
   core contracts, same status as the existing `ProgressionAlgorithm` interface — a plugin can
