@@ -45,6 +45,9 @@ import { createSqliteMessagesRepo } from "$lib/data/messages/messagesRepo.sqlite
 import type { MessagesRepo } from "$lib/data/messages/messagesRepo";
 import { createLocalExerciseRepo } from "$lib/data/exercise/localExerciseRepo";
 import { createLocalProgressionRepo } from "$lib/data/progressionRepo.local";
+import { createLocalTrainingBlockTagRepo } from "$lib/data/progression/trainingBlockTagRepo.local";
+import { createSqliteTrainingBlockTagRepo } from "$lib/data/progression/trainingBlockTagRepo.sqlite";
+import type { TrainingBlockTagRepo } from "@logit/core/data/trainingBlockTagRepo";
 import { createSqliteHabitRepo } from "$lib/data/habit/habitRepo.sqlite";
 import { createLocalHabitRepo } from "$lib/data/habit/habitRepo.local";
 import type { HabitRepo } from "@logit/core/data/habitRepo";
@@ -82,6 +85,7 @@ let nutritionRepo: NutritionRepo | null = null;
 let foodDbRepo: FoodDbRepo | null = null;
 let coachNutritionPlanRepo: AssignedNutritionPlanRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
+let trainingBlockTagRepo: TrainingBlockTagRepo | null = null;
 let habitRepo: HabitRepo | null = null;
 let assignedHabitRepo: AssignedHabitRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
@@ -161,6 +165,7 @@ export async function initRepos(): Promise<void> {
     nutritionRepo = createSqliteNutritionRepo();
     coachNutritionPlanRepo = createSqliteCoachNutritionPlanRepo();
     progressionRepo = createSqliteProgressionRepo();
+    trainingBlockTagRepo = createSqliteTrainingBlockTagRepo();
     habitRepo = createSqliteHabitRepo();
     assignedHabitRepo = createSqliteAssignedHabitRepo();
 
@@ -196,6 +201,7 @@ export async function initRepos(): Promise<void> {
     online: createOpenFoodFactsRepo(),
   });
   progressionRepo = createLocalProgressionRepo();
+  trainingBlockTagRepo = createLocalTrainingBlockTagRepo();
   habitRepo = createLocalHabitRepo();
   assignedHabitRepo = createLocalAssignedHabitRepo();
   didInit = true;
@@ -216,6 +222,7 @@ export function resetRepos(): void {
   coachNutritionPlanRepo = null;
   foodDbRepo = null;
   progressionRepo = null;
+  trainingBlockTagRepo = null;
   habitRepo = null;
   assignedHabitRepo = null;
 }
@@ -301,6 +308,12 @@ export function getProgressionRepo(): ProgressionRepo {
   if (!progressionRepo)
     throw new Error("ProgressionRepo not initialized. Call initRepos() first.");
   return progressionRepo;
+}
+
+export function getTrainingBlockTagRepo(): TrainingBlockTagRepo {
+  if (!trainingBlockTagRepo)
+    throw new Error("TrainingBlockTagRepo not initialized. Call initRepos() first.");
+  return trainingBlockTagRepo;
 }
 
 export function getAlgorithmRegistry(): AlgorithmRegistry {

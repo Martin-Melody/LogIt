@@ -4,6 +4,7 @@ import type { ExerciseRepo } from "../../data/exercise/exerciseRepo";
 import type { AlgorithmRegistry } from "../../progression/algorithmRegistry";
 import type { AnalyticsRegistry } from "../../domain/analytics";
 import type { MobilityProgressionAlgorithmRegistry } from "../../domain/mobilityProgression";
+import type { TrainingBlockTagRepo } from "../../data/trainingBlockTagRepo";
 
 /** Full set of repos/registries the progression usecases can draw from.
  * Each usecase only requires the subset it needs (via Pick) — callers can
@@ -15,4 +16,5 @@ export type ProgressionDeps = {
   algorithmRegistry: AlgorithmRegistry;
   analyticsRegistry: AnalyticsRegistry;
   mobilityAlgorithmRegistry: MobilityProgressionAlgorithmRegistry;
+  trainingBlockTagRepo: TrainingBlockTagRepo;
 };

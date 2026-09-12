@@ -1,8 +1,9 @@
 import type { ProgressStatus, ProgressionNudge } from "../../domain/progression";
-import { classifyTrend } from "../../domain/progression";
+import { classifyTrend, exerciseKey } from "../../domain/progression";
 import type { Reasoning } from "../../domain/reasoning";
 import { nowMs } from "../../domain/time";
 import type { AnalyticsSeries } from "../../domain/analytics";
+import { isWithinTrainingBlockTag } from "../../domain/trainingBlockTag";
 import { getExerciseAnalytics } from "./getExerciseAnalytics";
 import { getSuggestion } from "./getSuggestion";
 import type { ProgressionDeps } from "./deps";
@@ -74,6 +75,35 @@ function computeComparableToCurrent(
   });
 }
 
+// §10.3.3 tag training blocks — the general form of the same idea: any point
+// falling inside a user-tagged window is excluded from the outer trend the
+// same way a rep-range regime-change point is, just user-declared rather than
+// algorithm-derived. Counted separately from excludedForRegimeChange so the
+// "Why?" view can say *why* a point was dropped, not just that it was.
+function computeTaggedComparable(
+  points: { date: number }[],
+  tags: { startMs: number; endMs?: number }[],
+): { comparable: (boolean | undefined)[]; excludedCount: number } {
+  let excludedCount = 0;
+  const comparable = points.map((p) => {
+    const tagged = tags.some((t) => isWithinTrainingBlockTag(p.date, t));
+    if (tagged) excludedCount += 1;
+    return tagged ? false : undefined;
+  });
+  return { comparable, excludedCount };
+}
+
+// classifyTrend treats anything other than exactly `false` as "keep" — so
+// combining two independent exclusion sources is just "false wins".
+function combineComparable(
+  a: (boolean | undefined)[] | undefined,
+  b: (boolean | undefined)[] | undefined,
+  length: number,
+): (boolean | undefined)[] | undefined {
+  if (!a && !b) return undefined;
+  return Array.from({ length }, (_, i) => (a?.[i] === false || b?.[i] === false ? false : undefined));
+}
+
 /** Exported for reuse by anything that needs "the one series that best represents
  * progress" for an exercise — e.g. getMuscleGroupInsights, which correlates the same
  * primary metric against weekly training volume rather than just its own trend. */
@@ -128,8 +158,17 @@ export async function getExerciseProgressStory(
   const lastTrainedMs = points[points.length - 1]!.date;
 
   const ladder = (suggestion?.nextState as LinearTrialState | null)?.repRangeLadder;
-  const comparableToCurrent = computeComparableToCurrent(points, ladder);
+  const regimeComparable = computeComparableToCurrent(points, ladder);
+
+  const tags = await deps.trainingBlockTagRepo.listForExercise(exerciseKey(exercise));
+  const { comparable: taggedComparable, excludedCount: excludedForTaggedBlock } = computeTaggedComparable(points, tags);
+
+  const comparableToCurrent = combineComparable(regimeComparable, taggedComparable, points.length);
   const trend = classifyTrend({ values, sessionPositions, comparableToCurrent, lastTrainedMs, nowMs: nowMs() });
+  const trendReasoning: Reasoning =
+    excludedForTaggedBlock > 0
+      ? { ...trend.reasoning, inputs: { ...trend.reasoning.inputs, excludedForTaggedBlock } }
+      : trend.reasoning;
 
   // Last PR in the primary series.
   let runningMax = -Infinity;
@@ -162,7 +201,7 @@ export async function getExerciseProgressStory(
     nextNote: suggestion?.notes ?? undefined,
     lastTrainedMs,
     spark: values,
-    trendReasoning: trend.reasoning,
+    trendReasoning,
     suggestionReasoning: suggestion?.reasoning,
     nudge: suggestion?.nudge,
   };

@@ -18,6 +18,7 @@ function deps(history: WorkoutSession[]): ProgressionDeps {
     exerciseRepo: { getById: async () => null, getByName: async () => null },
     progressionRepo: { getAnalyticsConfig: async () => null, getConfig: async () => null },
     analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+    trainingBlockTagRepo: { listForExercise: async () => [] },
   } as unknown as ProgressionDeps;
 }
 

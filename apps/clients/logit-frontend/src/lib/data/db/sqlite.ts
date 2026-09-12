@@ -337,6 +337,22 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       PRIMARY KEY (owner_id)
     );
 
+    -- Training-block tags (adaptive-progression-engine.md §10.3.3) — a user-
+    -- authored "this period doesn't count as normal progression" annotation per
+    -- exercise, keyed by its own id (not exercise_key) since several can exist
+    -- for one exercise over time.
+    CREATE TABLE IF NOT EXISTS training_block_tags (
+      owner_id TEXT NOT NULL,
+      id TEXT NOT NULL,
+      exercise_key TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      created_at_ms INTEGER NOT NULL,
+      PRIMARY KEY (owner_id, id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_training_block_tags_exercise
+      ON training_block_tags(owner_id, exercise_key);
+
     CREATE TABLE IF NOT EXISTS algorithm_preferences (
       owner_id TEXT NOT NULL,
       algorithm_id TEXT NOT NULL,

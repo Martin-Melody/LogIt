@@ -23,7 +23,7 @@ function sessionWithFillerFirst(name: string, weight: number, reps: number, ende
   return finishSession(s, endedAtMs);
 }
 
-function deps(history: WorkoutSession[]): ProgressionDeps {
+function deps(history: WorkoutSession[], tags: unknown[] = []): ProgressionDeps {
   return {
     workoutRepo: {
       listAllSessions: async () => history,
@@ -35,6 +35,7 @@ function deps(history: WorkoutSession[]): ProgressionDeps {
       getConfig: async () => null, // → getSuggestion returns null, story still builds
     },
     analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+    trainingBlockTagRepo: { listForExercise: async () => tags },
   } as unknown as ProgressionDeps;
 }
 
@@ -130,6 +131,7 @@ describe("getExerciseProgressStory", () => {
           }),
         },
         analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
+        trainingBlockTagRepo: { listForExercise: async () => [] },
       } as unknown as ProgressionDeps;
     }
 
@@ -219,6 +221,55 @@ describe("getExerciseProgressStory", () => {
       const story = await getExerciseProgressStory({ name: "Bench" }, depsWithTrial(trialState, history));
       expect(story!.trendReasoning.inputs.excludedForRegimeChange).toBe(2);
       expect(story!.status).toBe("progressing");
+    });
+  });
+
+  describe("tag training blocks (§10.3.3)", () => {
+    it("excludes readings inside a tagged window from the headline trend", async () => {
+      const tagStart = now - 20 * DAY;
+      const tagEnd = now - 10 * DAY;
+      const history = [
+        session("Bench", 100, 1, now - 40 * DAY),
+        session("Bench", 102, 1, now - 33 * DAY),
+        session("Bench", 104, 1, now - 26 * DAY),
+        session("Bench", 106, 1, now - 23 * DAY),
+        // Tagged window — an injury layoff with two bad readings that shouldn't count.
+        session("Bench", 60, 1, tagStart + 1 * DAY),
+        session("Bench", 61, 1, tagStart + 5 * DAY),
+        // Back to normal, resuming near the pre-injury level (below its max, so this
+        // isn't a new PR masking the slope via the "PR recently" shortcut).
+        session("Bench", 104, 1, tagEnd + 1 * DAY),
+        session("Bench", 105, 1, now - 1 * DAY),
+      ];
+      const tags = [{ startMs: tagStart, endMs: tagEnd, reason: "injury" }];
+
+      const withoutTag = await getExerciseProgressStory({ name: "Bench" }, deps(history));
+      const withTag = await getExerciseProgressStory({ name: "Bench" }, deps(history, tags));
+
+      expect(withoutTag!.status).toBe("regressing");
+      expect(withTag!.status).not.toBe("regressing");
+      expect(withTag!.trendReasoning.inputs.excludedForTaggedBlock).toBe(2);
+    });
+
+    it("treats an open-ended tag (no endMs) as still in effect through today", async () => {
+      const tagStart = now - 15 * DAY;
+      const history = [
+        session("Bench", 100, 1, now - 40 * DAY),
+        session("Bench", 102, 1, now - 33 * DAY),
+        session("Bench", 104, 1, now - 26 * DAY),
+        session("Bench", 60, 1, tagStart + 1 * DAY),
+        session("Bench", 58, 1, now - 1 * DAY),
+      ];
+      const tags = [{ startMs: tagStart, reason: "injury" }];
+
+      const story = await getExerciseProgressStory({ name: "Bench" }, deps(history, tags));
+      expect(story!.trendReasoning.inputs.excludedForTaggedBlock).toBe(2);
+    });
+
+    it("doesn't add excludedForTaggedBlock when there are no tags", async () => {
+      const history = [session("Bench", 100, 1, now - 10 * DAY), session("Bench", 105, 1, now - 1 * DAY)];
+      const story = await getExerciseProgressStory({ name: "Bench" }, deps(history));
+      expect(story!.trendReasoning.inputs.excludedForTaggedBlock).toBeUndefined();
     });
   });
 });

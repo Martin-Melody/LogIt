@@ -6,6 +6,7 @@ import {
   getAlgorithmRegistry,
   getAnalyticsRegistry,
   getMobilityAlgorithmRegistry,
+  getTrainingBlockTagRepo,
 } from "$lib/data/repoProvider";
 
 /** The mobile app's repo/registry bundle for the @logit/core progression
@@ -20,5 +21,6 @@ export function getProgressionDeps(): ProgressionDeps {
     algorithmRegistry: getAlgorithmRegistry(),
     analyticsRegistry: getAnalyticsRegistry(),
     mobilityAlgorithmRegistry: getMobilityAlgorithmRegistry(),
+    trainingBlockTagRepo: getTrainingBlockTagRepo(),
   };
 }
