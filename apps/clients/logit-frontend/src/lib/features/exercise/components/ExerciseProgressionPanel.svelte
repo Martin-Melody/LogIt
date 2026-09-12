@@ -11,6 +11,7 @@
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import ProgressStatusChip from "./ProgressStatusChip.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
+  import TrainingBlockTagDialog from "./TrainingBlockTagDialog.svelte";
 
   const { exercise }: { exercise: { id?: string; name: string } } = $props();
 
@@ -129,6 +130,9 @@
             {new Date(story.lastPr.whenMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
           </p>
         {/if}
+        <div class="flex justify-end">
+          <TrainingBlockTagDialog {exercise} triggerVariant="ghost" onSaved={refreshStory} />
+        </div>
       </div>
     {/if}
 
