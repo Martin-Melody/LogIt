@@ -6,6 +6,7 @@
   import { getExerciseAnalytics, type ExerciseAnalyticsResult } from "@logit/core/usecases/progression/getExerciseAnalytics";
   import { getExerciseProgressStory, type ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
   import { dismissProgressionNudge } from "@logit/core/usecases/progression/dismissProgressionNudge";
+  import { acceptRepRangeExperiment } from "@logit/core/usecases/progression/acceptRepRangeExperiment";
   import type { AnalyticsSeries } from "@logit/core/domain/analytics";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import ProgressStatusChip from "./ProgressStatusChip.svelte";
@@ -42,6 +43,11 @@
 
   async function handleDismissNudge(nudgeId: string) {
     await dismissProgressionNudge(exercise, nudgeId, getProgressionDeps());
+    await refreshStory();
+  }
+
+  async function handleAcceptNudge(nudgeId: string) {
+    await acceptRepRangeExperiment(exercise, nudgeId, getProgressionDeps());
     await refreshStory();
   }
 
@@ -95,13 +101,24 @@
         {#if story.nudge}
           <div class="flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
             <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{story.nudge.message}</p>
-            <button
-              type="button"
-              class="shrink-0 text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
-              onclick={() => handleDismissNudge(story!.nudge!.id)}
-            >
-              Got it
-            </button>
+            <div class="flex shrink-0 items-center gap-2">
+              {#if story.nudge.actionLabel}
+                <button
+                  type="button"
+                  class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2"
+                  onclick={() => handleAcceptNudge(story!.nudge!.id)}
+                >
+                  {story.nudge.actionLabel}
+                </button>
+              {/if}
+              <button
+                type="button"
+                class="text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+                onclick={() => handleDismissNudge(story!.nudge!.id)}
+              >
+                {story.nudge.actionLabel ? "Not now" : "Got it"}
+              </button>
+            </div>
           </div>
         {/if}
         {#if story.lastPr}

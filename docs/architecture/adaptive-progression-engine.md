@@ -282,8 +282,8 @@ different treatments, not one shared UI:
   the `/progress` exercise detail panel (`ExerciseProgressionPanel.svelte`), each with a "Got it"
   dismiss control. Auto-stops asking the moment `calibrated` flips true — nothing to track for
   that path, it falls out of the same data the reasoning already reports.
-- **Personalized rep-range prescription per exercise — designed 2026-09-12, not built.**
-  Genuinely higher stakes than the order-variation nudge: the in-session "Target: 3×5-8" is a
+- **Personalized rep-range prescription per exercise — shipped** (same branch/PR as the
+  order-variation nudge). Genuinely higher stakes than that nudge: the in-session "Target: 3×5-8" is a
   fixed global preference today (`LinearPreferences`, stored in the single `algorithm_preferences`
   row keyed by algorithm id only — verified against the actual query path, not assumed), and
   there's no organic variation to learn from at all, unlike session position. Generating signal
@@ -335,6 +335,36 @@ different treatments, not one shared UI:
   real** — a third-party algorithm can't compete on this axis if experimentation only exists
   baked into the built-in one, same reasoning as §5's option B.
 
+  **Implementation notes (2026-09-12):**
+  - `ProgressionNudge` gained `actionLabel`/`actionData`/`exclusive` — a nudge can now propose a
+    real action (not just dismiss), carry the data needed to act on it, and mark itself as
+    needing exclusivity across exercises. `ExerciseProgressionState` gained `activeExperiment`
+    (generic — any algorithm's experiment can set it, `getSuggestion.ts` enforces "only one
+    exercise at a time" off it without knowing what the experiment is) and reuses
+    `dismissedNudges` for the "not now"/"keep usual" paths.
+  - `linearProgression`'s trial-conclusion math reuses `classifyTrend` directly (via a small
+    `blockTrend` helper) rather than a bespoke calculator — a trial's "did this help" reads on
+    the exact same slope scale as every status chip elsewhere. Reuses `estimated1RM` for the
+    per-session value, same as §5/§8.
+  - The muscle-group warm-start and the cross-exercise exclusivity check both live in
+    `getSuggestion.ts`, not the algorithm — `ProgressionInput` gained a bespoke
+    `suggestedTrialRepRange` field for this, clearly commented as a known v1 compromise
+    (`suggest()` only ever sees one exercise at a time; only the generic layer can look across
+    exercises to compute either of these).
+  - New `acceptRepRangeExperiment` usecase (bespoke, alongside the generic `dismissProgressionNudge`)
+    handles both "start the trial" and "switch permanently" — re-fetches the live suggestion
+    rather than trusting whatever the UI last rendered, so accepting a stale nudge is a no-op
+    instead of acting on outdated data.
+  - Real bug caught building this: `applySessionProgression` was replacing the whole
+    `ExerciseProgressionState` row on every completed session, silently dropping
+    `dismissedNudges` (and would have dropped `activeExperiment` too) since neither is part of
+    what `suggest()` returns. Fixed to carry `dismissedNudges` forward explicitly and re-derive
+    `activeExperiment` from `nextState` on every save.
+  - v1 doesn't correct for the fatigue-calibration confound this creates when both features are
+    active on the same exercise at once (a rep-range trial changes the rep ceiling
+    `calibrateSensitivity` scores history against) — noted as an accepted limitation in code,
+    expected to be rare in practice.
+
 ## 11. Sequencing
 
 1. ~~Reasoning-trace contract + generic "Why?" UI (§3)~~ — **shipped**, PR #66.
@@ -347,8 +377,8 @@ different treatments, not one shared UI:
    someone's (possibly Martin's own) later work, not core-team-built.
 6. ~~e1RM everywhere (§8)~~ — **shipped**, PR #66.
 7. Nutrition × training correlation (§9) — raised, not scoped/sequenced yet; likely after §5.
-8. ~~Deliberate signal-generation UX — order-variation nudge (§10)~~ — **shipped**. The rep-range
-   experimentation half of §10 is **designed, not built** — next up to actually implement.
+8. ~~Deliberate signal-generation UX — order-variation nudge + rep-range experimentation (§10)~~
+   — **both shipped**. §5's option B, §6, and §7 are the remaining undone items.
 
 ## 12. Extension points recap
 
@@ -372,13 +402,14 @@ marketing copy or docs-site per slice** — batch the update once the engine's s
 enough that it isn't described three different ways in three commits. Update this list as things
 ship; do the actual external-facing pass later, deliberately, not reactively.
 
-**Not yet reflected anywhere external, as of PR #66 (§1-3, 6, 10-order-nudge shipped):**
+**Not yet reflected anywhere external, as of PR #66 (§1-3, 5, 6, 10 all shipped):**
 - `apps/clients/docs-site/src/routes/docs/plugins/reference/+page.svx` — still describes
   `ProgressionInput`/`ProgressionOutput` generically (line ~61); doesn't mention `reasoning`,
   `Reasoning`/`ReasoningConfidence` (domain/reasoning.ts), the widened `sessionPositions`
-  parameter on `classifyTrend`, or the new `nudge`/`ProgressionNudge`/dismissal contract (§10). A
-  plugin author reading this today wouldn't know any of this exists, let alone that reasoning is
-  expected of a marketplace-quality algorithm.
+  parameter on `classifyTrend`, the `nudge`/`ProgressionNudge`/dismissal contract, or the
+  `actionLabel`/`actionData`/`exclusive`/`activeExperiment` additions from rep-range
+  experimentation (§10). A plugin author reading this today wouldn't know any of this exists, let
+  alone that reasoning is expected of a marketplace-quality algorithm.
 - No docs-site page for the muscle-group insight (`getMuscleGroupInsights`) — comparable pages
   exist for mobility (`docs/plugins/mobility-progression`, `mobility-packs`); this doesn't have
   one yet, and shouldn't until §5's option B (the pluggable version) exists — document the real
