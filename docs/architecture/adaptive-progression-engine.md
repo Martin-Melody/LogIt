@@ -282,22 +282,58 @@ different treatments, not one shared UI:
   the `/progress` exercise detail panel (`ExerciseProgressionPanel.svelte`), each with a "Got it"
   dismiss control. Auto-stops asking the moment `calibrated` flips true — nothing to track for
   that path, it falls out of the same data the reasoning already reports.
-- **Personalized set/rep prescription per exercise — not started.** Genuinely higher stakes: the
-  in-session "Target: 3×5-8" is a fixed global preference today (`LinearPreferences`, stored in
-  the single `algorithm_preferences` row keyed by algorithm id only — one prescription for every
-  exercise, not per-exercise; verified against the actual query path, not assumed), and there's no
-  organic variation to learn from at all — every exercise gets the identical prescription, unlike
-  session position which at least sometimes varies on its own. Generating signal here means the
-  algorithm has to *proactively change what it prescribes*, on purpose, for a while — a real
-  change to the number the user follows, not just a suggestion about structure. Decided: **opt-in**
-  (a settings toggle, off by default — "Let LogIt experiment with your set/rep scheme to
-  personalize it"), varying **one variable at a time** so results stay attributable, explained
-  live through the same reasoning-trace machinery (§3) rather than new UI, with its own defined
-  sample size / stop condition mirroring `calibrateSensitivity`'s approach rather than inventing a
-  new one. Not scoped yet — real open questions remain: how many sessions per trial, how to avoid
-  confusing someone mid-experiment, whether more than one exercise's experiment should ever run at
-  once. Reuses the same `nudge`/dismissal infra from the order-variation piece where it applies
-  (e.g. an opt-in prompt), but the experiment itself is new work.
+- **Personalized rep-range prescription per exercise — designed 2026-09-12, not built.**
+  Genuinely higher stakes than the order-variation nudge: the in-session "Target: 3×5-8" is a
+  fixed global preference today (`LinearPreferences`, stored in the single `algorithm_preferences`
+  row keyed by algorithm id only — verified against the actual query path, not assumed), and
+  there's no organic variation to learn from at all, unlike session position. Generating signal
+  means proactively changing what's prescribed, on purpose, for a while — a real change to the
+  number the user follows.
+
+  **Variable chosen: rep range, not set count.** Set count is deliberately left out — §5 already
+  owns "how many sets per week for this muscle" at the aggregate level; learning set-count
+  *per exercise* on top of that would fight with or duplicate what §5's option B will eventually
+  answer. Rep range isn't covered anywhere else in this doc, is a smaller behavioural ask (reps
+  you're already doing, not an added/removed set), and is the axis training approaches genuinely
+  disagree on (compounds vs. isolation, etc.). Set-count experimentation can come later, informed
+  by §5 rather than run as a separate parallel trial.
+
+  **Granularity: per-exercise ground truth, muscle-group-informed cold start — not a permanent
+  compromise between the two.** Once an exercise has enough of its own trial history, its own
+  result wins outright — this is what actually captures a real difference between, say, biceps
+  and quads, or between a stretch-emphasis exercise (Incline Curl) and an easier-to-cheat one
+  (Standing Curl) sharing the same muscle. Until an exercise has its own data, the *value it's
+  first trialed at* is informed by what's already worked across other exercises sharing its
+  primary muscle — a warm start, not a ceiling. Deliberately **not** attempting to hand-classify
+  exercises by mechanical property (stretch-emphasis, cheat-resistance, stability demand, etc.) —
+  that nuance is expected to emerge on its own from each exercise's own accumulated data once
+  there's enough of it, the same way every other learned piece in this doc works from the user's
+  own history rather than an encoded theory.
+
+  **Consent, opt-in twice:** a settings toggle turns the *feature* on (off by default — "Let LogIt
+  experiment with your rep ranges to personalize them"); a specific exercise still gets asked
+  individually before a trial starts on it, reusing the exact `ProgressionNudge`/dismissal UI
+  built for the order-variation nudge (§10 above) rather than new UI. No exercise is ever
+  experimented on without an explicit per-exercise yes.
+
+  **Pacing:** one trial actively running at a time, globally — not because the *result* should be
+  global (it isn't, see granularity above), but to keep what's changing legible; running several
+  concurrent rep-range changes across different exercises would be confusing to track and explain.
+
+  **Mechanics — block design:** N sessions at the trial rep range, compared against the N
+  sessions immediately before it at the baseline range — same before/after "did this improve"
+  comparison shape as §5's volume correlation (reuse the pattern, not necessarily the code).
+
+  **Transparency, in and out:** starting a trial states what's changing and why through the same
+  reasoning-trace UI (§3), not new UI; finishing one reports the real result — "progressed faster
+  at 8-12 (+X%) than your usual 5-8 (+Y%) — switch permanently?" or "no real difference — keeping
+  your usual range" — never silently keeps or discards the change.
+
+  **Scope for v1: bespoke to `linearProgression`, not a generic mechanism yet** — same phased
+  approach as §5 (insight first, generalize once proven). **Tracked, not a hard blocker on
+  shipping v1 itself, but should happen before the progression-algorithm marketplace becomes
+  real** — a third-party algorithm can't compete on this axis if experimentation only exists
+  baked into the built-in one, same reasoning as §5's option B.
 
 ## 11. Sequencing
 
@@ -311,8 +347,8 @@ different treatments, not one shared UI:
    someone's (possibly Martin's own) later work, not core-team-built.
 6. ~~e1RM everywhere (§8)~~ — **shipped**, PR #66.
 7. Nutrition × training correlation (§9) — raised, not scoped/sequenced yet; likely after §5.
-8. ~~Deliberate signal-generation UX — order-variation nudge (§10)~~ — **shipped**. The set/rep
-   experimentation half of §10 is still not scoped/built — opt-in, needs its own design pass.
+8. ~~Deliberate signal-generation UX — order-variation nudge (§10)~~ — **shipped**. The rep-range
+   experimentation half of §10 is **designed, not built** — next up to actually implement.
 
 ## 12. Extension points recap
 
