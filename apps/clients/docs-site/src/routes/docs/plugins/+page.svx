@@ -2,12 +2,15 @@
 title: Plugins
 ---
 
-A LogIt plugin extends the app with one of six things:
+A LogIt plugin extends the app with one of nine things:
 
 | Family | What it does | Runs as |
 |---|---|---|
 | `exercise-pack` | Adds exercises to the catalogue | Pure data — not code |
+| `mobility-pack` | Adds drills to the Mobility block's catalogue | Pure data — not code |
 | `progression-algorithm` | Suggests your next sets for an exercise | `suggest(input)` in the sandbox |
+| `mobility-progression` | Suggests your next targets for a mobility drill | `suggest(input)` in the sandbox |
+| `muscle-group-insight` | Says what your training data implies about a muscle group's volume | `analyze(input)` in the sandbox |
 | `analytics` | Custom charts/metrics for an exercise | `compute(input)` in the sandbox |
 | `nutrition-algorithm` | Turns your goal + data into a calorie target | `computeTargets(input)` in the sandbox |
 | `nutrition-analytics` | Weekly recaps, adherence, custom insights | `compute(input)` in the sandbox |
@@ -33,6 +36,9 @@ JavaScript environment with no DOM, no `fetch`, no storage, no timers.
 
 Start with the family you want:
 [exercise packs](/docs/plugins/exercise-packs) ·
+[mobility packs](/docs/plugins/mobility-packs) ·
 [progression](/docs/plugins/progression) ·
+[mobility progression](/docs/plugins/mobility-progression) ·
+[muscle group insight](/docs/plugins/muscle-group-insight) ·
 [nutrition](/docs/plugins/nutrition) ·
 [widgets](/docs/plugins/widgets)
