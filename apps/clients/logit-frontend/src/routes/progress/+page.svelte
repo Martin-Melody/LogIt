@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { page } from "$app/stores";
   import * as Card from "$lib/components/ui/card";
   import * as Tabs from "$lib/components/ui/tabs";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
@@ -7,6 +8,7 @@
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import Sparkline from "$lib/features/exercise/components/Sparkline.svelte";
   import MuscleGroupInsightsPanel from "$lib/features/exercise/components/MuscleGroupInsightsPanel.svelte";
+  import NutritionCorrelationPanel from "$lib/features/exercise/components/NutritionCorrelationPanel.svelte";
   import { getAllExerciseProgressStories } from "@logit/core/usecases/progression/getAllExerciseProgressStories";
   import type { ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
   import { PROGRESS_STATUS_ATTENTION_ORDER, type ProgressStatus } from "@logit/core/domain/progression";
@@ -18,7 +20,11 @@
 
   let stories = $state<ExerciseProgressStory[]>([]);
   let selected = $state<string | null>(null);
-  let tab = $state("exercises");
+  // The plateau-diagnosis orchestration (§10.3.2) links here with ?tab=muscles
+  // or ?tab=nutrition — a next-step suggestion opens the right tab directly
+  // rather than dropping the user on Exercises and making them find it.
+  const initialTab = $page.url.searchParams.get("tab");
+  let tab = $state(initialTab === "muscles" || initialTab === "nutrition" ? initialTab : "exercises");
 
   const selectedStory = $derived(
     stories.find((s) => s.exerciseName === selected) ?? null,
@@ -74,6 +80,7 @@
       <Tabs.List class="w-full">
         <Tabs.Trigger value="exercises" class="flex-1">Exercises</Tabs.Trigger>
         <Tabs.Trigger value="muscles" class="flex-1">Muscle groups</Tabs.Trigger>
+        <Tabs.Trigger value="nutrition" class="flex-1">Nutrition</Tabs.Trigger>
       </Tabs.List>
 
       <Tabs.Content value="exercises">
@@ -139,6 +146,10 @@
 
       <Tabs.Content value="muscles">
         <MuscleGroupInsightsPanel />
+      </Tabs.Content>
+
+      <Tabs.Content value="nutrition">
+        <NutritionCorrelationPanel />
       </Tabs.Content>
     </Tabs.Root>
     </div>

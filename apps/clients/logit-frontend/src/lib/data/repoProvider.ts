@@ -9,6 +9,7 @@ import type { AnalyticsRegistry } from "@logit/core/domain/analytics";
 import type { NutritionAlgorithmRegistry } from "@logit/core/domain/nutritionAlgorithm";
 import type { NutritionAnalyticsRegistry } from "@logit/core/domain/nutritionAnalytics";
 import type { MobilityProgressionAlgorithmRegistry } from "@logit/core/domain/mobilityProgression";
+import type { MuscleGroupInsightAlgorithmRegistry } from "@logit/core/domain/muscleGroupInsight";
 
 import { isNativePlatform } from "$lib/platform/isNative";
 
@@ -45,6 +46,9 @@ import { createSqliteMessagesRepo } from "$lib/data/messages/messagesRepo.sqlite
 import type { MessagesRepo } from "$lib/data/messages/messagesRepo";
 import { createLocalExerciseRepo } from "$lib/data/exercise/localExerciseRepo";
 import { createLocalProgressionRepo } from "$lib/data/progressionRepo.local";
+import { createLocalTrainingBlockTagRepo } from "$lib/data/progression/trainingBlockTagRepo.local";
+import { createSqliteTrainingBlockTagRepo } from "$lib/data/progression/trainingBlockTagRepo.sqlite";
+import type { TrainingBlockTagRepo } from "@logit/core/data/trainingBlockTagRepo";
 import { createSqliteHabitRepo } from "$lib/data/habit/habitRepo.sqlite";
 import { createLocalHabitRepo } from "$lib/data/habit/habitRepo.local";
 import type { HabitRepo } from "@logit/core/data/habitRepo";
@@ -82,6 +86,7 @@ let nutritionRepo: NutritionRepo | null = null;
 let foodDbRepo: FoodDbRepo | null = null;
 let coachNutritionPlanRepo: AssignedNutritionPlanRepo | null = null;
 let progressionRepo: ProgressionRepo | null = null;
+let trainingBlockTagRepo: TrainingBlockTagRepo | null = null;
 let habitRepo: HabitRepo | null = null;
 let assignedHabitRepo: AssignedHabitRepo | null = null;
 let algorithmRegistry: AlgorithmRegistry | null = null;
@@ -89,6 +94,7 @@ let analyticsRegistry: AnalyticsRegistry | null = null;
 let nutritionAlgorithmRegistry: NutritionAlgorithmRegistry | null = null;
 let nutritionAnalyticsRegistry: NutritionAnalyticsRegistry | null = null;
 let mobilityAlgorithmRegistry: MobilityProgressionAlgorithmRegistry | null = null;
+let muscleGroupInsightAlgorithmRegistry: MuscleGroupInsightAlgorithmRegistry | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -137,6 +143,7 @@ export async function initRepos(): Promise<void> {
   nutritionAlgorithmRegistry = pluginRuntime.nutritionAlgorithms;
   nutritionAnalyticsRegistry = pluginRuntime.nutritionAnalytics;
   mobilityAlgorithmRegistry = pluginRuntime.mobilityAlgorithms;
+  muscleGroupInsightAlgorithmRegistry = pluginRuntime.muscleGroupInsightAlgorithms;
 
   if (isNativePlatform()) {
     await withTimeout(initSqlite(), 10_000, "initSqlite");
@@ -161,6 +168,7 @@ export async function initRepos(): Promise<void> {
     nutritionRepo = createSqliteNutritionRepo();
     coachNutritionPlanRepo = createSqliteCoachNutritionPlanRepo();
     progressionRepo = createSqliteProgressionRepo();
+    trainingBlockTagRepo = createSqliteTrainingBlockTagRepo();
     habitRepo = createSqliteHabitRepo();
     assignedHabitRepo = createSqliteAssignedHabitRepo();
 
@@ -196,6 +204,7 @@ export async function initRepos(): Promise<void> {
     online: createOpenFoodFactsRepo(),
   });
   progressionRepo = createLocalProgressionRepo();
+  trainingBlockTagRepo = createLocalTrainingBlockTagRepo();
   habitRepo = createLocalHabitRepo();
   assignedHabitRepo = createLocalAssignedHabitRepo();
   didInit = true;
@@ -216,6 +225,7 @@ export function resetRepos(): void {
   coachNutritionPlanRepo = null;
   foodDbRepo = null;
   progressionRepo = null;
+  trainingBlockTagRepo = null;
   habitRepo = null;
   assignedHabitRepo = null;
 }
@@ -303,6 +313,12 @@ export function getProgressionRepo(): ProgressionRepo {
   return progressionRepo;
 }
 
+export function getTrainingBlockTagRepo(): TrainingBlockTagRepo {
+  if (!trainingBlockTagRepo)
+    throw new Error("TrainingBlockTagRepo not initialized. Call initRepos() first.");
+  return trainingBlockTagRepo;
+}
+
 export function getAlgorithmRegistry(): AlgorithmRegistry {
   if (!algorithmRegistry)
     throw new Error("AlgorithmRegistry not initialized. Call initRepos() first.");
@@ -331,4 +347,10 @@ export function getMobilityAlgorithmRegistry(): MobilityProgressionAlgorithmRegi
   if (!mobilityAlgorithmRegistry)
     throw new Error("MobilityProgressionAlgorithmRegistry not initialized. Call initRepos() first.");
   return mobilityAlgorithmRegistry;
+}
+
+export function getMuscleGroupInsightAlgorithmRegistry(): MuscleGroupInsightAlgorithmRegistry {
+  if (!muscleGroupInsightAlgorithmRegistry)
+    throw new Error("MuscleGroupInsightAlgorithmRegistry not initialized. Call initRepos() first.");
+  return muscleGroupInsightAlgorithmRegistry;
 }

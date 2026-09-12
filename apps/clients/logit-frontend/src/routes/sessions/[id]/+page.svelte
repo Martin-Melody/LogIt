@@ -16,9 +16,14 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
+  import TrainingBlockTagDialog from "$lib/features/exercise/components/TrainingBlockTagDialog.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import type { Machine } from "@logit/core/domain/exercise";
+
+  function isoOf(ms: number): string {
+    return new Date(ms).toISOString().slice(0, 10);
+  }
 
   const props = $props<{ params: { id: string } }>();
   const id = $derived(props.params.id);
@@ -370,9 +375,20 @@
     {#snippet exerciseBlock(ex: ExerciseEntry)}
       <div class="border-t border-border bg-muted/20 px-3 py-2 flex items-center justify-between gap-3">
         <span class="text-sm font-semibold truncate">{ex.exerciseName}</span>
-        <span class="text-xs text-muted-foreground shrink-0">
-          {ex.sets.length} set{ex.sets.length === 1 ? "" : "s"}
-        </span>
+        <div class="flex items-center gap-2 shrink-0">
+          {#if edit.active && displaySession}
+            <TrainingBlockTagDialog
+              exercise={{ id: ex.exerciseId, name: ex.exerciseName }}
+              initialStartIso={isoOf(displaySession.startedAtMs)}
+              initialEndIso={isoOf(displaySession.startedAtMs)}
+              triggerLabel="Tag"
+              triggerVariant="ghost"
+            />
+          {/if}
+          <span class="text-xs text-muted-foreground">
+            {ex.sets.length} set{ex.sets.length === 1 ? "" : "s"}
+          </span>
+        </div>
       </div>
 
       {#if ex.sets.length > 0}

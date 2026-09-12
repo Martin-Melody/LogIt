@@ -30,6 +30,16 @@ export function createRemoteProgressionRepo(): ProgressionRepo {
       throw new Error(NOT_SUPPORTED);
     },
 
+    async getMuscleGroupInsightConfig() {
+      return null;
+    },
+    async saveMuscleGroupInsightConfig() {
+      throw new Error(NOT_SUPPORTED);
+    },
+    async clearMuscleGroupInsightConfig() {
+      throw new Error(NOT_SUPPORTED);
+    },
+
     async getAnalyticsConfig() {
       return null;
     },

@@ -16,6 +16,7 @@
     "./progression/*": "./src/progression/*.ts",
     "./usecases/progression/*": "./src/usecases/progression/*.ts",
     "./usecases/nutrition/*": "./src/usecases/nutrition/*.ts",
+    "./usecases/*": "./src/usecases/*.ts",
     "./api/*": "./src/api/*.ts",
     "./platform/*": "./src/platform/*.ts"
   },

@@ -51,11 +51,27 @@ export type ProgressionInput = {
     avgExerciseDurationMs?: Record<string, number>;
   };
   // Bespoke to the rep-range-experimentation feature (adaptive-progression-engine.md
-  // §10) — a warm-start value for a new trial, informed by what's already worked for
-  // other exercises sharing this one's primary muscle. Computed by getSuggestion.ts,
-  // which has the cross-exercise repo access this otherwise-per-exercise input
-  // wouldn't. Undefined until this feature generalizes beyond linear-progression.
+  // §10/§10.3.1) — a warm-start value for the next untried rung on this exercise's
+  // ladder, informed by what's already worked for other exercises sharing this
+  // one's primary muscle. Computed by getSuggestion.ts, which has the
+  // cross-exercise repo access this otherwise-per-exercise input wouldn't.
+  // Undefined until this feature generalizes beyond linear-progression.
   suggestedTrialRepRange?: [number, number];
+  // Companion to the above (§10.3.1) — rep ranges a sibling exercise's own ladder
+  // has already run to conclusion *without* switching (i.e. ruled out). The next
+  // rung offered on THIS exercise's ladder should climb past one of these rather
+  // than re-litigating a range cross-exercise data already says isn't worth it —
+  // this exercise's own eventual result still wins if it's ever tested anyway
+  // (per-exercise ground truth), this only affects which range gets tried next.
+  siblingRuledOutRepRanges?: [number, number][];
+  // Contract accommodation for autoregulation plugins (adaptive-progression-engine.md
+  // §7) — an optional live, today-only signal alongside `history`, sourced from
+  // wherever the caller gets it (no capture UI exists yet; this is the plugin-side
+  // half of the accommodation). No built-in algorithm reads this. `rpe` mirrors the
+  // existing 6-10 `SetEntry.rpe` scale; `readiness` is deliberately unscaled/opaque —
+  // a plugin defines its own meaning (e.g. 1-10 self-rated, a wearable-derived score)
+  // rather than the core contract picking one.
+  liveInput?: { rpe?: number; readiness?: number };
 };
 
 export type SuggestedSet = {

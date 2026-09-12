@@ -6,13 +6,17 @@ import { estimated1RM } from "@logit/core/domain/oneRepMax";
 import { nowMs } from "@logit/core/domain/time";
 
 // A single-variable-at-a-time experiment on this exercise's rep range — see
-// docs/architecture/adaptive-progression-engine.md §10. Once concluded, this
-// record is kept (not cleared) even if the trial value was rejected — its
-// presence is what stops a second trial ever being offered on the same exercise
-// (a v1 scope boundary, not a permanent design decision), and a *successful*
-// one is read by other exercises sharing this muscle as a warm-start (see
-// getSuggestion.ts).
-type RepRangeTrial = {
+// docs/architecture/adaptive-progression-engine.md §10. One rung of a bounded,
+// upward-only ladder (§10.3.1): v1 tried exactly one alternative range and
+// stopped forever; the ladder now climbs up to MAX_LADDER_RUNGS total attempts
+// before giving up, each rung comparing against the SAME persisted usual range
+// (state.repRange, untouched here — only an explicit "switch" decision after a
+// win changes it, via acceptRepRangeExperiment.ts). A *successful* rung is read
+// by other exercises sharing this muscle as a warm-start for their own ladder
+// (see getSuggestion.ts); a *rejected* rung is likewise avoided as a next-rung
+// candidate for a sibling exercise, so the ladder doesn't re-litigate a range
+// cross-exercise data already says isn't worth it.
+type RepRangeRung = {
   trialRepRange: [number, number];
   baselineRepRange: [number, number];
   startedAtMs: number;
@@ -30,7 +34,9 @@ type LinearState = {
   failedAttempts: number;
   increment: number;
   repRange: [number, number];
-  repRangeTrial?: RepRangeTrial;
+  // Oldest → newest. A win (result.switched) is always the last entry — no
+  // further rungs are ever added once one wins, ladder or not.
+  repRangeLadder?: RepRangeRung[];
 };
 
 type LinearPreferences = {
@@ -135,7 +141,10 @@ const MIN_CALIBRATION_SAMPLES = 3;
 const MIN_SESSIONS_BEFORE_ASKING = 6;
 const ORDER_VARIETY_NUDGE_ID = "linear-progression:order-variety";
 
-// Rep-range experimentation (§10) — a single-variable, one-at-a-time trial.
+// Rep-range experimentation (§10) — a bounded, upward-only ladder (§10.3.1).
+// Nudge ids are suffixed per rung index (0-based) so dismissing one rung's ask
+// or result never suppresses a later, genuinely different rung's — see
+// dismissProgressionNudge.ts, which keys purely off nudge id.
 const REP_RANGE_TRIAL_OFFER_NUDGE_ID = "linear-progression:rep-range-trial-offer";
 const REP_RANGE_TRIAL_RESULT_NUDGE_ID = "linear-progression:rep-range-trial-result";
 // Need enough of an exercise's own history before even offering a trial — twice
@@ -148,6 +157,15 @@ const MIN_HISTORY_BEFORE_TRIAL_OFFER = TRIAL_BLOCK_SESSIONS * 2;
 // independently since this compares two blocks against each other rather than a
 // single series against zero.
 const TRIAL_SWITCH_SLOPE_MARGIN = 0.5;
+// Up to two more rungs after the first (three attempts total) before
+// permanently giving up and falling back to the usual range — §10.3.1's
+// decision. Upward only; v1 doesn't explore below the original baseline.
+const MAX_LADDER_RUNGS = 3;
+// Arbitrary step size for climbing to the next rung when no muscle-group warm
+// start applies — same "arbitrary first guess, not a principled one" status as
+// v1's original +7 fallback, just applied at every rung rather than only the
+// first.
+const LADDER_STEP = 7;
 
 function makeWorkingSets(weight: number, repRange: [number, number], count: number): SuggestedSet[] {
   return Array.from({ length: count }, () => ({
@@ -237,20 +255,84 @@ function fmtSlope(pct: number): string {
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
 
-// Deterministically rebuilds the "trial finished" nudge from a concluded trial's
-// stored result — used both at the moment of conclusion and on every later call
+// Deterministically rebuilds the "switch permanently?" nudge from a rung that
+// won its trial — used both at the moment of conclusion and on every later call
 // while it's still awaiting a decision, so the two never drift into describing
-// the same trial two different ways.
-function resultNudge(trial: RepRangeTrial): NonNullable<ProgressionOutput["nudge"]> {
-  const result = trial.result!;
-  const switched = result.switched;
+// the same result two different ways. Only ever called for a winning rung —
+// "no real difference" is handled by nextRungNudge/giveUpNudge below instead,
+// since that case needs to decide whether to also offer the next rung.
+function resultNudge(rung: RepRangeRung, rungIndex: number): NonNullable<ProgressionOutput["nudge"]> {
+  const result = rung.result!;
   return {
-    id: REP_RANGE_TRIAL_RESULT_NUDGE_ID,
-    message: switched
-      ? `Trial finished — you progressed faster at ${trial.trialRepRange[0]}-${trial.trialRepRange[1]} reps (${fmtSlope(result.trialSlopePctPerSession)}/session) than your usual ${trial.baselineRepRange[0]}-${trial.baselineRepRange[1]} (${fmtSlope(result.baselineSlopePctPerSession)}/session). Switch permanently?`
-      : `Trial finished — no meaningful difference at ${trial.trialRepRange[0]}-${trial.trialRepRange[1]} reps. Keeping your usual ${trial.baselineRepRange[0]}-${trial.baselineRepRange[1]}.`,
-    actionLabel: switched ? "Switch" : undefined,
-    actionData: switched ? { repRange: trial.trialRepRange } : undefined,
+    id: `${REP_RANGE_TRIAL_RESULT_NUDGE_ID}:rung${rungIndex}`,
+    message: `Trial finished — you progressed faster at ${rung.trialRepRange[0]}-${rung.trialRepRange[1]} reps (${fmtSlope(result.trialSlopePctPerSession)}/session) than your usual ${rung.baselineRepRange[0]}-${rung.baselineRepRange[1]} (${fmtSlope(result.baselineSlopePctPerSession)}/session). Switch permanently?`,
+    actionLabel: "Switch",
+    actionData: { repRange: rung.trialRepRange },
+  };
+}
+
+// The ladder gave up after MAX_LADDER_RUNGS attempts found no real difference —
+// terminal, re-derived deterministically on every later view the same way
+// resultNudge is, until dismissed.
+function giveUpNudge(lastRung: RepRangeRung, rungIndex: number): NonNullable<ProgressionOutput["nudge"]> {
+  return {
+    id: `${REP_RANGE_TRIAL_RESULT_NUDGE_ID}:rung${rungIndex}`,
+    message: `No meaningful difference found across ${MAX_LADDER_RUNGS} rep-range trials — keeping your usual ${lastRung.baselineRepRange[0]}-${lastRung.baselineRepRange[1]}.`,
+  };
+}
+
+// Picks the next rung to offer: a sibling's warm-start value if this exercise
+// hasn't already tried it and no sibling has already ruled it out, else the
+// next step up from wherever this exercise's own ladder last reached — climbing
+// past any range a sibling's ladder has already ruled out along the way.
+function nextCandidateRange(
+  ladder: RepRangeRung[],
+  usualRange: [number, number],
+  suggestedTrialRepRange: [number, number] | undefined,
+  siblingRuledOut: [number, number][],
+): [number, number] {
+  const rangesEqual = (a: [number, number], b: [number, number]) => a[0] === b[0] && a[1] === b[1];
+  const alreadyTried = (r: [number, number]) => ladder.some((rung) => rangesEqual(rung.trialRepRange, r));
+  const ruledOutBySibling = (r: [number, number]) => siblingRuledOut.some((s) => rangesEqual(s, r));
+
+  if (
+    suggestedTrialRepRange &&
+    !alreadyTried(suggestedTrialRepRange) &&
+    !ruledOutBySibling(suggestedTrialRepRange)
+  ) {
+    return suggestedTrialRepRange;
+  }
+
+  const lastCeiling = ladder.length > 0 ? ladder[ladder.length - 1]!.trialRepRange[1] : usualRange[1];
+  let candidate: [number, number] = [lastCeiling, lastCeiling + LADDER_STEP];
+  while (ruledOutBySibling(candidate) || alreadyTried(candidate)) {
+    candidate = [candidate[1], candidate[1] + LADDER_STEP];
+  }
+  return candidate;
+}
+
+// Offers the next rung, either as a fresh first ask (previous undefined) or
+// following a rejected rung (previous set — the message reports that result
+// too, so "no difference" and "want to try the next one" read as one nudge
+// rather than two the user has to dismiss in sequence).
+function nextRungNudge(
+  previous: RepRangeRung | undefined,
+  ladder: RepRangeRung[],
+  usualRange: [number, number],
+  suggestedTrialRepRange: [number, number] | undefined,
+  siblingRuledOut: [number, number][],
+): NonNullable<ProgressionOutput["nudge"]> {
+  const rungIndex = ladder.length;
+  const nextRange = nextCandidateRange(ladder, usualRange, suggestedTrialRepRange, siblingRuledOut);
+  const message = previous
+    ? `No meaningful difference at ${previous.trialRepRange[0]}-${previous.trialRepRange[1]} reps (${fmtSlope(previous.result!.trialSlopePctPerSession)}/session vs. usual ${fmtSlope(previous.result!.baselineSlopePctPerSession)}/session). Want to try ${nextRange[0]}-${nextRange[1]} reps instead?`
+    : `Try ${nextRange[0]}-${nextRange[1]} reps instead of your usual ${usualRange[0]}-${usualRange[1]} for ${TRIAL_BLOCK_SESSIONS} sessions to see how you respond?`;
+  return {
+    id: `${REP_RANGE_TRIAL_OFFER_NUDGE_ID}:rung${rungIndex}`,
+    message,
+    actionLabel: "Try it",
+    actionData: { trialRepRange: nextRange, baselineRepRange: usualRange },
+    exclusive: true,
   };
 }
 
@@ -364,38 +446,45 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     };
   }
 
-  // ── Rep-range experimentation (§10) ────────────────────────────────────────
-  // Resolves which rep range is actually in force this session — the trial range
-  // while one's running, else the persisted baseline (state.repRange) — and steps
-  // the trial's own state machine forward. state.repRange itself is never touched
-  // here; it only changes via an explicit "switch" decision after a trial
-  // concludes (see acceptRepRangeExperiment.ts).
+  // ── Rep-range experimentation (§10, ladder §10.3.1) ────────────────────────
+  // Resolves which rep range is actually in force this session — the active
+  // rung's range while one's running, else the persisted usual range
+  // (state.repRange) — and steps the ladder's state machine forward. state.
+  // repRange itself is never touched here; it only changes via an explicit
+  // "switch" decision after a rung wins (see acceptRepRangeExperiment.ts).
   //
   // Known v1 simplification: doesn't correct for a rep-range trial's fatigue
   // calibration confound (calibrateSensitivity below scores every history entry
   // against *today's* rep ceiling, which is only strictly right for entries
   // logged under that same ceiling) — acceptable for now since both features
   // running on the same exercise at the same time is expected to be rare.
-  let repRangeTrial = state.repRangeTrial;
+  let ladder: RepRangeRung[] = state.repRangeLadder ?? [];
   let activeRepRange = state.repRange;
   let trialNudge: ProgressionOutput["nudge"];
 
-  if (repRangeTrial?.status === "active") {
-    activeRepRange = repRangeTrial.trialRepRange;
-    const trialEntries = input.history.filter((h) => h.performedAtMs >= repRangeTrial!.startedAtMs);
+  const activeIdx = ladder.findIndex((r) => r.status === "active");
+  const lastRung = ladder[ladder.length - 1];
+
+  if (activeIdx !== -1) {
+    const active = ladder[activeIdx]!;
+    activeRepRange = active.trialRepRange;
+    const trialEntries = input.history.filter((h) => h.performedAtMs >= active.startedAtMs);
 
     if (trialEntries.length >= TRIAL_BLOCK_SESSIONS) {
       // history is most-recent-first, so this slice is the N most recent
-      // pre-trial sessions — the baseline block to compare against.
+      // pre-trial sessions — the baseline block to compare against. Since the
+      // active range reverts to `state.repRange` between rungs, these sessions
+      // are genuinely baseline-range sessions even for a later rung, not the
+      // previous (rejected) rung's own trial sessions.
       const baselineEntries = input.history
-        .filter((h) => h.performedAtMs < repRangeTrial!.startedAtMs)
+        .filter((h) => h.performedAtMs < active.startedAtMs)
         .slice(0, TRIAL_BLOCK_SESSIONS);
       const trial = blockTrend(trialEntries.slice(0, TRIAL_BLOCK_SESSIONS));
       const baseline = blockTrend(baselineEntries);
       const switched = trial.slopePctPerSession - baseline.slopePctPerSession > TRIAL_SWITCH_SLOPE_MARGIN;
 
-      repRangeTrial = {
-        ...repRangeTrial,
+      const concluded: RepRangeRung = {
+        ...active,
         status: "concluded",
         result: {
           trialSlopePctPerSession: Math.round(trial.slopePctPerSession * 100) / 100,
@@ -404,38 +493,41 @@ function suggest(input: ProgressionInput): ProgressionOutput {
           concludedAtMs: nowMs(),
         },
       };
-      trialNudge = resultNudge(repRangeTrial);
-      // The just-concluded trial no longer sets today's target — back to
-      // baseline until/unless the user accepts the switch above.
-      activeRepRange = repRangeTrial.baselineRepRange;
+      ladder = [...ladder.slice(0, activeIdx), concluded, ...ladder.slice(activeIdx + 1)];
+      // The just-concluded rung no longer sets today's target — back to the
+      // usual range until/unless the user accepts the switch below.
+      activeRepRange = state.repRange;
+
+      trialNudge = switched
+        ? resultNudge(concluded, ladder.length - 1)
+        : ladder.length < MAX_LADDER_RUNGS
+          ? nextRungNudge(concluded, ladder, state.repRange, input.suggestedTrialRepRange, input.siblingRuledOutRepRanges ?? [])
+          : giveUpNudge(concluded, ladder.length - 1);
     }
-  } else if (repRangeTrial?.status === "concluded" && repRangeTrial.result) {
-    // Re-propose the SAME result every call — not just at the moment of
+  } else if (lastRung?.status === "concluded" && lastRung.result) {
+    // Re-propose the SAME message every call — not just at the moment of
     // conclusion — otherwise a user who doesn't act on it immediately would
     // never see it again (viewing/re-suggesting doesn't persist anything;
-    // only a completed session does, via applySessionProgression). Whether
-    // this has already been dismissed ("keep usual") is handled generically,
+    // only a completed session does, via applySessionProgression). Whether an
+    // offer/give-up nudge has already been dismissed is handled generically,
     // same as any other nudge. "Switch" is different: accepting it actually
     // changes state.repRange, so re-checking that here (rather than a second
     // dismissal-style flag) is what stops it nagging forever after the fact.
-    const alreadySwitched =
-      repRangeTrial.result.switched &&
-      state.repRange[0] === repRangeTrial.trialRepRange[0] &&
-      state.repRange[1] === repRangeTrial.trialRepRange[1];
-    if (!alreadySwitched) trialNudge = resultNudge(repRangeTrial);
+    if (lastRung.result.switched) {
+      const alreadySwitched =
+        state.repRange[0] === lastRung.trialRepRange[0] && state.repRange[1] === lastRung.trialRepRange[1];
+      if (!alreadySwitched) trialNudge = resultNudge(lastRung, ladder.length - 1);
+    } else if (ladder.length < MAX_LADDER_RUNGS) {
+      trialNudge = nextRungNudge(lastRung, ladder, state.repRange, input.suggestedTrialRepRange, input.siblingRuledOutRepRanges ?? []);
+    } else {
+      trialNudge = giveUpNudge(lastRung, ladder.length - 1);
+    }
   } else if (
-    !repRangeTrial &&
+    ladder.length === 0 &&
     prefs.repRangeExperimentsEnabled &&
     input.history.length >= MIN_HISTORY_BEFORE_TRIAL_OFFER
   ) {
-    const trialRepRange = input.suggestedTrialRepRange ?? ([state.repRange[1], state.repRange[1] + 7] as [number, number]);
-    trialNudge = {
-      id: REP_RANGE_TRIAL_OFFER_NUDGE_ID,
-      message: `Try ${trialRepRange[0]}-${trialRepRange[1]} reps instead of your usual ${state.repRange[0]}-${state.repRange[1]} for ${TRIAL_BLOCK_SESSIONS} sessions to see how you respond?`,
-      actionLabel: "Try it",
-      actionData: { trialRepRange, baselineRepRange: state.repRange },
-      exclusive: true,
-    };
+    trialNudge = nextRungNudge(undefined, ladder, state.repRange, input.suggestedTrialRepRange, input.siblingRuledOutRepRanges ?? []);
   }
 
   const [repFloor, repCeiling] = activeRepRange;
@@ -464,7 +556,12 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     }
   }
 
-  const nextState: LinearState = { ...state, workingWeight: nextWeight, failedAttempts, repRangeTrial };
+  const nextState: LinearState = {
+    ...state,
+    workingWeight: nextWeight,
+    failedAttempts,
+    repRangeLadder: ladder.length > 0 ? ladder : undefined,
+  };
 
   // Fatigue discount doesn't apply to assisted exercises (assistance is machine-controlled)
   const targetPrimary = (input.exercise.primaryMuscles ?? []) as MuscleGroup[];
@@ -530,10 +627,11 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       precedingExercisesThisSession: preceding.length,
       fatigueCalibrationSamples: `${calibration.freshSamples} fresh / ${calibration.fatiguedSamples} fatigued`,
       fatigueCalibrated: calibration.calibrated,
-      ...(repRangeTrial
+      ...(ladder.length > 0
         ? {
-            repRangeTrialStatus: repRangeTrial.status,
-            repRangeTrialRange: `${repRangeTrial.trialRepRange[0]}-${repRangeTrial.trialRepRange[1]}`,
+            repRangeLadderRungs: ladder.length,
+            repRangeTrialStatus: ladder[ladder.length - 1]!.status,
+            repRangeTrialRange: `${ladder[ladder.length - 1]!.trialRepRange[0]}-${ladder[ladder.length - 1]!.trialRepRange[1]}`,
           }
         : {}),
     },

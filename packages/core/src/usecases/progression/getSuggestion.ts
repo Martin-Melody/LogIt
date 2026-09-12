@@ -20,6 +20,7 @@ export async function getSuggestion(
   deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo">,
   plannedTargets?: PlannedTargets,
   currentSession?: WorkoutSession,
+  liveInput?: { rpe?: number; readiness?: number },
 ): Promise<ProgressionOutput | null> {
   const { progressionRepo, workoutRepo, exerciseRepo, algorithmRegistry: registry } = deps;
 
@@ -102,31 +103,42 @@ export async function getSuggestion(
   const storedPrefs = await progressionRepo.getAlgorithmPreferences(config.algorithmId);
   const userPreferences = storedPrefs ?? algorithm.defaultPreferences ?? {};
 
-  // Bespoke to the rep-range-experimentation feature (§10) — a warm-start value for
-  // a *new* trial, informed by what's already worked for other exercises sharing
-  // this one's primary muscle. Only linear-progression's state shape is understood
-  // here; this whole computation is a known v1 compromise, tracked to generalize
-  // once the feature proves out beyond one built-in algorithm.
+  // Bespoke to the rep-range-experimentation feature (§10, ladder §10.3.1) — a
+  // warm-start value for the next untried rung, informed by what's already
+  // worked for other exercises sharing this one's primary muscle, plus every
+  // range a sibling's ladder has already ruled out (so this exercise's own
+  // ladder climbs past a range cross-exercise data already says isn't worth
+  // it, rather than re-testing it blind). Only linear-progression's state
+  // shape is understood here; this whole computation is a known v1
+  // compromise, tracked to generalize once the feature proves out beyond one
+  // built-in algorithm.
   let suggestedTrialRepRange: [number, number] | undefined;
+  const siblingRuledOutRepRanges: [number, number][] = [];
   let allStates: Awaited<ReturnType<typeof progressionRepo.listExerciseStates>> | undefined;
   if (config.algorithmId === "linear-progression" && exerciseWithMuscles.primaryMuscles.length > 0) {
     allStates = await progressionRepo.listExerciseStates();
     for (const other of allStates) {
       if (other.key === key || other.algorithmId !== "linear-progression") continue;
       const otherState = other.state as {
-        repRangeTrial?: { trialRepRange: [number, number]; result?: { switched?: boolean } };
+        repRangeLadder?: { trialRepRange: [number, number]; result?: { switched?: boolean } }[];
       } | null;
-      const trial = otherState?.repRangeTrial;
-      if (!trial?.result?.switched) continue;
+      const ladder = otherState?.repRangeLadder;
+      if (!ladder || ladder.length === 0) continue;
+
       const otherExercise = other.exerciseId
         ? await exerciseRepo.getById(other.exerciseId)
         : await exerciseRepo.getByName(other.exerciseName);
       const sharesMuscle = otherExercise?.primaryMuscles?.some((m) =>
         exerciseWithMuscles.primaryMuscles.includes(m),
       );
-      if (sharesMuscle) {
-        suggestedTrialRepRange = trial.trialRepRange;
-        break;
+      if (!sharesMuscle) continue;
+
+      for (const rung of ladder) {
+        if (rung.result?.switched) {
+          suggestedTrialRepRange ??= rung.trialRepRange;
+        } else if (rung.result?.switched === false) {
+          siblingRuledOutRepRanges.push(rung.trialRepRange);
+        }
       }
     }
   }
@@ -140,6 +152,8 @@ export async function getSuggestion(
     incrementOverride,
     sessionContext,
     suggestedTrialRepRange,
+    siblingRuledOutRepRanges: siblingRuledOutRepRanges.length > 0 ? siblingRuledOutRepRanges : undefined,
+    liveInput,
   });
 
   // An algorithm decides *whether* to ask for help generating signal; whether the
@@ -199,14 +213,16 @@ export async function applySessionProgression(
 
   // activeExperiment is a generic mirror of "does this algorithm's own opaque
   // state have an experiment running", re-derived on every save rather than
-  // trusted from before — bespoke to linear-progression's repRangeTrial shape for
-  // now (§10), same known v1 compromise as the warm-start lookup above.
+  // trusted from before — bespoke to linear-progression's repRangeLadder shape
+  // for now (§10, ladder §10.3.1), same known v1 compromise as the warm-start
+  // lookup above.
   let activeExperiment: { id: string; startedAtMs: number } | undefined;
   if (config.algorithmId === "linear-progression") {
-    const trial = (output.nextState as { repRangeTrial?: { status: string; startedAtMs: number } } | null)
-      ?.repRangeTrial;
-    if (trial?.status === "active") {
-      activeExperiment = { id: "rep-range-trial", startedAtMs: trial.startedAtMs };
+    const ladder = (output.nextState as { repRangeLadder?: { status: string; startedAtMs: number }[] } | null)
+      ?.repRangeLadder;
+    const active = ladder?.find((r) => r.status === "active");
+    if (active) {
+      activeExperiment = { id: "rep-range-trial", startedAtMs: active.startedAtMs };
     }
   }
 

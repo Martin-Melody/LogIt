@@ -8,6 +8,8 @@
   import { splits } from "$lib/stores/splits.store";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import { createSplit, addDay, addPlannedStrength } from "@logit/core/domain/WorkoutSplit";
+  import { BUILTIN_PROGRAMS } from "@logit/core/domain/builtinPrograms";
+  import { getCoachProgramRepo } from "$lib/data/repoProvider";
 
   type PresetDay = { name: string; exercises: string[] };
   type Preset = { id: string; name: string; description: string; days: PresetDay[] };
@@ -47,7 +49,21 @@
 
   let name = $state($profile.name);
   let selectedPreset = $state<string | null>(null);
+  // A full guided program (§2, §6) is mutually exclusive with a split -- picking
+  // one clears the other, since they're two different first-run paths ("hand me
+  // a plan" vs "I'll build my own"), not a combination.
+  let selectedProgramId = $state<string | null>(null);
   let saving = $state(false);
+
+  function pickPreset(id: string) {
+    selectedPreset = id;
+    selectedProgramId = null;
+  }
+
+  function pickProgram(id: string) {
+    selectedProgramId = id;
+    selectedPreset = null;
+  }
 
   async function applySplit() {
     if (!selectedPreset) return;
@@ -78,10 +94,14 @@
   }
 
   async function onSplitContinue() {
-    if (!selectedPreset) return;
+    if (!selectedPreset && !selectedProgramId) return;
     saving = true;
     try {
-      await applySplit();
+      if (selectedProgramId) {
+        await getCoachProgramRepo().setActiveProgramId(selectedProgramId);
+      } else {
+        await applySplit();
+      }
       await finishOnboarding();
     } finally {
       saving = false;
@@ -163,27 +183,52 @@
         <ArrowLeft class="h-4 w-4" /> Back
       </button>
       <div class="mb-6">
-        <h2 class="text-xl font-bold">Choose a training split</h2>
+        <h2 class="text-xl font-bold">Pick a plan, or don't</h2>
         <p class="text-sm text-muted-foreground mt-1">A starting point — you can change it any time.</p>
       </div>
 
-      <ul class="flex flex-col gap-2 flex-1">
-        {#each PRESETS as preset (preset.id)}
-          <li>
-            <button type="button"
-              class="w-full text-left px-4 py-3 rounded border transition-colors {selectedPreset === preset.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
-              onclick={() => (selectedPreset = preset.id)}>
-              <p class="text-sm font-medium">{preset.name}</p>
-              <p class="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
-            </button>
-          </li>
-        {/each}
-      </ul>
+      <div class="flex flex-col gap-4 flex-1 overflow-y-auto">
+        <div>
+          <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+            Guided program — day-by-day, no setup
+          </p>
+          <ul class="flex flex-col gap-2">
+            {#each BUILTIN_PROGRAMS as program (program.id)}
+              <li>
+                <button type="button"
+                  class="w-full text-left px-4 py-3 rounded border transition-colors {selectedProgramId === program.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
+                  onclick={() => pickProgram(program.id)}>
+                  <p class="text-sm font-medium">{program.name}</p>
+                  <p class="text-xs text-muted-foreground mt-0.5">{program.description}</p>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </div>
+
+        <div>
+          <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+            Or build your own split
+          </p>
+          <ul class="flex flex-col gap-2">
+            {#each PRESETS as preset (preset.id)}
+              <li>
+                <button type="button"
+                  class="w-full text-left px-4 py-3 rounded border transition-colors {selectedPreset === preset.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
+                  onclick={() => pickPreset(preset.id)}>
+                  <p class="text-sm font-medium">{preset.name}</p>
+                  <p class="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </div>
+      </div>
 
       <div class="flex flex-col gap-3 mt-8">
         <button type="button"
           class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          disabled={!selectedPreset || saving}
+          disabled={(!selectedPreset && !selectedProgramId) || saving}
           onclick={() => void onSplitContinue()}>
           {saving ? "Setting up…" : "Continue"}
         </button>

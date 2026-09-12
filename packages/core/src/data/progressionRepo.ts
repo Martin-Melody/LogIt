@@ -1,6 +1,7 @@
 import type { ExerciseProgressionState, UserProgressionConfig } from "../domain/progression";
 import type { UserAnalyticsConfig } from "../domain/analytics";
 import type { UserMobilityProgressionConfig } from "../domain/mobilityProgression";
+import type { UserMuscleGroupInsightConfig } from "../domain/muscleGroupInsight";
 
 export interface ProgressionRepo {
   getConfig(): Promise<UserProgressionConfig | null>;
@@ -16,6 +17,12 @@ export interface ProgressionRepo {
   getMobilityConfig(): Promise<UserMobilityProgressionConfig | null>;
   saveMobilityConfig(config: UserMobilityProgressionConfig): Promise<void>;
   clearMobilityConfig(): Promise<void>;
+
+  /** Which muscle-group-insight algorithm is active (§5 option B) — same
+   * separate-from-strength rationale as getMobilityConfig above. */
+  getMuscleGroupInsightConfig(): Promise<UserMuscleGroupInsightConfig | null>;
+  saveMuscleGroupInsightConfig(config: UserMuscleGroupInsightConfig): Promise<void>;
+  clearMuscleGroupInsightConfig(): Promise<void>;
 
   getAnalyticsConfig(): Promise<UserAnalyticsConfig | null>;
   saveAnalyticsConfig(config: UserAnalyticsConfig): Promise<void>;

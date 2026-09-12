@@ -5,6 +5,28 @@ import { createSession, addExercise, addSet, finishSession } from "../../domain/
 import type { WorkoutSession } from "../../domain/workout";
 import type { Exercise, MuscleGroup } from "../../domain/exercise";
 import type { ProgressionDeps } from "./deps";
+import type { MuscleGroupInsightAlgorithm, MuscleGroupInsightInput } from "../../domain/muscleGroupInsight";
+
+// A minimal stand-in for the pluggable §5-option-B algorithm — this file tests
+// getMuscleGroupInsights' own job (fetching sessions, resolving muscle tags,
+// building weekly volume + per-exercise trend series, delegating the rest),
+// not the correlation math itself, which now lives in the built-in
+// `learnedMuscleGroupInsight` algorithm (apps/clients/logit-frontend) and is
+// tested there directly.
+function stubAlgorithm(analyze?: MuscleGroupInsightAlgorithm["analyze"]): MuscleGroupInsightAlgorithm {
+  return {
+    id: "stub",
+    name: "Stub",
+    description: "test double",
+    defaultState: null,
+    analyze:
+      analyze ??
+      (async () => ({
+        nextState: null,
+        reasoning: { inputs: {}, computed: {}, confidence: "low", verdict: "stub" },
+      })),
+  };
+}
 
 type ExerciseDef = { primaryMuscles: MuscleGroup[]; secondaryMuscles?: MuscleGroup[] };
 
@@ -37,7 +59,11 @@ function sessionAtWeek(
 function deps(
   sessions: WorkoutSession[],
   exerciseDefs: Record<string, ExerciseDef>,
-): Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry"> {
+  analyze?: MuscleGroupInsightAlgorithm["analyze"],
+): Pick<
+  ProgressionDeps,
+  "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry" | "muscleGroupInsightAlgorithmRegistry"
+> {
   return {
     workoutRepo: { listAllSessions: async () => sessions, listRecentSessions: async () => sessions },
     exerciseRepo: {
@@ -53,9 +79,13 @@ function deps(
         } as Exercise;
       },
     },
-    progressionRepo: { getAnalyticsConfig: async () => null },
+    progressionRepo: { getAnalyticsConfig: async () => null, getMuscleGroupInsightConfig: async () => null },
     analyticsRegistry: { get: async (id: string) => (id === "basic-analytics" ? basicAnalytics : null) },
-  } as unknown as Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry">;
+    muscleGroupInsightAlgorithmRegistry: { get: async () => stubAlgorithm(analyze) },
+  } as unknown as Pick<
+    ProgressionDeps,
+    "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry" | "muscleGroupInsightAlgorithmRegistry"
+  >;
 }
 
 describe("getMuscleGroupInsights", () => {
@@ -119,36 +149,45 @@ describe("getMuscleGroupInsights", () => {
     expect(chest.status).toBe("regressing");
   });
 
-  it("does not offer a volume insight with fewer than the minimum weeks of history", async () => {
+  it("passes the group's weekly volume and per-exercise series to the configured algorithm", async () => {
+    const sessions = [2, 1, 0].map((w) => sessionAtWeek(w, [{ name: "Bench", weight: 100, reps: 5 }]));
+    let seenInput: MuscleGroupInsightInput | undefined;
+    const d = deps(sessions, { bench: { primaryMuscles: ["chest"] } }, async (input) => {
+      seenInput = input;
+      return { nextState: null, reasoning: { inputs: {}, computed: {}, confidence: "low", verdict: "seen" } };
+    });
+
+    await getMuscleGroupInsights(d);
+    expect(seenInput?.muscleGroup).toBe("chest");
+    expect(seenInput?.weeks).toHaveLength(3);
+    expect(seenInput?.contributingExercises).toHaveLength(1);
+    expect(seenInput?.contributingExercises[0]?.exerciseName).toBe("Bench");
+    expect(seenInput?.contributingExercises[0]?.seriesPoints.length).toBeGreaterThan(0);
+  });
+
+  it("threads the algorithm's volumeInsight and reasoning straight through to the result", async () => {
+    const sessions = [2, 1, 0].map((w) => sessionAtWeek(w, [{ name: "Bench", weight: 100, reps: 5 }]));
+    const canned = {
+      volumeInsight: { direction: "higher" as const, thresholdSets: 3, improveRateAbove: 0.8, improveRateBelow: 0.2 },
+      nextState: null,
+      reasoning: { inputs: {}, computed: {}, confidence: "high" as const, verdict: "canned verdict" },
+    };
+    const d = deps(sessions, { bench: { primaryMuscles: ["chest"] } }, async () => canned);
+
+    const { insights } = await getMuscleGroupInsights(d);
+    const chest = insights.find((i) => i.muscleGroup === "chest")!;
+    expect(chest.volumeInsight).toEqual(canned.volumeInsight);
+    expect(chest.reasoning).toEqual(canned.reasoning);
+  });
+
+  it("falls back to a low-confidence reasoning when no algorithm is configured", async () => {
     const sessions = [2, 1, 0].map((w) => sessionAtWeek(w, [{ name: "Bench", weight: 100, reps: 5 }]));
     const d = deps(sessions, { bench: { primaryMuscles: ["chest"] } });
+    d.muscleGroupInsightAlgorithmRegistry = { list: async () => [], get: async () => null };
 
     const { insights } = await getMuscleGroupInsights(d);
     const chest = insights.find((i) => i.muscleGroup === "chest")!;
     expect(chest.volumeInsight).toBeUndefined();
     expect(chest.reasoning.confidence).toBe("low");
-  });
-
-  it("surfaces a volume insight once there's a clear, well-supported correlation", async () => {
-    // 16 weeks: odd weeks train chest at high volume (4 sets) and the lift improves;
-    // even weeks train at low volume (1 set) and the lift doesn't improve — a clean,
-    // deliberately unambiguous split so the correlation has real signal to find.
-    const sessions: WorkoutSession[] = [];
-    let weight = 100;
-    for (let w = 0; w < 16; w++) {
-      const highVolume = w % 2 === 0;
-      if (highVolume) weight += 2; // improves following/leading into a high-volume week
-      const setCount = highVolume ? 4 : 1;
-      const exercises = Array.from({ length: setCount }, () => ({ name: "Bench", weight, reps: 5 }));
-      sessions.push(sessionAtWeek(15 - w, exercises)); // w=0 is oldest (15 weeks ago) -> newest (this week)
-    }
-    const d = deps(sessions, { bench: { primaryMuscles: ["chest"] } });
-
-    const { insights } = await getMuscleGroupInsights(d);
-    const chest = insights.find((i) => i.muscleGroup === "chest")!;
-    expect(chest.weeksWithData).toBe(16);
-    expect(chest.volumeInsight).toBeDefined();
-    expect(chest.volumeInsight!.direction).toBe("higher");
-    expect(chest.reasoning.confidence).not.toBe("low");
   });
 });
