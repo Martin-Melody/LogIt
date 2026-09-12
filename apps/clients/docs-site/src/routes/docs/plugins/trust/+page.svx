@@ -9,8 +9,8 @@ about. LogIt's plugin model is built around that.
 
 Community plugins that run code are **off by default**. The app ships and works
 with only its built-in extension points until you explicitly turn them on, with
-a one-time warning. Content packs (exercise packs) are pure data and always
-install.
+a one-time warning. Content packs (exercise packs, mobility packs) are pure data
+and always install.
 
 ## Install once, verify, run local
 

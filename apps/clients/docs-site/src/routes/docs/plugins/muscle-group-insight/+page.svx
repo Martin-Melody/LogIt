@@ -1,0 +1,102 @@
+---
+title: Muscle group insight
+---
+
+A muscle group insight algorithm looks at your training history for one muscle
+group — its weekly volume and the trend of every exercise that primarily
+targets it — and says what (if anything) your own data suggests about the
+volume/frequency that works for you. The user picks one in
+**Settings → Muscle groups**; the app calls it once per muscle group whenever
+that tab is viewed.
+
+Unlike a [progression algorithm](/docs/plugins/progression), the input here
+isn't one exercise's own history — a muscle group's volume is inherently
+cross-exercise. The app owns fetching every session and resolving muscle tags
+into the series below; your algorithm only sees the resolved data and decides
+what it means.
+
+## The contract
+
+```ts
+export const pluginBundle = {
+  formatVersion: 1,
+  pluginId: "com.you.my-insight",
+  family: "muscle-group-insight",
+  entryExport: "algorithm",
+} as const;
+
+export const algorithm = {
+  id: "com.you.my-insight",
+  name: "My Insight",
+  description: "Static RP-style volume landmarks instead of a learned correlation.",
+  defaultState: null,
+
+  analyze(input) {
+    const totalSets = input.weeks.reduce((sum, w) => sum + w.weightedSets, 0);
+    const avgWeeklySets = input.weeks.length ? totalSets / input.weeks.length : 0;
+
+    return {
+      nextState: input.state,
+      reasoning: {
+        inputs: { weeksWithData: input.weeks.length, avgWeeklySets: Math.round(avgWeeklySets) },
+        computed: {},
+        confidence: input.weeks.length >= 4 ? "medium" : "low",
+        verdict:
+          avgWeeklySets < 10
+            ? "below typical maintenance volume for this muscle group"
+            : "within typical training range",
+      },
+    };
+  },
+};
+```
+
+## Input — `MuscleGroupInsightInput`
+
+See `@logit/core/domain/muscleGroupInsight`.
+
+| Field | Notes |
+|---|---|
+| `muscleGroup` | Which muscle group this call is for. |
+| `weeks` | `{ weekBucket, weightedSets, sessionCount }[]`, oldest → newest. `weekBucket` is an opaque, comparable/orderable bucket id — match it against a series point's `date` via `weekBucket()` from `@logit/core/domain/time`, don't convert it back to a timestamp yourself. |
+| `contributingExercises` | Only exercises where this muscle is a **primary** tag — each with its `status` (the same `ProgressStatus` as `/progress`) and oldest→newest `seriesPoints` (`{ date, value }`, its primary-metric series). |
+| `state` | Your opaque value — whatever you returned as `nextState` last time. |
+| `userPreferences` | Values the user set, if you declare a `preferencesSchema`. |
+| `now` | Epoch ms, passed in so the algorithm stays pure. |
+
+## Output — `MuscleGroupInsightOutput`
+
+```ts
+type MuscleGroupInsightOutput = {
+  volumeInsight?: {
+    direction: "higher" | "lower";   // which side of thresholdSets correlates with more improved sessions
+    thresholdSets: number;
+    improveRateAbove: number;        // 0-1
+    improveRateBelow: number;        // 0-1
+  };
+  nextState: unknown;                // persisted by the app, handed back next call
+  reasoning: Reasoning;              // required here, unlike ProgressionOutput — see below
+};
+```
+
+`reasoning` (`@logit/core/domain/reasoning`) isn't optional for this family: it's
+how the "not enough data yet" state gets communicated honestly instead of a
+silent or overconfident verdict. `volumeInsight` is the only opinionated part —
+omit it whenever your algorithm doesn't have enough support for a claim yet, and
+say so via `reasoning.verdict`/`confidence` instead of guessing.
+
+## The built-in algorithm
+
+`learned-muscle-group-insight` (id `learned-muscle-group-insight`) is the
+learned option, not a fixed formula: it stays silent until there are at least 8
+weeks of data, then does a median-split correlation between weekly volume and
+session-over-session improvement across `contributingExercises`. A plugin
+implementing this same contract can swap in a static table (RP-style
+MEV/MAV/MRV numbers, or anything else) behind the identical interface — the
+settings picker treats both the same way.
+
+## Preferences, build & test
+
+Identical to [progression algorithms](/docs/plugins/progression): export a
+`preferencesSchema`, bundle with esbuild, test `analyze` as a pure function,
+then [publish](/docs/plugins/publishing).

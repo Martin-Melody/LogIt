@@ -10,7 +10,8 @@ current release.
 ```ts
 type PluginManifest = {
   id: string;
-  family: "exercise-pack" | "progression-algorithm" | "analytics"
+  family: "exercise-pack" | "progression-algorithm" | "mobility-progression"
+        | "mobility-pack" | "muscle-group-insight" | "analytics"
         | "nutrition-algorithm" | "nutrition-analytics" | "widget";
   name: string;
   description: string;
@@ -26,8 +27,9 @@ type PluginManifest = {
 };
 ```
 
-Capability id field by family: `exercisePackId`, `algorithmId` (progression &
-nutrition), `analyticsId` (analytics & nutrition-analytics), `widgetId`.
+Capability id field by family: `exercisePackId`, `mobilityPackId`, `algorithmId`
+(progression, mobility-progression, muscle-group-insight & nutrition),
+`analyticsId` (analytics & nutrition-analytics), `widgetId`.
 
 ## Bundle descriptor
 
@@ -51,6 +53,7 @@ A bundle is **one file, no `import` statements** — build with
 |---|---|
 | `progression-algorithm` | `{ id, name, description, defaultState, defaultPreferences?, preferencesSchema?, suggest(input) }` |
 | `mobility-progression` | `{ id, name, description, defaultState, defaultPreferences?, preferencesSchema?, suggest(input) }` |
+| `muscle-group-insight` | `{ id, name, description, defaultState, defaultPreferences?, preferencesSchema?, analyze(input) }` |
 | `analytics` | `{ id, name, description, metricDefinitions, compute(input) }` |
 | `nutrition-algorithm` | `{ id, name, description, defaultPreferences?, preferencesSchema?, computeTargets(input) }` |
 | `nutrition-analytics` | `{ id, name, description, metricDefinitions, compute(input) }` |
@@ -60,10 +63,14 @@ A bundle is **one file, no `import` statements** — build with
 
 - **Progression** — `@logit/core/domain/progression`: `ProgressionInput`, `ProgressionOutput`
 - **Mobility progression** — `@logit/core/domain/mobilityProgression`: `MobilityProgressionInput`, `MobilityProgressionOutput`
+- **Muscle group insight** — `@logit/core/domain/muscleGroupInsight`: `MuscleGroupInsightInput`, `MuscleGroupInsightOutput`
 - **Analytics** — `@logit/core/domain/analytics`: `AnalyticsInput`, `AnalyticsOutput`
 - **Nutrition algorithm** — `@logit/core/domain/nutritionAlgorithm`
 - **Nutrition analytics** — `@logit/core/domain/nutritionAnalytics`
 - **Widget** — `@logit/core/plugins/widgetView`: `WidgetInput`, `WidgetView`, `WidgetNode`, `WidgetAction`
+- **Reasoning** — `@logit/core/domain/reasoning`: `Reasoning`, `ReasoningConfidence` — the optional
+  "show your work" shape a progression algorithm can attach (required for muscle group insight);
+  see [progression algorithms](/docs/plugins/progression#reasoning-and-nudges).
 
 ## Sandbox limits
 

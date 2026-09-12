@@ -50,6 +50,9 @@ export const algorithm = {
 | `userPreferences` | Values the user set, if you declare a `preferencesSchema` (see below). |
 | `plannedTargets` | Sets/reps/weight from the user's split, if any. |
 | `sessionContext` | Preceding exercises this session + their effort, for fatigue-aware logic. |
+| `liveInput` | Optional, no built-in algorithm reads it: `{ rpe?, readiness? }`, a live today-only signal for autoregulation plugins. `rpe` mirrors the 6-10 `SetEntry.rpe` scale; `readiness` is deliberately unscaled — define your own meaning. |
+| `suggestedTrialRepRange` | Optional `[min, max]` warm-start value for a rep-range experiment on this exercise, informed by what's already worked for sibling exercises sharing its primary muscle. Bespoke to the rep-range-experimentation feature (see [reasoning and nudges](#reasoning-and-nudges) below) — you can ignore it unless you're implementing something similar. |
+| `siblingRuledOutRepRanges` | Optional `[min, max][]` — rep ranges a sibling exercise's own experiment already ran to conclusion without switching (ruled out). Only meaningful alongside `suggestedTrialRepRange`. |
 
 ## Output
 
@@ -60,11 +63,55 @@ type ProgressionOutput = {
   label?: string;
   notes?: string;
   displayMode?: "summary" | "block";
+  reasoning?: Reasoning;         // optional "show your work" — see below
+  nudge?: ProgressionNudge;      // optional dismissible ask — see below
 };
 ```
 
 **State lives in the return value, not in your module.** Every call gets a fresh
 VM.
+
+## Reasoning and nudges
+
+Both fields below are optional — omit them and your algorithm behaves exactly
+like before. Built-in algorithms populate both; they exist so a suggestion is
+never just a bare assertion, to a developer debugging and to a user squinting
+at a nudge alike.
+
+**`reasoning`** (`@logit/core/domain/reasoning`) — the inputs your algorithm
+looked at, the numbers it derived from them, a confidence level, and the
+verdict those numbers produced:
+
+```ts
+type Reasoning = {
+  inputs: Record<string, number | string | boolean>;
+  computed: Record<string, number>;
+  confidence: "low" | "medium" | "high";  // how much data supports this, NOT how favorable it is
+  verdict: string;
+};
+```
+
+Shown to the user behind a generic "Why?" affordance next to the suggestion —
+you don't build any UI for this yourself.
+
+**`nudge`** (`ProgressionNudge`, same domain module) — a dismissible, trackable
+ask, distinct from the static `notes` string:
+
+```ts
+type ProgressionNudge = {
+  id: string;              // stable per algorithm+kind, e.g. "my-algo:vary-order"
+  message: string;
+  actionLabel?: string;    // if present, the UI shows an accept button with this label
+  actionData?: unknown;    // data your own usecase needs to act on an accepted nudge
+  exclusive?: boolean;     // true if accepting this should be the only such thing running account-wide
+};
+```
+
+Dismissal is handled generically — `input.state`/your own logic doesn't need to
+track which nudges the user has already dismissed; the app filters those out
+before your algorithm is even asked again. `actionLabel`/`actionData` only
+matter if you also register whatever usecase interprets an accept for your
+`id` — most algorithms have nothing to act on and just use `message` alone.
 
 ## Preferences
 
