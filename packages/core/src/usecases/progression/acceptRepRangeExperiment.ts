@@ -46,8 +46,16 @@ export async function acceptRepRangeExperiment(
   if (!output?.nudge || output.nudge.id !== nudgeId) return;
 
   const existing = await progressionRepo.getExerciseState(key);
-  const currentState = (existing?.state as LinearStateShape | null) ?? null;
-  if (!currentState) return; // both nudges require existing history/state to have been offered at all
+  // No persisted row yet is normal, not exceptional — an exercise can go
+  // straight from "never saved state" to a nudge the moment it's offered,
+  // since getSuggestion seeds state fresh (algorithm.defaultState +
+  // history) whenever nothing's been saved. That freshly-seeded state is
+  // exactly what produced this nudge, so it's the right base to build the
+  // new rung onto — falling back to null here would silently drop the
+  // accept for any exercise whose progression state has never been
+  // persisted (e.g. trained for months before this algorithm was picked).
+  const currentState = (existing?.state as LinearStateShape | null) ?? (output.nextState as LinearStateShape | null);
+  if (!currentState) return;
 
   let nextState: LinearStateShape;
 
