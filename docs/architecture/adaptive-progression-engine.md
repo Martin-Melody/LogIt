@@ -128,14 +128,26 @@ hand, not because it's the only one worth modeling.
 
 ## 5. Personalized volume/frequency landmarks per muscle group
 
-**Scope decided 2026-09-12:** ship as a **read-only insight first** (option A) — a "muscle
-groups" panel showing current weekly volume/frequency per group plus a suggested range with
-honest confidence, reusing `classifyTrend` + the reasoning contract, no new plugin architecture
-yet. A full pluggable family (option B — a proper contract + registry + settings picker,
-mirroring `mobility-progression`, so e.g. an RP-style fixed-table algorithm can be swapped in) is
-**explicitly required before this ships to real users/launch** — A is allowed to prove the
-learning logic works on real data first, but B is not an optional nice-to-have, it's a tracked
-launch blocker. Don't let A quietly become the permanent implementation.
+**Status: v1 (option A) shipped** (branch `feat/progression-reasoning-trace`, PR #66) — a "Muscle
+groups" tab on `/progress` showing, per muscle group: current week's sets, average weekly
+sets/frequency, a worst-of status aggregated from the group's primary-tagged exercises, and —
+only once there's real statistical support — a volume correlation ("sessions tend to improve
+more in weeks with ≥N sets"), derived from a median-split of the user's *own* weekly volume
+history against session-over-session improvement. Gated on ≥8 weeks of data and ≥4 sessions per
+side of the split; below that it honestly says "not enough data yet" rather than guessing. No new
+plugin architecture — reuses `classifyTrend` + the reasoning contract, per the option-A scoping
+decision below.
+
+**Option B (a full pluggable family — a proper contract + registry + settings picker, mirroring
+`mobility-progression`, so e.g. an RP-style fixed-table algorithm can be swapped in) is still
+explicitly required before this ships to real users/launch** — A proved the learning logic works
+on real data, but B is not an optional nice-to-have, it's a tracked launch blocker. Don't let A
+quietly become the permanent implementation.
+
+**§5.4's tag-coverage concern is addressed for v1**, but simply, not with the full weighting
+scheme originally sketched: untagged exercises' sets are tracked and reported as one overall
+`untaggedSetsShare`, surfaced as a caveat in the UI above ~10%, rather than folded per-group into
+each group's own confidence score. Revisit if that proves too coarse in practice.
 
 Exercises already carry `primaryMuscles`/`secondaryMuscles`; nothing new needs tagging. The
 model: track, per user per muscle group, how historical sets×frequency correlates with the
@@ -251,9 +263,8 @@ project, not an extension of this progression-engine work. Not tracked further i
 
 1. ~~Reasoning-trace contract + generic "Why?" UI (§3)~~ — **shipped**, PR #66.
 2. ~~Context-adjusted per-exercise suggestions (§4)~~ — **shipped**, PR #66.
-3. Personalized volume/frequency landmarks (§5) — next up. Second consumer, larger
-   (per-muscle-group, whole-programme view). v1 = read-only insight; the full pluggable family
-   is a tracked launch blocker, not optional (§5 status line).
+3. ~~Personalized volume/frequency landmarks (§5), v1~~ — **shipped**, PR #66. The full
+   pluggable family (§5's "option B") remains a tracked launch blocker, not done yet.
 4. Program library (§6) — independent of 1-3, can build in parallel; it's the on-ramp, not the
    engine.
 5. Autoregulation input widening (§7) — contract accommodation only; the actual plugin is
