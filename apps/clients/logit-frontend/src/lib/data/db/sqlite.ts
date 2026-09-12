@@ -209,6 +209,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       weight_unit TEXT NOT NULL DEFAULT 'kg',
       blocks_collapsed_by_default INTEGER NOT NULL DEFAULT 1,
       rest_defaults_json TEXT NOT NULL DEFAULT '{}',
+      mobility_lead_side TEXT NOT NULL DEFAULT 'left',
       password_hash TEXT NULL,
       server_user_id TEXT NULL,
       onboarding_completed INTEGER NOT NULL DEFAULT 0,
@@ -341,6 +342,17 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       algorithm_id TEXT NOT NULL,
       data TEXT NOT NULL DEFAULT '{}',
       PRIMARY KEY (owner_id, algorithm_id)
+    );
+
+    -- Per-drill preference overrides (currently just lead side) set from a
+    -- mobility drill's detail sheet — a durable default for that one drill,
+    -- ahead of the app-wide Settings default. drill_key is the drill's catalog
+    -- id, or a slug of its name for a free-text drill.
+    CREATE TABLE IF NOT EXISTS mobility_drill_prefs (
+      owner_id TEXT NOT NULL,
+      drill_key TEXT NOT NULL,
+      lead_side TEXT NOT NULL,
+      PRIMARY KEY (owner_id, drill_key)
     );
 
     -- Read-only local mirror of programs a coach has assigned to this account (PT Studio).
@@ -571,12 +583,22 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateSessionNote(db);
   await migrateCoachMessageContext(db);
   await migrateProgressPhoto(db);
+  await migrateMobilityLeadSide(db);
   await seedExercises(db);
 }
 
 async function migrateProgressPhoto(db: SQLiteDBConnection): Promise<void> {
   try {
     await db.run(`ALTER TABLE local_accounts ADD COLUMN progress_photo_data_url TEXT NULL`, []);
+  } catch { /* column already exists */ }
+}
+
+async function migrateMobilityLeadSide(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run(
+      `ALTER TABLE local_accounts ADD COLUMN mobility_lead_side TEXT NOT NULL DEFAULT 'left'`,
+      [],
+    );
   } catch { /* column already exists */ }
 }
 

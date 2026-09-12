@@ -8,6 +8,7 @@ import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistr
 import type { AnalyticsRegistry } from "@logit/core/domain/analytics";
 import type { NutritionAlgorithmRegistry } from "@logit/core/domain/nutritionAlgorithm";
 import type { NutritionAnalyticsRegistry } from "@logit/core/domain/nutritionAnalytics";
+import type { MobilityProgressionAlgorithmRegistry } from "@logit/core/domain/mobilityProgression";
 
 import { isNativePlatform } from "$lib/platform/isNative";
 
@@ -87,6 +88,7 @@ let algorithmRegistry: AlgorithmRegistry | null = null;
 let analyticsRegistry: AnalyticsRegistry | null = null;
 let nutritionAlgorithmRegistry: NutritionAlgorithmRegistry | null = null;
 let nutritionAnalyticsRegistry: NutritionAnalyticsRegistry | null = null;
+let mobilityAlgorithmRegistry: MobilityProgressionAlgorithmRegistry | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -134,6 +136,7 @@ export async function initRepos(): Promise<void> {
   analyticsRegistry = pluginRuntime.analytics;
   nutritionAlgorithmRegistry = pluginRuntime.nutritionAlgorithms;
   nutritionAnalyticsRegistry = pluginRuntime.nutritionAnalytics;
+  mobilityAlgorithmRegistry = pluginRuntime.mobilityAlgorithms;
 
   if (isNativePlatform()) {
     await withTimeout(initSqlite(), 10_000, "initSqlite");
@@ -322,4 +325,10 @@ export function getNutritionAnalyticsRegistry(): NutritionAnalyticsRegistry {
   if (!nutritionAnalyticsRegistry)
     throw new Error("NutritionAnalyticsRegistry not initialized. Call initRepos() first.");
   return nutritionAnalyticsRegistry;
+}
+
+export function getMobilityAlgorithmRegistry(): MobilityProgressionAlgorithmRegistry {
+  if (!mobilityAlgorithmRegistry)
+    throw new Error("MobilityProgressionAlgorithmRegistry not initialized. Call initRepos() first.");
+  return mobilityAlgorithmRegistry;
 }

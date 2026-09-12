@@ -1,7 +1,15 @@
 # Progression & Analytics — rethink (Phase C)
 
-Status: **v1 in progress** (2026-09-06). Part of the session overhaul
+Status: **v1 shipped** (PR #63, 2026-09-06/07). Part of the session overhaul
 (`~/.claude/plans/declarative-percolating-shore.md`).
+
+**The "Roadmap (not in v1)" section below is superseded by
+`docs/architecture/adaptive-progression-engine.md`** (2026-09-12) — talking through what "Phase
+C proper" should actually be surfaced a bigger, more specific design than the bullet list below:
+a reasoning-trace contract so algorithms show their work, context-aware suggestions that don't
+mistake session-order fatigue for regression, personalized per-muscle volume/frequency learning,
+and a guided-program on-ramp for users who'd rather just follow a plan. Read that doc for the
+actual plan; this section is kept for history.
 
 ## Why
 

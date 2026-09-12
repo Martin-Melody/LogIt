@@ -4,6 +4,7 @@ import type {
   WidgetWorkout,
 } from "@logit/core/plugins/widgetView";
 import { getExercises } from "@logit/core/domain/workout";
+import type { MobilityBlockData } from "@logit/core/domain/workout";
 import { localDateIso } from "@logit/core/domain/nutrition";
 import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
 import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
@@ -115,6 +116,87 @@ export async function gatherWidgetInput(needs: WidgetDataNeed[]): Promise<Widget
               })),
             }),
           );
+        }),
+    );
+  }
+
+  if (want.has("mobility")) {
+    tasks.push(
+      getWorkoutRepo()
+        .listAllSessions()
+        .then((all) => {
+          const cutoff = Date.now() - 200 * 24 * 60 * 60 * 1000;
+          const sessions = all
+            .filter((s) => (s.endedAtMs ?? s.startedAtMs) >= cutoff)
+            .sort((a, b) => (b.endedAtMs ?? b.startedAtMs) - (a.endedAtMs ?? a.startedAtMs));
+
+          type Agg = {
+            name: string;
+            metric: "hold" | "reps";
+            perSide: boolean;
+            lastPerformedAtMs: number;
+            sessionsLogged: number;
+            bestHoldSec: number;
+            bestReps: number;
+          };
+          const byDrill = new Map<string, Agg>();
+          const dayKeys = new Set<string>();
+
+          for (const s of sessions) {
+            const at = s.endedAtMs ?? s.startedAtMs;
+            let hadMobility = false;
+            for (const block of s.blocks) {
+              if (block.type !== "mobility") continue;
+              hadMobility = true;
+              const d = block.data as MobilityBlockData;
+              const key = (d.drillId || d.drillName).toLowerCase();
+              const agg = byDrill.get(key) ?? {
+                name: d.drillName,
+                metric: d.metric,
+                perSide: d.perSide,
+                lastPerformedAtMs: at,
+                sessionsLogged: 0,
+                bestHoldSec: 0,
+                bestReps: 0,
+              };
+              agg.sessionsLogged += 1;
+              agg.lastPerformedAtMs = Math.max(agg.lastPerformedAtMs, at);
+              for (const set of d.sets) {
+                if (set.durationSec) agg.bestHoldSec = Math.max(agg.bestHoldSec, set.durationSec);
+                if (set.reps) agg.bestReps = Math.max(agg.bestReps, set.reps);
+              }
+              byDrill.set(key, agg);
+            }
+            if (hadMobility) dayKeys.add(new Date(at).toISOString().slice(0, 10));
+          }
+
+          // Consecutive-day streak ending today or yesterday.
+          let streakDays = 0;
+          const cursor = new Date();
+          for (let i = 0; i < 400; i++) {
+            const iso = cursor.toISOString().slice(0, 10);
+            if (dayKeys.has(iso)) streakDays++;
+            else if (i > 0) break;
+            cursor.setDate(cursor.getDate() - 1);
+          }
+
+          const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+          input.mobility = {
+            streakDays,
+            drillsThisWeek: [...byDrill.values()].filter((d) => d.lastPerformedAtMs >= weekAgo).length,
+            drills: [...byDrill.values()]
+              .sort((a, b) => b.lastPerformedAtMs - a.lastPerformedAtMs)
+              .slice(0, 20)
+              .map((d) => ({
+                name: d.name,
+                metric: d.metric,
+                perSide: d.perSide,
+                lastPerformedAtMs: d.lastPerformedAtMs,
+                sessionsLogged: d.sessionsLogged,
+                bestHoldSec: d.bestHoldSec || undefined,
+                bestReps: d.bestReps || undefined,
+              })),
+          };
         }),
     );
   }

@@ -6,6 +6,7 @@ import {
   type SessionBlock,
   type StrengthBlockData,
   type CardioBlockData,
+  type MobilityBlockData,
 } from "@logit/core/domain/workout";
 
 /**
@@ -76,6 +77,34 @@ function cloneBlock(block: SessionBlock, orderIndex: number): SessionBlock {
             note: null,
           })),
       } satisfies CardioBlockData,
+    };
+  }
+
+  if (block.type === "mobility") {
+    const data = block.data as MobilityBlockData;
+    return {
+      id,
+      type: "mobility",
+      orderIndex,
+      data: {
+        drillName: data.drillName,
+        drillId: data.drillId,
+        metric: data.metric,
+        perSide: data.perSide,
+        // Carry the drill-level setup forward — only the per-set log resets.
+        restBetweenSetsMs: data.restBetweenSetsMs,
+        leadSide: data.leadSide,
+        sets: data.sets
+          .slice()
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map((s, i) => ({
+            id: createId("mset"),
+            orderIndex: i,
+            side: s.side,
+            // Keep the target you were working toward; clear what you logged.
+            targetSec: s.targetSec ?? null,
+          })),
+      } satisfies MobilityBlockData,
     };
   }
 

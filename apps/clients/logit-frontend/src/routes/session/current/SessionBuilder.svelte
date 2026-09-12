@@ -8,10 +8,13 @@
   import { getWorkoutRepo, getExerciseRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { recentSessions } from "$lib/stores/recentSessions.store";
+  import { profile } from "$lib/stores/profile.store";
   import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
-  import type { WorkoutSession, SessionBlock } from "@logit/core/domain/workout";
-  import { addExercise, addCardioBlock, removeExercise, getExercises, setSessionNote } from "@logit/core/domain/workout";
+  import type { WorkoutSession, SessionBlock, MobilityBlockData, MobilityMetric } from "@logit/core/domain/workout";
+  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote } from "@logit/core/domain/workout";
+  import { refreshMobilityProgressionState } from "@logit/core/usecases/progression/getMobilitySuggestion";
+  import { mobilityDrillKey, getMobilityDrillLeadSide } from "$lib/data/mobilityDrillPrefs";
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
@@ -22,6 +25,7 @@
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
+  import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
   import BlockPickerSheet from "$lib/features/session/ui/BlockPickerSheet.svelte";
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
   import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
@@ -59,6 +63,7 @@
     pickerOpen: false,
     strengthOpen: false,
     cardioOpen: false,
+    mobilityOpen: false,
   });
 
   let recapSession = $state<WorkoutSession | null>(null);
@@ -149,6 +154,25 @@
     }
   }
 
+  async function addMobilityWithDrill(drill: {
+    drillName: string;
+    drillId?: string;
+    metric: MobilityMetric;
+    perSide: boolean;
+  }) {
+    const s = getSessionOrNull();
+    if (!s) return;
+    try {
+      const drillLead = await getMobilityDrillLeadSide(mobilityDrillKey(drill.drillId, drill.drillName));
+      await persistDraft(
+        addMobilityBlock(s, { ...drill, leadSide: drillLead ?? get(profile).mobilityLeadSide }),
+      );
+    } catch (e) {
+      ui.error = e instanceof Error ? e.message : "Failed to add mobility drill";
+      toast.error(ui.error ?? "Failed to add mobility drill");
+    }
+  }
+
   function openAddBlock() {
     if (ui.finishing) return;
     destroyActiveTour();
@@ -163,6 +187,7 @@
   function onBlockTypeSelected(type: string) {
     if (type === "strength") addBlockUi.strengthOpen = true;
     else if (type === "cardio") addBlockUi.cardioOpen = true;
+    else if (type === "mobility") addBlockUi.mobilityOpen = true;
   }
 
   async function onDeleteBlock(blockId: string) {
@@ -192,11 +217,21 @@
       void recentSessions.refresh(5);
 
       if (sessionSnapshot) {
-        await Promise.all(
-          getExercises(sessionSnapshot).map((ex) =>
-            refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName }, getProgressionDeps()),
+        const deps = getProgressionDeps();
+        await Promise.all([
+          ...getExercises(sessionSnapshot).map((ex) =>
+            refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName }, deps),
           ),
-        );
+          ...sessionSnapshot.blocks
+            .filter((b) => b.type === "mobility")
+            .map((b) => b.data as MobilityBlockData)
+            .map((d) =>
+              refreshMobilityProgressionState(
+                { id: d.drillId, name: d.drillName, metric: d.metric, perSide: d.perSide },
+                deps,
+              ),
+            ),
+        ]);
       }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to finish workout";
@@ -353,6 +388,14 @@
   const loggedSetCount = $derived(
     sessionExercises.reduce((n, ex) => n + ex.sets.length, 0),
   );
+  // Cardio and mobility blocks are loggable work too — a stretching-only session
+  // should still be finishable.
+  const nonStrengthBlockCount = $derived(
+    $currentSession
+      ? $currentSession.blocks.filter((b) => b.type === "cardio" || b.type === "mobility").length
+      : 0,
+  );
+  const hasLoggableWork = $derived(sessionExercises.length > 0 || nonStrengthBlockCount > 0);
 
   const sortedBlocks = $derived(
     $currentSession ? [...$currentSession.blocks].sort((a, b) => a.orderIndex - b.orderIndex) : [],
@@ -511,6 +554,13 @@
     onSubmit={addCardioWithName}
   />
 
+  <AddMobilityDialog
+    open={addBlockUi.mobilityOpen}
+    saving={ui.saving || ui.finishing}
+    onOpenChange={(v) => (addBlockUi.mobilityOpen = v)}
+    onSubmit={addMobilityWithDrill}
+  />
+
   {#if !ui.finishing && !$keyboard.visible}
     <div
       class="fixed right-3 z-20"
@@ -534,9 +584,9 @@
       class="fixed left-0 right-0 bottom-0 border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     >
       <FinishWorkoutCard
-        canFinish={!!$currentSession && !$currentSession.endedAtMs && sessionExercises.length > 0}
+        canFinish={!!$currentSession && !$currentSession.endedAtMs && hasLoggableWork}
         saving={ui.saving || ui.finishing}
-        exerciseCount={sessionExercises.length}
+        exerciseCount={sessionExercises.length + nonStrengthBlockCount}
         {loggedSetCount}
         onFinish={showRecap}
         onDiscard={discardSession}

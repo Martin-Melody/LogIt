@@ -1,4 +1,6 @@
 [
   { "id": "com.demo.linear", "name": "Linear Demo", "description": "Adds a fixed increment each session.", "family": "progression-algorithm", "author": "Demo", "manifestUrl": "plugins/linear-demo/manifest.json" },
-  { "id": "com.demo.starter-pack", "name": "Starter Pack", "description": "Two odd-lift movements.", "family": "exercise-pack", "author": "Demo", "manifestUrl": "plugins/starter-pack/manifest.json" }
+  { "id": "com.demo.starter-pack", "name": "Starter Pack", "description": "Two odd-lift movements.", "family": "exercise-pack", "author": "Demo", "manifestUrl": "plugins/starter-pack/manifest.json" },
+  { "id": "com.demo.mobility", "name": "Mobility Demo", "description": "Adds a few seconds of hold time each session.", "family": "mobility-progression", "author": "Demo", "manifestUrl": "plugins/mobility-demo/manifest.json" },
+  { "id": "com.demo.mobility-pack", "name": "Mobility Pack Demo", "description": "Two hip drills.", "family": "mobility-pack", "author": "Demo", "manifestUrl": "plugins/mobility-pack-demo/manifest.json" }
 ]

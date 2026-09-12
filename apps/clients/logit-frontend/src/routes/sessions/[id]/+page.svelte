@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
-  import type { WorkoutSession, SetEntry, ExerciseEntry } from "@logit/core/domain/workout";
-  import { getExercises, updateSet, foldSupersets, setTypeMeta, getSessionVolumeKg } from "@logit/core/domain/workout";
+  import type { WorkoutSession, SetEntry, ExerciseEntry, MobilityBlockData } from "@logit/core/domain/workout";
+  import { getExercises, updateSet, foldSupersets, setTypeMeta, getSessionVolumeKg, mobilitySetGroups } from "@logit/core/domain/workout";
   import { durationMs, formatDuration } from "@logit/core/domain/time";
   import { formatWeight } from "@logit/core/domain/units";
   import { profile } from "$lib/stores/profile.store";
@@ -96,6 +96,25 @@
   }
 
   const groups = $derived(displaySession ? foldSupersets(getExercises(displaySession)) : []);
+  const mobilityBlocks = $derived(
+    displaySession
+      ? displaySession.blocks
+          .filter((b) => b.type === "mobility")
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map((b) => b.data as MobilityBlockData)
+      : [],
+  );
+
+  function fmtHold(s: number): string {
+    const m = Math.floor(s / 60);
+    return m > 0 ? `${m}:${String(s % 60).padStart(2, "0")}` : `${s}s`;
+  }
+  function mobilityValue(set: { durationSec?: number; reps?: number; loadKg?: number }, metric: string): string {
+    const base = metric === "hold"
+      ? set.durationSec ? fmtHold(set.durationSec) : "–"
+      : set.reps != null ? `${set.reps} reps` : "–";
+    return set.loadKg ? `${base} · ${formatWeight(set.loadKg, weightUnit)}` : base;
+  }
 
   const ended = $derived(displaySession?.endedAtMs ?? displaySession?.startedAtMs ?? null);
 
@@ -397,7 +416,7 @@
       {/if}
     {/snippet}
 
-    {#if groups.length === 0}
+    {#if groups.length === 0 && mobilityBlocks.length === 0}
       <p class="px-3 py-6 text-sm text-muted-foreground text-center">No exercises recorded.</p>
     {:else}
       {#each groups as group (group.kind === "superset" ? group.id : group.exercise.id)}
@@ -417,6 +436,32 @@
         {/if}
       {/each}
     {/if}
+
+    {#each mobilityBlocks as m (m.drillName + m.metric)}
+      <div class="border-t border-border bg-muted/20 px-3 py-2 flex items-center justify-between gap-3">
+        <span class="text-sm font-semibold truncate">{m.drillName}</span>
+        <span class="text-xs text-muted-foreground shrink-0">
+          {m.metric === "hold" ? "Hold" : "Reps"}{m.perSide ? " · per side" : ""}
+        </span>
+      </div>
+      {#each mobilitySetGroups(m) as g (g.kind === "single" ? g.set.id : g.setNumber)}
+        <div class="grid grid-cols-[2.25rem_1fr] gap-2 items-center px-3 py-1.5 border-b border-border/50 text-sm">
+          <span class="text-xs text-muted-foreground tabular-nums">{g.setNumber}</span>
+          {#if g.kind === "single"}
+            <span class="tabular-nums">
+              {mobilityValue(g.set, m.metric)}
+              {#if g.set.depth}<span class="text-xs text-muted-foreground"> · depth {g.set.depth}</span>{/if}
+            </span>
+          {:else}
+            <span class="tabular-nums">
+              {#if g.left}L {mobilityValue(g.left, m.metric)}{/if}
+              {#if g.left && g.right}<span class="mx-1 text-muted-foreground">·</span>{/if}
+              {#if g.right}R {mobilityValue(g.right, m.metric)}{/if}
+            </span>
+          {/if}
+        </div>
+      {/each}
+    {/each}
   {/if}
 </div>
 

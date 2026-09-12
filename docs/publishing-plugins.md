@@ -10,7 +10,9 @@ A plugin is **a manifest plus one artifact**:
 | Family | Artifact | Runs as |
 |---|---|---|
 | `exercise-pack` | `exercises.json` (data) | not code — merged into the catalogue |
+| `mobility-pack` | `drills.json` (data) | not code — merged into the Mobility-block drill catalogue |
 | `progression-algorithm` | `bundle.js` | `suggest(input)` in the sandbox |
+| `mobility-progression` | `bundle.js` | `suggest(input)` in the sandbox (stretching progression) |
 | `analytics` | `bundle.js` | `compute(input)` in the sandbox |
 | `nutrition-algorithm` | `bundle.js` | `computeTargets(input)` in the sandbox |
 | `nutrition-analytics` | `bundle.js` | `compute(input)` in the sandbox |

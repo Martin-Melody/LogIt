@@ -56,6 +56,12 @@
     setProgressionAlgorithm,
   } from "@logit/core/usecases/progression/getProgressionConfig";
   import type { ProgressionConfigView } from "@logit/core/usecases/progression/getProgressionConfig";
+  import {
+    getMobilityProgressionConfig,
+    setMobilityProgressionAlgorithm,
+    DEFAULT_MOBILITY_ALGORITHM_ID,
+  } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
+  import type { MobilityProgressionConfigView } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
   import { Settings2 } from "lucide-svelte";
   import {
     getAnalyticsConfig,
@@ -227,6 +233,48 @@
     }
   }
 
+  // --- Mobility progression ---
+  const mobilityProgUi = $state({
+    loading: true,
+    saving: false,
+    error: null as string | null,
+  });
+  let mobilityView = $state<MobilityProgressionConfigView>({
+    config: null,
+    activeAlgorithmId: DEFAULT_MOBILITY_ALGORITHM_ID,
+    algorithms: [],
+  });
+
+  async function loadMobilityProgression() {
+    mobilityProgUi.loading = true;
+    mobilityProgUi.error = null;
+    try {
+      mobilityView = await getMobilityProgressionConfig(getProgressionDeps());
+    } catch (e) {
+      mobilityProgUi.error = e instanceof Error ? e.message : "Failed to load settings";
+    } finally {
+      mobilityProgUi.loading = false;
+    }
+  }
+
+  async function selectMobilityAlgorithm(id: string) {
+    if (mobilityProgUi.saving) return;
+    mobilityProgUi.saving = true;
+    mobilityProgUi.error = null;
+    try {
+      await setMobilityProgressionAlgorithm(id, getProgressionDeps());
+      mobilityView = {
+        ...mobilityView,
+        config: id && id !== DEFAULT_MOBILITY_ALGORITHM_ID ? { algorithmId: id } : null,
+        activeAlgorithmId: id || DEFAULT_MOBILITY_ALGORITHM_ID,
+      };
+    } catch (e) {
+      mobilityProgUi.error = e instanceof Error ? e.message : "Failed to save setting";
+    } finally {
+      mobilityProgUi.saving = false;
+    }
+  }
+
   // --- Analytics ---
   const analyticsUi = $state({
     loading: true,
@@ -275,6 +323,7 @@
     { id: "sec-appearance", label: "Appearance" },
     { id: "sec-units", label: "Units" },
     { id: "sec-progression", label: "Progression" },
+    { id: "sec-mobility-progression", label: "Mobility" },
     { id: "sec-session", label: "Session" },
     { id: "sec-plugins", label: "Plugins" },
     { id: "sec-danger", label: "Danger" },
@@ -407,6 +456,7 @@
 
   onMount(() => {
     void loadProgression();
+    void loadMobilityProgression();
     void loadAnalytics();
     if (authStore.isAuthenticated) connectionStatus.startPolling();
   });
@@ -826,6 +876,83 @@
           </Button>
         {/if}
       {/if}
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Mobility progression -->
+  <Card.Root id="sec-mobility-progression" class="scroll-mt-3">
+    <Card.Header>
+      <Card.Title>Mobility progression</Card.Title>
+      <Card.Description>How the app suggests holds, reps and load for your stretching drills.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-3">
+      {#if mobilityProgUi.error}
+        <p class="text-sm text-destructive">{mobilityProgUi.error}</p>
+      {/if}
+      {#if mobilityProgUi.loading}
+        <p class="text-sm text-muted-foreground">Loading…</p>
+      {:else if mobilityView.algorithms.length === 0}
+        <p class="text-sm text-muted-foreground">No algorithms available.</p>
+      {:else}
+        <ul class="flex flex-col gap-2">
+          {#each mobilityView.algorithms as algo (algo.id)}
+            {@const isActive = mobilityView.activeAlgorithmId === algo.id}
+            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium">{algo.name}</p>
+                    {#if isActive}
+                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                    {/if}
+                  </div>
+                  <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
+                  {#if algo.author}
+                    <p class="mt-1 text-xs text-muted-foreground/60">by {algo.author}</p>
+                  {/if}
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  {#if algo.hasPreferences}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure"
+                      onclick={() => goto(`/settings/mobility-progression/${algo.id}`)}
+                    >
+                      <Settings2 class="h-4 w-4" />
+                    </Button>
+                  {/if}
+                  {#if !isActive}
+                    <Button size="sm" variant="outline" disabled={mobilityProgUi.saving}
+                      onclick={() => void selectMobilityAlgorithm(algo.id)}>Select</Button>
+                  {/if}
+                </div>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
+      <div class="flex flex-col gap-2 border-t border-border pt-3">
+        <p class="text-sm font-medium">Unilateral drills — which side first</p>
+        <p class="text-xs text-muted-foreground mb-1">
+          Default order for per-side drills. Override it per set from a set's edit sheet.
+        </p>
+        <div class="flex gap-1.5">
+          {#each [{ v: "left", t: "Left first" }, { v: "right", t: "Right first" }] as opt (opt.v)}
+            <button
+              type="button"
+              class="flex-1 py-1.5 text-sm rounded border transition-colors {$profile.mobilityLeadSide === opt.v
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              onclick={() => profile.save({ mobilityLeadSide: opt.v as "left" | "right" })}
+            >
+              {opt.t}
+            </button>
+          {/each}
+        </div>
+      </div>
     </Card.Content>
   </Card.Root>
 

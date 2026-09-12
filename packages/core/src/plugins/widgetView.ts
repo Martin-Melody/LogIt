@@ -22,7 +22,8 @@ export type WidgetDataNeed =
   | "progressionTargets"
   | "nutrition"
   | "bodyweight"
-  | "habits";
+  | "habits"
+  | "mobility";
 
 export type WidgetWorkoutSet = {
   weight: number;
@@ -100,6 +101,24 @@ export type WidgetInput = {
     /** "2 / 3 this week" for weekly-cadence habits. */
     weekProgress?: { done: number; target: number };
   }[];
+  /** Stretching / mobility drills the user has logged. */
+  mobility?: {
+    /** Consecutive days with at least one mobility drill logged. */
+    streakDays: number;
+    /** Drills logged in the last 7 days. */
+    drillsThisWeek: number;
+    drills: {
+      name: string;
+      metric: "hold" | "reps";
+      perSide: boolean;
+      lastPerformedAtMs: number;
+      sessionsLogged: number;
+      /** Longest hold (s) on the better side, if a hold drill. */
+      bestHoldSec?: number;
+      /** Most reps on the better side, if a reps drill. */
+      bestReps?: number;
+    }[];
+  };
 };
 
 // ── View ─────────────────────────────────────────────────────────────────────
@@ -200,6 +219,24 @@ export type WidgetButtonRowNode = {
   buttons: { label: string; action: WidgetAction; primary?: boolean }[];
 };
 
+/**
+ * A single value measured against a target — a hold-time goal, a range-of-motion
+ * reading, "% of a milestone", a streak toward a target. Renders as a radial dial
+ * (default) or a linear meter. `value` may exceed `target` (the host shows an
+ * over-target state); the host clamps and coerces.
+ */
+export type WidgetGaugeNode = {
+  kind: "gauge";
+  label: string;
+  value: number;
+  target: number;
+  unit?: string;
+  /** e.g. "45s / 60s" or "3-week streak". */
+  sublabel?: string;
+  tone?: WidgetBarTone;
+  style?: "radial" | "linear";
+};
+
 export type WidgetChecklistNode = {
   kind: "checklist";
   items: {
@@ -224,7 +261,8 @@ export type WidgetNode =
   | WidgetMuscleMapNode
   | WidgetCalendarHeatmapNode
   | WidgetButtonRowNode
-  | WidgetChecklistNode;
+  | WidgetChecklistNode
+  | WidgetGaugeNode;
 
 export type WidgetHeaderAction = {
   /** Which glyph the host draws. */

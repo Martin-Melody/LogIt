@@ -11,6 +11,7 @@ import { progressionWidget } from "@logit/core/plugins/builtinWidgets/progressio
 import { todaysNutritionWidget } from "@logit/core/plugins/builtinWidgets/todaysNutrition";
 import { weightTrendWidget } from "@logit/core/plugins/builtinWidgets/weightTrend";
 import { habitsWidget } from "@logit/core/plugins/builtinWidgets/habits";
+import { mobilityWidget } from "@logit/core/plugins/builtinWidgets/mobility";
 
 const BUNDLED: WidgetDefinition[] = [
   {
@@ -96,6 +97,15 @@ const BUNDLED: WidgetDefinition[] = [
     props: { plugin: habitsWidget },
     defaultEnabled: false,
     defaultOrder: 8,
+  },
+  {
+    id: "mobility",
+    label: "Mobility",
+    description: "Stretching streak and progress toward your next hold-time or rep milestone.",
+    component: WidgetCard,
+    props: { plugin: mobilityWidget },
+    defaultEnabled: false,
+    defaultOrder: 9,
   },
 ];
 

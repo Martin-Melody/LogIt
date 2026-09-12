@@ -1,11 +1,12 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import { Dumbbell, Timer } from "lucide-svelte";
+  import { Dumbbell, Timer, PersonStanding } from "lucide-svelte";
   import { listBlockDefs } from "$lib/features/session/blocks";
 
   const ICONS: Record<string, typeof Dumbbell> = {
     strength: Dumbbell,
     cardio: Timer,
+    mobility: PersonStanding,
   };
 
   const props = $props<{

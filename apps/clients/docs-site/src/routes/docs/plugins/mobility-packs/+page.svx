@@ -1,0 +1,75 @@
+---
+title: Mobility packs
+---
+
+A mobility pack adds a list of **stretching / mobility drills** to the Mobility
+block's drill catalogue. Like exercise packs it's pure JSON — no code, no sandbox
+— so it installs regardless of Restricted Mode.
+
+## The pack file
+
+```json
+{
+  "formatVersion": 1,
+  "pluginId": "com.you.hip-pack",
+  "drills": [
+    {
+      "name": "Couch Stretch",
+      "area": "hip-flexors",
+      "defaultMetric": "hold",
+      "perSide": true,
+      "cues": ["Rear shin against the wall", "Squeeze the glute"]
+    },
+    {
+      "name": "Banded Hip Raise",
+      "area": "hip-flexors",
+      "defaultMetric": "reps",
+      "perSide": true,
+      "notes": "Active end-range hip flexion."
+    }
+  ]
+}
+```
+
+- **`area`** must be from: `neck`, `shoulders`, `t-spine`, `lower-back`,
+  `wrists`, `hips`, `hip-flexors`, `glutes`, `hamstrings`, `quads`, `adductors`,
+  `calves`, `ankles`, `full-body`.
+- **`defaultMetric`** (optional, default `hold`): `hold` or `reps` — the metric
+  the block starts with when the user picks this drill.
+- **`perSide`** (optional, default `false`): whether the drill is logged left /
+  right separately.
+- **`cues`** (optional): up to 6 short coaching lines.
+- Max 500 drills. In-pack duplicate names are dropped.
+
+## The manifest
+
+```json
+{
+  "id": "com.you.hip-pack",
+  "family": "mobility-pack",
+  "name": "Hip Pack",
+  "description": "Hip prehab drills.",
+  "version": "1.0.0",
+  "author": "You",
+  "integrity": "sha256-…",
+  "distribution": {
+    "origin": "url",
+    "manifestUrl": "plugins/hip-pack/manifest.json",
+    "bundleUrl": "plugins/hip-pack/drills.json"
+  },
+  "capabilities": [
+    { "family": "mobility-pack", "mobilityPackId": "com.you.hip-pack" }
+  ]
+}
+```
+
+`capabilities[0].mobilityPackId` must equal the manifest `id`.
+
+## What happens on install
+
+Pack drills appear in the Mobility block's drill picker with namespaced ids
+(`pack:<id>:<slug>`). A built-in drill with the same name wins. Disabling or
+uninstalling the pack removes them cleanly. Pack contents are device-local — not
+synced. Sample: `static/sample-plugins/hip-rehab-pack`.
+
+Next: [publishing](/docs/plugins/publishing).

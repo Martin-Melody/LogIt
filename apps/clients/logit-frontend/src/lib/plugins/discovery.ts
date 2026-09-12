@@ -105,7 +105,9 @@ function isPluginFamily(v: unknown): v is PluginFamily {
   return (
     v === "widget" ||
     v === "progression-algorithm" ||
+    v === "mobility-progression" ||
     v === "exercise-pack" ||
+    v === "mobility-pack" ||
     v === "analytics" ||
     v === "nutrition-algorithm" ||
     v === "nutrition-analytics"
@@ -163,6 +165,18 @@ function isExercisePackCapability(v: unknown): v is ExercisePackPluginCapability
   return record.family === "exercise-pack" && isString(record.exercisePackId);
 }
 
+function isMobilityProgressionCapability(v: unknown): boolean {
+  if (!v || typeof v !== "object") return false;
+  const record = v as Record<string, unknown>;
+  return record.family === "mobility-progression" && isString(record.algorithmId);
+}
+
+function isMobilityPackCapability(v: unknown): boolean {
+  if (!v || typeof v !== "object") return false;
+  const record = v as Record<string, unknown>;
+  return record.family === "mobility-pack" && isString(record.mobilityPackId);
+}
+
 function isAnalyticsCapability(v: unknown): v is AnalyticsPluginCapability {
   if (!v || typeof v !== "object") return false;
   const record = v as Record<string, unknown>;
@@ -185,7 +199,9 @@ function isPluginCapability(v: unknown): v is PluginCapability {
   return (
     isWidgetCapability(v) ||
     isProgressionCapability(v) ||
+    isMobilityProgressionCapability(v) ||
     isExercisePackCapability(v) ||
+    isMobilityPackCapability(v) ||
     isAnalyticsCapability(v) ||
     isNutritionAlgorithmCapability(v) ||
     isNutritionAnalyticsCapability(v)
