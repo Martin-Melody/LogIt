@@ -14,35 +14,14 @@ import {
 import { createOpenFoodFactsRepo } from "@logit/core/data/remote/openFoodFactsRepo";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
+import { createLocalAlgorithmRegistry } from "@logit/core/progression/localAlgorithmRegistry";
+import { createLocalMobilityAlgorithmRegistry } from "@logit/core/progression/localMobilityAlgorithmRegistry";
+import { createLocalMuscleGroupInsightAlgorithmRegistry } from "@logit/core/progression/localMuscleGroupInsightAlgorithmRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";
 import type { NutritionDeps } from "@logit/core/usecases/nutrition/deps";
 import type { ProgressionDeps } from "@logit/core/usecases/progression/deps";
-import type { AlgorithmRegistry } from "@logit/core/progression/algorithmRegistry";
-import type { MobilityProgressionAlgorithmRegistry } from "@logit/core/domain/mobilityProgression";
 import type { TrainingBlockTagRepo } from "@logit/core/data/trainingBlockTagRepo";
-import type { MuscleGroupInsightAlgorithmRegistry } from "@logit/core/domain/muscleGroupInsight";
-
-// Progression *suggestions* (what weight to lift next) are a mobile-only workflow —
-// out of scope for this read-only web dashboard. This stub satisfies ProgressionDeps
-// without pretending any algorithm is actually available.
-const stubAlgorithmRegistry: AlgorithmRegistry = {
-  async list() {
-    return [];
-  },
-  async get() {
-    return null;
-  },
-};
-
-const stubMobilityAlgorithmRegistry: MobilityProgressionAlgorithmRegistry = {
-  async list() {
-    return [];
-  },
-  async get() {
-    return null;
-  },
-};
 
 // Training-block tags (§10.3.3) are created from the mobile app's exercise
 // detail / session-edit surfaces — not a web dashboard concern yet. Stubbed
@@ -56,15 +35,6 @@ const stubTrainingBlockTagRepo: TrainingBlockTagRepo = {
   async delete() {},
 };
 
-const stubMuscleGroupInsightAlgorithmRegistry: MuscleGroupInsightAlgorithmRegistry = {
-  async list() {
-    return [];
-  },
-  async get() {
-    return null;
-  },
-};
-
 /** Repos/registries scoped to whichever account the token belongs to (default), or to a
  * specific client's data when `clientId` is given — a Studio-tier coach viewing a client
  * uses the exact same analytics usecases this way, no new analytics logic needed. Not
@@ -75,11 +45,11 @@ export function getWebDeps(clientId?: string): ProgressionDeps {
     workoutRepo: createRemoteWorkoutRepo(clientId),
     progressionRepo: createRemoteProgressionRepo(),
     exerciseRepo: createRemoteExerciseRepo(clientId),
-    algorithmRegistry: stubAlgorithmRegistry,
+    algorithmRegistry: createLocalAlgorithmRegistry(),
     analyticsRegistry: createLocalAnalyticsRegistry(),
-    mobilityAlgorithmRegistry: stubMobilityAlgorithmRegistry,
+    mobilityAlgorithmRegistry: createLocalMobilityAlgorithmRegistry(),
     trainingBlockTagRepo: stubTrainingBlockTagRepo,
-    muscleGroupInsightAlgorithmRegistry: stubMuscleGroupInsightAlgorithmRegistry,
+    muscleGroupInsightAlgorithmRegistry: createLocalMuscleGroupInsightAlgorithmRegistry(),
   };
 }
 

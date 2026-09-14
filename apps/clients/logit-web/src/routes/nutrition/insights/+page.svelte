@@ -6,6 +6,7 @@
   import { getNutritionInsights } from "@logit/core/usecases/nutrition/getNutritionInsights";
   import type { NutritionInsightsView } from "@logit/core/usecases/nutrition/getNutritionInsights";
   import { getOwnNutritionDeps, getOwnProfile } from "$lib/deps";
+  import NutritionCorrelationPanel from "$lib/features/exercise/components/NutritionCorrelationPanel.svelte";
 
   const deps = getOwnNutritionDeps();
 
@@ -124,5 +125,7 @@
         </Card.Content>
       </Card.Root>
     {/if}
+
+    <NutritionCorrelationPanel />
   {/if}
 </div>

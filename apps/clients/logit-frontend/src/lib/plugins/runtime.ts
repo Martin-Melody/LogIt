@@ -6,9 +6,9 @@ import type {
   ProgressionAlgorithmMeta,
   ProgressionOutput,
 } from "@logit/core/domain/progression";
-import { createLocalAlgorithmRegistry } from "$lib/progression/localAlgorithmRegistry";
-import { createLocalMobilityAlgorithmRegistry } from "$lib/progression/localMobilityAlgorithmRegistry";
-import { createLocalMuscleGroupInsightAlgorithmRegistry } from "$lib/progression/localMuscleGroupInsightAlgorithmRegistry";
+import { createLocalAlgorithmRegistry } from "@logit/core/progression/localAlgorithmRegistry";
+import { createLocalMobilityAlgorithmRegistry } from "@logit/core/progression/localMobilityAlgorithmRegistry";
+import { createLocalMuscleGroupInsightAlgorithmRegistry } from "@logit/core/progression/localMuscleGroupInsightAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
 import { createLocalNutritionAlgorithmRegistry } from "@logit/core/nutrition/algorithmRegistry";
 import { createLocalNutritionAnalyticsRegistry } from "@logit/core/nutrition/analyticsRegistry";

@@ -2,8 +2,8 @@ import type {
   MuscleGroupInsightAlgorithm,
   MuscleGroupInsightAlgorithmMeta,
   MuscleGroupInsightAlgorithmRegistry,
-} from "@logit/core/domain/muscleGroupInsight";
-import { learnedMuscleGroupInsight } from "$lib/progression/algorithms/learnedMuscleGroupInsight";
+} from "../domain/muscleGroupInsight";
+import { learnedMuscleGroupInsight } from "./algorithms/learnedMuscleGroupInsight";
 
 const BUNDLED: MuscleGroupInsightAlgorithm[] = [learnedMuscleGroupInsight];
 

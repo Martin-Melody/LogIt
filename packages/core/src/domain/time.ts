@@ -27,3 +27,9 @@ const MONDAY_EPOCH_ANCHOR_MS = 4 * MS_PER_DAY;
 export function weekBucket(ms: number): number {
   return Math.floor((ms - MONDAY_EPOCH_ANCHOR_MS) / MS_PER_WEEK);
 }
+
+/** Inverse of weekBucket — the UTC timestamp of that bucket's Monday. For display
+ * (e.g. labeling a weekly chart), not for re-deriving which week a timestamp fell in. */
+export function weekBucketStartMs(bucket: number): number {
+  return bucket * MS_PER_WEEK + MONDAY_EPOCH_ANCHOR_MS;
+}

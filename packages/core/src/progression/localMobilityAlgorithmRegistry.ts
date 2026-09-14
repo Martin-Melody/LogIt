@@ -2,8 +2,8 @@ import type {
   MobilityProgressionAlgorithm,
   MobilityProgressionAlgorithmMeta,
   MobilityProgressionAlgorithmRegistry,
-} from "@logit/core/domain/mobilityProgression";
-import { linearMobility } from "$lib/progression/algorithms/linearMobility";
+} from "../domain/mobilityProgression";
+import { linearMobility } from "./algorithms/linearMobility";
 
 const BUNDLED: MobilityProgressionAlgorithm[] = [linearMobility];
 

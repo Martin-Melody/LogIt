@@ -1,9 +1,9 @@
-import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "@logit/core/domain/progression";
-import { classifyTrend } from "@logit/core/domain/progression";
-import type { MuscleGroup } from "@logit/core/domain/exercise";
-import type { Reasoning, ReasoningConfidence } from "@logit/core/domain/reasoning";
-import { estimated1RM } from "@logit/core/domain/oneRepMax";
-import { nowMs } from "@logit/core/domain/time";
+import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "../../domain/progression";
+import { classifyTrend } from "../../domain/progression";
+import type { MuscleGroup } from "../../domain/exercise";
+import type { Reasoning, ReasoningConfidence } from "../../domain/reasoning";
+import { estimated1RM } from "../../domain/oneRepMax";
+import { nowMs } from "../../domain/time";
 
 // A single-variable-at-a-time experiment on this exercise's rep range — see
 // docs/architecture/adaptive-progression-engine.md §10. One rung of a bounded,

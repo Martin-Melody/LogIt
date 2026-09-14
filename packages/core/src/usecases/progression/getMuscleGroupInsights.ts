@@ -36,6 +36,10 @@ export type MuscleGroupInsight = {
   contributingExercises: MuscleGroupContributingExercise[];
   volumeInsight?: MuscleGroupVolumeInsight;
   reasoning: Reasoning;
+  /** oldest → newest weekly volume/frequency — the same series the configured
+   * algorithm correlates against, exposed so a caller can render the full
+   * trend rather than just the aggregate avgWeeklySets/avgWeeklyFrequency. */
+  weeks: MuscleGroupInsightWeek[];
 };
 
 export type MuscleGroupInsightsResult = {
@@ -224,6 +228,7 @@ export async function getMuscleGroupInsights(
         status: s,
       })),
       volumeInsight: output?.volumeInsight,
+      weeks,
       reasoning: output?.reasoning ?? {
         inputs: { weeksWithData, contributingExerciseCount: contributingExercises.length },
         computed: { currentWeekSets, avgWeeklySets, avgWeeklyFrequency },

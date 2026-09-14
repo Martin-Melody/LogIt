@@ -3,9 +3,9 @@ import type {
   MuscleGroupInsightInput,
   MuscleGroupInsightOutput,
   MuscleGroupVolumeInsight,
-} from "@logit/core/domain/muscleGroupInsight";
-import type { ReasoningConfidence } from "@logit/core/domain/reasoning";
-import { weekBucket } from "@logit/core/domain/time";
+} from "../../domain/muscleGroupInsight";
+import type { ReasoningConfidence } from "../../domain/reasoning";
+import { weekBucket } from "../../domain/time";
 
 // The v1 (option A) muscle-group insight logic, shipped in PR #66 as inline
 // code in getMuscleGroupInsights.ts — extracted unchanged into the built-in

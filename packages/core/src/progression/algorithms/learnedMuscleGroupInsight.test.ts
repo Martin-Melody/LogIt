@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { learnedMuscleGroupInsight } from "./learnedMuscleGroupInsight";
-import type { MuscleGroupInsightContributingExercise, MuscleGroupInsightWeek } from "@logit/core/domain/muscleGroupInsight";
-import { weekBucket } from "@logit/core/domain/time";
+import type { MuscleGroupInsightContributingExercise, MuscleGroupInsightWeek } from "../../domain/muscleGroupInsight";
+import { weekBucket } from "../../domain/time";
 
 const DAY = 86_400_000;
 const WEEK = 7 * DAY;
