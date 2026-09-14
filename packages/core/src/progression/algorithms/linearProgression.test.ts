@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { linearProgression } from "./linearProgression";
-import type { ProgressionInput, ExerciseHistoryEntry, PrecedingExercise } from "@logit/core/domain/progression";
-import type { SetEntry } from "@logit/core/domain/workout";
+import type { ProgressionInput, ExerciseHistoryEntry, PrecedingExercise } from "../../domain/progression";
+import type { SetEntry } from "../../domain/workout";
 
 let nextSetId = 0;
 function set(overrides: Partial<SetEntry> = {}): SetEntry {

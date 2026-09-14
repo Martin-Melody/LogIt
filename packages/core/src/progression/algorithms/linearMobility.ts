@@ -1,11 +1,11 @@
-import type { AlgorithmPreferencesField } from "@logit/core/domain/progression";
+import type { AlgorithmPreferencesField } from "../../domain/progression";
 import type {
   MobilityProgressionAlgorithm,
   MobilityProgressionInput,
   MobilityProgressionOutput,
   MobilitySetRecord,
   SuggestedMobilitySet,
-} from "@logit/core/domain/mobilityProgression";
+} from "../../domain/mobilityProgression";
 
 /**
  * Linear mobility progression — treat a stretch like a lift.

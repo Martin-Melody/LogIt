@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
+  import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
   import AppleIcon from "@lucide/svelte/icons/apple";
   import UsersIcon from "@lucide/svelte/icons/users";
   import ContactIcon from "@lucide/svelte/icons/contact";
@@ -28,6 +29,7 @@
   type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon; show: boolean };
   const items = $derived<NavItem[]>([
     { label: "Overview", href: "/", icon: LayoutDashboardIcon, show: true },
+    { label: "Progress", href: "/progress", icon: TrendingUpIcon, show: true },
     { label: "Nutrition", href: "/nutrition", icon: AppleIcon, show: true },
     { label: "Roster", href: "/roster", icon: UsersIcon, show: isStudio },
     { label: "Clients", href: "/clients", icon: ContactIcon, show: true },

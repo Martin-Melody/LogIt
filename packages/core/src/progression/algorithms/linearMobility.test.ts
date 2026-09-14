@@ -4,7 +4,7 @@ import type {
   MobilityProgressionInput,
   MobilityProgressionOutput,
   MobilityHistoryEntry,
-} from "@logit/core/domain/mobilityProgression";
+} from "../../domain/mobilityProgression";
 
 function run(partial: Partial<MobilityProgressionInput>): MobilityProgressionOutput & {
   sets: Array<{ side?: string; durationSec?: number; reps?: number; loadKg?: number }>;
