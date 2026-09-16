@@ -48,3 +48,6 @@ apps/clients/*/screenshots/
 
 # Logs
 *.log
+
+# Claude Code local settings (personal permission allowlist, machine-specific)
+.claude/settings.local.json

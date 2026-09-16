@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "skills": {
+    "capacitor-app-development": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-app-development/SKILL.md",
+      "computedHash": "f9ed46d94010df018f0152cf5caf195b98c0251ff92b01bce6382968bd64767b"
+    },
+    "capacitor-app-upgrades": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-app-upgrades/SKILL.md",
+      "computedHash": "4d82ba42f6f212f482c82f185bd1e55d806ce6a0d360cc3ce5513e4a7c3d57b4"
+    },
+    "capacitor-expert": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-expert/SKILL.md",
+      "computedHash": "053efb044fc37969f7702ba7c48a2819a2314e358f585b93ca10291932552c76"
+    },
+    "capacitor-platforms": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-platforms/SKILL.md",
+      "computedHash": "944f8f243676a3eff55a4914a6606bdb3f02fbcf3d0f71611eadbaa303fc53e9"
+    },
+    "capacitor-plugin-upgrades": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-plugin-upgrades/SKILL.md",
+      "computedHash": "9a9281e4fd3a70028824fb612caa8067e3c394ace9af18bc58346c89fa3cdccb"
+    },
+    "capacitor-plugins": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-plugins/SKILL.md",
+      "computedHash": "bb3a889d5e8d098b644f34171ad6b1d368a397fd13fa030b37ce5b0f2da31fd5"
+    },
+    "capacitor-push-notifications": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capacitor-push-notifications/SKILL.md",
+      "computedHash": "3c8da46bb2c63d83cade9d3c1e99fba6272dc5faf70b967e06e5bf0b3fc8aa56"
+    },
+    "capawesome-cloud": {
+      "source": "capawesome-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/capawesome-cloud/SKILL.md",
+      "computedHash": "908f875ec5a4591edc493da8e059fae26d6d537da0e847fbc7c06e5c608fe033"
+    },
+    "setup-fastlane": {
+      "source": "greenstevester/fastlane-skill",
+      "sourceType": "github",
+      "skillPath": "skills/setup-fastlane/SKILL.md",
+      "computedHash": "cb1fecee5f965c3c7481aa023bdac616b4c0b2c55be9815da6cc4e137ee0099a"
+    }
+  }
+}
