@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
   import { ArrowLeft, Dumbbell, Activity } from "lucide-svelte";

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { ArrowLeft, Search, Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -16,7 +16,7 @@
   import { pushRecipe } from "$lib/sync/syncService";
   import { fmtKcal } from "$lib/features/nutrition/nutrition";
 
-  const recipeId = $page.params.id ?? "";
+  const recipeId = page.params.id ?? "";
   const ui = $state({ loading: true, query: "", searching: false, grams: "100" });
   let recipe = $state<Recipe | null>(null);
   let results = $state<FoodRef[]>([]);

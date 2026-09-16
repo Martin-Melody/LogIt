@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { ArrowLeft, Plus, Trash, Copy, Dumbbell, Activity, ChevronDown, ChevronRight } from "lucide-svelte";
 
   import { back } from "$lib/navigation";
@@ -20,7 +20,7 @@
   const props = $props<{ params: { id: string; programId: string } }>();
   const programId = $derived(props.params.programId);
   const clientId = $derived(props.params.id);
-  const username = $derived($page.url.searchParams.get("u") ?? "");
+  const username = $derived(page.url.searchParams.get("u") ?? "");
 
   const ui = $state({ loading: true, saving: false, error: null as string | null });
   let program = $state<CoachProgram | null>(null);

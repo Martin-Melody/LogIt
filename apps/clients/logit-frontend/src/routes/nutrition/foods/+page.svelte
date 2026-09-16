@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { ArrowLeft, Plus, Trash2, Pencil, ScanText } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -91,7 +91,7 @@
     recipes = r.filter((x) => !x.deletedAtMs);
     mealTemplates = t.filter((x) => !x.deletedAtMs);
     ui.loading = false;
-    const editId = $page.url.searchParams.get("edit");
+    const editId = page.url.searchParams.get("edit");
     if (editId) {
       const row = foods.find((x) => x.food.id === editId);
       if (row) startEdit(row);

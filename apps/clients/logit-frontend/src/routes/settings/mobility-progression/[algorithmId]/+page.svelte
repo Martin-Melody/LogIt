@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
   import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
@@ -12,7 +12,7 @@
     AlgorithmPreferencesField,
   } from "@logit/core/domain/mobilityProgression";
 
-  const algorithmId = $derived($page.params.algorithmId ?? "");
+  const algorithmId = $derived(page.params.algorithmId ?? "");
 
   let algorithm = $state<MobilityProgressionAlgorithm | null>(null);
   let prefs = $state<Record<string, unknown>>({});

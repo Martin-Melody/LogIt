@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { ArrowLeft, Search, Barcode, Plus, Star, ScanText } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -42,10 +42,10 @@
 
   // No `meal` param → "browse" mode: search/inspect foods without committing to a meal yet
   // (reached from the "Foods" link). The meal to add to is then chosen with a picker.
-  const mealParam = $page.url.searchParams.get("meal");
+  const mealParam = page.url.searchParams.get("meal");
   const browse = mealParam === null;
   let meal = $state<MealSlot>((mealParam as MealSlot) ?? "breakfast");
-  const dateIso = $page.url.searchParams.get("date") ?? localDateIso();
+  const dateIso = page.url.searchParams.get("date") ?? localDateIso();
 
   const mealLabels: Record<MealSlot, string> = {
     breakfast: "Breakfast",

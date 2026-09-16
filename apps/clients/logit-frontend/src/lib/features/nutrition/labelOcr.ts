@@ -37,9 +37,6 @@ export async function scanLabel(path: string): Promise<LabelScanResult> {
   const b = parseNutritionLabel(res.text ?? "");
   const parsed = b.confidence > a.confidence ? b : a;
 
-  console.log(
-    `[labelOcr] flat ${(res.text ?? "").length}c/${b.confidence} · rebuilt ${rebuilt.length}c/${a.confidence} → ${parsed.layout}`,
-  );
   return { ...parsed, ms: Math.round(performance.now() - started) };
 }
 

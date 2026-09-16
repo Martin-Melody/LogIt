@@ -7,9 +7,13 @@ const config: CapacitorConfig = {
   appName: "LogIt",
   webDir: "build",
   server: {
-    ...(devServerUrl && { url: devServerUrl }),
-    androidScheme: "http",
-    cleartext: true,
+    // http/cleartext are only for local live-reload against CAPACITOR_DEV_URL —
+    // production builds must use the default https scheme (no cleartext traffic).
+    ...(devServerUrl && {
+      url: devServerUrl,
+      androidScheme: "http",
+      cleartext: true,
+    }),
   },
   plugins: {
     CapacitorSQLite: {
