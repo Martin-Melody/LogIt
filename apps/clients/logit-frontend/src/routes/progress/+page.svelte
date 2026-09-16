@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import * as Card from "$lib/components/ui/card";
   import * as Tabs from "$lib/components/ui/tabs";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
@@ -23,7 +23,7 @@
   // The plateau-diagnosis orchestration (§10.3.2) links here with ?tab=muscles
   // or ?tab=nutrition — a next-step suggestion opens the right tab directly
   // rather than dropping the user on Exercises and making them find it.
-  const initialTab = $page.url.searchParams.get("tab");
+  const initialTab = page.url.searchParams.get("tab");
   let tab = $state(initialTab === "muscles" || initialTab === "nutrition" ? initialTab : "exercises");
 
   const selectedStory = $derived(

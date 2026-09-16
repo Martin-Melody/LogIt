@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { keyboard } from "$lib/stores/keybaord.store";
   import { overlayOpen } from "$lib/stores/overlay.store";
   import { currentSession } from "$lib/stores/currentSession.store";
@@ -12,7 +12,7 @@
   let showMore = $state(false);
 
   const hasSession = $derived(!!$currentSession);
-  const hidden = $derived($keyboard.visible || $overlayOpen || $page.url.pathname.startsWith("/session/current"));
+  const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/current"));
 
   // Filter bar items by auth availability
   const visibleBar = $derived(
@@ -24,8 +24,8 @@
   );
 
   function isActive(href: string) {
-    if (href === "/") return $page.url.pathname === "/";
-    return $page.url.pathname === href || $page.url.pathname.startsWith(href + "/");
+    if (href === "/") return page.url.pathname === "/";
+    return page.url.pathname === href || page.url.pathname.startsWith(href + "/");
   }
 </script>
 

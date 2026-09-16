@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { ArrowLeft, Star, Pencil } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import * as Select from "$lib/components/ui/select";
@@ -23,8 +23,8 @@
   import { portionOptions, portionToGrams, portionLabel } from "$lib/features/nutrition/portion";
   import MacroRing from "$lib/features/nutrition/MacroRing.svelte";
 
-  const foodId = $derived($page.params.id ?? "");
-  const dateIso = $derived($page.url.searchParams.get("date") ?? localDateIso());
+  const foodId = $derived(page.params.id ?? "");
+  const dateIso = $derived(page.url.searchParams.get("date") ?? localDateIso());
 
   const mealLabels: Record<MealSlot, string> = {
     breakfast: "Breakfast",

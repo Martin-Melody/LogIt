@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { ArrowLeft, Trash, Plus } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -14,7 +14,7 @@
   const props = $props<{ params: { id: string; scheduleId: string } }>();
   const clientId = $derived(props.params.id);
   const scheduleId = $derived(props.params.scheduleId);
-  const username = $derived($page.url.searchParams.get("u") ?? "");
+  const username = $derived(page.url.searchParams.get("u") ?? "");
 
   const ui = $state({ loading: true, saving: false, error: null as string | null });
   let schedule = $state<CheckinSchedule | null>(null);

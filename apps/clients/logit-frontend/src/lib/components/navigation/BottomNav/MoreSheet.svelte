@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { authStore } from "$lib/api/authStore.svelte";
   import { navConfig, NAV_ITEM_DEFS } from "$lib/stores/navConfig.store";
   import { fade } from "svelte/transition";
@@ -22,7 +22,7 @@
   }
 
   function isActive(href: string) {
-    return $page.url.pathname === href || $page.url.pathname.startsWith(href + "/");
+    return page.url.pathname === href || page.url.pathname.startsWith(href + "/");
   }
 </script>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Plus } from "lucide-svelte";
 
@@ -14,8 +14,8 @@
   import { saveAuthoredProgram } from "$lib/usecases/coach/saveAuthoredProgram";
   import { saveAuthoredCheckin } from "$lib/usecases/coach/saveAuthoredCheckin";
 
-  const clientId = $derived($page.params.id ?? "");
-  const username = $derived($page.url.searchParams.get("u") ?? "");
+  const clientId = $derived(page.params.id ?? "");
+  const username = $derived(page.url.searchParams.get("u") ?? "");
 
   const ui = $state({ loading: true, creating: false, error: null as string | null });
   let programs = $state<CoachProgram[]>([]);

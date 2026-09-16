@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
   import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";

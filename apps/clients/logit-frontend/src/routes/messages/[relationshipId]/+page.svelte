@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { ArrowLeft, Send } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -11,7 +11,7 @@
 
   const props = $props<{ params: { relationshipId: string } }>();
   const relationshipId = $derived(props.params.relationshipId);
-  const name = $derived($page.url.searchParams.get("name") ?? "Conversation");
+  const name = $derived(page.url.searchParams.get("name") ?? "Conversation");
 
   const ui = $state({ loading: true, sending: false, error: null as string | null });
   let messages = $state<CoachMessage[]>([]);

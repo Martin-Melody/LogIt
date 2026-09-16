@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Archive, ArchiveRestore, Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
@@ -19,7 +19,7 @@
   import { pushHabit, pushHabitDeletion } from "$lib/sync/syncService";
   import HabitEditor from "$lib/features/habits/HabitEditor.svelte";
 
-  const id = $derived($page.params.id ?? "");
+  const id = $derived(page.params.id ?? "");
 
   const ui = $state({ loading: true, error: null as string | null, deleting: false });
   let habit = $state<Habit | null>(null);
