@@ -168,7 +168,11 @@ function createAuthStore() {
 
     const account = await createLocalAccount({
       username: uniqueSlug,
-      displayName: displayName.trim() || uniqueSlug,
+      // Blank, not the auto-generated slug — same as ensureLocalAccount()'s true-first-launch
+      // account. Falling back to the slug here used to pre-fill onboarding's name step with
+      // something like "local_1789636452490"; a user who didn't clear it before typing their
+      // real name ended up with the two concatenated.
+      displayName: displayName.trim(),
       password: effectivePassword,
     });
     setActiveOwnerId(account.id);

@@ -3,7 +3,9 @@
 **Reported:** 2026-09-04 (Martin, on-device smoke test, S23)
 **Area:** `src/routes/accounts/+page.svelte` (profile switcher), `authStore.svelte.ts`,
 local SQLite data isolation (`owner_id`)
-**Status:** Not fixed yet. Root cause + file:line + suggested fix per item below.
+**Status:** Item 2 (the data-corruption one) fixed 2026-09-12 in commit `8f05067`, with unit
+coverage in `tests/unit/accountSwitchGuards.test.ts` and `tests/unit/ownerIdIsolation.test.ts`.
+Item 1 (session restore) is still open.
 
 ---
 
@@ -41,10 +43,19 @@ implying `switchTo()` fully activates the profile.
 
 ---
 
-## 2. New profiles can silently claim another profile's un-migrated local data
+## 2. New profiles can silently claim another profile's un-migrated local data — FIXED 2026-09-12
 
 **Severity:** High — this is the one that actually leaked data: after switching profiles,
 splits/workouts still showed the previous (Pro) account's data instead of the new profile's own.
+
+**Fixed in `8f05067`:** `authStore.svelte.ts`'s `createOfflineAccount()` (and the online-login
+create path) now compute the claim target via a pure, unit-tested `orphanClaimTarget()`
+(`localAccountRepo.ts:217-223`) — true first-launch (`accountsBeforeCreate === 0`) still claims
+orphaned rows for the new account, but every later "Add another profile" now hands them to
+whichever profile was active *before* the create, never to the new one. Covered by
+`tests/unit/accountSwitchGuards.test.ts` (the guard function itself) and
+`tests/unit/ownerIdIsolation.test.ts` (exercised through the real repo functions). The
+description below is kept for history — the code no longer matches it.
 
 `claimOrphanedData(ownerId)` (`src/lib/data/localAccountRepo.ts:162-166`) reassigns any row
 still sitting at `owner_id IS NULL` to the given account:
