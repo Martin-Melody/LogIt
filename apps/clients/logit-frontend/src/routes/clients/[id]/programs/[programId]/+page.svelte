@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Plus, Trash, Copy, Dumbbell, Activity, ChevronDown, ChevronRight } from "lucide-svelte";
+  import { Plus, Trash, Copy, Dumbbell, Activity, ChevronDown, ChevronRight } from "lucide-svelte";
 
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -78,9 +79,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back(`/clients/${clientId}?u=${username}`)}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back(`/clients/${clientId}?u=${username}`)} />
     {#if program}
       <input
         class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-transparent focus:border-primary"
@@ -98,7 +97,7 @@
         onConfirm={removeProgram}
       >
         {#snippet child({ props })}
-          <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={ui.saving}>
+          <Button {...props} variant="ghost" size="icon" class="text-destructive" disabled={ui.saving}>
             <Trash class="h-3.5 w-3.5" />
           </Button>
         {/snippet}

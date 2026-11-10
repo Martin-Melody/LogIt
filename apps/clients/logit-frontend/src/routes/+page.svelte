@@ -68,7 +68,6 @@
       <Button
         variant="ghost"
         size="icon"
-        class="h-8 w-8"
         aria-label="Customise home"
         data-tour="home-customize"
         onclick={() => void goto("/home/customize")}

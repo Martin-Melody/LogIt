@@ -1,10 +1,18 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import {
-    ArrowLeft, Loader2, Download, Dumbbell, Trophy, CalendarDays,
-    Activity, Cpu, LayoutDashboard, Flame,
+    Loader2,
+    Download,
+    Dumbbell,
+    Trophy,
+    CalendarDays,
+    Activity,
+    Cpu,
+    LayoutDashboard,
+    Flame,
   } from "lucide-svelte";
   import { socialApi, type ApiPost, type PostType } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
@@ -115,9 +123,7 @@
 
 <div class="flex flex-col min-h-full">
   <header class="flex items-center gap-2 px-3 h-12 sticky top-0 bg-background/95 backdrop-blur z-10 border-b border-border">
-    <button type="button" class="p-1 -ml-1 text-muted-foreground" aria-label="Back" onclick={() => history.back()}>
-      <ArrowLeft class="h-5 w-5" />
-    </button>
+    <BackButton onclick={() => history.back()} />
     <h1 class="text-base font-semibold">{meta?.label ?? "Details"}</h1>
   </header>
 

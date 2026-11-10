@@ -421,7 +421,7 @@
     </button>
 
     {#if !collapsed}
-      <Button size="icon" class="h-7 w-7 shrink-0" onclick={addSet} disabled={saving} aria-label="Add set">
+      <Button size="icon" class="shrink-0" onclick={addSet} disabled={saving} aria-label="Add set">
         <Plus class="h-3.5 w-3.5" />
       </Button>
     {/if}
@@ -434,7 +434,7 @@
       onConfirm={onDelete}
     >
       {#snippet child({ props })}
-        <Button {...props} size="icon" variant="ghost" class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" disabled={saving} aria-label="Delete">
+        <Button {...props} size="icon" variant="ghost" class="shrink-0 text-muted-foreground hover:text-destructive" disabled={saving} aria-label="Delete">
           <Trash2 class="h-3.5 w-3.5" />
         </Button>
       {/snippet}

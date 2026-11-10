@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount, onDestroy, tick } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Send } from "lucide-svelte";
+  import { Send } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
@@ -59,9 +60,7 @@
 
 <div class="flex flex-col h-[100dvh]">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/messages")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+    <BackButton onclick={() => back("/messages")} />
     <p class="text-sm font-semibold truncate">{name}</p>
   </div>
 

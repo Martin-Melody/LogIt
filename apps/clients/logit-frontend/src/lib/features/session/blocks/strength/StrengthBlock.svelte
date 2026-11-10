@@ -616,7 +616,7 @@
     {#if canWarmup}
       <button
         type="button"
-        class="w-full px-3 py-1.5 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40 border-b border-border/50"
+        class="w-full h-10 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40 border-b border-border/50"
         disabled={saving}
         onclick={handleAddWarmup}
         transition:reveal
@@ -733,7 +733,7 @@
     {#if canWarmup}
       <button
         type="button"
-        class="w-full px-3 pb-3 -mt-1 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
+        class="w-full h-10 px-3 -mt-1 mb-1 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
         disabled={saving}
         onclick={handleAddWarmup}
         transition:reveal

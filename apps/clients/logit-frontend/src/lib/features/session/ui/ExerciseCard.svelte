@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2 } from "lucide-svelte";
+  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2, MoreHorizontal } from "lucide-svelte";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
@@ -61,6 +61,8 @@
     children?: import("svelte").Snippet;
   }>();
 
+  let confirmRemove = $state(false);
+
   const goal = $derived(suggestion?.progressGoal ?? null);
   const fatiguePct = $derived(Math.round(suggestion?.reasoning?.computed?.fatigueDiscountPct ?? 0));
   const showMeter = $derived(!collapsed && goal !== null && meter.length > 0 && goal.reps <= 30);
@@ -84,40 +86,42 @@
 <div class="border-b border-border/50">
 <!-- Exercise section header -->
 <div class="border-t border-border bg-muted/20" data-tour="session-exercise-header">
-  <div class="flex items-center gap-2 px-3 py-2">
+  <!-- Every control here is a 44px target. Swap / superset / remove live in the
+       ⋯ menu so the row doesn't need six icons and the name keeps its room. -->
+  <div class="flex items-center pl-1 pr-1">
     {#if !grouped}
       <!-- Grip handle -->
       <button
         type="button"
-        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        class="shrink-0 h-11 w-9 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
         style="touch-action: none"
         use:gripAction
         aria-label="Drag to reorder"
         tabindex="-1"
         disabled={saving}
       >
-        <GripVertical class="h-3.5 w-3.5" />
+        <GripVertical class="h-4 w-4" />
       </button>
     {/if}
 
     <!-- Collapse toggle -->
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded text-muted-foreground hover:text-foreground {grouped ? 'ml-1' : ''}"
       onclick={onToggleCollapse}
       aria-label={collapsed ? "Expand exercise" : "Collapse exercise"}
       disabled={saving}
     >
       {#if collapsed}
-        <ChevronRight class="h-3.5 w-3.5" />
+        <ChevronRight class="h-4 w-4" />
       {:else}
-        <ChevronDown class="h-3.5 w-3.5" />
+        <ChevronDown class="h-4 w-4" />
       {/if}
     </button>
 
     <button
       type="button"
-      class="flex-1 min-w-0 text-left"
+      class="flex-1 min-w-0 h-11 pl-1 pr-2 text-left"
       onclick={onOpenDetail}
       disabled={saving}
       aria-label="{exerciseName} — open details"
@@ -130,44 +134,47 @@
     </span>
 
     {#if collapsed && hasActiveTimer}
-      <span class="shrink-0 flex items-center text-primary animate-pulse" aria-label="Rest timer active">
-        <Timer class="h-3.5 w-3.5" />
+      <span class="shrink-0 ml-2 flex items-center text-primary animate-pulse" aria-label="Rest timer active">
+        <Timer class="h-4 w-4" />
       </span>
     {/if}
 
-    {#if canSuperset}
+    {#if !collapsed}
       <button
         type="button"
-        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-primary"
-        onclick={() => void onSuperset()}
-        disabled={saving}
-        aria-label="Superset with next exercise"
-      >
-        <Link2 class="h-3.5 w-3.5" />
-      </button>
-    {/if}
-
-    <button
-      type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
-      onclick={onSwap}
-      disabled={saving}
-      aria-label="Swap exercise"
-    >
-      <ArrowLeftRight class="h-3.5 w-3.5" />
-    </button>
-
-    {#if !collapsed}
-      <Button
-        size="icon"
-        class="h-7 w-7 shrink-0"
+        class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
         onclick={() => void onAddSet()}
         disabled={saving}
         aria-label="Add set"
       >
-        <Plus class="h-3.5 w-3.5" />
-      </Button>
+        <span class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Plus class="h-4 w-4" />
+        </span>
+      </button>
     {/if}
+
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger
+        class="shrink-0 h-11 w-11 flex items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-50"
+        disabled={saving}
+        aria-label="More actions for {exerciseName}"
+      >
+        <MoreHorizontal class="h-5 w-5" />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content>
+        <DropdownMenu.Item onSelect={onSwap}>
+          <ArrowLeftRight /> Swap exercise
+        </DropdownMenu.Item>
+        {#if canSuperset}
+          <DropdownMenu.Item onSelect={() => void onSuperset()}>
+            <Link2 /> Superset with next exercise
+          </DropdownMenu.Item>
+        {/if}
+        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
+          <Trash2 /> Remove exercise
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
 
     <ConfirmDialog
       title="Remove exercise?"
@@ -175,20 +182,9 @@
       confirmLabel="Remove"
       {saving}
       onConfirm={onDelete}
-    >
-      {#snippet child({ props })}
-        <Button
-          {...props}
-          size="icon"
-          variant="ghost"
-          class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-          disabled={saving}
-          aria-label="Delete exercise"
-        >
-          <Trash2 class="h-3.5 w-3.5" />
-        </Button>
-      {/snippet}
-    </ConfirmDialog>
+      open={confirmRemove}
+      onOpenChange={(v: boolean) => (confirmRemove = v)}
+    />
   </div>
 
   {#if !collapsed && suggestion && suggestion.sets.length > 0}

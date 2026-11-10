@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Star, Pencil } from "lucide-svelte";
+  import { Star, Pencil } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import * as Select from "$lib/components/ui/select";
   import {
@@ -97,9 +98,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition/foods")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+    <BackButton onclick={() => back("/nutrition/foods")} />
     {#if food}
       <button type="button" onclick={() => void toggleFav()} aria-label="Toggle favourite" class="h-8 w-8 flex items-center justify-center">
         <Star class="h-4 w-4 {isFav ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />

@@ -514,7 +514,7 @@
         {:else}
           <button
             type="button"
-            class="text-xs text-muted-foreground hover:text-foreground"
+            class="-mx-2 h-11 px-2 text-xs text-muted-foreground hover:text-foreground"
             onclick={() => (noteOpen = true)}
           >
             + Session note
@@ -574,13 +574,13 @@
     >
       <Button
         size="icon"
-        class="rounded-full shadow-lg"
+        class="size-12 rounded-full shadow-lg"
         disabled={ui.saving || ui.finishing}
         aria-label="Add block"
         data-tour="session-add-exercise"
         onclick={openAddBlock}
       >
-        <Plus />
+        <Plus class="size-5" />
       </Button>
     </div>
 

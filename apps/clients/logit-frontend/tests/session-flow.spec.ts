@@ -111,6 +111,11 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
   );
 }
 
+/** Swap / superset / remove live in the exercise header's ⋯ menu. */
+async function openExerciseMenu(page: Page, i = 0) {
+  await page.getByRole("button", { name: /^More actions for/ }).nth(i).click();
+}
+
 async function goToSession(page: Page) {
   await page.goto("/session/current");
   await page.waitForLoadState("networkidle");
@@ -420,7 +425,8 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Swap exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Swap exercise" }).click();
     const input = page.locator('input[placeholder="e.g. Bench Press"]');
     await expect(input).toBeVisible();
     await input.fill("Incline Bench Press");
@@ -447,7 +453,8 @@ test.describe("managing sets", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByText("Overhead Press")).toBeVisible();
 
-    await page.locator('[aria-label="Swap exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Swap exercise" }).click();
     const swapInput = page.locator('input[placeholder="e.g. Bench Press"]');
     await expect(swapInput).toBeVisible();
     await expect(swapInput).toBeEnabled();
@@ -463,7 +470,8 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Delete exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Remove exercise" }).click();
     // Confirm dialog appears
     await page.getByRole("button", { name: "Remove" }).click();
 
@@ -484,7 +492,8 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
 
     await expect(page.getByText("SUPERSET")).toBeVisible();
     await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
@@ -515,7 +524,8 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     // First member — completing it flows straight on, no rest.
@@ -622,6 +632,28 @@ test.describe("set reorder", () => {
   });
 });
 
+// ── Tap targets ───────────────────────────────────────────────────────────────
+
+test("every workout-screen control is at least 40px tall", async ({ page }) => {
+  await seedSession(page, {
+    session: makeSession([
+      makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100), makeSet("s2", 1, 5, 100)]),
+      makeStrengthBlock("b2", 1, "Row", [makeSet("s3", 0, 8, 60)]),
+    ]),
+  });
+  await goToSession(page);
+  await expect(page.getByTestId("set-weight").first()).toBeVisible();
+
+  const small = await page.evaluate(() =>
+    [...document.querySelectorAll("button, a[href], input, [role=button]")]
+      .map((el) => ({ el, r: el.getBoundingClientRect() }))
+      // Swipe actions sit behind their row until revealed; they're 40px too.
+      .filter(({ r }) => r.width > 0 && r.height > 0 && r.height < 40)
+      .map(({ el, r }) => `${el.getAttribute("aria-label") ?? el.textContent?.trim()} (${Math.round(r.height)}px)`),
+  );
+  expect(small).toEqual([]);
+});
+
 // ── Finish session ────────────────────────────────────────────────────────────
 
 test.describe("finish session", () => {
@@ -723,7 +755,8 @@ test.describe("finish session", () => {
       ]),
     });
     await goToSession(page);
-    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     await page.getByRole("button", { name: "Finish workout" }).click();

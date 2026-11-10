@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
@@ -11,7 +12,7 @@
   import { getSession } from "$lib/usecases/getSession";
   import { deleteSession } from "$lib/usecases/deleteSession";
   import { editSession } from "$lib/usecases/editSession";
-  import { ArrowLeft, Share2, Trash, Pencil } from "lucide-svelte";
+  import { Share2, Trash, Pencil } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
@@ -236,9 +237,7 @@
         {vm.saving ? "Saving…" : "Save"}
       </Button>
     {:else}
-      <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/sessions")}>
-        <ArrowLeft class="h-4 w-4" />
-      </Button>
+      <BackButton onclick={() => back("/sessions")} />
 
       <div class="flex-1 min-w-0">
         <span class="text-sm font-semibold">
@@ -250,7 +249,7 @@
         <Button
           variant="ghost"
           size="icon"
-          class="h-7 w-7 text-muted-foreground"
+          class="text-muted-foreground"
           disabled={vm.loading || !vm.session}
           aria-label="Share session"
           onclick={() => (vm.sharing = true)}
@@ -262,7 +261,7 @@
       <Button
         variant="ghost"
         size="icon"
-        class="h-7 w-7 text-muted-foreground"
+        class="text-muted-foreground"
         disabled={vm.loading || !vm.session}
         aria-label="Edit session"
         onclick={startEditing}
@@ -283,7 +282,7 @@
             {...props}
             variant="ghost"
             size="icon"
-            class="h-7 w-7 text-muted-foreground hover:text-destructive"
+            class="text-muted-foreground hover:text-destructive"
             disabled={vm.loading || !vm.session || vm.deleting}
             aria-label="Delete session"
           >

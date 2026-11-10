@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ArrowUp, ArrowDown, ArrowLeft } from "lucide-svelte";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
+  import { ArrowUp, ArrowDown } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -15,9 +16,7 @@
 
 <div class="flex flex-col gap-3 p-3 pb-24">
   <div class="flex items-center gap-2">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => back("/profile")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back("/profile")} />
     <h1 class="text-base font-semibold">Customise profile</h1>
   </div>
 
@@ -33,10 +32,10 @@
                 <span class="text-xs text-muted-foreground">{def.description}</span>
               </div>
               <div class="flex items-center gap-1 shrink-0">
-                <Button variant="ghost" size="icon" class="h-7 w-7" disabled={i === 0} aria-label="Move up" onclick={() => profileConfig.moveUp(slot.id)}>
+                <Button variant="ghost" size="icon" disabled={i === 0} aria-label="Move up" onclick={() => profileConfig.moveUp(slot.id)}>
                   <ArrowUp class="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" class="h-7 w-7" disabled={i === orderedSlots.length - 1} aria-label="Move down" onclick={() => profileConfig.moveDown(slot.id)}>
+                <Button variant="ghost" size="icon" disabled={i === orderedSlots.length - 1} aria-label="Move down" onclick={() => profileConfig.moveDown(slot.id)}>
                   <ArrowDown class="h-3.5 w-3.5" />
                 </Button>
                 <button

@@ -1,6 +1,6 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { getHabitRepo } from "$lib/data/repoProvider";
   import type { Habit } from "@logit/core/domain/habit";
@@ -28,13 +28,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 border-b border-border px-3 py-2">
-    <button
-      type="button"
-      class="flex h-8 w-8 items-center justify-center"
-      onclick={() => back("/habits")}
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+    <BackButton onclick={() => back("/habits")} />
     <h1 class="text-sm font-semibold">New habit</h1>
   </div>
 
