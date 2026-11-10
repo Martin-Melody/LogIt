@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -234,38 +235,38 @@
         />
       </div>
 
-      <div class="flex overflow-hidden rounded border text-xs">
+      <div class={segmentTrack}>
         <button
           type="button"
-          class="flex-1 px-3 py-1.5 {familyFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'all')} aria-pressed={familyFilter === 'all'}
           onclick={() => (familyFilter = "all")}
         >
           All
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'widget' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'widget')} aria-pressed={familyFilter === 'widget'}
           onclick={() => (familyFilter = "widget")}
         >
           Widgets
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'progression-algorithm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'progression-algorithm')} aria-pressed={familyFilter === 'progression-algorithm'}
           onclick={() => (familyFilter = "progression-algorithm")}
         >
           Progression
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'analytics' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'analytics')} aria-pressed={familyFilter === 'analytics'}
           onclick={() => (familyFilter = "analytics")}
         >
           Analytics
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'exercise-pack' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'exercise-pack')} aria-pressed={familyFilter === 'exercise-pack'}
           onclick={() => (familyFilter = "exercise-pack")}
         >
           Packs

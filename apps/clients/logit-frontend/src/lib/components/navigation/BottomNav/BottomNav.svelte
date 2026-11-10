@@ -14,13 +14,13 @@
   const hasSession = $derived(!!$currentSession);
   const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/current") || page.url.pathname.startsWith("/session/plan"));
 
-  // Filter bar items by auth availability
+  // One entry per bar slot; null where the item needs an account and there isn't
+  // one (yet). Positional, so nothing shifts sideways when sign-in resolves.
   const visibleBar = $derived(
-    $navConfig.bar
-      .map((id) => NAV_ITEM_DEFS.find((d) => d.id === id))
-      .filter((d): d is NonNullable<typeof d> =>
-        !!d && (!d.authRequired || authStore.isAuthenticated)
-      )
+    [0, 1, 2].map((i) => {
+      const d = NAV_ITEM_DEFS.find((def) => def.id === $navConfig.bar[i]);
+      return d && (!d.authRequired || authStore.isAuthenticated) ? d : null;
+    }),
   );
 
   function isActive(href: string) {
@@ -46,11 +46,18 @@
 {/snippet}
 
 {#if !hidden}
-  <nav class="flex items-end justify-around px-2 pt-0.5 pb-2" aria-label="Main navigation">
+  <!-- Five fixed slots, so Start stays centred even when a slot is empty (an item
+       that needs an account while signed out, or a bar customised to fewer items). -->
+  <nav class="grid grid-cols-5 items-end justify-items-center px-2 pt-0.5 pb-2" aria-label="Main navigation">
 
     <!-- Left bar slots (indices 0 and 1) -->
-    {#each visibleBar.slice(0, 2) as item}
-      {@render barItem(item)}
+    {#each [0, 1] as i (i)}
+      {@const item = visibleBar[i]}
+      {#if item}
+        {@render barItem(item)}
+      {:else}
+        <span aria-hidden="true"></span>
+      {/if}
     {/each}
 
     <!-- FAB: Start / Resume session (fixed center) -->
@@ -74,6 +81,8 @@
     <!-- Right bar slot (index 2) -->
     {#if visibleBar[2]}
       {@render barItem(visibleBar[2])}
+    {:else}
+      <span aria-hidden="true"></span>
     {/if}
 
     <!-- More (fixed rightmost) -->

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { Trash2, RotateCcw, Package } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -244,11 +245,11 @@
 
     <div class="flex flex-col gap-1.5">
       <span class="text-sm font-medium">Type</span>
-      <div class="flex gap-2">
+      <div class={segmentTrack}>
         {#each ([["normal", "Normal"], ["assisted", "Assisted"], ["bodyweight", "Bodyweight"]] as [ExerciseType, string][]) as [type, label] (type)}
           <button
             type="button"
-            class="flex-1 py-1.5 rounded border text-xs font-medium transition-colors {draftType === type ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}"
+            class={segment(draftType === type)} aria-pressed={draftType === type}
             onclick={() => selectType(type)}
           >
             {label}

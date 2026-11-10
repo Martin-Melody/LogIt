@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { X, Check } from "lucide-svelte";
   import { fade } from "svelte/transition";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -147,13 +148,11 @@
           <p class="text-xs text-muted-foreground -mt-1">
             Overrides your app-wide default whenever you add {target.drillName}. Still overridable per set.
           </p>
-          <div class="flex gap-1.5">
+          <div class={segmentTrack}>
             {#each [{ v: undefined, t: `App default (${$profile.mobilityLeadSide === "right" ? "R" : "L"})` }, { v: "left", t: "Left" }, { v: "right", t: "Right" }] as opt (opt.t)}
               <button
                 type="button"
-                class="flex-1 py-1.5 text-xs rounded border transition-colors flex items-center justify-center gap-1 {drillLead === opt.v
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                class={segment(drillLead === opt.v)} aria-pressed={drillLead === opt.v}
                 disabled={saving}
                 onclick={() => void pickLead(opt.v as MobilitySide | undefined)}
               >

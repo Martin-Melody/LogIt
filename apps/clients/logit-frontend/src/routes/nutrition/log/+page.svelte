@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
@@ -536,10 +538,10 @@
         <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="C" bind:value={labelDraft.carbs} />
         <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="F" bind:value={labelDraft.fat} />
       </div>
-      <div class="flex items-center gap-2 text-xs flex-wrap">
+      <div class={cn(segmentTrack, "w-fit")}>
         <span class="text-muted-foreground">Values per</span>
-        <button type="button" class="px-2 py-0.5 rounded {labelDraft.basis === '100g' ? 'bg-primary text-primary-foreground' : 'bg-muted'}" onclick={() => (labelDraft.basis = '100g')}>100 g</button>
-        <button type="button" class="px-2 py-0.5 rounded {labelDraft.basis === 'serving' ? 'bg-primary text-primary-foreground' : 'bg-muted'}" onclick={() => (labelDraft.basis = 'serving')}>serving</button>
+        <button type="button" class={segment(labelDraft.basis === '100g')} aria-pressed={labelDraft.basis === '100g'} onclick={() => (labelDraft.basis = '100g')}>100 g</button>
+        <button type="button" class={segment(labelDraft.basis === 'serving')} aria-pressed={labelDraft.basis === 'serving'} onclick={() => (labelDraft.basis = 'serving')}>serving</button>
         {#if labelDraft.basis === 'serving'}
           <input class="w-24 bg-muted rounded px-2 py-1 outline-none tabular-nums" inputmode="decimal" placeholder="g in a serving" bind:value={labelDraft.servingG} />
         {/if}

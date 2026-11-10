@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import {
@@ -520,11 +522,11 @@
   </div>
 
   <!-- Section quick-nav -->
-  <div class="flex gap-1.5 overflow-x-auto -mx-3 px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+  <div class="flex gap-2 overflow-x-auto -mx-3 px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     {#each sections as s (s.id)}
       <button
         type="button"
-        class="shrink-0 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+        class={chip(false)}
         onclick={() => jumpTo(s.id)}
       >
         {s.label}
@@ -734,14 +736,11 @@
       <Card.Description>Choose how the app looks.</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="flex rounded border overflow-hidden text-sm w-fit">
+      <div class={cn(segmentTrack, "w-fit")}>
         {#each [["system", "System"], ["light", "Light"], ["dark", "Dark"]] as ["system" | "light" | "dark", string][] as [value, label] (value)}
           <button
             type="button"
-            class="px-4 py-2 transition-colors {userPrefersMode.current ===
-            value
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            class={segment(userPrefersMode.current === value)} aria-pressed={userPrefersMode.current === value}
             onclick={() => setMode(value)}
           >
             {label}
@@ -768,13 +767,11 @@
     <Card.Content class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium">Weight</p>
-        <div class="flex rounded border overflow-hidden text-sm">
+        <div class={segmentTrack}>
           {#each [["kg", "kg"], ["lbs", "lb"]] as ["kg" | "lbs", string][] as [value, label] (value)}
             <button
               type="button"
-              class="px-4 py-1.5 transition-colors {$profile.weightUnit === value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              class={segment($profile.weightUnit === value)} aria-pressed={$profile.weightUnit === value}
               onclick={() => profile.save({ weightUnit: value })}
             >
               {label}
@@ -784,13 +781,11 @@
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium">Height</p>
-        <div class="flex rounded border overflow-hidden text-sm">
+        <div class={segmentTrack}>
           {#each [["cm", "cm"], ["in", "in"]] as ["cm" | "in", string][] as [value, label] (value)}
             <button
               type="button"
-              class="px-4 py-1.5 transition-colors {$profile.heightUnit === value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              class={segment($profile.heightUnit === value)} aria-pressed={$profile.heightUnit === value}
               onclick={() => profile.save({ heightUnit: value })}
             >
               {label}
@@ -982,13 +977,11 @@
         <p class="text-xs text-muted-foreground mb-1">
           Default order for per-side drills. Override it per set from a set's edit sheet.
         </p>
-        <div class="flex gap-1.5">
+        <div class={segmentTrack}>
           {#each [{ v: "left", t: "Left first" }, { v: "right", t: "Right first" }] as opt (opt.v)}
             <button
               type="button"
-              class="flex-1 py-1.5 text-sm rounded border transition-colors {$profile.mobilityLeadSide === opt.v
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              class={segment($profile.mobilityLeadSide === opt.v)} aria-pressed={$profile.mobilityLeadSide === opt.v}
               onclick={() => profile.save({ mobilityLeadSide: opt.v as "left" | "right" })}
             >
               {opt.t}

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import { Pencil, Check, X } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
@@ -58,9 +60,9 @@
               class="w-full rounded border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.height} />
           </div>
-          <div class="flex overflow-hidden rounded border text-xs mb-0.5">
-            <button type="button" class="px-2.5 py-1.5 {draft.heightUnit === 'cm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.heightUnit = "cm")}>cm</button>
-            <button type="button" class="px-2.5 py-1.5 {draft.heightUnit === 'in' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.heightUnit = "in")}>in</button>
+          <div class={cn(segmentTrack, "mb-0.5")}>
+            <button type="button" class={segment(draft.heightUnit === 'cm')} aria-pressed={draft.heightUnit === 'cm'} onclick={() => (draft.heightUnit = "cm")}>cm</button>
+            <button type="button" class={segment(draft.heightUnit === 'in')} aria-pressed={draft.heightUnit === 'in'} onclick={() => (draft.heightUnit = "in")}>in</button>
           </div>
         </div>
         <div class="flex gap-2 items-end">
@@ -70,9 +72,9 @@
               class="w-full rounded border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.weight} />
           </div>
-          <div class="flex overflow-hidden rounded border text-xs mb-0.5">
-            <button type="button" class="px-2.5 py-1.5 {draft.weightUnit === 'kg' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.weightUnit = "kg")}>kg</button>
-            <button type="button" class="px-2.5 py-1.5 {draft.weightUnit === 'lbs' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}" onclick={() => (draft.weightUnit = "lbs")}>lbs</button>
+          <div class={cn(segmentTrack, "mb-0.5")}>
+            <button type="button" class={segment(draft.weightUnit === 'kg')} aria-pressed={draft.weightUnit === 'kg'} onclick={() => (draft.weightUnit = "kg")}>kg</button>
+            <button type="button" class={segment(draft.weightUnit === 'lbs')} aria-pressed={draft.weightUnit === 'lbs'} onclick={() => (draft.weightUnit = "lbs")}>lbs</button>
           </div>
         </div>
         <div class="flex gap-2">
