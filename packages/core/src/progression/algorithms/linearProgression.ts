@@ -212,10 +212,13 @@ function perSetRepTargets(
   });
 }
 
+function roundDownTo(weight: number, increment: number): number {
+  if (!(increment > 0)) return Math.round(weight * 4) / 4;
+  return Math.max(0, Math.floor(weight / increment + 1e-9) * increment);
+}
+
 function deloadWeight(weight: number, increment: number): number {
-  const target = weight * DELOAD_FACTOR;
-  if (!(increment > 0)) return Math.round(target * 4) / 4;
-  return Math.max(0, Math.floor(target / increment + 1e-9) * increment);
+  return roundDownTo(weight * DELOAD_FACTOR, increment);
 }
 
 function fmtKg(kg: number): string {
@@ -463,13 +466,17 @@ function suggest(input: ProgressionInput): ProgressionOutput {
         newest.performedAtMs <= input.stateSavedAtMs);
 
   // If the newest, not-yet-applied session was done heavier than the state says,
-  // start from what was actually lifted. Also recovers a stale state (e.g. left at
-  // the default 0kg because history lookup once failed on a mismatched
-  // exerciseId). Never for a session already applied — that used to undo every
-  // deload on the very next suggestion — nor for assisted exercises, where a
-  // higher number means more help, not more strength.
+  // start from what was actually lifted. Never for a session this state has
+  // recorded applying — that used to undo every deload on the very next
+  // suggestion. A state from before that was recorded keeps the old recovery for
+  // stale states (e.g. left at a default because history lookup once failed on a
+  // mismatched exerciseId); its next save records the session and ends that.
+  // For assisted exercises a higher number means more help, so only an unseeded
+  // state (nothing applied yet, still at 0) takes its starting point from history.
   const historyWeight = seedFromHistory(input.history)?.workingWeight;
-  if (!alreadyApplied && !isAssisted && historyWeight !== undefined && historyWeight > state.workingWeight) {
+  const mayReseed = !alreadyApplied || state.lastAppliedSessionId === undefined;
+  const unseeded = state.lastAppliedSessionId === undefined && state.workingWeight === 0 && state.failedAttempts === 0;
+  if (mayReseed && (!isAssisted || unseeded) && historyWeight !== undefined && historyWeight > state.workingWeight) {
     state = { ...state, workingWeight: historyWeight };
   }
 
@@ -661,10 +668,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const effectiveDiscount = MAX_FATIGUE_DISCOUNT * calibration.sensitivity;
 
   // Today's prescription is the state *after* last session's result.
+  // Rounded down to the increment so the plan is a weight you can actually load.
   const suggestedWeight =
-    fatigueScore > 0
-      ? Math.round((nextWeight * (1 - fatigueScore * effectiveDiscount)) * 4) / 4
-      : nextWeight;
+    fatigueScore > 0 ? roundDownTo(nextWeight * (1 - fatigueScore * effectiveDiscount), state.increment) : nextWeight;
 
   const repTargets = perSetRepTargets(workingSets, nextWeight, activeRepRange, setCount);
   const lastReps = workingSets.map((s) => s.reps).join(" / ");

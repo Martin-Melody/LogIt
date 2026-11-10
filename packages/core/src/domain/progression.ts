@@ -1,4 +1,4 @@
-import type { SetEntry, SetType } from "./workout";
+import type { SetEntry, SetType, PlannedSet } from "./workout";
 import type { PlannedTargets } from "./WorkoutSplit";
 import type { MuscleGroup, Machine, ExerciseType } from "./exercise";
 import type { Reasoning, ReasoningConfidence } from "./reasoning";
@@ -132,6 +132,18 @@ export type ProgressionOutput = {
   // (`text`, e.g. "+1 rep") plus a sentence on why (`detail`).
   change?: ProgressionChange;
 };
+
+/** The sets a suggestion prescribes, in the shape a session block stores them. */
+export function suggestionToPlan(output: ProgressionOutput, machineId?: string | null): PlannedSet[] {
+  return output.sets.map((s) => ({
+    reps: Array.isArray(s.reps) ? s.reps[0] : s.reps,
+    ...(Array.isArray(s.reps) && s.reps[1] !== s.reps[0] ? { repsMax: s.reps[1] } : {}),
+    weight: s.weight,
+    setType: s.setType,
+    note: s.note,
+    machineId,
+  }));
+}
 
 export type ProgressionChange = {
   kind: "first" | "increase" | "reps" | "repeat" | "deload";
