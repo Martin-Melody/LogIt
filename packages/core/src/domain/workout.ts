@@ -114,7 +114,20 @@ export type SetEntry = {
   machineId?: string | null;
   /** Rate of perceived exertion, 6–10 (RPE) or left unset. */
   rpe?: number | null;
+  /**
+   * What the progression plan asked for on this set. A planned set starts with
+   * reps 0 and is logged by ticking it (reps/weight copied from here) or by
+   * entering what was actually done. `repsMax` is set when the plan is a range.
+   */
+  target?: SetTarget | null;
 };
+
+export type SetTarget = { reps: number; repsMax?: number; weight: number };
+
+/** A planned set nobody has done yet: still at 0 reps and not ticked. */
+export function isUnloggedPlannedSet(s: SetEntry): boolean {
+  return !!s.target && !s.completed && s.reps === 0;
+}
 
 /**
  * Marks a block as part of a superset / circuit. Blocks sharing an `id` are
@@ -371,7 +384,7 @@ export function normalizeSupersets(session: WorkoutSession): WorkoutSession {
 export function addSet(
   session: WorkoutSession,
   exerciseEntryId: string,
-  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "machineId">>,
+  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "machineId" | "target">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => {
     const set: SetEntry = {
@@ -382,6 +395,7 @@ export function addSet(
       note: defaults?.note,
       orderIndex: data.sets.length,
       machineId: defaults?.machineId,
+      ...(defaults?.target ? { target: defaults.target } : {}),
     };
     return { ...data, sets: [...data.sets, set] };
   });
@@ -391,7 +405,7 @@ export function updateSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
-  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId" | "rpe">>,
+  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId" | "rpe" | "target">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => ({
     ...data,
@@ -432,6 +446,56 @@ export function addWarmupSets(
     const shifted = data.sets.map((s) => ({ ...s, orderIndex: s.orderIndex + warmSets.length }));
     return { ...data, sets: [...warmSets, ...shifted] };
   });
+}
+
+export type PlannedSet = SetTarget & { setType?: SetType; note?: string; machineId?: string | null };
+
+/**
+ * Lay a progression plan onto a strength block: sets already logged stay as they
+ * are, planned sets nobody has done yet are replaced, and the plan fills in the
+ * remaining set slots (so swapping exercise after two logged sets plans only the
+ * rest). Sets entered by hand without a plan are never touched.
+ */
+export function applySetPlan(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  plan: PlannedSet[],
+): WorkoutSession {
+  return updateStrengthBlock(session, exerciseEntryId, (data) => {
+    const kept = [...data.sets]
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .filter((s) => !isUnloggedPlannedSet(s));
+    const keptWorking = kept.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)).length;
+    const added: SetEntry[] = plan.slice(keptWorking).map((p, i) => ({
+      id: createId("set"),
+      setType: p.setType ?? "normal",
+      reps: 0,
+      weight: p.weight,
+      note: p.note,
+      orderIndex: kept.length + i,
+      machineId: p.machineId ?? undefined,
+      target: { reps: p.reps, weight: p.weight, ...(p.repsMax !== undefined ? { repsMax: p.repsMax } : {}) },
+    }));
+    const sets = [...kept, ...added].map((s, i) => ({ ...s, orderIndex: i }));
+    return { ...data, sets };
+  });
+}
+
+/** Planned sets left untouched at the end of a workout weren't done — drop them. */
+export function dropUnloggedPlannedSets(session: WorkoutSession): WorkoutSession {
+  return {
+    ...session,
+    blocks: session.blocks.map((b) => {
+      if (b.type !== "strength") return b;
+      const data = b.data as StrengthBlockData;
+      if (!data.sets.some(isUnloggedPlannedSet)) return b;
+      const sets = [...data.sets]
+        .sort((x, y) => x.orderIndex - y.orderIndex)
+        .filter((s) => !isUnloggedPlannedSet(s))
+        .map((s, i) => ({ ...s, orderIndex: i }));
+      return { ...b, data: { ...data, sets } };
+    }),
+  };
 }
 
 export function finishSession(

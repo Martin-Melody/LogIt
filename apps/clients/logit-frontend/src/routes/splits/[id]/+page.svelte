@@ -26,10 +26,11 @@
 
   let pendingStartDay = $state<SplitDay | null>(null);
 
-  async function startDay(d: SplitDay) {
+  async function startDay(d: SplitDay, replace = false) {
     if (d.blocks.length === 0) return;
-    await currentSession.startFromSplitDay(d);
-    await goto("/session/current");
+    const params = new URLSearchParams({ split: splitId, day: d.id });
+    if (replace) params.set("replace", "1");
+    await goto(`/session/plan?${params}`);
   }
 
   function dayPreview(blocks: PlannedBlock[]): string {
@@ -446,6 +447,6 @@
   onConfirm={async () => {
     const d = pendingStartDay;
     pendingStartDay = null;
-    if (d) await startDay(d);
+    if (d) await startDay(d, true);
   }}
 />

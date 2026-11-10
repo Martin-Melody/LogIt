@@ -3,13 +3,14 @@
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import Textarea from "$lib/components/ui/textarea/textarea.svelte";
-  import { ChevronDown, ChevronRight } from "lucide-svelte";
+  import { ChevronDown, ChevronRight, Check, Minus, Plus } from "lucide-svelte";
   import { reveal } from "$lib/transitions";
 
-  import type { SetEntry, SetType } from "@logit/core/domain/workout";
+  import type { SetEntry, SetTarget, SetType } from "@logit/core/domain/workout";
   import type { Machine } from "@logit/core/domain/exercise";
   import type { WeightUnit } from "@logit/core/domain/units";
-  import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight } from "@logit/core/domain/units";
+  import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight, formatLoad, trimWeight } from "@logit/core/domain/units";
+  import { formatTargetReps } from "$lib/features/session/planFormat";
   import { snapToMachine, machineWeightsKg, stepMachineWeight } from "@logit/core/domain/machine";
   import SetTypePicker from "./SetTypePicker.svelte";
   import PlateBreakdown from "./PlateBreakdown.svelte";
@@ -26,8 +27,14 @@
     defaultMachineId = undefined,
     exerciseId = undefined,
     weightUnit = "kg",
+    setNumber = null,
+    target = null,
+    completed = false,
+    prev = null,
+    bodyweight = false,
     onOpenChange = () => {},
     onSave = async () => {},
+    onLog = undefined,
   } = $props<{
     open?: boolean;
     disabled?: boolean;
@@ -36,9 +43,31 @@
     defaultMachineId?: string;
     exerciseId?: string;
     weightUnit?: WeightUnit;
+    /** For the title ("Set 2"); drop sets and the like have none. */
+    setNumber?: number | null;
+    /** What the progression plan has this set down for, if anything. */
+    target?: SetTarget | null;
+    completed?: boolean;
+    /** The same set last time. */
+    prev?: { reps: number; weight: number } | null;
+    /** Weights are relative to bodyweight: 0 = BW, −25 = assisted, +10 = added. */
+    bodyweight?: boolean;
     onOpenChange?: (v: boolean) => void;
     onSave?: (patch: Partial<Editable>) => void | Promise<void>;
+    /** Save and tick the set off in one go (offered while it isn't done). */
+    onLog?: (patch: Partial<Editable>) => void | Promise<void>;
   }>();
+
+  const load = (kg: number) => formatLoad(kg, weightUnit, bodyweight, { withUnit: !bodyweight });
+  const planLine = $derived(
+    [
+      target && !completed ? `Planned ${formatTargetReps(target)} × ${load(target.weight)}` : null,
+      prev && prev.reps > 0 ? `last ${prev.reps} × ${load(prev.weight)}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  );
+  const weightStepSize = $derived(weightUnit === "lbs" ? 5 : 2.5);
 
   // Use null to represent "empty / not entered" for numeric fields
   const draft = $state<{
@@ -58,6 +87,14 @@
     machineId: null,
     rpe: null,
   });
+
+  // What "Log" will record; reps fall back to the plan when left alone.
+  const logReps = $derived(draft.reps ?? target?.reps ?? 0);
+  const logLabel = $derived(
+    `Log ${logReps} × ${draft.weight == null || draft.weight === 0
+      ? (bodyweight ? "BW" : `0 ${weightUnit}`)
+      : load(fromDisplayWeight(draft.weight, weightUnit))}`,
+  );
 
   let noteExpanded = $state(false);
   let moreOpen = $state(false);
@@ -80,11 +117,20 @@
     }
   }
 
-  /** +/- one achievable rung on the selected machine (or one increment). */
+  /** +/- one achievable rung on the selected machine, else one plate increment. */
   function stepWeight(dir: 1 | -1) {
-    if (!activeMachine) return;
     const currentKg = draft.weight != null ? fromDisplayWeight(draft.weight, weightUnit) : 0;
-    draft.weight = toInput(stepMachineWeight(activeMachine, currentKg, dir));
+    if (activeMachine) {
+      draft.weight = toInput(stepMachineWeight(activeMachine, currentKg, dir));
+      return;
+    }
+    const next = roundDisplayWeight((draft.weight ?? 0) + dir * weightStepSize, weightUnit);
+    // Below zero only means something relative to bodyweight (assistance).
+    draft.weight = bodyweight ? next : Math.max(0, next);
+  }
+
+  function stepReps(dir: 1 | -1) {
+    draft.reps = Math.max(0, (draft.reps ?? target?.reps ?? 0) + dir);
   }
 
   /** After a free-typed value, snap it to a real rung (weight-list machines only). */
@@ -100,7 +146,8 @@
     const key = `${initial.setType}|${initial.reps}|${initial.weight}|${initial.note ?? ""}|${initial.restDurationMs ?? ""}|${initial.machineId ?? ""}|${defaultMachineId ?? ""}|${initial.rpe ?? ""}`;
     if (lastKey === key) return;
     lastKey = key;
-    draft.reps = initial.reps > 0 ? initial.reps : null;
+    // An untouched planned set starts from the plan, so +/- means "one more than planned".
+    draft.reps = initial.reps > 0 ? initial.reps : target && !completed ? target.reps : null;
     // Keep negatives — net assistance on bodyweight / assisted-machine movements.
     // `draft.weight` is in the user's display unit; storage is always kg.
     draft.weight =
@@ -117,9 +164,10 @@
     noteExpanded = !!initial.note;
     // Auto-open "More" when the set already carries a non-default extra so the
     // user sees it without hunting; otherwise keep the dialog minimal.
+    // (restDurationMs is always filled in — it's the effective rest — so it can't
+    // be what opens this; that kept the card permanently expanded.)
     moreOpen =
       !!initial.note ||
-      initial.restDurationMs !== undefined ||
       (initial.machineId != null && initial.machineId !== (defaultMachineId ?? null));
   });
 
@@ -160,10 +208,7 @@
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
-  async function submit(e: SubmitEvent) {
-    e.preventDefault();
-    if (disabled) return;
-
+  function buildPatch(): Partial<Editable> {
     let weightKg = draft.weight != null ? fromDisplayWeight(draft.weight, weightUnit) : 0;
     if (activeMachine && machineWeightsKg(activeMachine)) {
       weightKg = snapToMachine(activeMachine, weightKg).kg;
@@ -178,20 +223,115 @@
       machineId: draft.machineId ?? undefined,
       rpe: draft.rpe,
     };
+    return patch;
+  }
 
+  async function submit(e: SubmitEvent) {
+    e.preventDefault();
+    if (disabled) return;
+    // Saving an untouched planned set keeps it planned (reps stay 0) rather than
+    // quietly logging the plan; "Log" is the way to record it.
+    const patch = buildPatch();
+    if (target && !completed && initial && initial.reps === 0 && draft.reps === target.reps) patch.reps = 0;
     await onSave(patch);
+    onOpenChange(false);
+  }
+
+  async function logSet() {
+    if (disabled || !onLog) return;
+    await onLog({ ...buildPatch(), reps: logReps });
     onOpenChange(false);
   }
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content class="sm:max-w-[380px]">
+  <!-- A bottom sheet on phones: thumbs reach it, and the set list stays in view above. -->
+  <Dialog.Content
+    class="grid-cols-[minmax(0,1fr)] top-auto bottom-0 left-0 max-w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-2xl max-h-[90dvh] overflow-y-auto
+      pb-[calc(1.25rem+env(safe-area-inset-bottom))]
+      data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100
+      data-[state=open]:slide-in-from-bottom-10 data-[state=closed]:slide-out-to-bottom-10
+      sm:left-[50%] sm:max-w-[420px] sm:translate-x-[-50%]"
+  >
     <form onsubmit={submit}>
-      <Dialog.Header>
-        <Dialog.Title>Edit set</Dialog.Title>
+      <Dialog.Header class="text-left">
+        <Dialog.Title>{setNumber ? `Set ${setNumber}` : "Edit set"}</Dialog.Title>
+        {#if planLine}
+          <Dialog.Description data-testid="set-card-plan">{planLine}</Dialog.Description>
+        {/if}
       </Dialog.Header>
 
       <div class="flex flex-col gap-4 py-4">
+
+        <!-- Reps -->
+        <div class="flex flex-col gap-1.5">
+          <Label for="es-reps">Reps</Label>
+          <div class="flex items-center gap-3">
+            <button type="button" class="h-12 w-12 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-muted disabled:opacity-40" {disabled} onclick={() => stepReps(-1)} aria-label="One less rep">
+              <Minus class="h-5 w-5" />
+            </button>
+            <input
+              id="es-reps"
+              type="number"
+              min="0"
+              inputmode="numeric"
+              placeholder="—"
+              class="h-12 min-w-0 flex-1 rounded-lg border bg-background px-3 text-center text-2xl font-bold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+              value={draft.reps ?? ""}
+              {disabled}
+              onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+              oninput={(e) => {
+                const v = (e.currentTarget as HTMLInputElement).value;
+                draft.reps = v === "" ? null : num(v);
+              }}
+            />
+            <button type="button" class="h-12 w-12 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-muted disabled:opacity-40" {disabled} onclick={() => stepReps(1)} aria-label="One more rep">
+              <Plus class="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Weight -->
+        <div class="flex flex-col gap-1.5">
+          <Label for="es-weight">
+            Weight <span class="text-muted-foreground font-normal">({bodyweight ? `${weightUnit} on top of bodyweight` : weightUnit})</span>
+          </Label>
+          <div class="flex items-center gap-3">
+            <button type="button" class="h-12 w-12 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-muted disabled:opacity-40" {disabled} onclick={() => stepWeight(-1)} aria-label={bodyweight ? "Less weight (more assistance)" : "Lighter"}>
+              <Minus class="h-5 w-5" />
+            </button>
+            <div class="relative min-w-0 flex-1">
+              {#if bodyweight}
+                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-lg font-bold text-muted-foreground" aria-hidden="true">
+                  {draft.weight != null && draft.weight > 0 ? "BW+" : "BW"}
+                </span>
+              {/if}
+              <input
+                id="es-weight"
+                type="number"
+                step={weightUnit === "lbs" ? "1" : "0.5"}
+                placeholder={bodyweight ? "" : "—"}
+                class="h-12 w-full rounded-lg border bg-background px-3 text-center text-2xl font-bold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring {bodyweight ? 'pl-14' : ''}"
+                value={draft.weight == null || (bodyweight && draft.weight === 0) ? "" : trimWeight(draft.weight)}
+                {disabled}
+                onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+                oninput={(e) => {
+                  const v = (e.currentTarget as HTMLInputElement).value;
+                  draft.weight = v === "" ? null : num(v, true);
+                }}
+                onblur={snapDraftWeight}
+              />
+            </div>
+            <button type="button" class="h-12 w-12 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-muted disabled:opacity-40" {disabled} onclick={() => stepWeight(1)} aria-label={bodyweight ? "More weight (less assistance)" : "Heavier"}>
+              <Plus class="h-5 w-5" />
+            </button>
+          </div>
+          {#if bodyweight}
+            <p class="text-xs text-muted-foreground">Below 0 is assistance (BW−25), above 0 is added weight (BW+10).</p>
+          {:else if !activeMachine && draft.weight != null && draft.weight > 0}
+            <PlateBreakdown weightKg={fromDisplayWeight(draft.weight, weightUnit)} {weightUnit} />
+          {/if}
+        </div>
 
         <!-- Set type -->
         <div class="flex flex-col gap-2">
@@ -201,88 +341,6 @@
             {disabled}
             onchange={(t) => (draft.setType = t)}
           />
-        </div>
-
-        <!-- Reps + Weight -->
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-2">
-            <Label for="es-reps">Reps</Label>
-            <input
-              id="es-reps"
-              type="number"
-              min="0"
-              inputmode="numeric"
-              placeholder="—"
-              class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
-              value={draft.reps ?? ""}
-              {disabled}
-              onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
-              oninput={(e) => {
-                const v = (e.currentTarget as HTMLInputElement).value;
-                draft.reps = v === "" ? null : num(v);
-              }}
-            />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <Label for="es-weight">Weight <span class="text-muted-foreground font-normal">({weightUnit})</span></Label>
-            {#if activeMachine}
-              <!-- Machine selected → step through its real weights; typing still snaps on blur. -->
-              <div class="flex items-stretch gap-1.5">
-                <button
-                  type="button"
-                  class="w-9 shrink-0 rounded border border-border text-base leading-none text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
-                  {disabled}
-                  onclick={() => stepWeight(-1)}
-                  aria-label="Lighter"
-                >
-                  −
-                </button>
-                <input
-                  id="es-weight"
-                  type="number"
-                  step={weightUnit === "lbs" ? "1" : "0.5"}
-                  placeholder="—"
-                  class="min-w-0 flex-1 rounded border bg-background px-2 py-2 text-sm tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
-                  value={draft.weight ?? ""}
-                  {disabled}
-                  onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
-                  oninput={(e) => {
-                    const v = (e.currentTarget as HTMLInputElement).value;
-                    draft.weight = v === "" ? null : num(v, true);
-                  }}
-                  onblur={snapDraftWeight}
-                />
-                <button
-                  type="button"
-                  class="w-9 shrink-0 rounded border border-border text-base leading-none text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
-                  {disabled}
-                  onclick={() => stepWeight(1)}
-                  aria-label="Heavier"
-                >
-                  +
-                </button>
-              </div>
-            {:else}
-              <input
-                id="es-weight"
-                type="number"
-                step={weightUnit === "lbs" ? "1" : "0.5"}
-                placeholder="—"
-                class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
-                value={draft.weight ?? ""}
-                {disabled}
-                onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
-                oninput={(e) => {
-                  const v = (e.currentTarget as HTMLInputElement).value;
-                  draft.weight = v === "" ? null : num(v, true);
-                }}
-              />
-            {/if}
-            {#if !activeMachine && draft.weight != null && draft.weight > 0}
-              <PlateBreakdown weightKg={fromDisplayWeight(draft.weight, weightUnit)} {weightUnit} />
-            {/if}
-          </div>
         </div>
 
         <!-- RPE -->
@@ -459,12 +517,17 @@
 
       </div>
 
-      <Dialog.Footer>
-        <Dialog.Close class={buttonVariants({ variant: "outline" })} {disabled}>
-          Cancel
-        </Dialog.Close>
-        <Button type="submit" {disabled}>Save</Button>
-      </Dialog.Footer>
+      <div class="flex gap-2">
+        {#if onLog && !completed}
+          <Button type="submit" variant="outline" class="h-12 flex-1" {disabled}>Save</Button>
+          <Button type="button" class="h-12 flex-[2] gap-2" {disabled} onclick={logSet} data-testid="set-card-log">
+            <Check class="h-4 w-4" />{logLabel}
+          </Button>
+        {:else}
+          <Dialog.Close class="{buttonVariants({ variant: 'outline' })} h-12 flex-1" {disabled}>Cancel</Dialog.Close>
+          <Button type="submit" class="h-12 flex-[2]" {disabled}>Save</Button>
+        {/if}
+      </div>
     </form>
   </Dialog.Content>
 </Dialog.Root>

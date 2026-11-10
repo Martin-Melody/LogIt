@@ -5,7 +5,7 @@ import { loadDraftSession } from "$lib/usecases/loadDraftSession";
 import { finishCurrentSession } from "$lib/usecases/finishCurrentSession";
 import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 import type { ProgramDay } from "@logit/core/domain/CoachProgram";
-import { startSessionFromSplitDay } from "$lib/usecases/startSessionFromSplitDay";
+import { startSessionFromSplitDay, startPlannedSession } from "$lib/usecases/startSessionFromSplitDay";
 import { startSessionFromProgramDay } from "$lib/usecases/startSessionFromProgramDay";
 import { repeatLastSession } from "$lib/usecases/repeatLastSession";
 
@@ -20,6 +20,8 @@ type CurrentSessionStore = {
 
   start: () => Promise<WorkoutSession>;
   startFromSplitDay: (day: SplitDay) => Promise<WorkoutSession>;
+  /** Start a session already built and planned (the "Today's plan" screen). */
+  startPlanned: (session: WorkoutSession) => Promise<WorkoutSession>;
   startFromProgramDay: (day: ProgramDay) => Promise<WorkoutSession>;
   repeatLast: () => Promise<WorkoutSession | null>;
   loadDraft: () => Promise<WorkoutSession | null>;
@@ -63,6 +65,12 @@ function createCurrentSessionStore(): CurrentSessionStore {
 
     async startFromSplitDay(day: SplitDay) {
       const session = await startSessionFromSplitDay(day);
+      store.set({ session, transitioning: false });
+      return session;
+    },
+
+    async startPlanned(planned: WorkoutSession) {
+      const session = await startPlannedSession(planned);
       store.set({ session, transitioning: false });
       return session;
     },

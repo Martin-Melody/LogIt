@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { WeightUnit } from "@logit/core/domain/units";
-
   const { weightUnit = "kg" } = $props<{ weightUnit?: WeightUnit }>();
 </script>
 
-<div class="grid grid-cols-[auto_1fr_1fr_2rem] gap-2 px-3 py-1 text-xs text-muted-foreground border-b border-border">
-  <span>#</span>
-  <span>Reps</span>
-  <span>Weight ({weightUnit})</span>
+<div class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] gap-1.5 px-3 pb-1 pt-2 text-xs text-muted-foreground">
+  <span class="text-center">#</span>
+  <span>Last</span>
+  <span class="text-center">{weightUnit}</span>
+  <span class="text-center">Reps</span>
   <span></span>
 </div>

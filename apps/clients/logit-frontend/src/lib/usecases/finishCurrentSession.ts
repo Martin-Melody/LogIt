@@ -1,5 +1,5 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
-import { finishSession, type WorkoutSession } from "@logit/core/domain/workout";
+import { dropUnloggedPlannedSets, finishSession, type WorkoutSession } from "@logit/core/domain/workout";
 import { pushSession } from "$lib/sync/syncService";
 
 export async function finishCurrentSession(
@@ -7,7 +7,8 @@ export async function finishCurrentSession(
 ): Promise<WorkoutSession> {
   const repo = getWorkoutRepo();
 
-  const finished = finishSession(session);
+  // Planned sets that were never done aren't part of the workout.
+  const finished = finishSession(dropUnloggedPlannedSets(session));
 
   await repo.saveSession(finished);
   await repo.clearDraftSession();

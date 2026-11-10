@@ -96,10 +96,13 @@ export function runWidgetAction(action: WidgetAction): void {
       if (split && day) {
         // "original" schedule mode advances by the scheduled day so the rotation
         // stays on track; "bump" advances by what you actually did.
+        // Recorded by the plan screen when Start is pressed, so backing out of
+        // the plan doesn't move the rotation on.
         const toRecord = getScheduleMode() === "original" ? scheduled : day;
-        if (toRecord) advanceRotation(split.id, toRecord.id);
-        clearDayOverride();
-        await currentSession.startFromSplitDay(day);
+        const params = new URLSearchParams({ split: split.id, day: day.id });
+        if (toRecord) params.set("record", toRecord.id);
+        await goto(`/session/plan?${params}`);
+        return;
       } else {
         await currentSession.start();
       }

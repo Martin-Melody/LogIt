@@ -11,6 +11,9 @@ export type ExerciseHistoryResult = {
 export async function getExerciseHistory(
   exercise: { id?: string; name: string },
   deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo">,
+  // The session being logged right now. On the phone the draft lives in the same
+  // table as finished sessions, so without this it reads as "last time".
+  opts: { excludeSessionId?: string } = {},
 ): Promise<ExerciseHistoryResult> {
   const [sessions, exerciseData] = await Promise.all([
     deps.workoutRepo.listAllSessions(),
@@ -20,15 +23,20 @@ export async function getExerciseHistory(
   ]);
 
   const history: ExerciseHistoryEntry[] = sessions
-    .filter((session) => !session.excludeFromProgression)
+    .filter((session) => !session.excludeFromProgression && session.id !== opts.excludeSessionId)
     .flatMap((session) => {
       const sessionPosition = findExerciseIndexInSession(session, exercise);
       if (sessionPosition === -1) return [];
       const match = getExercises(session)[sessionPosition]!;
+      // A set that was planned but never done (no reps, not ticked) isn't history,
+      // and an exercise with nothing done that session (skipped) isn't either —
+      // otherwise skipping it once wiped its plan back to 0kg.
+      const done = match.sets.filter((s) => s.completed || s.reps > 0);
+      if (done.length === 0) return [];
       return [{
         sessionId: session.id,
         performedAtMs: session.endedAtMs ?? session.startedAtMs,
-        sets: match.sets,
+        sets: done,
         sessionPosition,
       } satisfies ExerciseHistoryEntry];
     })

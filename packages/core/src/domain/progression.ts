@@ -1,4 +1,4 @@
-import type { SetEntry, SetType } from "./workout";
+import type { SetEntry, SetType, PlannedSet } from "./workout";
 import type { PlannedTargets } from "./WorkoutSplit";
 import type { MuscleGroup, Machine, ExerciseType } from "./exercise";
 import type { Reasoning, ReasoningConfidence } from "./reasoning";
@@ -72,6 +72,10 @@ export type ProgressionInput = {
   // a plugin defines its own meaning (e.g. 1-10 self-rated, a wearable-derived score)
   // rather than the core contract picking one.
   liveInput?: { rpe?: number; readiness?: number };
+  // When `state` was last saved (ExerciseProgressionState.updatedAtMs), if it came
+  // from storage. Lets an algorithm tell whether the newest history entry is
+  // already folded into a state saved before it started recording that itself.
+  stateSavedAtMs?: number;
 };
 
 export type SuggestedSet = {
@@ -121,6 +125,34 @@ export type ProgressionOutput = {
   // it's actually shown (i.e. hasn't already been dismissed) is handled generically,
   // not by the algorithm — see getSuggestion.ts and dismissProgressionNudge.ts.
   nudge?: ProgressionNudge;
+  // Optional: what it takes to move up. "Get `reps` on every working set and the
+  // next session prescribes `weight`." The session screen draws this as a meter.
+  // No `weight` when each set moves up on its own (sets done at different weights).
+  progressGoal?: { reps: number; weight?: number };
+  // True when weights are relative to bodyweight: 0 = bodyweight, −25 = 25 kg of
+  // assistance, +10 = 10 kg added. Shown as BW, BW−25, BW+10.
+  bodyweightLoad?: boolean;
+  // Optional: how today's prescription differs from last time, in one short tag
+  // (`text`, e.g. "+1 rep") plus a sentence on why (`detail`).
+  change?: ProgressionChange;
+};
+
+/** The sets a suggestion prescribes, in the shape a session block stores them. */
+export function suggestionToPlan(output: ProgressionOutput, machineId?: string | null): PlannedSet[] {
+  return output.sets.map((s) => ({
+    reps: Array.isArray(s.reps) ? s.reps[0] : s.reps,
+    ...(Array.isArray(s.reps) && s.reps[1] !== s.reps[0] ? { repsMax: s.reps[1] } : {}),
+    weight: s.weight,
+    setType: s.setType,
+    note: s.note,
+    machineId,
+  }));
+}
+
+export type ProgressionChange = {
+  kind: "first" | "increase" | "reps" | "repeat" | "deload";
+  text: string;
+  detail?: string;
 };
 
 export type ProgressionAlgorithmMeta = {
