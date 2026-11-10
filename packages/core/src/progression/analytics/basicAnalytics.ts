@@ -1,5 +1,7 @@
 import type { AnalyticsPlugin, AnalyticsInput, AnalyticsOutput } from "../../domain/analytics";
 import { estimated1RM } from "../../domain/oneRepMax";
+import { getSetVolumeKg } from "../../domain/workout";
+import { usesBodyweightLoad } from "../../domain/exercise";
 
 function computeNormal(input: AnalyticsInput): AnalyticsOutput {
   const maxWeightPoints = [];
@@ -17,7 +19,7 @@ function computeNormal(input: AnalyticsInput): AnalyticsOutput {
     if (workingSets.length === 0) continue;
 
     const maxWeight = Math.max(...workingSets.map((s) => s.weight));
-    const totalVolume = workingSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+    const totalVolume = workingSets.reduce((sum, s) => sum + getSetVolumeKg(s), 0);
     const best1RM = Math.max(...workingSets.map((s) => estimated1RM(s.weight, s.reps)));
 
     if (maxWeight > allTimeMax) allTimeMax = maxWeight;
@@ -192,7 +194,12 @@ function compute(input: AnalyticsInput): AnalyticsOutput {
   switch (input.exercise.exerciseType) {
     case "assisted":   return computeAssisted(input);
     case "bodyweight": return computeBodyweight(input);
-    default:           return computeNormal(input);
+    default:
+      // Untyped exercise logged as BW / BW−25 (e.g. dips before a type was set):
+      // weight × reps tonnage would be negative, so chart it as bodyweight work.
+      return usesBodyweightLoad(input.exercise.exerciseType, input.history.flatMap((e) => e.sets.map((s) => s.weight)))
+        ? computeBodyweight(input)
+        : computeNormal(input);
   }
 }
 

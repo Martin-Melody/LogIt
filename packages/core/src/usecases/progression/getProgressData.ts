@@ -1,4 +1,4 @@
-import { getExercises } from "../../domain/workout";
+import { getExercises, getSetVolumeKg } from "../../domain/workout";
 import type { ExerciseProgressionState } from "../../domain/progression";
 import type { ProgressionDeps } from "./deps";
 
@@ -60,7 +60,7 @@ export async function getProgressData(
 
       const maxWeight = Math.max(...workingSets.map((s) => s.weight));
       const totalVolume = workingSets.reduce(
-        (sum, s) => sum + s.weight * s.reps,
+        (sum, s) => sum + getSetVolumeKg(s),
         0,
       );
 
