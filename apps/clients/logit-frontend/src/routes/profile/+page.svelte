@@ -110,7 +110,7 @@
 
   <!-- Settings gear -->
   <div class="flex justify-end px-3 pt-3">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => void goto("/settings")} data-tour="profile-settings">
+    <Button variant="ghost" size="icon" onclick={() => void goto("/settings")} data-tour="profile-settings">
       <Settings class="h-4 w-4" />
     </Button>
   </div>

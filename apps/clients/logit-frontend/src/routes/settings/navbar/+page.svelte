@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { get } from "svelte/store";
   import { ArrowLeft, ArrowRight, ArrowLeftRight, GripVertical } from "lucide-svelte";
   import { back } from "$lib/navigation";
@@ -152,9 +153,7 @@
 
 <div class="flex flex-col gap-3 p-3 pb-24">
   <div class="flex items-center gap-2">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => back("/settings")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back("/settings")} />
     <h1 class="text-base font-semibold">Customise navigation</h1>
   </div>
 
@@ -186,7 +185,7 @@
               <Button
                 variant="ghost"
                 size="icon"
-                class="h-7 w-7 shrink-0 text-muted-foreground"
+                class="shrink-0 text-muted-foreground"
                 aria-label="Move to More"
                 onclick={() => navConfig.moveToMore(id)}
               >
@@ -230,7 +229,7 @@
               <Button
                 variant="ghost"
                 size="icon"
-                class="h-7 w-7 shrink-0 text-muted-foreground"
+                class="shrink-0 text-muted-foreground"
                 disabled={barFull}
                 aria-label="Move to bar"
                 onclick={() => navConfig.moveToBar(id)}

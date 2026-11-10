@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Search, Trash2 } from "lucide-svelte";
+  import { Search, Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import { createId } from "@logit/core/domain/ids";
@@ -97,9 +98,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition/foods")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+    <BackButton onclick={() => back("/nutrition/foods")} />
     <h1 class="text-sm font-semibold">Recipe</h1>
     <button type="button" class="ml-auto text-xs text-primary px-2 py-1" onclick={() => void save()}>Save</button>
   </div>

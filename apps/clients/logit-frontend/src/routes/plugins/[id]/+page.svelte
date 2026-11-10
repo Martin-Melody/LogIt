@@ -1,6 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Send, ToggleLeft, Trash2 } from "lucide-svelte";
+  import { Send, ToggleLeft, Trash2 } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -152,9 +153,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => void goto("/plugins")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => void goto("/plugins")} />
     <span class="text-sm font-semibold truncate">{manifest?.name ?? "Plugin"}</span>
   </div>
 

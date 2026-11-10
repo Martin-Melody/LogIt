@@ -1,7 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import {
-    ArrowLeft,
     ChartNoAxesColumn,
     ChevronLeft,
     ChevronRight,
@@ -257,9 +257,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 -ml-1.5 flex items-center justify-center" onclick={() => back("/")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+    <BackButton onclick={() => back("/")} />
     <h1 class="text-sm font-semibold">Nutrition</h1>
   </div>
 

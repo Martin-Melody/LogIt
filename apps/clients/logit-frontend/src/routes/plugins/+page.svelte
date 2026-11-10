@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Compass, Plus, Send, ShieldAlert, ShieldCheck } from "lucide-svelte";
+  import { Compass, Plus, Send, ShieldAlert, ShieldCheck } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
@@ -93,15 +94,13 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => void goto("/profile")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => void goto("/profile")} />
     <span class="text-sm font-semibold">Plugins</span>
     <div class="ml-auto flex items-center gap-1">
-      <Button variant="ghost" size="icon" class="h-8 w-8" title="Publish queue" onclick={() => void goto("/plugins/publish")}>
+      <Button variant="ghost" size="icon" title="Publish queue" onclick={() => void goto("/plugins/publish")}>
         <Send class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" title="Browse" onclick={() => void goto("/plugins/browse")}>
+      <Button variant="ghost" size="icon" title="Browse" onclick={() => void goto("/plugins/browse")}>
         <Compass class="h-4 w-4" />
       </Button>
       <Button size="sm" onclick={() => void goto("/plugins/import")}>

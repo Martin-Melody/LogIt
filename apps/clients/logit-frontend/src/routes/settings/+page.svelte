@@ -1,7 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import {
-    ArrowLeft,
     RotateCcw,
     Sparkles,
     Cloud,
@@ -515,14 +515,7 @@
 <div class="flex flex-col gap-3 p-3 pb-24">
   <!-- Header -->
   <div class="flex items-center gap-2">
-    <Button
-      variant="ghost"
-      size="icon"
-      class="h-8 w-8"
-      onclick={() => back("/profile")}
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back("/profile")} />
     <h1 class="text-base font-semibold">Settings</h1>
   </div>
 

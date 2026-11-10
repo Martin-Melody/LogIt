@@ -1,8 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import { currentSession } from "$lib/stores/currentSession.store";
@@ -117,14 +117,7 @@
 
 <div class="flex min-h-dvh flex-col">
   <div class="flex items-center gap-2 border-b border-border px-3 py-2">
-    <button
-      type="button"
-      class="-ml-1 shrink-0 p-1 text-muted-foreground hover:text-foreground"
-      onclick={() => back("/")}
-      aria-label="Back"
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+    <BackButton onclick={() => back("/")} />
     <h1 class="flex-1 text-base font-semibold">Today's plan</h1>
   </div>
 

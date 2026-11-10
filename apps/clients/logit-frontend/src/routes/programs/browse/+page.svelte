@@ -1,8 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
-  import { ArrowLeft } from "lucide-svelte";
-  import { Button } from "$lib/components/ui/button";
   import { BUILTIN_PROGRAMS } from "@logit/core/domain/builtinPrograms";
 
   // Permanent "pick a plan, or don't" entry point (adaptive-progression-engine.md
@@ -12,9 +11,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/splits")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back("/splits")} />
     <div class="min-w-0 flex-1">
       <p class="text-sm font-semibold">Browse programs</p>
       <p class="text-xs text-muted-foreground">Day-by-day, week-by-week — no configuration needed.</p>

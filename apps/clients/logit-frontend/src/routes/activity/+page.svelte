@@ -1,7 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ChevronLeft } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { getWorkoutRepo } from "$lib/data/repoProvider";
 
@@ -144,14 +144,7 @@
 <div class="flex flex-col pb-24 min-h-screen">
   <!-- Header -->
   <div class="flex items-center gap-2 px-3 py-3 border-b border-border">
-    <button
-      type="button"
-      class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
-      onclick={() => void goto("/")}
-      aria-label="Back"
-    >
-      <ChevronLeft class="h-5 w-5" />
-    </button>
+    <BackButton onclick={() => void goto("/")} />
     <h1 class="text-base font-semibold">Activity — {currentYear}</h1>
   </div>
 

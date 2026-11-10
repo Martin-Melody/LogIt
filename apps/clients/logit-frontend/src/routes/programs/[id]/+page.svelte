@@ -1,8 +1,9 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
-  import { ArrowLeft, Dumbbell, Activity } from "lucide-svelte";
+  import { Dumbbell, Activity } from "lucide-svelte";
 
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
@@ -81,9 +82,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/splits")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back("/splits")} />
     <div class="min-w-0 flex-1">
       <p class="text-sm font-semibold truncate">{program?.name ?? "Program"}</p>
       <p class="text-xs text-muted-foreground">From your coach · read-only</p>

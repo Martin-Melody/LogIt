@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Trash, Plus } from "lucide-svelte";
+  import { Trash, Plus } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -60,9 +61,7 @@
 
 <div class="flex flex-col pb-24">
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back(`/clients/${clientId}?u=${username}`)}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+    <BackButton onclick={() => back(`/clients/${clientId}?u=${username}`)} />
     {#if schedule}
       <input
         class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-transparent focus:border-primary"
@@ -72,7 +71,7 @@
       />
       <ConfirmDialog title="Delete this check-in?" description="Removes it for you and the client." confirmLabel="Delete" cancelLabel="Cancel" saving={ui.saving} onConfirm={removeSchedule}>
         {#snippet child({ props })}
-          <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={ui.saving}>
+          <Button {...props} variant="ghost" size="icon" class="text-destructive" disabled={ui.saving}>
             <Trash class="h-3.5 w-3.5" />
           </Button>
         {/snippet}

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Plus, Search, X, ChevronRight, ArrowLeft, Package, Check } from "lucide-svelte";
+  import { Plus, Search, X, ChevronRight, Package, Check } from "lucide-svelte";
   import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
@@ -160,14 +161,7 @@
         <Package class="h-4 w-4" />
       </button>
     {:else}
-      <button
-        type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
-        onclick={() => back("/profile")}
-        aria-label="Go back"
-      >
-        <ArrowLeft class="h-4 w-4" />
-      </button>
+      <BackButton onclick={() => back("/profile")} />
       <h1 class="text-base font-semibold flex-1">Exercises</h1>
       <button
         type="button"

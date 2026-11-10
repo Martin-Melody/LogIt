@@ -1,9 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
-  import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import AlgorithmPreferencesForm from "$lib/components/AlgorithmPreferencesForm.svelte";
   import { getMobilityAlgorithmRegistry, getProgressionRepo } from "$lib/data/repoProvider";
@@ -60,9 +59,7 @@
 
 <div class="flex flex-col gap-3 p-3 pb-24">
   <div class="flex items-center gap-2">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => back("/settings")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back("/settings")} />
     <h1 class="text-base font-semibold">{algorithm?.name ?? "Algorithm"} Settings</h1>
   </div>
 

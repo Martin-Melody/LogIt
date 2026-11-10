@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
@@ -17,7 +18,7 @@
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { activeSplit } from "$lib/stores/activeSplit.store";
 
-  import { ArrowLeft, Plus, Trash, Check, X, GripVertical, Dumbbell, Timer } from "lucide-svelte";
+  import { Plus, Trash, Check, X, GripVertical, Dumbbell, Timer } from "lucide-svelte";
   import { startSplitDayTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
@@ -388,9 +389,7 @@
 <div class="flex flex-col pb-24">
   <!-- Header -->
   <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back(`/splits/${splitId}`)}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+    <BackButton onclick={() => back(`/splits/${splitId}`)} />
 
     {#if ui.renamingDay}
       <input
@@ -405,10 +404,10 @@
         }}
         onblur={() => void commitRenameDay()}
       />
-      <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={cancelRenameDay}>
+      <Button variant="ghost" size="icon" class="shrink-0" onclick={cancelRenameDay}>
         <X class="h-3.5 w-3.5" />
       </Button>
-      <Button size="icon" class="h-7 w-7 shrink-0" onclick={() => void commitRenameDay()}>
+      <Button size="icon" class="shrink-0" onclick={() => void commitRenameDay()}>
         <Check class="h-3.5 w-3.5" />
       </Button>
     {:else}
@@ -431,7 +430,6 @@
       <div class="flex items-center gap-1 shrink-0">
         <Button
           size="icon"
-          class="h-7 w-7"
           disabled={!day || ui.saving}
           onclick={() => (ui.addMode = ui.addMode === "none" ? "picker" : "none")}
           aria-label="Add block"
@@ -449,7 +447,7 @@
           onConfirm={deleteDay}
         >
           {#snippet child({ props })}
-            <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={!day || ui.saving}>
+            <Button {...props} variant="ghost" size="icon" class="text-destructive" disabled={!day || ui.saving}>
               <Trash class="h-3.5 w-3.5" />
             </Button>
           {/snippet}
@@ -571,7 +569,7 @@
             <Button
               variant="ghost"
               size="icon"
-              class="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+              class="text-muted-foreground hover:text-destructive shrink-0"
               disabled={ui.saving}
               onclick={() => void deleteBlock(block.id)}
               aria-label="Remove {blockLabel(block)}"

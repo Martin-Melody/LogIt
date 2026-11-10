@@ -104,20 +104,20 @@
   }
 
   const box =
-    "h-9 w-full rounded border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+    "h-10 w-full rounded border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
   const planPh = "placeholder:font-medium placeholder:text-info";
   const plainPh = "placeholder:font-normal placeholder:text-muted-foreground";
 </script>
 
 <div
-  class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-1 transition-opacity {completed
+  class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-0.5 transition-opacity {completed
     ? 'opacity-70'
     : ''}"
 >
   <!-- Set number; also the drag handle (no grip icon: it cost every row width) -->
   <button
     type="button"
-    class="flex h-9 flex-col items-center justify-center text-muted-foreground cursor-grab active:cursor-grabbing"
+    class="flex h-10 flex-col items-center justify-center text-muted-foreground cursor-grab active:cursor-grabbing"
     style="touch-action: none"
     use:gripAction
     aria-label="Drag to reorder set"
@@ -142,7 +142,7 @@
   <!-- Last time; also the way into the set card -->
   <button
     type="button"
-    class="h-9 min-w-0 truncate text-left text-[13px] tabular-nums text-muted-foreground"
+    class="h-10 min-w-0 truncate text-left text-[13px] tabular-nums text-muted-foreground"
     onclick={onOpenDetails}
     {disabled}
     aria-label="Set {setNumber} details{lastText ? `, last time ${lastText}` : ''}"
