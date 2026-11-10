@@ -93,7 +93,7 @@
       <textarea
         rows={3}
         placeholder="Add a comment…"
-        class="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground/60"
+        class="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground"
         bind:value={body}
       ></textarea>
 

@@ -226,7 +226,7 @@
     </p>
   {:else}
     {#if !selecting && exportable.length > 0}
-      <p class="px-3 pb-1 text-[11px] text-muted-foreground/70">
+      <p class="px-3 pb-1 text-[11px] text-muted-foreground">
         Long-press a custom exercise to select several and export them as a pack.
       </p>
     {/if}
@@ -248,7 +248,7 @@
                 class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors {checked
                   ? 'border-primary bg-primary text-primary-foreground'
                   : selectable
-                    ? 'border-muted-foreground/40'
+                    ? 'border-muted-foreground'
                     : 'border-transparent'}"
               >
                 {#if checked}<Check class="h-3.5 w-3.5" />{/if}

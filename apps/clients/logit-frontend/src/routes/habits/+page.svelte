@@ -144,7 +144,7 @@
         aria-label={row.satisfied ? "Mark not done" : "Mark done"}
         class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors {row.satisfied
           ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-muted-foreground/40'}"
+          : 'border-muted-foreground'}"
         onclick={() => void toggle(row)}
       >
         {#if row.satisfied}<Check class="h-4 w-4" />{/if}
@@ -181,12 +181,12 @@
       <div class="shrink-0 text-right">
         {#if row.week}
           <span class="text-xs font-medium">{row.week.done}/{row.week.target}</span>
-          <span class="block text-[10px] text-muted-foreground">this week</span>
+          <span class="block text-[11px] text-muted-foreground">this week</span>
         {:else if row.streak > 0}
           <span class="flex items-center gap-0.5 text-xs font-medium">
             <Flame class="h-3 w-3" />{row.streak}
           </span>
-          <span class="block text-[10px] text-muted-foreground">
+          <span class="block text-[11px] text-muted-foreground">
             day{row.streak === 1 ? "" : "s"}
           </span>
         {/if}

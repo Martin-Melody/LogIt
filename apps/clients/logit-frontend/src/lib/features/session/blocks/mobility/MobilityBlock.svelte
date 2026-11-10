@@ -486,10 +486,10 @@
       {#each liveGroupOrder(groups) as group (groupKey(group))}
         {@const gc = isGroupCollapsed(group)}
         <div class="border-b border-border/60 last:border-b-0" transition:reveal>
-          <div class="flex items-center gap-1 px-3 text-[10px] uppercase tracking-wide text-muted-foreground">
+          <div class="flex items-center gap-1 px-3 text-[11px] uppercase tracking-wide text-muted-foreground">
             <button
               type="button"
-              class="shrink-0 flex items-center justify-center h-8 w-6 -ml-1 cursor-grab active:cursor-grabbing text-muted-foreground/70 hover:text-foreground"
+              class="shrink-0 flex items-center justify-center h-8 w-6 -ml-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
               style="touch-action: none"
               use:groupGripAction={groupKey(group)}
               aria-label="Drag to reorder set"

@@ -117,10 +117,10 @@
     {/if}
 
     {#if !$pluginSettings.communityPluginsEnabled}
-      <Card.Root class="w-full border-amber-500/40 bg-amber-500/5">
+      <Card.Root class="w-full border-warning/40 bg-warning/5">
         <Card.Header>
           <Card.Title class="flex items-center gap-2 text-base">
-            <ShieldAlert class="h-4 w-4 text-amber-600" />
+            <ShieldAlert class="h-4 w-4 text-warning" />
             Community plugins are off
           </Card.Title>
           <Card.Description>
@@ -139,7 +139,7 @@
     {:else}
       <div class="flex items-center justify-between gap-3 rounded border border-border px-3 py-2">
         <div class="flex items-center gap-2 text-sm">
-          <ShieldCheck class="h-4 w-4 text-emerald-600" />
+          <ShieldCheck class="h-4 w-4 text-success" />
           Community plugins enabled
         </div>
         <Button variant="ghost" size="sm" onclick={() => pluginSettings.disableCommunityPlugins()}>
@@ -184,11 +184,11 @@
                       {/if}
                     </div>
                     <p class="mt-0.5 text-xs text-muted-foreground">{plugin.manifest.description}</p>
-                    <p class="mt-1 text-xs text-muted-foreground/60">
+                    <p class="mt-1 text-xs text-muted-foreground">
                       {capabilityLabel(plugin.manifest)} · {originLabel(plugin.manifest)} · v{plugin.manifest.version}
                     </p>
                     {#if plugin.enabled && isExecutablePluginFamily(plugin.manifest.family) && !$pluginSettings.communityPluginsEnabled}
-                      <p class="mt-1 text-xs text-amber-600">
+                      <p class="mt-1 text-xs text-warning">
                         Not running — community plugins are off.
                       </p>
                     {/if}

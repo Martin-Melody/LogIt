@@ -88,7 +88,7 @@
 
     <button
       type="button"
-      class="text-xs text-muted-foreground/60 hover:text-muted-foreground self-start transition-colors"
+      class="text-xs text-muted-foreground hover:text-foreground self-start transition-colors"
       onclick={async () => {
         prefs = buildDefaults(algorithm?.preferencesSchema ?? []);
         await save();

@@ -214,7 +214,7 @@
     {/if}
 
     {#if registryErrors.length > 0}
-      <div class="rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+      <div class="rounded border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
         {#each registryErrors as err (err)}
           <p>{err}</p>
         {/each}
@@ -279,7 +279,7 @@
     {/if}
 
     {#if !$pluginSettings.communityPluginsEnabled}
-      <div class="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+      <div class="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
         <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           Community plugins are off. Widgets, progression and analytics plugins
@@ -320,7 +320,7 @@
                         {/if}
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
-                      <p class="mt-1 text-xs text-muted-foreground/60">
+                      <p class="mt-1 text-xs text-muted-foreground">
                         {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
                     </div>
@@ -370,7 +370,7 @@
                         {/if}
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
-                      <p class="mt-1 text-xs text-muted-foreground/60">
+                      <p class="mt-1 text-xs text-muted-foreground">
                         {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
                     </div>

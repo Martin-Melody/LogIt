@@ -35,12 +35,12 @@ export function changeTagClass(kind: ProgressionChange["kind"]): string {
     case "increase":
       return "bg-foreground text-background";
     case "deload":
-      return "border border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-300";
+      return "border border-warning/60 bg-warning/10 text-warning";
     case "repeat":
       return "border border-border bg-muted text-foreground";
     case "first":
       return "border border-border text-muted-foreground";
     default:
-      return "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300";
+      return "bg-info/10 text-info dark:bg-info/15";
   }
 }

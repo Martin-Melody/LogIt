@@ -98,12 +98,12 @@
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{account.displayName || account.username}</p>
-                <p class="text-[10px] text-muted-foreground">
+                <p class="text-[11px] text-muted-foreground">
                   {account.serverUserId ? "Linked account" : account.passwordHash ? "Password protected" : "Local only"}
                 </p>
               </div>
               {#if account.id === activeId}
-                <span class="flex items-center gap-1 text-[10px] text-primary shrink-0"><Check class="h-3.5 w-3.5" /> Active</span>
+                <span class="flex items-center gap-1 text-[11px] text-primary shrink-0"><Check class="h-3.5 w-3.5" /> Active</span>
               {/if}
             </div>
           </button>

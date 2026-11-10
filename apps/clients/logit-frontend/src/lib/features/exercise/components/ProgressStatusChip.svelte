@@ -5,10 +5,10 @@
   const { status } = $props<{ status: ProgressStatus }>();
 
   const meta: Record<ProgressStatus, { label: string; class: string; icon: typeof Minus }> = {
-    progressing: { label: "Progressing", class: "text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/10", icon: TrendingUp },
-    plateaued:   { label: "Plateaued",   class: "text-amber-600 dark:text-amber-400 border-amber-500/40 bg-amber-500/10",       icon: PauseCircle },
-    regressing:  { label: "Regressing",  class: "text-rose-600 dark:text-rose-400 border-rose-500/40 bg-rose-500/10",           icon: TrendingDown },
-    detraining:  { label: "Detraining",  class: "text-sky-600 dark:text-sky-400 border-sky-500/40 bg-sky-500/10",               icon: Minus },
+    progressing: { label: "Progressing", class: "text-success border-success/40 bg-success/10", icon: TrendingUp },
+    plateaued:   { label: "Plateaued",   class: "text-warning border-warning/40 bg-warning/10",       icon: PauseCircle },
+    regressing:  { label: "Regressing",  class: "text-destructive border-destructive/40 bg-destructive/10",           icon: TrendingDown },
+    detraining:  { label: "Detraining",  class: "text-info border-info/40 bg-info/10",               icon: Minus },
     new:         { label: "New",         class: "text-muted-foreground border-border bg-muted/40",                              icon: Sparkle },
   };
 

@@ -23,8 +23,8 @@
           {Math.round(ring.max > 0 ? (ring.value / ring.max) * 100 : 0)}%
         </text>
       </svg>
-      <span class="text-[10px] text-muted-foreground">{ring.label}</span>
-      <span class="text-[10px] tabular-nums">{Math.round(ring.value)}{ring.unit ? ` ${ring.unit}` : ""}</span>
+      <span class="text-[11px] text-muted-foreground">{ring.label}</span>
+      <span class="text-[11px] tabular-nums">{Math.round(ring.value)}{ring.unit ? ` ${ring.unit}` : ""}</span>
     </div>
   {/each}
 </div>

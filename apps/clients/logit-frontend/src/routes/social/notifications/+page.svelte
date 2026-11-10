@@ -122,7 +122,7 @@
               {#if n.postBody}
                 <p class="text-xs text-muted-foreground truncate mt-0.5">{n.postBody}</p>
               {/if}
-              <p class="text-[11px] text-muted-foreground/70 mt-0.5">{formatDistanceToNow(new Date(n.createdAt))}</p>
+              <p class="text-[11px] text-muted-foreground mt-0.5">{formatDistanceToNow(new Date(n.createdAt))}</p>
             </div>
           </button>
         </li>

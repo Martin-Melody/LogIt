@@ -17,7 +17,7 @@
 
 {#if weightKg > bar.barKg}
   <div class="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-    <span class="text-muted-foreground/70">Per side</span>
+    <span class="text-muted-foreground">Per side</span>
     {#if breakdown.perSide.length === 0}
       <span>just the bar</span>
     {:else}
@@ -26,7 +26,7 @@
       {/each}
     {/if}
     {#if breakdown.shortfallKg > 0.01}
-      <span class="text-amber-600 dark:text-amber-400">
+      <span class="text-warning">
         (−{fmt(breakdown.shortfallKg)} — nearest is {fmt(breakdown.achievableKg)})
       </span>
     {/if}

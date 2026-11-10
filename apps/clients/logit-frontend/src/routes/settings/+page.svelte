@@ -600,7 +600,7 @@
             <Users class="h-3.5 w-3.5 shrink-0" />
             <span class="text-left">
               <span class="block">Coaching</span>
-              <span class="block text-xs text-muted-foreground/70">View invites, or manage clients on a Studio plan</span>
+              <span class="block text-xs text-muted-foreground">View invites, or manage clients on a Studio plan</span>
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />
@@ -885,7 +885,7 @@
                     {algo.description}
                   </p>
                   {#if algo.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">
+                    <p class="mt-1 text-xs text-muted-foreground">
                       by {algo.author}
                     </p>
                   {/if}
@@ -958,7 +958,7 @@
                   </div>
                   <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
                   {#if algo.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">by {algo.author}</p>
+                    <p class="mt-1 text-xs text-muted-foreground">by {algo.author}</p>
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -1035,7 +1035,7 @@
                   </div>
                   <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
                   {#if algo.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">by {algo.author}</p>
+                    <p class="mt-1 text-xs text-muted-foreground">by {algo.author}</p>
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -1107,7 +1107,7 @@
                     {plugin.description}
                   </p>
                   {#if plugin.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">
+                    <p class="mt-1 text-xs text-muted-foreground">
                       by {plugin.author}
                     </p>
                   {/if}
@@ -1280,9 +1280,9 @@
       <p class="text-xs text-muted-foreground">
         Community plugins are
         {#if $pluginSettings.communityPluginsEnabled}
-          <span class="font-medium text-emerald-600">on</span>
+          <span class="font-medium text-success">on</span>
         {:else}
-          <span class="font-medium text-amber-600">off</span> — widgets and
+          <span class="font-medium text-warning">off</span> — widgets and
           algorithms from the community won't run
         {/if}.
       </p>
@@ -1421,7 +1421,7 @@
                     <p class="text-xs font-medium truncate">
                       {account.displayName || account.username}
                     </p>
-                    <p class="text-[10px] text-muted-foreground">
+                    <p class="text-[11px] text-muted-foreground">
                       {account.serverUserId
                         ? "linked to online account"
                         : account.passwordHash

@@ -219,7 +219,7 @@
               <p class="text-xs text-muted-foreground mt-0.5 truncate">
                 {s.days.length} day{s.days.length === 1 ? "" : "s"} · {splitPreview(s)}
               </p>
-              <p class="text-[11px] text-muted-foreground/70 mt-0.5">updated {formatDate(s.updatedAtMs)}</p>
+              <p class="text-[11px] text-muted-foreground mt-0.5">updated {formatDate(s.updatedAtMs)}</p>
             </div>
           </button>
 

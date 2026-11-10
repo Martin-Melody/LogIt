@@ -564,7 +564,7 @@
               {#if summary}
                 <span class="text-xs text-muted-foreground tabular-nums shrink-0">· {summary}</span>
               {:else if block.type === "strength"}
-                <span class="text-xs text-muted-foreground/60 shrink-0">· add targets</span>
+                <span class="text-xs text-muted-foreground shrink-0">· add targets</span>
               {/if}
             </button>
 

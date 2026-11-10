@@ -91,7 +91,7 @@
     {#if metric === "hold"}
       <button
         type="button"
-        class="relative h-8 w-8 shrink-0 flex items-center justify-center rounded-full border-2 {running ? 'border-primary text-primary' : 'border-muted-foreground/40 hover:border-primary'}"
+        class="relative h-8 w-8 shrink-0 flex items-center justify-center rounded-full border-2 {running ? 'border-primary text-primary' : 'border-muted-foreground hover:border-primary'}"
         onclick={() => (running ? void stopTimer() : startTimer())}
         {disabled}
         aria-label={running ? "Stop hold timer" : "Start hold timer"}
@@ -151,7 +151,7 @@
   <button
     type="button"
     class="h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0
-      {set.completed ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/40 hover:border-primary'}"
+      {set.completed ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground hover:border-primary'}"
     onclick={() => void onComplete()}
     {disabled}
     aria-label={set.completed ? "Mark incomplete" : "Mark complete"}

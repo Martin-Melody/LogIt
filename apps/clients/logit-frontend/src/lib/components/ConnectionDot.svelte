@@ -2,8 +2,8 @@
   import { connectionStatus, type ConnectionState } from "@logit/core/api/connectionStatus.svelte";
 
   const DOT: Record<ConnectionState, { color: string; label: string }> = {
-    connected:    { color: "bg-green-500",           label: "Connected" },
-    disconnected: { color: "bg-red-500",             label: "Can't reach server" },
+    connected:    { color: "bg-success",           label: "Connected" },
+    disconnected: { color: "bg-destructive",             label: "Can't reach server" },
     unknown:      { color: "bg-muted-foreground/40", label: "Connection unknown" },
   };
 

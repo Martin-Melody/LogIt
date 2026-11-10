@@ -77,7 +77,7 @@
         <div class="flex {m.mine ? 'justify-end' : 'justify-start'}">
           <div class="max-w-[80%] rounded-lg px-3 py-2 text-sm {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">
             <p class="whitespace-pre-wrap break-words">{m.body}</p>
-            <p class="text-[10px] opacity-60 mt-0.5">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>
+            <p class="text-[11px] opacity-80 mt-0.5">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>
           </div>
         </div>
       {/each}

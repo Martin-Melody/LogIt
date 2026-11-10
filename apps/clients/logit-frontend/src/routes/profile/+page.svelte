@@ -150,7 +150,7 @@
           {#if $profile.bio}
             <p class="text-sm text-muted-foreground max-w-xs mt-0.5">{$profile.bio}</p>
           {:else}
-            <p class="text-sm text-muted-foreground/50 italic mt-0.5">Add a bio…</p>
+            <p class="text-sm text-muted-foreground italic mt-0.5">Add a bio…</p>
           {/if}
         </div>
         <Button variant="outline" size="sm" onclick={openEdit} data-tour="profile-edit">
@@ -187,7 +187,7 @@
           <p class="text-sm font-medium">Create an account</p>
           <p class="text-xs text-muted-foreground">Unlock social features and cloud backup.</p>
         </div>
-        <Cloud class="h-4 w-4 text-muted-foreground/50 shrink-0 ml-3" />
+        <Cloud class="h-4 w-4 text-muted-foreground shrink-0 ml-3" />
       </button>
     {/if}
   </div>

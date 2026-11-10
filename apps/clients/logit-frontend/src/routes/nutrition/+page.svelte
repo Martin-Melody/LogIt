@@ -306,7 +306,7 @@
       {:else}
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs text-muted-foreground">Daily target</span>
-          {#if sourceBadge}<Badge variant={sourceBadge.variant} class="text-[10px]">{sourceBadge.label}</Badge>{/if}
+          {#if sourceBadge}<Badge variant={sourceBadge.variant} class="text-[11px]">{sourceBadge.label}</Badge>{/if}
         </div>
         {#if nut?.coachPlan?.note}
           <p class="text-[11px] text-muted-foreground mb-2 whitespace-pre-line">{nut.coachPlan.note}</p>
@@ -425,7 +425,7 @@
             <li animate:flip={{ duration: FLIP_MS }} transition:popIn class="flex items-center gap-1.5 text-xs">
               <span
                 use:dragHandle
-                class="h-6 w-5 -ml-1 flex items-center justify-center text-muted-foreground/40 touch-none cursor-grab active:cursor-grabbing"
+                class="h-6 w-5 -ml-1 flex items-center justify-center text-muted-foreground touch-none cursor-grab active:cursor-grabbing"
                 aria-label="Drag to move {it.name}"
               >
                 <GripVertical class="h-3.5 w-3.5" />

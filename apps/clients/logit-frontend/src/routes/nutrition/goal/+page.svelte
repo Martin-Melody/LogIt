@@ -392,9 +392,9 @@
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold">Your target</span>
           {#if goal.manualCalorieTarget}
-            <Badge variant="outline" class="text-[10px]">Manual</Badge>
+            <Badge variant="outline" class="text-[11px]">Manual</Badge>
           {:else if preview?.sourceLabel}
-            <Badge variant="outline" class="text-[10px]">{preview.sourceLabel}</Badge>
+            <Badge variant="outline" class="text-[11px]">{preview.sourceLabel}</Badge>
           {/if}
         </div>
         {#if goal.manualCalorieTarget}

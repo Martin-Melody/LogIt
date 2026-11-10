@@ -374,7 +374,7 @@
       <textarea
         rows={3}
         placeholder="What's on your mind?"
-        class="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground/60"
+        class="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground"
         bind:value={body}
       ></textarea>
 
@@ -603,7 +603,7 @@
                   >
                     <span class="font-medium">{algo.name}</span>
                     <span class="ml-2 capitalize text-muted-foreground">{algo.family}</span>
-                    {#if algo.author}<span class="ml-1 text-muted-foreground/60">· {algo.author}</span>{/if}
+                    {#if algo.author}<span class="ml-1 text-muted-foreground">· {algo.author}</span>{/if}
                   </button>
                 </li>
               {/each}

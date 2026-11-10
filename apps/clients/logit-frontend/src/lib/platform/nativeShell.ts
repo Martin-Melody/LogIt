@@ -35,7 +35,8 @@ async function syncStatusBar(): Promise<void> {
       // Style.Dark = light text (for dark backgrounds), Style.Light = dark text.
       await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light });
       if (Capacitor.getPlatform() === "android") {
-        await StatusBar.setBackgroundColor({ color: dark ? "#1C1D21" : "#FFFFFF" });
+        // Dark value is --background from layout.css (oklch 0.145 0.01 260).
+        await StatusBar.setBackgroundColor({ color: dark ? "#080A0E" : "#FFFFFF" });
       }
     };
 
