@@ -72,6 +72,10 @@ export type ProgressionInput = {
   // a plugin defines its own meaning (e.g. 1-10 self-rated, a wearable-derived score)
   // rather than the core contract picking one.
   liveInput?: { rpe?: number; readiness?: number };
+  // When `state` was last saved (ExerciseProgressionState.updatedAtMs), if it came
+  // from storage. Lets an algorithm tell whether the newest history entry is
+  // already folded into a state saved before it started recording that itself.
+  stateSavedAtMs?: number;
 };
 
 export type SuggestedSet = {
@@ -121,6 +125,18 @@ export type ProgressionOutput = {
   // it's actually shown (i.e. hasn't already been dismissed) is handled generically,
   // not by the algorithm — see getSuggestion.ts and dismissProgressionNudge.ts.
   nudge?: ProgressionNudge;
+  // Optional: what it takes to move up. "Get `reps` on every working set and the
+  // next session prescribes `weight`." The session screen draws this as a meter.
+  progressGoal?: { reps: number; weight: number };
+  // Optional: how today's prescription differs from last time, in one short tag
+  // (`text`, e.g. "+1 rep") plus a sentence on why (`detail`).
+  change?: ProgressionChange;
+};
+
+export type ProgressionChange = {
+  kind: "first" | "increase" | "reps" | "repeat" | "deload";
+  text: string;
+  detail?: string;
 };
 
 export type ProgressionAlgorithmMeta = {

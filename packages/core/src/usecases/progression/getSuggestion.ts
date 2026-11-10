@@ -48,7 +48,11 @@ export async function getSuggestion(
   // first) — reused rather than re-implemented, then capped to this exercise's
   // own most recent HISTORY_WINDOW and reversed to the newest-first order this
   // usecase has always returned.
-  const { history: fullHistory, exerciseData } = await getExerciseHistory(exercise, { workoutRepo, exerciseRepo });
+  const { history: fullHistory, exerciseData } = await getExerciseHistory(
+    exercise,
+    { workoutRepo, exerciseRepo },
+    { excludeSessionId: currentSession?.id },
+  );
   const history = fullHistory.slice(-HISTORY_WINDOW).reverse();
 
   const exerciseWithMuscles = {
@@ -154,6 +158,7 @@ export async function getSuggestion(
     suggestedTrialRepRange,
     siblingRuledOutRepRanges: siblingRuledOutRepRanges.length > 0 ? siblingRuledOutRepRanges : undefined,
     liveInput,
+    stateSavedAtMs: saved?.algorithmId === config.algorithmId ? saved.updatedAtMs : undefined,
   });
 
   // An algorithm decides *whether* to ask for help generating signal; whether the
