@@ -678,6 +678,43 @@ test.describe("finish session", () => {
     await expect(page.getByText("5×100").first()).toBeVisible();
   });
 
+  test("recap keeps the buttons on screen with a long summary", async ({ page }) => {
+    const names = ["Bench Press", "Incline Press", "Row", "Pulldown", "Curl", "Pushdown", "Lateral Raise", "Leg Press"];
+    await seedSession(page, {
+      session: makeSession(
+        names.map((name, i) =>
+          makeStrengthBlock(`b${i}`, i, name, [0, 1, 2, 3].map((j) => makeSet(`s${i}-${j}`, j, 8, 40 + j * 5))),
+        ),
+      ),
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "Save & finish" })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "Back to workout" })).toBeInViewport();
+  });
+
+  test("recap shows assisted sets as BW and leaves them out of volume", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
+        makeStrengthBlock("b2", 1, "Pec Deck", [makeSet("s3", 0, 10, 50)]),
+      ]),
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
+    await expect(breakdown.getByText("8×BW−25")).toBeVisible();
+    await expect(breakdown.getByText("5×BW+2.5")).toBeVisible();
+    // The first-time PR card uses the same BW form, with no 1RM estimate.
+    await expect(page.getByText("5 reps @ BW+2.5 kg")).toBeVisible();
+    // 10 × 50 + 5 × 2.5 — the assisted set doesn't subtract 200.
+    await expect(page.getByText("513", { exact: true })).toBeVisible();
+  });
+
   test("recap brackets superset exercises in the breakdown", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([

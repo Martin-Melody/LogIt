@@ -510,12 +510,26 @@ export function getSessionDurationMs(session: WorkoutSession): number | null {
   return Math.max(0, session.endedAtMs - session.startedAtMs);
 }
 
+/**
+ * Tonnage of one set (reps × weight, kg). Negative weight means net assistance
+ * (−25 = bodyweight minus 25 kg on an assisted machine), which moves no external
+ * load, so it counts as 0 instead of subtracting from the total.
+ */
+export function getSetVolumeKg(set: Pick<SetEntry, "reps" | "weight">): number {
+  return set.reps * Math.max(0, set.weight);
+}
+
+/** Total tonnage (kg) of one exercise's sets. */
+export function getExerciseVolumeKg(ex: Pick<ExerciseEntry, "sets">): number {
+  let vol = 0;
+  for (const set of ex.sets) vol += getSetVolumeKg(set);
+  return vol;
+}
+
 /** Total tonnage (Σ reps × weight, kg) across every strength set in the session. */
 export function getSessionVolumeKg(session: WorkoutSession): number {
   let vol = 0;
-  for (const ex of getExercises(session)) {
-    for (const set of ex.sets) vol += set.reps * set.weight;
-  }
+  for (const ex of getExercises(session)) vol += getExerciseVolumeKg(ex);
   return vol;
 }
 

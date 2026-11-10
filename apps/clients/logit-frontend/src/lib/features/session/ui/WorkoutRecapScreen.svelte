@@ -5,12 +5,14 @@
   import { Check, Trophy, Sparkles } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import type { WorkoutSession, CardioBlockData, MobilityBlockData, ExerciseEntry } from "@logit/core/domain/workout";
-  import { getExercises, getTopSetHighlight, foldSupersets, setTypeMeta } from "@logit/core/domain/workout";
+  import { getExercises, getTopSetHighlight, foldSupersets, setTypeMeta, getExerciseVolumeKg } from "@logit/core/domain/workout";
+  import { usesBodyweightLoad, type ExerciseType } from "@logit/core/domain/exercise";
   import { formatDuration } from "@logit/core/domain/time";
-  import { toDisplayWeight, formatWeight } from "@logit/core/domain/units";
+  import { toDisplayWeight, formatWeight, formatLoad } from "@logit/core/domain/units";
   import { estimated1RM } from "@logit/core/domain/oneRepMax";
   import { getSessionPRs, type SessionPR } from "@logit/core/usecases/progression/getSessionPRs";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+  import { getExerciseRepo } from "$lib/data/repoProvider";
   import { get } from "svelte/store";
 
   import { authStore } from "$lib/api/authStore.svelte";
@@ -31,10 +33,9 @@
   const exercises = getExercises(session);
   const topSet = getTopSetHighlight(session);
   const totalSets = exercises.reduce((n, ex) => n + ex.sets.length, 0);
-  const totalVolumeKg = exercises.reduce(
-    (vol, ex) => vol + ex.sets.reduce((s, set) => s + set.reps * set.weight, 0),
-    0,
-  );
+  const totalVolumeKg = exercises.reduce((vol, ex) => vol + getExerciseVolumeKg(ex), 0);
+  // Under a minute means the sets were logged after the fact, so "0m" says nothing.
+  const showDuration = durationMs >= 60_000;
   const totalVolume = Math.round(toDisplayWeight(totalVolumeKg, weightUnit));
 
   const cardioBlocks = session.blocks.filter((b) => b.type === "cardio");
@@ -69,7 +70,7 @@
       ? [{ label: `Volume (${weightUnit})`, value: totalVolume, fmt: (n: number) => Math.round(n).toLocaleString() }]
       : []),
     ...(totalSets > 0 ? [{ label: "Sets", value: totalSets, fmt: (n: number) => String(Math.round(n)) }] : []),
-    { label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true },
+    ...(showDuration ? [{ label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true }] : []),
   ];
 
   function formatHold(s: number): string {
@@ -78,12 +79,14 @@
   }
 
   const secondaryStats: { label: string; value: string }[] = [
-    { label: "Exercises", value: String(exercises.length + cardioBlocks.length + mobilityBlocks.length) },
     ...(totalCardioDistanceM > 0 ? [{ label: "Distance", value: formatDistance(totalCardioDistanceM) }] : []),
     ...(totalCardioDurationMs > 0 ? [{ label: "Cardio time", value: formatDuration(totalCardioDurationMs) }] : []),
     ...(totalMobilityHoldSec > 0 ? [{ label: "Time under tension", value: formatHold(totalMobilityHoldSec) }] : []),
     ...(totalMobilityReps > 0 ? [{ label: "Mobility reps", value: String(totalMobilityReps) }] : []),
   ];
+
+  // Exercise types, so bodyweight work reads "BW−22.5" like it does mid-session.
+  let exerciseTypes = $state<Record<string, ExerciseType | undefined>>({});
 
   let prs = $state<SessionPR[]>([]);
   let prsLoaded = $state(false);
@@ -97,6 +100,14 @@
       } finally {
         prsLoaded = true;
       }
+    })();
+
+    void (async () => {
+      const ids = [...new Set(exercises.map((ex) => ex.exerciseId).filter((id): id is string => !!id))];
+      const found = await Promise.all(
+        ids.map((id) => getExerciseRepo().getById(id).catch(() => null)),
+      );
+      exerciseTypes = Object.fromEntries(found.filter((ex) => !!ex).map((ex) => [ex!.id, ex!.exerciseType]));
     })();
 
     void (async () => {
@@ -123,160 +134,181 @@
   // Per-exercise breakdown — superset members folded into a bracketed group.
   const breakdown = foldSupersets(exercises);
 
+  function isBodyweight(ex: ExerciseEntry): boolean {
+    const type = ex.exerciseId ? exerciseTypes[ex.exerciseId] : undefined;
+    return usesBodyweightLoad(type, ex.sets.map((s) => s.weight));
+  }
+  function isBodyweightName(name: string): boolean {
+    const ex = exercises.find((e) => e.exerciseName === name);
+    return !!ex && isBodyweight(ex);
+  }
+  // A PR / best-lift line: "5 reps @ BW+2.5 kg", with no 1RM estimate for bodyweight
+  // work since the logged number is only the offset from bodyweight.
+  function liftLine(name: string, weight: number, reps: number): { load: string; e1rm: string | null } {
+    const bw = isBodyweightName(name);
+    return { load: formatLoad(weight, weightUnit, bw), e1rm: bw ? null : e1rmLabel(weight, reps) };
+  }
+  // Tonnage means nothing for bodyweight work, so those rows show sets only.
   function exerciseVolume(ex: ExerciseEntry): number {
-    const kg = ex.sets.reduce((v, s) => v + s.reps * s.weight, 0);
-    return Math.round(toDisplayWeight(kg, weightUnit));
+    if (isBodyweight(ex)) return 0;
+    return Math.round(toDisplayWeight(getExerciseVolumeKg(ex), weightUnit));
   }
   function workingSets(ex: ExerciseEntry): number {
     return ex.sets.filter((s) => s.setType !== "warmup").length;
   }
 </script>
 
-<div class="fixed inset-0 z-50 flex flex-col bg-background overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-  <div class="relative">
-    <Confetti />
+<div class="fixed inset-0 z-50 flex flex-col bg-background">
+  <!-- Only the summary scrolls; the buttons below always stay on screen. -->
+  <div class="flex-1 min-h-0 overflow-y-auto pb-4">
+    <div class="relative">
+      <Confetti />
 
-    <!-- Beat 1 — the checkmark -->
-    <div class="flex flex-col items-center justify-center gap-4 px-6 pt-16 pb-8 text-center">
-      <div
-        in:scale={{ duration: 480, start: 0.2, easing: backOut }}
-        class="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg"
-      >
-        <Check class="h-8 w-8" strokeWidth={3} />
-      </div>
-      <div in:fly={{ y: 12, duration: 380, delay: 220 }}>
-        <h1 class="text-2xl font-bold tracking-tight">Workout complete</h1>
-        <p class="text-sm text-muted-foreground mt-1">
-          {formatDuration(durationMs)} · {blockCount} exercise{blockCount === 1 ? "" : "s"}
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Beat 2 — hero stats -->
-  <div class="mx-4 grid gap-2" style="grid-template-columns: repeat({heroStats.length}, 1fr)">
-    {#each heroStats as stat, i (stat.label)}
-      <div
-        in:fly={{ y: 16, duration: 340, delay: 420 + i * 80 }}
-        class="flex flex-col items-center gap-0.5 rounded-lg border border-border px-2 py-3"
-      >
-        <span class="text-xl font-bold tabular-nums">
-          {#if stat.noCount}
-            {stat.fmt(stat.value)}
-          {:else}
-            <CountUp value={stat.value} format={stat.fmt} delay={420 + i * 80} />
-          {/if}
-        </span>
-        <span class="text-xs text-muted-foreground">{stat.label}</span>
-      </div>
-    {/each}
-  </div>
-
-  <!-- Beat 3 — PRs -->
-  {#if prsLoaded && prs.length > 0}
-    <div class="mx-4 mt-3 flex flex-col gap-2" in:fly={{ y: 16, duration: 400, delay: 120 }}>
-      {#each prs as pr, i (pr.exerciseName + pr.kind)}
+      <!-- Beat 1 — the checkmark -->
+      <div class="flex flex-col items-center justify-center gap-3 px-6 pt-[calc(2.5rem+env(safe-area-inset-top))] pb-6 text-center">
         <div
-          in:fly={{ x: 12, duration: 320, delay: i * 90 }}
-          class="flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3"
+          in:scale={{ duration: 480, start: 0.2, easing: backOut }}
+          class="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg"
         >
-          <Trophy class="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <div class="min-w-0">
-            <p class="text-sm font-semibold truncate">
-              {pr.exerciseName}
-              <span class="ml-1 text-xs font-medium text-amber-700 dark:text-amber-400">{prLabel(pr)}</span>
-            </p>
-            <p class="text-xs text-muted-foreground tabular-nums">
-              {pr.reps} reps @ {formatWeight(pr.weight, weightUnit)}
-              {#if e1rmLabel(pr.weight, pr.reps)}
-                <span class="text-muted-foreground/70"> · {e1rmLabel(pr.weight, pr.reps)}</span>
-              {/if}
-            </p>
-          </div>
-          <Sparkles class="ml-auto h-4 w-4 shrink-0 text-amber-500/70" />
+          <Check class="h-8 w-8" strokeWidth={3} />
         </div>
-      {/each}
-    </div>
-  {:else if topSet}
-    <div class="mx-4 mt-3 rounded-lg border border-border px-4 py-3" in:fade={{ duration: 300, delay: 700 }}>
-      <p class="text-xs text-muted-foreground">Best lift</p>
-      <p class="text-sm font-semibold mt-0.5">
-        {topSet.exerciseName}
-        <span class="font-normal text-muted-foreground"> · {topSet.reps} reps @ {formatWeight(topSet.weight, weightUnit)}</span>
-        {#if e1rmLabel(topSet.weight, topSet.reps)}
-          <span class="font-normal text-muted-foreground/70"> · {e1rmLabel(topSet.weight, topSet.reps)}</span>
-        {/if}
-      </p>
-    </div>
-  {/if}
-
-  <!-- Secondary stats -->
-  {#if secondaryStats.length > 0}
-    <div class="mx-4 mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" in:fade={{ duration: 300, delay: 800 }}>
-      {#each secondaryStats as s (s.label)}
-        <span><span class="text-foreground font-medium tabular-nums">{s.value}</span> {s.label}</span>
-      {/each}
-    </div>
-  {/if}
-
-  <!-- Session note -->
-  {#if session.note}
-    <div class="mx-4 mt-3 rounded-lg border border-border px-4 py-3" in:fade={{ duration: 300, delay: 850 }}>
-      <p class="text-xs text-muted-foreground">Note</p>
-      <p class="text-sm mt-0.5 whitespace-pre-wrap">{session.note}</p>
-    </div>
-  {/if}
-
-  <!-- Per-exercise breakdown -->
-  {#if breakdown.length > 0}
-    {#snippet exerciseRow(ex: ExerciseEntry)}
-      <div class="px-3 py-2">
-        <div class="flex items-baseline justify-between gap-2">
-          <span class="text-sm font-medium truncate">{ex.exerciseName}</span>
-          <span class="text-xs text-muted-foreground tabular-nums shrink-0">
-            {workingSets(ex)} set{workingSets(ex) === 1 ? "" : "s"}{exerciseVolume(ex) > 0 ? ` · ${exerciseVolume(ex).toLocaleString()} ${weightUnit}` : ""}
-          </span>
+        <div in:fly={{ y: 12, duration: 380, delay: 220 }}>
+          <h1 class="text-2xl font-bold tracking-tight">Workout complete</h1>
+          <p class="text-sm text-muted-foreground mt-1">
+            {#if showDuration}{formatDuration(durationMs)} · {/if}{blockCount} exercise{blockCount === 1 ? "" : "s"}
+          </p>
         </div>
-        {#if ex.sets.length > 0}
-          <div class="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
-            {#each ex.sets as s (s.id)}
-              {@const meta = setTypeMeta(s.setType)}
-              <span class={s.setType === "warmup" ? "opacity-50" : ""}>
-                {#if meta.short}<span class="text-[10px] font-bold">{meta.short}</span>{/if}
-                {s.reps}×{formatWeight(s.weight, weightUnit, { withUnit: false })}
-              </span>
-            {/each}
-          </div>
-        {/if}
       </div>
-    {/snippet}
+    </div>
 
-    <div class="mx-4 mt-4" in:fade={{ duration: 300, delay: 880 }}>
-      <p class="text-xs font-medium text-muted-foreground mb-1.5">What you did</p>
-      <div class="rounded-lg border border-border divide-y divide-border overflow-hidden">
-        {#each breakdown as group (group.kind === "superset" ? group.id : group.exercise.id)}
-          {#if group.kind === "superset"}
-            <div class="bg-primary/[0.03]">
-              <p class="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                {group.label ?? "Superset"}
+    <!-- Beat 2 — hero stats -->
+    <div class="mx-4 grid gap-2" style="grid-template-columns: repeat({heroStats.length}, 1fr)">
+      {#each heroStats as stat, i (stat.label)}
+        <div
+          in:fly={{ y: 16, duration: 340, delay: 420 + i * 80 }}
+          class="flex flex-col items-center gap-0.5 rounded-lg border border-border px-2 py-3"
+        >
+          <span class="text-xl font-bold tabular-nums">
+            {#if stat.noCount}
+              {stat.fmt(stat.value)}
+            {:else}
+              <CountUp value={stat.value} format={stat.fmt} delay={420 + i * 80} />
+            {/if}
+          </span>
+          <span class="text-xs text-muted-foreground">{stat.label}</span>
+        </div>
+      {/each}
+    </div>
+
+    <!-- Beat 3 — PRs -->
+    {#if prsLoaded && prs.length > 0}
+      <div class="mx-4 mt-3 flex flex-col gap-2" in:fly={{ y: 16, duration: 400, delay: 120 }}>
+        {#each prs as pr, i (pr.exerciseName + pr.kind)}
+          {@const line = liftLine(pr.exerciseName, pr.weight, pr.reps)}
+          <div
+            in:fly={{ x: 12, duration: 320, delay: i * 90 }}
+            class="flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3"
+          >
+            <Trophy class="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div class="min-w-0">
+              <p class="text-sm font-semibold truncate">
+                {pr.exerciseName}
+                <span class="ml-1 text-xs font-medium text-amber-700 dark:text-amber-400">{prLabel(pr)}</span>
               </p>
-              <div class="ml-3 border-l-2 border-primary/30 divide-y divide-border">
-                {#each group.exercises as ex (ex.id)}
-                  {@render exerciseRow(ex)}
-                {/each}
-              </div>
+              <p class="text-xs text-muted-foreground tabular-nums">
+                {pr.reps} reps @ {line.load}
+                {#if line.e1rm}
+                  <span class="text-muted-foreground/70"> · {line.e1rm}</span>
+                {/if}
+              </p>
             </div>
-          {:else}
-            {@render exerciseRow(group.exercise)}
-          {/if}
+            <Sparkles class="ml-auto h-4 w-4 shrink-0 text-amber-500/70" />
+          </div>
         {/each}
       </div>
-    </div>
-  {/if}
+    {:else if topSet}
+      {@const line = liftLine(topSet.exerciseName, topSet.weight, topSet.reps)}
+      <div class="mx-4 mt-3 rounded-lg border border-border px-4 py-3" in:fade={{ duration: 300, delay: 700 }}>
+        <p class="text-xs text-muted-foreground">Best lift</p>
+        <p class="text-sm font-semibold mt-0.5">
+          {topSet.exerciseName}
+          <span class="font-normal text-muted-foreground"> · {topSet.reps} reps @ {line.load}</span>
+          {#if line.e1rm}
+            <span class="font-normal text-muted-foreground/70"> · {line.e1rm}</span>
+          {/if}
+        </p>
+      </div>
+    {/if}
 
-  <div class="flex-1 min-h-6"></div>
+    <!-- Secondary stats -->
+    {#if secondaryStats.length > 0}
+      <div class="mx-4 mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" in:fade={{ duration: 300, delay: 800 }}>
+        {#each secondaryStats as s (s.label)}
+          <span><span class="text-foreground font-medium tabular-nums">{s.value}</span> {s.label}</span>
+        {/each}
+      </div>
+    {/if}
 
-  <div class="px-4 py-4 flex flex-col gap-2" in:fade={{ duration: 300, delay: 650 }}>
+    <!-- Session note -->
+    {#if session.note}
+      <div class="mx-4 mt-3 rounded-lg border border-border px-4 py-3" in:fade={{ duration: 300, delay: 850 }}>
+        <p class="text-xs text-muted-foreground">Note</p>
+        <p class="text-sm mt-0.5 whitespace-pre-wrap">{session.note}</p>
+      </div>
+    {/if}
+
+    <!-- Per-exercise breakdown -->
+    {#if breakdown.length > 0}
+      {#snippet exerciseRow(ex: ExerciseEntry)}
+        <div class="px-3 py-2">
+          <div class="flex items-baseline justify-between gap-2">
+            <span class="text-sm font-medium truncate">{ex.exerciseName}</span>
+            <span class="text-xs text-muted-foreground tabular-nums shrink-0">
+              {workingSets(ex)} set{workingSets(ex) === 1 ? "" : "s"}{exerciseVolume(ex) > 0 ? ` · ${exerciseVolume(ex).toLocaleString()} ${weightUnit}` : ""}
+            </span>
+          </div>
+          {#if ex.sets.length > 0}
+            <div class="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
+              {#each ex.sets as s (s.id)}
+                {@const meta = setTypeMeta(s.setType)}
+                <span class={s.setType === "warmup" ? "opacity-50" : ""}>
+                  {#if meta.short}<span class="text-[10px] font-bold">{meta.short}</span>{/if}
+                  {s.reps}×{formatLoad(s.weight, weightUnit, isBodyweight(ex), { withUnit: false })}
+                </span>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/snippet}
+
+      <div class="mx-4 mt-4" in:fade={{ duration: 300, delay: 880 }}>
+        <p class="text-xs font-medium text-muted-foreground mb-1.5">What you did</p>
+        <div class="rounded-lg border border-border divide-y divide-border overflow-hidden">
+          {#each breakdown as group (group.kind === "superset" ? group.id : group.exercise.id)}
+            {#if group.kind === "superset"}
+              <div class="bg-primary/[0.03]">
+                <p class="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                  {group.label ?? "Superset"}
+                </p>
+                <div class="ml-3 border-l-2 border-primary/30 divide-y divide-border">
+                  {#each group.exercises as ex (ex.id)}
+                    {@render exerciseRow(ex)}
+                  {/each}
+                </div>
+              </div>
+            {:else}
+              {@render exerciseRow(group.exercise)}
+            {/if}
+          {/each}
+        </div>
+      </div>
+    {/if}
+  </div>
+
+  <div
+    class="shrink-0 border-t border-border bg-background px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex flex-col gap-2"
+    in:fade={{ duration: 300, delay: 650 }}
+  >
     <Button class="w-full" onclick={() => void onDone()}>Save & finish</Button>
     {#if onShare && authStore.isAuthenticated}
       <Button variant="outline" class="w-full" onclick={() => onShare(session)}>Share workout</Button>
