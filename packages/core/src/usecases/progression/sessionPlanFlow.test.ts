@@ -81,3 +81,38 @@ describe("session plan across finish, revisit and edit", () => {
     expect(preview?.sets[0]!.weight).toBe(62.5);
   });
 });
+
+describe("planSession", () => {
+  it("creates every strength block's planned sets at the start", async () => {
+    const { planSession } = await import("./planSession");
+    const { addExercise, createSession, getExercises } = await import("../../domain/workout");
+    const { deps, sessions } = makeDeps();
+    sessions.unshift(session("s1", sets(62.5, [6, 5, 5])));
+    await refreshProgressionState(bench, deps);
+
+    const fresh = addExercise(createSession(tick()), { exerciseName: "Bench", exerciseId: "bench" });
+    const { session: planned, suggestions } = await planSession(fresh, deps);
+    const block = getExercises(planned)[0]!;
+    expect(block.sets.map((s) => [s.reps, s.weight, s.target?.reps])).toEqual([
+      [0, 62.5, 7],
+      [0, 62.5, 6],
+      [0, 62.5, 6],
+    ]);
+    expect(suggestions[block.id]?.change?.kind).toBe("reps");
+  });
+});
+
+describe("skipping an exercise", () => {
+  it("keeps its plan instead of resetting it to 0kg", async () => {
+    const { deps, sessions } = makeDeps();
+    sessions.unshift(session("s1", sets(62.5, [6, 5, 5])));
+    await refreshProgressionState(bench, deps);
+
+    // Next workout had Bench planned but it was skipped: nothing logged.
+    sessions.unshift(session("s2", []));
+    await refreshProgressionState(bench, deps);
+
+    const preview = await getSuggestion(bench, deps);
+    expect(preview?.sets.map((s) => [s.reps, s.weight])).toEqual([[7, 62.5], [6, 62.5], [6, 62.5]]);
+  });
+});

@@ -1,7 +1,7 @@
 import type { ProgressionOutput, PrecedingExercise } from "../../domain/progression";
 import { exerciseKey, resolveExerciseIncrement, resolveExerciseMachine } from "../../domain/progression";
 import { snapToMachine } from "../../domain/machine";
-import { getExercises } from "../../domain/workout";
+import { getExercises, isUnloggedPlannedSet } from "../../domain/workout";
 import type { WorkoutSession } from "../../domain/workout";
 import { nowMs } from "../../domain/time";
 import type { PlannedTargets } from "../../domain/WorkoutSplit";
@@ -80,13 +80,17 @@ export async function getSuggestion(
             ? await exerciseRepo.getById(entry.exerciseId)
             : await exerciseRepo.getByName(entry.exerciseName);
 
+          // Sets still planned count as work about to happen, so a plan made at the
+          // start of the session already allows for exercise order, and stays the
+          // same as the earlier exercises get ticked off.
+          const counts = (s: (typeof entry.sets)[number]) => s.completed || isUnloggedPlannedSet(s);
           const completedSets = entry.sets.filter(
-            (s) => s.completed && (s.setType === "normal" || !s.setType),
+            (s) => counts(s) && (s.setType === "normal" || !s.setType),
           ).length;
 
-          const normalSets = entry.sets.filter((s) => s.completed && (s.setType === "normal" || !s.setType)).length;
-          const highEffortSets = entry.sets.filter((s) => s.completed && (s.setType === "failure" || s.setType === "amrap")).length;
-          const warmupSets = entry.sets.filter((s) => s.completed && s.setType === "warmup").length;
+          const normalSets = completedSets;
+          const highEffortSets = entry.sets.filter((s) => counts(s) && (s.setType === "failure" || s.setType === "amrap")).length;
+          const warmupSets = entry.sets.filter((s) => counts(s) && s.setType === "warmup").length;
           const effortFactor = Math.min(1, (normalSets + highEffortSets * 1.5 + warmupSets * 0.25) / 3);
 
           return {

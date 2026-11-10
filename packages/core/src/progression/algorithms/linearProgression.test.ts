@@ -568,4 +568,27 @@ describe("linearProgression", () => {
       expect(out.sets[0]!.weight).toBe(62.5);
     });
   });
+
+  describe("assisted exercises", () => {
+    const assisted = { name: "Assisted Dips", exerciseType: "assisted" as const };
+    const at30 = historyEntry({ sessionId: "a1", sets: [set({ weight: 30, reps: 8 }), set({ weight: 30, reps: 8 })] });
+
+    it("takes a fresh state's starting assistance from history", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({ exercise: assisted, history: [at30], state: { workingWeight: 0, failedAttempts: 0, increment: 2.5, repRange: [5, 8] } }),
+      );
+      expect(out.sets[0]!.weight).toBe(27.5);
+    });
+
+    it("doesn't pull reduced assistance back up to an older, higher number", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          exercise: assisted,
+          history: [historyEntry({ sessionId: "a2", sets: [set({ weight: 30, reps: 6 })] })],
+          state: { workingWeight: 25, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+        }),
+      );
+      expect(out.sets[0]!.weight).toBe(25);
+    });
+  });
 });

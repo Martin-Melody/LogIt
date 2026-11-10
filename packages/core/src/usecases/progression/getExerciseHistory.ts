@@ -28,11 +28,15 @@ export async function getExerciseHistory(
       const sessionPosition = findExerciseIndexInSession(session, exercise);
       if (sessionPosition === -1) return [];
       const match = getExercises(session)[sessionPosition]!;
+      // A set that was planned but never done (no reps, not ticked) isn't history,
+      // and an exercise with nothing done that session (skipped) isn't either —
+      // otherwise skipping it once wiped its plan back to 0kg.
+      const done = match.sets.filter((s) => s.completed || s.reps > 0);
+      if (done.length === 0) return [];
       return [{
         sessionId: session.id,
         performedAtMs: session.endedAtMs ?? session.startedAtMs,
-        // A set that was planned but never done (no reps, not ticked) isn't history.
-        sets: match.sets.filter((s) => s.completed || s.reps > 0),
+        sets: done,
         sessionPosition,
       } satisfies ExerciseHistoryEntry];
     })
