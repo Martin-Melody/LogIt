@@ -12,7 +12,7 @@
   let showMore = $state(false);
 
   const hasSession = $derived(!!$currentSession);
-  const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/current"));
+  const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/current") || page.url.pathname.startsWith("/session/plan"));
 
   // Filter bar items by auth availability
   const visibleBar = $derived(

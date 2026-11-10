@@ -3,7 +3,8 @@
   import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2 } from "lucide-svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
-  import type { ProgressionOutput, SuggestedSet } from "@logit/core/domain/progression";
+  import type { ProgressionOutput } from "@logit/core/domain/progression";
+  import { changeTagClass } from "$lib/features/session/planFormat";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { formatWeight } from "@logit/core/domain/units";
@@ -12,6 +13,8 @@
   const {
     exerciseName = "",
     setCount = 0,
+    doneCount = 0,
+    meter = [],
     saving = false,
     collapsed = false,
     hasActiveTimer = false,
@@ -32,6 +35,10 @@
   } = $props<{
     exerciseName?: string;
     setCount?: number;
+    /** Working sets ticked off so far. */
+    doneCount?: number;
+    /** Per working set: reps done (0 if not yet) and reps planned, for the meter. */
+    meter?: { done: number; target: number }[];
     saving?: boolean;
     collapsed?: boolean;
     hasActiveTimer?: boolean;
@@ -51,23 +58,22 @@
     children?: import("svelte").Snippet;
   }>();
 
-  function formatReps(reps: SuggestedSet["reps"]): string {
-    return Array.isArray(reps) ? `${reps[0]}–${reps[1]}` : String(reps);
-  }
+  const goal = $derived(suggestion?.progressGoal ?? null);
+  const fatiguePct = $derived(Math.round(suggestion?.reasoning?.computed?.fatigueDiscountPct ?? 0));
+  const showMeter = $derived(!collapsed && goal !== null && meter.length > 0 && goal.reps <= 30);
 
-  function formatTarget(s: ProgressionOutput): string {
-    const { sets } = s;
-    if (sets.length === 0) return s.label ?? "";
-    const first = sets[0];
-    const allSame = sets.every(
-      (x) => x.weight === first.weight && JSON.stringify(x.reps) === JSON.stringify(first.reps),
-    );
-    const w = (kg: number) => formatWeight(kg, weightUnit, { space: false });
-    const setsStr = allSame
-      ? `${sets.length}×${formatReps(first.reps)} @ ${w(first.weight)}`
-      : sets.map((x) => `${formatReps(x.reps)}@${w(x.weight)}`).join(", ");
-    return s.label ? `${setsStr} · ${s.label}` : setsStr;
-  }
+  // One cell per rep up to the goal: done, still planned for today, or still to go.
+  const meterRows = $derived(
+    showMeter && goal
+      ? meter.map((m: { done: number; target: number }, i: number) => ({
+          label: `Set ${i + 1}`,
+          shown: m.done > 0 ? m.done : m.target,
+          cells: Array.from({ length: goal.reps }, (_, c) =>
+            c < m.done ? "done" : m.done === 0 && c < m.target ? "target" : "rest",
+          ),
+        }))
+      : [],
+  );
 </script>
 
 <div class="border-b border-border/50">
@@ -114,8 +120,8 @@
       <span class="text-sm font-semibold truncate block">{exerciseName}</span>
     </button>
 
-    <span class="text-xs text-muted-foreground shrink-0">
-      {setCount} set{setCount === 1 ? "" : "s"}
+    <span class="text-xs text-muted-foreground shrink-0 tabular-nums">
+      {#if setCount > 0}{doneCount} of {setCount}{:else}0 sets{/if}
     </span>
 
     {#if collapsed && hasActiveTimer}
@@ -181,21 +187,66 @@
   </div>
 
   {#if !collapsed && suggestion && suggestion.sets.length > 0}
-    <div class="px-3 pb-1.5 -mt-1 flex items-center gap-2 flex-wrap">
-      {#if suggestion.displayMode === "block"}
-        {#if suggestion.label}
-          <p class="text-xs text-muted-foreground/60">{suggestion.label}</p>
+    {#if showMeter && goal}
+      <div class="px-3 pb-2.5 flex flex-col gap-1.5" data-testid="progress-meter">
+        <div class="flex items-center gap-2">
+          {#if suggestion.change}
+            <span class="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
+              {suggestion.change.text}
+            </span>
+          {/if}
+          <p class="flex-1 text-xs text-muted-foreground">
+            Reps towards <strong class="font-semibold text-foreground">{formatWeight(goal.weight, weightUnit)}</strong>
+            ({goal.reps} on every set)
+          </p>
+          {#if suggestion.reasoning}
+            <ReasoningDialog reasoning={suggestion.reasoning} />
+          {/if}
+        </div>
+        {#each meterRows as row (row.label)}
+          <div class="flex items-center gap-2" aria-label="{row.label}: {row.shown} of {goal.reps} reps">
+            <span class="w-9 text-[11px] text-muted-foreground">{row.label}</span>
+            <div class="flex flex-1 gap-[3px]" aria-hidden="true">
+              {#each row.cells as cell, c (c)}
+                <span
+                  class="h-2.5 flex-1 rounded-[2px]
+                    {cell === 'done'
+                    ? 'bg-blue-700 dark:bg-blue-400'
+                    : cell === 'target'
+                      ? 'border border-blue-400 bg-blue-100 dark:border-blue-400/70 dark:bg-blue-500/20'
+                      : 'bg-muted-foreground/15'}"
+                ></span>
+              {/each}
+            </div>
+            <span class="w-8 text-right text-[11px] tabular-nums text-muted-foreground">{row.shown}/{goal.reps}</span>
+          </div>
+        {/each}
+        {#if suggestion.change?.detail}
+          <p class="text-xs text-muted-foreground">{suggestion.change.detail}</p>
         {/if}
-      {:else}
-        <!-- Summary mode (default) -->
-        <p class="text-xs text-muted-foreground">
-          Target: {formatTarget(suggestion)}
-        </p>
-      {/if}
-      {#if suggestion.reasoning}
-        <ReasoningDialog reasoning={suggestion.reasoning} />
-      {/if}
-    </div>
+        {#if fatiguePct > 0}
+          <p class="text-xs text-muted-foreground">
+            {fatiguePct}% lighter today: earlier exercises already worked these muscles.
+          </p>
+        {/if}
+      </div>
+    {:else}
+      <div class="px-3 pb-1.5 -mt-1 flex items-center gap-2 flex-wrap">
+        {#if suggestion.change}
+          <span class="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
+            {suggestion.change.text}
+          </span>
+        {/if}
+        {#if suggestion.change?.detail}
+          <p class="text-xs text-muted-foreground">{suggestion.change.detail}</p>
+        {:else if suggestion.label}
+          <p class="text-xs text-muted-foreground">{suggestion.label}</p>
+        {/if}
+        {#if suggestion.reasoning}
+          <ReasoningDialog reasoning={suggestion.reasoning} />
+        {/if}
+      </div>
+    {/if}
     {#if suggestion.notes}
       <p class="px-3 pb-1.5 text-xs text-amber-600 dark:text-amber-400 -mt-1">{suggestion.notes}</p>
     {/if}
