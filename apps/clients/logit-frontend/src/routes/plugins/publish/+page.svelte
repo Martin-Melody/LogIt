@@ -139,7 +139,7 @@
       <p class="text-sm text-destructive">{ui.error}</p>
     {/if}
     {#if ui.success}
-      <p class="text-sm text-emerald-600">{ui.success}</p>
+      <p class="text-sm text-success">{ui.success}</p>
     {/if}
 
     {#if ui.loading}

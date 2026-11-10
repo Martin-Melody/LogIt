@@ -207,22 +207,22 @@
           {@const line = liftLine(pr.exerciseName, pr.weight, pr.reps)}
           <div
             in:fly={{ x: 12, duration: 320, delay: i * 90 }}
-            class="flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3"
+            class="flex items-center gap-3 rounded-lg border border-highlight/40 bg-highlight/10 px-4 py-3"
           >
-            <Trophy class="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <Trophy class="h-5 w-5 shrink-0 text-highlight" />
             <div class="min-w-0">
               <p class="text-sm font-semibold truncate">
                 {pr.exerciseName}
-                <span class="ml-1 text-xs font-medium text-amber-700 dark:text-amber-400">{prLabel(pr)}</span>
+                <span class="ml-1 text-xs font-medium text-highlight">{prLabel(pr)}</span>
               </p>
               <p class="text-xs text-muted-foreground tabular-nums">
                 {pr.reps} reps @ {line.load}
                 {#if line.e1rm}
-                  <span class="text-muted-foreground/70"> · {line.e1rm}</span>
+                  <span class="text-muted-foreground"> · {line.e1rm}</span>
                 {/if}
               </p>
             </div>
-            <Sparkles class="ml-auto h-4 w-4 shrink-0 text-amber-500/70" />
+            <Sparkles class="ml-auto h-4 w-4 shrink-0 text-highlight/70" />
           </div>
         {/each}
       </div>
@@ -234,7 +234,7 @@
           {topSet.exerciseName}
           <span class="font-normal text-muted-foreground"> · {topSet.reps} reps @ {line.load}</span>
           {#if line.e1rm}
-            <span class="font-normal text-muted-foreground/70"> · {line.e1rm}</span>
+            <span class="font-normal text-muted-foreground"> · {line.e1rm}</span>
           {/if}
         </p>
       </div>
@@ -271,8 +271,8 @@
             <div class="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground tabular-nums">
               {#each ex.sets as s (s.id)}
                 {@const meta = setTypeMeta(s.setType)}
-                <span class={s.setType === "warmup" ? "opacity-50" : ""}>
-                  {#if meta.short}<span class="text-[10px] font-bold">{meta.short}</span>{/if}
+                <span class={s.setType === "warmup" ? "opacity-75" : ""}>
+                  {#if meta.short}<span class="text-[11px] font-bold">{meta.short}</span>{/if}
                   {s.reps}×{formatLoad(s.weight, weightUnit, isBodyweight(ex), { withUnit: false })}
                 </span>
               {/each}

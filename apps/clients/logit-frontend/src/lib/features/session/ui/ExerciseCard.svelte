@@ -219,7 +219,7 @@
                 <span
                   class="h-2.5 flex-1 rounded-[2px]
                     {cell === 'done'
-                    ? 'bg-blue-700 dark:bg-blue-400'
+                    ? 'bg-info'
                     : cell === 'target'
                       ? 'border border-dashed border-muted-foreground/60'
                       : 'bg-muted-foreground/15'}"
@@ -256,16 +256,16 @@
       </div>
     {/if}
     {#if suggestion.notes}
-      <p class="px-3 pb-1.5 text-xs text-amber-600 dark:text-amber-400 -mt-1">{suggestion.notes}</p>
+      <p class="px-3 pb-1.5 text-xs text-warning -mt-1">{suggestion.notes}</p>
     {/if}
     {#if suggestion.nudge}
-      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
-        <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{suggestion.nudge.message}</p>
+      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded border border-info/30 bg-info/10 px-2 py-1.5">
+        <p class="flex-1 text-xs text-info">{suggestion.nudge.message}</p>
         <div class="flex shrink-0 items-center gap-2">
           {#if suggestion.nudge.actionLabel}
             <button
               type="button"
-              class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2"
+              class="text-xs font-medium text-info underline underline-offset-2"
               onclick={() => onAcceptNudge(suggestion.nudge!.id)}
             >
               {suggestion.nudge.actionLabel}
@@ -273,7 +273,7 @@
           {/if}
           <button
             type="button"
-            class="text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+            class="text-xs text-info underline underline-offset-2"
             onclick={() => onDismissNudge(suggestion.nudge!.id)}
           >
             {suggestion.nudge.actionLabel ? "Not now" : "Got it"}

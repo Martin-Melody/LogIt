@@ -318,7 +318,7 @@
       {/if}
       {#if displaySession.excludeFromProgression}
         <span>·</span>
-        <span class="text-amber-500 dark:text-amber-400">Excluded from progression</span>
+        <span class="text-warning">Excluded from progression</span>
       {/if}
     </div>
 
@@ -404,7 +404,7 @@
           {#snippet cells()}
             <span class="flex items-center gap-1">
               {#if meta.short}
-                <span class="text-[10px] font-bold leading-none px-1 py-0.5 rounded border {meta.badgeClass}" title={meta.label}>{meta.short}</span>
+                <span class="text-[11px] font-bold leading-none px-1 py-0.5 rounded border {meta.badgeClass}" title={meta.label}>{meta.short}</span>
               {:else}
                 <span class="text-xs text-muted-foreground tabular-nums">{i + 1}</span>
               {/if}

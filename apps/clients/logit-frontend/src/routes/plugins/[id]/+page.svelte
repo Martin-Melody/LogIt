@@ -163,7 +163,7 @@
       <p class="text-sm text-destructive">{ui.error}</p>
     {/if}
     {#if ui.success}
-      <p class="text-sm text-emerald-600">{ui.success}</p>
+      <p class="text-sm text-success">{ui.success}</p>
     {/if}
 
     {#if ui.loading}
@@ -211,7 +211,7 @@
           </Card.Header>
           <Card.Content class="flex flex-col gap-2">
             {#if isEnabled && isExecutablePluginFamily(manifest.family) && !$pluginSettings.communityPluginsEnabled}
-              <p class="w-full text-xs text-amber-600">
+              <p class="w-full text-xs text-warning">
                 This plugin is enabled but not running — community plugins are
                 turned off.
                 <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins")}>Manage</button>

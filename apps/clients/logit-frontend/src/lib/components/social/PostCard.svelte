@@ -192,7 +192,7 @@
     <button type="button" class="flex-1 min-w-0 text-left leading-tight" onclick={() => void goto(`/social/${p.authorUsername}`)}>
       <span class="text-sm font-semibold">{p.authorDisplayName}</span>
       <span class="text-xs text-muted-foreground"> @{p.authorUsername} · {formatDistanceToNow(new Date(p.createdAt))}</span>
-      {#if p.editedAt}<span class="text-[10px] text-muted-foreground/60 italic"> · edited</span>{/if}
+      {#if p.editedAt}<span class="text-[11px] text-muted-foreground italic"> · edited</span>{/if}
     </button>
 
     <button type="button" class="p-1 -mr-1 text-muted-foreground shrink-0" aria-label="More" onclick={(e) => { e.stopPropagation(); menuOpen = true; }}>

@@ -170,7 +170,7 @@
       <p class="text-sm text-destructive">{ui.error}</p>
     {/if}
     {#if ui.success}
-      <p class="text-sm text-emerald-600">{ui.success}</p>
+      <p class="text-sm text-success">{ui.success}</p>
     {/if}
 
     <Card.Root class="w-full">
@@ -319,13 +319,13 @@
           </dl>
 
           {#if alreadyInstalled}
-            <p class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p class="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
               Already installed.
             </p>
           {/if}
 
           {#if restrictedModeBlocks}
-            <div class="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+            <div class="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning">
               <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 This is a {capabilityLabel(reviewed).toLowerCase()} — it runs code

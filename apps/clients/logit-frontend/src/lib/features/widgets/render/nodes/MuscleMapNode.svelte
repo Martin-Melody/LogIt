@@ -55,7 +55,7 @@
   <div class="flex justify-center gap-4">
     {#each views as v (v.label)}
       <div class="flex flex-col items-center gap-1">
-        <span class="text-[10px] text-muted-foreground uppercase tracking-widest">{v.label}</span>
+        <span class="text-[11px] text-muted-foreground uppercase tracking-widest">{v.label}</span>
         <svg viewBox={v.viewBox} width="110" height="auto" role="img" aria-label="{v.label} body muscle map">
           {#each v.muscles as m (m.id)}
             <path d={m.path} fill={fill(m.id)} aria-label={title(m.id) || m.name}>
@@ -71,7 +71,7 @@
     {#each [["var(--muscle-base)", "None"], ["var(--muscle-low)", "Light"], ["var(--muscle-med)", "Moderate"], ["var(--muscle-high)", "Heavy"]] as [color, label] (label)}
       <div class="flex items-center gap-1">
         <div class="w-2.5 h-2.5 rounded-[2px] shrink-0" style="background: {color}"></div>
-        <span class="text-[10px] text-muted-foreground">{label}</span>
+        <span class="text-[11px] text-muted-foreground">{label}</span>
       </div>
     {/each}
   </div>

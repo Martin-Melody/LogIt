@@ -203,11 +203,11 @@
         <div class="flex items-center gap-2 -mt-1">
           <h2 class="text-xl font-bold">{payload.name}</h2>
           {#if payload.family}
-            <span class="capitalize rounded border border-border px-1.5 py-0.5 text-[10px]">{payload.family}</span>
+            <span class="capitalize rounded border border-border px-1.5 py-0.5 text-[11px]">{payload.family}</span>
           {/if}
         </div>
         {#if payload.description}<p class="text-sm text-muted-foreground whitespace-pre-wrap">{payload.description}</p>{/if}
-        {#if payload.author}<p class="text-xs text-muted-foreground/60">by {payload.author}</p>{/if}
+        {#if payload.author}<p class="text-xs text-muted-foreground">by {payload.author}</p>{/if}
 
       {:else if source.type === "Habit"}
         <h2 class="text-xl font-bold -mt-1">{payload.name}</h2>

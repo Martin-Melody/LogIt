@@ -105,8 +105,8 @@
 
   const box =
     "h-9 w-full rounded border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
-  const planPh = "placeholder:font-medium placeholder:text-blue-600 dark:placeholder:text-blue-300";
-  const plainPh = "placeholder:font-normal placeholder:text-muted-foreground/60";
+  const planPh = "placeholder:font-medium placeholder:text-info";
+  const plainPh = "placeholder:font-normal placeholder:text-muted-foreground";
 </script>
 
 <div
@@ -126,7 +126,7 @@
   >
     {#if meta.short}
       <span
-        class="text-[10px] font-bold leading-none px-1 py-0.5 rounded border tabular-nums {meta.badgeClass}"
+        class="text-[11px] font-bold leading-none px-1 py-0.5 rounded border tabular-nums {meta.badgeClass}"
         title={meta.label}
       >
         {meta.short}
@@ -157,7 +157,7 @@
       <span
         class="pointer-events-none absolute inset-y-0 flex items-center text-[13px] font-semibold
           {weightValue === '' && weightPlaceholder === '' ? 'inset-x-0 justify-center' : 'left-2.5'}
-          {weightIsPlan ? 'text-blue-600 dark:text-blue-300' : 'text-muted-foreground'}"
+          {weightIsPlan ? 'text-info' : 'text-muted-foreground'}"
         aria-hidden="true"
       >
         {bwPrefix}
@@ -207,7 +207,7 @@
       class="flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors
         {completed
         ? 'border-primary bg-primary text-primary-foreground'
-        : 'border-muted-foreground/40 hover:border-primary'}"
+        : 'border-muted-foreground hover:border-primary'}"
     >
       {#if completed}<Check class="h-3 w-3" />{/if}
     </span>

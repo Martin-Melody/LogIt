@@ -339,7 +339,7 @@
             oninput={() => (urlTestResult = "idle")}
             bind:value={selfHostUrl} />
           {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
-            <p class="text-xs text-amber-600 dark:text-amber-400">HTTP is unencrypted — use HTTPS if possible.</p>
+            <p class="text-xs text-warning">HTTP is unencrypted — use HTTPS if possible.</p>
           {/if}
           <div class="flex items-center gap-2 flex-wrap">
             <button type="button"
@@ -361,7 +361,7 @@
             {/if}
           </div>
           {#if urlTestResult === "ok"}
-            <p class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"><CheckCircle class="h-3.5 w-3.5" /> Reachable</p>
+            <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Reachable</p>
           {:else if urlTestResult === "error"}
             <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach server</p>
           {/if}

@@ -170,7 +170,7 @@
     </button>
     {#if item?.sourceId && sourceFood}
       <button type="button" onclick={() => void toggleFav()} aria-label="Toggle favourite" class="h-8 w-8 flex items-center justify-center">
-        <Star class="h-4 w-4 {isFav ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}" />
+        <Star class="h-4 w-4 {isFav ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
       </button>
     {/if}
     <h1 class="text-sm font-semibold truncate">{item?.name ?? "Entry"}</h1>

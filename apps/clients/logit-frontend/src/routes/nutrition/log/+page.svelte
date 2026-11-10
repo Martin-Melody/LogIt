@@ -546,14 +546,14 @@
         {/if}
       </div>
       {#each labelDraft.warnings as w (w)}
-        <p class="text-[11px] text-amber-600 dark:text-amber-500">{w}</p>
+        <p class="text-[11px] text-warning">{w}</p>
       {/each}
       {#if labelDraft.raw}
         <button type="button" class="self-start text-[11px] text-muted-foreground underline" onclick={() => (labelDraft.showRaw = !labelDraft.showRaw)}>
           {labelDraft.showRaw ? "Hide" : "Show"} what the scan read
         </button>
         {#if labelDraft.showRaw}
-          <pre class="text-[10px] leading-tight bg-muted rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">{labelDraft.raw}</pre>
+          <pre class="text-[11px] leading-tight bg-muted rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">{labelDraft.raw}</pre>
         {/if}
       {/if}
       <div class="flex gap-2">
@@ -570,7 +570,7 @@
           {selected.name}{#if selected.brand}<span class="text-muted-foreground font-normal"> · {selected.brand}</span>{/if}
         </div>
         <button type="button" aria-label="Toggle favourite" onclick={() => void toggleFavorite(selected!)}>
-          <Star class="h-4 w-4 {favIds.has(selected.id) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}" />
+          <Star class="h-4 w-4 {favIds.has(selected.id) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
         </button>
       </div>
       <div class="flex gap-2">
@@ -621,7 +621,7 @@
               <span class="text-xs text-muted-foreground tabular-nums shrink-0">{fmtKcal(f.per100g.kcal)}/100g</span>
             </button>
             <button type="button" class="px-3 py-2 shrink-0" aria-label="Toggle favourite" onclick={() => void toggleFavorite(f)}>
-              <Star class="h-4 w-4 {favIds.has(f.id) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50'}" />
+              <Star class="h-4 w-4 {favIds.has(f.id) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
             </button>
           </li>
         {/each}
@@ -653,7 +653,7 @@
                 </button>
                 {#if r.sourceId}
                   <button type="button" class="px-3 py-2 shrink-0" aria-label="Toggle favourite" onclick={() => void toggleFavoriteRecent(r)}>
-                    <Star class="h-4 w-4 {favIds.has(r.sourceId) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50'}" />
+                    <Star class="h-4 w-4 {favIds.has(r.sourceId) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
                   </button>
                 {/if}
               </li>
@@ -679,7 +679,7 @@
                   <span class="text-xs text-muted-foreground tabular-nums shrink-0">{fmtKcal(fav.food.per100g.kcal)}/100g</span>
                 </button>
                 <button type="button" class="px-3 py-2 shrink-0" aria-label="Remove favourite" onclick={() => void toggleFavorite(fav.food)}>
-                  <Star class="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <Star class="h-4 w-4 fill-highlight-fill text-highlight-fill" />
                 </button>
               </li>
             {/each}
@@ -708,7 +708,7 @@
                   <span class="text-xs text-muted-foreground tabular-nums shrink-0">{fmtKcal(c.food.per100g.kcal)}/100g</span>
                 </button>
                 <button type="button" class="px-3 py-2 shrink-0" aria-label="Toggle favourite" onclick={() => void toggleFavorite(c.food)}>
-                  <Star class="h-4 w-4 {favIds.has(c.food.id) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50'}" />
+                  <Star class="h-4 w-4 {favIds.has(c.food.id) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
                 </button>
               </li>
             {/each}

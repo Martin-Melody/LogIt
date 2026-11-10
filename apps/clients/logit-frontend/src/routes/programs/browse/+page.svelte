@@ -32,7 +32,7 @@
           <div class="min-w-0 flex-1">
             <span class="text-sm font-medium truncate">{program.name}</span>
             <p class="text-xs text-muted-foreground mt-0.5">{program.description}</p>
-            <p class="text-xs text-muted-foreground/70 mt-0.5">
+            <p class="text-xs text-muted-foreground mt-0.5">
               {program.weeks[0]?.days.length ?? 0} day{(program.weeks[0]?.days.length ?? 0) === 1 ? "" : "s"}/week
             </p>
           </div>

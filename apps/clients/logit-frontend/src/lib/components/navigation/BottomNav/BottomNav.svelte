@@ -39,7 +39,7 @@
   >
     <item.icon size={22} strokeWidth={isActive(item.href) ? 2.5 : 2} />
     {#if item.id === "social" && $unreadNotifications > 0}
-      <span class="absolute top-1 right-2 h-2 w-2 rounded-full bg-rose-500 border border-background"></span>
+      <span class="absolute top-1 right-2 h-2 w-2 rounded-full bg-destructive border border-background"></span>
     {/if}
     <span>{item.label}</span>
   </a>
@@ -62,7 +62,7 @@
       <div class="relative">
         {#if hasSession}
           <span class="absolute inset-0 rounded-full bg-primary opacity-20 animate-ping"></span>
-          <span class="absolute -top-0.5 -right-0.5 z-10 h-3 w-3 rounded-full border-2 border-background bg-green-500"></span>
+          <span class="absolute -top-0.5 -right-0.5 z-10 h-3 w-3 rounded-full border-2 border-background bg-success"></span>
         {/if}
         <div class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
           <Dumbbell size={22} strokeWidth={2} />

@@ -156,9 +156,9 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-1.5 flex-wrap">
             <span class="text-xs font-medium">{comment.authorDisplayName}</span>
-            <span class="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(comment.createdAt))}</span>
+            <span class="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(comment.createdAt))}</span>
             {#if comment.editedAt}
-              <span class="text-[10px] text-muted-foreground/60 italic">edited</span>
+              <span class="text-[11px] text-muted-foreground italic">edited</span>
             {/if}
           </div>
 
@@ -202,9 +202,9 @@
             onclick={() => void toggleLike(comment)}
             aria-label={comment.isLikedByMe ? "Unlike" : "Like"}
           >
-            <Heart class="h-3.5 w-3.5 transition-colors {comment.isLikedByMe ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/50'}" />
+            <Heart class="h-3.5 w-3.5 transition-colors {comment.isLikedByMe ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground'}" />
             {#if comment.likeCount > 0}
-              <span class="text-[10px] tabular-nums {comment.isLikedByMe ? 'text-rose-500' : 'text-muted-foreground'}">{comment.likeCount}</span>
+              <span class="text-[11px] tabular-nums {comment.isLikedByMe ? 'text-rose-500' : 'text-muted-foreground'}">{comment.likeCount}</span>
             {/if}
           </button>
         {/if}
