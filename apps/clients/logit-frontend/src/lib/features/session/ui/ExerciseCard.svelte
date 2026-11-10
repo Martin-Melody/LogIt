@@ -7,7 +7,7 @@
   import { changeTagClass } from "$lib/features/session/planFormat";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
-  import { formatWeight } from "@logit/core/domain/units";
+  import { formatLoad } from "@logit/core/domain/units";
   import { reveal } from "$lib/transitions";
 
   const {
@@ -20,6 +20,7 @@
     hasActiveTimer = false,
     suggestion = null,
     weightUnit = "kg",
+    bodyweight = false,
     grouped = false,
     canSuperset = false,
     gripAction,
@@ -44,6 +45,8 @@
     hasActiveTimer?: boolean;
     suggestion?: ProgressionOutput | null;
     weightUnit?: WeightUnit;
+    /** Weights are relative to bodyweight (BW, BW−25, BW+10). */
+    bodyweight?: boolean;
     grouped?: boolean;
     canSuperset?: boolean;
     gripAction: GripAction;
@@ -62,12 +65,14 @@
   const fatiguePct = $derived(Math.round(suggestion?.reasoning?.computed?.fatigueDiscountPct ?? 0));
   const showMeter = $derived(!collapsed && goal !== null && meter.length > 0 && goal.reps <= 30);
 
-  // One cell per rep up to the goal: done, still planned for today, or still to go.
+  // One cell per rep up to the goal: done (filled), today's aim (dashed outline,
+  // clearly not done yet), or still to go.
   const meterRows = $derived(
     showMeter && goal
       ? meter.map((m: { done: number; target: number }, i: number) => ({
-          label: `Set ${i + 1}`,
-          shown: m.done > 0 ? m.done : m.target,
+          label: `${i + 1}`,
+          right: m.done > 0 ? (m.done >= goal.reps ? `${m.done} ✓` : `${m.done}/${goal.reps}`) : m.target > 0 ? `aim ${m.target}` : "",
+          spoken: m.done > 0 ? `${m.done} of ${goal.reps} reps done` : `aiming for ${m.target} of ${goal.reps}`,
           cells: Array.from({ length: goal.reps }, (_, c) =>
             c < m.done ? "done" : m.done === 0 && c < m.target ? "target" : "rest",
           ),
@@ -196,16 +201,19 @@
             </span>
           {/if}
           <p class="flex-1 text-xs text-muted-foreground">
-            Reps towards <strong class="font-semibold text-foreground">{formatWeight(goal.weight, weightUnit)}</strong>
-            ({goal.reps} on every set)
+            {#if goal.weight !== undefined}
+              {goal.reps} on every set → <strong class="font-semibold text-foreground">{formatLoad(goal.weight, weightUnit, bodyweight)}</strong>
+            {:else}
+              A set goes up at <strong class="font-semibold text-foreground">{goal.reps} reps</strong>
+            {/if}
           </p>
           {#if suggestion.reasoning}
             <ReasoningDialog reasoning={suggestion.reasoning} />
           {/if}
         </div>
         {#each meterRows as row (row.label)}
-          <div class="flex items-center gap-2" aria-label="{row.label}: {row.shown} of {goal.reps} reps">
-            <span class="w-9 text-[11px] text-muted-foreground">{row.label}</span>
+          <div class="flex items-center gap-2" aria-label="Set {row.label}: {row.spoken}">
+            <span class="w-3 text-[11px] tabular-nums text-muted-foreground">{row.label}</span>
             <div class="flex flex-1 gap-[3px]" aria-hidden="true">
               {#each row.cells as cell, c (c)}
                 <span
@@ -213,12 +221,12 @@
                     {cell === 'done'
                     ? 'bg-blue-700 dark:bg-blue-400'
                     : cell === 'target'
-                      ? 'border border-blue-400 bg-blue-100 dark:border-blue-400/70 dark:bg-blue-500/20'
+                      ? 'border border-dashed border-muted-foreground/60'
                       : 'bg-muted-foreground/15'}"
                 ></span>
               {/each}
             </div>
-            <span class="w-8 text-right text-[11px] tabular-nums text-muted-foreground">{row.shown}/{goal.reps}</span>
+            <span class="w-11 text-right text-[11px] tabular-nums text-muted-foreground">{row.right}</span>
           </div>
         {/each}
         {#if suggestion.change?.detail}

@@ -46,4 +46,23 @@ export function formatWeight(
   return opts.space === false ? `${num}${unit}` : `${num} ${unit}`;
 }
 
+/**
+ * A load that may be relative to bodyweight. With `bodyweight`, 0 is "BW",
+ * −25 is "BW−25" (assisted) and 10 is "BW+10" (added weight); the unit is
+ * appended unless `withUnit: false`. Otherwise the same as formatWeight.
+ */
+export function formatLoad(
+  kg: number,
+  unit: WeightUnit,
+  bodyweight: boolean,
+  opts: { withUnit?: boolean; space?: boolean } = {},
+): string {
+  if (!bodyweight) return formatWeight(kg, unit, opts);
+  const shown = roundDisplayWeight(toDisplayWeight(Math.abs(kg), unit), unit);
+  if (shown === 0) return "BW";
+  const num = `BW${kg < 0 ? "−" : "+"}${trimWeight(shown)}`;
+  if (opts.withUnit === false) return num;
+  return opts.space === false ? `${num}${unit}` : `${num} ${unit}`;
+}
+
 export const weightUnitLabel = (unit: WeightUnit): string => unit;

@@ -592,3 +592,113 @@ describe("linearProgression", () => {
     });
   });
 });
+
+describe("bodyweight-relative loads (0 = BW, negative = assisted, positive = added)", () => {
+  const dips = (exerciseType?: "normal" | "bodyweight" | "assisted") =>
+    ({ name: "Dips", primaryMuscles: ["chest"], exerciseType }) as ProgressionInput["exercise"];
+  const session = (rows: [number, number][], sessionId = "s1") =>
+    historyEntry({
+      sessionId,
+      sets: rows.map(([reps, weight], i) => set({ reps, weight, orderIndex: i, completed: true })),
+    });
+  const plan = (out: { sets: { reps: unknown; weight: number }[] }) => out.sets.map((s) => [s.reps, s.weight]);
+
+  it("moves up from assisted towards bodyweight when every set hits the top of the range", async () => {
+    const out = await linearProgression.suggest(baseInput({ exercise: dips(), history: [session([[8, -25], [8, -25], [8, -25]])] }));
+    expect(plan(out)).toEqual([[5, -22.5], [5, -22.5], [5, -22.5]]);
+    expect(out.bodyweightLoad).toBe(true);
+    expect(out.label).toBe("Up to BW−22.5kg");
+    expect(out.progressGoal).toEqual({ reps: 8, weight: -20 });
+  });
+
+  it("goes through bodyweight and on to added weight", async () => {
+    const toBw = await linearProgression.suggest(baseInput({ exercise: dips(), history: [session([[8, -2.5], [8, -2.5], [8, -2.5]])] }));
+    expect(plan(toBw)).toEqual([[5, 0], [5, 0], [5, 0]]);
+    expect(toBw.label).toBe("Up to BW");
+
+    const pastBw = await linearProgression.suggest(baseInput({ exercise: dips("bodyweight"), history: [session([[8, 0], [8, 0], [8, 0]])] }));
+    expect(plan(pastBw)).toEqual([[5, 2.5], [5, 2.5], [5, 2.5]]);
+    expect(pastBw.label).toBe("Up to BW+2.5kg");
+  });
+
+  it("aims for one more rep at the same assisted weight while still in range", async () => {
+    const out = await linearProgression.suggest(baseInput({ exercise: dips(), history: [session([[6, -25], [6, -25], [5, -25]])] }));
+    expect(plan(out)).toEqual([[7, -25], [7, -25], [6, -25]]);
+    expect(out.change?.kind).toBe("reps");
+  });
+
+  it("follows history down when a saved state sits at BW but the sets were assisted", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      exercise: dips(),
+      state: { workingWeight: 0, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+      history: [session([[6, -25], [6, -25], [6, -25]])],
+    }));
+    expect(plan(out)).toEqual([[7, -25], [7, -25], [7, -25]]);
+  });
+
+  it("deloads by two increments (more assistance) rather than a percentage", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      exercise: dips(),
+      state: { workingWeight: -20, failedAttempts: 1, increment: 2.5, repRange: [5, 8] },
+      history: [session([[4, -20], [4, -20], [3, -20]])],
+    }));
+    expect(out.change?.kind).toBe("deload");
+    expect(out.sets[0]!.weight).toBe(-25);
+  });
+
+  it("doesn't take a fatigue discount off a bodyweight-relative load", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      exercise: dips(),
+      history: [session([[6, -25], [6, -25], [6, -25]])],
+      sessionContext: { precedingExercises: [{ name: "Bench", primaryMuscles: ["chest"], secondaryMuscles: [], completedSets: 6 }] },
+    }));
+    expect(out.sets.every((s) => s.weight === -25)).toBe(true);
+  });
+});
+
+describe("sets done at different weights", () => {
+  const session = (rows: [number, number][]) =>
+    historyEntry({ sets: rows.map(([reps, weight], i) => set({ reps, weight, orderIndex: i, completed: true })) });
+
+  it("moves each set on its own: BW sets and assisted sets both progress", async () => {
+    // Two sets at BW, then two with 25 kg of help once tired.
+    const out = await linearProgression.suggest(baseInput({
+      exercise: { name: "Dips", primaryMuscles: ["chest"] },
+      history: [session([[10, 0], [6, 0], [10, -25], [7, -25]])],
+    }));
+    expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[5, 2.5], [7, 0], [5, -22.5], [8, -25]]);
+    expect(out.change).toMatchObject({ kind: "increase", text: "+2.5kg on 2 sets" });
+    expect(out.change?.detail).toMatch(/Sets 1 and 3 hit 8/);
+    expect(out.progressGoal).toEqual({ reps: 8 });
+  });
+
+  it("works the same for a top set with back-off sets", async () => {
+    const out = await linearProgression.suggest(baseInput({ history: [session([[6, 100], [8, 90], [8, 90]])] }));
+    expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[7, 100], [5, 92.5], [5, 92.5]]);
+    expect(out.bodyweightLoad).toBeUndefined();
+  });
+
+  it("gives the same plan however many times it's asked (it reads last session only)", async () => {
+    const input = baseInput({ history: [session([[6, 100], [8, 90]])] });
+    const first = await linearProgression.suggest(input);
+    const again = await linearProgression.suggest({ ...input, state: first.nextState });
+    expect(again.sets).toEqual(first.sets);
+  });
+});
+
+describe("set count", () => {
+  it("plans as many sets as last time when that was more than usual", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      history: [historyEntry({ sets: [set(), set(), set(), set()].map((s, i) => ({ ...s, reps: 6, orderIndex: i })) })],
+    }));
+    expect(out.sets).toHaveLength(4);
+  });
+
+  it("lets a split day's planned set count win", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      plannedTargets: { sets: 2 },
+      history: [historyEntry({ sets: [set(), set(), set(), set()].map((s, i) => ({ ...s, reps: 6, orderIndex: i })) })],
+    }));
+    expect(out.sets).toHaveLength(2);
+  });
+});
