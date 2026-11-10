@@ -37,7 +37,15 @@ type LinearState = {
   // Oldest → newest. A win (result.switched) is always the last entry — no
   // further rungs are ever added once one wins, ladder or not.
   repRangeLadder?: RepRangeRung[];
+  // The session whose result is already folded into workingWeight/failedAttempts.
+  // suggest() runs for previews (the session screen) as well as on finish/edit, so
+  // without this the same session got applied again on every call: "Next: 65kg"
+  // shown before lifting, and one missed session counted twice into a deload.
+  lastAppliedSessionId?: string;
+  lastOutcome?: Outcome;
 };
+
+type Outcome = "increase" | "hold" | "miss" | "deload";
 
 type LinearPreferences = {
   repRangeMin: number;
@@ -167,12 +175,51 @@ const MAX_LADDER_RUNGS = 3;
 // first.
 const LADDER_STEP = 7;
 
-function makeWorkingSets(weight: number, repRange: [number, number], count: number): SuggestedSet[] {
-  return Array.from({ length: count }, () => ({
-    reps: repRange,
+function makeWorkingSets(weight: number, reps: SuggestedSet["reps"][] | [number, number], count: number): SuggestedSet[] {
+  // A bare [min, max] tuple is one range for every set; an array of per-set
+  // targets is indexed (the last one repeats if there are fewer than `count`).
+  const perSet = isRange(reps) ? null : (reps as SuggestedSet["reps"][]);
+  return Array.from({ length: count }, (_, i) => ({
+    reps: perSet ? (perSet[i] ?? perSet[perSet.length - 1] ?? 0) : (reps as [number, number]),
     weight,
     setType: "normal" as const,
   }));
+}
+
+function isRange(x: unknown): x is [number, number] {
+  return Array.isArray(x) && x.length === 2 && typeof x[0] === "number" && typeof x[1] === "number";
+}
+
+function workingSetsOf(entry: ExerciseHistoryEntry) {
+  return entry.sets
+    .filter((s) => s.setType === "normal" || !s.setType)
+    .sort((a, b) => a.orderIndex - b.orderIndex);
+}
+
+// Exact rep targets for each set, so "5–8" becomes "7 / 6 / 6". At the same
+// weight as last time a set aims for one more rep than it got (within the range);
+// at a new weight it starts from the bottom of the range.
+function perSetRepTargets(
+  lastWorking: { reps: number; weight: number }[],
+  todayWeight: number,
+  [floor, ceiling]: [number, number],
+  count: number,
+): number[] {
+  return Array.from({ length: count }, (_, i) => {
+    const last = lastWorking[i] ?? lastWorking[lastWorking.length - 1];
+    if (!last || Math.abs(last.weight - todayWeight) > 0.01) return floor;
+    return Math.min(ceiling, Math.max(floor, last.reps + 1));
+  });
+}
+
+function deloadWeight(weight: number, increment: number): number {
+  const target = weight * DELOAD_FACTOR;
+  if (!(increment > 0)) return Math.round(target * 4) / 4;
+  return Math.max(0, Math.floor(target / increment + 1e-9) * increment);
+}
+
+function fmtKg(kg: number): string {
+  return `${Math.round(kg * 100) / 100}kg`;
 }
 
 function seedFromHistory(history: ProgressionInput["history"]): LinearState | null {
@@ -397,11 +444,32 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     state = { ...state, increment: input.incrementOverride };
   }
 
-  // If history shows a higher working weight than the saved state, reseed from history.
-  // This recovers from a stale state (e.g. saved at the default 20kg because history
-  // lookup previously failed due to a mismatched exerciseId).
+  const isAssisted = input.exercise.exerciseType === "assisted";
+  const newest = input.history[0];
+  // A split day's planned set count wins over the general preference.
+  const setCount = input.plannedTargets?.sets && input.plannedTargets.sets > 0
+    ? input.plannedTargets.sets
+    : prefs.workingSets;
+
+  // Is the newest session already folded into `state`? Either recorded directly,
+  // or (for a state saved before lastAppliedSessionId existed) inferred from the
+  // state having been saved after that session was performed.
+  const alreadyApplied =
+    newest !== undefined &&
+    (state.lastAppliedSessionId !== undefined
+      ? state.lastAppliedSessionId === newest.sessionId
+      : input.state != null &&
+        input.stateSavedAtMs !== undefined &&
+        newest.performedAtMs <= input.stateSavedAtMs);
+
+  // If the newest, not-yet-applied session was done heavier than the state says,
+  // start from what was actually lifted. Also recovers a stale state (e.g. left at
+  // the default 0kg because history lookup once failed on a mismatched
+  // exerciseId). Never for a session already applied — that used to undo every
+  // deload on the very next suggestion — nor for assisted exercises, where a
+  // higher number means more help, not more strength.
   const historyWeight = seedFromHistory(input.history)?.workingWeight;
-  if (historyWeight !== undefined && historyWeight > state.workingWeight) {
+  if (!alreadyApplied && !isAssisted && historyWeight !== undefined && historyWeight > state.workingWeight) {
     state = { ...state, workingWeight: historyWeight };
   }
 
@@ -414,10 +482,19 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       workingWeight: seedWeight,
       repRange: seedReps ? [seedReps, seedReps] : state.repRange,
     };
+    const [lo, hi] = seeded.repRange;
     return {
-      sets: makeWorkingSets(seeded.workingWeight, seeded.repRange, prefs.workingSets),
+      sets: makeWorkingSets(seeded.workingWeight, seeded.repRange, setCount),
       nextState: seeded,
       displayMode: prefs.suggestionDetail,
+      change: {
+        kind: "first",
+        text: "First time",
+        detail:
+          lo === hi
+            ? `Pick a weight you can do ${lo} reps with.`
+            : `Pick a weight you can do ${lo}–${hi} reps with.`,
+      },
       reasoning: {
         inputs: { historySessions: 0, plannedTargetWeight: input.plannedTargets?.weight ?? "none" },
         computed: { seedWeight: seeded.workingWeight },
@@ -427,14 +504,12 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     };
   }
 
-  const lastSession = input.history[0];
-  const workingSets = lastSession.sets.filter(
-    (s) => s.setType === "normal" || !s.setType,
-  );
+  const lastSession = input.history[0]!;
+  const workingSets = workingSetsOf(lastSession);
 
   if (workingSets.length === 0) {
     return {
-      sets: makeWorkingSets(state.workingWeight, state.repRange, prefs.workingSets),
+      sets: makeWorkingSets(state.workingWeight, state.repRange, setCount),
       nextState: state,
       displayMode: prefs.suggestionDetail,
       reasoning: {
@@ -534,26 +609,36 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const allHitCeiling = workingSets.every((s) => s.reps >= repCeiling);
   const anyMissedFloor = workingSets.some((s) => s.reps < repFloor);
 
-  const isAssisted = input.exercise.exerciseType === "assisted";
-
   let nextWeight = state.workingWeight;
   let failedAttempts = state.failedAttempts;
+  let outcome: Outcome;
 
-  if (allHitCeiling) {
+  if (alreadyApplied) {
+    // Last session's result is already in `state` — just read it back.
+    outcome =
+      state.lastOutcome ??
+      (allHitCeiling ? "increase" : anyMissedFloor ? (failedAttempts === 0 ? "deload" : "miss") : "hold");
+  } else if (allHitCeiling) {
     // Assisted: success means reduce the assistance (weight goes down toward 0)
     nextWeight = isAssisted
       ? Math.max(0, state.workingWeight - state.increment)
       : state.workingWeight + state.increment;
     failedAttempts = 0;
+    outcome = "increase";
   } else if (anyMissedFloor) {
     failedAttempts += 1;
+    outcome = "miss";
     if (failedAttempts >= DELOAD_THRESHOLD) {
-      // Assisted: deload means adding more assistance (weight goes back up)
+      // Assisted: deload means adding more assistance (weight goes back up).
+      // Otherwise drop ~10%, rounded down to something loadable.
       nextWeight = isAssisted
         ? state.workingWeight + state.increment
-        : state.workingWeight * DELOAD_FACTOR;
+        : deloadWeight(state.workingWeight, state.increment);
       failedAttempts = 0;
+      outcome = "deload";
     }
+  } else {
+    outcome = "hold";
   }
 
   const nextState: LinearState = {
@@ -561,6 +646,8 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     workingWeight: nextWeight,
     failedAttempts,
     repRangeLadder: ladder.length > 0 ? ladder : undefined,
+    lastAppliedSessionId: lastSession.sessionId,
+    lastOutcome: outcome,
   };
 
   // Fatigue discount doesn't apply to assisted exercises (assistance is machine-controlled)
@@ -573,16 +660,47 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const calibration = calibrateSensitivity(input.history, repCeiling);
   const effectiveDiscount = MAX_FATIGUE_DISCOUNT * calibration.sensitivity;
 
+  // Today's prescription is the state *after* last session's result.
   const suggestedWeight =
     fatigueScore > 0
-      ? Math.round((state.workingWeight * (1 - fatigueScore * effectiveDiscount)) * 4) / 4
-      : state.workingWeight;
+      ? Math.round((nextWeight * (1 - fatigueScore * effectiveDiscount)) * 4) / 4
+      : nextWeight;
 
-  const progressionLabel = allHitCeiling
-    ? isAssisted ? `Next: ${nextWeight}kg assist` : `Next: ${nextWeight}kg`
-    : anyMissedFloor && failedAttempts === 0
-      ? isAssisted ? `More assist next: ${nextWeight}kg` : `Deload next: ${nextWeight}kg`
-      : undefined;
+  const repTargets = perSetRepTargets(workingSets, nextWeight, activeRepRange, setCount);
+  const lastReps = workingSets.map((s) => s.reps).join(" / ");
+  const goalWeight = isAssisted ? Math.max(0, nextWeight - state.increment) : nextWeight + state.increment;
+
+  const change: NonNullable<ProgressionOutput["change"]> =
+    outcome === "increase"
+      ? {
+          kind: "increase",
+          text: isAssisted ? `−${fmtKg(state.increment)} assist` : `+${fmtKg(state.increment)}`,
+          detail: `You hit ${repCeiling} on every set last time.`,
+        }
+      : outcome === "deload"
+        ? {
+            kind: "deload",
+            text: "Deload",
+            detail: isAssisted
+              ? `Under ${repFloor} reps two sessions running, so a bit more assistance.`
+              : `Under ${repFloor} reps two sessions running, so the weight drops to rebuild.`,
+          }
+        : outcome === "miss"
+          ? {
+              kind: "repeat",
+              text: "Repeat",
+              detail: `Some sets were under ${repFloor} last time. Same weight; under ${repFloor} again means a deload.`,
+            }
+          : { kind: "reps", text: "+1 rep", detail: `Last time: ${lastReps}. Beat each set by a rep.` };
+
+  const progressionLabel =
+    outcome === "increase"
+      ? isAssisted ? `Assist down to ${fmtKg(nextWeight)}` : `Up to ${fmtKg(nextWeight)}`
+      : outcome === "deload"
+        ? isAssisted ? `More assist: ${fmtKg(nextWeight)}` : `Deload to ${fmtKg(nextWeight)}`
+        : outcome === "miss"
+          ? `Under ${repFloor} again → deload`
+          : undefined;
 
   const discountPct = Math.round(fatigueScore * effectiveDiscount * 100);
   const fatigueLabel = fatigueScore > 0.1 ? `Fatigue −${discountPct}%` : undefined;
@@ -624,6 +742,8 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       allSetsHitCeiling: allHitCeiling,
       anySetMissedFloor: anyMissedFloor,
       consecutiveFailedAttemptsBefore: state.failedAttempts,
+      lastSessionAlreadyApplied: alreadyApplied,
+      todayRepTargets: repTargets.join(" / "),
       precedingExercisesThisSession: preceding.length,
       fatigueCalibrationSamples: `${calibration.freshSamples} fresh / ${calibration.fatiguedSamples} fatigued`,
       fatigueCalibrated: calibration.calibrated,
@@ -636,23 +756,25 @@ function suggest(input: ProgressionInput): ProgressionOutput {
         : {}),
     },
     computed: {
-      workingWeightBeforeFatigueDiscount: state.workingWeight,
+      workingWeightBeforeFatigueDiscount: nextWeight,
       fatigueScore: Math.round(fatigueScore * 100) / 100,
       fatigueSensitivityMultiplier: Math.round(calibration.sensitivity * 100) / 100,
       fatigueDiscountPct: discountPct,
       suggestedWeight,
     },
     confidence: fatigueConfidence,
-    verdict: progressionLabel ?? "hold — still within rep range",
+    verdict: progressionLabel ?? "hold — still within rep range, aim for one more rep a set",
   };
 
   return {
-    sets: makeWorkingSets(suggestedWeight, activeRepRange, prefs.workingSets),
+    sets: makeWorkingSets(suggestedWeight, repTargets, setCount),
     nextState,
     label,
     displayMode: prefs.suggestionDetail,
     reasoning,
     nudge,
+    change,
+    progressGoal: { reps: repCeiling, weight: goalWeight },
   };
 }
 
