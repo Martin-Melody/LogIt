@@ -29,7 +29,8 @@
   import type { ProgressionOutput } from "@logit/core/domain/progression";
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
   import { getExerciseRepo } from "$lib/data/repoProvider";
-  import type { Machine } from "@logit/core/domain/exercise";
+  import type { ExerciseType, Machine } from "@logit/core/domain/exercise";
+  import { usesBodyweightLoad } from "@logit/core/domain/exercise";
 
   import { get } from "svelte/store";
   import { untrack } from "svelte";
@@ -61,9 +62,7 @@
   // Plan this block's sets once the suggestion arrives: on first load if it has
   // none yet, and after a swap (replacing only the planned, not-yet-done sets).
   let planPending = $state(untrack(() => data.sets.length === 0));
-  // Which set's "Today" editor is open.
-  let editingSetId = $state<string | null>(null);
-  let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string } | null>(null);
+  let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string; exerciseType?: ExerciseType } | null>(null);
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
 
@@ -74,7 +73,18 @@
   const editSet = $state({
     open: false,
     setId: null as string | null,
+    // Working-set number for the card's title and "last time"; none for drop sets.
+    setNumber: null as number | null,
   });
+
+  // Weights relative to bodyweight (0 = BW, −25 = assisted): shown as BW / BW−25.
+  const bodyweight = $derived(
+    !!suggestion?.bodyweightLoad ||
+      usesBodyweightLoad(exerciseData?.exerciseType, [
+        ...data.sets.map((s) => s.weight),
+        ...(prevSets ?? []).map((s) => s.weight),
+      ]),
+  );
 
   let swapOpen = $state(false);
   let detailExerciseId = $state<string | null>(null);
@@ -153,7 +163,9 @@
       const ex = exerciseId
         ? await getExerciseRepo().getById(exerciseId)
         : name ? await getExerciseRepo().getByName(name) : null;
-      exerciseData = ex ? { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId } : null;
+      exerciseData = ex
+        ? { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId, exerciseType: ex.exerciseType }
+        : null;
     } catch {
       exerciseData = null;
     }
@@ -213,16 +225,12 @@
       }),
     );
     if (collapsed) collapsed = false;
-    // A set beyond the plan has nothing to show yet — open it for entry.
+    // A set beyond the plan has nothing to show yet — open its card for entry.
     if (!planned) {
       const block = get(currentSession)?.blocks.find((b) => b.id === blockId);
       const added = (block?.data as StrengthBlockData | undefined)?.sets.find((x) => !before.has(x.id));
-      if (added) editingSetId = added.id;
+      if (added) openEditSet(added.id, working.length + 1);
     }
-  }
-
-  function toggleEdit(setId: string) {
-    editingSetId = editingSetId === setId ? null : setId;
   }
 
   const hasWarmup = $derived(data.sets.some((s) => s.setType === "warmup"));
@@ -230,7 +238,8 @@
     const logged = data.sets.find((s) => s.setType !== "warmup" && s.weight > 0)?.weight;
     return logged ?? suggestion?.sets.find((s) => (s.weight ?? 0) > 0)?.weight ?? 0;
   });
-  const canWarmup = $derived(!hasWarmup && warmupWorkingKg > 0);
+  // No ramp for bodyweight work: "BW+2.5" isn't a bar to build up to.
+  const canWarmup = $derived(!hasWarmup && warmupWorkingKg > 0 && !bodyweight);
 
   async function handleAddWarmup() {
     const workingKg = warmupWorkingKg;
@@ -263,9 +272,33 @@
     await onMutate((s: WorkoutSession) => removeSet(s, blockId, setId));
   }
 
-  function openEditSet(setId: string) {
+  function openEditSet(setId: string, setNumber: number | null = null) {
     editSet.setId = setId;
+    editSet.setNumber = setNumber;
     editSet.open = true;
+  }
+
+  const editedSet = $derived(editSet.setId ? (data.sets.find((s) => s.id === editSet.setId) ?? null) : null);
+
+  /** The set card's "Log": save what's in the card and tick the set off, in one change. */
+  async function logFromCard(
+    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
+  ) {
+    const set = editedSet;
+    if (!set) return;
+    const setId = set.id;
+    const setType = patch.setType ?? set.setType;
+    const effectiveRest = patch.restDurationMs ?? set.restDurationMs ?? get(profile).restDefaults[setType];
+    const startsRest = restsOnComplete && effectiveRest !== undefined;
+    await onMutate((s: WorkoutSession) =>
+      updateSet(s, blockId, setId, {
+        ...patch,
+        completed: true,
+        restStartedAtMs: startsRest ? Date.now() : null,
+      }),
+    );
+    void triggerHaptic();
+    if (startsRest) startRestTimer(setId, effectiveRest!);
   }
 
   function getEditableSet() {
@@ -313,11 +346,11 @@
       if (set.target) {
         fill = { reps: set.target.reps, ...(set.weight === 0 ? { weight: set.target.weight } : {}) };
       } else if (!setTypeMeta(set.setType).repsPlaceholder) {
-        editingSetId = set.id;
+        const lead = workingSets.findIndex((w) => w.id === set.id);
+        openEditSet(set.id, lead === -1 ? null : lead + 1);
         return;
       }
     }
-    if (!wasCompleted && editingSetId === set.id) editingSetId = null;
     // Explicit per-set override takes priority; fall back to per-type default.
     const effectiveRest = set.restDurationMs ?? get(profile).restDefaults[set.setType];
     // In a superset, only the anchor (last member of the round) starts a rest —
@@ -566,6 +599,7 @@
   {collapsed}
   {hasActiveTimer}
   weightUnit={$profile.weightUnit}
+  {bodyweight}
   {grouped}
   {canSuperset}
   {gripAction}
@@ -603,7 +637,7 @@
             disabled={saving}
             actionsWidth={80}
             onDelete={() => handleDeleteSet(lead.id)}
-            onEdit={() => openEditSet(lead.id)}
+            onEdit={() => openEditSet(lead.id, group.leadNum)}
           >
             <SetRow
               setNumber={group.leadNum}
@@ -611,11 +645,11 @@
               reps={lead.reps}
               weight={lead.weight}
               weightUnit={$profile.weightUnit}
+              {bodyweight}
               rpe={lead.rpe ?? null}
               prev={prevLeadSets[group.leadNum - 1] ?? null}
               target={lead.target ?? null}
-              editing={editingSetId === lead.id}
-              onToggleEdit={() => toggleEdit(lead.id)}
+              onOpenDetails={() => openEditSet(lead.id, group.leadNum)}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
               gripAction={(node) => setGripAction(node, lead.id)}
@@ -651,10 +685,10 @@
                   reps={drop.reps}
                   weight={drop.weight}
                   weightUnit={$profile.weightUnit}
+                  {bodyweight}
                   rpe={drop.rpe ?? null}
                   target={drop.target ?? null}
-                  editing={editingSetId === drop.id}
-                  onToggleEdit={() => toggleEdit(drop.id)}
+                  onOpenDetails={() => openEditSet(drop.id)}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
                   gripAction={noopGripAction}
@@ -727,8 +761,14 @@
   defaultMachineId={exerciseData?.defaultMachineId}
   exerciseId={exerciseData?.id}
   weightUnit={$profile.weightUnit}
+  setNumber={editSet.setNumber}
+  target={editedSet?.target ?? null}
+  completed={editedSet?.completed ?? false}
+  prev={editSet.setNumber ? (prevLeadSets[editSet.setNumber - 1] ?? null) : null}
+  {bodyweight}
   onOpenChange={(v) => (editSet.open = v)}
   onSave={saveSetPatch}
+  onLog={logFromCard}
 />
 
 <ExerciseDetailSheet

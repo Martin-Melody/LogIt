@@ -1,6 +1,7 @@
-import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField } from "../../domain/progression";
+import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField, ProgressionChange } from "../../domain/progression";
 import { classifyTrend } from "../../domain/progression";
 import type { MuscleGroup } from "../../domain/exercise";
+import { usesBodyweightLoad } from "../../domain/exercise";
 import type { Reasoning, ReasoningConfidence } from "../../domain/reasoning";
 import { estimated1RM } from "../../domain/oneRepMax";
 import { nowMs } from "../../domain/time";
@@ -217,12 +218,24 @@ function roundDownTo(weight: number, increment: number): number {
   return Math.max(0, Math.floor(weight / increment + 1e-9) * increment);
 }
 
+// A bodyweight-relative load is moved in whole increments rather than by a
+// percentage: −10% of "BW−25" would mean *less* help, and the percentage of
+// bodyweight isn't known.
+const BODYWEIGHT_DELOAD_INCREMENTS = 2;
+
 function deloadWeight(weight: number, increment: number): number {
   return roundDownTo(weight * DELOAD_FACTOR, increment);
 }
 
 function fmtKg(kg: number): string {
   return `${Math.round(kg * 100) / 100}kg`;
+}
+
+/** fmtKg, or BW / BW−25kg / BW+10kg when the load is relative to bodyweight. */
+function fmtLoad(kg: number, bodyweight: boolean): string {
+  if (!bodyweight) return fmtKg(kg);
+  if (Math.abs(kg) < 0.005) return "BW";
+  return `BW${kg < 0 ? "−" : "+"}${fmtKg(Math.abs(kg))}`;
 }
 
 function seedFromHistory(history: ProgressionInput["history"]): LinearState | null {
@@ -448,11 +461,20 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   }
 
   const isAssisted = input.exercise.exerciseType === "assisted";
+  // Weights relative to bodyweight (0 = BW, −25 = assisted, +10 = added) progress
+  // like any other load — up from −25 through BW and on to BW+2.5 — so negatives
+  // are kept rather than clamped to 0.
+  const bwLoad = usesBodyweightLoad(
+    input.exercise.exerciseType,
+    input.history.flatMap((h) => h.sets.map((s) => s.weight)),
+  );
   const newest = input.history[0];
-  // A split day's planned set count wins over the general preference.
-  const setCount = input.plannedTargets?.sets && input.plannedTargets.sets > 0
+  // A split day's planned set count wins over the general preference; otherwise
+  // at least as many sets as last time (raised once last session is read).
+  const plannedSetCount = input.plannedTargets?.sets && input.plannedTargets.sets > 0
     ? input.plannedTargets.sets
-    : prefs.workingSets;
+    : undefined;
+  let setCount = plannedSetCount ?? prefs.workingSets;
 
   // Is the newest session already folded into `state`? Either recorded directly,
   // or (for a state saved before lastAppliedSessionId existed) inferred from the
@@ -476,7 +498,12 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const historyWeight = seedFromHistory(input.history)?.workingWeight;
   const mayReseed = !alreadyApplied || state.lastAppliedSessionId === undefined;
   const unseeded = state.lastAppliedSessionId === undefined && state.workingWeight === 0 && state.failedAttempts === 0;
-  if (mayReseed && (!isAssisted || unseeded) && historyWeight !== undefined && historyWeight > state.workingWeight) {
+  // A bodyweight-relative state also follows history down: one left at 0 (BW)
+  // while the sets are being done at BW−25 is just wrong, not a deload to keep.
+  const historyDiffers =
+    historyWeight !== undefined &&
+    (historyWeight > state.workingWeight || (bwLoad && Math.abs(historyWeight - state.workingWeight) > 0.01));
+  if (mayReseed && (!isAssisted || unseeded) && historyWeight !== undefined && historyDiffers) {
     state = { ...state, workingWeight: historyWeight };
   }
 
@@ -494,6 +521,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       sets: makeWorkingSets(seeded.workingWeight, seeded.repRange, setCount),
       nextState: seeded,
       displayMode: prefs.suggestionDetail,
+      bodyweightLoad: bwLoad || undefined,
       change: {
         kind: "first",
         text: "First time",
@@ -513,12 +541,15 @@ function suggest(input: ProgressionInput): ProgressionOutput {
 
   const lastSession = input.history[0]!;
   const workingSets = workingSetsOf(lastSession);
+  // Did an extra set last time? Plan it again rather than silently dropping it.
+  if (plannedSetCount === undefined) setCount = Math.max(setCount, workingSets.length);
 
   if (workingSets.length === 0) {
     return {
       sets: makeWorkingSets(state.workingWeight, state.repRange, setCount),
       nextState: state,
       displayMode: prefs.suggestionDetail,
+      bodyweightLoad: bwLoad || undefined,
       reasoning: {
         inputs: { historySessions: input.history.length, lastSessionWorkingSets: 0 },
         computed: { repeatWeight: state.workingWeight },
@@ -616,6 +647,73 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const allHitCeiling = workingSets.every((s) => s.reps >= repCeiling);
   const anyMissedFloor = workingSets.some((s) => s.reps < repFloor);
 
+  // Sets done at different weights last time — BW for the first two and BW−25
+  // once tired, or a top set and back-offs. Forcing them onto one weight would
+  // plan a set at a load it wasn't done at (and start it from the bottom of the
+  // range). Instead each set moves on its own: one that hit the top of the range
+  // goes up an increment, the rest aim for one more rep. Worked out from last
+  // session alone, so it reads the same however often it's asked.
+  const mixedWeights = workingSets.some((s) => Math.abs(s.weight - workingSets[0]!.weight) > 0.01);
+  if (mixedWeights && !isAssisted) {
+    const plan = Array.from({ length: setCount }, (_, i) => {
+      const last = workingSets[i] ?? workingSets[workingSets.length - 1]!;
+      return last.reps >= repCeiling
+        ? { weight: last.weight + state.increment, reps: repFloor, up: true }
+        : { weight: last.weight, reps: Math.min(repCeiling, Math.max(repFloor, last.reps + 1)), up: false };
+    });
+    const upSets = plan.flatMap((p, i) => (p.up ? [i + 1] : []));
+    const setList = upSets.length === 1
+      ? `Set ${upSets[0]}`
+      : `Sets ${upSets.slice(0, -1).join(", ")} and ${upSets[upSets.length - 1]}`;
+    const lastDesc = workingSets.map((s) => `${s.reps} × ${fmtLoad(s.weight, bwLoad)}`).join(", ");
+    const anyUp = upSets.length > 0;
+    const change: ProgressionChange = anyUp
+      ? {
+          kind: "increase",
+          text: upSets.length === plan.length
+            ? `+${fmtKg(state.increment)}`
+            : `+${fmtKg(state.increment)} on ${upSets.length === 1 ? `set ${upSets[0]}` : `${upSets.length} sets`}`,
+          detail: upSets.length === plan.length
+            ? `Every set hit ${repCeiling} last time, so each goes up.`
+            : `${setList} hit ${repCeiling} last time, so ${upSets.length === 1 ? "it goes" : "they go"} up. The others aim for one more rep.`,
+        }
+      : {
+          kind: "reps",
+          text: "+1 rep",
+          detail: `Last time: ${lastDesc}. Each set aims for one more rep and goes up once it hits ${repCeiling}.`,
+        };
+    const verdict = anyUp ? `${setList} up ${fmtKg(state.increment)}` : "each set aims for one more rep";
+    return {
+      sets: plan.map((p) => ({ reps: p.reps, weight: p.weight, setType: "normal" as const })),
+      nextState: {
+        ...state,
+        workingWeight: Math.max(...plan.map((p) => p.weight)),
+        failedAttempts: 0,
+        repRangeLadder: ladder.length > 0 ? ladder : undefined,
+        lastAppliedSessionId: lastSession.sessionId,
+        lastOutcome: anyUp ? "increase" : "hold",
+      },
+      label: anyUp ? verdict : undefined,
+      displayMode: prefs.suggestionDetail,
+      nudge: trialNudge,
+      progressGoal: { reps: repCeiling },
+      change,
+      bodyweightLoad: bwLoad || undefined,
+      reasoning: {
+        inputs: {
+          historySessions: input.history.length,
+          lastSession: lastDesc,
+          perSetProgression: "sets were done at different weights",
+          todayRepTargets: plan.map((p) => p.reps).join(" / "),
+          todayWeights: plan.map((p) => fmtLoad(p.weight, bwLoad)).join(" / "),
+        },
+        computed: { setsGoingUp: upSets.length },
+        confidence: "medium",
+        verdict,
+      },
+    };
+  }
+
   let nextWeight = state.workingWeight;
   let failedAttempts = state.failedAttempts;
   let outcome: Outcome;
@@ -640,7 +738,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       // Otherwise drop ~10%, rounded down to something loadable.
       nextWeight = isAssisted
         ? state.workingWeight + state.increment
-        : deloadWeight(state.workingWeight, state.increment);
+        : bwLoad
+          ? state.workingWeight - BODYWEIGHT_DELOAD_INCREMENTS * state.increment
+          : deloadWeight(state.workingWeight, state.increment);
       failedAttempts = 0;
       outcome = "deload";
     }
@@ -660,7 +760,8 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   // Fatigue discount doesn't apply to assisted exercises (assistance is machine-controlled)
   const targetPrimary = (input.exercise.primaryMuscles ?? []) as MuscleGroup[];
   const preceding = input.sessionContext?.precedingExercises ?? [];
-  const fatigueScore = isAssisted ? 0 : computeFatigueScore(targetPrimary, preceding);
+  // Nor to bodyweight-relative loads: a percentage off "BW−25" isn't meaningful.
+  const fatigueScore = isAssisted || bwLoad ? 0 : computeFatigueScore(targetPrimary, preceding);
 
   // Personal sensitivity: how much do *this user's* reps actually drop when fatigued?
   // Calibrated from their history; defaults to 1.0 until enough data exists.
@@ -689,7 +790,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
             text: "Deload",
             detail: isAssisted
               ? `Under ${repFloor} reps two sessions running, so a bit more assistance.`
-              : `Under ${repFloor} reps two sessions running, so the weight drops to rebuild.`,
+              : bwLoad
+                ? `Under ${repFloor} reps two sessions running, so it drops to ${fmtLoad(nextWeight, true)} to rebuild.`
+                : `Under ${repFloor} reps two sessions running, so the weight drops to rebuild.`,
           }
         : outcome === "miss"
           ? {
@@ -701,9 +804,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
 
   const progressionLabel =
     outcome === "increase"
-      ? isAssisted ? `Assist down to ${fmtKg(nextWeight)}` : `Up to ${fmtKg(nextWeight)}`
+      ? isAssisted ? `Assist down to ${fmtKg(nextWeight)}` : `Up to ${fmtLoad(nextWeight, bwLoad)}`
       : outcome === "deload"
-        ? isAssisted ? `More assist: ${fmtKg(nextWeight)}` : `Deload to ${fmtKg(nextWeight)}`
+        ? isAssisted ? `More assist: ${fmtKg(nextWeight)}` : `Deload to ${fmtLoad(nextWeight, bwLoad)}`
         : outcome === "miss"
           ? `Under ${repFloor} again → deload`
           : undefined;
@@ -777,6 +880,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     nextState,
     label,
     displayMode: prefs.suggestionDetail,
+    bodyweightLoad: bwLoad || undefined,
     reasoning,
     nudge,
     change,

@@ -127,7 +127,11 @@ export type ProgressionOutput = {
   nudge?: ProgressionNudge;
   // Optional: what it takes to move up. "Get `reps` on every working set and the
   // next session prescribes `weight`." The session screen draws this as a meter.
-  progressGoal?: { reps: number; weight: number };
+  // No `weight` when each set moves up on its own (sets done at different weights).
+  progressGoal?: { reps: number; weight?: number };
+  // True when weights are relative to bodyweight: 0 = bodyweight, −25 = 25 kg of
+  // assistance, +10 = 10 kg added. Shown as BW, BW−25, BW+10.
+  bodyweightLoad?: boolean;
   // Optional: how today's prescription differs from last time, in one short tag
   // (`text`, e.g. "+1 rep") plus a sentence on why (`detail`).
   change?: ProgressionChange;

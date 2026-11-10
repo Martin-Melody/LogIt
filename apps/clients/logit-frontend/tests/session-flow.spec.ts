@@ -118,6 +118,15 @@ async function goToSession(page: Page) {
 
 // ── Session loads ─────────────────────────────────────────────────────────────
 
+/** Set row `i`'s plan or logged value as "reps × weight" (placeholders count). */
+async function rowText(page: Page, i = 0): Promise<string> {
+  const r = page.getByTestId("set-reps").nth(i);
+  const w = page.getByTestId("set-weight").nth(i);
+  const reps = (await r.inputValue()) || (await r.getAttribute("placeholder")) || "";
+  const weight = (await w.inputValue()) || (await w.getAttribute("placeholder")) || "";
+  return `${reps} × ${weight}`;
+}
+
 test.describe("session loads", () => {
   test("empty session shows empty state", async ({ page }) => {
     await seedSession(page, { session: makeSession([]) });
@@ -197,8 +206,8 @@ test.describe("progression targets", () => {
     await goToSession(page);
 
     // The block plans its sets straight away: no history yet, so the rep range at 100kg.
-    await expect(page.getByTestId("set-today")).toHaveCount(3);
-    await expect(page.getByTestId("set-today").first()).toContainText("5–8 × 100");
+    await expect(page.getByTestId("set-reps")).toHaveCount(3);
+    await expect.poll(() => rowText(page, 0)).toBe("5–8 × 100");
   });
 
   test("plans the next weight up when last session hit the rep ceiling", async ({ page }) => {
@@ -216,9 +225,9 @@ test.describe("progression targets", () => {
     await goToSession(page);
 
     // All 3 sets hit ceiling → today is 102.5kg, starting from the bottom of the range.
-    await expect(page.getByTestId("set-today").first()).toContainText("5 × 102.5");
+    await expect.poll(() => rowText(page, 0)).toBe("5 × 102.5");
     await expect(page.getByText("+2.5kg", { exact: true })).toBeVisible();
-    await expect(page.getByText(/Reps towards\s*105 kg/)).toBeVisible();
+    await expect(page.getByText(/8 on every set →\s*105 kg/)).toBeVisible();
   });
 
   test("plans a deload after two consecutive failures", async ({ page }) => {
@@ -242,7 +251,7 @@ test.describe("progression targets", () => {
     await goToSession(page);
 
     // Second failure → deload (100 * 0.9 = 90)
-    await expect(page.getByTestId("set-today").first()).toContainText("5 × 90");
+    await expect.poll(() => rowText(page, 0)).toBe("5 × 90");
     await expect(page.getByText("Deload", { exact: true })).toBeVisible();
   });
 
@@ -253,7 +262,7 @@ test.describe("progression targets", () => {
     });
     await goToSession(page);
 
-    await expect(page.getByTestId("set-today").first()).toContainText("5–8 × 20");
+    await expect.poll(() => rowText(page, 0)).toBe("5–8 × 20");
   });
 
   test("no target shown when progression is not configured", async ({ page }) => {
@@ -343,12 +352,12 @@ test.describe("managing sets", () => {
 
     // The plan creates the sets itself, weight filled in from the suggestion.
     await expect(page.getByText("+ Add first set")).toHaveCount(0);
-    await expect(page.getByTestId("set-today").first()).toContainText("× 80");
+    await expect.poll(() => rowText(page, 0)).toContain("× 80");
 
     // A set added beyond the plan carries the same weight.
     await page.getByRole("button", { name: "Add set" }).click();
-    await expect(page.getByTestId("set-today")).toHaveCount(4);
-    await expect(page.getByTestId("set-today").nth(3)).toContainText("× 80");
+    await expect(page.getByTestId("set-reps")).toHaveCount(4);
+    await expect.poll(() => rowText(page, 3)).toContain("× 80");
   });
 
   test("warm-up ramp prepends warm-up sets before the working set", async ({ page }) => {

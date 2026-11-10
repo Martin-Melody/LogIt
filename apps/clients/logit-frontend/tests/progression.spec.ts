@@ -102,13 +102,21 @@ async function goToSession(page: Page) {
 
 // ── Plan helpers ──────────────────────────────────────────────────────────────
 
-/** Waits for the planned set rows and returns their "Today" cells, compacted:
- * "7×80kg|6×80kg|6×80kg" (or "5–8reps" when there's no weight yet). */
+/** Waits for the planned set rows and returns what each plans, compacted:
+ * "7×80kg|6×80kg|6×80kg" (or "5–8reps" when there's no weight yet). The plan is
+ * in the boxes as placeholder text until a set is done. */
 async function getTargetText(page: Page): Promise<string> {
-  const cells = page.getByTestId("set-today");
-  await expect(cells.first()).toBeVisible({ timeout: 5_000 });
-  const texts = await cells.allTextContents();
-  return texts.map((t) => t.replace(/\s+/g, "")).join("|");
+  const reps = page.getByTestId("set-reps");
+  await expect(reps.first()).toBeVisible({ timeout: 5_000 });
+  const weights = page.getByTestId("set-weight");
+  const n = await reps.count();
+  const out: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const r = (await reps.nth(i).inputValue()) || (await reps.nth(i).getAttribute("placeholder")) || "";
+    const w = (await weights.nth(i).inputValue()) || (await weights.nth(i).getAttribute("placeholder")) || "";
+    out.push(w === "" || w === "0" ? `${r}reps` : `${r}×${w}kg`);
+  }
+  return out.join("|");
 }
 
 // ── History lookup — name fallback ────────────────────────────────────────────
@@ -623,5 +631,53 @@ test.describe("analytics — bodyweight exercise", () => {
     await expect(metricTile(page, "Max reps")).toHaveText("12 reps");
     await expect(page.getByText(/Up \d+ reps from last session/)).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Est. 1RM")).not.toBeVisible();
+  });
+});
+
+// ── Bodyweight-relative loads ─────────────────────────────────────────────────
+
+test.describe("bodyweight loads", () => {
+  test("plans each dip set from its own weight last time, shown relative to BW", async ({ page }) => {
+    // Two sets at bodyweight, then two with 25 kg of help once tired.
+    await seed(page, {
+      draft: makeDraftSession(makeStrengthBlock("b1", "Dips", [])),
+      history: [
+        makeCompletedSession(
+          "h1",
+          makeStrengthBlock("hb1", "Dips", [
+            makeSet("a", 0, 10, 0),
+            makeSet("b", 1, 6, 0),
+            makeSet("c", 2, 10, -25),
+            makeSet("d", 3, 7, -25),
+          ]),
+        ),
+      ],
+    });
+    await goToSession(page);
+
+    // Sets 1 and 3 hit 8 → up 2.5 (BW+2.5, BW−22.5); sets 2 and 4 aim for one more rep.
+    await expect.poll(() => getTargetText(page)).toBe("5×2.5kg|7reps|5×-22.5kg|8×-25kg");
+    await expect(page.getByTestId("set-last")).toHaveText(["10 × BW", "6 × BW", "10 × BW−25", "7 × BW−25"]);
+    await expect(page.getByText("+2.5kg on 2 sets")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Warm-up ramp/ })).toHaveCount(0);
+  });
+
+  test("the set card logs a set with what's in it", async ({ page }) => {
+    await seed(page, {
+      draft: makeDraftSession(makeStrengthBlock("b1", "Dips", [])),
+      history: [
+        makeCompletedSession("h1", makeStrengthBlock("hb1", "Dips", [makeSet("a", 0, 6, -25), makeSet("b", 1, 6, -25), makeSet("c", 2, 6, -25)])),
+      ],
+    });
+    await goToSession(page);
+    await expect.poll(() => getTargetText(page)).toBe("7×-25kg|7×-25kg|7×-25kg");
+
+    await page.getByTestId("set-last").first().click();
+    await expect(page.getByTestId("set-card-plan")).toHaveText("Planned 7 × BW−25 · last 6 × BW−25");
+    await page.getByRole("button", { name: "One more rep" }).click();
+    await page.getByTestId("set-card-log").click();
+
+    await expect(page.getByRole("button", { name: "Mark incomplete" })).toHaveCount(1);
+    await expect(page.getByTestId("set-reps").first()).toHaveValue("8");
   });
 });

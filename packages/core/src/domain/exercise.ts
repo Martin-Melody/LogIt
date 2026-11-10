@@ -52,3 +52,19 @@ export type Exercise = {
 };
 
 export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles" | "exerciseType" | "machines" | "defaultMachineId">>;
+
+/**
+ * Whether an exercise's weights are relative to bodyweight (0 = BW, negative =
+ * assisted, positive = added). True for the "bodyweight" type, and for any
+ * exercise with a negative weight logged (BW−25 on an assisted dip), except the
+ * "assisted" type, whose weight is the assistance itself.
+ */
+export function usesBodyweightLoad(
+  exerciseType: ExerciseType | undefined,
+  weights: Iterable<number> = [],
+): boolean {
+  if (exerciseType === "assisted") return false;
+  if (exerciseType === "bodyweight") return true;
+  for (const w of weights) if (w < 0) return true;
+  return false;
+}

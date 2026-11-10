@@ -55,7 +55,7 @@
             kind: "strength",
             id: b.id,
             name: d.exerciseName,
-            prescription: s ? formatPrescription(s.sets, unit) : null,
+            prescription: s ? formatPrescription(s.sets, unit, !!s.bodyweightLoad) : null,
             tag: s?.change ? { text: s.change.text, cls: changeTagClass(s.change.kind) } : undefined,
             detail: [s?.change?.detail, fatigueNote(s?.reasoning?.computed?.fatigueDiscountPct)].filter(Boolean).join(" "),
           }];
