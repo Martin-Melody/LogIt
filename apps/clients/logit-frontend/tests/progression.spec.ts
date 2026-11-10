@@ -48,6 +48,9 @@ type SeedOpts = {
     exerciseName: string;
     workingWeight: number;
     failedAttempts?: number;
+    // When the state was saved. Defaults to just now, i.e. after the history
+    // sessions (already applied); earlier means the newest session is still to apply.
+    savedAtMs?: number;
   };
 };
 
@@ -84,7 +87,7 @@ async function seed(page: Page, opts: SeedOpts) {
               increment: 2.5,
               repRange: [5, 8],
             },
-            updatedAtMs: Date.now() - 100_000,
+            updatedAtMs: s.savedAtMs ?? Date.now() - 100_000,
           },
         }),
       );
@@ -97,13 +100,15 @@ async function goToSession(page: Page) {
   await page.waitForLoadState("networkidle");
 }
 
-// ── Target label helpers ──────────────────────────────────────────────────────
+// ── Plan helpers ──────────────────────────────────────────────────────────────
 
-/** Waits for any Target: label and returns its text. */
+/** Waits for the planned set rows and returns their "Today" cells, compacted:
+ * "7×80kg|6×80kg|6×80kg" (or "5–8reps" when there's no weight yet). */
 async function getTargetText(page: Page): Promise<string> {
-  const el = page.getByText(/Target:/);
-  await expect(el).toBeVisible({ timeout: 5_000 });
-  return (await el.textContent()) ?? "";
+  const cells = page.getByTestId("set-today");
+  await expect(cells.first()).toBeVisible({ timeout: 5_000 });
+  const texts = await cells.allTextContents();
+  return texts.map((t) => t.replace(/\s+/g, "")).join("|");
 }
 
 // ── History lookup — name fallback ────────────────────────────────────────────
@@ -314,11 +319,13 @@ test.describe("progression — correct behaviour unchanged", () => {
     });
     await goToSession(page);
 
+    // No weight to suggest yet: just the rep range.
     const target = await getTargetText(page);
-    expect(target).toContain("0kg");
+    expect(target).toContain("5–8reps");
+    expect(target).not.toContain("kg");
   });
 
-  test("shows 'Next: Xkg' when last session hit the rep ceiling", async ({ page }) => {
+  test("plans the next weight when last session hit the rep ceiling", async ({ page }) => {
     const EXERCISE_ID = "ex_core_bench";
     const ceilingSets = [
       makeSet("s1", 0, 8, 100),
@@ -340,15 +347,17 @@ test.describe("progression — correct behaviour unchanged", () => {
         key: EXERCISE_ID,
         exerciseName: "Bench Press",
         workingWeight: 100,
+        savedAtMs: Date.now() - 2 * 86_400_000,
       },
     });
     await goToSession(page);
 
-    // Ceiling hit → next increment shown in label
-    await expect(page.getByText(/Next: 102\.5kg/)).toBeVisible();
+    // Ceiling hit → today steps up, from the bottom of the range
+    expect(await getTargetText(page)).toBe("5×102.5kg|5×102.5kg|5×102.5kg");
+    await expect(page.getByText("+2.5kg", { exact: true })).toBeVisible();
   });
 
-  test("shows 'Deload next' after two consecutive failures", async ({ page }) => {
+  test("plans a deload after two consecutive failures", async ({ page }) => {
     const EXERCISE_ID = "ex_core_squat";
     const failureSets = [
       makeSet("s1", 0, 3, 100),
@@ -371,11 +380,13 @@ test.describe("progression — correct behaviour unchanged", () => {
         exerciseName: "Squat",
         workingWeight: 100,
         failedAttempts: 1, // second failure triggers deload
+        savedAtMs: Date.now() - 2 * 86_400_000,
       },
     });
     await goToSession(page);
 
-    await expect(page.getByText(/Deload next: 90kg/)).toBeVisible();
+    expect(await getTargetText(page)).toContain("5×90kg");
+    await expect(page.getByText("Deload", { exact: true })).toBeVisible();
   });
 });
 
@@ -403,9 +414,9 @@ test.describe("excludeFromProgression", () => {
     });
     await goToSession(page);
 
-    // Excluded history means no valid data → falls back to 0kg default
+    // Excluded history means no valid data → no weight yet, just the rep range
     const target = await getTargetText(page);
-    expect(target).toContain("0kg");
+    expect(target).toContain("5–8reps");
     expect(target).not.toContain("80kg");
   });
 
@@ -475,8 +486,9 @@ test.describe("exercise type — assisted", () => {
     });
     await goToSession(page);
 
-    // Should show the reduced assistance weight and the "Next:" label
-    await expect(page.getByText(/Next: 27\.5kg assist/)).toBeVisible({ timeout: 5_000 });
+    // Should plan the reduced assistance weight
+    expect(await getTargetText(page)).toContain("5×27.5kg");
+    await expect(page.getByText("−2.5kg assist", { exact: true })).toBeVisible();
   });
 
   test("missing the rep floor increases assistance weight on deload", async ({ page }) => {
@@ -498,11 +510,14 @@ test.describe("exercise type — assisted", () => {
         exerciseName: "Assisted Dips",
         workingWeight: 20,
         failedAttempts: 1,
+        savedAtMs: Date.now() - 2 * 86_400_000,
       },
     });
     await goToSession(page);
 
-    await expect(page.getByText(/More assist next: 22\.5kg/)).toBeVisible({ timeout: 5_000 });
+    // Deload for assisted = more assistance
+    expect(await getTargetText(page)).toContain("5×22.5kg");
+    await expect(page.getByText("Deload", { exact: true })).toBeVisible();
   });
 });
 

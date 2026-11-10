@@ -10,8 +10,11 @@
     swapExercise,
     groupIntoSuperset,
     isContinuationSet,
+    setTypeMeta,
+    applySetPlan,
     DEFAULT_REST_MS,
   } from "@logit/core/domain/workout";
+  import { suggestionToPlan } from "@logit/core/domain/progression";
   import { warmupSets } from "@logit/core/domain/warmup";
   import { platesPerSide } from "@logit/core/domain/plates";
   import { machineWeightsKg, snapToMachine } from "@logit/core/domain/machine";
@@ -29,6 +32,7 @@
   import type { Machine } from "@logit/core/domain/exercise";
 
   import { get } from "svelte/store";
+  import { untrack } from "svelte";
   import { profile } from "$lib/stores/profile.store";
   import { startRestTimer, cancelRestTimer, hasRestTimerFired } from "$lib/services/restTimerService";
   import { reveal } from "$lib/transitions";
@@ -54,7 +58,11 @@
 
   let suggestion = $state<ProgressionOutput | null>(null);
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
-  let blockAutoApplied = $state(false);
+  // Plan this block's sets once the suggestion arrives: on first load if it has
+  // none yet, and after a swap (replacing only the planned, not-yet-done sets).
+  let planPending = $state(untrack(() => data.sets.length === 0));
+  // Which set's "Today" editor is open.
+  let editingSetId = $state<string | null>(null);
   let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string } | null>(null);
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
@@ -103,8 +111,8 @@
         const ex = await getExerciseRepo().create(trimmed);
         exerciseId = ex.id;
       }
-      // Let a block-mode suggestion for the new exercise auto-apply if empty.
-      blockAutoApplied = false;
+      // Re-plan for the new exercise once its suggestion loads; logged sets stay.
+      planPending = true;
       await onMutate((s: WorkoutSession) =>
         swapExercise(s, blockId, { exerciseName: trimmed, exerciseId }),
       );
@@ -128,7 +136,9 @@
 
   async function loadPrevSets(name: string, exerciseId?: string) {
     try {
-      const { history } = await getExerciseHistory({ id: exerciseId, name }, getProgressionDeps());
+      const { history } = await getExerciseHistory({ id: exerciseId, name }, getProgressionDeps(), {
+        excludeSessionId: get(currentSession)?.id,
+      });
       const last = history.at(-1);
       prevSets = last
         ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
@@ -149,18 +159,6 @@
     }
   }
 
-  $effect(() => {
-    if (
-      suggestion?.displayMode === "block" &&
-      suggestion.sets.length > 0 &&
-      data.sets.length === 0 &&
-      !blockAutoApplied
-    ) {
-      blockAutoApplied = true;
-      void handleApplySuggestion();
-    }
-  });
-
   async function loadSuggestion(name: string, exerciseId?: string) {
     try {
       const session = get(currentSession) ?? undefined;
@@ -168,6 +166,15 @@
     } catch {
       suggestion = null;
     }
+    if (planPending && suggestion && suggestion.sets.length > 0 && name === data.exerciseName) {
+      planPending = false;
+      await applyPlan(suggestion);
+    }
+  }
+
+  async function applyPlan(output: ProgressionOutput) {
+    const plan = suggestionToPlan(output, exerciseData?.defaultMachineId);
+    await onMutate((s: WorkoutSession) => applySetPlan(s, blockId, plan));
   }
 
   async function handleDismissNudge(nudgeId: string) {
@@ -193,12 +200,29 @@
   }
 
   async function handleAddSet() {
-    const setIndex = data.sets.length;
-    const suggestedSet = suggestion?.sets[setIndex] ?? suggestion?.sets[0];
+    const working = data.sets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType));
+    const planned = suggestion ? suggestionToPlan(suggestion)[working.length] : undefined;
+    const lastWeight = [...data.sets].sort(sortByOrderIndex).at(-1)?.weight;
+    const before = new Set(data.sets.map((s) => s.id));
     await onMutate((s: WorkoutSession) =>
-      addSet(s, blockId, { reps: 0, weight: suggestedSet?.weight ?? 0, machineId: exerciseData?.defaultMachineId }),
+      addSet(s, blockId, {
+        reps: 0,
+        weight: planned?.weight ?? lastWeight ?? suggestion?.sets[0]?.weight ?? 0,
+        machineId: exerciseData?.defaultMachineId,
+        ...(planned ? { target: { reps: planned.reps, weight: planned.weight, ...(planned.repsMax !== undefined ? { repsMax: planned.repsMax } : {}) } } : {}),
+      }),
     );
     if (collapsed) collapsed = false;
+    // A set beyond the plan has nothing to show yet — open it for entry.
+    if (!planned) {
+      const block = get(currentSession)?.blocks.find((b) => b.id === blockId);
+      const added = (block?.data as StrengthBlockData | undefined)?.sets.find((x) => !before.has(x.id));
+      if (added) editingSetId = added.id;
+    }
+  }
+
+  function toggleEdit(setId: string) {
+    editingSetId = editingSetId === setId ? null : setId;
   }
 
   const hasWarmup = $derived(data.sets.some((s) => s.setType === "warmup"));
@@ -221,24 +245,6 @@
     if (ramp.length === 0) return;
     await onMutate((s: WorkoutSession) => addWarmupSets(s, blockId, ramp));
     if (collapsed) collapsed = false;
-  }
-
-  async function handleApplySuggestion() {
-    if (!suggestion?.sets.length) return;
-    const sets = suggestion.sets;
-    await onMutate((s: WorkoutSession) => {
-      let result = s;
-      for (const sugSet of sets) {
-        result = addSet(result, blockId, {
-          reps: 0,
-          weight: sugSet.weight,
-          setType: sugSet.setType ?? "normal",
-          note: sugSet.note,
-          machineId: exerciseData?.defaultMachineId,
-        });
-      }
-      return result;
-    });
   }
 
   async function handleRepsChange(setId: string, reps: number) {
@@ -298,6 +304,20 @@
     if (!set) return;
 
     const wasCompleted = !!set.completed;
+
+    // Ticking an untouched set logs it. A planned set takes its planned reps; a
+    // set with nothing planned and nothing entered opens for entry instead of
+    // being logged as 0 reps.
+    let fill: { reps: number; weight?: number } | null = null;
+    if (!wasCompleted && set.reps === 0) {
+      if (set.target) {
+        fill = { reps: set.target.reps, ...(set.weight === 0 ? { weight: set.target.weight } : {}) };
+      } else if (!setTypeMeta(set.setType).repsPlaceholder) {
+        editingSetId = set.id;
+        return;
+      }
+    }
+    if (!wasCompleted && editingSetId === set.id) editingSetId = null;
     // Explicit per-set override takes priority; fall back to per-type default.
     const effectiveRest = set.restDurationMs ?? get(profile).restDefaults[set.setType];
     // In a superset, only the anchor (last member of the round) starts a rest —
@@ -306,6 +326,7 @@
 
     await onMutate((s: WorkoutSession) =>
       updateSet(s, blockId, setId, {
+        ...(fill ?? {}),
         completed: !wasCompleted,
         restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
       }),
@@ -404,6 +425,20 @@
     data.sets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)).length,
   );
   const hasActiveTimer = $derived(data.sets.some((s) => typeof s.restStartedAtMs === "number"));
+
+  const workingSets = $derived(
+    [...data.sets]
+      .sort(sortByOrderIndex)
+      .filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)),
+  );
+  const doneCount = $derived(workingSets.filter((s) => s.completed).length);
+  // For the reps-to-next-weight meter: what each working set got, or is aiming for.
+  const meter = $derived(
+    workingSets.map((s) => ({
+      done: s.completed || s.reps > 0 ? s.reps : 0,
+      target: s.target?.reps ?? 0,
+    })),
+  );
 
   // ── Set-level drag-to-reorder ─────────────────────────────────────────────
 
@@ -524,6 +559,8 @@
 <ExerciseCard
   exerciseName={data.exerciseName}
   setCount={workingSetCount}
+  {doneCount}
+  {meter}
   {saving}
   {suggestion}
   {collapsed}
@@ -576,6 +613,9 @@
               weightUnit={$profile.weightUnit}
               rpe={lead.rpe ?? null}
               prev={prevLeadSets[group.leadNum - 1] ?? null}
+              target={lead.target ?? null}
+              editing={editingSetId === lead.id}
+              onToggleEdit={() => toggleEdit(lead.id)}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
               gripAction={(node) => setGripAction(node, lead.id)}
@@ -612,6 +652,9 @@
                   weight={drop.weight}
                   weightUnit={$profile.weightUnit}
                   rpe={drop.rpe ?? null}
+                  target={drop.target ?? null}
+                  editing={editingSetId === drop.id}
+                  onToggleEdit={() => toggleEdit(drop.id)}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
                   gripAction={noopGripAction}
