@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import type { AlgorithmPreferencesField } from "@logit/core/domain/progression";
 
   let {
@@ -24,13 +26,11 @@
         {#if field.description}
           <p class="text-xs text-muted-foreground mt-0.5 mb-2">{field.description}</p>
         {/if}
-        <div class="flex rounded border overflow-hidden text-xs w-full">
+        <div class={cn(segmentTrack, "w-full")}>
           {#each field.options as opt (opt.value)}
             <button
               type="button"
-              class="flex-1 px-3 py-1.5 text-center transition-colors {getStr(field.key) === String(opt.value)
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              class={segment(getStr(field.key) === String(opt.value))} aria-pressed={getStr(field.key) === String(opt.value)}
               onclick={() => onChange(field.key, opt.value)}
             >
               {opt.label}

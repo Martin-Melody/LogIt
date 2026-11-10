@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import { Button, buttonVariants } from "$lib/components/ui/button/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
@@ -346,12 +347,10 @@
         <!-- RPE -->
         <div class="flex flex-col gap-2">
           <Label>RPE <span class="text-muted-foreground font-normal">(optional)</span></Label>
-          <div class="flex gap-1.5">
+          <div class={segmentTrack}>
             <button
               type="button"
-              class="flex-1 py-1.5 text-xs rounded border transition-colors {draft.rpe == null
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              class={segment(draft.rpe == null)} aria-pressed={draft.rpe == null}
               {disabled}
               onclick={() => (draft.rpe = null)}
             >
@@ -360,9 +359,7 @@
             {#each RPE_OPTIONS as v (v)}
               <button
                 type="button"
-                class="flex-1 py-1.5 text-xs rounded border tabular-nums transition-colors {draft.rpe === v
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                class={segment(draft.rpe === v)} aria-pressed={draft.rpe === v}
                 {disabled}
                 onclick={() => (draft.rpe = v)}
               >
@@ -394,13 +391,11 @@
           <div class="flex flex-col gap-2">
             <Label>Machine</Label>
             {#if machines.length > 0}
-              <div class="flex gap-1.5 flex-wrap">
+              <div class="flex flex-wrap gap-2">
                 {#each machines as m (m.id)}
                   <button
                     type="button"
-                    class="px-2.5 py-1.5 text-xs rounded border transition-colors {draft.machineId === m.id
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                    class={chip(draft.machineId === m.id)} aria-pressed={draft.machineId === m.id}
                     {disabled}
                     onclick={() => pickMachine(m.id)}
                   >
@@ -427,12 +422,10 @@
           <Label>Rest timer</Label>
 
           <!-- Preset chips -->
-          <div class="flex gap-1.5">
+          <div class={segmentTrack}>
             <button
               type="button"
-              class="flex-1 py-1.5 text-xs rounded border transition-colors {draft.restDurationMs === undefined
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              class={segment(draft.restDurationMs === undefined)} aria-pressed={draft.restDurationMs === undefined}
               {disabled}
               onclick={clearRest}
             >
@@ -441,9 +434,7 @@
             {#each REST_PRESETS as ms (ms)}
               <button
                 type="button"
-                class="flex-1 py-1.5 text-xs rounded border transition-colors {draft.restDurationMs === ms
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                class={segment(draft.restDurationMs === ms)} aria-pressed={draft.restDurationMs === ms}
                 {disabled}
                 onclick={() => selectPreset(ms)}
               >

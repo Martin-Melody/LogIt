@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import { curveNatural } from "d3-shape";
   import { scaleUtc } from "d3-scale";
   import { AreaChart } from "layerchart";
@@ -169,11 +171,11 @@
 
     <!-- Series switcher — only shown when more than one series available -->
     {#if analytics.series.length > 1}
-      <div class="flex rounded border overflow-hidden text-xs self-start">
+      <div class={cn(segmentTrack, "self-start")}>
         {#each analytics.series as s (s.metricId)}
           <button
             type="button"
-            class="px-3 py-1.5 transition-colors {activeSeries === s.metricId ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+            class={segment(activeSeries === s.metricId)} aria-pressed={activeSeries === s.metricId}
             onclick={() => (activeSeries = s.metricId)}
           >
             {s.label}

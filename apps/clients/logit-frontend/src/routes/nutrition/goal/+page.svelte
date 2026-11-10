@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
@@ -268,11 +269,11 @@
       <!-- Body -->
       <div class="px-3 py-3 flex flex-col gap-2">
         <span class="text-xs font-semibold">About you</span>
-        <div class="flex gap-2">
+        <div class={segmentTrack}>
           {#each ["male", "female"] as s (s)}
             <button
               type="button"
-              class="flex-1 py-1.5 rounded text-sm capitalize {goal.sex === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}"
+              class={segment(goal.sex === s, "capitalize")} aria-pressed={goal.sex === s}
               onclick={() => (goal.sex = s as Sex)}
             >{s}</button>
           {/each}
@@ -305,11 +306,11 @@
       <!-- Goal -->
       <div class="px-3 py-3 flex flex-col gap-2">
         <span class="text-xs font-semibold">Goal</span>
-        <div class="flex gap-2">
+        <div class={segmentTrack}>
           {#each ["lose", "maintain", "gain"] as t (t)}
             <button
               type="button"
-              class="flex-1 py-1.5 rounded text-sm capitalize {goal.goalType === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}"
+              class={segment(goal.goalType === t, "capitalize")} aria-pressed={goal.goalType === t}
               onclick={() => (goal.goalType = t as GoalType)}
             >{t}</button>
           {/each}

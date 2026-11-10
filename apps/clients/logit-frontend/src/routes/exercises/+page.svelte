@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -199,11 +200,11 @@
   </div>
 
   <!-- Filter tabs -->
-  <div class="flex gap-1 px-3 pb-2" data-tour="exercises-filter">
+  <div class="flex px-3 pb-2 gap-2" data-tour="exercises-filter">
     {#each (["all", "core", "mine"] as Filter[]) as f (f)}
       <button
         type="button"
-        class="px-3 py-1 rounded text-xs font-medium transition-colors {filter === f ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}"
+        class={chip(filter === f)} aria-pressed={filter === f}
         onclick={() => (filter = f)}
       >
         {f === "all" ? "All" : f === "core" ? "Built-in" : "Mine"}
@@ -318,11 +319,11 @@
 
         <div class="flex flex-col gap-1.5">
           <span class="text-sm font-medium">Type</span>
-          <div class="flex gap-2">
+          <div class={segmentTrack}>
             {#each ([["normal", "Normal"], ["assisted", "Assisted"], ["bodyweight", "Bodyweight"]] as [ExerciseType, string][]) as [type, label] (type)}
               <button
                 type="button"
-                class="flex-1 py-1.5 rounded border text-xs font-medium transition-colors {draftType === type ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}"
+                class={segment(draftType === type)} aria-pressed={draftType === type}
                 onclick={() => (draftType = type)}
               >
                 {label}

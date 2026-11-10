@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import { Trash2, Star } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -149,13 +150,11 @@
   <!-- Unit -->
   <div class="flex items-center gap-2">
     <span class="text-xs text-muted-foreground w-20">Unit</span>
-    <div class="flex gap-1">
+    <div class={segmentTrack}>
       {#each (["kg", "lbs"] as const) as u (u)}
         <button
           type="button"
-          class="px-2.5 py-1 text-xs rounded border {unit === u
-            ? 'bg-primary text-primary-foreground border-primary'
-            : 'border-border text-muted-foreground hover:text-foreground'}"
+          class={segment(unit === u)} aria-pressed={unit === u}
           onclick={() => { unit = u; commit(); }}
           disabled={saving}
         >
@@ -168,13 +167,11 @@
   <!-- Weight model -->
   <div class="flex items-center gap-2">
     <span class="text-xs text-muted-foreground w-20">Weights</span>
-    <div class="flex gap-1 flex-wrap">
+    <div class="flex flex-wrap gap-2">
       {#each ([["increment", "Simple"], ["linear", "Stack"], ["list", "List"]] as [Mode, string][]) as [m, label] (m)}
         <button
           type="button"
-          class="px-2.5 py-1 text-xs rounded border {mode === m
-            ? 'bg-primary text-primary-foreground border-primary'
-            : 'border-border text-muted-foreground hover:text-foreground'}"
+          class={chip(mode === m)} aria-pressed={mode === m}
           onclick={() => { mode = m; commit(); }}
           disabled={saving}
         >

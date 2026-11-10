@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
@@ -109,18 +110,18 @@
             {:else if q.type === "scale"}
               {@const min = q.scaleMin ?? 1}
               {@const max = q.scaleMax ?? 10}
-              <div class="flex flex-wrap gap-1">
+              <div class="flex flex-wrap gap-2">
                 {#each Array.from({ length: max - min + 1 }, (_, i) => min + i) as n}
                   <button type="button" disabled={alreadySubmitted}
-                    class="h-8 w-8 rounded border text-sm {answerFor(q.id)?.number === n ? 'bg-primary text-primary-foreground border-primary' : 'bg-background'}"
+                    class={chip(answerFor(q.id)?.number === n, "w-8")} aria-pressed={answerFor(q.id)?.number === n}
                     onclick={() => update(q, { number: n })}>{n}</button>
                 {/each}
               </div>
             {:else if q.type === "boolean"}
-              <div class="flex gap-2">
+              <div class={segmentTrack}>
                 {#each [{ v: true, l: "Yes" }, { v: false, l: "No" }] as opt}
                   <button type="button" disabled={alreadySubmitted}
-                    class="px-3 py-1.5 rounded border text-sm {answerFor(q.id)?.bool === opt.v ? 'bg-primary text-primary-foreground border-primary' : 'bg-background'}"
+                    class={segment(answerFor(q.id)?.bool === opt.v)} aria-pressed={answerFor(q.id)?.bool === opt.v}
                     onclick={() => update(q, { bool: opt.v })}>{opt.l}</button>
                 {/each}
               </div>

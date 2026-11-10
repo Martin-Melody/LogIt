@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import { Button, buttonVariants } from "$lib/components/ui/button/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
@@ -212,12 +213,10 @@
         <!-- Depth -->
         <div class="flex flex-col gap-2">
           <Label>Depth <span class="text-muted-foreground font-normal">(1–5, optional)</span></Label>
-          <div class="flex gap-1.5">
+          <div class={segmentTrack}>
             <button
               type="button"
-              class="flex-1 py-1.5 text-xs rounded border transition-colors {draft.depth == null
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              class={segment(draft.depth == null)} aria-pressed={draft.depth == null}
               {disabled}
               onclick={() => (draft.depth = null)}
             >
@@ -226,9 +225,7 @@
             {#each DEPTH_OPTIONS as d (d)}
               <button
                 type="button"
-                class="flex-1 py-1.5 text-xs rounded border tabular-nums transition-colors {draft.depth === d
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                class={segment(draft.depth === d)} aria-pressed={draft.depth === d}
                 {disabled}
                 onclick={() => (draft.depth = d)}
               >
@@ -241,12 +238,10 @@
         <!-- Rest after this set -->
         <div class="flex flex-col gap-2">
           <Label>Rest after this set</Label>
-          <div class="flex flex-wrap gap-1.5">
+          <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class="px-2.5 py-1.5 text-xs rounded border transition-colors {draft.restDurationMs === undefined
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              class={chip(draft.restDurationMs === undefined)} aria-pressed={draft.restDurationMs === undefined}
               {disabled}
               onclick={() => (draft.restDurationMs = undefined)}
             >
@@ -254,9 +249,7 @@
             </button>
             <button
               type="button"
-              class="px-2.5 py-1.5 text-xs rounded border transition-colors {draft.restDurationMs === 0
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              class={chip(draft.restDurationMs === 0)} aria-pressed={draft.restDurationMs === 0}
               {disabled}
               onclick={() => (draft.restDurationMs = 0)}
             >
@@ -265,9 +258,7 @@
             {#each REST_PRESETS as ms (ms)}
               <button
                 type="button"
-                class="px-2.5 py-1.5 text-xs rounded border tabular-nums transition-colors {draft.restDurationMs === ms
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                class={chip(draft.restDurationMs === ms)} aria-pressed={draft.restDurationMs === ms}
                 {disabled}
                 onclick={() => (draft.restDurationMs = ms)}
               >
@@ -287,13 +278,11 @@
         {#if perSide}
           <div class="flex flex-col gap-2">
             <Label>Which side first</Label>
-            <div class="flex gap-1.5">
+            <div class={segmentTrack}>
               {#each [{ v: null, t: `Drill default (${blockLeadSide === "right" ? "R" : "L"})` }, { v: "left", t: "Left" }, { v: "right", t: "Right" }] as opt (opt.t)}
                 <button
                   type="button"
-                  class="flex-1 py-1.5 text-xs rounded border transition-colors {draft.leadSide === opt.v
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                  class={segment(draft.leadSide === opt.v)} aria-pressed={draft.leadSide === opt.v}
                   {disabled}
                   onclick={() => (draft.leadSide = opt.v as MobilitySide | null)}
                 >

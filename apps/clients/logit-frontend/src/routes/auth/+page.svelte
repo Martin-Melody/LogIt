@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -197,14 +199,14 @@
     </p>
 
     <!-- Log in / Sign up toggle -->
-    <div class="flex rounded border overflow-hidden text-sm mb-5">
+    <div class={cn(segmentTrack, "mb-5")}>
       <button type="button"
-        class="flex-1 py-2 text-center transition-colors {mode === 'login' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+        class={segment(mode === 'login')} aria-pressed={mode === 'login'}
         onclick={() => switchMode("login")}>
         Log in
       </button>
       <button type="button"
-        class="flex-1 py-2 text-center transition-colors {mode === 'register' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+        class={segment(mode === 'register')} aria-pressed={mode === 'register'}
         onclick={() => switchMode("register")}>
         Sign up
       </button>

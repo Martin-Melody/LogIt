@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chip } from "$lib/components/ui/choice";
   import { untrack } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Select from "$lib/components/ui/select";
@@ -166,13 +167,11 @@
     </Select.Root>
 
     {#if mode === "days"}
-      <div class="flex gap-1 pt-2">
+      <div class="flex pt-2 gap-2">
         {#each WEEKDAYS as label, d (d)}
           <button
             type="button"
-            class="h-8 flex-1 rounded text-xs font-medium {days.includes(d)
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground'}"
+            class={chip(days.includes(d))} aria-pressed={days.includes(d)}
             onclick={() => toggleDay(d)}
           >
             {label}
