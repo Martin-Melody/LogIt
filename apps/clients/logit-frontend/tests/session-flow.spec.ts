@@ -50,7 +50,9 @@ function makeCompletedSession(exerciseName: string, sets: object[]) {
 
 type SeedOpts = {
   session?: object;
-  progressionState?: { exerciseName: string; workingWeight: number; failedAttempts?: number };
+  // savedAtMs: when the state was saved. Before the history session means that
+  // session hasn't been applied yet (it's the one being progressed from).
+  progressionState?: { exerciseName: string; workingWeight: number; failedAttempts?: number; savedAtMs?: number };
   history?: object[];
   blocksCollapsedByDefault?: boolean;
 };
@@ -95,7 +97,7 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
                 increment: 2.5,
                 repRange: [5, 8],
               },
-              updatedAtMs: Date.now(),
+              updatedAtMs: progressionState.savedAtMs ?? Date.now(),
             },
           }),
         );
@@ -115,6 +117,15 @@ async function goToSession(page: Page) {
 }
 
 // ── Session loads ─────────────────────────────────────────────────────────────
+
+/** Set row `i`'s plan or logged value as "reps × weight" (placeholders count). */
+async function rowText(page: Page, i = 0): Promise<string> {
+  const r = page.getByTestId("set-reps").nth(i);
+  const w = page.getByTestId("set-weight").nth(i);
+  const reps = (await r.inputValue()) || (await r.getAttribute("placeholder")) || "";
+  const weight = (await w.inputValue()) || (await w.getAttribute("placeholder")) || "";
+  return `${reps} × ${weight}`;
+}
 
 test.describe("session loads", () => {
   test("empty session shows empty state", async ({ page }) => {
@@ -194,11 +205,12 @@ test.describe("progression targets", () => {
     });
     await goToSession(page);
 
-    // ExerciseCard renders "Target: 3×5–8 @ 100kg" when expanded
-    await expect(page.getByText(/Target:.*100kg/)).toBeVisible();
+    // The block plans its sets straight away: no history yet, so the rep range at 100kg.
+    await expect(page.getByTestId("set-reps")).toHaveCount(3);
+    await expect.poll(() => rowText(page, 0)).toBe("5–8 × 100");
   });
 
-  test("shows 'Next: Xkg' label when last session hit the rep ceiling", async ({ page }) => {
+  test("plans the next weight up when last session hit the rep ceiling", async ({ page }) => {
     const ceilingSets = [
       makeSet("ps1", 0, 8, 100), // 8 = ceiling of repRange [5, 8]
       makeSet("ps2", 1, 8, 100),
@@ -207,16 +219,18 @@ test.describe("progression targets", () => {
 
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
-      progressionState: { exerciseName: "Bench Press", workingWeight: 100 },
+      progressionState: { exerciseName: "Bench Press", workingWeight: 100, savedAtMs: Date.now() - 3 * 86_400_000 },
       history: [makeCompletedSession("Bench Press", ceilingSets)],
     });
     await goToSession(page);
 
-    // All 3 sets hit ceiling → next session increment → "Next: 102.5kg"
-    await expect(page.getByText(/Next: 102\.5kg/)).toBeVisible();
+    // All 3 sets hit ceiling → today is 102.5kg, starting from the bottom of the range.
+    await expect.poll(() => rowText(page, 0)).toBe("5 × 102.5");
+    await expect(page.getByText("+2.5kg", { exact: true })).toBeVisible();
+    await expect(page.getByText(/8 on every set →\s*105 kg/)).toBeVisible();
   });
 
-  test("shows 'Deload next' label after two consecutive failures", async ({ page }) => {
+  test("plans a deload after two consecutive failures", async ({ page }) => {
     const failureSets = [
       makeSet("ps1", 0, 3, 100), // 3 < 5 = below floor
       makeSet("ps2", 1, 4, 100),
@@ -226,13 +240,19 @@ test.describe("progression targets", () => {
     // failedAttempts: 1 means this is the second failure → triggers deload
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
-      progressionState: { exerciseName: "Bench Press", workingWeight: 100, failedAttempts: 1 },
+      progressionState: {
+        exerciseName: "Bench Press",
+        workingWeight: 100,
+        failedAttempts: 1,
+        savedAtMs: Date.now() - 3 * 86_400_000,
+      },
       history: [makeCompletedSession("Bench Press", failureSets)],
     });
     await goToSession(page);
 
-    // Second failure → deload (100 * 0.9 = 90) → "Deload next: 90kg"
-    await expect(page.getByText(/Deload next: 90kg/)).toBeVisible();
+    // Second failure → deload (100 * 0.9 = 90)
+    await expect.poll(() => rowText(page, 0)).toBe("5 × 90");
+    await expect(page.getByText("Deload", { exact: true })).toBeVisible();
   });
 
   test("shows 20kg default target for first-time exercise with no history", async ({ page }) => {
@@ -242,7 +262,7 @@ test.describe("progression targets", () => {
     });
     await goToSession(page);
 
-    await expect(page.getByText(/Target:.*20kg/)).toBeVisible();
+    await expect.poll(() => rowText(page, 0)).toBe("5–8 × 20");
   });
 
   test("no target shown when progression is not configured", async ({ page }) => {
@@ -252,7 +272,8 @@ test.describe("progression targets", () => {
     });
     await goToSession(page);
 
-    await expect(page.getByText(/Target:/)).not.toBeVisible();
+    await expect(page.getByTestId("progress-meter")).toHaveCount(0);
+    await expect(page.getByText("+ Add first set")).toBeVisible();
   });
 });
 
@@ -305,7 +326,7 @@ test.describe("managing sets", () => {
     await expect(page.locator('[aria-label="Add set"]')).toBeVisible();
   });
 
-  test("set rows show the previous session's reps/weight as a placeholder", async ({ page }) => {
+  test("set rows show the previous session's reps/weight under Last time", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([makeStrengthBlock("b1", 0, "Bench Press")]),
       history: [
@@ -319,8 +340,7 @@ test.describe("managing sets", () => {
 
     await page.getByText("+ Add first set").click();
 
-    const weightInput = page.locator('input[step="0.5"]').first();
-    await expect(weightInput).toHaveJSProperty("placeholder", "90");
+    await expect(page.getByTestId("set-last").first()).toHaveText("6 × 90");
   });
 
   test("add set button uses suggestion weight as default", async ({ page }) => {
@@ -330,12 +350,14 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    // Add first set uses suggestion
-    await page.getByText("+ Add first set").click();
+    // The plan creates the sets itself, weight filled in from the suggestion.
+    await expect(page.getByText("+ Add first set")).toHaveCount(0);
+    await expect.poll(() => rowText(page, 0)).toContain("× 80");
 
-    // The weight input should be pre-filled with 80 from the suggestion
-    const weightInput = page.locator('input[step="0.5"]').first();
-    await expect(weightInput).toHaveValue("80");
+    // A set added beyond the plan carries the same weight.
+    await page.getByRole("button", { name: "Add set" }).click();
+    await expect(page.getByTestId("set-reps")).toHaveCount(4);
+    await expect.poll(() => rowText(page, 3)).toContain("× 80");
   });
 
   test("warm-up ramp prepends warm-up sets before the working set", async ({ page }) => {

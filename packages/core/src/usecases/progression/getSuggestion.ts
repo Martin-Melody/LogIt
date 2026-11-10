@@ -1,7 +1,7 @@
 import type { ProgressionOutput, PrecedingExercise } from "../../domain/progression";
 import { exerciseKey, resolveExerciseIncrement, resolveExerciseMachine } from "../../domain/progression";
 import { snapToMachine } from "../../domain/machine";
-import { getExercises } from "../../domain/workout";
+import { getExercises, isUnloggedPlannedSet } from "../../domain/workout";
 import type { WorkoutSession } from "../../domain/workout";
 import { nowMs } from "../../domain/time";
 import type { PlannedTargets } from "../../domain/WorkoutSplit";
@@ -48,7 +48,11 @@ export async function getSuggestion(
   // first) — reused rather than re-implemented, then capped to this exercise's
   // own most recent HISTORY_WINDOW and reversed to the newest-first order this
   // usecase has always returned.
-  const { history: fullHistory, exerciseData } = await getExerciseHistory(exercise, { workoutRepo, exerciseRepo });
+  const { history: fullHistory, exerciseData } = await getExerciseHistory(
+    exercise,
+    { workoutRepo, exerciseRepo },
+    { excludeSessionId: currentSession?.id },
+  );
   const history = fullHistory.slice(-HISTORY_WINDOW).reverse();
 
   const exerciseWithMuscles = {
@@ -76,13 +80,17 @@ export async function getSuggestion(
             ? await exerciseRepo.getById(entry.exerciseId)
             : await exerciseRepo.getByName(entry.exerciseName);
 
+          // Sets still planned count as work about to happen, so a plan made at the
+          // start of the session already allows for exercise order, and stays the
+          // same as the earlier exercises get ticked off.
+          const counts = (s: (typeof entry.sets)[number]) => s.completed || isUnloggedPlannedSet(s);
           const completedSets = entry.sets.filter(
-            (s) => s.completed && (s.setType === "normal" || !s.setType),
+            (s) => counts(s) && (s.setType === "normal" || !s.setType),
           ).length;
 
-          const normalSets = entry.sets.filter((s) => s.completed && (s.setType === "normal" || !s.setType)).length;
-          const highEffortSets = entry.sets.filter((s) => s.completed && (s.setType === "failure" || s.setType === "amrap")).length;
-          const warmupSets = entry.sets.filter((s) => s.completed && s.setType === "warmup").length;
+          const normalSets = completedSets;
+          const highEffortSets = entry.sets.filter((s) => counts(s) && (s.setType === "failure" || s.setType === "amrap")).length;
+          const warmupSets = entry.sets.filter((s) => counts(s) && s.setType === "warmup").length;
           const effortFactor = Math.min(1, (normalSets + highEffortSets * 1.5 + warmupSets * 0.25) / 3);
 
           return {
@@ -154,6 +162,7 @@ export async function getSuggestion(
     suggestedTrialRepRange,
     siblingRuledOutRepRanges: siblingRuledOutRepRanges.length > 0 ? siblingRuledOutRepRanges : undefined,
     liveInput,
+    stateSavedAtMs: saved?.algorithmId === config.algorithmId ? saved.updatedAtMs : undefined,
   });
 
   // An algorithm decides *whether* to ask for help generating signal; whether the

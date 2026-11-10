@@ -12,7 +12,7 @@
   import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import type { WorkoutSession, SessionBlock, MobilityBlockData, MobilityMetric } from "@logit/core/domain/workout";
-  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote } from "@logit/core/domain/workout";
+  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote, dropUnloggedPlannedSets } from "@logit/core/domain/workout";
   import { refreshMobilityProgressionState } from "@logit/core/usecases/progression/getMobilitySuggestion";
   import { mobilityDrillKey, getMobilityDrillLeadSide } from "$lib/data/mobilityDrillPrefs";
 
@@ -199,7 +199,8 @@
     const s = getSessionOrNull();
     if (!s) return;
     destroyActiveTour();
-    recapSession = s;
+    // Recap what will actually be saved: planned sets nobody did aren't part of it.
+    recapSession = dropUnloggedPlannedSets(s);
   }
 
   async function confirmFinish() {
@@ -246,8 +247,13 @@
     ui.finishing = true;
     currentSession.beginTransition();
     try {
+      const draftId = getSessionOrNull()?.id;
       await goto("/");
-      await getWorkoutRepo().clearDraftSession();
+      const repo = getWorkoutRepo();
+      await repo.clearDraftSession();
+      // On SQLite the draft is a row in the sessions table; clearing the pointer
+      // alone left it behind, where progression read it as a real workout.
+      if (draftId) await repo.deleteSession(draftId);
       currentSession.clear();
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to discard workout";

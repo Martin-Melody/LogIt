@@ -32,6 +32,15 @@ function parseBlockData(type: string, dataJson: string): unknown {
         restStartedAtMs: s.restStartedAtMs ?? null,
         machineId: s.machineId ?? undefined,
         rpe: s.rpe ?? null,
+        ...(s.target && Number.isFinite(Number(s.target.reps)) && Number.isFinite(Number(s.target.weight))
+          ? {
+              target: {
+                reps: Number(s.target.reps),
+                weight: Number(s.target.weight),
+                ...(s.target.repsMax != null ? { repsMax: Number(s.target.repsMax) } : {}),
+              },
+            }
+          : {}),
       })),
     } satisfies StrengthBlockData;
   }

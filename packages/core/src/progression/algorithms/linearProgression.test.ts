@@ -49,8 +49,11 @@ describe("linearProgression", () => {
       history: [historyEntry()], // all sets at 8 reps = ceiling
     });
     const out = await linearProgression.suggest(input);
-    expect(out.label).toMatch(/Next: 102\.5kg/);
-    expect(out.reasoning?.verdict).toMatch(/Next: 102\.5kg/);
+    expect(out.label).toMatch(/Up to 102\.5kg/);
+    expect(out.reasoning?.verdict).toMatch(/Up to 102\.5kg/);
+    expect(out.sets[0]!.weight).toBe(102.5);
+    expect(out.sets.map((s) => s.reps)).toEqual([5, 5, 5]); // new weight → bottom of the range
+    expect(out.change?.kind).toBe("increase");
     expect(out.reasoning?.inputs.allSetsHitCeiling).toBe(true);
   });
 
@@ -63,8 +66,9 @@ describe("linearProgression", () => {
         history: [failing],
       }),
     );
-    // First miss is recorded but doesn't deload or label anything yet.
-    expect(firstMiss.label).toBeUndefined();
+    // First miss is recorded but doesn't deload yet — it only warns.
+    expect(firstMiss.label).toMatch(/again → deload/);
+    expect(firstMiss.change?.kind).toBe("repeat");
     expect((firstMiss.nextState as { workingWeight: number }).workingWeight).toBe(100);
     expect((firstMiss.nextState as { failedAttempts: number }).failedAttempts).toBe(1);
 
@@ -75,6 +79,7 @@ describe("linearProgression", () => {
       }),
     );
     expect((secondMiss.nextState as { workingWeight: number }).workingWeight).toBeCloseTo(90, 5);
+    expect(secondMiss.change?.kind).toBe("deload");
     expect((secondMiss.nextState as { failedAttempts: number }).failedAttempts).toBe(0);
   });
 
@@ -317,7 +322,9 @@ describe("linearProgression", () => {
           history,
         }),
       );
-      expect(out.sets[0]!.reps).toEqual([10, 15]);
+      // Last session's 8s at 100kg sit below the trial range, so every set aims for its floor.
+      expect(out.sets[0]!.reps).toBe(10);
+      expect(out.progressGoal?.reps).toBe(15);
       expect(out.nudge).toBeUndefined(); // mid-trial — nothing to report yet
       const ladder = (out.nextState as { repRangeLadder: { status: string }[] }).repRangeLadder;
       expect(ladder[ladder.length - 1]!.status).toBe("active");
@@ -360,7 +367,10 @@ describe("linearProgression", () => {
       expect(out.nudge?.actionLabel).toBe("Switch");
       expect(out.nudge?.actionData).toEqual({ repRange: [10, 15] });
       // Reverts to the baseline range for this suggestion, pending the user's decision.
-      expect(out.sets[0]!.reps).toEqual([5, 8]);
+      expect(out.progressGoal?.reps).toBe(8);
+      const reps = out.sets[0]!.reps as number;
+      expect(reps).toBeGreaterThanOrEqual(5);
+      expect(reps).toBeLessThanOrEqual(8);
     });
 
     it("reports no meaningful difference (and offers no action) when the trial doesn't clearly beat baseline", async () => {
@@ -471,5 +481,224 @@ describe("linearProgression", () => {
       expect(out.nudge?.actionLabel).toBe("Try it");
       expect(out.nudge?.message).toContain("No meaningful difference at 10-15 reps");
     });
+  });
+
+  describe("exact per-set targets", () => {
+    const state = { workingWeight: 62.5, failedAttempts: 0, increment: 2.5, repRange: [5, 8] as [number, number] };
+    const last = historyEntry({
+      sessionId: "last",
+      sets: [
+        set({ weight: 62.5, reps: 6, orderIndex: 0 }),
+        set({ weight: 62.5, reps: 5, orderIndex: 1 }),
+        set({ weight: 62.5, reps: 5, orderIndex: 2 }),
+      ],
+    });
+
+    it("aims one rep higher per set at the same weight", async () => {
+      const out = await linearProgression.suggest(baseInput({ state, history: [last] }));
+      expect(out.sets.map((s) => s.reps)).toEqual([7, 6, 6]);
+      expect(out.sets.every((s) => s.weight === 62.5)).toBe(true);
+      expect(out.change).toMatchObject({ kind: "reps", text: "+1 rep" });
+      expect(out.progressGoal).toEqual({ reps: 8, weight: 65 });
+    });
+
+    it("never aims past the top of the range", async () => {
+      const nearTop = historyEntry({ sets: [set({ weight: 62.5, reps: 8 }), set({ weight: 62.5, reps: 7 })] });
+      const out = await linearProgression.suggest(baseInput({ state, history: [nearTop] }));
+      expect(out.sets.map((s) => s.reps)).toEqual([8, 8, 8]);
+    });
+
+    it("uses a split day's planned set count", async () => {
+      const out = await linearProgression.suggest(baseInput({ state, history: [last], plannedTargets: { sets: 4 } }));
+      expect(out.sets.map((s) => s.reps)).toEqual([7, 6, 6, 6]);
+    });
+  });
+
+  describe("applying a session exactly once", () => {
+    const start = { workingWeight: 60, failedAttempts: 0, increment: 2.5, repRange: [5, 8] as [number, number] };
+    const hitTop = historyEntry({ sessionId: "s1", sets: [set({ weight: 60, reps: 8 }), set({ weight: 60, reps: 8 }), set({ weight: 60, reps: 8 })] });
+
+    it("previews today's weight without stepping it again", async () => {
+      const finished = await linearProgression.suggest(baseInput({ state: start, history: [hitTop] }));
+      expect((finished.nextState as { workingWeight: number }).workingWeight).toBe(62.5);
+
+      // Next visit to the session screen: same history, state already includes s1.
+      const preview = await linearProgression.suggest(baseInput({ state: finished.nextState, history: [hitTop] }));
+      expect(preview.sets[0]!.weight).toBe(62.5);
+      expect(preview.label).toBe("Up to 62.5kg");
+      expect(preview.nextState).toEqual(finished.nextState);
+    });
+
+    it("doesn't count one missed session twice", async () => {
+      const miss = historyEntry({ sessionId: "s2", sets: [set({ weight: 62.5, reps: 4 }), set({ weight: 62.5, reps: 3 })] });
+      const s = { ...start, workingWeight: 62.5 };
+      const once = await linearProgression.suggest(baseInput({ state: s, history: [miss] }));
+      const again = await linearProgression.suggest(baseInput({ state: once.nextState, history: [miss] }));
+      expect((again.nextState as { failedAttempts: number }).failedAttempts).toBe(1);
+      expect((again.nextState as { workingWeight: number }).workingWeight).toBe(62.5);
+      expect(again.change?.kind).toBe("repeat");
+    });
+
+    it("keeps a deload instead of jumping back to the heavier history weight", async () => {
+      const miss = historyEntry({ sessionId: "s3", sets: [set({ weight: 62.5, reps: 4 })] });
+      const deloaded = await linearProgression.suggest(
+        baseInput({ state: { ...start, workingWeight: 62.5, failedAttempts: 1 }, history: [miss] }),
+      );
+      expect((deloaded.nextState as { workingWeight: number }).workingWeight).toBe(55); // 56.25 rounded down to 2.5s
+      const preview = await linearProgression.suggest(baseInput({ state: deloaded.nextState, history: [miss] }));
+      expect(preview.sets[0]!.weight).toBe(55);
+      expect(preview.change?.kind).toBe("deload");
+      expect(preview.sets.map((x) => x.reps)).toEqual([5, 5, 5]);
+    });
+
+    it("treats a state saved after the newest session (from before this was tracked) as already applied", async () => {
+      const legacy = { ...start, workingWeight: 62.5 }; // saved on finishing hitTop, no lastAppliedSessionId
+      const preview = await linearProgression.suggest(
+        baseInput({ state: legacy, history: [hitTop], stateSavedAtMs: hitTop.performedAtMs + 1000 }),
+      );
+      expect(preview.sets[0]!.weight).toBe(62.5);
+      expect((preview.nextState as { lastAppliedSessionId: string }).lastAppliedSessionId).toBe("s1");
+    });
+
+    it("still applies a newer session to a state saved before it", async () => {
+      const legacy = { ...start, workingWeight: 60 };
+      const out = await linearProgression.suggest(
+        baseInput({ state: legacy, history: [hitTop], stateSavedAtMs: hitTop.performedAtMs - 1000 }),
+      );
+      expect(out.sets[0]!.weight).toBe(62.5);
+    });
+  });
+
+  describe("assisted exercises", () => {
+    const assisted = { name: "Assisted Dips", exerciseType: "assisted" as const };
+    const at30 = historyEntry({ sessionId: "a1", sets: [set({ weight: 30, reps: 8 }), set({ weight: 30, reps: 8 })] });
+
+    it("takes a fresh state's starting assistance from history", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({ exercise: assisted, history: [at30], state: { workingWeight: 0, failedAttempts: 0, increment: 2.5, repRange: [5, 8] } }),
+      );
+      expect(out.sets[0]!.weight).toBe(27.5);
+    });
+
+    it("doesn't pull reduced assistance back up to an older, higher number", async () => {
+      const out = await linearProgression.suggest(
+        baseInput({
+          exercise: assisted,
+          history: [historyEntry({ sessionId: "a2", sets: [set({ weight: 30, reps: 6 })] })],
+          state: { workingWeight: 25, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+        }),
+      );
+      expect(out.sets[0]!.weight).toBe(25);
+    });
+  });
+});
+
+describe("bodyweight-relative loads (0 = BW, negative = assisted, positive = added)", () => {
+  const dips = (exerciseType?: "normal" | "bodyweight" | "assisted") =>
+    ({ name: "Dips", primaryMuscles: ["chest"], exerciseType }) as ProgressionInput["exercise"];
+  const session = (rows: [number, number][], sessionId = "s1") =>
+    historyEntry({
+      sessionId,
+      sets: rows.map(([reps, weight], i) => set({ reps, weight, orderIndex: i, completed: true })),
+    });
+  const plan = (out: { sets: { reps: unknown; weight: number }[] }) => out.sets.map((s) => [s.reps, s.weight]);
+
+  it("moves up from assisted towards bodyweight when every set hits the top of the range", async () => {
+    const out = await linearProgression.suggest(baseInput({ exercise: dips(), history: [session([[8, -25], [8, -25], [8, -25]])] }));
+    expect(plan(out)).toEqual([[5, -22.5], [5, -22.5], [5, -22.5]]);
+    expect(out.bodyweightLoad).toBe(true);
+    expect(out.label).toBe("Up to BW−22.5kg");
+    expect(out.progressGoal).toEqual({ reps: 8, weight: -20 });
+  });
+
+  it("goes through bodyweight and on to added weight", async () => {
+    const toBw = await linearProgression.suggest(baseInput({ exercise: dips(), history: [session([[8, -2.5], [8, -2.5], [8, -2.5]])] }));
+    expect(plan(toBw)).toEqual([[5, 0], [5, 0], [5, 0]]);
+    expect(toBw.label).toBe("Up to BW");
+
+    const pastBw = await linearProgression.suggest(baseInput({ exercise: dips("bodyweight"), history: [session([[8, 0], [8, 0], [8, 0]])] }));
+    expect(plan(pastBw)).toEqual([[5, 2.5], [5, 2.5], [5, 2.5]]);
+    expect(pastBw.label).toBe("Up to BW+2.5kg");
+  });
+
+  it("aims for one more rep at the same assisted weight while still in range", async () => {
+    const out = await linearProgression.suggest(baseInput({ exercise: dips(), history: [session([[6, -25], [6, -25], [5, -25]])] }));
+    expect(plan(out)).toEqual([[7, -25], [7, -25], [6, -25]]);
+    expect(out.change?.kind).toBe("reps");
+  });
+
+  it("follows history down when a saved state sits at BW but the sets were assisted", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      exercise: dips(),
+      state: { workingWeight: 0, failedAttempts: 0, increment: 2.5, repRange: [5, 8] },
+      history: [session([[6, -25], [6, -25], [6, -25]])],
+    }));
+    expect(plan(out)).toEqual([[7, -25], [7, -25], [7, -25]]);
+  });
+
+  it("deloads by two increments (more assistance) rather than a percentage", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      exercise: dips(),
+      state: { workingWeight: -20, failedAttempts: 1, increment: 2.5, repRange: [5, 8] },
+      history: [session([[4, -20], [4, -20], [3, -20]])],
+    }));
+    expect(out.change?.kind).toBe("deload");
+    expect(out.sets[0]!.weight).toBe(-25);
+  });
+
+  it("doesn't take a fatigue discount off a bodyweight-relative load", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      exercise: dips(),
+      history: [session([[6, -25], [6, -25], [6, -25]])],
+      sessionContext: { precedingExercises: [{ name: "Bench", primaryMuscles: ["chest"], secondaryMuscles: [], completedSets: 6 }] },
+    }));
+    expect(out.sets.every((s) => s.weight === -25)).toBe(true);
+  });
+});
+
+describe("sets done at different weights", () => {
+  const session = (rows: [number, number][]) =>
+    historyEntry({ sets: rows.map(([reps, weight], i) => set({ reps, weight, orderIndex: i, completed: true })) });
+
+  it("moves each set on its own: BW sets and assisted sets both progress", async () => {
+    // Two sets at BW, then two with 25 kg of help once tired.
+    const out = await linearProgression.suggest(baseInput({
+      exercise: { name: "Dips", primaryMuscles: ["chest"] },
+      history: [session([[10, 0], [6, 0], [10, -25], [7, -25]])],
+    }));
+    expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[5, 2.5], [7, 0], [5, -22.5], [8, -25]]);
+    expect(out.change).toMatchObject({ kind: "increase", text: "+2.5kg on 2 sets" });
+    expect(out.change?.detail).toMatch(/Sets 1 and 3 hit 8/);
+    expect(out.progressGoal).toEqual({ reps: 8 });
+  });
+
+  it("works the same for a top set with back-off sets", async () => {
+    const out = await linearProgression.suggest(baseInput({ history: [session([[6, 100], [8, 90], [8, 90]])] }));
+    expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[7, 100], [5, 92.5], [5, 92.5]]);
+    expect(out.bodyweightLoad).toBeUndefined();
+  });
+
+  it("gives the same plan however many times it's asked (it reads last session only)", async () => {
+    const input = baseInput({ history: [session([[6, 100], [8, 90]])] });
+    const first = await linearProgression.suggest(input);
+    const again = await linearProgression.suggest({ ...input, state: first.nextState });
+    expect(again.sets).toEqual(first.sets);
+  });
+});
+
+describe("set count", () => {
+  it("plans as many sets as last time when that was more than usual", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      history: [historyEntry({ sets: [set(), set(), set(), set()].map((s, i) => ({ ...s, reps: 6, orderIndex: i })) })],
+    }));
+    expect(out.sets).toHaveLength(4);
+  });
+
+  it("lets a split day's planned set count win", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      plannedTargets: { sets: 2 },
+      history: [historyEntry({ sets: [set(), set(), set(), set()].map((s, i) => ({ ...s, reps: 6, orderIndex: i })) })],
+    }));
+    expect(out.sets).toHaveLength(2);
   });
 });
