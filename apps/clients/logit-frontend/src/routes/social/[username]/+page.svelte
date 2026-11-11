@@ -7,9 +7,9 @@
 </script>
 
 <div class="flex flex-col min-h-full">
-  <header class="flex items-center gap-2 px-3 h-12 sticky top-0 bg-background/95 backdrop-blur z-10 border-b border-border">
+  <header class="page-header sticky top-0 bg-background/95 backdrop-blur z-10">
     <BackButton onclick={() => history.back()} />
-    <span class="text-sm font-semibold truncate">@{username}</span>
+    <span class="text-base font-semibold truncate">@{username}</span>
   </header>
 
   {#key username}

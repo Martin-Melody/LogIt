@@ -58,7 +58,7 @@
 				<DateFieldPrimitive.Segment
 					{part}
 					class={cn(
-						"rounded px-0.5 tabular-nums focus:outline-none",
+						"rounded-md px-0.5 tabular-nums focus:outline-none",
 						part === "literal"
 							? "text-muted-foreground px-0"
 							: "data-[placeholder]:text-muted-foreground focus:bg-accent focus:text-accent-foreground"

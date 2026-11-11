@@ -138,22 +138,22 @@
 
 <div class="flex flex-col pb-24 min-h-full">
   <!-- Header -->
-  <div class="flex items-center gap-1 px-1 py-3 border-b border-border">
+  <div class="page-header">
     {#if selecting}
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        class="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
         onclick={exitSelection}
         aria-label="Cancel selection"
       >
         <X class="h-4 w-4" />
       </button>
-      <h1 class="text-base font-semibold flex-1">
+      <h1 class="page-title">
         {selectedCount} selected
       </h1>
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-40 shrink-0"
+        class="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 shrink-0"
         onclick={openExport}
         disabled={selectedCount === 0}
         aria-label="Export selected as a pack"
@@ -163,10 +163,10 @@
       </button>
     {:else}
       <BackButton onclick={() => back("/profile")} />
-      <h1 class="text-base font-semibold flex-1">Exercises</h1>
+      <h1 class="page-title">Exercises</h1>
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        class="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
         onclick={openAdd}
         aria-label="Add exercise"
         data-tour="exercises-add"
@@ -183,7 +183,7 @@
       <input
         type="search"
         placeholder="Search exercises…"
-        class="w-full rounded border bg-background pl-8 pr-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="w-full rounded-md border bg-background pl-8 pr-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={query}
       />
       {#if query}
@@ -299,7 +299,7 @@
             id="ex-name"
             type="text"
             placeholder="e.g. Cable Fly"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={draftName}
           />
         </div>
@@ -312,7 +312,7 @@
             id="ex-notes"
             placeholder="e.g. Use slow eccentric, keep elbows tucked…"
             rows="3"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             bind:value={draftNotes}
           ></textarea>
         </div>
@@ -339,7 +339,7 @@
 
         <button
           type="button"
-          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
           disabled={!draftName.trim() || saving}
           onclick={() => void save()}
         >
@@ -373,7 +373,7 @@
             id="pack-name"
             type="text"
             placeholder="e.g. My Gym's Machines"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={exportName}
           />
         </div>
@@ -384,7 +384,7 @@
 
         <button
           type="button"
-          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
           disabled={!exportName.trim() || exporting}
           onclick={() => void exportPack()}
         >

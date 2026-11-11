@@ -260,7 +260,7 @@
     <!-- Grip handle -->
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing"
       style="touch-action: none"
       use:gripAction
       aria-label="Drag to reorder"
@@ -273,7 +273,7 @@
     <!-- Collapse toggle -->
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
       onclick={() => (collapsed = !collapsed)}
       disabled={saving}
       aria-label={collapsed ? "Expand" : "Collapse"}
@@ -364,7 +364,7 @@
 
           <!-- Duration input: mm:ss -->
           <input
-            class="w-full rounded border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-full rounded-md border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             type="text"
             inputmode="numeric"
             placeholder="0:00"
@@ -379,7 +379,7 @@
 
           <!-- Distance input: km or m -->
           <input
-            class="w-full rounded border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-full rounded-md border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             type="text"
             inputmode="decimal"
             placeholder="km / m"
@@ -394,7 +394,7 @@
 
           <button
             type="button"
-            class="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive disabled:opacity-30 justify-self-center"
+            class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive disabled:opacity-30 justify-self-center"
             disabled={saving}
             onclick={() => removeInterval(iv.id)}
             aria-label="Remove interval"

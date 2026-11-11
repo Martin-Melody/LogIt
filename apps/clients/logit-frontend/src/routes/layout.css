@@ -28,7 +28,7 @@ body {
   --font-sans:
     "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
-  --radius: 0.25rem;
+  --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -165,6 +165,14 @@ body {
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* One page header everywhere: a 56px bar (fits the 44px back button), a 16px title. */
+@utility page-header {
+  @apply flex min-h-14 shrink-0 items-center gap-2 border-b border-border px-3 py-1.5;
+}
+@utility page-title {
+  @apply min-w-0 flex-1 truncate text-base font-semibold;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -229,3 +237,67 @@ footer {
     animation: none !important;
   }
 }
+
+/* Tours (driver.js): drawn like the app's own popovers instead of the library's
+   white box, so they follow the theme. */
+.driver-popover {
+  font-family: inherit;
+  color: var(--popover-foreground);
+  background-color: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.35);
+}
+.driver-popover-title {
+  font-size: 1rem;
+  font-weight: 600;
+  padding-right: 32px;
+}
+.driver-popover-description {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+.driver-popover-progress-text {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.driver-popover-close-btn {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  color: var(--muted-foreground);
+}
+.driver-popover-close-btn:hover,
+.driver-popover-close-btn:focus {
+  color: var(--foreground);
+}
+.driver-popover-footer-btn {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 0.875rem;
+  line-height: 34px;
+  text-shadow: none;
+  color: var(--foreground);
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.driver-popover-footer-btn:hover,
+.driver-popover-footer-btn:focus {
+  background-color: var(--muted);
+}
+.driver-popover-navigation-btns button + button {
+  margin-left: 8px;
+}
+.driver-popover-next-btn,
+.driver-popover-next-btn:hover,
+.driver-popover-next-btn:focus {
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+.driver-popover-arrow-side-left { border-left-color: var(--popover); }
+.driver-popover-arrow-side-right { border-right-color: var(--popover); }
+.driver-popover-arrow-side-top { border-top-color: var(--popover); }
+.driver-popover-arrow-side-bottom { border-bottom-color: var(--popover); }

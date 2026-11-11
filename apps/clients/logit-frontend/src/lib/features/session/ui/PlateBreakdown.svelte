@@ -22,7 +22,7 @@
       <span>just the bar</span>
     {:else}
       {#each breakdown.perSide as p, i (i)}
-        <span class="rounded bg-muted px-1.5 py-0.5 font-medium tabular-nums text-foreground">{fmt(p)}</span>
+        <span class="rounded-md bg-muted px-1.5 py-0.5 font-medium tabular-nums text-foreground">{fmt(p)}</span>
       {/each}
     {/if}
     {#if breakdown.shortfallKg > 0.01}

@@ -369,7 +369,7 @@
   <div class="flex items-center gap-2 px-3 py-2">
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing"
       style="touch-action: none"
       use:gripAction
       aria-label="Drag to reorder"
@@ -381,7 +381,7 @@
 
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
       onclick={() => (collapsed = !collapsed)}
       disabled={saving}
       aria-label={collapsed ? "Expand" : "Collapse"}
@@ -411,7 +411,7 @@
 
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
       onclick={() => (swapOpen = true)}
       disabled={saving}
       aria-label="Swap drill"
@@ -458,13 +458,13 @@
 
 {#if !collapsed}
   <div class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-border text-xs">
-    <div class="flex rounded border border-border overflow-hidden">
+    <div class="flex rounded-md border border-border overflow-hidden">
       <button type="button" class="px-2 py-0.5 {data.metric === 'hold' ? 'bg-primary/10 text-foreground' : 'text-muted-foreground'}" disabled={saving} onclick={() => switchMetric("hold")}>Hold</button>
       <button type="button" class="px-2 py-0.5 border-l border-border {data.metric === 'reps' ? 'bg-primary/10 text-foreground' : 'text-muted-foreground'}" disabled={saving} onclick={() => switchMetric("reps")}>Reps</button>
     </div>
     <button
       type="button"
-      class="rounded border px-2 py-0.5 {data.perSide ? 'border-primary text-primary' : 'border-border text-muted-foreground'}"
+      class="rounded-md border px-2 py-0.5 {data.perSide ? 'border-primary text-primary' : 'border-border text-muted-foreground'}"
       disabled={saving}
       onclick={togglePerSide}
     >
@@ -472,7 +472,7 @@
     </button>
     <button
       type="button"
-      class="rounded border px-2 py-0.5 {data.restBetweenSetsMs ? 'border-primary text-primary' : 'border-border text-muted-foreground'}"
+      class="rounded-md border px-2 py-0.5 {data.restBetweenSetsMs ? 'border-primary text-primary' : 'border-border text-muted-foreground'}"
       disabled={saving}
       onclick={cycleRest}
       title="Rest after each set / side"

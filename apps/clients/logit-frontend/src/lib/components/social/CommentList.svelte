@@ -167,13 +167,13 @@
               <textarea
                 bind:value={editDraft}
                 rows={2}
-                class="flex-1 resize-none rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="flex-1 resize-none rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void saveEdit(comment); } if (e.key === "Escape") cancelEdit(); }}
               ></textarea>
               <div class="flex flex-col gap-1 shrink-0">
                 <button
                   type="button"
-                  class="flex items-center justify-center h-7 w-7 rounded bg-primary text-primary-foreground disabled:opacity-50"
+                  class="flex items-center justify-center h-7 w-7 rounded-md bg-primary text-primary-foreground disabled:opacity-50"
                   disabled={!editDraft.trim() || savingEditId === comment.id}
                   onclick={() => void saveEdit(comment)}
                 >
@@ -181,7 +181,7 @@
                 </button>
                 <button
                   type="button"
-                  class="flex items-center justify-center h-7 w-7 rounded border border-border text-muted-foreground"
+                  class="flex items-center justify-center h-7 w-7 rounded-md border border-border text-muted-foreground"
                   onclick={cancelEdit}
                 >
                   <X class="h-3 w-3" />
@@ -248,7 +248,7 @@
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (pendingDeleteId = null)}>Cancel</button>
       <button type="button"
-        class="text-xs bg-destructive text-destructive-foreground rounded px-3 py-1.5 flex items-center gap-1 disabled:opacity-50"
+        class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50"
         disabled={!target || deletingId === target.id}
         onclick={() => target && void remove(target)}>
         {#if target && deletingId === target.id}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Delete

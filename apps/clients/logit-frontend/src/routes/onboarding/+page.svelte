@@ -133,7 +133,7 @@
       <div class="flex flex-col items-center gap-3 w-full max-w-xs">
         <button
           type="button"
-          class="flex items-center justify-center gap-2 w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
+          class="flex items-center justify-center gap-2 w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium"
           onclick={() => onboarding.setStep(1)}
         >
           Get started <ChevronRight class="h-4 w-4" />
@@ -158,13 +158,13 @@
       <div class="flex flex-col gap-1.5 flex-1">
         <label class="text-sm font-medium" for="name">Name</label>
         <input id="name" type="text" autocomplete="name" placeholder="Your name"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={name}
           onkeydown={(e) => { if (e.key === "Enter") onNameContinue(); }} />
       </div>
 
       <div class="flex flex-col gap-3 mt-8">
-        <button type="button" class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+        <button type="button" class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
           disabled={!name.trim()}
           onclick={onNameContinue}>
           Continue
@@ -196,7 +196,7 @@
             {#each BUILTIN_PROGRAMS as program (program.id)}
               <li>
                 <button type="button"
-                  class="w-full text-left px-4 py-3 rounded border transition-colors {selectedProgramId === program.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
+                  class="w-full text-left px-4 py-3 rounded-md border transition-colors {selectedProgramId === program.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
                   onclick={() => pickProgram(program.id)}>
                   <p class="text-sm font-medium">{program.name}</p>
                   <p class="text-xs text-muted-foreground mt-0.5">{program.description}</p>
@@ -214,7 +214,7 @@
             {#each PRESETS as preset (preset.id)}
               <li>
                 <button type="button"
-                  class="w-full text-left px-4 py-3 rounded border transition-colors {selectedPreset === preset.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
+                  class="w-full text-left px-4 py-3 rounded-md border transition-colors {selectedPreset === preset.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
                   onclick={() => pickPreset(preset.id)}>
                   <p class="text-sm font-medium">{preset.name}</p>
                   <p class="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
@@ -227,7 +227,7 @@
 
       <div class="flex flex-col gap-3 mt-8">
         <button type="button"
-          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
           disabled={(!selectedPreset && !selectedProgramId) || saving}
           onclick={() => void onSplitContinue()}>
           {saving ? "Setting up…" : "Continue"}

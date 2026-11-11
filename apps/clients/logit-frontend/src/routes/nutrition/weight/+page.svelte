@@ -75,15 +75,15 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/nutrition")} />
-    <h1 class="text-sm font-semibold">Weight</h1>
+    <h1 class="page-title">Weight</h1>
   </div>
 
   <div class="px-3 py-3 border-b border-border flex items-end gap-2">
     <label class="flex-1 flex flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Weight ({unit})</span>
-      <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={ui.value} />
+      <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={ui.value} />
     </label>
     <div class="flex flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Date</span>

@@ -78,11 +78,11 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back(`/clients/${clientId}?u=${username}`)} />
     {#if program}
       <input
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-transparent focus:border-primary"
+        class="flex-1 min-w-0 bg-transparent text-base font-semibold focus:outline-none border-b border-transparent focus:border-primary"
         value={program.name}
         disabled={ui.saving}
         onblur={(e) => void rename(e.currentTarget.value)}
@@ -163,7 +163,7 @@
 
                 <div class="mt-1.5 flex flex-col gap-1.5">
                   {#each [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) as block (block.id)}
-                    <div class="rounded border border-border bg-background p-2">
+                    <div class="rounded-md border border-border bg-background p-2">
                       <div class="flex items-center gap-1.5">
                         {#if block.type === "strength"}
                           <Dumbbell class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -185,15 +185,15 @@
                             <li class="flex items-center gap-1.5 text-xs">
                               <span class="w-5 text-muted-foreground">{si + 1}</span>
                               <input type="number" inputmode="numeric" placeholder="reps" value={set.reps ?? ""}
-                                class="w-14 rounded border bg-background px-1 py-0.5"
+                                class="w-14 rounded-md border bg-background px-1 py-0.5"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { reps: num(e.currentTarget.value) }))} />
                               <input type="number" inputmode="decimal" placeholder="kg" value={set.weight ?? ""}
-                                class="w-16 rounded border bg-background px-1 py-0.5"
+                                class="w-16 rounded-md border bg-background px-1 py-0.5"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { weight: num(e.currentTarget.value) }))} />
                               <input type="number" inputmode="decimal" placeholder="RPE" value={set.rpe ?? ""}
-                                class="w-12 rounded border bg-background px-1 py-0.5"
+                                class="w-12 rounded-md border bg-background px-1 py-0.5"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { rpe: num(e.currentTarget.value) }))} />
-                              <select value={set.setType} class="rounded border bg-background px-1 py-0.5"
+                              <select value={set.setType} class="rounded-md border bg-background px-1 py-0.5"
                                 onchange={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: e.currentTarget.value as SetType }))}>
                                 {#each setTypes as t}<option value={t.type}>{t.label}</option>{/each}
                               </select>

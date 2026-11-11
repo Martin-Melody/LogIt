@@ -50,9 +50,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/nutrition")} />
-    <h1 class="text-sm font-semibold">Meal plan</h1>
+    <h1 class="page-title">Meal plan</h1>
   </div>
 
   {#if ui.loading}

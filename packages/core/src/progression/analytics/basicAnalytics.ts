@@ -32,7 +32,7 @@ function withVolume(out: AnalyticsOutput, volume: { points: Point[]; total: numb
   return {
     ...out,
     metrics: [...out.metrics, { id: "total_volume", value: volume.total, formatted: `${(volume.total / 1000).toFixed(1)}t` }],
-    series: [...out.series, { metricId: "total_volume", label: "Session volume", points: volume.points }],
+    series: [...out.series, { metricId: "total_volume", label: "Volume", points: volume.points }],
   };
 }
 
@@ -79,7 +79,7 @@ function computeNormal(input: AnalyticsInput): AnalyticsOutput {
     ],
     series: [
       { metricId: "max_weight", label: "Max weight", points: maxWeightPoints },
-      { metricId: "total_volume", label: "Session volume", points: volumePoints },
+      { metricId: "total_volume", label: "Volume", points: volumePoints },
       { metricId: "estimated_1rm", label: "Est. 1RM", points: estimated1RMPoints },
     ],
     label: sessionCount > 0 ? `${allTimeMax}kg best · ${trendLabel} last session` : undefined,
@@ -137,8 +137,8 @@ function computeAssisted(input: AnalyticsInput): AnalyticsOutput {
       { id: "total_reps", value: allTimeReps, formatted: String(allTimeReps) },
     ],
     series: [
-      { metricId: "min_assist", label: "Assistance weight", points: assistPoints },
-      { metricId: "total_reps", label: "Session reps", points: repsPoints },
+      { metricId: "min_assist", label: "Assistance", points: assistPoints },
+      { metricId: "total_reps", label: "Reps", points: repsPoints },
     ],
     label: sessionCount > 0 ? `${lowestAssist === Infinity ? 0 : lowestAssist}kg assist best · ${trendLabel} last session` : undefined,
     insights:
@@ -206,8 +206,8 @@ function computeBodyweight(input: AnalyticsInput): AnalyticsOutput {
   }
 
   const series = [
-    { metricId: "max_reps", label: "Max reps (set)", points: maxRepsPoints },
-    { metricId: "total_reps", label: "Session reps", points: totalRepsPoints },
+    { metricId: "max_reps", label: "Max reps", points: maxRepsPoints },
+    { metricId: "total_reps", label: "Reps", points: totalRepsPoints },
   ];
 
   if (hasExtraLoad) {

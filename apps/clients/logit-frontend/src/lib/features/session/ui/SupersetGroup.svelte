@@ -40,7 +40,7 @@
   <div class="flex items-center gap-2 pl-1 pr-1">
     <button
       type="button"
-      class="shrink-0 h-11 w-9 flex items-center justify-center rounded text-primary/70 cursor-grab active:cursor-grabbing touch-none"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-primary/70 cursor-grab active:cursor-grabbing touch-none"
       style="touch-action: none"
       use:groupGripAction
       aria-label="Drag superset to reorder"

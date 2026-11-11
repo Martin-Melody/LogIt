@@ -38,9 +38,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/splits")} />
-    <h1 class="text-sm font-semibold">Check-ins</h1>
+    <h1 class="page-title">Check-ins</h1>
   </div>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>{/if}

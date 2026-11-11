@@ -159,9 +159,9 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => void goto("/plugins")} />
-    <span class="text-sm font-semibold">Add plugin</span>
+    <span class="text-base font-semibold">Add plugin</span>
   </div>
 
   <div class="flex flex-col gap-3 p-3">
@@ -223,7 +223,7 @@
           <div class="flex flex-col gap-2">
             <label
               for="pack-file"
-              class="flex cursor-pointer items-center justify-center gap-2 rounded border border-dashed border-border bg-background px-3 py-4 text-sm text-muted-foreground hover:bg-muted/40"
+              class="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background px-3 py-4 text-sm text-muted-foreground hover:bg-muted/40"
             >
               <FileJson class="h-4 w-4" />
               {fileName || "Choose a pack file"}
@@ -247,7 +247,7 @@
             <input
               id="manifest-url"
               type="url"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="https://example.com/plugin.json"
               bind:value={manifestUrl}
             />
@@ -258,7 +258,7 @@
             <input
               id="actor-url"
               type="url"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="https://mastodon.social/@someone"
               bind:value={actorUrl}
             />
@@ -272,7 +272,7 @@
             <textarea
               id="manifest-json"
               rows="10"
-              class="w-full rounded border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder={`{"id":"...","family":"widget","name":"...","description":"...","version":"1.0.0","distribution":{"origin":"manual"},"capabilities":[...]}`}
               bind:value={manifestJson}
             ></textarea>
@@ -318,13 +318,13 @@
           </dl>
 
           {#if alreadyInstalled}
-            <p class="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+            <p class="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
               Already installed.
             </p>
           {/if}
 
           {#if restrictedModeBlocks}
-            <div class="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning">
+            <div class="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning">
               <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 This is a {capabilityLabel(reviewed).toLowerCase()} — it runs code

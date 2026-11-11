@@ -93,7 +93,7 @@
       <!-- Grip handle -->
       <button
         type="button"
-        class="shrink-0 h-11 w-9 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
         style="touch-action: none"
         use:gripAction
         aria-label="Drag to reorder"
@@ -107,7 +107,7 @@
     <!-- Collapse toggle -->
     <button
       type="button"
-      class="shrink-0 h-11 w-9 flex items-center justify-center rounded text-muted-foreground hover:text-foreground {grouped ? 'ml-1' : ''}"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground {grouped ? 'ml-1' : ''}"
       onclick={onToggleCollapse}
       aria-label={collapsed ? "Expand exercise" : "Collapse exercise"}
       disabled={saving}
@@ -155,7 +155,7 @@
 
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        class="shrink-0 h-11 w-11 flex items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-50"
+        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
         disabled={saving}
         aria-label="More actions for {exerciseName}"
       >
@@ -192,7 +192,7 @@
       <div class="px-3 pb-2.5 flex flex-col gap-1.5" data-testid="progress-meter">
         <div class="flex items-center gap-2">
           {#if suggestion.change}
-            <span class="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
+            <span class="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
               {suggestion.change.text}
             </span>
           {/if}
@@ -237,7 +237,7 @@
     {:else}
       <div class="px-3 pb-1.5 -mt-1 flex items-center gap-2 flex-wrap">
         {#if suggestion.change}
-          <span class="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
+          <span class="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
             {suggestion.change.text}
           </span>
         {/if}
@@ -255,7 +255,7 @@
       <p class="px-3 pb-1.5 text-xs text-warning -mt-1">{suggestion.notes}</p>
     {/if}
     {#if suggestion.nudge}
-      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded border border-info/30 bg-info/10 px-2 py-1.5">
+      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded-md border border-info/30 bg-info/10 px-2 py-1.5">
         <p class="flex-1 text-xs text-info">{suggestion.nudge.message}</p>
         <div class="flex shrink-0 items-center gap-2">
           {#if suggestion.nudge.actionLabel}

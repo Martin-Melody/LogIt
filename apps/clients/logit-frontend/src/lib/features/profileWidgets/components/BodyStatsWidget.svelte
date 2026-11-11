@@ -57,7 +57,7 @@
           <div class="flex flex-col gap-1 flex-1">
             <label class="text-xs text-muted-foreground" for="bs-height">Height</label>
             <input id="bs-height" type="number" min="0" inputmode="decimal"
-              class="w-full rounded border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.height} />
           </div>
           <div class={cn(segmentTrack, "mb-0.5")}>
@@ -69,7 +69,7 @@
           <div class="flex flex-col gap-1 flex-1">
             <label class="text-xs text-muted-foreground" for="bs-weight">Weight</label>
             <input id="bs-weight" type="number" min="0" inputmode="decimal"
-              class="w-full rounded border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.weight} />
           </div>
           <div class={cn(segmentTrack, "mb-0.5")}>

@@ -113,7 +113,7 @@
         <div class="flex gap-2">
           <input
             id="mds-name"
-            class="flex-1 min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="flex-1 min-w-0 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={nameDraft}
             disabled={saving}
             onkeydown={(e) => { if (e.key === "Enter") void commitRename(); }}

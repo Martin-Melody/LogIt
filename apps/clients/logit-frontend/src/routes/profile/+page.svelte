@@ -85,7 +85,7 @@
         id="p-name"
         type="text"
         autocomplete="name"
-        class="w-full rounded border bg-background px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draft.name}
       />
     </div>
@@ -95,7 +95,7 @@
         id="p-bio"
         rows={3}
         placeholder="Something about yourself…"
-        class="w-full rounded border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draft.bio}
       ></textarea>
     </div>
@@ -163,7 +163,7 @@
   <!-- Account status bar -->
   <div class="mx-3 mb-1">
     {#if authStore.isAuthenticated && authStore.user}
-      <div class="flex items-center gap-3 rounded border border-border px-3 py-2">
+      <div class="flex items-center gap-3 rounded-md border border-border px-3 py-2">
         {#if serverMode === "cloud"}
           <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
         {:else}
@@ -180,7 +180,7 @@
     {:else}
       <button
         type="button"
-        class="w-full flex items-center justify-between rounded border border-dashed border-border px-3 py-2.5 text-left hover:border-muted-foreground/50 transition-colors"
+        class="w-full flex items-center justify-between rounded-md border border-dashed border-border px-3 py-2.5 text-left hover:border-muted-foreground/50 transition-colors"
         onclick={() => void goto("/auth?mode=register")}
       >
         <div>

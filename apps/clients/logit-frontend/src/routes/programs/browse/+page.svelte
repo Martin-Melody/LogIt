@@ -10,10 +10,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/splits")} />
     <div class="min-w-0 flex-1">
-      <p class="text-sm font-semibold">Browse programs</p>
+      <p class="text-base font-semibold">Browse programs</p>
       <p class="text-xs text-muted-foreground">Day-by-day, week-by-week — no configuration needed.</p>
     </div>
   </div>

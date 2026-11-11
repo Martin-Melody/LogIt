@@ -71,10 +71,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/programs/browse")} />
     <div class="min-w-0 flex-1">
-      <p class="text-sm font-semibold truncate">{program?.name ?? "Program"}</p>
+      <p class="text-base font-semibold truncate">{program?.name ?? "Program"}</p>
       <p class="text-xs text-muted-foreground">Guided program · pick any day to start</p>
     </div>
     {#if isActive}

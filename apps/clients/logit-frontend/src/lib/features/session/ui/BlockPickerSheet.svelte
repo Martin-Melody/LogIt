@@ -33,7 +33,7 @@
         {@const Icon = ICONS[def.type]}
         <button
           type="button"
-          class="flex items-center gap-3 rounded border border-border px-3 py-3 text-left hover:bg-muted/50"
+          class="flex items-center gap-3 rounded-md border border-border px-3 py-3 text-left hover:bg-muted/50"
           onclick={() => { onSelect(def.type); onOpenChange(false); }}
         >
           {#if Icon}

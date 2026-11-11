@@ -104,7 +104,7 @@
           <p class="text-xs text-warning">{story.nextNote}</p>
         {/if}
         {#if story.nudge}
-          <div class="flex items-start gap-2 rounded border border-info/30 bg-info/10 px-2 py-1.5">
+          <div class="flex items-start gap-2 rounded-md border border-info/30 bg-info/10 px-2 py-1.5">
             <p class="flex-1 text-xs text-info">{story.nudge.message}</p>
             <div class="flex shrink-0 items-center gap-2">
               {#if story.nudge.actionLabel}
@@ -136,7 +136,7 @@
           <!-- §10.3.2 — the rep-range ladder ran out of rungs with no real
                difference. Presents the remaining hypotheses as options, not
                a decision made for the user (Martin's call). -->
-          <div class="rounded border border-border px-2 py-1.5">
+          <div class="rounded-md border border-border px-2 py-1.5">
             <p class="text-xs text-muted-foreground mb-1">
               Rep-range experiments didn't find a difference here. Worth checking next:
             </p>
@@ -171,7 +171,7 @@
 
     <!-- Series switcher — only shown when more than one series available -->
     {#if analytics.series.length > 1}
-      <div class={cn(segmentTrack, "self-start")}>
+      <div class={cn(segmentTrack, "w-full")}>
         {#each analytics.series as s (s.metricId)}
           <button
             type="button"

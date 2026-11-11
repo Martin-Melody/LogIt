@@ -72,14 +72,14 @@
       <div class="flex flex-col gap-2 w-full max-w-xs">
         <button
           type="button"
-          class="rounded bg-white text-black text-sm font-medium px-4 py-2.5 flex items-center justify-center gap-2"
+          class="rounded-md bg-white text-black text-sm font-medium px-4 py-2.5 flex items-center justify-center gap-2"
           onclick={() => capture("camera")}
         >
           <Camera class="h-4 w-4" /> Take a photo
         </button>
         <button
           type="button"
-          class="rounded border border-white/30 text-sm px-4 py-2.5 flex items-center justify-center gap-2"
+          class="rounded-md border border-white/30 text-sm px-4 py-2.5 flex items-center justify-center gap-2"
           onclick={() => capture("gallery")}
         >
           <ImageIcon class="h-4 w-4" /> Choose from gallery

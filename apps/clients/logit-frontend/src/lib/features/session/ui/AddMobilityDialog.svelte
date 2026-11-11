@@ -125,7 +125,7 @@
       <div class="relative">
         <input
           bind:this={inputEl}
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           placeholder="Search drills, or type a new one…"
           bind:value={name}
           oninput={() => { listOpen = true; activeIndex = -1; }}
@@ -179,14 +179,14 @@
         <div class="grid grid-cols-2 gap-2">
           <button
             type="button"
-            class="flex items-center justify-center gap-2 rounded border px-3 py-2 text-sm {metric === 'hold' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground'}"
+            class="flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm {metric === 'hold' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground'}"
             onclick={() => { metric = "hold"; touchedMetric = true; }}
           >
             <Timer class="h-3.5 w-3.5" /> Hold (time)
           </button>
           <button
             type="button"
-            class="flex items-center justify-center gap-2 rounded border px-3 py-2 text-sm {metric === 'reps' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground'}"
+            class="flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm {metric === 'reps' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground'}"
             onclick={() => { metric = "reps"; touchedMetric = true; }}
           >
             <Hash class="h-3.5 w-3.5" /> Reps
@@ -196,14 +196,14 @@
         <!-- Per side -->
         <button
           type="button"
-          class="flex items-center justify-between rounded border px-3 py-2 text-sm {perSide ? 'border-primary bg-primary/10' : 'border-border'}"
+          class="flex items-center justify-between rounded-md border px-3 py-2 text-sm {perSide ? 'border-primary bg-primary/10' : 'border-border'}"
           onclick={() => { perSide = !perSide; touchedPerSide = true; }}
         >
           <span class="text-left">
             <span class="block font-medium text-foreground">Track each side</span>
             <span class="block text-xs text-muted-foreground">Log left and right separately, e.g. rehab work.</span>
           </span>
-          <span class="ml-2 flex h-5 w-5 items-center justify-center rounded border {perSide ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}">
+          <span class="ml-2 flex h-5 w-5 items-center justify-center rounded-md border {perSide ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}">
             {#if perSide}<Check class="h-3.5 w-3.5" />{/if}
           </span>
         </button>

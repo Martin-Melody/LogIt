@@ -75,7 +75,7 @@
                 max={field.max}
                 step={field.step ?? 1}
                 value={getNum(field.key)}
-                class="w-20 rounded border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                class="w-20 rounded-md border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                 onchange={(e) => onChange(field.key, Number((e.target as HTMLInputElement).value))}
               />
               {#if field.unit}

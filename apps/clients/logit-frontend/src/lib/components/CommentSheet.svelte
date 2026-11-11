@@ -100,12 +100,12 @@
           bind:value={body}
           rows={1}
           placeholder="Add a comment…"
-          class="flex-1 resize-none rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring min-h-[38px] max-h-32"
+          class="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring min-h-[38px] max-h-32"
           onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(); } }}
         ></textarea>
         <button
           type="button"
-          class="h-[38px] w-[38px] flex items-center justify-center rounded bg-primary text-primary-foreground shrink-0 disabled:opacity-50"
+          class="h-[38px] w-[38px] flex items-center justify-center rounded-md bg-primary text-primary-foreground shrink-0 disabled:opacity-50"
           disabled={!body.trim() || submitting}
           onclick={() => void submit()}
         >

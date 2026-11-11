@@ -122,7 +122,7 @@
   <label class="flex flex-col gap-1">
     <span class="text-[11px] text-muted-foreground">Name</span>
     <input
-      class="bg-muted rounded px-2 py-1.5 text-sm outline-none"
+      class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none"
       placeholder="Drink water, Stretch, Read…"
       bind:value={name}
     />
@@ -132,7 +132,7 @@
     <label class="flex w-16 flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Icon</span>
       <input
-        class="bg-muted rounded px-2 py-1.5 text-center text-sm outline-none"
+        class="bg-muted rounded-md px-2 py-1.5 text-center text-sm outline-none"
         maxlength="2"
         placeholder="💧"
         bind:value={icon}
@@ -181,7 +181,7 @@
     {:else if mode === "weekly"}
       <label class="flex items-center gap-2 pt-2">
         <input
-          class="bg-muted w-16 rounded px-2 py-1.5 text-sm outline-none"
+          class="bg-muted w-16 rounded-md px-2 py-1.5 text-sm outline-none"
           inputmode="numeric"
           bind:value={timesPerWeek}
         />
@@ -198,13 +198,13 @@
     {#if tracksNumber}
       <div class="flex items-center gap-2 pt-1">
         <input
-          class="bg-muted w-20 rounded px-2 py-1.5 text-sm outline-none"
+          class="bg-muted w-20 rounded-md px-2 py-1.5 text-sm outline-none"
           inputmode="decimal"
           placeholder="8"
           bind:value={targetValue}
         />
         <input
-          class="bg-muted w-24 rounded px-2 py-1.5 text-sm outline-none"
+          class="bg-muted w-24 rounded-md px-2 py-1.5 text-sm outline-none"
           placeholder="glasses"
           bind:value={targetUnit}
         />

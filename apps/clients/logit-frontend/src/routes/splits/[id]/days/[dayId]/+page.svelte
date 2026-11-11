@@ -388,13 +388,13 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back(`/splits/${splitId}`)} />
 
     {#if ui.renamingDay}
       <input
         bind:this={dayNameInput}
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
+        class="flex-1 min-w-0 bg-transparent text-base font-semibold focus:outline-none border-b border-primary"
         bind:value={ui.dayNameDraft}
         placeholder="Day name (optional)"
         disabled={ui.saving}
@@ -465,7 +465,7 @@
     <div class="flex gap-2 px-3 py-2 border-b border-border bg-muted/30" transition:reveal>
       <button
         type="button"
-        class="flex-1 flex items-center gap-2 rounded border border-border px-3 py-2 text-sm hover:bg-muted/50"
+        class="flex-1 flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/50"
         onclick={() => (ui.addMode = "exercise")}
       >
         <Dumbbell class="h-4 w-4 text-muted-foreground shrink-0" />
@@ -473,7 +473,7 @@
       </button>
       <button
         type="button"
-        class="flex-1 flex items-center gap-2 rounded border border-border px-3 py-2 text-sm hover:bg-muted/50"
+        class="flex-1 flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/50"
         onclick={() => (ui.addMode = "cardio")}
       >
         <Timer class="h-4 w-4 text-muted-foreground shrink-0" />
@@ -589,7 +589,7 @@
                       inputmode="decimal"
                       min="0"
                       placeholder="—"
-                      class="w-full rounded border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                      class="w-full rounded-md border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
                       value={targetDraft[key as "sets" | "reps" | "weight"] ?? ""}
                       disabled={ui.saving}
                       oninput={(e) => {

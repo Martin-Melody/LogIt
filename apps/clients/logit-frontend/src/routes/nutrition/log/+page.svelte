@@ -430,9 +430,9 @@
 {/if}
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/nutrition")} />
-    <h1 class="text-sm font-semibold">
+    <h1 class="page-title">
       {#if browse}Foods{:else}Add to <span class="capitalize">{meal}</span>{/if}
     </h1>
     {#if browse}
@@ -472,7 +472,7 @@
       {#each ["all", "custom", "recipes"] as t (t)}
         <button
           type="button"
-          class="px-2 py-1 rounded capitalize {ui.filter === t ? 'bg-muted font-medium' : 'text-muted-foreground'}"
+          class="px-2 py-1 rounded-md capitalize {ui.filter === t ? 'bg-muted font-medium' : 'text-muted-foreground'}"
           onclick={() => { ui.filter = t as typeof ui.filter; void runSearch(); }}
         >{t}</button>
       {/each}
@@ -484,12 +484,12 @@
 
   {#if showQuick}
     <div class="px-3 py-3 border-b border-border flex flex-col gap-2">
-      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={quick.name} />
+      <input class="w-full bg-muted rounded-md px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={quick.name} />
       <div class="grid grid-cols-4 gap-2">
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="kcal" bind:value={quick.kcal} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="P" bind:value={quick.protein} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="C" bind:value={quick.carbs} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="F" bind:value={quick.fat} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="kcal" bind:value={quick.kcal} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="P" bind:value={quick.protein} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="C" bind:value={quick.carbs} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="F" bind:value={quick.fat} />
       </div>
       <Button size="sm" onclick={() => void addQuick()}>Add</Button>
     </div>
@@ -503,7 +503,7 @@
       {#if ocrReady}
         <button
           type="button"
-          class="self-start rounded bg-primary text-primary-foreground text-sm px-3 py-1.5 flex items-center gap-1.5"
+          class="self-start rounded-md bg-primary text-primary-foreground text-sm px-3 py-1.5 flex items-center gap-1.5"
           onclick={() => (showLabelScanner = true)}
         >
           <ScanText class="h-4 w-4" /> Scan the nutrition label
@@ -530,20 +530,20 @@
           Rescan
         </button>
       </div>
-      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={labelDraft.name} />
-      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Brand (optional)" bind:value={labelDraft.brand} />
+      <input class="w-full bg-muted rounded-md px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={labelDraft.name} />
+      <input class="w-full bg-muted rounded-md px-2 py-1.5 text-sm outline-none" placeholder="Brand (optional)" bind:value={labelDraft.brand} />
       <div class="grid grid-cols-4 gap-2">
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="kcal" bind:value={labelDraft.kcal} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="P" bind:value={labelDraft.protein} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="C" bind:value={labelDraft.carbs} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="F" bind:value={labelDraft.fat} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="kcal" bind:value={labelDraft.kcal} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="P" bind:value={labelDraft.protein} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="C" bind:value={labelDraft.carbs} />
+        <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="F" bind:value={labelDraft.fat} />
       </div>
       <div class={cn(segmentTrack, "w-fit")}>
         <span class="text-muted-foreground">Values per</span>
         <button type="button" class={segment(labelDraft.basis === '100g')} aria-pressed={labelDraft.basis === '100g'} onclick={() => (labelDraft.basis = '100g')}>100 g</button>
         <button type="button" class={segment(labelDraft.basis === 'serving')} aria-pressed={labelDraft.basis === 'serving'} onclick={() => (labelDraft.basis = 'serving')}>serving</button>
         {#if labelDraft.basis === 'serving'}
-          <input class="w-24 bg-muted rounded px-2 py-1 outline-none tabular-nums" inputmode="decimal" placeholder="g in a serving" bind:value={labelDraft.servingG} />
+          <input class="w-24 bg-muted rounded-md px-2 py-1 outline-none tabular-nums" inputmode="decimal" placeholder="g in a serving" bind:value={labelDraft.servingG} />
         {/if}
       </div>
       {#each labelDraft.warnings as w (w)}
@@ -554,7 +554,7 @@
           {labelDraft.showRaw ? "Hide" : "Show"} what the scan read
         </button>
         {#if labelDraft.showRaw}
-          <pre class="text-[11px] leading-tight bg-muted rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">{labelDraft.raw}</pre>
+          <pre class="text-[11px] leading-tight bg-muted rounded-md p-2 max-h-40 overflow-auto whitespace-pre-wrap">{labelDraft.raw}</pre>
         {/if}
       {/if}
       <div class="flex gap-2">
@@ -576,7 +576,7 @@
       </div>
       <div class="flex gap-2">
         <input
-          class="w-24 bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums"
+          class="w-24 bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums"
           inputmode="decimal"
           aria-label="Amount"
           bind:value={pick.amount}
