@@ -477,18 +477,18 @@
 
           <!-- Always show editable fields (pre-filled if PR was selected) -->
           <input type="text" placeholder="Exercise name"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={prExercise} />
           <div class="grid grid-cols-2 gap-2">
             <div class="flex items-center rounded-md border bg-background overflow-hidden">
               <input type="number" min="0" inputmode="decimal" placeholder="Weight"
-                class="flex-1 min-w-0 px-3 py-2 text-sm bg-transparent focus:outline-none"
+                class="h-10 flex-1 min-w-0 px-3 text-sm bg-transparent focus:outline-none"
                 bind:value={prWeight} />
               <span class="pr-3 text-xs text-muted-foreground">kg</span>
             </div>
             <div class="flex items-center rounded-md border bg-background overflow-hidden">
               <input type="number" min="0" inputmode="numeric" placeholder="Reps"
-                class="flex-1 min-w-0 px-3 py-2 text-sm bg-transparent focus:outline-none"
+                class="h-10 flex-1 min-w-0 px-3 text-sm bg-transparent focus:outline-none"
                 bind:value={prReps} />
               <span class="pr-3 text-xs text-muted-foreground">reps</span>
             </div>

@@ -107,7 +107,7 @@
       {#if habit.archived}
         <button
           type="button"
-          class="flex h-8 w-8 items-center justify-center text-muted-foreground"
+          class="flex h-11 w-11 items-center justify-center text-muted-foreground"
           aria-label="Restore habit"
           onclick={unarchive}
         >
@@ -116,7 +116,7 @@
       {:else}
         <button
           type="button"
-          class="flex h-8 w-8 items-center justify-center text-muted-foreground"
+          class="flex h-11 w-11 items-center justify-center text-muted-foreground"
           aria-label="Archive habit"
           onclick={archive}
         >
@@ -134,7 +134,7 @@
           <button
             {...props}
             type="button"
-            class="flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-destructive"
+            class="flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive"
             aria-label="Delete habit"
           >
             <Trash2 class="h-4 w-4" />

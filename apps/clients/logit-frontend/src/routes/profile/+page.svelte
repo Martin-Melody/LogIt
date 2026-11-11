@@ -85,7 +85,7 @@
         id="p-name"
         type="text"
         autocomplete="name"
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 w-full rounded-md border bg-background px-3 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draft.name}
       />
     </div>

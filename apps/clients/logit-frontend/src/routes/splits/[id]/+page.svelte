@@ -373,9 +373,9 @@
     </div>
 
     {#if split.days.length === 0}
-      <div class="px-3 py-6 flex flex-col items-center gap-2 text-center">
+      <div class="px-3 py-12 flex flex-col items-center gap-3 text-center">
         <p class="text-sm text-muted-foreground">No days yet.</p>
-        <Button variant="outline" size="sm" onclick={() => void addDay()}>Add first day</Button>
+        <Button variant="outline" onclick={() => void addDay()}>Add first day</Button>
       </div>
     {:else}
       {@const sorted = sortDays(split.days)}

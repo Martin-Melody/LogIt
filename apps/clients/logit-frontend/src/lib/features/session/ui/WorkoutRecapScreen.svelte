@@ -328,7 +328,7 @@
           {#each breakdown as group (group.kind === "superset" ? group.id : group.exercise.id)}
             {#if group.kind === "superset"}
               <div class="bg-primary/[0.03]">
-                <p class="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                <p class="px-3 pt-1.5 text-xs font-medium uppercase tracking-wide text-primary">
                   {group.label ?? "Superset"}
                 </p>
                 <div class="ml-3 border-l-2 border-primary/30 divide-y divide-border">

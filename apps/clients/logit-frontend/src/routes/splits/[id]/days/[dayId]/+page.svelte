@@ -511,9 +511,9 @@
   {:else if !day}
     <p class="px-3 py-4 text-sm text-muted-foreground">Day not found.</p>
   {:else if day.blocks.length === 0}
-    <div class="px-3 py-6 flex flex-col items-center gap-2 text-center">
+    <div class="px-3 py-12 flex flex-col items-center gap-3 text-center">
       <p class="text-sm text-muted-foreground">Nothing planned yet.</p>
-      <Button variant="outline" size="sm" onclick={() => (ui.addMode = "picker")}>
+      <Button variant="outline" onclick={() => (ui.addMode = "picker")}>
         Add first block
       </Button>
     </div>
@@ -589,7 +589,7 @@
                       inputmode="decimal"
                       min="0"
                       placeholder="—"
-                      class="w-full rounded-md border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                      class="h-10 w-full rounded-md border bg-background px-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
                       value={targetDraft[key as "sets" | "reps" | "weight"] ?? ""}
                       disabled={ui.saving}
                       oninput={(e) => {

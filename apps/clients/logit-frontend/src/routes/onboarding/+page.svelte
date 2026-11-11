@@ -158,7 +158,7 @@
       <div class="flex flex-col gap-1.5 flex-1">
         <label class="text-sm font-medium" for="name">Name</label>
         <input id="name" type="text" autocomplete="name" placeholder="Your name"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={name}
           onkeydown={(e) => { if (e.key === "Enter") onNameContinue(); }} />
       </div>

@@ -103,7 +103,7 @@
                 onblur={(e) => update(q, { text: e.currentTarget.value })}></textarea>
             {:else if q.type === "number" || q.type === "weight"}
               <input id={q.id} type="number" inputmode="decimal" disabled={alreadySubmitted}
-                class="w-32 rounded-md border bg-background px-2 py-1.5 text-sm"
+                class="h-10 w-32 rounded-md border bg-background px-2 text-sm"
                 value={answerFor(q.id)?.number ?? ""}
                 onblur={(e) => update(q, { number: e.currentTarget.value === "" ? undefined : Number(e.currentTarget.value) })} />
               {#if q.type === "weight"}<span class="ml-1 text-xs text-muted-foreground">kg</span>{/if}

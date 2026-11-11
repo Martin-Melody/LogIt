@@ -113,7 +113,7 @@
   <div class="flex items-center gap-2">
     <input
       type="text"
-      class="flex-1 min-w-0 rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      class="h-10 flex-1 min-w-0 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
       bind:value={name}
       onblur={commit}
       disabled={saving}
@@ -186,7 +186,7 @@
       <span class="w-20">Increment (kg)</span>
       <input
         type="number" min="0.25" step="0.25"
-        class="w-20 rounded-md border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 w-20 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={increment}
         onblur={commit}
         disabled={saving}
@@ -195,21 +195,21 @@
   {:else if mode === "linear"}
     <div class="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
       <label class="flex flex-col gap-1">Min ({unit})
-        <input type="number" min="0" class="rounded-md border bg-background px-2 py-1 text-sm text-foreground"
+        <input type="number" min="0" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
           bind:value={linMin} onblur={commit} disabled={saving} />
       </label>
       <label class="flex flex-col gap-1">Step ({unit})
-        <input type="number" min="0.25" step="0.25" class="rounded-md border bg-background px-2 py-1 text-sm text-foreground"
+        <input type="number" min="0.25" step="0.25" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
           bind:value={linStep} onblur={commit} disabled={saving} />
       </label>
       <label class="flex flex-col gap-1">Max ({unit})
-        <input type="number" min="0" class="rounded-md border bg-background px-2 py-1 text-sm text-foreground"
+        <input type="number" min="0" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
           bind:value={linMax} onblur={commit} disabled={saving} />
       </label>
     </div>
     <label class="flex flex-col gap-1 text-xs text-muted-foreground">
       Add-on plates ({unit}, optional) — e.g. 2.5
-      <input type="text" class="rounded-md border bg-background px-2 py-1 text-sm text-foreground"
+      <input type="text" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
         bind:value={addOnsText} onblur={commit} disabled={saving} placeholder="2.5" />
     </label>
   {:else}

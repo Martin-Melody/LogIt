@@ -222,7 +222,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Widgets</p>
               <ul class="flex flex-col gap-1.5">
                 {#each widgets as plugin (plugin.id)}
-                  <li class="rounded-md border border-border p-2.5">
+                  <li class="rounded-md border border-border p-3">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>
@@ -248,7 +248,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Progression</p>
               <ul class="flex flex-col gap-1.5">
                 {#each progressionAlgorithms as plugin (plugin.id)}
-                  <li class="rounded-md border border-border p-2.5">
+                  <li class="rounded-md border border-border p-3">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>
@@ -274,7 +274,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Analytics</p>
               <ul class="flex flex-col gap-1.5">
                 {#each analyticsPlugins as plugin (plugin.id)}
-                  <li class="rounded-md border border-border p-2.5">
+                  <li class="rounded-md border border-border p-3">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>

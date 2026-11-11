@@ -61,6 +61,9 @@
 </script>
 
 <div class="p-3 flex flex-col gap-3 pb-32">
+  <div class="page-header -mx-3 -mt-3">
+    <h1 class="page-title">Progress</h1>
+  </div>
   {#if ui.loading}
     <Card.Root><Card.Content class="pt-6"><p class="text-sm text-muted-foreground">Loading…</p></Card.Content></Card.Root>
   {:else if ui.error}

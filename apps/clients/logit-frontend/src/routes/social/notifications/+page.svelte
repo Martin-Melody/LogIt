@@ -98,7 +98,7 @@
         <li>
           <button
             type="button"
-            class="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/40 {n.readAt ? '' : 'bg-primary/5'}"
+            class="w-full flex items-start gap-3 px-3 py-3 text-left hover:bg-muted/40 {n.readAt ? '' : 'bg-primary/5'}"
             onclick={() => goto(target(n))}
           >
             <div class="relative shrink-0">

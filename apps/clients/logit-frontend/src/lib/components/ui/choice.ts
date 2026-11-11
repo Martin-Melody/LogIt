@@ -23,7 +23,7 @@ export function segment(selected: boolean, className?: string): string {
 
 export function chip(selected: boolean, className?: string): string {
   return cn(
-    "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-50",
+    "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-50",
     selected
       ? "border-primary bg-primary text-primary-foreground"
       : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground",

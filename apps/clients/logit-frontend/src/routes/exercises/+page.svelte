@@ -142,7 +142,7 @@
     {#if selecting}
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
+        class="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
         onclick={exitSelection}
         aria-label="Cancel selection"
       >
@@ -153,7 +153,7 @@
       </h1>
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 shrink-0"
+        class="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 shrink-0"
         onclick={openExport}
         disabled={selectedCount === 0}
         aria-label="Export selected as a pack"
@@ -166,7 +166,7 @@
       <h1 class="page-title">Exercises</h1>
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
+        class="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
         onclick={openAdd}
         aria-label="Add exercise"
         data-tour="exercises-add"
@@ -183,7 +183,7 @@
       <input
         type="search"
         placeholder="Search exercises…"
-        class="w-full rounded-md border bg-background pl-8 pr-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 w-full rounded-md border bg-background pl-8 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={query}
       />
       {#if query}
@@ -299,7 +299,7 @@
             id="ex-name"
             type="text"
             placeholder="e.g. Cable Fly"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={draftName}
           />
         </div>
@@ -373,7 +373,7 @@
             id="pack-name"
             type="text"
             placeholder="e.g. My Gym's Machines"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={exportName}
           />
         </div>

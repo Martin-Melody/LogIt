@@ -43,7 +43,7 @@
       <div class="h-1 w-10 rounded-full bg-muted-foreground/20"></div>
     </div>
 
-    <p class="px-4 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+    <p class="px-4 pt-1 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
       More
     </p>
 

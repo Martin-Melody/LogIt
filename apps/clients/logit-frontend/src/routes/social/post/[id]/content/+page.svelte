@@ -152,7 +152,7 @@
 
       <div class="flex items-center gap-2 text-muted-foreground">
         <Icon class="h-4 w-4" />
-        <span class="uppercase tracking-wide text-[11px] font-medium">{meta.label}</span>
+        <span class="uppercase tracking-wide text-xs font-medium">{meta.label}</span>
       </div>
 
       {#if source.type === "Split"}

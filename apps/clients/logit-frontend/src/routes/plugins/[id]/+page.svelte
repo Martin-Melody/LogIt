@@ -260,7 +260,7 @@
           <Card.Content>
             <ul class="flex flex-col gap-1.5">
               {#each pack.exercises as ex (ex.name)}
-                <li class="rounded-md border border-border px-2.5 py-2">
+                <li class="rounded-md border border-border px-3 py-2.5">
                   <p class="text-sm font-medium">{ex.name}</p>
                   {#if ex.primaryMuscles.length > 0}
                     <p class="mt-0.5 text-xs text-muted-foreground capitalize">
@@ -314,7 +314,7 @@
               <input
                 id="actor-url"
                 type="url"
-                class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 bind:value={actorUrl}
                 placeholder="https://mastodon.social/@you"
               />

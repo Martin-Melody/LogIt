@@ -342,7 +342,7 @@
           <input
             id="edit-started"
             type="datetime-local"
-            class="rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             value={msToDatetimeLocal(edit.draft.startedAtMs)}
             onchange={(e) => { if (edit.draft) edit.draft.startedAtMs = new Date(e.currentTarget.value).getTime(); }}
           />
@@ -353,7 +353,7 @@
             <input
               id="edit-ended"
               type="datetime-local"
-              class="rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               value={msToDatetimeLocal(edit.draft.endedAtMs)}
               onchange={(e) => { if (edit.draft) edit.draft.endedAtMs = new Date(e.currentTarget.value).getTime(); }}
             />
@@ -437,7 +437,7 @@
       {#each groups as group (group.kind === "superset" ? group.id : group.exercise.id)}
         {#if group.kind === "superset"}
           <div class="border-t border-primary/30 bg-primary/[0.03]" transition:reveal>
-            <p class="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <p class="px-3 pt-1.5 text-xs font-medium uppercase tracking-wide text-primary">
               {group.label ?? "Superset"}
             </p>
             <div class="ml-3 border-l-2 border-primary/30">

@@ -613,13 +613,13 @@
         {#if showOnlinePasswordForm}
           <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             <input type="password" placeholder="Current password" autocomplete="current-password"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.current} />
             <input type="password" placeholder="New password" autocomplete="new-password"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.next} />
             <input type="password" placeholder="Confirm new password" autocomplete="new-password"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.confirm} />
             {#if onlinePasswordError}
               <p class="text-xs text-destructive">{onlinePasswordError}</p>
@@ -682,14 +682,14 @@
           <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             {#if localAccountHasPassword}
               <input type="password" placeholder="Current password" autocomplete="current-password"
-                class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 bind:value={passwordForm.current} />
             {/if}
             <input type="password" placeholder={localAccountHasPassword ? "New password" : "Password"} autocomplete="new-password"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={passwordForm.next} />
             <input type="password" placeholder="Confirm password" autocomplete="new-password"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={passwordForm.confirm} />
             {#if passwordError}
               <p class="text-xs text-destructive">{passwordError}</p>
@@ -750,7 +750,7 @@
       </div>
       <button
         type="button"
-        class="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        class="flex min-h-11 items-center justify-between border-t border-border pt-1 -mb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         onclick={() => goto("/settings/navbar")}
       >
         Customise navigation
@@ -810,7 +810,7 @@
             id="bar-weight"
             type="number"
             min="1"
-            class="w-24 rounded-md border bg-background px-2 py-1 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-24 rounded-md border bg-background px-2 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={barWeightDisplay}
             onchange={(e) => saveBarWeight((e.currentTarget as HTMLInputElement).value)}
           />
@@ -821,14 +821,14 @@
             id="bar-plates"
             type="text"
             inputmode="decimal"
-            class="w-full rounded-md border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={platesDisplay}
             onchange={(e) => savePlates((e.currentTarget as HTMLInputElement).value)}
           />
         </div>
         <div class="flex gap-2">
-          <Button size="sm" variant="outline" class="h-7 text-xs" onclick={() => applyBarPreset("kg")}>kg preset</Button>
-          <Button size="sm" variant="outline" class="h-7 text-xs" onclick={() => applyBarPreset("lb")}>lb preset</Button>
+          <Button size="sm" variant="outline" onclick={() => applyBarPreset("kg")}>kg preset</Button>
+          <Button size="sm" variant="outline" onclick={() => applyBarPreset("lb")}>lb preset</Button>
         </div>
       </div>
     </Card.Content>
@@ -884,8 +884,8 @@
                     <Button
                       size="sm"
                       variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      title="Configure"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure" aria-label="Configure"
                       onclick={() => goto(`/settings/progression/${algo.id}`)}
                     >
                       <Settings2 class="h-4 w-4" />
@@ -955,8 +955,8 @@
                     <Button
                       size="sm"
                       variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      title="Configure"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure" aria-label="Configure"
                       onclick={() => goto(`/settings/mobility-progression/${algo.id}`)}
                     >
                       <Settings2 class="h-4 w-4" />
@@ -1030,8 +1030,8 @@
                     <Button
                       size="sm"
                       variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      title="Configure"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure" aria-label="Configure"
                       onclick={() => goto(`/settings/muscle-group-insight/${algo.id}`)}
                     >
                       <Settings2 class="h-4 w-4" />
@@ -1155,7 +1155,7 @@
                   type="number"
                   min="5"
                   max="600"
-                  class="w-16 rounded-md border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                  class="h-10 w-16 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                   value={seconds}
                   onchange={(e) =>
                     setRestSeconds(type, (e.target as HTMLInputElement).value)}
@@ -1186,7 +1186,6 @@
     <Card.Content class="flex flex-col gap-2">
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startHomeTour(true)}
       >
@@ -1194,7 +1193,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startSessionTour(true)}
       >
@@ -1202,7 +1200,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startSplitsTour(true)}
       >
@@ -1210,7 +1207,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startExercisesTour(true)}
       >
@@ -1218,7 +1214,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startProfileTour(true)}
       >
@@ -1247,7 +1242,6 @@
       </p>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => void goto("/plugins")}
       >
@@ -1277,7 +1271,7 @@
               type="password"
               placeholder="Confirm your password"
               autocomplete="current-password"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={deleteAccountPassword}
             />
           {/if}
@@ -1334,7 +1328,6 @@
       <Card.Content class="flex flex-col gap-2">
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           onclick={() => void resetOnboarding()}
         >
@@ -1342,7 +1335,6 @@
         </Button>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           onclick={() => resetTours()}
         >
@@ -1350,7 +1342,6 @@
         </Button>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           onclick={() => void clearAllData()}
         >
@@ -1358,7 +1349,6 @@
         </Button>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           disabled={!authStore.isAuthenticated}
           onclick={() => void clearAllDataAndAccount()}
@@ -1422,7 +1412,7 @@
         href={PRIVACY_URL}
         target="_blank"
         rel="noreferrer"
-        class="flex items-center justify-between text-sm hover:text-foreground text-muted-foreground"
+        class="flex min-h-11 items-center justify-between text-sm hover:text-foreground text-muted-foreground"
       >
         Privacy Policy <ChevronRight class="h-3.5 w-3.5" />
       </a>
@@ -1430,7 +1420,7 @@
         href={TERMS_URL}
         target="_blank"
         rel="noreferrer"
-        class="flex items-center justify-between text-sm hover:text-foreground text-muted-foreground"
+        class="flex min-h-11 items-center justify-between text-sm hover:text-foreground text-muted-foreground"
       >
         Terms of Service <ChevronRight class="h-3.5 w-3.5" />
       </a>

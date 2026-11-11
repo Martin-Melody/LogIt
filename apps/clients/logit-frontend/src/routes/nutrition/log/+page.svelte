@@ -436,7 +436,7 @@
       {#if browse}Foods{:else}Add to <span class="capitalize">{meal}</span>{/if}
     </h1>
     {#if browse}
-      <a href="/nutrition/foods" class="ml-auto text-xs text-muted-foreground">Manage</a>
+      <a href="/nutrition/foods" class="ml-auto -mr-1 flex h-11 items-center px-2 text-sm text-muted-foreground hover:text-foreground">Manage</a>
     {/if}
   </div>
 
@@ -472,7 +472,7 @@
       {#each ["all", "custom", "recipes"] as t (t)}
         <button
           type="button"
-          class={chip(ui.filter === t, "h-10 capitalize")}
+          class={chip(ui.filter === t, "capitalize")}
           aria-pressed={ui.filter === t}
           onclick={() => { ui.filter = t as typeof ui.filter; void runSearch(); }}
         >{t}</button>

@@ -78,7 +78,7 @@
     <div class="flex items-center justify-between gap-1.5 text-muted-foreground">
       <span class="flex items-center gap-1.5">
         <Icon class="h-3 w-3" />
-        <span class="uppercase tracking-wide text-[11px] font-medium">{label}</span>
+        <span class="uppercase tracking-wide text-xs font-medium">{label}</span>
       </span>
       <ChevronRight class="h-3.5 w-3.5 shrink-0" />
     </div>

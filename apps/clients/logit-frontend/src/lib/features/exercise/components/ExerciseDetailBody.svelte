@@ -220,7 +220,7 @@
       <input
         id="ex-name"
         type="text"
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draftName}
         onblur={commitName}
         disabled={view.exercise.isCore}
@@ -338,7 +338,7 @@
       <input
         type="text"
         placeholder="Add a machine…"
-        class="flex-1 min-w-0 rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 flex-1 min-w-0 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={newMachineName}
         onkeydown={(e) => { if (e.key === "Enter") void addMachine(); }}
       />
@@ -365,7 +365,7 @@
           </p>
           <input
             type="text"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             placeholder="Pack name"
             bind:value={exportName}
           />

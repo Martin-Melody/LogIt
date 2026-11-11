@@ -173,7 +173,7 @@
               <div class="flex flex-col gap-1 shrink-0">
                 <button
                   type="button"
-                  class="flex items-center justify-center h-7 w-7 rounded-md bg-primary text-primary-foreground disabled:opacity-50"
+                  class="flex items-center justify-center h-11 w-11 rounded-md bg-primary text-primary-foreground disabled:opacity-50"
                   disabled={!editDraft.trim() || savingEditId === comment.id}
                   onclick={() => void saveEdit(comment)}
                 >
@@ -181,7 +181,7 @@
                 </button>
                 <button
                   type="button"
-                  class="flex items-center justify-center h-7 w-7 rounded-md border border-border text-muted-foreground"
+                  class="flex items-center justify-center h-11 w-11 rounded-md border border-border text-muted-foreground"
                   onclick={cancelEdit}
                 >
                   <X class="h-3 w-3" />
