@@ -56,6 +56,10 @@ export type RemoteProfile = {
    */
   activeSplitId: string | null;
   updatedAtMs: number;
+  /** Which split day was done last, per split: { [splitId]: { lastDayId, recordedAtMs } }.
+   * Unlike the rest of this blob it's merged per split (newest wins), on the server and on
+   * pull, so the next workout is the same day on every device. */
+  splitRotationJson?: string | null;
 };
 
 // ── Nutrition ────────────────────────────────────────────────────────────────

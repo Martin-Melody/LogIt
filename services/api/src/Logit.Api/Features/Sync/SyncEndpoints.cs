@@ -312,14 +312,59 @@ public static class SyncEndpoints
         var user = await db.Users.FindAsync(userId);
         if (user is null) return Results.NotFound();
 
+        // The split rotation doesn't follow the profile's last-write-wins: each split keeps
+        // whichever "last day done" is newest, from either side. Otherwise a device that saved
+        // its profile before it had pulled another device's newer workout would rewind it.
+        ProfileDto? stored = null;
+        if (user.ProfileJson is not null)
+        {
+            try { stored = JsonSerializer.Deserialize<ProfileDto>(user.ProfileJson); }
+            catch (JsonException) { }
+        }
+        var rotations = MergeSplitRotations(stored?.SplitRotationJson, dto.SplitRotationJson);
+
         if (dto.UpdatedAtMs > user.ProfileUpdatedAtMs)
         {
-            user.ProfileJson = JsonSerializer.Serialize(dto);
+            user.ProfileJson = JsonSerializer.Serialize(dto with { SplitRotationJson = rotations });
             user.ProfileUpdatedAtMs = dto.UpdatedAtMs;
+            await db.SaveChangesAsync();
+        }
+        else if (stored is not null && rotations != stored.SplitRotationJson)
+        {
+            user.ProfileJson = JsonSerializer.Serialize(stored with { SplitRotationJson = rotations });
             await db.SaveChangesAsync();
         }
 
         return Results.NoContent();
+    }
+
+    /// Merge two split-rotation maps ({ splitId: { lastDayId, recordedAtMs } }), keeping the
+    /// newer entry per split. Unreadable input is ignored; returns null when both are empty.
+    public static string? MergeSplitRotations(string? stored, string? incoming)
+    {
+        var merged = new SortedDictionary<string, JsonElement>(StringComparer.Ordinal);
+        static long RecordedAt(JsonElement e) =>
+            e.ValueKind == JsonValueKind.Object && e.TryGetProperty("recordedAtMs", out var r) && r.TryGetInt64(out var v)
+                ? v
+                : long.MinValue;
+
+        foreach (var json in new[] { stored, incoming })
+        {
+            if (string.IsNullOrWhiteSpace(json)) continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object) continue;
+                foreach (var split in doc.RootElement.EnumerateObject())
+                {
+                    if (!merged.TryGetValue(split.Name, out var current) || RecordedAt(split.Value) > RecordedAt(current))
+                        merged[split.Name] = split.Value.Clone();
+                }
+            }
+            catch (JsonException) { }
+        }
+
+        return merged.Count == 0 ? null : JsonSerializer.Serialize(merged);
     }
 
     private static async Task<IResult> PullProfile(
@@ -669,7 +714,10 @@ public record ProfileDto(
     string? NavConfigJson,
     string? HomeConfigJson,
     string? ActiveSplitId,
-    long UpdatedAtMs
+    long UpdatedAtMs,
+    // Per split: { lastDayId, recordedAtMs }. Merged per split on push (see PushProfile), not
+    // replaced with the rest of the profile. Last so older stored profiles still read.
+    string? SplitRotationJson = null
 );
 
 /// One client-owned sync row — nutrition row, habit or habit entry (see ISyncedClientRow).
