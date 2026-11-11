@@ -29,6 +29,8 @@
   import BlockPickerSheet from "$lib/features/session/ui/BlockPickerSheet.svelte";
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
   import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
+  import CircuitOverlay from "$lib/features/session/circuit/CircuitOverlay.svelte";
+  import { circuitRunner } from "$lib/features/session/circuit/circuitRunner";
   import GroupPickerSheet from "$lib/features/session/ui/GroupPickerSheet.svelte";
   import { groupPickerModel, groupConfirmLabel, allowedDropIndices, nearestAllowed, type GroupPickerModel } from "$lib/features/session/grouping";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
@@ -493,6 +495,10 @@
     };
   }
 
+  // The shrunk circuit timer sits where the add button was; the button moves up.
+  const CIRCUIT_BAR_SPACE = 84;
+  const circuitBarShown = $derived(!!$circuitRunner.run && !$circuitRunner.expanded);
+
   const sessionExercises = $derived($currentSession ? getExercises($currentSession) : []);
   const loggedSetCount = $derived(
     sessionExercises.reduce((n, ex) => n + ex.sets.length, 0),
@@ -544,7 +550,7 @@
 </script>
 
 <div
-  class="flex flex-col pb-48"
+  class="flex flex-col {circuitBarShown ? 'pb-72' : 'pb-48'}"
   onpointerdown={(e) => {
     if (!(e.target as HTMLElement).closest("input, textarea")) {
       const active = document.activeElement as HTMLElement | null;
@@ -712,10 +718,14 @@
     onSubmit={addMobilityWithDrill}
   />
 
+  {#if !ui.finishing}
+    <CircuitOverlay bottomOffset={addButtonBottom} />
+  {/if}
+
   {#if !ui.finishing && !$keyboard.visible}
     <div
       class="fixed right-3 z-20"
-      style={`bottom: ${addButtonBottom}px;`}
+      style={`bottom: ${addButtonBottom + (circuitBarShown ? CIRCUIT_BAR_SPACE : 0)}px;`}
     >
       <Button
         size="icon"
