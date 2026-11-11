@@ -77,6 +77,10 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] Logging in on a fresh install no longer loops back to the welcome screen: logging in
+      to an existing account marks onboarding done (here and on the server) and goes home;
+      signing up still goes through name and starter split, and the welcome step hides
+      "Log in" once you're signed in. Found 2026-11-11 on a fresh dev install.
 - [x] Today's Plan card is a carousel (today, tomorrow, …).
 - [x] Search on the Sessions page.
 - [x] Light / dark mode.

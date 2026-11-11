@@ -4,6 +4,7 @@
 
   import { profile } from "$lib/stores/profile.store";
   import { onboarding } from "$lib/stores/onboarding.store";
+  import { authStore } from "$lib/api/authStore.svelte";
   import { resetTours } from "$lib/tour/index";
   import { splits } from "$lib/stores/splits.store";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
@@ -138,9 +139,12 @@
         >
           Get started <ChevronRight class="h-4 w-4" />
         </button>
-        <a href="/auth?mode=login" class="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Already have an account? <span class="text-foreground font-medium">Log in</span>
-        </a>
+        <!-- Already signed in (just signed up): "Log in" would only bounce back here. -->
+        {#if !authStore.isAuthenticated}
+          <a href="/auth?mode=login" class="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Already have an account? <span class="text-foreground font-medium">Log in</span>
+          </a>
+        {/if}
       </div>
     </div>
 
