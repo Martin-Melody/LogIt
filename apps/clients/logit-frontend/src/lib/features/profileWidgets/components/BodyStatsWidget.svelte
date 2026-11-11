@@ -17,14 +17,25 @@
     editing = true;
   }
 
+  // The kg/lb and cm/in toggles here are only for typing the value: it's saved in
+  // the app's units (Settings › Units), so entering a weight in lb doesn't switch
+  // the whole app to lb.
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  function toProfileWeight(v: number): number {
+    if (draft.weightUnit === $profile.weightUnit) return v;
+    return round1($profile.weightUnit === "lbs" ? v * 2.2046226218 : v / 2.2046226218);
+  }
+  function toProfileHeight(v: number): number {
+    if (draft.heightUnit === $profile.heightUnit) return v;
+    return round1($profile.heightUnit === "in" ? v / 2.54 : v * 2.54);
+  }
+
   function save() {
     const h = Number(draft.height);
     const w = Number(draft.weight);
     profile.save({
-      height: Number.isFinite(h) && h > 0 ? h : null,
-      heightUnit: draft.heightUnit,
-      weight: Number.isFinite(w) && w > 0 ? w : null,
-      weightUnit: draft.weightUnit,
+      height: Number.isFinite(h) && h > 0 ? toProfileHeight(h) : null,
+      weight: Number.isFinite(w) && w > 0 ? toProfileWeight(w) : null,
     });
     editing = false;
   }

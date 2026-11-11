@@ -147,6 +147,11 @@
     return `≈${formatWeight(estimated1RM(weight, reps), weightUnit)} 1RM`;
   }
 
+  // Real PRs get a card each. Debuts are only news one at a time: on a first
+  // workout every exercise is "First time", so two or more share one card.
+  const prCards = $derived(prs.filter((p) => p.kind !== "first" || prs.filter((q) => q.kind === "first").length === 1));
+  const firstTimers = $derived(prs.filter((p) => p.kind === "first").length > 1 ? prs.filter((p) => p.kind === "first") : []);
+
   function prLabel(pr: SessionPR): string {
     if (pr.kind === "first") return "First time";
     if (pr.kind === "reps") return "Rep PR";
@@ -222,7 +227,7 @@
     <!-- Beat 3 — PRs -->
     {#if prsLoaded && prs.length > 0}
       <div class="mx-4 mt-3 flex flex-col gap-2" in:fly={{ y: 16, duration: 400, delay: 120 }}>
-        {#each prs as pr, i (pr.exerciseName + pr.kind)}
+        {#each prCards as pr, i (pr.exerciseName + pr.kind)}
           {@const line = liftLine(pr.exerciseName, pr.weight, pr.reps)}
           <div
             in:fly={{ x: 12, duration: 320, delay: i * 90 }}
@@ -244,6 +249,23 @@
             <Sparkles class="ml-auto h-4 w-4 shrink-0 text-highlight/70" />
           </div>
         {/each}
+        {#if firstTimers.length > 0}
+          <div
+            in:fly={{ x: 12, duration: 320, delay: prCards.length * 90 }}
+            class="flex items-center gap-3 rounded-lg border border-highlight/40 bg-highlight/10 px-4 py-3"
+          >
+            <Sparkles class="h-5 w-5 shrink-0 text-highlight" />
+            <div class="min-w-0">
+              <p class="text-sm font-semibold">
+                {firstTimers.length} new exercises
+                <span class="ml-1 text-xs font-medium text-highlight">First time</span>
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {firstTimers.map((p) => p.exerciseName).join(", ")} — next time you'll have something to beat.
+              </p>
+            </div>
+          </div>
+        {/if}
       </div>
     {:else if topSet}
       {@const line = liftLine(topSet.exerciseName, topSet.weight, topSet.reps)}

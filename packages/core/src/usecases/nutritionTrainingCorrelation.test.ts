@@ -164,4 +164,17 @@ describe("getNutritionTrainingCorrelation", () => {
     expect(result.mealTimingCarbs).toBeUndefined();
     expect(result.mealTimingReasoning.verdict).toMatch(/not enough precisely-timed logging/);
   });
+
+  it("counts sessions with the volume function it's given (bodyweight work)", async () => {
+    // Bodyweight-only sessions have 0 plain tonnage, so they'd all be skipped;
+    // with a bodyweight-aware volume they become samples.
+    const sessions = Array.from({ length: 5 }, (_, i) => sessionAt(i, 0));
+    const plain = await getNutritionTrainingCorrelation(deps(sessions, []));
+    expect(plain.dayLevelReasoning.inputs.sessionsWithASample).toBe(0);
+    const withBw = await getNutritionTrainingCorrelation({
+      ...deps(sessions, []),
+      sessionVolumeKg: (s) => 90 * 5 + s.startedAtMs / DAY,
+    });
+    expect(withBw.dayLevelReasoning.inputs.sessionsWithASample).toBe(4);
+  });
 });

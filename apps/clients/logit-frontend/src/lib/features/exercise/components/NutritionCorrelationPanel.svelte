@@ -11,6 +11,7 @@
   import type { NutritionTrainingCorrelationResult } from "@logit/core/usecases/nutritionTrainingCorrelation";
   import { getWorkoutRepo, getNutritionRepo } from "$lib/data/repoProvider";
   import { popIn } from "$lib/transitions";
+  import { loadVolumeContext, sessionVolumeKg } from "$lib/features/bodyweight/bodyweight";
 
   const ui = $state({ loading: true, error: null as string | null });
   let result = $state<NutritionTrainingCorrelationResult | null>(null);
@@ -19,9 +20,11 @@
     ui.loading = true;
     ui.error = null;
     try {
+      const volumeCtx = await loadVolumeContext().catch(() => null);
       result = await getNutritionTrainingCorrelation({
         workoutRepo: getWorkoutRepo(),
         nutritionRepo: getNutritionRepo(),
+        sessionVolumeKg: (s) => sessionVolumeKg(s, volumeCtx),
       });
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load nutrition correlation";
