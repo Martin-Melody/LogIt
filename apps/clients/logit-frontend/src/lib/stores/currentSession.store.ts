@@ -8,6 +8,7 @@ import type { ProgramDay } from "@logit/core/domain/CoachProgram";
 import { startSessionFromSplitDay, startPlannedSession } from "$lib/usecases/startSessionFromSplitDay";
 import { startSessionFromProgramDay } from "$lib/usecases/startSessionFromProgramDay";
 import { repeatLastSession } from "$lib/usecases/repeatLastSession";
+import { getWorkoutRepo } from "$lib/data/repoProvider";
 
 type CurrentSessionState = {
   session: WorkoutSession | null;
@@ -32,6 +33,13 @@ type CurrentSessionStore = {
 
   clear: () => void;
   setSession: (session: WorkoutSession | null) => void;
+  /**
+   * Change the in-progress session and save the draft. Changes run one at a time, each on
+   * the latest session, so two writers (the session screen and the rest timer) can't undo
+   * each other. Does nothing while there's no session or it's being finished. Resolves to
+   * the saved session (or null when nothing was done).
+   */
+  mutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<WorkoutSession | null>;
   getTransitioning: () => boolean;
 };
 
@@ -40,6 +48,7 @@ function createCurrentSessionStore(): CurrentSessionStore {
     session: null,
     transitioning: false,
   });
+  let mutateQueue: Promise<unknown> = Promise.resolve();
 
   return {
     subscribe: (run) => store.subscribe((s) => run(s.session)),
@@ -114,6 +123,21 @@ function createCurrentSessionStore(): CurrentSessionStore {
 
     setSession(session) {
       store.update((s) => ({ ...s, session }));
+    },
+
+    mutate(updater) {
+      const run = mutateQueue.then(async () => {
+        const { session, transitioning } = get(store);
+        if (!session || transitioning) return null;
+        const next = updater(session);
+        if (next === session) return session;
+        store.update((s) => ({ ...s, session: next }));
+        await getWorkoutRepo().saveDraftSession(next);
+        return next;
+      });
+      // Keep the queue going after a failure; the caller still sees its own error.
+      mutateQueue = run.catch(() => {});
+      return run;
     },
   };
 }
