@@ -5,8 +5,9 @@ import {
   groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
   setSessionNote, foldSupersets, addWarmupSets,
   addMobilityBlock, addCardioBlock, blockGroup, blockDisplayName, groupLabel, groupCandidates,
+  addMobilitySet, updateMobilitySet, supersetRoundCount, mobilitySetGroups,
 } from "@logit/core/domain/workout";
-import type { StrengthBlockData } from "@logit/core/domain/workout";
+import type { MobilityBlockData, StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
 
 function seedSession() {
@@ -230,6 +231,52 @@ describe("supersets", () => {
     expect(a.sets).toHaveLength(2);
     expect(a.sets[1].weight).toBe(50); // carried from the previous set
     expect(b.sets).toHaveLength(1);
+  });
+
+  it("addSupersetRound adds a set to mobility members, an L/R pair when per side", () => {
+    let s = createSession(1_000);
+    s = addMobilityBlock(s, { drillName: "Hamstring stretch", metric: "hold" });
+    s = addMobilityBlock(s, { drillName: "Pigeon stretch", metric: "hold", perSide: true });
+    s = addCardioBlock(s, "Incline walk");
+    const [ham, pigeon, walk] = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const mob = (id: string) => s.blocks.find((b) => b.id === id)!.data as MobilityBlockData;
+    // Targets and a load on the first round carry into the next one.
+    s = updateMobilitySet(s, ham!.id, mob(ham!.id).sets[0]!.id, { targetSec: 30, loadKg: 5, durationSec: 34, completed: true });
+    const [l, r] = mob(pigeon!.id).sets;
+    s = updateMobilitySet(s, pigeon!.id, l!.id, { targetSec: 40 });
+    s = updateMobilitySet(s, pigeon!.id, r!.id, { targetSec: 45 });
+    s = groupIntoSuperset(s, [ham!.id, pigeon!.id, walk!.id]);
+    const group = blockGroup(s.blocks[0]!)!.id;
+    expect(supersetRoundCount(supersetMembers(s, group))).toBe(1);
+
+    s = addSupersetRound(s, group);
+
+    expect(supersetRoundCount(supersetMembers(s, group))).toBe(2);
+    const hamSets = mob(ham!.id).sets;
+    expect(hamSets).toHaveLength(2);
+    expect(hamSets[1]).toMatchObject({ targetSec: 30, loadKg: 5 });
+    expect(hamSets[1]!.durationSec).toBeUndefined();
+    expect(hamSets[1]!.completed).toBeUndefined();
+    const pairs = mobilitySetGroups(mob(pigeon!.id));
+    expect(pairs).toHaveLength(2);
+    const second = pairs[1]!;
+    expect(second.kind === "pair" && [second.left?.targetSec, second.right?.targetSec]).toEqual([40, 45]);
+    // Cardio has no rounds, so it's left alone.
+    const intervals = (id: string) => (s.blocks.find((b) => b.id === id)!.data as { intervals: unknown[] }).intervals;
+    expect(intervals(walk!.id)).toEqual((walk!.data as { intervals: unknown[] }).intervals);
+  });
+
+  it("supersetRoundCount takes the member with the most rounds", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Push-up" });
+    s = addMobilityBlock(s, { drillName: "Pigeon stretch", perSide: true });
+    const [push, pigeon] = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    s = addSet(s, push!.id, { reps: 10, weight: 0 });
+    s = addMobilitySet(s, pigeon!.id);
+    s = addMobilitySet(s, pigeon!.id);
+    // 1 strength set vs 3 L/R pairs (6 sets).
+    expect(supersetRoundCount(s.blocks)).toBe(3);
+    expect(supersetRoundCount([])).toBe(0);
   });
 
   it("ungroupSuperset clears the tag", () => {

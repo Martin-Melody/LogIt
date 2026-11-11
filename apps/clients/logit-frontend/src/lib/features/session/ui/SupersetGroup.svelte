@@ -1,7 +1,7 @@
 <script lang="ts">
   import { GripVertical, Link2Off, Plus } from "lucide-svelte";
   import type { SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
-  import { addSupersetRound, blockGroup, groupLabel, ungroupSuperset } from "@logit/core/domain/workout";
+  import { addSupersetRound, blockGroup, groupLabel, supersetRoundCount, ungroupSuperset } from "@logit/core/domain/workout";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
   import { reveal } from "$lib/transitions";
@@ -38,14 +38,8 @@
   // "Superset" for two, "Circuit" for three or more, unless it was given a name.
   const label = $derived(groupLabel(blocks.length, blockGroup(blocks[0])?.label));
 
-  const roundCount = $derived(
-    Math.max(
-      0,
-      ...blocks.map((b: SessionBlock) =>
-        b.type === "strength" ? (b.data as { sets: unknown[] }).sets.length : 0,
-      ),
-    ),
-  );
+  // Strength sets and mobility sets (an L/R pair is one round); cardio doesn't count.
+  const roundCount = $derived(supersetRoundCount(blocks));
 </script>
 
 <div class="border-y border-primary/30 bg-primary/[0.03] transition-opacity {dragging ? 'opacity-50' : ''}">

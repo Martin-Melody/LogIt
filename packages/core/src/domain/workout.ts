@@ -1100,20 +1100,63 @@ export function groupCandidates(
   };
 }
 
-/** Add one more round: appends a fresh set to every strength member of the group. */
+/**
+ * How many rounds a member has: strength sets, or mobility sets (an L/R pair
+ * counts once). Other block types don't count rounds.
+ */
+export function memberRoundCount(block: SessionBlock): number {
+  if (block.type === "strength") return (block.data as StrengthBlockData).sets.length;
+  if (block.type === "mobility") return mobilitySetGroups(block.data as MobilityBlockData).length;
+  return 0;
+}
+
+/** A group's round count: the most rounds any member has. */
+export function supersetRoundCount(members: SessionBlock[]): number {
+  return Math.max(0, ...members.map(memberRoundCount));
+}
+
+/**
+ * Add one more round: appends a fresh set to every strength member (weight
+ * carried from its last set) and a set, or L/R pair, to every mobility member
+ * (hold target and load carried from its last set on the same side).
+ */
 export function addSupersetRound(session: WorkoutSession, supersetId: string): WorkoutSession {
   let next = session;
   for (const member of supersetMembers(session, supersetId)) {
-    if (member.type !== "strength") continue;
-    const sets = (member.data as StrengthBlockData).sets;
-    const last = sets[sets.length - 1];
-    next = addSet(next, member.id, {
-      reps: 0,
-      weight: last?.weight ?? 0,
-      setType: "normal",
-    });
+    if (member.type === "strength") {
+      const sets = (member.data as StrengthBlockData).sets;
+      const last = sets[sets.length - 1];
+      next = addSet(next, member.id, {
+        reps: 0,
+        weight: last?.weight ?? 0,
+        setType: "normal",
+      });
+    } else if (member.type === "mobility") {
+      next = addMobilityRound(next, member.id);
+    }
   }
   return next;
+}
+
+/** `addMobilitySet`, plus the hold target and load of the last set on the same side. */
+function addMobilityRound(session: WorkoutSession, blockId: string): WorkoutSession {
+  return updateMobilityBlock(addMobilitySet(session, blockId), blockId, (data) => {
+    const sorted = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+    const added = data.perSide ? 2 : 1;
+    const before = sorted.slice(0, -added);
+    const fresh = new Set(sorted.slice(-added).map((s) => s.id));
+    const sets = data.sets.map((s) => {
+      if (!fresh.has(s.id)) return s;
+      const prev = [...before].reverse().find((p) => !data.perSide || p.side === s.side);
+      if (!prev) return s;
+      return {
+        ...s,
+        ...(prev.targetSec != null ? { targetSec: prev.targetSec } : {}),
+        ...(prev.loadKg ? { loadKg: prev.loadKg } : {}),
+      };
+    });
+    return { ...data, sets };
+  });
 }
 
 function updateStrengthBlock(

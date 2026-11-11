@@ -625,6 +625,45 @@ test.describe("supersets", () => {
     expect(names).toEqual(["Hamstring stretch", "Butterfly stretch", "Middle split", "Bench Press"]);
   });
 
+  test("a circuit of drills counts rounds, and add round carries the hold target", async ({ page }) => {
+    const drill = (id: string, orderIndex: number, drillName: string, perSide = false) => ({
+      id, type: "mobility", orderIndex,
+      data: {
+        drillName, metric: "hold", perSide, restBetweenSetsMs: 30_000,
+        sets: perSide
+          ? [
+              { id: `${id}-l`, orderIndex: 0, side: "left", targetSec: 30, durationSec: 30 },
+              { id: `${id}-r`, orderIndex: 1, side: "right", targetSec: 30, durationSec: 30 },
+            ]
+          : [{ id: `${id}-1`, orderIndex: 0, targetSec: 30, durationSec: 30 }],
+      },
+    });
+    await seedSession(page, {
+      session: makeSession([drill("m1", 0, "Hamstring stretch"), drill("m2", 1, "Pigeon stretch", true)]),
+    });
+    await goToSession(page);
+
+    await groupWith(page, ["Pigeon stretch"]);
+    await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
+
+    // Not the last drill of the round: ticking it moves on without a rest.
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+    // The last drill rests as usual.
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
+    await page.getByLabel("Dismiss rest timer").click();
+
+    await page.getByRole("button", { name: "Add round" }).click();
+    await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
+    // One new set for the hamstring, one L/R pair for the pigeon.
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
+    // Every open hold row, the new ones included, has the 30 s target for the timer.
+    const holdRows = page.getByRole("row", { name: /Start hold timer/ });
+    await expect(holdRows).toHaveCount(5);
+    await expect(page.getByRole("row", { name: /Start hold timer.*\/ 30s/ })).toHaveCount(5);
+  });
+
   test("rest starts only after the last exercise of a superset round", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([

@@ -34,8 +34,17 @@
   import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
   import MobilityDrillDetailSheet from "$lib/features/session/ui/MobilityDrillDetailSheet.svelte";
 
-  const { blockId, data, saving, grouped = false, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<MobilityBlockData> =
-    $props();
+  const {
+    blockId,
+    data,
+    saving,
+    grouped = false,
+    restsOnComplete = true,
+    gripAction,
+    onGroup,
+    onDelete,
+    onMutate,
+  }: BlockBaseProps<MobilityBlockData> = $props();
 
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
   const weightUnit = $derived(($profile.weightUnit ?? "kg") as WeightUnit);
@@ -128,7 +137,8 @@
   async function toggleComplete(set: MobilitySet) {
     const wasCompleted = !!set.completed;
     const rest = effectiveRestMs(set);
-    const startsRest = !wasCompleted && rest > 0;
+    // In a circuit, only the last exercise of the round rests (see StrengthBlock).
+    const startsRest = restsOnComplete && !wasCompleted && rest > 0;
     await onMutate((s) =>
       updateMobilitySet(s, blockId, set.id, {
         completed: !wasCompleted,
