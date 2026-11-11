@@ -72,6 +72,10 @@
     `features/session/grouping.ts`; "Add another exercise" comes back ticked; members drag
     within their group; drags can no longer drop a block inside a group (that used to split
     it). Not yet: renaming a group, a way to take one exercise out of a group.
+  - Step 2 built 2026-11-11: the group's round count includes mobility (an L/R pair is one
+    round; `supersetRoundCount`), "Add round" adds a set or L/R pair to each drill with the
+    last set's hold target and load, and drills follow the group's rest rule (only the last
+    exercise of a round rests). Cardio still has no rounds; that waits for per-member goals.
   - Step 4, plan groups in a split day (added 2026-11-11):
     - Split days can't hold mobility at all yet (`PlannedBlock` = strength | cardio), so add
       a planned mobility block first: drill, sets, hold or reps, target, per side.
