@@ -229,14 +229,14 @@
       {#if torchSupported}
         <button
           type="button"
-          class="h-8 w-8 flex items-center justify-center"
+          class="h-11 w-11 flex items-center justify-center"
           onclick={toggleTorch}
           aria-label={torchOn ? "Turn off torch" : "Turn on torch"}
         >
           {#if torchOn}<Flashlight class="h-5 w-5" />{:else}<FlashlightOff class="h-5 w-5" />{/if}
         </button>
       {/if}
-      <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={close} aria-label="Close">
+      <button type="button" class="h-11 w-11 flex items-center justify-center" onclick={close} aria-label="Close">
         <X class="h-5 w-5" />
       </button>
     </div>

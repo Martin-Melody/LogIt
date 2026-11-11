@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
+  import { chip } from "$lib/components/ui/choice";
   import { untrack } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Select from "$lib/components/ui/select";
@@ -121,7 +123,7 @@
   <label class="flex flex-col gap-1">
     <span class="text-[11px] text-muted-foreground">Name</span>
     <input
-      class="bg-muted rounded px-2 py-1.5 text-sm outline-none"
+      class="h-10 bg-muted rounded-md px-2 text-sm outline-none"
       placeholder="Drink water, Stretch, Read…"
       bind:value={name}
     />
@@ -131,7 +133,7 @@
     <label class="flex w-16 flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Icon</span>
       <input
-        class="bg-muted rounded px-2 py-1.5 text-center text-sm outline-none"
+        class="h-10 bg-muted rounded-md px-2 text-center text-sm outline-none"
         maxlength="2"
         placeholder="💧"
         bind:value={icon}
@@ -139,16 +141,21 @@
     </label>
     <div class="flex flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Colour</span>
-      <div class="flex items-center gap-1.5 py-1.5">
+      <div class="flex items-center -mx-2">
         {#each TONES as t (t.value)}
           <button
             type="button"
             aria-label={t.value}
-            class="h-5 w-5 rounded-full {t.class} {tone === t.value
-              ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
-              : 'opacity-60'}"
+            aria-pressed={tone === t.value}
+            class="h-11 w-11 flex items-center justify-center"
             onclick={() => (tone = tone === t.value ? undefined : t.value)}
-          ></button>
+          >
+            <span
+              class="h-6 w-6 rounded-full {t.class} {tone === t.value
+                ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
+                : ''}"
+            ></span>
+          </button>
         {/each}
       </div>
     </div>
@@ -166,13 +173,11 @@
     </Select.Root>
 
     {#if mode === "days"}
-      <div class="flex gap-1 pt-2">
+      <div class="flex pt-2 gap-2">
         {#each WEEKDAYS as label, d (d)}
           <button
             type="button"
-            class="h-8 flex-1 rounded text-xs font-medium {days.includes(d)
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground'}"
+            class={chip(days.includes(d))} aria-pressed={days.includes(d)}
             onclick={() => toggleDay(d)}
           >
             {label}
@@ -182,7 +187,7 @@
     {:else if mode === "weekly"}
       <label class="flex items-center gap-2 pt-2">
         <input
-          class="bg-muted w-16 rounded px-2 py-1.5 text-sm outline-none"
+          class="h-10 bg-muted w-16 rounded-md px-2 text-sm outline-none"
           inputmode="numeric"
           bind:value={timesPerWeek}
         />
@@ -192,20 +197,20 @@
   </div>
 
   <div class="flex flex-col gap-1">
-    <label class="flex items-center gap-2">
-      <input type="checkbox" bind:checked={tracksNumber} />
+    <div class="flex items-center justify-between gap-2">
       <span class="text-sm">Track a number</span>
-    </label>
+      <Switch checked={tracksNumber} label="Track a number" onchange={(v) => (tracksNumber = v)} />
+    </div>
     {#if tracksNumber}
       <div class="flex items-center gap-2 pt-1">
         <input
-          class="bg-muted w-20 rounded px-2 py-1.5 text-sm outline-none"
+          class="h-10 bg-muted w-20 rounded-md px-2 text-sm outline-none"
           inputmode="decimal"
           placeholder="8"
           bind:value={targetValue}
         />
         <input
-          class="bg-muted w-24 rounded px-2 py-1.5 text-sm outline-none"
+          class="h-10 bg-muted w-24 rounded-md px-2 text-sm outline-none"
           placeholder="glasses"
           bind:value={targetUnit}
         />

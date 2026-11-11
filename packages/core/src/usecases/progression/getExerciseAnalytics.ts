@@ -47,13 +47,21 @@ export type ExerciseAnalyticsResult = {
 
 export async function getExerciseAnalytics(
   exercise: { id?: string; name: string },
-  deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry" | "loadBodyweight">,
 ): Promise<ExerciseAnalyticsResult | null> {
-  const [{ history, exerciseData }, analyticsId, mobilitySessions] = await Promise.all([
+  const [{ history: rawHistory, exerciseData }, analyticsId, mobilitySessions, bodyweightAt] = await Promise.all([
     getExerciseHistory(exercise, deps),
     resolveAnalyticsId(deps),
     loadMobilitySessions(deps),
+    deps.loadBodyweight?.().catch(() => null) ?? null,
   ]);
+  // Plain numbers on each entry (not a function) so sandboxed plugins get them too.
+  const history = bodyweightAt
+    ? rawHistory.map((h) => {
+        const kg = bodyweightAt(h.performedAtMs);
+        return kg != null ? { ...h, bodyweightKg: kg } : h;
+      })
+    : rawHistory;
 
   const plugin = await deps.analyticsRegistry.get(analyticsId);
   if (!plugin) return null;

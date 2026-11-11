@@ -179,7 +179,7 @@
   <div class="flex items-center gap-2.5">
     <button
       type="button"
-      class="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden"
+      class="h-11 w-11 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden"
       onclick={() => void goto(`/social/${p.authorUsername}`)}
     >
       {#if p.authorAvatarUrl}
@@ -192,7 +192,7 @@
     <button type="button" class="flex-1 min-w-0 text-left leading-tight" onclick={() => void goto(`/social/${p.authorUsername}`)}>
       <span class="text-sm font-semibold">{p.authorDisplayName}</span>
       <span class="text-xs text-muted-foreground"> @{p.authorUsername} · {formatDistanceToNow(new Date(p.createdAt))}</span>
-      {#if p.editedAt}<span class="text-[10px] text-muted-foreground/60 italic"> · edited</span>{/if}
+      {#if p.editedAt}<span class="text-[11px] text-muted-foreground italic"> · edited</span>{/if}
     </button>
 
     <button type="button" class="p-1 -mr-1 text-muted-foreground shrink-0" aria-label="More" onclick={(e) => { e.stopPropagation(); menuOpen = true; }}>
@@ -206,7 +206,7 @@
       <textarea
         bind:value={editDraft}
         rows={3}
-        class="resize-none rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="resize-none rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
       ></textarea>
       <div class="flex gap-2 justify-end">
         <button type="button" class="flex items-center gap-1 text-xs text-muted-foreground px-2 py-1" onclick={() => (editing = false)}>
@@ -214,7 +214,7 @@
         </button>
         <button
           type="button"
-          class="flex items-center gap-1 text-xs bg-primary text-primary-foreground rounded px-3 py-1 disabled:opacity-50"
+          class="flex items-center gap-1 text-xs bg-primary text-primary-foreground rounded-md px-3 py-1 disabled:opacity-50"
           disabled={!editDraft.trim() || savingEdit}
           onclick={saveEdit}
         >
@@ -316,7 +316,7 @@
     </p>
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (confirmBlock = false)}>Cancel</button>
-      <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={blocking} onclick={doBlock}>
+      <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={blocking} onclick={doBlock}>
         {#if blocking}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Block
       </button>
     </div>
@@ -331,7 +331,7 @@
     <p class="text-xs text-muted-foreground">This can't be undone.</p>
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (confirmDelete = false)}>Cancel</button>
-      <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={deleting} onclick={doDelete}>
+      <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={deleting} onclick={doDelete}>
         {#if deleting}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Delete
       </button>
     </div>

@@ -18,7 +18,7 @@
         <span
           class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors {item.checked
             ? 'border-primary bg-primary text-primary-foreground'
-            : 'border-muted-foreground/40'}"
+            : 'border-muted-foreground'}"
         >
           {#if item.checked}<Check class="h-3.5 w-3.5" />{/if}
         </span>

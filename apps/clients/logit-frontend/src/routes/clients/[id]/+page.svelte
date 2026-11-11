@@ -1,8 +1,9 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Plus } from "lucide-svelte";
+  import { Plus } from "lucide-svelte";
 
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -67,12 +68,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/clients")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+  <div class="page-header">
+    <BackButton onclick={() => back("/clients")} />
     <div class="min-w-0 flex-1">
-      <p class="text-sm font-semibold truncate">@{username}</p>
+      <p class="text-base font-semibold truncate">@{username}</p>
       <p class="text-xs text-muted-foreground">Client</p>
     </div>
   </div>

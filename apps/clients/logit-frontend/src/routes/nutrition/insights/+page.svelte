@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { getNutritionInsights } from "@logit/core/usecases/nutrition/getNutritionInsights";
   import type { NutritionInsightsView } from "@logit/core/usecases/nutrition/getNutritionInsights";
@@ -58,16 +60,15 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">Insights</h1>
-    <div class="ml-auto flex gap-1 text-xs">
+  <div class="page-header">
+    <BackButton onclick={() => back("/nutrition")} />
+    <h1 class="page-title">Insights</h1>
+    <div class={cn(segmentTrack, "flex-none")}>
       {#each [7, 30] as d (d)}
         <button
           type="button"
-          class="px-2 py-1 rounded {ui.range === d ? 'bg-muted font-medium' : 'text-muted-foreground'}"
+          class={segment(ui.range === d)}
+          aria-pressed={ui.range === d}
           onclick={() => setRange(d)}
         >{d}d</button>
       {/each}

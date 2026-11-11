@@ -18,9 +18,9 @@
 
   const toneVar: Record<string, string> = {
     primary: "var(--primary)",
-    protein: "oklch(0.7 0.15 155)",
-    carbs: "oklch(0.75 0.15 75)",
-    fat: "oklch(0.68 0.17 15)",
+    protein: "var(--macro-protein)",
+    carbs: "var(--macro-carbs)",
+    fat: "var(--macro-fat)",
   };
   const stroke = $derived(over ? toneVar.protein : toneVar[node.tone ?? "primary"] ?? "var(--primary)");
 
@@ -72,7 +72,7 @@
       </div>
     {/if}
     {#if over}
-      <p class="mt-1 text-[10px] text-emerald-600 dark:text-emerald-400">Target beaten</p>
+      <p class="mt-1 text-[11px] text-success">Target beaten</p>
     {/if}
   </div>
 </div>

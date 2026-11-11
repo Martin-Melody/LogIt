@@ -145,7 +145,7 @@
       {#if !loading && tags.length > 0}
         <div class="flex flex-col gap-1.5 max-h-32 overflow-y-auto">
           {#each tags as tag (tag.id)}
-            <div class="flex items-center justify-between gap-2 rounded border border-border px-2 py-1.5 text-xs">
+            <div class="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5 text-xs">
               <div class="min-w-0">
                 <p class="font-medium truncate">
                   {REASON_LABELS[tag.reason]}

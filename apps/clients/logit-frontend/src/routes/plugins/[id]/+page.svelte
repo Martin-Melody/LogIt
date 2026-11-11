@@ -1,6 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Send, ToggleLeft, Trash2 } from "lucide-svelte";
+  import { Send, ToggleLeft, Trash2 } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -151,11 +152,9 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => void goto("/plugins")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <span class="text-sm font-semibold truncate">{manifest?.name ?? "Plugin"}</span>
+  <div class="page-header">
+    <BackButton onclick={() => void goto("/plugins")} />
+    <span class="text-base font-semibold truncate">{manifest?.name ?? "Plugin"}</span>
   </div>
 
   <div class="flex flex-col gap-3 p-3">
@@ -163,7 +162,7 @@
       <p class="text-sm text-destructive">{ui.error}</p>
     {/if}
     {#if ui.success}
-      <p class="text-sm text-emerald-600">{ui.success}</p>
+      <p class="text-sm text-success">{ui.success}</p>
     {/if}
 
     {#if ui.loading}
@@ -211,7 +210,7 @@
           </Card.Header>
           <Card.Content class="flex flex-col gap-2">
             {#if isEnabled && isExecutablePluginFamily(manifest.family) && !$pluginSettings.communityPluginsEnabled}
-              <p class="w-full text-xs text-amber-600">
+              <p class="w-full text-xs text-warning">
                 This plugin is enabled but not running — community plugins are
                 turned off.
                 <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins")}>Manage</button>
@@ -261,7 +260,7 @@
           <Card.Content>
             <ul class="flex flex-col gap-1.5">
               {#each pack.exercises as ex (ex.name)}
-                <li class="rounded border border-border px-2.5 py-2">
+                <li class="rounded-md border border-border px-3 py-2.5">
                   <p class="text-sm font-medium">{ex.name}</p>
                   {#if ex.primaryMuscles.length > 0}
                     <p class="mt-0.5 text-xs text-muted-foreground capitalize">
@@ -315,7 +314,7 @@
               <input
                 id="actor-url"
                 type="url"
-                class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 bind:value={actorUrl}
                 placeholder="https://mastodon.social/@you"
               />

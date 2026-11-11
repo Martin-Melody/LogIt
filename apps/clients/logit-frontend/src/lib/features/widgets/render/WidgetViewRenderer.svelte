@@ -58,7 +58,7 @@
             <Button
               variant="ghost"
               size={ha.icon === "edit" ? "sm" : "icon"}
-              class={ha.icon === "edit" ? "h-7 px-2 text-xs" : "h-7 w-7"}
+              class={ha.icon === "edit" ? "h-7 px-2 text-xs" : "h-11 w-11"}
               aria-label={ha.label}
               onclick={() => runWidgetAction(ha.action)}
             >
@@ -87,7 +87,7 @@
     {#if view.empty}
       <button
         type="button"
-        class="w-full text-left text-sm text-primary disabled:text-muted-foreground"
+        class="-my-2 flex min-h-11 w-full items-center text-left text-sm text-primary disabled:text-muted-foreground"
         disabled={!view.empty.action}
         onclick={() => view.empty!.action && runWidgetAction(view.empty!.action)}
       >

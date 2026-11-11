@@ -14,9 +14,9 @@
     const f = Math.max(0, macros.fatG) * 9;
     const sum = p + c + f;
     return [
-      { key: "p", label: "Protein", grams: macros.proteinG, kcal: p, color: "rgb(16 185 129)" },
-      { key: "c", label: "Carbs", grams: macros.carbsG, kcal: c, color: "rgb(245 158 11)" },
-      { key: "f", label: "Fat", grams: macros.fatG, kcal: f, color: "rgb(244 63 94)" },
+      { key: "p", label: "Protein", grams: macros.proteinG, kcal: p, color: "var(--macro-protein)" },
+      { key: "c", label: "Carbs", grams: macros.carbsG, kcal: c, color: "var(--macro-carbs)" },
+      { key: "f", label: "Fat", grams: macros.fatG, kcal: f, color: "var(--macro-fat)" },
     ].map((r) => ({ ...r, pct: sum > 0 ? (r.kcal / sum) * 100 : 0 }));
   });
 

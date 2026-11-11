@@ -162,7 +162,7 @@ export function startSessionTour(force = false) {
       popover: {
         title: "Exercise Card",
         description:
-          "Tap the exercise name to rename it. Use + to add more sets, or swipe a row left to edit or delete it.",
+          "Tap the name for details and history. Use + to add a set, and ⋯ to swap, superset or remove the exercise. Swipe a set left to edit or delete it.",
         side: "bottom" as const,
         align: "start" as const,
       },

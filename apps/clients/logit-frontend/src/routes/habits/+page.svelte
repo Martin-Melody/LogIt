@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Plus, Check, Flame, CalendarCheck, ChevronDown } from "lucide-svelte";
+  import { Plus, Check, Flame, CalendarCheck, ChevronDown } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { onForeground } from "$lib/lifecycle";
   import { getHabitRepo, getAssignedHabitRepo } from "$lib/data/repoProvider";
@@ -114,18 +116,12 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 border-b border-border px-3 py-2">
+  <div class="page-header">
+    <BackButton onclick={() => back("/")} />
+    <h1 class="page-title">Habits</h1>
     <button
       type="button"
-      class="flex h-8 w-8 items-center justify-center"
-      onclick={() => back("/")}
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">Habits</h1>
-    <button
-      type="button"
-      class="ml-auto flex h-8 w-8 items-center justify-center"
+      class="ml-auto flex h-11 w-11 items-center justify-center"
       aria-label="New habit"
       onclick={() => void goto("/habits/new")}
     >
@@ -142,9 +138,7 @@
       <button
         type="button"
         aria-label={row.satisfied ? "Mark not done" : "Mark done"}
-        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors {row.satisfied
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-muted-foreground/40'}"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors {row.satisfied ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground'}"
         onclick={() => void toggle(row)}
       >
         {#if row.satisfied}<Check class="h-4 w-4" />{/if}
@@ -181,12 +175,12 @@
       <div class="shrink-0 text-right">
         {#if row.week}
           <span class="text-xs font-medium">{row.week.done}/{row.week.target}</span>
-          <span class="block text-[10px] text-muted-foreground">this week</span>
+          <span class="block text-[11px] text-muted-foreground">this week</span>
         {:else if row.streak > 0}
           <span class="flex items-center gap-0.5 text-xs font-medium">
             <Flame class="h-3 w-3" />{row.streak}
           </span>
-          <span class="block text-[10px] text-muted-foreground">
+          <span class="block text-[11px] text-muted-foreground">
             day{row.streak === 1 ? "" : "s"}
           </span>
         {/if}
@@ -198,27 +192,21 @@
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
   {:else if rows.length === 0 && coachRows.length === 0}
     <div
-      class="flex flex-col items-center gap-3 px-3 py-14 text-center text-muted-foreground"
+      class="flex flex-col items-center gap-3 px-3 py-12 text-center text-muted-foreground"
     >
       <CalendarCheck class="h-6 w-6" />
       <p class="text-sm">No habits yet.</p>
-      <button
-        type="button"
-        class="text-sm text-primary"
-        onclick={() => void goto("/habits/new")}
-      >
-        Add your first habit
-      </button>
+      <Button variant="outline" onclick={() => void goto("/habits/new")}>Add your first habit</Button>
     </div>
   {:else}
     {#if dueRows.length > 0}
-      <p class="px-3 pt-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+      <p class="px-3 pt-3 text-xs uppercase tracking-wide text-muted-foreground font-medium">
         {doneCount} / {dueRows.length} done today
       </p>
     {/if}
 
     {#if coachRows.length > 0}
-      <p class="px-3 pt-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+      <p class="px-3 pt-3 text-xs uppercase tracking-wide text-muted-foreground font-medium">
         From your coach
       </p>
       <ul class="divide-y divide-border">
@@ -230,7 +218,7 @@
 
     {#if rows.length > 0}
       {#if coachRows.length > 0}
-        <p class="px-3 pt-4 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <p class="px-3 pt-4 text-xs uppercase tracking-wide text-muted-foreground font-medium">
           Your habits
         </p>
       {/if}
@@ -246,7 +234,7 @@
     <div class="mt-6 border-t border-border">
       <button
         type="button"
-        class="flex w-full items-center justify-between px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground"
+        class="flex w-full items-center justify-between px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground font-medium"
         onclick={() => (ui.showArchived = !ui.showArchived)}
       >
         <span>Archived ({archived.length})</span>

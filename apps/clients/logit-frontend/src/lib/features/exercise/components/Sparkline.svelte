@@ -30,7 +30,7 @@
       d={path}
       fill="none"
       stroke="currentColor"
-      class={up ? "text-emerald-500" : "text-rose-500"}
+      class={up ? "text-success" : "text-destructive"}
       stroke-width="1.5"
       stroke-linecap="round"
       stroke-linejoin="round"

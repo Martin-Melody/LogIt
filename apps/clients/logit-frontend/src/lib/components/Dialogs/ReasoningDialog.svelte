@@ -12,15 +12,15 @@
   const CONFIDENCE_META: Record<ReasoningConfidence, { label: string; class: string }> = {
     low: {
       label: "Low confidence — not much data yet",
-      class: "text-amber-600 dark:text-amber-400 border-amber-500/40 bg-amber-500/10",
+      class: "text-warning border-warning/40 bg-warning/10",
     },
     medium: {
       label: "Medium confidence",
-      class: "text-sky-600 dark:text-sky-400 border-sky-500/40 bg-sky-500/10",
+      class: "text-info border-info/40 bg-info/10",
     },
     high: {
       label: "High confidence",
-      class: "text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/10",
+      class: "text-success border-success/40 bg-success/10",
     },
   };
 

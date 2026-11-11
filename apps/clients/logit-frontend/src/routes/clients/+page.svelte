@@ -1,7 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft } from "lucide-svelte";
 
   import { apiClient, ApiError } from "@logit/core/api/client";
   import {
@@ -73,11 +73,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/settings")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <h1 class="text-sm font-semibold">Coaching</h1>
+  <div class="page-header">
+    <BackButton onclick={() => back("/settings")} />
+    <h1 class="page-title">Coaching</h1>
   </div>
 
   {#if ui.error}
@@ -132,7 +130,7 @@
 
         <form class="flex gap-2 px-3 py-3" onsubmit={invite}>
           <input type="text" placeholder="Client's username" bind:value={inviteUsername}
-            class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
+            class="h-10 flex-1 min-w-0 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
           <Button type="submit" size="sm" disabled={ui.inviting || !inviteUsername.trim()}>Invite</Button>
         </form>
         {#if inviteError}<p class="px-3 pb-2 text-sm text-destructive">{inviteError}</p>{/if}

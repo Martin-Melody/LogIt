@@ -1,6 +1,7 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
-  import { ArrowLeft, Trash2 } from "lucide-svelte";
+  import { Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import DateField from "$lib/components/ui/date-field";
@@ -74,23 +75,21 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">Weight</h1>
+  <div class="page-header">
+    <BackButton onclick={() => back("/nutrition")} />
+    <h1 class="page-title">Weight</h1>
   </div>
 
   <div class="px-3 py-3 border-b border-border flex items-end gap-2">
     <label class="flex-1 flex flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Weight ({unit})</span>
-      <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={ui.value} />
+      <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={ui.value} />
     </label>
     <div class="flex flex-col gap-1">
       <span class="text-[11px] text-muted-foreground">Date</span>
       <DateField bind:value={ui.dateIso} maxIso={localDateIso()} aria-label="Entry date" class="w-[9.5rem]" />
     </div>
-    <Button size="sm" onclick={() => void save()}>Log</Button>
+    <Button onclick={() => void save()}>Log</Button>
   </div>
 
   <div class="px-3 py-3 border-b border-border">
@@ -113,11 +112,11 @@
   {:else}
     <ul class="divide-y divide-border">
       {#each entries.filter((e) => !e.deletedAtMs).slice().reverse() as e (e.id)}
-        <li class="flex items-center gap-2 px-3 py-2 text-sm">
+        <li class="flex min-h-11 items-center gap-2 pl-3 pr-1 text-sm">
           <span class="text-muted-foreground text-xs w-24">{e.dateIso}</span>
           <span class="flex-1 tabular-nums">{kgToDisplay(e.weightKg, unit).toFixed(1)} {unit}</span>
-          <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void remove(e.id)} aria-label="Delete">
-            <Trash2 class="h-3.5 w-3.5" />
+          <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-destructive" onclick={() => void remove(e.id)} aria-label="Delete {e.dateIso}">
+            <Trash2 class="h-4 w-4" />
           </button>
         </li>
       {/each}

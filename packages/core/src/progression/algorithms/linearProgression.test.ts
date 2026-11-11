@@ -36,6 +36,14 @@ function baseInput(overrides: Partial<ProgressionInput> = {}): ProgressionInput 
 }
 
 describe("linearProgression", () => {
+  it("works below 20 kg: a 17.5 kg dumbbell curl plans 17.5, not a 20 kg floor", async () => {
+    const out = await linearProgression.suggest(baseInput({
+      exercise: { name: "Incline Dumbbell Curl", primaryMuscles: ["biceps"] },
+      history: [historyEntry({ sets: [set({ weight: 17.5, reps: 6 }), set({ weight: 17.5, reps: 6 })] })],
+    }));
+    expect(out.sets[0]!.weight).toBe(17.5);
+  });
+
   it("seeds from planned targets when there's no history", async () => {
     const out = await linearProgression.suggest(baseInput({ plannedTargets: { weight: 60, reps: 5 } }));
     expect(out.sets[0]!.weight).toBe(60);

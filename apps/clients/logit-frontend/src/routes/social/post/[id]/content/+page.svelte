@@ -1,10 +1,18 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import {
-    ArrowLeft, Loader2, Download, Dumbbell, Trophy, CalendarDays,
-    Activity, Cpu, LayoutDashboard, Flame,
+    Loader2,
+    Download,
+    Dumbbell,
+    Trophy,
+    CalendarDays,
+    Activity,
+    Cpu,
+    LayoutDashboard,
+    Flame,
   } from "lucide-svelte";
   import { socialApi, type ApiPost, type PostType } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
@@ -114,11 +122,9 @@
 </script>
 
 <div class="flex flex-col min-h-full">
-  <header class="flex items-center gap-2 px-3 h-12 sticky top-0 bg-background/95 backdrop-blur z-10 border-b border-border">
-    <button type="button" class="p-1 -ml-1 text-muted-foreground" aria-label="Back" onclick={() => history.back()}>
-      <ArrowLeft class="h-5 w-5" />
-    </button>
-    <h1 class="text-base font-semibold">{meta?.label ?? "Details"}</h1>
+  <header class="page-header sticky top-0 bg-background/95 backdrop-blur z-10">
+    <BackButton onclick={() => history.back()} />
+    <h1 class="page-title">{meta?.label ?? "Details"}</h1>
   </header>
 
   {#if loading}
@@ -146,7 +152,7 @@
 
       <div class="flex items-center gap-2 text-muted-foreground">
         <Icon class="h-4 w-4" />
-        <span class="uppercase tracking-wide text-[11px] font-medium">{meta.label}</span>
+        <span class="uppercase tracking-wide text-xs font-medium">{meta.label}</span>
       </div>
 
       {#if source.type === "Split"}
@@ -203,11 +209,11 @@
         <div class="flex items-center gap-2 -mt-1">
           <h2 class="text-xl font-bold">{payload.name}</h2>
           {#if payload.family}
-            <span class="capitalize rounded border border-border px-1.5 py-0.5 text-[10px]">{payload.family}</span>
+            <span class="capitalize rounded-md border border-border px-1.5 py-0.5 text-[11px]">{payload.family}</span>
           {/if}
         </div>
         {#if payload.description}<p class="text-sm text-muted-foreground whitespace-pre-wrap">{payload.description}</p>{/if}
-        {#if payload.author}<p class="text-xs text-muted-foreground/60">by {payload.author}</p>{/if}
+        {#if payload.author}<p class="text-xs text-muted-foreground">by {payload.author}</p>{/if}
 
       {:else if source.type === "Habit"}
         <h2 class="text-xl font-bold -mt-1">{payload.name}</h2>
@@ -250,7 +256,7 @@
       <div class="sticky bottom-0 bg-background border-t border-border px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         <button
           type="button"
-          class="w-full flex items-center justify-center gap-2 rounded bg-primary text-primary-foreground text-sm font-medium py-2.5 disabled:opacity-50"
+          class="w-full flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground text-sm font-medium py-2.5 disabled:opacity-50"
           disabled={copying}
           onclick={copyToMine}
         >

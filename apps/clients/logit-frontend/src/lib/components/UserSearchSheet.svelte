@@ -155,7 +155,7 @@
               <!-- Avatar (tappable → profile) -->
               <button
                 type="button"
-                class="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden"
+                class="h-11 w-11 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden"
                 onclick={() => openProfile(user.username)}
               >
                 {#if user.avatarUrl}
@@ -178,7 +178,7 @@
               <!-- Follow / Following -->
               <button
                 type="button"
-                class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50
+                class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50
                   {isFollowing
                     ? 'border border-border text-foreground bg-background hover:bg-muted/40'
                     : 'bg-primary text-primary-foreground'}"

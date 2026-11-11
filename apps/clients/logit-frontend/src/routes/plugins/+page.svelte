@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Compass, Plus, Send, ShieldAlert, ShieldCheck } from "lucide-svelte";
+  import { Compass, Plus, Send, ShieldAlert, ShieldCheck } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
@@ -92,16 +93,14 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => void goto("/profile")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <span class="text-sm font-semibold">Plugins</span>
+  <div class="page-header">
+    <BackButton onclick={() => void goto("/profile")} />
+    <span class="text-base font-semibold">Plugins</span>
     <div class="ml-auto flex items-center gap-1">
-      <Button variant="ghost" size="icon" class="h-8 w-8" title="Publish queue" onclick={() => void goto("/plugins/publish")}>
+      <Button variant="ghost" size="icon" title="Publish queue" onclick={() => void goto("/plugins/publish")}>
         <Send class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" title="Browse" onclick={() => void goto("/plugins/browse")}>
+      <Button variant="ghost" size="icon" title="Browse" onclick={() => void goto("/plugins/browse")}>
         <Compass class="h-4 w-4" />
       </Button>
       <Button size="sm" onclick={() => void goto("/plugins/import")}>
@@ -117,10 +116,10 @@
     {/if}
 
     {#if !$pluginSettings.communityPluginsEnabled}
-      <Card.Root class="w-full border-amber-500/40 bg-amber-500/5">
+      <Card.Root class="w-full border-warning/40 bg-warning/5">
         <Card.Header>
           <Card.Title class="flex items-center gap-2 text-base">
-            <ShieldAlert class="h-4 w-4 text-amber-600" />
+            <ShieldAlert class="h-4 w-4 text-warning" />
             Community plugins are off
           </Card.Title>
           <Card.Description>
@@ -137,9 +136,9 @@
         </Card.Content>
       </Card.Root>
     {:else}
-      <div class="flex items-center justify-between gap-3 rounded border border-border px-3 py-2">
+      <div class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
         <div class="flex items-center gap-2 text-sm">
-          <ShieldCheck class="h-4 w-4 text-emerald-600" />
+          <ShieldCheck class="h-4 w-4 text-success" />
           Community plugins enabled
         </div>
         <Button variant="ghost" size="sm" onclick={() => pluginSettings.disableCommunityPlugins()}>
@@ -172,23 +171,23 @@
         {:else}
           <ul class="flex flex-col gap-2">
             {#each installed as plugin (plugin.manifest.id)}
-              <li class="rounded border p-3 {plugin.enabled ? 'border-border' : 'border-border opacity-60'}">
+              <li class="rounded-md border p-3 {plugin.enabled ? 'border-border' : 'border-border opacity-60'}">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                       <p class="text-sm font-medium truncate">{plugin.manifest.name}</p>
                       {#if plugin.enabled}
-                        <span class="rounded border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">On</span>
+                        <span class="rounded-md border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">On</span>
                       {:else}
-                        <span class="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">Off</span>
+                        <span class="rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground">Off</span>
                       {/if}
                     </div>
                     <p class="mt-0.5 text-xs text-muted-foreground">{plugin.manifest.description}</p>
-                    <p class="mt-1 text-xs text-muted-foreground/60">
+                    <p class="mt-1 text-xs text-muted-foreground">
                       {capabilityLabel(plugin.manifest)} · {originLabel(plugin.manifest)} · v{plugin.manifest.version}
                     </p>
                     {#if plugin.enabled && isExecutablePluginFamily(plugin.manifest.family) && !$pluginSettings.communityPluginsEnabled}
-                      <p class="mt-1 text-xs text-amber-600">
+                      <p class="mt-1 text-xs text-warning">
                         Not running — community plugins are off.
                       </p>
                     {/if}
@@ -223,7 +222,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Widgets</p>
               <ul class="flex flex-col gap-1.5">
                 {#each widgets as plugin (plugin.id)}
-                  <li class="rounded border border-border p-2.5">
+                  <li class="rounded-md border border-border p-3">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>
@@ -249,7 +248,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Progression</p>
               <ul class="flex flex-col gap-1.5">
                 {#each progressionAlgorithms as plugin (plugin.id)}
-                  <li class="rounded border border-border p-2.5">
+                  <li class="rounded-md border border-border p-3">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>
@@ -275,7 +274,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Analytics</p>
               <ul class="flex flex-col gap-1.5">
                 {#each analyticsPlugins as plugin (plugin.id)}
-                  <li class="rounded border border-border p-2.5">
+                  <li class="rounded-md border border-border p-3">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>

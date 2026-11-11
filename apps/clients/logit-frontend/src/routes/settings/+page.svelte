@@ -1,7 +1,10 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import {
-    ArrowLeft,
     RotateCcw,
     Sparkles,
     Cloud,
@@ -514,24 +517,17 @@
 
 <div class="flex flex-col gap-3 p-3 pb-24">
   <!-- Header -->
-  <div class="flex items-center gap-2">
-    <Button
-      variant="ghost"
-      size="icon"
-      class="h-8 w-8"
-      onclick={() => back("/profile")}
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <h1 class="text-base font-semibold">Settings</h1>
+  <div class="page-header -mx-3 -mt-3">
+    <BackButton onclick={() => back("/profile")} />
+    <h1 class="page-title">Settings</h1>
   </div>
 
   <!-- Section quick-nav -->
-  <div class="flex gap-1.5 overflow-x-auto -mx-3 px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+  <div class="flex gap-2 overflow-x-auto -mx-3 px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     {#each sections as s (s.id)}
       <button
         type="button"
-        class="shrink-0 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+        class={chip(false)}
         onclick={() => jumpTo(s.id)}
       >
         {s.label}
@@ -600,7 +596,7 @@
             <Users class="h-3.5 w-3.5 shrink-0" />
             <span class="text-left">
               <span class="block">Coaching</span>
-              <span class="block text-xs text-muted-foreground/70">View invites, or manage clients on a Studio plan</span>
+              <span class="block text-xs text-muted-foreground">View invites, or manage clients on a Studio plan</span>
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />
@@ -617,13 +613,13 @@
         {#if showOnlinePasswordForm}
           <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             <input type="password" placeholder="Current password" autocomplete="current-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.current} />
             <input type="password" placeholder="New password" autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.next} />
             <input type="password" placeholder="Confirm new password" autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.confirm} />
             {#if onlinePasswordError}
               <p class="text-xs text-destructive">{onlinePasswordError}</p>
@@ -686,14 +682,14 @@
           <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             {#if localAccountHasPassword}
               <input type="password" placeholder="Current password" autocomplete="current-password"
-                class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 bind:value={passwordForm.current} />
             {/if}
             <input type="password" placeholder={localAccountHasPassword ? "New password" : "Password"} autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={passwordForm.next} />
             <input type="password" placeholder="Confirm password" autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={passwordForm.confirm} />
             {#if passwordError}
               <p class="text-xs text-destructive">{passwordError}</p>
@@ -741,14 +737,11 @@
       <Card.Description>Choose how the app looks.</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="flex rounded border overflow-hidden text-sm w-fit">
+      <div class={cn(segmentTrack, "w-fit")}>
         {#each [["system", "System"], ["light", "Light"], ["dark", "Dark"]] as ["system" | "light" | "dark", string][] as [value, label] (value)}
           <button
             type="button"
-            class="px-4 py-2 transition-colors {userPrefersMode.current ===
-            value
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            class={segment(userPrefersMode.current === value)} aria-pressed={userPrefersMode.current === value}
             onclick={() => setMode(value)}
           >
             {label}
@@ -757,7 +750,7 @@
       </div>
       <button
         type="button"
-        class="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        class="flex min-h-11 items-center justify-between border-t border-border pt-1 -mb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         onclick={() => goto("/settings/navbar")}
       >
         Customise navigation
@@ -775,13 +768,11 @@
     <Card.Content class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium">Weight</p>
-        <div class="flex rounded border overflow-hidden text-sm">
+        <div class={segmentTrack}>
           {#each [["kg", "kg"], ["lbs", "lb"]] as ["kg" | "lbs", string][] as [value, label] (value)}
             <button
               type="button"
-              class="px-4 py-1.5 transition-colors {$profile.weightUnit === value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              class={segment($profile.weightUnit === value)} aria-pressed={$profile.weightUnit === value}
               onclick={() => profile.save({ weightUnit: value })}
             >
               {label}
@@ -791,13 +782,11 @@
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium">Height</p>
-        <div class="flex rounded border overflow-hidden text-sm">
+        <div class={segmentTrack}>
           {#each [["cm", "cm"], ["in", "in"]] as ["cm" | "in", string][] as [value, label] (value)}
             <button
               type="button"
-              class="px-4 py-1.5 transition-colors {$profile.heightUnit === value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              class={segment($profile.heightUnit === value)} aria-pressed={$profile.heightUnit === value}
               onclick={() => profile.save({ heightUnit: value })}
             >
               {label}
@@ -821,7 +810,7 @@
             id="bar-weight"
             type="number"
             min="1"
-            class="w-24 rounded border bg-background px-2 py-1 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-24 rounded-md border bg-background px-2 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={barWeightDisplay}
             onchange={(e) => saveBarWeight((e.currentTarget as HTMLInputElement).value)}
           />
@@ -832,14 +821,14 @@
             id="bar-plates"
             type="text"
             inputmode="decimal"
-            class="w-full rounded border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={platesDisplay}
             onchange={(e) => savePlates((e.currentTarget as HTMLInputElement).value)}
           />
         </div>
         <div class="flex gap-2">
-          <Button size="sm" variant="outline" class="h-7 text-xs" onclick={() => applyBarPreset("kg")}>kg preset</Button>
-          <Button size="sm" variant="outline" class="h-7 text-xs" onclick={() => applyBarPreset("lb")}>lb preset</Button>
+          <Button size="sm" variant="outline" onclick={() => applyBarPreset("kg")}>kg preset</Button>
+          <Button size="sm" variant="outline" onclick={() => applyBarPreset("lb")}>lb preset</Button>
         </div>
       </div>
     </Card.Content>
@@ -866,7 +855,7 @@
           {#each view.algorithms as algo (algo.id)}
             {@const isActive = view.config?.algorithmId === algo.id}
             <li
-              class="rounded border p-3 transition-colors {isActive
+              class="rounded-md border p-3 transition-colors {isActive
                 ? 'border-primary bg-primary/5'
                 : 'border-border'}"
             >
@@ -876,7 +865,7 @@
                     <p class="text-sm font-medium">{algo.name}</p>
                     {#if isActive}
                       <span
-                        class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5"
+                        class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5"
                         >Active</span
                       >
                     {/if}
@@ -885,7 +874,7 @@
                     {algo.description}
                   </p>
                   {#if algo.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">
+                    <p class="mt-1 text-xs text-muted-foreground">
                       by {algo.author}
                     </p>
                   {/if}
@@ -895,8 +884,8 @@
                     <Button
                       size="sm"
                       variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      title="Configure"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure" aria-label="Configure"
                       onclick={() => goto(`/settings/progression/${algo.id}`)}
                     >
                       <Settings2 class="h-4 w-4" />
@@ -947,18 +936,18 @@
         <ul class="flex flex-col gap-2">
           {#each mobilityView.algorithms as algo (algo.id)}
             {@const isActive = mobilityView.activeAlgorithmId === algo.id}
-            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+            <li class="rounded-md border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium">{algo.name}</p>
                     {#if isActive}
-                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                      <span class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5">Active</span>
                     {/if}
                   </div>
                   <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
                   {#if algo.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">by {algo.author}</p>
+                    <p class="mt-1 text-xs text-muted-foreground">by {algo.author}</p>
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -966,8 +955,8 @@
                     <Button
                       size="sm"
                       variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      title="Configure"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure" aria-label="Configure"
                       onclick={() => goto(`/settings/mobility-progression/${algo.id}`)}
                     >
                       <Settings2 class="h-4 w-4" />
@@ -989,13 +978,11 @@
         <p class="text-xs text-muted-foreground mb-1">
           Default order for per-side drills. Override it per set from a set's edit sheet.
         </p>
-        <div class="flex gap-1.5">
+        <div class={segmentTrack}>
           {#each [{ v: "left", t: "Left first" }, { v: "right", t: "Right first" }] as opt (opt.v)}
             <button
               type="button"
-              class="flex-1 py-1.5 text-sm rounded border transition-colors {$profile.mobilityLeadSide === opt.v
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+              class={segment($profile.mobilityLeadSide === opt.v)} aria-pressed={$profile.mobilityLeadSide === opt.v}
               onclick={() => profile.save({ mobilityLeadSide: opt.v as "left" | "right" })}
             >
               {opt.t}
@@ -1024,18 +1011,18 @@
         <ul class="flex flex-col gap-2">
           {#each muscleGroupInsightView.algorithms as algo (algo.id)}
             {@const isActive = muscleGroupInsightView.activeAlgorithmId === algo.id}
-            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+            <li class="rounded-md border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium">{algo.name}</p>
                     {#if isActive}
-                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                      <span class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5">Active</span>
                     {/if}
                   </div>
                   <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
                   {#if algo.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">by {algo.author}</p>
+                    <p class="mt-1 text-xs text-muted-foreground">by {algo.author}</p>
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -1043,8 +1030,8 @@
                     <Button
                       size="sm"
                       variant="ghost"
-                      class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      title="Configure"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Configure" aria-label="Configure"
                       onclick={() => goto(`/settings/muscle-group-insight/${algo.id}`)}
                     >
                       <Settings2 class="h-4 w-4" />
@@ -1088,7 +1075,7 @@
               analyticsView.config?.analyticsId ?? DEFAULT_ANALYTICS_ID}
             {@const isActive = activeId === plugin.id}
             <li
-              class="rounded border p-3 transition-colors {isActive
+              class="rounded-md border p-3 transition-colors {isActive
                 ? 'border-primary bg-primary/5'
                 : 'border-border'}"
             >
@@ -1098,7 +1085,7 @@
                     <p class="text-sm font-medium">{plugin.name}</p>
                     {#if isActive}
                       <span
-                        class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5"
+                        class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5"
                         >Active</span
                       >
                     {/if}
@@ -1107,7 +1094,7 @@
                     {plugin.description}
                   </p>
                   {#if plugin.author}
-                    <p class="mt-1 text-xs text-muted-foreground/60">
+                    <p class="mt-1 text-xs text-muted-foreground">
                       by {plugin.author}
                     </p>
                   {/if}
@@ -1143,24 +1130,10 @@
             Exercise blocks start collapsed in a session.
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={$profile.blocksCollapsedByDefault}
-          class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {$profile.blocksCollapsedByDefault
-            ? 'bg-primary'
-            : 'bg-input'}"
-          onclick={() =>
+        <Switch checked={$profile.blocksCollapsedByDefault} label="Collapse blocks by default" onchange={() =>
             profile.save({
               blocksCollapsedByDefault: !$profile.blocksCollapsedByDefault,
-            })}
-        >
-          <span
-            class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {$profile.blocksCollapsedByDefault
-              ? 'translate-x-4'
-              : 'translate-x-0'}"
-          ></span>
-        </button>
+            })} />
       </label>
 
       <div class="flex flex-col gap-2">
@@ -1174,21 +1147,7 @@
             ? Math.round(($profile.restDefaults[type] ?? 90_000) / 1000)
             : 90}
           <div class="flex items-center gap-3">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {enabled
-                ? 'bg-primary'
-                : 'bg-input'}"
-              onclick={() => toggleRestDefault(type)}
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {enabled
-                  ? 'translate-x-4'
-                  : 'translate-x-0'}"
-              ></span>
-            </button>
+            <Switch checked={enabled} label={`Auto rest timer: ${label}`} onchange={() => toggleRestDefault(type)} class="-ml-1.5 mr-0" />
             <span class="text-sm w-24">{label}</span>
             {#if enabled}
               <div class="flex items-center gap-1.5 ml-auto" transition:reveal={{ axis: "x" }}>
@@ -1196,7 +1155,7 @@
                   type="number"
                   min="5"
                   max="600"
-                  class="w-16 rounded border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                  class="h-10 w-16 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                   value={seconds}
                   onchange={(e) =>
                     setRestSeconds(type, (e.target as HTMLInputElement).value)}
@@ -1227,7 +1186,6 @@
     <Card.Content class="flex flex-col gap-2">
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startHomeTour(true)}
       >
@@ -1235,7 +1193,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startSessionTour(true)}
       >
@@ -1243,7 +1200,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startSplitsTour(true)}
       >
@@ -1251,7 +1207,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startExercisesTour(true)}
       >
@@ -1259,7 +1214,6 @@
       </Button>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => startProfileTour(true)}
       >
@@ -1280,15 +1234,14 @@
       <p class="text-xs text-muted-foreground">
         Community plugins are
         {#if $pluginSettings.communityPluginsEnabled}
-          <span class="font-medium text-emerald-600">on</span>
+          <span class="font-medium text-success">on</span>
         {:else}
-          <span class="font-medium text-amber-600">off</span> — widgets and
+          <span class="font-medium text-warning">off</span> — widgets and
           algorithms from the community won't run
         {/if}.
       </p>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         onclick={() => void goto("/plugins")}
       >
@@ -1318,7 +1271,7 @@
               type="password"
               placeholder="Confirm your password"
               autocomplete="current-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={deleteAccountPassword}
             />
           {/if}
@@ -1375,7 +1328,6 @@
       <Card.Content class="flex flex-col gap-2">
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           onclick={() => void resetOnboarding()}
         >
@@ -1383,7 +1335,6 @@
         </Button>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           onclick={() => resetTours()}
         >
@@ -1391,7 +1342,6 @@
         </Button>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           onclick={() => void clearAllData()}
         >
@@ -1399,7 +1349,6 @@
         </Button>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start border-destructive/40 text-destructive hover:bg-destructive/10"
           disabled={!authStore.isAuthenticated}
           onclick={() => void clearAllDataAndAccount()}
@@ -1415,13 +1364,13 @@
             <div class="flex flex-col gap-1.5">
               {#each localAccounts as account (account.id)}
                 <div
-                  class="flex items-center gap-2 rounded border border-destructive/30 px-3 py-2"
+                  class="flex items-center gap-2 rounded-md border border-destructive/30 px-3 py-2"
                 >
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-medium truncate">
                       {account.displayName || account.username}
                     </p>
-                    <p class="text-[10px] text-muted-foreground">
+                    <p class="text-[11px] text-muted-foreground">
                       {account.serverUserId
                         ? "linked to online account"
                         : account.passwordHash
@@ -1463,7 +1412,7 @@
         href={PRIVACY_URL}
         target="_blank"
         rel="noreferrer"
-        class="flex items-center justify-between text-sm hover:text-foreground text-muted-foreground"
+        class="flex min-h-11 items-center justify-between text-sm hover:text-foreground text-muted-foreground"
       >
         Privacy Policy <ChevronRight class="h-3.5 w-3.5" />
       </a>
@@ -1471,7 +1420,7 @@
         href={TERMS_URL}
         target="_blank"
         rel="noreferrer"
-        class="flex items-center justify-between text-sm hover:text-foreground text-muted-foreground"
+        class="flex min-h-11 items-center justify-between text-sm hover:text-foreground text-muted-foreground"
       >
         Terms of Service <ChevronRight class="h-3.5 w-3.5" />
       </a>

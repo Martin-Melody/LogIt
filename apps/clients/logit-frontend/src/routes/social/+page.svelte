@@ -126,8 +126,8 @@
 
 <div class="flex flex-col min-h-full">
   <!-- Header -->
-  <header class="flex items-center gap-1 px-3 h-12 sticky top-0 bg-background/95 backdrop-blur z-10 border-b border-border">
-    <h1 class="text-base font-semibold flex-1 px-1">Feed</h1>
+  <header class="page-header sticky top-0 bg-background/95 backdrop-blur z-10">
+    <h1 class="page-title">Feed</h1>
     {#if authStore.isAuthenticated}
       <button type="button" class="p-2 text-muted-foreground" aria-label="Search people" onclick={() => (showSearch = true)}>
         <Search class="h-[1.15rem] w-[1.15rem]" />
@@ -153,8 +153,8 @@
     <div class="flex flex-col items-center justify-center gap-4 px-6 py-20 text-center flex-1">
       <p class="text-sm text-muted-foreground">Sign in to see posts from people you follow.</p>
       <div class="flex gap-2">
-        <button type="button" class="px-4 py-2 rounded bg-primary text-primary-foreground text-sm font-medium" onclick={() => goto("/auth?mode=login&redirect=/social")}>Log in</button>
-        <button type="button" class="px-4 py-2 rounded border border-border text-sm" onclick={() => goto("/auth?mode=register&redirect=/social")}>Sign up</button>
+        <button type="button" class="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium" onclick={() => goto("/auth?mode=login&redirect=/social")}>Log in</button>
+        <button type="button" class="px-4 py-2 rounded-md border border-border text-sm" onclick={() => goto("/auth?mode=register&redirect=/social")}>Sign up</button>
       </div>
     </div>
 
@@ -168,7 +168,7 @@
     <div class="flex flex-col items-center gap-3 py-20 text-center px-6 flex-1">
       <p class="text-sm font-medium">Your feed is empty</p>
       <p class="text-xs text-muted-foreground">Follow people to see their workouts and posts here.</p>
-      <button type="button" class="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground" onclick={() => (showSearch = true)}>
+      <button type="button" class="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground" onclick={() => (showSearch = true)}>
         <Search class="h-3.5 w-3.5" /> Find people
       </button>
     </div>

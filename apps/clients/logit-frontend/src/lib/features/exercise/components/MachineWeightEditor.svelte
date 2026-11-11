@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import { Trash2, Star } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -108,11 +109,11 @@
   });
 </script>
 
-<div class="flex flex-col gap-3 rounded border border-border px-3 py-3">
+<div class="flex flex-col gap-3 rounded-md border border-border px-3 py-3">
   <div class="flex items-center gap-2">
     <input
       type="text"
-      class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      class="h-10 flex-1 min-w-0 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
       bind:value={name}
       onblur={commit}
       disabled={saving}
@@ -149,13 +150,11 @@
   <!-- Unit -->
   <div class="flex items-center gap-2">
     <span class="text-xs text-muted-foreground w-20">Unit</span>
-    <div class="flex gap-1">
+    <div class={segmentTrack}>
       {#each (["kg", "lbs"] as const) as u (u)}
         <button
           type="button"
-          class="px-2.5 py-1 text-xs rounded border {unit === u
-            ? 'bg-primary text-primary-foreground border-primary'
-            : 'border-border text-muted-foreground hover:text-foreground'}"
+          class={segment(unit === u)} aria-pressed={unit === u}
           onclick={() => { unit = u; commit(); }}
           disabled={saving}
         >
@@ -168,13 +167,11 @@
   <!-- Weight model -->
   <div class="flex items-center gap-2">
     <span class="text-xs text-muted-foreground w-20">Weights</span>
-    <div class="flex gap-1 flex-wrap">
+    <div class="flex flex-wrap gap-2">
       {#each ([["increment", "Simple"], ["linear", "Stack"], ["list", "List"]] as [Mode, string][]) as [m, label] (m)}
         <button
           type="button"
-          class="px-2.5 py-1 text-xs rounded border {mode === m
-            ? 'bg-primary text-primary-foreground border-primary'
-            : 'border-border text-muted-foreground hover:text-foreground'}"
+          class={chip(mode === m)} aria-pressed={mode === m}
           onclick={() => { mode = m; commit(); }}
           disabled={saving}
         >
@@ -189,7 +186,7 @@
       <span class="w-20">Increment (kg)</span>
       <input
         type="number" min="0.25" step="0.25"
-        class="w-20 rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 w-20 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={increment}
         onblur={commit}
         disabled={saving}
@@ -198,27 +195,27 @@
   {:else if mode === "linear"}
     <div class="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
       <label class="flex flex-col gap-1">Min ({unit})
-        <input type="number" min="0" class="rounded border bg-background px-2 py-1 text-sm text-foreground"
+        <input type="number" min="0" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
           bind:value={linMin} onblur={commit} disabled={saving} />
       </label>
       <label class="flex flex-col gap-1">Step ({unit})
-        <input type="number" min="0.25" step="0.25" class="rounded border bg-background px-2 py-1 text-sm text-foreground"
+        <input type="number" min="0.25" step="0.25" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
           bind:value={linStep} onblur={commit} disabled={saving} />
       </label>
       <label class="flex flex-col gap-1">Max ({unit})
-        <input type="number" min="0" class="rounded border bg-background px-2 py-1 text-sm text-foreground"
+        <input type="number" min="0" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
           bind:value={linMax} onblur={commit} disabled={saving} />
       </label>
     </div>
     <label class="flex flex-col gap-1 text-xs text-muted-foreground">
       Add-on plates ({unit}, optional) — e.g. 2.5
-      <input type="text" class="rounded border bg-background px-2 py-1 text-sm text-foreground"
+      <input type="text" class="h-10 rounded-md border bg-background px-2 text-sm text-foreground"
         bind:value={addOnsText} onblur={commit} disabled={saving} placeholder="2.5" />
     </label>
   {:else}
     <label class="flex flex-col gap-1 text-xs text-muted-foreground">
       Every weight ({unit}), comma separated
-      <textarea rows="2" class="rounded border bg-background px-2 py-1 text-sm text-foreground"
+      <textarea rows="2" class="rounded-md border bg-background px-2 py-1 text-sm text-foreground"
         bind:value={listText} onblur={commit} disabled={saving}
         placeholder="5, 10, 15, 20, 30, 40, 50"></textarea>
     </label>

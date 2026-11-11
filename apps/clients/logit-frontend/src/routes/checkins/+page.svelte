@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, ClipboardCheck } from "lucide-svelte";
+  import { ClipboardCheck } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Badge } from "$lib/components/ui/badge";
   import type { CheckinSchedule, CheckinSubmission } from "@logit/core/domain/Checkin";
@@ -37,11 +38,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/splits")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">Check-ins</h1>
+  <div class="page-header">
+    <BackButton onclick={() => back("/splits")} />
+    <h1 class="page-title">Check-ins</h1>
   </div>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>{/if}

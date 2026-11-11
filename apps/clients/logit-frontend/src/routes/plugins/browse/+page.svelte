@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Search, ShieldAlert, Plus, X, Server } from "lucide-svelte";
+  import { Search, ShieldAlert, Plus, X, Server } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -147,11 +149,9 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => void goto("/plugins")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <span class="text-sm font-semibold">Browse plugins</span>
+  <div class="page-header">
+    <BackButton onclick={() => void goto("/plugins")} />
+    <span class="text-base font-semibold">Browse plugins</span>
     <Button
       variant="ghost"
       size="sm"
@@ -176,7 +176,7 @@
         <Card.Content class="flex flex-col gap-2">
           <ul class="flex flex-col gap-1.5">
             {#each $registrySources as src (src.url)}
-              <li class="flex items-center gap-2 rounded border border-border px-2.5 py-2">
+              <li class="flex items-center gap-2 rounded-md border border-border px-3 py-2.5">
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-sm font-medium">{src.label}</p>
                   <p class="truncate text-xs text-muted-foreground">{src.url}</p>
@@ -185,7 +185,7 @@
                   <Button
                     variant="ghost"
                     size="icon"
-                    class="h-7 w-7 shrink-0"
+                    class="shrink-0"
                     title="Remove registry"
                     onclick={() => void removeRegistry(src.url)}
                   >
@@ -199,7 +199,7 @@
             <input
               type="url"
               placeholder="https://example.com/registry.json"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={newRegistryUrl}
             />
             <Button size="sm" disabled={!newRegistryUrl.trim()} onclick={() => void addRegistry()}>
@@ -214,7 +214,7 @@
     {/if}
 
     {#if registryErrors.length > 0}
-      <div class="rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+      <div class="rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
         {#each registryErrors as err (err)}
           <p>{err}</p>
         {/each}
@@ -230,43 +230,43 @@
         <input
           type="search"
           placeholder="Search plugins…"
-          class="w-full rounded border bg-background py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="h-10 w-full rounded-md border bg-background pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={query}
         />
       </div>
 
-      <div class="flex overflow-hidden rounded border text-xs">
+      <div class={segmentTrack}>
         <button
           type="button"
-          class="flex-1 px-3 py-1.5 {familyFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'all')} aria-pressed={familyFilter === 'all'}
           onclick={() => (familyFilter = "all")}
         >
           All
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'widget' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'widget')} aria-pressed={familyFilter === 'widget'}
           onclick={() => (familyFilter = "widget")}
         >
           Widgets
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'progression-algorithm' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'progression-algorithm')} aria-pressed={familyFilter === 'progression-algorithm'}
           onclick={() => (familyFilter = "progression-algorithm")}
         >
           Progression
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'analytics' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'analytics')} aria-pressed={familyFilter === 'analytics'}
           onclick={() => (familyFilter = "analytics")}
         >
           Analytics
         </button>
         <button
           type="button"
-          class="flex-1 border-l px-3 py-1.5 {familyFilter === 'exercise-pack' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+          class={segment(familyFilter === 'exercise-pack')} aria-pressed={familyFilter === 'exercise-pack'}
           onclick={() => (familyFilter = "exercise-pack")}
         >
           Packs
@@ -279,7 +279,7 @@
     {/if}
 
     {#if !$pluginSettings.communityPluginsEnabled}
-      <div class="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+      <div class="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
         <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           Community plugins are off. Widgets, progression and analytics plugins
@@ -310,17 +310,17 @@
               {#each featured as entry (entry.id)}
                 {@const isInstalled = installedIds.has(entry.id)}
                 {@const isInstalling = installingIds[entry.id]}
-                <li class="rounded border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
+                <li class="rounded-md border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
                         <p class="text-sm font-medium">{entry.name}</p>
                         {#if isInstalled}
-                          <span class="rounded border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
+                          <span class="rounded-md border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
                         {/if}
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
-                      <p class="mt-1 text-xs text-muted-foreground/60">
+                      <p class="mt-1 text-xs text-muted-foreground">
                         {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
                     </div>
@@ -360,17 +360,17 @@
               {#each rest as entry (entry.id)}
                 {@const isInstalled = installedIds.has(entry.id)}
                 {@const isInstalling = installingIds[entry.id]}
-                <li class="rounded border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
+                <li class="rounded-md border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
                         <p class="text-sm font-medium">{entry.name}</p>
                         {#if isInstalled}
-                          <span class="rounded border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
+                          <span class="rounded-md border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
                         {/if}
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
-                      <p class="mt-1 text-xs text-muted-foreground/60">
+                      <p class="mt-1 text-xs text-muted-foreground">
                         {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
                     </div>

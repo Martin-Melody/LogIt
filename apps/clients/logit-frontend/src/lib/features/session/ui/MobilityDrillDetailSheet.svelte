@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { X, Check } from "lucide-svelte";
   import { fade } from "svelte/transition";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -112,7 +113,7 @@
         <div class="flex gap-2">
           <input
             id="mds-name"
-            class="flex-1 min-w-0 rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 flex-1 min-w-0 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={nameDraft}
             disabled={saving}
             onkeydown={(e) => { if (e.key === "Enter") void commitRename(); }}
@@ -126,7 +127,7 @@
       <!-- Catalog info -->
       {#if catalogEntry}
         <div class="flex flex-col gap-1.5 text-sm" transition:reveal>
-          <p class="text-xs uppercase tracking-wide text-muted-foreground">{catalogEntry.area.replace("-", " ")}</p>
+          <p class="text-xs uppercase tracking-wide text-muted-foreground font-medium">{catalogEntry.area.replace("-", " ")}</p>
           {#if catalogEntry.cues.length}
             <ul class="list-disc list-inside text-muted-foreground text-xs space-y-0.5">
               {#each catalogEntry.cues as cue (cue)}
@@ -147,13 +148,11 @@
           <p class="text-xs text-muted-foreground -mt-1">
             Overrides your app-wide default whenever you add {target.drillName}. Still overridable per set.
           </p>
-          <div class="flex gap-1.5">
+          <div class={segmentTrack}>
             {#each [{ v: undefined, t: `App default (${$profile.mobilityLeadSide === "right" ? "R" : "L"})` }, { v: "left", t: "Left" }, { v: "right", t: "Right" }] as opt (opt.t)}
               <button
                 type="button"
-                class="flex-1 py-1.5 text-xs rounded border transition-colors flex items-center justify-center gap-1 {drillLead === opt.v
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground'}"
+                class={segment(drillLead === opt.v)} aria-pressed={drillLead === opt.v}
                 disabled={saving}
                 onclick={() => void pickLead(opt.v as MobilitySide | undefined)}
               >
