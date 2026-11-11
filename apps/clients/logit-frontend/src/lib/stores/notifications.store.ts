@@ -19,22 +19,31 @@ function createUnreadStore() {
     }
   }
 
-  /** Start periodic refresh (called once from appInit after auth settles). */
+  function refreshWhenVisible() {
+    if (document.visibilityState === "visible") void refresh();
+  }
+
+  /** Start periodic refresh (from startBackgroundSync, once a user is signed in). */
   function start() {
     if (timer) return;
     void refresh();
     timer = setInterval(refresh, 60_000);
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") void refresh();
-      });
-    }
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", refreshWhenVisible);
+  }
+
+  /** Stop refreshing and clear the badge (on logout). */
+  function stop() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    if (typeof document !== "undefined") document.removeEventListener("visibilitychange", refreshWhenVisible);
+    store.set(0);
   }
 
   return {
     subscribe: store.subscribe,
     refresh,
     start,
+    stop,
     clear: () => store.set(0),
     decrement: (by = 1) => store.set(Math.max(0, get(store) - by)),
   };

@@ -10,9 +10,39 @@ import { exercisesStore } from "$lib/stores/exercises.store";
 import { navConfig } from "$lib/stores/navConfig.store";
 import { setupKeyboard } from "./keyboard";
 import { setupNativeShell } from "./nativeShell";
-import { syncAll } from "$lib/sync/syncService";
+import { syncAll, reloadLastSyncedAt } from "$lib/sync/syncService";
 
 let didInit = false;
+
+// ── Background sync ──────────────────────────────────────────────────────────
+// Every 5 minutes and whenever the app comes back to the foreground, plus the unread
+// notification badge. Started for any signed-in user: at startup if already signed in, and
+// on login/register. It used to be set up only at startup, so someone who signed in later
+// got no background sync or badge updates until they restarted the app.
+
+const BACKGROUND_SYNC_MS = 5 * 60 * 1000;
+let backgroundTimer: ReturnType<typeof setInterval> | null = null;
+
+function syncWhenVisible() {
+  if (document.visibilityState === "visible" && authStore.isAuthenticated) void syncAll();
+}
+
+export function startBackgroundSync(): void {
+  if (!browser || backgroundTimer) return;
+  backgroundTimer = setInterval(() => {
+    if (authStore.isAuthenticated) void syncAll();
+  }, BACKGROUND_SYNC_MS);
+  document.addEventListener("visibilitychange", syncWhenVisible);
+  void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.start());
+}
+
+export function stopBackgroundSync(): void {
+  if (!browser || !backgroundTimer) return;
+  clearInterval(backgroundTimer);
+  backgroundTimer = null;
+  document.removeEventListener("visibilitychange", syncWhenVisible);
+  void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.stop());
+}
 
 /**
  * Clear all data-bearing stores and reload them from the current active owner.
@@ -25,6 +55,8 @@ export async function rehydrateStores(): Promise<void> {
   activeSplit.clear();
   currentSession.clear();
   exercisesStore.clear();
+  // Sync bookkeeping is per profile; show this profile's last sync, not the previous one's.
+  reloadLastSyncedAt();
 
   // Reload from repos (which are already re-initialized with the new owner)
   await recentSessions.refresh(5);
@@ -50,15 +82,7 @@ export async function appInit(): Promise<void> {
           return;
         }
         void syncAll();
-        void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.start());
-
-        // Periodic background sync
-        setInterval(() => { if (authStore.isAuthenticated) void syncAll(); }, 5 * 60 * 1000);
-
-        // Sync when the app returns to foreground (e.g. switching back on mobile)
-        document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible" && authStore.isAuthenticated) void syncAll();
-        });
+        startBackgroundSync();
       })
       .catch(() => {});
 

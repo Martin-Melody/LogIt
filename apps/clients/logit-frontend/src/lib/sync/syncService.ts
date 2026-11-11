@@ -41,6 +41,8 @@ import { favoriteFoodId } from "@logit/core/domain/nutrition";
 import type { Habit, HabitEntry } from "@logit/core/domain/habit";
 import type { CoachHabit } from "@logit/core/domain/CoachHabit";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
+import { syncStorageKey } from "$lib/sync/syncKeys";
+import { singleFlight } from "$lib/sync/singleFlight";
 
 // ── localStorage keys ────────────────────────────────────────────────────────
 
@@ -63,11 +65,12 @@ const HABITS_LAST_PULLED_KEY = "logit:sync:habitsLastPulledAt";
 const HABIT_ENTRIES_LAST_PULLED_KEY = "logit:sync:habitEntriesLastPulledAt";
 const COACH_HABITS_LAST_PULLED_KEY = "logit:sync:coachHabitsLastPulledAt";
 
+// Every key below is per profile on the phone; see syncStorageKey.
 function getTimestamp(key: string): number {
-  try { return parseInt(localStorage.getItem(key) ?? "0", 10) || 0; } catch { return 0; }
+  try { return parseInt(localStorage.getItem(syncStorageKey(key)) ?? "0", 10) || 0; } catch { return 0; }
 }
 function setTimestamp(key: string, ms: number): void {
-  try { localStorage.setItem(key, String(ms)); } catch {}
+  try { localStorage.setItem(syncStorageKey(key), String(ms)); } catch {}
 }
 
 // ── Last synced ───────────────────────────────────────────────────────────────
@@ -78,8 +81,13 @@ function getLastSyncedAtMs(): number {
   return getTimestamp(LAST_SYNCED_AT_KEY);
 }
 
-/** Reactive store — updates whenever a full sync completes. */
+/** Reactive store — updates whenever a full sync completes, and on a profile switch. */
 export const lastSyncedAt = writable(getLastSyncedAtMs());
+
+/** Re-read the active profile's last-synced time (call after the active profile changes). */
+export function reloadLastSyncedAt(): void {
+  lastSyncedAt.set(getLastSyncedAtMs());
+}
 
 // ── Sessions ─────────────────────────────────────────────────────────────────
 
@@ -539,10 +547,13 @@ export function pushMessage(message: CoachMessage): void {
     createdAtMs: message.createdAtMs,
     contextDateIso: message.contextDateIso,
   };
+  // On failure the message just stays unsynced locally: that flag is its queue, and the next
+  // sync re-sends it (pushPendingMessages). It used to also go into the outbox, which sent it
+  // without ever marking it synced.
   messagesApi
     .send(dto)
     .then(() => getMessagesRepo().markSynced(message.id))
-    .catch(() => enqueue({ type: "coachMessage", dto }));
+    .catch(() => {});
 }
 
 export async function pushPendingMessages(): Promise<void> {
@@ -1060,13 +1071,20 @@ export async function pushAllLocalData(): Promise<void> {
   ]);
 }
 
+/** Sync now. One sync at a time: login, the 5-minute timer, the app coming back to the
+ * foreground and the Settings button all call this, and two overlapping runs used to flush
+ * the outbox twice and pull the same data twice. A call during a run joins it and asks for
+ * one more pass afterwards; the result is the last pass's. */
+export const syncAll: () => Promise<boolean> = singleFlight(() => syncOnce());
+
 /** Runs every pull in parallel and only reports (and timestamps) success when all of them
  * actually completed — a Free-tier account whose pulls all 403 must not see a clean "synced"
  * state (see docs/bugs/social-smoke-test-findings.md #3). Returns false if any pull failed. */
-export async function syncAll(): Promise<boolean> {
+async function syncOnce(): Promise<boolean> {
   // Flush any writes queued while offline before pulling, so the server has the
   // latest local state before we merge its response back.
   await flushOutbox();
+  await pushPendingMessages();
   const results = await Promise.all([
     pullAndMergeSessions(),
     pullAndMergeSplits(),
