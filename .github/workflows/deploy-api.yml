@@ -41,7 +41,10 @@ jobs:
           dotnet-version: "8.0.x"
       - name: Migration histories in sync (SQLite + Postgres)
         run: |
-          dotnet tool install --global dotnet-ef
+          # Pinned to the EF Core major the API targets: unpinned it installs the newest
+          # dotnet-ef (11.x), which needs a newer .NET than setup-dotnet installs and crashes,
+          # so the check below reported a false "model changes not captured" failure.
+          dotnet tool install --global dotnet-ef --version "8.*"
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
           "$GITHUB_WORKSPACE/scripts/check-migrations-sync.sh"
 
