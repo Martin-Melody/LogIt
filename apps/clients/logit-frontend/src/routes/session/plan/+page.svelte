@@ -126,7 +126,7 @@
   {/if}
 
   {#if day}
-    <div class="border-b border-border px-4 pb-3 pt-4">
+    <div class="border-b border-border px-3 pb-3 pt-4">
       <h2 class="text-xl font-bold">{day.name ?? "Workout"}</h2>
       {#if plan}
         <p class="mt-0.5 text-xs text-muted-foreground">
@@ -138,10 +138,10 @@
 
   <div class="flex-1 pb-32">
     {#if !plan && !error}
-      <p class="px-4 py-6 text-sm text-muted-foreground">Working out today's numbers…</p>
+      <p class="px-3 py-6 text-sm text-muted-foreground">Working out today's numbers…</p>
     {/if}
     {#each rows as row (row.id)}
-      <div class="flex flex-col gap-0.5 border-b border-border px-4 py-3" data-testid="plan-row">
+      <div class="flex flex-col gap-0.5 border-b border-border px-3 py-3" data-testid="plan-row">
         <div class="flex items-center gap-2">
           <span class="flex-1 text-sm">{row.name}</span>
           {#if row.kind === "strength" && row.tag}

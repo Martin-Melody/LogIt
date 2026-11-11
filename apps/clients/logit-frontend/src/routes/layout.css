@@ -273,10 +273,10 @@ footer {
   color: var(--foreground);
 }
 .driver-popover-footer-btn {
-  height: 36px;
+  height: 40px;
   padding: 0 14px;
   font-size: 0.875rem;
-  line-height: 34px;
+  line-height: 38px;
   text-shadow: none;
   color: var(--foreground);
   background-color: transparent;

@@ -113,7 +113,7 @@
         <div class="flex gap-2">
           <input
             id="mds-name"
-            class="flex-1 min-w-0 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 flex-1 min-w-0 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={nameDraft}
             disabled={saving}
             onkeydown={(e) => { if (e.key === "Enter") void commitRename(); }}
@@ -127,7 +127,7 @@
       <!-- Catalog info -->
       {#if catalogEntry}
         <div class="flex flex-col gap-1.5 text-sm" transition:reveal>
-          <p class="text-xs uppercase tracking-wide text-muted-foreground">{catalogEntry.area.replace("-", " ")}</p>
+          <p class="text-xs uppercase tracking-wide text-muted-foreground font-medium">{catalogEntry.area.replace("-", " ")}</p>
           {#if catalogEntry.cues.length}
             <ul class="list-disc list-inside text-muted-foreground text-xs space-y-0.5">
               {#each catalogEntry.cues as cue (cue)}

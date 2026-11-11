@@ -93,7 +93,7 @@
                 {/if}
                 <button
                   type="button"
-                  class="h-6 w-6 flex items-center justify-center {ui.logged.has(food.id) ? 'text-success' : 'text-primary'}"
+                  class="h-11 w-11 flex items-center justify-center {ui.logged.has(food.id) ? 'text-success' : 'text-primary'}"
                   onclick={() => void logFood(meal, food)}
                   aria-label="Log"
                 >

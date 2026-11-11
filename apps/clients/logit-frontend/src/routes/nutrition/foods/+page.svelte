@@ -212,8 +212,8 @@
                   {fmtKcal(r.perServing.kcal)} kcal / serving · {r.servings} servings
                 </span>
               </a>
-              <a href="/nutrition/foods/recipe/{r.id}" class="h-6 w-6 flex items-center justify-center text-muted-foreground"><Pencil class="h-3.5 w-3.5" /></a>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteRecipe(r.id)} aria-label="Delete">
+              <a href="/nutrition/foods/recipe/{r.id}" class="h-11 w-11 flex items-center justify-center text-muted-foreground"><Pencil class="h-3.5 w-3.5" /></a>
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => void deleteRecipe(r.id)} aria-label="Delete">
                 <Trash2 class="h-3.5 w-3.5" />
               </button>
             </li>
@@ -244,7 +244,7 @@
               <span class="text-[11px] text-muted-foreground tabular-nums shrink-0">
                 {fmtKcal(totals.kcal)} kcal · {t.items.length} item{t.items.length === 1 ? "" : "s"}
               </span>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteTemplate(t.id)} aria-label="Delete">
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => void deleteTemplate(t.id)} aria-label="Delete">
                 <Trash2 class="h-3.5 w-3.5" />
               </button>
             </li>
@@ -320,10 +320,10 @@
             <li class="flex items-center gap-2 px-3 py-2 text-sm">
               <a href="/nutrition/food/{f.food.id}" class="flex-1 min-w-0 truncate">{f.food.name}</a>
               <span class="text-xs text-muted-foreground tabular-nums">{fmtKcal(f.food.per100g.kcal)}/100g</span>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => startEdit(f)} aria-label="Edit">
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => startEdit(f)} aria-label="Edit">
                 <Pencil class="h-3.5 w-3.5" />
               </button>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteFood(f.food.id)} aria-label="Delete">
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => void deleteFood(f.food.id)} aria-label="Delete">
                 <Trash2 class="h-3.5 w-3.5" />
               </button>
             </li>

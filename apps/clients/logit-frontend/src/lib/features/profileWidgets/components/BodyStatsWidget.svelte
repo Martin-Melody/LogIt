@@ -52,10 +52,10 @@
       <Card.Action>
         <button
           type="button"
-          class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          class="-my-3 -mr-2 flex min-h-11 items-center gap-1 px-2 text-sm text-muted-foreground hover:text-foreground"
           onclick={openEdit}
         >
-          <Pencil class="h-3 w-3" /> Edit
+          <Pencil class="h-3.5 w-3.5" /> Edit
         </button>
       </Card.Action>
     {/if}
@@ -68,7 +68,7 @@
           <div class="flex flex-col gap-1 flex-1">
             <label class="text-xs text-muted-foreground" for="bs-height">Height</label>
             <input id="bs-height" type="number" min="0" inputmode="decimal"
-              class="w-full rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.height} />
           </div>
           <div class={cn(segmentTrack, "mb-0.5")}>
@@ -80,7 +80,7 @@
           <div class="flex flex-col gap-1 flex-1">
             <label class="text-xs text-muted-foreground" for="bs-weight">Weight</label>
             <input id="bs-weight" type="number" min="0" inputmode="decimal"
-              class="w-full rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={draft.weight} />
           </div>
           <div class={cn(segmentTrack, "mb-0.5")}>

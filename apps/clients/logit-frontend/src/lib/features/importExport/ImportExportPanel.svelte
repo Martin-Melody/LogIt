@@ -153,7 +153,6 @@
       </p>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         disabled={phase === "exporting"}
         onclick={() => void handleExport()}
@@ -256,7 +255,6 @@
         </div>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start self-start"
           onclick={cancelImport}
         >
@@ -265,7 +263,6 @@
       {:else}
         <Button
           variant="outline"
-          size="sm"
           class="justify-start"
           onclick={() => void handlePickFile()}
           disabled={phase === "picking"}

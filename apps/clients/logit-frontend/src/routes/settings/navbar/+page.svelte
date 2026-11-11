@@ -171,10 +171,10 @@
           {@const def = NAV_ITEM_DEFS.find((d) => d.id === id)}
           {@const gripAction = makeGripAction("bar", id)}
           {#if def && isAvailable(def)}
-            <li class="py-2 flex items-center gap-2 transition-opacity {barDragId === id ? 'opacity-40' : ''}">
+            <li class="flex items-center gap-2 transition-opacity {barDragId === id ? 'opacity-40' : ''}">
               <button
                 type="button"
-                class="touch-none cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing -ml-1 p-1"
+                class="touch-none cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing -ml-2 h-11 w-9 flex items-center justify-center"
                 aria-label="Drag to reorder"
                 use:gripAction
               >
@@ -215,10 +215,10 @@
           {@const def = NAV_ITEM_DEFS.find((d) => d.id === id)}
           {@const gripAction = makeGripAction("more", id)}
           {#if def && isAvailable(def)}
-            <li class="py-2 flex items-center gap-2 transition-opacity {moreDragId === id ? 'opacity-40' : ''}">
+            <li class="flex items-center gap-2 transition-opacity {moreDragId === id ? 'opacity-40' : ''}">
               <button
                 type="button"
-                class="touch-none cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing -ml-1 p-1"
+                class="touch-none cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing -ml-2 h-11 w-9 flex items-center justify-center"
                 aria-label="Drag to reorder"
                 use:gripAction
               >

@@ -91,7 +91,7 @@
       class="flex-1 resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
       onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
     ></textarea>
-    <Button type="submit" size="icon" class="h-9 w-9 shrink-0" disabled={ui.sending || !draft.trim()}>
+    <Button type="submit" size="icon" class="h-11 w-11 shrink-0" disabled={ui.sending || !draft.trim()}>
       <Send class="h-4 w-4" />
     </Button>
   </form>

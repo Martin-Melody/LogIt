@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { Search, X, ChevronRight, Dumbbell } from "lucide-svelte";
@@ -175,7 +176,7 @@
       type="text"
       placeholder="Search by date or exercise…"
       bind:value={query}
-      class="w-full rounded-md border border-border bg-background pl-8 pr-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      class="h-10 w-full rounded-md border border-border bg-background pl-8 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
     />
     {#if query}
       <button
@@ -203,25 +204,19 @@
       </button>
     </div>
   {:else if filteredRows.length === 0}
-    <div class="px-3 py-12 flex flex-col items-center gap-2 text-center" in:fade={{ duration: 160 }}>
-      <Dumbbell class="h-6 w-6 text-muted-foreground/50" />
+    <div class="px-3 py-12 flex flex-col items-center gap-3 text-center" in:fade={{ duration: 160 }}>
+      <Dumbbell class="h-6 w-6 text-muted-foreground" />
       <p class="text-sm text-muted-foreground">
         {query.trim() ? "No sessions match your search." : "No sessions yet."}
       </p>
       {#if !query.trim()}
-        <button
-          type="button"
-          class="mt-1 text-sm text-primary font-medium"
-          onclick={() => void goto("/session/current")}
-        >
-          Start your first workout
-        </button>
+        <Button variant="outline" onclick={() => void goto("/session/current")}>Start your first workout</Button>
       {/if}
     </div>
   {:else}
     {#each groups as group (group.bucket)}
       <div transition:reveal>
-        <p class="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {group.bucket}
         </p>
         <ul class="divide-y divide-border">

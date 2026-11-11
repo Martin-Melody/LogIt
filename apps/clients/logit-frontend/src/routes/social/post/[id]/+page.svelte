@@ -121,7 +121,7 @@
         class="flex-1 resize-none rounded-full border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-24"
         onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}
       ></textarea>
-      <button type="button" class="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40" disabled={!draft.trim() || submitting} onclick={submit} aria-label="Send">
+      <button type="button" class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40" disabled={!draft.trim() || submitting} onclick={submit} aria-label="Send">
         {#if submitting}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Send class="h-4 w-4" />{/if}
       </button>
     </div>

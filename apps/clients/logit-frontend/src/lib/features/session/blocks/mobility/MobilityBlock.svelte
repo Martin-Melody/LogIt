@@ -478,7 +478,7 @@
     </div>
     <button
       type="button"
-      class={chip(data.perSide, "h-10")}
+      class={chip(data.perSide)}
       aria-pressed={data.perSide}
       disabled={saving}
       onclick={togglePerSide}
@@ -487,7 +487,7 @@
     </button>
     <button
       type="button"
-      class={chip(!!data.restBetweenSetsMs, "h-10")}
+      class={chip(!!data.restBetweenSetsMs)}
       disabled={saving}
       onclick={cycleRest}
       title="Rest after each set / side"
@@ -501,7 +501,7 @@
       {#each liveGroupOrder(groups) as group (groupKey(group))}
         {@const gc = isGroupCollapsed(group)}
         <div class="border-b border-border/60 last:border-b-0" transition:reveal>
-          <div class="flex items-center gap-1 px-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <div class="flex items-center gap-1 px-3 text-xs uppercase tracking-wide text-muted-foreground font-medium">
             <button
               type="button"
               class="shrink-0 flex items-center justify-center h-11 w-9 -ml-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"

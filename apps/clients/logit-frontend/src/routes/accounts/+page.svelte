@@ -122,7 +122,7 @@
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     autocomplete="current-password"
-                    class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-ring"
+                    class="h-10 w-full rounded-md border border-border bg-background px-3 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-ring"
                     bind:value={password}
                     onkeydown={(e) => { if (e.key === "Enter") void switchTo(account); }} />
                   <button type="button"

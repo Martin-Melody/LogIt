@@ -167,7 +167,7 @@
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium" for="forgot-email">Email</label>
         <input id="forgot-email" type="email" autocomplete="email" placeholder="you@example.com"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={forgotEmail} />
       </div>
 
@@ -233,7 +233,7 @@
         <input id="username" type="text"
           autocomplete="username"
           placeholder={mode === "login" ? "username or email" : "choose a username"}
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={form.username} />
         {#if mode === "register"}
           <p class="text-xs text-muted-foreground">Letters, numbers, and underscores only.</p>
@@ -245,7 +245,7 @@
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium" for="email">Email</label>
           <input id="email" type="email" autocomplete="email" placeholder="you@example.com"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={form.email} />
         </div>
       {/if}
@@ -258,7 +258,7 @@
             type={showPassword ? "text" : "password"}
             autocomplete={mode === "login" ? "current-password" : "new-password"}
             placeholder="••••••••"
-            class="w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={form.password} />
           <button type="button"
             class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -285,7 +285,7 @@
               type={showConfirmPassword ? "text" : "password"}
               autocomplete="new-password"
               placeholder="••••••••"
-              class="w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring {passwordMismatch ? 'border-destructive focus:ring-destructive' : ''}"
+              class="h-10 w-full rounded-md border bg-background px-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring {passwordMismatch ? 'border-destructive focus:ring-destructive' : ''}"
               bind:value={form.confirmPassword} />
             <button type="button"
               class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -337,7 +337,7 @@
         <div class="rounded-md border border-border p-4 flex flex-col gap-3">
           <p class="text-xs font-medium">Connect to a self-hosted server</p>
           <input type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             oninput={() => (urlTestResult = "idle")}
             bind:value={selfHostUrl} />
           {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}

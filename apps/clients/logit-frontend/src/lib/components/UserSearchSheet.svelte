@@ -155,7 +155,7 @@
               <!-- Avatar (tappable → profile) -->
               <button
                 type="button"
-                class="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden"
+                class="h-11 w-11 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden"
                 onclick={() => openProfile(user.username)}
               >
                 {#if user.avatarUrl}

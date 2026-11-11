@@ -247,7 +247,7 @@
             <input
               id="manifest-url"
               type="url"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="https://example.com/plugin.json"
               bind:value={manifestUrl}
             />
@@ -258,7 +258,7 @@
             <input
               id="actor-url"
               type="url"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="https://mastodon.social/@someone"
               bind:value={actorUrl}
             />

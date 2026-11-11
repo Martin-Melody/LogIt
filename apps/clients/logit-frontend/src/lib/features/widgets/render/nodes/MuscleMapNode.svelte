@@ -55,7 +55,7 @@
   <div class="flex justify-center gap-4">
     {#each views as v (v.label)}
       <div class="flex flex-col items-center gap-1">
-        <span class="text-[11px] text-muted-foreground uppercase tracking-widest">{v.label}</span>
+        <span class="text-xs text-muted-foreground uppercase tracking-wide font-medium">{v.label}</span>
         <svg viewBox={v.viewBox} width="110" height="auto" role="img" aria-label="{v.label} body muscle map">
           {#each v.muscles as m (m.id)}
             <path d={m.path} fill={fill(m.id)} aria-label={title(m.id) || m.name}>

@@ -185,15 +185,15 @@
                             <li class="flex items-center gap-1.5 text-xs">
                               <span class="w-5 text-muted-foreground">{si + 1}</span>
                               <input type="number" inputmode="numeric" placeholder="reps" value={set.reps ?? ""}
-                                class="w-14 rounded-md border bg-background px-1 py-0.5"
+                                class="h-10 w-14 rounded-md border bg-background px-1"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { reps: num(e.currentTarget.value) }))} />
                               <input type="number" inputmode="decimal" placeholder="kg" value={set.weight ?? ""}
-                                class="w-16 rounded-md border bg-background px-1 py-0.5"
+                                class="h-10 w-16 rounded-md border bg-background px-1"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { weight: num(e.currentTarget.value) }))} />
                               <input type="number" inputmode="decimal" placeholder="RPE" value={set.rpe ?? ""}
-                                class="w-12 rounded-md border bg-background px-1 py-0.5"
+                                class="h-10 w-12 rounded-md border bg-background px-1"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { rpe: num(e.currentTarget.value) }))} />
-                              <select value={set.setType} class="rounded-md border bg-background px-1 py-0.5"
+                              <select value={set.setType} class="h-10 rounded-md border bg-background px-1"
                                 onchange={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: e.currentTarget.value as SetType }))}>
                                 {#each setTypes as t}<option value={t.type}>{t.label}</option>{/each}
                               </select>

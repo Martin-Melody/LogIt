@@ -49,7 +49,7 @@
     >
       <GripVertical class="h-4 w-4" />
     </button>
-    <span class="text-xs font-semibold text-primary uppercase tracking-wide">Superset</span>
+    <span class="text-xs font-medium text-primary uppercase tracking-wide">Superset</span>
     <span class="text-xs text-muted-foreground">
       {blocks.length} exercises{roundCount > 0 ? ` · ${roundCount} round${roundCount === 1 ? "" : "s"}` : ""}
     </span>

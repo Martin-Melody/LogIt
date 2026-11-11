@@ -176,7 +176,7 @@
         <Card.Content class="flex flex-col gap-2">
           <ul class="flex flex-col gap-1.5">
             {#each $registrySources as src (src.url)}
-              <li class="flex items-center gap-2 rounded-md border border-border px-2.5 py-2">
+              <li class="flex items-center gap-2 rounded-md border border-border px-3 py-2.5">
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-sm font-medium">{src.label}</p>
                   <p class="truncate text-xs text-muted-foreground">{src.url}</p>
@@ -199,7 +199,7 @@
             <input
               type="url"
               placeholder="https://example.com/registry.json"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={newRegistryUrl}
             />
             <Button size="sm" disabled={!newRegistryUrl.trim()} onclick={() => void addRegistry()}>
@@ -230,7 +230,7 @@
         <input
           type="search"
           placeholder="Search plugins…"
-          class="w-full rounded-md border bg-background py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="h-10 w-full rounded-md border bg-background pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={query}
         />
       </div>

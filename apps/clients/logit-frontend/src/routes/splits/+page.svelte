@@ -193,7 +193,7 @@
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
   {:else if $splits.length === 0}
-    <div class="px-3 py-8 flex flex-col items-center gap-3 text-center">
+    <div class="px-3 py-12 flex flex-col items-center gap-3 text-center">
       <p class="text-sm text-muted-foreground">No splits yet.</p>
       <Button variant="outline" onclick={() => void newSplit()}>Create your first split</Button>
     </div>

@@ -290,7 +290,7 @@
     {#if ui.editing}
       <input
         bind:this={nameInput}
-        class="flex-1 min-w-0 h-9 mx-1 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
+        class="flex-1 min-w-0 h-10 mx-1 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
         bind:value={ui.draft}
         disabled={saving}
         onkeydown={(e) => { if (e.key === "Enter") void commitEdit(); if (e.key === "Escape") ui.editing = false; }}

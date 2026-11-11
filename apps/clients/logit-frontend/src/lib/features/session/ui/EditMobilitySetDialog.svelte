@@ -149,7 +149,7 @@
               <input
                 id="ems-target"
                 type="number" min="0" inputmode="numeric" placeholder="—"
-                class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                class="h-10 w-full rounded-md border bg-background px-3 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
                 value={draft.targetSec ?? ""}
                 {disabled}
                 onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -164,7 +164,7 @@
               <input
                 id="ems-dur"
                 type="number" min="0" inputmode="numeric" placeholder="—"
-                class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                class="h-10 w-full rounded-md border bg-background px-3 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
                 value={draft.durationSec ?? ""}
                 {disabled}
                 onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -181,7 +181,7 @@
             <input
               id="ems-reps"
               type="number" min="0" inputmode="numeric" placeholder="—"
-              class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
               value={draft.reps ?? ""}
               {disabled}
               onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -199,7 +199,7 @@
           <input
             id="ems-load"
             type="number" min="0" step={weightUnit === "lbs" ? "1" : "0.5"} placeholder="—"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={draft.load ?? ""}
             {disabled}
             onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
