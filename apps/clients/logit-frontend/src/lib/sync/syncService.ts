@@ -982,6 +982,12 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
   ]);
   const p = get(profile);
   const activeSplitId = await getSplitRepo().getActiveSplitId().catch(() => null);
+  // Only this profile's splits: rotation keys aren't per profile on the phone.
+  const splitIds = (
+    await getSplitRepo().getListSplits({ includeArchived: true, limit: 1000 }).catch(() => [])
+  ).map((s) => s.id);
+  const { getRotations } = await import("$lib/usecases/Splits/splitRotation");
+  const rotations = getRotations(splitIds);
   return {
     displayName: p.name,
     bio: p.bio,
@@ -996,6 +1002,7 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     navConfigJson: getNavConfigJson(),
     homeConfigJson: getHomeConfigJson(),
     activeSplitId,
+    splitRotationJson: Object.keys(rotations).length ? JSON.stringify(rotations) : null,
     updatedAtMs: Date.now(),
   };
 }
@@ -1113,6 +1120,16 @@ export async function pullAndApplyProfile(): Promise<boolean> {
   try {
     const { profile: remote } = await syncApi.pullProfile();
     if (!remote) return true;
+
+    // Split rotation is merged per split (newest wins), whatever the profile's own age: a
+    // workout on another device moves the next day here even if this profile was edited
+    // more recently.
+    if (remote.splitRotationJson) {
+      try {
+        const { applyRemoteRotations } = await import("$lib/usecases/Splits/splitRotation");
+        applyRemoteRotations(JSON.parse(remote.splitRotationJson));
+      } catch {}
+    }
 
     const localUpdatedAtMs = getProfileUpdatedAtMs();
     if (remote.updatedAtMs <= localUpdatedAtMs) return true;
