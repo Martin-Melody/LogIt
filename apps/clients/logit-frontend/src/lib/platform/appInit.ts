@@ -86,6 +86,10 @@ export async function appInit(): Promise<void> {
       })
       .catch(() => {});
 
+    // Follows the in-progress workout's rests from here on, on every screen.
+    const { startRestTimers } = await import("$lib/services/restTimerService");
+    startRestTimers();
+
     await rehydrateStores();
 
     try {

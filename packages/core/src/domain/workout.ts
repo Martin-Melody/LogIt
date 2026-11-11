@@ -1079,3 +1079,63 @@ function updateStrengthBlock(
   const blocks = session.blocks.map((b, i) => (i === idx ? updated : b));
   return { ...session, blocks };
 }
+
+// ── Rest timers ──────────────────────────────────────────────────────────────
+// A set's `restStartedAtMs` is the one record of a running rest: set when the set is ticked
+// (if it has a rest), cleared when the rest ends, is dismissed, or the set is unticked. The
+// app's rest service, the progress bars and the collapsed-card indicator all read it.
+
+/** How long a strength set rests: its own override, else the profile default for its type. */
+export function strengthRestMs(set: SetEntry, restDefaults: Record<string, number | undefined>): number {
+  return set.restDurationMs ?? restDefaults[set.setType] ?? DEFAULT_REST_MS;
+}
+
+/** How long a mobility set rests: its own override, else the block's rest (60 s if neither). */
+export function mobilityRestMs(set: MobilitySet, block: MobilityBlockData): number {
+  return (set.restDurationMs ?? block.restBetweenSetsMs ?? 0) || 60_000;
+}
+
+export type RunningRest = { setId: string; startedAtMs: number; endsAtMs: number };
+
+/** Every set in the session with a rest started, and when that rest ends. */
+export function getRunningRests(
+  session: WorkoutSession,
+  restDefaults: Record<string, number | undefined>,
+): RunningRest[] {
+  const out: RunningRest[] = [];
+  for (const block of session.blocks) {
+    if (block.type === "strength") {
+      for (const set of (block.data as StrengthBlockData).sets) {
+        if (typeof set.restStartedAtMs !== "number") continue;
+        out.push({ setId: set.id, startedAtMs: set.restStartedAtMs, endsAtMs: set.restStartedAtMs + strengthRestMs(set, restDefaults) });
+      }
+    } else if (block.type === "mobility") {
+      const data = block.data as MobilityBlockData;
+      for (const set of data.sets) {
+        if (typeof set.restStartedAtMs !== "number") continue;
+        out.push({ setId: set.id, startedAtMs: set.restStartedAtMs, endsAtMs: set.restStartedAtMs + mobilityRestMs(set, data) });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * End a set's rest. With `startedAtMs`, only the rest that started then is cleared, so a
+ * rest that ended while the set was re-ticked (a new rest) is left running. Returns the same
+ * session object when nothing changed.
+ */
+export function clearRest(session: WorkoutSession, setId: string, startedAtMs?: number): WorkoutSession {
+  let changed = false;
+  const matches = (s: { id: string; restStartedAtMs?: number | null }) =>
+    s.id === setId && typeof s.restStartedAtMs === "number" && (startedAtMs === undefined || s.restStartedAtMs === startedAtMs);
+  const blocks = session.blocks.map((block) => {
+    if (block.type !== "strength" && block.type !== "mobility") return block;
+    const data = block.data as StrengthBlockData | MobilityBlockData;
+    if (!data.sets.some(matches)) return block;
+    changed = true;
+    const sets = data.sets.map((s) => (matches(s) ? { ...s, restStartedAtMs: null } : s));
+    return { ...block, data: { ...data, sets } };
+  });
+  return changed ? { ...session, blocks } : session;
+}
