@@ -288,10 +288,17 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
       }
       try {
         const program = JSON.parse(entry.dataJson) as CoachProgram;
-        // The coach is the sole writer, so a plain last-write-wins on updatedAtMs is safe.
         const existing = await repo.getAssignedProgram(program.id);
-        if (existing && existing.updatedAtMs >= program.updatedAtMs) continue;
-        await repo.upsertFromRemote(program);
+        // The client's Start lives outside the coach's data. Keep a local start the server
+        // hasn't confirmed yet (it's queued in the outbox) rather than wiping it.
+        const clientStartedAtMs = entry.startedAtMs ?? existing?.clientStartedAtMs;
+        // The coach is the sole writer of everything else, so last-write-wins on updatedAtMs.
+        // A newer start alone (from the client's other device) also counts as a change.
+        const coachChanged = !existing || program.updatedAtMs > existing.updatedAtMs;
+        const startChanged = existing?.clientStartedAtMs !== clientStartedAtMs;
+        if (!coachChanged && !startChanged) continue;
+        const base = coachChanged ? program : existing!;
+        await repo.upsertFromRemote({ ...base, clientStartedAtMs: clientStartedAtMs ?? undefined });
       } catch {}
     }
 
@@ -300,6 +307,21 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Send the client's Start for an assigned program, queueing it if offline. The server keeps
+ * the first start it sees and replies with it; that value is saved locally. */
+export function pushProgramStart(programId: string, startedAtMs: number): void {
+  if (!apiClient.isAuthenticated()) return;
+  coachProgramApi
+    .startAssigned(programId, startedAtMs)
+    .then(async (res) => {
+      if (res.startedAtMs === startedAtMs) return;
+      const repo = getCoachProgramRepo();
+      const program = await repo.getAssignedProgram(programId);
+      if (program) await repo.upsertFromRemote({ ...program, clientStartedAtMs: res.startedAtMs });
+    })
+    .catch(() => enqueue({ type: "programStart", dto: { programId, startedAtMs } }));
 }
 
 /** Pull the nutrition plan(s) a coach has assigned into the local read-only mirror. */
