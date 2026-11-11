@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
@@ -363,17 +364,7 @@
             <span class="text-sm font-medium">Exclude from progression</span>
             <span class="text-xs text-muted-foreground">This session won't influence future weight suggestions.</span>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={edit.draft.excludeFromProgression ?? false}
-            class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {edit.draft.excludeFromProgression ? 'bg-primary' : 'bg-muted'}"
-            onclick={() => { if (edit.draft) edit.draft.excludeFromProgression = !edit.draft.excludeFromProgression; }}
-          >
-            <span
-              class="pointer-events-none block h-4 w-4 rounded-full bg-white shadow transition-transform {edit.draft.excludeFromProgression ? 'translate-x-4' : 'translate-x-0'}"
-            ></span>
-          </button>
+          <Switch checked={edit.draft.excludeFromProgression ?? false} label="Exclude from progression" onchange={() => { if (edit.draft) edit.draft.excludeFromProgression = !edit.draft.excludeFromProgression; }} />
         </div>
       </div>
     {/if}

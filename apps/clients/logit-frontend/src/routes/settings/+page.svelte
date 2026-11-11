@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -1129,24 +1130,10 @@
             Exercise blocks start collapsed in a session.
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={$profile.blocksCollapsedByDefault}
-          class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {$profile.blocksCollapsedByDefault
-            ? 'bg-primary'
-            : 'bg-input'}"
-          onclick={() =>
+        <Switch checked={$profile.blocksCollapsedByDefault} label="Collapse blocks by default" onchange={() =>
             profile.save({
               blocksCollapsedByDefault: !$profile.blocksCollapsedByDefault,
-            })}
-        >
-          <span
-            class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {$profile.blocksCollapsedByDefault
-              ? 'translate-x-4'
-              : 'translate-x-0'}"
-          ></span>
-        </button>
+            })} />
       </label>
 
       <div class="flex flex-col gap-2">
@@ -1160,21 +1147,7 @@
             ? Math.round(($profile.restDefaults[type] ?? 90_000) / 1000)
             : 90}
           <div class="flex items-center gap-3">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {enabled
-                ? 'bg-primary'
-                : 'bg-input'}"
-              onclick={() => toggleRestDefault(type)}
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {enabled
-                  ? 'translate-x-4'
-                  : 'translate-x-0'}"
-              ></span>
-            </button>
+            <Switch checked={enabled} label={`Auto rest timer: ${label}`} onchange={() => toggleRestDefault(type)} class="-ml-1.5 mr-0" />
             <span class="text-sm w-24">{label}</span>
             {#if enabled}
               <div class="flex items-center gap-1.5 ml-auto" transition:reveal={{ axis: "x" }}>

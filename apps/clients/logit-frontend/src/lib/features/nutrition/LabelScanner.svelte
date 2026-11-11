@@ -49,7 +49,7 @@
 <div class="fixed inset-0 z-[100] bg-black flex flex-col text-white">
   <div class="flex items-center justify-between px-3 py-2">
     <span class="text-sm font-medium">Scan the nutrition label</span>
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={onClose} aria-label="Close">
+    <button type="button" class="h-11 w-11 flex items-center justify-center" onclick={onClose} aria-label="Close">
       <X class="h-5 w-5" />
     </button>
   </div>
@@ -72,14 +72,14 @@
       <div class="flex flex-col gap-2 w-full max-w-xs">
         <button
           type="button"
-          class="rounded-md bg-white text-black text-sm font-medium px-4 py-2.5 flex items-center justify-center gap-2"
+          class="rounded-md bg-white text-black text-sm font-medium h-11 px-4 flex items-center justify-center gap-2"
           onclick={() => capture("camera")}
         >
           <Camera class="h-4 w-4" /> Take a photo
         </button>
         <button
           type="button"
-          class="rounded-md border border-white/30 text-sm px-4 py-2.5 flex items-center justify-center gap-2"
+          class="rounded-md border border-white/30 text-sm h-11 px-4 flex items-center justify-center gap-2"
           onclick={() => capture("gallery")}
         >
           <ImageIcon class="h-4 w-4" /> Choose from gallery
