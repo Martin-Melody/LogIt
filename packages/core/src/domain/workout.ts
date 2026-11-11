@@ -1,5 +1,7 @@
 import { createId } from "./ids";
 import { nowMs } from "./time";
+import { effectiveLoadKg, getLoadMode, type LoadMode } from "./bodyweight";
+import type { ExerciseType } from "./exercise";
 
 export const DEFAULT_REST_MS = 90_000;
 
@@ -510,11 +512,48 @@ export function getSessionDurationMs(session: WorkoutSession): number | null {
   return Math.max(0, session.endedAtMs - session.startedAtMs);
 }
 
-/** Total tonnage (Σ reps × weight, kg) across every strength set in the session. */
-export function getSessionVolumeKg(session: WorkoutSession): number {
+/**
+ * Tonnage of one set (reps × load, kg). For bodyweight work the load is
+ * bodyweight ± the logged number (see effectiveLoadKg); with no bodyweight known,
+ * a negative (assisted) weight counts as 0 instead of subtracting from the total.
+ */
+export function getSetVolumeKg(
+  set: Pick<SetEntry, "reps" | "weight">,
+  mode: LoadMode = "external",
+  bodyweightKg?: number | null,
+): number {
+  return set.reps * effectiveLoadKg(set.weight, mode, bodyweightKg);
+}
+
+export type VolumeOptions = {
+  /** The lifter's bodyweight, for bodyweight and assisted exercises. */
+  bodyweightKg?: number | null;
+  exerciseType?: ExerciseType;
+};
+
+/** Total tonnage (kg) of one exercise's sets. */
+export function getExerciseVolumeKg(
+  ex: Pick<ExerciseEntry, "sets"> & { exerciseName?: string },
+  opts: VolumeOptions = {},
+): number {
+  const mode = getLoadMode(opts.exerciseType, ex.sets.map((s) => s.weight), ex.exerciseName);
+  let vol = 0;
+  for (const set of ex.sets) vol += getSetVolumeKg(set, mode, opts.bodyweightKg);
+  return vol;
+}
+
+/** Total tonnage (Σ reps × load, kg) across every strength set in the session. */
+export function getSessionVolumeKg(
+  session: WorkoutSession,
+  opts: {
+    bodyweightKg?: number | null;
+    /** Exercise type by entry, so assisted-machine work isn't counted as lifted weight. */
+    exerciseTypeOf?: (ex: ExerciseEntry) => ExerciseType | undefined;
+  } = {},
+): number {
   let vol = 0;
   for (const ex of getExercises(session)) {
-    for (const set of ex.sets) vol += set.reps * set.weight;
+    vol += getExerciseVolumeKg(ex, { bodyweightKg: opts.bodyweightKg, exerciseType: opts.exerciseTypeOf?.(ex) });
   }
   return vol;
 }

@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { segment, segmentTrack, chip } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Search, Barcode, Plus, Star, ScanText } from "lucide-svelte";
+  import { Search, Barcode, Plus, Star, ScanText } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import * as Tabs from "$lib/components/ui/tabs";
@@ -427,15 +430,13 @@
 {/if}
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">
+  <div class="page-header">
+    <BackButton onclick={() => back("/nutrition")} />
+    <h1 class="page-title">
       {#if browse}Foods{:else}Add to <span class="capitalize">{meal}</span>{/if}
     </h1>
     {#if browse}
-      <a href="/nutrition/foods" class="ml-auto text-xs text-muted-foreground">Manage</a>
+      <a href="/nutrition/foods" class="ml-auto -mr-1 flex h-11 items-center px-2 text-sm text-muted-foreground hover:text-foreground">Manage</a>
     {/if}
   </div>
 
@@ -453,44 +454,45 @@
     </div>
   {/if}
 
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="flex items-center gap-2 pl-3 pr-1 border-b border-border">
     <Search class="h-4 w-4 text-muted-foreground shrink-0" />
     <input
-      class="flex-1 bg-transparent text-sm outline-none py-1"
+      class="h-11 flex-1 bg-transparent text-sm outline-none"
       placeholder="Search foods or paste a barcode"
       bind:value={ui.query}
       oninput={onInput}
     />
-    <button type="button" class="h-7 w-7 flex items-center justify-center text-muted-foreground" onclick={openScanner} aria-label="Scan barcode">
-      <Barcode class="h-4 w-4" />
+    <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-foreground" onclick={openScanner} aria-label="Scan barcode">
+      <Barcode class="h-5 w-5" />
     </button>
   </div>
 
-  <div class="flex items-center gap-1 px-3 py-1.5 border-b border-border text-xs">
+  <div class="flex items-center gap-2 px-3 border-b border-border {searching ? 'py-1.5' : ''}">
     {#if searching}
       {#each ["all", "custom", "recipes"] as t (t)}
         <button
           type="button"
-          class="px-2 py-1 rounded capitalize {ui.filter === t ? 'bg-muted font-medium' : 'text-muted-foreground'}"
+          class={chip(ui.filter === t, "capitalize")}
+          aria-pressed={ui.filter === t}
           onclick={() => { ui.filter = t as typeof ui.filter; void runSearch(); }}
         >{t}</button>
       {/each}
     {/if}
-    <button type="button" class="ml-auto px-2 py-1 text-primary flex items-center gap-1" onclick={() => (showQuick = !showQuick)}>
-      <Plus class="h-3.5 w-3.5" /> Quick add
+    <button type="button" class="ml-auto h-11 px-2 text-sm text-primary flex items-center gap-1" onclick={() => (showQuick = !showQuick)} aria-expanded={showQuick}>
+      <Plus class="h-4 w-4" /> Quick add
     </button>
   </div>
 
   {#if showQuick}
     <div class="px-3 py-3 border-b border-border flex flex-col gap-2">
-      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={quick.name} />
+      <input class="h-10 w-full bg-muted rounded-md px-3 text-sm outline-none focus:ring-1 focus:ring-ring" placeholder="Name" bind:value={quick.name} />
       <div class="grid grid-cols-4 gap-2">
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="kcal" bind:value={quick.kcal} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="P" bind:value={quick.protein} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="C" bind:value={quick.carbs} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="F" bind:value={quick.fat} />
+        <input class="h-10 min-w-0 bg-muted rounded-md px-2 text-sm text-center outline-none focus:ring-1 focus:ring-ring" inputmode="numeric" placeholder="kcal" bind:value={quick.kcal} />
+        <input class="h-10 min-w-0 bg-muted rounded-md px-2 text-sm text-center outline-none focus:ring-1 focus:ring-ring" inputmode="numeric" placeholder="P" bind:value={quick.protein} />
+        <input class="h-10 min-w-0 bg-muted rounded-md px-2 text-sm text-center outline-none focus:ring-1 focus:ring-ring" inputmode="numeric" placeholder="C" bind:value={quick.carbs} />
+        <input class="h-10 min-w-0 bg-muted rounded-md px-2 text-sm text-center outline-none focus:ring-1 focus:ring-ring" inputmode="numeric" placeholder="F" bind:value={quick.fat} />
       </div>
-      <Button size="sm" onclick={() => void addQuick()}>Add</Button>
+      <Button onclick={() => void addQuick()}>Add</Button>
     </div>
   {/if}
 
@@ -502,7 +504,7 @@
       {#if ocrReady}
         <button
           type="button"
-          class="self-start rounded bg-primary text-primary-foreground text-sm px-3 py-1.5 flex items-center gap-1.5"
+          class="self-start rounded-md bg-primary text-primary-foreground text-sm px-3 py-1.5 flex items-center gap-1.5"
           onclick={() => (showLabelScanner = true)}
         >
           <ScanText class="h-4 w-4" /> Scan the nutrition label
@@ -529,31 +531,31 @@
           Rescan
         </button>
       </div>
-      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={labelDraft.name} />
-      <input class="w-full bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Brand (optional)" bind:value={labelDraft.brand} />
+      <input class="w-full bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" placeholder="Name" bind:value={labelDraft.name} />
+      <input class="w-full bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" placeholder="Brand (optional)" bind:value={labelDraft.brand} />
       <div class="grid grid-cols-4 gap-2">
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="kcal" bind:value={labelDraft.kcal} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="P" bind:value={labelDraft.protein} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="C" bind:value={labelDraft.carbs} />
-        <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="F" bind:value={labelDraft.fat} />
+        <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none tabular-nums focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="kcal" bind:value={labelDraft.kcal} />
+        <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none tabular-nums focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="P" bind:value={labelDraft.protein} />
+        <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none tabular-nums focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="C" bind:value={labelDraft.carbs} />
+        <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none tabular-nums focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="F" bind:value={labelDraft.fat} />
       </div>
-      <div class="flex items-center gap-2 text-xs flex-wrap">
+      <div class={cn(segmentTrack, "w-fit")}>
         <span class="text-muted-foreground">Values per</span>
-        <button type="button" class="px-2 py-0.5 rounded {labelDraft.basis === '100g' ? 'bg-primary text-primary-foreground' : 'bg-muted'}" onclick={() => (labelDraft.basis = '100g')}>100 g</button>
-        <button type="button" class="px-2 py-0.5 rounded {labelDraft.basis === 'serving' ? 'bg-primary text-primary-foreground' : 'bg-muted'}" onclick={() => (labelDraft.basis = 'serving')}>serving</button>
+        <button type="button" class={segment(labelDraft.basis === '100g')} aria-pressed={labelDraft.basis === '100g'} onclick={() => (labelDraft.basis = '100g')}>100 g</button>
+        <button type="button" class={segment(labelDraft.basis === 'serving')} aria-pressed={labelDraft.basis === 'serving'} onclick={() => (labelDraft.basis = 'serving')}>serving</button>
         {#if labelDraft.basis === 'serving'}
-          <input class="w-24 bg-muted rounded px-2 py-1 outline-none tabular-nums" inputmode="decimal" placeholder="g in a serving" bind:value={labelDraft.servingG} />
+          <input class="w-24 bg-muted rounded-md px-2 h-10 outline-none tabular-nums focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="g in a serving" bind:value={labelDraft.servingG} />
         {/if}
       </div>
       {#each labelDraft.warnings as w (w)}
-        <p class="text-[11px] text-amber-600 dark:text-amber-500">{w}</p>
+        <p class="text-[11px] text-warning">{w}</p>
       {/each}
       {#if labelDraft.raw}
         <button type="button" class="self-start text-[11px] text-muted-foreground underline" onclick={() => (labelDraft.showRaw = !labelDraft.showRaw)}>
           {labelDraft.showRaw ? "Hide" : "Show"} what the scan read
         </button>
         {#if labelDraft.showRaw}
-          <pre class="text-[10px] leading-tight bg-muted rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap">{labelDraft.raw}</pre>
+          <pre class="text-[11px] leading-tight bg-muted rounded-md p-2 max-h-40 overflow-auto whitespace-pre-wrap">{labelDraft.raw}</pre>
         {/if}
       {/if}
       <div class="flex gap-2">
@@ -570,12 +572,12 @@
           {selected.name}{#if selected.brand}<span class="text-muted-foreground font-normal"> · {selected.brand}</span>{/if}
         </div>
         <button type="button" aria-label="Toggle favourite" onclick={() => void toggleFavorite(selected!)}>
-          <Star class="h-4 w-4 {favIds.has(selected.id) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}" />
+          <Star class="h-4 w-4 {favIds.has(selected.id) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
         </button>
       </div>
       <div class="flex gap-2">
         <input
-          class="w-24 bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums"
+          class="w-24 bg-muted rounded-md px-2 h-10 text-sm outline-none tabular-nums focus:ring-1 focus:ring-ring"
           inputmode="decimal"
           aria-label="Amount"
           bind:value={pick.amount}
@@ -621,7 +623,7 @@
               <span class="text-xs text-muted-foreground tabular-nums shrink-0">{fmtKcal(f.per100g.kcal)}/100g</span>
             </button>
             <button type="button" class="px-3 py-2 shrink-0" aria-label="Toggle favourite" onclick={() => void toggleFavorite(f)}>
-              <Star class="h-4 w-4 {favIds.has(f.id) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50'}" />
+              <Star class="h-4 w-4 {favIds.has(f.id) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
             </button>
           </li>
         {/each}
@@ -653,7 +655,7 @@
                 </button>
                 {#if r.sourceId}
                   <button type="button" class="px-3 py-2 shrink-0" aria-label="Toggle favourite" onclick={() => void toggleFavoriteRecent(r)}>
-                    <Star class="h-4 w-4 {favIds.has(r.sourceId) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50'}" />
+                    <Star class="h-4 w-4 {favIds.has(r.sourceId) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
                   </button>
                 {/if}
               </li>
@@ -679,7 +681,7 @@
                   <span class="text-xs text-muted-foreground tabular-nums shrink-0">{fmtKcal(fav.food.per100g.kcal)}/100g</span>
                 </button>
                 <button type="button" class="px-3 py-2 shrink-0" aria-label="Remove favourite" onclick={() => void toggleFavorite(fav.food)}>
-                  <Star class="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <Star class="h-4 w-4 fill-highlight-fill text-highlight-fill" />
                 </button>
               </li>
             {/each}
@@ -708,7 +710,7 @@
                   <span class="text-xs text-muted-foreground tabular-nums shrink-0">{fmtKcal(c.food.per100g.kcal)}/100g</span>
                 </button>
                 <button type="button" class="px-3 py-2 shrink-0" aria-label="Toggle favourite" onclick={() => void toggleFavorite(c.food)}>
-                  <Star class="h-4 w-4 {favIds.has(c.food.id) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50'}" />
+                  <Star class="h-4 w-4 {favIds.has(c.food.id) ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
                 </button>
               </li>
             {/each}

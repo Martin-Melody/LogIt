@@ -12,6 +12,10 @@
 import { test, expect } from "@playwright/test";
 
 const API_BASE = "http://localhost:5118";
+// Sync needs a Pro account (RequireTier in SyncEndpoints.cs). Each test's fresh
+// account is upgraded through the admin API, using the dev key from
+// appsettings.Development.json unless LOGIT_ADMIN_KEY says otherwise.
+const ADMIN_KEY = process.env.LOGIT_ADMIN_KEY ?? "dev-admin-key";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -30,7 +34,14 @@ async function register(suffix: string): Promise<AuthTokens> {
     }),
   });
   if (!res.ok) throw new Error(`register failed: ${res.status}`);
-  return res.json();
+  const auth = (await res.json()) as AuthTokens & { user: { id: string } };
+  const upgrade = await fetch(`${API_BASE}/admin/api/users/${auth.user.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Key": ADMIN_KEY },
+    body: JSON.stringify({ tier: "Pro" }),
+  });
+  if (!upgrade.ok) throw new Error(`upgrading the test account to Pro failed: ${upgrade.status}`);
+  return auth;
 }
 
 async function deleteAccount(accessToken: string): Promise<void> {

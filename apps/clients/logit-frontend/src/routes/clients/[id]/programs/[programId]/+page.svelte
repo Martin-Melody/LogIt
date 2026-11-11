@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Plus, Trash, Copy, Dumbbell, Activity, ChevronDown, ChevronRight } from "lucide-svelte";
+  import { Plus, Trash, Copy, Dumbbell, Activity, ChevronDown, ChevronRight } from "lucide-svelte";
 
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
@@ -77,13 +78,11 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back(`/clients/${clientId}?u=${username}`)}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+  <div class="page-header">
+    <BackButton onclick={() => back(`/clients/${clientId}?u=${username}`)} />
     {#if program}
       <input
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-transparent focus:border-primary"
+        class="flex-1 min-w-0 bg-transparent text-base font-semibold focus:outline-none border-b border-transparent focus:border-primary"
         value={program.name}
         disabled={ui.saving}
         onblur={(e) => void rename(e.currentTarget.value)}
@@ -98,7 +97,7 @@
         onConfirm={removeProgram}
       >
         {#snippet child({ props })}
-          <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={ui.saving}>
+          <Button {...props} variant="ghost" size="icon" class="text-destructive" disabled={ui.saving}>
             <Trash class="h-3.5 w-3.5" />
           </Button>
         {/snippet}
@@ -164,7 +163,7 @@
 
                 <div class="mt-1.5 flex flex-col gap-1.5">
                   {#each [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) as block (block.id)}
-                    <div class="rounded border border-border bg-background p-2">
+                    <div class="rounded-md border border-border bg-background p-2">
                       <div class="flex items-center gap-1.5">
                         {#if block.type === "strength"}
                           <Dumbbell class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -186,15 +185,15 @@
                             <li class="flex items-center gap-1.5 text-xs">
                               <span class="w-5 text-muted-foreground">{si + 1}</span>
                               <input type="number" inputmode="numeric" placeholder="reps" value={set.reps ?? ""}
-                                class="w-14 rounded border bg-background px-1 py-0.5"
+                                class="h-10 w-14 rounded-md border bg-background px-1"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { reps: num(e.currentTarget.value) }))} />
                               <input type="number" inputmode="decimal" placeholder="kg" value={set.weight ?? ""}
-                                class="w-16 rounded border bg-background px-1 py-0.5"
+                                class="h-10 w-16 rounded-md border bg-background px-1"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { weight: num(e.currentTarget.value) }))} />
                               <input type="number" inputmode="decimal" placeholder="RPE" value={set.rpe ?? ""}
-                                class="w-12 rounded border bg-background px-1 py-0.5"
+                                class="h-10 w-12 rounded-md border bg-background px-1"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { rpe: num(e.currentTarget.value) }))} />
-                              <select value={set.setType} class="rounded border bg-background px-1 py-0.5"
+                              <select value={set.setType} class="h-10 rounded-md border bg-background px-1"
                                 onchange={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: e.currentTarget.value as SetType }))}>
                                 {#each setTypes as t}<option value={t.type}>{t.label}</option>{/each}
                               </select>

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Star, Pencil } from "lucide-svelte";
+  import { Star, Pencil } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import * as Select from "$lib/components/ui/select";
   import {
@@ -96,24 +97,22 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition/foods")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+  <div class="page-header">
+    <BackButton onclick={() => back("/nutrition/foods")} />
     {#if food}
-      <button type="button" onclick={() => void toggleFav()} aria-label="Toggle favourite" class="h-8 w-8 flex items-center justify-center">
-        <Star class="h-4 w-4 {isFav ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}" />
+      <button type="button" onclick={() => void toggleFav()} aria-label="Toggle favourite" class="h-11 w-11 shrink-0 -mx-1 flex items-center justify-center">
+        <Star class="h-4 w-4 {isFav ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
       </button>
     {/if}
-    <h1 class="text-sm font-semibold truncate">
+    <h1 class="page-title">
       {food?.name ?? "Food"}{#if food?.brand}<span class="text-muted-foreground font-normal"> · {food.brand}</span>{/if}
     </h1>
     {#if foodId.startsWith("rcp_")}
-      <a href="/nutrition/foods/recipe/{foodId}" class="ml-auto h-8 w-8 flex items-center justify-center text-muted-foreground">
+      <a href="/nutrition/foods/recipe/{foodId}" class="ml-auto h-11 w-11 shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Edit food">
         <Pencil class="h-4 w-4" />
       </a>
     {:else if food?.source === "custom"}
-      <a href="/nutrition/foods?edit={foodId}" class="ml-auto h-8 w-8 flex items-center justify-center text-muted-foreground">
+      <a href="/nutrition/foods?edit={foodId}" class="ml-auto h-11 w-11 shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Edit food">
         <Pencil class="h-4 w-4" />
       </a>
     {/if}
@@ -128,7 +127,7 @@
       <div class="flex items-center justify-between px-3 py-3">
         <span class="text-sm">Amount</span>
         <input
-          class="w-28 bg-muted rounded px-2 py-1.5 text-sm text-right outline-none tabular-nums"
+          class="w-28 bg-muted rounded-md px-2 h-10 text-sm text-right outline-none tabular-nums focus:ring-1 focus:ring-ring"
           inputmode="decimal"
           aria-label="Amount"
           bind:value={amount}
@@ -167,7 +166,7 @@
           {#each MEAL_SLOTS as m (m)}
             <button
               type="button"
-              class="rounded border border-border text-sm py-2 disabled:opacity-50"
+              class="h-11 rounded-md border border-border text-sm font-medium hover:bg-muted disabled:opacity-50"
               disabled={grams <= 0}
               onclick={() => void addTo(m)}
             >

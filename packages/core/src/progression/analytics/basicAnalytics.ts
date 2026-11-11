@@ -1,5 +1,40 @@
 import type { AnalyticsPlugin, AnalyticsInput, AnalyticsOutput } from "../../domain/analytics";
 import { estimated1RM } from "../../domain/oneRepMax";
+import { getSetVolumeKg } from "../../domain/workout";
+import { effectiveLoadKg, getLoadMode, type LoadMode } from "../../domain/bodyweight";
+import type { ExerciseHistoryEntry } from "../../domain/progression";
+import type { SetEntry } from "../../domain/workout";
+
+type Point = { date: number; value: number; sessionPosition?: number };
+
+/**
+ * Session volume for bodyweight / assisted work: reps × (bodyweight ± the logged
+ * number), only for sessions with a bodyweight known. Null when none has one, so
+ * the exercise stays charted by reps alone.
+ */
+function bodyweightVolume(
+  entries: { entry: ExerciseHistoryEntry; workingSets: SetEntry[] }[],
+  mode: LoadMode,
+): { points: Point[]; total: number } | null {
+  const points: Point[] = [];
+  let total = 0;
+  for (const { entry, workingSets } of entries) {
+    if (entry.bodyweightKg == null) continue;
+    const value = workingSets.reduce((sum, s) => sum + s.reps * effectiveLoadKg(s.weight, mode, entry.bodyweightKg), 0);
+    total += value;
+    points.push({ date: entry.performedAtMs, value, sessionPosition: entry.sessionPosition });
+  }
+  return points.length ? { points, total } : null;
+}
+
+function withVolume(out: AnalyticsOutput, volume: { points: Point[]; total: number } | null): AnalyticsOutput {
+  if (!volume) return out;
+  return {
+    ...out,
+    metrics: [...out.metrics, { id: "total_volume", value: volume.total, formatted: `${(volume.total / 1000).toFixed(1)}t` }],
+    series: [...out.series, { metricId: "total_volume", label: "Volume", points: volume.points }],
+  };
+}
 
 function computeNormal(input: AnalyticsInput): AnalyticsOutput {
   const maxWeightPoints = [];
@@ -17,7 +52,7 @@ function computeNormal(input: AnalyticsInput): AnalyticsOutput {
     if (workingSets.length === 0) continue;
 
     const maxWeight = Math.max(...workingSets.map((s) => s.weight));
-    const totalVolume = workingSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+    const totalVolume = workingSets.reduce((sum, s) => sum + getSetVolumeKg(s), 0);
     const best1RM = Math.max(...workingSets.map((s) => estimated1RM(s.weight, s.reps)));
 
     if (maxWeight > allTimeMax) allTimeMax = maxWeight;
@@ -44,7 +79,7 @@ function computeNormal(input: AnalyticsInput): AnalyticsOutput {
     ],
     series: [
       { metricId: "max_weight", label: "Max weight", points: maxWeightPoints },
-      { metricId: "total_volume", label: "Session volume", points: volumePoints },
+      { metricId: "total_volume", label: "Volume", points: volumePoints },
       { metricId: "estimated_1rm", label: "Est. 1RM", points: estimated1RMPoints },
     ],
     label: sessionCount > 0 ? `${allTimeMax}kg best · ${trendLabel} last session` : undefined,
@@ -65,12 +100,14 @@ function computeAssisted(input: AnalyticsInput): AnalyticsOutput {
 
   let lowestAssist = Infinity;
   let allTimeReps = 0;
+  const done: { entry: ExerciseHistoryEntry; workingSets: SetEntry[] }[] = [];
 
   for (const entry of input.history) {
     const workingSets = entry.sets.filter(
       (s) => (s.setType === "normal" || !s.setType) && s.completed !== false,
     );
     if (workingSets.length === 0) continue;
+    done.push({ entry, workingSets });
 
     const minAssist = Math.min(...workingSets.map((s) => s.weight));
     const totalReps = workingSets.reduce((sum, s) => sum + s.reps, 0);
@@ -93,15 +130,15 @@ function computeAssisted(input: AnalyticsInput): AnalyticsOutput {
   const trendLabel =
     trend < 0 ? `−${Math.abs(trend)}kg assist` : trend > 0 ? `+${trend}kg assist` : "steady";
 
-  return {
+  return withVolume({
     metrics: [
       { id: "min_assist", value: lowestAssist === Infinity ? 0 : lowestAssist, formatted: `${lowestAssist === Infinity ? 0 : lowestAssist}kg` },
       { id: "total_sessions", value: sessionCount, formatted: String(sessionCount) },
       { id: "total_reps", value: allTimeReps, formatted: String(allTimeReps) },
     ],
     series: [
-      { metricId: "min_assist", label: "Assistance weight", points: assistPoints },
-      { metricId: "total_reps", label: "Session reps", points: repsPoints },
+      { metricId: "min_assist", label: "Assistance", points: assistPoints },
+      { metricId: "total_reps", label: "Reps", points: repsPoints },
     ],
     label: sessionCount > 0 ? `${lowestAssist === Infinity ? 0 : lowestAssist}kg assist best · ${trendLabel} last session` : undefined,
     insights:
@@ -110,7 +147,7 @@ function computeAssisted(input: AnalyticsInput): AnalyticsOutput {
         : trend > 0
           ? [`Assistance increased by ${trend}kg last session`]
           : undefined,
-  };
+  }, bodyweightVolume(done, "assisted"));
 }
 
 // For bodyweight exercises, weight may be 0 (pure BW) or extra load on top.
@@ -123,12 +160,14 @@ function computeBodyweight(input: AnalyticsInput): AnalyticsOutput {
   let allTimeMaxReps = 0;
   let allTimeReps = 0;
   let hasExtraLoad = false;
+  const done: { entry: ExerciseHistoryEntry; workingSets: SetEntry[] }[] = [];
 
   for (const entry of input.history) {
     const workingSets = entry.sets.filter(
       (s) => (s.setType === "normal" || !s.setType) && s.completed !== false,
     );
     if (workingSets.length === 0) continue;
+    done.push({ entry, workingSets });
 
     const maxReps = Math.max(...workingSets.map((s) => s.reps));
     const totalReps = workingSets.reduce((sum, s) => sum + s.reps, 0);
@@ -153,7 +192,8 @@ function computeBodyweight(input: AnalyticsInput): AnalyticsOutput {
   const recentReps = maxRepsPoints.at(-1)!.value;
   const prevReps = maxRepsPoints.at(-2)?.value ?? recentReps;
   const repTrend = recentReps - prevReps;
-  const trendLabel = repTrend > 0 ? `+${repTrend} reps` : repTrend < 0 ? `${repTrend} reps` : "steady";
+  const reps = (n: number) => `${n} ${Math.abs(n) === 1 ? "rep" : "reps"}`;
+  const trendLabel = repTrend > 0 ? `+${reps(repTrend)}` : repTrend < 0 ? reps(repTrend) : "steady";
 
   const metrics = [
     { id: "max_reps", value: allTimeMaxReps, formatted: `${allTimeMaxReps} reps` },
@@ -167,32 +207,42 @@ function computeBodyweight(input: AnalyticsInput): AnalyticsOutput {
   }
 
   const series = [
-    { metricId: "max_reps", label: "Max reps (set)", points: maxRepsPoints },
-    { metricId: "total_reps", label: "Session reps", points: totalRepsPoints },
+    { metricId: "max_reps", label: "Max reps", points: maxRepsPoints },
+    { metricId: "total_reps", label: "Reps", points: totalRepsPoints },
   ];
 
   if (hasExtraLoad) {
     series.push({ metricId: "max_extra_load", label: "Extra load", points: extraLoadPoints });
   }
 
-  return {
+  return withVolume({
     metrics,
     series,
     label: sessionCount > 0 ? `${allTimeMaxReps} rep best · ${trendLabel} last session` : undefined,
     insights:
       repTrend > 0
-        ? [`Up ${repTrend} reps from last session`]
+        ? [`Up ${reps(repTrend)} from last session`]
         : repTrend < 0
-          ? [`Down ${Math.abs(repTrend)} reps from last session`]
+          ? [`Down ${reps(Math.abs(repTrend))} from last session`]
           : undefined,
-  };
+  }, bodyweightVolume(done, "bodyweight"));
 }
 
 function compute(input: AnalyticsInput): AnalyticsOutput {
   switch (input.exercise.exerciseType) {
     case "assisted":   return computeAssisted(input);
     case "bodyweight": return computeBodyweight(input);
-    default:           return computeNormal(input);
+    default:
+      // Untyped exercise that is bodyweight work: logged as BW / BW−25 (dips
+      // before a type was set), or a pull-up / dip / push-up by name. Charted by
+      // reps, plus bodyweight-based volume where the bodyweight is known.
+      return getLoadMode(
+        input.exercise.exerciseType,
+        input.history.flatMap((e) => e.sets.map((s) => s.weight)),
+        input.exercise.name,
+      ) === "bodyweight"
+        ? computeBodyweight(input)
+        : computeNormal(input);
   }
 }
 

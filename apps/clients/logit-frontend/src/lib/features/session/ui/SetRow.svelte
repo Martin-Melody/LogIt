@@ -104,20 +104,20 @@
   }
 
   const box =
-    "h-9 w-full rounded border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
-  const planPh = "placeholder:font-medium placeholder:text-blue-600 dark:placeholder:text-blue-300";
-  const plainPh = "placeholder:font-normal placeholder:text-muted-foreground/60";
+    "h-10 w-full rounded-md border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+  const planPh = "placeholder:font-medium placeholder:text-info";
+  const plainPh = "placeholder:font-normal placeholder:text-muted-foreground";
 </script>
 
 <div
-  class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-1 transition-opacity {completed
-    ? 'opacity-70'
+  class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-0.5 transition-colors {completed
+    ? 'bg-muted/40'
     : ''}"
 >
   <!-- Set number; also the drag handle (no grip icon: it cost every row width) -->
   <button
     type="button"
-    class="flex h-9 flex-col items-center justify-center text-muted-foreground cursor-grab active:cursor-grabbing"
+    class="flex h-10 flex-col items-center justify-center text-muted-foreground cursor-grab active:cursor-grabbing"
     style="touch-action: none"
     use:gripAction
     aria-label="Drag to reorder set"
@@ -126,7 +126,7 @@
   >
     {#if meta.short}
       <span
-        class="text-[10px] font-bold leading-none px-1 py-0.5 rounded border tabular-nums {meta.badgeClass}"
+        class="text-[11px] font-bold leading-none px-1 py-0.5 rounded-md border tabular-nums {meta.badgeClass}"
         title={meta.label}
       >
         {meta.short}
@@ -142,7 +142,7 @@
   <!-- Last time; also the way into the set card -->
   <button
     type="button"
-    class="h-9 min-w-0 truncate text-left text-[13px] tabular-nums text-muted-foreground"
+    class="h-10 min-w-0 truncate text-left text-[13px] tabular-nums text-muted-foreground"
     onclick={onOpenDetails}
     {disabled}
     aria-label="Set {setNumber} details{lastText ? `, last time ${lastText}` : ''}"
@@ -157,7 +157,7 @@
       <span
         class="pointer-events-none absolute inset-y-0 flex items-center text-[13px] font-semibold
           {weightValue === '' && weightPlaceholder === '' ? 'inset-x-0 justify-center' : 'left-2.5'}
-          {weightIsPlan ? 'text-blue-600 dark:text-blue-300' : 'text-muted-foreground'}"
+          {weightIsPlan ? 'text-info' : 'text-muted-foreground'}"
         aria-hidden="true"
       >
         {bwPrefix}
@@ -207,7 +207,7 @@
       class="flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors
         {completed
         ? 'border-primary bg-primary text-primary-foreground'
-        : 'border-muted-foreground/40 hover:border-primary'}"
+        : 'border-muted-foreground hover:border-primary'}"
     >
       {#if completed}<Check class="h-3 w-3" />{/if}
     </span>

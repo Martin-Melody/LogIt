@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
@@ -17,7 +18,7 @@
   import { deleteSplit } from "$lib/usecases/Splits/deleteSplit";
   import { createId } from "@logit/core/domain/ids";
 
-  import { ArrowLeft, Trash, Check, X, Plus, GripVertical, Play } from "lucide-svelte";
+  import { Trash, Check, X, Plus, GripVertical, Play } from "lucide-svelte";
   import { startSplitDetailTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { reveal, popIn } from "$lib/transitions";
@@ -277,15 +278,13 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/splits")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+  <div class="page-header">
+    <BackButton onclick={() => back("/splits")} />
 
     {#if ui.renaming}
       <input
         bind:this={nameInput}
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
+        class="flex-1 min-w-0 bg-transparent text-base font-semibold focus:outline-none border-b border-primary"
         bind:value={ui.nameDraft}
         disabled={ui.saving}
         onkeydown={(e) => {
@@ -294,10 +293,10 @@
         }}
         onblur={() => void commitRename()}
       />
-      <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={cancelRename}>
+      <Button variant="ghost" size="icon" class="shrink-0" onclick={cancelRename}>
         <X class="h-3.5 w-3.5" />
       </Button>
-      <Button size="icon" class="h-7 w-7 shrink-0" onclick={() => void commitRename()}>
+      <Button size="icon" class="shrink-0" onclick={() => void commitRename()}>
         <Check class="h-3.5 w-3.5" />
       </Button>
     {:else}
@@ -338,7 +337,7 @@
           onConfirm={deleteThisSplit}
         >
           {#snippet child({ props })}
-            <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={!split || ui.saving}>
+            <Button {...props} variant="ghost" size="icon" class="text-destructive" disabled={!split || ui.saving}>
               <Trash class="h-3.5 w-3.5" />
             </Button>
           {/snippet}
@@ -374,9 +373,9 @@
     </div>
 
     {#if split.days.length === 0}
-      <div class="px-3 py-6 flex flex-col items-center gap-2 text-center">
+      <div class="px-3 py-12 flex flex-col items-center gap-3 text-center">
         <p class="text-sm text-muted-foreground">No days yet.</p>
-        <Button variant="outline" size="sm" onclick={() => void addDay()}>Add first day</Button>
+        <Button variant="outline" onclick={() => void addDay()}>Add first day</Button>
       </div>
     {:else}
       {@const sorted = sortDays(split.days)}

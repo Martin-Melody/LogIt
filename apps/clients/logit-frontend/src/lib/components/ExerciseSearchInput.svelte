@@ -94,7 +94,7 @@
 <div class="relative w-full">
   <input
     bind:this={inputEl}
-    class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+    class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
     type="text"
     {placeholder}
     {disabled}
@@ -128,7 +128,7 @@
     -->
     <button
       type="button"
-      class="mt-1 w-full rounded border border-dashed border-border px-3 py-2 text-sm text-left text-muted-foreground hover:bg-muted transition-colors"
+      class="mt-1 w-full rounded-md border border-dashed border-border px-3 py-2 text-sm text-left text-muted-foreground hover:bg-muted transition-colors"
       onpointerdown={(e) => { e.preventDefault(); confirmNew(); }}
     >
       Add "<span class="text-foreground font-medium">{query.trim()}</span>"

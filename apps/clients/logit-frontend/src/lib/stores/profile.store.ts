@@ -1,5 +1,5 @@
 import { browser } from "$app/environment";
-import { writable } from "svelte/store";
+import { get, writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { pushProfile, setProfileUpdatedAtMs, buildRemoteProfile } from "$lib/sync/syncService";
 
@@ -19,6 +19,26 @@ export type UserProfile = {
 };
 
 const STORAGE_KEY = "logit:profile:v1";
+
+const LB_PER_KG = 2.2046226218;
+const CM_PER_IN = 2.54;
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * Weight and height are stored in the profile's own units, so changing a unit
+ * on its own must convert the number too — otherwise 91 kg became 91 lb.
+ * A patch that sets the value as well is taken as already in the new unit.
+ */
+export function convertForUnitChange(current: UserProfile, patch: Partial<UserProfile>): Partial<UserProfile> {
+  const out = { ...patch };
+  if (out.weightUnit && out.weightUnit !== current.weightUnit && out.weight === undefined && current.weight != null) {
+    out.weight = round1(out.weightUnit === "lbs" ? current.weight * LB_PER_KG : current.weight / LB_PER_KG);
+  }
+  if (out.heightUnit && out.heightUnit !== current.heightUnit && out.height === undefined && current.height != null) {
+    out.height = round1(out.heightUnit === "in" ? current.height / CM_PER_IN : current.height * CM_PER_IN);
+  }
+  return out;
+}
 
 const defaultRestDefaults: Record<string, number | undefined> = {
   normal:  90_000,
@@ -102,7 +122,8 @@ function createProfileStore() {
       });
     },
 
-    save(patch: Partial<UserProfile>) {
+    save(rawPatch: Partial<UserProfile>) {
+      const patch = convertForUnitChange(get(store), rawPatch);
       applyLocally(patch);
 
       if (browser) {

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { ArrowLeft, CheckCircle2, FileJson, Link2, Globe2, ShieldAlert } from "lucide-svelte";
+  import { CheckCircle2, FileJson, Link2, Globe2, ShieldAlert } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -158,11 +159,9 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => void goto("/plugins")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <span class="text-sm font-semibold">Add plugin</span>
+  <div class="page-header">
+    <BackButton onclick={() => void goto("/plugins")} />
+    <span class="text-base font-semibold">Add plugin</span>
   </div>
 
   <div class="flex flex-col gap-3 p-3">
@@ -170,7 +169,7 @@
       <p class="text-sm text-destructive">{ui.error}</p>
     {/if}
     {#if ui.success}
-      <p class="text-sm text-emerald-600">{ui.success}</p>
+      <p class="text-sm text-success">{ui.success}</p>
     {/if}
 
     <Card.Root class="w-full">
@@ -224,7 +223,7 @@
           <div class="flex flex-col gap-2">
             <label
               for="pack-file"
-              class="flex cursor-pointer items-center justify-center gap-2 rounded border border-dashed border-border bg-background px-3 py-4 text-sm text-muted-foreground hover:bg-muted/40"
+              class="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background px-3 py-4 text-sm text-muted-foreground hover:bg-muted/40"
             >
               <FileJson class="h-4 w-4" />
               {fileName || "Choose a pack file"}
@@ -248,7 +247,7 @@
             <input
               id="manifest-url"
               type="url"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="https://example.com/plugin.json"
               bind:value={manifestUrl}
             />
@@ -259,7 +258,7 @@
             <input
               id="actor-url"
               type="url"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="https://mastodon.social/@someone"
               bind:value={actorUrl}
             />
@@ -273,7 +272,7 @@
             <textarea
               id="manifest-json"
               rows="10"
-              class="w-full rounded border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder={`{"id":"...","family":"widget","name":"...","description":"...","version":"1.0.0","distribution":{"origin":"manual"},"capabilities":[...]}`}
               bind:value={manifestJson}
             ></textarea>
@@ -319,13 +318,13 @@
           </dl>
 
           {#if alreadyInstalled}
-            <p class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p class="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
               Already installed.
             </p>
           {/if}
 
           {#if restrictedModeBlocks}
-            <div class="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+            <div class="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning">
               <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 This is a {capabilityLabel(reviewed).toLowerCase()} — it runs code

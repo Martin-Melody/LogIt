@@ -58,9 +58,9 @@
   onDestroy(() => connectionStatus.stopPolling());
 </script>
 
-<div class="flex flex-col gap-2 p-3 pb-24">
-  <div class="flex items-center justify-between">
-    <h1 class="text-lg font-semibold">Home</h1>
+<div class="flex flex-col gap-3 p-3 pb-24">
+  <div class="page-header -mx-3 -mt-3">
+    <h1 class="page-title">Home</h1>
     <div class="flex items-center gap-2">
       {#if authStore.isAuthenticated}
         <ConnectionDot />
@@ -68,7 +68,6 @@
       <Button
         variant="ghost"
         size="icon"
-        class="h-8 w-8"
         aria-label="Customise home"
         data-tour="home-customize"
         onclick={() => void goto("/home/customize")}

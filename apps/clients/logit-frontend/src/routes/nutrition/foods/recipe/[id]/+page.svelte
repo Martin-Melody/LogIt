@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Search, Trash2 } from "lucide-svelte";
+  import { Search, Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import { createId } from "@logit/core/domain/ids";
@@ -96,12 +97,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition/foods")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">Recipe</h1>
-    <button type="button" class="ml-auto text-xs text-primary px-2 py-1" onclick={() => void save()}>Save</button>
+  <div class="page-header">
+    <BackButton onclick={() => back("/nutrition/foods")} />
+    <h1 class="page-title">Recipe</h1>
+    <button type="button" class="ml-auto h-11 px-3 -mr-1 text-sm font-medium text-primary" onclick={() => void save()}>Save</button>
   </div>
 
   {#if ui.loading}
@@ -110,11 +109,11 @@
     <p class="px-3 py-4 text-sm text-destructive">Recipe not found.</p>
   {:else}
     <div class="px-3 py-3 border-b border-border flex flex-col gap-2">
-      <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none font-medium" bind:value={recipe.name} />
+      <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none font-medium focus:ring-1 focus:ring-ring" bind:value={recipe.name} />
       <label class="flex items-center gap-2 text-xs text-muted-foreground">
         Makes
         <input
-          class="w-16 bg-muted rounded px-2 py-1.5 text-sm outline-none"
+          class="w-16 bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring"
           inputmode="numeric"
           value={recipe.servings}
           oninput={(e) => setServings(e.currentTarget.value)}
@@ -132,11 +131,11 @@
     <!-- Ingredients -->
     <ul class="divide-y divide-border">
       {#each recipe.ingredients as ing (ing.id)}
-        <li class="flex items-center gap-2 px-3 py-2 text-sm">
+        <li class="flex min-h-11 items-center gap-2 pl-3 pr-1 text-sm">
           <span class="flex-1 min-w-0 truncate">{ing.name} <span class="text-muted-foreground">· {Math.round(ing.grams)} g</span></span>
           <span class="text-xs text-muted-foreground tabular-nums">{fmtKcal(ing.computed.kcal)}</span>
-          <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => removeIngredient(ing.id)} aria-label="Remove">
-            <Trash2 class="h-3.5 w-3.5" />
+          <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-destructive" onclick={() => removeIngredient(ing.id)} aria-label="Remove {ing.name}">
+            <Trash2 class="h-4 w-4" />
           </button>
         </li>
       {/each}
@@ -147,15 +146,15 @@
       {#if picked}
         <div class="flex items-center gap-2">
           <span class="flex-1 text-sm truncate">{picked.name}</span>
-          <input class="w-20 bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" bind:value={ui.grams} />
+          <input class="w-20 bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="numeric" bind:value={ui.grams} />
           <span class="text-xs text-muted-foreground">g</span>
-          <Button size="sm" onclick={addIngredient}>Add</Button>
-          <Button size="sm" variant="ghost" onclick={() => (picked = null)}>×</Button>
+          <Button onclick={addIngredient}>Add</Button>
+          <Button size="icon" variant="ghost" onclick={() => (picked = null)} aria-label="Cancel">×</Button>
         </div>
       {:else}
         <div class="flex items-center gap-2">
           <Search class="h-4 w-4 text-muted-foreground" />
-          <input class="flex-1 bg-transparent text-sm outline-none py-1" placeholder="Add an ingredient" bind:value={ui.query} oninput={onInput} />
+          <input class="flex-1 bg-transparent text-sm outline-none h-11" placeholder="Add an ingredient" bind:value={ui.query} oninput={onInput} />
         </div>
         {#if results.length > 0}
           <ul class="divide-y divide-border border-t border-border">

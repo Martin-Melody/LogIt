@@ -85,7 +85,7 @@
         id="p-name"
         type="text"
         autocomplete="name"
-        class="w-full rounded border bg-background px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 w-full rounded-md border bg-background px-3 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draft.name}
       />
     </div>
@@ -95,7 +95,7 @@
         id="p-bio"
         rows={3}
         placeholder="Something about yourself…"
-        class="w-full rounded border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draft.bio}
       ></textarea>
     </div>
@@ -110,7 +110,7 @@
 
   <!-- Settings gear -->
   <div class="flex justify-end px-3 pt-3">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => void goto("/settings")} data-tour="profile-settings">
+    <Button variant="ghost" size="icon" onclick={() => void goto("/settings")} data-tour="profile-settings">
       <Settings class="h-4 w-4" />
     </Button>
   </div>
@@ -150,7 +150,7 @@
           {#if $profile.bio}
             <p class="text-sm text-muted-foreground max-w-xs mt-0.5">{$profile.bio}</p>
           {:else}
-            <p class="text-sm text-muted-foreground/50 italic mt-0.5">Add a bio…</p>
+            <p class="text-sm text-muted-foreground italic mt-0.5">Add a bio…</p>
           {/if}
         </div>
         <Button variant="outline" size="sm" onclick={openEdit} data-tour="profile-edit">
@@ -163,7 +163,7 @@
   <!-- Account status bar -->
   <div class="mx-3 mb-1">
     {#if authStore.isAuthenticated && authStore.user}
-      <div class="flex items-center gap-3 rounded border border-border px-3 py-2">
+      <div class="flex items-center gap-3 rounded-md border border-border px-3 py-2">
         {#if serverMode === "cloud"}
           <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
         {:else}
@@ -180,14 +180,14 @@
     {:else}
       <button
         type="button"
-        class="w-full flex items-center justify-between rounded border border-dashed border-border px-3 py-2.5 text-left hover:border-muted-foreground/50 transition-colors"
+        class="w-full flex items-center justify-between rounded-md border border-dashed border-border px-3 py-2.5 text-left hover:border-muted-foreground/50 transition-colors"
         onclick={() => void goto("/auth?mode=register")}
       >
         <div>
           <p class="text-sm font-medium">Create an account</p>
           <p class="text-xs text-muted-foreground">Unlock social features and cloud backup.</p>
         </div>
-        <Cloud class="h-4 w-4 text-muted-foreground/50 shrink-0 ml-3" />
+        <Cloud class="h-4 w-4 text-muted-foreground shrink-0 ml-3" />
       </button>
     {/if}
   </div>

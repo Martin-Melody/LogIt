@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { Search, X, ChevronRight, Dumbbell } from "lucide-svelte";
@@ -9,9 +10,10 @@
   import {
     getTopSetHighlight,
     getExercises,
-    getSessionVolumeKg,
+
   } from "@logit/core/domain/workout";
   import { formatWeight } from "@logit/core/domain/units";
+  import { loadVolumeContext, sessionVolumeKg, type VolumeContext } from "$lib/features/bodyweight/bodyweight";
   import { reveal, popIn } from "$lib/transitions";
   import { fade } from "svelte/transition";
 
@@ -60,6 +62,9 @@
     });
   }
 
+  // Bodyweight + exercise types, so pull-ups and dips count in volume.
+  let volumeCtx = $state<VolumeContext | null>(null);
+
   type Row = {
     id: string;
     startedAtMs: number;
@@ -85,7 +90,7 @@
         durationLabel: s.endedAtMs ? formatDuration(dur) : "In progress",
         inProgress: !s.endedAtMs,
         exerciseCount: getExercises(s).length,
-        volumeKg: getSessionVolumeKg(s),
+        volumeKg: sessionVolumeKg(s, volumeCtx),
         topSet,
         searchText: `${relativeDate(ended)} ${new Date(ended).toLocaleDateString()} ${topSet ?? ""}`.toLowerCase(),
       };
@@ -119,7 +124,7 @@
     const finished = ($recentSessions ?? []).filter((s) => s.endedAtMs);
     const thisWeek = finished.filter((s) => s.startedAtMs >= weekStart);
     const thisMonth = finished.filter((s) => s.startedAtMs >= monthStart.getTime());
-    const weekVolumeKg = thisWeek.reduce((v, s) => v + getSessionVolumeKg(s), 0);
+    const weekVolumeKg = thisWeek.reduce((v, s) => v + sessionVolumeKg(s, volumeCtx), 0);
     return {
       week: thisWeek.length,
       month: thisMonth.length,
@@ -128,6 +133,7 @@
   });
 
   onMount(async () => {
+    void loadVolumeContext().then((c) => (volumeCtx = c)).catch(() => {});
     ui.loading = true;
     ui.error = null;
     try {
@@ -141,8 +147,8 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center justify-between px-3 py-3 border-b border-border">
-    <h1 class="text-base font-semibold">Sessions</h1>
+  <div class="page-header">
+    <h1 class="page-title">Sessions</h1>
   </div>
 
   {#if !ui.loading && !ui.error && allRows.length > 0}
@@ -170,7 +176,7 @@
       type="text"
       placeholder="Search by date or exercise…"
       bind:value={query}
-      class="w-full rounded border border-border bg-background pl-8 pr-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      class="h-10 w-full rounded-md border border-border bg-background pl-8 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
     />
     {#if query}
       <button
@@ -198,25 +204,19 @@
       </button>
     </div>
   {:else if filteredRows.length === 0}
-    <div class="px-3 py-12 flex flex-col items-center gap-2 text-center" in:fade={{ duration: 160 }}>
-      <Dumbbell class="h-6 w-6 text-muted-foreground/50" />
+    <div class="px-3 py-12 flex flex-col items-center gap-3 text-center" in:fade={{ duration: 160 }}>
+      <Dumbbell class="h-6 w-6 text-muted-foreground" />
       <p class="text-sm text-muted-foreground">
         {query.trim() ? "No sessions match your search." : "No sessions yet."}
       </p>
       {#if !query.trim()}
-        <button
-          type="button"
-          class="mt-1 text-sm text-primary font-medium"
-          onclick={() => void goto("/session/current")}
-        >
-          Start your first workout
-        </button>
+        <Button variant="outline" onclick={() => void goto("/session/current")}>Start your first workout</Button>
       {/if}
     </div>
   {:else}
     {#each groups as group (group.bucket)}
       <div transition:reveal>
-        <p class="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {group.bucket}
         </p>
         <ul class="divide-y divide-border">

@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
@@ -256,11 +257,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">Nutrition goal</h1>
+  <div class="page-header">
+    <BackButton onclick={() => back("/nutrition")} />
+    <h1 class="page-title">Nutrition goal</h1>
   </div>
 
   {#if ui.loading}
@@ -270,11 +269,11 @@
       <!-- Body -->
       <div class="px-3 py-3 flex flex-col gap-2">
         <span class="text-xs font-semibold">About you</span>
-        <div class="flex gap-2">
+        <div class={segmentTrack}>
           {#each ["male", "female"] as s (s)}
             <button
               type="button"
-              class="flex-1 py-1.5 rounded text-sm capitalize {goal.sex === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}"
+              class={segment(goal.sex === s, "capitalize")} aria-pressed={goal.sex === s}
               onclick={() => (goal.sex = s as Sex)}
             >{s}</button>
           {/each}
@@ -286,7 +285,7 @@
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Height ({heightUnit})</span>
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={heightDisplay} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={heightDisplay} />
           </label>
         </div>
         <div class="flex flex-col gap-1">
@@ -307,11 +306,11 @@
       <!-- Goal -->
       <div class="px-3 py-3 flex flex-col gap-2">
         <span class="text-xs font-semibold">Goal</span>
-        <div class="flex gap-2">
+        <div class={segmentTrack}>
           {#each ["lose", "maintain", "gain"] as t (t)}
             <button
               type="button"
-              class="flex-1 py-1.5 rounded text-sm capitalize {goal.goalType === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}"
+              class={segment(goal.goalType === t, "capitalize")} aria-pressed={goal.goalType === t}
               onclick={() => (goal.goalType = t as GoalType)}
             >{t}</button>
           {/each}
@@ -320,11 +319,11 @@
           <div class="grid grid-cols-2 gap-2">
             <label class="flex flex-col gap-1">
               <span class="text-[11px] text-muted-foreground">Rate ({weightUnit}/week)</span>
-              <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={rateDisplay} />
+              <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={rateDisplay} />
             </label>
             <label class="flex flex-col gap-1">
               <span class="text-[11px] text-muted-foreground">Target weight ({weightUnit}, optional)</span>
-              <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={targetWeightDisplay} />
+              <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={targetWeightDisplay} />
             </label>
           </div>
         {/if}
@@ -336,12 +335,12 @@
         <div class="grid grid-cols-2 gap-2">
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Protein (g/kg body weight)</span>
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={goal.proteinGPerKg} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={goal.proteinGPerKg} />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Fat (% of calories)</span>
             <input
-              class="bg-muted rounded px-2 py-1.5 text-sm outline-none"
+              class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring"
               inputmode="numeric"
               value={Math.round(goal.fatPct * 100)}
               oninput={(e) => (goal.fatPct = (Number(e.currentTarget.value) || 0) / 100)}
@@ -360,7 +359,7 @@
           {#each algorithms as a (a.id)}
             <button
               type="button"
-              class="text-left rounded px-2.5 py-2 border {selectedAlgoId === a.id
+              class="text-left rounded-md px-2.5 py-2 border {selectedAlgoId === a.id
                 ? 'border-primary bg-primary/5'
                 : 'border-border'}"
               onclick={() => void selectAlgorithm(a.id)}
@@ -372,7 +371,7 @@
         </div>
 
         {#if algoSchema.length}
-          <div class="mt-1 rounded border border-border px-3">
+          <div class="mt-1 rounded-md border border-border px-3">
             <AlgorithmPreferencesForm schema={algoSchema} values={algoPrefs} onChange={setAlgoPref} />
           </div>
         {/if}
@@ -380,7 +379,7 @@
         <label class="flex flex-col gap-1 mt-1">
           <span class="text-[11px] text-muted-foreground">Manual calorie override (optional)</span>
           <input
-            class="bg-muted rounded px-2 py-1.5 text-sm outline-none"
+            class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring"
             inputmode="numeric"
             bind:value={goal.manualCalorieTarget}
           />
@@ -392,9 +391,9 @@
         <div class="flex items-center justify-between">
           <span class="text-xs font-semibold">Your target</span>
           {#if goal.manualCalorieTarget}
-            <Badge variant="outline" class="text-[10px]">Manual</Badge>
+            <Badge variant="outline" class="text-[11px]">Manual</Badge>
           {:else if preview?.sourceLabel}
-            <Badge variant="outline" class="text-[10px]">{preview.sourceLabel}</Badge>
+            <Badge variant="outline" class="text-[11px]">{preview.sourceLabel}</Badge>
           {/if}
         </div>
         {#if goal.manualCalorieTarget}

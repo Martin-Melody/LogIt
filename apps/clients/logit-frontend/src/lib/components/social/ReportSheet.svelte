@@ -83,14 +83,14 @@
         rows={3}
         maxlength={1000}
         placeholder="Add any detail (optional)"
-        class="mt-2 resize-none rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="mt-2 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
       ></textarea>
     </div>
 
     <div class="px-4 py-3 border-t border-border shrink-0">
       <button
         type="button"
-        class="w-full flex items-center justify-center gap-2 rounded bg-primary text-primary-foreground text-sm font-medium py-2.5 disabled:opacity-50"
+        class="w-full flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground text-sm font-medium py-2.5 disabled:opacity-50"
         disabled={!reason || submitting}
         onclick={submit}
       >

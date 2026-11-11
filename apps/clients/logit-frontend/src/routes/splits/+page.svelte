@@ -110,8 +110,8 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center justify-between px-3 py-3 border-b border-border">
-    <h1 class="text-base font-semibold">Splits</h1>
+  <div class="page-header">
+    <h1 class="page-title">Splits</h1>
     <div class="flex items-center gap-2">
       <Button size="sm" variant="outline" onclick={() => goto("/programs/browse")}>
         Browse programs
@@ -193,7 +193,7 @@
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
   {:else if $splits.length === 0}
-    <div class="px-3 py-8 flex flex-col items-center gap-3 text-center">
+    <div class="px-3 py-12 flex flex-col items-center gap-3 text-center">
       <p class="text-sm text-muted-foreground">No splits yet.</p>
       <Button variant="outline" onclick={() => void newSplit()}>Create your first split</Button>
     </div>
@@ -219,7 +219,7 @@
               <p class="text-xs text-muted-foreground mt-0.5 truncate">
                 {s.days.length} day{s.days.length === 1 ? "" : "s"} · {splitPreview(s)}
               </p>
-              <p class="text-[11px] text-muted-foreground/70 mt-0.5">updated {formatDate(s.updatedAtMs)}</p>
+              <p class="text-[11px] text-muted-foreground mt-0.5">updated {formatDate(s.updatedAtMs)}</p>
             </div>
           </button>
 

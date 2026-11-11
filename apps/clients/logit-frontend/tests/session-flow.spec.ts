@@ -55,6 +55,8 @@ type SeedOpts = {
   progressionState?: { exerciseName: string; workingWeight: number; failedAttempts?: number; savedAtMs?: number };
   history?: object[];
   blocksCollapsedByDefault?: boolean;
+  /** Profile bodyweight (kg), for bodyweight-exercise volume. */
+  bodyweightKg?: number;
 };
 
 async function seedSession(page: Page, opts: SeedOpts = {}) {
@@ -63,10 +65,11 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
     progressionState,
     history,
     blocksCollapsedByDefault = false,
+    bodyweightKg,
   } = opts;
 
   await page.addInitScript(
-    ({ session, progressionState, history, blocksCollapsedByDefault }) => {
+    ({ session, progressionState, history, blocksCollapsedByDefault, bodyweightKg }) => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
       localStorage.setItem(
         "logit:tours:v1",
@@ -75,7 +78,10 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
       localStorage.setItem("logit:draft:v1", JSON.stringify(session));
       localStorage.setItem(
         "logit:profile:v1",
-        JSON.stringify({ blocksCollapsedByDefault }),
+        JSON.stringify({
+          blocksCollapsedByDefault,
+          ...(bodyweightKg ? { weight: bodyweightKg, weightUnit: "kg" } : {}),
+        }),
       );
 
       if (progressionState) {
@@ -107,8 +113,13 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
         localStorage.setItem("logit:sessions:v1", JSON.stringify(history));
       }
     },
-    { session, progressionState, history, blocksCollapsedByDefault },
+    { session, progressionState, history, blocksCollapsedByDefault, bodyweightKg },
   );
+}
+
+/** Swap / superset / remove live in the exercise header's ⋯ menu. */
+async function openExerciseMenu(page: Page, i = 0) {
+  await page.getByRole("button", { name: /^More actions for/ }).nth(i).click();
 }
 
 async function goToSession(page: Page) {
@@ -311,6 +322,62 @@ test.describe("adding exercises", () => {
   });
 });
 
+test.describe("bodyweight prompt", () => {
+  async function addExercise(page: Page, name: string) {
+    await page.locator('[aria-label="Add block"]').click();
+    await page.getByText("Strength exercise").click();
+    const input = page.locator('input[placeholder="e.g. Bench Press"]');
+    await input.fill(name);
+    await page.keyboard.press("Enter");
+    await expect(input).not.toBeVisible();
+  }
+
+  test("asks for bodyweight when a bodyweight exercise is added and none is known", async ({ page }) => {
+    await seedSession(page, { session: makeSession([]) });
+    await goToSession(page);
+
+    await addExercise(page, "Weighted Dips");
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toBeVisible();
+    await page.getByLabel("Bodyweight").fill("88.5");
+    await page.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).not.toBeVisible();
+
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("logit:profile:v1") ?? "{}").weight);
+    expect(saved).toBe(88.5);
+
+    // Known now, so a second bodyweight exercise doesn't ask again.
+    await addExercise(page, "Chin-Up");
+    await expect(page.getByText("Chin-Up")).toBeVisible();
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+  });
+
+  test("doesn't ask for weighted exercises, or again after 'Not now'", async ({ page }) => {
+    await seedSession(page, { session: makeSession([]) });
+    await goToSession(page);
+
+    await addExercise(page, "Romanian Deadlift");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+
+    await addExercise(page, "Pull ups");
+    await page.getByRole("button", { name: "Not now" }).click();
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+
+    await addExercise(page, "Push-Up");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+  });
+
+  test("isn't asked when bodyweight is already set", async ({ page }) => {
+    await seedSession(page, { session: makeSession([]), bodyweightKg: 80 });
+    await goToSession(page);
+    await addExercise(page, "Dips");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+  });
+});
+
 // ── Adding and managing sets ──────────────────────────────────────────────────
 
 test.describe("managing sets", () => {
@@ -420,7 +487,8 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Swap exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Swap exercise" }).click();
     const input = page.locator('input[placeholder="e.g. Bench Press"]');
     await expect(input).toBeVisible();
     await input.fill("Incline Bench Press");
@@ -447,7 +515,8 @@ test.describe("managing sets", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByText("Overhead Press")).toBeVisible();
 
-    await page.locator('[aria-label="Swap exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Swap exercise" }).click();
     const swapInput = page.locator('input[placeholder="e.g. Bench Press"]');
     await expect(swapInput).toBeVisible();
     await expect(swapInput).toBeEnabled();
@@ -463,7 +532,8 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Delete exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Remove exercise" }).click();
     // Confirm dialog appears
     await page.getByRole("button", { name: "Remove" }).click();
 
@@ -484,7 +554,8 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
 
     await expect(page.getByText("SUPERSET")).toBeVisible();
     await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
@@ -515,7 +586,8 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
 
-    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     // First member — completing it flows straight on, no rest.
@@ -622,6 +694,48 @@ test.describe("set reorder", () => {
   });
 });
 
+// ── Tap targets ───────────────────────────────────────────────────────────────
+
+test("every workout-screen control is at least 40px tall", async ({ page }) => {
+  await seedSession(page, {
+    session: makeSession([
+      makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100), makeSet("s2", 1, 5, 100)]),
+      makeStrengthBlock("b2", 1, "Row", [makeSet("s3", 0, 8, 60)]),
+      {
+        id: "m1", type: "mobility", orderIndex: 2,
+        data: { drillName: "Couch Stretch", metric: "hold", perSide: true, sets: [
+          { id: "ms1", orderIndex: 0, side: "left", durationSec: 30, completed: true },
+          { id: "ms2", orderIndex: 1, side: "right" },
+        ] },
+      },
+      {
+        id: "m2", type: "mobility", orderIndex: 3,
+        data: { drillName: "Cat Cow", metric: "reps", perSide: false, sets: [{ id: "ms3", orderIndex: 0, reps: 8 }] },
+      },
+      {
+        id: "c1", type: "cardio", orderIndex: 4,
+        data: { activityName: "Rower", intervals: [{ id: "i1", orderIndex: 0, durationMs: 300_000, distanceM: 1000, note: null }] },
+      },
+    ]),
+  });
+  await goToSession(page);
+  await expect(page.getByTestId("set-weight").first()).toBeVisible();
+
+  const small = await page.evaluate(() =>
+    [...document.querySelectorAll("button, a[href], input, [role=button]")]
+      .map((el) => {
+        // A pick-one segment's tap area covers its whole track (an ::after over the
+        // track's padding), so it's measured by the track.
+        const seg = el.hasAttribute("aria-pressed") && el.parentElement?.classList.contains("p-[3px]");
+        return { el, r: (seg ? el.parentElement! : el).getBoundingClientRect() };
+      })
+      // Swipe actions sit behind their row until revealed; they're 40px too.
+      .filter(({ r }) => r.width > 0 && r.height > 0 && r.height < 40)
+      .map(({ el, r }) => `${el.getAttribute("aria-label") ?? el.textContent?.trim()} (${Math.round(r.height)}px)`),
+  );
+  expect(small).toEqual([]);
+});
+
 // ── Finish session ────────────────────────────────────────────────────────────
 
 test.describe("finish session", () => {
@@ -678,6 +792,85 @@ test.describe("finish session", () => {
     await expect(page.getByText("5×100").first()).toBeVisible();
   });
 
+  test("recap keeps the buttons on screen with a long summary", async ({ page }) => {
+    const names = ["Bench Press", "Incline Press", "Row", "Pulldown", "Curl", "Pushdown", "Lateral Raise", "Leg Press"];
+    await seedSession(page, {
+      session: makeSession(
+        names.map((name, i) =>
+          makeStrengthBlock(`b${i}`, i, name, [0, 1, 2, 3].map((j) => makeSet(`s${i}-${j}`, j, 8, 40 + j * 5))),
+        ),
+      ),
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "Save & finish" })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "Back to workout" })).toBeInViewport();
+  });
+
+  test("recap shows assisted sets as BW and leaves them out of volume without a bodyweight", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
+        makeStrengthBlock("b2", 1, "Pec Deck", [makeSet("s3", 0, 10, 50)]),
+      ]),
+      // Pec Deck has history (and no PR today), so Dips is the only first-timer
+      // and gets its own card.
+      history: [makeCompletedSession("Pec Deck", [makeSet("ps1", 0, 10, 60)])],
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
+    await expect(breakdown.getByText("8×BW−25")).toBeVisible();
+    await expect(breakdown.getByText("5×BW+2.5")).toBeVisible();
+    // The first-time PR card uses the same BW form, with no 1RM estimate.
+    await expect(page.getByText("5 reps @ BW+2.5 kg")).toBeVisible();
+    // Only the 10 × 50 pec deck: with no bodyweight known the dips aren't
+    // counted, so the assisted set doesn't subtract 200 either.
+    await expect(page.getByText("500", { exact: true })).toBeVisible();
+  });
+
+  test("recap groups first-time exercises into one card", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 80)]),
+        makeStrengthBlock("b2", 1, "Squat", [makeSet("s2", 0, 5, 100)]),
+        makeStrengthBlock("b3", 2, "Row", [makeSet("s3", 0, 8, 60)]),
+      ]),
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    await expect(page.getByText("3 new exercises")).toBeVisible();
+    await expect(page.getByText(/Bench Press, Squat, Row/)).toBeVisible();
+    await expect(page.getByText("5 reps @ 80 kg")).toHaveCount(0);
+  });
+
+  test("recap counts bodyweight work at bodyweight ± the logged number", async ({ page }) => {
+    await seedSession(page, {
+      bodyweightKg: 90,
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
+        makeStrengthBlock("b2", 1, "Pull-Up", [makeSet("s3", 0, 6, 0)]),
+        makeStrengthBlock("b3", 2, "Pec Deck", [makeSet("s4", 0, 10, 50)]),
+      ]),
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    // Dips 5 × 92.5 + 8 × 65 = 983 (rounded), pull-ups 6 × 90 = 540, pec deck 500.
+    const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
+    await expect(breakdown.getByText("2 sets · 983 kg")).toBeVisible();
+    await expect(breakdown.getByText("1 set · 540 kg")).toBeVisible();
+    // Hero total: 982.5 + 540 + 500 = 2,022.5 → 2,023.
+    await expect(page.getByText("2,023", { exact: true })).toBeVisible();
+  });
+
   test("recap brackets superset exercises in the breakdown", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([
@@ -686,7 +879,8 @@ test.describe("finish session", () => {
       ]),
     });
     await goToSession(page);
-    await page.locator('[aria-label="Superset with next exercise"]').first().click();
+    await openExerciseMenu(page);
+    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     await page.getByRole("button", { name: "Finish workout" }).click();

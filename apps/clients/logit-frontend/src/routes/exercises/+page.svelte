@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Plus, Search, X, ChevronRight, ArrowLeft, Package, Check } from "lucide-svelte";
+  import { Plus, Search, X, ChevronRight, Package, Check } from "lucide-svelte";
   import { startExercisesTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
@@ -136,22 +138,22 @@
 
 <div class="flex flex-col pb-24 min-h-full">
   <!-- Header -->
-  <div class="flex items-center gap-1 px-1 py-3 border-b border-border">
+  <div class="page-header">
     {#if selecting}
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        class="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
         onclick={exitSelection}
         aria-label="Cancel selection"
       >
         <X class="h-4 w-4" />
       </button>
-      <h1 class="text-base font-semibold flex-1">
+      <h1 class="page-title">
         {selectedCount} selected
       </h1>
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-40 shrink-0"
+        class="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 shrink-0"
         onclick={openExport}
         disabled={selectedCount === 0}
         aria-label="Export selected as a pack"
@@ -160,18 +162,11 @@
         <Package class="h-4 w-4" />
       </button>
     {:else}
+      <BackButton onclick={() => back("/profile")} />
+      <h1 class="page-title">Exercises</h1>
       <button
         type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
-        onclick={() => back("/profile")}
-        aria-label="Go back"
-      >
-        <ArrowLeft class="h-4 w-4" />
-      </button>
-      <h1 class="text-base font-semibold flex-1">Exercises</h1>
-      <button
-        type="button"
-        class="h-8 w-8 flex items-center justify-center rounded text-muted-foreground hover:text-foreground shrink-0"
+        class="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground shrink-0"
         onclick={openAdd}
         aria-label="Add exercise"
         data-tour="exercises-add"
@@ -188,7 +183,7 @@
       <input
         type="search"
         placeholder="Search exercises…"
-        class="w-full rounded border bg-background pl-8 pr-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="h-10 w-full rounded-md border bg-background pl-8 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={query}
       />
       {#if query}
@@ -205,11 +200,11 @@
   </div>
 
   <!-- Filter tabs -->
-  <div class="flex gap-1 px-3 pb-2" data-tour="exercises-filter">
+  <div class="flex px-3 pb-2 gap-2" data-tour="exercises-filter">
     {#each (["all", "core", "mine"] as Filter[]) as f (f)}
       <button
         type="button"
-        class="px-3 py-1 rounded text-xs font-medium transition-colors {filter === f ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}"
+        class={chip(filter === f)} aria-pressed={filter === f}
         onclick={() => (filter = f)}
       >
         {f === "all" ? "All" : f === "core" ? "Built-in" : "Mine"}
@@ -226,7 +221,7 @@
     </p>
   {:else}
     {#if !selecting && exportable.length > 0}
-      <p class="px-3 pb-1 text-[11px] text-muted-foreground/70">
+      <p class="px-3 pb-1 text-[11px] text-muted-foreground">
         Long-press a custom exercise to select several and export them as a pack.
       </p>
     {/if}
@@ -248,7 +243,7 @@
                 class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors {checked
                   ? 'border-primary bg-primary text-primary-foreground'
                   : selectable
-                    ? 'border-muted-foreground/40'
+                    ? 'border-muted-foreground'
                     : 'border-transparent'}"
               >
                 {#if checked}<Check class="h-3.5 w-3.5" />{/if}
@@ -304,7 +299,7 @@
             id="ex-name"
             type="text"
             placeholder="e.g. Cable Fly"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={draftName}
           />
         </div>
@@ -317,18 +312,18 @@
             id="ex-notes"
             placeholder="e.g. Use slow eccentric, keep elbows tucked…"
             rows="3"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             bind:value={draftNotes}
           ></textarea>
         </div>
 
         <div class="flex flex-col gap-1.5">
           <span class="text-sm font-medium">Type</span>
-          <div class="flex gap-2">
+          <div class={segmentTrack}>
             {#each ([["normal", "Normal"], ["assisted", "Assisted"], ["bodyweight", "Bodyweight"]] as [ExerciseType, string][]) as [type, label] (type)}
               <button
                 type="button"
-                class="flex-1 py-1.5 rounded border text-xs font-medium transition-colors {draftType === type ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}"
+                class={segment(draftType === type)} aria-pressed={draftType === type}
                 onclick={() => (draftType = type)}
               >
                 {label}
@@ -344,7 +339,7 @@
 
         <button
           type="button"
-          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
           disabled={!draftName.trim() || saving}
           onclick={() => void save()}
         >
@@ -378,7 +373,7 @@
             id="pack-name"
             type="text"
             placeholder="e.g. My Gym's Machines"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={exportName}
           />
         </div>
@@ -389,7 +384,7 @@
 
         <button
           type="button"
-          class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+          class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
           disabled={!exportName.trim() || exporting}
           onclick={() => void exportPack()}
         >

@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import type { AlgorithmPreferencesField } from "@logit/core/domain/progression";
 
   let {
@@ -24,13 +27,11 @@
         {#if field.description}
           <p class="text-xs text-muted-foreground mt-0.5 mb-2">{field.description}</p>
         {/if}
-        <div class="flex rounded border overflow-hidden text-xs w-full">
+        <div class={cn(segmentTrack, "w-full")}>
           {#each field.options as opt (opt.value)}
             <button
               type="button"
-              class="flex-1 px-3 py-1.5 text-center transition-colors {getStr(field.key) === String(opt.value)
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:text-foreground'}"
+              class={segment(getStr(field.key) === String(opt.value))} aria-pressed={getStr(field.key) === String(opt.value)}
               onclick={() => onChange(field.key, opt.value)}
             >
               {opt.label}
@@ -47,26 +48,7 @@
           </div>
 
           {#if field.type === "boolean"}
-            <button
-              type="button"
-              role="switch"
-              aria-label={field.label}
-              aria-checked={getBool(field.key)}
-              class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {getBool(
-                field.key,
-              )
-                ? 'bg-primary'
-                : 'bg-input'}"
-              onclick={() => onChange(field.key, !getBool(field.key))}
-            >
-              <span
-                class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform {getBool(
-                  field.key,
-                )
-                  ? 'translate-x-4'
-                  : 'translate-x-0'}"
-              ></span>
-            </button>
+            <Switch checked={getBool(field.key)} label={field.label} onchange={() => onChange(field.key, !getBool(field.key))} />
           {:else if field.type === "number" || field.type === "range"}
             <div class="flex items-center gap-1.5 shrink-0">
               <input
@@ -75,7 +57,7 @@
                 max={field.max}
                 step={field.step ?? 1}
                 value={getNum(field.key)}
-                class="w-20 rounded border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                class="h-10 w-20 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                 onchange={(e) => onChange(field.key, Number((e.target as HTMLInputElement).value))}
               />
               {#if field.unit}

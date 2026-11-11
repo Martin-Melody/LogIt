@@ -9,6 +9,7 @@ import {
   getTrainingBlockTagRepo,
   getMuscleGroupInsightAlgorithmRegistry,
 } from "$lib/data/repoProvider";
+import { loadBodyweightLookup } from "$lib/features/bodyweight/bodyweight";
 
 /** The mobile app's repo/registry bundle for the @logit/core progression
  * usecases, which take their dependencies as an explicit parameter instead
@@ -24,5 +25,6 @@ export function getProgressionDeps(): ProgressionDeps {
     mobilityAlgorithmRegistry: getMobilityAlgorithmRegistry(),
     trainingBlockTagRepo: getTrainingBlockTagRepo(),
     muscleGroupInsightAlgorithmRegistry: getMuscleGroupInsightAlgorithmRegistry(),
+    loadBodyweight: loadBodyweightLookup,
   };
 }

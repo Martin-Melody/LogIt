@@ -1,8 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import { currentSession } from "$lib/stores/currentSession.store";
@@ -116,16 +116,9 @@
 </script>
 
 <div class="flex min-h-dvh flex-col">
-  <div class="flex items-center gap-2 border-b border-border px-3 py-2">
-    <button
-      type="button"
-      class="-ml-1 shrink-0 p-1 text-muted-foreground hover:text-foreground"
-      onclick={() => back("/")}
-      aria-label="Back"
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="flex-1 text-base font-semibold">Today's plan</h1>
+  <div class="page-header">
+    <BackButton onclick={() => back("/")} />
+    <h1 class="page-title">Today's plan</h1>
   </div>
 
   {#if error}
@@ -133,7 +126,7 @@
   {/if}
 
   {#if day}
-    <div class="border-b border-border px-4 pb-3 pt-4">
+    <div class="border-b border-border px-3 pb-3 pt-4">
       <h2 class="text-xl font-bold">{day.name ?? "Workout"}</h2>
       {#if plan}
         <p class="mt-0.5 text-xs text-muted-foreground">
@@ -145,14 +138,14 @@
 
   <div class="flex-1 pb-32">
     {#if !plan && !error}
-      <p class="px-4 py-6 text-sm text-muted-foreground">Working out today's numbers…</p>
+      <p class="px-3 py-6 text-sm text-muted-foreground">Working out today's numbers…</p>
     {/if}
     {#each rows as row (row.id)}
-      <div class="flex flex-col gap-0.5 border-b border-border px-4 py-3" data-testid="plan-row">
+      <div class="flex flex-col gap-0.5 border-b border-border px-3 py-3" data-testid="plan-row">
         <div class="flex items-center gap-2">
           <span class="flex-1 text-sm">{row.name}</span>
           {#if row.kind === "strength" && row.tag}
-            <span class="whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold {row.tag.cls}">{row.tag.text}</span>
+            <span class="whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {row.tag.cls}">{row.tag.text}</span>
           {/if}
         </div>
         {#if row.kind === "strength"}

@@ -78,7 +78,7 @@
     <div class="flex items-center justify-between gap-1.5 text-muted-foreground">
       <span class="flex items-center gap-1.5">
         <Icon class="h-3 w-3" />
-        <span class="uppercase tracking-wide text-[10px] font-medium">{label}</span>
+        <span class="uppercase tracking-wide text-xs font-medium">{label}</span>
       </span>
       <ChevronRight class="h-3.5 w-3.5 shrink-0" />
     </div>
@@ -116,11 +116,11 @@
       <div class="flex items-center gap-2">
         <span class="text-sm font-medium text-foreground">{payload.name}</span>
         {#if payload.family}
-          <span class="capitalize rounded border border-border px-1.5 py-0.5 text-[10px]">{payload.family}</span>
+          <span class="capitalize rounded-md border border-border px-1.5 py-0.5 text-[11px]">{payload.family}</span>
         {/if}
       </div>
       {#if payload.description}<span class="text-muted-foreground">{payload.description}</span>{/if}
-      {#if payload.author}<span class="text-muted-foreground/60">by {payload.author}</span>{/if}
+      {#if payload.author}<span class="text-muted-foreground">by {payload.author}</span>{/if}
 
     {:else if post.type === "Widget" && payload.name}
       <span class="text-sm font-medium text-foreground">{payload.name}</span>

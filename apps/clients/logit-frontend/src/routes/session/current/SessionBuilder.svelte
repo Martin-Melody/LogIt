@@ -31,6 +31,9 @@
   import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
+  import BodyweightPromptDialog from "$lib/features/bodyweight/BodyweightPromptDialog.svelte";
+  import { shouldAskForBodyweight, dismissBodyweightPrompt } from "$lib/features/bodyweight/bodyweight";
+  import type { ExerciseType } from "@logit/core/domain/exercise";
 
   import CurrentSessionHeader from "./Components/CurrentSessionHeader.svelte";
   import FinishWorkoutCard from "./Components/FinishWorkoutCard.svelte";
@@ -70,6 +73,8 @@
   let shareSession = $state<WorkoutSession | null>(null);
   let hasPreviousSession = $state(false);
   let noteOpen = $state(false);
+  // Set to the exercise's name while asking for bodyweight (see addExerciseWithName).
+  let bodyweightPromptFor = $state<string | null>(null);
 
   async function saveNote(value: string) {
     await onMutate((s) => setSessionNote(s, value));
@@ -132,11 +137,20 @@
     if (!trimmed) return;
     try {
       let exerciseId = selection.exerciseId;
+      let exerciseType: ExerciseType | undefined;
       if (!exerciseId) {
         const ex = await getExerciseRepo().create(trimmed);
         exerciseId = ex.id;
+        exerciseType = ex.exerciseType;
+      } else {
+        exerciseType = (await getExerciseRepo().getById(exerciseId).catch(() => null))?.exerciseType;
       }
       await persistDraft(addExercise(s, { exerciseName: trimmed, exerciseId }));
+      // Pull-ups, dips…: their volume needs a bodyweight. Asked after the add
+      // dialog has closed so the two don't fight over focus.
+      if (await shouldAskForBodyweight(trimmed, exerciseType).catch(() => false)) {
+        setTimeout(() => (bodyweightPromptFor = trimmed), 250);
+      }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to add exercise";
       toast.error(ui.error ?? "Failed to add exercise");
@@ -506,7 +520,7 @@
             rows="2"
             placeholder="Session note — how it felt, sleep, anything…"
             transition:reveal
-            class="w-full rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+            class="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             value={$currentSession?.note ?? ""}
             disabled={ui.saving || ui.finishing}
             onblur={(e) => void saveNote((e.currentTarget as HTMLTextAreaElement).value)}
@@ -514,7 +528,7 @@
         {:else}
           <button
             type="button"
-            class="text-xs text-muted-foreground hover:text-foreground"
+            class="-mx-2 h-11 px-2 text-xs text-muted-foreground hover:text-foreground"
             onclick={() => (noteOpen = true)}
           >
             + Session note
@@ -553,6 +567,14 @@
     onSubmit={addExerciseWithName}
   />
 
+  <BodyweightPromptDialog
+    exerciseName={bodyweightPromptFor}
+    onClose={(saved) => {
+      if (!saved) dismissBodyweightPrompt();
+      bodyweightPromptFor = null;
+    }}
+  />
+
   <AddCardioDialog
     open={addBlockUi.cardioOpen}
     saving={ui.saving || ui.finishing}
@@ -574,13 +596,13 @@
     >
       <Button
         size="icon"
-        class="rounded-full shadow-lg"
+        class="size-12 rounded-full shadow-lg"
         disabled={ui.saving || ui.finishing}
         aria-label="Add block"
         data-tour="session-add-exercise"
         onclick={openAddBlock}
       >
-        <Plus />
+        <Plus class="size-5" />
       </Button>
     </div>
 

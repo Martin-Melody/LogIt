@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import type { CheckinSchedule, CheckinSubmission, CheckinQuestion } from "@logit/core/domain/Checkin";
@@ -71,12 +72,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/checkins")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
+  <div class="page-header">
+    <BackButton onclick={() => back("/checkins")} />
     <div class="min-w-0 flex-1">
-      <p class="text-sm font-semibold truncate">{schedule?.name ?? "Check-in"}</p>
+      <p class="text-base font-semibold truncate">{schedule?.name ?? "Check-in"}</p>
       {#if alreadySubmitted}<p class="text-xs text-muted-foreground">Submitted — thanks!</p>{/if}
     </div>
   </div>
@@ -99,36 +98,36 @@
           <div class="mt-1.5">
             {#if q.type === "text"}
               <textarea id={q.id} rows="3" disabled={alreadySubmitted}
-                class="w-full rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 value={answerFor(q.id)?.text ?? ""}
                 onblur={(e) => update(q, { text: e.currentTarget.value })}></textarea>
             {:else if q.type === "number" || q.type === "weight"}
               <input id={q.id} type="number" inputmode="decimal" disabled={alreadySubmitted}
-                class="w-32 rounded border bg-background px-2 py-1.5 text-sm"
+                class="h-10 w-32 rounded-md border bg-background px-2 text-sm"
                 value={answerFor(q.id)?.number ?? ""}
                 onblur={(e) => update(q, { number: e.currentTarget.value === "" ? undefined : Number(e.currentTarget.value) })} />
               {#if q.type === "weight"}<span class="ml-1 text-xs text-muted-foreground">kg</span>{/if}
             {:else if q.type === "scale"}
               {@const min = q.scaleMin ?? 1}
               {@const max = q.scaleMax ?? 10}
-              <div class="flex flex-wrap gap-1">
+              <div class="flex flex-wrap gap-2">
                 {#each Array.from({ length: max - min + 1 }, (_, i) => min + i) as n}
                   <button type="button" disabled={alreadySubmitted}
-                    class="h-8 w-8 rounded border text-sm {answerFor(q.id)?.number === n ? 'bg-primary text-primary-foreground border-primary' : 'bg-background'}"
+                    class={chip(answerFor(q.id)?.number === n, "w-8")} aria-pressed={answerFor(q.id)?.number === n}
                     onclick={() => update(q, { number: n })}>{n}</button>
                 {/each}
               </div>
             {:else if q.type === "boolean"}
-              <div class="flex gap-2">
+              <div class={segmentTrack}>
                 {#each [{ v: true, l: "Yes" }, { v: false, l: "No" }] as opt}
                   <button type="button" disabled={alreadySubmitted}
-                    class="px-3 py-1.5 rounded border text-sm {answerFor(q.id)?.bool === opt.v ? 'bg-primary text-primary-foreground border-primary' : 'bg-background'}"
+                    class={segment(answerFor(q.id)?.bool === opt.v)} aria-pressed={answerFor(q.id)?.bool === opt.v}
                     onclick={() => update(q, { bool: opt.v })}>{opt.l}</button>
                 {/each}
               </div>
             {:else if q.type === "photo"}
               {#if answerFor(q.id)?.photoDataUrl}
-                <img src={answerFor(q.id)?.photoDataUrl} alt="check-in" class="max-h-40 rounded border border-border" />
+                <img src={answerFor(q.id)?.photoDataUrl} alt="check-in" class="max-h-40 rounded-md border border-border" />
               {/if}
               {#if !alreadySubmitted}
                 <input type="file" accept="image/*" class="mt-1 text-xs" onchange={(e) => handlePhoto(q, e)} />

@@ -153,13 +153,12 @@
       </p>
       <Button
         variant="outline"
-        size="sm"
         class="justify-start"
         disabled={phase === "exporting"}
         onclick={() => void handleExport()}
       >
         {#if phase === "exported"}
-          <Check class="mr-2 h-3.5 w-3.5 text-green-500" /> Downloaded
+          <Check class="mr-2 h-3.5 w-3.5 text-success" /> Downloaded
         {:else}
           <Download class="mr-2 h-3.5 w-3.5" />
           {phase === "exporting" ? "Exporting…" : "Download backup file"}
@@ -184,7 +183,7 @@
       {#if phase === "confirming" && parsedData}
         <!-- File parsed — show category picker -->
         <div
-          class="rounded border border-border bg-muted/30 p-3 flex flex-col gap-3"
+          class="rounded-md border border-border bg-muted/30 p-3 flex flex-col gap-3"
         >
           <div class="flex items-start gap-2">
             <FileJson class="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
@@ -195,10 +194,10 @@
           </div>
 
           <div
-            class="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/5 p-2"
+            class="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-2"
           >
-            <AlertTriangle class="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
-            <p class="text-xs text-amber-600 dark:text-amber-400">
+            <AlertTriangle class="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
+            <p class="text-xs text-warning">
               Most categories replace your current data outright. Nutrition and
               habits are merged in (kept alongside what you have). Can't be undone.
             </p>
@@ -242,21 +241,20 @@
         <p class="text-sm text-muted-foreground">Restoring data…</p>
       {:else if phase === "done"}
         <div
-          class="flex items-center gap-2 text-sm text-green-600 dark:text-green-400"
+          class="flex items-center gap-2 text-sm text-success"
         >
           <Check class="h-4 w-4" /> Restore complete. You may need to reload the
           app to see your data.
         </div>
       {:else if phase === "error"}
         <div
-          class="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/5 p-2"
+          class="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2"
         >
           <AlertTriangle class="h-3.5 w-3.5 mt-0.5 shrink-0 text-destructive" />
           <p class="text-xs text-destructive">{errorMsg}</p>
         </div>
         <Button
           variant="outline"
-          size="sm"
           class="justify-start self-start"
           onclick={cancelImport}
         >
@@ -265,7 +263,6 @@
       {:else}
         <Button
           variant="outline"
-          size="sm"
           class="justify-start"
           onclick={() => void handlePickFile()}
           disabled={phase === "picking"}

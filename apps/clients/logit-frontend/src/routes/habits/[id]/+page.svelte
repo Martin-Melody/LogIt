@@ -1,10 +1,10 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Archive, ArchiveRestore, Trash2 } from "lucide-svelte";
+  import { Archive, ArchiveRestore, Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
-  import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { getHabitRepo } from "$lib/data/repoProvider";
   import { localDateIso } from "@logit/core/domain/nutrition";
@@ -97,15 +97,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 border-b border-border px-3 py-2">
-    <button
-      type="button"
-      class="flex h-8 w-8 items-center justify-center"
-      onclick={() => back("/habits")}
-    >
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="min-w-0 flex-1 truncate text-sm font-semibold">
+  <div class="page-header">
+    <BackButton onclick={() => back("/habits")} />
+    <h1 class="page-title">
       {habit?.name ?? "Edit habit"}
     </h1>
 
@@ -113,7 +107,7 @@
       {#if habit.archived}
         <button
           type="button"
-          class="flex h-8 w-8 items-center justify-center text-muted-foreground"
+          class="flex h-11 w-11 items-center justify-center text-muted-foreground"
           aria-label="Restore habit"
           onclick={unarchive}
         >
@@ -122,7 +116,7 @@
       {:else}
         <button
           type="button"
-          class="flex h-8 w-8 items-center justify-center text-muted-foreground"
+          class="flex h-11 w-11 items-center justify-center text-muted-foreground"
           aria-label="Archive habit"
           onclick={archive}
         >
@@ -140,7 +134,7 @@
           <button
             {...props}
             type="button"
-            class="flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-destructive"
+            class="flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive"
             aria-label="Delete habit"
           >
             <Trash2 class="h-4 w-4" />

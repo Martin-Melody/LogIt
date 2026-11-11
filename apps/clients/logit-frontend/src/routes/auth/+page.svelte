@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -165,18 +167,18 @@
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium" for="forgot-email">Email</label>
         <input id="forgot-email" type="email" autocomplete="email" placeholder="you@example.com"
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={forgotEmail} />
       </div>
 
       {#if forgotResult}
-        <div class="rounded border px-3 py-2 {forgotResult.isError ? 'border-destructive/30 bg-destructive/5' : 'border-border'}">
+        <div class="rounded-md border px-3 py-2 {forgotResult.isError ? 'border-destructive/30 bg-destructive/5' : 'border-border'}">
           <p class="text-sm {forgotResult.isError ? 'text-destructive' : 'text-foreground'}">{forgotResult.message}</p>
         </div>
       {/if}
 
       <button type="button"
-        class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+        class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
         disabled={forgotLoading || !forgotEmail.trim()}
         onclick={() => void submitForgotPassword()}>
         {#if forgotLoading}<Loader2 class="h-4 w-4 animate-spin" />{/if}
@@ -197,27 +199,27 @@
     </p>
 
     <!-- Log in / Sign up toggle -->
-    <div class="flex rounded border overflow-hidden text-sm mb-5">
+    <div class={cn(segmentTrack, "mb-5")}>
       <button type="button"
-        class="flex-1 py-2 text-center transition-colors {mode === 'login' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+        class={segment(mode === 'login')} aria-pressed={mode === 'login'}
         onclick={() => switchMode("login")}>
         Log in
       </button>
       <button type="button"
-        class="flex-1 py-2 text-center transition-colors {mode === 'register' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+        class={segment(mode === 'register')} aria-pressed={mode === 'register'}
         onclick={() => switchMode("register")}>
         Sign up
       </button>
     </div>
 
     {#if mode === "register" && hasLocalData}
-      <p class="text-xs text-muted-foreground mb-4 rounded border border-border px-3 py-2">
+      <p class="text-xs text-muted-foreground mb-4 rounded-md border border-border px-3 py-2">
         Your workouts on this device stay put — they'll sync to your new account.
       </p>
     {/if}
 
     {#if mode === "login" && resumeUsername}
-      <p class="text-xs text-muted-foreground mb-4 rounded border border-border px-3 py-2">
+      <p class="text-xs text-muted-foreground mb-4 rounded-md border border-border px-3 py-2">
         Sign in as <span class="font-medium text-foreground">{resumeUsername}</span> to resume syncing this profile.
       </p>
     {/if}
@@ -231,7 +233,7 @@
         <input id="username" type="text"
           autocomplete="username"
           placeholder={mode === "login" ? "username or email" : "choose a username"}
-          class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={form.username} />
         {#if mode === "register"}
           <p class="text-xs text-muted-foreground">Letters, numbers, and underscores only.</p>
@@ -243,7 +245,7 @@
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium" for="email">Email</label>
           <input id="email" type="email" autocomplete="email" placeholder="you@example.com"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={form.email} />
         </div>
       {/if}
@@ -256,7 +258,7 @@
             type={showPassword ? "text" : "password"}
             autocomplete={mode === "login" ? "current-password" : "new-password"}
             placeholder="••••••••"
-            class="w-full rounded border bg-background px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={form.password} />
           <button type="button"
             class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -283,7 +285,7 @@
               type={showConfirmPassword ? "text" : "password"}
               autocomplete="new-password"
               placeholder="••••••••"
-              class="w-full rounded border bg-background px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring {passwordMismatch ? 'border-destructive focus:ring-destructive' : ''}"
+              class="h-10 w-full rounded-md border bg-background px-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-ring {passwordMismatch ? 'border-destructive focus:ring-destructive' : ''}"
               bind:value={form.confirmPassword} />
             <button type="button"
               class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -298,13 +300,13 @@
       {/if}
 
       {#if authError}
-        <div class="rounded border border-destructive/30 bg-destructive/5 px-3 py-2">
+        <div class="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
           <p class="text-sm text-destructive">{authError}</p>
         </div>
       {/if}
 
       <button type="submit"
-        class="w-full py-3 mt-2 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+        class="w-full py-3 mt-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
         disabled={submitDisabled}>
         {#if authLoading}
           <Loader2 class="h-4 w-4 animate-spin" />
@@ -332,24 +334,24 @@
           </button>
         </div>
       {:else}
-        <div class="rounded border border-border p-4 flex flex-col gap-3">
+        <div class="rounded-md border border-border p-4 flex flex-col gap-3">
           <p class="text-xs font-medium">Connect to a self-hosted server</p>
           <input type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             oninput={() => (urlTestResult = "idle")}
             bind:value={selfHostUrl} />
           {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
-            <p class="text-xs text-amber-600 dark:text-amber-400">HTTP is unencrypted — use HTTPS if possible.</p>
+            <p class="text-xs text-warning">HTTP is unencrypted — use HTTPS if possible.</p>
           {/if}
           <div class="flex items-center gap-2 flex-wrap">
             <button type="button"
-              class="px-3 py-1.5 rounded border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"
+              class="px-3 py-1.5 rounded-md border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"
               disabled={!selfHostUrl.trim() || selfHostUrl.trim().replace(/\/$/, "") === "https:/" || urlTestResult === "testing"}
               onclick={() => void testServerUrl()}>
               {urlTestResult === "testing" ? "Testing…" : "Test connection"}
             </button>
             <button type="button"
-              class="px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs disabled:opacity-50"
+              class="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs disabled:opacity-50"
               disabled={!selfHostUrl.trim() || selfHostUrl.trim().replace(/\/$/, "") === "https:/"}
               onclick={saveServerUrl}>
               Save
@@ -361,7 +363,7 @@
             {/if}
           </div>
           {#if urlTestResult === "ok"}
-            <p class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"><CheckCircle class="h-3.5 w-3.5" /> Reachable</p>
+            <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Reachable</p>
           {:else if urlTestResult === "error"}
             <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach server</p>
           {/if}

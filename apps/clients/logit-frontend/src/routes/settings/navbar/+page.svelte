@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { get } from "svelte/store";
   import { ArrowLeft, ArrowRight, ArrowLeftRight, GripVertical } from "lucide-svelte";
   import { back } from "$lib/navigation";
@@ -151,11 +152,9 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="flex items-center gap-2">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => back("/settings")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <h1 class="text-base font-semibold">Customise navigation</h1>
+  <div class="page-header -mx-3 -mt-3">
+    <BackButton onclick={() => back("/settings")} />
+    <h1 class="page-title">Customise navigation</h1>
   </div>
 
   <!-- Bottom bar -->
@@ -172,10 +171,10 @@
           {@const def = NAV_ITEM_DEFS.find((d) => d.id === id)}
           {@const gripAction = makeGripAction("bar", id)}
           {#if def && isAvailable(def)}
-            <li class="py-2 flex items-center gap-2 transition-opacity {barDragId === id ? 'opacity-40' : ''}">
+            <li class="flex items-center gap-2 transition-opacity {barDragId === id ? 'opacity-40' : ''}">
               <button
                 type="button"
-                class="touch-none cursor-grab text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing -ml-1 p-1"
+                class="touch-none cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing -ml-2 h-11 w-9 flex items-center justify-center"
                 aria-label="Drag to reorder"
                 use:gripAction
               >
@@ -186,7 +185,7 @@
               <Button
                 variant="ghost"
                 size="icon"
-                class="h-7 w-7 shrink-0 text-muted-foreground"
+                class="shrink-0 text-muted-foreground"
                 aria-label="Move to More"
                 onclick={() => navConfig.moveToMore(id)}
               >
@@ -216,10 +215,10 @@
           {@const def = NAV_ITEM_DEFS.find((d) => d.id === id)}
           {@const gripAction = makeGripAction("more", id)}
           {#if def && isAvailable(def)}
-            <li class="py-2 flex items-center gap-2 transition-opacity {moreDragId === id ? 'opacity-40' : ''}">
+            <li class="flex items-center gap-2 transition-opacity {moreDragId === id ? 'opacity-40' : ''}">
               <button
                 type="button"
-                class="touch-none cursor-grab text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing -ml-1 p-1"
+                class="touch-none cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing -ml-2 h-11 w-9 flex items-center justify-center"
                 aria-label="Drag to reorder"
                 use:gripAction
               >
@@ -230,7 +229,7 @@
               <Button
                 variant="ghost"
                 size="icon"
-                class="h-7 w-7 shrink-0 text-muted-foreground"
+                class="shrink-0 text-muted-foreground"
                 disabled={barFull}
                 aria-label="Move to bar"
                 onclick={() => navConfig.moveToBar(id)}

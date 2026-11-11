@@ -1,9 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { ArrowLeft } from "lucide-svelte";
   import { back } from "$lib/navigation";
-  import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import AlgorithmPreferencesForm from "$lib/components/AlgorithmPreferencesForm.svelte";
   import { getAlgorithmRegistry, getProgressionRepo } from "$lib/data/repoProvider";
@@ -56,11 +55,9 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="flex items-center gap-2">
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={() => back("/settings")}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
-    <h1 class="text-base font-semibold">
+  <div class="page-header -mx-3 -mt-3">
+    <BackButton onclick={() => back("/settings")} />
+    <h1 class="page-title">
       {algorithm?.name ?? "Algorithm"} Settings
     </h1>
   </div>
@@ -88,7 +85,7 @@
 
     <button
       type="button"
-      class="text-xs text-muted-foreground/60 hover:text-muted-foreground self-start transition-colors"
+      class="text-xs text-muted-foreground hover:text-foreground self-start transition-colors"
       onclick={async () => {
         prefs = buildDefaults(algorithm?.preferencesSchema ?? []);
         await save();

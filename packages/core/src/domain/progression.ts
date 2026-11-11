@@ -25,6 +25,9 @@ export type ExerciseHistoryEntry = {
   sets: SetEntry[];
   // 0-based position of this exercise in its session; undefined if unknown
   sessionPosition?: number;
+  /** The lifter's bodyweight (kg) around that session, when known — for the
+   * volume of bodyweight and assisted exercises. */
+  bodyweightKg?: number;
 };
 
 export type PrecedingExercise = {

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2 } from "lucide-svelte";
+  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2, MoreHorizontal } from "lucide-svelte";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
@@ -61,6 +61,8 @@
     children?: import("svelte").Snippet;
   }>();
 
+  let confirmRemove = $state(false);
+
   const goal = $derived(suggestion?.progressGoal ?? null);
   const fatiguePct = $derived(Math.round(suggestion?.reasoning?.computed?.fatigueDiscountPct ?? 0));
   const showMeter = $derived(!collapsed && goal !== null && meter.length > 0 && goal.reps <= 30);
@@ -84,40 +86,42 @@
 <div class="border-b border-border/50">
 <!-- Exercise section header -->
 <div class="border-t border-border bg-muted/20" data-tour="session-exercise-header">
-  <div class="flex items-center gap-2 px-3 py-2">
+  <!-- Every control here is a 44px target. Swap / superset / remove live in the
+       ⋯ menu so the row doesn't need six icons and the name keeps its room. -->
+  <div class="flex items-center pl-1 pr-1">
     {#if !grouped}
       <!-- Grip handle -->
       <button
         type="button"
-        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
         style="touch-action: none"
         use:gripAction
         aria-label="Drag to reorder"
         tabindex="-1"
         disabled={saving}
       >
-        <GripVertical class="h-3.5 w-3.5" />
+        <GripVertical class="h-4 w-4" />
       </button>
     {/if}
 
     <!-- Collapse toggle -->
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground {grouped ? 'ml-1' : ''}"
       onclick={onToggleCollapse}
       aria-label={collapsed ? "Expand exercise" : "Collapse exercise"}
       disabled={saving}
     >
       {#if collapsed}
-        <ChevronRight class="h-3.5 w-3.5" />
+        <ChevronRight class="h-4 w-4" />
       {:else}
-        <ChevronDown class="h-3.5 w-3.5" />
+        <ChevronDown class="h-4 w-4" />
       {/if}
     </button>
 
     <button
       type="button"
-      class="flex-1 min-w-0 text-left"
+      class="flex-1 min-w-0 h-11 pl-1 pr-2 text-left"
       onclick={onOpenDetail}
       disabled={saving}
       aria-label="{exerciseName} — open details"
@@ -130,44 +134,47 @@
     </span>
 
     {#if collapsed && hasActiveTimer}
-      <span class="shrink-0 flex items-center text-primary animate-pulse" aria-label="Rest timer active">
-        <Timer class="h-3.5 w-3.5" />
+      <span class="shrink-0 ml-2 flex items-center text-primary animate-pulse" aria-label="Rest timer active">
+        <Timer class="h-4 w-4" />
       </span>
     {/if}
 
-    {#if canSuperset}
+    {#if !collapsed}
       <button
         type="button"
-        class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-primary"
-        onclick={() => void onSuperset()}
-        disabled={saving}
-        aria-label="Superset with next exercise"
-      >
-        <Link2 class="h-3.5 w-3.5" />
-      </button>
-    {/if}
-
-    <button
-      type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
-      onclick={onSwap}
-      disabled={saving}
-      aria-label="Swap exercise"
-    >
-      <ArrowLeftRight class="h-3.5 w-3.5" />
-    </button>
-
-    {#if !collapsed}
-      <Button
-        size="icon"
-        class="h-7 w-7 shrink-0"
+        class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
         onclick={() => void onAddSet()}
         disabled={saving}
         aria-label="Add set"
       >
-        <Plus class="h-3.5 w-3.5" />
-      </Button>
+        <span class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Plus class="h-4 w-4" />
+        </span>
+      </button>
     {/if}
+
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger
+        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+        disabled={saving}
+        aria-label="More actions for {exerciseName}"
+      >
+        <MoreHorizontal class="h-5 w-5" />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content>
+        <DropdownMenu.Item onSelect={onSwap}>
+          <ArrowLeftRight /> Swap exercise
+        </DropdownMenu.Item>
+        {#if canSuperset}
+          <DropdownMenu.Item onSelect={() => void onSuperset()}>
+            <Link2 /> Superset with next exercise
+          </DropdownMenu.Item>
+        {/if}
+        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
+          <Trash2 /> Remove exercise
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
 
     <ConfirmDialog
       title="Remove exercise?"
@@ -175,20 +182,9 @@
       confirmLabel="Remove"
       {saving}
       onConfirm={onDelete}
-    >
-      {#snippet child({ props })}
-        <Button
-          {...props}
-          size="icon"
-          variant="ghost"
-          class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-          disabled={saving}
-          aria-label="Delete exercise"
-        >
-          <Trash2 class="h-3.5 w-3.5" />
-        </Button>
-      {/snippet}
-    </ConfirmDialog>
+      open={confirmRemove}
+      onOpenChange={(v: boolean) => (confirmRemove = v)}
+    />
   </div>
 
   {#if !collapsed && suggestion && suggestion.sets.length > 0}
@@ -196,7 +192,7 @@
       <div class="px-3 pb-2.5 flex flex-col gap-1.5" data-testid="progress-meter">
         <div class="flex items-center gap-2">
           {#if suggestion.change}
-            <span class="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
+            <span class="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
               {suggestion.change.text}
             </span>
           {/if}
@@ -219,7 +215,7 @@
                 <span
                   class="h-2.5 flex-1 rounded-[2px]
                     {cell === 'done'
-                    ? 'bg-blue-700 dark:bg-blue-400'
+                    ? 'bg-info'
                     : cell === 'target'
                       ? 'border border-dashed border-muted-foreground/60'
                       : 'bg-muted-foreground/15'}"
@@ -241,7 +237,7 @@
     {:else}
       <div class="px-3 pb-1.5 -mt-1 flex items-center gap-2 flex-wrap">
         {#if suggestion.change}
-          <span class="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
+          <span class="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
             {suggestion.change.text}
           </span>
         {/if}
@@ -256,16 +252,16 @@
       </div>
     {/if}
     {#if suggestion.notes}
-      <p class="px-3 pb-1.5 text-xs text-amber-600 dark:text-amber-400 -mt-1">{suggestion.notes}</p>
+      <p class="px-3 pb-1.5 text-xs text-warning -mt-1">{suggestion.notes}</p>
     {/if}
     {#if suggestion.nudge}
-      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
-        <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{suggestion.nudge.message}</p>
+      <div class="mx-3 mb-1.5 -mt-1 flex items-start gap-2 rounded-md border border-info/30 bg-info/10 px-2 py-1.5">
+        <p class="flex-1 text-xs text-info">{suggestion.nudge.message}</p>
         <div class="flex shrink-0 items-center gap-2">
           {#if suggestion.nudge.actionLabel}
             <button
               type="button"
-              class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2"
+              class="text-xs font-medium text-info underline underline-offset-2"
               onclick={() => onAcceptNudge(suggestion.nudge!.id)}
             >
               {suggestion.nudge.actionLabel}
@@ -273,7 +269,7 @@
           {/if}
           <button
             type="button"
-            class="text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+            class="text-xs text-info underline underline-offset-2"
             onclick={() => onDismissNudge(suggestion.nudge!.id)}
           >
             {suggestion.nudge.actionLabel ? "Not now" : "Got it"}

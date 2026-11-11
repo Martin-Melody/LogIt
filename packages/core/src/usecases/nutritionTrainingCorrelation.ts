@@ -68,15 +68,18 @@ function median(values: number[]): number {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function buildSessionSamples(sessions: WorkoutSession[]): SessionSample[] {
+function buildSessionSamples(
+  sessions: WorkoutSession[],
+  volumeOf: (s: WorkoutSession) => number = getSessionVolumeKg,
+): SessionSample[] {
   const trainable = sessions
     .filter((s) => !s.excludeFromProgression && getExercises(s).length > 0)
     .sort((a, b) => (a.startedAtMs ?? 0) - (b.startedAtMs ?? 0));
 
   const samples: SessionSample[] = [];
   for (let i = 1; i < trainable.length; i++) {
-    const prevVol = getSessionVolumeKg(trainable[i - 1]!);
-    const vol = getSessionVolumeKg(trainable[i]!);
+    const prevVol = volumeOf(trainable[i - 1]!);
+    const vol = volumeOf(trainable[i]!);
     if (prevVol <= 0 || vol <= 0) continue;
     samples.push({ session: trainable[i]!, improved: vol > prevVol });
   }
@@ -89,10 +92,16 @@ function bucketRate(samples: SessionSample[]): NutritionCorrelationBucket {
 }
 
 export async function getNutritionTrainingCorrelation(
-  deps: { workoutRepo: WorkoutRepo; nutritionRepo: NutritionRepo },
+  deps: {
+    workoutRepo: WorkoutRepo;
+    nutritionRepo: NutritionRepo;
+    /** Session volume with bodyweight work counted (pull-ups at BW, dips at BW−25).
+     * Defaults to plain tonnage, where those count only their added weight. */
+    sessionVolumeKg?: (s: WorkoutSession) => number;
+  },
 ): Promise<NutritionTrainingCorrelationResult> {
   const sessions = await deps.workoutRepo.listAllSessions();
-  const samples = buildSessionSamples(sessions);
+  const samples = buildSessionSamples(sessions, deps.sessionVolumeKg);
 
   if (samples.length < MIN_SESSIONS_FOR_CORRELATION) {
     const notEnough: Reasoning = {

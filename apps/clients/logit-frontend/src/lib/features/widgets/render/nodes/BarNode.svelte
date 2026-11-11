@@ -4,9 +4,9 @@
   const fallbackMax = $derived(Math.max(1, ...node.bars.map((b) => b.max ?? b.value)));
   const toneClass: Record<string, string> = {
     primary: "bg-primary",
-    protein: "bg-emerald-500",
-    carbs: "bg-amber-500",
-    fat: "bg-rose-500",
+    protein: "bg-macro-protein",
+    carbs: "bg-macro-carbs",
+    fat: "bg-macro-fat",
   };
   function pct(v: number, max: number): number {
     return Math.max(0, Math.min(100, (v / (max || 1)) * 100));

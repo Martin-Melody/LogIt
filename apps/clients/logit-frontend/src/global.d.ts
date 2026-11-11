@@ -3,7 +3,7 @@ declare module "d3-scale" {
 }
 
 declare module "d3-shape" {
-  export const curveNatural: any;
+  export const curveMonotoneX: any;
 }
 
 // vitest is now a real devDependency (see package.json) — its own types are used instead of a

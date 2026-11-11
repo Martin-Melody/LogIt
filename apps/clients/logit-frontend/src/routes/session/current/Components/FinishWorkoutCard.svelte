@@ -31,6 +31,7 @@
 
 <div class="py-3 flex flex-col items-center gap-2">
   <Button
+    size="lg"
     class="w-full"
     onclick={() => void onFinish()}
     disabled={!canFinish || saving}
@@ -51,7 +52,7 @@
         <button
           {...props}
           type="button"
-          class="text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+          class="-my-2 h-11 px-3 text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
           disabled={saving}
         >
           Discard workout

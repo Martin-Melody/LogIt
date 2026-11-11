@@ -10,7 +10,7 @@
       <p class="text-base font-semibold tabular-nums">{stat.value}</p>
       <p class="text-[11px] text-muted-foreground">{stat.label}</p>
       {#if stat.sublabel}
-        <p class="text-[10px] text-muted-foreground/70">{stat.sublabel}</p>
+        <p class="text-[11px] text-muted-foreground">{stat.sublabel}</p>
       {/if}
     </div>
   {/each}

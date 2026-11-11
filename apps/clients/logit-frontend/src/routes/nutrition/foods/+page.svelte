@@ -1,8 +1,9 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { ArrowLeft, Plus, Trash2, Pencil, ScanText } from "lucide-svelte";
+  import { Plus, Trash2, Pencil, ScanText } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -185,11 +186,9 @@
 {/if}
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/nutrition")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <h1 class="text-sm font-semibold">Manage foods &amp; recipes</h1>
+  <div class="page-header">
+    <BackButton onclick={() => back("/nutrition")} />
+    <h1 class="page-title">Manage foods &amp; recipes</h1>
   </div>
 
   {#if ui.loading}
@@ -213,8 +212,8 @@
                   {fmtKcal(r.perServing.kcal)} kcal / serving · {r.servings} servings
                 </span>
               </a>
-              <a href="/nutrition/foods/recipe/{r.id}" class="h-6 w-6 flex items-center justify-center text-muted-foreground"><Pencil class="h-3.5 w-3.5" /></a>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteRecipe(r.id)} aria-label="Delete">
+              <a href="/nutrition/foods/recipe/{r.id}" class="h-11 w-11 flex items-center justify-center text-muted-foreground"><Pencil class="h-3.5 w-3.5" /></a>
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => void deleteRecipe(r.id)} aria-label="Delete">
                 <Trash2 class="h-3.5 w-3.5" />
               </button>
             </li>
@@ -238,14 +237,14 @@
             {@const totals = mealTemplateTotals(t)}
             <li class="flex items-center gap-2 px-3 py-2 text-sm">
               <input
-                class="flex-1 min-w-0 bg-transparent outline-none focus:bg-muted rounded px-1 py-0.5"
+                class="flex-1 min-w-0 bg-transparent outline-none focus:bg-muted rounded-md px-1 h-10 focus:ring-1 focus:ring-ring"
                 value={t.name}
                 onblur={(e) => void renameTemplate(t, e.currentTarget.value)}
               />
               <span class="text-[11px] text-muted-foreground tabular-nums shrink-0">
                 {fmtKcal(totals.kcal)} kcal · {t.items.length} item{t.items.length === 1 ? "" : "s"}
               </span>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteTemplate(t.id)} aria-label="Delete">
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => void deleteTemplate(t.id)} aria-label="Delete">
                 <Trash2 class="h-3.5 w-3.5" />
               </button>
             </li>
@@ -287,22 +286,22 @@
           {#if ocrReady}
             <button
               type="button"
-              class="self-start rounded border border-border text-sm px-3 py-1.5 flex items-center gap-1.5"
+              class="self-start rounded-md border border-border text-sm px-3 py-1.5 flex items-center gap-1.5"
               onclick={() => (showLabelScanner = true)}
             >
               <ScanText class="h-4 w-4" /> Scan nutrition label
             </button>
           {/if}
-          <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={draft.name} />
-          <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Brand (optional)" bind:value={draft.brand} />
+          <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" placeholder="Name" bind:value={draft.name} />
+          <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" placeholder="Brand (optional)" bind:value={draft.brand} />
           <div class="grid grid-cols-4 gap-2">
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="kcal" bind:value={draft.kcal} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="P" bind:value={draft.protein} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="C" bind:value={draft.carbs} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="F" bind:value={draft.fat} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="kcal" bind:value={draft.kcal} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="P" bind:value={draft.protein} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="C" bind:value={draft.carbs} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" placeholder="F" bind:value={draft.fat} />
           </div>
           <p class="text-[11px] text-muted-foreground">Values per 100 g.</p>
-          <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="Serving size in grams (optional)" bind:value={draft.serving} />
+          <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="numeric" placeholder="Serving size in grams (optional)" bind:value={draft.serving} />
           {#if editingId}
             <p class="text-[11px] text-muted-foreground">
               Entries you already logged from this food keep their saved values.
@@ -321,10 +320,10 @@
             <li class="flex items-center gap-2 px-3 py-2 text-sm">
               <a href="/nutrition/food/{f.food.id}" class="flex-1 min-w-0 truncate">{f.food.name}</a>
               <span class="text-xs text-muted-foreground tabular-nums">{fmtKcal(f.food.per100g.kcal)}/100g</span>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => startEdit(f)} aria-label="Edit">
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => startEdit(f)} aria-label="Edit">
                 <Pencil class="h-3.5 w-3.5" />
               </button>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteFood(f.food.id)} aria-label="Delete">
+              <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground" onclick={() => void deleteFood(f.food.id)} aria-label="Delete">
                 <Trash2 class="h-3.5 w-3.5" />
               </button>
             </li>

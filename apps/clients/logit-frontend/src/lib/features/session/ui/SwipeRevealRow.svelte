@@ -99,21 +99,25 @@
       {#if onEdit}
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          class="text-info"
           {disabled}
+          aria-label="Edit set"
           onclick={() => { onEdit?.(); close(); }}
         >
-          <Pencil color="blue" />
+          <Pencil />
         </Button>
       {/if}
       {#if onDelete}
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          class="text-destructive"
           {disabled}
+          aria-label="Delete set"
           onclick={() => { onDelete?.(); close(); }}
         >
-          <Trash color="red" />
+          <Trash />
         </Button>
       {/if}
     </div>

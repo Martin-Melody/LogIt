@@ -84,7 +84,7 @@
   {:else}
     <ul class="flex flex-col gap-2 flex-1">
       {#each accounts as account (account.id)}
-        <li class="rounded border transition-colors {selectedId === account.id ? 'border-primary bg-primary/5' : 'border-border'}">
+        <li class="rounded-md border transition-colors {selectedId === account.id ? 'border-primary bg-primary/5' : 'border-border'}">
           <button type="button"
             class="w-full text-left px-4 py-3"
             onclick={() => select(account)}>
@@ -98,12 +98,12 @@
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{account.displayName || account.username}</p>
-                <p class="text-[10px] text-muted-foreground">
+                <p class="text-[11px] text-muted-foreground">
                   {account.serverUserId ? "Linked account" : account.passwordHash ? "Password protected" : "Local only"}
                 </p>
               </div>
               {#if account.id === activeId}
-                <span class="flex items-center gap-1 text-[10px] text-primary shrink-0"><Check class="h-3.5 w-3.5" /> Active</span>
+                <span class="flex items-center gap-1 text-[11px] text-primary shrink-0"><Check class="h-3.5 w-3.5" /> Active</span>
               {/if}
             </div>
           </button>
@@ -122,7 +122,7 @@
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     autocomplete="current-password"
-                    class="w-full rounded border border-border bg-background px-3 py-2 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-ring"
+                    class="h-10 w-full rounded-md border border-border bg-background px-3 text-sm pr-10 focus:outline-none focus:ring-1 focus:ring-ring"
                     bind:value={password}
                     onkeydown={(e) => { if (e.key === "Enter") void switchTo(account); }} />
                   <button type="button"
@@ -136,7 +136,7 @@
                 <p class="text-xs text-destructive">{error}</p>
               {/if}
               <button type="button"
-                class="w-full py-2 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                class="w-full py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                 disabled={busy || (!!account.passwordHash && !password)}
                 onclick={() => void switchTo(account)}>
                 {#if busy}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if}
@@ -149,7 +149,7 @@
     </ul>
 
     <button type="button"
-      class="mt-4 flex items-center justify-center gap-1.5 w-full py-2.5 rounded border border-dashed border-border text-sm text-muted-foreground hover:border-muted-foreground/50 transition-colors disabled:opacity-50"
+      class="mt-4 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:border-muted-foreground/50 transition-colors disabled:opacity-50"
       disabled={creating}
       onclick={() => void addProfile()}>
       {#if creating}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Plus class="h-4 w-4" />{/if}

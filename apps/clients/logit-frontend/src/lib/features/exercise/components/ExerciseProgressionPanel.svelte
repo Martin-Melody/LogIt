@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { curveNatural } from "d3-shape";
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
+  import { curveMonotoneX } from "d3-shape";
   import { scaleUtc } from "d3-scale";
   import { AreaChart } from "layerchart";
   import * as Chart from "$lib/components/ui/chart";
@@ -32,10 +34,9 @@
   );
 
   const chartData = $derived(
-    currentSeries?.points.map((p) => ({
-      date: new Date(p.date),
-      value: p.value,
-    })) ?? [],
+    (currentSeries?.points ?? [])
+      .map((p) => ({ date: new Date(p.date), value: p.value }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime()),
   );
 
   const currentDef = $derived(metricDefs.find((d) => d.id === activeSeries));
@@ -99,16 +100,16 @@
           </div>
         {/if}
         {#if story.nextNote}
-          <p class="text-xs text-amber-600 dark:text-amber-400">{story.nextNote}</p>
+          <p class="text-xs text-warning">{story.nextNote}</p>
         {/if}
         {#if story.nudge}
-          <div class="flex items-start gap-2 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1.5">
-            <p class="flex-1 text-xs text-sky-700 dark:text-sky-400">{story.nudge.message}</p>
+          <div class="flex items-start gap-2 rounded-md border border-info/30 bg-info/10 px-2 py-1.5">
+            <p class="flex-1 text-xs text-info">{story.nudge.message}</p>
             <div class="flex shrink-0 items-center gap-2">
               {#if story.nudge.actionLabel}
                 <button
                   type="button"
-                  class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2"
+                  class="text-xs font-medium text-info underline underline-offset-2"
                   onclick={() => handleAcceptNudge(story!.nudge!.id)}
                 >
                   {story.nudge.actionLabel}
@@ -116,7 +117,7 @@
               {/if}
               <button
                 type="button"
-                class="text-xs text-sky-700 dark:text-sky-400 underline underline-offset-2"
+                class="text-xs text-info underline underline-offset-2"
                 onclick={() => handleDismissNudge(story!.nudge!.id)}
               >
                 {story.nudge.actionLabel ? "Not now" : "Got it"}
@@ -134,17 +135,17 @@
           <!-- §10.3.2 — the rep-range ladder ran out of rungs with no real
                difference. Presents the remaining hypotheses as options, not
                a decision made for the user (Martin's call). -->
-          <div class="rounded border border-border px-2 py-1.5">
+          <div class="rounded-md border border-border px-2 py-1.5">
             <p class="text-xs text-muted-foreground mb-1">
               Rep-range experiments didn't find a difference here. Worth checking next:
             </p>
             <div class="flex flex-wrap gap-3">
               {#if story.plateauNextSteps.muscleGroup}
-                <a href="/progress?tab=muscles" class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2">
+                <a href="/progress?tab=muscles" class="text-xs font-medium text-info underline underline-offset-2">
                   {story.plateauNextSteps.muscleGroup} volume/frequency
                 </a>
               {/if}
-              <a href="/progress?tab=nutrition" class="text-xs font-medium text-sky-700 dark:text-sky-400 underline underline-offset-2">
+              <a href="/progress?tab=nutrition" class="text-xs font-medium text-info underline underline-offset-2">
                 Nutrition timing
               </a>
             </div>
@@ -169,11 +170,11 @@
 
     <!-- Series switcher — only shown when more than one series available -->
     {#if analytics.series.length > 1}
-      <div class="flex rounded border overflow-hidden text-xs self-start">
+      <div class={cn(segmentTrack, "w-full")}>
         {#each analytics.series as s (s.metricId)}
           <button
             type="button"
-            class="px-3 py-1.5 transition-colors {activeSeries === s.metricId ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}"
+            class={segment(activeSeries === s.metricId)} aria-pressed={activeSeries === s.metricId}
             onclick={() => (activeSeries = s.metricId)}
           >
             {s.label}
@@ -189,10 +190,14 @@
           data={chartData}
           x="date"
           xScale={scaleUtc()}
+          yNice={4}
           series={[{ key: "value", label: currentSeries?.label ?? "", color: chartConfig.value.color }]}
           props={{
             area: {
-              curve: curveNatural,
+              // Monotone: smooth, but never above / below the points it joins or
+              // backwards in time. curveNatural overshot on unevenly spaced sessions,
+              // looping past the first / last point and out of the plot.
+              curve: curveMonotoneX,
               fillOpacity: 0.3,
               line: { class: "stroke-1" },
               motion: "tween",
@@ -201,9 +206,13 @@
               format: (v: Date) =>
                 v.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
             },
+            // No rotated axis title: on a phone it overlapped the tick numbers, and the
+            // toggle above already names the metric. The unit rides on the ticks.
             yAxis: {
-              label: currentDef?.unit ? `${currentSeries?.label ?? ""} (${currentDef.unit})` : currentSeries?.label,
-              format: (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
+              format: (v: number) => {
+                const n = Number.isInteger(v) ? String(v) : v.toFixed(1);
+                return currentDef?.unit ? `${n} ${currentDef.unit}` : n;
+              },
               ticks: 4,
             },
           }}

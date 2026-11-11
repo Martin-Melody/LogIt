@@ -1,17 +1,21 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
   import type { WorkoutSession, SetEntry, ExerciseEntry, MobilityBlockData } from "@logit/core/domain/workout";
-  import { getExercises, updateSet, foldSupersets, setTypeMeta, getSessionVolumeKg, mobilitySetGroups } from "@logit/core/domain/workout";
+  import { loadVolumeContext, sessionVolumeKg, type VolumeContext } from "$lib/features/bodyweight/bodyweight";
+  import { getExercises, updateSet, foldSupersets, setTypeMeta, mobilitySetGroups } from "@logit/core/domain/workout";
   import { durationMs, formatDuration } from "@logit/core/domain/time";
-  import { formatWeight } from "@logit/core/domain/units";
+  import { formatWeight, formatLoad } from "@logit/core/domain/units";
+  import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { profile } from "$lib/stores/profile.store";
   import { reveal } from "$lib/transitions";
   import { getSession } from "$lib/usecases/getSession";
   import { deleteSession } from "$lib/usecases/deleteSession";
   import { editSession } from "$lib/usecases/editSession";
-  import { ArrowLeft, Share2, Trash, Pencil } from "lucide-svelte";
+  import { Share2, Trash, Pencil } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
@@ -46,6 +50,12 @@
   });
 
   const displaySession = $derived(edit.active && edit.draft ? edit.draft : vm.session);
+  // Bodyweight + exercise types, so pull-ups and dips count in the volume.
+  let volumeCtx = $state<VolumeContext | null>(null);
+  $effect(() => {
+    void loadVolumeContext().then((c) => (volumeCtx = c)).catch(() => {});
+  });
+  const volumeKg = $derived(displaySession ? sessionVolumeKg(displaySession, volumeCtx) : 0);
 
   let editMachines: Machine[] = $state([]);
   let editDefaultMachineId: string | undefined = $state(undefined);
@@ -210,7 +220,7 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     {#if edit.active}
       <Button
         variant="ghost"
@@ -223,7 +233,7 @@
       </Button>
 
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-semibold">Editing session</span>
+        <span class="text-base font-semibold">Editing session</span>
       </div>
 
       <Button
@@ -236,12 +246,10 @@
         {vm.saving ? "Saving…" : "Save"}
       </Button>
     {:else}
-      <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back("/sessions")}>
-        <ArrowLeft class="h-4 w-4" />
-      </Button>
+      <BackButton onclick={() => back("/sessions")} />
 
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-semibold">
+        <span class="text-base font-semibold">
           {ended ? longDate(ended) : "Session"}
         </span>
       </div>
@@ -250,7 +258,7 @@
         <Button
           variant="ghost"
           size="icon"
-          class="h-7 w-7 text-muted-foreground"
+          class="text-muted-foreground"
           disabled={vm.loading || !vm.session}
           aria-label="Share session"
           onclick={() => (vm.sharing = true)}
@@ -262,7 +270,7 @@
       <Button
         variant="ghost"
         size="icon"
-        class="h-7 w-7 text-muted-foreground"
+        class="text-muted-foreground"
         disabled={vm.loading || !vm.session}
         aria-label="Edit session"
         onclick={startEditing}
@@ -283,7 +291,7 @@
             {...props}
             variant="ghost"
             size="icon"
-            class="h-7 w-7 text-muted-foreground hover:text-destructive"
+            class="text-muted-foreground hover:text-destructive"
             disabled={vm.loading || !vm.session || vm.deleting}
             aria-label="Delete session"
           >
@@ -312,13 +320,13 @@
       <span>{getExercises(displaySession).length} exercise{getExercises(displaySession).length === 1 ? "" : "s"}</span>
       <span>·</span>
       <span>{countSets(displaySession)} sets</span>
-      {#if getSessionVolumeKg(displaySession) > 0}
+      {#if volumeKg > 0}
         <span>·</span>
-        <span>{formatWeight(getSessionVolumeKg(displaySession), weightUnit)}</span>
+        <span>{formatWeight(volumeKg, weightUnit)}</span>
       {/if}
       {#if displaySession.excludeFromProgression}
         <span>·</span>
-        <span class="text-amber-500 dark:text-amber-400">Excluded from progression</span>
+        <span class="text-warning">Excluded from progression</span>
       {/if}
     </div>
 
@@ -334,7 +342,7 @@
           <input
             id="edit-started"
             type="datetime-local"
-            class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             value={msToDatetimeLocal(edit.draft.startedAtMs)}
             onchange={(e) => { if (edit.draft) edit.draft.startedAtMs = new Date(e.currentTarget.value).getTime(); }}
           />
@@ -345,7 +353,7 @@
             <input
               id="edit-ended"
               type="datetime-local"
-              class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="h-10 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               value={msToDatetimeLocal(edit.draft.endedAtMs)}
               onchange={(e) => { if (edit.draft) edit.draft.endedAtMs = new Date(e.currentTarget.value).getTime(); }}
             />
@@ -356,17 +364,7 @@
             <span class="text-sm font-medium">Exclude from progression</span>
             <span class="text-xs text-muted-foreground">This session won't influence future weight suggestions.</span>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={edit.draft.excludeFromProgression ?? false}
-            class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors {edit.draft.excludeFromProgression ? 'bg-primary' : 'bg-muted'}"
-            onclick={() => { if (edit.draft) edit.draft.excludeFromProgression = !edit.draft.excludeFromProgression; }}
-          >
-            <span
-              class="pointer-events-none block h-4 w-4 rounded-full bg-white shadow transition-transform {edit.draft.excludeFromProgression ? 'translate-x-4' : 'translate-x-0'}"
-            ></span>
-          </button>
+          <Switch checked={edit.draft.excludeFromProgression ?? false} label="Exclude from progression" onchange={() => { if (edit.draft) edit.draft.excludeFromProgression = !edit.draft.excludeFromProgression; }} />
         </div>
       </div>
     {/if}
@@ -399,12 +397,13 @@
           {#if edit.active}<span></span>{/if}
         </div>
 
+        {@const bodyweight = usesBodyweightLoad(ex.exerciseId ? volumeCtx?.typeById.get(ex.exerciseId) : undefined, ex.sets.map((s) => s.weight))}
         {#each [...ex.sets].sort(sortByOrder) as set, i (set.id)}
           {@const meta = setTypeMeta(set.setType)}
           {#snippet cells()}
             <span class="flex items-center gap-1">
               {#if meta.short}
-                <span class="text-[10px] font-bold leading-none px-1 py-0.5 rounded border {meta.badgeClass}" title={meta.label}>{meta.short}</span>
+                <span class="text-[11px] font-bold leading-none px-1 py-0.5 rounded-md border {meta.badgeClass}" title={meta.label}>{meta.short}</span>
               {:else}
                 <span class="text-xs text-muted-foreground tabular-nums">{i + 1}</span>
               {/if}
@@ -412,7 +411,7 @@
             <span class="text-sm tabular-nums">
               {set.reps}{#if set.rpe != null}<span class="text-xs text-muted-foreground"> @{set.rpe}</span>{/if}
             </span>
-            <span class="text-sm tabular-nums">{formatWeight(set.weight, weightUnit, { withUnit: false })}</span>
+            <span class="text-sm tabular-nums">{formatLoad(set.weight, weightUnit, bodyweight, { withUnit: false })}</span>
           {/snippet}
           {#if edit.active}
             <button
@@ -438,7 +437,7 @@
       {#each groups as group (group.kind === "superset" ? group.id : group.exercise.id)}
         {#if group.kind === "superset"}
           <div class="border-t border-primary/30 bg-primary/[0.03]" transition:reveal>
-            <p class="px-3 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <p class="px-3 pt-1.5 text-xs font-medium uppercase tracking-wide text-primary">
               {group.label ?? "Superset"}
             </p>
             <div class="ml-3 border-l-2 border-primary/30">

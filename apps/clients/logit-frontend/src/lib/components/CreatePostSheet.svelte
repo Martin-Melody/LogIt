@@ -359,7 +359,7 @@
       <span class="text-sm font-semibold flex-1">New post</span>
       <button
         type="button"
-        class="px-4 py-1.5 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+        class="px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
         disabled={!canSubmit}
         onclick={() => void submit()}
       >
@@ -374,7 +374,7 @@
       <textarea
         rows={3}
         placeholder="What's on your mind?"
-        class="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground/60"
+        class="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground"
         bind:value={body}
       ></textarea>
 
@@ -419,7 +419,7 @@
       <!-- ── Workout picker ─────────────────────────────────────────────── -->
       {#if attachmentType === "workout"}
         {#if prefillSession}
-          <div class="rounded border border-border bg-muted/30 px-3 py-2.5 flex items-center gap-3 shrink-0">
+          <div class="rounded-md border border-border bg-muted/30 px-3 py-2.5 flex items-center gap-3 shrink-0">
             <Dumbbell class="h-4 w-4 text-muted-foreground shrink-0" />
             <p class="text-xs text-muted-foreground">{sessionSummary(prefillSession)}</p>
           </div>
@@ -435,7 +435,7 @@
                 {#each ($recentSessions ?? []) as s (s.id)}
                   <li>
                     <button type="button"
-                      class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                      class="w-full text-left px-3 py-2 rounded-md border text-xs transition-colors
                         {selectedSession?.id === s.id
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"
@@ -460,7 +460,7 @@
               {#each prs as pr (pr.exerciseName)}
                 <li>
                   <button type="button"
-                    class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                    class="w-full text-left px-3 py-2 rounded-md border text-xs transition-colors
                       {prExercise === pr.exerciseName
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"
@@ -477,18 +477,18 @@
 
           <!-- Always show editable fields (pre-filled if PR was selected) -->
           <input type="text" placeholder="Exercise name"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             bind:value={prExercise} />
           <div class="grid grid-cols-2 gap-2">
-            <div class="flex items-center rounded border bg-background overflow-hidden">
+            <div class="flex items-center rounded-md border bg-background overflow-hidden">
               <input type="number" min="0" inputmode="decimal" placeholder="Weight"
-                class="flex-1 min-w-0 px-3 py-2 text-sm bg-transparent focus:outline-none"
+                class="h-10 flex-1 min-w-0 px-3 text-sm bg-transparent focus:outline-none"
                 bind:value={prWeight} />
               <span class="pr-3 text-xs text-muted-foreground">kg</span>
             </div>
-            <div class="flex items-center rounded border bg-background overflow-hidden">
+            <div class="flex items-center rounded-md border bg-background overflow-hidden">
               <input type="number" min="0" inputmode="numeric" placeholder="Reps"
-                class="flex-1 min-w-0 px-3 py-2 text-sm bg-transparent focus:outline-none"
+                class="h-10 flex-1 min-w-0 px-3 text-sm bg-transparent focus:outline-none"
                 bind:value={prReps} />
               <span class="pr-3 text-xs text-muted-foreground">reps</span>
             </div>
@@ -509,7 +509,7 @@
               {#each ($splits ?? []) as split (split.id)}
                 <li>
                   <button type="button"
-                    class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                    class="w-full text-left px-3 py-2 rounded-md border text-xs transition-colors
                       {selectedSplit?.id === split.id
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"
@@ -538,7 +538,7 @@
               {#each customExercises as ex (ex.id)}
                 <li>
                   <button type="button"
-                    class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                    class="w-full text-left px-3 py-2 rounded-md border text-xs transition-colors
                       {selectedExerciseId === ex.id
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"
@@ -567,7 +567,7 @@
               {#each habits as habit (habit.id)}
                 <li>
                   <button type="button"
-                    class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                    class="w-full text-left px-3 py-2 rounded-md border text-xs transition-colors
                       {selectedHabitId === habit.id
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"
@@ -595,7 +595,7 @@
               {#each algorithms as algo (algo.id + algo.family)}
                 <li>
                   <button type="button"
-                    class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                    class="w-full text-left px-3 py-2 rounded-md border text-xs transition-colors
                       {selectedAlgo?.id === algo.id && selectedAlgo?.family === algo.family
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"
@@ -603,7 +603,7 @@
                   >
                     <span class="font-medium">{algo.name}</span>
                     <span class="ml-2 capitalize text-muted-foreground">{algo.family}</span>
-                    {#if algo.author}<span class="ml-1 text-muted-foreground/60">· {algo.author}</span>{/if}
+                    {#if algo.author}<span class="ml-1 text-muted-foreground">· {algo.author}</span>{/if}
                   </button>
                 </li>
               {/each}
@@ -620,7 +620,7 @@
             {#each widgets as w (w.id)}
               <li>
                 <button type="button"
-                  class="w-full text-left px-3 py-2 rounded border text-xs transition-colors
+                  class="w-full text-left px-3 py-2 rounded-md border text-xs transition-colors
                     {selectedWidgetId === w.id
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border text-muted-foreground hover:border-muted-foreground/50'}"

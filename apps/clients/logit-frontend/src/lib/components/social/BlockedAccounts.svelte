@@ -61,7 +61,7 @@
             </div>
             <button
               type="button"
-              class="text-xs rounded border border-border px-2.5 py-1 disabled:opacity-50 shrink-0"
+              class="text-xs rounded-md border border-border px-2.5 py-1 disabled:opacity-50 shrink-0"
               disabled={unblocking === u.id}
               onclick={() => unblock(u)}
             >

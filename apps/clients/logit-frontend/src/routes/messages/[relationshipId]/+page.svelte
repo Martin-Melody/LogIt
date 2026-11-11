@@ -1,7 +1,8 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount, onDestroy, tick } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Send } from "lucide-svelte";
+  import { Send } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
@@ -58,11 +59,9 @@
 </script>
 
 <div class="flex flex-col h-[100dvh]">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
-    <button type="button" class="h-8 w-8 flex items-center justify-center" onclick={() => back("/messages")}>
-      <ArrowLeft class="h-4 w-4" />
-    </button>
-    <p class="text-sm font-semibold truncate">{name}</p>
+  <div class="page-header shrink-0">
+    <BackButton onclick={() => back("/messages")} />
+    <p class="text-base font-semibold truncate">{name}</p>
   </div>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive shrink-0">{ui.error}</p>{/if}
@@ -77,7 +76,7 @@
         <div class="flex {m.mine ? 'justify-end' : 'justify-start'}">
           <div class="max-w-[80%] rounded-lg px-3 py-2 text-sm {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">
             <p class="whitespace-pre-wrap break-words">{m.body}</p>
-            <p class="text-[10px] opacity-60 mt-0.5">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>
+            <p class="text-[11px] opacity-80 mt-0.5">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>
           </div>
         </div>
       {/each}
@@ -89,10 +88,10 @@
       bind:value={draft}
       rows="1"
       placeholder="Message…"
-      class="flex-1 resize-none rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
+      class="flex-1 resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
       onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
     ></textarea>
-    <Button type="submit" size="icon" class="h-9 w-9 shrink-0" disabled={ui.sending || !draft.trim()}>
+    <Button type="submit" size="icon" class="h-11 w-11 shrink-0" disabled={ui.sending || !draft.trim()}>
       <Send class="h-4 w-4" />
     </Button>
   </form>

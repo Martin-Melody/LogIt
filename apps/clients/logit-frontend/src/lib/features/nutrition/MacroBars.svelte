@@ -6,9 +6,9 @@
 
   const rows = $derived([
     { key: "kcal", label: "Calories", got: consumed.kcal, goal: target?.kcal ?? 0, fmt: fmtKcal, unit: "kcal", color: "bg-primary" },
-    { key: "p", label: "Protein", got: consumed.proteinG, goal: target?.proteinG ?? 0, fmt: fmtGrams, unit: "", color: "bg-emerald-500" },
-    { key: "c", label: "Carbs", got: consumed.carbsG, goal: target?.carbsG ?? 0, fmt: fmtGrams, unit: "", color: "bg-amber-500" },
-    { key: "f", label: "Fat", got: consumed.fatG, goal: target?.fatG ?? 0, fmt: fmtGrams, unit: "", color: "bg-rose-500" },
+    { key: "p", label: "Protein", got: consumed.proteinG, goal: target?.proteinG ?? 0, fmt: fmtGrams, unit: "", color: "bg-macro-protein" },
+    { key: "c", label: "Carbs", got: consumed.carbsG, goal: target?.carbsG ?? 0, fmt: fmtGrams, unit: "", color: "bg-macro-carbs" },
+    { key: "f", label: "Fat", got: consumed.fatG, goal: target?.fatG ?? 0, fmt: fmtGrams, unit: "", color: "bg-macro-fat" },
   ]);
 
   function pct(got: number, goal: number): number {

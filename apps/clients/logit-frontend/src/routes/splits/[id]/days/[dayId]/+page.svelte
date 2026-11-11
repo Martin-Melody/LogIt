@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
 
@@ -17,7 +18,7 @@
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { activeSplit } from "$lib/stores/activeSplit.store";
 
-  import { ArrowLeft, Plus, Trash, Check, X, GripVertical, Dumbbell, Timer } from "lucide-svelte";
+  import { Plus, Trash, Check, X, GripVertical, Dumbbell, Timer } from "lucide-svelte";
   import { startSplitDayTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
@@ -387,15 +388,13 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
-    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={() => back(`/splits/${splitId}`)}>
-      <ArrowLeft class="h-4 w-4" />
-    </Button>
+  <div class="page-header">
+    <BackButton onclick={() => back(`/splits/${splitId}`)} />
 
     {#if ui.renamingDay}
       <input
         bind:this={dayNameInput}
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
+        class="flex-1 min-w-0 bg-transparent text-base font-semibold focus:outline-none border-b border-primary"
         bind:value={ui.dayNameDraft}
         placeholder="Day name (optional)"
         disabled={ui.saving}
@@ -405,10 +404,10 @@
         }}
         onblur={() => void commitRenameDay()}
       />
-      <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" onclick={cancelRenameDay}>
+      <Button variant="ghost" size="icon" class="shrink-0" onclick={cancelRenameDay}>
         <X class="h-3.5 w-3.5" />
       </Button>
-      <Button size="icon" class="h-7 w-7 shrink-0" onclick={() => void commitRenameDay()}>
+      <Button size="icon" class="shrink-0" onclick={() => void commitRenameDay()}>
         <Check class="h-3.5 w-3.5" />
       </Button>
     {:else}
@@ -431,7 +430,6 @@
       <div class="flex items-center gap-1 shrink-0">
         <Button
           size="icon"
-          class="h-7 w-7"
           disabled={!day || ui.saving}
           onclick={() => (ui.addMode = ui.addMode === "none" ? "picker" : "none")}
           aria-label="Add block"
@@ -449,7 +447,7 @@
           onConfirm={deleteDay}
         >
           {#snippet child({ props })}
-            <Button {...props} variant="ghost" size="icon" class="h-7 w-7 text-destructive" disabled={!day || ui.saving}>
+            <Button {...props} variant="ghost" size="icon" class="text-destructive" disabled={!day || ui.saving}>
               <Trash class="h-3.5 w-3.5" />
             </Button>
           {/snippet}
@@ -467,7 +465,7 @@
     <div class="flex gap-2 px-3 py-2 border-b border-border bg-muted/30" transition:reveal>
       <button
         type="button"
-        class="flex-1 flex items-center gap-2 rounded border border-border px-3 py-2 text-sm hover:bg-muted/50"
+        class="flex-1 flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/50"
         onclick={() => (ui.addMode = "exercise")}
       >
         <Dumbbell class="h-4 w-4 text-muted-foreground shrink-0" />
@@ -475,7 +473,7 @@
       </button>
       <button
         type="button"
-        class="flex-1 flex items-center gap-2 rounded border border-border px-3 py-2 text-sm hover:bg-muted/50"
+        class="flex-1 flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/50"
         onclick={() => (ui.addMode = "cardio")}
       >
         <Timer class="h-4 w-4 text-muted-foreground shrink-0" />
@@ -513,9 +511,9 @@
   {:else if !day}
     <p class="px-3 py-4 text-sm text-muted-foreground">Day not found.</p>
   {:else if day.blocks.length === 0}
-    <div class="px-3 py-6 flex flex-col items-center gap-2 text-center">
+    <div class="px-3 py-12 flex flex-col items-center gap-3 text-center">
       <p class="text-sm text-muted-foreground">Nothing planned yet.</p>
-      <Button variant="outline" size="sm" onclick={() => (ui.addMode = "picker")}>
+      <Button variant="outline" onclick={() => (ui.addMode = "picker")}>
         Add first block
       </Button>
     </div>
@@ -564,14 +562,14 @@
               {#if summary}
                 <span class="text-xs text-muted-foreground tabular-nums shrink-0">· {summary}</span>
               {:else if block.type === "strength"}
-                <span class="text-xs text-muted-foreground/60 shrink-0">· add targets</span>
+                <span class="text-xs text-muted-foreground shrink-0">· add targets</span>
               {/if}
             </button>
 
             <Button
               variant="ghost"
               size="icon"
-              class="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+              class="text-muted-foreground hover:text-destructive shrink-0"
               disabled={ui.saving}
               onclick={() => void deleteBlock(block.id)}
               aria-label="Remove {blockLabel(block)}"
@@ -591,7 +589,7 @@
                       inputmode="decimal"
                       min="0"
                       placeholder="—"
-                      class="w-full rounded border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                      class="h-10 w-full rounded-md border bg-background px-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
                       value={targetDraft[key as "sets" | "reps" | "weight"] ?? ""}
                       disabled={ui.saving}
                       oninput={(e) => {
