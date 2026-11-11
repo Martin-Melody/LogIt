@@ -11,10 +11,17 @@
   import { unreadNotifications } from "$lib/stores/notifications.store";
 
   let posts = $state<ApiPost[]>([]);
-  let loading = $state(true);
-  let loadingMore = $state(false);
-  let refreshing = $state(false);
-  let error = $state<string | null>(null);
+  // One status instead of three loading flags: the flags let a refresh and a "load more" run at
+  // once, and whichever finished first cleared all three, so the next page could be fetched
+  // twice or an old page appended to a freshly refreshed feed.
+  type FeedStatus = "loading" | "ready" | "refreshing" | "more" | "error";
+  let status = $state<FeedStatus>("loading");
+  const loading = $derived(status === "loading");
+  const refreshing = $derived(status === "refreshing");
+  const loadingMore = $derived(status === "more");
+  const error = $derived(status === "error" ? "Couldn't load the feed. Check your connection." : null);
+  // Bumped by every load; a response for an older request is dropped.
+  let latestRequest = 0;
   let nextCursor = $state<string | null>(null);
   let showConnectPrompt = $state(false);
   let showCreatePost = $state(false);
@@ -77,20 +84,21 @@
 
   async function load(mode: "initial" | "refresh" | "more" = "initial") {
     if (!authStore.isAuthenticated) return;
-    if (mode === "initial") loading = true;
-    else if (mode === "refresh") refreshing = true;
-    else loadingMore = true;
-    error = null;
+    // "More" only continues a settled feed. A refresh or retry always wins: it bumps the
+    // request number, so a "more" still in flight is ignored when it lands.
+    if (mode === "more" && (status !== "ready" || !nextCursor)) return;
+    const request = ++latestRequest;
+    status = mode === "initial" ? "loading" : mode === "refresh" ? "refreshing" : "more";
     try {
       const page = await socialApi.getFeed(20, mode === "more" ? nextCursor ?? undefined : undefined);
+      if (request !== latestRequest) return;
       posts = mode === "more" ? [...posts, ...page.posts] : page.posts;
       nextCursor = page.nextCursor;
+      status = "ready";
     } catch {
-      if (mode !== "more") error = "Couldn't load the feed. Check your connection.";
-    } finally {
-      loading = false;
-      refreshing = false;
-      loadingMore = false;
+      if (request !== latestRequest) return;
+      // A failed "more" keeps what's already shown; scrolling retries it.
+      status = mode === "more" ? "ready" : "error";
     }
   }
 
@@ -99,7 +107,7 @@
     if (!authStore.ready || started) return;
     started = true;
     if (!authStore.isAuthenticated) {
-      loading = false;
+      status = "ready";
       return;
     }
     void load("initial");
@@ -109,11 +117,12 @@
     void unreadNotifications.refresh();
   });
 
-  // Infinite scroll
+  // Infinite scroll. Re-created each time the feed settles: a new observer reports straight
+  // away, so a sentinel that stayed on screen through a load still asks for the next page.
   $effect(() => {
-    if (!sentinel) return;
+    if (!sentinel || status !== "ready" || !nextCursor) return;
     const io = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && nextCursor && !loadingMore) void load("more");
+      if (entries[0].isIntersecting) void load("more");
     }, { rootMargin: "600px" });
     io.observe(sentinel);
     return () => io.disconnect();
