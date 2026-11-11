@@ -795,6 +795,9 @@ test.describe("finish session", () => {
         makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
         makeStrengthBlock("b2", 1, "Pec Deck", [makeSet("s3", 0, 10, 50)]),
       ]),
+      // Pec Deck has history (and no PR today), so Dips is the only first-timer
+      // and gets its own card.
+      history: [makeCompletedSession("Pec Deck", [makeSet("ps1", 0, 10, 60)])],
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
@@ -808,6 +811,23 @@ test.describe("finish session", () => {
     // Only the 10 × 50 pec deck: with no bodyweight known the dips aren't
     // counted, so the assisted set doesn't subtract 200 either.
     await expect(page.getByText("500", { exact: true })).toBeVisible();
+  });
+
+  test("recap groups first-time exercises into one card", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 80)]),
+        makeStrengthBlock("b2", 1, "Squat", [makeSet("s2", 0, 5, 100)]),
+        makeStrengthBlock("b3", 2, "Row", [makeSet("s3", 0, 8, 60)]),
+      ]),
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    await expect(page.getByText("3 new exercises")).toBeVisible();
+    await expect(page.getByText(/Bench Press, Squat, Row/)).toBeVisible();
+    await expect(page.getByText("5 reps @ 80 kg")).toHaveCount(0);
   });
 
   test("recap counts bodyweight work at bodyweight ± the logged number", async ({ page }) => {
