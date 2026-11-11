@@ -29,6 +29,7 @@ public static class CoachEndpoints
         group.MapPost("/programs", UpsertProgram).RequireTier(UserTier.Studio);
         group.MapGet("/programs", GetMyPrograms).RequireTier(UserTier.Studio);
         group.MapGet("/programs/assigned", GetAssignedPrograms);
+        group.MapPost("/programs/assigned/{programId}/start", StartAssignedProgram);
 
         // Coach-assigned nutrition targets — same shape/rules as programs.
         group.MapPost("/nutrition-plans", UpsertNutritionPlan).RequireTier(UserTier.Studio);
@@ -71,18 +72,29 @@ public static class CoachEndpoints
         if (client is null) return Results.NotFound();
         if (client.Id == coachId) return Results.BadRequest(new { error = "Cannot invite yourself." });
 
-        var existing = await db.CoachClientRelationships.AnyAsync(r =>
-            r.CoachId == coachId && r.ClientId == client.Id &&
-            (r.Status == CoachClientStatus.Pending || r.Status == CoachClientStatus.Active));
-        if (existing) return Results.Conflict(new { error = "Already invited or connected." });
+        // (CoachId, ClientId) is unique, so there is at most one row per pair whatever its
+        // status. A Revoked row is reopened rather than duplicated: inserting a second row
+        // used to hit the unique index and 500, so a revoked client could never be re-invited.
+        var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
+            r.CoachId == coachId && r.ClientId == client.Id);
+        if (relationship is not null && relationship.Status != CoachClientStatus.Revoked)
+            return Results.Conflict(new { error = "Already invited or connected." });
 
-        var relationship = new CoachClientRelationship
+        if (relationship is null)
         {
-            CoachId = coachId,
-            ClientId = client.Id,
-            Status = CoachClientStatus.Pending,
-        };
-        db.CoachClientRelationships.Add(relationship);
+            relationship = new CoachClientRelationship
+            {
+                CoachId = coachId,
+                ClientId = client.Id,
+                Status = CoachClientStatus.Pending,
+            };
+            db.CoachClientRelationships.Add(relationship);
+        }
+        else
+        {
+            relationship.Status = CoachClientStatus.Pending;
+            relationship.UpdatedAt = DateTime.UtcNow;
+        }
         await db.SaveChangesAsync();
 
         return Results.Created($"/coach/invites/{relationship.Id}", new { relationshipId = relationship.Id });
@@ -298,8 +310,20 @@ public static class CoachEndpoints
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
             r.Id == relationshipId &&
             (r.CoachId == userId || r.ClientId == userId) &&
-            r.Status == CoachClientStatus.Active);
+            (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Pending));
         if (relationship is null) return Results.NotFound();
+
+        // A relationship that ends before it started leaves no trace (same as the client
+        // declining). One that was Active is kept as Revoked: programs, check-ins and
+        // messages point at it.
+        if (relationship.Status == CoachClientStatus.Pending)
+        {
+            // Only the coach withdraws a pending invite; the client declines it instead.
+            if (relationship.CoachId != userId) return Results.NotFound();
+            db.CoachClientRelationships.Remove(relationship);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        }
 
         relationship.Status = CoachClientStatus.Revoked;
         relationship.UpdatedAt = DateTime.UtcNow;
@@ -377,6 +401,8 @@ public static class CoachEndpoints
         // leaves the existing assignment untouched.
         if (recipientUserId.HasValue)
         {
+            // A new client starts the program afresh.
+            if (stored.RecipientUserId != recipientUserId) stored.StartedAtMs = null;
             stored.RecipientUserId = recipientUserId;
             stored.RelationshipId = relationshipId;
         }
@@ -431,10 +457,39 @@ public static class CoachEndpoints
                 p.ProgramId,
                 p.UpdatedAtMs,
                 p.DeletedAtMs == null ? p.DataJson : null,
-                p.DeletedAtMs))
+                p.DeletedAtMs,
+                p.StartedAtMs))
             .ToListAsync();
 
         return Results.Ok(new { programs });
+    }
+
+    /// Client: start an assigned program ("week 1, day 1" = the given start of day). The
+    /// first start wins; starting again returns the existing date, so a retry from the offline
+    /// queue or a second device can't move the program's weeks.
+    private static async Task<IResult> StartAssignedProgram(
+        string programId,
+        [FromBody] StartProgramRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var program = await db.CoachPrograms
+            .Where(p => p.RecipientUserId == userId && p.ProgramId == programId && p.DeletedAtMs == null)
+            .Where(p => db.CoachClientRelationships.Any(r =>
+                r.CoachId == p.CoachId && r.ClientId == userId && r.Status == CoachClientStatus.Active))
+            .FirstOrDefaultAsync();
+        if (program is null) return Results.NotFound();
+
+        if (program.StartedAtMs is null)
+        {
+            program.StartedAtMs = req.StartedAtMs;
+            // Bump so the client's other devices pick the start up on their next pull.
+            program.SyncedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        return Results.Ok(new { programId, startedAtMs = program.StartedAtMs });
     }
 
     // ── Nutrition plans ───────────────────────────────────────────────────────
@@ -969,7 +1024,10 @@ public record AssignedProgramDto(
     string ProgramId,
     long UpdatedAtMs,
     string? DataJson,
-    long? DeletedAtMs);
+    long? DeletedAtMs,
+    long? StartedAtMs);
+
+public record StartProgramRequest(long StartedAtMs);
 
 public record UpsertNutritionPlanRequest(
     string PlanId,

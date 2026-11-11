@@ -125,7 +125,7 @@ public static class BillingEndpoints
                 break;
 
             case "customer.subscription.updated":
-                await HandleSubscriptionUpdated(stripeEvent, db);
+                await HandleSubscriptionUpdated(stripeEvent, db, config);
                 break;
         }
 
@@ -162,21 +162,35 @@ public static class BillingEndpoints
         await db.SaveChangesAsync();
     }
 
-    private static async Task HandleSubscriptionUpdated(Event stripeEvent, AppDbContext db)
+    private static async Task HandleSubscriptionUpdated(Event stripeEvent, AppDbContext db, IConfiguration config)
     {
         if (stripeEvent.Data.Object is not Subscription sub) return;
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.StripeSubscriptionId == sub.Id);
         if (user is null) return;
 
-        // Only act on deactivation — we don't reliably know Pro vs Studio from this event
-        // alone, and the tier is already correct (set by checkout.session.completed) for
-        // any subscription that's still active, so there's nothing to do in that case.
-        var active = sub.Status is "active" or "trialing";
-        if (!active)
+        // The tier follows the subscription both ways. This used to only ever move it down,
+        // so a card that failed and then succeeded on retry (past_due -> active) left a paying
+        // user on Free, and a Pro <-> Studio change made in the billing portal never landed.
+        var tier = TierFor(sub, config);
+        if (tier is { } t && t != user.Tier)
         {
-            user.Tier = UserTier.Free;
+            user.Tier = t;
             await db.SaveChangesAsync();
         }
+    }
+
+    /// The tier a subscription entitles its owner to: Free unless it's active or trialing,
+    /// otherwise whichever plan its price belongs to. Null when the price matches neither
+    /// configured plan, so an unrecognised price never changes the tier.
+    public static UserTier? TierFor(Subscription sub, IConfiguration config)
+    {
+        if (sub.Status is not ("active" or "trialing")) return UserTier.Free;
+
+        var priceId = sub.Items?.Data?.FirstOrDefault()?.Price?.Id;
+        if (priceId is null) return null;
+        if (priceId == config["Stripe:StudioPriceId"]) return UserTier.Studio;
+        if (priceId == config["Stripe:ProPriceId"]) return UserTier.Pro;
+        return null;
     }
 }

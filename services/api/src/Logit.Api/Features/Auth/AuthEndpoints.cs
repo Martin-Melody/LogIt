@@ -70,12 +70,8 @@ public static class AuthEndpoints
         if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
             return Results.Unauthorized();
 
-        var existing = await db.RefreshTokens
-            .Where(t => t.UserId == user.Id && t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow)
-            .ToListAsync();
-        var now = DateTime.UtcNow;
-        foreach (var t in existing) t.RevokedAt = now;
-
+        // Other devices keep their tokens: signing in on a second phone must not sign the
+        // first one out. Every token is revoked only on a password reset (ResetPassword).
         var refresh = tokens.CreateRefreshToken(user.Id);
         db.RefreshTokens.Add(refresh);
         await db.SaveChangesAsync();

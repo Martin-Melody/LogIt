@@ -9,7 +9,8 @@
   import { Badge } from "$lib/components/ui/badge";
 
   import type { CoachProgram, ProgramDay, ProgramStrength } from "@logit/core/domain/CoachProgram";
-  import { getCurrentWeek } from "@logit/core/domain/CoachProgram";
+  import { getCurrentWeek, getProgramProgress } from "@logit/core/domain/CoachProgram";
+  import { startAssignedProgram } from "$lib/usecases/coach/startAssignedProgram";
   import { getCoachProgramRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
 
@@ -21,6 +22,26 @@
   let openWeekId = $state<string | null>(null);
 
   const currentWeek = $derived(program ? getCurrentWeek(program) : null);
+  const progress = $derived(program ? getProgramProgress(program) : null);
+  const canStart = $derived(progress?.status === "not-started" && program?.startMode !== "fixed-date");
+
+  function formatDate(ms: number): string {
+    return new Date(ms).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  }
+
+  async function startProgram() {
+    if (ui.starting) return;
+    ui.starting = true;
+    ui.error = null;
+    try {
+      program = await startAssignedProgram(programId);
+      openWeekId = currentWeek?.id ?? openWeekId;
+    } catch (e) {
+      ui.error = e instanceof Error ? e.message : "Couldn't start the program";
+    } finally {
+      ui.starting = false;
+    }
+  }
   const weeks = $derived([...(program?.weeks ?? [])].sort((a, b) => a.weekNumber - b.weekNumber));
 
   function sortByOrder<T extends { orderIndex: number }>(a: T[]): T[] {
@@ -100,6 +121,29 @@
   {:else}
     {#if program.description}
       <p class="px-3 py-2 text-sm text-muted-foreground border-b border-border">{program.description}</p>
+    {/if}
+
+    {#if progress}
+      <div class="flex items-center gap-3 px-3 py-2.5 border-b border-border">
+        <p class="min-w-0 flex-1 text-sm text-muted-foreground">
+          {#if progress.status === "running"}
+            Week {progress.weekNumber} of {weeks.length}
+          {:else if progress.status === "scheduled"}
+            Starts {formatDate(progress.startsAtMs)}
+          {:else if progress.status === "finished"}
+            Finished
+          {:else if canStart}
+            Not started. Starting makes today week 1, day 1.
+          {:else}
+            Your coach hasn't set a start date yet.
+          {/if}
+        </p>
+        {#if canStart}
+          <Button size="sm" class="shrink-0" disabled={ui.starting} onclick={() => void startProgram()}>
+            Start program
+          </Button>
+        {/if}
+      </div>
     {/if}
 
     {#each weeks as w (w.id)}

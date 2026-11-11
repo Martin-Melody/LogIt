@@ -102,32 +102,19 @@
     return get(currentSession);
   }
 
-  async function persistDraft(next: WorkoutSession) {
+  /** Every change to the workout goes through the store's queue (currentSession.mutate),
+   * which applies it to the latest session; the rest timer writes through it too. */
+  async function onMutate(updater: (s: WorkoutSession) => WorkoutSession) {
     if (ui.finishing) return;
-    currentSession.setSession(next);
     ui.saving = true;
     ui.error = null;
     try {
-      await getWorkoutRepo().saveDraftSession(next);
+      await currentSession.mutate(updater);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to save draft session";
     } finally {
       ui.saving = false;
     }
-  }
-
-  let mutateQueue: Promise<void> = Promise.resolve();
-
-  async function onMutate(updater: (s: WorkoutSession) => WorkoutSession) {
-    const thisCall = mutateQueue.then(async () => {
-      const s = getSessionOrNull();
-      if (!s || ui.finishing) return;
-      await persistDraft(updater(s));
-    });
-    // Advance the queue but swallow errors so later mutations still run.
-    mutateQueue = thisCall.catch(() => {});
-    // Propagate the error to the individual caller.
-    await thisCall;
   }
 
   async function addExerciseWithName(selection: { name: string; exerciseId?: string }) {
@@ -145,7 +132,7 @@
       } else {
         exerciseType = (await getExerciseRepo().getById(exerciseId).catch(() => null))?.exerciseType;
       }
-      await persistDraft(addExercise(s, { exerciseName: trimmed, exerciseId }));
+      await onMutate((cur) => addExercise(cur, { exerciseName: trimmed, exerciseId }));
       // Pull-ups, dips…: their volume needs a bodyweight. Asked after the add
       // dialog has closed so the two don't fight over focus.
       if (await shouldAskForBodyweight(trimmed, exerciseType).catch(() => false)) {
@@ -161,7 +148,7 @@
     const s = getSessionOrNull();
     if (!s) return;
     try {
-      await persistDraft(addCardioBlock(s, name));
+      await onMutate((cur) => addCardioBlock(cur, name));
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to add cardio activity";
       toast.error(ui.error ?? "Failed to add cardio activity");
@@ -178,9 +165,8 @@
     if (!s) return;
     try {
       const drillLead = await getMobilityDrillLeadSide(mobilityDrillKey(drill.drillId, drill.drillName));
-      await persistDraft(
-        addMobilityBlock(s, { ...drill, leadSide: drillLead ?? get(profile).mobilityLeadSide }),
-      );
+      const leadSide = drillLead ?? get(profile).mobilityLeadSide;
+      await onMutate((cur) => addMobilityBlock(cur, { ...drill, leadSide }));
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to add mobility drill";
       toast.error(ui.error ?? "Failed to add mobility drill");

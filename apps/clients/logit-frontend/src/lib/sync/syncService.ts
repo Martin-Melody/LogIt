@@ -41,6 +41,8 @@ import { favoriteFoodId } from "@logit/core/domain/nutrition";
 import type { Habit, HabitEntry } from "@logit/core/domain/habit";
 import type { CoachHabit } from "@logit/core/domain/CoachHabit";
 import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
+import { syncStorageKey } from "$lib/sync/syncKeys";
+import { singleFlight } from "$lib/sync/singleFlight";
 
 // ── localStorage keys ────────────────────────────────────────────────────────
 
@@ -63,11 +65,12 @@ const HABITS_LAST_PULLED_KEY = "logit:sync:habitsLastPulledAt";
 const HABIT_ENTRIES_LAST_PULLED_KEY = "logit:sync:habitEntriesLastPulledAt";
 const COACH_HABITS_LAST_PULLED_KEY = "logit:sync:coachHabitsLastPulledAt";
 
+// Every key below is per profile on the phone; see syncStorageKey.
 function getTimestamp(key: string): number {
-  try { return parseInt(localStorage.getItem(key) ?? "0", 10) || 0; } catch { return 0; }
+  try { return parseInt(localStorage.getItem(syncStorageKey(key)) ?? "0", 10) || 0; } catch { return 0; }
 }
 function setTimestamp(key: string, ms: number): void {
-  try { localStorage.setItem(key, String(ms)); } catch {}
+  try { localStorage.setItem(syncStorageKey(key), String(ms)); } catch {}
 }
 
 // ── Last synced ───────────────────────────────────────────────────────────────
@@ -78,8 +81,13 @@ function getLastSyncedAtMs(): number {
   return getTimestamp(LAST_SYNCED_AT_KEY);
 }
 
-/** Reactive store — updates whenever a full sync completes. */
+/** Reactive store — updates whenever a full sync completes, and on a profile switch. */
 export const lastSyncedAt = writable(getLastSyncedAtMs());
+
+/** Re-read the active profile's last-synced time (call after the active profile changes). */
+export function reloadLastSyncedAt(): void {
+  lastSyncedAt.set(getLastSyncedAtMs());
+}
 
 // ── Sessions ─────────────────────────────────────────────────────────────────
 
@@ -288,10 +296,17 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
       }
       try {
         const program = JSON.parse(entry.dataJson) as CoachProgram;
-        // The coach is the sole writer, so a plain last-write-wins on updatedAtMs is safe.
         const existing = await repo.getAssignedProgram(program.id);
-        if (existing && existing.updatedAtMs >= program.updatedAtMs) continue;
-        await repo.upsertFromRemote(program);
+        // The client's Start lives outside the coach's data. Keep a local start the server
+        // hasn't confirmed yet (it's queued in the outbox) rather than wiping it.
+        const clientStartedAtMs = entry.startedAtMs ?? existing?.clientStartedAtMs;
+        // The coach is the sole writer of everything else, so last-write-wins on updatedAtMs.
+        // A newer start alone (from the client's other device) also counts as a change.
+        const coachChanged = !existing || program.updatedAtMs > existing.updatedAtMs;
+        const startChanged = existing?.clientStartedAtMs !== clientStartedAtMs;
+        if (!coachChanged && !startChanged) continue;
+        const base = coachChanged ? program : existing!;
+        await repo.upsertFromRemote({ ...base, clientStartedAtMs: clientStartedAtMs ?? undefined });
       } catch {}
     }
 
@@ -300,6 +315,21 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Send the client's Start for an assigned program, queueing it if offline. The server keeps
+ * the first start it sees and replies with it; that value is saved locally. */
+export function pushProgramStart(programId: string, startedAtMs: number): void {
+  if (!apiClient.isAuthenticated()) return;
+  coachProgramApi
+    .startAssigned(programId, startedAtMs)
+    .then(async (res) => {
+      if (res.startedAtMs === startedAtMs) return;
+      const repo = getCoachProgramRepo();
+      const program = await repo.getAssignedProgram(programId);
+      if (program) await repo.upsertFromRemote({ ...program, clientStartedAtMs: res.startedAtMs });
+    })
+    .catch(() => enqueue({ type: "programStart", dto: { programId, startedAtMs } }));
 }
 
 /** Pull the nutrition plan(s) a coach has assigned into the local read-only mirror. */
@@ -517,10 +547,13 @@ export function pushMessage(message: CoachMessage): void {
     createdAtMs: message.createdAtMs,
     contextDateIso: message.contextDateIso,
   };
+  // On failure the message just stays unsynced locally: that flag is its queue, and the next
+  // sync re-sends it (pushPendingMessages). It used to also go into the outbox, which sent it
+  // without ever marking it synced.
   messagesApi
     .send(dto)
     .then(() => getMessagesRepo().markSynced(message.id))
-    .catch(() => enqueue({ type: "coachMessage", dto }));
+    .catch(() => {});
 }
 
 export async function pushPendingMessages(): Promise<void> {
@@ -949,6 +982,12 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
   ]);
   const p = get(profile);
   const activeSplitId = await getSplitRepo().getActiveSplitId().catch(() => null);
+  // Only this profile's splits: rotation keys aren't per profile on the phone.
+  const splitIds = (
+    await getSplitRepo().getListSplits({ includeArchived: true, limit: 1000 }).catch(() => [])
+  ).map((s) => s.id);
+  const { getRotations } = await import("$lib/usecases/Splits/splitRotation");
+  const rotations = getRotations(splitIds);
   return {
     displayName: p.name,
     bio: p.bio,
@@ -963,6 +1002,7 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     navConfigJson: getNavConfigJson(),
     homeConfigJson: getHomeConfigJson(),
     activeSplitId,
+    splitRotationJson: Object.keys(rotations).length ? JSON.stringify(rotations) : null,
     updatedAtMs: Date.now(),
   };
 }
@@ -1038,13 +1078,20 @@ export async function pushAllLocalData(): Promise<void> {
   ]);
 }
 
+/** Sync now. One sync at a time: login, the 5-minute timer, the app coming back to the
+ * foreground and the Settings button all call this, and two overlapping runs used to flush
+ * the outbox twice and pull the same data twice. A call during a run joins it and asks for
+ * one more pass afterwards; the result is the last pass's. */
+export const syncAll: () => Promise<boolean> = singleFlight(() => syncOnce());
+
 /** Runs every pull in parallel and only reports (and timestamps) success when all of them
  * actually completed — a Free-tier account whose pulls all 403 must not see a clean "synced"
  * state (see docs/bugs/social-smoke-test-findings.md #3). Returns false if any pull failed. */
-export async function syncAll(): Promise<boolean> {
+async function syncOnce(): Promise<boolean> {
   // Flush any writes queued while offline before pulling, so the server has the
   // latest local state before we merge its response back.
   await flushOutbox();
+  await pushPendingMessages();
   const results = await Promise.all([
     pullAndMergeSessions(),
     pullAndMergeSplits(),
@@ -1073,6 +1120,16 @@ export async function pullAndApplyProfile(): Promise<boolean> {
   try {
     const { profile: remote } = await syncApi.pullProfile();
     if (!remote) return true;
+
+    // Split rotation is merged per split (newest wins), whatever the profile's own age: a
+    // workout on another device moves the next day here even if this profile was edited
+    // more recently.
+    if (remote.splitRotationJson) {
+      try {
+        const { applyRemoteRotations } = await import("$lib/usecases/Splits/splitRotation");
+        applyRemoteRotations(JSON.parse(remote.splitRotationJson));
+      } catch {}
+    }
 
     const localUpdatedAtMs = getProfileUpdatedAtMs();
     if (remote.updatedAtMs <= localUpdatedAtMs) return true;

@@ -9,11 +9,11 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { profile } from "$lib/stores/profile.store";
   import { reveal } from "$lib/transitions";
-  import { startRestTimer, cancelRestTimer, hasRestTimerFired } from "$lib/services/restTimerService";
   import type { WeightUnit } from "@logit/core/domain/units";
   import type { MobilityBlockData, MobilitySet, MobilitySetGroup, MobilitySide } from "@logit/core/domain/workout";
   import {
     addMobilitySet,
+    mobilityRestMs,
     removeMobilitySet,
     updateMobilitySet,
     updateMobilityDrill,
@@ -123,7 +123,6 @@
     await onMutate((s) => updateMobilitySet(s, blockId, setId, patch));
   }
   async function deleteSet(setId: string) {
-    cancelRestTimer(setId);
     await onMutate((s) => removeMobilitySet(s, blockId, setId));
   }
   async function toggleComplete(set: MobilitySet) {
@@ -136,17 +135,9 @@
         restStartedAtMs: startsRest ? Date.now() : null,
       }),
     );
-    if (startsRest) startRestTimer(set.id, rest);
-    else cancelRestTimer(set.id);
-  }
-  async function handleRestDone(setId: string) {
-    const alreadyToasted = hasRestTimerFired(setId);
-    cancelRestTimer(setId);
-    if (!alreadyToasted) toast("Rest complete — next set!");
-    await patchSet(setId, { restStartedAtMs: null });
+    // The rest service (restTimerService.ts) follows restStartedAtMs from here.
   }
   async function handleDismissRest(setId: string) {
-    cancelRestTimer(setId);
     await patchSet(setId, { restStartedAtMs: null });
   }
   async function switchMetric(metric: "hold" | "reps") {
@@ -561,8 +552,7 @@
                   <div transition:reveal>
                     <RestProgressBar
                       restStartedAtMs={group.set.restStartedAtMs}
-                      restDurationMs={effectiveRestMs(group.set) || 60_000}
-                      onDone={() => handleRestDone(group.set.id)}
+                      restDurationMs={mobilityRestMs(group.set, data)}
                       onDismiss={() => handleDismissRest(group.set.id)}
                     />
                   </div>
@@ -595,8 +585,7 @@
                       <div transition:reveal>
                         <RestProgressBar
                           restStartedAtMs={rowSet.restStartedAtMs}
-                          restDurationMs={effectiveRestMs(rowSet) || 60_000}
-                          onDone={() => handleRestDone(rowSet.id)}
+                          restDurationMs={mobilityRestMs(rowSet, data)}
                           onDismiss={() => handleDismissRest(rowSet.id)}
                         />
                       </div>

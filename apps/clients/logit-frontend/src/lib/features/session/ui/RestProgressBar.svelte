@@ -1,20 +1,18 @@
 <script lang="ts">
   import { X } from "lucide-svelte";
 
+  // Display only: the rest service (restTimerService.ts) alerts and ends the rest.
   const {
     restStartedAtMs,
     restDurationMs = 90_000,
-    onDone = () => {},
     onDismiss = () => {},
   } = $props<{
     restStartedAtMs: number;
     restDurationMs?: number;
-    onDone?: () => void;
     onDismiss?: () => void;
   }>();
 
   let nowMs = $state(Date.now());
-  let doneFired = $state(false);
 
   $effect(() => {
     const id = setInterval(() => {
@@ -38,12 +36,6 @@
         : `${secs}s`,
   );
 
-  $effect(() => {
-    if (isDone && !doneFired) {
-      doneFired = true;
-      onDone();
-    }
-  });
 </script>
 
 <div class="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/10">
