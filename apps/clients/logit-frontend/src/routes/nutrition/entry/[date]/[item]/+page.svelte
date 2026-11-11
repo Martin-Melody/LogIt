@@ -165,14 +165,14 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/nutrition")} />
     {#if item?.sourceId && sourceFood}
       <button type="button" onclick={() => void toggleFav()} aria-label="Toggle favourite" class="h-8 w-8 flex items-center justify-center">
         <Star class="h-4 w-4 {isFav ? 'fill-highlight-fill text-highlight-fill' : 'text-muted-foreground'}" />
       </button>
     {/if}
-    <h1 class="text-sm font-semibold truncate">{item?.name ?? "Entry"}</h1>
+    <h1 class="page-title">{item?.name ?? "Entry"}</h1>
   </div>
 
   {#if ui.loading}
@@ -186,7 +186,7 @@
         <div class="flex items-center justify-between px-3 py-3">
           <span class="text-sm">Amount</span>
           <input
-            class="w-28 bg-muted rounded px-2 py-1.5 text-sm text-right outline-none tabular-nums"
+            class="w-28 bg-muted rounded-md px-2 py-1.5 text-sm text-right outline-none tabular-nums"
             inputmode="decimal"
             aria-label="Amount"
             bind:value={amount}
@@ -207,10 +207,10 @@
         <div class="px-3 py-3 flex flex-col gap-2">
           <span class="text-sm">Macros for this entry</span>
           <div class="grid grid-cols-4 gap-2">
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="kcal" bind:value={raw.kcal} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="P" bind:value={raw.protein} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="C" bind:value={raw.carbs} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="F" bind:value={raw.fat} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="kcal" bind:value={raw.kcal} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="P" bind:value={raw.protein} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="C" bind:value={raw.carbs} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none tabular-nums" inputmode="decimal" placeholder="F" bind:value={raw.fat} />
           </div>
         </div>
       {/if}
@@ -249,7 +249,7 @@
       </Button>
       <button
         type="button"
-        class="h-9 px-3 flex items-center gap-1.5 text-sm text-destructive rounded border border-border"
+        class="h-9 px-3 flex items-center gap-1.5 text-sm text-destructive rounded-md border border-border"
         onclick={() => void del()}
       >
         <Trash2 class="h-4 w-4" /> Delete

@@ -178,7 +178,7 @@
               <!-- Follow / Following -->
               <button
                 type="button"
-                class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50
+                class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50
                   {isFollowing
                     ? 'border border-border text-foreground bg-background hover:bg-muted/40'
                     : 'bg-primary text-primary-foreground'}"

@@ -52,12 +52,12 @@
 
     <div class="flex flex-col gap-2">
       <button type="button"
-        class="w-full py-3 rounded bg-primary text-primary-foreground text-sm font-medium"
+        class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium"
         onclick={register}>
         Create a free account
       </button>
       <button type="button"
-        class="w-full py-2.5 rounded border border-border text-sm"
+        class="w-full py-2.5 rounded-md border border-border text-sm"
         onclick={login}>
         Log in
       </button>

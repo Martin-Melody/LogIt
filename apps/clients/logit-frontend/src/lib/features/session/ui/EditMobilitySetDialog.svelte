@@ -149,7 +149,7 @@
               <input
                 id="ems-target"
                 type="number" min="0" inputmode="numeric" placeholder="—"
-                class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
                 value={draft.targetSec ?? ""}
                 {disabled}
                 onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -164,7 +164,7 @@
               <input
                 id="ems-dur"
                 type="number" min="0" inputmode="numeric" placeholder="—"
-                class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+                class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
                 value={draft.durationSec ?? ""}
                 {disabled}
                 onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -181,7 +181,7 @@
             <input
               id="ems-reps"
               type="number" min="0" inputmode="numeric" placeholder="—"
-              class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
               value={draft.reps ?? ""}
               {disabled}
               onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -199,7 +199,7 @@
           <input
             id="ems-load"
             type="number" min="0" step={weightUnit === "lbs" ? "1" : "0.5"} placeholder="—"
-            class="w-full rounded border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={draft.load ?? ""}
             {disabled}
             onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -267,10 +267,10 @@
             {/each}
           </div>
           {#if draft.restDurationMs !== undefined && draft.restDurationMs > 0}
-            <div class="flex items-center justify-between gap-2 rounded border border-border px-3 py-2" transition:reveal>
-              <button type="button" class="h-7 w-10 flex items-center justify-center rounded text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30" {disabled} onclick={() => stepRest(-STEP_MS)}>−15s</button>
+            <div class="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2" transition:reveal>
+              <button type="button" class="h-7 w-10 flex items-center justify-center rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30" {disabled} onclick={() => stepRest(-STEP_MS)}>−15s</button>
               <span class="text-sm font-semibold tabular-nums">{formatRest(draft.restDurationMs)}</span>
-              <button type="button" class="h-7 w-10 flex items-center justify-center rounded text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30" {disabled} onclick={() => stepRest(STEP_MS)}>+15s</button>
+              <button type="button" class="h-7 w-10 flex items-center justify-center rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30" {disabled} onclick={() => stepRest(STEP_MS)}>+15s</button>
             </div>
           {/if}
         </div>

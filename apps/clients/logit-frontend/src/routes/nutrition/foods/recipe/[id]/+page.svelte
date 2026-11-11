@@ -97,9 +97,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/nutrition/foods")} />
-    <h1 class="text-sm font-semibold">Recipe</h1>
+    <h1 class="page-title">Recipe</h1>
     <button type="button" class="ml-auto text-xs text-primary px-2 py-1" onclick={() => void save()}>Save</button>
   </div>
 
@@ -109,11 +109,11 @@
     <p class="px-3 py-4 text-sm text-destructive">Recipe not found.</p>
   {:else}
     <div class="px-3 py-3 border-b border-border flex flex-col gap-2">
-      <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none font-medium" bind:value={recipe.name} />
+      <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none font-medium" bind:value={recipe.name} />
       <label class="flex items-center gap-2 text-xs text-muted-foreground">
         Makes
         <input
-          class="w-16 bg-muted rounded px-2 py-1.5 text-sm outline-none"
+          class="w-16 bg-muted rounded-md px-2 py-1.5 text-sm outline-none"
           inputmode="numeric"
           value={recipe.servings}
           oninput={(e) => setServings(e.currentTarget.value)}
@@ -146,7 +146,7 @@
       {#if picked}
         <div class="flex items-center gap-2">
           <span class="flex-1 text-sm truncate">{picked.name}</span>
-          <input class="w-20 bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" bind:value={ui.grams} />
+          <input class="w-20 bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="numeric" bind:value={ui.grams} />
           <span class="text-xs text-muted-foreground">g</span>
           <Button size="sm" onclick={addIngredient}>Add</Button>
           <Button size="sm" variant="ghost" onclick={() => (picked = null)}>×</Button>

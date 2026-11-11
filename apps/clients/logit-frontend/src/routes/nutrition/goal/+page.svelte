@@ -257,9 +257,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/nutrition")} />
-    <h1 class="text-sm font-semibold">Nutrition goal</h1>
+    <h1 class="page-title">Nutrition goal</h1>
   </div>
 
   {#if ui.loading}
@@ -285,7 +285,7 @@
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Height ({heightUnit})</span>
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={heightDisplay} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={heightDisplay} />
           </label>
         </div>
         <div class="flex flex-col gap-1">
@@ -319,11 +319,11 @@
           <div class="grid grid-cols-2 gap-2">
             <label class="flex flex-col gap-1">
               <span class="text-[11px] text-muted-foreground">Rate ({weightUnit}/week)</span>
-              <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={rateDisplay} />
+              <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={rateDisplay} />
             </label>
             <label class="flex flex-col gap-1">
               <span class="text-[11px] text-muted-foreground">Target weight ({weightUnit}, optional)</span>
-              <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={targetWeightDisplay} />
+              <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={targetWeightDisplay} />
             </label>
           </div>
         {/if}
@@ -335,12 +335,12 @@
         <div class="grid grid-cols-2 gap-2">
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Protein (g/kg body weight)</span>
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={goal.proteinGPerKg} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={goal.proteinGPerKg} />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Fat (% of calories)</span>
             <input
-              class="bg-muted rounded px-2 py-1.5 text-sm outline-none"
+              class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none"
               inputmode="numeric"
               value={Math.round(goal.fatPct * 100)}
               oninput={(e) => (goal.fatPct = (Number(e.currentTarget.value) || 0) / 100)}
@@ -359,7 +359,7 @@
           {#each algorithms as a (a.id)}
             <button
               type="button"
-              class="text-left rounded px-2.5 py-2 border {selectedAlgoId === a.id
+              class="text-left rounded-md px-2.5 py-2 border {selectedAlgoId === a.id
                 ? 'border-primary bg-primary/5'
                 : 'border-border'}"
               onclick={() => void selectAlgorithm(a.id)}
@@ -371,7 +371,7 @@
         </div>
 
         {#if algoSchema.length}
-          <div class="mt-1 rounded border border-border px-3">
+          <div class="mt-1 rounded-md border border-border px-3">
             <AlgorithmPreferencesForm schema={algoSchema} values={algoPrefs} onChange={setAlgoPref} />
           </div>
         {/if}
@@ -379,7 +379,7 @@
         <label class="flex flex-col gap-1 mt-1">
           <span class="text-[11px] text-muted-foreground">Manual calorie override (optional)</span>
           <input
-            class="bg-muted rounded px-2 py-1.5 text-sm outline-none"
+            class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none"
             inputmode="numeric"
             bind:value={goal.manualCalorieTarget}
           />

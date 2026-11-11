@@ -167,7 +167,7 @@ test.describe("check-in schedule editor", () => {
 
     await expect(page.locator("input").first()).toHaveValue("To delete");
     // Header row is [back button, name input, delete-trigger button] — the trigger is last.
-    await page.locator("div.border-b.border-border").first().getByRole("button").last().click();
+    await page.locator(".page-header").first().getByRole("button").last().click();
     await expect(page.getByText("Delete this check-in?")).toBeVisible();
 
     await page.getByRole("button", { name: "Delete", exact: true }).click();

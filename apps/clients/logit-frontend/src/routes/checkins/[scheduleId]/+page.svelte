@@ -72,10 +72,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/checkins")} />
     <div class="min-w-0 flex-1">
-      <p class="text-sm font-semibold truncate">{schedule?.name ?? "Check-in"}</p>
+      <p class="text-base font-semibold truncate">{schedule?.name ?? "Check-in"}</p>
       {#if alreadySubmitted}<p class="text-xs text-muted-foreground">Submitted — thanks!</p>{/if}
     </div>
   </div>
@@ -98,12 +98,12 @@
           <div class="mt-1.5">
             {#if q.type === "text"}
               <textarea id={q.id} rows="3" disabled={alreadySubmitted}
-                class="w-full rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 value={answerFor(q.id)?.text ?? ""}
                 onblur={(e) => update(q, { text: e.currentTarget.value })}></textarea>
             {:else if q.type === "number" || q.type === "weight"}
               <input id={q.id} type="number" inputmode="decimal" disabled={alreadySubmitted}
-                class="w-32 rounded border bg-background px-2 py-1.5 text-sm"
+                class="w-32 rounded-md border bg-background px-2 py-1.5 text-sm"
                 value={answerFor(q.id)?.number ?? ""}
                 onblur={(e) => update(q, { number: e.currentTarget.value === "" ? undefined : Number(e.currentTarget.value) })} />
               {#if q.type === "weight"}<span class="ml-1 text-xs text-muted-foreground">kg</span>{/if}
@@ -127,7 +127,7 @@
               </div>
             {:else if q.type === "photo"}
               {#if answerFor(q.id)?.photoDataUrl}
-                <img src={answerFor(q.id)?.photoDataUrl} alt="check-in" class="max-h-40 rounded border border-border" />
+                <img src={answerFor(q.id)?.photoDataUrl} alt="check-in" class="max-h-40 rounded-md border border-border" />
               {/if}
               {#if !alreadySubmitted}
                 <input type="file" accept="image/*" class="mt-1 text-xs" onchange={(e) => handlePhoto(q, e)} />

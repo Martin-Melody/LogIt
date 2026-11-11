@@ -110,8 +110,8 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center justify-between px-3 py-3 border-b border-border">
-    <h1 class="text-base font-semibold">Splits</h1>
+  <div class="page-header">
+    <h1 class="page-title">Splits</h1>
     <div class="flex items-center gap-2">
       <Button size="sm" variant="outline" onclick={() => goto("/programs/browse")}>
         Browse programs

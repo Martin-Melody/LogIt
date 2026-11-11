@@ -116,7 +116,7 @@
       <div class="flex items-center gap-2">
         <span class="text-sm font-medium text-foreground">{payload.name}</span>
         {#if payload.family}
-          <span class="capitalize rounded border border-border px-1.5 py-0.5 text-[11px]">{payload.family}</span>
+          <span class="capitalize rounded-md border border-border px-1.5 py-0.5 text-[11px]">{payload.family}</span>
         {/if}
       </div>
       {#if payload.description}<span class="text-muted-foreground">{payload.description}</span>{/if}

@@ -256,9 +256,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/")} />
-    <h1 class="text-sm font-semibold">Nutrition</h1>
+    <h1 class="page-title">Nutrition</h1>
   </div>
 
   <nav class="flex items-center gap-1 px-2 py-1 border-b border-border text-xs text-muted-foreground">
@@ -298,7 +298,7 @@
     <!-- Targets -->
     <div class="px-3 py-3 border-b border-border">
       {#if !nut?.goal && !nut?.coachPlan}
-        <a href="/nutrition/goal" class="flex items-center gap-2 text-sm text-primary">
+        <a href="/nutrition/goal" class="mb-3 flex min-h-11 items-center gap-2 text-sm text-primary">
           <Target class="h-4 w-4" /> Set a goal for calorie &amp; macro targets
         </a>
       {:else}
@@ -317,7 +317,7 @@
       <div class="px-3 py-2.5 border-b border-border flex flex-col gap-1.5">
         <span class="text-xs text-muted-foreground">Coach comments · {isToday ? "today" : dateIso}</span>
         {#each coachComments as c (c.id)}
-          <div class="rounded bg-muted/50 px-2 py-1.5 text-[11px]">
+          <div class="rounded-md bg-muted/50 px-2 py-1.5 text-[11px]">
             <span class="text-muted-foreground">{c.mine ? "You" : "Coach"}</span>
             <p class="whitespace-pre-line">{c.body}</p>
           </div>
@@ -356,7 +356,7 @@
           </button>
           <button
             type="button"
-            class="rounded bg-primary text-primary-foreground text-xs px-3 py-1.5 disabled:opacity-50"
+            class="rounded-md bg-primary text-primary-foreground text-xs px-3 py-1.5 disabled:opacity-50"
             disabled={copyBusy}
             onclick={() => void doCopy()}
           >
@@ -401,7 +401,7 @@
             onsubmit={(e) => { e.preventDefault(); void confirmSaveMeal(); }}
           >
             <input
-              class="flex-1 bg-muted rounded px-2 py-1.5 text-xs outline-none"
+              class="flex-1 bg-muted rounded-md px-2 py-1.5 text-xs outline-none"
               placeholder="Meal name"
               bind:value={templateName}
             />
@@ -429,7 +429,7 @@
                 <GripVertical class="h-3.5 w-3.5" />
               </span>
               {#if it.photoDataUrl}
-                <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded object-cover shrink-0" />
+                <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded-md object-cover shrink-0" />
               {/if}
               <a href="/nutrition/entry/{dateIso}/{it.id}" class="flex-1 truncate">
                 {it.name}

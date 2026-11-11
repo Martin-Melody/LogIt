@@ -202,7 +202,7 @@
       {#if headerActions}
         {@render headerActions()}
       {:else}
-        <button type="button" class="flex items-center gap-1.5 px-5 py-2 rounded border border-border text-sm font-medium hover:bg-muted/40" onclick={() => goto("/profile")}>
+        <button type="button" class="flex items-center gap-1.5 px-5 py-2 rounded-md border border-border text-sm font-medium hover:bg-muted/40" onclick={() => goto("/profile")}>
           <Pencil class="h-3.5 w-3.5" /> Edit profile
         </button>
       {/if}
@@ -210,14 +210,14 @@
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="flex items-center gap-1.5 px-5 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50
+          class="flex items-center gap-1.5 px-5 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50
             {profile.isFollowing ? 'border border-border bg-background hover:bg-muted/40' : 'bg-primary text-primary-foreground'}"
           disabled={followLoading}
           onclick={toggleFollow}
         >
           {#if profile.isFollowing}<UserCheck class="h-4 w-4" /> Following{:else}<UserPlus class="h-4 w-4" /> Follow{/if}
         </button>
-        <button type="button" class="p-2 rounded border border-border text-muted-foreground" aria-label="More" onclick={() => (menuOpen = true)}>
+        <button type="button" class="p-2 rounded-md border border-border text-muted-foreground" aria-label="More" onclick={() => (menuOpen = true)}>
           <MoreHorizontal class="h-4 w-4" />
         </button>
       </div>
@@ -337,7 +337,7 @@
     <p class="text-xs text-muted-foreground">You won't see each other's posts, comments, or profiles, and you'll both stop following each other. Undo from Settings.</p>
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (confirmBlock = false)}>Cancel</button>
-      <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={blocking} onclick={doBlock}>
+      <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={blocking} onclick={doBlock}>
         {#if blocking}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Block
       </button>
     </div>

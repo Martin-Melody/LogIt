@@ -516,9 +516,9 @@
 
 <div class="flex flex-col gap-3 p-3 pb-24">
   <!-- Header -->
-  <div class="flex items-center gap-2">
+  <div class="page-header -mx-3 -mt-3">
     <BackButton onclick={() => back("/profile")} />
-    <h1 class="text-base font-semibold">Settings</h1>
+    <h1 class="page-title">Settings</h1>
   </div>
 
   <!-- Section quick-nav -->
@@ -612,13 +612,13 @@
         {#if showOnlinePasswordForm}
           <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             <input type="password" placeholder="Current password" autocomplete="current-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.current} />
             <input type="password" placeholder="New password" autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.next} />
             <input type="password" placeholder="Confirm new password" autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={onlinePasswordForm.confirm} />
             {#if onlinePasswordError}
               <p class="text-xs text-destructive">{onlinePasswordError}</p>
@@ -681,14 +681,14 @@
           <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
             {#if localAccountHasPassword}
               <input type="password" placeholder="Current password" autocomplete="current-password"
-                class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 bind:value={passwordForm.current} />
             {/if}
             <input type="password" placeholder={localAccountHasPassword ? "New password" : "Password"} autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={passwordForm.next} />
             <input type="password" placeholder="Confirm password" autocomplete="new-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={passwordForm.confirm} />
             {#if passwordError}
               <p class="text-xs text-destructive">{passwordError}</p>
@@ -809,7 +809,7 @@
             id="bar-weight"
             type="number"
             min="1"
-            class="w-24 rounded border bg-background px-2 py-1 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-24 rounded-md border bg-background px-2 py-1 text-sm text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={barWeightDisplay}
             onchange={(e) => saveBarWeight((e.currentTarget as HTMLInputElement).value)}
           />
@@ -820,7 +820,7 @@
             id="bar-plates"
             type="text"
             inputmode="decimal"
-            class="w-full rounded border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-full rounded-md border bg-background px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
             value={platesDisplay}
             onchange={(e) => savePlates((e.currentTarget as HTMLInputElement).value)}
           />
@@ -854,7 +854,7 @@
           {#each view.algorithms as algo (algo.id)}
             {@const isActive = view.config?.algorithmId === algo.id}
             <li
-              class="rounded border p-3 transition-colors {isActive
+              class="rounded-md border p-3 transition-colors {isActive
                 ? 'border-primary bg-primary/5'
                 : 'border-border'}"
             >
@@ -864,7 +864,7 @@
                     <p class="text-sm font-medium">{algo.name}</p>
                     {#if isActive}
                       <span
-                        class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5"
+                        class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5"
                         >Active</span
                       >
                     {/if}
@@ -935,13 +935,13 @@
         <ul class="flex flex-col gap-2">
           {#each mobilityView.algorithms as algo (algo.id)}
             {@const isActive = mobilityView.activeAlgorithmId === algo.id}
-            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+            <li class="rounded-md border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium">{algo.name}</p>
                     {#if isActive}
-                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                      <span class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5">Active</span>
                     {/if}
                   </div>
                   <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
@@ -1010,13 +1010,13 @@
         <ul class="flex flex-col gap-2">
           {#each muscleGroupInsightView.algorithms as algo (algo.id)}
             {@const isActive = muscleGroupInsightView.activeAlgorithmId === algo.id}
-            <li class="rounded border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
+            <li class="rounded-md border p-3 transition-colors {isActive ? 'border-primary bg-primary/5' : 'border-border'}">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium">{algo.name}</p>
                     {#if isActive}
-                      <span class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5">Active</span>
+                      <span class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5">Active</span>
                     {/if}
                   </div>
                   <p class="mt-1 text-xs text-muted-foreground">{algo.description}</p>
@@ -1074,7 +1074,7 @@
               analyticsView.config?.analyticsId ?? DEFAULT_ANALYTICS_ID}
             {@const isActive = activeId === plugin.id}
             <li
-              class="rounded border p-3 transition-colors {isActive
+              class="rounded-md border p-3 transition-colors {isActive
                 ? 'border-primary bg-primary/5'
                 : 'border-border'}"
             >
@@ -1084,7 +1084,7 @@
                     <p class="text-sm font-medium">{plugin.name}</p>
                     {#if isActive}
                       <span
-                        class="text-xs font-medium text-primary rounded border border-primary px-1.5 py-0.5"
+                        class="text-xs font-medium text-primary rounded-md border border-primary px-1.5 py-0.5"
                         >Active</span
                       >
                     {/if}
@@ -1182,7 +1182,7 @@
                   type="number"
                   min="5"
                   max="600"
-                  class="w-16 rounded border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                  class="w-16 rounded-md border bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                   value={seconds}
                   onchange={(e) =>
                     setRestSeconds(type, (e.target as HTMLInputElement).value)}
@@ -1304,7 +1304,7 @@
               type="password"
               placeholder="Confirm your password"
               autocomplete="current-password"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={deleteAccountPassword}
             />
           {/if}
@@ -1401,7 +1401,7 @@
             <div class="flex flex-col gap-1.5">
               {#each localAccounts as account (account.id)}
                 <div
-                  class="flex items-center gap-2 rounded border border-destructive/30 px-3 py-2"
+                  class="flex items-center gap-2 rounded-md border border-destructive/30 px-3 py-2"
                 >
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-medium truncate">

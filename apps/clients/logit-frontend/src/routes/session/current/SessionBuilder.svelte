@@ -520,7 +520,7 @@
             rows="2"
             placeholder="Session note — how it felt, sleep, anything…"
             transition:reveal
-            class="w-full rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+            class="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
             value={$currentSession?.note ?? ""}
             disabled={ui.saving || ui.finishing}
             onblur={(e) => void saveNote((e.currentTarget as HTMLTextAreaElement).value)}

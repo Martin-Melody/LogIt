@@ -27,10 +27,10 @@
   });
 </script>
 
-<div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+<div class="page-header">
   <BackButton onclick={() => back("/")} />
 
-  <h1 class="flex-1 text-base font-semibold">Workout</h1>
+  <h1 class="page-title">Workout</h1>
 
   {#if saving}
     <span class="text-xs text-muted-foreground shrink-0">Saving…</span>

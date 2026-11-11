@@ -186,9 +186,9 @@
 {/if}
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back("/nutrition")} />
-    <h1 class="text-sm font-semibold">Manage foods &amp; recipes</h1>
+    <h1 class="page-title">Manage foods &amp; recipes</h1>
   </div>
 
   {#if ui.loading}
@@ -237,7 +237,7 @@
             {@const totals = mealTemplateTotals(t)}
             <li class="flex items-center gap-2 px-3 py-2 text-sm">
               <input
-                class="flex-1 min-w-0 bg-transparent outline-none focus:bg-muted rounded px-1 py-0.5"
+                class="flex-1 min-w-0 bg-transparent outline-none focus:bg-muted rounded-md px-1 py-0.5"
                 value={t.name}
                 onblur={(e) => void renameTemplate(t, e.currentTarget.value)}
               />
@@ -286,22 +286,22 @@
           {#if ocrReady}
             <button
               type="button"
-              class="self-start rounded border border-border text-sm px-3 py-1.5 flex items-center gap-1.5"
+              class="self-start rounded-md border border-border text-sm px-3 py-1.5 flex items-center gap-1.5"
               onclick={() => (showLabelScanner = true)}
             >
               <ScanText class="h-4 w-4" /> Scan nutrition label
             </button>
           {/if}
-          <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={draft.name} />
-          <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" placeholder="Brand (optional)" bind:value={draft.brand} />
+          <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" placeholder="Name" bind:value={draft.name} />
+          <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" placeholder="Brand (optional)" bind:value={draft.brand} />
           <div class="grid grid-cols-4 gap-2">
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="kcal" bind:value={draft.kcal} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="P" bind:value={draft.protein} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="C" bind:value={draft.carbs} />
-            <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="F" bind:value={draft.fat} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="kcal" bind:value={draft.kcal} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="P" bind:value={draft.protein} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="C" bind:value={draft.carbs} />
+            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" placeholder="F" bind:value={draft.fat} />
           </div>
           <p class="text-[11px] text-muted-foreground">Values per 100 g.</p>
-          <input class="bg-muted rounded px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="Serving size in grams (optional)" bind:value={draft.serving} />
+          <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="numeric" placeholder="Serving size in grams (optional)" bind:value={draft.serving} />
           {#if editingId}
             <p class="text-[11px] text-muted-foreground">
               Entries you already logged from this food keep their saved values.

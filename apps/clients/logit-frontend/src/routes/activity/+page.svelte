@@ -143,9 +143,9 @@
 
 <div class="flex flex-col pb-24 min-h-screen">
   <!-- Header -->
-  <div class="flex items-center gap-2 px-3 py-3 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => void goto("/")} />
-    <h1 class="text-base font-semibold">Activity — {currentYear}</h1>
+    <h1 class="page-title">Activity — {currentYear}</h1>
   </div>
 
   <div class="flex flex-col gap-3 p-3">

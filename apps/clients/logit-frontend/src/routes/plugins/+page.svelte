@@ -93,9 +93,9 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => void goto("/profile")} />
-    <span class="text-sm font-semibold">Plugins</span>
+    <span class="text-base font-semibold">Plugins</span>
     <div class="ml-auto flex items-center gap-1">
       <Button variant="ghost" size="icon" title="Publish queue" onclick={() => void goto("/plugins/publish")}>
         <Send class="h-4 w-4" />
@@ -136,7 +136,7 @@
         </Card.Content>
       </Card.Root>
     {:else}
-      <div class="flex items-center justify-between gap-3 rounded border border-border px-3 py-2">
+      <div class="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
         <div class="flex items-center gap-2 text-sm">
           <ShieldCheck class="h-4 w-4 text-success" />
           Community plugins enabled
@@ -171,15 +171,15 @@
         {:else}
           <ul class="flex flex-col gap-2">
             {#each installed as plugin (plugin.manifest.id)}
-              <li class="rounded border p-3 {plugin.enabled ? 'border-border' : 'border-border opacity-60'}">
+              <li class="rounded-md border p-3 {plugin.enabled ? 'border-border' : 'border-border opacity-60'}">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                       <p class="text-sm font-medium truncate">{plugin.manifest.name}</p>
                       {#if plugin.enabled}
-                        <span class="rounded border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">On</span>
+                        <span class="rounded-md border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">On</span>
                       {:else}
-                        <span class="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">Off</span>
+                        <span class="rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground">Off</span>
                       {/if}
                     </div>
                     <p class="mt-0.5 text-xs text-muted-foreground">{plugin.manifest.description}</p>
@@ -222,7 +222,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Widgets</p>
               <ul class="flex flex-col gap-1.5">
                 {#each widgets as plugin (plugin.id)}
-                  <li class="rounded border border-border p-2.5">
+                  <li class="rounded-md border border-border p-2.5">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>
@@ -248,7 +248,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Progression</p>
               <ul class="flex flex-col gap-1.5">
                 {#each progressionAlgorithms as plugin (plugin.id)}
-                  <li class="rounded border border-border p-2.5">
+                  <li class="rounded-md border border-border p-2.5">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>
@@ -274,7 +274,7 @@
               <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Analytics</p>
               <ul class="flex flex-col gap-1.5">
                 {#each analyticsPlugins as plugin (plugin.id)}
-                  <li class="rounded border border-border p-2.5">
+                  <li class="rounded-md border border-border p-2.5">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <p class="text-sm font-medium">{plugin.name}</p>

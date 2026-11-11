@@ -184,7 +184,7 @@
       {#if phase === "confirming" && parsedData}
         <!-- File parsed — show category picker -->
         <div
-          class="rounded border border-border bg-muted/30 p-3 flex flex-col gap-3"
+          class="rounded-md border border-border bg-muted/30 p-3 flex flex-col gap-3"
         >
           <div class="flex items-start gap-2">
             <FileJson class="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
@@ -195,7 +195,7 @@
           </div>
 
           <div
-            class="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 p-2"
+            class="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-2"
           >
             <AlertTriangle class="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
             <p class="text-xs text-warning">
@@ -249,7 +249,7 @@
         </div>
       {:else if phase === "error"}
         <div
-          class="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/5 p-2"
+          class="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2"
         >
           <AlertTriangle class="h-3.5 w-3.5 mt-0.5 shrink-0 text-destructive" />
           <p class="text-xs text-destructive">{errorMsg}</p>

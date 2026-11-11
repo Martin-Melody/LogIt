@@ -7,7 +7,8 @@
   import { loadVolumeContext, sessionVolumeKg, type VolumeContext } from "$lib/features/bodyweight/bodyweight";
   import { getExercises, updateSet, foldSupersets, setTypeMeta, mobilitySetGroups } from "@logit/core/domain/workout";
   import { durationMs, formatDuration } from "@logit/core/domain/time";
-  import { formatWeight } from "@logit/core/domain/units";
+  import { formatWeight, formatLoad } from "@logit/core/domain/units";
+  import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { profile } from "$lib/stores/profile.store";
   import { reveal } from "$lib/transitions";
   import { getSession } from "$lib/usecases/getSession";
@@ -218,7 +219,7 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     {#if edit.active}
       <Button
         variant="ghost"
@@ -231,7 +232,7 @@
       </Button>
 
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-semibold">Editing session</span>
+        <span class="text-base font-semibold">Editing session</span>
       </div>
 
       <Button
@@ -247,7 +248,7 @@
       <BackButton onclick={() => back("/sessions")} />
 
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-semibold">
+        <span class="text-base font-semibold">
           {ended ? longDate(ended) : "Session"}
         </span>
       </div>
@@ -340,7 +341,7 @@
           <input
             id="edit-started"
             type="datetime-local"
-            class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             value={msToDatetimeLocal(edit.draft.startedAtMs)}
             onchange={(e) => { if (edit.draft) edit.draft.startedAtMs = new Date(e.currentTarget.value).getTime(); }}
           />
@@ -351,7 +352,7 @@
             <input
               id="edit-ended"
               type="datetime-local"
-              class="rounded border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               value={msToDatetimeLocal(edit.draft.endedAtMs)}
               onchange={(e) => { if (edit.draft) edit.draft.endedAtMs = new Date(e.currentTarget.value).getTime(); }}
             />
@@ -405,12 +406,13 @@
           {#if edit.active}<span></span>{/if}
         </div>
 
+        {@const bodyweight = usesBodyweightLoad(ex.exerciseId ? volumeCtx?.typeById.get(ex.exerciseId) : undefined, ex.sets.map((s) => s.weight))}
         {#each [...ex.sets].sort(sortByOrder) as set, i (set.id)}
           {@const meta = setTypeMeta(set.setType)}
           {#snippet cells()}
             <span class="flex items-center gap-1">
               {#if meta.short}
-                <span class="text-[11px] font-bold leading-none px-1 py-0.5 rounded border {meta.badgeClass}" title={meta.label}>{meta.short}</span>
+                <span class="text-[11px] font-bold leading-none px-1 py-0.5 rounded-md border {meta.badgeClass}" title={meta.label}>{meta.short}</span>
               {:else}
                 <span class="text-xs text-muted-foreground tabular-nums">{i + 1}</span>
               {/if}
@@ -418,7 +420,7 @@
             <span class="text-sm tabular-nums">
               {set.reps}{#if set.rpe != null}<span class="text-xs text-muted-foreground"> @{set.rpe}</span>{/if}
             </span>
-            <span class="text-sm tabular-nums">{formatWeight(set.weight, weightUnit, { withUnit: false })}</span>
+            <span class="text-sm tabular-nums">{formatLoad(set.weight, weightUnit, bodyweight, { withUnit: false })}</span>
           {/snippet}
           {#if edit.active}
             <button

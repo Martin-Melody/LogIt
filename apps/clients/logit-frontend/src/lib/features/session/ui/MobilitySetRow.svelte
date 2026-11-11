@@ -112,13 +112,13 @@
         {holdDisplay}{#if target && !running}<span class="text-muted-foreground font-normal"> / {target}s</span>{/if}
       </span>
     {:else}
-      <button type="button" class="h-7 w-7 shrink-0 flex items-center justify-center rounded border text-muted-foreground hover:text-foreground disabled:opacity-30"
+      <button type="button" class="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border text-muted-foreground hover:text-foreground disabled:opacity-30"
         {disabled} aria-label="One fewer rep"
         onclick={() => void onPatch({ reps: Math.max(0, (set.reps ?? 0) - 1) || undefined })}>
         <Minus class="h-3 w-3" />
       </button>
       <input
-        class="w-14 shrink-0 rounded border bg-background px-1.5 py-1 text-sm tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
+        class="w-14 shrink-0 rounded-md border bg-background px-1.5 py-1 text-sm tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
         type="number" min="0" inputmode="numeric"
         placeholder={prevReps ?? "0"}
         value={set.reps ? String(set.reps) : ""}
@@ -126,7 +126,7 @@
         onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
         onchange={(e) => void onPatch({ reps: num((e.currentTarget as HTMLInputElement).value) || undefined })}
       />
-      <button type="button" class="h-7 w-7 shrink-0 flex items-center justify-center rounded border text-muted-foreground hover:text-foreground"
+      <button type="button" class="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border text-muted-foreground hover:text-foreground"
         {disabled} aria-label="One more rep"
         onclick={() => void onPatch({ reps: (set.reps ?? 0) + 1 })}>
         <Plus class="h-3 w-3" />
@@ -134,7 +134,7 @@
     {/if}
 
     <input
-      class="w-14 shrink-0 ml-auto rounded border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+      class="w-14 shrink-0 ml-auto rounded-md border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
       type="number" min="0" step={weightUnit === "lbs" ? "1" : "0.5"}
       placeholder={prevLoad ?? "±kg"}
       value={displayLoad}

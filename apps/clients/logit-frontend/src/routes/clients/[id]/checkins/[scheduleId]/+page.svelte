@@ -60,11 +60,11 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => back(`/clients/${clientId}?u=${username}`)} />
     {#if schedule}
       <input
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-transparent focus:border-primary"
+        class="flex-1 min-w-0 bg-transparent text-base font-semibold focus:outline-none border-b border-transparent focus:border-primary"
         value={schedule.name}
         disabled={ui.saving}
         onblur={(e) => { const v = e.currentTarget.value.trim(); if (v && v !== schedule?.name) void run((s) => C.renameCheckinSchedule(s, v)); }}
@@ -88,7 +88,7 @@
   {:else}
     <div class="px-3 py-2 border-b border-border flex items-center gap-2 text-sm">
       <span class="text-muted-foreground">Cadence</span>
-      <select value={schedule.cadence} class="rounded border bg-background px-2 py-1 text-sm"
+      <select value={schedule.cadence} class="rounded-md border bg-background px-2 py-1 text-sm"
         onchange={(e) => void run((s) => C.setCadence(s, e.currentTarget.value as CheckinCadence))}>
         {#each cadences as c}<option value={c} class="capitalize">{c}</option>{/each}
       </select>
@@ -111,7 +111,7 @@
             </button>
           </div>
           <div class="flex items-center gap-2">
-            <select value={q.type} class="rounded border bg-background px-1.5 py-0.5 text-xs"
+            <select value={q.type} class="rounded-md border bg-background px-1.5 py-0.5 text-xs"
               onchange={(e) => void run((s) => C.updateQuestion(s, q.id, { type: e.currentTarget.value as CheckinQuestionType }))}>
               {#each qTypes as t}<option value={t.v}>{t.l}</option>{/each}
             </select>

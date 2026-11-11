@@ -146,8 +146,8 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center justify-between px-3 py-3 border-b border-border">
-    <h1 class="text-base font-semibold">Sessions</h1>
+  <div class="page-header">
+    <h1 class="page-title">Sessions</h1>
   </div>
 
   {#if !ui.loading && !ui.error && allRows.length > 0}
@@ -175,7 +175,7 @@
       type="text"
       placeholder="Search by date or exercise…"
       bind:value={query}
-      class="w-full rounded border border-border bg-background pl-8 pr-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      class="w-full rounded-md border border-border bg-background pl-8 pr-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
     />
     {#if query}
       <button

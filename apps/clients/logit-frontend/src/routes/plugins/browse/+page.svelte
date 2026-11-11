@@ -149,9 +149,9 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => void goto("/plugins")} />
-    <span class="text-sm font-semibold">Browse plugins</span>
+    <span class="text-base font-semibold">Browse plugins</span>
     <Button
       variant="ghost"
       size="sm"
@@ -176,7 +176,7 @@
         <Card.Content class="flex flex-col gap-2">
           <ul class="flex flex-col gap-1.5">
             {#each $registrySources as src (src.url)}
-              <li class="flex items-center gap-2 rounded border border-border px-2.5 py-2">
+              <li class="flex items-center gap-2 rounded-md border border-border px-2.5 py-2">
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-sm font-medium">{src.label}</p>
                   <p class="truncate text-xs text-muted-foreground">{src.url}</p>
@@ -199,7 +199,7 @@
             <input
               type="url"
               placeholder="https://example.com/registry.json"
-              class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={newRegistryUrl}
             />
             <Button size="sm" disabled={!newRegistryUrl.trim()} onclick={() => void addRegistry()}>
@@ -214,7 +214,7 @@
     {/if}
 
     {#if registryErrors.length > 0}
-      <div class="rounded border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
+      <div class="rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
         {#each registryErrors as err (err)}
           <p>{err}</p>
         {/each}
@@ -230,7 +230,7 @@
         <input
           type="search"
           placeholder="Search plugins…"
-          class="w-full rounded border bg-background py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          class="w-full rounded-md border bg-background py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={query}
         />
       </div>
@@ -279,7 +279,7 @@
     {/if}
 
     {#if !$pluginSettings.communityPluginsEnabled}
-      <div class="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
+      <div class="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
         <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           Community plugins are off. Widgets, progression and analytics plugins
@@ -310,13 +310,13 @@
               {#each featured as entry (entry.id)}
                 {@const isInstalled = installedIds.has(entry.id)}
                 {@const isInstalling = installingIds[entry.id]}
-                <li class="rounded border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
+                <li class="rounded-md border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
                         <p class="text-sm font-medium">{entry.name}</p>
                         {#if isInstalled}
-                          <span class="rounded border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
+                          <span class="rounded-md border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
                         {/if}
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>
@@ -360,13 +360,13 @@
               {#each rest as entry (entry.id)}
                 {@const isInstalled = installedIds.has(entry.id)}
                 {@const isInstalling = installingIds[entry.id]}
-                <li class="rounded border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
+                <li class="rounded-md border p-3 {isInstalled ? 'border-primary/30 bg-primary/5' : 'border-border'}">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
                         <p class="text-sm font-medium">{entry.name}</p>
                         {#if isInstalled}
-                          <span class="rounded border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
+                          <span class="rounded-md border border-primary px-1.5 py-0.5 text-xs font-medium text-primary">Installed</span>
                         {/if}
                       </div>
                       <p class="mt-0.5 text-xs text-muted-foreground">{entry.description}</p>

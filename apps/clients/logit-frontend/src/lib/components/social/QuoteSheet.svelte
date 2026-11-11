@@ -80,7 +80,7 @@
       <span class="text-sm font-semibold flex-1">Quote post</span>
       <button
         type="button"
-        class="px-4 py-1.5 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
+        class="px-4 py-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
         disabled={submitting || !body.trim()}
         onclick={() => void submit()}
       >

@@ -104,7 +104,7 @@
   }
 
   const box =
-    "h-10 w-full rounded border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+    "h-10 w-full rounded-md border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
   const planPh = "placeholder:font-medium placeholder:text-info";
   const plainPh = "placeholder:font-normal placeholder:text-muted-foreground";
 </script>
@@ -126,7 +126,7 @@
   >
     {#if meta.short}
       <span
-        class="text-[11px] font-bold leading-none px-1 py-0.5 rounded border tabular-nums {meta.badgeClass}"
+        class="text-[11px] font-bold leading-none px-1 py-0.5 rounded-md border tabular-nums {meta.badgeClass}"
         title={meta.label}
       >
         {meta.short}

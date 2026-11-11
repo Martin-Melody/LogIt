@@ -55,9 +55,9 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="flex items-center gap-2">
+  <div class="page-header -mx-3 -mt-3">
     <BackButton onclick={() => back("/settings")} />
-    <h1 class="text-base font-semibold">
+    <h1 class="page-title">
       {algorithm?.name ?? "Algorithm"} Settings
     </h1>
   </div>

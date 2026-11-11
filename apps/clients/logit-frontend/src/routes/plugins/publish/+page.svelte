@@ -123,9 +123,9 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border">
+  <div class="page-header">
     <BackButton onclick={() => void goto("/plugins")} />
-    <span class="text-sm font-semibold">Publish queue</span>
+    <span class="text-base font-semibold">Publish queue</span>
     {#if items.length > 0}
       <Button variant="ghost" size="sm" class="ml-auto text-xs text-muted-foreground" onclick={clearAll}>
         Clear all
@@ -162,7 +162,7 @@
                 <Card.Description class="break-all">{item.package.actorUrl}</Card.Description>
               </div>
               <span
-                class="shrink-0 rounded border px-1.5 py-0.5 text-xs font-medium {item.status === 'published' ? 'border-primary/30 text-primary' : 'border-border text-muted-foreground'}"
+                class="shrink-0 rounded-md border px-1.5 py-0.5 text-xs font-medium {item.status === 'published' ? 'border-primary/30 text-primary' : 'border-border text-muted-foreground'}"
               >
                 {item.status}
               </span>
@@ -180,7 +180,7 @@
 
             <div>
               <p class="mb-1.5 text-xs text-muted-foreground">Announcement JSON</p>
-              <pre class="overflow-auto rounded border border-border bg-muted/30 p-3 text-xs leading-relaxed">{JSON.stringify(item.package.announcement, null, 2)}</pre>
+              <pre class="overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs leading-relaxed">{JSON.stringify(item.package.announcement, null, 2)}</pre>
             </div>
 
             <div class="flex flex-wrap gap-2">

@@ -115,9 +115,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="flex items-center gap-2 border-b border-border px-3 py-2">
+  <div class="page-header">
     <BackButton onclick={() => back("/")} />
-    <h1 class="text-sm font-semibold">Habits</h1>
+    <h1 class="page-title">Habits</h1>
     <button
       type="button"
       class="ml-auto flex h-8 w-8 items-center justify-center"

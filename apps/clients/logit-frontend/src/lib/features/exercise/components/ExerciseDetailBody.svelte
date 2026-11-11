@@ -220,7 +220,7 @@
       <input
         id="ex-name"
         type="text"
-        class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draftName}
         onblur={commitName}
         disabled={view.exercise.isCore}
@@ -237,7 +237,7 @@
       <textarea
         id="ex-notes"
         rows="3"
-        class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
         bind:value={draftNotes}
         onblur={commitNotes}
       ></textarea>
@@ -338,13 +338,13 @@
       <input
         type="text"
         placeholder="Add a machine…"
-        class="flex-1 min-w-0 rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        class="flex-1 min-w-0 rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={newMachineName}
         onkeydown={(e) => { if (e.key === "Enter") void addMachine(); }}
       />
       <button
         type="button"
-        class="shrink-0 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
+        class="shrink-0 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
         disabled={!newMachineName.trim()}
         onclick={() => void addMachine()}
       >
@@ -365,7 +365,7 @@
           </p>
           <input
             type="text"
-            class="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             placeholder="Pack name"
             bind:value={exportName}
           />

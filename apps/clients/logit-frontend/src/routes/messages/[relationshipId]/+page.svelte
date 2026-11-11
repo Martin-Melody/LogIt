@@ -59,9 +59,9 @@
 </script>
 
 <div class="flex flex-col h-[100dvh]">
-  <div class="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
+  <div class="page-header shrink-0">
     <BackButton onclick={() => back("/messages")} />
-    <p class="text-sm font-semibold truncate">{name}</p>
+    <p class="text-base font-semibold truncate">{name}</p>
   </div>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive shrink-0">{ui.error}</p>{/if}
@@ -88,7 +88,7 @@
       bind:value={draft}
       rows="1"
       placeholder="Message…"
-      class="flex-1 resize-none rounded border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
+      class="flex-1 resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
       onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
     ></textarea>
     <Button type="submit" size="icon" class="h-9 w-9 shrink-0" disabled={ui.sending || !draft.trim()}>

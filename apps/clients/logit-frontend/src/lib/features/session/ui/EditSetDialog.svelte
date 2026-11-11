@@ -445,10 +445,10 @@
 
           <!-- Stepper — only when a time is set -->
           {#if draft.restDurationMs !== undefined}
-            <div class="flex items-center justify-between gap-2 rounded border border-border px-3 py-2" transition:reveal>
+            <div class="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2" transition:reveal>
               <button
                 type="button"
-                class="h-7 w-7 flex items-center justify-center rounded text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                class="h-7 w-7 flex items-center justify-center rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
                 {disabled}
                 onclick={() => stepRest(-STEP_MS)}
               >
@@ -457,7 +457,7 @@
               <span class="text-sm font-semibold tabular-nums">{formatRest(draft.restDurationMs)}</span>
               <button
                 type="button"
-                class="h-7 w-7 flex items-center justify-center rounded text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+                class="h-7 w-7 flex items-center justify-center rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
                 {disabled}
                 onclick={() => stepRest(STEP_MS)}
               >
