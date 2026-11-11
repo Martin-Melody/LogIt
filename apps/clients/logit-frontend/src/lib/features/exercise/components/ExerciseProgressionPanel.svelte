@@ -1,7 +1,7 @@
 <script lang="ts">
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
-  import { curveNatural } from "d3-shape";
+  import { curveMonotoneX } from "d3-shape";
   import { scaleUtc } from "d3-scale";
   import { AreaChart } from "layerchart";
   import * as Chart from "$lib/components/ui/chart";
@@ -34,10 +34,9 @@
   );
 
   const chartData = $derived(
-    currentSeries?.points.map((p) => ({
-      date: new Date(p.date),
-      value: p.value,
-    })) ?? [],
+    (currentSeries?.points ?? [])
+      .map((p) => ({ date: new Date(p.date), value: p.value }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime()),
   );
 
   const currentDef = $derived(metricDefs.find((d) => d.id === activeSeries));
@@ -191,10 +190,14 @@
           data={chartData}
           x="date"
           xScale={scaleUtc()}
+          yNice={4}
           series={[{ key: "value", label: currentSeries?.label ?? "", color: chartConfig.value.color }]}
           props={{
             area: {
-              curve: curveNatural,
+              // Monotone: smooth, but never above / below the points it joins or
+              // backwards in time. curveNatural overshot on unevenly spaced sessions,
+              // looping past the first / last point and out of the plot.
+              curve: curveMonotoneX,
               fillOpacity: 0.3,
               line: { class: "stroke-1" },
               motion: "tween",
