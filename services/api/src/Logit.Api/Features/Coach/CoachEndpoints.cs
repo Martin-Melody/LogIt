@@ -71,18 +71,29 @@ public static class CoachEndpoints
         if (client is null) return Results.NotFound();
         if (client.Id == coachId) return Results.BadRequest(new { error = "Cannot invite yourself." });
 
-        var existing = await db.CoachClientRelationships.AnyAsync(r =>
-            r.CoachId == coachId && r.ClientId == client.Id &&
-            (r.Status == CoachClientStatus.Pending || r.Status == CoachClientStatus.Active));
-        if (existing) return Results.Conflict(new { error = "Already invited or connected." });
+        // (CoachId, ClientId) is unique, so there is at most one row per pair whatever its
+        // status. A Revoked row is reopened rather than duplicated: inserting a second row
+        // used to hit the unique index and 500, so a revoked client could never be re-invited.
+        var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
+            r.CoachId == coachId && r.ClientId == client.Id);
+        if (relationship is not null && relationship.Status != CoachClientStatus.Revoked)
+            return Results.Conflict(new { error = "Already invited or connected." });
 
-        var relationship = new CoachClientRelationship
+        if (relationship is null)
         {
-            CoachId = coachId,
-            ClientId = client.Id,
-            Status = CoachClientStatus.Pending,
-        };
-        db.CoachClientRelationships.Add(relationship);
+            relationship = new CoachClientRelationship
+            {
+                CoachId = coachId,
+                ClientId = client.Id,
+                Status = CoachClientStatus.Pending,
+            };
+            db.CoachClientRelationships.Add(relationship);
+        }
+        else
+        {
+            relationship.Status = CoachClientStatus.Pending;
+            relationship.UpdatedAt = DateTime.UtcNow;
+        }
         await db.SaveChangesAsync();
 
         return Results.Created($"/coach/invites/{relationship.Id}", new { relationshipId = relationship.Id });
@@ -298,8 +309,20 @@ public static class CoachEndpoints
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
             r.Id == relationshipId &&
             (r.CoachId == userId || r.ClientId == userId) &&
-            r.Status == CoachClientStatus.Active);
+            (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Pending));
         if (relationship is null) return Results.NotFound();
+
+        // A relationship that ends before it started leaves no trace (same as the client
+        // declining). One that was Active is kept as Revoked: programs, check-ins and
+        // messages point at it.
+        if (relationship.Status == CoachClientStatus.Pending)
+        {
+            // Only the coach withdraws a pending invite; the client declines it instead.
+            if (relationship.CoachId != userId) return Results.NotFound();
+            db.CoachClientRelationships.Remove(relationship);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        }
 
         relationship.Status = CoachClientStatus.Revoked;
         relationship.UpdatedAt = DateTime.UtcNow;

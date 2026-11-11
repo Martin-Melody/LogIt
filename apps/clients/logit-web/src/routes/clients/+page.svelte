@@ -206,6 +206,14 @@
               {#each sent as inv (inv.relationshipId)}
                 <div class="flex items-center justify-between py-1 text-sm">
                   <span class="text-muted-foreground">{inv.client.displayName || inv.client.username}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busyId === inv.relationshipId}
+                    onclick={() => revoke(inv.relationshipId)}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               {/each}
             </div>

@@ -139,7 +139,11 @@
           <div class="px-3 pb-3">
             <p class="text-xs text-muted-foreground mb-1">Pending invites sent</p>
             {#each sent as inv (inv.relationshipId)}
-              <p class="text-sm text-muted-foreground py-0.5">{inv.client.displayName || inv.client.username}</p>
+              <div class="flex items-center justify-between py-0.5 text-sm">
+                <span class="text-muted-foreground">{inv.client.displayName || inv.client.username}</span>
+                <Button size="sm" variant="outline" disabled={ui.busyId === inv.relationshipId}
+                  onclick={() => act(inv.relationshipId, () => coachApi.revokeRelationship(inv.relationshipId))}>Cancel</Button>
+              </div>
             {/each}
           </div>
         {/if}
