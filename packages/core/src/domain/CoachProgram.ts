@@ -8,7 +8,10 @@ import { nowMs } from "./time";
 // read-only via /coach/programs/assigned and trains against it — logged sessions sync back
 // through the normal session path, unchanged.
 
-export type ProgramStartMode = "on-accept" | "fixed-date" | "manual";
+/** How a program's "week 1, day 1" is decided: on a date the coach picks, or when the
+ * client taps Start. Programs saved before 2026-11 may still say "on-accept"; nothing ever
+ * set a date for those, so they're read as "manual" (see getProgramStartMs). */
+export type ProgramStartMode = "fixed-date" | "manual";
 
 export type CoachProgram = {
   id: string;
@@ -16,9 +19,13 @@ export type CoachProgram = {
   description?: string;
   lengthWeeks: number;
   startMode: ProgramStartMode;
-  /** Epoch ms of week 1, day 1. Set when startMode is "fixed-date", or stamped when the
-   * client first starts the program under "on-accept". Undefined => not started yet. */
+  /** Epoch ms of week 1, day 1, picked by the coach. Only read when startMode is
+   * "fixed-date". */
   startDateMs?: number;
+  /** When the client tapped Start (start of their day, epoch ms). Only ever set on the
+   * client's own copy, from the server's StartedAtMs column; the coach never authors it.
+   * Only read when startMode is "manual". */
+  clientStartedAtMs?: number;
   weeks: ProgramWeek[];
   archived: boolean;
   createdAtMs: number;
@@ -91,7 +98,7 @@ export function createCoachProgram(name: string = "New Program"): CoachProgram {
     id: createId("cprog"),
     name: name.trim() || "New Program",
     lengthWeeks: 1,
-    startMode: "on-accept",
+    startMode: "manual",
     weeks: [createWeek(1)],
     archived: false,
     createdAtMs: now,
@@ -101,6 +108,34 @@ export function createCoachProgram(name: string = "New Program"): CoachProgram {
 
 export function touchCoachProgram(program: CoachProgram): CoachProgram {
   return { ...program, updatedAtMs: nowMs() };
+}
+
+/** Coach: choose how the program starts. A fixed date is week 1, day 1 at local midnight
+ * of that day; switching to "manual" drops the date so it can't linger unused. */
+export function setProgramStart(
+  program: CoachProgram,
+  start: { mode: "manual" } | { mode: "fixed-date"; startDateMs: number },
+): CoachProgram {
+  if (start.mode === "manual") {
+    const { startDateMs: _dropped, ...rest } = program;
+    return touchCoachProgram({ ...rest, startMode: "manual" });
+  }
+  return touchCoachProgram({ ...program, startMode: "fixed-date", startDateMs: startOfLocalDayMs(start.startDateMs) });
+}
+
+/** "2026-11-16" for a date input, in local time. */
+export function toDateInputValue(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Local midnight of a date input's "YYYY-MM-DD" value, or null if it isn't one. */
+export function fromDateInputValue(value: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return null;
+  const ms = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+  return Number.isFinite(ms) ? ms : null;
 }
 
 export function renameCoachProgram(program: CoachProgram, name: string): CoachProgram {
@@ -286,18 +321,52 @@ export function removeSet(
 
 // ── Client-side resolution ────────────────────────────────────────────────────
 
+/** Epoch ms of week 1, day 1, or null while the program has no start yet. */
+export function getProgramStartMs(program: CoachProgram): number | null {
+  // Anything but "fixed-date" (including the old "on-accept") starts when the client taps Start.
+  const start = program.startMode === "fixed-date" ? program.startDateMs : program.clientStartedAtMs;
+  return start ?? null;
+}
+
+/**
+ * Where a program is in its life:
+ * - "not-started": waiting for the client to tap Start (manual), or for the coach to pick a
+ *   date (fixed-date without one).
+ * - "scheduled": fixed-date, and the date is still ahead.
+ * - "running": in week `weekNumber` (1-indexed).
+ * - "finished": past the last week.
+ */
+export type ProgramProgress =
+  | { status: "not-started" }
+  | { status: "scheduled"; startsAtMs: number }
+  | { status: "running"; weekNumber: number }
+  | { status: "finished" };
+
+export function getProgramProgress(program: CoachProgram, atMs: number = nowMs()): ProgramProgress {
+  const start = getProgramStartMs(program);
+  if (start == null) return { status: "not-started" };
+  const elapsedMs = atMs - start;
+  if (elapsedMs < 0) return { status: "scheduled", startsAtMs: start };
+  const weekIndex = Math.floor(elapsedMs / WEEK_MS);
+  if (weekIndex >= program.weeks.length) return { status: "finished" };
+  return { status: "running", weekNumber: weekIndex + 1 };
+}
+
 /** Which week the client is currently in (1-indexed), given when the program started.
  * Returns null if the program hasn't started or has already finished. */
 export function resolveCurrentWeekNumber(
   program: CoachProgram,
   atMs: number = nowMs(),
 ): number | null {
-  if (program.startDateMs == null) return null;
-  const elapsedMs = atMs - program.startDateMs;
-  if (elapsedMs < 0) return null;
-  const weekIndex = Math.floor(elapsedMs / WEEK_MS);
-  if (weekIndex >= program.weeks.length) return null;
-  return weekIndex + 1;
+  const progress = getProgramProgress(program, atMs);
+  return progress.status === "running" ? progress.weekNumber : null;
+}
+
+/** Local midnight of the day containing `atMs`: the start a client gets when they tap Start. */
+export function startOfLocalDayMs(atMs: number = nowMs()): number {
+  const d = new Date(atMs);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
 }
 
 export function getCurrentWeek(

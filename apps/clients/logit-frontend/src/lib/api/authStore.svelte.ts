@@ -3,7 +3,7 @@ import { getServerMode } from "@logit/core/api/serverConfig";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId } from "$lib/data/activeOwner";
 import { resetRepos, initRepos } from "$lib/data/repoProvider";
-import { rehydrateStores } from "$lib/platform/appInit";
+import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
 import { navConfig } from "$lib/stores/navConfig.store";
 import { syncAll, pushAllLocalData, pushCurrentProfile } from "$lib/sync/syncService";
@@ -43,6 +43,7 @@ function createAuthStore() {
     // pulls — see pushCurrentProfile()'s comment for why it can't safely run alongside
     // pushAllLocalData() like everything else here.
     void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
+    startBackgroundSync();
   }
 
   async function register(username: string, email: string, password: string, displayName: string) {
@@ -50,6 +51,7 @@ function createAuthStore() {
     user = serverUser;
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
     void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
+    startBackgroundSync();
   }
 
   async function linkOrCreateLocalAccount(serverUser: AuthUser) {
@@ -134,6 +136,7 @@ function createAuthStore() {
     // means offline use — even if the account was previously linked, online auth must be
     // re-established explicitly via the /auth screen.
     user = null;
+    stopBackgroundSync();
     await apiClient.clearLocal();
 
     setActiveOwnerId(account.id);
@@ -154,6 +157,7 @@ function createAuthStore() {
 
     // Creating a new local account means going offline — clear any stale online auth.
     user = null;
+    stopBackgroundSync();
     await apiClient.clearLocal();
 
     const { createLocalAccount, listLocalAccounts, claimOrphanedData, orphanClaimTarget } =
@@ -192,6 +196,7 @@ function createAuthStore() {
       try { await apiClient.logout(); } catch {}
     }
     user = null;
+    stopBackgroundSync();
 
     if (isNativePlatform()) {
       // Drop the active owner pointer — data stays in SQLite under owner_id
@@ -215,6 +220,7 @@ function createAuthStore() {
       await apiClient.deleteAccount(password);
     }
     user = null;
+    stopBackgroundSync();
 
     if (isNativePlatform()) {
       const { clearOwnerData, getDb } = await import("$lib/data/db/sqlite");

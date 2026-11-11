@@ -13,7 +13,7 @@
 
   import { createSplit } from "@logit/core/domain/WorkoutSplit";
   import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
-  import { getCurrentWeek } from "@logit/core/domain/CoachProgram";
+  import { getProgramProgress } from "@logit/core/domain/CoachProgram";
   import { getBuiltinProgram, isBuiltinProgramId } from "@logit/core/domain/builtinPrograms";
   import { reveal, popIn } from "$lib/transitions";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
@@ -168,7 +168,7 @@
           </li>
         {/if}
         {#each $assignedPrograms as p (p.id)}
-          {@const week = getCurrentWeek(p)}
+          {@const progress = getProgramProgress(p)}
           <li>
             <button
               type="button"
@@ -179,7 +179,10 @@
                 <span class="text-sm font-medium truncate">{p.name}</span>
                 <p class="text-xs text-muted-foreground mt-0.5">
                   {p.weeks.length} week{p.weeks.length === 1 ? "" : "s"}
-                  {#if week} · currently week {week.weekNumber}{/if}
+                  {#if progress.status === "running"} · week {progress.weekNumber}
+                  {:else if progress.status === "scheduled"} · starts {new Date(progress.startsAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                  {:else if progress.status === "finished"} · finished
+                  {:else} · not started{/if}
                 </p>
               </div>
               <span class="text-muted-foreground text-sm shrink-0">›</span>

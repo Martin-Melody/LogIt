@@ -17,7 +17,7 @@ namespace Logit.Api.Migrations.Postgres
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.30")
+                .HasAnnotation("ProductVersion", "8.0.34")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -270,6 +270,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<Guid?>("RelationshipId")
                         .HasColumnType("uuid");
+
+                    b.Property<long?>("StartedAtMs")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("timestamp with time zone");

@@ -70,25 +70,34 @@
     }
   }
 
+  // Bumped by every load; a response for an older request (e.g. a "more" for the previous
+  // profile, still in flight when the username changed) is dropped instead of appended.
+  let latestPostsRequest = 0;
+
   async function loadPosts(more = false) {
+    if (more && (postsLoading || loadingMore || !nextCursor)) return;
+    const request = ++latestPostsRequest;
     if (more) loadingMore = true;
     else postsLoading = true;
     try {
       const page = await socialApi.getUserPosts(username, 20, more ? nextCursor ?? undefined : undefined);
+      if (request !== latestPostsRequest) return;
       posts = more ? [...posts, ...page.posts] : page.posts;
       nextCursor = page.nextCursor;
     } catch {
       // leave what we have
     } finally {
-      postsLoading = false;
-      loadingMore = false;
+      if (request === latestPostsRequest) {
+        postsLoading = false;
+        loadingMore = false;
+      }
     }
   }
 
   $effect(() => {
-    if (!sentinel) return;
+    if (!sentinel || postsLoading || loadingMore || !nextCursor) return;
     const io = new IntersectionObserver((e) => {
-      if (e[0].isIntersecting && nextCursor && !loadingMore) void loadPosts(true);
+      if (e[0].isIntersecting) void loadPosts(true);
     }, { rootMargin: "500px" });
     io.observe(sentinel);
     return () => io.disconnect();

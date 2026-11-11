@@ -12,7 +12,7 @@
     isContinuationSet,
     setTypeMeta,
     applySetPlan,
-    DEFAULT_REST_MS,
+    strengthRestMs,
   } from "@logit/core/domain/workout";
   import { suggestionToPlan } from "@logit/core/domain/progression";
   import { warmupSets } from "@logit/core/domain/warmup";
@@ -35,7 +35,6 @@
   import { get } from "svelte/store";
   import { untrack } from "svelte";
   import { profile } from "$lib/stores/profile.store";
-  import { startRestTimer, cancelRestTimer, hasRestTimerFired } from "$lib/services/restTimerService";
   import { reveal } from "$lib/transitions";
   import ExerciseCard from "$lib/features/session/ui/ExerciseCard.svelte";
   import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
@@ -298,7 +297,6 @@
       }),
     );
     void triggerHaptic();
-    if (startsRest) startRestTimer(setId, effectiveRest!);
   }
 
   function getEditableSet() {
@@ -365,35 +363,12 @@
       }),
     );
 
-    if (!wasCompleted) {
-      void triggerHaptic();
-      if (startsRest) startRestTimer(setId, effectiveRest!);
-    } else {
-      cancelRestTimer(setId);
-    }
-  }
-
-  async function handleRestDone(setId: string) {
-    // The global in-app timer may have already fired and shown its own toast.
-    // Only show the toast here if the RestProgressBar caught it first.
-    const alreadyToasted = hasRestTimerFired(setId);
-    cancelRestTimer(setId);
-
-    if (!alreadyToasted) {
-      toast("Rest complete — time for your next set!");
-      try {
-        const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
-        await Haptics.impact({ style: ImpactStyle.Light });
-      } catch {}
-    }
-
-    await onMutate((s: WorkoutSession) =>
-      updateSet(s, blockId, setId, { restStartedAtMs: null }),
-    );
+    // The rest service (restTimerService.ts) sees restStartedAtMs change and schedules or
+    // cancels the alert itself.
+    if (!wasCompleted) void triggerHaptic();
   }
 
   async function handleDismissRest(setId: string) {
-    cancelRestTimer(setId);
     await onMutate((s: WorkoutSession) =>
       updateSet(s, blockId, setId, { restStartedAtMs: null }),
     );
@@ -662,8 +637,7 @@
             <div transition:reveal>
               <RestProgressBar
                 restStartedAtMs={lead.restStartedAtMs}
-                restDurationMs={lead.restDurationMs ?? $profile.restDefaults[lead.setType] ?? DEFAULT_REST_MS}
-                onDone={() => handleRestDone(lead.id)}
+                restDurationMs={strengthRestMs(lead, $profile.restDefaults)}
                 onDismiss={() => handleDismissRest(lead.id)}
               />
             </div>
@@ -701,8 +675,7 @@
                 <div transition:reveal>
                   <RestProgressBar
                     restStartedAtMs={drop.restStartedAtMs}
-                    restDurationMs={drop.restDurationMs ?? $profile.restDefaults[drop.setType] ?? DEFAULT_REST_MS}
-                    onDone={() => handleRestDone(drop.id)}
+                    restDurationMs={strengthRestMs(drop, $profile.restDefaults)}
                     onDismiss={() => handleDismissRest(drop.id)}
                   />
                 </div>

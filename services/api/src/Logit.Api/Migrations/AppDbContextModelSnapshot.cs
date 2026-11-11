@@ -15,7 +15,7 @@ namespace Logit.Api.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.30");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.34");
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Block", b =>
                 {
@@ -265,6 +265,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<Guid?>("RelationshipId")
                         .HasColumnType("TEXT");
+
+                    b.Property<long?>("StartedAtMs")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("TEXT");
