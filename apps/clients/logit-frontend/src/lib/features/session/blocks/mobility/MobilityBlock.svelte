@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal } from "lucide-svelte";
+  import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import { get } from "svelte/store";
   import { SvelteMap } from "svelte/reactivity";
@@ -34,7 +34,7 @@
   import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
   import MobilityDrillDetailSheet from "$lib/features/session/ui/MobilityDrillDetailSheet.svelte";
 
-  const { blockId, data, saving, gripAction, onDelete, onMutate }: BlockBaseProps<MobilityBlockData> =
+  const { blockId, data, saving, grouped = false, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<MobilityBlockData> =
     $props();
 
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
@@ -368,7 +368,7 @@
       class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
       style="touch-action: none"
       use:gripAction
-      aria-label="Drag to reorder"
+      aria-label={grouped ? "Drag to reorder within the group" : "Drag to reorder"}
       tabindex="-1"
       disabled={saving}
     >
@@ -429,6 +429,11 @@
         <DropdownMenu.Item onSelect={() => (swapOpen = true)}>
           <ArrowLeftRight /> Swap drill
         </DropdownMenu.Item>
+        {#if onGroup}
+          <DropdownMenu.Item onSelect={onGroup}>
+            <Link2 /> Superset / circuit with…
+          </DropdownMenu.Item>
+        {/if}
         <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
           <Trash2 /> Remove drill
         </DropdownMenu.Item>

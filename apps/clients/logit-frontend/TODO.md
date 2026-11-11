@@ -58,16 +58,47 @@
     a `durationSec` and a decision on what progression does with them.
   - Mixing types is allowed, but the picker shows the same kind first (mobility next to
     mobility) and other exercises lower down, so bench + hamstring stretch isn't the default.
+  - The picker lists the workout's exercises, plus an "Add another exercise" row at the end
+    that opens the normal exercise search; the pick is added to the workout already ticked.
   - Overlay while running: "3, 2, 1 — Hamstring stretch", big countdown (or the rep/distance
     goal with a Done button), round and side, small "Up next: Middle split", pause / skip /
     +10 s, and it can be shrunk to see the list.
   - Agreed with Martin 2026-11-11. Build order: (1) link icon + picker for any block type,
     (2) rounds / + Round for mobility in groups, (3) the overlay with hold countdowns,
-    (4) timed strength sets (data model change). 1–3 cover the mobility-day case.
-  - Still open: one gap setting between exercises (e.g. 5 s or just the 3-2-1) plus a
-    separate rest between rounds (e.g. 60 s)? After a timed strength set, ask for reps or
-    only record the time? Circuit order = order ticked in the picker, or workout order?
-    Ignore timed sets in progression, or pass them to the algorithm?
+    (4) supersets and circuits in splits, (5) timed strength sets (data model change).
+    1–3 cover the mobility-day case; 4 means it doesn't have to be set up by hand each week.
+  - Step 1 built 2026-11-11 (branch `feat/circuits`): "Superset / circuit with…" in the ⋯
+    menu of strength, mobility and cardio; shared `GroupPickerSheet` fed by
+    `features/session/grouping.ts`; "Add another exercise" comes back ticked; members drag
+    within their group; drags can no longer drop a block inside a group (that used to split
+    it). Not yet: renaming a group, a way to take one exercise out of a group.
+  - Step 4, plan groups in a split day (added 2026-11-11):
+    - Split days can't hold mobility at all yet (`PlannedBlock` = strength | cardio), so add
+      a planned mobility block first: drill, sets, hold or reps, target, per side.
+    - A group field on planned blocks plus the group's own settings (label, rest between
+      rounds). The server keeps splits as one JSON blob (`SyncedSplit.DataJson`), so no API
+      change; the local `planned_blocks` table needs a migration.
+    - Split day editor: the same link icon and picker as the workout (build the picker as a
+      shared component in step 1). In a group the round count is set on the group, not per
+      member.
+    - Agreed with Martin: in step 4 the split builder also gets the session screen's look,
+      by sharing pieces rather than reusing the session blocks (`StrengthBlock` reads
+      `$currentSession` and does ticking/rest timers): the ⋯ menu per row (Swap,
+      Superset / circuit with…, Remove) instead of the bare ✕; the same group band as
+      `SupersetGroup`; the session's `BlockPickerSheet` instead of the inline Strength /
+      Cardio bar; session-style summaries ("4 × 30 s hold", "3 × 8 · BW"). Split targets
+      stay their own fields. Editing a split day on the workout screen itself (an edit mode)
+      is a possible later, separate project.
+    - `planSplitDay` recreates the groups with `groupIntoSuperset` after adding the blocks;
+      progression still plans each block on its own.
+    - Coach programs already have `supersetGroup` on `ProgramStrength`/`ProgramCardio`, but
+      nothing reads it, so a coach's supersets are lost when the client starts the day. Wire
+      it up the same way.
+  - Decided with Martin 2026-11-11: circuit order = workout order, members can be dragged
+    within the group. Between exercises only the 3-2-1 lead-in (with "Up next"); a separate
+    rest between rounds, off by default, set per circuit (e.g. 60 s). After a timed strength
+    set, a skippable reps prompt (time always saved). Timed sets go to the algorithm
+    (`durationSec` on the interface); the built-in algorithm ignores them for now.
 
 ## Principle
 

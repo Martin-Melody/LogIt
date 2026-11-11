@@ -89,25 +89,23 @@
   <!-- Every control here is a 44px target. Swap / superset / remove live in the
        ⋯ menu so the row doesn't need six icons and the name keeps its room. -->
   <div class="flex items-center pl-1 pr-1">
-    {#if !grouped}
-      <!-- Grip handle -->
-      <button
-        type="button"
-        class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-        style="touch-action: none"
-        use:gripAction
-        aria-label="Drag to reorder"
-        tabindex="-1"
-        disabled={saving}
-      >
-        <GripVertical class="h-4 w-4" />
-      </button>
-    {/if}
+    <!-- Grip handle. Inside a superset / circuit it moves the exercise within the group. -->
+    <button
+      type="button"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+      style="touch-action: none"
+      use:gripAction
+      aria-label={grouped ? "Drag to reorder within the group" : "Drag to reorder"}
+      tabindex="-1"
+      disabled={saving}
+    >
+      <GripVertical class="h-4 w-4" />
+    </button>
 
     <!-- Collapse toggle -->
     <button
       type="button"
-      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground {grouped ? 'ml-1' : ''}"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
       onclick={onToggleCollapse}
       aria-label={collapsed ? "Expand exercise" : "Collapse exercise"}
       disabled={saving}
@@ -167,7 +165,7 @@
         </DropdownMenu.Item>
         {#if canSuperset}
           <DropdownMenu.Item onSelect={() => void onSuperset()}>
-            <Link2 /> Superset with next exercise
+            <Link2 /> Superset / circuit with…
           </DropdownMenu.Item>
         {/if}
         <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>

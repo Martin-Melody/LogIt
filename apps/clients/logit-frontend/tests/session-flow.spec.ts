@@ -122,6 +122,15 @@ async function openExerciseMenu(page: Page, i = 0) {
   await page.getByRole("button", { name: /^More actions for/ }).nth(i).click();
 }
 
+/** ⋯ → "Superset / circuit with…", tick `names` in the picker and confirm. */
+async function groupWith(page: Page, names: string[], menuIndex = 0) {
+  await openExerciseMenu(page, menuIndex);
+  await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+  for (const name of names) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
+  await page.getByRole("button", { name: /^Make (superset|circuit)/ }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
 async function goToSession(page: Page) {
   await page.goto("/session/current");
   await page.waitForLoadState("networkidle");
@@ -554,8 +563,7 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
 
-    await openExerciseMenu(page);
-    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
+    await groupWith(page, ["Row"]);
 
     await expect(page.getByText("SUPERSET")).toBeVisible();
     await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
@@ -573,6 +581,50 @@ test.describe("supersets", () => {
     await expect(page.getByText("Row", { exact: true })).toBeVisible();
   });
 
+  test("a drill's menu builds a circuit: same kind first, add another comes back ticked", async ({ page }) => {
+    const drill = (id: string, orderIndex: number, drillName: string) => ({
+      id, type: "mobility", orderIndex,
+      data: { drillName, metric: "hold", perSide: false, sets: [{ id: `${id}-1`, orderIndex: 0, durationSec: 30 }] },
+    });
+    await seedSession(page, {
+      session: makeSession([
+        drill("m1", 0, "Hamstring stretch"),
+        makeStrengthBlock("b1", 1, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+        drill("m2", 2, "Butterfly stretch"),
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "More actions for Hamstring stretch" }).click();
+    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    const picker = page.getByRole("dialog", { name: "Superset / circuit with Hamstring stretch" });
+    await expect(picker).toBeVisible();
+    // Mobility first, then everything else.
+    await expect(picker.getByRole("checkbox")).toHaveCount(2);
+    await expect(picker.getByText("Mobility", { exact: true })).toBeVisible();
+    await expect(picker.getByText("Other exercises")).toBeVisible();
+    await picker.getByRole("checkbox", { name: /Butterfly stretch/ }).check();
+    await expect(picker.getByRole("button", { name: "Make superset" })).toBeVisible();
+
+    // A drill that isn't in the workout yet.
+    await picker.getByRole("button", { name: /Add another exercise/ }).click();
+    await page.getByRole("button", { name: /Mobility \/ Stretching/ }).click();
+    await page.getByPlaceholder("Search drills, or type a new one…").fill("Middle split");
+    await page.getByRole("dialog", { name: "Add mobility drill" }).getByRole("button", { name: "Add", exact: true }).click();
+
+    await expect(picker).toBeVisible();
+    await expect(picker.getByRole("checkbox", { name: /Middle split/ })).toBeChecked();
+    await picker.getByRole("button", { name: "Make circuit · 3 exercises" }).click();
+    await expect(picker).toHaveCount(0);
+
+    await expect(page.getByText("CIRCUIT")).toBeVisible();
+    // Grouped drills sit together, in workout order; Bench Press is pushed below.
+    const names = await page.getByRole("button", { name: /^More actions for/ }).evaluateAll((els) =>
+      els.map((e) => e.getAttribute("aria-label")!.replace("More actions for ", "")),
+    );
+    expect(names).toEqual(["Hamstring stretch", "Butterfly stretch", "Middle split", "Bench Press"]);
+  });
+
   test("rest starts only after the last exercise of a superset round", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([
@@ -586,8 +638,7 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
 
-    await openExerciseMenu(page);
-    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
+    await groupWith(page, ["Row"]);
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     // First member — completing it flows straight on, no rest.
@@ -879,8 +930,7 @@ test.describe("finish session", () => {
       ]),
     });
     await goToSession(page);
-    await openExerciseMenu(page);
-    await page.getByRole("menuitem", { name: "Superset with next exercise" }).click();
+    await groupWith(page, ["Row"]);
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     await page.getByRole("button", { name: "Finish workout" }).click();

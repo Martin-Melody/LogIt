@@ -12,7 +12,7 @@
   import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import type { WorkoutSession, SessionBlock, MobilityBlockData, MobilityMetric } from "@logit/core/domain/workout";
-  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote, dropUnloggedPlannedSets } from "@logit/core/domain/workout";
+  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote, dropUnloggedPlannedSets, groupIntoSuperset } from "@logit/core/domain/workout";
   import { refreshMobilityProgressionState } from "@logit/core/usecases/progression/getMobilitySuggestion";
   import { mobilityDrillKey, getMobilityDrillLeadSide } from "$lib/data/mobilityDrillPrefs";
 
@@ -29,6 +29,8 @@
   import BlockPickerSheet from "$lib/features/session/ui/BlockPickerSheet.svelte";
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
   import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
+  import GroupPickerSheet from "$lib/features/session/ui/GroupPickerSheet.svelte";
+  import { groupPickerModel, groupConfirmLabel, allowedDropIndices, nearestAllowed, type GroupPickerModel } from "$lib/features/session/grouping";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import BodyweightPromptDialog from "$lib/features/bodyweight/BodyweightPromptDialog.svelte";
@@ -132,11 +134,13 @@
       } else {
         exerciseType = (await getExerciseRepo().getById(exerciseId).catch(() => null))?.exerciseType;
       }
-      await onMutate((cur) => addExercise(cur, { exerciseName: trimmed, exerciseId }));
+      const forGroup = await addAndTick((cur) => addExercise(cur, { exerciseName: trimmed, exerciseId }));
       // Pull-ups, dips…: their volume needs a bodyweight. Asked after the add
-      // dialog has closed so the two don't fight over focus.
+      // dialog has closed so the two don't fight over focus — or, when added from
+      // the group picker, once that's done.
       if (await shouldAskForBodyweight(trimmed, exerciseType).catch(() => false)) {
-        setTimeout(() => (bodyweightPromptFor = trimmed), 250);
+        if (forGroup) groupUi.bodyweightFor = trimmed;
+        else setTimeout(() => (bodyweightPromptFor = trimmed), 250);
       }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to add exercise";
@@ -148,7 +152,7 @@
     const s = getSessionOrNull();
     if (!s) return;
     try {
-      await onMutate((cur) => addCardioBlock(cur, name));
+      await addAndTick((cur) => addCardioBlock(cur, name));
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to add cardio activity";
       toast.error(ui.error ?? "Failed to add cardio activity");
@@ -166,7 +170,7 @@
     try {
       const drillLead = await getMobilityDrillLeadSide(mobilityDrillKey(drill.drillId, drill.drillName));
       const leadSide = drillLead ?? get(profile).mobilityLeadSide;
-      await onMutate((cur) => addMobilityBlock(cur, { ...drill, leadSide }));
+      await addAndTick((cur) => addMobilityBlock(cur, { ...drill, leadSide }));
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to add mobility drill";
       toast.error(ui.error ?? "Failed to add mobility drill");
@@ -188,6 +192,101 @@
     if (type === "strength") addBlockUi.strengthOpen = true;
     else if (type === "cardio") addBlockUi.cardioOpen = true;
     else if (type === "mobility") addBlockUi.mobilityOpen = true;
+  }
+
+  // ── "Superset / circuit with…" ────────────────────────────────────────────
+  // The picker lives here, not in the blocks, because "Add another exercise"
+  // goes through this screen's add dialogs and comes back with the new block ticked.
+
+  const groupUi = $state({
+    open: false,
+    anchorId: null as string | null,
+    picked: [] as string[],
+    /** Away in the add dialogs from "Add another exercise". */
+    adding: false,
+    /** A bodyweight question for an exercise added from the picker, asked once it's done. */
+    bodyweightFor: null as string | null,
+  });
+
+  // Frozen while closed, so the sheet doesn't change (e.g. to "Add to superset")
+  // as it animates out after grouping.
+  let lastGroupModel: GroupPickerModel | null = null;
+  const groupModel = $derived.by(() => {
+    if (groupUi.open && $currentSession && groupUi.anchorId) {
+      lastGroupModel = groupPickerModel($currentSession, groupUi.anchorId);
+    }
+    return lastGroupModel;
+  });
+
+  function openGroupPicker(anchorId: string) {
+    if (ui.finishing) return;
+    destroyActiveTour();
+    groupUi.anchorId = anchorId;
+    groupUi.picked = [];
+    groupUi.adding = false;
+    groupUi.open = true;
+  }
+
+  // Leaves anchorId set so the sheet can animate out; openGroupPicker resets it.
+  function closeGroupPicker() {
+    groupUi.open = false;
+    groupUi.adding = false;
+    const bw = groupUi.bodyweightFor;
+    groupUi.bodyweightFor = null;
+    if (bw) setTimeout(() => (bodyweightPromptFor = bw), 250);
+  }
+
+  function toggleGroupPick(id: string) {
+    groupUi.picked = groupUi.picked.includes(id)
+      ? groupUi.picked.filter((p) => p !== id)
+      : [...groupUi.picked, id];
+  }
+
+  async function confirmGroup() {
+    const anchorId = groupUi.anchorId;
+    const picked = [...groupUi.picked];
+    closeGroupPicker();
+    if (!anchorId || picked.length === 0) return;
+    await onMutate((s) => groupIntoSuperset(s, [anchorId, ...picked]));
+  }
+
+  function addAnotherToGroup() {
+    groupUi.adding = true;
+    groupUi.open = false;
+    // Let the picker close before the add sheet opens.
+    setTimeout(() => openAddBlock(), 150);
+  }
+
+  /**
+   * Adds a block. When it comes from the picker's "Add another exercise", it's
+   * ticked there; returns the picker's anchor in that case.
+   */
+  async function addAndTick(updater: (s: WorkoutSession) => WorkoutSession): Promise<string | null> {
+    const forGroup = groupUi.adding ? groupUi.anchorId : null;
+    const before = new Set((getSessionOrNull()?.blocks ?? []).map((b) => b.id));
+    await onMutate(updater);
+    if (!forGroup || groupUi.anchorId !== forGroup) return null;
+    const added = (getSessionOrNull()?.blocks ?? [])
+      .map((b) => b.id)
+      .filter((id) => !before.has(id) && !groupUi.picked.includes(id));
+    groupUi.picked = [...groupUi.picked, ...added];
+    return forGroup;
+  }
+
+  /** Back to the picker once every add dialog has closed (added or cancelled). */
+  function returnToGroupPicker() {
+    if (!groupUi.adding) return;
+    setTimeout(() => {
+      if (!groupUi.adding) return;
+      if (addBlockUi.pickerOpen || addBlockUi.strengthOpen || addBlockUi.cardioOpen || addBlockUi.mobilityOpen) return;
+      groupUi.adding = false;
+      const anchorId = groupUi.anchorId;
+      if (!anchorId || !getSessionOrNull()?.blocks.some((b) => b.id === anchorId)) {
+        closeGroupPicker();
+        return;
+      }
+      groupUi.open = true;
+    }, 200);
   }
 
   async function onDeleteBlock(blockId: string) {
@@ -269,6 +368,8 @@
   let blockDragToIdx = $state(-1);
   let blockDragSpan = $state(1);
   let blockDragStartY = $state(0);
+  // Where the dragged block may land, so supersets and circuits stay whole.
+  let blockDragAllowed: number[] = [];
 
   function liveBlockOrder(sorted: SessionBlock[]): SessionBlock[] {
     if (!blockDragId || blockDragFromIdx === blockDragToIdx) return sorted;
@@ -323,6 +424,7 @@
         blockDragToIdx = idx;
         blockDragSpan = span;
         blockDragStartY = clientY;
+        blockDragAllowed = allowedDropIndices(sorted, idx, span);
         void hapticLight();
         return true;
       }
@@ -334,9 +436,10 @@
         const rowH = blocksListEl
           ? blocksListEl.getBoundingClientRect().height / total
           : 64;
-        const newIdx = Math.max(
-          0,
-          Math.min(total - blockDragSpan, Math.round(blockDragFromIdx + (clientY - blockDragStartY) / rowH)),
+        const newIdx = nearestAllowed(
+          blockDragAllowed,
+          Math.round(blockDragFromIdx + (clientY - blockDragStartY) / rowH),
+          blockDragFromIdx,
         );
         if (newIdx !== blockDragToIdx) blockDragToIdx = newIdx;
       }
@@ -474,8 +577,11 @@
                 supersetId={item.supersetId}
                 blocks={item.blocks}
                 saving={ui.saving || ui.finishing}
-                dragging={blockDragId === item.blocks[0].id}
+                dragging={blockDragId === item.blocks[0].id && blockDragSpan > 1}
+                draggingBlockId={blockDragSpan === 1 ? blockDragId : null}
                 groupGripAction={makeBlockGripAction(item.blocks[0].id, item.blocks.length)}
+                memberGripAction={(id) => makeBlockGripAction(id)}
+                onGroupBlock={openGroupPicker}
                 onDeleteBlock={onDeleteBlock}
                 {onMutate}
               />
@@ -491,6 +597,7 @@
                 data={item.block.data}
                 saving={ui.saving || ui.finishing}
                 gripAction={makeBlockGripAction(item.block.id)}
+                onGroup={() => openGroupPicker(item.block.id)}
                 onDelete={() => onDeleteBlock(item.block.id)}
                 {onMutate}
               />
@@ -542,14 +649,38 @@
 
   <BlockPickerSheet
     open={addBlockUi.pickerOpen}
-    onOpenChange={(v) => (addBlockUi.pickerOpen = v)}
+    onOpenChange={(v) => {
+      addBlockUi.pickerOpen = v;
+      if (!v) returnToGroupPicker();
+    }}
     onSelect={onBlockTypeSelected}
   />
+
+  {#if groupModel}
+    <GroupPickerSheet
+      open={groupUi.open}
+      title={groupModel.title}
+      sections={groupModel.sections}
+      picked={groupUi.picked}
+      confirmLabel={groupConfirmLabel(groupModel, groupUi.picked.length)}
+      showSizeHint={!groupModel.alreadyGrouped}
+      saving={ui.saving || ui.finishing}
+      onToggle={toggleGroupPick}
+      onAddAnother={addAnotherToGroup}
+      onConfirm={confirmGroup}
+      onOpenChange={(v) => {
+        if (!v) closeGroupPicker();
+      }}
+    />
+  {/if}
 
   <AddExerciseDialog
     open={addBlockUi.strengthOpen}
     saving={ui.saving || ui.finishing}
-    onOpenChange={(v) => (addBlockUi.strengthOpen = v)}
+    onOpenChange={(v) => {
+      addBlockUi.strengthOpen = v;
+      if (!v) returnToGroupPicker();
+    }}
     onSubmit={addExerciseWithName}
   />
 
@@ -564,14 +695,20 @@
   <AddCardioDialog
     open={addBlockUi.cardioOpen}
     saving={ui.saving || ui.finishing}
-    onOpenChange={(v) => (addBlockUi.cardioOpen = v)}
+    onOpenChange={(v) => {
+      addBlockUi.cardioOpen = v;
+      if (!v) returnToGroupPicker();
+    }}
     onSubmit={addCardioWithName}
   />
 
   <AddMobilityDialog
     open={addBlockUi.mobilityOpen}
     saving={ui.saving || ui.finishing}
-    onOpenChange={(v) => (addBlockUi.mobilityOpen = v)}
+    onOpenChange={(v) => {
+      addBlockUi.mobilityOpen = v;
+      if (!v) returnToGroupPicker();
+    }}
     onSubmit={addMobilityWithDrill}
   />
 

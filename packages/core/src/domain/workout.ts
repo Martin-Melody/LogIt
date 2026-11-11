@@ -1015,10 +1015,11 @@ export function groupIntoSuperset(
   const targets = session.blocks.filter((b) => ids.has(b.id));
   if (targets.length < 2) return session;
 
-  // Reuse an existing superset id among the targets, else mint one.
-  const existingId = targets.map(blockSuperset).find((s) => s)?.id;
-  const supersetId = existingId ?? createId("superset");
-  const info: SupersetInfo = { id: supersetId, ...(label ? { label } : {}) };
+  // Reuse an existing superset (id and name) among the targets, else mint one.
+  const existing = targets.map(blockSuperset).find((s) => s);
+  const supersetId = existing?.id ?? createId("superset");
+  const name = label ?? existing?.label;
+  const info: SupersetInfo = { id: supersetId, ...(name ? { label: name } : {}) };
 
   // Also fold in any blocks that already shared an id with a target.
   const foldedIds = new Set(blockIds);
@@ -1047,6 +1048,55 @@ export function ungroupSuperset(session: WorkoutSession, supersetId: string): Wo
     blocks: session.blocks.map((b) =>
       blockSuperset(b)?.id === supersetId ? setBlockSuperset(b, undefined) : b,
     ),
+  };
+}
+
+/** The superset / circuit a block belongs to, if any. */
+export function blockGroup(b: SessionBlock): SupersetInfo | undefined {
+  return blockSuperset(b);
+}
+
+/** The name a block goes by in lists and pickers: exercise, activity or drill. */
+export function blockDisplayName(b: SessionBlock): string {
+  switch (b.type) {
+    case "strength":
+      return (b.data as StrengthBlockData).exerciseName;
+    case "cardio":
+      return (b.data as CardioBlockData).activityName;
+    case "mobility":
+      return (b.data as MobilityBlockData).drillName;
+    default:
+      return b.type;
+  }
+}
+
+/** "Superset" for two, "Circuit" for three or more, unless the group was given a name. */
+export function groupLabel(memberCount: number, label?: string): string {
+  const named = label?.trim();
+  if (named) return named;
+  return memberCount >= 3 ? "Circuit" : "Superset";
+}
+
+/**
+ * What "Superset / circuit with…" offers for a block: every other block in the
+ * workout that isn't already in its group, in workout order, split into the
+ * block's own kind first (mobility next to mobility) and everything else after.
+ * Blocks in another group are offered too; picking one merges the groups.
+ */
+export function groupCandidates(
+  session: WorkoutSession,
+  anchorId: string,
+): { same: SessionBlock[]; other: SessionBlock[] } {
+  const sorted = [...session.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const anchor = sorted.find((b) => b.id === anchorId);
+  if (!anchor) return { same: [], other: [] };
+  const groupId = blockSuperset(anchor)?.id;
+  const pool = sorted.filter(
+    (b) => b.id !== anchorId && !(groupId && blockSuperset(b)?.id === groupId),
+  );
+  return {
+    same: pool.filter((b) => b.type === anchor.type),
+    other: pool.filter((b) => b.type !== anchor.type),
   };
 }
 
