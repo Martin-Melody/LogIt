@@ -149,6 +149,79 @@ test.describe("self-hosted server setup", () => {
   });
 });
 
+// ── Fresh install, faked server ──────────────────────────────────────────────
+
+test.describe("fresh install - faked server", () => {
+  const MOCK_API = "http://mock-api.test";
+  const user = {
+    id: "u1", username: "martin", displayName: "Martin", avatarUrl: null, tier: "free",
+    // As on a fresh dev server: the account exists but never recorded onboarding as done.
+    onboardingCompleted: false,
+  };
+
+  /** Fake the API: login/register answer, PATCH /users/me is recorded, the rest is 404. */
+  async function fakeServer(page: Page) {
+    const patches: unknown[] = [];
+    await page.route(`${MOCK_API}/**`, async (route) => {
+      const req = route.request();
+      const path = new URL(req.url()).pathname;
+      if (path === "/auth/login" || path === "/auth/register") {
+        return route.fulfill({
+          json: { accessToken: "a", refreshToken: "r", user, isSelfHosted: true },
+        });
+      }
+      if (path === "/users/me" && req.method() === "PATCH") {
+        patches.push(req.postDataJSON());
+        return route.fulfill({ status: 204 });
+      }
+      return route.fulfill({ status: 404, body: "" });
+    });
+    await page.addInitScript((url) => {
+      if (sessionStorage.getItem("seeded")) return; // keep state across the reload below
+      sessionStorage.setItem("seeded", "1");
+      localStorage.clear();
+      localStorage.setItem("logit:server:mode", "selfhosted");
+      localStorage.setItem("logit:api:baseUrl", url);
+    }, MOCK_API);
+    return patches;
+  }
+
+  test("logging in from the welcome screen goes home, not back to onboarding", async ({ page }) => {
+    const patches = await fakeServer(page);
+    await page.goto("/");
+    await page.waitForURL(/\/onboarding/);
+    await page.getByRole("link", { name: /Log in/ }).click();
+    await page.waitForURL(/\/auth/);
+
+    await page.locator('input[id="username"]').fill("martin");
+    await page.locator('input[id="password"]').fill("TestPass123!");
+    await page.locator("form").getByRole("button", { name: "Log in" }).click();
+
+    await page.waitForURL(/^http:\/\/localhost:5173\/$/);
+    // It stays home, also after a restart, and the server is told onboarding is done.
+    await page.waitForTimeout(1_000);
+    expect(new URL(page.url()).pathname).toBe("/");
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    expect(new URL(page.url()).pathname).toBe("/");
+    expect(patches).toContainEqual({ onboardingCompleted: true });
+  });
+
+  test("signing up still goes through onboarding, without a Log in link", async ({ page }) => {
+    await fakeServer(page);
+    await goToAuth(page, "?mode=register");
+    await page.locator('input[id="username"]').fill("martin");
+    await page.locator('input[id="email"]').fill("martin@test.example");
+    await page.locator('input[id="password"]').fill("TestPass123!");
+    await page.locator('input[id="confirm-password"]').fill("TestPass123!");
+    await page.locator('button[type="submit"]').click();
+
+    await page.waitForURL(/\/onboarding/);
+    await expect(page.getByRole("button", { name: /Get started/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Log in/ })).toHaveCount(0);
+  });
+});
+
 // ── Online account (requires live API at localhost:5118) ─────────────────────
 
 test.describe("online account - requires API", () => {

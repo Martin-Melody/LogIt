@@ -111,7 +111,8 @@
     }
   });
 
-  function resolveRedirect(): string {
+  /** A new account goes through onboarding (name, starter split) unless this install already did it. */
+  function resolveRegisterRedirect(): string {
     const { completed } = get(onboarding);
     return completed ? redirectTo : "/onboarding";
   }
@@ -141,11 +142,16 @@
     try {
       if (mode === "login") {
         await authStore.login(form.username.trim(), form.password);
+        // Logging in to an existing account skips onboarding, even on a fresh install or when
+        // the server never recorded it as done. Sending it to /onboarding looped: the welcome
+        // step's "Log in" led back here, already signed in, then "/", then /onboarding again.
+        onboarding.complete();
+        await goto(redirectTo);
       } else {
         const displayName = get(profile).name.trim() || form.username.trim();
         await authStore.register(form.username.trim(), form.email.trim(), form.password, displayName);
+        await goto(resolveRegisterRedirect());
       }
-      await goto(resolveRedirect());
     } catch (e) {
       authError = e instanceof ApiError ? e.message : "Something went wrong. Please try again.";
     } finally {
