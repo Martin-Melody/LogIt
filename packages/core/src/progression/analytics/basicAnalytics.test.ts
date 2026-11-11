@@ -29,3 +29,35 @@ describe("basicAnalytics", () => {
     expect(vol.value).toBe(8 * 60 * 2 + 8 * 62.5);
   });
 });
+
+describe("basicAnalytics with a known bodyweight", () => {
+  const withBw = (inp: AnalyticsInput, kg: number): AnalyticsInput => ({
+    ...inp,
+    history: inp.history.map((h) => ({ ...h, bodyweightKg: kg })),
+  });
+
+  it("charts bodyweight volume as reps × (bodyweight ± the logged number)", async () => {
+    const out = await basicAnalytics.compute(withBw(input("Dips", [[-25, 0], [10]]), 90));
+    const vol = out.metrics.find((m) => m.id === "total_volume")!;
+    expect(vol.value).toBe(8 * 65 + 8 * 90 + 8 * 100);
+    expect(out.series.find((s) => s.metricId === "total_volume")!.points.map((p) => p.value)).toEqual([8 * 65 + 8 * 90, 8 * 100]);
+    expect(out.metrics.map((m) => m.id)).toContain("max_reps");
+  });
+
+  it("treats an untyped pull-up at 0 kg as bodyweight work", async () => {
+    const out = await basicAnalytics.compute(withBw(input("Pull-Up", [[0, 0]]), 80));
+    expect(out.metrics.find((m) => m.id === "total_volume")!.value).toBe(2 * 8 * 80);
+    expect(out.metrics.map((m) => m.id)).not.toContain("max_weight");
+  });
+
+  it("subtracts the assistance for the assisted type", async () => {
+    const base = input("Assisted Dip", [[30]]);
+    const out = await basicAnalytics.compute(withBw({ ...base, exercise: { ...base.exercise, exerciseType: "assisted" } }, 90));
+    expect(out.metrics.find((m) => m.id === "total_volume")!.value).toBe(8 * 60);
+  });
+
+  it("leaves volume out when no bodyweight is known", async () => {
+    const out = await basicAnalytics.compute(input("Dips", [[-25]]));
+    expect(out.metrics.map((m) => m.id)).not.toContain("total_volume");
+  });
+});

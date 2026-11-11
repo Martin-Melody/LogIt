@@ -55,6 +55,8 @@ type SeedOpts = {
   progressionState?: { exerciseName: string; workingWeight: number; failedAttempts?: number; savedAtMs?: number };
   history?: object[];
   blocksCollapsedByDefault?: boolean;
+  /** Profile bodyweight (kg), for bodyweight-exercise volume. */
+  bodyweightKg?: number;
 };
 
 async function seedSession(page: Page, opts: SeedOpts = {}) {
@@ -63,10 +65,11 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
     progressionState,
     history,
     blocksCollapsedByDefault = false,
+    bodyweightKg,
   } = opts;
 
   await page.addInitScript(
-    ({ session, progressionState, history, blocksCollapsedByDefault }) => {
+    ({ session, progressionState, history, blocksCollapsedByDefault, bodyweightKg }) => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
       localStorage.setItem(
         "logit:tours:v1",
@@ -75,7 +78,10 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
       localStorage.setItem("logit:draft:v1", JSON.stringify(session));
       localStorage.setItem(
         "logit:profile:v1",
-        JSON.stringify({ blocksCollapsedByDefault }),
+        JSON.stringify({
+          blocksCollapsedByDefault,
+          ...(bodyweightKg ? { weight: bodyweightKg, weightUnit: "kg" } : {}),
+        }),
       );
 
       if (progressionState) {
@@ -107,7 +113,7 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
         localStorage.setItem("logit:sessions:v1", JSON.stringify(history));
       }
     },
-    { session, progressionState, history, blocksCollapsedByDefault },
+    { session, progressionState, history, blocksCollapsedByDefault, bodyweightKg },
   );
 }
 
@@ -313,6 +319,62 @@ test.describe("adding exercises", () => {
 
     await expect(page.locator('input[placeholder="e.g. Bench Press"]')).not.toBeVisible();
     await expect(page.getByText("Romanian Deadlift")).toBeVisible();
+  });
+});
+
+test.describe("bodyweight prompt", () => {
+  async function addExercise(page: Page, name: string) {
+    await page.locator('[aria-label="Add block"]').click();
+    await page.getByText("Strength exercise").click();
+    const input = page.locator('input[placeholder="e.g. Bench Press"]');
+    await input.fill(name);
+    await page.keyboard.press("Enter");
+    await expect(input).not.toBeVisible();
+  }
+
+  test("asks for bodyweight when a bodyweight exercise is added and none is known", async ({ page }) => {
+    await seedSession(page, { session: makeSession([]) });
+    await goToSession(page);
+
+    await addExercise(page, "Weighted Dips");
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toBeVisible();
+    await page.getByLabel("Bodyweight").fill("88.5");
+    await page.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).not.toBeVisible();
+
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("logit:profile:v1") ?? "{}").weight);
+    expect(saved).toBe(88.5);
+
+    // Known now, so a second bodyweight exercise doesn't ask again.
+    await addExercise(page, "Chin-Up");
+    await expect(page.getByText("Chin-Up")).toBeVisible();
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+  });
+
+  test("doesn't ask for weighted exercises, or again after 'Not now'", async ({ page }) => {
+    await seedSession(page, { session: makeSession([]) });
+    await goToSession(page);
+
+    await addExercise(page, "Romanian Deadlift");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+
+    await addExercise(page, "Pull ups");
+    await page.getByRole("button", { name: "Not now" }).click();
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+
+    await addExercise(page, "Push-Up");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
+  });
+
+  test("isn't asked when bodyweight is already set", async ({ page }) => {
+    await seedSession(page, { session: makeSession([]), bodyweightKg: 80 });
+    await goToSession(page);
+    await addExercise(page, "Dips");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("dialog", { name: "What do you weigh?" })).toHaveCount(0);
   });
 });
 
@@ -727,7 +789,7 @@ test.describe("finish session", () => {
     await expect(page.getByRole("button", { name: "Back to workout" })).toBeInViewport();
   });
 
-  test("recap shows assisted sets as BW and leaves them out of volume", async ({ page }) => {
+  test("recap shows assisted sets as BW and leaves them out of volume without a bodyweight", async ({ page }) => {
     await seedSession(page, {
       session: makeSession([
         makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
@@ -743,8 +805,30 @@ test.describe("finish session", () => {
     await expect(breakdown.getByText("5×BW+2.5")).toBeVisible();
     // The first-time PR card uses the same BW form, with no 1RM estimate.
     await expect(page.getByText("5 reps @ BW+2.5 kg")).toBeVisible();
-    // 10 × 50 + 5 × 2.5 — the assisted set doesn't subtract 200.
-    await expect(page.getByText("513", { exact: true })).toBeVisible();
+    // Only the 10 × 50 pec deck: with no bodyweight known the dips aren't
+    // counted, so the assisted set doesn't subtract 200 either.
+    await expect(page.getByText("500", { exact: true })).toBeVisible();
+  });
+
+  test("recap counts bodyweight work at bodyweight ± the logged number", async ({ page }) => {
+    await seedSession(page, {
+      bodyweightKg: 90,
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
+        makeStrengthBlock("b2", 1, "Pull-Up", [makeSet("s3", 0, 6, 0)]),
+        makeStrengthBlock("b3", 2, "Pec Deck", [makeSet("s4", 0, 10, 50)]),
+      ]),
+    });
+    await goToSession(page);
+    await page.getByRole("button", { name: "Finish workout" }).click();
+    await expect(page.getByText("Workout complete")).toBeVisible();
+
+    // Dips 5 × 92.5 + 8 × 65 = 983 (rounded), pull-ups 6 × 90 = 540, pec deck 500.
+    const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
+    await expect(breakdown.getByText("2 sets · 983 kg")).toBeVisible();
+    await expect(breakdown.getByText("1 set · 540 kg")).toBeVisible();
+    // Hero total: 982.5 + 540 + 500 = 2,022.5 → 2,023.
+    await expect(page.getByText("2,023", { exact: true })).toBeVisible();
   });
 
   test("recap brackets superset exercises in the breakdown", async ({ page }) => {

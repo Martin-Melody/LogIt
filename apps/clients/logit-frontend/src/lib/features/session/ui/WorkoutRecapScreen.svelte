@@ -7,6 +7,8 @@
   import type { WorkoutSession, CardioBlockData, MobilityBlockData, ExerciseEntry } from "@logit/core/domain/workout";
   import { getExercises, getTopSetHighlight, foldSupersets, setTypeMeta, getExerciseVolumeKg } from "@logit/core/domain/workout";
   import { usesBodyweightLoad, type ExerciseType } from "@logit/core/domain/exercise";
+  import { getLoadMode } from "@logit/core/domain/bodyweight";
+  import { loadBodyweightLookup, profileBodyweightKg } from "$lib/features/bodyweight/bodyweight";
   import { formatDuration } from "@logit/core/domain/time";
   import { toDisplayWeight, formatWeight, formatLoad } from "@logit/core/domain/units";
   import { estimated1RM } from "@logit/core/domain/oneRepMax";
@@ -33,10 +35,29 @@
   const exercises = getExercises(session);
   const topSet = getTopSetHighlight(session);
   const totalSets = exercises.reduce((n, ex) => n + ex.sets.length, 0);
-  const totalVolumeKg = exercises.reduce((vol, ex) => vol + getExerciseVolumeKg(ex), 0);
   // Under a minute means the sets were logged after the fact, so "0m" says nothing.
   const showDuration = durationMs >= 60_000;
-  const totalVolume = Math.round(toDisplayWeight(totalVolumeKg, weightUnit));
+
+  // Exercise types, so bodyweight work reads "BW−22.5" like it does mid-session
+  // and an assisted machine's help isn't counted as lifted weight.
+  let exerciseTypes = $state<Record<string, ExerciseType | undefined>>({});
+  // Bodyweight-exercise volume is bodyweight ± the logged number.
+  let bodyweightKg = $state<number | null>(profileBodyweightKg());
+
+  function exerciseType(ex: ExerciseEntry): ExerciseType | undefined {
+    return ex.exerciseId ? exerciseTypes[ex.exerciseId] : undefined;
+  }
+  // kg moved by one exercise. Bodyweight / assisted work counts only once the
+  // bodyweight is known; before that the row shows its sets alone.
+  function exerciseVolumeKg(ex: ExerciseEntry): number {
+    const type = exerciseType(ex);
+    const mode = getLoadMode(type, ex.sets.map((s) => s.weight), ex.exerciseName);
+    if (mode !== "external" && bodyweightKg == null) return 0;
+    return getExerciseVolumeKg(ex, { exerciseType: type, bodyweightKg });
+  }
+  const totalVolume = $derived(
+    Math.round(toDisplayWeight(exercises.reduce((vol, ex) => vol + exerciseVolumeKg(ex), 0), weightUnit)),
+  );
 
   const cardioBlocks = session.blocks.filter((b) => b.type === "cardio");
   const totalCardioDistanceM = cardioBlocks.reduce((sum, b) => {
@@ -65,13 +86,13 @@
 
   // Hero stats — the two or three numbers that matter, count up on reveal.
   type HeroStat = { label: string; value: number; fmt: (n: number) => string; noCount?: boolean };
-  const heroStats: HeroStat[] = [
+  const heroStats: HeroStat[] = $derived([
     ...(totalVolume > 0
       ? [{ label: `Volume (${weightUnit})`, value: totalVolume, fmt: (n: number) => Math.round(n).toLocaleString() }]
       : []),
     ...(totalSets > 0 ? [{ label: "Sets", value: totalSets, fmt: (n: number) => String(Math.round(n)) }] : []),
     ...(showDuration ? [{ label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true }] : []),
-  ];
+  ]);
 
   function formatHold(s: number): string {
     const m = Math.floor(s / 60);
@@ -84,9 +105,6 @@
     ...(totalMobilityHoldSec > 0 ? [{ label: "Time under tension", value: formatHold(totalMobilityHoldSec) }] : []),
     ...(totalMobilityReps > 0 ? [{ label: "Mobility reps", value: String(totalMobilityReps) }] : []),
   ];
-
-  // Exercise types, so bodyweight work reads "BW−22.5" like it does mid-session.
-  let exerciseTypes = $state<Record<string, ExerciseType | undefined>>({});
 
   let prs = $state<SessionPR[]>([]);
   let prsLoaded = $state(false);
@@ -101,6 +119,10 @@
         prsLoaded = true;
       }
     })();
+
+    void loadBodyweightLookup()
+      .then((at) => (bodyweightKg = at(Date.now())))
+      .catch(() => {});
 
     void (async () => {
       const ids = [...new Set(exercises.map((ex) => ex.exerciseId).filter((id): id is string => !!id))];
@@ -135,8 +157,7 @@
   const breakdown = foldSupersets(exercises);
 
   function isBodyweight(ex: ExerciseEntry): boolean {
-    const type = ex.exerciseId ? exerciseTypes[ex.exerciseId] : undefined;
-    return usesBodyweightLoad(type, ex.sets.map((s) => s.weight));
+    return usesBodyweightLoad(exerciseType(ex), ex.sets.map((s) => s.weight));
   }
   function isBodyweightName(name: string): boolean {
     const ex = exercises.find((e) => e.exerciseName === name);
@@ -148,10 +169,8 @@
     const bw = isBodyweightName(name);
     return { load: formatLoad(weight, weightUnit, bw), e1rm: bw ? null : e1rmLabel(weight, reps) };
   }
-  // Tonnage means nothing for bodyweight work, so those rows show sets only.
   function exerciseVolume(ex: ExerciseEntry): number {
-    if (isBodyweight(ex)) return 0;
-    return Math.round(toDisplayWeight(getExerciseVolumeKg(ex), weightUnit));
+    return Math.round(toDisplayWeight(exerciseVolumeKg(ex), weightUnit));
   }
   function workingSets(ex: ExerciseEntry): number {
     return ex.sets.filter((s) => s.setType !== "warmup").length;

@@ -9,9 +9,10 @@
   import {
     getTopSetHighlight,
     getExercises,
-    getSessionVolumeKg,
+
   } from "@logit/core/domain/workout";
   import { formatWeight } from "@logit/core/domain/units";
+  import { loadVolumeContext, sessionVolumeKg, type VolumeContext } from "$lib/features/bodyweight/bodyweight";
   import { reveal, popIn } from "$lib/transitions";
   import { fade } from "svelte/transition";
 
@@ -60,6 +61,9 @@
     });
   }
 
+  // Bodyweight + exercise types, so pull-ups and dips count in volume.
+  let volumeCtx = $state<VolumeContext | null>(null);
+
   type Row = {
     id: string;
     startedAtMs: number;
@@ -85,7 +89,7 @@
         durationLabel: s.endedAtMs ? formatDuration(dur) : "In progress",
         inProgress: !s.endedAtMs,
         exerciseCount: getExercises(s).length,
-        volumeKg: getSessionVolumeKg(s),
+        volumeKg: sessionVolumeKg(s, volumeCtx),
         topSet,
         searchText: `${relativeDate(ended)} ${new Date(ended).toLocaleDateString()} ${topSet ?? ""}`.toLowerCase(),
       };
@@ -119,7 +123,7 @@
     const finished = ($recentSessions ?? []).filter((s) => s.endedAtMs);
     const thisWeek = finished.filter((s) => s.startedAtMs >= weekStart);
     const thisMonth = finished.filter((s) => s.startedAtMs >= monthStart.getTime());
-    const weekVolumeKg = thisWeek.reduce((v, s) => v + getSessionVolumeKg(s), 0);
+    const weekVolumeKg = thisWeek.reduce((v, s) => v + sessionVolumeKg(s, volumeCtx), 0);
     return {
       week: thisWeek.length,
       month: thisMonth.length,
@@ -128,6 +132,7 @@
   });
 
   onMount(async () => {
+    void loadVolumeContext().then((c) => (volumeCtx = c)).catch(() => {});
     ui.loading = true;
     ui.error = null;
     try {

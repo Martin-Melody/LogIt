@@ -4,7 +4,8 @@
   import { back } from "$lib/navigation";
 
   import type { WorkoutSession, SetEntry, ExerciseEntry, MobilityBlockData } from "@logit/core/domain/workout";
-  import { getExercises, updateSet, foldSupersets, setTypeMeta, getSessionVolumeKg, mobilitySetGroups } from "@logit/core/domain/workout";
+  import { loadVolumeContext, sessionVolumeKg, type VolumeContext } from "$lib/features/bodyweight/bodyweight";
+  import { getExercises, updateSet, foldSupersets, setTypeMeta, mobilitySetGroups } from "@logit/core/domain/workout";
   import { durationMs, formatDuration } from "@logit/core/domain/time";
   import { formatWeight } from "@logit/core/domain/units";
   import { profile } from "$lib/stores/profile.store";
@@ -47,6 +48,12 @@
   });
 
   const displaySession = $derived(edit.active && edit.draft ? edit.draft : vm.session);
+  // Bodyweight + exercise types, so pull-ups and dips count in the volume.
+  let volumeCtx = $state<VolumeContext | null>(null);
+  $effect(() => {
+    void loadVolumeContext().then((c) => (volumeCtx = c)).catch(() => {});
+  });
+  const volumeKg = $derived(displaySession ? sessionVolumeKg(displaySession, volumeCtx) : 0);
 
   let editMachines: Machine[] = $state([]);
   let editDefaultMachineId: string | undefined = $state(undefined);
@@ -311,9 +318,9 @@
       <span>{getExercises(displaySession).length} exercise{getExercises(displaySession).length === 1 ? "" : "s"}</span>
       <span>·</span>
       <span>{countSets(displaySession)} sets</span>
-      {#if getSessionVolumeKg(displaySession) > 0}
+      {#if volumeKg > 0}
         <span>·</span>
-        <span>{formatWeight(getSessionVolumeKg(displaySession), weightUnit)}</span>
+        <span>{formatWeight(volumeKg, weightUnit)}</span>
       {/if}
       {#if displaySession.excludeFromProgression}
         <span>·</span>
