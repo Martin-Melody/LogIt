@@ -110,8 +110,8 @@
 </script>
 
 <div
-  class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-0.5 transition-opacity {completed
-    ? 'opacity-70'
+  class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-0.5 transition-colors {completed
+    ? 'bg-muted/40'
     : ''}"
 >
   <!-- Set number; also the drag handle (no grip icon: it cost every row width) -->
