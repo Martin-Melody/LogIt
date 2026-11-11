@@ -11,6 +11,7 @@
     grouped = false,
     restsOnComplete = true,
     gripAction,
+    onGroup,
     onDelete,
     onMutate,
   } = $props<{
@@ -21,6 +22,7 @@
     grouped?: boolean;
     restsOnComplete?: boolean;
     gripAction: GripAction;
+    onGroup?: () => void;
     onDelete: () => void | Promise<void>;
     onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
   }>();
@@ -37,6 +39,7 @@
     {grouped}
     {restsOnComplete}
     {gripAction}
+    {onGroup}
     {onDelete}
     {onMutate}
   />

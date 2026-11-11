@@ -16,6 +16,11 @@ export interface BlockBaseProps<T = unknown> {
    */
   restsOnComplete?: boolean;
   gripAction: GripAction;
+  /**
+   * Opens the "Superset / circuit with…" picker for this block. Blocks show the
+   * menu item only when it's given (the workout screen passes it).
+   */
+  onGroup?: () => void;
   onDelete: () => void | Promise<void>;
   onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
 }

@@ -8,7 +8,6 @@
     updateSet,
     removeSet,
     swapExercise,
-    groupIntoSuperset,
     isContinuationSet,
     setTypeMeta,
     applySetPlan,
@@ -52,6 +51,7 @@
     grouped = false,
     restsOnComplete = true,
     gripAction,
+    onGroup,
     onDelete,
     onMutate,
   }: BlockBaseProps<StrengthBlockData> = $props();
@@ -90,25 +90,6 @@
 
   function openDetail() {
     if (data.exerciseId) detailExerciseId = data.exerciseId;
-  }
-
-  // "Link with next" — starts (or extends) a superset with the block below.
-  const canSuperset = $derived.by(() => {
-    if (grouped) return false;
-    const s = $currentSession;
-    if (!s) return false;
-    const sorted = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
-    const idx = sorted.findIndex((b) => b.id === blockId);
-    return idx !== -1 && idx < sorted.length - 1;
-  });
-
-  async function linkWithNext() {
-    await onMutate((s: WorkoutSession) => {
-      const sorted = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
-      const idx = sorted.findIndex((b) => b.id === blockId);
-      const next = sorted[idx + 1];
-      return next ? groupIntoSuperset(s, [blockId, next.id]) : s;
-    });
   }
 
   async function handleSwap(selection: { name: string; exerciseId?: string }) {
@@ -576,13 +557,13 @@
   weightUnit={$profile.weightUnit}
   {bodyweight}
   {grouped}
-  {canSuperset}
+  canSuperset={!!onGroup}
   {gripAction}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
   onOpenDetail={openDetail}
   onSwap={() => (swapOpen = true)}
-  onSuperset={linkWithNext}
+  onSuperset={onGroup}
   {onDelete}
   onDismissNudge={handleDismissNudge}
   onAcceptNudge={handleAcceptNudge}

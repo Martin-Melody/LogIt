@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight, MoreHorizontal } from "lucide-svelte";
+  import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight, MoreHorizontal, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { createId } from "@logit/core/domain/ids";
@@ -8,13 +8,13 @@
   import type { CardioBlockData, CardioInterval, WorkoutSession } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
 
-  // `grouped` is accepted by the block contract but cardio doesn't customise its
-  // chrome for supersets yet.
   const {
     blockId,
     data,
     saving,
+    grouped = false,
     gripAction,
+    onGroup,
     onDelete,
     onMutate,
   }: BlockBaseProps<CardioBlockData> = $props();
@@ -265,7 +265,7 @@
       class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
       style="touch-action: none"
       use:gripAction
-      aria-label="Drag to reorder"
+      aria-label={grouped ? "Drag to reorder within the group" : "Drag to reorder"}
       tabindex="-1"
       disabled={saving}
     >
@@ -325,6 +325,11 @@
         <MoreHorizontal class="h-5 w-5" />
       </DropdownMenu.Trigger>
       <DropdownMenu.Content>
+        {#if onGroup}
+          <DropdownMenu.Item onSelect={onGroup}>
+            <Link2 /> Superset / circuit with…
+          </DropdownMenu.Item>
+        {/if}
         <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
           <Trash2 /> Remove activity
         </DropdownMenu.Item>

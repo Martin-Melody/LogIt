@@ -4,6 +4,7 @@ import {
   SET_TYPE_META, setTypeMeta, isContinuationSet, swapExercise,
   groupIntoSuperset, ungroupSuperset, addSupersetRound, supersetMembers,
   setSessionNote, foldSupersets, addWarmupSets,
+  addMobilityBlock, addCardioBlock, blockGroup, blockDisplayName, groupLabel, groupCandidates,
 } from "@logit/core/domain/workout";
 import type { StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
@@ -251,6 +252,56 @@ describe("supersets", () => {
     const block = s.blocks.find((b) => b.id === blockId)!;
     return (block.data as StrengthBlockData).superset!.id;
   }
+
+  it("merging into a named group keeps its name", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[1]], "Finisher");
+    s = groupIntoSuperset(s, [ids[0], ids[2]]);
+    expect(blockGroup(s.blocks.find((b) => b.id === ids[2])!)?.label).toBe("Finisher");
+    expect(supersetMembers(s, superId(s, ids[0]))).toHaveLength(3);
+  });
+
+  it("groups any block type, mobility and cardio included", () => {
+    let s = createSession(1_000);
+    s = addMobilityBlock(s, { drillName: "Hamstring stretch", metric: "hold" });
+    s = addCardioBlock(s, "Incline walk");
+    s = addMobilityBlock(s, { drillName: "Pigeon stretch", metric: "hold", perSide: true });
+    const [mob1, cardio, mob2] = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    s = groupIntoSuperset(s, [mob1!.id, mob2!.id, cardio!.id]);
+    const members = supersetMembers(s, blockGroup(s.blocks[0]!)!.id);
+    // Workout order is kept.
+    expect(members.map(blockDisplayName)).toEqual(["Hamstring stretch", "Incline walk", "Pigeon stretch"]);
+  });
+
+  it("groupLabel: two is a superset, three or more a circuit, a name wins", () => {
+    expect(groupLabel(2)).toBe("Superset");
+    expect(groupLabel(3)).toBe("Circuit");
+    expect(groupLabel(5, "  Mobility flow ")).toBe("Mobility flow");
+    expect(groupLabel(2, "  ")).toBe("Superset");
+  });
+
+  it("groupCandidates puts the same kind first and leaves out the block's own group", () => {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Bench" });
+    s = addMobilityBlock(s, { drillName: "Hamstring stretch" });
+    s = addCardioBlock(s, "Incline walk");
+    s = addMobilityBlock(s, { drillName: "Butterfly stretch" });
+    s = addMobilityBlock(s, { drillName: "Pancake stretch" });
+    const byName = (n: string) => s.blocks.find((b) => blockDisplayName(b) === n)!.id;
+    s = groupIntoSuperset(s, [byName("Hamstring stretch"), byName("Pancake stretch")]);
+
+    const { same, other } = groupCandidates(s, byName("Hamstring stretch"));
+    expect(same.map(blockDisplayName)).toEqual(["Butterfly stretch"]);
+    expect(other.map(blockDisplayName)).toEqual(["Bench", "Incline walk"]);
+
+    // From a block outside the group, the group's members are offered (picking merges).
+    const fromBench = groupCandidates(s, byName("Bench"));
+    expect(fromBench.same).toHaveLength(0);
+    expect(fromBench.other.map(blockDisplayName)).toEqual([
+      "Hamstring stretch", "Pancake stretch", "Incline walk", "Butterfly stretch",
+    ]);
+    expect(groupCandidates(s, "missing")).toEqual({ same: [], other: [] });
+  });
 
   it("getExercises carries the superset tag", () => {
     let { s, ids } = seedThree();
