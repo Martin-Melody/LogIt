@@ -73,7 +73,7 @@ function worstStatus(statuses: ProgressStatus[]): ProgressStatus {
 export async function getMuscleGroupInsights(
   deps: Pick<
     ProgressionDeps,
-    "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry" | "muscleGroupInsightAlgorithmRegistry"
+    "workoutRepo" | "exerciseRepo" | "progressionRepo" | "analyticsRegistry" | "muscleGroupInsightAlgorithmRegistry" | "loadBodyweight"
   >,
 ): Promise<MuscleGroupInsightsResult> {
   const sessions: WorkoutSession[] = await deps.workoutRepo.listAllSessions();
