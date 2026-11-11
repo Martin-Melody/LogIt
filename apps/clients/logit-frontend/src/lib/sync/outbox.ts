@@ -16,7 +16,12 @@ import type {
   RemoteWeightEntry,
 } from "@logit/core/api/syncApi";
 
-const KEY = "logit:sync:outbox";
+import { syncStorageKey } from "$lib/sync/syncKeys";
+
+// Per profile on the phone (see syncStorageKey). Before that existed this one key was shared
+// by every profile; whichever profile first loads after the update adopts it, which is who
+// it would have been sent as before.
+const LEGACY_KEY = "logit:sync:outbox";
 
 type OutboxEntry =
   | { type: "session"; dto: RemoteSession }
@@ -27,6 +32,8 @@ type OutboxEntry =
   | { type: "programStart"; dto: { programId: string; startedAtMs: number } }
   | { type: "checkinSchedule"; dto: UpsertCheckinScheduleInput }
   | { type: "checkinSubmission"; dto: RemoteCheckinSubmission }
+  // No longer queued (an unsynced message is re-sent from the messages table); kept so
+  // entries already in someone's outbox still get delivered.
   | { type: "coachMessage"; dto: SendMessageInput }
   | { type: "nutritionDay"; dto: RemoteNutritionDay }
   | { type: "customFood"; dto: RemoteCustomFood }
@@ -38,12 +45,28 @@ type OutboxEntry =
   | { type: "habit"; dto: RemoteHabit }
   | { type: "habitEntry"; dto: RemoteHabitEntry };
 
-function load(): OutboxEntry[] {
-  try { return JSON.parse(localStorage.getItem(KEY) ?? "[]"); } catch { return []; }
+function key(): string {
+  const k = syncStorageKey(LEGACY_KEY);
+  if (k !== LEGACY_KEY) adoptLegacy(k);
+  return k;
 }
 
-function save(entries: OutboxEntry[]): void {
-  try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch {}
+function adoptLegacy(k: string): void {
+  try {
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (!legacy) return;
+    const current = JSON.parse(localStorage.getItem(k) ?? "[]") as OutboxEntry[];
+    localStorage.setItem(k, JSON.stringify([...(JSON.parse(legacy) as OutboxEntry[]), ...current]));
+    localStorage.removeItem(LEGACY_KEY);
+  } catch {}
+}
+
+function load(k: string = key()): OutboxEntry[] {
+  try { return JSON.parse(localStorage.getItem(k) ?? "[]"); } catch { return []; }
+}
+
+function save(entries: OutboxEntry[], k: string = key()): void {
+  try { localStorage.setItem(k, JSON.stringify(entries)); } catch {}
 }
 
 export function enqueue(entry: OutboxEntry): void {
@@ -52,12 +75,20 @@ export function enqueue(entry: OutboxEntry): void {
   save(entries);
 }
 
+/**
+ * Send everything queued. Entries stay in storage until they've been sent: if the app is
+ * closed mid-flush they're sent again next time, which is safe because every push is an
+ * upsert (or, for messages and program starts, ignored when repeated). It used to empty the
+ * queue first, so closing the app during a flush lost those writes.
+ *
+ * Only syncAll() calls this, one run at a time, so nothing else edits the queue meanwhile
+ * except enqueue(), which only appends.
+ */
 export async function flush(): Promise<void> {
-  const entries = load();
+  // Fixed for the whole flush, so a profile switch mid-flush can't write to the wrong queue.
+  const k = key();
+  const entries = load(k);
   if (entries.length === 0) return;
-
-  // Clear atomically before attempting — new writes during flush will be separate entries
-  save([]);
 
   const sessions = entries.filter((e): e is Extract<OutboxEntry, { type: "session" }> => e.type === "session").map(e => e.dto);
   const splits = entries.filter((e): e is Extract<OutboxEntry, { type: "split" }> => e.type === "split").map(e => e.dto);
@@ -194,9 +225,8 @@ export async function flush(): Promise<void> {
     catch { habitEntries.forEach((dto) => failed.push({ type: "habitEntry", dto })); }
   }
 
-  if (failed.length > 0) {
-    // Prepend failed entries so they retry first; preserve any new entries queued during flush
-    const newer = load();
-    save([...failed, ...newer]);
-  }
+  // Drop what was sent: keep the failures (first, so they retry first) and anything queued
+  // while sending, which enqueue() appended after the entries this flush started with.
+  const newer = load(k).slice(entries.length);
+  save([...failed, ...newer], k);
 }
