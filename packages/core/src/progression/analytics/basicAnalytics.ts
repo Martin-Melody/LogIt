@@ -192,7 +192,8 @@ function computeBodyweight(input: AnalyticsInput): AnalyticsOutput {
   const recentReps = maxRepsPoints.at(-1)!.value;
   const prevReps = maxRepsPoints.at(-2)?.value ?? recentReps;
   const repTrend = recentReps - prevReps;
-  const trendLabel = repTrend > 0 ? `+${repTrend} reps` : repTrend < 0 ? `${repTrend} reps` : "steady";
+  const reps = (n: number) => `${n} ${Math.abs(n) === 1 ? "rep" : "reps"}`;
+  const trendLabel = repTrend > 0 ? `+${reps(repTrend)}` : repTrend < 0 ? reps(repTrend) : "steady";
 
   const metrics = [
     { id: "max_reps", value: allTimeMaxReps, formatted: `${allTimeMaxReps} reps` },
@@ -220,9 +221,9 @@ function computeBodyweight(input: AnalyticsInput): AnalyticsOutput {
     label: sessionCount > 0 ? `${allTimeMaxReps} rep best · ${trendLabel} last session` : undefined,
     insights:
       repTrend > 0
-        ? [`Up ${repTrend} reps from last session`]
+        ? [`Up ${reps(repTrend)} from last session`]
         : repTrend < 0
-          ? [`Down ${Math.abs(repTrend)} reps from last session`]
+          ? [`Down ${reps(Math.abs(repTrend))} from last session`]
           : undefined,
   }, bodyweightVolume(done, "bodyweight"));
 }
