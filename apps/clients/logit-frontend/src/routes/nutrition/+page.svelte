@@ -261,14 +261,14 @@
     <h1 class="page-title">Nutrition</h1>
   </div>
 
-  <nav class="flex items-center gap-1 px-2 py-1 border-b border-border text-xs text-muted-foreground">
-    <a href="/nutrition/log" class="h-8 px-2 flex items-center gap-1">
+  <nav class="flex items-center gap-1 px-1 border-b border-border text-sm text-muted-foreground">
+    <a href="/nutrition/log" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
       <Carrot class="h-4 w-4" /> Foods
     </a>
-    <a href="/nutrition/insights" class="h-8 px-2 flex items-center gap-1">
+    <a href="/nutrition/insights" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
       <ChartNoAxesColumn class="h-4 w-4" /> Insights
     </a>
-    <a href="/nutrition/goal" class="h-8 px-2 flex items-center gap-1">
+    <a href="/nutrition/goal" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
       <Target class="h-4 w-4" /> Goal
     </a>
   </nav>
@@ -276,14 +276,14 @@
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>{/if}
 
   <!-- Date nav -->
-  <div class="flex items-center justify-between px-3 py-2 border-b border-border">
-    <button type="button" class="h-7 w-7 flex items-center justify-center" onclick={() => shiftDate(-1)} aria-label="Previous day">
+  <div class="flex items-center justify-between px-1 border-b border-border">
+    <button type="button" class="h-11 w-11 flex items-center justify-center" onclick={() => shiftDate(-1)} aria-label="Previous day">
       <ChevronLeft class="h-4 w-4" />
     </button>
-    <span class="text-xs font-medium">{isToday ? "Today" : dateIso}</span>
+    <span class="text-sm font-medium">{isToday ? "Today" : dateIso}</span>
     <button
       type="button"
-      class="h-7 w-7 flex items-center justify-center disabled:opacity-30"
+      class="h-11 w-11 flex items-center justify-center disabled:opacity-30"
       onclick={() => shiftDate(1)}
       disabled={isToday}
       aria-label="Next day"
@@ -333,37 +333,37 @@
     {/if}
 
     <!-- Copy a previous day -->
-    <div class="px-3 py-2 border-b border-border">
+    <div class="px-3 border-b border-border">
       <button
         type="button"
-        class="flex items-center gap-1.5 text-xs text-muted-foreground"
+        class="min-h-11 flex items-center gap-1.5 text-sm text-muted-foreground"
         onclick={toggleCopy}
       >
         <CopyPlus class="h-3.5 w-3.5" /> Copy a day
       </button>
       {#if showCopy}
-        <div class="mt-2 flex flex-wrap items-end gap-2" transition:reveal>
+        <div class="pb-3 flex flex-wrap items-end gap-2" transition:reveal>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Copy meals from</span>
             <DateField bind:value={copyFromIso} maxIso={localDateIso()} aria-label="Copy from date" class="w-[9.5rem]" />
           </label>
           <button
             type="button"
-            class="text-[11px] text-primary pb-1.5"
+            class="h-10 px-2 text-sm text-primary"
             onclick={() => (copyFromIso = dayBefore(dateIso))}
           >
             Yesterday
           </button>
           <button
             type="button"
-            class="rounded-md bg-primary text-primary-foreground text-xs px-3 py-1.5 disabled:opacity-50"
+            class="h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 disabled:opacity-50"
             disabled={copyBusy}
             onclick={() => void doCopy()}
           >
             {copyBusy ? "Copying…" : "Copy"}
           </button>
         </div>
-        {#if copyMsg}<p class="mt-1 text-[11px] text-muted-foreground">{copyMsg}</p>{/if}
+        {#if copyMsg}<p class="pb-3 text-xs text-muted-foreground">{copyMsg}</p>{/if}
       {/if}
     </div>
 
@@ -371,27 +371,27 @@
     {#each MEAL_SLOTS as meal (meal)}
       {@const mt = day ? mealTotals(day, meal) : null}
       <div class="border-b border-border">
-        <div class="flex items-center justify-between px-3 py-2">
+        <div class="flex items-center justify-between pl-3 pr-1">
           <div class="flex items-baseline gap-2">
-            <span class="text-xs font-semibold">{mealLabels[meal]}</span>
-            {#if mt && mt.kcal > 0}<span class="text-[11px] text-muted-foreground tabular-nums">{fmtKcal(mt.kcal)} kcal</span>{/if}
+            <span class="text-sm font-semibold">{mealLabels[meal]}</span>
+            {#if mt && mt.kcal > 0}<span class="text-xs text-muted-foreground tabular-nums">{fmtKcal(mt.kcal)} kcal</span>{/if}
           </div>
           <div class="flex items-center gap-1">
             {#if dndItems[meal].length > 0}
               <button
                 type="button"
-                class="h-7 w-7 flex items-center justify-center text-muted-foreground"
+                class="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-foreground"
                 aria-label="Save {mealLabels[meal]} as a meal"
                 onclick={() => (savingMeal === meal ? (savingMeal = null) : startSaveMeal(meal))}
               >
-                <BookmarkPlus class="h-3.5 w-3.5" />
+                <BookmarkPlus class="h-4 w-4" />
               </button>
             {/if}
             <a
               href="/nutrition/log?meal={meal}&date={dateIso}"
-              class="h-7 px-2 flex items-center gap-1 text-xs text-primary"
+              class="h-11 px-3 flex items-center gap-1 text-sm text-primary"
             >
-              <Plus class="h-3.5 w-3.5" /> Add
+              <Plus class="h-4 w-4" /> Add
             </a>
           </div>
         </div>
@@ -401,15 +401,15 @@
             onsubmit={(e) => { e.preventDefault(); void confirmSaveMeal(); }}
           >
             <input
-              class="flex-1 bg-muted rounded-md px-2 py-1.5 text-xs outline-none"
+              class="h-10 flex-1 bg-muted rounded-md px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
               placeholder="Meal name"
               bind:value={templateName}
             />
-            <button type="submit" class="text-xs text-primary px-2 py-1.5">Save meal</button>
+            <button type="submit" class="h-10 px-3 text-sm font-medium text-primary">Save meal</button>
           </form>
         {/if}
         <ul
-          class="px-3 pb-2 flex flex-col gap-1 min-h-[10px]"
+          class="pl-1 pr-1 pb-1 flex flex-col min-h-[10px]"
           use:dragHandleZone={{
             items: dndItems[meal],
             flipDurationMs: FLIP_MS,
@@ -420,27 +420,27 @@
           onfinalize={(e) => onFinalize(meal, e)}
         >
           {#each dndItems[meal] as it (it.id)}
-            <li animate:flip={{ duration: FLIP_MS }} transition:popIn class="flex items-center gap-1.5 text-xs">
+            <li animate:flip={{ duration: FLIP_MS }} transition:popIn class="flex min-h-11 items-center gap-1 text-sm">
               <span
                 use:dragHandle
-                class="h-6 w-5 -ml-1 flex items-center justify-center text-muted-foreground touch-none cursor-grab active:cursor-grabbing"
+                class="h-11 w-8 shrink-0 flex items-center justify-center text-muted-foreground touch-none cursor-grab active:cursor-grabbing"
                 aria-label="Drag to move {it.name}"
               >
-                <GripVertical class="h-3.5 w-3.5" />
+                <GripVertical class="h-4 w-4" />
               </span>
               {#if it.photoDataUrl}
                 <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded-md object-cover shrink-0" />
               {/if}
-              <a href="/nutrition/entry/{dateIso}/{it.id}" class="flex-1 truncate">
+              <a href="/nutrition/entry/{dateIso}/{it.id}" class="flex-1 min-w-0 min-h-11 flex items-center"><span class="truncate">
                 {it.name}
                 {#if it.servingLabel}<span class="text-muted-foreground"> · {it.servingLabel}</span>{/if}
-              </a>
-              <span class="tabular-nums text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void addPhoto(it.id)} aria-label="Add photo">
-                <Camera class="h-3.5 w-3.5" />
+              </span></a>
+              <span class="tabular-nums text-xs text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
+              <button type="button" class="h-11 w-10 shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground" onclick={() => void addPhoto(it.id)} aria-label="Add photo">
+                <Camera class="h-4 w-4" />
               </button>
-              <button type="button" class="h-6 w-6 flex items-center justify-center text-muted-foreground" onclick={() => void deleteItem(it.id)} aria-label="Remove">
-                <Trash2 class="h-3.5 w-3.5" />
+              <button type="button" class="h-11 w-10 shrink-0 flex items-center justify-center text-muted-foreground hover:text-destructive" onclick={() => void deleteItem(it.id)} aria-label="Remove">
+                <Trash2 class="h-4 w-4" />
               </button>
             </li>
           {/each}
@@ -451,7 +451,7 @@
     <!-- Weight -->
     <a href="/nutrition/weight" class="block px-3 py-3">
       <div class="flex items-center justify-between mb-1">
-        <span class="text-xs font-semibold flex items-center gap-1.5"><Scale class="h-3.5 w-3.5" /> Weight</span>
+        <span class="text-sm font-semibold flex items-center gap-1.5"><Scale class="h-4 w-4" /> Weight</span>
         <span class="text-xs tabular-nums">
           {fmtWeight(nut?.trend.currentKg ?? null, unit)}
           {#if nut && Math.abs(nut.trend.weeklyRateKg) >= 0.05}

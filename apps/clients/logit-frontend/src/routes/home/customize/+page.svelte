@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { ArrowUp, ArrowDown } from "lucide-svelte";
   import { back } from "$lib/navigation";
@@ -67,18 +68,7 @@
                 >
                   <ArrowDown class="h-3.5 w-3.5" />
                 </Button>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={slot.enabled}
-                  aria-label={slot.enabled ? "Disable widget" : "Enable widget"}
-                  class="relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {slot.enabled ? 'bg-primary' : 'bg-input'}"
-                  onclick={() => homeConfig.toggleWidget(slot.id)}
-                >
-                  <span
-                    class="pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform {slot.enabled ? 'translate-x-4' : 'translate-x-0'}"
-                  ></span>
-                </button>
+                <Switch checked={slot.enabled} label={slot.enabled ? "Disable widget" : "Enable widget"} onchange={() => homeConfig.toggleWidget(slot.id)} />
               </div>
             </li>
           {/if}

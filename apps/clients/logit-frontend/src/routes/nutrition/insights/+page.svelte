@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { back } from "$lib/navigation";
@@ -61,11 +63,12 @@
   <div class="page-header">
     <BackButton onclick={() => back("/nutrition")} />
     <h1 class="page-title">Insights</h1>
-    <div class="ml-auto flex gap-1 text-xs">
+    <div class={cn(segmentTrack, "flex-none")}>
       {#each [7, 30] as d (d)}
         <button
           type="button"
-          class="px-2 py-1 rounded-md {ui.range === d ? 'bg-muted font-medium' : 'text-muted-foreground'}"
+          class={segment(ui.range === d)}
+          aria-pressed={ui.range === d}
           onclick={() => setRange(d)}
         >{d}d</button>
       {/each}

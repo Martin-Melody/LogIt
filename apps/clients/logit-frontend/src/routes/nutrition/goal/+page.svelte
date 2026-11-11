@@ -285,7 +285,7 @@
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Height ({heightUnit})</span>
-            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={heightDisplay} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={heightDisplay} />
           </label>
         </div>
         <div class="flex flex-col gap-1">
@@ -319,11 +319,11 @@
           <div class="grid grid-cols-2 gap-2">
             <label class="flex flex-col gap-1">
               <span class="text-[11px] text-muted-foreground">Rate ({weightUnit}/week)</span>
-              <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={rateDisplay} />
+              <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={rateDisplay} />
             </label>
             <label class="flex flex-col gap-1">
               <span class="text-[11px] text-muted-foreground">Target weight ({weightUnit}, optional)</span>
-              <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={targetWeightDisplay} />
+              <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={targetWeightDisplay} />
             </label>
           </div>
         {/if}
@@ -335,12 +335,12 @@
         <div class="grid grid-cols-2 gap-2">
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Protein (g/kg body weight)</span>
-            <input class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none" inputmode="decimal" bind:value={goal.proteinGPerKg} />
+            <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="decimal" bind:value={goal.proteinGPerKg} />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[11px] text-muted-foreground">Fat (% of calories)</span>
             <input
-              class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none"
+              class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring"
               inputmode="numeric"
               value={Math.round(goal.fatPct * 100)}
               oninput={(e) => (goal.fatPct = (Number(e.currentTarget.value) || 0) / 100)}
@@ -379,7 +379,7 @@
         <label class="flex flex-col gap-1 mt-1">
           <span class="text-[11px] text-muted-foreground">Manual calorie override (optional)</span>
           <input
-            class="bg-muted rounded-md px-2 py-1.5 text-sm outline-none"
+            class="bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring"
             inputmode="numeric"
             bind:value={goal.manualCalorieTarget}
           />
