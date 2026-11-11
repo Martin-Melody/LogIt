@@ -701,6 +701,21 @@ test("every workout-screen control is at least 40px tall", async ({ page }) => {
     session: makeSession([
       makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 5, 100), makeSet("s2", 1, 5, 100)]),
       makeStrengthBlock("b2", 1, "Row", [makeSet("s3", 0, 8, 60)]),
+      {
+        id: "m1", type: "mobility", orderIndex: 2,
+        data: { drillName: "Couch Stretch", metric: "hold", perSide: true, sets: [
+          { id: "ms1", orderIndex: 0, side: "left", durationSec: 30, completed: true },
+          { id: "ms2", orderIndex: 1, side: "right" },
+        ] },
+      },
+      {
+        id: "m2", type: "mobility", orderIndex: 3,
+        data: { drillName: "Cat Cow", metric: "reps", perSide: false, sets: [{ id: "ms3", orderIndex: 0, reps: 8 }] },
+      },
+      {
+        id: "c1", type: "cardio", orderIndex: 4,
+        data: { activityName: "Rower", intervals: [{ id: "i1", orderIndex: 0, durationMs: 300_000, distanceM: 1000, note: null }] },
+      },
     ]),
   });
   await goToSession(page);
@@ -708,7 +723,12 @@ test("every workout-screen control is at least 40px tall", async ({ page }) => {
 
   const small = await page.evaluate(() =>
     [...document.querySelectorAll("button, a[href], input, [role=button]")]
-      .map((el) => ({ el, r: el.getBoundingClientRect() }))
+      .map((el) => {
+        // A pick-one segment's tap area covers its whole track (an ::after over the
+        // track's padding), so it's measured by the track.
+        const seg = el.hasAttribute("aria-pressed") && el.parentElement?.classList.contains("p-[3px]");
+        return { el, r: (seg ? el.parentElement! : el).getBoundingClientRect() };
+      })
       // Swipe actions sit behind their row until revealed; they're 40px too.
       .filter(({ r }) => r.width > 0 && r.height > 0 && r.height < 40)
       .map(({ el, r }) => `${el.getAttribute("aria-label") ?? el.textContent?.trim()} (${Math.round(r.height)}px)`),

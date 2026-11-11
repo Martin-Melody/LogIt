@@ -267,10 +267,10 @@
             {/each}
           </div>
           {#if draft.restDurationMs !== undefined && draft.restDurationMs > 0}
-            <div class="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2" transition:reveal>
-              <button type="button" class="h-7 w-10 flex items-center justify-center rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30" {disabled} onclick={() => stepRest(-STEP_MS)}>−15s</button>
+            <div class="flex items-center justify-between gap-2 rounded-md border border-border px-1 py-0.5" transition:reveal>
+              <button type="button" class="h-11 min-w-14 px-3 flex items-center justify-center rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors" {disabled} onclick={() => stepRest(-STEP_MS)}>−15s</button>
               <span class="text-sm font-semibold tabular-nums">{formatRest(draft.restDurationMs)}</span>
-              <button type="button" class="h-7 w-10 flex items-center justify-center rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30" {disabled} onclick={() => stepRest(STEP_MS)}>+15s</button>
+              <button type="button" class="h-11 min-w-14 px-3 flex items-center justify-center rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors" {disabled} onclick={() => stepRest(STEP_MS)}>+15s</button>
             </div>
           {/if}
         </div>

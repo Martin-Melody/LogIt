@@ -13,7 +13,9 @@ export const segmentTrack = "flex h-10 items-stretch gap-0.5 rounded-lg bg-muted
 
 export function segment(selected: boolean, className?: string): string {
   return cn(
-    "inline-flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 font-medium tabular-nums transition-colors disabled:opacity-50",
+    // The ::after stretches the tap area over the track's 3px padding, so the
+    // whole 40px track height is the target, not just the 34px pill.
+    "relative inline-flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 font-medium tabular-nums transition-colors disabled:opacity-50 after:absolute after:-inset-y-[3px] after:inset-x-0 after:content-['']",
     selected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
     className,
   );

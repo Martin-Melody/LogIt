@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight } from "lucide-svelte";
-  import { Button } from "$lib/components/ui/button";
+  import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight, MoreHorizontal } from "lucide-svelte";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { createId } from "@logit/core/domain/ids";
   import { get } from "svelte/store";
@@ -122,6 +122,7 @@
   }
 
   const ui = $state({ editing: false, draft: "" });
+  let confirmRemove = $state(false);
   let nameInput = $state<HTMLInputElement | null>(null);
   $effect(() => { if (ui.editing) nameInput?.focus(); });
 
@@ -256,55 +257,79 @@
 
 <!-- Block header -->
 <div class="border-t border-border bg-muted/20">
-  <div class="flex items-center gap-2 px-3 py-2">
+  <!-- Same row as a strength exercise: 44px controls, remove in the ⋯ menu. -->
+  <div class="flex items-center pl-1 pr-1">
     <!-- Grip handle -->
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
       style="touch-action: none"
       use:gripAction
       aria-label="Drag to reorder"
       tabindex="-1"
       disabled={saving}
     >
-      <GripVertical class="h-3.5 w-3.5" />
+      <GripVertical class="h-4 w-4" />
     </button>
 
     <!-- Collapse toggle -->
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
       onclick={() => (collapsed = !collapsed)}
       disabled={saving}
       aria-label={collapsed ? "Expand" : "Collapse"}
     >
       {#if collapsed}
-        <ChevronRight class="h-3.5 w-3.5" />
+        <ChevronRight class="h-4 w-4" />
       {:else}
-        <ChevronDown class="h-3.5 w-3.5" />
+        <ChevronDown class="h-4 w-4" />
       {/if}
     </button>
 
     {#if ui.editing}
       <input
         bind:this={nameInput}
-        class="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
+        class="flex-1 min-w-0 h-9 mx-1 bg-transparent text-sm font-semibold focus:outline-none border-b border-primary"
         bind:value={ui.draft}
         disabled={saving}
         onkeydown={(e) => { if (e.key === "Enter") void commitEdit(); if (e.key === "Escape") ui.editing = false; }}
         onblur={() => void commitEdit()}
       />
     {:else}
-      <button type="button" class="flex-1 min-w-0 text-left" onclick={startEdit} disabled={saving}>
+      <button type="button" class="flex-1 min-w-0 h-11 pl-1 pr-2 text-left" onclick={startEdit} disabled={saving} aria-label="{data.activityName} — rename">
         <span class="text-sm font-semibold truncate block">{data.activityName}</span>
       </button>
     {/if}
 
     {#if !collapsed}
-      <Button size="icon" class="shrink-0" onclick={addInterval} disabled={saving} aria-label="Add interval">
-        <Plus class="h-3.5 w-3.5" />
-      </Button>
+      <button
+        type="button"
+        class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
+        onclick={addInterval}
+        disabled={saving}
+        aria-label="Add interval"
+      >
+        <span class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Plus class="h-4 w-4" />
+        </span>
+      </button>
     {/if}
+
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger
+        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+        disabled={saving}
+        aria-label="More actions for {data.activityName}"
+      >
+        <MoreHorizontal class="h-5 w-5" />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content>
+        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
+          <Trash2 /> Remove activity
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
 
     <ConfirmDialog
       title="Remove activity?"
@@ -312,13 +337,9 @@
       confirmLabel="Remove"
       {saving}
       onConfirm={onDelete}
-    >
-      {#snippet child({ props })}
-        <Button {...props} size="icon" variant="ghost" class="shrink-0 text-muted-foreground hover:text-destructive" disabled={saving} aria-label="Delete">
-          <Trash2 class="h-3.5 w-3.5" />
-        </Button>
-      {/snippet}
-    </ConfirmDialog>
+      open={confirmRemove}
+      onOpenChange={(v: boolean) => (confirmRemove = v)}
+    />
   </div>
 
   <!-- Totals summary line -->
@@ -335,7 +356,7 @@
 {#if !collapsed}
   {#if sortedIntervals.length > 0}
     <!-- Column headers -->
-    <div class="grid grid-cols-[1.5rem_2rem_1fr_1fr_2rem] gap-2 px-3 py-1 text-xs text-muted-foreground border-b border-border">
+    <div class="grid grid-cols-[2.25rem_1.25rem_1fr_1fr_2.75rem] gap-1.5 px-3 py-1 text-xs text-muted-foreground border-b border-border">
       <span></span>
       <span>#</span>
       <span>Duration</span>
@@ -346,25 +367,25 @@
     {@const liveIntervals = liveIvOrder(sortedIntervals)}
     <div bind:this={ivListEl}>
       {#each liveIntervals as iv, i (iv.id)}
-        <div class="grid grid-cols-[1.5rem_2rem_1fr_1fr_2rem] gap-2 items-center px-3 py-1.5 {ivDragId === iv.id ? 'opacity-50' : ''}">
+        <div class="grid grid-cols-[2.25rem_1.25rem_1fr_1fr_2.75rem] gap-1.5 items-center px-3 py-0.5 {ivDragId === iv.id ? 'opacity-50' : ''}">
 
           <button
             type="button"
-            class="h-6 w-6 flex items-center justify-center text-muted-foreground cursor-grab active:cursor-grabbing"
+            class="h-11 w-9 -ml-1 flex items-center justify-center text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
             style="touch-action: none"
             use:ivGripAction={iv.id}
             aria-label="Drag to reorder"
             tabindex="-1"
             disabled={saving}
           >
-            <GripVertical class="h-3.5 w-3.5" />
+            <GripVertical class="h-4 w-4" />
           </button>
 
-          <span class="text-xs text-muted-foreground">{i + 1}</span>
+          <span class="text-xs text-muted-foreground tabular-nums">{i + 1}</span>
 
           <!-- Duration input: mm:ss -->
           <input
-            class="w-full rounded-md border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-2 text-[15px] font-semibold tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
             type="text"
             inputmode="numeric"
             placeholder="0:00"
@@ -379,7 +400,7 @@
 
           <!-- Distance input: km or m -->
           <input
-            class="w-full rounded-md border bg-background px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
+            class="h-10 w-full rounded-md border bg-background px-2 text-[15px] font-semibold tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
             type="text"
             inputmode="decimal"
             placeholder="km / m"
@@ -394,12 +415,12 @@
 
           <button
             type="button"
-            class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive disabled:opacity-30 justify-self-center"
+            class="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive disabled:opacity-50 justify-self-center"
             disabled={saving}
             onclick={() => removeInterval(iv.id)}
             aria-label="Remove interval"
           >
-            <Trash2 class="h-3 w-3" />
+            <Trash2 class="h-4 w-4" />
           </button>
         </div>
       {/each}
@@ -407,7 +428,7 @@
   {:else}
     <button
       type="button"
-      class="w-full px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
+      class="w-full min-h-11 px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
       disabled={saving}
       onclick={addInterval}
     >

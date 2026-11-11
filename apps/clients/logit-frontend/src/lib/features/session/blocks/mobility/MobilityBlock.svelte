@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight } from "lucide-svelte";
+  import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal } from "lucide-svelte";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import { get } from "svelte/store";
   import { SvelteMap } from "svelte/reactivity";
-  import { Button } from "$lib/components/ui/button";
+  import { segment, segmentTrack, chip } from "$lib/components/ui/choice";
+  import { cn } from "$lib/utils.js";
   import { toast } from "$lib/components/ui/sonner/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { profile } from "$lib/stores/profile.store";
@@ -170,6 +172,7 @@
 
   // ── Swap drill ─────────────────────────────────────────────────────────────
   let swapOpen = $state(false);
+  let confirmRemove = $state(false);
   async function handleSwap(sel: { drillName: string; drillId?: string }) {
     const name = sel.drillName.trim();
     if (!name) return;
@@ -366,32 +369,34 @@
 </script>
 
 <div class="border-t border-border bg-muted/20">
-  <div class="flex items-center gap-2 px-3 py-2">
+  <!-- Same row as a strength exercise: every control a 44px target, swap and
+       remove in the ⋯ menu. -->
+  <div class="flex items-center pl-1 pr-1">
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
       style="touch-action: none"
       use:gripAction
       aria-label="Drag to reorder"
       tabindex="-1"
       disabled={saving}
     >
-      <GripVertical class="h-3.5 w-3.5" />
+      <GripVertical class="h-4 w-4" />
     </button>
 
     <button
       type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
       onclick={() => (collapsed = !collapsed)}
       disabled={saving}
       aria-label={collapsed ? "Expand" : "Collapse"}
     >
-      {#if collapsed}<ChevronRight class="h-3.5 w-3.5" />{:else}<ChevronDown class="h-3.5 w-3.5" />{/if}
+      {#if collapsed}<ChevronRight class="h-4 w-4" />{:else}<ChevronDown class="h-4 w-4" />{/if}
     </button>
 
     <button
       type="button"
-      class="flex-1 min-w-0 text-left"
+      class="flex-1 min-w-0 h-11 pl-1 pr-2 text-left"
       onclick={() => (detailOpen = true)}
       disabled={saving}
       aria-label="{data.drillName} — open details"
@@ -400,31 +405,44 @@
     </button>
 
     <!--
-      Reps used to show as a Repeat icon (⟲) here — right next to the swap
-      button's ArrowLeftRight (⇄), two "double arrow" glyphs read as two swap
-      controls at a glance. Hash (#) reads unambiguously as "counted reps"
-      instead, and doesn't fight with the swap icon beside it.
+      Reps used to show as a Repeat icon (⟲), which read as a second swap
+      control next to ⇄. Hash (#) reads as "counted reps".
     -->
     <span class="shrink-0 text-muted-foreground" title={data.metric === "hold" ? "Timed hold" : "Reps"}>
-      {#if data.metric === "hold"}<Timer class="h-3.5 w-3.5" />{:else}<Hash class="h-3.5 w-3.5" />{/if}
+      {#if data.metric === "hold"}<Timer class="h-4 w-4" />{:else}<Hash class="h-4 w-4" />{/if}
     </span>
 
-    <button
-      type="button"
-      class="shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
-      onclick={() => (swapOpen = true)}
-      disabled={saving}
-      aria-label="Swap drill"
-      title="Swap drill"
-    >
-      <ArrowLeftRight class="h-3.5 w-3.5" />
-    </button>
-
     {#if !collapsed}
-      <Button size="icon" class="shrink-0" onclick={addSet} disabled={saving} aria-label="Add set">
-        <Plus class="h-3.5 w-3.5" />
-      </Button>
+      <button
+        type="button"
+        class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
+        onclick={addSet}
+        disabled={saving}
+        aria-label="Add set"
+      >
+        <span class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Plus class="h-4 w-4" />
+        </span>
+      </button>
     {/if}
+
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger
+        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+        disabled={saving}
+        aria-label="More actions for {data.drillName}"
+      >
+        <MoreHorizontal class="h-5 w-5" />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content>
+        <DropdownMenu.Item onSelect={() => (swapOpen = true)}>
+          <ArrowLeftRight /> Swap drill
+        </DropdownMenu.Item>
+        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
+          <Trash2 /> Remove drill
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
 
     <ConfirmDialog
       title="Remove drill?"
@@ -432,13 +450,9 @@
       confirmLabel="Remove"
       {saving}
       onConfirm={onDelete}
-    >
-      {#snippet child({ props })}
-        <Button {...props} size="icon" variant="ghost" class="shrink-0 text-muted-foreground hover:text-destructive" disabled={saving} aria-label="Delete">
-          <Trash2 class="h-3.5 w-3.5" />
-        </Button>
-      {/snippet}
-    </ConfirmDialog>
+      open={confirmRemove}
+      onOpenChange={(v: boolean) => (confirmRemove = v)}
+    />
   </div>
 
   {#if !collapsed && suggestionLabel}
@@ -457,14 +471,15 @@
 </div>
 
 {#if !collapsed}
-  <div class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-border text-xs">
-    <div class="flex rounded-md border border-border overflow-hidden">
-      <button type="button" class="px-2 py-0.5 {data.metric === 'hold' ? 'bg-primary/10 text-foreground' : 'text-muted-foreground'}" disabled={saving} onclick={() => switchMetric("hold")}>Hold</button>
-      <button type="button" class="px-2 py-0.5 border-l border-border {data.metric === 'reps' ? 'bg-primary/10 text-foreground' : 'text-muted-foreground'}" disabled={saving} onclick={() => switchMetric("reps")}>Reps</button>
+  <div class="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-border">
+    <div class={cn(segmentTrack, "flex-none")}>
+      <button type="button" class={segment(data.metric === "hold")} aria-pressed={data.metric === "hold"} disabled={saving} onclick={() => switchMetric("hold")}>Hold</button>
+      <button type="button" class={segment(data.metric === "reps")} aria-pressed={data.metric === "reps"} disabled={saving} onclick={() => switchMetric("reps")}>Reps</button>
     </div>
     <button
       type="button"
-      class="rounded-md border px-2 py-0.5 {data.perSide ? 'border-primary text-primary' : 'border-border text-muted-foreground'}"
+      class={chip(data.perSide, "h-10")}
+      aria-pressed={data.perSide}
       disabled={saving}
       onclick={togglePerSide}
     >
@@ -472,7 +487,7 @@
     </button>
     <button
       type="button"
-      class="rounded-md border px-2 py-0.5 {data.restBetweenSetsMs ? 'border-primary text-primary' : 'border-border text-muted-foreground'}"
+      class={chip(!!data.restBetweenSetsMs, "h-10")}
       disabled={saving}
       onclick={cycleRest}
       title="Rest after each set / side"
@@ -489,19 +504,19 @@
           <div class="flex items-center gap-1 px-3 text-[11px] uppercase tracking-wide text-muted-foreground">
             <button
               type="button"
-              class="shrink-0 flex items-center justify-center h-8 w-6 -ml-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+              class="shrink-0 flex items-center justify-center h-11 w-9 -ml-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
               style="touch-action: none"
               use:groupGripAction={groupKey(group)}
               aria-label="Drag to reorder set"
               tabindex="-1"
               disabled={saving}
             >
-              <GripVertical class="h-3 w-3" />
+              <GripVertical class="h-4 w-4" />
             </button>
             <!-- Big tap target — the whole label + collapsed summary toggles, not just the chevron. -->
             <button
               type="button"
-              class="flex-1 min-w-0 flex items-center gap-1 py-2 hover:text-foreground text-left"
+              class="flex-1 min-w-0 min-h-11 flex items-center gap-1 hover:text-foreground text-left"
               onclick={() => toggleGroup(group, gc)}
               disabled={saving}
             >
@@ -519,7 +534,7 @@
               {/if}
             </button>
             <span class="shrink-0 flex items-center">
-              <button type="button" class="h-8 px-1.5 flex items-center hover:text-destructive" disabled={saving} onclick={() => requestDeleteGroup(group.setNumber)} aria-label="Remove set"><Trash2 class="h-3.5 w-3.5" /></button>
+              <button type="button" class="h-11 w-11 -mr-2 flex items-center justify-center hover:text-destructive" disabled={saving} onclick={() => requestDeleteGroup(group.setNumber)} aria-label="Remove set"><Trash2 class="h-4 w-4" /></button>
             </span>
           </div>
 
