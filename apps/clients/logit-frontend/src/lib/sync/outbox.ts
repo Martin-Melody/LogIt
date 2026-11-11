@@ -24,6 +24,7 @@ type OutboxEntry =
   | { type: "exercise"; dto: RemoteExercise }
   | { type: "profile"; dto: RemoteProfile }
   | { type: "coachProgram"; dto: UpsertCoachProgramInput }
+  | { type: "programStart"; dto: { programId: string; startedAtMs: number } }
   | { type: "checkinSchedule"; dto: UpsertCheckinScheduleInput }
   | { type: "checkinSubmission"; dto: RemoteCheckinSubmission }
   | { type: "coachMessage"; dto: SendMessageInput }
@@ -70,6 +71,12 @@ export async function flush(): Promise<void> {
     if (e.type !== "coachProgram") continue;
     const prev = coachProgramMap.get(e.dto.programId);
     if (!prev || e.dto.updatedAtMs >= prev.updatedAtMs) coachProgramMap.set(e.dto.programId, e.dto);
+  }
+  // Program starts: the server keeps the first one, so the earliest queued per program is enough.
+  const programStartMap = new Map<string, { programId: string; startedAtMs: number }>();
+  for (const e of entries) {
+    if (e.type !== "programStart") continue;
+    if (!programStartMap.has(e.dto.programId)) programStartMap.set(e.dto.programId, e.dto);
   }
   const checkinScheduleMap = new Map<string, UpsertCheckinScheduleInput>();
   for (const e of entries) {
@@ -133,6 +140,10 @@ export async function flush(): Promise<void> {
   for (const dto of coachProgramMap.values()) {
     try { await coachProgramApi.upsert(dto); }
     catch { failed.push({ type: "coachProgram", dto }); }
+  }
+  for (const dto of programStartMap.values()) {
+    try { await coachProgramApi.startAssigned(dto.programId, dto.startedAtMs); }
+    catch { failed.push({ type: "programStart", dto }); }
   }
   for (const dto of checkinScheduleMap.values()) {
     try { await checkinApi.upsert(dto); }

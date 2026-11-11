@@ -29,6 +29,7 @@ public static class CoachEndpoints
         group.MapPost("/programs", UpsertProgram).RequireTier(UserTier.Studio);
         group.MapGet("/programs", GetMyPrograms).RequireTier(UserTier.Studio);
         group.MapGet("/programs/assigned", GetAssignedPrograms);
+        group.MapPost("/programs/assigned/{programId}/start", StartAssignedProgram);
 
         // Coach-assigned nutrition targets — same shape/rules as programs.
         group.MapPost("/nutrition-plans", UpsertNutritionPlan).RequireTier(UserTier.Studio);
@@ -400,6 +401,8 @@ public static class CoachEndpoints
         // leaves the existing assignment untouched.
         if (recipientUserId.HasValue)
         {
+            // A new client starts the program afresh.
+            if (stored.RecipientUserId != recipientUserId) stored.StartedAtMs = null;
             stored.RecipientUserId = recipientUserId;
             stored.RelationshipId = relationshipId;
         }
@@ -454,10 +457,39 @@ public static class CoachEndpoints
                 p.ProgramId,
                 p.UpdatedAtMs,
                 p.DeletedAtMs == null ? p.DataJson : null,
-                p.DeletedAtMs))
+                p.DeletedAtMs,
+                p.StartedAtMs))
             .ToListAsync();
 
         return Results.Ok(new { programs });
+    }
+
+    /// Client: start an assigned program ("week 1, day 1" = the given start of day). The
+    /// first start wins; starting again returns the existing date, so a retry from the offline
+    /// queue or a second device can't move the program's weeks.
+    private static async Task<IResult> StartAssignedProgram(
+        string programId,
+        [FromBody] StartProgramRequest req,
+        ClaimsPrincipal caller,
+        AppDbContext db)
+    {
+        var userId = caller.GetUserId();
+        var program = await db.CoachPrograms
+            .Where(p => p.RecipientUserId == userId && p.ProgramId == programId && p.DeletedAtMs == null)
+            .Where(p => db.CoachClientRelationships.Any(r =>
+                r.CoachId == p.CoachId && r.ClientId == userId && r.Status == CoachClientStatus.Active))
+            .FirstOrDefaultAsync();
+        if (program is null) return Results.NotFound();
+
+        if (program.StartedAtMs is null)
+        {
+            program.StartedAtMs = req.StartedAtMs;
+            // Bump so the client's other devices pick the start up on their next pull.
+            program.SyncedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        return Results.Ok(new { programId, startedAtMs = program.StartedAtMs });
     }
 
     // ── Nutrition plans ───────────────────────────────────────────────────────
@@ -992,7 +1024,10 @@ public record AssignedProgramDto(
     string ProgramId,
     long UpdatedAtMs,
     string? DataJson,
-    long? DeletedAtMs);
+    long? DeletedAtMs,
+    long? StartedAtMs);
+
+public record StartProgramRequest(long StartedAtMs);
 
 public record UpsertNutritionPlanRequest(
     string PlanId,

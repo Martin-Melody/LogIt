@@ -132,6 +132,41 @@
       <span class="text-xs text-muted-foreground">{saving ? "saving…" : "saved"}</span>
     </div>
 
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+      <label for="program-start-mode" class="text-muted-foreground">Starts</label>
+      <select
+        id="program-start-mode"
+        class="h-9 rounded-md border border-input bg-background px-2 text-sm"
+        value={program.startMode === "fixed-date" ? "fixed-date" : "manual"}
+        disabled={saving}
+        onchange={(e) => {
+          const mode = e.currentTarget.value;
+          void run((p) =>
+            mode === "fixed-date"
+              ? P.setProgramStart(p, { mode: "fixed-date", startDateMs: p.startDateMs ?? P.startOfLocalDayMs() })
+              : P.setProgramStart(p, { mode: "manual" }),
+          );
+        }}
+      >
+        <option value="manual">When the client taps Start</option>
+        <option value="fixed-date">On a date</option>
+      </select>
+      {#if program.startMode === "fixed-date"}
+        <input
+          id="program-start-date"
+          type="date"
+          aria-label="Start date"
+          class="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={program.startDateMs != null ? P.toDateInputValue(program.startDateMs) : ""}
+          disabled={saving}
+          onchange={(e) => {
+            const ms = P.fromDateInputValue(e.currentTarget.value);
+            if (ms != null) void run((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms }));
+          }}
+        />
+      {/if}
+    </div>
+
     {#each [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber) as week (week.id)}
       <div class="rounded border border-border">
         <div class="flex items-center gap-2 px-3 py-2 bg-muted/30">

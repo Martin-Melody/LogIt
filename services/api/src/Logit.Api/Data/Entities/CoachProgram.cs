@@ -25,6 +25,13 @@ public class CoachProgram
     public CoachClientRelationship? Relationship { get; set; }
 
     public long UpdatedAtMs { get; set; }
+
+    /// When the client tapped Start (epoch ms, start of their day). Client-owned, so it lives
+    /// outside the coach's DataJson: a coach edit would otherwise overwrite it. Only used when
+    /// the program's start mode is "manual"; a "fixed-date" program carries its date in
+    /// DataJson. Cleared when the program is reassigned to a different client.
+    public long? StartedAtMs { get; set; }
+
     public string DataJson { get; set; } = string.Empty;
     public long? DeletedAtMs { get; set; }
     public DateTime SyncedAt { get; set; } = DateTime.UtcNow;

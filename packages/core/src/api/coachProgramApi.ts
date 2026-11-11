@@ -7,6 +7,8 @@ export interface RemoteCoachProgram {
   updatedAtMs: number;
   dataJson: string | null;
   deletedAtMs?: number | null;
+  /** When the client tapped Start (assigned pull only). See CoachProgram.clientStartedAtMs. */
+  startedAtMs?: number | null;
 }
 
 /** Coach-side row: same, plus which client it's assigned to (null = template). */
@@ -44,6 +46,15 @@ export const coachProgramApi = {
       `/coach/programs${qs ? `?${qs}` : ""}`,
     );
     return programs;
+  },
+
+  /** Client: start an assigned program. The first start wins; the reply carries the
+   * start the server kept, which may be an earlier one from another device. */
+  async startAssigned(programId: string, startedAtMs: number): Promise<{ startedAtMs: number }> {
+    return apiClient.fetch(`/coach/programs/assigned/${encodeURIComponent(programId)}/start`, {
+      method: "POST",
+      body: JSON.stringify({ startedAtMs }),
+    });
   },
 
   /** Client: incremental pull of programs assigned to the caller (read-only). */
