@@ -690,6 +690,107 @@ test.describe("supersets", () => {
   });
 });
 
+// ── Circuit countdown ─────────────────────────────────────────────────────────
+
+test.describe("circuit countdown", () => {
+  /** A drill already in group `g1`, with `rounds` sets (L/R pairs when per side) and a target. */
+  function groupedDrill(id: string, orderIndex: number, drillName: string, perSide: boolean, rounds: number, targetSec: number) {
+    const sets = [];
+    for (let r = 0; r < rounds; r++) {
+      if (perSide) {
+        sets.push({ id: `${id}-${r}l`, orderIndex: sets.length, side: "left", targetSec });
+        sets.push({ id: `${id}-${r}r`, orderIndex: sets.length, side: "right", targetSec });
+      } else {
+        sets.push({ id: `${id}-${r}`, orderIndex: sets.length, targetSec });
+      }
+    }
+    return {
+      id, type: "mobility", orderIndex,
+      data: { drillName, metric: "hold", perSide, sets, superset: { id: "g1", roundRestMs: 30_000 } },
+    };
+  }
+
+  type DraftSet = { id: string; durationSec?: number; completed?: boolean };
+  async function draftSets(page: Page): Promise<Record<string, DraftSet>> {
+    return page.evaluate(() => {
+      const draft = JSON.parse(localStorage.getItem("logit:draft:v1")!);
+      const out: Record<string, DraftSet> = {};
+      for (const b of draft.blocks) for (const set of b.data.sets ?? []) out[set.id] = set;
+      return out;
+    });
+  }
+
+  test("runs the drills with a 3-2-1, holds that stop on their own, sides and a round rest", async ({ page }) => {
+    await page.clock.install();
+    await seedSession(page, {
+      session: makeSession([
+        groupedDrill("ham", 0, "Hamstring stretch", false, 2, 20),
+        groupedDrill("pig", 1, "Pigeon stretch", true, 2, 20),
+      ]),
+    });
+    await goToSession(page);
+    await expect(page.getByRole("button", { name: /Rest between rounds: 30 s/ })).toBeVisible();
+
+    await page.getByRole("button", { name: "Start superset" }).click();
+    const overlay = page.getByRole("dialog", { name: "Superset timer" });
+    await expect(overlay.getByText("Get ready")).toBeVisible();
+    await expect(overlay.getByRole("heading", { name: "Hamstring stretch" })).toBeVisible();
+    await expect(overlay.getByText("Round 1 of 2")).toBeVisible();
+    await expect(overlay.getByText("Pigeon stretch, left side")).toBeVisible(); // up next
+
+    // 3-2-1, then the hold counts down from 20 s and stops on its own.
+    await page.clock.runFor(3_500);
+    await expect(overlay.getByRole("img", { name: /seconds left of 20/ })).toBeVisible();
+    await page.clock.runFor(20_000);
+    await expect(overlay.getByRole("heading", { name: "Pigeon stretch" })).toBeVisible();
+    await expect(overlay.getByText("Get ready")).toBeVisible();
+    await expect.poll(async () => (await draftSets(page))["ham-0"]).toMatchObject({ durationSec: 20, completed: true });
+
+    // Start now, +10 s, and the hold runs to 30 s; the right side then gets a 5 s switch.
+    await overlay.getByRole("button", { name: "Start now" }).click();
+    await expect(overlay.getByText("Left side")).toBeVisible();
+    await expect(overlay.getByText("5 s to switch")).toBeVisible();
+    await overlay.getByRole("button", { name: "Add 10 seconds" }).click();
+    await expect(overlay.getByText("of 30 s")).toBeVisible();
+    await page.clock.runFor(30_500);
+    await expect(overlay.getByText("Switch sides")).toBeVisible();
+    await expect.poll(async () => (await draftSets(page))["pig-0l"]).toMatchObject({ durationSec: 30, completed: true });
+
+    // Skipping about 5 s into the right side keeps the time held (the switch started 0.5 s ago).
+    await page.clock.runFor(4_500 + 5_000);
+    await overlay.getByRole("button", { name: "Skip to next" }).click();
+    await expect.poll(async () => (await draftSets(page))["pig-0r"]?.completed).toBe(true);
+    const held = (await draftSets(page))["pig-0r"]!.durationSec!;
+    expect(held).toBeGreaterThanOrEqual(5);
+    expect(held).toBeLessThanOrEqual(6);
+
+    // Round 1 done: rest between rounds, then round 2 starts with the hamstring.
+    await expect(overlay.getByRole("heading", { name: "Rest" })).toBeVisible();
+    await expect(overlay.getByText("Round 1 of 2 done")).toBeVisible();
+    await expect(overlay.getByText("Up next · round 2 of 2")).toBeVisible();
+    await expect(overlay.getByText("Hamstring stretch", { exact: true })).toBeVisible();
+    await overlay.getByRole("button", { name: "Skip rest" }).click();
+    await expect(overlay.getByText("Round 2 of 2")).toBeVisible();
+    await expect(overlay.getByRole("heading", { name: "Hamstring stretch" })).toBeVisible();
+
+    // Shrink to see the workout, pause, then end: what was logged stays.
+    await overlay.getByRole("button", { name: "Shrink to see the workout" }).click();
+    const bar = page.getByRole("region", { name: "Superset timer" });
+    await expect(bar).toBeVisible();
+    await expect(page.getByRole("button", { name: "Show the superset timer" })).toBeVisible();
+    await bar.getByRole("button", { name: "Pause" }).click();
+    await page.clock.runFor(60_000);
+    await expect(bar.getByText("Paused")).toBeVisible();
+    await bar.getByRole("button", { name: "Expand timer" }).click();
+    await overlay.getByRole("button", { name: "End" }).click();
+    await expect(overlay).toHaveCount(0);
+    await expect(bar).toHaveCount(0);
+    const sets = await draftSets(page);
+    expect(sets["ham-1"]?.completed).toBeFalsy();
+    await expect(page.getByRole("button", { name: "Start superset" })).toBeVisible();
+  });
+});
+
 // ── Block drag to reorder ─────────────────────────────────────────────────────
 
 test.describe("block reorder", () => {

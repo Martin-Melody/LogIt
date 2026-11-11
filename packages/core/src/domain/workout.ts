@@ -137,7 +137,12 @@ export function isUnloggedPlannedSet(s: SetEntry): boolean {
  * (not on the block) so it round-trips through the JSON `session_blocks.data`
  * column with no schema change.
  */
-export type SupersetInfo = { id: string; label?: string };
+export type SupersetInfo = {
+  id: string;
+  label?: string;
+  /** Rest after each round when the circuit is run with the countdown, ms. Undefined = none. */
+  roundRestMs?: number;
+};
 
 // Data payload for a strength (exercise + sets) block
 export type StrengthBlockData = {
@@ -1019,7 +1024,11 @@ export function groupIntoSuperset(
   const existing = targets.map(blockSuperset).find((s) => s);
   const supersetId = existing?.id ?? createId("superset");
   const name = label ?? existing?.label;
-  const info: SupersetInfo = { id: supersetId, ...(name ? { label: name } : {}) };
+  const info: SupersetInfo = {
+    id: supersetId,
+    ...(name ? { label: name } : {}),
+    ...(existing?.roundRestMs ? { roundRestMs: existing.roundRestMs } : {}),
+  };
 
   // Also fold in any blocks that already shared an id with a target.
   const foldedIds = new Set(blockIds);
@@ -1048,6 +1057,25 @@ export function ungroupSuperset(session: WorkoutSession, supersetId: string): Wo
     blocks: session.blocks.map((b) =>
       blockSuperset(b)?.id === supersetId ? setBlockSuperset(b, undefined) : b,
     ),
+  };
+}
+
+/** Set (or clear, with undefined/0) the rest between rounds of a circuit, on every member. */
+export function setGroupRoundRest(
+  session: WorkoutSession,
+  supersetId: string,
+  roundRestMs: number | undefined,
+): WorkoutSession {
+  return {
+    ...session,
+    blocks: session.blocks.map((b) => {
+      const info = blockSuperset(b);
+      if (info?.id !== supersetId) return b;
+      const next: SupersetInfo = { ...info };
+      if (roundRestMs && roundRestMs > 0) next.roundRestMs = roundRestMs;
+      else delete next.roundRestMs;
+      return setBlockSuperset(b, next);
+    }),
   };
 }
 

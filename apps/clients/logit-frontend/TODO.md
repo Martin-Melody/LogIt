@@ -76,6 +76,18 @@
     round; `supersetRoundCount`), "Add round" adds a set or L/R pair to each drill with the
     last set's hold target and load, and drills follow the group's rest rule (only the last
     exercise of a round rests). Cardio still has no rounds; that waits for per-member goals.
+  - Step 3 built 2026-11-11: "Start" on a group with drills opens the full-screen countdown
+    (`features/session/circuit/`, pure state in `@logit/core/domain/circuit`). Round by round,
+    drills in workout order, leading side first; 3-2-1 lead-in, a hold that stops and saves
+    itself (goal = set target, else the drill's last hold, else 30 s), 5 s to switch sides,
+    rep drills get a goal with −/+ and Done. Pause / +10 s / Skip (a hold skipped part-way
+    keeps the time held; a skipped lead-in leaves the set unlogged), "Rest between rounds"
+    chip on the group (off by default, stored as `roundRestMs` on the group), shrink to a bar
+    above the finish bar, End. Beeps on 3-2-1 and at the end, haptics, screen kept on.
+    Starts at the first set not done, so it can be resumed. Limits: strength and cardio
+    members are skipped by the countdown (step 5); a reload stops a running countdown (what
+    was saved stays); no phone notification when a hold ends with the app in the background
+    (it catches up on return).
   - Step 4, plan groups in a split day (added 2026-11-11):
     - Split days can't hold mobility at all yet (`PlannedBlock` = strength | cardio), so add
       a planned mobility block first: drill, sets, hold or reps, target, per side.
