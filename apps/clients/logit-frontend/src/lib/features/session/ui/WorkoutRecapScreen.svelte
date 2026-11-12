@@ -19,6 +19,7 @@
 
   import { authStore } from "$lib/api/authStore.svelte";
   import { profile } from "$lib/stores/profile.store";
+  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import Confetti from "./Confetti.svelte";
   import CountUp from "./CountUp.svelte";
 
@@ -108,6 +109,12 @@
 
   let prs = $state<SessionPR[]>([]);
   let prsLoaded = $state(false);
+
+  // Full screen: hide the bottom nav (shown on the workout screen) while it's up.
+  onMount(() => {
+    openOverlay();
+    return () => closeOverlay();
+  });
 
   onMount(() => {
     void (async () => {

@@ -12,11 +12,25 @@
   import { goto, onNavigate } from "$app/navigation";
   import { ModeWatcher } from "mode-watcher";
   import { bottomNavHeight } from "$lib/stores/bottomNav.store";
+  import { navConfig, NAV_ITEM_DEFS } from "$lib/stores/navConfig.store";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { overlayOpen } from "$lib/stores/overlay.store";
+  import { tabHrefs, neighbourTab, tabDirection, tabSwipe } from "$lib/features/navigation/tabSwipe";
 
   let { children } = $props();
 
   let footerHeight = $state(0);
   $effect(() => bottomNavHeight.set(footerHeight));
+
+  // Bottom-nav pages in bar order (Start in the middle), for swiping and slide direction.
+  const tabs = $derived(tabHrefs($navConfig, NAV_ITEM_DEFS, authStore.isAuthenticated));
+  const swipeOn = $derived($navConfig.swipe !== false);
+
+  const swipeParams = $derived({
+    target: (step: 1 | -1) =>
+      swipeOn && !$overlayOpen ? neighbourTab(tabs, page.url.pathname, step) : null,
+    onSwipe: (href: string) => void goto(href),
+  });
 
   const isOnboarding = $derived(
     page.url.pathname.startsWith("/onboarding") ||
@@ -49,6 +63,14 @@
   onNavigate((navigation) => {
     if (!document.startViewTransition) return;
 
+    // Between two bar pages the page slides the way the bar goes; anything else cross-fades.
+    const dir =
+      navigation.from && navigation.to
+        ? tabDirection(tabs, navigation.from.url.pathname, navigation.to.url.pathname)
+        : null;
+    if (dir) document.documentElement.dataset.navDir = dir;
+    else delete document.documentElement.dataset.navDir;
+
     return new Promise<void>((resolve) => {
       document.startViewTransition(async () => {
         resolve();
@@ -77,7 +99,10 @@
     {@render children()}
   {:else}
     <div class="flex h-screen flex-col bg-background text-foreground">
-      <main class="flex-1 overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)]">
+      <main
+        class="flex-1 overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)]"
+        use:tabSwipe={swipeParams}
+      >
         {@render children()}
       </main>
 

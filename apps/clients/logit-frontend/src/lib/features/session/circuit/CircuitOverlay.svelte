@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { ChevronDown, ChevronUp, Pause, Play, SkipForward, Check, Minus, Plus } from "lucide-svelte";
   import { currentSession } from "$lib/stores/currentSession.store";
   import { blockGroup, groupLabel } from "@logit/core/domain/workout";
@@ -107,6 +108,14 @@
   const C = 2 * Math.PI * R;
   const r = 20;
   const c = 2 * Math.PI * r;
+
+  // The full-screen timer hides the bottom nav (shown on the workout screen).
+  $effect(() => {
+    if (run && phase && phase.kind !== "done" && $circuitRunner.expanded) {
+      openOverlay();
+      return () => closeOverlay();
+    }
+  });
 </script>
 
 {#if run && phase && phase.kind !== "done"}
