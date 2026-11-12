@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronRight, GripVertical, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
+  import { Check, ChevronDown, ChevronRight, GripVertical, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
@@ -10,6 +10,8 @@
     groupKindOf,
     groupLabel,
     groupProgress,
+    groupRounds,
+    memberRoundCount,
     removeGroup,
     setGroupKind,
     supersetRoundCount,
@@ -23,6 +25,9 @@
   import type { GripAction } from "$lib/features/session/blocks/types";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
   import { reveal } from "$lib/transitions";
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { SvelteMap } from "svelte/reactivity";
+  import { groupViews } from "./groupViews";
 
   const {
     supersetId,
@@ -63,6 +68,39 @@
   // Collapsed, the whole group is one line. It never collapses on its own.
   let collapsed = $state(false);
   const progress = $derived(groupProgress(blocks));
+
+  // Expanded, a group shows its rounds (each opens and closes on its own) or, to drag,
+  // add warm-ups and see the rep bars, its exercises one after another.
+  const roundBlocks = $derived(blocks.filter((b: SessionBlock) => b.type === "strength" || b.type === "mobility"));
+  const otherBlocks = $derived(blocks.filter((b: SessionBlock) => b.type !== "strength" && b.type !== "mobility"));
+  const rounds = $derived(groupRounds(roundBlocks));
+  const canShowRounds = $derived(rounds.length > 0);
+  function initialView(): "rounds" | "exercises" {
+    return groupViews.get(supersetId) ?? "rounds";
+  }
+  let view = $state<"rounds" | "exercises">(initialView());
+  function setView(v: "rounds" | "exercises") {
+    view = v;
+    groupViews.set(supersetId, v);
+  }
+  const byRound = $derived(view === "rounds" && canShowRounds);
+  // Rounds the user opened or closed; the rest follow: the round being worked on, and any
+  // round with a rest running (its rest bar is inside it), are open.
+  const roundChoice = new SvelteMap<number, boolean>();
+  function roundOpen(r: number): boolean {
+    return roundChoice.get(r) ?? (r === progress.currentRound - 1 || rounds[r]!.resting);
+  }
+  function roundStatus(r: number): string {
+    const t = rounds[r]!;
+    if (t.done === t.total) return "Done";
+    if (t.done > 0 || r === progress.currentRound - 1) return `${t.done} of ${t.total} done`;
+    if (r === progress.currentRound) return "Up next";
+    return "";
+  }
+  /** Index in `blocks` of a member, for its rest (the last member rests between rounds). */
+  function memberIndex(block: SessionBlock): number {
+    return blocks.findIndex((b: SessionBlock) => b.id === block.id);
+  }
   async function removeAll() {
     if (running) circuitRunner.end();
     await onMutate((s: WorkoutSession) => removeGroup(s, supersetId));
@@ -192,24 +230,87 @@
     {/if}
   {:else}
     <div transition:reveal>
-      <div class="ml-3 border-l-2 border-primary/30">
-        {#each blocks as block, i (block.id)}
-          <div class="transition-opacity {draggingBlockId === block.id ? 'opacity-50' : ''}" transition:reveal>
+      {#if canShowRounds}
+        <div class="px-3 pb-2">
+          <div class={segmentTrack} role="group" aria-label="Show {label}">
+            <button type="button" class={segment(byRound)} aria-pressed={byRound} onclick={() => setView("rounds")}>By round</button>
+            <button type="button" class={segment(!byRound)} aria-pressed={!byRound} onclick={() => setView("exercises")}>By exercise</button>
+          </div>
+        </div>
+      {/if}
+
+      {#if byRound}
+        <div class="ml-3 border-l-2 border-primary/30">
+          {#each rounds as tally, r (r)}
+            {@const open = roundOpen(r)}
+            <div class="border-t border-border/60 first:border-t-0">
+              <button
+                type="button"
+                class="w-full min-h-11 flex items-center gap-2 pl-3 pr-4 text-left text-sm {open ? 'font-semibold' : 'text-muted-foreground'}"
+                onclick={() => roundChoice.set(r, !open)}
+                aria-expanded={open}
+              >
+                {#if open}<ChevronDown class="h-4 w-4 shrink-0" />{:else}<ChevronRight class="h-4 w-4 shrink-0" />{/if}
+                <span class="flex-1">Round {r + 1}</span>
+                <span class="text-xs font-normal text-muted-foreground">{roundStatus(r)}</span>
+                {#if tally.done === tally.total}<Check class="h-4 w-4 shrink-0 text-info" aria-hidden="true" />{/if}
+              </button>
+              {#if open}
+                <div transition:reveal>
+                  {#each roundBlocks.filter((b: SessionBlock) => memberRoundCount(b) > r) as block (block.id)}
+                    <BlockHost
+                      type={block.type}
+                      blockId={block.id}
+                      data={block.data}
+                      {saving}
+                      grouped
+                      round={r}
+                      groupRestMs={memberRest(memberIndex(block))}
+                      gripAction={noopGrip}
+                      onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
+                      onDelete={() => onDeleteBlock(block.id)}
+                      {onMutate}
+                    />
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/each}
+          {#each otherBlocks as block (block.id)}
             <BlockHost
               type={block.type}
               blockId={block.id}
               data={block.data}
               {saving}
               grouped
-              groupRestMs={memberRest(i)}
-              gripAction={memberGripAction ? memberGripAction(block.id) : noopGrip}
+              groupRestMs={memberRest(memberIndex(block))}
+              gripAction={noopGrip}
               onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
               onDelete={() => onDeleteBlock(block.id)}
               {onMutate}
             />
-          </div>
-        {/each}
-      </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="ml-3 border-l-2 border-primary/30">
+          {#each blocks as block, i (block.id)}
+            <div class="transition-opacity {draggingBlockId === block.id ? 'opacity-50' : ''}" transition:reveal>
+              <BlockHost
+                type={block.type}
+                blockId={block.id}
+                data={block.data}
+                {saving}
+                grouped
+                groupRestMs={memberRest(i)}
+                gripAction={memberGripAction ? memberGripAction(block.id) : noopGrip}
+                onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
+                onDelete={() => onDeleteBlock(block.id)}
+                {onMutate}
+              />
+            </div>
+          {/each}
+        </div>
+      {/if}
 
       <button
         type="button"

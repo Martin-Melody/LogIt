@@ -8,6 +8,7 @@ import {
   createSession,
   groupIntoSuperset,
   groupProgress,
+  groupRounds,
   removeSupersetRound,
   setGroupSettings,
   supersetMembers,
@@ -108,7 +109,11 @@ describe("groupProgress", () => {
     s = updateMobilitySet(s, pigeon.id, l1!.id, { completed: true });
     // One side of the pair isn't the whole round.
     expect(groupProgress(supersetMembers(s, group))).toMatchObject({ done: 1, currentRound: 1 });
-    s = updateMobilitySet(s, pigeon.id, r1!.id, { completed: true });
+    s = updateMobilitySet(s, pigeon.id, r1!.id, { completed: true, restStartedAtMs: 5 });
     expect(groupProgress(supersetMembers(s, group))).toMatchObject({ done: 2, currentRound: 2 });
+    expect(groupRounds(supersetMembers(s, group))).toEqual([
+      { total: 2, done: 2, resting: true },
+      { total: 1, done: 0, resting: false },
+    ]);
   });
 });

@@ -569,10 +569,12 @@ test.describe("supersets", () => {
     await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
 
     await page.getByRole("button", { name: "Add round" }).click();
-
-    // Each exercise now has 2 set rows.
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
     await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Round 2/ })).toBeVisible();
+
+    // By exercise, each exercise now has 2 set rows.
+    await page.getByRole("button", { name: "By exercise" }).click();
+    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
 
     // Ungroup (from the group's menu) restores plain blocks.
     await page.getByRole("button", { name: "More actions for this superset" }).click();
@@ -646,6 +648,7 @@ test.describe("supersets", () => {
 
     await groupWith(page, ["Pigeon stretch"]);
     await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
+    await page.getByRole("button", { name: "By exercise" }).click();
 
     // Not the last drill of the round: ticking it moves on without a rest.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
@@ -762,6 +765,7 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
     await groupWith(page, ["Row"]);
+    await page.getByRole("button", { name: "By exercise" }).click();
 
     // Tapping the group's name opens its sheet: make it a named circuit.
     await page.getByRole("button", { name: "Edit Superset" }).click();
@@ -794,6 +798,43 @@ test.describe("supersets", () => {
     // Bench's second set, not the last exercise of its round.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
     await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+  });
+
+  test("by round: the round being worked on is open, and each round opens and closes", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60), makeSet("s3", 1, 8, 60)]),
+        makeStrengthBlock("b2", 1, "Row", [
+          { ...makeSet("s2", 0, 8, 40), restDurationMs: 60_000 },
+          makeSet("s4", 1, 8, 40),
+        ]),
+      ]),
+    });
+    await goToSession(page);
+    await groupWith(page, ["Row"]);
+
+    const round1 = page.getByRole("button", { name: /^Round 1/ });
+    const round2 = page.getByRole("button", { name: /^Round 2/ });
+    await expect(round1).toHaveAttribute("aria-expanded", "true");
+    await expect(round2).toHaveAttribute("aria-expanded", "false");
+    await expect(round2).toContainText("Up next");
+    // Round 1 shows each exercise once, with its first set.
+    await expect(page.getByRole("button", { name: "Mark complete" })).toHaveCount(2);
+
+    // Finishing round 1 opens round 2; round 1 stays open while its rest runs.
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await page.getByRole("button", { name: "Mark complete" }).first().click();
+    await expect(round1).toContainText("Done");
+    await expect(round2).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
+    await page.getByLabel("Dismiss rest timer").click();
+    await expect(round1).toHaveAttribute("aria-expanded", "false");
+
+    // Any round can be opened or closed by hand.
+    await round1.click();
+    await expect(round1).toHaveAttribute("aria-expanded", "true");
+    await round2.click();
+    await expect(round2).toHaveAttribute("aria-expanded", "false");
   });
 
   test("the edit sheet adds and removes rounds, and ungroups", async ({ page }) => {

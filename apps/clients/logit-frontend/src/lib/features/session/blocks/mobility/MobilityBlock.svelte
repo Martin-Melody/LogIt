@@ -40,6 +40,7 @@
     saving,
     grouped = false,
     groupRestMs,
+    round,
     gripAction,
     onGroup,
     onDelete,
@@ -382,28 +383,30 @@
 <div class="border-t border-border bg-muted/20">
   <!-- Same row as a strength exercise: every control a 44px target, swap and
        remove in the ⋯ menu. -->
-  <div class="flex items-center pl-1 pr-1">
-    <button
-      type="button"
-      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
-      style="touch-action: none"
-      use:gripAction
-      aria-label={grouped ? "Drag to reorder within the group" : "Drag to reorder"}
-      tabindex="-1"
-      disabled={saving}
-    >
-      <GripVertical class="h-4 w-4" />
-    </button>
+  <div class="flex items-center {round === undefined ? 'pl-1' : 'pl-3'} pr-1">
+    {#if round === undefined}
+      <button
+        type="button"
+        class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        style="touch-action: none"
+        use:gripAction
+        aria-label={grouped ? "Drag to reorder within the group" : "Drag to reorder"}
+        tabindex="-1"
+        disabled={saving}
+      >
+        <GripVertical class="h-4 w-4" />
+      </button>
 
-    <button
-      type="button"
-      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
-      onclick={() => (collapsed = !collapsed)}
-      disabled={saving}
-      aria-label={collapsed ? "Expand" : "Collapse"}
-    >
-      {#if collapsed}<ChevronRight class="h-4 w-4" />{:else}<ChevronDown class="h-4 w-4" />{/if}
-    </button>
+      <button
+        type="button"
+        class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+        onclick={() => (collapsed = !collapsed)}
+        disabled={saving}
+        aria-label={collapsed ? "Expand" : "Collapse"}
+      >
+        {#if collapsed}<ChevronRight class="h-4 w-4" />{:else}<ChevronDown class="h-4 w-4" />{/if}
+      </button>
+    {/if}
 
     <button
       type="button"
@@ -423,7 +426,7 @@
       {#if data.metric === "hold"}<Timer class="h-4 w-4" />{:else}<Hash class="h-4 w-4" />{/if}
     </span>
 
-    {#if !collapsed}
+    {#if !collapsed && round === undefined}
       <button
         type="button"
         class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
@@ -471,13 +474,13 @@
     />
   </div>
 
-  {#if !collapsed && suggestionLabel}
+  {#if !collapsed && round === undefined && suggestionLabel}
     <p class="px-3 pb-1 -mt-1 text-xs text-primary/90">{suggestionLabel}</p>
   {/if}
-  {#if !collapsed && suggestionNotes}
+  {#if !collapsed && round === undefined && suggestionNotes}
     <p class="px-3 pb-1.5 text-xs text-muted-foreground">{suggestionNotes}</p>
   {/if}
-  {#if !collapsed && (totalHoldSec > 0 || totalReps > 0)}
+  {#if !collapsed && round === undefined && (totalHoldSec > 0 || totalReps > 0)}
     <p class="px-3 pb-1.5 text-xs text-muted-foreground">
       {#if totalHoldSec > 0}Total hold {fmtHold(totalHoldSec)}{/if}
       {#if totalHoldSec > 0 && totalReps > 0}<span class="mx-1">·</span>{/if}
@@ -486,7 +489,48 @@
   {/if}
 </div>
 
-{#if !collapsed}
+{#if round !== undefined}
+  {@const roundGroup = groups[round]}
+  {#if roundGroup}
+    {@const rows = roundGroup.kind === "single"
+      ? [{ s: roundGroup.set, l: undefined }]
+      : roundGroup.lead === "right"
+        ? [{ s: roundGroup.right, l: "R" }, { s: roundGroup.left, l: "L" }]
+        : [{ s: roundGroup.left, l: "L" }, { s: roundGroup.right, l: "R" }]}
+    {#each rows as row (row.l ?? "single")}
+      {#if row.s}
+        {@const rowSet = row.s}
+        {@const rowLabel = row.l ? `Set ${roundGroup.setNumber} · ${row.l}` : `Set ${roundGroup.setNumber}`}
+        <SwipeRevealRow
+          disabled={saving}
+          actionsWidth={80}
+          onEdit={() => openEdit(rowSet, rowLabel)}
+          onDelete={() => requestDeleteGroup(roundGroup.setNumber)}
+        >
+          <MobilitySetRow
+            metric={data.metric}
+            set={rowSet}
+            label={row.l}
+            prev={prevFor(rowSet)}
+            {weightUnit}
+            disabled={saving}
+            onPatch={(p) => patchSet(rowSet.id, p)}
+            onComplete={() => toggleComplete(rowSet)}
+          />
+        </SwipeRevealRow>
+        {#if typeof rowSet.restStartedAtMs === "number"}
+          <div transition:reveal>
+            <RestProgressBar
+              restStartedAtMs={rowSet.restStartedAtMs}
+              restDurationMs={mobilityRestMs(rowSet, data)}
+              onDismiss={() => handleDismissRest(rowSet.id)}
+            />
+          </div>
+        {/if}
+      {/if}
+    {/each}
+  {/if}
+{:else if !collapsed}
   <div class="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-border">
     <div class={cn(segmentTrack, "flex-none")}>
       <button type="button" class={segment(data.metric === "hold")} aria-pressed={data.metric === "hold"} disabled={saving} onclick={() => switchMetric("hold")}>Hold</button>
