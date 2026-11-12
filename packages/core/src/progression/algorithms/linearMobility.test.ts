@@ -39,6 +39,22 @@ describe("linearMobility", () => {
     expect(out.sets[0].durationSec).toBe(50);
   });
 
+  it("snaps a stopwatch hold to a 5-second goal", () => {
+    // Stopped the timer at 34s against a 30s goal: next goal is 40s, not 39s.
+    const out = run({
+      history: [session([{ durationSec: 34, targetSec: 30, completed: true, depth: 4 }])],
+    });
+    expect(out.sets[0].durationSec).toBe(40);
+  });
+
+  it("keeps 1-second steps when the increment is under 5s", () => {
+    const out = run({
+      history: [session([{ durationSec: 34, targetSec: 30, completed: true, depth: 4 }])],
+      userPreferences: { ...(linearMobility.defaultPreferences as object), holdIncrementSec: 2 },
+    });
+    expect(out.sets[0].durationSec).toBe(36);
+  });
+
   it("holds steady after a single miss", () => {
     const out = run({
       history: [session([{ durationSec: 40, targetSec: 60, completed: true, depth: 4 }])],

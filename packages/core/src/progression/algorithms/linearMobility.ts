@@ -103,8 +103,15 @@ function avgDepth(sets: MobilitySetRecord[]): number {
   return ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : 0;
 }
 
-function roundHold(v: number): number {
-  return Math.max(5, Math.round(v));
+/**
+ * Holds come off a stopwatch (34s, 37s…), so the next goal is snapped to a
+ * 5-second step: every drill gets a clean, comparable target instead of
+ * whatever second the timer happened to stop on. A sub-5s increment keeps
+ * 1-second steps so it can still progress.
+ */
+function roundHold(v: number, incrementSec: number): number {
+  const step = incrementSec >= 5 ? 5 : 1;
+  return Math.max(5, Math.round(v / step) * step);
 }
 
 function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
@@ -152,20 +159,20 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
 
       let nextHold: number;
       if (metTarget && depthOK) {
-        nextHold = roundHold(Math.min(p.maxHoldSec, lastBest + p.holdIncrementSec));
+        nextHold = roundHold(Math.min(p.maxHoldSec, lastBest + p.holdIncrementSec), p.holdIncrementSec);
         nextStreak[sideKey] = { hits: prevStreak.hits + 1, misses: 0 };
         if (lastBest + p.holdIncrementSec > p.maxHoldSec) {
           noteParts.push(`You're past ${p.maxHoldSec}s${SIDE_LABEL[sideKey] ?? ""} — add load or move to a harder variant.`);
         }
       } else if (!depthOK) {
-        nextHold = roundHold(lastBest);
+        nextHold = roundHold(lastBest, p.holdIncrementSec);
         noteParts.push(`Depth was light${SIDE_LABEL[sideKey] ?? ""} — build into the stretch before adding time.`);
       } else if (prevStreak.misses + 1 >= DELOAD_AFTER_MISSES) {
-        nextHold = roundHold(lastBest * DELOAD_FACTOR);
+        nextHold = roundHold(lastBest * DELOAD_FACTOR, p.holdIncrementSec);
         nextStreak[sideKey] = { hits: 0, misses: 0 };
         noteParts.push(`Backing off${SIDE_LABEL[sideKey] ?? ""} after two misses.`);
       } else {
-        nextHold = roundHold(lastBest);
+        nextHold = roundHold(lastBest, p.holdIncrementSec);
         nextStreak[sideKey] = { hits: 0, misses: prevStreak.misses + 1 };
       }
       target = { durationSec: nextHold };
