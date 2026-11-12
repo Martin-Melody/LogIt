@@ -13,12 +13,14 @@
     open?: boolean;
     onOpenChange?: (v: boolean) => void;
     onSelect?: (type: string) => void;
+    /** Only these block types (the split day editor plans three). */
+    types?: string[];
   }>();
 
   const onOpenChange = props.onOpenChange ?? ((_v: boolean) => {});
   const onSelect = props.onSelect ?? ((_t: string) => {});
 
-  const defs = $derived(listBlockDefs());
+  const defs = $derived(listBlockDefs().filter((d) => !props.types || props.types.includes(d.type)));
 </script>
 
 <Dialog.Root open={props.open ?? false} {onOpenChange}>

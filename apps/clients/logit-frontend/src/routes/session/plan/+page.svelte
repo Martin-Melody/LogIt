@@ -15,7 +15,8 @@
   import { formatPrescription, changeTagClass } from "$lib/features/session/planFormat";
   import type { SessionPlan } from "@logit/core/usecases/progression/planSession";
   import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
-  import type { CardioBlockData, StrengthBlockData } from "@logit/core/domain/workout";
+  import type { CardioBlockData, MobilityBlockData, SessionBlock, StrengthBlockData } from "@logit/core/domain/workout";
+  import { blockGroup, groupLabel, mobilitySetGroups, supersetMembers } from "@logit/core/domain/workout";
 
   // "Today's plan": shown before a split day starts. Nothing is saved (and the
   // split rotation doesn't move) until Start is pressed.
@@ -34,8 +35,21 @@
   let starting = $state(false);
 
   type Row =
-    | { kind: "strength"; id: string; name: string; prescription: string | null; tag?: { text: string; cls: string }; detail?: string; last?: string }
-    | { kind: "cardio"; id: string; name: string };
+    | { kind: "strength"; id: string; name: string; prescription: string | null; tag?: { text: string; cls: string }; detail?: string; last?: string; grouped: boolean }
+    | { kind: "cardio"; id: string; name: string; grouped: boolean }
+    | { kind: "mobility"; id: string; name: string; prescription: string; grouped: boolean }
+    | { kind: "group"; id: string; name: string; detail: string };
+
+  /** "3 × 30 s hold · each side", "3 × 12 reps". */
+  function drillPrescription(d: MobilityBlockData): string {
+    const rounds = mobilitySetGroups(d).length;
+    const first = [...d.sets].sort((a, b) => a.orderIndex - b.orderIndex)[0];
+    const each =
+      d.metric === "hold"
+        ? first?.targetSec ? `${first.targetSec} s hold` : "hold"
+        : first?.reps ? `${first.reps} reps` : "reps";
+    return `${rounds} × ${each}${d.perSide ? " · each side" : ""}`;
+  }
 
   function fatigueNote(pct: number | undefined): string | undefined {
     const p = Math.round(pct ?? 0);
@@ -44,26 +58,52 @@
 
   const rows = $derived.by((): Row[] => {
     if (!plan) return [];
-    const unit = $profile.weightUnit;
+    let lastGroup: string | undefined;
     return [...plan.session.blocks]
       .sort((a, b) => a.orderIndex - b.orderIndex)
       .flatMap((b): Row[] => {
-        if (b.type === "strength") {
-          const d = b.data as StrengthBlockData;
-          const s = plan!.suggestions[b.id];
-          return [{
-            kind: "strength",
-            id: b.id,
-            name: d.exerciseName,
-            prescription: s ? formatPrescription(s.sets, unit, !!s.bodyweightLoad) : null,
-            tag: s?.change ? { text: s.change.text, cls: changeTagClass(s.change.kind) } : undefined,
-            detail: [s?.change?.detail, fatigueNote(s?.reasoning?.computed?.fatigueDiscountPct)].filter(Boolean).join(" "),
-          }];
+        const group = blockGroup(b);
+        const grouped = !!group;
+        const header: Row[] = [];
+        if (group && group.id !== lastGroup) {
+          const members = supersetMembers(plan!.session, group.id);
+          header.push({
+            kind: "group",
+            id: group.id,
+            name: groupLabel(members.length, group.label, group.kind),
+            detail: `${members.length} exercise${members.length === 1 ? "" : "s"}`,
+          });
         }
-        if (b.type === "cardio") return [{ kind: "cardio", id: b.id, name: (b.data as CardioBlockData).activityName }];
-        return [];
+        lastGroup = group?.id;
+        return [...header, ...blockRows(b, grouped)];
       });
   });
+
+  function blockRows(b: SessionBlock, grouped: boolean): Row[] {
+    const unit = $profile.weightUnit;
+    if (b.type === "strength") {
+      const d = b.data as StrengthBlockData;
+      const s = plan!.suggestions[b.id];
+      return [{
+        kind: "strength",
+        id: b.id,
+        name: d.exerciseName,
+        // A grouped exercise has its rounds as sets even with no plan behind them.
+        prescription: s ? formatPrescription(s.sets, unit, !!s.bodyweightLoad) : grouped && d.sets.length ? `${d.sets.length} sets` : null,
+        tag: s?.change ? { text: s.change.text, cls: changeTagClass(s.change.kind) } : undefined,
+        detail: [s?.change?.detail, fatigueNote(s?.reasoning?.computed?.fatigueDiscountPct)].filter(Boolean).join(" "),
+        grouped,
+      }];
+    }
+    if (b.type === "cardio") return [{ kind: "cardio", id: b.id, name: (b.data as CardioBlockData).activityName, grouped }];
+    if (b.type === "mobility") {
+      const d = b.data as MobilityBlockData;
+      return [{ kind: "mobility", id: b.id, name: d.drillName, prescription: drillPrescription(d), grouped }];
+    }
+    return [];
+  }
+
+  const exerciseCount = $derived(rows.filter((r) => r.kind !== "group").length);
 
   const workingSetCount = $derived(
     plan
@@ -130,7 +170,7 @@
       <h2 class="text-xl font-bold">{day.name ?? "Workout"}</h2>
       {#if plan}
         <p class="mt-0.5 text-xs text-muted-foreground">
-          {rows.length} exercise{rows.length === 1 ? "" : "s"} · {workingSetCount} working set{workingSetCount === 1 ? "" : "s"}
+          {exerciseCount} exercise{exerciseCount === 1 ? "" : "s"} · {workingSetCount} working set{workingSetCount === 1 ? "" : "s"}
         </p>
       {/if}
     </div>
@@ -141,7 +181,13 @@
       <p class="px-3 py-6 text-sm text-muted-foreground">Working out today's numbers…</p>
     {/if}
     {#each rows as row (row.id)}
-      <div class="flex flex-col gap-0.5 border-b border-border px-3 py-3" data-testid="plan-row">
+      {#if row.kind === "group"}
+        <div class="border-b border-primary/30 bg-primary/[0.03] px-3 pb-1.5 pt-3" data-testid="plan-group">
+          <p class="text-xs font-medium uppercase tracking-wide text-primary">{row.name}</p>
+          <p class="text-xs text-muted-foreground">{row.detail}</p>
+        </div>
+      {:else}
+      <div class="flex flex-col gap-0.5 border-b border-border px-3 py-3 {row.grouped ? 'ml-3 border-l-2 border-l-primary/30' : ''}" data-testid="plan-row">
         <div class="flex items-center gap-2">
           <span class="flex-1 text-sm">{row.name}</span>
           {#if row.kind === "strength" && row.tag}
@@ -157,10 +203,13 @@
           {#if row.detail}
             <p class="text-xs text-muted-foreground">{row.detail}</p>
           {/if}
+        {:else if row.kind === "mobility"}
+          <p class="text-[15px] font-semibold tabular-nums">{row.prescription}</p>
         {:else}
           <p class="text-sm text-muted-foreground">Cardio</p>
         {/if}
       </div>
+      {/if}
     {/each}
   </div>
 

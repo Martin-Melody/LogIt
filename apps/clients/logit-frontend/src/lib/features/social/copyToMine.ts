@@ -7,7 +7,16 @@ import { setProgressionAlgorithm } from "@logit/core/usecases/progression/getPro
 import { setAnalyticsPlugin } from "@logit/core/usecases/progression/getAnalyticsConfig";
 import { setNutritionAlgorithm } from "@logit/core/usecases/nutrition/getNutritionAlgorithmConfig";
 import { touchGoal, defaultNutritionGoal } from "@logit/core/domain/nutrition";
-import type { WorkoutSplit, SplitDay, PlannedBlock, PlannedTargets } from "@logit/core/domain/WorkoutSplit";
+import type {
+  WorkoutSplit,
+  SplitDay,
+  PlannedBlock,
+  PlannedGroup,
+  PlannedMobilityTargets,
+  PlannedTargets,
+} from "@logit/core/domain/WorkoutSplit";
+import { normalizePlannedGroups } from "@logit/core/domain/WorkoutSplit";
+import type { MobilityMetric } from "@logit/core/domain/workout";
 import type { Exercise, MuscleGroup, ExerciseType, Machine } from "@logit/core/domain/exercise";
 import type { Habit, HabitCadence, HabitTone } from "@logit/core/domain/habit";
 import { getProgressionDeps } from "$lib/usecases/progressionDeps";
@@ -99,12 +108,22 @@ export async function copyExerciseToMine(payload: CopyableExercise): Promise<Exe
 // ── Split ─────────────────────────────────────────────────────────────────────
 
 type CopyableBlock =
-  | { type: "strength"; orderIndex: number; exerciseName: string; exerciseId?: string; targets?: PlannedTargets }
-  | { type: "cardio"; orderIndex: number; activityName: string };
+  | { type: "strength"; orderIndex: number; exerciseName: string; exerciseId?: string; targets?: PlannedTargets; groupId?: string }
+  | { type: "cardio"; orderIndex: number; activityName: string; groupId?: string }
+  | {
+      type: "mobility";
+      orderIndex: number;
+      drillName: string;
+      drillId?: string;
+      metric: MobilityMetric;
+      perSide: boolean;
+      targets?: PlannedMobilityTargets;
+      groupId?: string;
+    };
 
 export type CopyableSplit = {
   name: string;
-  days: { name?: string; orderIndex: number; blocks: CopyableBlock[] }[];
+  days: { name?: string; orderIndex: number; blocks: CopyableBlock[]; groups?: PlannedGroup[] }[];
   /** Full definitions of every non-core exercise this split uses, so a copier who doesn't
    * already have one by that name can get a real local copy instead of a dangling reference —
    * core/bundled exercises are seeded with the same id everywhere and never need this. */
@@ -146,6 +165,7 @@ export async function copySplitToMine(payload: CopyableSplit): Promise<void> {
   for (const d of payload.days) {
     const blocks: PlannedBlock[] = [];
     for (const b of d.blocks) {
+      const group = b.groupId ? { groupId: b.groupId } : {};
       if (b.type === "strength") {
         blocks.push({
           type: "strength",
@@ -154,12 +174,29 @@ export async function copySplitToMine(payload: CopyableSplit): Promise<void> {
           exerciseName: b.exerciseName,
           exerciseId: await resolveExerciseId(b.exerciseName, b.exerciseId, customByName, idCache),
           targets: b.targets,
+          ...group,
+        });
+      } else if (b.type === "mobility") {
+        // Drill ids come from the bundled catalog, the same on every phone.
+        blocks.push({
+          type: "mobility",
+          id: createId("blk"),
+          orderIndex: b.orderIndex,
+          drillName: b.drillName,
+          ...(b.drillId ? { drillId: b.drillId } : {}),
+          metric: b.metric === "reps" ? "reps" : "hold",
+          perSide: !!b.perSide,
+          ...(b.targets ? { targets: b.targets } : {}),
+          ...group,
         });
       } else {
-        blocks.push({ type: "cardio", id: createId("blk"), orderIndex: b.orderIndex, activityName: b.activityName });
+        blocks.push({ type: "cardio", id: createId("blk"), orderIndex: b.orderIndex, activityName: b.activityName, ...group });
       }
     }
-    days.push({ id: createId("day"), orderIndex: d.orderIndex, name: d.name, blocks });
+    // A post from an older app has no groups; one with groups keeps them (ids are per day).
+    const day: SplitDay = { id: createId("day"), orderIndex: d.orderIndex, name: d.name, blocks };
+    if (d.groups?.length) day.groups = d.groups;
+    days.push(normalizePlannedGroups(day));
   }
 
   const now = nowMs();

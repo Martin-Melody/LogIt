@@ -227,9 +227,12 @@
             orderIndex: d.orderIndex,
             blocks: d.blocks.map((b) =>
               b.type === "strength"
-                ? { type: "strength", orderIndex: b.orderIndex, exerciseName: b.exerciseName, exerciseId: b.exerciseId, targets: b.targets }
-                : { type: "cardio", orderIndex: b.orderIndex, activityName: b.activityName },
+                ? { type: "strength", orderIndex: b.orderIndex, exerciseName: b.exerciseName, exerciseId: b.exerciseId, targets: b.targets, groupId: b.groupId }
+                : b.type === "mobility"
+                  ? { type: "mobility", orderIndex: b.orderIndex, drillName: b.drillName, drillId: b.drillId, metric: b.metric, perSide: b.perSide, targets: b.targets, groupId: b.groupId }
+                  : { type: "cardio", orderIndex: b.orderIndex, activityName: b.activityName, groupId: b.groupId },
             ),
+            groups: d.groups?.length ? d.groups : undefined,
           })),
           customExercises: [...customExercises.values()],
         });

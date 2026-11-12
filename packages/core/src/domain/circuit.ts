@@ -19,6 +19,7 @@ import {
   type MobilitySetPatch,
   type MobilitySide,
   type SessionBlock,
+  type SupersetInfo,
   type WorkoutSession,
 } from "./workout";
 
@@ -108,8 +109,16 @@ export function groupTiming(
   defaults: CircuitDefaults = DEFAULT_CIRCUIT_SETTINGS,
 ): GroupTiming {
   const members = groupMembers(session, supersetId);
-  const info = members[0] ? blockGroup(members[0]) : undefined;
-  const kind = groupKindOf(members.length, info?.kind);
+  return resolveGroupTiming(members[0] ? blockGroup(members[0]) : undefined, members.length, defaults);
+}
+
+/** `groupTiming` for a group's settings and size, wherever they're kept (a split day too). */
+export function resolveGroupTiming(
+  info: Pick<SupersetInfo, "kind" | "leadInMs" | "memberRestMs" | "roundRestMs"> | undefined,
+  memberCount: number,
+  defaults: CircuitDefaults = DEFAULT_CIRCUIT_SETTINGS,
+): GroupTiming {
+  const kind = groupKindOf(memberCount, info?.kind);
   return {
     leadInMs: info?.leadInMs ?? defaults.leadInMs,
     memberRestMs: info?.memberRestMs ?? (kind === "circuit" ? defaults.memberRestMs : 0),

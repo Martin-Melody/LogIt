@@ -236,6 +236,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       split_id TEXT NOT NULL,
       order_index INTEGER NOT NULL,
       name TEXT NULL,
+      groups_json TEXT NULL,
       FOREIGN KEY (split_id) REFERENCES splits(id) ON DELETE CASCADE
     );
 
@@ -253,6 +254,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       target_reps INTEGER NULL,
       target_weight REAL NULL,
       activity_name TEXT NULL,
+      extra_json TEXT NULL,
       FOREIGN KEY (day_id) REFERENCES split_days(id) ON DELETE CASCADE
     );
 
@@ -600,6 +602,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateCoachMessageContext(db);
   await migrateProgressPhoto(db);
   await migrateMobilityLeadSide(db);
+  await migrateSplitGroups(db);
   await seedExercises(db);
 }
 
@@ -607,6 +610,19 @@ async function migrateProgressPhoto(db: SQLiteDBConnection): Promise<void> {
   try {
     await db.run(`ALTER TABLE local_accounts ADD COLUMN progress_photo_data_url TEXT NULL`, []);
   } catch { /* column already exists */ }
+}
+
+// Supersets / circuits and mobility drills in split days (2026-11): the day's groups as
+// JSON, and per block the group id plus a drill's metric, sides and targets.
+async function migrateSplitGroups(db: SQLiteDBConnection): Promise<void> {
+  for (const sql of [
+    "ALTER TABLE split_days ADD COLUMN groups_json TEXT NULL",
+    "ALTER TABLE planned_blocks ADD COLUMN extra_json TEXT NULL",
+  ]) {
+    try {
+      await db.run(sql, []);
+    } catch { /* column already exists */ }
+  }
 }
 
 async function migrateMobilityLeadSide(db: SQLiteDBConnection): Promise<void> {

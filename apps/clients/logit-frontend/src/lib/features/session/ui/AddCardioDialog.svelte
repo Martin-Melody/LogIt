@@ -7,6 +7,8 @@
     saving?: boolean;
     onOpenChange?: (v: boolean) => void;
     onSubmit?: (name: string) => void | Promise<void>;
+    title?: string;
+    submitLabel?: string;
   }>();
 
   const saving = props.saving ?? false;
@@ -30,7 +32,7 @@
 <Dialog.Root open={props.open ?? false} {onOpenChange}>
   <Dialog.Content class="sm:max-w-[420px]">
     <Dialog.Header>
-      <Dialog.Title>Add cardio activity</Dialog.Title>
+      <Dialog.Title>{props.title ?? "Add cardio activity"}</Dialog.Title>
       <Dialog.Description>
         Name the activity, e.g. Morning run, Cycling, BJJ.
       </Dialog.Description>
@@ -50,7 +52,7 @@
         Cancel
       </Button>
       <Button disabled={!name.trim() || saving} onclick={() => void handleConfirm()}>
-        Add
+        {props.submitLabel ?? "Add"}
       </Button>
     </Dialog.Footer>
   </Dialog.Content>
