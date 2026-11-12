@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount, onDestroy, tick } from "svelte";
   import { page } from "$app/state";
@@ -58,11 +59,11 @@
   onDestroy(() => clearInterval(poll));
 </script>
 
-<div class="flex flex-col h-[100dvh]">
-  <div class="page-header shrink-0">
+<div class="flex h-full flex-col">
+  <PageHeader>
     <BackButton onclick={() => back("/messages")} />
     <p class="text-base font-semibold truncate">{name}</p>
-  </div>
+  </PageHeader>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive shrink-0">{ui.error}</p>{/if}
 

@@ -198,10 +198,12 @@ export async function getSuggestion(
 export async function refreshProgressionState(
   exercise: { id?: string; name: string },
   deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo">,
-): Promise<void> {
+): Promise<ProgressionOutput | null> {
   const output = await getSuggestion(exercise, deps);
-  if (!output) return;
+  if (!output) return null;
   await applySessionProgression(exercise, output, deps);
+  // The plan for next time; its `change` says how it differs from the session just done.
+  return output;
 }
 
 export async function applySessionProgression(

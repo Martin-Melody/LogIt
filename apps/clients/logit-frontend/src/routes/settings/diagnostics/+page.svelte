@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { ChevronRight } from "lucide-svelte";
@@ -156,10 +157,10 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="page-header -mx-3 -mt-3">
+  <PageHeader>
     <BackButton onclick={() => back("/settings")} />
     <h1 class="page-title">Diagnostics</h1>
-  </div>
+  </PageHeader>
 
   <Card.Root>
     <Card.Header>

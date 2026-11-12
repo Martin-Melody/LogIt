@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell, Rss, Cloud, Server, PenSquare } from "lucide-svelte";
@@ -108,12 +109,12 @@
 
 <div class="flex flex-col pb-24">
 
-  <!-- Settings gear -->
-  <div class="flex justify-end px-3 pt-3">
-    <Button variant="ghost" size="icon" onclick={() => void goto("/settings")} data-tour="profile-settings">
+  <PageHeader>
+    <h1 class="page-title">Profile</h1>
+    <Button variant="ghost" size="icon" aria-label="Settings" onclick={() => void goto("/settings")} data-tour="profile-settings">
       <Settings class="h-4 w-4" />
     </Button>
-  </div>
+  </PageHeader>
 
   {#if authStore.isAuthenticated && authStore.user}
     {#key refreshKey}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { ArrowUp, ArrowDown } from "lucide-svelte";
@@ -32,10 +33,10 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="page-header -mx-3 -mt-3">
+  <PageHeader>
     <BackButton onclick={() => back("/")} />
     <h1 class="page-title">Customise home</h1>
-  </div>
+  </PageHeader>
 
   <Card.Root>
     <Card.Content class="pt-3">

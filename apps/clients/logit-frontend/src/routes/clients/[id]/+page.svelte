@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
@@ -68,13 +69,13 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/clients")} />
     <div class="min-w-0 flex-1">
       <p class="text-base font-semibold truncate">@{username}</p>
       <p class="text-xs text-muted-foreground">Client</p>
     </div>
-  </div>
+  </PageHeader>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>{/if}
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -93,7 +94,7 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => void goto("/profile")} />
     <span class="text-base font-semibold">Plugins</span>
     <div class="ml-auto flex items-center gap-1">
@@ -108,7 +109,7 @@
         Add
       </Button>
     </div>
-  </div>
+  </PageHeader>
 
   <div class="flex flex-col gap-3 p-3">
     {#if ui.error}

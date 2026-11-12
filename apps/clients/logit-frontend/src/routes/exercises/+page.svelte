@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -138,7 +139,7 @@
 
 <div class="flex flex-col pb-24 min-h-full">
   <!-- Header -->
-  <div class="page-header">
+  <PageHeader>
     {#if selecting}
       <button
         type="button"
@@ -174,7 +175,7 @@
         <Plus class="h-5 w-5" />
       </button>
     {/if}
-  </div>
+  </PageHeader>
 
   <!-- Search -->
   <div class="px-3 pt-3 pb-2" data-tour="exercises-search">

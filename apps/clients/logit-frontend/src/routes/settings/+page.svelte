@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { log } from "@logit/core/platform/log";
   import { BETWEEN_EXERCISES_KEY, GET_READY_KEY, circuitDefaultsFrom } from "$lib/features/session/circuit/circuitSettings";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
@@ -530,10 +531,10 @@
 
 <div class="flex flex-col gap-3 p-3 pb-24">
   <!-- Header -->
-  <div class="page-header -mx-3 -mt-3">
+  <PageHeader>
     <BackButton onclick={() => back("/profile")} />
     <h1 class="page-title">Settings</h1>
-  </div>
+  </PageHeader>
 
   <!-- Section quick-nav -->
   <div class="flex gap-2 overflow-x-auto -mx-3 px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

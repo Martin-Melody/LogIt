@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { page } from "$app/state";
   import ProfileView from "$lib/components/social/ProfileView.svelte";
@@ -7,10 +8,10 @@
 </script>
 
 <div class="flex flex-col min-h-full">
-  <header class="page-header sticky top-0 bg-background/95 backdrop-blur z-10">
+  <PageHeader>
     <BackButton onclick={() => history.back()} />
     <span class="text-base font-semibold truncate">@{username}</span>
-  </header>
+  </PageHeader>
 
   {#key username}
     <ProfileView {username} />

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   // One day of a split: what to train, in order, with targets. Looks like the workout
   // screen: a ⋯ menu per row (Swap, Superset / circuit with…, Remove), supersets and
   // circuits as a band whose name opens the same edit sheet, and the same block picker.
@@ -528,7 +529,7 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back(`/splits/${splitId}`)} />
 
     {#if ui.renamingDay}
@@ -594,7 +595,7 @@
         </ConfirmDialog>
       </div>
     {/if}
-  </div>
+  </PageHeader>
 
   {#if ui.error}
     <p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>
