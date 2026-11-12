@@ -1,3 +1,4 @@
+import { plannedBlockName } from "@logit/core/domain/WorkoutSplit";
 import type {
   WidgetDataNeed,
   WidgetInput,
@@ -80,9 +81,7 @@ export async function gatherWidgetInput(needs: WidgetDataNeed[]): Promise<Widget
         scheduled: !!(day && scheduled && day.id === scheduled.id),
         dayIndex: day ? sortedDays.findIndex((d) => d.id === day.id) : undefined,
         dayCount: sortedDays.length,
-        exercises: blocks.map((b) =>
-          b.type === "strength" ? b.exerciseName : b.activityName,
-        ),
+        exercises: blocks.map(plannedBlockName),
       };
     }
   }

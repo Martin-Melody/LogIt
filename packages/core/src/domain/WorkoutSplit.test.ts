@@ -7,6 +7,7 @@ import {
   updatePlannedBlock,
   setPlannedTargets,
   reorderPlannedBlocks,
+  plannedBlockName,
   type PlannedStrength,
 } from "./WorkoutSplit";
 
@@ -62,7 +63,7 @@ describe("WorkoutSplit planned blocks", () => {
   it("reorderPlannedBlocks reindexes", () => {
     let { s, dayId } = seed();
     s = reorderPlannedBlocks(s, dayId, 0, 2);
-    expect(s.days[0]!.blocks.map((b) => (b.type === "strength" ? b.exerciseName : b.activityName)))
+    expect(s.days[0]!.blocks.map(plannedBlockName))
       .toEqual(["OHP", "Bike", "Bench Press"]);
     expect(s.days[0]!.blocks.map((b) => b.orderIndex)).toEqual([0, 1, 2]);
   });

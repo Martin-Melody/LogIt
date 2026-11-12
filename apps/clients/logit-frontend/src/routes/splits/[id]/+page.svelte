@@ -8,7 +8,7 @@
   import { Badge } from "$lib/components/ui/badge";
 
   import type { WorkoutSplit, SplitDay } from "@logit/core/domain/WorkoutSplit";
-  import { touchSplit } from "@logit/core/domain/WorkoutSplit";
+  import { touchSplit, plannedBlockName } from "@logit/core/domain/WorkoutSplit";
 
   import { splits } from "$lib/stores/splits.store";
   import { activeSplit } from "$lib/stores/activeSplit.store";
@@ -38,7 +38,7 @@
     if (blocks.length === 0) return "Empty";
     const names = [...blocks]
       .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((b) => (b.type === "strength" ? b.exerciseName : b.activityName));
+      .map(plannedBlockName);
     const shown = names.slice(0, 3).join(" · ");
     return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
   }

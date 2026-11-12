@@ -116,6 +116,26 @@
     - Coach programs already have `supersetGroup` on `ProgramStrength`/`ProgramCardio`, but
       nothing reads it, so a coach's supersets are lost when the client starts the day. Wire
       it up the same way.
+    - Built 2026-11-12 (branch `feat/split-circuits`):
+      - Model: `PlannedMobility` (drill, hold or reps, each side, targets sets / holdSec /
+        reps) and `SplitDay.groups` (`PlannedGroup`: label, kind, rounds, the three rests);
+        members carry `groupId`. Group functions in `WorkoutSplit.ts` mirror the workout's
+        (merge, ungroup keeps the rounds as sets, a superset left with one is ungrouped).
+      - SQLite: `split_days.groups_json`, `planned_blocks.extra_json` (migration
+        `migrateSplitGroups`). Sync sends the split as JSON, so nothing else changed.
+        Sharing a split on the feed carries drills and groups.
+      - Starting a day: `splitDaySession` (core) builds the workout with drills, sets and
+        groups; strength members get the group's rounds as their set target, and
+        `padGroupRounds` fills any rounds the plan left out. Coach programs:
+        `programDaySession` (core) groups blocks sharing a `supersetGroup`.
+      - Editor: ⋯ per row (Swap, Superset / circuit with…, Remove), the group band with
+        its own ⋯, tapping its name opens `GroupSettingsSheet` (the workout's sheet, now
+        fed by values; `GroupEditSheet` wraps it for the workout), the block picker with
+        mobility, drag with a drop line (members stay in their group, groups move whole).
+      - "Today's plan" shows group headers and drills.
+      - Not done: "Add another exercise" in the split's group picker; a drill's lead side
+        per drill (it uses the Settings one); the coach program editor still can't set
+        `supersetGroup`.
   - Decided with Martin 2026-11-11: circuit order = workout order, members can be dragged
     within the group. Between exercises only the 3-2-1 lead-in (with "Up next"); a separate
     rest between rounds, off by default, set per circuit (e.g. 60 s). After a timed strength

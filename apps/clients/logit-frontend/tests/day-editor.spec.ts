@@ -47,17 +47,22 @@ async function goToDayEditor(page: Page) {
   await page.goto(`/splits/${SPLIT_ID}/days/${DAY_ID}`);
   await page.waitForLoadState("networkidle");
   // Make sure the exercise list is visible before proceeding
-  await expect(page.locator("main ul")).toBeVisible();
+  await expect(page.getByTestId("day-blocks")).toBeVisible();
 }
 
 function exerciseNames(page: Page) {
-  return page.locator("main ul li span.truncate");
+  return page.getByTestId("planned-name");
 }
 
 /** Opens the "add block" picker and switches to the exercise-search field. */
 async function openExerciseAdd(page: Page) {
   await page.locator('[aria-label="Add block"]').click();
-  await page.getByRole("button", { name: "Exercise", exact: true }).click();
+  await page.getByRole("button", { name: /Strength exercise/ }).click();
+}
+
+/** The split as saved in local storage. */
+async function storedDay(page: Page) {
+  return page.evaluate(() => JSON.parse(localStorage.getItem("logit:splits:v1") ?? "[]")[0]?.days?.[0]);
 }
 
 // ── Drag to reorder ──────────────────────────────────────────────────────────
@@ -93,9 +98,10 @@ test.describe("drag to reorder", () => {
     const box = await firstGrip.boundingBox();
     expect(box).not.toBeNull();
 
+    const rowBox = await page.getByTestId("planned-block").first().boundingBox();
     const cx = box!.x + box!.width / 2;
     const cy = box!.y + box!.height / 2;
-    const targetY = cy + box!.height * 2.2; // drag ~2 rows down
+    const targetY = cy + rowBox!.height * 2.5; // past the middle of the third row
 
     console.log(`Mouse drag: from (${cx}, ${cy}) to (${cx}, ${targetY})`);
 
@@ -235,7 +241,7 @@ test.describe("planned targets", () => {
     await page.getByLabel(/^Weight/).fill("100");
     await page.getByLabel(/^Weight/).blur();
 
-    await expect(page.locator("main")).toContainText("3×5", { timeout: 10_000 });
+    await expect(page.locator("main")).toContainText("3 × 5", { timeout: 10_000 });
     await expect(page.locator("main")).toContainText("100 kg");
 
     // Persisted to the split store (kg canonical).
@@ -250,6 +256,123 @@ test.describe("planned targets", () => {
 
     // Clearing removes it.
     await page.getByText("Clear targets").click();
-    await expect(page.locator("main")).toContainText("Squat · add targets");
+    await expect(page.getByTestId("planned-block").first()).toContainText("Add targets");
+  });
+});
+
+// ── Supersets, circuits and drills ───────────────────────────────────────────
+
+test.describe("groups and drills", () => {
+  test("groups two exercises into a superset from the row menu", async ({ page }) => {
+    await goToDayEditor(page);
+
+    await page.getByRole("button", { name: "More actions for Squat" }).click();
+    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    await page.getByRole("checkbox", { name: /Deadlift/ }).check();
+    await page.getByRole("button", { name: "Make superset" }).click();
+
+    const band = page.getByTestId("planned-group");
+    await expect(band).toBeVisible();
+    await expect(band).toContainText("Superset");
+    await expect(band).toContainText("2 exercises · 3 rounds");
+    // Deadlift moved up next to Squat.
+    await expect(exerciseNames(page)).toHaveText(["Squat", "Deadlift", "Bench Press"]);
+
+    await expect.poll(async () => (await storedDay(page))?.groups?.length).toBe(1);
+    const day = await storedDay(page);
+    expect(day.groups[0]).toMatchObject({ kind: "superset", rounds: 3 });
+    const grouped = day.blocks.filter((b: { groupId?: string }) => b.groupId === day.groups[0].id);
+    expect(grouped.map((b: { exerciseName: string }) => b.exerciseName).sort()).toEqual(["Deadlift", "Squat"]);
+  });
+
+  test("the group's name opens the edit sheet: name, rounds, rest", async ({ page }) => {
+    await goToDayEditor(page);
+    await page.getByRole("button", { name: "More actions for Squat" }).click();
+    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    await page.getByRole("checkbox", { name: /Bench Press/ }).check();
+    await page.getByRole("button", { name: "Make superset" }).click();
+
+    await page.getByRole("button", { name: "Edit Superset" }).click();
+    const sheet = page.getByRole("dialog", { name: "Edit superset" });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole("button", { name: "One more round" }).click();
+    await sheet.getByRole("button", { name: "1 min", exact: true }).click();
+    await sheet.getByLabel("Name").fill("Push pair");
+    await sheet.getByRole("button", { name: "Save" }).click();
+
+    await expect
+      .poll(async () => (await storedDay(page))?.groups?.[0])
+      .toMatchObject({ label: "Push pair", rounds: 4, roundRestMs: 60_000 });
+    await sheet.getByRole("button", { name: "Close" }).first().click();
+    await expect(page.getByTestId("planned-group")).toContainText("Push pair");
+    await expect(page.getByTestId("planned-group")).toContainText("4 rounds · 1 min rest");
+
+    // In a group the sets come from the rounds: no Sets field.
+    await page.getByTestId("planned-block").first().getByRole("button", { name: /^Squat/ }).click();
+    await expect(page.getByLabel("Reps")).toBeVisible();
+    await expect(page.getByLabel("Sets")).toHaveCount(0);
+  });
+
+  test("ungrouping keeps the rounds as each exercise's sets", async ({ page }) => {
+    await goToDayEditor(page);
+    await page.getByRole("button", { name: "More actions for Squat" }).click();
+    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    await page.getByRole("checkbox", { name: /Bench Press/ }).check();
+    await page.getByRole("button", { name: "Make superset" }).click();
+
+    await page.getByRole("button", { name: "More actions for this superset" }).click();
+    await page.getByRole("menuitem", { name: "Ungroup" }).click();
+    await expect(page.getByTestId("planned-group")).toHaveCount(0);
+    await expect.poll(async () => (await storedDay(page))?.groups ?? []).toEqual([]);
+    const day = await storedDay(page);
+    expect(day.blocks.every((b: { groupId?: string }) => !b.groupId)).toBe(true);
+    expect(day.blocks.find((b: { exerciseName: string }) => b.exerciseName === "Squat").targets).toEqual({ sets: 3 });
+    await expect(page.getByTestId("planned-block").first()).toContainText("3 sets");
+  });
+
+  test("adds a mobility drill with a hold target and makes it a one-drill circuit", async ({ page }) => {
+    await goToDayEditor(page);
+    await page.locator('[aria-label="Add block"]').click();
+    await page.getByRole("button", { name: /Mobility/ }).click();
+    await page.getByPlaceholder("Search drills, or type a new one…").fill("Dead hang");
+    await page.getByRole("dialog").getByRole("button", { name: "Add", exact: true }).click();
+    await expect(exerciseNames(page)).toHaveText(["Squat", "Bench Press", "Deadlift", "Dead hang"]);
+
+    await page.getByTestId("planned-block").last().getByRole("button", { name: /^Dead hang/ }).click();
+    await page.getByLabel("Sets").fill("3");
+    await page.getByLabel("Hold (s)").fill("30");
+    await page.getByLabel("Hold (s)").blur();
+    await expect(page.getByTestId("planned-block").last()).toContainText("3 × 30 s hold");
+
+    await page.getByRole("button", { name: "More actions for Dead hang" }).click();
+    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    await page.getByRole("radio", { name: "Circuit" }).click();
+    await page.getByRole("button", { name: "Make circuit · 1 exercise" }).click();
+    await expect(page.getByTestId("planned-group")).toContainText("1 exercise · 3 rounds");
+
+    const day = await storedDay(page);
+    const drill = day.blocks.find((b: { type: string }) => b.type === "mobility");
+    expect(drill).toMatchObject({ drillName: "Dead hang", metric: "hold", targets: { sets: 3, holdSec: 30 } });
+    expect(day.groups[0]).toMatchObject({ kind: "circuit", rounds: 3 });
+  });
+
+  test("a member drags only within its group", async ({ page }) => {
+    await goToDayEditor(page);
+    await page.getByRole("button", { name: "More actions for Squat" }).click();
+    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    await page.getByRole("checkbox", { name: /Bench Press/ }).check();
+    await page.getByRole("button", { name: "Make superset" }).click();
+    await expect(exerciseNames(page)).toHaveText(["Squat", "Bench Press", "Deadlift"]);
+
+    // Drag Squat far down, past Deadlift: it stops at the end of its group.
+    const grip = page.locator('[aria-label="Drag to reorder"]').first();
+    const box = (await grip.boundingBox())!;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) await page.mouse.move(cx, cy + i * 30);
+    await page.mouse.up();
+    await expect(exerciseNames(page)).toHaveText(["Bench Press", "Squat", "Deadlift"]);
   });
 });

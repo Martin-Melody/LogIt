@@ -148,18 +148,24 @@ export function groupConfirmLabel(
  * Where a dragged block (or a whole group, `span` blocks from `fromIdx`) may land, as
  * insertion indices into the list with the moving blocks taken out. Keeps groups
  * whole: a member stays inside its own group, and anything else lands between
- * groups, never inside one (that split a superset in two).
+ * groups, never inside one (that split a superset in two). `groupOf` reads an item's
+ * group (a split day's planned blocks keep it in `groupId`).
  */
-export function allowedDropIndices(sorted: SessionBlock[], fromIdx: number, span = 1): number[] {
+export function allowedDropIndices<T = SessionBlock>(
+  sorted: T[],
+  fromIdx: number,
+  span = 1,
+  groupOf: (item: T) => string | undefined = (b) => blockGroup(b as SessionBlock)?.id,
+): number[] {
   const moving = sorted[fromIdx];
   if (!moving) return [];
-  const ownGroup = span === 1 ? blockGroup(moving)?.id : undefined;
+  const ownGroup = span === 1 ? groupOf(moving) : undefined;
   const rest = [...sorted];
   rest.splice(fromIdx, span);
   const allowed: number[] = [];
   for (let to = 0; to <= rest.length; to++) {
-    const left = to > 0 ? blockGroup(rest[to - 1]!)?.id : undefined;
-    const right = to < rest.length ? blockGroup(rest[to]!)?.id : undefined;
+    const left = to > 0 ? groupOf(rest[to - 1]!) : undefined;
+    const right = to < rest.length ? groupOf(rest[to]!) : undefined;
     if (ownGroup) {
       if (left === ownGroup || right === ownGroup) allowed.push(to);
     } else if (!(left && left === right)) {

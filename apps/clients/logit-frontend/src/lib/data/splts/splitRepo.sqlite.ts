@@ -3,10 +3,133 @@ import type {
   WorkoutSplit,
   SplitDay,
   PlannedBlock,
+  PlannedGroup,
+  PlannedMobilityTargets,
 } from "@logit/core/domain/WorkoutSplit";
+import type { MobilityMetric } from "@logit/core/domain/workout";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { nowMs } from "@logit/core/domain/time";
+
+function parseJson<T>(raw: unknown): T | undefined {
+  if (typeof raw !== "string" || !raw) return undefined;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+/** What a drill keeps beyond the shared columns (name, drill id, sets). */
+type BlockExtra = {
+  groupId?: string;
+  metric?: MobilityMetric;
+  perSide?: boolean;
+  holdSec?: number;
+  reps?: number;
+};
+
+type BlockRow = {
+  name: string | null;
+  refId: string | null;
+  sets: number | null;
+  reps: number | null;
+  weight: number | null;
+  activityName: string | null;
+  extra: BlockExtra | null;
+};
+
+function plannedBlockRow(block: PlannedBlock): BlockRow | null {
+  const group: BlockExtra = block.groupId ? { groupId: block.groupId } : {};
+  if (block.type === "strength") {
+    return {
+      name: block.exerciseName,
+      refId: block.exerciseId ?? null,
+      sets: block.targets?.sets ?? null,
+      reps: block.targets?.reps ?? null,
+      weight: block.targets?.weight ?? null,
+      activityName: null,
+      extra: block.groupId ? group : null,
+    };
+  }
+  if (block.type === "cardio") {
+    return {
+      name: null,
+      refId: null,
+      sets: null,
+      reps: null,
+      weight: null,
+      activityName: block.activityName,
+      extra: block.groupId ? group : null,
+    };
+  }
+  if (block.type === "mobility") {
+    return {
+      name: block.drillName,
+      refId: block.drillId ?? null,
+      sets: block.targets?.sets ?? null,
+      reps: null,
+      weight: null,
+      activityName: null,
+      extra: {
+        ...group,
+        metric: block.metric,
+        perSide: block.perSide,
+        ...(block.targets?.holdSec ? { holdSec: block.targets.holdSec } : {}),
+        ...(block.targets?.reps ? { reps: block.targets.reps } : {}),
+      },
+    };
+  }
+  return null;
+}
+
+function plannedBlockFromRow(r: any): PlannedBlock {
+  const extra = parseJson<BlockExtra>(r.extraJson) ?? {};
+  const group = extra.groupId ? { groupId: extra.groupId } : {};
+  if (r.blockType === "cardio") {
+    return {
+      type: "cardio" as const,
+      id: r.id,
+      orderIndex: r.orderIndex,
+      activityName: r.activityName ?? "",
+      ...group,
+    };
+  }
+  if (r.blockType === "mobility") {
+    const targets: PlannedMobilityTargets = {
+      ...(r.targetSets != null ? { sets: r.targetSets } : {}),
+      ...(extra.holdSec ? { holdSec: extra.holdSec } : {}),
+      ...(extra.reps ? { reps: extra.reps } : {}),
+    };
+    return {
+      type: "mobility" as const,
+      id: r.id,
+      orderIndex: r.orderIndex,
+      drillName: r.exerciseName ?? "",
+      ...(r.exerciseId ? { drillId: r.exerciseId } : {}),
+      metric: extra.metric === "reps" ? "reps" : "hold",
+      perSide: !!extra.perSide,
+      ...(Object.keys(targets).length ? { targets } : {}),
+      ...group,
+    };
+  }
+  return {
+    type: "strength" as const,
+    id: r.id,
+    orderIndex: r.orderIndex,
+    exerciseName: r.exerciseName ?? "",
+    exerciseId: r.exerciseId ?? undefined,
+    targets:
+      r.targetSets == null && r.targetReps == null && r.targetWeight == null
+        ? undefined
+        : {
+            sets: r.targetSets ?? undefined,
+            reps: r.targetReps ?? undefined,
+            weight: r.targetWeight ?? undefined,
+          },
+    ...group,
+  };
+}
 
 export function createSqliteSplitRepo(): SplitRepo {
   return {
@@ -43,47 +166,37 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       for (const day of split.days) {
         await db.run(
-          `INSERT INTO split_days(id, split_id, order_index, name) VALUES(?, ?, ?, ?)`,
-          [day.id, split.id, day.orderIndex, day.name ?? null],
+          `INSERT INTO split_days(id, split_id, order_index, name, groups_json) VALUES(?, ?, ?, ?, ?)`,
+          [day.id, split.id, day.orderIndex, day.name ?? null, day.groups?.length ? JSON.stringify(day.groups) : null],
         );
 
         for (const block of day.blocks) {
-          if (block.type === "strength") {
-            await db.run(
-              `
-              INSERT INTO planned_blocks(
-                id, day_id, block_type, order_index,
-                exercise_name, exercise_id,
-                target_sets, target_reps, target_weight,
-                activity_name
-              )
-              VALUES(?, ?, 'strength', ?, ?, ?, ?, ?, ?, NULL)
-              `,
-              [
-                block.id,
-                day.id,
-                block.orderIndex,
-                block.exerciseName,
-                block.exerciseId ?? null,
-                block.targets?.sets ?? null,
-                block.targets?.reps ?? null,
-                block.targets?.weight ?? null,
-              ],
-            );
-          } else if (block.type === "cardio") {
-            await db.run(
-              `
-              INSERT INTO planned_blocks(
-                id, day_id, block_type, order_index,
-                exercise_name, exercise_id,
-                target_sets, target_reps, target_weight,
-                activity_name
-              )
-              VALUES(?, ?, 'cardio', ?, NULL, NULL, NULL, NULL, NULL, ?)
-              `,
-              [block.id, day.id, block.orderIndex, block.activityName],
-            );
-          }
+          const row = plannedBlockRow(block);
+          if (!row) continue;
+          await db.run(
+            `
+            INSERT INTO planned_blocks(
+              id, day_id, block_type, order_index,
+              exercise_name, exercise_id,
+              target_sets, target_reps, target_weight,
+              activity_name, extra_json
+            )
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+              block.id,
+              day.id,
+              block.type,
+              block.orderIndex,
+              row.name,
+              row.refId,
+              row.sets,
+              row.reps,
+              row.weight,
+              row.activityName,
+              row.extra ? JSON.stringify(row.extra) : null,
+            ],
+          );
         }
       }
     },
@@ -106,7 +219,7 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       const daysRes = await db.query(
         `
-        SELECT id, order_index as orderIndex, name
+        SELECT id, order_index as orderIndex, name, groups_json as groupsJson
         FROM split_days
         WHERE split_id = ?
         ORDER BY order_index ASC
@@ -122,7 +235,7 @@ export function createSqliteSplitRepo(): SplitRepo {
             id, block_type as blockType, order_index as orderIndex,
             exercise_name as exerciseName, exercise_id as exerciseId,
             target_sets as targetSets, target_reps as targetReps, target_weight as targetWeight,
-            activity_name as activityName
+            activity_name as activityName, extra_json as extraJson
           FROM planned_blocks
           WHERE day_id = ?
           ORDER BY order_index ASC
@@ -130,37 +243,15 @@ export function createSqliteSplitRepo(): SplitRepo {
           [d.id],
         );
 
-        const blocks: PlannedBlock[] = ((blocksRes.values ?? []) as any[]).map((r) => {
-          if (r.blockType === "cardio") {
-            return {
-              type: "cardio" as const,
-              id: r.id,
-              orderIndex: r.orderIndex,
-              activityName: r.activityName ?? "",
-            };
-          }
-          return {
-            type: "strength" as const,
-            id: r.id,
-            orderIndex: r.orderIndex,
-            exerciseName: r.exerciseName ?? "",
-            exerciseId: r.exerciseId ?? undefined,
-            targets:
-              r.targetSets == null && r.targetReps == null && r.targetWeight == null
-                ? undefined
-                : {
-                    sets: r.targetSets ?? undefined,
-                    reps: r.targetReps ?? undefined,
-                    weight: r.targetWeight ?? undefined,
-                  },
-          };
-        });
+        const blocks: PlannedBlock[] = ((blocksRes.values ?? []) as any[]).map(plannedBlockFromRow);
+        const groups = parseJson<PlannedGroup[]>(d.groupsJson);
 
         days.push({
           id: d.id,
           orderIndex: d.orderIndex,
           name: d.name ?? undefined,
           blocks,
+          ...(groups?.length ? { groups } : {}),
         });
       }
 
