@@ -18,6 +18,7 @@
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
+  import { bottomNavHeight } from "$lib/stores/bottomNav.store";
   import { reveal } from "$lib/transitions";
   import { startSessionTour, destroyActiveTour } from "$lib/tour/index";
 
@@ -93,7 +94,9 @@
   }
   let finishBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
-  let addButtonBottom = $state(0);
+  let finishBarHeight = $state(0);
+  // The finish bar sits on top of the bottom nav, and the add button just above the bar.
+  const addButtonBottom = $derived(finishBarHeight > 0 ? $bottomNavHeight + finishBarHeight + 12 : 0);
 
   // The add button (and the shrunk circuit timer) sit just above the finish bar. The bar is
   // taken out and put back (e.g. while the keyboard is open), so follow whichever bar is on
@@ -101,7 +104,7 @@
   // to drop the button to the very bottom, where it stayed.
   function updateAddButtonOffset() {
     const h = finishBarEl?.offsetHeight ?? 0;
-    if (h > 0) addButtonBottom = h + 12;
+    if (h > 0) finishBarHeight = h;
   }
 
   $effect(() => {
@@ -772,7 +775,8 @@
     <div
       bind:this={finishBarEl}
       data-tour="session-finish"
-      class="fixed left-0 right-0 bottom-0 border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+      class="fixed left-0 right-0 z-10 border-t border-border bg-background px-3 py-3"
+      style="bottom: {$bottomNavHeight}px"
     >
       <FinishWorkoutCard
         canFinish={!!$currentSession && !$currentSession.endedAtMs && hasLoggableWork}
