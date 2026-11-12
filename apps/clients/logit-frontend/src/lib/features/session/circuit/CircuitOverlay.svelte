@@ -17,7 +17,18 @@
 
   const run = $derived($circuitRunner.run);
   const session = $derived($currentSession);
-  const now = $derived($circuitNow);
+  // The runner's clock moves 5 times a second, enough for the digits but not the ring:
+  // while the timer is on screen and running, follow every frame instead.
+  let frameNow = $state(Date.now());
+  $effect(() => {
+    if (!$circuitRunner.run || $circuitRunner.run.pausedAtMs != null) return;
+    let id = requestAnimationFrame(function frame() {
+      frameNow = Date.now();
+      id = requestAnimationFrame(frame);
+    });
+    return () => cancelAnimationFrame(id);
+  });
+  const now = $derived(Math.max($circuitNow, frameNow));
 
   const step = $derived(run && session ? currentStep(session, run) : null);
   // During the rest, the set after it is the first thing up next.
@@ -33,7 +44,8 @@
   const title = $derived.by(() => {
     if (!run || !session) return "Circuit";
     const members = session.blocks.filter((b) => blockGroup(b)?.id === run.supersetId);
-    return groupLabel(members.length, members[0] ? blockGroup(members[0])?.label : undefined);
+    const info = members[0] ? blockGroup(members[0]) : undefined;
+    return groupLabel(members.length, info?.label, info?.kind);
   });
 
   // Hold: total = goal plus any +10 s. Rest: its length. Lead-in: 3 or 5 s.

@@ -574,8 +574,9 @@ test.describe("supersets", () => {
     await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
     await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
 
-    // Ungroup restores plain blocks.
-    await page.getByRole("button", { name: "Ungroup" }).click();
+    // Ungroup (from the group's menu) restores plain blocks.
+    await page.getByRole("button", { name: "More actions for this superset" }).click();
+    await page.getByRole("menuitem", { name: "Ungroup" }).click();
     await expect(page.getByText("SUPERSET")).not.toBeVisible();
     await expect(page.getByText("Bench Press")).toBeVisible();
     await expect(page.getByText("Row", { exact: true })).toBeVisible();
@@ -619,7 +620,7 @@ test.describe("supersets", () => {
 
     await expect(page.getByText("CIRCUIT")).toBeVisible();
     // Grouped drills sit together, in workout order; Bench Press is pushed below.
-    const names = await page.getByRole("button", { name: /^More actions for/ }).evaluateAll((els) =>
+    const names = await page.getByRole("button", { name: /^More actions for (?!this )/ }).evaluateAll((els) =>
       els.map((e) => e.getAttribute("aria-label")!.replace("More actions for ", "")),
     );
     expect(names).toEqual(["Hamstring stretch", "Butterfly stretch", "Middle split", "Bench Press"]);
@@ -662,6 +663,60 @@ test.describe("supersets", () => {
     const holdRows = page.getByRole("row", { name: /Start hold timer/ });
     await expect(holdRows).toHaveCount(5);
     await expect(page.getByRole("row", { name: /Start hold timer.*\/ 30s/ })).toHaveCount(5);
+  });
+
+  test("one drill can be a circuit on its own, and run with the countdown", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        {
+          id: "m1", type: "mobility", orderIndex: 0,
+          data: {
+            drillName: "Couch stretch", metric: "hold", perSide: false,
+            sets: [{ id: "m1-1", orderIndex: 0, targetSec: 20 }, { id: "m1-2", orderIndex: 1, targetSec: 20 }],
+          },
+        },
+      ]),
+    });
+    await goToSession(page);
+
+    await page.getByRole("button", { name: "More actions for Couch stretch" }).click();
+    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    const picker = page.getByRole("dialog", { name: "Superset / circuit with Couch stretch" });
+    await expect(picker.getByRole("radio", { name: "Circuit" })).toHaveAttribute("aria-checked", "true");
+    await expect(picker.getByRole("radio", { name: "Superset" })).toBeDisabled();
+    await picker.getByRole("button", { name: "Make circuit · 1 exercise" }).click();
+    await expect(picker).toHaveCount(0);
+
+    await expect(page.getByText("Circuit", { exact: true })).toBeVisible();
+    await expect(page.getByText("1 exercise · 2 rounds")).toBeVisible();
+    await page.getByRole("button", { name: "Start circuit" }).click();
+    await expect(page.getByRole("dialog", { name: "Circuit timer" }).getByText("Round 1 of 2")).toBeVisible();
+  });
+
+  test("a superset can be called a circuit, and a whole group removed", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession([
+        makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+        makeStrengthBlock("b2", 1, "Row", [makeSet("s2", 0, 8, 40)]),
+        makeStrengthBlock("b3", 2, "Squat", [makeSet("s3", 0, 5, 100)]),
+      ]),
+    });
+    await goToSession(page);
+    await groupWith(page, ["Row"]);
+    await expect(page.getByText("SUPERSET")).toBeVisible();
+
+    await page.getByRole("button", { name: "More actions for this superset" }).click();
+    await page.getByRole("menuitem", { name: "Make it a circuit" }).click();
+    await expect(page.getByText("Circuit", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "More actions for this circuit" }).click();
+    await page.getByRole("menuitem", { name: "Remove circuit and its exercises" }).click();
+    await expect(page.getByText("Removes all 2 exercises and everything logged in them.")).toBeVisible();
+    await page.getByRole("button", { name: "Remove", exact: true }).click();
+    await expect(page.getByText("Circuit", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Bench Press")).toHaveCount(0);
+    await expect(page.getByText("Row", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Squat")).toBeVisible();
   });
 
   test("rest starts only after the last exercise of a superset round", async ({ page }) => {
@@ -785,6 +840,10 @@ test.describe("circuit countdown", () => {
     await overlay.getByRole("button", { name: "End" }).click();
     await expect(overlay).toHaveCount(0);
     await expect(bar).toHaveCount(0);
+    // The add button is back above the finish bar, not stuck at the bottom.
+    const fab = await page.getByRole("button", { name: "Add block" }).boundingBox();
+    const finish = await page.getByRole("button", { name: "Finish workout" }).boundingBox();
+    expect(fab!.y + fab!.height).toBeLessThan(finish!.y);
     const sets = await draftSets(page);
     expect(sets["ham-1"]?.completed).toBeFalsy();
     await expect(page.getByRole("button", { name: "Start superset" })).toBeVisible();

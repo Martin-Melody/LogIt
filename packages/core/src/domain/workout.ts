@@ -137,9 +137,14 @@ export function isUnloggedPlannedSet(s: SetEntry): boolean {
  * (not on the block) so it round-trips through the JSON `session_blocks.data`
  * column with no schema change.
  */
+/** What a group is called: a superset needs two or more exercises, a circuit one or more. */
+export type GroupKind = "superset" | "circuit";
+
 export type SupersetInfo = {
   id: string;
   label?: string;
+  /** Chosen by the user. Undefined = by count: two is a superset, three or more a circuit. */
+  kind?: GroupKind;
   /** Rest after each round when the circuit is run with the countdown, ms. Undefined = none. */
   roundRestMs?: number;
 };
@@ -314,7 +319,7 @@ export function findExerciseIndexInSession(
  */
 export type ExerciseGroup =
   | { kind: "single"; exercise: ExerciseEntry }
-  | { kind: "superset"; id: string; label?: string; exercises: ExerciseEntry[] };
+  | { kind: "superset"; id: string; label?: string; groupKind?: GroupKind; exercises: ExerciseEntry[] };
 
 export function foldSupersets(entries: ExerciseEntry[]): ExerciseGroup[] {
   const out: ExerciseGroup[] = [];
@@ -327,8 +332,15 @@ export function foldSupersets(entries: ExerciseEntry[]): ExerciseGroup[] {
     const members: ExerciseEntry[] = [];
     while (i < entries.length && entries[i]!.superset?.id === sid) members.push(entries[i++]!);
     i--;
-    if (members.length >= 2) {
-      out.push({ kind: "superset", id: sid, label: members[0]!.superset?.label, exercises: members });
+    const info = members[0]!.superset;
+    if (members.length >= minGroupSize(info?.kind)) {
+      out.push({
+        kind: "superset",
+        id: sid,
+        label: info?.label,
+        ...(info?.kind ? { groupKind: info.kind } : {}),
+        exercises: members,
+      });
     } else {
       for (const m of members) out.push({ kind: "single", exercise: m });
     }
@@ -370,14 +382,25 @@ export function removeExercise(
   return normalizeSupersets({ ...session, blocks: reindexed });
 }
 
-/** Drop superset tags that ended up with fewer than two members. */
+/** Fewest exercises a group can have: a circuit can be one exercise for N rounds. */
+export function minGroupSize(kind: GroupKind | undefined): number {
+  return kind === "circuit" ? 1 : 2;
+}
+
+/** Drop group tags left with too few members (under two, or none for a circuit). */
 export function normalizeSupersets(session: WorkoutSession): WorkoutSession {
   const counts = new Map<string, number>();
+  const kinds = new Map<string, GroupKind | undefined>();
   for (const b of session.blocks) {
     const s = blockSuperset(b);
-    if (s) counts.set(s.id, (counts.get(s.id) ?? 0) + 1);
+    if (s) {
+      counts.set(s.id, (counts.get(s.id) ?? 0) + 1);
+      kinds.set(s.id, s.kind);
+    }
   }
-  const lonely = new Set([...counts].filter(([, n]) => n < 2).map(([id]) => id));
+  const lonely = new Set(
+    [...counts].filter(([id, n]) => n < minGroupSize(kinds.get(id))).map(([id]) => id),
+  );
   if (lonely.size === 0) return session;
   return {
     ...session,
@@ -1015,18 +1038,21 @@ export function groupIntoSuperset(
   session: WorkoutSession,
   blockIds: string[],
   label?: string,
+  kind?: GroupKind,
 ): WorkoutSession {
   const ids = new Set(blockIds);
   const targets = session.blocks.filter((b) => ids.has(b.id));
-  if (targets.length < 2) return session;
 
-  // Reuse an existing superset (id and name) among the targets, else mint one.
+  // Reuse an existing superset (id, name, kind) among the targets, else mint one.
   const existing = targets.map(blockSuperset).find((s) => s);
+  const groupKind = kind ?? existing?.kind;
+  if (targets.length < minGroupSize(groupKind)) return session;
   const supersetId = existing?.id ?? createId("superset");
   const name = label ?? existing?.label;
   const info: SupersetInfo = {
     id: supersetId,
     ...(name ? { label: name } : {}),
+    ...(groupKind ? { kind: groupKind } : {}),
     ...(existing?.roundRestMs ? { roundRestMs: existing.roundRestMs } : {}),
   };
 
@@ -1058,6 +1084,25 @@ export function ungroupSuperset(session: WorkoutSession, supersetId: string): Wo
       blockSuperset(b)?.id === supersetId ? setBlockSuperset(b, undefined) : b,
     ),
   };
+}
+
+/** Call a group a superset or a circuit. A one-exercise group made a superset is ungrouped. */
+export function setGroupKind(session: WorkoutSession, supersetId: string, kind: GroupKind): WorkoutSession {
+  return normalizeSupersets({
+    ...session,
+    blocks: session.blocks.map((b) => {
+      const info = blockSuperset(b);
+      return info?.id === supersetId ? setBlockSuperset(b, { ...info, kind }) : b;
+    }),
+  });
+}
+
+/** Remove a whole superset / circuit: the group and every exercise in it. */
+export function removeGroup(session: WorkoutSession, supersetId: string): WorkoutSession {
+  const kept = [...session.blocks]
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .filter((b) => blockSuperset(b)?.id !== supersetId);
+  return { ...session, blocks: kept.map((b, i) => ({ ...b, orderIndex: i })) };
 }
 
 /** Set (or clear, with undefined/0) the rest between rounds of a circuit, on every member. */
@@ -1098,11 +1143,19 @@ export function blockDisplayName(b: SessionBlock): string {
   }
 }
 
-/** "Superset" for two, "Circuit" for three or more, unless the group was given a name. */
-export function groupLabel(memberCount: number, label?: string): string {
+/**
+ * A group's name: its own name if it was given one, else the kind chosen for it, else by
+ * count ("Superset" for two, "Circuit" for one or three or more).
+ */
+export function groupLabel(memberCount: number, label?: string, kind?: GroupKind): string {
   const named = label?.trim();
   if (named) return named;
-  return memberCount >= 3 ? "Circuit" : "Superset";
+  return groupKindOf(memberCount, kind) === "circuit" ? "Circuit" : "Superset";
+}
+
+/** The kind a group is: the chosen one, else by count. */
+export function groupKindOf(memberCount: number, kind?: GroupKind): GroupKind {
+  return kind ?? (memberCount === 2 ? "superset" : "circuit");
 }
 
 /**

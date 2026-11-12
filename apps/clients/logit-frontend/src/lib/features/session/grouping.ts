@@ -2,6 +2,7 @@
 // the sheet itself so the split day editor can feed the same sheet its own rows.
 
 import type {
+  GroupKind,
   CardioBlockData,
   MobilityBlockData,
   SessionBlock,
@@ -12,6 +13,7 @@ import {
   blockDisplayName,
   blockGroup,
   groupCandidates,
+  groupKindOf,
   groupLabel,
   supersetMembers,
 } from "@logit/core/domain/workout";
@@ -28,6 +30,8 @@ export type GroupPickerModel = {
   alreadyGrouped: boolean;
   /** The group's own name, if it was given one. */
   label?: string;
+  /** The kind chosen for the anchor's group, if it's in one and one was chosen. */
+  kind?: GroupKind;
 };
 
 const KIND_TITLES: Record<string, string> = {
@@ -55,15 +59,21 @@ function blockDetail(session: WorkoutSession, b: SessionBlock): string {
     detail = KIND_TITLES[b.type] ?? b.type;
   }
   const group = blockGroup(b);
-  if (group) detail += ` · in ${groupName(session, group.id, group.label, "a ")}`;
+  if (group) detail += ` · in ${groupName(session, group.id, group.label, group.kind, "a ")}`;
   return detail;
 }
 
 /** "a circuit" / "a superset" (with `article`), or a named group's name as given. */
-function groupName(session: WorkoutSession, groupId: string, label: string | undefined, article = ""): string {
+function groupName(
+  session: WorkoutSession,
+  groupId: string,
+  label: string | undefined,
+  kind: GroupKind | undefined,
+  article = "",
+): string {
   const named = label?.trim();
   if (named) return named;
-  return article + groupLabel(supersetMembers(session, groupId).length).toLowerCase();
+  return article + groupLabel(supersetMembers(session, groupId).length, undefined, kind).toLowerCase();
 }
 
 export function groupPickerModel(session: WorkoutSession, anchorId: string): GroupPickerModel | null {
@@ -86,25 +96,52 @@ export function groupPickerModel(session: WorkoutSession, anchorId: string): Gro
 
   return {
     title: group
-      ? `Add to ${groupName(session, group.id, group.label)}`
+      ? `Add to ${groupName(session, group.id, group.label, group.kind)}`
       : `Superset / circuit with ${blockDisplayName(anchor)}`,
     sections,
     groupSize,
     alreadyGrouped: !!group,
     label: group?.label?.trim() || undefined,
+    ...(group?.kind ? { kind: group.kind } : {}),
   };
 }
 
-/** The picker's confirm button: "Make superset", "Make circuit · 5 exercises", "Add to circuit · 6 exercises". */
-export function groupConfirmLabel(
-  model: Pick<GroupPickerModel, "groupSize" | "alreadyGrouped" | "label">,
+/**
+ * Superset or circuit for a new group: the user's choice, else by count (one ticked is a
+ * superset of two; none, or two or more, a circuit). A circuit can be one exercise alone.
+ */
+export function pickerGroupKind(pickedCount: number, chosen: GroupKind | null): GroupKind {
+  if (chosen === "superset" && pickedCount === 0) return "circuit";
+  return chosen ?? groupKindOf(pickedCount + 1);
+}
+
+/** Whether the picker can confirm: a superset needs another exercise, a circuit doesn't. */
+export function canConfirmGroup(
+  model: Pick<GroupPickerModel, "alreadyGrouped">,
   pickedCount: number,
+  kind: GroupKind,
+): boolean {
+  return pickedCount > 0 || (!model.alreadyGrouped && kind === "circuit");
+}
+
+/**
+ * The picker's confirm button: "Make superset", "Make circuit · 5 exercises",
+ * "Make circuit · 1 exercise", "Add to circuit · 6 exercises".
+ */
+export function groupConfirmLabel(
+  model: Pick<GroupPickerModel, "groupSize" | "alreadyGrouped" | "label" | "kind">,
+  pickedCount: number,
+  chosen: GroupKind | null = null,
 ): string {
-  if (pickedCount === 0) return "Tick at least one";
   const total = model.groupSize + pickedCount;
-  const name = model.label ?? (total >= 3 ? "circuit" : "superset");
-  const count = total >= 3 ? ` · ${total} exercises` : "";
-  return `${model.alreadyGrouped ? "Add to" : "Make"} ${name}${count}`;
+  if (model.alreadyGrouped) {
+    if (pickedCount === 0) return "Tick at least one";
+    const name = model.label ?? groupLabel(total, undefined, model.kind).toLowerCase();
+    return `Add to ${name}${total >= 3 ? ` · ${total} exercises` : ""}`;
+  }
+  const kind = pickerGroupKind(pickedCount, chosen);
+  if (kind === "superset") return pickedCount === 0 ? "Tick at least one" : `Make superset${total >= 3 ? ` · ${total} exercises` : ""}`;
+  return `Make circuit · ${total} exercise${total === 1 ? "" : "s"}`;
 }
 
 /**

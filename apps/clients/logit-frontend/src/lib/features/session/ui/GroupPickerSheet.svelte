@@ -6,6 +6,8 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Plus, Search } from "lucide-svelte";
   import type { GroupPickerSection } from "$lib/features/session/grouping";
+  import type { GroupKind } from "@logit/core/domain/workout";
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
 
   const {
     open = false,
@@ -13,6 +15,9 @@
     sections,
     picked,
     confirmLabel,
+    canConfirm,
+    kind = null,
+    onKindChange,
     showSizeHint = true,
     saving = false,
     addAnotherDetail = "Search all exercises · added here, ticked",
@@ -27,7 +32,12 @@
     /** Ids ticked so far. */
     picked: string[];
     confirmLabel: string;
-    /** The "2 make a superset, 3 or more a circuit" line; off when adding to a group. */
+    /** Defaults to "something is ticked". */
+    canConfirm?: boolean;
+    /** For a new group: superset or circuit, as it will be made (shown as a switch). */
+    kind?: GroupKind | null;
+    onKindChange?: (kind: GroupKind) => void;
+    /** The superset / circuit switch and its hint; off when adding to a group. */
     showSizeHint?: boolean;
     saving?: boolean;
     addAnotherDetail?: string;
@@ -38,6 +48,7 @@
     onOpenChange?: (v: boolean) => void;
   }>();
 
+  const confirmable = $derived(canConfirm ?? picked.length > 0);
   const isEmpty = $derived(sections.every((s: GroupPickerSection) => s.items.length === 0));
 </script>
 
@@ -97,12 +108,28 @@
     </div>
 
     <div class="flex flex-col gap-2 border-t border-border px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-      {#if showSizeHint}
+      {#if showSizeHint && kind && onKindChange}
+        <div class={segmentTrack} role="radiogroup" aria-label="Group type">
+          {#each [["superset", "Superset"], ["circuit", "Circuit"]] as [k, text] (k)}
+            <button
+              type="button"
+              role="radio"
+              aria-checked={kind === k}
+              class={segment(kind === k) + " flex-1"}
+              disabled={saving || (k === "superset" && picked.length === 0)}
+              onclick={() => onKindChange(k as GroupKind)}
+            >
+              {text}
+            </button>
+          {/each}
+        </div>
         <p class="text-center text-xs text-muted-foreground">
-          2 exercises make a superset, 3 or more a circuit.
+          {kind === "circuit"
+            ? "Rounds through every exercise, with the countdown. Can be just this one."
+            : "Two or more exercises back to back, one rest per round."}
         </p>
       {/if}
-      <Button class="h-12 text-[15px]" disabled={saving || picked.length === 0} onclick={() => void onConfirm()}>
+      <Button class="h-12 text-[15px]" disabled={saving || !confirmable} onclick={() => void onConfirm()}>
         {confirmLabel}
       </Button>
     </div>

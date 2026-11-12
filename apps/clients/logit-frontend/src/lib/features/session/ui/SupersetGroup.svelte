@@ -1,10 +1,16 @@
 <script lang="ts">
-  import { GripVertical, Link2Off, Play, Plus, Timer } from "lucide-svelte";
+  import { GripVertical, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
   import {
     addSupersetRound,
+    blockDisplayName,
     blockGroup,
+    groupKindOf,
     groupLabel,
+    removeGroup,
+    setGroupKind,
     setGroupRoundRest,
     supersetRoundCount,
     ungroupSuperset,
@@ -44,8 +50,20 @@
 
   const noopGrip: GripAction = () => ({ destroy() {} });
 
-  // "Superset" for two, "Circuit" for three or more, unless it was given a name.
-  const label = $derived(groupLabel(blocks.length, blockGroup(blocks[0])?.label));
+  // Its own name, else the kind chosen for it, else "Superset" for two, "Circuit" otherwise.
+  const info = $derived(blockGroup(blocks[0]));
+  const label = $derived(groupLabel(blocks.length, info?.label, info?.kind));
+  const kind = $derived(groupKindOf(blocks.length, info?.kind));
+
+  let confirmRemove = $state(false);
+  async function removeAll() {
+    if (running) circuitRunner.end();
+    await onMutate((s: WorkoutSession) => removeGroup(s, supersetId));
+  }
+  function ungroup() {
+    if (running) circuitRunner.end();
+    void onMutate((s: WorkoutSession) => ungroupSuperset(s, supersetId));
+  }
 
   // Strength sets and mobility sets (an L/R pair is one round); cardio doesn't count.
   const roundCount = $derived(supersetRoundCount(blocks));
@@ -88,17 +106,9 @@
     <div class="flex-1 min-w-0 py-1.5">
       <span class="block text-xs font-medium text-primary uppercase tracking-wide">{label}</span>
       <span class="block text-xs text-muted-foreground truncate">
-        {blocks.length} exercises{roundCount > 0 ? ` · ${roundCount} round${roundCount === 1 ? "" : "s"}` : ""}
+        {blocks.length} exercise{blocks.length === 1 ? "" : "s"}{roundCount > 0 ? ` · ${roundCount} round${roundCount === 1 ? "" : "s"}` : ""}
       </span>
     </div>
-    <button
-      type="button"
-      class="shrink-0 flex h-11 items-center gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
-      onclick={() => onMutate((s: WorkoutSession) => ungroupSuperset(s, supersetId))}
-      disabled={saving || running}
-    >
-      <Link2Off class="h-3.5 w-3.5" /> Ungroup
-    </button>
     {#if canRun || running}
       <button
         type="button"
@@ -110,6 +120,32 @@
         {#if running}<Timer class="h-4 w-4" /> Running{:else}<Play class="h-4 w-4 fill-current" /> Start{/if}
       </button>
     {/if}
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger
+        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+        disabled={saving}
+        aria-label="More actions for this {label.toLowerCase()}"
+      >
+        <MoreHorizontal class="h-5 w-5" />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content align="end">
+        {#if kind === "superset"}
+          <DropdownMenu.Item onSelect={() => onMutate((s: WorkoutSession) => setGroupKind(s, supersetId, "circuit"))}>
+            <Repeat /> Make it a circuit
+          </DropdownMenu.Item>
+        {:else if blocks.length >= 2}
+          <DropdownMenu.Item onSelect={() => onMutate((s: WorkoutSession) => setGroupKind(s, supersetId, "superset"))}>
+            <Zap /> Make it a superset
+          </DropdownMenu.Item>
+        {/if}
+        <DropdownMenu.Item onSelect={ungroup}>
+          <Link2Off /> Ungroup
+        </DropdownMenu.Item>
+        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
+          <Trash2 /> Remove {label.toLowerCase()} and its exercises
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
   </div>
 
   {#if hasDrills}
@@ -154,3 +190,15 @@
     <Plus class="inline h-3.5 w-3.5 -mt-0.5" /> Add round
   </button>
 </div>
+
+<ConfirmDialog
+  title="Remove {label.toLowerCase()}?"
+  description={blocks.length === 1
+    ? `Removes ${blockDisplayName(blocks[0])} and everything logged in it.`
+    : `Removes all ${blocks.length} exercises and everything logged in them.`}
+  confirmLabel="Remove"
+  {saving}
+  onConfirm={removeAll}
+  open={confirmRemove}
+  onOpenChange={(v: boolean) => (confirmRemove = v)}
+/>
