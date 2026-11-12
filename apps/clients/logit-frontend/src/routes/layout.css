@@ -187,9 +187,24 @@ main {
   view-transition-name: page;
 }
 
-header,
-footer {
+header {
   view-transition-name: none;
+}
+
+/* The bottom nav is its own layer during page transitions: as part of the root
+   snapshot it sat under the sliding page, so the Start button (which pokes up into
+   the page area) was covered for a frame. Its own group paints above the page (it
+   comes after <main>) and switches instantly, no cross-fade. */
+footer {
+  view-transition-name: bottom-nav;
+}
+::view-transition-group(bottom-nav),
+::view-transition-new(bottom-nav) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(bottom-nav) {
+  display: none;
 }
 
 /* Disable root-level transitions — only animate the page element */
