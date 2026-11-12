@@ -305,7 +305,8 @@ public static class SyncEndpoints
     private static async Task<IResult> PushProfile(
         [FromBody] ProfileDto dto,
         ClaimsPrincipal caller,
-        AppDbContext db)
+        AppDbContext db,
+        ILoggerFactory loggerFactory)
     {
         var userId = caller.GetUserId();
 
@@ -319,7 +320,11 @@ public static class SyncEndpoints
         if (user.ProfileJson is not null)
         {
             try { stored = JsonSerializer.Deserialize<ProfileDto>(user.ProfileJson); }
-            catch (JsonException) { }
+            catch (JsonException ex)
+            {
+                loggerFactory.CreateLogger("Logit.Sync").LogWarning(
+                    "Stored profile of user {UserId} is unreadable ({Reason}); its split rotation is dropped", userId, ex.Message);
+            }
         }
         var rotations = MergeSplitRotations(stored?.SplitRotationJson, dto.SplitRotationJson);
 
@@ -370,7 +375,8 @@ public static class SyncEndpoints
     private static async Task<IResult> PullProfile(
         [FromQuery] Guid? clientId,
         ClaimsPrincipal caller,
-        AppDbContext db)
+        AppDbContext db,
+        ILoggerFactory loggerFactory)
     {
         var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
         if (forbidden is not null) return forbidden;
@@ -389,8 +395,10 @@ public static class SyncEndpoints
             var profile = JsonSerializer.Deserialize<ProfileDto>(user.ProfileJson);
             return Results.Ok(new { profile });
         }
-        catch
+        catch (Exception ex)
         {
+            loggerFactory.CreateLogger("Logit.Sync").LogWarning(
+                "Stored profile of user {UserId} is unreadable ({Reason}); sent as empty", userId, ex.Message);
             return Results.Ok(new { profile = (ProfileDto?)null });
         }
     }

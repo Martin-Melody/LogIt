@@ -7,6 +7,7 @@ import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/p
 import { needsAccountAuth } from "$lib/stores/appReady.store";
 import { navConfig } from "$lib/stores/navConfig.store";
 import { syncAll, pushAllLocalData, pushCurrentProfile } from "$lib/sync/syncService";
+import { log } from "@logit/core/platform/log";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
 async function switchActiveOwner(isOnlineAccount: boolean): Promise<void> {
@@ -36,6 +37,7 @@ function createAuthStore() {
   async function login(usernameOrEmail: string, password: string) {
     const serverUser = await apiClient.login(usernameOrEmail, password);
     user = serverUser;
+    log.info("auth", "Signed in", { tier: serverUser.tier, selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
     // Push this device's existing local history first — otherwise only records
     // created after this sign-in ever reach the server, and everything logged
@@ -49,6 +51,7 @@ function createAuthStore() {
   async function register(username: string, email: string, password: string, displayName: string) {
     const serverUser = await apiClient.register(username, email, password, displayName);
     user = serverUser;
+    log.info("auth", "Account created and signed in", { selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
     void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
     startBackgroundSync();
@@ -193,8 +196,9 @@ function createAuthStore() {
 
   async function logout() {
     if (user) {
-      try { await apiClient.logout(); } catch {}
+      try { await apiClient.logout(); } catch (e) { log.warn("auth", "Server sign-out failed (signed out locally anyway)", e); }
     }
+    log.info("auth", "Signed out");
     user = null;
     stopBackgroundSync();
 

@@ -7,6 +7,7 @@ using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
 using Logit.Api.Features.Billing;
 using Logit.Api.Features.Coach;
+using Logit.Api.Features.Diagnostics;
 using Logit.Api.Features.Email;
 using Logit.Api.Features.Social;
 using Logit.Api.Features.Sync;
@@ -16,6 +17,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Logs carry our own RequestId scope (see RequestLogging); the default trace/span ids only
+// lengthen every line. The console format ("logit", one line per entry; or "json") is set
+// under Logging:Console in appsettings.json.
+builder.Logging.Configure(o => o.ActivityTrackingOptions = ActivityTrackingOptions.None);
+builder.Logging.AddConsoleFormatter<LogitConsoleFormatter, Microsoft.Extensions.Logging.Console.ConsoleFormatterOptions>();
 
 // Serialize/deserialize all enums as strings so the frontend can use names like "Text" / "WorkoutSession"
 builder.Services.ConfigureHttpJsonOptions(o =>
@@ -87,6 +94,17 @@ builder.Services.AddRateLimiter(o =>
             AutoReplenishment = true,
         });
     });
+    // Diagnostics reports: a handful per user per hour is plenty.
+    o.AddPolicy(DiagnosticsEndpoints.RateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0,
+            }));
 });
 
 Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
@@ -100,13 +118,22 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 }
 
+app.Logger.LogInformation("Logit API starting ({Environment}, {Database}, self-hosted: {SelfHosted})",
+    app.Environment.EnvironmentName,
+    connectionString.StartsWith("Host=") || connectionString.StartsWith("postgres") ? "PostgreSQL" : "SQLite",
+    app.Configuration.GetValue<bool>("Deployment:SelfHosted"));
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Outermost, so every request (errors included) gets one log line with its id. CORS sits
+// outside the exception handler so a 500's body still reaches the browser app.
+app.UseRequestLogging();
 app.UseCors();
+app.UseJsonExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -120,6 +147,7 @@ app.MapAdminEndpoints(builder.Configuration);
 app.MapSyncEndpoints();
 app.MapBillingEndpoints();
 app.MapCoachEndpoints();
+app.MapDiagnosticsEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

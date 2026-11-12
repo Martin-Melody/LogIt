@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { log } from "@logit/core/platform/log";
   import { Camera, ImagePlus, Loader2, X } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { profile } from "$lib/stores/profile.store";
@@ -20,7 +21,7 @@
       profile.save({ progressPhotoDataUrl: dataUrl });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.toLowerCase().includes("cancel")) console.error("[CurrentPhotoWidget] pick failed", err);
+      if (!msg.toLowerCase().includes("cancel")) log.error("photo", "Progress photo pick failed", err);
     } finally {
       picking = false;
     }

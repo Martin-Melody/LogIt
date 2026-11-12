@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { log } from "@logit/core/platform/log";
   import { Camera, User } from "lucide-svelte";
   import * as Avatar from "$lib/components/ui/avatar";
   import { profile } from "$lib/stores/profile.store";
@@ -38,7 +39,7 @@
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (!msg.toLowerCase().includes("cancel")) {
-        console.error("[ProfileAvatar] pick failed", err);
+        log.error("photo", "Avatar pick failed", err);
       }
     } finally {
       picking = false;

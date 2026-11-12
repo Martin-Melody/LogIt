@@ -1,3 +1,4 @@
+import { log } from "@logit/core/platform/log";
 import { browser } from "$app/environment";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -100,14 +101,14 @@ export async function initFoodDb(): Promise<void> {
     // An older unpacked copy won't have been overwritten by copyFromAssets(false). If it's
     // behind the version this build expects, force a re-copy from the APK asset.
     if ((await buildVersion(foodDb)) < FOOD_DB_VERSION) {
-      console.warn("[nutrition] food.db is stale — re-copying from assets");
+      log.info("db", "food.db is stale, re-copying it from the app");
       await sqlite.closeConnection(FOOD_DB_NAME, true).catch(() => {});
       foodDb = null;
       await sqlite.copyFromAssets(true);
       foodDb = await open();
     }
   } catch (err) {
-    console.warn("[nutrition] bundled food.db unavailable:", err);
+    log.warn("db", "Bundled food database unavailable", err);
     foodDb = null;
   }
 }

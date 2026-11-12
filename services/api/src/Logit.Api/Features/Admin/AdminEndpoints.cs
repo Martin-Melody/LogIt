@@ -27,6 +27,46 @@ public static class AdminEndpoints
 
         api.MapGet("/reports", GetReports);
         api.MapPost("/reports/{id:guid}/resolve", ResolveReport);
+
+        api.MapGet("/diagnostics", GetDiagnosticReports);
+        api.MapGet("/diagnostics/{id:guid}", GetDiagnosticReport);
+        api.MapDelete("/diagnostics/{id:guid}", DeleteDiagnosticReport);
+    }
+
+    // ── Diagnostics reports (sent from the app's Settings → Diagnostics) ─────
+
+    private static async Task<IResult> GetDiagnosticReports(AppDbContext db)
+    {
+        var reports = await db.DiagnosticReports
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(200)
+            .Select(r => new
+            {
+                r.Id,
+                r.CreatedAt,
+                r.AppVersion,
+                r.Platform,
+                r.Note,
+                Chars = r.Log.Length,
+                User = new { r.User.Id, r.User.Username },
+            })
+            .ToListAsync();
+        return Results.Ok(new { reports });
+    }
+
+    private static async Task<IResult> GetDiagnosticReport(Guid id, AppDbContext db)
+    {
+        var r = await db.DiagnosticReports
+            .Where(x => x.Id == id)
+            .Select(x => new { x.Id, x.CreatedAt, x.AppVersion, x.Platform, x.Note, x.Log, User = new { x.User.Id, x.User.Username } })
+            .FirstOrDefaultAsync();
+        return r is null ? Results.NotFound(new { error = "Report not found." }) : Results.Ok(r);
+    }
+
+    private static async Task<IResult> DeleteDiagnosticReport(Guid id, AppDbContext db)
+    {
+        var deleted = await db.DiagnosticReports.Where(r => r.Id == id).ExecuteDeleteAsync();
+        return deleted == 0 ? Results.NotFound(new { error = "Report not found." }) : Results.NoContent();
     }
 
     private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminKeyFilter(string key) =>
@@ -43,7 +83,8 @@ public static class AdminEndpoints
         var postCount = await db.Posts.CountAsync(p => p.DeletedAt == null);
         var activeTokens = await db.RefreshTokens.CountAsync(t => t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow);
         var workoutCount = await db.SyncedWorkoutSessions.CountAsync(s => s.DeletedAtMs == null);
-        return Results.Ok(new { userCount, postCount, activeTokens, workoutCount });
+        var diagnosticsCount = await db.DiagnosticReports.CountAsync();
+        return Results.Ok(new { userCount, postCount, activeTokens, workoutCount, diagnosticsCount });
     }
 
     private static async Task<IResult> GetUsers(AppDbContext db, string? search = null, int page = 1, int pageSize = 100)

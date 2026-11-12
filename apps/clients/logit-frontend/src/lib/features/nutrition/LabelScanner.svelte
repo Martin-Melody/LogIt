@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { log } from "@logit/core/platform/log";
   import { onMount } from "svelte";
   import { X, Camera, Image as ImageIcon, LoaderCircle } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -37,7 +38,7 @@
         phase = "choose";
         return;
       }
-      console.warn("[LabelScanner] scan failed", e);
+      log.warn("scanner", "Label scan failed", e);
       error = /timed out/i.test(msg)
         ? "That took too long. Try again with a closer, straighter photo."
         : "Couldn't read the label. Use a straight, well-lit photo that fills the frame.";

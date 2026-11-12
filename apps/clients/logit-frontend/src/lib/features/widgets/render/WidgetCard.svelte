@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { log } from "@logit/core/platform/log";
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
   import type { WidgetPlugin, WidgetView } from "@logit/core/plugins/widgetView";
@@ -32,7 +33,7 @@
       view = await plugin.compute(input);
       error = false;
     } catch (e) {
-      console.warn("[widget]", plugin.id, "failed", e);
+      log.warn("widget", `Widget ${plugin.id} failed`, e);
       error = true;
     }
   }

@@ -11,18 +11,22 @@ interface FileSaverPlugin {
 
 const FileSaver = registerPlugin<FileSaverPlugin>("FileSaver");
 
-export async function saveTextFile(filename: string, content: string): Promise<void> {
+export async function saveTextFile(
+  filename: string,
+  content: string,
+  mimeType = "application/json",
+): Promise<void> {
   if (content.length === 0) {
     throw new Error("Refusing to save an empty file.");
   }
 
   if (isNativePlatform()) {
-    const result = await FileSaver.saveFile({ filename, content, mimeType: "application/json" });
+    const result = await FileSaver.saveFile({ filename, content, mimeType });
     if (!result?.uri) {
       throw new Error("File save did not report a destination.");
     }
   } else {
-    const blob = new Blob([content], { type: "application/json" });
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     try {
       const a = document.createElement("a");
