@@ -570,11 +570,14 @@ test.describe("supersets", () => {
 
     await page.getByRole("button", { name: "Add round" }).click();
     await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Round 2/ })).toBeVisible();
 
-    // By exercise, each exercise now has 2 set rows.
-    await page.getByRole("button", { name: "By exercise" }).click();
+    // By exercise (the default), each exercise now has 2 set rows.
+    await expect(page.getByRole("button", { name: "By exercise" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
+
+    // By round, each round is its own row.
+    await page.getByRole("button", { name: "By round" }).click();
+    await expect(page.getByRole("button", { name: /Round 2/ })).toBeVisible();
 
     // Ungroup (from the group's menu) restores plain blocks.
     await page.getByRole("button", { name: "More actions for this superset" }).click();
@@ -582,6 +585,26 @@ test.describe("supersets", () => {
     await expect(page.getByText("SUPERSET")).not.toBeVisible();
     await expect(page.getByText("Bench Press")).toBeVisible();
     await expect(page.getByText("Row", { exact: true })).toBeVisible();
+  });
+
+  test("with 'Collapse blocks by default' on, a group starts collapsed", async ({ page }) => {
+    await seedSession(page, {
+      session: makeSession(
+        [
+          makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+          makeStrengthBlock("b2", 1, "Row", [makeSet("s2", 0, 8, 40)]),
+        ].map((b) => ({ ...b, data: { ...b.data, superset: { id: "g1" } } })),
+      ),
+      blocksCollapsedByDefault: true,
+    });
+    await goToSession(page);
+
+    const toggle = page.getByRole("button", { name: /^(Expand|Collapse) Superset$/ });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("button", { name: "By exercise" })).toHaveCount(0);
+
+    await toggle.click();
+    await expect(page.getByRole("button", { name: "By exercise" })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("a drill's menu builds a circuit: same kind first, add another comes back ticked", async ({ page }) => {
@@ -668,7 +691,7 @@ test.describe("supersets", () => {
     // Round 1 is all done, so the open hold rows are the new ones, each with the 30 s target.
     const holdRows = page.getByRole("row", { name: /Start hold timer/ });
     await expect(holdRows).toHaveCount(3);
-    await expect(page.getByRole("row", { name: /Start hold timer.*\/ 30s/ })).toHaveCount(3);
+    await expect(page.getByRole("row", { name: /Start hold timer.*30s goal/ })).toHaveCount(3);
   });
 
   test("one drill can be a circuit on its own, and run with the countdown", async ({ page }) => {
@@ -812,6 +835,7 @@ test.describe("supersets", () => {
     });
     await goToSession(page);
     await groupWith(page, ["Row"]);
+    await page.getByRole("button", { name: "By round" }).click();
 
     const round1 = page.getByRole("button", { name: /^Round 1/ });
     const round2 = page.getByRole("button", { name: /^Round 2/ });
