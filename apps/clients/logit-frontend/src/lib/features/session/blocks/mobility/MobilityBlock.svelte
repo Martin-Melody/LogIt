@@ -39,7 +39,7 @@
     data,
     saving,
     grouped = false,
-    restsOnComplete = true,
+    groupRestMs,
     gripAction,
     onGroup,
     onDelete,
@@ -136,11 +136,16 @@
   }
   async function toggleComplete(set: MobilitySet) {
     const wasCompleted = !!set.completed;
-    const rest = effectiveRestMs(set);
-    // In a circuit, only the last exercise of the round rests (see StrengthBlock).
-    const startsRest = restsOnComplete && !wasCompleted && rest > 0;
+    // In a superset / circuit the group's rest wins (0 = straight on); see StrengthBlock.
+    // There, the first side of an L/R pair goes straight on to the other side.
+    const rest = groupRestMs !== undefined ? groupRestMs : effectiveRestMs(set);
+    const pair = groups.find((g) => g.kind === "pair" && (g.left?.id === set.id || g.right?.id === set.id));
+    const otherSide = pair?.kind === "pair" ? (pair.left?.id === set.id ? pair.right : pair.left) : undefined;
+    const switchingSides = grouped && !!otherSide && !otherSide.completed;
+    const startsRest = !wasCompleted && rest > 0 && !switchingSides;
     await onMutate((s) =>
       updateMobilitySet(s, blockId, set.id, {
+        ...(startsRest && groupRestMs ? { restDurationMs: groupRestMs } : {}),
         completed: !wasCompleted,
         restStartedAtMs: startsRest ? Date.now() : null,
       }),
@@ -234,9 +239,14 @@
   function groupDone(g: MobilitySetGroup): boolean {
     return g.kind === "single" ? !!g.set.completed : !!g.left?.completed && !!g.right?.completed;
   }
+  function groupResting(g: MobilitySetGroup): boolean {
+    const sets = g.kind === "single" ? [g.set] : [g.left, g.right];
+    return sets.some((s) => typeof s?.restStartedAtMs === "number");
+  }
+  // A done set folds away, but not while its rest is running: the rest bar lives inside it.
   function isGroupCollapsed(g: MobilitySetGroup): boolean {
     const explicit = userCollapse.get(groupKey(g));
-    return explicit ?? groupDone(g);
+    return explicit ?? (groupDone(g) && !groupResting(g));
   }
   function toggleGroup(g: MobilitySetGroup, current: boolean) {
     userCollapse.set(groupKey(g), !current);

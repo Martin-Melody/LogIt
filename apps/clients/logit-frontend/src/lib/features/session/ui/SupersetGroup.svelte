@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GripVertical, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
+  import { ChevronDown, ChevronRight, GripVertical, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
@@ -9,14 +9,17 @@
     blockGroup,
     groupKindOf,
     groupLabel,
+    groupProgress,
     removeGroup,
     setGroupKind,
-    setGroupRoundRest,
     supersetRoundCount,
     ungroupSuperset,
   } from "@logit/core/domain/workout";
-  import { canRunCircuit, circuitRoundRestMs } from "@logit/core/domain/circuit";
+  import { canRunCircuit, groupTiming } from "@logit/core/domain/circuit";
   import { circuitRunner } from "$lib/features/session/circuit/circuitRunner";
+  import { circuitDefaultsFrom, formatRestMs } from "$lib/features/session/circuit/circuitSettings";
+  import { profile } from "$lib/stores/profile.store";
+  import GroupEditSheet from "./GroupEditSheet.svelte";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
   import { reveal } from "$lib/transitions";
@@ -56,6 +59,10 @@
   const kind = $derived(groupKindOf(blocks.length, info?.kind));
 
   let confirmRemove = $state(false);
+  let editOpen = $state(false);
+  // Collapsed, the whole group is one line. It never collapses on its own.
+  let collapsed = $state(false);
+  const progress = $derived(groupProgress(blocks));
   async function removeAll() {
     if (running) circuitRunner.end();
     await onMutate((s: WorkoutSession) => removeGroup(s, supersetId));
@@ -72,18 +79,29 @@
   const hasDrills = $derived(blocks.some((b: SessionBlock) => b.type === "mobility"));
   const canRun = $derived(canRunCircuit({ blocks }, supersetId));
   const running = $derived($circuitRunner.run?.supersetId === supersetId);
-  const roundRestMs = $derived(circuitRoundRestMs({ blocks }, supersetId));
+  const timing = $derived(groupTiming({ blocks }, supersetId, circuitDefaultsFrom($profile.restDefaults)));
+  /**
+   * The rest a member starts when one of its sets is ticked by hand: the rest between
+   * exercises, or after the last one the rest between rounds. An unset round rest leaves
+   * it to the exercise's own rest timer (undefined).
+   */
+  function memberRest(i: number): number | undefined {
+    if (i < blocks.length - 1) return timing.memberRestMs;
+    return info?.roundRestMs;
+  }
 
-  const ROUND_REST_LADDER = [0, 30_000, 45_000, 60_000, 90_000, 120_000];
-  function cycleRoundRest() {
-    const i = ROUND_REST_LADDER.indexOf(roundRestMs);
-    const next = ROUND_REST_LADDER[(i + 1) % ROUND_REST_LADDER.length]!;
-    void onMutate((s: WorkoutSession) => setGroupRoundRest(s, supersetId, next || undefined));
-  }
-  function fmtRest(ms: number): string {
-    const sec = Math.round(ms / 1000);
-    return sec >= 60 && sec % 60 === 0 ? `${sec / 60} min` : `${sec} s`;
-  }
+  const summary = $derived.by(() => {
+    const parts: string[] = [];
+    if (info?.label?.trim()) parts.push(kind === "circuit" ? "Circuit" : "Superset");
+    parts.push(`${blocks.length} exercise${blocks.length === 1 ? "" : "s"}`);
+    if (collapsed && progress.roundCount > 0) {
+      parts.push(`round ${progress.currentRound} of ${progress.roundCount}`);
+      return parts.join(" · ");
+    }
+    if (roundCount > 0) parts.push(`${roundCount} round${roundCount === 1 ? "" : "s"}`);
+    if (info?.roundRestMs) parts.push(`${formatRestMs(info.roundRestMs)} rest`);
+    return parts.join(" · ");
+  });
   function startOrShow() {
     if (running) circuitRunner.expand();
     else circuitRunner.start(supersetId);
@@ -103,12 +121,30 @@
     >
       <GripVertical class="h-4 w-4" />
     </button>
-    <div class="flex-1 min-w-0 py-1.5">
-      <span class="block text-xs font-medium text-primary uppercase tracking-wide">{label}</span>
-      <span class="block text-xs text-muted-foreground truncate">
-        {blocks.length} exercise{blocks.length === 1 ? "" : "s"}{roundCount > 0 ? ` · ${roundCount} round${roundCount === 1 ? "" : "s"}` : ""}
+    <button
+      type="button"
+      class="shrink-0 -ml-2 h-11 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+      onclick={() => (collapsed = !collapsed)}
+      aria-expanded={!collapsed}
+      aria-label="{collapsed ? 'Expand' : 'Collapse'} {label}"
+    >
+      {#if collapsed}<ChevronRight class="h-4 w-4" />{:else}<ChevronDown class="h-4 w-4" />{/if}
+    </button>
+    <button
+      type="button"
+      class="flex-1 min-w-0 py-1.5 text-left rounded-md disabled:opacity-50"
+      onclick={() => (editOpen = true)}
+      disabled={saving}
+      aria-label="Edit {label}"
+    >
+      <span class="flex items-center gap-1 text-xs font-medium text-primary uppercase tracking-wide">
+        <span class="truncate">{label}</span>
       </span>
-    </div>
+      <span class="block text-xs text-muted-foreground truncate">{summary}</span>
+    </button>
+    {#if collapsed && progress.total > 0}
+      <span class="shrink-0 text-xs text-muted-foreground tabular-nums">{progress.done} of {progress.total}</span>
+    {/if}
     {#if canRun || running}
       <button
         type="button"
@@ -148,48 +184,61 @@
     </DropdownMenu.Root>
   </div>
 
-  {#if hasDrills}
-    <div class="flex flex-wrap gap-2 pb-2 pl-11 pr-3">
+  {#if collapsed}
+    {#if progress.total > 0}
+      <div class="h-[3px] bg-muted" role="progressbar" aria-label="{label} progress" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}>
+        <div class="h-full bg-info transition-[width]" style="width: {(progress.done / progress.total) * 100}%"></div>
+      </div>
+    {/if}
+  {:else}
+    <div transition:reveal>
+      <div class="ml-3 border-l-2 border-primary/30">
+        {#each blocks as block, i (block.id)}
+          <div class="transition-opacity {draggingBlockId === block.id ? 'opacity-50' : ''}" transition:reveal>
+            <BlockHost
+              type={block.type}
+              blockId={block.id}
+              data={block.data}
+              {saving}
+              grouped
+              groupRestMs={memberRest(i)}
+              gripAction={memberGripAction ? memberGripAction(block.id) : noopGrip}
+              onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
+              onDelete={() => onDeleteBlock(block.id)}
+              {onMutate}
+            />
+          </div>
+        {/each}
+      </div>
+
       <button
         type="button"
-        class="h-8 rounded-full border border-border bg-background px-3 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
-        onclick={cycleRoundRest}
+        class="w-full h-11 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
+        onclick={() => onMutate((s: WorkoutSession) => addSupersetRound(s, supersetId))}
         disabled={saving}
-        aria-label="Rest between rounds: {roundRestMs ? fmtRest(roundRestMs) : 'off'}. Tap to change."
       >
-        Rest between rounds: {roundRestMs ? fmtRest(roundRestMs) : "off"}
+        <Plus class="inline h-3.5 w-3.5 -mt-0.5" /> Add round
       </button>
     </div>
   {/if}
-
-  <div class="ml-3 border-l-2 border-primary/30">
-    {#each blocks as block, i (block.id)}
-      <div class="transition-opacity {draggingBlockId === block.id ? 'opacity-50' : ''}" transition:reveal>
-        <BlockHost
-          type={block.type}
-          blockId={block.id}
-          data={block.data}
-          {saving}
-          grouped
-          restsOnComplete={i === blocks.length - 1}
-          gripAction={memberGripAction ? memberGripAction(block.id) : noopGrip}
-          onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
-          onDelete={() => onDeleteBlock(block.id)}
-          {onMutate}
-        />
-      </div>
-    {/each}
-  </div>
-
-  <button
-    type="button"
-    class="w-full h-11 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-    onclick={() => onMutate((s: WorkoutSession) => addSupersetRound(s, supersetId))}
-    disabled={saving}
-  >
-    <Plus class="inline h-3.5 w-3.5 -mt-0.5" /> Add round
-  </button>
 </div>
+
+<GroupEditSheet
+  open={editOpen}
+  {supersetId}
+  {blocks}
+  {saving}
+  onClose={() => (editOpen = false)}
+  {onMutate}
+  onUngroup={() => {
+    editOpen = false;
+    ungroup();
+  }}
+  onRemove={() => {
+    editOpen = false;
+    confirmRemove = true;
+  }}
+/>
 
 <ConfirmDialog
   title="Remove {label.toLowerCase()}?"

@@ -49,7 +49,7 @@
     data,
     saving,
     grouped = false,
-    restsOnComplete = true,
+    groupRestMs,
     gripAction,
     onGroup,
     onDelete,
@@ -260,6 +260,11 @@
 
   const editedSet = $derived(editSet.setId ? (data.sets.find((s) => s.id === editSet.setId) ?? null) : null);
 
+  /** The group's rest when it sets one (a positive number), else undefined. */
+  function groupRest(): number | undefined {
+    return groupRestMs && groupRestMs > 0 ? groupRestMs : undefined;
+  }
+
   /** The set card's "Log": save what's in the card and tick the set off, in one change. */
   async function logFromCard(
     patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
@@ -268,11 +273,12 @@
     if (!set) return;
     const setId = set.id;
     const setType = patch.setType ?? set.setType;
-    const effectiveRest = patch.restDurationMs ?? set.restDurationMs ?? get(profile).restDefaults[setType];
-    const startsRest = restsOnComplete && effectiveRest !== undefined;
+    const effectiveRest = patch.restDurationMs ?? groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[setType];
+    const startsRest = groupRestMs !== 0 && effectiveRest !== undefined;
     await onMutate((s: WorkoutSession) =>
       updateSet(s, blockId, setId, {
         ...patch,
+        ...(startsRest && groupRest() !== undefined && patch.restDurationMs === undefined ? { restDurationMs: groupRest() } : {}),
         completed: true,
         restStartedAtMs: startsRest ? Date.now() : null,
       }),
@@ -330,15 +336,16 @@
         return;
       }
     }
-    // Explicit per-set override takes priority; fall back to per-type default.
-    const effectiveRest = set.restDurationMs ?? get(profile).restDefaults[set.setType];
-    // In a superset, only the anchor (last member of the round) starts a rest —
-    // the others flow straight into the next exercise.
-    const startsRest = restsOnComplete && effectiveRest !== undefined;
+    // In a superset / circuit the group's rest wins; else the set's own override,
+    // else the per-type default. A group rest of 0 goes straight on.
+    const effectiveRest = groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[set.setType];
+    const startsRest = groupRestMs !== 0 && effectiveRest !== undefined;
 
     await onMutate((s: WorkoutSession) =>
       updateSet(s, blockId, setId, {
         ...(fill ?? {}),
+        // The rest bar reads the set's rest, so a group rest is written onto the set.
+        ...(!wasCompleted && startsRest && groupRest() !== undefined ? { restDurationMs: groupRest() } : {}),
         completed: !wasCompleted,
         restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
       }),

@@ -141,6 +141,13 @@
     line (option A: name, "round 2 of 3", sets done, a progress line, Start, ⋯); expanded,
     it shows rounds (option C) and each round opens and closes on its own (the current
     round open, done rounds one line each). Finished groups don't collapse by themselves.
+  - Built 2026-11-12: the edit sheet (`GroupEditSheet.svelte`, group fields `memberRestMs`,
+    `leadInMs`, `roundRestMs` 0 = off), Settings › Circuits defaults (stored in
+    `restDefaults` under `circuit.*` keys, so no migration), the countdown's rest between
+    exercises and +10 s on the get-ready, and the collapsed one-line group (A). An unset
+    round rest still means each exercise's own rest timer when ticking by hand (none in the
+    countdown); the first side of an L/R pair in a group goes straight on to the other
+    side. Not built yet: the expanded rounds view (C).
 - [ ] Edit the planned workout on the pre-workout screen (`/session/plan`) before pressing
       Start: swap an exercise for another, remove or add one, drag to reorder. Today the
       screen only shows the plan (`planSplitDay` → `SessionPlan`) and Start. (Martin,

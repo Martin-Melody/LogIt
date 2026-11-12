@@ -2,7 +2,8 @@
 // A circuit (or superset) of mobility drills is run one set at a time, round by
 // round: A1 B1 C1, A2 B2 C2… (per-side drills do both sides back to back). Each
 // set gets a 3-2-1 lead-in, then a hold that counts down and stops on its own (or,
-// for rep drills, a goal with a Done button). An optional rest runs between rounds.
+// for rep drills, a goal with a Done button). Rests can run between exercises (on by
+// default in a circuit) and between rounds.
 //
 // Everything here is pure: the run is a small state value, every action takes the
 // current time, and what has to be written to the workout comes back as `saves`.
@@ -11,6 +12,7 @@
 
 import {
   blockGroup,
+  groupKindOf,
   mobilitySetGroups,
   type MobilityBlockData,
   type MobilityMetric,
@@ -24,6 +26,20 @@ export const LEAD_IN_MS = 3_000;
 export const SWITCH_SIDES_MS = 5_000;
 export const DEFAULT_HOLD_SEC = 30;
 export const DEFAULT_REPS = 10;
+/** How long a rep counts for in the time estimate, ms. */
+export const ESTIMATE_MS_PER_REP = 3_000;
+
+/** The app-wide defaults a group falls back to (Settings). */
+export type CircuitDefaults = {
+  /** Get-ready before each exercise. */
+  leadInMs: number;
+  /** Rest between exercises in a circuit (supersets default to none). */
+  memberRestMs: number;
+};
+export const DEFAULT_CIRCUIT_SETTINGS: CircuitDefaults = { leadInMs: LEAD_IN_MS, memberRestMs: 15_000 };
+
+/** A group's timings with its defaults filled in, ms. */
+export type GroupTiming = { leadInMs: number; memberRestMs: number; roundRestMs: number };
 
 /** One set of one drill in one round, in the order the circuit runs. */
 export type CircuitStep = {
@@ -49,7 +65,8 @@ export type CircuitPhase =
   | { kind: "lead"; setId: string; endsAtMs: number; durationMs: number; switching: boolean }
   | { kind: "hold"; setId: string; startedAtMs: number; endsAtMs: number }
   | { kind: "reps"; setId: string; startedAtMs: number }
-  | { kind: "rest"; nextSetId: string; endsAtMs: number; durationMs: number }
+  /** `between`: rest between exercises in a round; else between rounds. */
+  | { kind: "rest"; nextSetId: string; endsAtMs: number; durationMs: number; between?: boolean }
   | { kind: "done" };
 
 export type CircuitRun = {
@@ -59,6 +76,8 @@ export type CircuitRun = {
   pausedAtMs: number | null;
   /** Sets skipped before they started this run, so they aren't offered again. */
   skipped: string[];
+  /** The app defaults the group's own timings fall back to. Missing = the built-in ones. */
+  defaults?: CircuitDefaults;
 };
 
 export type CircuitSave = { blockId: string; setId: string; patch: MobilitySetPatch };
@@ -77,6 +96,25 @@ function groupMembers(session: HasBlocks, supersetId: string): SessionBlock[] {
 export function circuitRoundRestMs(session: HasBlocks, supersetId: string): number {
   const first = groupMembers(session, supersetId)[0];
   return (first && blockGroup(first)?.roundRestMs) || 0;
+}
+
+/**
+ * The countdown's timings for a group: its own settings, else the app defaults. Rest
+ * between exercises defaults on for a circuit and off for a superset.
+ */
+export function groupTiming(
+  session: HasBlocks,
+  supersetId: string,
+  defaults: CircuitDefaults = DEFAULT_CIRCUIT_SETTINGS,
+): GroupTiming {
+  const members = groupMembers(session, supersetId);
+  const info = members[0] ? blockGroup(members[0]) : undefined;
+  const kind = groupKindOf(members.length, info?.kind);
+  return {
+    leadInMs: info?.leadInMs ?? defaults.leadInMs,
+    memberRestMs: info?.memberRestMs ?? (kind === "circuit" ? defaults.memberRestMs : 0),
+    roundRestMs: info?.roundRestMs ?? 0,
+  };
 }
 
 /**
@@ -164,29 +202,62 @@ export function canRunCircuit(session: HasBlocks, supersetId: string): boolean {
   return circuitSteps(session, supersetId).some((s) => !s.completed);
 }
 
-function leadInto(step: CircuitStep, at: number, switching: boolean): CircuitPhase {
-  const durationMs = switching ? SWITCH_SIDES_MS : LEAD_IN_MS;
+function timingOf(session: HasBlocks, run: CircuitRun): GroupTiming {
+  return groupTiming(session, run.supersetId, run.defaults);
+}
+
+function leadInto(step: CircuitStep, at: number, switching: boolean, leadInMs: number): CircuitPhase {
+  const durationMs = switching ? SWITCH_SIDES_MS : leadInMs;
   return { kind: "lead", setId: step.setId, endsAtMs: at + durationMs, durationMs, switching };
 }
 
 /** Start at the first set not done yet. Null when there's nothing to run. */
-export function startCircuit(session: WorkoutSession, supersetId: string, nowMs: number): CircuitRun | null {
-  const run: CircuitRun = { supersetId, phase: { kind: "done" }, pausedAtMs: null, skipped: [] };
+export function startCircuit(
+  session: WorkoutSession,
+  supersetId: string,
+  nowMs: number,
+  defaults?: CircuitDefaults,
+): CircuitRun | null {
+  const run: CircuitRun = {
+    supersetId,
+    phase: { kind: "done" },
+    pausedAtMs: null,
+    skipped: [],
+    ...(defaults ? { defaults } : {}),
+  };
   const first = pendingSteps(session, run)[0];
   if (!first) return null;
-  return { ...run, phase: leadInto(first, nowMs, false) };
+  return { ...run, phase: leadInto(first, nowMs, false, timingOf(session, run).leadInMs) };
+}
+
+/** What comes between `from` and `next`: nothing, a side switch, or a rest. */
+function gapKind(from: CircuitStep | null, next: CircuitStep): "none" | "switch" | "between" | "round" {
+  if (!from) return "none";
+  if (next.round > from.round) return "round";
+  if (next.blockId === from.blockId) return "switch";
+  return "between";
 }
 
 /** Move on from `from` (just finished or skipped) at time `at`. */
 function moveOn(session: WorkoutSession, run: CircuitRun, from: CircuitStep | null, at: number): CircuitRun {
   const next = pendingSteps(session, run, from?.setId)[0];
   if (!next) return { ...run, phase: { kind: "done" }, pausedAtMs: null };
-  const restMs = circuitRoundRestMs(session, run.supersetId);
-  if (from && next.round > from.round && restMs > 0) {
-    return { ...run, phase: { kind: "rest", nextSetId: next.setId, endsAtMs: at + restMs, durationMs: restMs } };
+  const timing = timingOf(session, run);
+  const gap = gapKind(from, next);
+  const restMs = gap === "round" ? timing.roundRestMs : gap === "between" ? timing.memberRestMs : 0;
+  if (restMs > 0) {
+    return {
+      ...run,
+      phase: {
+        kind: "rest",
+        nextSetId: next.setId,
+        endsAtMs: at + restMs,
+        durationMs: restMs,
+        ...(gap === "between" ? { between: true } : {}),
+      },
+    };
   }
-  const switching = !!from && next.blockId === from.blockId && next.round === from.round;
-  return { ...run, phase: leadInto(next, at, switching) };
+  return { ...run, phase: leadInto(next, at, gap === "switch", timing.leadInMs) };
 }
 
 function stepFor(session: WorkoutSession, run: CircuitRun, setId: string): CircuitStep | null {
@@ -239,7 +310,7 @@ export function tickCircuit(session: WorkoutSession, run: CircuitRun, nowMs: num
       r = moveOn(s, r, step, p.endsAtMs);
     } else if (p.kind === "rest" && p.endsAtMs <= nowMs) {
       const step = stepFor(s, r, p.nextSetId);
-      r = step ? { ...r, phase: leadInto(step, p.endsAtMs, false) } : moveOn(s, r, null, p.endsAtMs);
+      r = step ? { ...r, phase: leadInto(step, p.endsAtMs, false, timingOf(s, r).leadInMs) } : moveOn(s, r, null, p.endsAtMs);
     } else {
       break;
     }
@@ -267,11 +338,11 @@ export function resumeCircuit(run: CircuitRun, nowMs: number): CircuitRun {
   return { ...run, phase, pausedAtMs: null };
 }
 
-/** +10 s (or any amount) on the hold or the rest. */
+/** +10 s (or any amount) on the get-ready, the hold or the rest. */
 export function extendCircuit(run: CircuitRun, ms: number): CircuitRun {
   const p = run.phase;
   if (p.kind === "hold") return { ...run, phase: { ...p, endsAtMs: p.endsAtMs + ms } };
-  if (p.kind === "rest") {
+  if (p.kind === "rest" || p.kind === "lead") {
     return { ...run, phase: { ...p, endsAtMs: p.endsAtMs + ms, durationMs: p.durationMs + ms } };
   }
   return run;
@@ -355,4 +426,33 @@ export function phaseElapsedMs(run: CircuitRun, nowMs: number): number {
   const p = run.phase;
   if (p.kind !== "hold" && p.kind !== "reps") return 0;
   return Math.max(0, (run.pausedAtMs ?? nowMs) - p.startedAtMs);
+}
+
+/**
+ * Roughly how long the group takes with the countdown, from the start: one round (the
+ * first) and the whole thing. Holds count at their goal, reps at 3 s each, plus every
+ * get-ready, side switch and rest. Strength and cardio members aren't counted.
+ */
+export function estimateCircuitMs(
+  session: HasBlocks,
+  supersetId: string,
+  defaults?: CircuitDefaults,
+): { roundMs: number; totalMs: number } {
+  const timing = groupTiming(session, supersetId, defaults);
+  const steps = circuitSteps(session, supersetId);
+  let totalMs = 0;
+  let roundMs = 0;
+  let prev: CircuitStep | null = null;
+  for (const step of steps) {
+    const gap = gapKind(prev, step);
+    const before =
+      gap === "switch"
+        ? SWITCH_SIDES_MS
+        : timing.leadInMs + (gap === "round" ? timing.roundRestMs : gap === "between" ? timing.memberRestMs : 0);
+    const work = step.metric === "reps" ? step.reps * ESTIMATE_MS_PER_REP : step.goalSec * 1000;
+    totalMs += before + work;
+    if (step.round === 0) roundMs += before + work;
+    prev = step;
+  }
+  return { roundMs, totalMs };
 }
