@@ -145,3 +145,24 @@ test("the bell opens the inbox with the device's own notifications", async ({ pa
   await page.getByRole("link", { name: "Home" }).click();
   await expect(page.getByRole("link", { name: "Notifications", exact: true })).toBeVisible();
 });
+
+test("a running workout uses the shared header, so the bar doesn't move on the way in", async ({ page }) => {
+  await seed(page);
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "logit:draft:v1",
+      JSON.stringify({ id: "sess-test", startedAtMs: Date.now() - 60_000, blocks: [] }),
+    );
+  });
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  const header = page.locator("header.page-header");
+  const before = await header.boundingBox();
+
+  await page.getByRole("link", { name: "Resume session" }).click();
+  await expect(page).toHaveURL(/\/session\/current$/);
+  await expect(header).toContainText("Workout");
+  await expect(header.getByLabel("Elapsed workout time")).toBeVisible();
+  await expect(header.getByRole("link", { name: /^Notifications/ })).toHaveCount(0);
+  expect(await header.boundingBox()).toEqual(before);
+});

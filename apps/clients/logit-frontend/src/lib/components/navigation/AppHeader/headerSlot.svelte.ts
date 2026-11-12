@@ -12,7 +12,7 @@ import type { Snippet } from "svelte";
  * from both kept only the later batch's view of it (the header vanished). `rev` is just
  * the signal to re-read; a fresh object each time, so no batch can see "unchanged".
  */
-type Entry = { id: number; content: Snippet };
+type Entry = { id: number; content: Snippet; bell: boolean };
 
 let nextId = 0;
 const stack: Entry[] = [];
@@ -23,17 +23,17 @@ function changed() {
 }
 
 export const headerSlot = {
-  /** The header content to draw, or null when the page has no header. */
-  get current(): Snippet | null {
+  /** The header to draw (content + whether to show the bell), or null when the page has none. */
+  get current(): { content: Snippet; bell: boolean } | null {
     void rev;
-    return stack.at(-1)?.content ?? null;
+    return stack.at(-1) ?? null;
   },
 };
 
 /** Show `content` in the shared header until the returned function is called. */
-export function registerHeader(content: Snippet): () => void {
+export function registerHeader(content: Snippet, bell = true): () => void {
   const id = ++nextId;
-  stack.push({ id, content });
+  stack.push({ id, content, bell });
   changed();
   return () => {
     const i = stack.findIndex((e) => e.id === id);

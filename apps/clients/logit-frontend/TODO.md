@@ -237,8 +237,9 @@ the same features in their own algorithms.
       nav shows on the workout screen; `/session/current` no longer starts a workout, it
       shows an idle Start screen (today's split day / empty / repeat last).
 - [x] One shared top header with a notifications bell (2026-11-12). Pages hand their header
-      markup to the layout with `<PageHeader>`; the active workout keeps its own header (timer),
-      onboarding/auth have none. Back buttons hide on bar pages. The bell opens `/inbox`
+      markup to the layout with `<PageHeader>`; the workout uses it too (timer, no bell:
+      its own header inside the page made the content jump on the way in), onboarding/auth
+      have none. Back buttons hide on bar pages. The bell opens `/inbox`
       (social + local), `/social/notifications` redirects there.
 
 - [x] Today's Plan card is a carousel (today, tomorrow, …).

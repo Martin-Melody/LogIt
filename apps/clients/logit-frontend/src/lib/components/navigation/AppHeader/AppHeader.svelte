@@ -4,9 +4,11 @@
 </script>
 
 {#if headerSlot.current}
-  {@const Content = headerSlot.current}
+  {@const { content: Content, bell } = headerSlot.current}
   <header class="page-header bg-background">
     {@render Content()}
-    <NotificationsBell />
+    {#if bell}
+      <NotificationsBell />
+    {/if}
   </header>
 {/if}
