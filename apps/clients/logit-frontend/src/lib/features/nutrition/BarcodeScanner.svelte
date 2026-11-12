@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { log } from "@logit/core/platform/log";
   import { onMount, onDestroy } from "svelte";
   import { X, Flashlight, FlashlightOff } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -127,7 +128,7 @@
         await runZxing();
       }
     } catch (e) {
-      console.warn("[BarcodeScanner] camera start failed", e);
+      log.warn("scanner", "Camera start failed", e);
       const msg = e instanceof Error ? `${e.name} ${e.message}` : String(e);
       error = /permission|denied|notallowed/i.test(msg)
         ? "Camera access denied. Type the barcode instead."
@@ -175,7 +176,7 @@
         return;
       }
       if (err && err.name && !/NotFound/.test(err.name)) {
-        console.warn("[BarcodeScanner] decode error", err);
+        log.debug("scanner", "Barcode decode error", err);
       }
     });
   }

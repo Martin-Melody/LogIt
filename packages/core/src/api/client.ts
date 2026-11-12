@@ -1,4 +1,5 @@
 import { tokenStorage, type StoredTokens } from "./tokenStorage";
+import { log } from "../platform/log";
 
 const USER_KEY = "logit:auth:user";
 const SELF_HOSTED_KEY = "logit:auth:selfHosted";
@@ -37,6 +38,21 @@ const DEFAULT_BASE_URL: string =
 function getBaseUrl(): string {
   return localStorage.getItem(BASE_URL_KEY) ?? DEFAULT_BASE_URL;
 }
+
+/** Sent as X-Request-Id; the server logs it with the request and echoes it back, so an entry
+ * in the app's diagnostics log can be matched to the server's log line. */
+function newRequestId(): string {
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** The path without its query string, which can carry search text. */
+function routeOf(path: string): string {
+  return path.split("?")[0] ?? path;
+}
+
+const SLOW_REQUEST_MS = 5000;
 
 class ApiClient {
   private tokens: StoredTokens | null = null;
@@ -97,6 +113,7 @@ class ApiClient {
           body: JSON.stringify({ refreshToken: this.tokens.refreshToken }),
         });
         if (!res.ok) {
+          log.info("auth", `Session refresh rejected (${res.status}), signed out on this device`);
           // Don't call logout() here — it would try to revoke via fetch(), which
           // calls refreshTokens() again while this.refreshPromise is still set,
           // causing an async deadlock. Just clear tokens locally.
@@ -115,7 +132,8 @@ class ApiClient {
         // one identity while requests run as another.
         this.saveUser(data.user, data.isSelfHosted);
         return true;
-      } catch {
+      } catch (e) {
+        log.warn("auth", "Session refresh failed (network?)", e);
         return false;
       } finally {
         this.refreshPromise = null;
@@ -126,23 +144,43 @@ class ApiClient {
   }
 
   async fetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const method = (init.method ?? "GET").toUpperCase();
+    const route = routeOf(path);
+    const requestId = newRequestId();
+    const started = Date.now();
+
     const doRequest = async (token: string | null) => {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
+        "X-Request-Id": requestId,
         ...(init.headers as Record<string, string>),
       };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       return fetch(`${getBaseUrl()}${path}`, { ...init, headers });
     };
 
-    let res = await doRequest(this.tokens?.accessToken ?? null);
+    let res: Response;
+    try {
+      res = await doRequest(this.tokens?.accessToken ?? null);
 
-    if (res.status === 401 && this.tokens) {
-      const refreshed = await this.refreshTokens();
-      if (refreshed) {
-        res = await doRequest(this.tokens!.accessToken);
+      if (res.status === 401 && this.tokens) {
+        const refreshed = await this.refreshTokens();
+        if (refreshed) {
+          res = await doRequest(this.tokens!.accessToken);
+        }
       }
+    } catch (e) {
+      // fetch() only throws when no response came back: offline, DNS, TLS, CORS, aborted.
+      log.warn("api", `${method} ${route} got no response`, {
+        requestId,
+        ms: Date.now() - started,
+        online: typeof navigator === "undefined" ? undefined : navigator.onLine,
+        error: e,
+      });
+      throw e;
     }
+
+    const ms = Date.now() - started;
 
     if (!res.ok) {
       let message = res.statusText;
@@ -150,8 +188,14 @@ class ApiClient {
         const body = await res.json();
         message = body?.error ?? message;
       } catch {}
+      const details = { requestId, ms, error: message };
+      if (res.status >= 500) log.error("api", `${method} ${route} ${res.status}`, details);
+      else log.warn("api", `${method} ${route} ${res.status}`, details);
       throw new ApiError(res.status, message);
     }
+
+    if (ms >= SLOW_REQUEST_MS) log.info("api", `${method} ${route} slow`, { requestId, ms, status: res.status });
+    else log.debug("api", `${method} ${route} ${res.status}`, { requestId, ms });
 
     if (res.status === 204) return undefined as T;
     return res.json();

@@ -1,3 +1,4 @@
+import { log } from "@logit/core/platform/log";
 import { browser } from "$app/environment";
 import { writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
@@ -34,7 +35,7 @@ function createOnboardingStore() {
         _nativeRepo.updateLocalAccount(ownerId, {
           onboardingCompleted: state.completed,
           onboardingStep: state.step,
-        }).catch(console.error);
+        }).catch((e) => log.error("onboarding", "Could not update the local account", e));
       }
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -68,7 +69,7 @@ function createOnboardingStore() {
       store.set(next);
       persist(next);
       if (browser && getServerMode() !== "offline" && apiClient.isAuthenticated()) {
-        apiClient.updateOnboardingCompleted(true).catch(console.error);
+        apiClient.updateOnboardingCompleted(true).catch((e) => log.warn("onboarding", "Could not save onboarding status to the server", e));
       }
     },
 

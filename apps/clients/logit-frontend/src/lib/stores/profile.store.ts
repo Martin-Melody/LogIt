@@ -1,3 +1,4 @@
+import { log } from "@logit/core/platform/log";
 import { browser } from "$app/environment";
 import { get, writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
@@ -178,7 +179,7 @@ function createProfileStore() {
             if (patch.restDefaults !== undefined)            accountPatch.restDefaultsJson = JSON.stringify(patch.restDefaults);
             if (patch.mobilityLeadSide !== undefined)        accountPatch.mobilityLeadSide = patch.mobilityLeadSide;
 
-            _nativeRepo.updateLocalAccount(ownerId, accountPatch as Parameters<typeof _nativeRepo.updateLocalAccount>[1]).catch(console.error);
+            _nativeRepo.updateLocalAccount(ownerId, accountPatch as Parameters<typeof _nativeRepo.updateLocalAccount>[1]).catch((e) => log.error("profile", "Could not update the local account", e));
           }
         } else {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

@@ -61,14 +61,25 @@ public static class AuthEndpoints
         [FromBody] LoginRequest req,
         AppDbContext db,
         TokenService tokens,
-        IConfiguration config)
+        IConfiguration config,
+        ILoggerFactory loggerFactory)
     {
         var identifier = req.UsernameOrEmail.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u =>
             u.Username == identifier || u.Email == identifier);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
+        // The response doesn't say which one it was; the log does, for "I can't sign in" help.
+        // The typed identifier isn't logged (it may be an email address).
+        if (user is null)
+        {
+            loggerFactory.CreateLogger("Logit.Auth").LogInformation("Login failed: no such account");
             return Results.Unauthorized();
+        }
+        if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
+        {
+            loggerFactory.CreateLogger("Logit.Auth").LogInformation("Login failed: wrong password for user {UserId}", user.Id);
+            return Results.Unauthorized();
+        }
 
         // Other devices keep their tokens: signing in on a second phone must not sign the
         // first one out. Every token is revoked only on a password reset (ResetPassword).
@@ -83,14 +94,27 @@ public static class AuthEndpoints
         [FromBody] RefreshRequest req,
         AppDbContext db,
         TokenService tokens,
-        IConfiguration config)
+        IConfiguration config,
+        ILoggerFactory loggerFactory)
     {
         var stored = await db.RefreshTokens
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.Token == req.RefreshToken);
 
         if (stored is null || !stored.IsActive)
+        {
+            var log = loggerFactory.CreateLogger("Logit.Auth");
+            if (stored is null)
+                log.LogInformation("Refresh rejected: unknown token");
+            else if (stored.RevokedAt is not null)
+                // Tokens rotate on every refresh, so reuse of a revoked one means two refreshes
+                // raced on one device, or the token was copied. Either way the user is signed out.
+                log.LogWarning("Refresh rejected: token for user {UserId} was already used or revoked at {RevokedAt:o}",
+                    stored.UserId, stored.RevokedAt);
+            else
+                log.LogInformation("Refresh rejected: token for user {UserId} expired", stored.UserId);
             return Results.Unauthorized();
+        }
 
         // Rotate: revoke old, issue new
         stored.RevokedAt = DateTime.UtcNow;
