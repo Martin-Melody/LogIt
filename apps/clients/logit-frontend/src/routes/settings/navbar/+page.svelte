@@ -1,9 +1,11 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { get } from "svelte/store";
   import { ArrowLeft, ArrowRight, ArrowLeftRight, GripVertical } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import * as Card from "$lib/components/ui/card";
   import { authStore } from "$lib/api/authStore.svelte";
   import { navConfig, NAV_ITEM_DEFS, BAR_SLOTS } from "$lib/stores/navConfig.store";
@@ -152,10 +154,10 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="page-header -mx-3 -mt-3">
+  <PageHeader>
     <BackButton onclick={() => back("/settings")} />
     <h1 class="page-title">Customise navigation</h1>
-  </div>
+  </PageHeader>
 
   <!-- Bottom bar -->
   <Card.Root>
@@ -240,6 +242,23 @@
           {/if}
         {/each}
       </ul>
+    </Card.Content>
+  </Card.Root>
+
+  <!-- Swipe between pages -->
+  <Card.Root>
+    <Card.Content class="flex items-center gap-3 py-3">
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium">Swipe between pages</p>
+        <p class="text-xs text-muted-foreground">
+          Swipe left or right to move between the bottom bar pages, in bar order with Start in the middle.
+        </p>
+      </div>
+      <Switch
+        checked={$navConfig.swipe !== false}
+        label="Swipe between pages"
+        onchange={(on) => navConfig.setSwipe(on)}
+      />
     </Card.Content>
   </Card.Root>
 

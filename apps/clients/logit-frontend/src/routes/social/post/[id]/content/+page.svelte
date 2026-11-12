@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -122,10 +123,10 @@
 </script>
 
 <div class="flex flex-col min-h-full">
-  <header class="page-header sticky top-0 bg-background/95 backdrop-blur z-10">
+  <PageHeader>
     <BackButton onclick={() => history.back()} />
     <h1 class="page-title">{meta?.label ?? "Details"}</h1>
-  </header>
+  </PageHeader>
 
   {#if loading}
     <div class="flex justify-center py-20"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { Plus, Repeat, ShoppingCart, Check } from "lucide-svelte";
@@ -50,10 +51,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/nutrition")} />
     <h1 class="page-title">Meal plan</h1>
-  </div>
+  </PageHeader>
 
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>

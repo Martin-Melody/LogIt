@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
@@ -27,10 +28,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/habits")} />
     <h1 class="page-title">New habit</h1>
-  </div>
+  </PageHeader>
 
   <HabitEditor onsave={save} />
 </div>

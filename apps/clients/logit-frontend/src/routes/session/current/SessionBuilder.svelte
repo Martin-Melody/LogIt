@@ -18,6 +18,7 @@
 
   import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
+  import { bottomNavHeight } from "$lib/stores/bottomNav.store";
   import { reveal } from "$lib/transitions";
   import { startSessionTour, destroyActiveTour } from "$lib/tour/index";
 
@@ -42,6 +43,8 @@
     type GroupPickerModel,
   } from "$lib/features/session/grouping";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
+  import type { SessionPR } from "@logit/core/usecases/progression/getSessionPRs";
+  import { localInbox, prNotifications, progressionNotification } from "$lib/features/inbox/localInbox";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import BodyweightPromptDialog from "$lib/features/bodyweight/BodyweightPromptDialog.svelte";
   import { shouldAskForBodyweight, dismissBodyweightPrompt } from "$lib/features/bodyweight/bodyweight";
@@ -82,6 +85,8 @@
   });
 
   let recapSession = $state<WorkoutSession | null>(null);
+  // PRs the recap worked out, for the inbox once the session is saved.
+  let recapPrs: SessionPR[] = [];
   let shareSession = $state<WorkoutSession | null>(null);
   let hasPreviousSession = $state(false);
   let noteOpen = $state(false);
@@ -93,7 +98,9 @@
   }
   let finishBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
-  let addButtonBottom = $state(0);
+  let finishBarHeight = $state(0);
+  // The finish bar sits on top of the bottom nav, and the add button just above the bar.
+  const addButtonBottom = $derived(finishBarHeight > 0 ? $bottomNavHeight + finishBarHeight + 12 : 0);
 
   // The add button (and the shrunk circuit timer) sit just above the finish bar. The bar is
   // taken out and put back (e.g. while the keyboard is open), so follow whichever bar is on
@@ -101,7 +108,7 @@
   // to drop the button to the very bottom, where it stayed.
   function updateAddButtonOffset() {
     const h = finishBarEl?.offsetHeight ?? 0;
-    if (h > 0) addButtonBottom = h + 12;
+    if (h > 0) finishBarHeight = h;
   }
 
   $effect(() => {
@@ -343,21 +350,33 @@
       void recentSessions.refresh(5);
 
       if (sessionSnapshot) {
+        const now = Date.now();
+        localInbox.add(prNotifications(recapPrs, now));
+
         const deps = getProgressionDeps();
-        await Promise.all([
-          ...getExercises(sessionSnapshot).map((ex) =>
-            refreshProgressionState({ id: ex.exerciseId, name: ex.exerciseName }, deps),
-          ),
-          ...sessionSnapshot.blocks
-            .filter((b) => b.type === "mobility")
-            .map((b) => b.data as MobilityBlockData)
-            .map((d) =>
+        // One per exercise, even when it's in the session twice.
+        const strength = [
+          ...new Map(
+            getExercises(sessionSnapshot).map((ex) => [ex.exerciseId ?? ex.exerciseName, { id: ex.exerciseId, name: ex.exerciseName }]),
+          ).values(),
+        ];
+        const mobility = sessionSnapshot.blocks
+          .filter((b) => b.type === "mobility")
+          .map((b) => b.data as MobilityBlockData);
+        const [outputs] = await Promise.all([
+          Promise.all(strength.map((ex) => refreshProgressionState(ex, deps))),
+          Promise.all(
+            mobility.map((d) =>
               refreshMobilityProgressionState(
                 { id: d.drillId, name: d.drillName, metric: d.metric, perSide: d.perSide },
                 deps,
               ),
             ),
+          ),
         ]);
+        localInbox.add(
+          strength.flatMap((ex, i) => progressionNotification(ex, outputs[i]?.change, now, i) ?? []),
+        );
       }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to finish workout";
@@ -667,6 +686,7 @@
   {#if recapSession}
     <WorkoutRecapScreen
       session={recapSession}
+      onPrs={(prs) => (recapPrs = prs)}
       onDone={confirmFinish}
       onCancel={() => { recapSession = null; }}
       onShare={(s) => { shareSession = s; }}
@@ -772,7 +792,8 @@
     <div
       bind:this={finishBarEl}
       data-tour="session-finish"
-      class="fixed left-0 right-0 bottom-0 border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+      class="fixed left-0 right-0 z-10 border-t border-border bg-background px-3 py-3"
+      style="bottom: {$bottomNavHeight}px"
     >
       <FinishWorkoutCard
         canFinish={!!$currentSession && !$currentSession.endedAtMs && hasLoggableWork}

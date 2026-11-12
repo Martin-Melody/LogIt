@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { back } from "$lib/navigation";
   import ExerciseDetailBody from "$lib/features/exercise/components/ExerciseDetailBody.svelte";
@@ -12,12 +13,12 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/exercises")} />
     <div class="flex-1 min-w-0">
       <span class="text-base font-semibold truncate block">{exerciseName}</span>
     </div>
-  </div>
+  </PageHeader>
 
   <ExerciseDetailBody
     exerciseId={id}

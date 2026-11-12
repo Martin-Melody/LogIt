@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { Button } from "$lib/components/ui/button";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -116,7 +117,7 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/")} />
     <h1 class="page-title">Habits</h1>
     <button
@@ -127,7 +128,7 @@
     >
       <Plus class="h-4 w-4" />
     </button>
-  </div>
+  </PageHeader>
 
   {#if ui.error}
     <p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>

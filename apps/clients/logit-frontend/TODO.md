@@ -25,27 +25,16 @@
 - [ ] A time budget for a workout ("I have 1 hour"): plan sets to fit, using how long each
       exercise usually takes. `ProgressionInput` already carries `timeBudgetMs`; nothing sets or
       uses it yet.
-- [ ] Swipe between the bottom-nav pages, Instagram style, in bar order (Start in the middle).
-      With the default bar that's Home ↔ Social ↔ Start ↔ Profile. Show the bottom nav on the
-      workout screen too (it's hidden on `/session/current` and `/session/plan` today).
-      On/off toggle in Settings › Navigation bar (`/settings/navbar`); the order is the bar order.
-  - Opening `/session/current` starts a workout (`currentSession.start()` on load), so swiping
-    past it would start one by accident. It needs an idle "Start workout" state first.
-  - Only on the tab pages themselves, not detail pages like `/exercises/[id]` (those keep
-    swipe-to-go-back).
-  - Clashes with things that already swipe sideways: swipe-to-edit/delete set rows, the Today's
-    Plan carousel, drag grips, charts. They need to claim the gesture first.
-  - Start with "swipe, then slide to the next page" (the layout already uses view transitions).
-    A page that follows the finger means rendering neighbouring pages at the same time; only
-    do that if the simple version feels wrong.
-- [ ] One shared top header (like the bottom nav) with a notifications bell on every main page.
-      Exceptions to decide; probably onboarding/auth and maybe the workout screen.
-  - The bell opens one inbox: social (likes, comments, follows, from the server) plus local
-    ones: PRs, progression (target raised, deload suggested), nutrition, habits/check-ins.
-  - Local notifications need storing on the device (they work offline and signed out); social
-    ones stay on the server. Merge them in the inbox, with filter chips and per-type on/off.
-  - Pages currently draw their own headers (`page-header`), so each page needs to hand its
-    title and buttons to the shared header.
+- [ ] Notifications inbox, what's left after the first pass (2026-11-12, branch
+      `feat/nav-swipe-header`; the swipe nav and shared header are in Done):
+  - Local notifications for nutrition and habits/check-ins. Only PRs (heaviest weight, or
+    more reps at it; a first-ever set isn't one) and progression changes (target raised,
+    deload) are made so far, when a workout is finished (`features/inbox/localInbox.ts`).
+  - Per-type on/off. Filter chips (All / Social / PRs / Progression) are there.
+  - Mobility progression changes: `refreshMobilityProgressionState` doesn't return its
+    output yet, so mobility drills never make one.
+  - Social notifications load a page at a time and local ones all at once, so an old local
+    item can sit below the loaded social page until the next page loads.
 - [ ] Mobility (maybe any exercise) as a circuit or one after another, with a countdown and
       no tapping "add set" + "start timer" for every drill. **Needs a design conversation
       first.** What's there now: hold timer counts up and doesn't stop at the target; supersets
@@ -240,6 +229,18 @@ the app. If an interface has to grow to make that possible, grow it, so other au
 the same features in their own algorithms.
 
 ## Done
+
+- [x] Swipe between the bottom-nav pages in bar order, Start in the middle (2026-11-12).
+      Only on the tab pages; anything that takes the gesture wins (set rows and grips via
+      preventDefault, touch-action, horizontal scrollers, charts, fixed overlays, screen
+      edges). Slides the way the bar goes. On/off in Settings › Navigation bar. The bottom
+      nav shows on the workout screen; `/session/current` no longer starts a workout, it
+      shows an idle Start screen (today's split day / empty / repeat last).
+- [x] One shared top header with a notifications bell (2026-11-12). Pages hand their header
+      markup to the layout with `<PageHeader>`; the workout uses it too (timer, no bell:
+      its own header inside the page made the content jump on the way in), onboarding/auth
+      have none. Back buttons hide on bar pages. The bell opens `/inbox`
+      (social + local), `/social/notifications` redirects there.
 
 - [x] Today's Plan card is a carousel (today, tomorrow, …).
 - [x] Search on the Sessions page.
