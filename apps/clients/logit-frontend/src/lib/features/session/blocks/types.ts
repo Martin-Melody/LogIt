@@ -15,6 +15,11 @@ export interface BlockBaseProps<T = unknown> {
    * group, or the group leaves it to the exercise) = the exercise's own rest.
    */
   groupRestMs?: number;
+  /**
+   * Show only this round (0-based) of the block: its set for that round, for a group's
+   * "by round" view. Undefined = the whole block. Blocks without rounds ignore it.
+   */
+  round?: number;
   gripAction: GripAction;
   /**
    * Opens the "Superset / circuit with…" picker for this block. Blocks show the

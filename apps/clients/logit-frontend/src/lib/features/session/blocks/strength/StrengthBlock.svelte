@@ -50,6 +50,7 @@
     saving,
     grouped = false,
     groupRestMs,
+    round,
     gripAction,
     onGroup,
     onDelete,
@@ -559,7 +560,8 @@
   {meter}
   {saving}
   {suggestion}
-  {collapsed}
+  collapsed={round === undefined ? collapsed : false}
+  roundView={round !== undefined}
   {hasActiveTimer}
   weightUnit={$profile.weightUnit}
   {bodyweight}
@@ -575,7 +577,48 @@
   onDismissNudge={handleDismissNudge}
   onAcceptNudge={handleAcceptNudge}
 >
-  {#if data.sets.length > 0}
+  {#if round !== undefined}
+    <!-- One round of a group: only this exercise's set for that round. -->
+    {@const roundSet = [...data.sets].sort(sortByOrderIndex)[round]}
+    {#if roundSet}
+      {@const workingIdx = workingSets.findIndex((w) => w.id === roundSet.id)}
+      {@const roundNum = workingIdx === -1 ? 0 : workingIdx + 1}
+      <SwipeRevealRow
+        disabled={saving}
+        actionsWidth={80}
+        onDelete={() => handleDeleteSet(roundSet.id)}
+        onEdit={() => openEditSet(roundSet.id, roundNum || null)}
+      >
+        <SetRow
+          setNumber={roundNum}
+          setType={roundSet.setType}
+          reps={roundSet.reps}
+          weight={roundSet.weight}
+          weightUnit={$profile.weightUnit}
+          {bodyweight}
+          rpe={roundSet.rpe ?? null}
+          prev={roundNum ? (prevLeadSets[roundNum - 1] ?? null) : null}
+          target={roundSet.target ?? null}
+          onOpenDetails={() => openEditSet(roundSet.id, roundNum || null)}
+          completed={roundSet.completed ?? false}
+          disabled={saving}
+          gripAction={noopGripAction}
+          onRepsChange={(r) => handleRepsChange(roundSet.id, r)}
+          onWeightChange={(w) => handleWeightChange(roundSet.id, w)}
+          onComplete={() => handleComplete(roundSet.id)}
+        />
+      </SwipeRevealRow>
+      {#if typeof roundSet.restStartedAtMs === "number"}
+        <div transition:reveal>
+          <RestProgressBar
+            restStartedAtMs={roundSet.restStartedAtMs}
+            restDurationMs={strengthRestMs(roundSet, $profile.restDefaults)}
+            onDismiss={() => handleDismissRest(roundSet.id)}
+          />
+        </div>
+      {/if}
+    {/if}
+  {:else if data.sets.length > 0}
     {#if canWarmup}
       <button
         type="button"

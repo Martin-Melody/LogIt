@@ -1247,19 +1247,39 @@ export function supersetRoundCount(members: SessionBlock[]): number {
   return Math.max(0, ...members.map(memberRoundCount));
 }
 
-/** Which of a member's rounds are logged: a strength set ticked, or a mobility set / both sides of a pair. */
-function memberRoundsDone(block: SessionBlock): boolean[] {
+/** A member's sets per round: a strength set, or a mobility set / both sides of a pair. */
+function memberRoundSets(block: SessionBlock): { completed?: boolean; restStartedAtMs?: number | null }[][] {
   if (block.type === "strength") {
-    return [...(block.data as StrengthBlockData).sets]
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((s) => !!s.completed);
+    return [...(block.data as StrengthBlockData).sets].sort((a, b) => a.orderIndex - b.orderIndex).map((s) => [s]);
   }
   if (block.type === "mobility") {
     return mobilitySetGroups(block.data as MobilityBlockData).map((g) =>
-      g.kind === "single" ? !!g.set.completed : [g.left, g.right].every((x) => !x || x.completed),
+      g.kind === "single" ? [g.set] : [g.left, g.right].filter((x): x is MobilitySet => !!x),
     );
   }
   return [];
+}
+
+/** Which of a member's rounds are logged (both sides of a pair). */
+function memberRoundsDone(block: SessionBlock): boolean[] {
+  return memberRoundSets(block).map((sets) => sets.every((s) => s.completed));
+}
+
+/**
+ * Each round of a group: how many members have a set in it, how many of those are
+ * logged, and whether a rest timer is running on one of its sets.
+ */
+export function groupRounds(members: SessionBlock[]): { total: number; done: number; resting: boolean }[] {
+  const perMember = members.map(memberRoundSets);
+  const count = Math.max(0, ...perMember.map((r) => r.length));
+  return Array.from({ length: count }, (_, r) => {
+    const sets = perMember.map((m) => m[r]).filter((x): x is NonNullable<typeof x> => !!x);
+    return {
+      total: sets.length,
+      done: sets.filter((x) => x.every((s) => s.completed)).length,
+      resting: sets.some((x) => x.some((s) => typeof s.restStartedAtMs === "number")),
+    };
+  });
 }
 
 /**

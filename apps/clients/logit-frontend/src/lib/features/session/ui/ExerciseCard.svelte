@@ -23,6 +23,7 @@
     bodyweight = false,
     grouped = false,
     canSuperset = false,
+    roundView = false,
     gripAction,
     onAddSet = () => {},
     onOpenDetail = () => {},
@@ -49,6 +50,8 @@
     bodyweight?: boolean;
     grouped?: boolean;
     canSuperset?: boolean;
+    /** One round of a group: just the name, menu and that round's set (no grip, collapse, add set or meter). */
+    roundView?: boolean;
     gripAction: GripAction;
     onAddSet?: () => void | Promise<void>;
     onOpenDetail?: () => void;
@@ -84,7 +87,8 @@
 <div class="border-t border-border bg-muted/20" data-tour="session-exercise-header">
   <!-- Every control here is a 44px target. Swap / superset / remove live in the
        ⋯ menu so the row doesn't need six icons and the name keeps its room. -->
-  <div class="flex items-center pl-1 pr-1">
+  <div class="flex items-center {roundView ? 'pl-3' : 'pl-1'} pr-1">
+    {#if !roundView}
     <!-- Grip handle. Inside a superset / circuit it moves the exercise within the group. -->
     <button
       type="button"
@@ -112,6 +116,7 @@
         <ChevronDown class="h-4 w-4" />
       {/if}
     </button>
+    {/if}
 
     <button
       type="button"
@@ -133,7 +138,7 @@
       </span>
     {/if}
 
-    {#if !collapsed}
+    {#if !collapsed && !roundView}
       <button
         type="button"
         class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
@@ -181,7 +186,7 @@
     />
   </div>
 
-  {#if !collapsed && suggestion && suggestion.sets.length > 0}
+  {#if !collapsed && !roundView && suggestion && suggestion.sets.length > 0}
     {#if showMeter && goal}
       <div class="px-3 pb-2.5 flex flex-col gap-1.5" data-testid="progress-meter">
         <div class="flex items-center gap-2">

@@ -10,6 +10,7 @@
     saving,
     grouped = false,
     groupRestMs,
+    round,
     gripAction,
     onGroup,
     onDelete,
@@ -21,6 +22,7 @@
     saving: boolean;
     grouped?: boolean;
     groupRestMs?: number;
+    round?: number;
     gripAction: GripAction;
     onGroup?: () => void;
     onDelete: () => void | Promise<void>;
@@ -38,6 +40,7 @@
     {saving}
     {grouped}
     {groupRestMs}
+    {round}
     {gripAction}
     {onGroup}
     {onDelete}
