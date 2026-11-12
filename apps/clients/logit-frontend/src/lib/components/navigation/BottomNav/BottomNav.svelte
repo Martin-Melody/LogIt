@@ -12,7 +12,9 @@
   let showMore = $state(false);
 
   const hasSession = $derived(!!$currentSession);
-  const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/current") || page.url.pathname.startsWith("/session/plan"));
+  // Hidden on the plan screen (a step with its own Start bar); shown on the workout screen.
+  const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/plan"));
+  const onWorkout = $derived(page.url.pathname.startsWith("/session/current"));
 
   // One entry per bar slot; null where the item needs an account and there isn't
   // one (yet). Positional, so nothing shifts sideways when sign-in resolves.
@@ -48,7 +50,7 @@
 {#if !hidden}
   <!-- Five fixed slots, so Start stays centred even when a slot is empty (an item
        that needs an account while signed out, or a bar customised to fewer items). -->
-  <nav class="grid grid-cols-5 items-end justify-items-center px-2 pt-0.5 pb-2" aria-label="Main navigation">
+  <nav class="grid grid-cols-5 items-end justify-items-center border-t border-border px-2 pt-0.5 pb-2" aria-label="Main navigation">
 
     <!-- Left bar slots (indices 0 and 1) -->
     {#each [0, 1] as i (i)}
@@ -64,6 +66,7 @@
     <a
       href="/session/current"
       aria-label={hasSession ? "Resume session" : "Start session"}
+      aria-current={onWorkout ? "page" : undefined}
       class="relative flex -mt-4 flex-col items-center px-1 text-[11px]"
     >
       <div class="relative">
@@ -75,7 +78,7 @@
           <Dumbbell size={22} strokeWidth={2} />
         </div>
       </div>
-      <span class="mt-1 text-muted-foreground">{hasSession ? "Resume" : "Start"}</span>
+      <span class="mt-1 {onWorkout ? 'text-primary font-medium' : 'text-muted-foreground'}">{hasSession ? (onWorkout ? "Workout" : "Resume") : "Start"}</span>
     </a>
 
     <!-- Right bar slot (index 2) -->

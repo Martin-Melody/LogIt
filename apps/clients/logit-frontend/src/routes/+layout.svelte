@@ -11,8 +11,12 @@
   import { onboarding } from "$lib/stores/onboarding.store";
   import { goto, onNavigate } from "$app/navigation";
   import { ModeWatcher } from "mode-watcher";
+  import { bottomNavHeight } from "$lib/stores/bottomNav.store";
 
   let { children } = $props();
+
+  let footerHeight = $state(0);
+  $effect(() => bottomNavHeight.set(footerHeight));
 
   const isOnboarding = $derived(
     page.url.pathname.startsWith("/onboarding") ||
@@ -78,7 +82,8 @@
       </main>
 
       <footer
-        class="border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
+        class="bg-background pb-[env(safe-area-inset-bottom)]"
+        bind:offsetHeight={footerHeight}
       >
         <BottomNav />
       </footer>
