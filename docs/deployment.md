@@ -17,6 +17,30 @@ Runs the API (SQLite storage, persisted in a named volume) and the analytics web
 (`logit-web`) on your own machine or server. See the root `README`/`.env.example` for the two
 required secrets. This is the whole self-host story — no AWS or Cloudflare account needed.
 
+## Logs and diagnostics
+
+**Server.** The API writes one line per request to stdout (`docker compose logs -f api`):
+
+```
+2026-11-12 15:59:13.458Z INFO  Logit.Requests req=76ac8caa85c1 POST /auth/login 401 590ms user=-
+```
+
+`req=` is the request id. The app sends one with every call (`X-Request-Id`) and keeps it in its
+own log, so an app entry like `POST /sync/sessions 500 {"requestId":"76ac8caa85c1"}` can be found
+with `grep 76ac8caa85c1`. A 500 also returns the id to the app ("Reference: …"). Anything logged
+while handling the request (auth failures, billing webhooks, unreadable stored data, exceptions
+with their stack trace) carries the same `req=`. For structured output (e.g. CloudWatch queries)
+set `Logging__Console__FormatterName=json`; the id is then a `RequestId` field. Levels are set
+under `Logging:LogLevel` as usual (`Logging__LogLevel__Default=Debug` for more detail).
+
+**App.** Settings → Diagnostics shows the app's own log (newest 1,000 entries, kept on the
+device): failed and slow requests, sync steps that failed, crashes. Users can copy it or save it
+as a file. "Detailed logging" also records every request and sync step. On the hosted service a
+signed-in user can also **Send to Logit**: the report is stored in `DiagnosticReports`, shown on
+`/admin` under "Diagnostics", deleted after 30 days and with the account. Self-hosted servers
+refuse reports (404) and the app doesn't offer the button, so self-hosted and offline logs never
+leave the device.
+
 ## Logit-hosted (paid) — what actually runs where
 
 | Piece | What it is | Runs on | Example URL |

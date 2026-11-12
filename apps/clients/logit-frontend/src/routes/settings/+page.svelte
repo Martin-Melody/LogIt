@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { log } from "@logit/core/platform/log";
   import { BETWEEN_EXERCISES_KEY, GET_READY_KEY, circuitDefaultsFrom } from "$lib/features/session/circuit/circuitSettings";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
@@ -96,7 +97,7 @@
       // before local history was ever fully backfilled to the server.
       await pushAllLocalData();
       const ok = await syncAll();
-      if (!ok) toast.error("Couldn't sync — some data didn't reach the server. Try again shortly.");
+      if (!ok) toast.error("Couldn't sync — some data didn't reach the server. Try again shortly, or see Diagnostics below for what failed.");
     } finally {
       syncing = false;
     }
@@ -512,7 +513,7 @@
         await authStore.logout();
       }
     } catch (e) {
-      console.error("Failed to delete local account", e);
+      log.error("accounts", "Could not delete local account", e);
     } finally {
       deletingAccountId = null;
     }
@@ -1480,6 +1481,12 @@
         class="flex min-h-11 items-center justify-between text-sm hover:text-foreground text-muted-foreground"
       >
         Terms of Service <ChevronRight class="h-3.5 w-3.5" />
+      </a>
+      <a
+        href="/settings/diagnostics"
+        class="flex min-h-11 items-center justify-between text-sm hover:text-foreground text-muted-foreground"
+      >
+        Diagnostics <ChevronRight class="h-3.5 w-3.5" />
       </a>
     </Card.Content>
   </Card.Root>

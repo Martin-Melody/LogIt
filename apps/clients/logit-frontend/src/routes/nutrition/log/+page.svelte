@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { log } from "@logit/core/platform/log";
   import { segment, segmentTrack, chip } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -249,7 +250,7 @@
       if (code) void lookupBarcode(code);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.warn("[barcode] native scan failed", e);
+      log.warn("scanner", "Native barcode scan failed", e);
       toast(
         msg === "scanner-preparing"
           ? "Preparing the scanner — try again in a moment."

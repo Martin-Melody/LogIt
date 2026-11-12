@@ -1,3 +1,6 @@
+/** Build id injected by vite.config.ts (commit and build date). */
+declare const __LOGIT_BUILD__: string;
+
 declare module "d3-scale" {
   export function scaleUtc(): any;
 }

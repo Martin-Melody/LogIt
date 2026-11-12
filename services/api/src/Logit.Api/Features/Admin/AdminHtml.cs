@@ -169,6 +169,7 @@ public static class AdminHtml
               <div class="stat"><span class="stat-val" id="stat-tokens">—</span><span class="stat-label">Active logins</span></div>
               <div class="stat"><span class="stat-val" id="stat-workouts">—</span><span class="stat-label">Workouts</span></div>
               <div class="stat" style="cursor:pointer" onclick="toggleReports()"><span class="stat-val" id="stat-reports">—</span><span class="stat-label">Open reports</span></div>
+              <div class="stat" style="cursor:pointer" onclick="toggleDiagnostics()"><span class="stat-val" id="stat-diagnostics">—</span><span class="stat-label">Diagnostics</span></div>
             </div>
             <button class="topbar-logout" onclick="logout()">Sign out</button>
           </div>
@@ -177,6 +178,13 @@ public static class AdminHtml
           <div id="reports-panel" style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);max-height:40vh;overflow-y:auto">
             <h3 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Open reports</h3>
             <div id="reports-list"></div>
+          </div>
+
+          <!-- Diagnostics reports panel -->
+          <div id="diagnostics-panel" style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);max-height:60vh;overflow-y:auto">
+            <h3 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Diagnostics reports (kept 30 days)</h3>
+            <div id="diagnostics-list"></div>
+            <pre id="diagnostics-log" style="display:none;margin-top:12px;padding:10px;background:var(--surface,#111);border:1px solid var(--border);border-radius:6px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-all;max-height:50vh;overflow:auto"></pre>
           </div>
 
           <div class="main">
@@ -343,6 +351,43 @@ public static class AdminHtml
             document.getElementById('stat-posts').textContent = s.postCount.toLocaleString();
             document.getElementById('stat-tokens').textContent = s.activeTokens.toLocaleString();
             document.getElementById('stat-workouts').textContent = s.workoutCount.toLocaleString();
+            document.getElementById('stat-diagnostics').textContent = s.diagnosticsCount.toLocaleString();
+          }
+
+          function esc(v) {
+            return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+          }
+          async function toggleDiagnostics() {
+            const p = document.getElementById('diagnostics-panel');
+            const open = p.style.display === 'none';
+            p.style.display = open ? 'block' : 'none';
+            if (open) await loadDiagnostics();
+          }
+          async function loadDiagnostics() {
+            const { reports } = await api('/diagnostics');
+            document.getElementById('stat-diagnostics').textContent = reports.length.toLocaleString();
+            const el = document.getElementById('diagnostics-list');
+            if (!reports.length) { el.innerHTML = '<div class="empty">No diagnostics reports.</div>'; return; }
+            el.innerHTML = reports.map(r => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+                <div><strong>@${esc(r.user.username)}</strong> · ${esc(r.platform)} · ${esc(r.appVersion)} · ${new Date(r.createdAt).toLocaleString()} · ${(r.chars / 1024).toFixed(0)} KB · ref ${esc(r.id.slice(0, 8))}</div>
+                ${r.note ? `<div style="font-size:12px;margin-top:2px">${esc(r.note)}</div>` : ''}
+                <div style="margin-top:6px;display:flex;gap:6px">
+                  <button class="btn-warn" onclick="viewDiagnostics('${esc(r.id)}')">View log</button>
+                  <button class="btn-danger" onclick="deleteDiagnostics('${esc(r.id)}')">Delete</button>
+                </div>
+              </div>`).join('');
+          }
+          async function viewDiagnostics(id) {
+            const r = await api(`/diagnostics/${id}`);
+            const pre = document.getElementById('diagnostics-log');
+            pre.textContent = r.log;
+            pre.style.display = 'block';
+            pre.scrollIntoView({ block: 'nearest' });
+          }
+          async function deleteDiagnostics(id) {
+            await api(`/diagnostics/${id}`, { method: 'DELETE' });
+            document.getElementById('diagnostics-log').style.display = 'none';
+            await loadDiagnostics();
           }
 
           let reports = [], reportPreviews = {};

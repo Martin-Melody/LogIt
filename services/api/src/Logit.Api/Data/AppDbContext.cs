@@ -34,6 +34,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedHabit> SyncedHabits => Set<SyncedHabit>();
     public DbSet<SyncedHabitEntry> SyncedHabitEntries => Set<SyncedHabitEntry>();
     public DbSet<CoachHabit> CoachHabits => Set<CoachHabit>();
+    public DbSet<DiagnosticReport> DiagnosticReports => Set<DiagnosticReport>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -139,6 +140,18 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(b => b.Blocked)
              .WithMany()
              .HasForeignKey(b => b.BlockedId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<DiagnosticReport>(e =>
+        {
+            e.HasIndex(r => r.CreatedAt);
+            e.Property(r => r.AppVersion).HasMaxLength(100);
+            e.Property(r => r.Platform).HasMaxLength(20);
+            e.Property(r => r.Note).HasMaxLength(DiagnosticsLimits.MaxNoteChars);
+            e.HasOne(r => r.User)
+             .WithMany()
+             .HasForeignKey(r => r.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 
