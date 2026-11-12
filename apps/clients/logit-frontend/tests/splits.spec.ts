@@ -126,3 +126,44 @@ test.describe("a split day with a circuit", () => {
     expect(drills.every((b: { data: { superset?: { label: string } } }) => b.data.superset?.label === "Hip opener")).toBe(true);
   });
 });
+
+test.describe("Quick Start on home", () => {
+  test("Start Day opens the day with the split's sets when no algorithm is picked", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+      localStorage.setItem(
+        "logit:tours:v1",
+        JSON.stringify({ home: true, session: true, splits: true, splitDetail: true, splitDay: true }),
+      );
+      localStorage.setItem("logit:activeSplitId:v1", JSON.stringify("split-q"));
+      localStorage.setItem(
+        "logit:splits:v1",
+        JSON.stringify([
+          {
+            id: "split-q",
+            name: "Upper",
+            archived: false,
+            createdAtMs: Date.now(),
+            updatedAtMs: Date.now(),
+            days: [
+              {
+                id: "dq",
+                orderIndex: 0,
+                name: "Upper A",
+                blocks: [{ type: "strength", id: "q1", orderIndex: 0, exerciseName: "Bench Press", targets: { sets: 3, reps: 6, weight: 80 } }],
+              },
+            ],
+          },
+        ]),
+      );
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Start Day 1 — Upper A" }).click();
+    await page.waitForURL("**/session/current");
+    await expect(page.getByRole("main")).toContainText("Bench Press");
+    const draft = await page.evaluate(() => JSON.parse(localStorage.getItem("logit:draft:v1") ?? "null"));
+    const sets = draft.blocks[0].data.sets;
+    expect(sets).toHaveLength(3);
+    expect(sets.every((s: { target: unknown }) => JSON.stringify(s.target) === JSON.stringify({ reps: 6, weight: 80 }))).toBe(true);
+  });
+});

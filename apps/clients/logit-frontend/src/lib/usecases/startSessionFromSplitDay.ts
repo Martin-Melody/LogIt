@@ -1,7 +1,7 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
 import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 import type { MobilitySide, WorkoutSession } from "@logit/core/domain/workout";
-import { padGroupRounds, splitDaySession } from "@logit/core/domain/splitDaySession";
+import { padPlannedSets, splitDaySession } from "@logit/core/domain/splitDaySession";
 import { planSession, type SessionPlan } from "@logit/core/usecases/progression/planSession";
 import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 import { get } from "svelte/store";
@@ -23,8 +23,9 @@ export async function planSplitDay(day: SplitDay, opts: { leadSide?: MobilitySid
     // A plan is a convenience; never let it stop a workout from starting.
     plan = { session: built.session, suggestions: {} };
   }
-  // A group's rounds are its exercises' sets, planned or not.
-  return { ...plan, session: padGroupRounds(plan.session, built.roundsByBlockId, built.targetsByBlockId) };
+  // A group's rounds are its exercises' sets, and the split's own set targets stand in
+  // where the algorithm planned nothing.
+  return { ...plan, session: padPlannedSets(plan.session, built) };
 }
 
 /** Save a planned session as the in-progress workout, timed from now. */

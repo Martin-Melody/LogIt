@@ -2,6 +2,17 @@
 
 ## Open
 
+- [ ] Martin still gets an empty workout from home › Quick Start › Start Day (2026-11-12).
+      Not reproduced: his synced split (PPL, next day Legs = a 4-round circuit of drills)
+      starts fine on web and through the SQLite repo/draft code in tests. Fixed meanwhile:
+      exercises with no algorithm plan start with the split's set target
+      (`padPlannedSets`), and Start Day no longer falls back to an empty workout when the
+      active split isn't loaded. Next: his answers (button label, plan screen shown, empty
+      vs no sets) or logs over wireless ADB.
+- [ ] Server keeps several `SyncedSplits` rows for one split (Martin's "Upper / Lower" has
+      six under `split_chuHTTustOVMytKveBjvi`, one per edit on 2026-09-05). Should be one row
+      per user + ClientId (upsert, unique index).
+
 - [ ] Leave a single exercise (or set) out of progression. Whole sessions can already be
       excluded (session details › Edit › "Exclude from progression"), e.g. a weekend at
       another gym, but not one exercise on its own, e.g. one machine that felt different.

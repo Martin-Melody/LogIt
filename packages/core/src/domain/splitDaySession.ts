@@ -29,6 +29,8 @@ export type SplitDaySession = {
   targetsByBlockId: Record<string, PlannedTargets | undefined>;
   /** Rounds each grouped strength block should have, by workout block id. */
   roundsByBlockId: Record<string, number>;
+  /** The set target of each strength block not in a group, by workout block id. */
+  ownSetsByBlockId: Record<string, number>;
   /** The workout group each planned group became, by planned group id. */
   groupIdByPlannedId: Record<string, string>;
 };
@@ -40,6 +42,7 @@ export function splitDaySession(
   let session = createSession(opts.startedAtMs);
   const targetsByBlockId: Record<string, PlannedTargets | undefined> = {};
   const roundsByBlockId: Record<string, number> = {};
+  const ownSetsByBlockId: Record<string, number> = {};
   const sessionIdByPlannedId: Record<string, string> = {};
 
   for (const block of sortPlannedBlocks(day.blocks)) {
@@ -50,6 +53,7 @@ export function splitDaySession(
       const grouped = !!block.groupId && count !== undefined;
       targetsByBlockId[id] = grouped ? { ...block.targets, sets: count } : block.targets;
       if (grouped) roundsByBlockId[id] = count!;
+      else if (count) ownSetsByBlockId[id] = count;
       sessionIdByPlannedId[block.id] = id;
     } else if (block.type === "cardio") {
       session = addCardioBlock(session, block.activityName);
@@ -96,7 +100,26 @@ export function splitDaySession(
     });
   }
 
-  return { session, targetsByBlockId, roundsByBlockId, groupIdByPlannedId };
+  return { session, targetsByBlockId, roundsByBlockId, ownSetsByBlockId, groupIdByPlannedId };
+}
+
+/**
+ * Fill in the sets the progression plan didn't: a grouped exercise gets up to its group's
+ * rounds, and an exercise with no sets at all (no algorithm picked, or nothing to go on
+ * yet) gets the split's set target. An exercise the algorithm planned keeps its plan.
+ */
+export function padPlannedSets(
+  session: WorkoutSession,
+  built: Pick<SplitDaySession, "roundsByBlockId" | "ownSetsByBlockId" | "targetsByBlockId">,
+): WorkoutSession {
+  let out = padGroupRounds(session, built.roundsByBlockId, built.targetsByBlockId);
+  const empty: Record<string, number> = {};
+  for (const [id, sets] of Object.entries(built.ownSetsByBlockId)) {
+    const block = out.blocks.find((b) => b.id === id);
+    if (block?.type === "strength" && (block.data as StrengthBlockData).sets.length === 0) empty[id] = sets;
+  }
+  out = padGroupRounds(out, empty, built.targetsByBlockId);
+  return out;
 }
 
 /**

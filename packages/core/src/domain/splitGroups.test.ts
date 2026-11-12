@@ -261,3 +261,34 @@ describe("split day → workout", () => {
     expect(setsB.every((x) => !x.target && x.reps === 0)).toBe(true);
   });
 });
+
+describe("split targets without a plan", () => {
+  it("an exercise the algorithm planned nothing for gets the split's sets", async () => {
+    const { padPlannedSets } = await import("./splitDaySession");
+    let s = createSplit("T");
+    s = addDay(s);
+    const dayId = s.days[0]!.id;
+    s = addPlannedStrength(s, dayId, { exerciseName: "Bench", targets: { sets: 3, reps: 6, weight: 80 } });
+    s = addPlannedStrength(s, dayId, { exerciseName: "Curl", targets: { sets: 2 } });
+    s = addPlannedStrength(s, dayId, { exerciseName: "Dips", targets: {} });
+    const built = splitDaySession(s.days[0]!);
+    const sets = padPlannedSets(built.session, built).blocks.map((b) => (b.data as StrengthBlockData).sets);
+    expect(sets[0]!.map((x) => x.target)).toEqual(Array(3).fill({ reps: 6, weight: 80 }));
+    expect(sets[1]!).toHaveLength(2);
+    expect(sets[1]!.every((x) => !x.target && x.reps === 0)).toBe(true);
+    expect(sets[2]!).toHaveLength(0);
+  });
+
+  it("leaves an exercise the algorithm planned alone", async () => {
+    const { padPlannedSets } = await import("./splitDaySession");
+    const { applySetPlan } = await import("./workout");
+    let s = createSplit("T");
+    s = addDay(s);
+    s = addPlannedStrength(s, s.days[0]!.id, { exerciseName: "Bench", targets: { sets: 5, reps: 5 } });
+    const built = splitDaySession(s.days[0]!);
+    const id = built.session.blocks[0]!.id;
+    const planned = applySetPlan(built.session, id, [{ reps: 8, weight: 70 }, { reps: 8, weight: 70 }]);
+    const sets = (padPlannedSets(planned, built).blocks[0]!.data as StrengthBlockData).sets;
+    expect(sets.map((x) => x.target)).toEqual([{ reps: 8, weight: 70 }, { reps: 8, weight: 70 }]);
+  });
+});
