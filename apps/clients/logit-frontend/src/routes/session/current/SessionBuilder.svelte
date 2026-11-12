@@ -12,7 +12,7 @@
   import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import type { WorkoutSession, SessionBlock, MobilityBlockData, MobilityMetric } from "@logit/core/domain/workout";
-  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote, dropUnloggedPlannedSets, groupIntoSuperset } from "@logit/core/domain/workout";
+  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote, dropUnloggedPlannedSets, groupIntoSuperset, minGroupSize, type GroupKind } from "@logit/core/domain/workout";
   import { refreshMobilityProgressionState } from "@logit/core/usecases/progression/getMobilitySuggestion";
   import { mobilityDrillKey, getMobilityDrillLeadSide } from "$lib/data/mobilityDrillPrefs";
 
@@ -32,7 +32,15 @@
   import CircuitOverlay from "$lib/features/session/circuit/CircuitOverlay.svelte";
   import { circuitRunner } from "$lib/features/session/circuit/circuitRunner";
   import GroupPickerSheet from "$lib/features/session/ui/GroupPickerSheet.svelte";
-  import { groupPickerModel, groupConfirmLabel, allowedDropIndices, nearestAllowed, type GroupPickerModel } from "$lib/features/session/grouping";
+  import {
+    groupPickerModel,
+    groupConfirmLabel,
+    canConfirmGroup,
+    pickerGroupKind,
+    allowedDropIndices,
+    nearestAllowed,
+    type GroupPickerModel,
+  } from "$lib/features/session/grouping";
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import BodyweightPromptDialog from "$lib/features/bodyweight/BodyweightPromptDialog.svelte";
@@ -87,14 +95,21 @@
   let blocksListEl = $state<HTMLElement | null>(null);
   let addButtonBottom = $state(0);
 
+  // The add button (and the shrunk circuit timer) sit just above the finish bar. The bar is
+  // taken out and put back (e.g. while the keyboard is open), so follow whichever bar is on
+  // screen, and keep the last good offset while there is none: measuring a missing bar used
+  // to drop the button to the very bottom, where it stayed.
   function updateAddButtonOffset() {
-    addButtonBottom = (finishBarEl?.offsetHeight ?? 0) + 12;
+    const h = finishBarEl?.offsetHeight ?? 0;
+    if (h > 0) addButtonBottom = h + 12;
   }
 
-  onMount(() => {
+  $effect(() => {
+    const el = finishBarEl;
+    if (!el) return;
     updateAddButtonOffset();
     const observer = new ResizeObserver(() => updateAddButtonOffset());
-    if (finishBarEl) observer.observe(finishBarEl);
+    observer.observe(el);
     window.addEventListener("resize", updateAddButtonOffset);
     return () => {
       observer.disconnect();
@@ -204,6 +219,8 @@
     open: false,
     anchorId: null as string | null,
     picked: [] as string[],
+    /** Superset or circuit, when the user picked one; null = by count. */
+    kind: null as GroupKind | null,
     /** Away in the add dialogs from "Add another exercise". */
     adding: false,
     /** A bodyweight question for an exercise added from the picker, asked once it's done. */
@@ -225,6 +242,7 @@
     destroyActiveTour();
     groupUi.anchorId = anchorId;
     groupUi.picked = [];
+    groupUi.kind = null;
     groupUi.adding = false;
     groupUi.open = true;
   }
@@ -244,12 +262,18 @@
       : [...groupUi.picked, id];
   }
 
+  const groupKind = $derived(pickerGroupKind(groupUi.picked.length, groupUi.kind));
+
   async function confirmGroup() {
     const anchorId = groupUi.anchorId;
     const picked = [...groupUi.picked];
+    const model = groupModel;
+    // Store the kind when it was chosen, or when it's a circuit of one (which needs it);
+    // otherwise the name follows the count as exercises are added.
+    const kind = groupUi.kind || picked.length === 0 ? groupKind : undefined;
     closeGroupPicker();
-    if (!anchorId || picked.length === 0) return;
-    await onMutate((s) => groupIntoSuperset(s, [anchorId, ...picked]));
+    if (!anchorId || !model || !canConfirmGroup(model, picked.length, groupKind)) return;
+    await onMutate((s) => groupIntoSuperset(s, [anchorId, ...picked], undefined, model.alreadyGrouped ? undefined : kind));
   }
 
   function addAnotherToGroup() {
@@ -526,6 +550,9 @@
   function supersetIdOf(b: SessionBlock): string | undefined {
     return (b.data as { superset?: { id: string } } | undefined)?.superset?.id;
   }
+  function groupKindIn(b: SessionBlock): GroupKind | undefined {
+    return (b.data as { superset?: { kind?: GroupKind } } | undefined)?.superset?.kind;
+  }
 
   const renderItems = $derived.by<RenderItem[]>(() => {
     const items: RenderItem[] = [];
@@ -536,7 +563,7 @@
       if (sid) {
         const group: SessionBlock[] = [];
         while (i < blocks.length && supersetIdOf(blocks[i]!) === sid) group.push(blocks[i++]!);
-        if (group.length >= 2) {
+        if (group.length >= minGroupSize(groupKindIn(group[0]!))) {
           items.push({ kind: "superset", supersetId: sid, blocks: group });
           continue;
         }
@@ -668,7 +695,10 @@
       title={groupModel.title}
       sections={groupModel.sections}
       picked={groupUi.picked}
-      confirmLabel={groupConfirmLabel(groupModel, groupUi.picked.length)}
+      confirmLabel={groupConfirmLabel(groupModel, groupUi.picked.length, groupUi.kind)}
+      canConfirm={canConfirmGroup(groupModel, groupUi.picked.length, groupKind)}
+      kind={groupModel.alreadyGrouped ? null : groupKind}
+      onKindChange={(k) => (groupUi.kind = k)}
       showSizeHint={!groupModel.alreadyGrouped}
       saving={ui.saving || ui.finishing}
       onToggle={toggleGroupPick}

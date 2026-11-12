@@ -9,7 +9,14 @@ import {
   groupIntoSuperset,
   type WorkoutSession,
 } from "@logit/core/domain/workout";
-import { allowedDropIndices, groupConfirmLabel, groupPickerModel, nearestAllowed } from "$lib/features/session/grouping";
+import {
+  allowedDropIndices,
+  canConfirmGroup,
+  groupConfirmLabel,
+  groupPickerModel,
+  nearestAllowed,
+  pickerGroupKind,
+} from "$lib/features/session/grouping";
 
 function mobilityDay(): WorkoutSession {
   let s = createSession(1_000);
@@ -74,12 +81,23 @@ describe("group picker model", () => {
     expect(groupPickerModel(mobilityDay(), "missing")).toBeNull();
   });
 
-  it("confirm label follows the group size", () => {
+  it("confirm label follows the group size, or the kind chosen", () => {
     const fresh = { groupSize: 1, alreadyGrouped: false };
-    expect(groupConfirmLabel(fresh, 0)).toBe("Tick at least one");
+    // Nothing ticked: a circuit of just this exercise.
+    expect(groupConfirmLabel(fresh, 0)).toBe("Make circuit · 1 exercise");
     expect(groupConfirmLabel(fresh, 1)).toBe("Make superset");
     expect(groupConfirmLabel(fresh, 4)).toBe("Make circuit · 5 exercises");
+    // Chosen: two can be a circuit, and a superset needs another exercise.
+    expect(groupConfirmLabel(fresh, 1, "circuit")).toBe("Make circuit · 2 exercises");
+    expect(groupConfirmLabel(fresh, 2, "superset")).toBe("Make superset · 3 exercises");
+    expect(pickerGroupKind(0, "superset")).toBe("circuit");
+    expect(canConfirmGroup(fresh, 0, "circuit")).toBe(true);
+    expect(canConfirmGroup(fresh, 0, "superset")).toBe(false);
+    // Adding to a group needs something ticked; the group's kind names it.
+    expect(groupConfirmLabel({ groupSize: 2, alreadyGrouped: true }, 0)).toBe("Tick at least one");
+    expect(canConfirmGroup({ alreadyGrouped: true }, 0, "circuit")).toBe(false);
     expect(groupConfirmLabel({ groupSize: 2, alreadyGrouped: true }, 1)).toBe("Add to circuit · 3 exercises");
+    expect(groupConfirmLabel({ groupSize: 1, alreadyGrouped: true, kind: "circuit" }, 1)).toBe("Add to circuit");
     expect(groupConfirmLabel({ groupSize: 2, alreadyGrouped: true, label: "Hips" }, 1)).toBe("Add to Hips · 3 exercises");
   });
 });

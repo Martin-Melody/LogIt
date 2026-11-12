@@ -88,6 +88,12 @@
     members are skipped by the countdown (step 5); a reload stops a running countdown (what
     was saved stays); no phone notification when a hold ends with the app in the background
     (it catches up on return).
+  - After Martin's first phone test (2026-11-11): the ring follows every frame; a group can be
+    set to Superset or Circuit (`SupersetInfo.kind`, in the picker and the group's ⋯ menu;
+    unset = by count), a circuit can be one exercise (one drill for N rounds); the ⋯ menu also
+    has Ungroup and "Remove … and its exercises"; history and the recap name groups with
+    `groupLabel` (they said "Superset" for every group); the add button no longer sticks to
+    the bottom after the finish bar is re-mounted.
   - Step 4, plan groups in a split day (added 2026-11-11):
     - Split days can't hold mobility at all yet (`PlannedBlock` = strength | cardio), so add
       a planned mobility block first: drill, sets, hold or reps, target, per side.
@@ -115,6 +121,70 @@
     rest between rounds, off by default, set per circuit (e.g. 60 s). After a timed strength
     set, a skippable reps prompt (time always saved). Timed sets go to the algorithm
     (`durationSec` on the interface); the built-in algorithm ignores them for now.
+  - Edit circuit / superset sheet (Martin's idea 2026-11-12, mock:
+    https://claude.ai/artifact/JimQ9yGM5435p3xi8uzjCJ): tap a group's name to open it, like
+    tapping an exercise name. Name, type, rounds stepper, get-ready length, rest between
+    exercises, rest between rounds, a time estimate, Ungroup / Remove. Replaces the
+    round-rest chip under the group header. Decided with Martin 2026-11-12:
+    - In a strength superset the group's rest replaces each exercise's own rest timer while
+      it's in the group (its own rest comes back when ungrouped).
+    - Rest between exercises is ON by default for circuits only (supersets: off by
+      default, still settable), settable in the sheet; its default length
+      is app-wide in Settings next to get-ready (15 s proposed, not agreed). This replaces
+      the 2026-11-11 "only the 3-2-1 between exercises". The get-ready countdown also gets
+      a +10 s button (today +10 s only works on holds and rests).
+    - One rest-between-rounds value per group; no different rest per round.
+    - Get-ready length: an app-wide default in Settings (like rest defaults), overridable
+      per circuit / during the workout the way rest timers are.
+  - Collapsing circuit blocks on the session screen (a long circuit takes a lot of the
+    screen). Picked 2026-11-12 from the mock's options: collapsed, the whole group is one
+    line (option A: name, "round 2 of 3", sets done, a progress line, Start, ⋯); expanded,
+    it shows rounds (option C) and each round opens and closes on its own (the current
+    round open, done rounds one line each). Finished groups don't collapse by themselves.
+- [ ] Edit the planned workout on the pre-workout screen (`/session/plan`) before pressing
+      Start: swap an exercise for another, remove or add one, drag to reorder. Today the
+      screen only shows the plan (`planSplitDay` → `SessionPlan`) and Start. (Martin,
+      2026-11-12, a note, not designed yet.)
+  - Reordering should take fatigue into account: an exercise moved later in the workout
+    should get targets for a tired lifter, and moved first, for a fresh one. The pieces
+    exist: progression already calibrates a per-exercise drop by position in the session
+    (`calibrateFatigueDiscount` in `packages/core/src/domain/progression.ts`, fed
+    `sessionPositions`), and `linearProgression` has a fatigue score. So a reorder should
+    replan with the new positions rather than keep the old targets. Per the Principle
+    below, this belongs in the algorithm, which gets the planned position as input.
+  - Decided with Martin 2026-11-12: a change is for today by default, with an option to
+    make it permanent (save it back to the split day). The app can suggest an order (e.g.
+    big compound lifts before isolation work on the same muscles). Suggestions are under
+    the user's control (can be turned off) and can always be overridden, never applied on
+    their own. The "make permanent" choice is asked once, when Start is pressed, and covers
+    swaps as well as reorders (Martin, 2026-11-12).
+  - Also decided 2026-11-12:
+    - Swapping shows suggestions first (same muscles / movement, same equipment), then the
+      full list: replacing bench press shouldn't offer adductors first.
+    - The order suggestion comes from the progression algorithm (it can grow an interface
+      for it), so users customise it through the algorithm's preferences. Its on/off
+      setting lives in Settings › Progression.
+    - Dragging exercises during a workout re-plans the sets not yet logged, the same way.
+    - Coach programs, for now (Martin: pick a sensible default, decide better later): a
+      client can change a coach's day for today (swap, reorder, remove, add), but "save
+      to the day" isn't offered; the coach owns the program. Later ideas: the coach
+      decides whether clients may save changes, or gives suitable replacements per
+      exercise.
+- [ ] Switching machines mid-workout (your usual one is taken). Today the machine is picked
+      per set in `EditSetDialog`: it snaps that one set's weight to the new machine's weights,
+      but the other sets keep their planned targets, and progression treats every machine of
+      an exercise as one history (machines are only used to round weights, in
+      `getSuggestion`). Also `resolveExerciseMachine` picks the machine of the most recent
+      set, so one forced switch makes the next workout plan for the backup machine.
+      Martin asked 2026-11-12 whether targets update; they don't. Agreed first version:
+  - Change the machine once for the exercise; it applies to every set not yet logged, for
+    today only (no "make default?" prompt; the default is already easy to set).
+  - Round the remaining planned weights to the new machine; a session on a non-default
+    machine doesn't count as a regression on the usual one.
+  - Plan with the default machine, not the last one used.
+  - Still to do later (Martin: "remember that has to be done"): per the Principle, the
+    algorithm gets the machine of each history set and the machine chosen today and
+    decides itself, e.g. learns a ratio between two machines once both have history.
 
 ## Principle
 

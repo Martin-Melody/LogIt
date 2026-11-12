@@ -5,7 +5,7 @@
   import { Check, Trophy, Sparkles } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import type { WorkoutSession, CardioBlockData, MobilityBlockData, ExerciseEntry } from "@logit/core/domain/workout";
-  import { getExercises, getTopSetHighlight, foldSupersets, setTypeMeta, getExerciseVolumeKg } from "@logit/core/domain/workout";
+  import { getExercises, getTopSetHighlight, foldSupersets, groupLabel, setTypeMeta, getExerciseVolumeKg } from "@logit/core/domain/workout";
   import { usesBodyweightLoad, type ExerciseType } from "@logit/core/domain/exercise";
   import { getLoadMode } from "@logit/core/domain/bodyweight";
   import { loadBodyweightLookup, profileBodyweightKg } from "$lib/features/bodyweight/bodyweight";
@@ -329,7 +329,7 @@
             {#if group.kind === "superset"}
               <div class="bg-primary/[0.03]">
                 <p class="px-3 pt-1.5 text-xs font-medium uppercase tracking-wide text-primary">
-                  {group.label ?? "Superset"}
+                  {groupLabel(group.exercises.length, group.label, group.groupKind)}
                 </p>
                 <div class="ml-3 border-l-2 border-primary/30 divide-y divide-border">
                   {#each group.exercises as ex (ex.id)}

@@ -6,7 +6,7 @@
 
   import type { WorkoutSession, SetEntry, ExerciseEntry, MobilityBlockData } from "@logit/core/domain/workout";
   import { loadVolumeContext, sessionVolumeKg, type VolumeContext } from "$lib/features/bodyweight/bodyweight";
-  import { getExercises, updateSet, foldSupersets, setTypeMeta, mobilitySetGroups } from "@logit/core/domain/workout";
+  import { getExercises, updateSet, foldSupersets, groupLabel, setTypeMeta, mobilitySetGroups } from "@logit/core/domain/workout";
   import { durationMs, formatDuration } from "@logit/core/domain/time";
   import { formatWeight, formatLoad } from "@logit/core/domain/units";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
@@ -438,7 +438,7 @@
         {#if group.kind === "superset"}
           <div class="border-t border-primary/30 bg-primary/[0.03]" transition:reveal>
             <p class="px-3 pt-1.5 text-xs font-medium uppercase tracking-wide text-primary">
-              {group.label ?? "Superset"}
+              {groupLabel(group.exercises.length, group.label, group.groupKind)}
             </p>
             <div class="ml-3 border-l-2 border-primary/30">
               {#each group.exercises as ex (ex.id)}

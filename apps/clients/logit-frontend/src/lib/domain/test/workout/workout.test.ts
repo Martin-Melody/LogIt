@@ -6,6 +6,7 @@ import {
   setSessionNote, foldSupersets, addWarmupSets,
   addMobilityBlock, addCardioBlock, blockGroup, blockDisplayName, groupLabel, groupCandidates,
   addMobilitySet, updateMobilitySet, supersetRoundCount, mobilitySetGroups,
+  setGroupKind, removeGroup, normalizeSupersets,
 } from "@logit/core/domain/workout";
 import type { MobilityBlockData, StrengthBlockData } from "@logit/core/domain/workout";
 import { describe, expect, it } from "vitest";
@@ -277,6 +278,38 @@ describe("supersets", () => {
     // 1 strength set vs 3 L/R pairs (6 sets).
     expect(supersetRoundCount(s.blocks)).toBe(3);
     expect(supersetRoundCount([])).toBe(0);
+  });
+
+  it("a circuit can be one exercise, or two; a superset still needs two", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0]], undefined, "circuit");
+    const one = blockGroup(s.blocks.find((b) => b.id === ids[0])!)!;
+    expect(one.kind).toBe("circuit");
+    expect(groupLabel(1, undefined, one.kind)).toBe("Circuit");
+    // It survives the clean-up that drops lone members.
+    expect(supersetMembers(normalizeSupersets(s), one.id)).toHaveLength(1);
+    expect(foldSupersets(getExercises(s))[0]).toMatchObject({ kind: "superset", groupKind: "circuit" });
+
+    // Adding one more keeps it a circuit (no longer by count).
+    s = groupIntoSuperset(s, [ids[0], ids[1]]);
+    expect(groupLabel(2, undefined, blockGroup(s.blocks[0]!)!.kind)).toBe("Circuit");
+
+    // Made a superset, then cut to one exercise: it's ungrouped.
+    s = setGroupKind(s, one.id, "superset");
+    expect(groupLabel(2, undefined, blockGroup(s.blocks[0]!)!.kind)).toBe("Superset");
+    s = removeExercise(s, ids[1]);
+    expect(supersetMembers(s, one.id)).toHaveLength(0);
+
+    // A superset of one can't be made.
+    const before = JSON.stringify(s);
+    expect(JSON.stringify(groupIntoSuperset(s, [ids[0]], undefined, "superset"))).toBe(before);
+  });
+
+  it("removeGroup takes the group and its exercises out, and renumbers the rest", () => {
+    let { s, ids } = seedThree();
+    s = groupIntoSuperset(s, [ids[0], ids[2]]);
+    s = removeGroup(s, superId(s, ids[0]));
+    expect(getExercises(s).map((e) => [e.exerciseName, e.orderIndex])).toEqual([["B", 0]]);
   });
 
   it("ungroupSuperset clears the tag", () => {
