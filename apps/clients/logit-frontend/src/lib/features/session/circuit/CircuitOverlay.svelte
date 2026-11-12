@@ -84,7 +84,7 @@
 
   const roundLabel = $derived.by(() => {
     if (!step) return "";
-    if (phase?.kind === "rest") return `Round ${step.round} of ${step.roundCount} done`;
+    if (phase?.kind === "rest" && !phase.between) return `Round ${step.round} of ${step.roundCount} done`;
     return `Round ${step.round + 1} of ${step.roundCount}`;
   });
 
@@ -96,7 +96,7 @@
   const upNextLabel = $derived.by(() => {
     const n = upcoming[0];
     if (!n || !step) return "";
-    if (phase?.kind === "rest") return `Up next · round ${step.round + 1} of ${step.roundCount}`;
+    if (phase?.kind === "rest") return phase.between ? "Up next" : `Up next · round ${step.round + 1} of ${step.roundCount}`;
     if (nextIsSwitch) return "Up next · 5 s to switch";
     if (n.round > step.round) return `Up next · round ${n.round + 1}`;
     return "Up next";
@@ -137,13 +137,13 @@
         <div
           class="flex gap-1 px-5 pt-3"
           role="img"
-          aria-label={phase.kind === "rest"
+          aria-label={phase.kind === "rest" && !phase.between
             ? `All ${step.memberCount} exercises done this round`
             : `Exercise ${step.memberIndex + 1} of ${step.memberCount} in this round`}
         >
           {#each Array(step.memberCount) as _, i (i)}
             <div
-              class="flex-1 h-1 rounded-sm {phase.kind === 'rest' || i < step.memberIndex
+              class="flex-1 h-1 rounded-sm {(phase.kind === 'rest' && !phase.between) || i < step.memberIndex
                 ? 'bg-[#6b717b]'
                 : i === step.memberIndex
                   ? 'bg-[#cfd3da]'
@@ -183,7 +183,7 @@
             `${Math.ceil(remainingMs / 1000)} seconds left of ${Math.round(totalMs / 1000)}`)}
         {:else if phase.kind === "rest"}
           <h2 class="m-0 text-3xl font-bold leading-tight">Rest</h2>
-          <p class="mt-2 text-[15px] text-[#9aa1ab]">Between rounds</p>
+          <p class="mt-2 text-[15px] text-[#9aa1ab]">{phase.between ? "Before the next exercise" : "Between rounds"}</p>
           {@render ring(`${clock(remainingMs)}`, `of ${Math.round(totalMs / 1000)} s`, "#7d8591",
             `${Math.ceil(remainingMs / 1000)} seconds of rest left of ${Math.round(totalMs / 1000)}`)}
         {:else if phase.kind === "reps" && step}
@@ -235,6 +235,7 @@
       {:else}
         <div class="flex justify-center items-start gap-8 pb-6">
           {#if phase.kind === "lead"}
+            {@render control("Add 10 seconds", "+10 s", () => circuitRunner.extend(), plusTen)}
             {@render pauseButton(false)}
             {@render control("Start now", "Start now", () => void circuitRunner.startNow(), skipIcon)}
           {:else}
@@ -282,7 +283,7 @@
       </svg>
       <div class="flex-1 min-w-0">
         <div class="text-sm font-semibold truncate">
-          {#if phase.kind === "rest"}Rest between rounds{:else if step}{phase.kind === "lead" ? "Get ready: " : ""}{step.drillName}{step.side ? ` · ${sideLabel(step.side)}` : ""}{/if}
+          {#if phase.kind === "rest"}{phase.between ? "Rest" : "Rest between rounds"}{:else if step}{phase.kind === "lead" ? "Get ready: " : ""}{step.drillName}{step.side ? ` · ${sideLabel(step.side)}` : ""}{/if}
         </div>
         <div class="text-xs text-[#9aa1ab] mt-0.5 truncate">
           {#if paused}Paused{:else if upcoming[0]}Next: {nextIsSwitch && step?.side ? sideLabel(upcoming[0].side) : stepName(upcoming[0])}{:else}Last one{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { BETWEEN_EXERCISES_KEY, GET_READY_KEY, circuitDefaultsFrom } from "$lib/features/session/circuit/circuitSettings";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
@@ -437,6 +438,17 @@
     const ms = Math.round(Number(seconds) * 1000);
     if (!Number.isFinite(ms) || ms <= 0) return;
     profile.save({ restDefaults: { ...$profile.restDefaults, [type]: ms } });
+  }
+
+  // Circuit defaults: stored in restDefaults under their own keys (circuitSettings.ts).
+  const circuitDefaults = $derived(circuitDefaultsFrom($profile.restDefaults));
+  function setCircuitDefault(key: string, ms: number) {
+    profile.save({ restDefaults: { ...$profile.restDefaults, [key]: ms } });
+  }
+  function setCircuitSeconds(key: string, seconds: string, min: number, max: number) {
+    const sec = Math.round(Number(seconds));
+    if (!Number.isFinite(sec) || sec < min || sec > max) return;
+    setCircuitDefault(key, sec * 1000);
   }
 
   async function clearAllDataAndAccount() {
@@ -1165,6 +1177,51 @@
             {/if}
           </div>
         {/each}
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <p class="text-sm font-medium">Circuits</p>
+        <p class="text-xs text-muted-foreground mb-1">
+          Defaults for every circuit. To change one circuit, tap its name in a workout.
+        </p>
+        <div class="flex items-center gap-3">
+          <span class="text-sm flex-1">Get ready before each exercise</span>
+          <div class="flex items-center gap-1.5">
+            <input
+              type="number"
+              min="1"
+              max="30"
+              aria-label="Get ready before each exercise, seconds"
+              class="h-10 w-16 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+              value={Math.round(circuitDefaults.leadInMs / 1000)}
+              onchange={(e) => setCircuitSeconds(GET_READY_KEY, (e.target as HTMLInputElement).value, 1, 30)}
+            />
+            <span class="text-xs text-muted-foreground">sec</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <Switch
+            checked={circuitDefaults.memberRestMs > 0}
+            label="Rest between exercises in a circuit"
+            onchange={() => setCircuitDefault(BETWEEN_EXERCISES_KEY, circuitDefaults.memberRestMs > 0 ? 0 : 15_000)}
+            class="-ml-1.5 mr-0"
+          />
+          <span class="text-sm flex-1">Rest between exercises</span>
+          {#if circuitDefaults.memberRestMs > 0}
+            <div class="flex items-center gap-1.5" transition:reveal={{ axis: "x" }}>
+              <input
+                type="number"
+                min="5"
+                max="600"
+                aria-label="Rest between exercises, seconds"
+                class="h-10 w-16 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                value={Math.round(circuitDefaults.memberRestMs / 1000)}
+                onchange={(e) => setCircuitSeconds(BETWEEN_EXERCISES_KEY, (e.target as HTMLInputElement).value, 5, 600)}
+              />
+              <span class="text-xs text-muted-foreground">sec</span>
+            </div>
+          {/if}
+        </div>
       </div>
     </Card.Content>
   </Card.Root>

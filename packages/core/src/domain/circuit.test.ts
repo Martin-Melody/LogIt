@@ -7,6 +7,7 @@ import {
   createSession,
   groupIntoSuperset,
   setGroupRoundRest,
+  setGroupSettings,
   updateMobilitySet,
   type MobilityBlockData,
   type WorkoutSession,
@@ -15,6 +16,8 @@ import {
   applyCircuitSaves,
   canRunCircuit,
   circuitSteps,
+  estimateCircuitMs,
+  groupTiming,
   currentStep,
   extendCircuit,
   finishRepsCircuit,
@@ -33,7 +36,10 @@ import {
 
 const T0 = 1_000_000;
 
-/** Hamstring (hold, 30 s target), Pigeon (per side, 40 s), Push-ups (strength), 2 rounds. */
+/**
+ * Hamstring (hold, 30 s target), Pigeon (per side, 40 s), Push-ups (strength), 2 rounds.
+ * No rest between exercises, so the timings below are lead-ins and holds only.
+ */
 function seed(): { s: WorkoutSession; group: string; ham: string; pigeon: string } {
   let s = createSession(1_000);
   s = addMobilityBlock(s, { drillName: "Hamstring stretch", metric: "hold" });
@@ -46,6 +52,7 @@ function seed(): { s: WorkoutSession; group: string; ham: string; pigeon: string
   s = groupIntoSuperset(s, [ham!, pigeon!, push!]);
   const group = blockGroup(s.blocks[0]!)!.id;
   s = addSupersetRound(s, group);
+  s = setGroupSettings(s, group, { memberRestMs: 0 });
   return { s, group, ham: ham!, pigeon: pigeon! };
 }
 
@@ -221,5 +228,78 @@ describe("running a circuit", () => {
     expect(s.blocks.every((b) => blockGroup(b)?.roundRestMs === 45_000)).toBe(true);
     s = setGroupRoundRest(s, group, undefined);
     expect(s.blocks.some((b) => blockGroup(b)?.roundRestMs)).toBe(false);
+  });
+});
+
+describe("rest between exercises and the get-ready", () => {
+  /** Two hold drills (30 s each), 1 round, grouped as `kind` (unset = by count). */
+  function pair(kind?: "superset" | "circuit") {
+    let s = createSession(1_000);
+    s = addMobilityBlock(s, { drillName: "A" });
+    s = addMobilityBlock(s, { drillName: "B" });
+    const [a, b] = s.blocks.map((x) => x.id);
+    s = groupIntoSuperset(s, [a!, b!], undefined, kind);
+    return { s, group: blockGroup(s.blocks[0]!)!.id };
+  }
+
+  it("a circuit rests between exercises by default (15 s), then leads in", () => {
+    const { s: s0, group } = pair("circuit");
+    let s = s0;
+    let run = startCircuit(s, group, T0)!;
+    const aEnd = T0 + LEAD_IN_MS + 30_000;
+    ({ s, run } = step(s, tickCircuit(s, run, aEnd)));
+    expect(run.phase).toMatchObject({ kind: "rest", between: true, durationMs: 15_000 });
+    expect(currentStep(s, run)?.drillName).toBe("B");
+    ({ s, run } = step(s, tickCircuit(s, run, aEnd + 15_000)));
+    expect(run.phase).toMatchObject({ kind: "lead", endsAtMs: aEnd + 15_000 + LEAD_IN_MS });
+  });
+
+  it("a superset doesn't rest between exercises unless it's set", () => {
+    const { s: s0, group } = pair();
+    let s = s0;
+    let run = startCircuit(s, group, T0)!;
+    ({ s, run } = step(s, tickCircuit(s, run, T0 + LEAD_IN_MS + 30_000)));
+    expect(run.phase.kind).toBe("lead");
+
+    s = setGroupSettings(s0, group, { memberRestMs: 20_000 });
+    run = startCircuit(s, group, T0)!;
+    ({ s, run } = step(s, tickCircuit(s, run, T0 + LEAD_IN_MS + 30_000)));
+    expect(run.phase).toMatchObject({ kind: "rest", durationMs: 20_000 });
+  });
+
+  it("switching sides never rests between exercises", () => {
+    const { s: s0, group } = seed();
+    const s = setGroupSettings(s0, group, { memberRestMs: 20_000 });
+    let run = startCircuit(s, group, T0)!;
+    let s1 = s;
+    // Hamstring, then a rest before the pigeon, then the pigeon's left side.
+    ({ s: s1, run } = step(s1, tickCircuit(s1, run, T0 + 3_000 + 30_000)));
+    expect(run.phase).toMatchObject({ kind: "rest", between: true });
+    ({ s: s1, run } = step(s1, tickCircuit(s1, run, T0 + 3_000 + 30_000 + 20_000 + 3_000 + 40_000)));
+    expect(run.phase).toMatchObject({ kind: "lead", switching: true });
+  });
+
+  it("the get-ready comes from the group, else the app default, and +10 s lengthens it", () => {
+    const { s: s0, group } = pair("circuit");
+    let run = startCircuit(s0, group, T0, { leadInMs: 5_000, memberRestMs: 0 })!;
+    expect(run.phase).toMatchObject({ kind: "lead", durationMs: 5_000 });
+    const s = setGroupSettings(s0, group, { leadInMs: 10_000 });
+    run = startCircuit(s, group, T0, { leadInMs: 5_000, memberRestMs: 0 })!;
+    expect(run.phase).toMatchObject({ kind: "lead", durationMs: 10_000 });
+    run = extendCircuit(run, 10_000);
+    expect(run.phase).toMatchObject({ kind: "lead", durationMs: 20_000, endsAtMs: T0 + 20_000 });
+    expect(groupTiming(s, group, { leadInMs: 5_000, memberRestMs: 0 })).toEqual({
+      leadInMs: 10_000,
+      memberRestMs: 0,
+      roundRestMs: 0,
+    });
+  });
+
+  it("estimates one round and the whole group", () => {
+    const { s: s0, group } = seed();
+    const s = setGroupSettings(s0, group, { memberRestMs: 10_000, roundRestMs: 60_000 });
+    // Round: ham 3+30, rest 10, pigeon L 3+40, switch 5, R 40 = 131 s.
+    const round = 3_000 + 30_000 + 10_000 + 3_000 + 40_000 + 5_000 + 40_000;
+    expect(estimateCircuitMs(s, group)).toEqual({ roundMs: round, totalMs: round * 2 + 60_000 });
   });
 });

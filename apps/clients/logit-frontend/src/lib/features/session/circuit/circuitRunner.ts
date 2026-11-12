@@ -18,6 +18,8 @@ import {
   type CircuitUpdate,
 } from "@logit/core/domain/circuit";
 import { cueEnd, cueGo, cueTick, keepScreenOn, unlockAudio } from "./cues";
+import { circuitDefaultsFrom } from "./circuitSettings";
+import { profile } from "$lib/stores/profile.store";
 
 // ── The running circuit ──────────────────────────────────────────────────────
 // One circuit runs at a time. The run itself is the pure state from
@@ -112,7 +114,7 @@ export const circuitRunner = {
   start(supersetId: string): boolean {
     const session = get(currentSession);
     if (!session) return false;
-    const run = startCircuit(session, supersetId, Date.now());
+    const run = startCircuit(session, supersetId, Date.now(), circuitDefaultsFrom(get(profile).restDefaults));
     if (!run) {
       toast("Nothing left to run in this circuit");
       return false;
@@ -147,7 +149,7 @@ export const circuitRunner = {
     if (run) state.update((s) => ({ ...s, run: resumeCircuit(run, Date.now()) }));
   },
 
-  /** +10 s on the hold or rest. */
+  /** +10 s on the get-ready, the hold or the rest. */
   extend(ms = 10_000): void {
     const run = get(state).run;
     if (run) state.update((s) => ({ ...s, run: extendCircuit(run, ms) }));

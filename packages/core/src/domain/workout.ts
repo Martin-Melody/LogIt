@@ -145,8 +145,26 @@ export type SupersetInfo = {
   label?: string;
   /** Chosen by the user. Undefined = by count: two is a superset, three or more a circuit. */
   kind?: GroupKind;
-  /** Rest after each round when the circuit is run with the countdown, ms. Undefined = none. */
+  /**
+   * Rest after each round, ms. 0 = none. Undefined: none in the countdown; when sets are
+   * ticked by hand, the last exercise's own rest timer.
+   */
   roundRestMs?: number;
+  /**
+   * Rest between one exercise and the next within a round, ms. 0 = none. Undefined: the
+   * app default for circuits (Settings), none for supersets.
+   */
+  memberRestMs?: number;
+  /** The countdown's get-ready before each exercise, ms. Undefined: the app default. */
+  leadInMs?: number;
+};
+
+/** The group settings the edit sheet changes; `null` clears one back to its default. */
+export type GroupSettingsPatch = {
+  label?: string | null;
+  roundRestMs?: number | null;
+  memberRestMs?: number | null;
+  leadInMs?: number | null;
 };
 
 // Data payload for a strength (exercise + sets) block
@@ -1053,7 +1071,9 @@ export function groupIntoSuperset(
     id: supersetId,
     ...(name ? { label: name } : {}),
     ...(groupKind ? { kind: groupKind } : {}),
-    ...(existing?.roundRestMs ? { roundRestMs: existing.roundRestMs } : {}),
+    ...(existing?.roundRestMs !== undefined ? { roundRestMs: existing.roundRestMs } : {}),
+    ...(existing?.memberRestMs !== undefined ? { memberRestMs: existing.memberRestMs } : {}),
+    ...(existing?.leadInMs !== undefined ? { leadInMs: existing.leadInMs } : {}),
   };
 
   // Also fold in any blocks that already shared an id with a target.
@@ -1119,6 +1139,37 @@ export function setGroupRoundRest(
       const next: SupersetInfo = { ...info };
       if (roundRestMs && roundRestMs > 0) next.roundRestMs = roundRestMs;
       else delete next.roundRestMs;
+      return setBlockSuperset(b, next);
+    }),
+  };
+}
+
+/**
+ * Change a group's name or timings on every member. A field left out stays as it is;
+ * `null` (or an empty name) clears it back to its default.
+ */
+export function setGroupSettings(
+  session: WorkoutSession,
+  supersetId: string,
+  patch: GroupSettingsPatch,
+): WorkoutSession {
+  return {
+    ...session,
+    blocks: session.blocks.map((b) => {
+      const info = blockSuperset(b);
+      if (info?.id !== supersetId) return b;
+      const next: SupersetInfo = { ...info };
+      if (patch.label !== undefined) {
+        const name = patch.label?.trim();
+        if (name) next.label = name;
+        else delete next.label;
+      }
+      for (const key of ["roundRestMs", "memberRestMs", "leadInMs"] as const) {
+        const v = patch[key];
+        if (v === undefined) continue;
+        if (v === null) delete next[key];
+        else next[key] = Math.max(0, Math.round(v));
+      }
       return setBlockSuperset(b, next);
     }),
   };
@@ -1196,6 +1247,40 @@ export function supersetRoundCount(members: SessionBlock[]): number {
   return Math.max(0, ...members.map(memberRoundCount));
 }
 
+/** Which of a member's rounds are logged: a strength set ticked, or a mobility set / both sides of a pair. */
+function memberRoundsDone(block: SessionBlock): boolean[] {
+  if (block.type === "strength") {
+    return [...(block.data as StrengthBlockData).sets]
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((s) => !!s.completed);
+  }
+  if (block.type === "mobility") {
+    return mobilitySetGroups(block.data as MobilityBlockData).map((g) =>
+      g.kind === "single" ? !!g.set.completed : [g.left, g.right].every((x) => !x || x.completed),
+    );
+  }
+  return [];
+}
+
+/**
+ * How far through a group is, for its collapsed line: sets logged out of all sets (one
+ * per member per round; an L/R pair counts once), and the round being worked on (1-based,
+ * the first with anything left; the last round once everything is done).
+ */
+export function groupProgress(members: SessionBlock[]): { done: number; total: number; currentRound: number; roundCount: number } {
+  const perMember = members.map(memberRoundsDone);
+  const roundCount = Math.max(0, ...perMember.map((r) => r.length));
+  const all = perMember.flat();
+  let currentRound = roundCount;
+  for (let r = 0; r < roundCount; r++) {
+    if (perMember.some((m) => r < m.length && !m[r])) {
+      currentRound = r + 1;
+      break;
+    }
+  }
+  return { done: all.filter(Boolean).length, total: all.length, currentRound, roundCount };
+}
+
 /**
  * Add one more round: appends a fresh set to every strength member (weight
  * carried from its last set) and a set, or L/R pair, to every mobility member
@@ -1215,6 +1300,50 @@ export function addSupersetRound(session: WorkoutSession, supersetId: string): W
     } else if (member.type === "mobility") {
       next = addMobilityRound(next, member.id);
     }
+  }
+  return next;
+}
+
+/** The id of a member's last round (strength set, or mobility set / L/R pair) if nothing in it is logged. */
+function unloggedLastRound(block: SessionBlock): string | null {
+  if (block.type === "strength") {
+    const sets = [...(block.data as StrengthBlockData).sets].sort((a, b) => a.orderIndex - b.orderIndex);
+    const last = sets[sets.length - 1];
+    return last && !last.completed && last.reps === 0 ? last.id : null;
+  }
+  if (block.type === "mobility") {
+    const groups = mobilitySetGroups(block.data as MobilityBlockData);
+    const last = groups[groups.length - 1];
+    if (!last) return null;
+    const sets = last.kind === "single" ? [last.set] : [last.left, last.right];
+    if (sets.some((x) => x?.completed)) return null;
+    return sets.find((x) => x)?.id ?? null;
+  }
+  return null;
+}
+
+/** True when `removeSupersetRound` would remove something. */
+export function canRemoveSupersetRound(session: WorkoutSession, supersetId: string): boolean {
+  const members = supersetMembers(session, supersetId);
+  const rounds = supersetRoundCount(members);
+  return rounds > 1 && members.some((m) => memberRoundCount(m) === rounds && unloggedLastRound(m) !== null);
+}
+
+/**
+ * One round fewer: removes the last round from every member that has the group's full
+ * round count, if nothing in that round is logged. Logged sets are never removed, and a
+ * group keeps at least one round.
+ */
+export function removeSupersetRound(session: WorkoutSession, supersetId: string): WorkoutSession {
+  if (!canRemoveSupersetRound(session, supersetId)) return session;
+  const members = supersetMembers(session, supersetId);
+  const rounds = supersetRoundCount(members);
+  let next = session;
+  for (const member of members) {
+    if (memberRoundCount(member) !== rounds) continue;
+    const setId = unloggedLastRound(member);
+    if (!setId) continue;
+    next = member.type === "strength" ? removeSet(next, member.id, setId) : removeMobilitySet(next, member.id, setId);
   }
   return next;
 }

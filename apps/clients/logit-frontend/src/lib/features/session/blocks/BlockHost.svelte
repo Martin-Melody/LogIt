@@ -9,7 +9,7 @@
     data,
     saving,
     grouped = false,
-    restsOnComplete = true,
+    groupRestMs,
     gripAction,
     onGroup,
     onDelete,
@@ -20,7 +20,7 @@
     data: unknown;
     saving: boolean;
     grouped?: boolean;
-    restsOnComplete?: boolean;
+    groupRestMs?: number;
     gripAction: GripAction;
     onGroup?: () => void;
     onDelete: () => void | Promise<void>;
@@ -37,7 +37,7 @@
     {data}
     {saving}
     {grouped}
-    {restsOnComplete}
+    {groupRestMs}
     {gripAction}
     {onGroup}
     {onDelete}

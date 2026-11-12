@@ -10,11 +10,11 @@ export interface BlockBaseProps<T = unknown> {
   /** True when this block is rendered inside a superset / circuit group. */
   grouped?: boolean;
   /**
-   * Whether completing a set here should start a rest timer. Defaults to true.
-   * Superset members that aren't the last in the round pass `false` so you flow
-   * straight into the next exercise — one shared rest per round, on the anchor.
+   * The rest a set here starts when ticked, set by its superset / circuit: 0 = none
+   * (straight on to the next exercise), a number = that rest. Undefined (not in a
+   * group, or the group leaves it to the exercise) = the exercise's own rest.
    */
-  restsOnComplete?: boolean;
+  groupRestMs?: number;
   gripAction: GripAction;
   /**
    * Opens the "Superset / circuit with…" picker for this block. Blocks show the
