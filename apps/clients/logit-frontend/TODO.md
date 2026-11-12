@@ -179,13 +179,15 @@
     round rest still means each exercise's own rest timer when ticking by hand (none in the
     countdown); the first side of an L/R pair in a group goes straight on to the other
     side.
-  - Built 2026-11-12, the expanded rounds view (C): "By round" (default) shows each round
+  - Built 2026-11-12, the expanded rounds view (C): "By round" shows each round
     with its own open/close; the round being worked on and any round with a rest running
     are open unless the user chose otherwise. Each exercise in a round shows its name, ⋯
     menu and that round's set (`round` prop on the blocks). "By exercise" is the old
     layout, kept for dragging, warm-up ramps, drop sets and the rep bars; the choice is
     remembered per group while the app runs (`groupViews.ts`). Cardio members show
     under the rounds.
+  - Changed 2026-11-12 (Martin): "By exercise" is the default view, and a group starts
+    collapsed when "Collapse blocks by default" is on (it was always open before).
 - [ ] Edit the planned workout on the pre-workout screen (`/session/plan`) before pressing
       Start: swap an exercise for another, remove or add one, drag to reorder. Today the
       screen only shows the plan (`planSplitDay` → `SessionPlan`) and Start. (Martin,

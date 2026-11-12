@@ -27,6 +27,7 @@
   import { reveal } from "$lib/transitions";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { SvelteMap } from "svelte/reactivity";
+  import { get } from "svelte/store";
   import { groupViews } from "./groupViews";
 
   const {
@@ -65,18 +66,19 @@
 
   let confirmRemove = $state(false);
   let editOpen = $state(false);
-  // Collapsed, the whole group is one line. It never collapses on its own.
-  let collapsed = $state(false);
+  // Collapsed, the whole group is one line. It starts the way the "Collapse blocks by
+  // default" setting says, like a single exercise, and never collapses on its own after that.
+  let collapsed = $state(get(profile).blocksCollapsedByDefault);
   const progress = $derived(groupProgress(blocks));
 
-  // Expanded, a group shows its rounds (each opens and closes on its own) or, to drag,
-  // add warm-ups and see the rep bars, its exercises one after another.
+  // Expanded, a group shows its exercises one after another (the default: drag, warm-ups,
+  // rep bars) or its rounds, each opening and closing on its own.
   const roundBlocks = $derived(blocks.filter((b: SessionBlock) => b.type === "strength" || b.type === "mobility"));
   const otherBlocks = $derived(blocks.filter((b: SessionBlock) => b.type !== "strength" && b.type !== "mobility"));
   const rounds = $derived(groupRounds(roundBlocks));
   const canShowRounds = $derived(rounds.length > 0);
   function initialView(): "rounds" | "exercises" {
-    return groupViews.get(supersetId) ?? "rounds";
+    return groupViews.get(supersetId) ?? "exercises";
   }
   let view = $state<"rounds" | "exercises">(initialView());
   function setView(v: "rounds" | "exercises") {
