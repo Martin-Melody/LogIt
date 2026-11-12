@@ -4,7 +4,7 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
-  import { changeTagClass } from "$lib/features/session/planFormat";
+  import { changeTagClass, meterRow } from "$lib/features/session/planFormat";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { formatLoad } from "@logit/core/domain/units";
@@ -67,17 +67,13 @@
   const fatiguePct = $derived(Math.round(suggestion?.reasoning?.computed?.fatigueDiscountPct ?? 0));
   const showMeter = $derived(!collapsed && goal !== null && meter.length > 0 && goal.reps <= 30);
 
-  // One cell per rep up to the goal: done (filled), today's aim (dashed outline,
-  // clearly not done yet), or still to go.
+  // One cell per rep up to the goal: reps towards today's aim (blue), reps beyond it
+  // (green), the aim still to do (dashed), or still to go before the weight goes up.
   const meterRows = $derived(
     showMeter && goal
       ? meter.map((m: { done: number; target: number }, i: number) => ({
           label: `${i + 1}`,
-          right: m.done > 0 ? (m.done >= goal.reps ? `${m.done} ✓` : `${m.done}/${goal.reps}`) : m.target > 0 ? `aim ${m.target}` : "",
-          spoken: m.done > 0 ? `${m.done} of ${goal.reps} reps done` : `aiming for ${m.target} of ${goal.reps}`,
-          cells: Array.from({ length: goal.reps }, (_, c) =>
-            c < m.done ? "done" : m.done === 0 && c < m.target ? "target" : "rest",
-          ),
+          ...meterRow(m.done, m.target, goal.reps),
         }))
       : [],
   );
@@ -212,9 +208,11 @@
               {#each row.cells as cell, c (c)}
                 <span
                   class="h-2.5 flex-1 rounded-[2px]
-                    {cell === 'done'
+                    {cell === 'hit'
                     ? 'bg-info'
-                    : cell === 'target'
+                    : cell === 'bonus'
+                      ? 'bg-success'
+                      : cell === 'target'
                       ? 'border border-dashed border-muted-foreground/60'
                       : 'bg-muted-foreground/15'}"
                 ></span>

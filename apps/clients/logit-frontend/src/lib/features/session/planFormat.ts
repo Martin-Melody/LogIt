@@ -44,3 +44,42 @@ export function changeTagClass(kind: ProgressionChange["kind"]): string {
       return "bg-info/10 text-info dark:bg-info/15";
   }
 }
+
+/**
+ * One cell per rep up to the rep count where the weight goes up (`goalReps`):
+ * - `hit`: a rep that counts towards today's aim,
+ * - `bonus`: a rep beyond today's aim (the reward colour),
+ * - `target`: a rep of the aim not done yet (dashed),
+ * - `rest`: reps still to go before the weight goes up.
+ * A set with no aim (`target` 0) counts every rep as `hit`.
+ */
+export type MeterCell = "hit" | "bonus" | "target" | "rest";
+
+export type MeterRow = { right: string; spoken: string; cells: MeterCell[] };
+
+export function meterRow(done: number, target: number, goalReps: number): MeterRow {
+  const aim = target > 0 ? target : done;
+  const cells: MeterCell[] = Array.from({ length: goalReps }, (_, c) =>
+    c < Math.min(done, aim) ? "hit" : c < done ? "bonus" : c < aim ? "target" : "rest",
+  );
+
+  let right: string;
+  let spoken: string;
+  if (done === 0) {
+    right = target > 0 ? `aim ${target}` : "";
+    spoken = target > 0 ? `aiming for ${target} reps; the weight goes up at ${goalReps}` : "not done yet";
+  } else if (done >= goalReps) {
+    right = `${done} ✓`;
+    spoken = `${done} reps: reached ${goalReps}, the weight goes up`;
+  } else if (target > 0 && done < target) {
+    right = `${done}/${target}`;
+    spoken = `${done} of the ${target} reps aimed for`;
+  } else if (target > 0 && done > target) {
+    right = `${done} +${done - target}`;
+    spoken = `${done} reps, ${done - target} more than the ${target} aimed for`;
+  } else {
+    right = target > 0 ? `${done}/${target}` : `${done}`;
+    spoken = target > 0 ? `${done} reps, the ${target} aimed for` : `${done} reps`;
+  }
+  return { right, spoken, cells };
+}
