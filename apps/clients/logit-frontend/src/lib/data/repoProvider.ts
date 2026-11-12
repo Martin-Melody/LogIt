@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { log } from "@logit/core/platform/log";
 import type { WorkoutRepo } from "@logit/core/data/workoutRepo";
 import type { SplitRepo } from "@logit/core/data/splitRepo";
 import type { AssignedProgramRepo } from "@logit/core/data/coachProgramRepo";
@@ -174,7 +175,7 @@ export async function initRepos(): Promise<void> {
 
     // Bundled food DB is optional. Whether or not this build shipped one, layer the online
     // Open Food Facts lookup on top and cache its hits locally for offline reuse.
-    await initFoodDb().catch(() => {});
+    await initFoodDb().catch((e) => log.warn("db", "Bundled food database failed to open", e));
     foodDbRepo = createCachingFoodDbRepo({
       bundled: getFoodDb() ? createSqliteFoodDbRepo() : null,
       cache: createSqliteFoodCacheStore(),

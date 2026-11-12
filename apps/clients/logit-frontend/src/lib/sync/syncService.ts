@@ -40,9 +40,16 @@ import type {
 import { favoriteFoodId } from "@logit/core/domain/nutrition";
 import type { Habit, HabitEntry } from "@logit/core/domain/habit";
 import type { CoachHabit } from "@logit/core/domain/CoachHabit";
-import { enqueue, flush as flushOutbox } from "$lib/sync/outbox";
+import { enqueue, flush as flushOutbox, outboxSize } from "$lib/sync/outbox";
 import { syncStorageKey } from "$lib/sync/syncKeys";
 import { singleFlight } from "$lib/sync/singleFlight";
+import { log } from "@logit/core/platform/log";
+
+/** A sync step that failed and was skipped. API failures are also logged by the API client
+ * with their status and request id; this says which step they broke. */
+function syncWarn(step: string, e: unknown): void {
+  log.warn("sync", `${step} failed`, e);
+}
 
 // ── localStorage keys ────────────────────────────────────────────────────────
 
@@ -70,7 +77,7 @@ function getTimestamp(key: string): number {
   try { return parseInt(localStorage.getItem(syncStorageKey(key)) ?? "0", 10) || 0; } catch { return 0; }
 }
 function setTimestamp(key: string, ms: number): void {
-  try { localStorage.setItem(syncStorageKey(key), String(ms)); } catch {}
+  try { localStorage.setItem(syncStorageKey(key), String(ms)); } catch (e) { syncWarn("setTimestamp", e); }
 }
 
 // ── Last synced ───────────────────────────────────────────────────────────────
@@ -111,7 +118,7 @@ export async function pushAllSessions(): Promise<void> {
     if (all.length === 0) return;
     const remote = all.map((s) => ({ id: s.id, startedAtMs: s.startedAtMs, dataJson: JSON.stringify(s) }));
     await syncApi.pushSessions(remote);
-  } catch {}
+  } catch (e) { syncWarn("pushAllSessions", e); }
 }
 
 /** Returns false when the pull itself failed (network/auth rejection) — syncAll() uses this
@@ -131,19 +138,20 @@ export async function pullAndMergeSessions(): Promise<boolean> {
 
     for (const entry of remote) {
       if (entry.deletedAtMs) {
-        if (existingIds.has(entry.id)) await repo.deleteSession(entry.id).catch(() => {});
+        if (existingIds.has(entry.id)) await repo.deleteSession(entry.id).catch((e) => syncWarn("pullAndMergeSessions", e));
         continue;
       }
       if (existingIds.has(entry.id)) continue;
       try {
         const session: WorkoutSession = JSON.parse(entry.dataJson!);
         await repo.saveSession(session);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeSessions", e); }
     }
 
     setTimestamp(SESSIONS_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeSessions", e);
     return false;
   }
 }
@@ -180,7 +188,7 @@ export async function pushAllSplits(): Promise<void> {
       .filter((s): s is NonNullable<typeof s> => s !== null)
       .map((s) => ({ id: s.id, updatedAtMs: s.updatedAtMs, dataJson: JSON.stringify(s) }));
     await syncApi.pushSplits(remote);
-  } catch {}
+  } catch (e) { syncWarn("pushAllSplits", e); }
 }
 
 export async function pullAndMergeSplits(): Promise<boolean> {
@@ -197,7 +205,7 @@ export async function pullAndMergeSplits(): Promise<boolean> {
 
     for (const entry of remote) {
       if (entry.deletedAtMs) {
-        if (localMap.has(entry.id)) await repo.deleteSplit(entry.id).catch(() => {});
+        if (localMap.has(entry.id)) await repo.deleteSplit(entry.id).catch((e) => syncWarn("pullAndMergeSplits", e));
         continue;
       }
       const localUpdatedAtMs = localMap.get(entry.id) ?? -1;
@@ -205,12 +213,13 @@ export async function pullAndMergeSplits(): Promise<boolean> {
       try {
         const split: WorkoutSplit = JSON.parse(entry.dataJson!);
         await repo.saveSplit(split);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeSplits", e); }
     }
 
     setTimestamp(SPLITS_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeSplits", e);
     return false;
   }
 }
@@ -240,7 +249,7 @@ export async function pushAllExercises(): Promise<void> {
     if (all.length === 0) return;
     const remote = all.map((e) => ({ id: e.id, createdAtMs: e.createdAtMs, dataJson: JSON.stringify(e) }));
     await syncApi.pushExercises(remote);
-  } catch {}
+  } catch (e) { syncWarn("pushAllExercises", e); }
 }
 
 export async function pullAndMergeExercises(): Promise<boolean> {
@@ -257,19 +266,20 @@ export async function pullAndMergeExercises(): Promise<boolean> {
 
     for (const entry of remote) {
       if (entry.deletedAtMs) {
-        if (existingIds.has(entry.id)) await repo.remove(entry.id).catch(() => {});
+        if (existingIds.has(entry.id)) await repo.remove(entry.id).catch((e) => syncWarn("pullAndMergeExercises", e));
         continue;
       }
       if (existingIds.has(entry.id)) continue;
       try {
         const exercise: Exercise = JSON.parse(entry.dataJson!);
         await repo.saveExercise(exercise);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeExercises", e); }
     }
 
     setTimestamp(EXERCISES_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeExercises", e);
     return false;
   }
 }
@@ -291,7 +301,7 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
     const repo = getCoachProgramRepo();
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
-        await repo.removeFromRemote(entry.programId).catch(() => {});
+        await repo.removeFromRemote(entry.programId).catch((e) => syncWarn("pullAndMergeCoachPrograms", e));
         continue;
       }
       try {
@@ -307,12 +317,13 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
         if (!coachChanged && !startChanged) continue;
         const base = coachChanged ? program : existing!;
         await repo.upsertFromRemote({ ...base, clientStartedAtMs: clientStartedAtMs ?? undefined });
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeCoachPrograms", e); }
     }
 
     setTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeCoachPrograms", e);
     return false;
   }
 }
@@ -345,16 +356,17 @@ export async function pullAndMergeCoachNutritionPlan(): Promise<boolean> {
     const repo = getCoachNutritionPlanRepo();
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
-        await repo.removeFromRemote(entry.planId).catch(() => {});
+        await repo.removeFromRemote(entry.planId).catch((e) => syncWarn("pullAndMergeCoachNutritionPlan", e));
         continue;
       }
       try {
         await repo.upsertFromRemote(JSON.parse(entry.dataJson) as CoachNutritionPlan);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeCoachNutritionPlan", e); }
     }
     setTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeCoachNutritionPlan", e);
     return false;
   }
 }
@@ -393,9 +405,9 @@ export async function pushAllAuthoredPrograms(): Promise<void> {
           updatedAtMs: program.updatedAtMs,
           recipientUsername: recipientUsername ?? undefined,
         })
-        .catch(() => {});
+        .catch((e) => syncWarn("pushAllAuthoredPrograms", e));
     }
-  } catch {}
+  } catch (e) { syncWarn("pushAllAuthoredPrograms", e); }
 }
 
 // ── Check-ins ────────────────────────────────────────────────────────────────
@@ -409,7 +421,7 @@ export async function pullAndMergeCheckinSchedules(): Promise<boolean> {
     const repo = getCheckinRepo();
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
-        await repo.removeScheduleFromRemote(entry.scheduleId).catch(() => {});
+        await repo.removeScheduleFromRemote(entry.scheduleId).catch((e) => syncWarn("pullAndMergeCheckinSchedules", e));
         continue;
       }
       try {
@@ -417,11 +429,12 @@ export async function pullAndMergeCheckinSchedules(): Promise<boolean> {
         const existing = await repo.getAssignedSchedule(schedule.id);
         if (existing && existing.updatedAtMs >= schedule.updatedAtMs) continue;
         await repo.upsertScheduleFromRemote(schedule);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeCheckinSchedules", e); }
     }
     setTimestamp(CHECKIN_SCHEDULES_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeCheckinSchedules", e);
     return false;
   }
 }
@@ -435,7 +448,7 @@ export async function pullAndMergeCheckinSubmissions(): Promise<boolean> {
     const repo = getCheckinRepo();
     for (const entry of submissions) {
       if (entry.deletedAtMs || !entry.dataJson) {
-        await repo.removeSubmissionFromRemote(entry.id).catch(() => {});
+        await repo.removeSubmissionFromRemote(entry.id).catch((e) => syncWarn("pullAndMergeCheckinSubmissions", e));
         continue;
       }
       try {
@@ -443,11 +456,12 @@ export async function pullAndMergeCheckinSubmissions(): Promise<boolean> {
         const existing = await repo.getSubmission(sub.id);
         if (existing && existing.updatedAtMs >= sub.updatedAtMs) continue;
         await repo.upsertSubmissionFromRemote(sub);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeCheckinSubmissions", e); }
     }
     setTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeCheckinSubmissions", e);
     return false;
   }
 }
@@ -472,7 +486,7 @@ export async function pushAllCheckinSubmissions(): Promise<void> {
     await syncApi.pushCheckinSubmissions(
       subs.map((s) => ({ id: s.id, createdAtMs: s.createdAtMs, updatedAtMs: s.updatedAtMs, dataJson: JSON.stringify(s) })),
     );
-  } catch {}
+  } catch (e) { syncWarn("pushAllCheckinSubmissions", e); }
 }
 
 /** Coach authoring: push one check-in schedule, queued if offline (mirrors pushCoachProgram). */
@@ -504,9 +518,9 @@ export async function pushAllAuthoredCheckinSchedules(): Promise<void> {
           updatedAtMs: schedule.updatedAtMs,
           recipientUsername: recipientUsername ?? undefined,
         })
-        .catch(() => {});
+        .catch((e) => syncWarn("pushAllAuthoredCheckinSchedules", e));
     }
-  } catch {}
+  } catch (e) { syncWarn("pushAllAuthoredCheckinSchedules", e); }
 }
 
 // ── Messaging ────────────────────────────────────────────────────────────────
@@ -532,7 +546,8 @@ export async function pullAndMergeMessages(): Promise<boolean> {
     }
     setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeMessages", e);
     return false;
   }
 }
@@ -553,7 +568,7 @@ export function pushMessage(message: CoachMessage): void {
   messagesApi
     .send(dto)
     .then(() => getMessagesRepo().markSynced(message.id))
-    .catch(() => {});
+    .catch((e) => syncWarn("pushMessage", e));
 }
 
 export async function pushPendingMessages(): Promise<void> {
@@ -571,18 +586,18 @@ export async function pushPendingMessages(): Promise<void> {
           contextDateIso: m.contextDateIso,
         });
         await repo.markSynced(m.id);
-      } catch {}
+      } catch (e) { syncWarn("pushPendingMessages", e); }
     }
-  } catch {}
+  } catch (e) { syncWarn("pushPendingMessages", e); }
 }
 
 /** Mark the other party's messages in a thread read, locally and on the server. */
 export async function markThreadRead(relationshipId: string, upToMs: number): Promise<void> {
   try {
     await getMessagesRepo().markThreadRead(relationshipId, upToMs);
-  } catch {}
+  } catch (e) { syncWarn("markThreadRead", e); }
   if (apiClient.isAuthenticated()) {
-    messagesApi.markRead(relationshipId, upToMs).catch(() => {});
+    messagesApi.markRead(relationshipId, upToMs).catch((e) => syncWarn("markThreadRead", e));
   }
 }
 
@@ -668,7 +683,7 @@ export async function pushAllNutrition(): Promise<void> {
       await syncApi.pushMealTemplates(templates.map((t) => nutritionRowDto(t.id, t)));
     if (weights.length) await syncApi.pushWeightEntries(weights.map((w) => nutritionRowDto(w.id, w)));
     if (goal) await syncApi.pushNutritionGoal({ dataJson: JSON.stringify(goal), updatedAtMs: goal.updatedAtMs });
-  } catch {}
+  } catch (e) { syncWarn("pushAllNutrition", e); }
 }
 
 export async function pullAndMergeNutrition(): Promise<boolean> {
@@ -684,7 +699,7 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
     const { days } = await syncApi.pullNutritionDays(since);
     for (const e of days) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeDayFromRemote(e.id).catch(() => {});
+        await repo.removeDayFromRemote(e.id).catch((e) => syncWarn("pullAndMergeNutrition", e));
         continue;
       }
       try {
@@ -692,10 +707,11 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         const existing = await repo.getDay(day.dateIso);
         if (existing && existing.updatedAtMs >= day.updatedAtMs) continue;
         await repo.upsertDayFromRemote(day);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
     setTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
@@ -704,7 +720,7 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
     const { foods } = await syncApi.pullCustomFoods(since);
     for (const e of foods) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeCustomFoodFromRemote(e.id).catch(() => {});
+        await repo.removeCustomFoodFromRemote(e.id).catch((e) => syncWarn("pullAndMergeNutrition", e));
         continue;
       }
       try {
@@ -712,10 +728,11 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         const existing = await repo.getCustomFood(food.food.id);
         if (existing && existing.updatedAtMs >= food.updatedAtMs) continue;
         await repo.upsertCustomFoodFromRemote(food);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
     setTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
@@ -724,7 +741,7 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
     const { recipes } = await syncApi.pullRecipes(since);
     for (const e of recipes) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeRecipeFromRemote(e.id).catch(() => {});
+        await repo.removeRecipeFromRemote(e.id).catch((e) => syncWarn("pullAndMergeNutrition", e));
         continue;
       }
       try {
@@ -732,10 +749,11 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         const existing = await repo.getRecipe(recipe.id);
         if (existing && existing.updatedAtMs >= recipe.updatedAtMs) continue;
         await repo.upsertRecipeFromRemote(recipe);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
     setTimestamp(RECIPES_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
@@ -745,7 +763,7 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
     const local = await repo.listFavorites();
     for (const e of favorites) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeFavoriteFromRemote(e.id).catch(() => {});
+        await repo.removeFavoriteFromRemote(e.id).catch((e) => syncWarn("pullAndMergeNutrition", e));
         continue;
       }
       try {
@@ -753,10 +771,11 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         const existing = local.find((f) => f.food.id === fav.food.id);
         if (existing && existing.updatedAtMs >= fav.updatedAtMs) continue;
         await repo.upsertFavoriteFromRemote(fav);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
     setTimestamp(FAVORITES_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
@@ -766,7 +785,7 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
     const local = await repo.listMealTemplates();
     for (const e of templates) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeMealTemplateFromRemote(e.id).catch(() => {});
+        await repo.removeMealTemplateFromRemote(e.id).catch((e) => syncWarn("pullAndMergeNutrition", e));
         continue;
       }
       try {
@@ -774,10 +793,11 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         const existing = local.find((x) => x.id === t.id);
         if (existing && existing.updatedAtMs >= t.updatedAtMs) continue;
         await repo.upsertMealTemplateFromRemote(t);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
     setTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
@@ -786,7 +806,7 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
     const { entries } = await syncApi.pullWeightEntries(since);
     for (const e of entries) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeWeightEntryFromRemote(e.id).catch(() => {});
+        await repo.removeWeightEntryFromRemote(e.id).catch((e) => syncWarn("pullAndMergeNutrition", e));
         continue;
       }
       try {
@@ -794,10 +814,11 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         const existing = await repo.getWeightEntry(entry.id);
         if (existing && existing.updatedAtMs >= entry.updatedAtMs) continue;
         await repo.upsertWeightEntryFromRemote(entry);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
     setTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
@@ -810,7 +831,8 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         await repo.upsertGoalFromRemote(remoteGoal);
       }
     }
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
@@ -871,7 +893,7 @@ export async function pushAllHabits(): Promise<void> {
     if (habits.length) await syncApi.pushHabits(habits.map((h) => habitRowDto(h.id, h)));
     if (entries.length)
       await syncApi.pushHabitEntries(entries.map((e) => habitRowDto(e.id, e)));
-  } catch {}
+  } catch (e) { syncWarn("pushAllHabits", e); }
 }
 
 export async function pullAndMergeHabits(): Promise<boolean> {
@@ -884,7 +906,7 @@ export async function pullAndMergeHabits(): Promise<boolean> {
     const { habits } = await syncApi.pullHabits(since);
     for (const e of habits) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeHabitFromRemote(e.id).catch(() => {});
+        await repo.removeHabitFromRemote(e.id).catch((e) => syncWarn("pullAndMergeHabits", e));
         continue;
       }
       try {
@@ -892,10 +914,11 @@ export async function pullAndMergeHabits(): Promise<boolean> {
         const existing = await repo.getHabit(habit.id);
         if (existing && existing.updatedAtMs >= habit.updatedAtMs) continue;
         await repo.upsertHabitFromRemote(habit);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeHabits", e); }
     }
     setTimestamp(HABITS_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeHabits", e);
     ok = false;
   }
 
@@ -904,7 +927,7 @@ export async function pullAndMergeHabits(): Promise<boolean> {
     const { entries } = await syncApi.pullHabitEntries(since);
     for (const e of entries) {
       if (e.deletedAtMs || !e.dataJson) {
-        await repo.removeEntryFromRemote(e.id).catch(() => {});
+        await repo.removeEntryFromRemote(e.id).catch((e) => syncWarn("pullAndMergeHabits", e));
         continue;
       }
       try {
@@ -912,10 +935,11 @@ export async function pullAndMergeHabits(): Promise<boolean> {
         const existing = await repo.getEntry(entry.habitId, entry.dateIso);
         if (existing && existing.updatedAtMs >= entry.updatedAtMs) continue;
         await repo.upsertEntryFromRemote(entry);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeHabits", e); }
     }
     setTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY, Date.now());
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeHabits", e);
     ok = false;
   }
 
@@ -935,7 +959,7 @@ export async function pullAndMergeAssignedHabits(): Promise<boolean> {
     const repo = getAssignedHabitRepo();
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
-        await repo.removeFromRemote(entry.habitId).catch(() => {});
+        await repo.removeFromRemote(entry.habitId).catch((e) => syncWarn("pullAndMergeAssignedHabits", e));
         continue;
       }
       try {
@@ -943,11 +967,12 @@ export async function pullAndMergeAssignedHabits(): Promise<boolean> {
         const existing = await repo.getAssignedHabit(habit.id);
         if (existing && existing.updatedAtMs >= habit.updatedAtMs) continue;
         await repo.upsertFromRemote(habit);
-      } catch {}
+      } catch (e) { syncWarn("pullAndMergeAssignedHabits", e); }
     }
     setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndMergeAssignedHabits", e);
     return false;
   }
 }
@@ -1020,7 +1045,7 @@ export async function pushNavConfig(): Promise<void> {
     const remote = await buildRemoteProfile();
     setProfileUpdatedAtMs(remote.updatedAtMs);
     syncApi.pushProfile(remote).catch(() => enqueue({ type: "profile", dto: remote }));
-  } catch {}
+  } catch (e) { syncWarn("pushNavConfig", e); }
 }
 
 /**
@@ -1050,7 +1075,7 @@ export async function pushCurrentProfile(): Promise<void> {
     const remote = await buildRemoteProfile();
     setProfileUpdatedAtMs(remote.updatedAtMs);
     await syncApi.pushProfile(remote);
-  } catch {}
+  } catch (e) { syncWarn("pushCurrentProfile", e); }
 }
 
 /**
@@ -1088,29 +1113,37 @@ export const syncAll: () => Promise<boolean> = singleFlight(() => syncOnce());
  * actually completed — a Free-tier account whose pulls all 403 must not see a clean "synced"
  * state (see docs/bugs/social-smoke-test-findings.md #3). Returns false if any pull failed. */
 async function syncOnce(): Promise<boolean> {
+  const started = Date.now();
+  log.debug("sync", "Sync started");
   // Flush any writes queued while offline before pulling, so the server has the
   // latest local state before we merge its response back.
   await flushOutbox();
   await pushPendingMessages();
-  const results = await Promise.all([
-    pullAndMergeSessions(),
-    pullAndMergeSplits(),
-    pullAndMergeExercises(),
-    pullAndMergeCoachPrograms(),
-    pullAndMergeCoachNutritionPlan(),
-    pullAndMergeCheckinSchedules(),
-    pullAndMergeCheckinSubmissions(),
-    pullAndMergeMessages(),
-    pullAndMergeNutrition(),
-    pullAndMergeHabits(),
-    pullAndMergeAssignedHabits(),
-    pullAndApplyProfile(),
-  ]);
+  const pulls: [string, Promise<boolean>][] = [
+    ["sessions", pullAndMergeSessions()],
+    ["splits", pullAndMergeSplits()],
+    ["exercises", pullAndMergeExercises()],
+    ["coach programs", pullAndMergeCoachPrograms()],
+    ["coach nutrition plan", pullAndMergeCoachNutritionPlan()],
+    ["check-in schedules", pullAndMergeCheckinSchedules()],
+    ["check-ins", pullAndMergeCheckinSubmissions()],
+    ["messages", pullAndMergeMessages()],
+    ["nutrition", pullAndMergeNutrition()],
+    ["habits", pullAndMergeHabits()],
+    ["assigned habits", pullAndMergeAssignedHabits()],
+    ["profile", pullAndApplyProfile()],
+  ];
+  const results = await Promise.all(pulls.map(([, p]) => p));
   const ok = results.every(Boolean);
+  const ms = Date.now() - started;
   if (ok) {
     const now = Date.now();
     setTimestamp(LAST_SYNCED_AT_KEY, now);
     lastSyncedAt.set(now);
+    log.debug("sync", "Sync finished", { ms, queued: outboxSize() });
+  } else {
+    const failed = pulls.filter((_, i) => !results[i]).map(([name]) => name);
+    log.warn("sync", "Sync incomplete", { failed, ms, queued: outboxSize() });
   }
   return ok;
 }
@@ -1128,7 +1161,7 @@ export async function pullAndApplyProfile(): Promise<boolean> {
       try {
         const { applyRemoteRotations } = await import("$lib/usecases/Splits/splitRotation");
         applyRemoteRotations(JSON.parse(remote.splitRotationJson));
-      } catch {}
+      } catch (e) { syncWarn("pullAndApplyProfile", e); }
     }
 
     const localUpdatedAtMs = getProfileUpdatedAtMs();
@@ -1158,7 +1191,7 @@ export async function pullAndApplyProfile(): Promise<boolean> {
       try {
         const { navConfig } = await import("$lib/stores/navConfig.store");
         navConfig.applyRemote(JSON.parse(remote.navConfigJson));
-      } catch {}
+      } catch (e) { syncWarn("pullAndApplyProfile", e); }
     }
 
     // Home widget layout was previously a single, un-namespaced localStorage key — not
@@ -1167,18 +1200,18 @@ export async function pullAndApplyProfile(): Promise<boolean> {
       try {
         const { homeConfig } = await import("$lib/stores/homeConfig.store");
         homeConfig.applyRemote(JSON.parse(remote.homeConfigJson));
-      } catch {}
+      } catch (e) { syncWarn("pullAndApplyProfile", e); }
     }
 
     // Which split is "active" was previously a local-only meta-table entry with no sync
     // path at all — every fresh install/re-login lost it even though the split data itself
     // (days/blocks) synced fine, forcing the user to re-pick it by hand every time.
     if (remote.activeSplitId !== undefined) {
-      await getSplitRepo().setActiveSplitId(remote.activeSplitId).catch(() => {});
+      await getSplitRepo().setActiveSplitId(remote.activeSplitId).catch((e) => syncWarn("pullAndApplyProfile", e));
     }
 
     let restDefaults: Record<string, number | undefined> = {};
-    try { restDefaults = JSON.parse(remote.restDefaultsJson); } catch {}
+    try { restDefaults = JSON.parse(remote.restDefaultsJson); } catch (e) { syncWarn("pullAndApplyProfile", e); }
 
     // applyRemote(), not save() — save() always re-pushes with a fresh timestamp, which
     // would make every routine pull look like a brand-new edit and could race with (and
@@ -1200,7 +1233,8 @@ export async function pullAndApplyProfile(): Promise<boolean> {
 
     setProfileUpdatedAtMs(remote.updatedAtMs);
     return true;
-  } catch {
+  } catch (e) {
+    syncWarn("pullAndApplyProfile", e);
     return false;
   }
 }

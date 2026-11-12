@@ -95,8 +95,9 @@ public static class BillingEndpoints
         return Results.Ok(new BillingStatusResponse(user.Tier.ToString(), active));
     }
 
-    private static async Task<IResult> Webhook(HttpRequest request, AppDbContext db, IConfiguration config)
+    private static async Task<IResult> Webhook(HttpRequest request, AppDbContext db, IConfiguration config, ILoggerFactory loggerFactory)
     {
+        var log = loggerFactory.CreateLogger("Logit.Billing");
         using var reader = new StreamReader(request.Body);
         var json = await reader.ReadToEndAsync();
 
@@ -109,30 +110,33 @@ public static class BillingEndpoints
                 request.Headers["Stripe-Signature"],
                 webhookSecret);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            log.LogWarning("Stripe webhook rejected: {Reason}", ex.Message);
             return Results.BadRequest();
         }
+
+        log.LogInformation("Stripe webhook {EventType} ({EventId})", stripeEvent.Type, stripeEvent.Id);
 
         switch (stripeEvent.Type)
         {
             case "checkout.session.completed":
-                await HandleCheckoutCompleted(stripeEvent, db);
+                await HandleCheckoutCompleted(stripeEvent, db, log);
                 break;
 
             case "customer.subscription.deleted":
-                await HandleSubscriptionDeleted(stripeEvent, db);
+                await HandleSubscriptionDeleted(stripeEvent, db, log);
                 break;
 
             case "customer.subscription.updated":
-                await HandleSubscriptionUpdated(stripeEvent, db, config);
+                await HandleSubscriptionUpdated(stripeEvent, db, config, log);
                 break;
         }
 
         return Results.Ok();
     }
 
-    private static async Task HandleCheckoutCompleted(Event stripeEvent, AppDbContext db)
+    private static async Task HandleCheckoutCompleted(Event stripeEvent, AppDbContext db, ILogger log)
     {
         if (stripeEvent.Data.Object is not Session session) return;
 
@@ -140,7 +144,13 @@ public static class BillingEndpoints
         if (session.ClientReferenceId is not null && Guid.TryParse(session.ClientReferenceId, out var userId))
             user = await db.Users.FindAsync(userId);
         user ??= await db.Users.FirstOrDefaultAsync(u => u.StripeCustomerId == session.CustomerId);
-        if (user is null) return;
+        if (user is null)
+        {
+            // Someone paid and no account was upgraded: needs fixing by hand in the admin page.
+            log.LogError("Checkout {SessionId} completed but no user matches (client ref {ClientRef}, customer {CustomerId})",
+                session.Id, session.ClientReferenceId, session.CustomerId);
+            return;
+        }
 
         user.Tier = session.Metadata is not null && session.Metadata.TryGetValue("plan", out var plan) && plan == "studio"
             ? UserTier.Studio
@@ -148,33 +158,48 @@ public static class BillingEndpoints
         user.StripeSubscriptionId = session.SubscriptionId;
         if (session.CustomerId is not null) user.StripeCustomerId = session.CustomerId;
         await db.SaveChangesAsync();
+        log.LogInformation("User {UserId} upgraded to {Tier} by checkout {SessionId}", user.Id, user.Tier, session.Id);
     }
 
-    private static async Task HandleSubscriptionDeleted(Event stripeEvent, AppDbContext db)
+    private static async Task HandleSubscriptionDeleted(Event stripeEvent, AppDbContext db, ILogger log)
     {
         if (stripeEvent.Data.Object is not Subscription sub) return;
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.StripeSubscriptionId == sub.Id);
-        if (user is null) return;
+        if (user is null)
+        {
+            log.LogWarning("Subscription {SubscriptionId} deleted but no user has it", sub.Id);
+            return;
+        }
 
         user.Tier = UserTier.Free;
         user.StripeSubscriptionId = null;
         await db.SaveChangesAsync();
+        log.LogInformation("User {UserId} moved to Free: subscription {SubscriptionId} ended", user.Id, sub.Id);
     }
 
-    private static async Task HandleSubscriptionUpdated(Event stripeEvent, AppDbContext db, IConfiguration config)
+    private static async Task HandleSubscriptionUpdated(Event stripeEvent, AppDbContext db, IConfiguration config, ILogger log)
     {
         if (stripeEvent.Data.Object is not Subscription sub) return;
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.StripeSubscriptionId == sub.Id);
-        if (user is null) return;
+        if (user is null)
+        {
+            log.LogWarning("Subscription {SubscriptionId} updated ({Status}) but no user has it", sub.Id, sub.Status);
+            return;
+        }
 
         // The tier follows the subscription both ways. This used to only ever move it down,
         // so a card that failed and then succeeded on retry (past_due -> active) left a paying
         // user on Free, and a Pro <-> Studio change made in the billing portal never landed.
         var tier = TierFor(sub, config);
+        if (tier is null)
+            log.LogWarning("Subscription {SubscriptionId} has a price that matches neither plan; tier left at {Tier}",
+                sub.Id, user.Tier);
         if (tier is { } t && t != user.Tier)
         {
+            log.LogInformation("User {UserId} tier {From} -> {To} (subscription {SubscriptionId} is {Status})",
+                user.Id, user.Tier, t, sub.Id, sub.Status);
             user.Tier = t;
             await db.SaveChangesAsync();
         }

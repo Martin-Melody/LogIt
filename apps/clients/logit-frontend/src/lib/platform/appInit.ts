@@ -11,6 +11,8 @@ import { navConfig } from "$lib/stores/navConfig.store";
 import { setupKeyboard } from "./keyboard";
 import { setupNativeShell } from "./nativeShell";
 import { syncAll, reloadLastSyncedAt } from "$lib/sync/syncService";
+import { log, captureGlobalErrors } from "@logit/core/platform/log";
+import { getDeviceInfo } from "./deviceInfo";
 
 let didInit = false;
 
@@ -71,8 +73,20 @@ export async function appInit(): Promise<void> {
   if (didInit) return;
   didInit = true;
 
+  captureGlobalErrors();
+  const started = Date.now();
+  void getDeviceInfo().then((info) =>
+    log.info("app", "App started", {
+      version: info.appVersion,
+      build: info.build,
+      platform: info.platform,
+      server: info.serverMode,
+    }),
+  );
+
   try {
     await initRepos();
+    log.debug("app", "Local database ready", { ms: Date.now() - started });
 
     // Auth check runs in background — never blocks startup; sync follows if authenticated
     authStore.init()
@@ -84,7 +98,7 @@ export async function appInit(): Promise<void> {
         void syncAll();
         startBackgroundSync();
       })
-      .catch(() => {});
+      .catch((e) => log.error("auth", "Could not restore the signed-in session", e));
 
     // Follows the in-progress workout's rests from here on, on every screen.
     const { startRestTimers } = await import("$lib/services/restTimerService");
@@ -95,18 +109,19 @@ export async function appInit(): Promise<void> {
     try {
       await setupKeyboard();
     } catch (e) {
-      console.warn("[appInit] keyboard setup failed (continuing)", e);
+      log.warn("app", "Keyboard setup failed (continuing)", e);
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[appInit] startup failed", error);
+    log.error("app", "Startup failed", error);
     appInitError.set(msg);
   } finally {
     appReady.set(true);
+    log.debug("app", "Startup finished", { ms: Date.now() - started });
     // Runs even if startup failed, so the native splash always yields to the
     // web layer (the error screen included) rather than hanging.
     setupNativeShell().catch((e) =>
-      console.warn("[appInit] native shell setup failed (continuing)", e),
+      log.warn("app", "Native shell setup failed (continuing)", e),
     );
   }
 }

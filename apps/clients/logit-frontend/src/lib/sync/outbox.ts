@@ -17,6 +17,7 @@ import type {
 } from "@logit/core/api/syncApi";
 
 import { syncStorageKey } from "$lib/sync/syncKeys";
+import { log } from "@logit/core/platform/log";
 
 // Per profile on the phone (see syncStorageKey). Before that existed this one key was shared
 // by every profile; whichever profile first loads after the update adopts it, which is who
@@ -58,21 +59,50 @@ function adoptLegacy(k: string): void {
     const current = JSON.parse(localStorage.getItem(k) ?? "[]") as OutboxEntry[];
     localStorage.setItem(k, JSON.stringify([...(JSON.parse(legacy) as OutboxEntry[]), ...current]));
     localStorage.removeItem(LEGACY_KEY);
-  } catch {}
+  } catch (e) {
+    log.warn("sync", "Could not adopt the old shared outbox", e);
+  }
 }
 
 function load(k: string = key()): OutboxEntry[] {
-  try { return JSON.parse(localStorage.getItem(k) ?? "[]"); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(k) ?? "[]");
+  } catch (e) {
+    log.error("sync", "Outbox unreadable, treating it as empty", e);
+    return [];
+  }
 }
 
 function save(entries: OutboxEntry[], k: string = key()): void {
-  try { localStorage.setItem(k, JSON.stringify(entries)); } catch {}
+  try {
+    localStorage.setItem(k, JSON.stringify(entries));
+  } catch (e) {
+    // Most likely storage is full. These changes are still saved locally, but won't reach
+    // the server until a full re-push (sign in again).
+    log.error("sync", "Could not save the outbox; queued changes may not upload", {
+      entries: entries.length,
+      error: e,
+    });
+  }
+}
+
+/** How many changes are waiting to be sent. */
+export function outboxSize(): number {
+  return load().length;
+}
+
+/** Waiting changes per type, e.g. { session: 2, nutritionDay: 5 }. */
+export function outboxSummary(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const e of load()) counts[e.type] = (counts[e.type] ?? 0) + 1;
+  return counts;
 }
 
 export function enqueue(entry: OutboxEntry): void {
   const entries = load();
   entries.push(entry);
   save(entries);
+  log.debug("sync", `Queued ${entry.type} to send later`, { queued: entries.length });
 }
 
 /**
@@ -229,4 +259,15 @@ export async function flush(): Promise<void> {
   // while sending, which enqueue() appended after the entries this flush started with.
   const newer = load(k).slice(entries.length);
   save([...failed, ...newer], k);
+
+  if (failed.length === 0) {
+    log.info("sync", "Sent queued changes", { sent: entries.length });
+  } else {
+    const types = [...new Set(failed.map((f) => f.type))];
+    log.warn("sync", "Some queued changes could not be sent; will retry", {
+      queued: entries.length,
+      stillQueued: failed.length,
+      types,
+    });
+  }
 }
