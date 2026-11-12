@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { Button } from "$lib/components/ui/button";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -147,9 +148,9 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <h1 class="page-title">Sessions</h1>
-  </div>
+  </PageHeader>
 
   {#if !ui.loading && !ui.error && allRows.length > 0}
     <div class="grid grid-cols-3 divide-x divide-border border-b border-border" in:fade={{ duration: 160 }}>

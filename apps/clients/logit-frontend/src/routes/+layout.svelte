@@ -2,6 +2,7 @@
   import "./layout.css";
   import favicon from "$lib/assets/favicon.png";
   import BottomNav from "$lib/components/navigation/BottomNav/BottomNav.svelte";
+  import AppHeader from "$lib/components/navigation/AppHeader/AppHeader.svelte";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Toaster } from "$lib/components/ui/sonner/index";
   import { onMount } from "svelte";
@@ -98,9 +99,11 @@
   {#if isOnboarding}
     {@render children()}
   {:else}
-    <div class="flex h-screen flex-col bg-background text-foreground">
+    <div class="flex h-screen flex-col bg-background pt-[env(safe-area-inset-top)] text-foreground">
+      <AppHeader />
+
       <main
-        class="flex-1 overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)]"
+        class="flex-1 overflow-y-auto overscroll-contain"
         use:tabSwipe={swipeParams}
       >
         {@render children()}

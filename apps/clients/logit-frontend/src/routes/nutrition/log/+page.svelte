@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { log } from "@logit/core/platform/log";
   import { segment, segmentTrack, chip } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
@@ -431,7 +432,7 @@
 {/if}
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/nutrition")} />
     <h1 class="page-title">
       {#if browse}Foods{:else}Add to <span class="capitalize">{meal}</span>{/if}
@@ -439,7 +440,7 @@
     {#if browse}
       <a href="/nutrition/foods" class="ml-auto -mr-1 flex h-11 items-center px-2 text-sm text-muted-foreground hover:text-foreground">Manage</a>
     {/if}
-  </div>
+  </PageHeader>
 
   {#if browse}
     <div class="flex items-center justify-between px-3 py-2 border-b border-border">

@@ -1,6 +1,7 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { goto } from "$app/navigation";
-  import { Loader2, Search, PenSquare, Bell } from "lucide-svelte";
+  import { Loader2, Search, PenSquare } from "lucide-svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
   import PostCard from "$lib/components/social/PostCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -135,25 +136,17 @@
 
 <div class="flex flex-col min-h-full">
   <!-- Header -->
-  <header class="page-header sticky top-0 bg-background/95 backdrop-blur z-10">
+  <PageHeader>
     <h1 class="page-title">Feed</h1>
     {#if authStore.isAuthenticated}
       <button type="button" class="p-2 text-muted-foreground" aria-label="Search people" onclick={() => (showSearch = true)}>
         <Search class="h-[1.15rem] w-[1.15rem]" />
       </button>
-      <button type="button" class="p-2 text-muted-foreground relative" aria-label="Notifications" onclick={() => goto("/social/notifications")}>
-        <Bell class="h-[1.15rem] w-[1.15rem]" />
-        {#if $unreadNotifications > 0}
-          <span class="absolute top-1 right-1 min-w-[1rem] h-4 px-1 rounded-full bg-rose-500 text-[10px] font-semibold text-white flex items-center justify-center">
-            {$unreadNotifications > 9 ? "9+" : $unreadNotifications}
-          </span>
-        {/if}
-      </button>
       <button type="button" class="p-2 text-muted-foreground" aria-label="New post" onclick={() => (showCreatePost = true)}>
         <PenSquare class="h-[1.15rem] w-[1.15rem]" />
       </button>
     {/if}
-  </header>
+  </PageHeader>
 
   {#if !authStore.ready || (loading && authStore.isAuthenticated)}
     <div class="flex justify-center py-20"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>

@@ -7,6 +7,7 @@
   import { currentSession } from "$lib/stores/currentSession.store";
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { popIn } from "$lib/transitions";
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import {
     plannedDay,
     splitDayLabel,
@@ -41,6 +42,10 @@
     }
   }
 </script>
+
+<PageHeader>
+  <h1 class="page-title">Workout</h1>
+</PageHeader>
 
 <div class="flex flex-col items-center gap-5 px-6 py-12 text-center" in:popIn={{ duration: 200 }}>
   <div class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">

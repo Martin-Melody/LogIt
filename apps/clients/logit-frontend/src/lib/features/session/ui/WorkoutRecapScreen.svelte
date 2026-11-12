@@ -25,11 +25,13 @@
 
   const weightUnit = get(profile).weightUnit;
 
-  const { session, onDone, onCancel, onShare }: {
+  const { session, onDone, onCancel, onShare, onPrs }: {
     session: WorkoutSession;
     onDone: () => void | Promise<void>;
     onCancel?: () => void;
     onShare?: (session: WorkoutSession) => void;
+    /** The session's PRs once worked out (before it's saved, so history doesn't include it). */
+    onPrs?: (prs: SessionPR[]) => void;
   } = $props();
 
   const durationMs = Math.max(0, Date.now() - session.startedAtMs);
@@ -120,6 +122,7 @@
     void (async () => {
       try {
         prs = await getSessionPRs(session, getProgressionDeps());
+        onPrs?.(prs);
       } catch {
         prs = [];
       } finally {

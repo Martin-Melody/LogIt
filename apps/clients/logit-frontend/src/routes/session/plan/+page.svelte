@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -156,10 +157,10 @@
 </script>
 
 <div class="flex min-h-dvh flex-col">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/")} />
     <h1 class="page-title">Today's plan</h1>
-  </div>
+  </PageHeader>
 
   {#if error}
     <p class="border-b border-border px-3 py-2 text-sm text-destructive">{error}</p>

@@ -99,3 +99,49 @@ test("swiping does nothing when turned off", async ({ page }) => {
   await page.waitForTimeout(300);
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("the shared header follows the page on in-app navigation", async ({ page }) => {
+  await seed(page);
+  await page.goto("/settings");
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("header.page-header")).toContainText("Settings");
+
+  await page.getByText("Customise navigation").first().click();
+  await expect(page).toHaveURL(/\/settings\/navbar$/);
+  await expect(page.locator("header.page-header")).toContainText("Customise navigation");
+
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.locator("header.page-header")).toContainText("Settings");
+});
+
+test("the bell opens the inbox with the device's own notifications", async ({ page }) => {
+  await seed(page);
+  await page.addInitScript(() => {
+    const now = Date.now();
+    localStorage.setItem(
+      "logit:inbox:v1:" + (localStorage.getItem("logit:active_owner") ?? "local"),
+      JSON.stringify([
+        { id: "a", kind: "pr", createdAtMs: now - 60_000, read: false, exerciseName: "Bench Press", prKind: "weight", weightKg: 102.5, reps: 5 },
+        { id: "b", kind: "progression", createdAtMs: now - 120_000, read: false, exerciseName: "Squat", change: { kind: "increase", text: "+2.5 kg" } },
+      ]),
+    );
+  });
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+
+  const bell = page.getByRole("link", { name: "Notifications, 2 unread" });
+  await expect(bell).toBeVisible();
+  await bell.click();
+  await expect(page).toHaveURL(/\/inbox$/);
+  await expect(page.getByText("New PR · Bench Press")).toBeVisible();
+  await expect(page.getByText("5 × 102.5 kg, your heaviest yet")).toBeVisible();
+  await expect(page.getByText("+2.5 kg next time")).toBeVisible();
+
+  await page.getByRole("button", { name: "Progression" }).click();
+  await expect(page.getByText("New PR · Bench Press")).toHaveCount(0);
+  await expect(page.getByText("+2.5 kg next time")).toBeVisible();
+
+  // Opening the inbox marked them read. (In-app: a reload would re-run the seed script.)
+  await page.getByRole("link", { name: "Home" }).click();
+  await expect(page.getByRole("link", { name: "Notifications", exact: true })).toBeVisible();
+});

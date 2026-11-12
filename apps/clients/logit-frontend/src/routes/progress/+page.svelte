@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import * as Card from "$lib/components/ui/card";
@@ -61,9 +62,9 @@
 </script>
 
 <div class="p-3 flex flex-col gap-3 pb-32">
-  <div class="page-header -mx-3 -mt-3">
+  <PageHeader>
     <h1 class="page-title">Progress</h1>
-  </div>
+  </PageHeader>
   {#if ui.loading}
     <Card.Root><Card.Content class="pt-6"><p class="text-sm text-muted-foreground">Loading…</p></Card.Content></Card.Root>
   {:else if ui.error}

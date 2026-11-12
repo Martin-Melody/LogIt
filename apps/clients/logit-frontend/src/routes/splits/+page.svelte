@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { startSplitsTour } from "$lib/tour/index";
@@ -110,7 +111,7 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <h1 class="page-title">Splits</h1>
     <div class="flex items-center gap-2">
       <Button size="sm" variant="outline" onclick={() => goto("/programs/browse")}>
@@ -121,7 +122,7 @@
         New
       </Button>
     </div>
-  </div>
+  </PageHeader>
 
   {#if ui.error}
     <p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>

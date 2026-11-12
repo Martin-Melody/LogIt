@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { goto } from "$app/navigation";
   import { onMount, onDestroy } from "svelte";
   import { SlidersHorizontal } from "lucide-svelte";
@@ -59,7 +60,7 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="page-header -mx-3 -mt-3">
+  <PageHeader>
     <h1 class="page-title">Home</h1>
     <div class="flex items-center gap-2">
       {#if authStore.isAuthenticated}
@@ -75,7 +76,7 @@
         <SlidersHorizontal class="h-4 w-4" />
       </Button>
     </div>
-  </div>
+  </PageHeader>
 
   {#each activeWidgets as widget, i (widget.id)}
     {@const WidgetComponent = widget.component}
