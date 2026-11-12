@@ -147,7 +147,7 @@
 </script>
 
 <div class="border-y border-primary/30 bg-primary/[0.03] transition-opacity {dragging ? 'opacity-50' : ''}">
-  <div class="flex items-center gap-2 pl-1 pr-1">
+  <div class="flex items-center gap-2 py-1 pl-1 pr-1">
     <button
       type="button"
       class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-primary/70 cursor-grab active:cursor-grabbing touch-none"
@@ -186,12 +186,12 @@
     {#if canRun || running}
       <button
         type="button"
-        class="shrink-0 flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+        class="shrink-0 flex h-8 items-center gap-1 rounded-md bg-primary pl-2 pr-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
         onclick={startOrShow}
         disabled={saving && !running}
         aria-label={running ? `Show the ${label.toLowerCase()} timer` : `Start ${label.toLowerCase()}`}
       >
-        {#if running}<Timer class="h-4 w-4" /> Running{:else}<Play class="h-4 w-4 fill-current" /> Start{/if}
+        {#if running}<Timer class="h-3.5 w-3.5" /> Running{:else}<Play class="h-3.5 w-3.5 fill-current" /> Start{/if}
       </button>
     {/if}
     <DropdownMenu.Root>
