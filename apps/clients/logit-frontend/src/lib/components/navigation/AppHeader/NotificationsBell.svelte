@@ -14,7 +14,7 @@
 {#if !active}
   <a
     {href}
-    class="relative -mr-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    class="relative -mr-1.5 -my-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
     aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
     data-tour="header-bell"
   >
