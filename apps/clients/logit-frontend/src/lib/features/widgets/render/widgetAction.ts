@@ -85,7 +85,9 @@ export function runWidgetAction(action: WidgetAction): void {
         await goto("/session/current");
         return;
       }
-      const split = get(activeSplit);
+      // The button was drawn from the active split; if it isn't loaded now (a sync or
+      // account switch reloading it), load it rather than fall back to an empty workout.
+      const split = get(activeSplit) ?? (await activeSplit.load());
       const scheduled = split ? getTodaySplitDay(split) : null;
       const override = get(selectedDayOverride);
       const day =
@@ -103,10 +105,9 @@ export function runWidgetAction(action: WidgetAction): void {
         if (toRecord) params.set("record", toRecord.id);
         await goto(`/session/plan?${params}`);
         return;
-      } else {
-        await currentSession.start();
       }
-      await goto("/session/current");
+      // No active split or no day in it: the plan to start lives on the splits page.
+      await goto("/splits");
     })();
     return;
   }
