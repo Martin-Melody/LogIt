@@ -65,8 +65,10 @@
   const R = 13;
   const C = 2 * Math.PI * R;
 
+  // Before the hold there is nothing held yet: show just the goal (muted)
+  // rather than "39s / 39s", which read as if it had already been done.
   const holdDisplay = $derived(
-    running ? fmt(elapsed) : set.durationSec ? fmt(set.durationSec) : prev?.durationSec ? fmt(prev.durationSec) : "–",
+    running ? fmt(elapsed) : set.durationSec ? fmt(set.durationSec) : target ? null : prev?.durationSec ? fmt(prev.durationSec) : "–",
   );
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -111,7 +113,11 @@
         {#if running}<Square class="h-3.5 w-3.5" />{:else}<Play class="h-3.5 w-3.5" />{/if}
       </button>
       <span class="text-sm tabular-nums font-medium">
-        {holdDisplay}{#if target && !running}<span class="text-muted-foreground font-normal"> / {target}s</span>{/if}
+        {#if holdDisplay === null}
+          <span class="text-muted-foreground font-normal">{fmt(target ?? 0)} goal</span>
+        {:else}
+          {holdDisplay}{#if target && !running}<span class="text-muted-foreground font-normal"> / {fmt(target)}</span>{/if}
+        {/if}
       </span>
     {:else}
       <button type="button" class="h-10 w-10 shrink-0 flex items-center justify-center rounded-md border text-muted-foreground hover:text-foreground disabled:opacity-50"
