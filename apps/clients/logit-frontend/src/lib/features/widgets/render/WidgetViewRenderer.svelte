@@ -4,7 +4,11 @@
   import { Plus, Pencil, ChevronLeft, ChevronRight } from "lucide-svelte";
   import type { WidgetNode, WidgetView } from "@logit/core/plugins/widgetView";
   import { createSwipeHandlers } from "$lib/swipe";
-  import { runWidgetAction } from "./widgetAction";
+  import { runWidgetAction as runAction } from "./widgetAction";
+  import type { WidgetAction } from "@logit/core/plugins/widgetView";
+  import { fly } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
+  import { motionOK } from "$lib/transitions";
   import TextNode from "./nodes/TextNode.svelte";
   import StatGridNode from "./nodes/StatGridNode.svelte";
   import MuscleMapNode from "./nodes/MuscleMapNode.svelte";
@@ -33,11 +37,25 @@
     "calendar-heatmap",
   ]);
 
+  // Paged cards (Today's plan's days) slide their body in from the side they're moving
+  // to: from the right going forward (swipe left / next), from the left going back.
+  let slideDir = $state(0);
+
+  function runWidgetAction(action: WidgetAction, swipeDir = 0) {
+    slideDir = "cycleDay" in action ? Math.sign(action.cycleDay) : swipeDir;
+    runAction(action);
+  }
+
+  function slideIn(node: Element) {
+    if (!motionOK() || slideDir === 0) return { duration: 0 };
+    return fly(node, { x: slideDir * 32, duration: 220, easing: cubicOut, opacity: 0 });
+  }
+
   const swipe = $derived(
     view.swipe
       ? createSwipeHandlers(
-          () => view.swipe && runWidgetAction(view.swipe.left),
-          () => view.swipe && runWidgetAction(view.swipe.right),
+          () => view.swipe && runWidgetAction(view.swipe.left, 1),
+          () => view.swipe && runWidgetAction(view.swipe.right, -1),
         )
       : null,
   );
@@ -84,64 +102,68 @@
   </Card.Header>
 
   <Card.Content>
-    {#if view.empty}
-      <button
-        type="button"
-        class="-my-2 flex min-h-11 w-full items-center text-left text-sm text-primary disabled:text-muted-foreground"
-        disabled={!view.empty.action}
-        onclick={() => view.empty!.action && runWidgetAction(view.empty!.action)}
-      >
-        {view.empty.text}
-      </button>
-    {:else}
-      {#snippet nodeView(node: WidgetNode)}
-        {#if node.kind === "text"}
-          <TextNode {node} />
-        {:else if node.kind === "stat-grid"}
-          <StatGridNode {node} />
-        {:else if node.kind === "muscle-map"}
-          <MuscleMapNode {node} />
-        {:else if node.kind === "list"}
-          <ListNode {node} />
-        {:else if node.kind === "progress-rings"}
-          <ProgressRingsNode {node} />
-        {:else if node.kind === "bar"}
-          <BarNode {node} />
-        {:else if node.kind === "line"}
-          <LineNode {node} />
-        {:else if node.kind === "calendar-heatmap"}
-          <CalendarHeatmapNode {node} />
-        {:else if node.kind === "button-row"}
-          <ButtonRowNode {node} />
-        {:else if node.kind === "checklist"}
-          <ChecklistNode {node} />
-        {:else if node.kind === "gauge"}
-          <GaugeNode {node} />
-        {/if}
-      {/snippet}
-
-      {#if bodyClickable}
-        <!-- Full-body tap opens the card; interactive rows sit above the overlay. -->
-        <div class="relative flex w-full flex-col gap-3">
-          <button
-            type="button"
-            class="absolute inset-0 z-0 cursor-pointer"
-            aria-label={view.title}
-            onclick={() => runWidgetAction(view.action!)}
-          ></button>
-          {#each view.body as node, i (i)}
-            <div class={INTERACTIVE_KINDS.has(node.kind) ? "relative z-10" : ""}>
-              {@render nodeView(node)}
-            </div>
-          {/each}
-        </div>
+    {#key view.pager?.index ?? -1}
+    <div in:slideIn>
+      {#if view.empty}
+        <button
+          type="button"
+          class="-my-2 flex min-h-11 w-full items-center text-left text-sm text-primary disabled:text-muted-foreground"
+          disabled={!view.empty.action}
+          onclick={() => view.empty!.action && runWidgetAction(view.empty!.action)}
+        >
+          {view.empty.text}
+        </button>
       {:else}
-        <div class="flex w-full flex-col gap-3">
-          {#each view.body as node, i (i)}
-            {@render nodeView(node)}
-          {/each}
-        </div>
+        {#snippet nodeView(node: WidgetNode)}
+          {#if node.kind === "text"}
+            <TextNode {node} />
+          {:else if node.kind === "stat-grid"}
+            <StatGridNode {node} />
+          {:else if node.kind === "muscle-map"}
+            <MuscleMapNode {node} />
+          {:else if node.kind === "list"}
+            <ListNode {node} />
+          {:else if node.kind === "progress-rings"}
+            <ProgressRingsNode {node} />
+          {:else if node.kind === "bar"}
+            <BarNode {node} />
+          {:else if node.kind === "line"}
+            <LineNode {node} />
+          {:else if node.kind === "calendar-heatmap"}
+            <CalendarHeatmapNode {node} />
+          {:else if node.kind === "button-row"}
+            <ButtonRowNode {node} />
+          {:else if node.kind === "checklist"}
+            <ChecklistNode {node} />
+          {:else if node.kind === "gauge"}
+            <GaugeNode {node} />
+          {/if}
+        {/snippet}
+
+        {#if bodyClickable}
+          <!-- Full-body tap opens the card; interactive rows sit above the overlay. -->
+          <div class="relative flex w-full flex-col gap-3">
+            <button
+              type="button"
+              class="absolute inset-0 z-0 cursor-pointer"
+              aria-label={view.title}
+              onclick={() => runWidgetAction(view.action!)}
+            ></button>
+            {#each view.body as node, i (i)}
+              <div class={INTERACTIVE_KINDS.has(node.kind) ? "relative z-10" : ""}>
+                {@render nodeView(node)}
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="flex w-full flex-col gap-3">
+            {#each view.body as node, i (i)}
+              {@render nodeView(node)}
+            {/each}
+          </div>
+        {/if}
       {/if}
-    {/if}
+    </div>
+    {/key}
   </Card.Content>
 </Card.Root>

@@ -1,7 +1,6 @@
 import { get } from "svelte/store";
 import { goto } from "$app/navigation";
 import type { WidgetAction } from "@logit/core/plugins/widgetView";
-import { currentSession } from "$lib/stores/currentSession.store";
 import { activeSplit } from "$lib/stores/activeSplit.store";
 import {
   selectedDayOverride,
@@ -9,7 +8,7 @@ import {
   clearDayOverride,
 } from "$lib/stores/todaysPlan.store";
 import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
-import { getScheduleMode, advanceRotation } from "$lib/usecases/Splits/splitRotation";
+import { startEmptyWorkout, startPlannedWorkout } from "$lib/features/session/startWorkout";
 import { getHabitRepo } from "$lib/data/repoProvider";
 import { localDateIso } from "@logit/core/domain/nutrition";
 import { createHabitEntry, isSatisfied } from "@logit/core/domain/habit";
@@ -72,43 +71,12 @@ export function runWidgetAction(action: WidgetAction): void {
   }
 
   if ("startEmptyWorkout" in action) {
-    void (async () => {
-      if (get(currentSession) === null) await currentSession.start();
-      await goto("/session/current");
-    })();
+    void startEmptyWorkout();
     return;
   }
 
   if ("startPlannedWorkout" in action) {
-    void (async () => {
-      if (get(currentSession) !== null) {
-        await goto("/session/current");
-        return;
-      }
-      // The button was drawn from the active split; if it isn't loaded now (a sync or
-      // account switch reloading it), load it rather than fall back to an empty workout.
-      const split = get(activeSplit) ?? (await activeSplit.load());
-      const scheduled = split ? getTodaySplitDay(split) : null;
-      const override = get(selectedDayOverride);
-      const day =
-        split && override?.splitId === split.id
-          ? (split.days.find((d) => d.id === override.dayId) ?? scheduled)
-          : scheduled;
-
-      if (split && day) {
-        // "original" schedule mode advances by the scheduled day so the rotation
-        // stays on track; "bump" advances by what you actually did.
-        // Recorded by the plan screen when Start is pressed, so backing out of
-        // the plan doesn't move the rotation on.
-        const toRecord = getScheduleMode() === "original" ? scheduled : day;
-        const params = new URLSearchParams({ split: split.id, day: day.id });
-        if (toRecord) params.set("record", toRecord.id);
-        await goto(`/session/plan?${params}`);
-        return;
-      }
-      // No active split or no day in it: the plan to start lives on the splits page.
-      await goto("/splits");
-    })();
+    void startPlannedWorkout();
     return;
   }
 }

@@ -19,16 +19,19 @@
 
   import { authStore } from "$lib/api/authStore.svelte";
   import { profile } from "$lib/stores/profile.store";
+  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import Confetti from "./Confetti.svelte";
   import CountUp from "./CountUp.svelte";
 
   const weightUnit = get(profile).weightUnit;
 
-  const { session, onDone, onCancel, onShare }: {
+  const { session, onDone, onCancel, onShare, onPrs }: {
     session: WorkoutSession;
     onDone: () => void | Promise<void>;
     onCancel?: () => void;
     onShare?: (session: WorkoutSession) => void;
+    /** The session's PRs once worked out (before it's saved, so history doesn't include it). */
+    onPrs?: (prs: SessionPR[]) => void;
   } = $props();
 
   const durationMs = Math.max(0, Date.now() - session.startedAtMs);
@@ -109,10 +112,17 @@
   let prs = $state<SessionPR[]>([]);
   let prsLoaded = $state(false);
 
+  // Full screen: hide the bottom nav (shown on the workout screen) while it's up.
+  onMount(() => {
+    openOverlay();
+    return () => closeOverlay();
+  });
+
   onMount(() => {
     void (async () => {
       try {
         prs = await getSessionPRs(session, getProgressionDeps());
+        onPrs?.(prs);
       } catch {
         prs = [];
       } finally {

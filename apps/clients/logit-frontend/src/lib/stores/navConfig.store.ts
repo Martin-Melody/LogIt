@@ -59,6 +59,8 @@ export const BAR_SLOTS = 3;
 export type NavConfig = {
   bar: NavItemId[];  // up to BAR_SLOTS items shown in the bottom bar
   more: NavItemId[]; // items shown in the More drawer
+  /** Swipe sideways between the bar pages. Missing = on (configs saved before it existed). */
+  swipe?: boolean;
 };
 
 const STORAGE_KEY = "logit:nav-config:v1";
@@ -85,7 +87,7 @@ function load(): NavConfig {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
     const parsed = JSON.parse(raw) as NavConfig;
-    return ensureComplete({ bar: parsed.bar ?? [], more: parsed.more ?? [] });
+    return ensureComplete({ bar: parsed.bar ?? [], more: parsed.more ?? [], swipe: parsed.swipe });
   } catch {
     return defaultConfig();
   }
@@ -133,14 +135,14 @@ function createNavConfigStore() {
   function moveToBar(id: NavItemId) {
     update((c) => {
       if (c.bar.length >= BAR_SLOTS || c.bar.includes(id)) return c;
-      return { bar: [...c.bar, id], more: c.more.filter((x) => x !== id) };
+      return { ...c, bar: [...c.bar, id], more: c.more.filter((x) => x !== id) };
     });
   }
 
   function moveToMore(id: NavItemId) {
     update((c) => {
       if (!c.bar.includes(id)) return c;
-      return { bar: c.bar.filter((x) => x !== id), more: [id, ...c.more] };
+      return { ...c, bar: c.bar.filter((x) => x !== id), more: [id, ...c.more] };
     });
   }
 
@@ -184,6 +186,10 @@ function createNavConfigStore() {
     });
   }
 
+  function setSwipe(on: boolean) {
+    update((c) => ({ ...c, swipe: on }));
+  }
+
   /** Apply a config pulled from remote sync without triggering a re-push. */
   function applyRemote(config: NavConfig) {
     const complete = ensureComplete(config);
@@ -201,7 +207,7 @@ function createNavConfigStore() {
     update((c) => {
       const swap = (arr: NavItemId[]) =>
         arr.map((id) => (id === "social" ? "exercises" : id === "exercises" ? "social" : id));
-      return { bar: swap(c.bar), more: swap(c.more) };
+      return { ...c, bar: swap(c.bar), more: swap(c.more) };
     });
   }
 
@@ -215,6 +221,7 @@ function createNavConfigStore() {
     moveBarDown,
     moveMoreUp,
     moveMoreDown,
+    setSwipe,
     applyRemote,
     reconcileForOffline,
   };

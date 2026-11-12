@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
@@ -97,11 +98,11 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/nutrition/foods")} />
     <h1 class="page-title">Recipe</h1>
     <button type="button" class="ml-auto h-11 px-3 -mr-1 text-sm font-medium text-primary" onclick={() => void save()}>Save</button>
-  </div>
+  </PageHeader>
 
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>

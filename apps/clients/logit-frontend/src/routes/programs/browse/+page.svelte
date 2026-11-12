@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
@@ -10,13 +11,13 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/splits")} />
     <div class="min-w-0 flex-1">
       <p class="text-base font-semibold">Browse programs</p>
       <p class="text-xs text-muted-foreground">Day-by-day, week-by-week — no configuration needed.</p>
     </div>
-  </div>
+  </PageHeader>
 
   <ul class="divide-y divide-border">
     {#each BUILTIN_PROGRAMS as program (program.id)}

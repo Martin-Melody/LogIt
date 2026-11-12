@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -58,10 +59,10 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-24">
-  <div class="page-header -mx-3 -mt-3">
+  <PageHeader>
     <BackButton onclick={() => back("/settings")} />
     <h1 class="page-title">{algorithm?.name ?? "Algorithm"} Settings</h1>
-  </div>
+  </PageHeader>
 
   {#if loading}
     <p class="text-sm text-muted-foreground p-1">Loading…</p>

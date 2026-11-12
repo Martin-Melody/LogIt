@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { Trash2 } from "lucide-svelte";
@@ -75,10 +76,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/nutrition")} />
     <h1 class="page-title">Weight</h1>
-  </div>
+  </PageHeader>
 
   <div class="px-3 py-3 border-b border-border flex items-end gap-2">
     <label class="flex-1 flex flex-col gap-1">

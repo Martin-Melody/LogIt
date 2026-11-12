@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -220,7 +221,7 @@
 
 <div class="flex flex-col pb-24">
   <!-- Header -->
-  <div class="page-header">
+  <PageHeader>
     {#if edit.active}
       <Button
         variant="ghost"
@@ -300,7 +301,7 @@
         {/snippet}
       </ConfirmDialog>
     {/if}
-  </div>
+  </PageHeader>
 
   {#if vm.error}
     <p class="px-3 py-2 text-sm text-destructive border-b border-border">{vm.error}</p>

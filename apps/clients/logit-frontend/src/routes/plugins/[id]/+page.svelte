@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
   import { Send, ToggleLeft, Trash2 } from "lucide-svelte";
@@ -152,10 +153,10 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => void goto("/plugins")} />
     <span class="text-base font-semibold truncate">{manifest?.name ?? "Plugin"}</span>
-  </div>
+  </PageHeader>
 
   <div class="flex flex-col gap-3 p-3">
     {#if ui.error}

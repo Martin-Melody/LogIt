@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -42,10 +43,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/splits")} />
     <h1 class="page-title">Messages</h1>
-  </div>
+  </PageHeader>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>{/if}
 

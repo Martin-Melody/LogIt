@@ -187,9 +187,24 @@ main {
   view-transition-name: page;
 }
 
-header,
-footer {
+header {
   view-transition-name: none;
+}
+
+/* The bottom nav is its own layer during page transitions: as part of the root
+   snapshot it sat under the sliding page, so the Start button (which pokes up into
+   the page area) was covered for a frame. Its own group paints above the page (it
+   comes after <main>) and switches instantly, no cross-fade. */
+footer {
+  view-transition-name: bottom-nav;
+}
+::view-transition-group(bottom-nav),
+::view-transition-new(bottom-nav) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(bottom-nav) {
+  display: none;
 }
 
 /* Disable root-level transitions — only animate the page element */
@@ -301,3 +316,17 @@ footer {
 .driver-popover-arrow-side-right { border-right-color: var(--popover); }
 .driver-popover-arrow-side-top { border-top-color: var(--popover); }
 .driver-popover-arrow-side-bottom { border-bottom-color: var(--popover); }
+
+/* Moving between bottom-nav pages (tap or swipe): slide the way the bar goes.
+   `data-nav-dir` is set on <html> by the layout's onNavigate. */
+@keyframes nav-out-left  { to   { transform: translateX(-30%); opacity: 0; } }
+@keyframes nav-in-right  { from { transform: translateX(30%);  opacity: 0; } }
+@keyframes nav-out-right { to   { transform: translateX(30%);  opacity: 0; } }
+@keyframes nav-in-left   { from { transform: translateX(-30%); opacity: 0; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-nav-dir="forward"]::view-transition-old(page) { animation: 200ms cubic-bezier(0.4, 0, 0.2, 1) both nav-out-left; }
+  :root[data-nav-dir="forward"]::view-transition-new(page) { animation: 200ms cubic-bezier(0.4, 0, 0.2, 1) both nav-in-right; }
+  :root[data-nav-dir="back"]::view-transition-old(page)    { animation: 200ms cubic-bezier(0.4, 0, 0.2, 1) both nav-out-right; }
+  :root[data-nav-dir="back"]::view-transition-new(page)    { animation: 200ms cubic-bezier(0.4, 0, 0.2, 1) both nav-in-left; }
+}

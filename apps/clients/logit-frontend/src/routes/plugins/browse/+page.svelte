@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -149,7 +150,7 @@
 </svelte:head>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => void goto("/plugins")} />
     <span class="text-base font-semibold">Browse plugins</span>
     <Button
@@ -161,7 +162,7 @@
       <Server class="h-3.5 w-3.5" />
       {$registrySources.length} {$registrySources.length === 1 ? "source" : "sources"}
     </Button>
-  </div>
+  </PageHeader>
 
   <div class="flex flex-col gap-3 p-3">
     {#if showSources}

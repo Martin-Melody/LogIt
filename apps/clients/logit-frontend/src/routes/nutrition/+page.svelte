@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import {
@@ -256,10 +257,10 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => back("/")} />
     <h1 class="page-title">Nutrition</h1>
-  </div>
+  </PageHeader>
 
   <nav class="flex items-center gap-1 px-1 border-b border-border text-sm text-muted-foreground">
     <a href="/nutrition/log" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">

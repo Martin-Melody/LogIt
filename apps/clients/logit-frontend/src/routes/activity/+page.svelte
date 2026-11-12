@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -143,10 +144,10 @@
 
 <div class="flex flex-col pb-24 min-h-screen">
   <!-- Header -->
-  <div class="page-header">
+  <PageHeader>
     <BackButton onclick={() => void goto("/")} />
     <h1 class="page-title">Activity — {currentYear}</h1>
-  </div>
+  </PageHeader>
 
   <div class="flex flex-col gap-3 p-3">
     {#if loading}

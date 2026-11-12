@@ -1,6 +1,7 @@
 <script lang="ts">
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { back } from "$lib/navigation";
+  import PageHeader from "$lib/components/navigation/PageHeader.svelte";
 
   const { saving = false, error = null, startedAtMs = null } = $props<{
     saving?: boolean;
@@ -27,7 +28,9 @@
   });
 </script>
 
-<div class="page-header">
+<!-- In the shared header (same place as every other page's, so landing here doesn't
+     shift the page), without the bell while training. -->
+<PageHeader bell={false}>
   <BackButton onclick={() => back("/")} />
 
   <h1 class="page-title">Workout</h1>
@@ -42,7 +45,7 @@
       {elapsedLabel}
     </span>
   {/if}
-</div>
+</PageHeader>
 
 {#if error}
   <p class="px-3 py-1.5 text-sm text-destructive border-b border-border">{error}</p>
