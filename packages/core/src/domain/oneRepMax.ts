@@ -11,3 +11,14 @@
 export function estimated1RM(weight: number, reps: number): number {
   return reps === 1 ? weight : weight * (1 + reps / 30);
 }
+
+/**
+ * Reps done at one load, expressed as reps at another load: the rep count at
+ * `toKg` with the same Epley estimate as `reps` at `fromKg`. Used to judge a set
+ * done at a different weight from the plan (5 at +2.5 kg ≈ 6 at the planned
+ * weight). Not rounded and never below 0; null when either load isn't positive.
+ */
+export function repsAtLoad(reps: number, fromKg: number, toKg: number): number | null {
+  if (!(fromKg > 0) || !(toKg > 0) || reps <= 0) return null;
+  return Math.max(0, (fromKg / toKg) * (30 + reps) - 30);
+}
