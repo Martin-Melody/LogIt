@@ -7,9 +7,22 @@ import type {
   MobilityBlockData,
   MobilityMetric,
   MobilitySide,
+  SessionSource,
 } from "@logit/core/domain/workout";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
+
+/** The name and source columns, left off the session when empty. */
+function nameAndSource(row: any): Pick<WorkoutSession, "name" | "source"> {
+  let source: SessionSource | null = null;
+  if (row.source_json) {
+    try { source = JSON.parse(row.source_json) as SessionSource; } catch { source = null; }
+  }
+  return {
+    ...(row.name ? { name: row.name as string } : {}),
+    ...(source && typeof source.dayId === "string" ? { source } : {}),
+  };
+}
 
 function parseBlockData(type: string, dataJson: string): unknown {
   let raw: any;
@@ -122,14 +135,25 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
       const db = getDb();
 
       await db.run(
-        `INSERT INTO sessions(id, started_at_ms, ended_at_ms, owner_id, exclude_from_progression, note)
-         VALUES(?, ?, ?, ?, ?, ?)
+        `INSERT INTO sessions(id, started_at_ms, ended_at_ms, owner_id, exclude_from_progression, note, name, source_json)
+         VALUES(?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            started_at_ms = excluded.started_at_ms,
            ended_at_ms   = excluded.ended_at_ms,
            exclude_from_progression = excluded.exclude_from_progression,
-           note = excluded.note`,
-        [session.id, session.startedAtMs, session.endedAtMs ?? null, getActiveOwnerId(), session.excludeFromProgression ? 1 : 0, session.note ?? null],
+           note = excluded.note,
+           name = excluded.name,
+           source_json = excluded.source_json`,
+        [
+          session.id,
+          session.startedAtMs,
+          session.endedAtMs ?? null,
+          getActiveOwnerId(),
+          session.excludeFromProgression ? 1 : 0,
+          session.note ?? null,
+          session.name?.trim() || null,
+          session.source ? JSON.stringify(session.source) : null,
+        ],
       );
 
       await writeBlocks(db, session);
@@ -140,7 +164,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
       const ownerId = getActiveOwnerId();
       const baseRes = await db.query(
-        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note
+        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note, name, source_json
          FROM sessions WHERE id = ? AND (owner_id = ? OR owner_id IS NULL)`,
         [id, ownerId],
       );
@@ -153,6 +177,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         endedAtMs: base.endedAtMs ?? undefined,
         excludeFromProgression: base.exclude_from_progression === 1 ? true : undefined,
         note: base.note ?? null,
+        ...nameAndSource(base),
         blocks: await readBlocks(db, id),
       };
     },
@@ -162,7 +187,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
       const ownerId = getActiveOwnerId();
       const sessionRes = await db.query(
-        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note
+        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note, name, source_json
          FROM sessions
          WHERE ended_at_ms IS NOT NULL AND (owner_id = ? OR owner_id IS NULL)
          ORDER BY ended_at_ms DESC
@@ -204,6 +229,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         endedAtMs: r.endedAtMs ?? undefined,
         excludeFromProgression: r.exclude_from_progression === 1 ? true : undefined,
         note: r.note ?? null,
+        ...nameAndSource(r),
         blocks: blocksBySessionId.get(r.id) ?? [],
       }));
     },
@@ -213,7 +239,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
 
       const ownerId = getActiveOwnerId();
       const sessionRes = await db.query(
-        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note
+        `SELECT id, started_at_ms as startedAtMs, ended_at_ms as endedAtMs, exclude_from_progression, note, name, source_json
          FROM sessions
          WHERE owner_id = ? OR owner_id IS NULL
          ORDER BY COALESCE(ended_at_ms, started_at_ms) DESC`,
@@ -253,6 +279,7 @@ export function createSqliteWorkoutRepo(): WorkoutRepo {
         endedAtMs: r.endedAtMs ?? undefined,
         excludeFromProgression: r.exclude_from_progression === 1 ? true : undefined,
         note: r.note ?? null,
+        ...nameAndSource(r),
         blocks: blocksBySessionId.get(r.id) ?? [],
       }));
     },
