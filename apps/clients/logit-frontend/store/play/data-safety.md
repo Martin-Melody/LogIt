@@ -1,7 +1,7 @@
 # Play Console — Data safety form answers
 
 App Content → Data safety. Answers reflect the shipped mobile binary + the
-managed (logit.ie) sync backend. Self-hosted servers are the operator's
+managed (getlogit.app) sync backend. Self-hosted servers are the operator's
 responsibility.
 
 ## Does your app collect or share any of the required user data types?
@@ -13,7 +13,7 @@ YES (HTTPS).
 
 ## Do you provide a way for users to request that their data be deleted?
 YES — in-app: Settings → Account → Delete account. Also by email.
-Deletion URL (for the form): https://logit.ie/delete-account
+Deletion URL (for the form): https://getlogit.app/delete-account
   (in the app, on the web dashboard for Pro/Studio, or by email; lists what is deleted
   and what is kept)
 

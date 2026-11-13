@@ -176,7 +176,7 @@ A **registry is a JSON document** — an array of manifests (or an ActivityPub
 outbox). No server compute. This maps onto the existing hosting split:
 
 - The app ships with a **default registry URL** baked in — a static
-  `registry.json` on Cloudflare Pages (`registry.logit.ie` or similar).
+  `registry.json` on Cloudflare Pages (`registry.getlogit.app` or similar).
 - Settings → **"Add registry URL"**. Self-hosters point at their own or add
   community registries. Multiple registries merge in the browse view, tagged by
   source.
@@ -424,7 +424,7 @@ yet — `wrangler pages deploy` when ready.
 - ~~**Sandbox engine**~~ — **decided: QuickJS-WASM** (`quickjs-emscripten`),
   2026-09-01. Hard boundary, identical web/iOS/Android, clean for Apple 2.5.2.
   The WASM + Capacitor wiring needs on-device verification.
-- **Registry hosting** — dedicated `registry.logit.ie` static site vs a
+- **Registry hosting** — dedicated `registry.getlogit.app` static site vs a
   `registry.json` in a public GitHub repo consumed via raw URL / Pages (the
   Obsidian model).
 - **Signing** — is registry-issued signing worth it in Phase 5, or does

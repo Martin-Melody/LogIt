@@ -88,7 +88,7 @@ function saveUserSources(sources: RegistrySource[]): void {
 
 function hostLabel(url: string): string {
   try {
-    return new URL(url, browser ? location.origin : "https://logit.ie").host || url;
+    return new URL(url, browser ? location.origin : "https://getlogit.app").host || url;
   } catch {
     return url;
   }

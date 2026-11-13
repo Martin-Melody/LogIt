@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "logit.ie: the marketing site, pricing, legal pages, self-hosting guide and plugin docs.",
+  "description": "getlogit.app: the marketing site, pricing, legal pages, self-hosting guide and plugin docs.",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

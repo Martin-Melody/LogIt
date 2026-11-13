@@ -22,8 +22,8 @@ Store assets and copy live in `apps/clients/logit-frontend/store/`.
 
 2. **Privacy policy must be live at a public URL.** `apps/clients/website` has
    `/privacy`, `/terms` and `/delete-account`; the store files already point at
-   `https://logit.ie/...`. Deploy the website and attach `logit.ie` to it (see
-   `docs/deployment.md`). The app's default `VITE_MARKETING_URL` is `https://logit.ie`.
+   `https://getlogit.app/...`. Deploy the website and attach `getlogit.app` to it (see
+   `docs/deployment.md`). The app's default `VITE_MARKETING_URL` is `https://getlogit.app`.
 
 3. **Upload keystore password is a dev placeholder.** `~/.keystores/logit-upload.jks`
    was generated with password `logit-upload-dev`. Before first submission,
@@ -139,7 +139,7 @@ session, history, progress charts, nutrition diary, habits.
 
 ## 4. Post-launch follow-ups
 
-- Buy `logit.ie`; point `VITE_MARKETING_URL`, `VITE_API_URL`, `VITE_WEB_URL`, and
+- `getlogit.app` is bought (2026-11-13). Point `VITE_MARKETING_URL`, `VITE_API_URL`, `VITE_WEB_URL`, and
   the Play/ASC privacy URLs at the real domain; attach the domain to the
   Cloudflare Pages project (`TODO.md`).
 - Apply the nutrition DB migrations to the deployed database (dual SQLite +

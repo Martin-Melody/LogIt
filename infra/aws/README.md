@@ -41,7 +41,7 @@ services.
    then `aws configure` with credentials for the account you're deploying into.
 2. Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in `db_password`,
    `jwt_secret` (generate with `openssl rand -base64 48`), `admin_key`, and `web_origin` (the
-   subdomain you intend to point at `logit-web`, e.g. `https://app.logit.ie` — SvelteKit needs
+   subdomain you intend to point at `logit-web`, e.g. `https://app.getlogit.app` — SvelteKit needs
    this upfront, see the variable's description in `variables.tf`). This file is gitignored —
    never commit it.
 3. `terraform init`
@@ -96,17 +96,17 @@ working, with the Postgres schema showing the correct native `boolean` column.
 ## Custom domains (via Cloudflare, not Route53)
 
 DNS lives on Cloudflare, not AWS, so this isn't fully automated. After `terraform apply`, for
-each of `api.logit.ie` and `app.logit.ie` (or whatever you actually pick):
+each of `api.getlogit.app` and `app.getlogit.app` (or whatever you actually pick):
 
 1. `terraform output cloudflare_cname_targets` — the default `*.awsapprunner.com` URL for each
    service.
 2. In Cloudflare's dashboard, add a CNAME for the hostname pointing at the matching value
    (**DNS-only, not proxied** — App Runner needs to see the real request to issue/validate its
    own TLS certificate for the custom domain).
-3. `aws apprunner associate-custom-domain --service-arn $(terraform output -raw api_service_arn) --domain-name api.logit.ie`
-   (swap in `web_service_arn` / `app.logit.ie` for the other one).
+3. `aws apprunner associate-custom-domain --service-arn $(terraform output -raw api_service_arn) --domain-name api.getlogit.app`
+   (swap in `web_service_arn` / `app.getlogit.app` for the other one).
 4. Wait for `aws apprunner describe-custom-domains` to show the certificate as `ACTIVE`.
-5. If `app.logit.ie` ends up different from what you put in `web_origin` earlier, update that
+5. If `app.getlogit.app` ends up different from what you put in `web_origin` earlier, update that
    variable to match and `terraform apply` again — SvelteKit checks the real request origin
    against it.
 

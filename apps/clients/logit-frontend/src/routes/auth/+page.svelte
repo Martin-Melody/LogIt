@@ -326,7 +326,7 @@
             <span class="truncate">{getSelfHostUrl() || "Self-hosted"}</span>
           {:else}
             <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>logit.ie</span>
+            <span>getlogit.app</span>
           {/if}
           <button type="button" class="ml-auto underline hover:text-foreground shrink-0"
             onclick={() => { showServerSetup = true; urlTestResult = "idle"; }}>
@@ -357,7 +357,7 @@
               Save
             </button>
             {#if serverMode === "selfhosted"}
-              <button type="button" class="text-xs text-muted-foreground" onclick={useCloud}>Use logit.ie instead</button>
+              <button type="button" class="text-xs text-muted-foreground" onclick={useCloud}>Use getlogit.app instead</button>
             {:else}
               <button type="button" class="text-xs text-muted-foreground" onclick={() => (showServerSetup = false)}>Cancel</button>
             {/if}

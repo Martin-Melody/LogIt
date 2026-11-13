@@ -109,7 +109,7 @@
       <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">My clients</p>
       {#if !isStudio}
         <p class="px-3 pb-3 text-sm text-muted-foreground">
-          Coaching clients is a Studio-tier feature. Manage your plan in a browser at logit.ie.
+          Coaching clients is a Studio-tier feature. Manage your plan in a browser at getlogit.app.
         </p>
       {:else}
         {#if clients.length === 0}

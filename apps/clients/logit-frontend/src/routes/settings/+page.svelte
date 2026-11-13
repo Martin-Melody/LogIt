@@ -572,7 +572,7 @@
           {/if}
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium">@{authStore.user.username}</p>
-            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "logit.ie" : "Self-hosted"} · {authStore.user.tier} plan</p>
+            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "getlogit.app" : "Self-hosted"} · {authStore.user.tier} plan</p>
           </div>
         </div>
 
@@ -581,9 +581,9 @@
         <div class="border-t border-border py-3">
           <p class="text-xs text-muted-foreground">
             {#if authStore.user.tier === "Free"}
-              Free plan — social feed on your phone. Cross-device sync and the web dashboard need Pro or Studio. Manage your plan in a browser at logit.ie.
+              Free plan — social feed on your phone. Cross-device sync and the web dashboard need Pro or Studio. Manage your plan in a browser at getlogit.app.
             {:else}
-              {authStore.user.tier} plan. Manage your plan in a browser at logit.ie.
+              {authStore.user.tier} plan. Manage your plan in a browser at getlogit.app.
             {/if}
           </p>
         </div>

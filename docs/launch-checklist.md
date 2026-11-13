@@ -33,9 +33,12 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       EU hosting, plugins and diagnostics; the hosting provider's name is still a TODO in the policy).
 - [ ] **VPS**: buy one (Hetzner CX22-ish, ~€5/month, EU) and give Claude SSH access.
 - [ ] **Off-site backup storage** for the database (e.g. Hetzner Storage Box or Backblaze B2, a few €/month).
-- [ ] **logit.ie DNS to Cloudflare**: currently a registrar parking page over plain http. Move the
-      nameservers to Cloudflare (free plan) so the website, `app.logit.ie` and `api.logit.ie` can be set up.
-- [ ] **hello@logit.ie and privacy@logit.ie mailboxes** (or forwarding to your inbox, e.g. Cloudflare
+- [x] **Domain**: `getlogit.app`, bought on Cloudflare Registrar 2026-11-13 (logit.ie is owned by
+      Grandstream Holdings Limited since 2018, renewal due 2026-12-05). DNS is already on Cloudflare.
+      Website at `getlogit.app`, dashboard `app.getlogit.app`, API `api.getlogit.app`. .app is HTTPS-only.
+- [ ] **Attach `getlogit.app` to the Cloudflare Pages project** and add the `app` / `api` records once
+      the VPS exists.
+- [ ] **hello@getlogit.app and privacy@getlogit.app mailboxes** (or forwarding to your inbox, e.g. Cloudflare
       Email Routing). The site, privacy policy and Play listing use them.
 - [ ] **Upload keystore**: none on the lab. Find the September one (Windows PC?) or let Claude generate a
       new one. Store the `.jks` and its password in a password manager plus an offline copy.
@@ -62,7 +65,7 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       grace-period / account-hold notices, Stripe checkout switched off. Tested against fake Google responses.
 - [ ] **Android billing plugin**: list plans, buy (tied to the logged-in Logit account), restore,
       open Play's subscription page.
-- [ ] **In-app Upgrade screen**: mockup first. Replace the "Manage your plan in a browser at logit.ie" text
+- [ ] **In-app Upgrade screen**: mockup first. Replace the "Manage your plan in a browser at getlogit.app" text
       (`settings/+page.svelte`, `clients/+page.svelte`).
 - [ ] **logit-web `/upgrade`**: say "subscribe in the app" instead of going to Stripe.
 - [ ] **VPS deploy files**: production compose (API + Postgres + logit-web behind Caddy for HTTPS),
@@ -70,7 +73,7 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 
 ## After both halves are done
 
-- [ ] Point the app build at `https://api.logit.ie` (the default in `packages/core/src/api/client.ts`
+- [ ] Point the app build at `https://api.getlogit.app` (the default in `packages/core/src/api/client.ts`
       is an old AWS App Runner host that no longer exists).
 - [ ] Create the subscriptions in Play Console; test buying with Play license testers.
 - [ ] Merge `feat/sessions-overhaul` first: the website's Sessions screenshots show those pages.

@@ -1,6 +1,6 @@
 # App screenshots for the website
 
-The phone screens on logit.ie (`static/screens/*.webp`) are the real app, running in a browser in
+The phone screens on getlogit.app (`static/screens/*.webp`) are the real app, running in a browser in
 dark mode with made-up sample data: "Alex" on an upper/lower split with 10 weeks of training,
 3 weeks of food, bodyweight, habits and goals, plus a few fake lifters on the social feed.
 Nothing here touches real data or the real API.
