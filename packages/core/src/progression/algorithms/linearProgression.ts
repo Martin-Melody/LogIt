@@ -3,7 +3,8 @@ import { classifyTrend } from "../../domain/progression";
 import type { MuscleGroup } from "../../domain/exercise";
 import { usesBodyweightLoad } from "../../domain/exercise";
 import type { Reasoning, ReasoningConfidence } from "../../domain/reasoning";
-import { estimated1RM } from "../../domain/oneRepMax";
+import { estimated1RM, repsAtLoad } from "../../domain/oneRepMax";
+import { effectiveLoadKg, getLoadMode } from "../../domain/bodyweight";
 import { nowMs } from "../../domain/time";
 
 // A single-variable-at-a-time experiment on this exercise's rep range — see
@@ -544,6 +545,39 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   // Did an extra set last time? Plan it again rather than silently dropping it.
   if (plannedSetCount === undefined) setCount = Math.max(setCount, workingSets.length);
 
+  // Lead-in sets: lighter than a set done after them (15 × 25 kg, then 7 × 30 kg
+  // once the right weight was found). The plan works from the heaviest weight, and
+  // each lead-in counts as the reps it's worth there (Epley, rounded down: 15 × 25
+  // ≈ 7 × 30). Only this calculation sees the converted sets; what was logged is
+  // left alone. Sets that drop after the heaviest (back-offs, BW then BW−25) are
+  // planned on their own as before. Not for assisted exercises, where a bigger
+  // number is more help. A bodyweight lead-in with no known bodyweight can't be
+  // converted, so it's left out.
+  const isLeadIn = (i: number) =>
+    !isAssisted && workingSets.slice(i + 1).some((l) => l.weight > workingSets[i]!.weight + 0.01);
+  const leadInIdx = workingSets.flatMap((_, i) => (isLeadIn(i) ? [i] : []));
+  const leadIns = leadInIdx.length;
+  const topWeight = Math.max(...workingSets.map((s) => s.weight));
+  // By name too (the bundled Dips has no type), so 12 × BW then 6 × BW+5 converts.
+  const bwLeadIn = bwLoad || getLoadMode(input.exercise.exerciseType, workingSets.map((s) => s.weight), input.exercise.name) === "bodyweight";
+  const loadKg = (w: number) => effectiveLoadKg(w, bwLeadIn ? "bodyweight" : "external", lastSession.bodyweightKg);
+  const leadInDesc: string[] = [];
+  const counted = workingSets.flatMap((s, i) => {
+    if (!isLeadIn(i)) return [s];
+    if (bwLeadIn && !(lastSession.bodyweightKg && lastSession.bodyweightKg > 0)) return [];
+    const eq = repsAtLoad(s.reps, loadKg(s.weight), loadKg(topWeight));
+    if (eq === null) return [];
+    const reps = Math.floor(eq + 1e-9);
+    leadInDesc.push(`${s.reps} × ${fmtLoad(s.weight, bwLeadIn)} ≈ ${reps} × ${fmtLoad(topWeight, bwLeadIn)}`);
+    return [{ ...s, weight: topWeight, reps }];
+  });
+  const leadInNote =
+    leadIns > 0
+      ? leadInDesc.length > 0
+        ? ` Lighter sets count as reps at ${fmtLoad(topWeight, bwLeadIn)}: ${leadInDesc.join(", ")}.`
+        : ` Lighter sets before ${fmtLoad(topWeight, bwLeadIn)} don't count (no bodyweight to convert them).`
+      : "";
+
   if (workingSets.length === 0) {
     return {
       sets: makeWorkingSets(state.workingWeight, state.repRange, setCount),
@@ -644,8 +678,8 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   }
 
   const [repFloor, repCeiling] = activeRepRange;
-  const allHitCeiling = workingSets.every((s) => s.reps >= repCeiling);
-  const anyMissedFloor = workingSets.some((s) => s.reps < repFloor);
+  const allHitCeiling = counted.every((s) => s.reps >= repCeiling);
+  const anyMissedFloor = counted.some((s) => s.reps < repFloor);
 
   // Sets done at different weights last time — BW for the first two and BW−25
   // once tired, or a top set and back-offs. Forcing them onto one weight would
@@ -653,10 +687,10 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   // range). Instead each set moves on its own: one that hit the top of the range
   // goes up an increment, the rest aim for one more rep. Worked out from last
   // session alone, so it reads the same however often it's asked.
-  const mixedWeights = workingSets.some((s) => Math.abs(s.weight - workingSets[0]!.weight) > 0.01);
+  const mixedWeights = counted.some((s) => Math.abs(s.weight - counted[0]!.weight) > 0.01);
   if (mixedWeights && !isAssisted) {
     const plan = Array.from({ length: setCount }, (_, i) => {
-      const last = workingSets[i] ?? workingSets[workingSets.length - 1]!;
+      const last = counted[i] ?? counted[counted.length - 1]!;
       return last.reps >= repCeiling
         ? { weight: last.weight + state.increment, reps: repFloor, up: true }
         : { weight: last.weight, reps: Math.min(repCeiling, Math.max(repFloor, last.reps + 1)), up: false };
@@ -667,7 +701,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
       : `Sets ${upSets.slice(0, -1).join(", ")} and ${upSets[upSets.length - 1]}`;
     const lastDesc = workingSets.map((s) => `${s.reps} × ${fmtLoad(s.weight, bwLoad)}`).join(", ");
     const anyUp = upSets.length > 0;
-    const change: ProgressionChange = anyUp
+    const perSetChange: ProgressionChange = anyUp
       ? {
           kind: "increase",
           text: upSets.length === plan.length
@@ -682,6 +716,9 @@ function suggest(input: ProgressionInput): ProgressionOutput {
           text: "+1 rep",
           detail: `Last time: ${lastDesc}. Each set aims for one more rep and goes up once it hits ${repCeiling}.`,
         };
+    const change: ProgressionChange = leadInNote
+      ? { ...perSetChange, detail: `${perSetChange.detail ?? ""}${leadInNote}`.trim() }
+      : perSetChange;
     const verdict = anyUp ? `${setList} up ${fmtKg(state.increment)}` : "each set aims for one more rep";
     return {
       sets: plan.map((p) => ({ reps: p.reps, weight: p.weight, setType: "normal" as const })),
@@ -714,11 +751,20 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     };
   }
 
+  // After lead-in sets, work out today from last session alone, from the heaviest
+  // weight. A state saved by the old per-set plan may say
+  // "+2.5 kg" for the lead-in set; that isn't carried over. No miss / deload count
+  // either: a session spent finding the weight isn't a failed attempt.
+  if (leadIns > 0) state = { ...state, workingWeight: topWeight, failedAttempts: 0 };
+
   let nextWeight = state.workingWeight;
   let failedAttempts = state.failedAttempts;
   let outcome: Outcome;
 
-  if (alreadyApplied) {
+  if (leadIns > 0) {
+    if (allHitCeiling) nextWeight = topWeight + state.increment;
+    outcome = allHitCeiling ? "increase" : "hold";
+  } else if (alreadyApplied) {
     // Last session's result is already in `state` — just read it back.
     outcome =
       state.lastOutcome ??
@@ -773,11 +819,11 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   const suggestedWeight =
     fatigueScore > 0 ? roundDownTo(nextWeight * (1 - fatigueScore * effectiveDiscount), state.increment) : nextWeight;
 
-  const repTargets = perSetRepTargets(workingSets, nextWeight, activeRepRange, setCount);
-  const lastReps = workingSets.map((s) => s.reps).join(" / ");
+  const repTargets = perSetRepTargets(counted, nextWeight, activeRepRange, setCount);
+  const lastReps = counted.map((s) => s.reps).join(" / ");
   const goalWeight = isAssisted ? Math.max(0, nextWeight - state.increment) : nextWeight + state.increment;
 
-  const change: NonNullable<ProgressionOutput["change"]> =
+  const baseChange: NonNullable<ProgressionOutput["change"]> =
     outcome === "increase"
       ? {
           kind: "increase",
@@ -801,6 +847,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
               detail: `Some sets were under ${repFloor} last time. Same weight; under ${repFloor} again means a deload.`,
             }
           : { kind: "reps", text: "+1 rep", detail: `Last time: ${lastReps}. Beat each set by a rep.` };
+  const change = leadInNote ? { ...baseChange, detail: `${baseChange.detail ?? ""}${leadInNote}`.trim() } : baseChange;
 
   const progressionLabel =
     outcome === "increase"
@@ -849,6 +896,7 @@ function suggest(input: ProgressionInput): ProgressionOutput {
     inputs: {
       historySessions: input.history.length,
       allSetsHitCeiling: allHitCeiling,
+      ...(leadIns > 0 ? { leadInSets: leadInDesc.join(", ") || `${leadIns} (not converted)`, plannedFrom: fmtLoad(topWeight, bwLeadIn) } : {}),
       anySetMissedFloor: anyMissedFloor,
       consecutiveFailedAttemptsBefore: state.failedAttempts,
       lastSessionAlreadyApplied: alreadyApplied,
