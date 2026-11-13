@@ -45,7 +45,7 @@ export const activityWidget: WidgetPlugin = {
           })),
         },
       ],
-      action: { navigate: "/activity" },
+      action: { navigate: "/sessions" },
     };
   },
 };

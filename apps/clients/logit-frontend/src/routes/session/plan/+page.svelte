@@ -10,6 +10,8 @@
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { profile } from "$lib/stores/profile.store";
   import { getSplit } from "$lib/usecases/Splits/getSplit";
+  import { sourceFromSplitDay } from "@logit/core/domain/sessionHistory";
+  import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
   import { planSplitDay } from "$lib/usecases/startSessionFromSplitDay";
   import { advanceRotation } from "$lib/usecases/Splits/splitRotation";
   import { clearDayOverride } from "$lib/stores/todaysPlan.store";
@@ -31,6 +33,7 @@
   const replacing = $derived(page.url.searchParams.get("replace") === "1");
 
   let day = $state<SplitDay | null>(null);
+  let split: WorkoutSplit | null = null;
   let plan = $state<SessionPlan | null>(null);
   let error = $state<string | null>(null);
   let starting = $state(false);
@@ -122,7 +125,7 @@
     }
     try {
       if (!splitId || !dayId) throw new Error("No split day picked.");
-      const split = await getSplit(splitId);
+      split = await getSplit(splitId);
       day = split?.days.find((d) => d.id === dayId) ?? null;
       if (!day) throw new Error("That split day no longer exists.");
       plan = await planSplitDay(day);
@@ -147,7 +150,9 @@
         await repo.clearDraftSession();
         await repo.deleteSession(previous.id);
       }
-      await currentSession.startPlanned(plan.session);
+      // Keeps where it came from and the plan as shown, for the history.
+      const source = split && day ? sourceFromSplitDay(split, day, plan.session) : null;
+      await currentSession.startPlanned(source ? { ...plan.session, source } : plan.session);
       await goto("/session/current", { replaceState: true });
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't start the workout";

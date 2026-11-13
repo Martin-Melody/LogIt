@@ -230,6 +230,19 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] Sessions overhaul (2026-11-13, mockups: https://claude.ai/artifact/JmwnCcUfaC7Kr6HmPDAcGL). A session
+      keeps `name` and `source` (split/program day + `plan` snapshot as shown on the plan screen; phone
+      SQLite `sessions.name`, `sessions.source_json`; synced inside the session JSON). Core
+      `sessionHistory.ts`: titles (name → day → lookalike split day for old sessions → muscles), compare
+      with last time per exercise/drill, PRs across history, plan vs done, split changes since, search,
+      session → split day. Core `repeatSession.ts` (keeps groups). `/sessions`: month/week calendar
+      (replaces `/activity`, deleted; the activity widget opens Sessions), streak, split-day chips, cards
+      with PRs and up/down, search over every exercise, paged. `/sessions/[id]`: rename, plan sheet,
+      Last time column, PR sets, cardio and drills in workout order, Do this again, Save as a split day,
+      leave out of progression, and an editor with the logging set rows (`SetRow` `onRemove`). Editing
+      now syncs (`editSession` didn't push before) and redoes progression for removed exercises/drills.
+      Moving in the editor is Move up/down in the ⋯ menu, not drag.
+
 - [x] Split schedule (2026-11-13, mockups approved: https://claude.ai/artifact/XMTmyPuuvSQGFeQ9g6XExt).
       A split runs "In order" (default) or "By weekday" (`WorkoutSplit.schedule`). In order:
       rest days (`SplitDay.rest`) take one calendar day each and pass on their own; workouts
