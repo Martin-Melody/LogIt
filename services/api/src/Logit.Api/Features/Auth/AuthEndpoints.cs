@@ -15,7 +15,8 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/auth").WithTags("Auth");
 
-        group.MapPost("/register", Register);
+        group.MapPost("/register", Register).RequireRateLimiting(Registration.RateLimitPolicy);
+        group.MapGet("/registration", GetRegistrationInfo);
         group.MapPost("/login", Login);
         group.MapPost("/refresh", Refresh);
         group.MapPost("/revoke", Revoke).RequireAuthorization();
@@ -40,22 +41,51 @@ public static class AuthEndpoints
         if (await db.Users.AnyAsync(u => u.Email == normalizedEmail))
             return Results.Conflict(new { error = "Email already registered." });
 
+        Guid? inviteId = null;
+        if (Registration.GetMode(config) == RegistrationMode.Invite)
+        {
+            if (string.IsNullOrWhiteSpace(req.InviteCode))
+                return Results.Json(
+                    new { error = "This server is invite-only. Ask its admin for an invite code.", code = "invite_required" },
+                    statusCode: StatusCodes.Status403Forbidden);
+            inviteId = await Registration.TryClaimAsync(db, req.InviteCode, DateTime.UtcNow);
+            if (inviteId is null)
+                return Results.Json(
+                    new { error = "That invite code isn't valid, has expired or has been used up.", code = "invite_invalid" },
+                    statusCode: StatusCodes.Status403Forbidden);
+        }
+
         var user = new User
         {
             Username = normalizedUsername,
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
             DisplayName = req.DisplayName.Trim(),
+            InviteId = inviteId,
         };
 
         var refresh = tokens.CreateRefreshToken(user.Id);
         user.RefreshTokens.Add(refresh);
 
         db.Users.Add(user);
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (inviteId is { } id)
+        {
+            // e.g. someone took the username a moment ago: give the invite's use back.
+            await Registration.ReleaseAsync(db, id);
+            throw;
+        }
 
         return Results.Ok(BuildAuthResponse(user, refresh.Token, tokens, config));
     }
+
+    private static IResult GetRegistrationInfo(IConfiguration config) =>
+        Results.Ok(new RegistrationInfo(
+            Registration.ModeName(Registration.GetMode(config)),
+            config.GetValue<bool>("Deployment:SelfHosted")));
 
     private static async Task<IResult> Login(
         [FromBody] LoginRequest req,

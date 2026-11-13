@@ -4,13 +4,13 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { ArrowLeft, Cloud, Server, Eye, EyeOff, Loader2, CheckCircle, XCircle } from "lucide-svelte";
+  import { ArrowLeft, Cloud, Server, Eye, EyeOff, Loader2, CheckCircle, XCircle, Ticket } from "lucide-svelte";
   import { get } from "svelte/store";
   import { authStore } from "$lib/api/authStore.svelte";
   import { profile } from "$lib/stores/profile.store";
   import { getServerMode, setServerMode, getSelfHostUrl } from "@logit/core/api/serverConfig";
   import { testServerConnection, type ConnectionResult } from "@logit/core/api/testConnection";
-  import { apiClient, ApiError } from "@logit/core/api/client";
+  import { apiClient, ApiError, type RegistrationInfo } from "@logit/core/api/client";
   import { isNativePlatform } from "$lib/platform/isNative";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { getActiveOwnerId } from "$lib/data/activeOwner";
@@ -31,6 +31,17 @@
   const form = $state({ username: resumeUsername, email: "", password: "", confirmPassword: "" });
   let authError = $state<string | null>(null);
   let authLoading = $state(false);
+
+  // Invite-only servers: the sign-up form needs an invite code from the server's admin.
+  let registration = $state<RegistrationInfo | null>(null);
+  let inviteCode = $state("");
+  let inviteError = $state<string | null>(null);
+  const inviteRequired = $derived(mode === "register" && registration?.mode === "invite");
+
+  async function loadRegistration() {
+    registration = null;
+    registration = await apiClient.getRegistrationInfo();
+  }
 
   // Whether this device already holds unsynced local data to bring along
   let hasLocalData = $state(false);
@@ -75,12 +86,16 @@
     setServerMode("selfhosted", url);
     serverMode = "selfhosted";
     showServerSetup = false;
+    inviteError = null;
+    void loadRegistration();
   }
 
   function useCloud() {
     setServerMode("cloud");
     serverMode = "cloud";
     showServerSetup = false;
+    inviteError = null;
+    void loadRegistration();
   }
 
   const passwordMismatch = $derived(
@@ -91,7 +106,8 @@
     authLoading ||
     !form.username.trim() ||
     !form.password ||
-    (mode === "register" && (!form.email.trim() || passwordMismatch || !form.confirmPassword))
+    (mode === "register" && (!form.email.trim() || passwordMismatch || !form.confirmPassword)) ||
+    (inviteRequired && !inviteCode.trim())
   );
 
   onMount(async () => {
@@ -99,6 +115,7 @@
       await goto(redirectTo, { replaceState: true });
       return;
     }
+    void loadRegistration();
     if (isNativePlatform()) {
       try {
         const ownerId = getActiveOwnerId();
@@ -143,10 +160,21 @@
         await authStore.login(form.username.trim(), form.password);
       } else {
         const displayName = get(profile).name.trim() || form.username.trim();
-        await authStore.register(form.username.trim(), form.email.trim(), form.password, displayName);
+        await authStore.register(
+          form.username.trim(), form.email.trim(), form.password, displayName,
+          inviteRequired ? inviteCode : undefined,
+        );
       }
       await goto(resolveRedirect());
     } catch (e) {
+      if (e instanceof ApiError && (e.code === "invite_required" || e.code === "invite_invalid")) {
+        // The server may have become invite-only since the screen loaded: show the field.
+        registration = { mode: "invite", selfHosted: registration?.selfHosted ?? true };
+        inviteError = e.code === "invite_invalid"
+          ? "That code isn't valid, has expired or has been used up. Check it with whoever sent it."
+          : "This server is invite-only. Enter the invite code you were sent.";
+        return;
+      }
       authError = e instanceof ApiError ? e.message : "Something went wrong. Please try again.";
     } finally {
       authLoading = false;
@@ -225,6 +253,27 @@
     {/if}
 
     <form class="flex flex-col gap-4" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
+      {#if inviteRequired}
+        <!-- Invite code (invite-only servers) -->
+        <div class="flex flex-col gap-2.5 rounded-xl border border-border bg-card p-3.5">
+          <p class="flex items-center gap-2 text-sm font-semibold">
+            <Ticket class="h-4 w-4 text-highlight" aria-hidden="true" /> This server is invite-only
+          </p>
+          <label class="text-sm font-medium" for="invite-code">Invite code</label>
+          <input id="invite-code" type="text"
+            autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12"
+            placeholder="XXXX-XXXX"
+            aria-invalid={inviteError ? "true" : undefined}
+            aria-describedby="invite-code-help"
+            class="h-10 w-full rounded-md border bg-background px-3 font-mono text-[15px] uppercase tracking-[0.12em] placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-1 focus:ring-ring {inviteError ? 'border-destructive focus:ring-destructive' : ''}"
+            oninput={() => (inviteError = null)}
+            bind:value={inviteCode} />
+          <p id="invite-code-help" class="text-xs {inviteError ? 'text-destructive' : 'text-muted-foreground'}">
+            {inviteError ?? "Ask whoever runs this server for one."}
+          </p>
+        </div>
+      {/if}
+
       <!-- Username -->
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium" for="username">
@@ -324,13 +373,16 @@
           {#if serverMode === "selfhosted"}
             <Server class="h-3.5 w-3.5 shrink-0" />
             <span class="truncate">{getSelfHostUrl() || "Self-hosted"}</span>
+            {#if registration?.mode === "invite"}
+              <span class="shrink-0 rounded-full bg-highlight/12 px-2 py-0.5 text-[11px] font-semibold text-highlight">Invite-only</span>
+            {/if}
           {:else}
             <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
             <span>getlogit.app</span>
           {/if}
           <button type="button" class="ml-auto underline hover:text-foreground shrink-0"
             onclick={() => { showServerSetup = true; urlTestResult = "idle"; }}>
-            Connect to a different server
+            {serverMode === "selfhosted" ? "Change server" : "Connect to a different server"}
           </button>
         </div>
       {:else}

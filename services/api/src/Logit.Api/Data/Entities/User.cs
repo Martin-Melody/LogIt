@@ -27,6 +27,9 @@ public class User
     public string? StripeSubscriptionId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    /// The invite this account signed up with (invite-only servers). Null for open sign-up.
+    public Guid? InviteId { get; set; }
+    public Invite? Invite { get; set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
     public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = [];

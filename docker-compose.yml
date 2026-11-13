@@ -12,6 +12,7 @@ services:
       Jwt__Audience: logit-app
       Admin__Key: ${ADMIN_KEY:?Set ADMIN_KEY in .env — see .env.example}
       Deployment__SelfHosted: "true"
+      Registration__Mode: ${REGISTRATION_MODE:-invite}
       Web__Origin: ${WEB_ORIGIN:-http://localhost:3000}
       Smtp__Host: ${SMTP_HOST:-}
       Smtp__Port: ${SMTP_PORT:-587}

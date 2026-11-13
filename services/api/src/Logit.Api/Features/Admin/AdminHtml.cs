@@ -55,6 +55,28 @@ public static class AdminHtml
             .stat { display: flex; flex-direction: column; align-items: flex-end; }
             .stat-val { font-size: 13px; font-weight: 600; }
             .stat-label { font-size: 10px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+            .stat-button { background: var(--surface); border: 1px solid var(--border2); border-radius: 6px; padding: 3px 9px; }
+            .mode-pill { margin-left: 12px; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 2px 8px; }
+            .mode-pill.invite { color: #FFB900; background: rgba(255,185,0,.1); border: 1px solid rgba(255,185,0,.3); }
+            .mode-pill.open { color: var(--muted); border: 1px solid var(--border2); }
+            /* ── Invites ── */
+            .inv-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 12px 0 14px; }
+            .inv-form .field-group { display: flex; flex-direction: column; gap: 4px; }
+            .inv-form .field-label { font-size: 11px; color: var(--muted); }
+            .inv-table { width: 100%; border-collapse: collapse; }
+            .inv-table th { text-align: left; font-size: 10px; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 8px 10px; text-transform: uppercase; }
+            .inv-table td { padding: 8px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+            .inv-table tr.dim td { color: var(--muted); }
+            .inv-table a { color: var(--text); text-decoration: underline; text-decoration-color: var(--border2); text-underline-offset: 2px; }
+            .inv-table a:hover { text-decoration-color: var(--text); }
+            .inv-table tr.fresh td { background: rgba(82,192,122,.06); }
+            .code { font-family: ui-monospace, Menlo, monospace; letter-spacing: .08em; }
+            .badge-status { font-size: 11px; border-radius: 999px; padding: 2px 8px; background: var(--surface); color: var(--muted); }
+            .badge-status.active { color: var(--success); background: rgba(82,192,122,.12); }
+            .inv-created { display: flex; flex-wrap: wrap; gap: 24px; border: 1px solid rgba(82,192,122,.4); border-radius: 8px; padding: 16px; margin-bottom: 14px; background: var(--surface); }
+            .inv-created .big { font-family: ui-monospace, Menlo, monospace; font-size: 30px; font-weight: 600; letter-spacing: .1em; margin: 6px 0; }
+            .inv-msg { flex: 1 1 380px; min-width: 0; }
+            .inv-msg pre { background: var(--bg); border: 1px solid var(--border2); border-radius: 6px; padding: 12px 14px; font-family: var(--font); font-size: 12px; line-height: 1.6; white-space: pre-wrap; margin-top: 4px; }
             .topbar-logout { color: var(--muted); font-size: 11px; cursor: pointer; border: none; background: none; padding: 0; }
             .topbar-logout:hover { color: var(--text); }
 
@@ -162,14 +184,15 @@ public static class AdminHtml
         <!-- App -->
         <div id="app">
           <div class="topbar">
-            <span class="topbar-title">LOGIT <span>ADMIN</span></span>
+            <span class="topbar-title">LOGIT <span>ADMIN</span><span id="signup-mode" class="mode-pill" style="display:none"></span></span>
             <div class="stats">
               <div class="stat"><span class="stat-val" id="stat-users">—</span><span class="stat-label">Users</span></div>
               <div class="stat"><span class="stat-val" id="stat-posts">—</span><span class="stat-label">Posts</span></div>
               <div class="stat"><span class="stat-val" id="stat-tokens">—</span><span class="stat-label">Active logins</span></div>
               <div class="stat"><span class="stat-val" id="stat-workouts">—</span><span class="stat-label">Workouts</span></div>
+              <button type="button" class="stat stat-button" id="stat-invites-wrap" style="display:none" onclick="toggleInvites()"><span class="stat-val" id="stat-invites">—</span><span class="stat-label">Invites</span></button>
               <div class="stat" style="cursor:pointer" onclick="toggleReports()"><span class="stat-val" id="stat-reports">—</span><span class="stat-label">Open reports</span></div>
-              <div class="stat" style="cursor:pointer" onclick="toggleDiagnostics()"><span class="stat-val" id="stat-diagnostics">—</span><span class="stat-label">Diagnostics</span></div>
+              <div class="stat" id="stat-diagnostics-wrap" style="cursor:pointer" onclick="toggleDiagnostics()"><span class="stat-val" id="stat-diagnostics">—</span><span class="stat-label">Diagnostics</span></div>
             </div>
             <button class="topbar-logout" onclick="logout()">Sign out</button>
           </div>
@@ -178,6 +201,38 @@ public static class AdminHtml
           <div id="reports-panel" style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);max-height:40vh;overflow-y:auto">
             <h3 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Open reports</h3>
             <div id="reports-list"></div>
+          </div>
+
+          <!-- Invites panel -->
+          <div id="invites-panel" style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);max-height:70vh;overflow-y:auto">
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px">
+              <h3 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Invites</h3>
+              <span id="invites-note" style="font-size:12px;color:var(--muted)"></span>
+            </div>
+            <form class="inv-form" onsubmit="event.preventDefault(); createInvite();">
+              <div class="field-group" style="flex:1 1 240px">
+                <label class="field-label" for="inv-note">Who it's for (optional)</label>
+                <input class="field-input" id="inv-note" maxlength="200" placeholder="e.g. Sarah, or gym group" />
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="inv-uses">Uses</label>
+                <select class="field-input" id="inv-uses"><option value="1">1 person</option><option value="5">5 people</option><option value="10">10 people</option><option value="25">25 people</option></select>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="inv-exp">Expires</label>
+                <select class="field-input" id="inv-exp"><option value="7">In 7 days</option><option value="30">In 30 days</option><option value="">Never</option></select>
+              </div>
+              <button type="submit" class="btn-primary" id="inv-create">Create invite</button>
+              <span id="inv-err" style="color:var(--danger);font-size:12px"></span>
+            </form>
+            <div id="inv-created" class="inv-created" style="display:none"></div>
+            <div style="overflow-x:auto;border:1px solid var(--border);border-radius:6px">
+              <table class="inv-table">
+                <thead><tr><th>Code</th><th>For</th><th>Used</th><th>Expires</th><th>Status</th><th>Signed up</th><th><span style="position:absolute;left:-9999px">Actions</span></th></tr></thead>
+                <tbody id="inv-rows"></tbody>
+              </table>
+              <div id="inv-empty" class="empty" style="display:none;padding:14px">No invites yet.</div>
+            </div>
           </div>
 
           <!-- Diagnostics reports panel -->
@@ -293,7 +348,9 @@ public static class AdminHtml
             if (!k) return;
             const res = await fetch('/admin/api/stats', { headers: { 'X-Admin-Key': k } });
             if (!res.ok) {
-              document.getElementById('login-error').textContent = 'Invalid key.';
+              const body = await res.json().catch(() => ({}));
+              document.getElementById('login-error').textContent =
+                res.status === 429 ? (body.error || 'Too many wrong keys. Try again later.') : 'Invalid key.';
               return;
             }
             KEY = k;
@@ -342,7 +399,142 @@ public static class AdminHtml
           }
 
           async function loadAll() {
-            await Promise.all([loadStats(), loadUsers(), loadReports()]);
+            await Promise.all([loadStats(), loadUsers(), loadReports(), loadServer()]);
+          }
+
+          // ── Server settings + invites ─────────────────────────────────────
+          let server = null;
+          let invites = [];
+          let freshInviteId = null;
+
+          // SQLite hands dates back without a time zone; they are UTC.
+          function utc(iso) { return iso && !/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso + 'Z' : iso; }
+          function shortDate(iso) { return new Date(utc(iso)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+
+          async function loadServer() {
+            server = await api('/server');
+            const pill = document.getElementById('signup-mode');
+            const invite = server.registrationMode === 'invite';
+            pill.textContent = invite ? 'Sign-ups: invite-only' : 'Sign-ups: open';
+            pill.className = 'mode-pill ' + (invite ? 'invite' : 'open');
+            pill.style.display = '';
+            document.getElementById('stat-invites-wrap').style.display = invite ? '' : 'none';
+            document.getElementById('invites-note').textContent = invite
+              ? 'New accounts need an invite code. To let anyone sign up, set REGISTRATION_MODE=open in .env and restart.'
+              : 'Sign-ups are open, so invites aren\'t needed. Set REGISTRATION_MODE=invite in .env to require them.';
+            // Self-hosted servers have no plans or diagnostics reports: hide those controls.
+            if (server.selfHosted) {
+              document.getElementById('stat-diagnostics-wrap').style.display = 'none';
+              const tier = document.getElementById('f-tier');
+              if (tier) tier.closest('.field-group').style.display = 'none';
+            }
+            if (invite) await loadInvites();
+          }
+
+          async function loadInvites() {
+            invites = await api('/invites');
+            document.getElementById('stat-invites').textContent = invites.filter(i => i.status === 'active').length;
+            renderInvites();
+          }
+
+          function toggleInvites() {
+            const p = document.getElementById('invites-panel');
+            p.style.display = p.style.display === 'none' ? 'block' : 'none';
+          }
+
+          function inviteMessage(i) {
+            const uses = i.maxUses === 1 ? 'works once' : `works for ${i.maxUses} people`;
+            const until = i.expiresAt ? `, until ${shortDate(i.expiresAt)}` : '';
+            return `You're invited to my LogIt server.\n\n` +
+              `1. Install LogIt from Google Play.\n` +
+              `2. Go to Settings › Account, tap “Connect to a different server” and enter:\n` +
+              `   ${location.origin}\n` +
+              `3. Tap Sign up and use invite code ${i.code}\n` +
+              `   (${uses}${until}).`;
+          }
+
+          async function copyText(text, btn) {
+            try {
+              await navigator.clipboard.writeText(text);
+            } catch {
+              // No clipboard API over plain http: copy through a hidden text box instead.
+              const t = document.createElement('textarea');
+              t.value = text; document.body.appendChild(t); t.select();
+              document.execCommand('copy'); t.remove();
+            }
+            if (btn) { const old = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = old), 1500); }
+          }
+
+          function renderInvites() {
+            const rows = document.getElementById('inv-rows');
+            document.getElementById('inv-empty').style.display = invites.length ? 'none' : 'block';
+            rows.innerHTML = invites.map(i => {
+              const active = i.status === 'active';
+              const label = { active: 'Active', used: 'Used', expired: 'Expired', revoked: 'Revoked' }[i.status] || i.status;
+              const users = i.usedBy.length ? i.usedBy.map(u => `<a href="#" onclick="event.preventDefault(); selectUser('${u.id}')">@${esc(u.username)}</a>`).join(', ') : '—';
+              const actions = active
+                ? `<button type="button" onclick="copyText(inviteMessage(invites.find(x => x.id === '${i.id}')), this)">Copy message</button>
+                   <button type="button" style="border:none;background:none;color:var(--danger)" onclick="revokeInvite('${i.id}')">Revoke</button>`
+                : '';
+              return `<tr class="${active ? '' : 'dim'} ${i.id === freshInviteId ? 'fresh' : ''}">
+                <td class="code">${esc(i.code)}</td>
+                <td>${esc(i.note) || '—'}</td>
+                <td>${i.useCount} of ${i.maxUses}</td>
+                <td>${i.expiresAt ? shortDate(i.expiresAt) : '—'}</td>
+                <td><span class="badge-status ${active ? 'active' : ''}">${label}</span></td>
+                <td>${users}</td>
+                <td style="text-align:right;white-space:nowrap">${actions}</td>
+              </tr>`;
+            }).join('');
+          }
+
+          async function createInvite() {
+            const btn = document.getElementById('inv-create');
+            const err = document.getElementById('inv-err');
+            err.textContent = '';
+            btn.disabled = true;
+            try {
+              const exp = document.getElementById('inv-exp').value;
+              const note = document.getElementById('inv-note').value.trim();
+              const made = await api('/invites', {
+                method: 'POST',
+                body: JSON.stringify({ note: note || null, maxUses: Number(document.getElementById('inv-uses').value), expiresInDays: exp ? Number(exp) : null }),
+              });
+              freshInviteId = made.id;
+              document.getElementById('inv-note').value = '';
+              await loadInvites();
+              const i = invites.find(x => x.id === made.id) || { ...made, note };
+              const box = document.getElementById('inv-created');
+              const uses = i.maxUses === 1 ? 'Works once' : `Works for ${i.maxUses} people`;
+              box.innerHTML = `<div style="flex:0 1 260px">
+                  <div style="color:var(--success);font-size:12px;font-weight:600">Invite created${i.note ? ' for ' + esc(i.note) : ''}</div>
+                  <div class="big">${esc(i.code)}</div>
+                  <div style="color:var(--muted);font-size:12px">${uses}${i.expiresAt ? ' · until ' + shortDate(i.expiresAt) : ' · no expiry'}</div>
+                  <div style="display:flex;gap:8px;margin-top:10px">
+                    <button type="button" class="btn-primary" id="inv-copy-msg">Copy message</button>
+                    <button type="button" id="inv-copy-code">Copy code only</button>
+                  </div>
+                </div>
+                <div class="inv-msg">
+                  <div style="font-size:11px;color:var(--muted)">The message, ready to paste into WhatsApp, a text or an email</div>
+                  <pre>${esc(inviteMessage(i))}</pre>
+                </div>`;
+              box.style.display = 'flex';
+              document.getElementById('inv-copy-msg').onclick = e => copyText(inviteMessage(i), e.currentTarget);
+              document.getElementById('inv-copy-code').onclick = e => copyText(i.code, e.currentTarget);
+            } catch (e) {
+              err.textContent = e.message;
+            } finally {
+              btn.disabled = false;
+            }
+          }
+
+          async function revokeInvite(id) {
+            const i = invites.find(x => x.id === id);
+            if (!confirm(`Revoke invite ${i ? i.code : ''}? Nobody will be able to sign up with it.`)) return;
+            await api('/invites/' + id, { method: 'DELETE' });
+            if (freshInviteId === id) document.getElementById('inv-created').style.display = 'none';
+            await loadInvites();
           }
 
           async function loadStats() {

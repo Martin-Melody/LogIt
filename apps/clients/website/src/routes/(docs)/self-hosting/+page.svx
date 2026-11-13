@@ -25,7 +25,7 @@ cp .env.example .env
 Edit `.env` and fill in:
 
 - `JWT_SECRET`: generate one with `openssl rand -base64 48`
-- `ADMIN_KEY`: any value you choose, for the admin endpoints
+- `ADMIN_KEY`: unlocks the admin page; generate one with `openssl rand -base64 32`
 
 `.env` is ignored by git and never committed. Keep these values private: they protect every account on your server.
 
@@ -37,13 +37,23 @@ docker compose up -d
 
 This starts two services: the sync API on port `8080` and the web dashboard on port `3000`. Data is stored in SQLite inside a Docker volume, so it survives restarts.
 
-## 4. Connect the app
+## 4. Make yourself an invite
 
-In the LogIt app, open the sign-in screen (Settings › Account), tap **Connect to a different server** and enter your server's address: for example `http://192.168.1.10:8080` on your home network, or your server's public address. Then create an account. It exists only on your server.
+Sign-ups are invite-only unless you set `REGISTRATION_MODE=open` in `.env`, so strangers can't make accounts on your server. Open `http://<your-server>:8080/admin`, enter your `ADMIN_KEY`, click **Invites** and create one. **Copy message** gives you text to send to anyone else you invite.
 
-## 5. Open the dashboard
+## 5. Connect the app
+
+In the LogIt app, open the sign-in screen (Settings › Account), tap **Connect to a different server** and enter your server's address: for example `http://192.168.1.10:8080` on your home network, or your server's public address. Then tap **Sign up** and enter the invite code. Your account exists only on your server.
+
+## 6. Open the dashboard
 
 Go to `http://<your-server>:3000` and sign in with the same account for the bigger charts: activity, personal records and a deep dive into each exercise.
+
+## The admin page
+
+Open `http://<your-server>:8080/admin` and enter your `ADMIN_KEY` to make invites, see your server's
+users, reset a password (handy if you haven't set up email), sign someone out everywhere, delete an
+account or deal with reported posts. Ten wrong keys from one address lock it out for 15 minutes.
 
 ## Updating
 

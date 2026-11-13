@@ -24,9 +24,18 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** The server's machine-readable reason, when it sends one (e.g. "invite_invalid"). */
+    public code?: string,
   ) {
     super(message);
   }
+}
+
+/** Who may sign up on a server (GET /auth/registration). */
+export interface RegistrationInfo {
+  /** "invite": signing up needs an invite code from the server's admin. */
+  mode: "open" | "invite";
+  selfHosted: boolean;
 }
 
 const BASE_URL_KEY = "logit:api:baseUrl";
@@ -183,14 +192,16 @@ class ApiClient {
 
     if (!res.ok) {
       let message = res.statusText;
+      let code: string | undefined;
       try {
         const body = await res.json();
         message = body?.error ?? message;
+        if (typeof body?.code === "string") code = body.code;
       } catch {}
       const details = { requestId, ms, error: message };
       if (res.status >= 500) log.error("api", `${method} ${route} ${res.status}`, details);
       else log.warn("api", `${method} ${route} ${res.status}`, details);
-      throw new ApiError(res.status, message);
+      throw new ApiError(res.status, message, code);
     }
 
     if (ms >= SLOW_REQUEST_MS) log.info("api", `${method} ${route} slow`, { requestId, ms, status: res.status });
@@ -207,15 +218,30 @@ class ApiClient {
     email: string,
     password: string,
     displayName: string,
+    inviteCode?: string,
   ): Promise<AuthUser> {
     const data: AuthResponse = await this.fetch("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ username, email, password, displayName }),
+      body: JSON.stringify({ username, email, password, displayName, inviteCode: inviteCode?.trim() || undefined }),
     });
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
     return data.user;
+  }
+
+  /**
+   * Whether the current server needs an invite code to sign up. Servers from before invites
+   * existed answer 404, which means open. Null when the server can't be reached.
+   */
+  async getRegistrationInfo(): Promise<RegistrationInfo | null> {
+    try {
+      const info = await this.fetch<RegistrationInfo>("/auth/registration");
+      return { mode: info.mode === "invite" ? "invite" : "open", selfHosted: !!info.selfHosted };
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return { mode: "open", selfHosted: false };
+      return null;
+    }
   }
 
   async login(usernameOrEmail: string, password: string): Promise<AuthUser> {

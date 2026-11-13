@@ -114,6 +114,17 @@ builder.Services.AddRateLimiter(o =>
             AutoReplenishment = true,
         });
     });
+    // Sign-ups: 10 per address per 10 minutes. Stops scripted account creation and
+    // guessing invite codes on invite-only servers.
+    o.AddPolicy(Registration.RateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+            }));
     // Diagnostics reports: a handful per user per hour is plenty.
     o.AddPolicy(DiagnosticsEndpoints.RateLimitPolicy, ctx =>
         RateLimitPartition.GetFixedWindowLimiter(
@@ -167,7 +178,7 @@ app.MapUserEndpoints();
 app.MapSocialEndpoints();
 app.MapModerationEndpoints();
 app.MapNotificationEndpoints();
-app.MapAdminEndpoints(builder.Configuration);
+app.MapAdminEndpoints(builder.Configuration, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Logit.Admin"));
 app.MapSyncEndpoints();
 app.MapBillingEndpoints();
 app.MapCoachEndpoints();

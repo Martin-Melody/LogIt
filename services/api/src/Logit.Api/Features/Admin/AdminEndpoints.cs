@@ -1,20 +1,26 @@
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
+using Logit.Api.Features.Auth;
 using Microsoft.EntityFrameworkCore;
 
 namespace Logit.Api.Features.Admin;
 
 public static class AdminEndpoints
 {
-    public static void MapAdminEndpoints(this IEndpointRouteBuilder app, IConfiguration config)
+    public static void MapAdminEndpoints(this IEndpointRouteBuilder app, IConfiguration config, ILogger logger)
     {
         var adminKey = config["Admin:Key"];
         if (string.IsNullOrWhiteSpace(adminKey)) return; // admin disabled when no key is configured
+        if (adminKey.Length < AdminKeyGuard.RecommendedMinKeyLength)
+            logger.LogWarning(
+                "ADMIN_KEY is only {Length} characters. Use a long random key (e.g. openssl rand -base64 32): it unlocks every account on this server.",
+                adminKey.Length);
+        var guard = new AdminKeyGuard(adminKey);
 
         app.MapGet("/admin", () => Results.Content(AdminHtml.Page, "text/html")).ExcludeFromDescription();
 
         var api = app.MapGroup("/admin/api")
-            .AddEndpointFilter(AdminKeyFilter(adminKey))
+            .AddEndpointFilter(AdminKeyFilter(guard, logger))
             .ExcludeFromDescription();
 
         api.MapGet("/stats", GetStats);
@@ -24,6 +30,15 @@ public static class AdminEndpoints
         api.MapDelete("/users/{id:guid}", DeleteUser);
         api.MapDelete("/users/{id:guid}/tokens", RevokeTokens);
         api.MapPost("/users/{id:guid}/reset-password", ResetPassword);
+
+        api.MapGet("/server", (IConfiguration cfg) => Results.Ok(new
+        {
+            registrationMode = Registration.ModeName(Registration.GetMode(cfg)),
+            selfHosted = cfg.GetValue<bool>("Deployment:SelfHosted"),
+        }));
+        api.MapGet("/invites", GetInvites);
+        api.MapPost("/invites", CreateInvite);
+        api.MapDelete("/invites/{id:guid}", RevokeInvite);
 
         api.MapGet("/reports", GetReports);
         api.MapPost("/reports/{id:guid}/resolve", ResolveReport);
@@ -69,13 +84,98 @@ public static class AdminEndpoints
         return deleted == 0 ? Results.NotFound(new { error = "Report not found." }) : Results.NoContent();
     }
 
-    private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminKeyFilter(string key) =>
+    private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminKeyFilter(
+        AdminKeyGuard guard, ILogger logger) =>
         async (ctx, next) =>
         {
-            var header = ctx.HttpContext.Request.Headers["X-Admin-Key"].FirstOrDefault();
-            if (header != key) return Results.Json(new { error = "Unauthorized" }, statusCode: 401);
+            var http = ctx.HttpContext;
+            var client = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var now = DateTime.UtcNow;
+
+            if (guard.LockedUntil(client, now) is { } until)
+            {
+                var wait = (int)Math.Ceiling((until - now).TotalSeconds);
+                http.Response.Headers.RetryAfter = wait.ToString();
+                return Results.Json(
+                    new { error = $"Too many wrong admin keys. Try again in {Math.Max(1, (wait + 59) / 60)} min." },
+                    statusCode: StatusCodes.Status429TooManyRequests);
+            }
+
+            if (!guard.KeyMatches(http.Request.Headers["X-Admin-Key"].FirstOrDefault()))
+            {
+                if (guard.RecordFailure(client, now))
+                    logger.LogWarning("Admin: {Client} locked out for {Minutes} min after {Count} wrong keys",
+                        client, AdminKeyGuard.Window.TotalMinutes, AdminKeyGuard.MaxFailures);
+                else
+                    logger.LogInformation("Admin: wrong key from {Client}", client);
+                return Results.Json(new { error = "Unauthorized" }, statusCode: 401);
+            }
             return await next(ctx);
         };
+
+    // ── Invites ─────────────────────────────────────────────────────────────
+
+    private static async Task<IResult> GetInvites(AppDbContext db)
+    {
+        var now = DateTime.UtcNow;
+        var invites = await db.Invites
+            .OrderByDescending(i => i.CreatedAt)
+            .Select(i => new
+            {
+                Invite = i,
+                Users = i.Users.OrderBy(u => u.CreatedAt).Select(u => new { u.Id, u.Username }).ToList(),
+            })
+            .ToListAsync();
+        return Results.Ok(invites.Select(x => new
+        {
+            x.Invite.Id,
+            Code = Registration.Format(x.Invite.Code),
+            x.Invite.Note,
+            x.Invite.CreatedAt,
+            x.Invite.ExpiresAt,
+            x.Invite.MaxUses,
+            x.Invite.UseCount,
+            x.Invite.RevokedAt,
+            Status = Registration.Status(x.Invite, now),
+            UsedBy = x.Users,
+        }));
+    }
+
+    private record CreateInviteRequest(string? Note, int? MaxUses, int? ExpiresInDays);
+
+    private static async Task<IResult> CreateInvite(CreateInviteRequest req, AppDbContext db)
+    {
+        var maxUses = req.MaxUses ?? 1;
+        if (maxUses < 1 || maxUses > InviteLimits.MaxUses)
+            return Results.BadRequest(new { error = $"Uses must be between 1 and {InviteLimits.MaxUses}." });
+        if (req.ExpiresInDays is { } d && (d < 1 || d > InviteLimits.MaxDays))
+            return Results.BadRequest(new { error = $"Expiry must be between 1 and {InviteLimits.MaxDays} days." });
+        var note = string.IsNullOrWhiteSpace(req.Note) ? null : req.Note.Trim();
+        if (note?.Length > InviteLimits.MaxNoteChars)
+            return Results.BadRequest(new { error = $"Note is too long (max {InviteLimits.MaxNoteChars} characters)." });
+
+        // A clash is about 1 in a trillion per existing code; try again rather than fail.
+        string code;
+        do code = Registration.NewCode(); while (await db.Invites.AnyAsync(i => i.Code == code));
+
+        var invite = new Invite
+        {
+            Code = code,
+            Note = note,
+            MaxUses = maxUses,
+            ExpiresAt = req.ExpiresInDays is { } days ? DateTime.UtcNow.AddDays(days) : null,
+        };
+        db.Invites.Add(invite);
+        await db.SaveChangesAsync();
+        return Results.Ok(new { invite.Id, Code = Registration.Format(invite.Code), invite.ExpiresAt, invite.MaxUses });
+    }
+
+    private static async Task<IResult> RevokeInvite(Guid id, AppDbContext db)
+    {
+        var updated = await db.Invites.Where(i => i.Id == id && i.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, DateTime.UtcNow));
+        return updated == 0 ? Results.NotFound(new { error = "Invite not found or already revoked." }) : Results.NoContent();
+    }
 
     private static async Task<IResult> GetStats(AppDbContext db)
     {

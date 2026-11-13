@@ -1,6 +1,8 @@
 namespace Logit.Api.Features.Auth;
 
-public record RegisterRequest(string Username, string Email, string Password, string DisplayName);
+public record RegisterRequest(string Username, string Email, string Password, string DisplayName, string? InviteCode = null);
+/// GET /auth/registration: what the sign-up form needs to know before it's filled in.
+public record RegistrationInfo(string Mode, bool SelfHosted);
 public record LoginRequest(string UsernameOrEmail, string Password);
 public record RefreshRequest(string RefreshToken);
 public record RevokeRequest(string RefreshToken);
