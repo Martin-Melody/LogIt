@@ -1000,10 +1000,11 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
  */
 export async function buildRemoteProfile(): Promise<RemoteProfile> {
   const { get } = await import("svelte/store");
-  const [{ profile }, { getNavConfigJson }, { getHomeConfigJson }] = await Promise.all([
+  const [{ profile }, { getNavConfigJson }, { getHomeConfigJson }, { getGoalsJson }] = await Promise.all([
     import("$lib/stores/profile.store"),
     import("$lib/stores/navConfig.store"),
     import("$lib/stores/homeConfig.store"),
+    import("$lib/features/goals/goalsStore"),
   ]);
   const p = get(profile);
   const activeSplitId = await getSplitRepo().getActiveSplitId().catch(() => null);
@@ -1028,6 +1029,7 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     homeConfigJson: getHomeConfigJson(),
     activeSplitId,
     splitRotationJson: Object.keys(rotations).length ? JSON.stringify(rotations) : null,
+    goalsJson: getGoalsJson(),
     updatedAtMs: Date.now(),
   };
 }
@@ -1161,6 +1163,14 @@ export async function pullAndApplyProfile(): Promise<boolean> {
       try {
         const { applyRemoteRotations } = await import("$lib/usecases/Splits/splitRotation");
         applyRemoteRotations(JSON.parse(remote.splitRotationJson));
+      } catch (e) { syncWarn("pullAndApplyProfile", e); }
+    }
+
+    // Goals merge per goal the same way.
+    if (remote.goalsJson) {
+      try {
+        const { goalsStore } = await import("$lib/features/goals/goalsStore");
+        goalsStore.applyRemote(JSON.parse(remote.goalsJson));
       } catch (e) { syncWarn("pullAndApplyProfile", e); }
     }
 

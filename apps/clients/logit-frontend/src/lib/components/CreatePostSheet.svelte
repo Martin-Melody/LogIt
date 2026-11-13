@@ -233,7 +233,11 @@
                   : { type: "cardio", orderIndex: b.orderIndex, activityName: b.activityName, groupId: b.groupId },
             ),
             groups: d.groups?.length ? d.groups : undefined,
+            rest: d.rest || undefined,
+            sameDayAsPrevious: d.sameDayAsPrevious || undefined,
+            weekday: d.weekday,
           })),
+          schedule: full.schedule,
           customExercises: [...customExercises.values()],
         });
       }

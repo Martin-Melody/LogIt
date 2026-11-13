@@ -229,7 +229,8 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       name TEXT NOT NULL,
       archived INTEGER NOT NULL DEFAULT 0,
       created_at_ms INTEGER NOT NULL,
-      updated_at_ms INTEGER NOT NULL
+      updated_at_ms INTEGER NOT NULL,
+      schedule TEXT NULL
     );
 
     CREATE TABLE IF NOT EXISTS split_days (
@@ -238,6 +239,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       order_index INTEGER NOT NULL,
       name TEXT NULL,
       groups_json TEXT NULL,
+      schedule_json TEXT NULL,
       FOREIGN KEY (split_id) REFERENCES splits(id) ON DELETE CASCADE
     );
 
@@ -604,6 +606,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateProgressPhoto(db);
   await migrateMobilityLeadSide(db);
   await migrateSplitGroups(db);
+  await migrateSplitSchedule(db);
   await seedExercises(db);
 }
 
@@ -619,6 +622,19 @@ async function migrateSplitGroups(db: SQLiteDBConnection): Promise<void> {
   for (const sql of [
     "ALTER TABLE split_days ADD COLUMN groups_json TEXT NULL",
     "ALTER TABLE planned_blocks ADD COLUMN extra_json TEXT NULL",
+  ]) {
+    try {
+      await db.run(sql, []);
+    } catch { /* column already exists */ }
+  }
+}
+
+// Rest days, weekdays and same-day workouts (2026-11): the split's schedule mode, and per
+// day { rest, sameDayAsPrevious, weekday } as JSON.
+async function migrateSplitSchedule(db: SQLiteDBConnection): Promise<void> {
+  for (const sql of [
+    "ALTER TABLE splits ADD COLUMN schedule TEXT NULL",
+    "ALTER TABLE split_days ADD COLUMN schedule_json TEXT NULL",
   ]) {
     try {
       await db.run(sql, []);

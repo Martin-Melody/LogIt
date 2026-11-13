@@ -13,7 +13,9 @@ export async function getExerciseHistory(
   deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo">,
   // The session being logged right now. On the phone the draft lives in the same
   // table as finished sessions, so without this it reads as "last time".
-  opts: { excludeSessionId?: string } = {},
+  // includeExcluded: also sessions marked "Exclude from progression" (goals count a real
+  // set wherever it was done).
+  opts: { excludeSessionId?: string; includeExcluded?: boolean } = {},
 ): Promise<ExerciseHistoryResult> {
   const [sessions, exerciseData] = await Promise.all([
     deps.workoutRepo.listAllSessions(),
@@ -23,7 +25,7 @@ export async function getExerciseHistory(
   ]);
 
   const history: ExerciseHistoryEntry[] = sessions
-    .filter((session) => !session.excludeFromProgression && session.id !== opts.excludeSessionId)
+    .filter((session) => (opts.includeExcluded || !session.excludeFromProgression) && session.id !== opts.excludeSessionId)
     .flatMap((session) => {
       const sessionPosition = findExerciseIndexInSession(session, exercise);
       if (sessionPosition === -1) return [];

@@ -8,6 +8,8 @@ import {
   clearDayOverride,
 } from "$lib/stores/todaysPlan.store";
 import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
+import { getSplitPlan, getSplitTimeline } from "$lib/usecases/Splits/splitRotation";
+import { defaultTimelineIndex } from "@logit/core/domain/splitSchedule";
 import { startEmptyWorkout, startPlannedWorkout } from "$lib/features/session/startWorkout";
 import { getHabitRepo } from "$lib/data/repoProvider";
 import { localDateIso } from "@logit/core/domain/nutrition";
@@ -57,15 +59,30 @@ export function runWidgetAction(action: WidgetAction): void {
 
   if ("cycleDay" in action) {
     const split = get(activeSplit);
-    if (!split || split.days.length < 2) return;
-    const days = [...split.days].sort((a, b) => a.orderIndex - b.orderIndex);
+    if (!split) return;
+    const timeline = getSplitTimeline(split);
     const override = get(selectedDayOverride);
-    const current =
+    if (timeline.length > 1) {
+      // Step through the coming days, stopping at either end.
+      const current =
+        override?.splitId === split.id
+          ? timeline.findIndex((e) => e.dateIso === override.dateIso && (e.day?.id ?? null) === override.dayId)
+          : -1;
+      const from = current >= 0 ? current : defaultTimelineIndex(timeline, getSplitPlan(split));
+      const to = Math.max(0, Math.min(timeline.length - 1, from + action.cycleDay));
+      if (to === from) return;
+      const e = timeline[to]!;
+      selectDayOverride(split.id, e.day?.id ?? null, e.dateIso);
+      return;
+    }
+    // Nothing to place on a calendar (weekday split with no weekdays yet): step through days.
+    const days = [...split.days].filter((d) => !d.rest).sort((a, b) => a.orderIndex - b.orderIndex);
+    if (days.length < 2) return;
+    const cur =
       override?.splitId === split.id
         ? days.findIndex((d) => d.id === override.dayId)
         : days.findIndex((d) => d.id === (getTodaySplitDay(split)?.id ?? ""));
-    const from = current < 0 ? 0 : current;
-    const next = days[(from + action.cycleDay + days.length) % days.length]!;
+    const next = days[((cur < 0 ? 0 : cur) + action.cycleDay + days.length) % days.length]!;
     selectDayOverride(split.id, next.id);
     return;
   }

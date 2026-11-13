@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { loadWeeklyStreak } from "$lib/features/goals/streak";
+  import type { WeeklyStreak } from "@logit/core/domain/weeklyStreak";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -81,39 +83,12 @@
 
   // --- Stats ---
   const statsYear = $derived.by(() => {
-    if (workedDays.size === 0) return { workouts: 0, currentStreak: 0, bestStreak: 0 };
-
     const prefix = String(currentYear);
-    const yearDays = [...workedDays].filter((k) => k.startsWith(prefix)).sort();
-    const workouts = yearDays.length;
-
-    // Current streak: walk backwards from today
-    let currentStreak = 0;
-    let d = new Date(today);
-    d.setHours(0, 0, 0, 0);
-    while (workedDays.has(toKey(d))) {
-      currentStreak++;
-      d = addDays(d, -1);
-    }
-
-    // Best streak in the year
-    let bestStreak = 0;
-    let streak = 0;
-    let prev: Date | null = null;
-    for (const key of yearDays) {
-      const [y, mo, dy] = key.split("-").map(Number);
-      const date = new Date(y!, (mo! - 1), dy!);
-      if (prev && (date.getTime() - prev.getTime()) === 86_400_000) {
-        streak++;
-      } else {
-        streak = 1;
-      }
-      if (streak > bestStreak) bestStreak = streak;
-      prev = date;
-    }
-
-    return { workouts, currentStreak, bestStreak };
+    return { workouts: [...workedDays].filter((k) => k.startsWith(prefix)).length };
   });
+
+  // Streak in weeks on target (see core weeklyStreak.ts): rest days don't break it.
+  let weekly = $state<WeeklyStreak | null>(null);
 
   // Monthly breakdown
   const monthStats = $derived.by(() => {
@@ -124,6 +99,7 @@
   });
 
   onMount(async () => {
+    void loadWeeklyStreak().then((w) => (weekly = w)).catch(() => {});
     try {
       const repo = getWorkoutRepo();
       const sessions = await repo.listAllSessions();
@@ -174,12 +150,12 @@
               <p class="text-xs text-muted-foreground mt-0.5">Workouts</p>
             </div>
             <div class="text-center px-2">
-              <p class="text-lg font-semibold tabular-nums">{statsYear.currentStreak}</p>
-              <p class="text-xs text-muted-foreground mt-0.5">Streak</p>
+              <p class="text-lg font-semibold tabular-nums">{weekly?.currentWeeks ?? "–"}</p>
+              <p class="text-xs text-muted-foreground mt-0.5">Week streak</p>
             </div>
             <div class="text-center px-2">
-              <p class="text-lg font-semibold tabular-nums">{statsYear.bestStreak}</p>
-              <p class="text-xs text-muted-foreground mt-0.5">Best streak</p>
+              <p class="text-lg font-semibold tabular-nums">{weekly?.bestWeeks ?? "–"}</p>
+              <p class="text-xs text-muted-foreground mt-0.5">Best (weeks)</p>
             </div>
           </div>
         </Card.Content>

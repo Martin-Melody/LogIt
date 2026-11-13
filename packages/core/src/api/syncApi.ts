@@ -60,6 +60,9 @@ export type RemoteProfile = {
    * Unlike the rest of this blob it's merged per split (newest wins), on the server and on
    * pull, so the next workout is the same day on every device. */
   splitRotationJson?: string | null;
+  /** Goals and weekly-streak settings: { [goalId]: Goal, streak: {...} }. Merged per key
+   * (newest `updatedAtMs` wins) on the server and on pull, like splitRotationJson. */
+  goalsJson?: string | null;
 };
 
 // ── Nutrition ────────────────────────────────────────────────────────────────

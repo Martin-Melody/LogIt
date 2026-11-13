@@ -9,7 +9,14 @@ export type WorkoutSplit = {
   createdAtMs: number;
   updatedAtMs: number;
   days: SplitDay[];
+  /**
+   * How the days fall on the calendar (see splitSchedule.ts). "rotation" (unset): one after
+   * another, rest days included, whenever you train. "weekdays": each day has a weekday.
+   */
+  schedule?: SplitScheduleMode;
 };
+
+export type SplitScheduleMode = "rotation" | "weekdays";
 
 export type SplitDay = {
   id: string;
@@ -18,6 +25,12 @@ export type SplitDay = {
   blocks: PlannedBlock[];
   /** Supersets and circuits on this day. Members point at one with `groupId`. */
   groups?: PlannedGroup[];
+  /** A rest day in a rotation: takes up a calendar day, nothing to start. */
+  rest?: boolean;
+  /** Rotation: done on the same calendar day as the day before it (a second workout). */
+  sameDayAsPrevious?: boolean;
+  /** "weekdays" schedule: 0 = Sunday … 6 = Saturday. Several days can share one. */
+  weekday?: number;
 };
 
 /**
