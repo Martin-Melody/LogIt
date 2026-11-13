@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check } from "lucide-svelte";
+  import { Check, X } from "lucide-svelte";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight, trimWeight, formatLoad } from "@logit/core/domain/units";
@@ -27,6 +27,7 @@
     onWeightChange = () => {},
     onComplete = () => {},
     onOpenDetails = () => {},
+    onRemove,
   } = $props<{
     setNumber?: number;
     setType?: string;
@@ -45,6 +46,8 @@
     onWeightChange?: (weight: number) => void | Promise<void>;
     onComplete?: () => void | Promise<void>;
     onOpenDetails?: () => void;
+    /** Editing a past session: the last cell takes the set out instead of ticking it. */
+    onRemove?: () => void | Promise<void>;
   }>();
 
   const meta = $derived(setTypeMeta(setType));
@@ -195,6 +198,17 @@
     data-testid="set-reps"
   />
 
+  {#if onRemove}
+  <button
+    type="button"
+    class="flex h-11 w-11 items-center justify-center justify-self-center text-muted-foreground hover:text-destructive"
+    onclick={() => void onRemove()}
+    {disabled}
+    aria-label="Remove set {setNumber}"
+  >
+    <X class="h-4 w-4" />
+  </button>
+  {:else}
   <button
     type="button"
     data-tour="session-set-complete"
@@ -212,4 +226,5 @@
       {#if completed}<Check class="h-3 w-3" />{/if}
     </span>
   </button>
+  {/if}
 </div>

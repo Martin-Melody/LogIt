@@ -277,10 +277,54 @@ export type WorkoutSession = {
   excludeFromProgression?: boolean;
   /** Free-text note for the whole session ("slept badly", "great energy"). */
   note?: string | null;
+  /** What the user calls it. Unset: the day it came from, else one made up from the exercises. */
+  name?: string | null;
+  /** The split or program day it was started from, as that day was at the time. */
+  source?: SessionSource | null;
+};
+
+/**
+ * Where a workout came from. Kept with the session (not looked up) so the history still
+ * says what the plan was after the split is changed or deleted.
+ */
+export type SessionSource = {
+  kind: "split" | "program";
+  /** The split's (or program's) id and name when the workout started. */
+  parentId: string;
+  parentName: string;
+  dayId: string;
+  /** "Lower 2", or "Day 5" for an unnamed day. */
+  dayName: string;
+  /** Position among the workout days, 1-based. */
+  dayNumber?: number;
+  /** What the plan screen showed: every exercise, drill and activity with its planned sets. */
+  plan?: PlannedItem[];
+};
+
+/** One thing on the plan a workout started from. */
+export type PlannedItem = {
+  /** The block it became in the workout. Matched on this, then on the name. */
+  blockId: string;
+  type: "strength" | "cardio" | "mobility";
+  name: string;
+  exerciseId?: string;
+  /** Members of one superset / circuit share this (the workout's group id). */
+  groupId?: string;
+  /** Strength: the planned sets, warm-ups included. */
+  sets?: { setType: SetType; reps: number; repsMax?: number; weight: number }[];
+  /** Mobility: rounds (an L/R pair counts once) and the target of each. */
+  rounds?: number;
+  targetSec?: number;
+  targetReps?: number;
 };
 
 export function setSessionNote(session: WorkoutSession, note: string | null): WorkoutSession {
   return { ...session, note: note?.trim() || null };
+}
+
+/** A blank name clears it (back to the automatic one). */
+export function setSessionName(session: WorkoutSession, name: string | null): WorkoutSession {
+  return { ...session, name: name?.trim() || null };
 }
 
 export type SessionSummary = {
