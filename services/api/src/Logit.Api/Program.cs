@@ -115,13 +115,15 @@ builder.Services.AddRateLimiter(o =>
         });
     });
     // Sign-ups: 10 per address per 10 minutes. Stops scripted account creation and
-    // guessing invite codes on invite-only servers.
+    // guessing invite codes on invite-only servers. Registration:SignupsPer10Minutes
+    // overrides it (CI raises it: the E2E suite creates many accounts from one address).
+    var signupLimit = Math.Max(1, builder.Configuration.GetValue("Registration:SignupsPer10Minutes", 10));
     o.AddPolicy(Registration.RateLimitPolicy, ctx =>
         RateLimitPartition.GetFixedWindowLimiter(
             ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = signupLimit,
                 Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0,
             }));
