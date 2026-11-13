@@ -106,6 +106,8 @@ jobs:
           Deployment__SelfHosted: "true"
           ConnectionStrings__Default: "Data Source=ci-e2e.db"
           Jwt__Secret: "ci-e2e-secret-at-least-32-characters-long"
+          # the suite registers far more than the default 10 accounts per address per 10 minutes
+          Registration__SignupsPer10Minutes: "1000"
         run: |
           nohup dotnet run --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &
           for i in $(seq 1 60); do
