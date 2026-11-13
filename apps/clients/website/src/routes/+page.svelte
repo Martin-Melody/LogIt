@@ -74,20 +74,19 @@
   <meta property="og:description" content="Workout, food and habit tracking that works offline. Free on Android." />
 </svelte:head>
 
+<!-- Topographic lines (static/topo-*.svg, drawn by scripts/topo/generate.mjs): the hero has its
+     own picture over a plain background; below it, the .topo-tile lines on <main> show through. -->
 <div class="overflow-x-clip">
   <!-- ═════════ HERO ═════════ -->
-  <section class="relative px-4 sm:px-6">
+  <section class="relative bg-background px-4 sm:px-6">
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute inset-x-0 -top-24 bottom-0 -z-0"
-      style="background: radial-gradient(55% 60% at 12% 78%, color-mix(in oklch, var(--chart-1) 30%, transparent) 0%, transparent 70%), radial-gradient(45% 55% at 90% 85%, color-mix(in oklch, var(--highlight) 12%, transparent) 0%, transparent 70%)"
-    ></div>
+      class="pointer-events-none absolute inset-0 -z-0 overflow-hidden [mask-image:linear-gradient(to_bottom,black_80%,transparent)]"
+    >
+      <img src="/topo-hero.svg" alt="" class="size-full object-cover object-top" />
+    </div>
 
-    <div class="relative mx-auto flex max-w-[860px] flex-col items-center gap-5 pt-14 text-center sm:pt-16">
-      <span class="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-[13px] text-muted-foreground">
-        <span class="size-1.5 rounded-full bg-success"></span>
-        Android first. Free, no account needed.
-      </span>
+    <div class="relative mx-auto flex max-w-[860px] flex-col items-center gap-5 pt-14 text-center sm:pt-20">
       <h1 class="text-[40px] font-bold leading-[1.04] tracking-[-0.035em] text-heading sm:text-[62px]">Log every set.<br />Know the next one.</h1>
       <p class="max-w-[560px] text-[17px] leading-relaxed text-muted-foreground sm:text-lg">
         A workout, food and habit tracker that works out your next weight, shows you why, and keeps everything on your phone.
@@ -225,8 +224,7 @@
   </section>
 
   <!-- ═════════ PLUGINS ═════════ -->
-  <section id="plugins" class="mt-28 scroll-mt-6 border-y border-border bg-sidebar px-4 pb-28 pt-24 sm:mt-36 sm:px-6"
-    style="background-image: radial-gradient(50% 40% at 50% 0%, color-mix(in oklch, var(--chart-1) 16%, transparent) 0%, transparent 70%)">
+  <section id="plugins" class="topo-tile mt-28 scroll-mt-6 border-y border-border bg-sidebar px-4 pb-28 pt-24 [background-position:center_-1400px] sm:mt-36 sm:px-6">
     <div class="mx-auto flex max-w-[1080px] flex-col gap-16">
       <div class="mx-auto flex max-w-[720px] flex-col items-center gap-[18px] text-center">
         <Eyebrow>Plugins</Eyebrow>
