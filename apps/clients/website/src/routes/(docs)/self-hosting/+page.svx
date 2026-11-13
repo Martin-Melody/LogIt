@@ -1,0 +1,61 @@
+---
+title: Self-hosting LogIt
+---
+
+<p class="lead">Run your own sync server and web dashboard. Free, no account with us, and your data stays on machines you control.</p>
+
+## Requirements
+
+- [Docker](https://docs.docker.com/get-docker/) with Docker Compose (included in current Docker installs)
+- Somewhere to run it: your own computer for use at home, or any server or VPS to reach it from anywhere
+
+## 1. Get the files
+
+```bash
+git clone https://github.com/Martin-Melody/LogIt.git
+cd LogIt
+```
+
+## 2. Set two secrets
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and fill in:
+
+- `JWT_SECRET`: generate one with `openssl rand -base64 48`
+- `ADMIN_KEY`: any value you choose, for the admin endpoints
+
+`.env` is ignored by git and never committed. Keep these values private: they protect every account on your server.
+
+## 3. Start it
+
+```bash
+docker compose up -d
+```
+
+This starts two services: the sync API on port `8080` and the web dashboard on port `3000`. Data is stored in SQLite inside a Docker volume, so it survives restarts.
+
+## 4. Connect the app
+
+In the LogIt app, open the sign-in screen (Settings › Account), tap **Connect to a different server** and enter your server's address: for example `http://192.168.1.10:8080` on your home network, or your server's public address. Then create an account. It exists only on your server.
+
+## 5. Open the dashboard
+
+Go to `http://<your-server>:3000` and sign in with the same account for the bigger charts: activity, personal records and a deep dive into each exercise.
+
+## Updating
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Database changes run automatically when the server starts. Back up the Docker volume before big version jumps anyway, like any database you care about.
+
+## Need more control?
+
+The `docker-compose.yml` at the root of the repo is the whole setup. Read it if you want to run the services differently: behind your own reverse proxy, on separate machines or with another database. Each service also has its own `Dockerfile` if you'd rather not use Compose.
+
+Questions or problems? [Open an issue on GitHub](https://github.com/Martin-Melody/LogIt/issues).

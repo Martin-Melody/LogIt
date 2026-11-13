@@ -14,9 +14,8 @@ const root = join(here, "..");
 
 const targets = [
   "apps/clients/logit-frontend/src/lib/assets/favicon.png",
-  "apps/clients/logit-marketing/static/favicon.png",
   "apps/clients/logit-web/static/favicon.png",
-  "apps/clients/docs-site/static/favicon.png",
+  "apps/clients/website/static/favicon.png",
 ];
 
 for (const t of targets) {

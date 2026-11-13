@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Colours, Inter, radius and base styles are shared with the phone app and the dashboard.
+   The site always uses the app's dark theme (<html class="dark"> in app.html). */
+@import "@logit/ui/theme.css";
+
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Headings a touch brighter than body text, like the app's titles on dark cards. */
+@utility text-heading {
+  color: color-mix(in oklch, var(--foreground) 70%, white);
+}
+
+/* Long-form text: legal pages and the docs. */
+.prose-site {
+  color: color-mix(in oklch, var(--foreground) 88%, transparent);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.prose-site h1 {
+  font-size: 2.25rem;
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: color-mix(in oklch, var(--foreground) 70%, white);
+  margin-bottom: 0.75rem;
+}
+.prose-site h2 {
+  font-size: 1.375rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: color-mix(in oklch, var(--foreground) 70%, white);
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 1.5rem;
+}
+.prose-site h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+.prose-site p,
+.prose-site ul,
+.prose-site ol {
+  margin: 0.85rem 0;
+}
+.prose-site ul { list-style: disc; padding-left: 1.4rem; }
+.prose-site ol { list-style: decimal; padding-left: 1.4rem; }
+.prose-site li { margin: 0.35rem 0; }
+.prose-site li::marker { color: var(--muted-foreground); }
+.prose-site strong { color: var(--foreground); font-weight: 600; }
+.prose-site a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--foreground) 40%, transparent);
+  text-underline-offset: 3px;
+}
+.prose-site a:hover { text-decoration-color: var(--foreground); }
+.prose-site code:not(pre code) {
+  background: var(--muted);
+  border-radius: 5px;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.85em;
+}
+.prose-site pre {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  margin: 1.1rem 0;
+}
+.prose-site pre code { background: none; }
+.prose-site blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+}
+.prose-site table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.1rem 0;
+  font-size: 0.9rem;
+  display: block;
+  overflow-x: auto;
+}
+.prose-site th,
+.prose-site td {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.8rem;
+  text-align: left;
+}
+.prose-site th { background: var(--card); font-weight: 600; color: var(--foreground); }
+.prose-site .shiki,
+.prose-site .shiki span {
+  color: var(--shiki-dark);
+  background-color: transparent;
+}
+.prose-site .lead {
+  font-size: 1.125rem;
+  color: var(--muted-foreground);
+}

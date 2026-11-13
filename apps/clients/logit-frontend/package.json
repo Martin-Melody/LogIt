@@ -59,6 +59,7 @@
     "@capawesome/capacitor-file-picker": "^8.0.2",
     "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
     "@logit/core": "*",
+    "@logit/ui": "*",
     "@react2svelte/swipeable": "^0.1.4",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
