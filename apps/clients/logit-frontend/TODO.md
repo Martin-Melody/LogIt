@@ -230,6 +230,27 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] Split schedule (2026-11-13, mockups approved: https://claude.ai/artifact/XMTmyPuuvSQGFeQ9g6XExt).
+      A split runs "In order" (default) or "By weekday" (`WorkoutSplit.schedule`). In order:
+      rest days (`SplitDay.rest`) take one calendar day each and pass on their own; workouts
+      never get skipped; "Same day as the one above" (`sameDayAsPrevious`) is a second workout
+      that day. By weekday: `SplitDay.weekday`, several days on one weekday = several
+      workouts; rest days are hidden (kept for switching back). Duplicate day = a separate
+      copy. Planner: core `splitSchedule.ts` `planSplit` (done today / later today / rest /
+      next). The rotation state keeps every day done today (`doneOnDay`). Home card says
+      Later today / Tomorrow / Rest tomorrow · Next: date / Rest day; Start starts the next
+      workout even on a rest day. Phone SQLite: `splits.schedule`, `split_days.schedule_json`.
+      The card's ‹ › page through the coming days (core `splitTimeline`): Today (✓ Done) /
+      Tomorrow / "Sun 15 Nov", rest days as their own page, one page per workout; in order
+      one lap of the split, by weekday 7 days. The picked page is a date + day in
+      `selectedDayOverride`; a rest page leaves Start on the next workout.
+      By weekday, a workout from another weekday done today stands in for one of today's
+      (swapped days), so the card moves on instead of asking for today's as "Later today".
+      Every page, the one the card opens on included, is headed by its own day (Today's plan /
+      Later today / Tomorrow / "Mon 16 Nov"); "Rest day today" and "Rest until then (Sat,
+      Sun)" are notes under it. Replaces the mockup's "Rest tomorrow" / "Rest day" headings.
+      The card opens on today (Martin, 2026-11-13): today's workout still to do, else
+      "Today · ✓ Done" or "Today · Rest day" with a "Next: Mon 16 Nov · Push" line.
 - [x] Goals with a projection chart, weekly streak (replaces day streaks), strength
       milestone badges (2026-11-13). Core `goals.ts`, `weeklyStreak.ts`, `milestones.ts`;
       screens under Progress › Goals. Goals sync on the profile (`goalsJson`, merged per goal).
