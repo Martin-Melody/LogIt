@@ -27,19 +27,24 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       Then put them in `apps/clients/website/src/lib/site.ts` (`PRICES`, shown as "€ TBC" until then).
 - [ ] **Decide**: free trial on Pro? How many days to act on an emailed deletion request, and how long
       server backups are kept (the delete-account page says 30 and 30 for now).
-- [ ] **Cloudflare Pages project** named `logit-website` (or change `--project-name` in
-      `.github/workflows/deploy-web.yml`), plus `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets.
+- [x] **Cloudflare Pages project** `logit-website`: created by the first deploy 2026-11-13, live at
+      https://logit-website.pages.dev. GitHub has `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`, so pushes to main deploy it.
 - [ ] **Have someone check the privacy policy and terms** (updated 2026-11-13 for Google Play billing,
       EU hosting, plugins and diagnostics; the hosting provider's name is still a TODO in the policy).
-- [ ] **VPS**: buy one (Hetzner CX22-ish, ~€5/month, EU) and give Claude SSH access.
-- [ ] **Off-site backup storage** for the database (e.g. Hetzner Storage Box or Backblaze B2, a few €/month).
+- [x] **VPS**: Hetzner CX23 `logit-prod` (Germany), bought 2026-11-13 with Hetzner backups on. Claude set
+      it up: `deploy` user, key-only SSH, auto security updates, Docker, swap. Hetzner firewall: 22 open, 80/443 only from
+      Cloudflare's ranges (2026-11-13; update it and the Caddyfile if Cloudflare adds ranges).
+- [x] **Off-site backup storage**: R2 bucket `logit-backups` (location hint Western Europe, not the EU jurisdiction),
+      lifecycle rule deletes objects after 30 days (checked 2026-11-13).
 - [x] **Domain**: `getlogit.app`, bought on Cloudflare Registrar 2026-11-13 (logit.ie is owned by
       Grandstream Holdings Limited since 2018, renewal due 2026-12-05). DNS is already on Cloudflare.
       Website at `getlogit.app`, dashboard `app.getlogit.app`, API `api.getlogit.app`. .app is HTTPS-only.
-- [ ] **Attach `getlogit.app` to the Cloudflare Pages project** and add the `app` / `api` records once
-      the VPS exists.
-- [ ] **hello@getlogit.app and privacy@getlogit.app mailboxes** (or forwarding to your inbox, e.g. Cloudflare
-      Email Routing). The site, privacy policy and Play listing use them.
+- [x] **`getlogit.app` on the Pages project** and proxied `api` / `app` records to the VPS (2026-11-13). SSL mode
+      Full (strict) with a Cloudflare Origin CA certificate on the server. `www.getlogit.app` serves the site
+      (checked 2026-11-13; canonical tag points at getlogit.app). Redirect rule sends www to getlogit.app (301, keeps path and query).
+- [x] **hello@getlogit.app and privacy@getlogit.app** (2026-11-13): getlogit.app added to the existing Zoho Mail
+      org (EU), both are aliases on Martin's mailbox. MX/SPF/DKIM (`zmail`) verified, DMARC `p=none` with reports
+      to hello@. Server alerts go to hello@. Tighten DMARC to `p=quarantine` after a few clean weeks.
 - [ ] **Upload keystore**: none on the lab. Find the September one (Windows PC?) or let Claude generate a
       new one. Store the `.jks` and its password in a password manager plus an offline copy.
 - [ ] **Accountant**: registering as a sole trader / company, income tax on Google payouts. (Google
@@ -61,6 +66,18 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [ ] **App bugs seen while taking screenshots**: two rest timers at once when ticking sets quickly;
       exercise chart y-axis labels clipped and x-axis dates overlapping; PR card "200kg × 1 reps";
       "Why progressing?" sheet reads like debug output; a habit icon set to a Lucide name shows as text.
+- [x] **Admin key hardening** (2026-11-13): constant-time check, 10 wrong keys from one address
+      lock it out for 15 minutes, startup warning for keys under 24 characters. Applies to the hosted
+      server too.
+- [x] **Self-hosted sign-ups** (2026-11-13): server side (`REGISTRATION_MODE` open/invite, self-host
+      default invite; invite codes with uses/expiry/note; admin API; `GET /auth/registration`; sign-up rate
+      limit 10 per address per 10 min; migrations for both databases). Screens built to the approved mockup
+      (https://claude.ai/artifact/4Yn1JX97tCfrvRwBAjWYQz): invite field in the app and dashboard sign-up,
+      Invites panel on the admin page with a ready-to-send message; self-hosting guide updated.
+- [x] **Admin page for self-hosters** (2026-11-13): plan editor and diagnostics counter hidden when
+      `Deployment:SelfHosted` is on.
+- [x] **Document the admin page** in the self-hosting guide and `.env.example` (2026-11-13).
+- [ ] **Admin page styling** on the shared theme (cosmetic; it's HTML inside `AdminHtml.cs`).
 - [ ] **Server billing**: plan source (google/stripe), purchase check with Google, renewal / cancel /
       grace-period / account-hold notices, Stripe checkout switched off. Tested against fake Google responses.
 - [ ] **Android billing plugin**: list plans, buy (tied to the logged-in Logit account), restore,
@@ -68,12 +85,18 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [ ] **In-app Upgrade screen**: mockup first. Replace the "Manage your plan in a browser at getlogit.app" text
       (`settings/+page.svelte`, `clients/+page.svelte`).
 - [ ] **logit-web `/upgrade`**: say "subscribe in the app" instead of going to Stripe.
-- [ ] **VPS deploy files**: production compose (API + Postgres + logit-web behind Caddy for HTTPS),
-      nightly off-site backups, a written restore test.
+- [x] **VPS deploy files** (2026-11-13, `deploy/production`): Caddy + API + Postgres 17 + logit-web,
+      `deploy-server.yml` builds images to GHCR and deploys on push to main, forwarded headers
+      (`Proxy:TrustForwardedHeaders`, Caddy trusts CF-Connecting-IP only from Cloudflare). Live and verified.
+- [x] **Nightly off-site database backups** to Cloudflare R2 (2026-11-13): 03:30 UTC dump, weekly automatic
+      restore test, failure emails to ALERT_EMAIL. Runbook in `deploy/production/README.md`.
+- [x] **Email**: Resend SMTP on the server (2026-11-13); password-reset send succeeded, delivery to be confirmed by Martin.
+- [ ] `POST /auth/login` with a missing field returns 500 instead of 400 (seen 2026-11-13; other
+      endpoints probably the same).
 
 ## After both halves are done
 
-- [ ] Point the app build at `https://api.getlogit.app` (the default in `packages/core/src/api/client.ts`
+- [x] Point the app build at `https://api.getlogit.app` (done 2026-11-13; was: the default in `packages/core/src/api/client.ts`
       is an old AWS App Runner host that no longer exists).
 - [ ] Create the subscriptions in Play Console; test buying with Play license testers.
 - [ ] Merge `feat/sessions-overhaul` first: the website's Sessions screenshots show those pages.
