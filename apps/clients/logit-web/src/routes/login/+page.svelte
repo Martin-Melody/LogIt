@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { apiClient, ApiError } from "@logit/core/api/client";
+  import { onMount } from "svelte";
+  import { apiClient, ApiError, type RegistrationInfo } from "@logit/core/api/client";
   import { getServerMode, setServerMode, getSelfHostUrl } from "@logit/core/api/serverConfig";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
@@ -26,6 +27,18 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
 
+  // Invite-only servers: signing up needs an invite code from the server's admin page.
+  let registration = $state<RegistrationInfo | null>(null);
+  let inviteCode = $state("");
+  let inviteError = $state<string | null>(null);
+  const inviteRequired = $derived(mode === "register" && registration?.mode === "invite");
+
+  async function loadRegistration() {
+    registration = null;
+    registration = await apiClient.getRegistrationInfo();
+  }
+  onMount(() => void loadRegistration());
+
   let showServerSetup = $state(false);
   let serverMode = $state(getServerMode());
   let selfHostUrl = $state(getSelfHostUrl() || "");
@@ -39,7 +52,8 @@
     !!password &&
     (mode === "login"
       ? !!usernameOrEmail.trim()
-      : !!username.trim() && !!email.trim() && !!displayName.trim() && !!confirmPassword && !passwordMismatch),
+      : !!username.trim() && !!email.trim() && !!displayName.trim() && !!confirmPassword && !passwordMismatch &&
+        (!inviteRequired || !!inviteCode.trim())),
   );
 
   function switchMode(m: Mode) {
@@ -58,11 +72,19 @@
       if (mode === "login") {
         await apiClient.login(usernameOrEmail.trim(), password);
       } else {
-        await apiClient.register(username.trim(), email.trim(), password, displayName.trim());
+        await apiClient.register(
+          username.trim(), email.trim(), password, displayName.trim(),
+          inviteRequired ? inviteCode : undefined,
+        );
       }
       await goto("/");
     } catch (err) {
-      if (mode === "register" && err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && (err.code === "invite_required" || err.code === "invite_invalid")) {
+        registration = { mode: "invite", selfHosted: registration?.selfHosted ?? true };
+        inviteError = err.code === "invite_invalid"
+          ? "That code isn't valid, has expired or has been used up. Check it with whoever sent it."
+          : "This server is invite-only. Enter the invite code you were sent.";
+      } else if (mode === "register" && err instanceof ApiError && err.status === 409) {
         error = "That username or email already has an account — try logging in.";
       } else {
         error =
@@ -83,12 +105,16 @@
     setServerMode("selfhosted", url);
     serverMode = "selfhosted";
     showServerSetup = false;
+    inviteError = null;
+    void loadRegistration();
   }
 
   function useCloud() {
     setServerMode("cloud");
     serverMode = "cloud";
     showServerSetup = false;
+    inviteError = null;
+    void loadRegistration();
   }
 </script>
 
@@ -117,6 +143,29 @@
           <Input id="identifier" type="text" bind:value={usernameOrEmail} autocomplete="username" />
         </div>
       {:else}
+        {#if inviteRequired}
+          <div class="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
+            <p class="text-sm font-semibold">This server is invite-only</p>
+            <Label for="invite-code">Invite code</Label>
+            <Input
+              id="invite-code"
+              type="text"
+              bind:value={inviteCode}
+              oninput={() => (inviteError = null)}
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength={12}
+              placeholder="XXXX-XXXX"
+              class="font-mono uppercase tracking-[0.12em] placeholder:normal-case placeholder:tracking-normal"
+              aria-invalid={!!inviteError}
+              aria-describedby="invite-code-help"
+            />
+            <p id="invite-code-help" class="text-xs {inviteError ? 'text-destructive' : 'text-muted-foreground'}">
+              {inviteError ?? "Ask whoever runs this server for one."}
+            </p>
+          </div>
+        {/if}
         <div class="flex flex-col gap-1.5">
           <Label for="displayName">Name</Label>
           <Input id="displayName" type="text" bind:value={displayName} autocomplete="name" />

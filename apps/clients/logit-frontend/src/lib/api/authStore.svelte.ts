@@ -48,8 +48,8 @@ function createAuthStore() {
     startBackgroundSync();
   }
 
-  async function register(username: string, email: string, password: string, displayName: string) {
-    const serverUser = await apiClient.register(username, email, password, displayName);
+  async function register(username: string, email: string, password: string, displayName: string, inviteCode?: string) {
+    const serverUser = await apiClient.register(username, email, password, displayName, inviteCode);
     user = serverUser;
     log.info("auth", "Account created and signed in", { selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);

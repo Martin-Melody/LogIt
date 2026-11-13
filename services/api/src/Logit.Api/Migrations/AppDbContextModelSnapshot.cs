@@ -398,6 +398,44 @@ namespace Logit.Api.Migrations
                     b.ToTable("Follows");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Invite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxUses")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UseCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Invites");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -1073,6 +1111,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("InviteId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("NutritionGoalJson")
                         .HasColumnType("TEXT");
 
@@ -1118,6 +1159,8 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("InviteId");
 
                     b.HasIndex("Username")
                         .IsUnique();
@@ -1571,9 +1614,24 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.User", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Invite", "Invite")
+                        .WithMany("Users")
+                        .HasForeignKey("InviteId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Invite");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
                 {
                     b.Navigation("Likes");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Invite", b =>
+                {
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
