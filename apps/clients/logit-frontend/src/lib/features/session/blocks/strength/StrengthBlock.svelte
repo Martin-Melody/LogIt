@@ -30,6 +30,9 @@
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import type { ExerciseType, Machine } from "@logit/core/domain/exercise";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
+  import { getLoadMode, effectiveLoadKg } from "@logit/core/domain/bodyweight";
+  import { repsAtLoad } from "@logit/core/domain/oneRepMax";
+  import { profileBodyweightKg } from "$lib/features/bodyweight/bodyweight";
 
   import { get } from "svelte/store";
   import { untrack } from "svelte";
@@ -430,12 +433,30 @@
   );
   const doneCount = $derived(workingSets.filter((s) => s.completed).length);
   // For the reps-to-next-weight meter: what each working set got, or is aiming for.
-  const meter = $derived(
-    workingSets.map((s) => ({
-      done: s.completed || s.reps > 0 ? s.reps : 0,
-      target: s.target?.reps ?? 0,
-    })),
+  // A set done at a different weight from the plan is worked out as reps at the
+  // planned weight, so 5 at +2.5 kg isn't drawn as a 5 at the planned weight.
+  const loadMode = $derived(
+    getLoadMode(exerciseData?.exerciseType, data.sets.map((s) => s.weight), data.exerciseName),
   );
+  const meter = $derived.by(() => {
+    const bw = loadMode === "external" ? null : profileBodyweightKg();
+    return workingSets.map((s) => {
+      const done = s.completed || s.reps > 0 ? s.reps : 0;
+      const target = s.target?.reps ?? 0;
+      const plannedKg = s.target?.weight;
+      if (done === 0 || target === 0 || plannedKg === undefined || Math.abs(s.weight - plannedKg) < 0.01) {
+        return { done, target };
+      }
+      // Bodyweight work needs a bodyweight to compare BW+2.5 with BW.
+      if (loadMode !== "external" && bw == null) return { done, target };
+      const eq = repsAtLoad(
+        done,
+        effectiveLoadKg(s.weight, loadMode, bw),
+        effectiveLoadKg(plannedKg, loadMode, bw),
+      );
+      return eq === null ? { done, target } : { done: Math.round(eq), target, logged: done };
+    });
+  });
 
   // ── Set-level drag-to-reorder ─────────────────────────────────────────────
 
