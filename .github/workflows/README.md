@@ -5,7 +5,7 @@
 | `ci.yml` | every PR + push to `main` | API build/test + migration-sync check; core/frontend/website builds + unit tests; Playwright social E2E against a real API |
 | `deploy-web.yml` | push to `main` touching `apps/clients/website` or `packages/ui` (or manual) | `wrangler pages deploy` of getlogit.app to Cloudflare Pages |
 | `android-release.yml` | push a `v*` tag, or manual | signed release AAB/APK artifact; uploads to the Play `internal` track when a Play service account is set |
-| `deploy-api.yml` | manual only | migration-sync gate, then `scripts/deploy.sh` → ECR → App Runner auto-deploys |
+| `deploy-server.yml` | push to `main` touching the API, dashboard, `packages/core` or `deploy/production` (or manual) | API tests + migration-sync gate, builds `logit-api` / `logit-web` images to GHCR, deploys that commit to the production VPS (`deploy/production/README.md`) |
 
 ## `npm run check` is not blocking yet
 
@@ -38,21 +38,15 @@ Set under **Settings → Secrets and variables → Actions**.
 
 Without the keystore secrets the workflow still builds a debug-signed artifact for smoke testing.
 
-### AWS (`deploy-api.yml`)
-Preferred — GitHub OIDC:
+### Production server (`deploy-server.yml`)
 | Secret | |
 |---|---|
-| `AWS_DEPLOY_ROLE_ARN` | IAM role trusting this repo via OIDC; needs ECR push + `apprunner:StartDeployment` |
+| `DEPLOY_HOST` | the VPS's IP (a secret so the repo doesn't reveal the address Cloudflare hides) |
+| `DEPLOY_KNOWN_HOSTS` | its host key line, `ssh-keyscan -t ed25519 <ip>` |
+| `DEPLOY_SSH_KEY` | private key; its public half is in the server's `authorized_keys` forced to `/opt/logit/bin/deploy` |
 
-Fallback — static keys (set variable `AWS_AUTH=keys`):
-| Secret | |
-|---|---|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | deploy user credentials |
-
-| Variable | |
-|---|---|
-| `AWS_REGION` | *(optional)* defaults to `eu-west-1` |
-| `AWS_AUTH` | set to `keys` to use static keys instead of OIDC |
+Images are pushed with the workflow's own `GITHUB_TOKEN`, which is also passed to the server for
+the pull, so no registry credentials are stored anywhere.
 
 ## First-time Play upload
 

@@ -45,12 +45,12 @@ leave the device.
 
 | Piece | What it is | Runs on | Example URL |
 |---|---|---|---|
-| `services/api` | Auth, sync, social, billing | AWS App Runner + RDS Postgres — see `infra/aws/README.md` | `api.getlogit.app` |
-| `apps/clients/logit-web` | Analytics dashboard | AWS App Runner (same Terraform, no VPC/database access needed) | `app.getlogit.app` |
+| `services/api` | Auth, sync, social, billing | Hetzner VPS (Docker: Caddy + API + Postgres 17) — see `deploy/production/README.md` | `api.getlogit.app` |
+| `apps/clients/logit-web` | Analytics dashboard | Same VPS, behind the same Caddy | `app.getlogit.app` |
 | `apps/clients/website` | The website: home, pricing, legal pages, self-hosting guide, plugin docs | Cloudflare Pages (static SvelteKit, `adapter-cloudflare`) | `getlogit.app` |
 
-For launch the API and dashboard move to a single cheap VPS instead of AWS (decided 2026-11-13,
-see `docs/launch-checklist.md`); the AWS notes below describe the earlier setup.
+Since 2026-11-13 the API and dashboard run on a single VPS instead of AWS
+(`deploy/production/README.md`); the AWS notes below describe the earlier setup.
 
 **Important: `logit-web` on AWS is one shared, multi-tenant deployment — not one instance per
 paying customer.** A customer who buys hosting doesn't get their own server; they get an account

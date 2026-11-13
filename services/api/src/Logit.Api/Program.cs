@@ -13,6 +13,7 @@ using Logit.Api.Features.Social;
 using Logit.Api.Features.Sync;
 using Logit.Api.Features.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -72,6 +73,25 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Behind a reverse proxy (the hosted server runs behind Caddy and Cloudflare), every request
+// arrives from the proxy's address. With Proxy:TrustForwardedHeaders on, the client address
+// comes from X-Forwarded-For instead, so rate limits, the admin lockout and the request logs
+// see real users. Only turn it on when the proxy is the only way to reach the API, or anyone
+// can claim any address. The proxy must set the header itself, not pass on the client's.
+var trustForwardedHeaders = builder.Configuration.GetValue<bool>("Proxy:TrustForwardedHeaders");
+if (trustForwardedHeaders)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.ForwardLimit = 1;
+        // The proxy's address is not known in advance (a Docker network); the API is not
+        // published, so whatever connects is the proxy.
+        o.KnownNetworks.Clear();
+        o.KnownProxies.Clear();
+    });
+}
+
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
@@ -118,10 +138,11 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 }
 
-app.Logger.LogInformation("Logit API starting ({Environment}, {Database}, self-hosted: {SelfHosted})",
+app.Logger.LogInformation("Logit API starting ({Environment}, {Database}, self-hosted: {SelfHosted}, trust forwarded headers: {TrustForwarded})",
     app.Environment.EnvironmentName,
     connectionString.StartsWith("Host=") || connectionString.StartsWith("postgres") ? "PostgreSQL" : "SQLite",
-    app.Configuration.GetValue<bool>("Deployment:SelfHosted"));
+    app.Configuration.GetValue<bool>("Deployment:SelfHosted"),
+    trustForwardedHeaders);
 
 if (app.Environment.IsDevelopment())
 {
@@ -129,7 +150,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Outermost, so every request (errors included) gets one log line with its id. CORS sits
+if (trustForwardedHeaders) app.UseForwardedHeaders();
+
+// Outermost (after the client address is known), so every request (errors included) gets one
+// log line with its id. CORS sits
 // outside the exception handler so a 500's body still reaches the browser app.
 app.UseRequestLogging();
 app.UseCors();

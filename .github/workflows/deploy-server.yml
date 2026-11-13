@@ -1,0 +1,100 @@
+name: Deploy server (api + dashboard)
+
+# Builds the API and dashboard images, pushes them to GHCR tagged with the commit, then deploys
+# that commit to the production VPS (deploy/production/README.md).
+#
+# Required repo secrets:
+#   DEPLOY_HOST          the server's IP (kept out of the repo: Cloudflare hides it)
+#   DEPLOY_KNOWN_HOSTS   its SSH host key line (ssh-keyscan -t ed25519 <ip>)
+#   DEPLOY_SSH_KEY       private key whose public half is forced to /opt/logit/bin/deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/api/**"
+      - "apps/clients/logit-web/**"
+      - "packages/core/**"
+      - "package-lock.json"
+      - "deploy/production/**"
+      - ".github/workflows/deploy-server.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # The same gate as ci.yml's API job, so a commit that breaks the API or its migrations never
+  # reaches the server (this workflow runs alongside CI, not after it).
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: API tests
+        run: dotnet test services/api/Logit.Api.sln -c Release
+      - name: Migration histories in sync (SQLite + Postgres)
+        run: |
+          dotnet tool install --global dotnet-ef --version "8.*"
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+          "$GITHUB_WORKSPACE/scripts/check-migrations-sync.sh"
+
+  images:
+    needs: checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: logit-api
+            context: services/api
+            file: services/api/Dockerfile
+          - name: logit-web
+            context: .
+            file: apps/clients/logit-web/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          tags: |
+            ghcr.io/martin-melody/${{ matrix.name }}:${{ github.sha }}
+            ghcr.io/martin-melody/${{ matrix.name }}:latest
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy ${{ github.sha }}
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ]; then
+            echo "::error::DEPLOY_HOST / DEPLOY_SSH_KEY not set"; exit 1
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          # The server ignores the command text except "deploy <sha>"; the token goes on stdin.
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "deploy@$HOST" "deploy ${{ github.sha }}"

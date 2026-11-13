@@ -1,0 +1,36 @@
+# HTTPS for the hosted server. Cloudflare proxies api. and app.getlogit.app here with SSL mode
+# "Full (strict)"; certs/origin.pem is a Cloudflare Origin CA certificate (valid to 2041) whose
+# key was generated on the server and never left it. No ACME: the certificate is loaded as is.
+{
+	# Origin CA certificates have no OCSP responder; without this Caddy warns every few minutes.
+	ocsp_stapling off
+
+	servers {
+		# The visitor's address comes from CF-Connecting-IP, but only on connections from
+		# Cloudflare (https://www.cloudflare.com/ips/, checked 2026-11-13). Anyone else
+		# connecting directly cannot claim an address.
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
+(proxy_headers) {
+	# Replace, never append to, whatever X-Forwarded-For the request came with.
+	header_up X-Forwarded-For {client_ip}
+}
+
+api.getlogit.app {
+	tls /certs/origin.pem /certs/origin.key
+	encode zstd gzip
+	reverse_proxy api:8080 {
+		import proxy_headers
+	}
+}
+
+app.getlogit.app {
+	tls /certs/origin.pem /certs/origin.key
+	encode zstd gzip
+	reverse_proxy web:3000 {
+		import proxy_headers
+	}
+}

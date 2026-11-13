@@ -1,0 +1,73 @@
+# The hosted LogIt server (api.getlogit.app + app.getlogit.app) on the production VPS.
+#
+# Lives in /opt/logit on the server next to .env (secrets + LOGIT_TAG) and certs/. Deploys
+# replace this file and the Caddyfile with the copies at the deployed commit; see README.md.
+# Self-hosters: use the docker-compose.yml at the repo root instead.
+name: logit
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
+
+  api:
+    image: ghcr.io/martin-melody/logit-api:${LOGIT_TAG:?Set LOGIT_TAG in .env}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Host=db;Database=logit;Username=logit;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      Jwt__Secret: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      Jwt__Issuer: logit-api
+      Jwt__Audience: logit-app
+      Admin__Key: ${ADMIN_KEY:?Set ADMIN_KEY in .env}
+      Deployment__SelfHosted: "false"
+      Registration__Mode: open
+      Web__Origin: https://app.getlogit.app
+      # Only Caddy can reach the API (no published port), and Caddy sets X-Forwarded-For itself.
+      Proxy__TrustForwardedHeaders: "true"
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@getlogit.app}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/martin-melody/logit-web:${LOGIT_TAG:?Set LOGIT_TAG in .env}
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      ORIGIN: https://app.getlogit.app
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: logit
+      POSTGRES_USER: logit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logit -d logit"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
