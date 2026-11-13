@@ -1,0 +1,14 @@
+---
+title: Documentation
+---
+
+<p class="lead">How to run your own LogIt server and how to build plugins for the app.</p>
+
+## Sections
+
+- **[Self-hosting](/self-hosting)**: run the sync server and web dashboard yourself with Docker Compose.
+- **[Plugins](/docs/plugins)**: build and share progression rules, nutrition targets, analytics, home-screen widgets and exercise packs. Code plugins run in a sandbox with no access to the network or the rest of the app's data.
+
+## Source
+
+Everything is on [GitHub](https://github.com/Martin-Melody/LogIt) under the MIT licence. The app is SvelteKit with Capacitor; shared logic lives in `@logit/core` and the shared look in `@logit/ui`.
