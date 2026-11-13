@@ -2,7 +2,7 @@
 // VITE_MARKETING_URL at build time (e.g. the Cloudflare Pages preview URL until
 // the domain is live). See docs/store-submission.md.
 export const MARKETING_URL: string =
-  import.meta.env.VITE_MARKETING_URL || "https://logit.ie";
+  import.meta.env.VITE_MARKETING_URL || "https://getlogit.app";
 
 export const PRIVACY_URL = `${MARKETING_URL}/privacy`;
 export const TERMS_URL = `${MARKETING_URL}/terms`;

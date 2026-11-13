@@ -20,7 +20,7 @@
       price: PRICES.pro.monthly,
       per: "/ month",
       yearly: `or ${PRICES.pro.yearly} a year`,
-      items: ["Everything in Free", "Backup and sync between your devices", "The web dashboard at app.logit.ie", "Deeper charts: e1RM, volume, nutrition against performance"],
+      items: ["Everything in Free", "Backup and sync between your devices", "The web dashboard at app.getlogit.app", "Deeper charts: e1RM, volume, nutrition against performance"],
       cta: "app",
       featured: true,
     },

@@ -45,7 +45,7 @@ YOURS TO KEEP
 LogIt is a tracking and planning tool, not medical advice. Check with a qualified
 professional before starting a new training or nutrition programme.
 
-Privacy policy: https://logit.ie/privacy
+Privacy policy: https://getlogit.app/privacy
 
 ## Category
 Health & Fitness
@@ -54,10 +54,10 @@ Health & Fitness
 workout tracker, gym log, nutrition tracker, calorie counter, habit tracker
 
 ## Contact details
-Email: hello@logit.ie (Play needs an address Google can actually reach: set up the
+Email: hello@getlogit.app (Play needs an address Google can actually reach: set up the
   mailbox or forwarding first, see docs/launch-checklist.md)
-Website: https://logit.ie
+Website: https://getlogit.app
 Phone: (optional)
 
 ## External privacy policy URL (required)
-https://logit.ie/privacy
+https://getlogit.app/privacy

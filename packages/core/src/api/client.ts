@@ -31,7 +31,7 @@ export class ApiError extends Error {
 
 const BASE_URL_KEY = "logit:api:baseUrl";
 // Falls back to the live App Runner URL (infra/aws terraform output api_service_url) so
-// every app works out of the box; set VITE_API_URL at build time once api.logit.ie is live.
+// every app works out of the box; set VITE_API_URL at build time once api.getlogit.app is live.
 const DEFAULT_BASE_URL: string =
   import.meta.env.VITE_API_URL || "https://zczrd44n9t.eu-west-1.awsapprunner.com";
 

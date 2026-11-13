@@ -45,16 +45,16 @@ leave the device.
 
 | Piece | What it is | Runs on | Example URL |
 |---|---|---|---|
-| `services/api` | Auth, sync, social, billing | AWS App Runner + RDS Postgres — see `infra/aws/README.md` | `api.logit.ie` |
-| `apps/clients/logit-web` | Analytics dashboard | AWS App Runner (same Terraform, no VPC/database access needed) | `app.logit.ie` |
-| `apps/clients/website` | The website: home, pricing, legal pages, self-hosting guide, plugin docs | Cloudflare Pages (static SvelteKit, `adapter-cloudflare`) | `logit.ie` |
+| `services/api` | Auth, sync, social, billing | AWS App Runner + RDS Postgres — see `infra/aws/README.md` | `api.getlogit.app` |
+| `apps/clients/logit-web` | Analytics dashboard | AWS App Runner (same Terraform, no VPC/database access needed) | `app.getlogit.app` |
+| `apps/clients/website` | The website: home, pricing, legal pages, self-hosting guide, plugin docs | Cloudflare Pages (static SvelteKit, `adapter-cloudflare`) | `getlogit.app` |
 
 For launch the API and dashboard move to a single cheap VPS instead of AWS (decided 2026-11-13,
 see `docs/launch-checklist.md`); the AWS notes below describe the earlier setup.
 
 **Important: `logit-web` on AWS is one shared, multi-tenant deployment — not one instance per
 paying customer.** A customer who buys hosting doesn't get their own server; they get an account
-inside the one `app.logit.ie` deployment, the same way every Bitwarden Cloud customer logs into
+inside the one `app.getlogit.app` deployment, the same way every Bitwarden Cloud customer logs into
 the same shared `vault.bitwarden.com`. Their data is isolated by the API scoping everything to
 their user id, not by separate infrastructure. Spinning up per-customer infrastructure was never
 built and isn't the plan — that doesn't happen anywhere in this codebase.
@@ -144,7 +144,7 @@ Pending → 403, accept, read succeeds with real data, unrelated third party →
 → 403 again) — this is consent/privacy-sensitive code, so it was checked end-to-end, not just
 type-checked.
 
-## Signup flow (logit.ie): removed for launch
+## Signup flow (getlogit.app): removed for launch
 
 **Since 2026-11-13 the website sells nothing.** Plans are bought in the Android app through
 Google Play Billing, and the old `/signup`, `/success` and `/pt` pages went with

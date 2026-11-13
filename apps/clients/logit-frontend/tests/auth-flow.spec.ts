@@ -46,12 +46,12 @@ async function deleteTestAccount(accessToken: string) {
 // ── Default surface ──────────────────────────────────────────────────────────
 
 test.describe("auth surface", () => {
-  test("defaults to the managed cloud (logit.ie) with no server-setup wall", async ({ page }) => {
+  test("defaults to the managed cloud (getlogit.app) with no server-setup wall", async ({ page }) => {
     await resetState(page);
     await goToAuth(page);
 
     await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
-    await expect(page.getByText("logit.ie")).toBeVisible();
+    await expect(page.getByText("getlogit.app")).toBeVisible();
     await expect(page.getByText("No server configured")).not.toBeVisible();
   });
 
@@ -135,14 +135,14 @@ test.describe("self-hosted server setup", () => {
     expect(mode).toBe("selfhosted");
   });
 
-  test("'Use logit.ie instead' reverts a self-hosted selection", async ({ page }) => {
+  test("'Use getlogit.app instead' reverts a self-hosted selection", async ({ page }) => {
     await setServerMode(page, "selfhosted", "https://logit.example.com");
     await goToAuth(page);
 
     await page.getByRole("button", { name: /Connect to a different server/i }).click();
     await page.getByRole("button", { name: /Use logit\.ie instead/i }).click();
 
-    await expect(page.getByText("logit.ie")).toBeVisible();
+    await expect(page.getByText("getlogit.app")).toBeVisible();
 
     const mode = await page.evaluate(() => localStorage.getItem("logit:server:mode"));
     expect(mode).toBe("cloud");

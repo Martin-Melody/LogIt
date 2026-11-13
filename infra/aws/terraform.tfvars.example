@@ -3,7 +3,7 @@
 db_password = "" # generate: openssl rand -base64 32
 jwt_secret  = "" # generate: openssl rand -base64 48
 admin_key   = "" # pick your own value
-web_origin  = "" # e.g. https://app.logit.ie — the subdomain you intend to point at logit-web
+web_origin  = "" # e.g. https://app.getlogit.app — the subdomain you intend to point at logit-web
 
 # Optional at first apply — these four default to a placeholder if omitted, so you can stand
 # up the infrastructure before Stripe is ready. Checkout/webhooks won't work until they're

@@ -93,6 +93,6 @@ variable "apprunner_auto_deploy" {
 }
 
 variable "web_origin" {
-  description = "Public URL logit-web will be served at once its custom domain is set up (e.g. https://app.logit.ie) — SvelteKit needs this upfront for CSRF origin checks, so pick the subdomain before the DNS/custom-domain step exists. Using the App Runner default *.awsapprunner.com URL here works too, but you'd need to change it (and redeploy) once you attach a real domain."
+  description = "Public URL logit-web will be served at once its custom domain is set up (e.g. https://app.getlogit.app) — SvelteKit needs this upfront for CSRF origin checks, so pick the subdomain before the DNS/custom-domain step exists. Using the App Runner default *.awsapprunner.com URL here works too, but you'd need to change it (and redeploy) once you attach a real domain."
   type        = string
 }

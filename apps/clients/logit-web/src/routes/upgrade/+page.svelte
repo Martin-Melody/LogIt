@@ -7,8 +7,8 @@
   const user = $derived(apiClient.getUser());
 
   // Falls back to the live Cloudflare Pages URL so this works out of the box; set
-  // VITE_MARKETING_URL at build time once logit.ie is live.
-  const PRICING_URL: string = `${import.meta.env.VITE_MARKETING_URL || "https://logit.ie"}/pricing`;
+  // VITE_MARKETING_URL at build time once getlogit.app is live.
+  const PRICING_URL: string = `${import.meta.env.VITE_MARKETING_URL || "https://getlogit.app"}/pricing`;
 
   let checkoutLoading = $state<"pro" | "studio" | null>(null);
   let checkoutError = $state<string | null>(null);

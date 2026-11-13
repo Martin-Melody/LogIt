@@ -12,5 +12,5 @@
   `CLOUDFLARE_API_TOKEN` repo secret (Pages:Edit permission). Currently deploys are manual via
   `wrangler pages deploy` from a local checkout (see `docs/deployment.md`).
 
-- Attach the real custom domain (`logit.ie`) to the `logit-website` Cloudflare Pages project
+- Attach the real custom domain (`getlogit.app`) to the `logit-website` Cloudflare Pages project
   once ready to go live (DNS change — do deliberately, not as a side effect of other work).

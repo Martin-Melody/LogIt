@@ -1,6 +1,6 @@
 name: Deploy website (Cloudflare Pages)
 
-# Deploys logit.ie (apps/clients/website, a static SvelteKit site) to Cloudflare Pages on
+# Deploys getlogit.app (apps/clients/website, a static SvelteKit site) to Cloudflare Pages on
 # every push to main that touches it or the shared look in packages/ui.
 #
 # Required repo secrets:
@@ -55,4 +55,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/clients/website
+          # Creates the Pages project on the first deploy; fails harmlessly once it exists.
+          preCommands: npx --yes wrangler pages project create logit-website --production-branch main || true
           command: pages deploy .svelte-kit/cloudflare --project-name logit-website --branch main

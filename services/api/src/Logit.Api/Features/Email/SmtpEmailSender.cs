@@ -21,7 +21,7 @@ public class SmtpEmailSender(IConfiguration config) : IEmailSender
         var port = config.GetValue<int?>("Smtp:Port") ?? 587;
         var user = config["Smtp:User"];
         var password = config["Smtp:Password"];
-        var from = config["Smtp:FromAddress"] ?? user ?? "no-reply@logit.ie";
+        var from = config["Smtp:FromAddress"] ?? user ?? "no-reply@getlogit.app";
 
         using var client = new SmtpClient(host, port) { EnableSsl = true };
         if (!string.IsNullOrWhiteSpace(user))

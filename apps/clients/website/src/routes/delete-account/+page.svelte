@@ -32,7 +32,7 @@
     </div>
     <div class="rounded-[14px] border border-border bg-card p-5">
       <p class="!mt-0 !mb-1.5 font-semibold text-heading">On the web</p>
-      <p class="!m-0 text-[15px] text-muted-foreground">Pro and Studio: sign in at <a href="{DASHBOARD_URL}/account">app.logit.ie</a>, open Account, then Delete account.</p>
+      <p class="!m-0 text-[15px] text-muted-foreground">Pro and Studio: sign in at <a href="{DASHBOARD_URL}/account">app.getlogit.app</a>, open Account, then Delete account.</p>
     </div>
     <div class="rounded-[14px] border border-border bg-card p-5">
       <p class="!mt-0 !mb-1.5 font-semibold text-heading">By email</p>

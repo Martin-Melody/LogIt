@@ -33,7 +33,7 @@ output "rds_endpoint" {
 }
 
 output "cloudflare_cname_targets" {
-  description = "For each custom domain you want (e.g. api.logit.ie, app.logit.ie): add a CNAME record in Cloudflare pointing at the matching value here (DNS-only, not proxied), then run `aws apprunner associate-custom-domain` for that service — see README.md."
+  description = "For each custom domain you want (e.g. api.getlogit.app, app.getlogit.app): add a CNAME record in Cloudflare pointing at the matching value here (DNS-only, not proxied), then run `aws apprunner associate-custom-domain` for that service — see README.md."
   value = {
     api = aws_apprunner_service.api.service_url
     web = aws_apprunner_service.web.service_url

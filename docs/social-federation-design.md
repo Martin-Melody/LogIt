@@ -7,7 +7,7 @@ decisions, so the centralised redesign (Phase 2) doesn't paint us into a corner.
 ## The problem
 
 Today there are separate social graphs:
-- The hosted instance (`logit.ie`) — free-tier and paid users post, follow, and
+- The hosted instance (`getlogit.app`) — free-tier and paid users post, follow, and
   see one feed.
 - Each self-hosted instance — its users' posts and follows are local to that box.
 
@@ -23,14 +23,14 @@ authenticates a remote user directly.
 
 ### Identity
 
-- Canonical handle: `@username@instance-domain` (e.g. `@martin@logit.ie`,
+- Canonical handle: `@username@instance-domain` (e.g. `@martin@getlogit.app`,
   `@sam@gym.example`).
 - Local users on this instance: `User.Origin == null`. Their bare `@username` is
   unambiguous *on this instance*.
 - Remote users are **mirrored** as local `User` rows with `Origin = "<domain>"`
   and a cached profile snapshot (display name, bio, avatar URL, last refreshed
   timestamp). They have no credentials here. `Username` is unique **per Origin**,
-  not globally — a `gym.example` `martin` and a `logit.ie` `martin` coexist.
+  not globally — a `gym.example` `martin` and a `getlogit.app` `martin` coexist.
 - `Post` and `Comment` get their origin transitively from `Author`. A mirrored
   remote post is a local row authored by a mirrored remote user, carrying the
   remote `Id` (so dedupe on re-delivery is trivial) and a `RemoteUrl`.
