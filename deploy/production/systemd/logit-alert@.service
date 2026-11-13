@@ -1,0 +1,7 @@
+[Unit]
+Description=LogIt alert email for %i
+
+[Service]
+Type=oneshot
+User=deploy
+ExecStart=/opt/logit/bin/alert %i

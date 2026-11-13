@@ -1,0 +1,9 @@
+[Unit]
+Description=LogIt nightly database backup (03:30 UTC, before the 04:30 update reboot window)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

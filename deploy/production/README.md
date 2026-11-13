@@ -67,5 +67,35 @@ Edit `/opt/logit/.env`, then `docker compose up -d`. Changing `JWT_SECRET` signs
 
 ## Backups
 
-- Hetzner backups: a daily image of the whole server, kept 7 days.
-- Nightly `pg_dump` to Cloudflare R2: **not set up yet** (`docs/launch-checklist.md`).
+| | When | Kept |
+|---|---|---|
+| Hetzner backups (whole server image) | daily | 7 days |
+| `pg_dump` to Cloudflare R2, bucket `logit-backups` (location hint Western Europe; standard endpoint, not `.eu`), `db/logit-<time>.dump` | 03:30 UTC (`logit-backup.timer`) | 30 days (bucket lifecycle rule); last 3 also in `/opt/logit/backups` |
+| Restore test: newest R2 dump into a throwaway Postgres, row counts compared with live | Sundays 05:15 UTC (`logit-restore-test.timer`) | |
+
+If either job fails, `logit-alert@.service` emails `ALERT_EMAIL` (in `.env`) through Resend with
+the last log lines.
+
+The 30 days is what the delete-account page promises: a deleted account is gone from every
+backup a month later. Change both together.
+
+Scripts (installed by hand like `deploy`): `backup.sh` → `/opt/logit/bin/backup`,
+`restore-test.sh` → `bin/restore-test`, `alert.sh` → `bin/alert`, `lib.sh` → `bin/lib.sh`;
+`systemd/*` → `/etc/systemd/system/`, then `sudo systemctl daemon-reload`.
+
+```sh
+sudo systemctl start logit-backup        # back up now
+/opt/logit/bin/restore-test              # test the newest backup now
+journalctl -u logit-backup -n 20         # last run
+systemctl list-timers 'logit-*'          # next runs
+```
+
+### Restoring for real
+
+```sh
+cd /opt/logit
+docker compose stop api web                         # nobody writes while restoring
+ls -1t backups/                                     # or fetch one from R2 (see restore-test.sh)
+docker compose exec -T db pg_restore -U logit -d logit --clean --if-exists --no-owner < backups/<file>.dump
+docker compose start api web
+```
