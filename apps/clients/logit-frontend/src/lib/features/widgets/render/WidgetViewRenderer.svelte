@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
-  import { Plus, Pencil, ChevronLeft, ChevronRight } from "lucide-svelte";
+  import { Plus, Pencil, ChevronLeft, ChevronRight, Moon } from "lucide-svelte";
   import type { WidgetNode, WidgetView } from "@logit/core/plugins/widgetView";
   import { createSwipeHandlers } from "$lib/swipe";
   import { runWidgetAction as runAction } from "./widgetAction";
@@ -64,11 +64,18 @@
 <Card.Root class="w-full" {...(swipe ?? {})}>
   <Card.Header>
     <div class="flex items-start justify-between gap-2">
-      <div class="min-w-0">
-        <Card.Title>{view.title}</Card.Title>
-        {#if view.subtitle}
-          <Card.Description>{view.subtitle}</Card.Description>
+      <div class="flex min-w-0 items-start gap-2.5">
+        {#if view.titleIcon === "rest"}
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden="true">
+            <Moon class="h-4 w-4" />
+          </span>
         {/if}
+        <div class="min-w-0">
+          <Card.Title>{view.title}</Card.Title>
+          {#if view.subtitle}
+            <Card.Description>{view.subtitle}</Card.Description>
+          {/if}
+        </div>
       </div>
       {#if view.headerActions?.length}
         <div class="flex shrink-0 items-center gap-0.5">

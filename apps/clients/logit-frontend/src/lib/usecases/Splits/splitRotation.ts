@@ -1,6 +1,13 @@
 import type { WorkoutSplit, SplitDay } from "@logit/core/domain/WorkoutSplit";
+import { planSplit, splitTimeline, type SplitPlan, type SplitProgress, type TimelineEntry } from "@logit/core/domain/splitSchedule";
+import { localDateIso } from "@logit/core/domain/nutrition";
 
-export type RotationState = { lastDayId: string; recordedAtMs: number };
+export type RotationState = {
+  lastDayId: string;
+  recordedAtMs: number;
+  /** Every day done on the local date of `recordedAtMs` (a second workout that day). */
+  doneOnDay?: string[];
+};
 
 export type ScheduleMode = "bump" | "original";
 
@@ -44,7 +51,11 @@ function loadState(splitId: string): RotationState | null {
 export function advanceRotation(splitId: string, dayId: string): void {
   if (typeof localStorage === "undefined") return;
   try {
-    const state: RotationState = { lastDayId: dayId, recordedAtMs: Date.now() };
+    const now = Date.now();
+    const prev = readRaw(splitId);
+    const sameDay = prev && localDateIso(new Date(prev.recordedAtMs)) === localDateIso(new Date(now));
+    const doneOnDay = [...new Set([...(sameDay ? (prev.doneOnDay ?? [prev.lastDayId]) : []), dayId])];
+    const state: RotationState = { lastDayId: dayId, recordedAtMs: now, doneOnDay };
     localStorage.setItem(storageKey(splitId), JSON.stringify(state));
   } catch {
     // ignore storage errors
@@ -72,21 +83,39 @@ export function applyRemoteRotations(remote: Record<string, RotationState>): voi
     const local = readRaw(splitId);
     if (local && local.recordedAtMs >= state.recordedAtMs) continue;
     try {
-      localStorage.setItem(storageKey(splitId), JSON.stringify({ lastDayId: state.lastDayId, recordedAtMs: state.recordedAtMs }));
+      localStorage.setItem(
+        storageKey(splitId),
+        JSON.stringify({
+          lastDayId: state.lastDayId,
+          recordedAtMs: state.recordedAtMs,
+          ...(Array.isArray(state.doneOnDay) ? { doneOnDay: state.doneOnDay } : {}),
+        }),
+      );
     } catch {}
   }
 }
 
-export function getNextDay(split: WorkoutSplit): SplitDay | null {
-  const days = [...split.days].sort((a, b) => a.orderIndex - b.orderIndex);
-  if (!days.length) return null;
-
+function progressOf(split: WorkoutSplit, todayIso: string): SplitProgress {
   const state = loadState(split.id);
-  if (!state) return days[0]!;
+  const last = state ? { dayId: state.lastDayId, dateIso: localDateIso(new Date(state.recordedAtMs)) } : null;
+  // doneOnDay belongs to the day it was recorded; yesterday's list says nothing about today.
+  const doneTodayIds = last?.dateIso === todayIso ? (state?.doneOnDay ?? []) : [];
+  return { last, doneTodayIds };
+}
 
-  const lastIdx = days.findIndex((d) => d.id === state.lastDayId);
-  if (lastIdx === -1) return days[0]!; // last day was deleted — restart from beginning
+/** Where the split puts you today: done, still to do, rest, and the next workout. */
+export function getSplitPlan(split: WorkoutSplit, now = new Date()): SplitPlan {
+  const todayIso = localDateIso(now);
+  return planSplit(split, progressOf(split, todayIso), todayIso);
+}
 
-  const nextIdx = (lastIdx + 1) % days.length;
-  return days[nextIdx]!;
+/** Today and the coming days, a page per workout or rest day (Today's plan card). */
+export function getSplitTimeline(split: WorkoutSplit, now = new Date()): TimelineEntry[] {
+  const todayIso = localDateIso(now);
+  return splitTimeline(split, progressOf(split, todayIso), todayIso);
+}
+
+/** The day Start should start: today's next workout, else the next one planned. */
+export function getNextDay(split: WorkoutSplit): SplitDay | null {
+  return getSplitPlan(split).startNext;
 }

@@ -74,6 +74,29 @@ export type WidgetInput = {
     dayIndex?: number;
     dayCount?: number;
     exercises: string[];
+    /**
+     * When the shown day is planned for, relative to today: still to do today (nothing
+     * done yet, or "laterToday" after a workout today), "tomorrow", or a later date
+     * ("upcoming", e.g. after a rest day). "restToday": today is a planned rest day and the
+     * shown day is the next workout. Unset when the user picked a day by hand.
+     */
+    when?: "today" | "laterToday" | "tomorrow" | "upcoming" | "restToday";
+    /** The shown day's planned date (YYYY-MM-DD) when it isn't today. */
+    dateIso?: string;
+    /** Labels of the split days already done today. */
+    doneToday?: string[];
+    /** The shown page is a rest day (no exercises). */
+    rest?: boolean;
+    /** The shown workout is already done (today). */
+    done?: boolean;
+    /** The user paged to this one with ‹ › (not the page the card opens on). */
+    picked?: boolean;
+    /** Today is a planned rest day (the card opens on the next workout). */
+    restToday?: boolean;
+    /** Rest days between today and the shown workout, YYYY-MM-DD. */
+    restBefore?: string[];
+    /** On a done or rest page the card opens on: the next workout to do. */
+    nextUp?: { dateIso: string; label: string };
   };
   /** Current targets per tracked exercise — the host runs the algorithm. */
   progressionTargets?: { exerciseName: string; target: string }[];
@@ -137,7 +160,8 @@ export type WidgetAction =
 export type WidgetTextNode = {
   kind: "text";
   text: string;
-  tone?: "default" | "muted" | "primary";
+  /** "success": green with a tick, for something done ("Upper done today"). */
+  tone?: "default" | "muted" | "primary" | "success";
 };
 
 export type WidgetStat = {
@@ -274,6 +298,8 @@ export type WidgetHeaderAction = {
 export type WidgetView = {
   title: string;
   subtitle?: string;
+  /** A small round icon before the title. "rest": a moon, for a rest day. */
+  titleIcon?: "rest";
   /** One or more primitive nodes, stacked. */
   body: WidgetNode[];
   /** Tapping the card body (outside interactive nodes) goes here. */

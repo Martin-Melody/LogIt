@@ -6,9 +6,12 @@ import { activeSplit } from "$lib/stores/activeSplit.store";
 import { selectedDayOverride } from "$lib/stores/todaysPlan.store";
 import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
 import { getScheduleMode } from "$lib/usecases/Splits/splitRotation";
+import { splitDayTitle } from "@logit/core/domain/splitSchedule";
 
-/** "Day 2 — Legs", or "Day 2" for an unnamed day. */
-export function splitDayLabel(day: Pick<SplitDay, "orderIndex" | "name">): string {
+/** "Day 2 — Legs", or "Day 2" for an unnamed day. Numbered among workout days when the
+ * split is given (rest days don't count). */
+export function splitDayLabel(day: Pick<SplitDay, "id" | "orderIndex" | "name" | "rest">, split?: WorkoutSplit | null): string {
+  if (split) return splitDayTitle(split, day);
   return day.name ? `Day ${day.orderIndex + 1} — ${day.name}` : `Day ${day.orderIndex + 1}`;
 }
 
@@ -20,8 +23,9 @@ export function plannedDay(split: WorkoutSplit | null): { day: SplitDay | null; 
   if (!split) return { day: null, scheduled: null };
   const scheduled = getTodaySplitDay(split);
   const override = get(selectedDayOverride);
+  // A rest day picked on the card has no workout: Start keeps the scheduled one.
   const day =
-    override?.splitId === split.id
+    override?.splitId === split.id && override.dayId
       ? (split.days.find((d) => d.id === override.dayId) ?? scheduled)
       : scheduled;
   return { day, scheduled };
