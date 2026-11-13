@@ -1,0 +1,20 @@
+{
+  "name": "@logit/ui",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "LogIt's shared look: theme (colours, Inter, radius) and brand components, used by the app, the dashboard and the website.",
+  "exports": {
+    "./theme.css": "./src/theme.css",
+    "./Logo.svelte": {
+      "types": "./src/Logo.svelte",
+      "svelte": "./src/Logo.svelte",
+      "default": "./src/Logo.svelte"
+    },
+    "./fonts/*": "./fonts/*"
+  },
+  "files": ["src", "fonts"],
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  }
+}

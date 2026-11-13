@@ -1,5 +1,8 @@
 # App store submission runbook
 
+> **2026-11-13:** the current launch plan and to-do list is `docs/launch-checklist.md`. This
+> runbook is older; report/block (blocker 1) has since been built.
+
 Status as of 2026-09-03: Android release build is **green and signed**; iOS
 platform is **scaffolded but not buildable here** (needs a Mac / cloud macOS).
 No developer accounts exist yet. No custom domain yet.
@@ -17,13 +20,10 @@ Store assets and copy live in `apps/clients/logit-frontend/store/`.
    → Either build report + block, **or** feature-gate the social feed out of the
    store build for v1. Decide before filling the content-rating form.
 
-2. **Privacy policy must be live at a public URL.** Pages exist at
-   `apps/clients/logit-marketing` `/privacy` and `/terms`. Deploy logit-marketing
-   (`wrangler pages deploy`, see `docs/deployment.md`) and use the resulting
-   `https://<project>.pages.dev/privacy` URL until `logit.ie` is bought. Update
-   the placeholder URLs in `store/play/listing-en-GB.md` and
-   `store/play/data-safety.md`, and set `VITE_MARKETING_URL` for the app build so
-   the in-app Settings → About links resolve.
+2. **Privacy policy must be live at a public URL.** `apps/clients/website` has
+   `/privacy`, `/terms` and `/delete-account`; the store files already point at
+   `https://logit.ie/...`. Deploy the website and attach `logit.ie` to it (see
+   `docs/deployment.md`). The app's default `VITE_MARKETING_URL` is `https://logit.ie`.
 
 3. **Upload keystore password is a dev placeholder.** `~/.keystores/logit-upload.jks`
    was generated with password `logit-upload-dev`. Before first submission,

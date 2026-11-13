@@ -2,8 +2,8 @@
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | every PR + push to `main` | API build/test + migration-sync check; core/frontend/marketing/docs builds + unit tests; Playwright social E2E against a real API |
-| `deploy-web.yml` | push to `main` touching `logit-marketing`, `docs-site`, or `packages/core` (or manual) | `wrangler pages deploy` for the affected Cloudflare Pages site(s) |
+| `ci.yml` | every PR + push to `main` | API build/test + migration-sync check; core/frontend/website builds + unit tests; Playwright social E2E against a real API |
+| `deploy-web.yml` | push to `main` touching `apps/clients/website` or `packages/ui` (or manual) | `wrangler pages deploy` of logit.ie to Cloudflare Pages |
 | `android-release.yml` | push a `v*` tag, or manual | signed release AAB/APK artifact; uploads to the Play `internal` track when a Play service account is set |
 | `deploy-api.yml` | manual only | migration-sync gate, then `scripts/deploy.sh` → ECR → App Runner auto-deploys |
 
@@ -34,7 +34,7 @@ Set under **Settings → Secrets and variables → Actions**.
 
 | Variable | |
 |---|---|
-| `MARKETING_URL` | *(optional)* baked into the app build; defaults to `https://logit-marketing.pages.dev` |
+| `MARKETING_URL` | *(optional)* baked into the app build; defaults to `https://logit.ie` |
 
 Without the keystore secrets the workflow still builds a debug-signed artifact for smoke testing.
 
