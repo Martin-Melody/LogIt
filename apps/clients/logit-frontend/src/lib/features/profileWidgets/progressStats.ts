@@ -7,6 +7,20 @@
 import { getWorkoutRepo, getNutritionRepo } from "$lib/data/repoProvider";
 import { getPersonalRecords } from "$lib/usecases/getPersonalRecords";
 import type { PublicWeightTrend, PublicStreak, PublicBadge } from "@logit/core/api/socialApi";
+import { GOALS_REACHED_TIERS, SESSION_COUNT_TIERS, WEEK_STREAK_TIERS, liftMilestones } from "@logit/core/domain/milestones";
+import { loadBodyweightLookup } from "$lib/features/bodyweight/bodyweight";
+
+async function countGoalsReached(): Promise<number> {
+  const [{ get }, { goalsStore, activeGoals }, { loadGoalView }] = await Promise.all([
+    import("svelte/store"),
+    import("$lib/features/goals/goalsStore"),
+    import("$lib/features/goals/goalProgress"),
+  ]);
+  const goals = activeGoals(get(goalsStore));
+  const cache = {};
+  const views = await Promise.all(goals.map((g) => loadGoalView(g, Date.now(), cache)));
+  return views.filter((v) => v.achievedAtMs != null).length;
+}
 
 const DAY_MS = 86_400_000;
 
@@ -25,48 +39,40 @@ export async function computeWeightTrend(days = 90): Promise<PublicWeightTrend> 
 }
 
 export async function computeStreak(): Promise<PublicStreak> {
-  const sessions = await getWorkoutRepo().listAllSessions();
-  const days = new Set(sessions.map((s) => toDateIso(s.startedAtMs)));
-  const sorted = [...days].sort();
-
-  // Current streak: consecutive calendar days ending today. A rest day today doesn't break
-  // it until tomorrow passes with still nothing logged — so fall back to counting from
-  // yesterday when today has no session yet.
-  let currentDays = 0;
-  let cursorMs = Date.now();
-  if (!days.has(toDateIso(cursorMs))) cursorMs -= DAY_MS;
-  while (days.has(toDateIso(cursorMs))) {
-    currentDays++;
-    cursorMs -= DAY_MS;
-  }
-
-  // Best streak: longest run of consecutive calendar days anywhere in history.
-  let bestDays = 0;
-  let run = 0;
-  let prevMs: number | null = null;
-  for (const iso of sorted) {
-    const ms = Date.parse(iso);
-    run = prevMs !== null && ms - prevMs === DAY_MS ? run + 1 : 1;
-    bestDays = Math.max(bestDays, run);
-    prevMs = ms;
-  }
-
-  return { currentDays, bestDays: Math.max(bestDays, currentDays) };
+  const { loadWeeklyStreak } = await import("$lib/features/goals/streak");
+  const s = await loadWeeklyStreak();
+  return { currentWeeks: s.currentWeeks, bestWeeks: s.bestWeeks, weeklyTarget: s.weeklyTarget };
 }
 
-/** Small, explicitly bounded v1 set — thresholds chosen to be reachable but not trivial.
- * Recomputed live each time, not a persisted earn-log. */
+/** Small, explicitly bounded set — thresholds chosen to be reachable but not trivial.
+ * Recomputed live each time, not a persisted earn-log. Rewards weeks on plan, real strength
+ * milestones and goals reached, never training every single day. */
 export async function computeBadges(): Promise<PublicBadge[]> {
-  const [streak, prs, sessions] = await Promise.all([
+  const [streak, prs, sessions, bodyweightAt, goalsReached] = await Promise.all([
     computeStreak(),
     getPersonalRecords(1000),
     getWorkoutRepo().listAllSessions(),
+    loadBodyweightLookup().catch(() => null),
+    countGoalsReached().catch(() => 0),
   ]);
 
   const badges: PublicBadge[] = [];
-  for (const tier of [7, 30, 100]) {
-    if (streak.bestDays >= tier) badges.push({ id: `streak-${tier}`, label: `${tier}-day streak` });
+  for (const tier of WEEK_STREAK_TIERS) {
+    if ((streak.bestWeeks ?? 0) >= tier) badges.push({ id: `week-streak-${tier}`, label: `${tier}-week streak` });
   }
+  const finished = sessions.filter((s) => s.endedAtMs != null).length;
+  for (const tier of SESSION_COUNT_TIERS) {
+    if (finished >= tier) badges.push({ id: `sessions-${tier}`, label: `${tier} workouts` });
+  }
+  for (const tier of GOALS_REACHED_TIERS) {
+    if (goalsReached >= tier) badges.push({ id: `goals-${tier}`, label: tier === 1 ? "First goal reached" : `${tier} goals reached` });
+  }
+  badges.push(
+    ...liftMilestones(
+      prs.map((r) => ({ exerciseName: r.exerciseName, weight: r.weight, bodyweightKg: bodyweightAt?.(r.achievedAtMs) ?? null })),
+      bodyweightAt?.(Date.now()) ?? null,
+    ),
+  );
   for (const tier of [5, 20]) {
     if (prs.length >= tier) badges.push({ id: `prs-${tier}`, label: `${tier}+ personal records` });
   }

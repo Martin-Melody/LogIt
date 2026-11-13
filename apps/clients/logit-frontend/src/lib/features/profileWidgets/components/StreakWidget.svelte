@@ -17,6 +17,8 @@
 
   const streak = $derived(data ?? live);
   const loading = $derived(!data && !fetched);
+
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 </script>
 
 <Card.Root>
@@ -28,12 +30,26 @@
     {#if loading}
       <p class="text-xs text-muted-foreground">Loading…</p>
     {:else if streak}
-      <dl class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-        <dt class="text-muted-foreground">Current</dt>
-        <dd class="font-medium tabular-nums">{streak.currentDays} day{streak.currentDays === 1 ? "" : "s"}</dd>
-        <dt class="text-muted-foreground">Best</dt>
-        <dd class="font-medium tabular-nums">{streak.bestDays} day{streak.bestDays === 1 ? "" : "s"}</dd>
-      </dl>
+      {#if streak.currentWeeks != null}
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+          <dt class="text-muted-foreground">Current</dt>
+          <dd class="font-medium tabular-nums">{plural(streak.currentWeeks, "week")}</dd>
+          <dt class="text-muted-foreground">Best</dt>
+          <dd class="font-medium tabular-nums">{plural(streak.bestWeeks ?? 0, "week")}</dd>
+          {#if streak.weeklyTarget}
+            <dt class="text-muted-foreground">Target</dt>
+            <dd class="font-medium tabular-nums">{streak.weeklyTarget}× a week</dd>
+          {/if}
+        </dl>
+      {:else}
+        <!-- A snapshot from an older app version: day streaks. -->
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+          <dt class="text-muted-foreground">Current</dt>
+          <dd class="font-medium tabular-nums">{plural(streak.currentDays ?? 0, "day")}</dd>
+          <dt class="text-muted-foreground">Best</dt>
+          <dd class="font-medium tabular-nums">{plural(streak.bestDays ?? 0, "day")}</dd>
+        </dl>
+      {/if}
     {/if}
   </Card.Content>
 </Card.Root>

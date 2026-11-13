@@ -2,6 +2,7 @@ import type { WidgetDefinition, WidgetId } from "./widget";
 import type { WidgetRegistry } from "./widgetRegistry";
 
 import WidgetCard from "./render/WidgetCard.svelte";
+import GoalsWidget from "$lib/features/goals/GoalsWidget.svelte";
 import { quickStartWidget } from "@logit/core/plugins/builtinWidgets/quickStart";
 import { todaysPlanWidget } from "@logit/core/plugins/builtinWidgets/todaysPlan";
 import { muscleFocusWidget } from "@logit/core/plugins/builtinWidgets/muscleFocus";
@@ -106,6 +107,14 @@ const BUNDLED: WidgetDefinition[] = [
     props: { plugin: mobilityWidget },
     defaultEnabled: false,
     defaultOrder: 9,
+  },
+  {
+    id: "goals",
+    label: "Goals",
+    description: "Your week streak and the goals you're closest to, with when you'll get there.",
+    component: GoalsWidget,
+    defaultEnabled: true,
+    defaultOrder: 10,
   },
 ];
 

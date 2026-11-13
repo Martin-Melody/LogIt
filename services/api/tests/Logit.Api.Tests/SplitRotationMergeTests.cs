@@ -31,3 +31,20 @@ public class SplitRotationMergeTests
         Assert.Equal(("a1", 1L), Read(only)["a"]);
     }
 }
+
+public class GoalsMergeTests
+{
+    [Fact]
+    public void Keeps_the_newer_copy_of_each_goal_and_the_streak_settings()
+    {
+        var stored = """{"goal_a":{"updatedAtMs":5,"target":{"type":"reps","reps":20}},"streak":{"weeklyTarget":5,"pauses":[],"updatedAtMs":9}}""";
+        var incoming = """{"goal_a":{"updatedAtMs":3,"target":{"type":"reps","reps":15}},"goal_b":{"updatedAtMs":4,"deletedAtMs":4},"streak":{"weeklyTarget":3,"pauses":[],"updatedAtMs":2}}""";
+
+        var merged = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            SyncEndpoints.MergeByTimestamp(stored, incoming, "updatedAtMs")!)!;
+
+        Assert.Equal(20, merged["goal_a"].GetProperty("target").GetProperty("reps").GetInt32());
+        Assert.Equal(4, merged["goal_b"].GetProperty("deletedAtMs").GetInt64());
+        Assert.Equal(5, merged["streak"].GetProperty("weeklyTarget").GetInt32());
+    }
+}

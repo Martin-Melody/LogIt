@@ -17,6 +17,7 @@
     Trophy,
     TrendingUp,
     TrendingDown,
+    Target,
   } from "lucide-svelte";
   import { notificationsApi, type ApiNotification } from "@logit/core/api/socialApi";
   import { formatWeight } from "@logit/core/domain/units";
@@ -31,7 +32,7 @@
   // One inbox: social notifications from the server (signed in) merged with the ones
   // made on the device (PRs, progression changes). Opening it marks everything read.
 
-  type Filter = "all" | "social" | "pr" | "progression";
+  type Filter = "all" | "social" | "pr" | "goal" | "progression";
   type Row =
     | { source: "social"; id: string; atMs: number; read: boolean; n: ApiNotification }
     | { source: "local"; id: string; atMs: number; read: boolean; n: LocalNotification };
@@ -40,6 +41,7 @@
     { id: "all", label: "All" },
     { id: "social", label: "Social", social: true },
     { id: "pr", label: "PRs" },
+    { id: "goal", label: "Goals" },
     { id: "progression", label: "Progression" },
   ];
 
@@ -147,6 +149,7 @@
   }
 
   function localTarget(n: LocalNotification) {
+    if (n.kind === "goal") return `/progress/goals/${n.goalId}`;
     return n.exerciseId ? `/exercises/${n.exerciseId}` : null;
   }
 
@@ -157,6 +160,7 @@
 
   const emptyText = $derived(
     filter === "pr" ? "No PRs yet. They show up here after a workout."
+      : filter === "goal" ? "No goals reached yet. Set one on the Progress page."
       : filter === "progression" ? "No progression changes yet. Raised targets and deloads show up here."
       : filter === "social" ? "No social notifications yet."
       : "No notifications yet.",
@@ -177,7 +181,7 @@
     {/each}
   </div>
 
-  {#if error && filter !== "pr" && filter !== "progression"}
+  {#if error && filter !== "pr" && filter !== "goal" && filter !== "progression"}
     <div class="flex items-center justify-between gap-3 border-t border-border px-3 py-2.5">
       <p class="text-sm text-muted-foreground">{error}</p>
       <button type="button" class="h-11 shrink-0 text-sm text-primary" onclick={() => loadSocial()}>Try again</button>
@@ -237,12 +241,14 @@
             >
               <div
                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full
-                  {n.kind === 'pr' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  {n.kind === 'pr' || n.kind === 'goal' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                     : n.kind === 'progression' && n.change.kind === 'deload' ? 'bg-muted text-muted-foreground'
                     : 'bg-primary/10 text-primary'}"
               >
                 {#if n.kind === "pr"}
                   <Trophy class="h-4 w-4" />
+                {:else if n.kind === "goal"}
+                  <Target class="h-4 w-4" />
                 {:else if n.change.kind === "deload"}
                   <TrendingDown class="h-4 w-4" />
                 {:else}
@@ -253,6 +259,8 @@
                 {#if n.kind === "pr"}
                   <p class="text-sm leading-snug"><span class="font-semibold">New PR</span> · {n.exerciseName}</p>
                   <p class="mt-0.5 text-xs text-muted-foreground">{prText(n)}</p>
+                {:else if n.kind === "goal"}
+                  <p class="text-sm leading-snug"><span class="font-semibold">Goal reached</span> · {n.exerciseName}</p>
                 {:else}
                   <p class="text-sm leading-snug">
                     <span class="font-semibold">{n.exerciseName}</span>

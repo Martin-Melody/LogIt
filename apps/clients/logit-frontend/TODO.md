@@ -230,6 +230,10 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] Goals with a projection chart, weekly streak (replaces day streaks), strength
+      milestone badges (2026-11-13). Core `goals.ts`, `weeklyStreak.ts`, `milestones.ts`;
+      screens under Progress › Goals. Goals sync on the profile (`goalsJson`, merged per goal).
+
 - [x] Swipe between the bottom-nav pages in bar order, Start in the middle (2026-11-12).
       Only on the tab pages; anything that takes the gesture wins (set rows and grips via
       preventDefault, touch-action, horizontal scrollers, charts, fixed overlays, screen

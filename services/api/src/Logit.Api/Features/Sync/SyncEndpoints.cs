@@ -327,16 +327,18 @@ public static class SyncEndpoints
             }
         }
         var rotations = MergeSplitRotations(stored?.SplitRotationJson, dto.SplitRotationJson);
+        // Goals the same way, per goal on its updatedAtMs.
+        var goals = MergeByTimestamp(stored?.GoalsJson, dto.GoalsJson, "updatedAtMs");
 
         if (dto.UpdatedAtMs > user.ProfileUpdatedAtMs)
         {
-            user.ProfileJson = JsonSerializer.Serialize(dto with { SplitRotationJson = rotations });
+            user.ProfileJson = JsonSerializer.Serialize(dto with { SplitRotationJson = rotations, GoalsJson = goals });
             user.ProfileUpdatedAtMs = dto.UpdatedAtMs;
             await db.SaveChangesAsync();
         }
-        else if (stored is not null && rotations != stored.SplitRotationJson)
+        else if (stored is not null && (rotations != stored.SplitRotationJson || goals != stored.GoalsJson))
         {
-            user.ProfileJson = JsonSerializer.Serialize(stored with { SplitRotationJson = rotations });
+            user.ProfileJson = JsonSerializer.Serialize(stored with { SplitRotationJson = rotations, GoalsJson = goals });
             await db.SaveChangesAsync();
         }
 
@@ -345,11 +347,16 @@ public static class SyncEndpoints
 
     /// Merge two split-rotation maps ({ splitId: { lastDayId, recordedAtMs } }), keeping the
     /// newer entry per split. Unreadable input is ignored; returns null when both are empty.
-    public static string? MergeSplitRotations(string? stored, string? incoming)
+    public static string? MergeSplitRotations(string? stored, string? incoming) =>
+        MergeByTimestamp(stored, incoming, "recordedAtMs");
+
+    /// Merge two JSON objects of { key: { <timestampField>: ms, ... } }, keeping the entry with
+    /// the newer timestamp per key. Unreadable input is ignored; returns null when both are empty.
+    public static string? MergeByTimestamp(string? stored, string? incoming, string timestampField)
     {
         var merged = new SortedDictionary<string, JsonElement>(StringComparer.Ordinal);
-        static long RecordedAt(JsonElement e) =>
-            e.ValueKind == JsonValueKind.Object && e.TryGetProperty("recordedAtMs", out var r) && r.TryGetInt64(out var v)
+        long RecordedAt(JsonElement e) =>
+            e.ValueKind == JsonValueKind.Object && e.TryGetProperty(timestampField, out var r) && r.TryGetInt64(out var v)
                 ? v
                 : long.MinValue;
 
@@ -725,7 +732,10 @@ public record ProfileDto(
     long UpdatedAtMs,
     // Per split: { lastDayId, recordedAtMs }. Merged per split on push (see PushProfile), not
     // replaced with the rest of the profile. Last so older stored profiles still read.
-    string? SplitRotationJson = null
+    string? SplitRotationJson = null,
+    // Goals + weekly streak settings: { goalId: { ..., updatedAtMs }, streak: { ..., updatedAtMs } }.
+    // Merged per key on push like SplitRotationJson.
+    string? GoalsJson = null
 );
 
 /// One client-owned sync row — nutrition row, habit or habit entry (see ISyncedClientRow).
