@@ -14,6 +14,11 @@ visitor ─▶ Cloudflare (proxy, "Full (strict)") ─▶ VPS :443 Caddy ─┬�
   sudo, in the `docker` group.
 - **Updates:** unattended-upgrades installs security updates nightly and reboots at 04:30 when
   needed. Every container has `restart: unless-stopped`.
+- **Firewall:** the Hetzner Cloud firewall `firewall-1` lets in SSH (22) from anywhere and 80/443 only
+  from [Cloudflare's addresses](https://www.cloudflare.com/ips/), so nobody can skip Cloudflare by
+  using the IP. The `Caddyfile` trusts the same list. If Cloudflare changes it, update **both**.
+- **Email:** hello@ and privacy@getlogit.app are aliases in Zoho Mail (EU). The server sends through
+  Resend (`SMTP_*`); backup failures go to `ALERT_EMAIL` (hello@).
 
 ## Files on the server (`/opt/logit`)
 
