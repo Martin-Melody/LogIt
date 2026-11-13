@@ -90,7 +90,7 @@
         return;
       }
       await getCoachProgramRepo().setActiveProgramId(programId);
-      await currentSession.startFromProgramDay(day);
+      await currentSession.startFromProgramDay(day, program ? { id: program.id, name: program.name } : undefined);
       await goto("/session/current");
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to start workout";

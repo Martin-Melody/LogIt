@@ -1,257 +1,287 @@
 <script lang="ts">
+  import { onMount, tick } from "svelte";
+  import { goto } from "$app/navigation";
+  import { fade } from "svelte/transition";
+  import { Search, X, Dumbbell } from "lucide-svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { Button } from "$lib/components/ui/button";
-  import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
-  import { Search, X, ChevronRight, Dumbbell } from "lucide-svelte";
-
-  import { recentSessions } from "$lib/stores/recentSessions.store";
   import { profile } from "$lib/stores/profile.store";
-  import { durationMs, formatDuration } from "@logit/core/domain/time";
-  import {
-    getTopSetHighlight,
-    getExercises,
+  import { activeSplit } from "$lib/stores/activeSplit.store";
+  import { sessionHistory, type HistoryEntry } from "$lib/features/sessions/history";
+  import SessionCalendar from "$lib/features/sessions/SessionCalendar.svelte";
+  import SessionCard from "$lib/features/sessions/SessionCard.svelte";
+  import { volumeLabel } from "$lib/features/sessions/format";
+  import { loadWeeklyStreak } from "$lib/features/goals/streak";
+  import type { WeeklyStreak } from "@logit/core/domain/weeklyStreak";
+  import { sessionMatches } from "@logit/core/domain/sessionHistory";
+  import { splitDayName } from "@logit/core/domain/splitSchedule";
+  import { localDateIso } from "@logit/core/domain/nutrition";
 
-  } from "@logit/core/domain/workout";
-  import { formatWeight } from "@logit/core/domain/units";
-  import { loadVolumeContext, sessionVolumeKg, type VolumeContext } from "$lib/features/bodyweight/bodyweight";
-  import { reveal, popIn } from "$lib/transitions";
-  import { fade } from "svelte/transition";
+  const unit = $derived($profile.weightUnit);
 
-  const ui = $state({ loading: true, error: null as string | null });
+  let error = $state<string | null>(null);
+  let streak = $state<WeeklyStreak | null>(null);
+  let searching = $state(false);
   let query = $state("");
+  let selectedDay = $state<string | null>(null);
+  let chip = $state<string | null>(null);
+  let calendarExpanded = $state(true);
+  let searchEl = $state<HTMLInputElement | null>(null);
 
-  const weightUnit = $derived($profile.weightUnit);
-
-  const DAY = 86_400_000;
-
-  /** Monday 00:00 of the week containing `ms`. */
-  function startOfWeek(ms: number): number {
-    const d = new Date(ms);
-    d.setHours(0, 0, 0, 0);
-    const dow = (d.getDay() + 6) % 7; // 0 = Monday
-    return d.getTime() - dow * DAY;
-  }
-
-  function relativeDate(ms: number): string {
-    const now = new Date();
-    const then = new Date(ms);
-    const startToday = new Date(now).setHours(0, 0, 0, 0);
-    const startThen = new Date(then).setHours(0, 0, 0, 0);
-    const diffDays = Math.round((startToday - startThen) / DAY);
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays > 1 && diffDays < 7) return then.toLocaleDateString(undefined, { weekday: "long" });
-    const sameYear = then.getFullYear() === now.getFullYear();
-    return then.toLocaleDateString(undefined, {
-      day: "numeric",
-      month: "short",
-      ...(sameYear ? {} : { year: "numeric" }),
-    });
-  }
-
-  function bucketOf(ms: number): string {
-    const now = Date.now();
-    const thisWeek = startOfWeek(now);
-    if (ms >= thisWeek) return "This week";
-    if (ms >= thisWeek - 7 * DAY) return "Last week";
-    const d = new Date(ms);
-    const sameYear = d.getFullYear() === new Date(now).getFullYear();
-    return d.toLocaleDateString(undefined, {
-      month: "long",
-      ...(sameYear ? {} : { year: "numeric" }),
-    });
-  }
-
-  // Bodyweight + exercise types, so pull-ups and dips count in volume.
-  let volumeCtx = $state<VolumeContext | null>(null);
-
-  type Row = {
-    id: string;
-    startedAtMs: number;
-    dateLabel: string;
-    durationLabel: string;
-    inProgress: boolean;
-    exerciseCount: number;
-    volumeKg: number;
-    topSet: string | null;
-    searchText: string;
-  };
-
-  const allRows = $derived<Row[]>(
-    ($recentSessions ?? []).map((s) => {
-      const ended = s.endedAtMs ?? s.startedAtMs;
-      const dur = s.endedAtMs ? durationMs(s.startedAtMs, s.endedAtMs) : 0;
-      const top = getTopSetHighlight(s);
-      const topSet = top ? `${top.exerciseName} ${top.reps}×${formatWeight(top.weight, weightUnit)}` : null;
-      return {
-        id: s.id,
-        startedAtMs: s.startedAtMs,
-        dateLabel: relativeDate(ended),
-        durationLabel: s.endedAtMs ? formatDuration(dur) : "In progress",
-        inProgress: !s.endedAtMs,
-        exerciseCount: getExercises(s).length,
-        volumeKg: sessionVolumeKg(s, volumeCtx),
-        topSet,
-        searchText: `${relativeDate(ended)} ${new Date(ended).toLocaleDateString()} ${topSet ?? ""}`.toLowerCase(),
-      };
-    }),
-  );
-
-  const filteredRows = $derived.by(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return allRows;
-    return allRows.filter((r) => r.searchText.includes(q));
+  onMount(() => {
+    sessionHistory.refresh().catch((e) => (error = e instanceof Error ? e.message : "Couldn't load your sessions"));
+    loadWeeklyStreak().then((s) => (streak = s)).catch(() => {});
   });
 
-  const groups = $derived.by(() => {
-    const out: { bucket: string; rows: Row[] }[] = [];
-    for (const row of filteredRows) {
-      const bucket = bucketOf(row.startedAtMs);
-      const last = out[out.length - 1];
-      if (last && last.bucket === bucket) last.rows.push(row);
-      else out.push({ bucket, rows: [row] });
+  const entries = $derived($sessionHistory?.entries ?? []);
+  const loading = $derived(!$sessionHistory && !error);
+
+  const workoutsByDay = $derived.by(() => {
+    const m = new Map<string, number>();
+    for (const e of entries) m.set(e.dayIso, (m.get(e.dayIso) ?? 0) + 1);
+    return m;
+  });
+
+  const q = $derived(query.trim().toLowerCase());
+
+  function matchesQuery(e: HistoryEntry): boolean {
+    if (!q) return true;
+    return e.title.toLowerCase().includes(q) || sessionMatches(e.session, q).length > 0 || (e.session.note ?? "").toLowerCase().includes(q);
+  }
+
+  const matchDays = $derived(q ? new Set(entries.filter(matchesQuery).map((e) => e.dayIso)) : null);
+
+  const monthCount = $derived.by(() => {
+    const prefix = localDateIso(new Date()).slice(0, 7);
+    return entries.filter((e) => !e.inProgress && e.dayIso.startsWith(prefix)).length;
+  });
+
+  // Filter chips: the workouts done more than once, the active split's days first in split order.
+  const chips = $derived.by(() => {
+    const counts = new Map<string, number>();
+    // By the day's own name, so a renamed workout still counts as its split day.
+    for (const e of entries) if (e.parentName) counts.set(e.autoTitle, (counts.get(e.autoTitle) ?? 0) + 1);
+    const split = $activeSplit;
+    const order = split ? split.days.filter((d) => !d.rest).map((d) => splitDayName(split, d)) : [];
+    const titles = [...counts.keys()].filter((t) => counts.get(t)! > 1 || order.includes(t));
+    titles.sort((a, b) => {
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      if (ia !== -1 || ib !== -1) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+      return counts.get(b)! - counts.get(a)!;
+    });
+    return titles.slice(0, 10);
+  });
+
+  const filtered = $derived(
+    entries.filter(
+      (e) => (!selectedDay || e.dayIso === selectedDay) && (!chip || e.autoTitle === chip) && matchesQuery(e),
+    ),
+  );
+
+  // Weeks, then months; inside, one card per day (a second workout that day sits under it,
+  // except in search results, where each match is its own card).
+  type DayGroup = { key: string; entries: HistoryEntry[] };
+  type Section = { key: string; label: string; count: number; volumeKg: number; days: DayGroup[] };
+
+  function mondayIso(d: Date): string {
+    const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+    return localDateIso(m);
+  }
+
+  const sections = $derived.by((): Section[] => {
+    const now = new Date();
+    const thisWeek = mondayIso(now);
+    const lastWeek = mondayIso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7));
+    const out: Section[] = [];
+    for (const e of filtered) {
+      const d = new Date(e.session.startedAtMs);
+      const wk = mondayIso(d);
+      const key = e.inProgress ? "now" : wk === thisWeek ? "this" : wk === lastWeek ? "last" : `${d.getFullYear()}-${d.getMonth()}`;
+      const label =
+        key === "now"
+          ? "In progress"
+          : key === "this"
+            ? "This week"
+            : key === "last"
+              ? "Last week"
+              : d.toLocaleDateString(undefined, { month: "long", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
+      let sec = out.at(-1);
+      if (!sec || sec.key !== key) {
+        sec = { key, label, count: 0, volumeKg: 0, days: [] };
+        out.push(sec);
+      }
+      sec.count++;
+      sec.volumeKg += e.volumeKg;
+      const last = sec.days.at(-1);
+      // The day's first workout leads; later ones that day sit under it.
+      if (!q && !e.inProgress && last && last.entries[0]!.dayIso === e.dayIso && !last.entries[0]!.inProgress) last.entries.unshift(e);
+      else sec.days.push({ key: e.session.id, entries: [e] });
     }
     return out;
   });
 
-  // Header stats — computed from what's loaded (the store keeps the last 50).
-  const stats = $derived.by(() => {
-    const now = Date.now();
-    const weekStart = startOfWeek(now);
-    const monthStart = new Date(now);
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const finished = ($recentSessions ?? []).filter((s) => s.endedAtMs);
-    const thisWeek = finished.filter((s) => s.startedAtMs >= weekStart);
-    const thisMonth = finished.filter((s) => s.startedAtMs >= monthStart.getTime());
-    const weekVolumeKg = thisWeek.reduce((v, s) => v + sessionVolumeKg(s, volumeCtx), 0);
-    return {
-      week: thisWeek.length,
-      month: thisMonth.length,
-      weekVolume: weekVolumeKg,
-    };
+  // Draw a page of days at a time; more as the end comes into view.
+  const PAGE = 20;
+  let shown = $state(PAGE);
+  $effect(() => {
+    void q;
+    void selectedDay;
+    void chip;
+    shown = PAGE;
+  });
+  const totalDays = $derived(sections.reduce((n, s) => n + s.days.length, 0));
+  const visible = $derived.by(() => {
+    let left = shown;
+    const out: Section[] = [];
+    for (const s of sections) {
+      if (left <= 0) break;
+      out.push({ ...s, days: s.days.slice(0, left) });
+      left -= s.days.length;
+    }
+    return out;
   });
 
-  onMount(async () => {
-    void loadVolumeContext().then((c) => (volumeCtx = c)).catch(() => {});
-    ui.loading = true;
-    ui.error = null;
-    try {
-      await recentSessions.refresh(50);
-    } catch (e) {
-      ui.error = e instanceof Error ? e.message : "Failed to load sessions";
-    } finally {
-      ui.loading = false;
-    }
+  let sentinel = $state<HTMLElement | null>(null);
+  $effect(() => {
+    const el = sentinel;
+    if (!el) return;
+    const io = new IntersectionObserver((xs) => {
+      if (xs.some((x) => x.isIntersecting)) shown += PAGE;
+    }, { rootMargin: "400px" });
+    io.observe(el);
+    return () => io.disconnect();
   });
+
+  async function openSearch() {
+    searching = true;
+    calendarExpanded = false;
+    await tick();
+    searchEl?.focus();
+  }
+
+  function closeSearch() {
+    searching = false;
+    query = "";
+    calendarExpanded = true;
+  }
+
+  function open(e: HistoryEntry) {
+    void goto(e.inProgress ? "/session/current" : `/sessions/${e.session.id}`);
+  }
+
+  const filterLabel = $derived(
+    selectedDay
+      ? new Date(`${selectedDay}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })
+      : null,
+  );
 </script>
 
-<div class="flex flex-col pb-24">
-  <PageHeader>
+<PageHeader>
+  {#if searching}
+    <div class="relative flex min-w-0 flex-1 items-center">
+      <Search class="pointer-events-none absolute left-2.5 h-4 w-4 text-muted-foreground" />
+      <input
+        bind:this={searchEl}
+        bind:value={query}
+        type="search"
+        aria-label="Search sessions"
+        placeholder="Exercise, workout or note"
+        class="h-10 w-full rounded-md border border-border bg-background pl-8 pr-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    </div>
+    <button type="button" class="h-11 shrink-0 px-2 text-sm font-medium" onclick={closeSearch}>Cancel</button>
+  {:else}
     <h1 class="page-title">Sessions</h1>
-  </PageHeader>
-
-  {#if !ui.loading && !ui.error && allRows.length > 0}
-    <div class="grid grid-cols-3 divide-x divide-border border-b border-border" in:fade={{ duration: 160 }}>
-      <div class="px-3 py-2.5 text-center">
-        <p class="text-lg font-bold tabular-nums leading-none">{stats.week}</p>
-        <p class="text-[11px] text-muted-foreground mt-1">this week</p>
-      </div>
-      <div class="px-3 py-2.5 text-center">
-        <p class="text-lg font-bold tabular-nums leading-none">{stats.month}</p>
-        <p class="text-[11px] text-muted-foreground mt-1">this month</p>
-      </div>
-      <div class="px-3 py-2.5 text-center">
-        <p class="text-lg font-bold tabular-nums leading-none">
-          {stats.weekVolume > 0 ? formatWeight(stats.weekVolume, weightUnit, { withUnit: false }) : "—"}
-        </p>
-        <p class="text-[11px] text-muted-foreground mt-1">{weightUnit} this week</p>
-      </div>
-    </div>
+    <button
+      type="button"
+      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+      aria-label="Search sessions"
+      onclick={() => void openSearch()}
+    >
+      <Search class="h-[18px] w-[18px]" />
+    </button>
   {/if}
+</PageHeader>
 
-  <div class="relative px-3 py-2 border-b border-border">
-    <Search class="absolute left-6 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-    <input
-      type="text"
-      placeholder="Search by date or exercise…"
-      bind:value={query}
-      class="h-10 w-full rounded-md border border-border bg-background pl-8 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-    />
-    {#if query}
-      <button
-        type="button"
-        class="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-        onclick={() => (query = "")}
-        aria-label="Clear search"
-      >
-        <X class="h-3.5 w-3.5" />
-      </button>
-    {/if}
-  </div>
-
-  {#if ui.loading}
-    <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
-  {:else if ui.error}
-    <div class="px-3 py-4 flex flex-col gap-2">
-      <p class="text-sm text-destructive">{ui.error}</p>
-      <button
-        type="button"
-        class="text-sm underline-offset-2 hover:underline text-left w-fit"
-        onclick={() => void recentSessions.refresh(50)}
-      >
-        Retry
-      </button>
+<div class="flex flex-col gap-3 p-3 pb-28">
+  {#if error}
+    <div class="flex flex-col gap-2 rounded-xl border p-3">
+      <p class="text-sm text-destructive">{error}</p>
+      <button type="button" class="w-fit text-sm underline-offset-2 hover:underline" onclick={() => { error = null; void sessionHistory.refresh(); }}>Retry</button>
     </div>
-  {:else if filteredRows.length === 0}
-    <div class="px-3 py-12 flex flex-col items-center gap-3 text-center" in:fade={{ duration: 160 }}>
+  {:else if loading}
+    <p class="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+  {:else if entries.length === 0}
+    <div class="flex flex-col items-center gap-3 px-3 py-12 text-center" in:fade={{ duration: 160 }}>
       <Dumbbell class="h-6 w-6 text-muted-foreground" />
-      <p class="text-sm text-muted-foreground">
-        {query.trim() ? "No sessions match your search." : "No sessions yet."}
-      </p>
-      {#if !query.trim()}
-        <Button variant="outline" onclick={() => void goto("/session/current")}>Start your first workout</Button>
-      {/if}
+      <p class="text-sm text-muted-foreground">No workouts yet. They'll show up here with what changed each time.</p>
+      <Button variant="outline" onclick={() => void goto("/session/current")}>Start your first workout</Button>
     </div>
   {:else}
-    {#each groups as group (group.bucket)}
-      <div transition:reveal>
-        <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {group.bucket}
-        </p>
-        <ul class="divide-y divide-border">
-          {#each group.rows as s, i (s.id)}
-            <li in:popIn={{ duration: 200, delay: Math.min(i * 25, 200) }}>
-              <button
-                type="button"
-                class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors {s.inProgress ? 'bg-primary/[0.04]' : ''}"
-                onclick={() => void goto(s.inProgress ? "/session/current" : `/sessions/${s.id}`)}
-              >
-                {#if s.inProgress}
-                  <span class="h-2 w-2 rounded-full bg-primary shrink-0 animate-pulse" aria-hidden="true"></span>
-                {/if}
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium">{s.dateLabel}</span>
-                    <span class="text-xs {s.inProgress ? 'text-primary font-medium' : 'text-muted-foreground'}">{s.durationLabel}</span>
-                  </div>
-                  {#if !s.inProgress}
-                    <p class="text-xs text-muted-foreground mt-0.5 truncate">
-                      {s.exerciseCount} exercise{s.exerciseCount === 1 ? "" : "s"}{s.volumeKg > 0 ? ` · ${formatWeight(s.volumeKg, weightUnit)}` : ""}{s.topSet ? ` · ${s.topSet}` : ""}
-                    </p>
-                  {/if}
-                </div>
-                {#if s.inProgress}
-                  <span class="text-xs font-semibold text-primary shrink-0">Resume</span>
-                {:else}
-                  <ChevronRight class="h-4 w-4 text-muted-foreground shrink-0" />
-                {/if}
-              </button>
-            </li>
-          {/each}
-        </ul>
+    <SessionCalendar
+      {workoutsByDay}
+      {matchDays}
+      selected={selectedDay}
+      bind:expanded={calendarExpanded}
+      {streak}
+      {monthCount}
+      onSelect={(d) => (selectedDay = d)}
+    />
+
+    {#if chips.length > 1 && !searching}
+      <div class="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none]" style="touch-action: pan-x">
+        <button
+          type="button"
+          aria-pressed={!chip}
+          class="h-8 shrink-0 rounded-full px-3.5 text-[13px] font-medium {!chip ? 'bg-foreground text-background' : 'border bg-card'}"
+          onclick={() => (chip = null)}>All</button
+        >
+        {#each chips as c (c)}
+          <button
+            type="button"
+            aria-pressed={chip === c}
+            class="h-8 shrink-0 rounded-full px-3.5 text-[13px] font-medium {chip === c ? 'bg-foreground text-background' : 'border bg-card'}"
+            onclick={() => (chip = chip === c ? null : c)}>{c}</button
+          >
+        {/each}
       </div>
+    {/if}
+
+    {#if filterLabel}
+      <div class="flex items-center justify-between gap-2 px-0.5">
+        <span class="text-sm font-medium">{filterLabel}</span>
+        <button type="button" class="flex h-8 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted" onclick={() => (selectedDay = null)}>
+          <X class="h-3.5 w-3.5" /> Show all days
+        </button>
+      </div>
+    {/if}
+
+    {#if filtered.length === 0}
+      <p class="py-8 text-center text-sm text-muted-foreground">
+        {q ? `Nothing with “${query.trim()}”.` : "No workouts match."}
+      </p>
+    {/if}
+
+    {#each visible as sec (sec.key)}
+      <div class="flex items-baseline justify-between px-0.5 pt-1">
+        <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {sec.key === "now" ? sec.label : `${sec.label} · ${sec.count} workout${sec.count === 1 ? "" : "s"}`}
+        </span>
+        {#if sec.volumeKg > 0 && sec.key !== "now"}
+          <span class="text-xs text-muted-foreground tabular-nums">{volumeLabel(sec.volumeKg, unit)}</span>
+        {/if}
+      </div>
+      {#each sec.days as day (day.key)}
+        <SessionCard entries={day.entries} {unit} query={q} onOpen={open} />
+      {/each}
     {/each}
+
+    {#if shown < totalDays}
+      <div bind:this={sentinel} class="flex justify-center py-2">
+        <Button variant="ghost" size="sm" onclick={() => (shown += PAGE)}>Show more</Button>
+      </div>
+    {/if}
   {/if}
 </div>

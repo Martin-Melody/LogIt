@@ -602,6 +602,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateMachines(db);
   await migrateSessionFlags(db);
   await migrateSessionNote(db);
+  await migrateSessionNameSource(db);
   await migrateCoachMessageContext(db);
   await migrateProgressPhoto(db);
   await migrateMobilityLeadSide(db);
@@ -677,6 +678,16 @@ async function migrateSessionNote(db: SQLiteDBConnection): Promise<void> {
   try {
     await db.run(`ALTER TABLE sessions ADD COLUMN note TEXT NULL`, []);
   } catch { /* column already exists */ }
+}
+
+// A session's own name and the split/program day it came from (with the plan, as JSON).
+async function migrateSessionNameSource(db: SQLiteDBConnection): Promise<void> {
+  for (const sql of [
+    `ALTER TABLE sessions ADD COLUMN name TEXT NULL`,
+    `ALTER TABLE sessions ADD COLUMN source_json TEXT NULL`,
+  ]) {
+    try { await db.run(sql, []); } catch { /* column already exists */ }
+  }
 }
 
 async function migrateCoachMessageContext(db: SQLiteDBConnection): Promise<void> {
