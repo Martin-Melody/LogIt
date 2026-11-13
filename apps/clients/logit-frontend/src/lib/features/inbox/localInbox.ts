@@ -14,7 +14,9 @@ type Base = { id: string; createdAtMs: number; read: boolean; exerciseName: stri
 
 export type LocalNotification =
   | (Base & { kind: "pr"; prKind: "weight" | "reps"; weightKg: number; reps: number })
-  | (Base & { kind: "progression"; change: ProgressionChange });
+  | (Base & { kind: "progression"; change: ProgressionChange })
+  /** A goal reached. `exerciseName` holds the goal's title. */
+  | (Base & { kind: "goal"; goalId: string });
 
 export type LocalNotificationKind = LocalNotification["kind"];
 
@@ -78,6 +80,19 @@ export function progressionNotification(
     exerciseId: exercise.id,
     change,
   };
+}
+
+/** A notification per goal reached in the session just finished. */
+export function goalNotifications(goals: { id: string; title: string; exerciseId?: string }[], nowMs: number): LocalNotification[] {
+  return goals.map((g, i) => ({
+    id: `goal-${nowMs}-${i}`,
+    kind: "goal",
+    createdAtMs: nowMs,
+    read: false,
+    exerciseName: g.title,
+    exerciseId: g.exerciseId,
+    goalId: g.id,
+  }));
 }
 
 function createLocalInbox() {

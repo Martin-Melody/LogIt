@@ -53,7 +53,7 @@ export async function pushPublicProfileSnapshot(): Promise<void> {
           activeSplit: split
             ? {
                 name: split.name,
-                days: split.days.map((d) => ({
+                days: split.days.filter((d) => !d.rest).map((d) => ({
                   name: d.name ?? `Day ${d.orderIndex + 1}`,
                   exercises: d.blocks
                     .filter((b) => b.type === "strength")

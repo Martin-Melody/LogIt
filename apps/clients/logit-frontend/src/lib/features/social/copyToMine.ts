@@ -123,7 +123,16 @@ type CopyableBlock =
 
 export type CopyableSplit = {
   name: string;
-  days: { name?: string; orderIndex: number; blocks: CopyableBlock[]; groups?: PlannedGroup[] }[];
+  days: {
+    name?: string;
+    orderIndex: number;
+    blocks: CopyableBlock[];
+    groups?: PlannedGroup[];
+    rest?: boolean;
+    sameDayAsPrevious?: boolean;
+    weekday?: number;
+  }[];
+  schedule?: WorkoutSplit["schedule"];
   /** Full definitions of every non-core exercise this split uses, so a copier who doesn't
    * already have one by that name can get a real local copy instead of a dangling reference —
    * core/bundled exercises are seeded with the same id everywhere and never need this. */
@@ -194,7 +203,15 @@ export async function copySplitToMine(payload: CopyableSplit): Promise<void> {
       }
     }
     // A post from an older app has no groups; one with groups keeps them (ids are per day).
-    const day: SplitDay = { id: createId("day"), orderIndex: d.orderIndex, name: d.name, blocks };
+    const day: SplitDay = {
+      id: createId("day"),
+      orderIndex: d.orderIndex,
+      name: d.name,
+      blocks,
+      ...(d.rest ? { rest: true } : {}),
+      ...(d.sameDayAsPrevious ? { sameDayAsPrevious: true } : {}),
+      ...(typeof d.weekday === "number" && d.weekday >= 0 && d.weekday <= 6 ? { weekday: d.weekday } : {}),
+    };
     if (d.groups?.length) day.groups = d.groups;
     days.push(normalizePlannedGroups(day));
   }
@@ -207,6 +224,7 @@ export async function copySplitToMine(payload: CopyableSplit): Promise<void> {
     createdAtMs: now,
     updatedAtMs: now,
     days,
+    ...(payload.schedule === "weekdays" ? { schedule: "weekdays" as const } : {}),
   };
   await getSplitRepo().saveSplit(split);
   pushSplit(split);

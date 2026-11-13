@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { removeDay, splitDayTitle } from "@logit/core/domain/splitSchedule";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   // One day of a split: what to train, in order, with targets. Looks like the workout
   // screen: a ⋯ menu per row (Swap, Superset / circuit with…, Remove), supersets and
@@ -225,10 +226,7 @@
   }
 
   async function deleteDay() {
-    await persist((s) => ({
-      ...s,
-      days: s.days.filter((d) => d.id !== dayId).map((d, i) => ({ ...d, orderIndex: i })),
-    }));
+    await persist((s) => removeDay(s, dayId));
     back(`/splits/${splitId}`);
   }
 
@@ -561,7 +559,7 @@
       >
         <span class="text-sm font-semibold">
           {#if day}
-            Day {day.orderIndex + 1}{day.name ? ` — ${day.name}` : ""}
+            {split ? splitDayTitle(split, day) : `Day ${day.orderIndex + 1}${day.name ? ` — ${day.name}` : ""}`}
           {:else}
             Day
           {/if}

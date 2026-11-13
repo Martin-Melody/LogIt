@@ -31,7 +31,7 @@
       <p class="text-sm font-medium">{split.name}</p>
       {#if split.days.length > 0}
         <ul class="mt-2 flex flex-col gap-1">
-          {#each split.days as day (day.id)}
+          {#each split.days.filter((d) => !d.rest) as day (day.id)}
             <li class="flex items-center justify-between text-xs">
               <span class="text-muted-foreground">{day.name ?? `Day ${day.orderIndex + 1}`}</span>
               <span class="text-right text-foreground/70">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { splitDayName } from "@logit/core/domain/splitSchedule";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -46,8 +47,9 @@
 
   function splitPreview(s: WorkoutSplit): string {
     const names = [...s.days]
+      .filter((d) => !d.rest)
       .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((d) => d.name?.trim() || `Day ${d.orderIndex + 1}`);
+      .map((d) => splitDayName(s, d));
     if (names.length === 0) return "No days yet";
     const shown = names.slice(0, 3).join(" · ");
     return names.length > 3 ? `${shown} +${names.length - 3}` : shown;

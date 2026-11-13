@@ -11,6 +11,26 @@ import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { nowMs } from "@logit/core/domain/time";
 
+/** A day's schedule fields as stored (null when it has none). */
+function dayScheduleJson(day: SplitDay): string | null {
+  const v = {
+    ...(day.rest ? { rest: true } : {}),
+    ...(day.sameDayAsPrevious ? { sameDayAsPrevious: true } : {}),
+    ...(day.weekday != null ? { weekday: day.weekday } : {}),
+  };
+  return Object.keys(v).length ? JSON.stringify(v) : null;
+}
+
+function daySchedule(raw: unknown): Pick<SplitDay, "rest" | "sameDayAsPrevious" | "weekday"> {
+  const v = parseJson<{ rest?: boolean; sameDayAsPrevious?: boolean; weekday?: number }>(raw);
+  if (!v) return {};
+  return {
+    ...(v.rest ? { rest: true } : {}),
+    ...(v.sameDayAsPrevious ? { sameDayAsPrevious: true } : {}),
+    ...(typeof v.weekday === "number" ? { weekday: v.weekday } : {}),
+  };
+}
+
 function parseJson<T>(raw: unknown): T | undefined {
   if (typeof raw !== "string" || !raw) return undefined;
   try {
@@ -145,12 +165,13 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       await db.run(
         `
-        INSERT INTO splits(id, name, archived, created_at_ms, updated_at_ms, owner_id)
-        VALUES(?, ?, ?, ?, ?, ?)
+        INSERT INTO splits(id, name, archived, created_at_ms, updated_at_ms, owner_id, schedule)
+        VALUES(?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           name=excluded.name,
           archived=excluded.archived,
-          updated_at_ms=excluded.updated_at_ms
+          updated_at_ms=excluded.updated_at_ms,
+          schedule=excluded.schedule
         `,
         [
           split.id,
@@ -159,6 +180,7 @@ export function createSqliteSplitRepo(): SplitRepo {
           split.createdAtMs,
           updatedAt,
           getActiveOwnerId(),
+          split.schedule ?? null,
         ],
       );
 
@@ -166,8 +188,15 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       for (const day of split.days) {
         await db.run(
-          `INSERT INTO split_days(id, split_id, order_index, name, groups_json) VALUES(?, ?, ?, ?, ?)`,
-          [day.id, split.id, day.orderIndex, day.name ?? null, day.groups?.length ? JSON.stringify(day.groups) : null],
+          `INSERT INTO split_days(id, split_id, order_index, name, groups_json, schedule_json) VALUES(?, ?, ?, ?, ?, ?)`,
+          [
+            day.id,
+            split.id,
+            day.orderIndex,
+            day.name ?? null,
+            day.groups?.length ? JSON.stringify(day.groups) : null,
+            dayScheduleJson(day),
+          ],
         );
 
         for (const block of day.blocks) {
@@ -207,7 +236,7 @@ export function createSqliteSplitRepo(): SplitRepo {
       const ownerId = getActiveOwnerId();
       const splitRes = await db.query(
         `
-        SELECT id, name, archived, created_at_ms as createdAtMs, updated_at_ms as updatedAtMs
+        SELECT id, name, archived, created_at_ms as createdAtMs, updated_at_ms as updatedAtMs, schedule
         FROM splits
         WHERE id = ? AND (owner_id = ? OR owner_id IS NULL)
         `,
@@ -219,7 +248,7 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       const daysRes = await db.query(
         `
-        SELECT id, order_index as orderIndex, name, groups_json as groupsJson
+        SELECT id, order_index as orderIndex, name, groups_json as groupsJson, schedule_json as scheduleJson
         FROM split_days
         WHERE split_id = ?
         ORDER BY order_index ASC
@@ -252,6 +281,7 @@ export function createSqliteSplitRepo(): SplitRepo {
           name: d.name ?? undefined,
           blocks,
           ...(groups?.length ? { groups } : {}),
+          ...daySchedule(d.scheduleJson),
         });
       }
 
@@ -262,6 +292,7 @@ export function createSqliteSplitRepo(): SplitRepo {
         createdAtMs: base.createdAtMs,
         updatedAtMs: base.updatedAtMs,
         days,
+        ...(base.schedule === "weekdays" ? { schedule: "weekdays" as const } : {}),
       };
     },
 
@@ -296,7 +327,7 @@ export function createSqliteSplitRepo(): SplitRepo {
 
       const res = await db.query(
         `
-        SELECT id, name, archived, created_at_ms as createdAtMs, updated_at_ms as updatedAtMs
+        SELECT id, name, archived, created_at_ms as createdAtMs, updated_at_ms as updatedAtMs, schedule
         FROM splits
         ${whereSql}
         ORDER BY ${sortCol} ${order.toUpperCase() === "ASC" ? "ASC" : "DESC"}
@@ -313,7 +344,7 @@ export function createSqliteSplitRepo(): SplitRepo {
       const placeholders = splitRows.map(() => "?").join(",");
       const splitIds = splitRows.map((r) => r.id);
       const daysRes = await db.query(
-        `SELECT id, split_id as splitId, order_index as orderIndex, name
+        `SELECT id, split_id as splitId, order_index as orderIndex, name, schedule_json as scheduleJson
          FROM split_days
          WHERE split_id IN (${placeholders})
          ORDER BY order_index ASC`,
@@ -323,7 +354,7 @@ export function createSqliteSplitRepo(): SplitRepo {
       const daysBySplitId = new Map<string, SplitDay[]>();
       for (const d of (daysRes.values ?? []) as any[]) {
         const list = daysBySplitId.get(d.splitId) ?? [];
-        list.push({ id: d.id, orderIndex: d.orderIndex, name: d.name ?? undefined, blocks: [] });
+        list.push({ id: d.id, orderIndex: d.orderIndex, name: d.name ?? undefined, blocks: [], ...daySchedule(d.scheduleJson) });
         daysBySplitId.set(d.splitId, list);
       }
 
@@ -334,6 +365,7 @@ export function createSqliteSplitRepo(): SplitRepo {
         createdAtMs: r.createdAtMs,
         updatedAtMs: r.updatedAtMs,
         days: daysBySplitId.get(r.id) ?? [],
+        ...(r.schedule === "weekdays" ? { schedule: "weekdays" as const } : {}),
       }));
     },
 

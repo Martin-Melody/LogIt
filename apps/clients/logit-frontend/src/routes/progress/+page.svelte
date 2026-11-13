@@ -10,6 +10,7 @@
   import Sparkline from "$lib/features/exercise/components/Sparkline.svelte";
   import MuscleGroupInsightsPanel from "$lib/features/exercise/components/MuscleGroupInsightsPanel.svelte";
   import NutritionCorrelationPanel from "$lib/features/exercise/components/NutritionCorrelationPanel.svelte";
+  import GoalsPanel from "$lib/features/goals/GoalsPanel.svelte";
   import { getAllExerciseProgressStories } from "@logit/core/usecases/progression/getAllExerciseProgressStories";
   import type { ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
   import { PROGRESS_STATUS_ATTENTION_ORDER, type ProgressStatus } from "@logit/core/domain/progression";
@@ -25,7 +26,10 @@
   // or ?tab=nutrition — a next-step suggestion opens the right tab directly
   // rather than dropping the user on Exercises and making them find it.
   const initialTab = page.url.searchParams.get("tab");
-  let tab = $state(initialTab === "muscles" || initialTab === "nutrition" ? initialTab : "exercises");
+  // Goals first: it's the tab that works from day one (streak + goals need no history).
+  let tab = $state(
+    initialTab === "muscles" || initialTab === "nutrition" || initialTab === "exercises" ? initialTab : "goals",
+  );
 
   const selectedStory = $derived(
     stories.find((s) => s.exerciseName === selected) ?? null,
@@ -65,29 +69,34 @@
   <PageHeader>
     <h1 class="page-title">Progress</h1>
   </PageHeader>
-  {#if ui.loading}
-    <Card.Root><Card.Content class="pt-6"><p class="text-sm text-muted-foreground">Loading…</p></Card.Content></Card.Root>
-  {:else if ui.error}
-    <Card.Root><Card.Content class="pt-6"><p class="text-sm text-destructive">{ui.error}</p></Card.Content></Card.Root>
-  {:else if stories.length === 0}
-    <Card.Root>
-      <Card.Header>
-        <Card.Title>Progress</Card.Title>
-        <Card.Description>
-          Complete at least 2 sessions with the same exercise to see your progress here.
-        </Card.Description>
-      </Card.Header>
-    </Card.Root>
-  {:else}
     <div in:fade={{ duration: 160 }}>
     <Tabs.Root bind:value={tab} class="gap-3">
       <Tabs.List class="w-full">
+        <Tabs.Trigger value="goals" class="flex-1">Goals</Tabs.Trigger>
         <Tabs.Trigger value="exercises" class="flex-1">Exercises</Tabs.Trigger>
-        <Tabs.Trigger value="muscles" class="flex-1">Muscle groups</Tabs.Trigger>
+        <Tabs.Trigger value="muscles" class="flex-1">Muscles</Tabs.Trigger>
         <Tabs.Trigger value="nutrition" class="flex-1">Nutrition</Tabs.Trigger>
       </Tabs.List>
 
+      <Tabs.Content value="goals">
+        <GoalsPanel />
+      </Tabs.Content>
+
       <Tabs.Content value="exercises">
+        {#if ui.loading}
+          <Card.Root><Card.Content class="pt-6"><p class="text-sm text-muted-foreground">Loading…</p></Card.Content></Card.Root>
+        {:else if ui.error}
+          <Card.Root><Card.Content class="pt-6"><p class="text-sm text-destructive">{ui.error}</p></Card.Content></Card.Root>
+        {:else if stories.length === 0}
+          <Card.Root>
+            <Card.Header>
+              <Card.Title>Progress</Card.Title>
+              <Card.Description>
+                Complete at least 2 sessions with the same exercise to see your progress here.
+              </Card.Description>
+            </Card.Header>
+          </Card.Root>
+        {:else}
         <div class="flex flex-col gap-3">
         {#if selectedStory}
           {#key selected}
@@ -146,6 +155,7 @@
           </Card.Content>
         </Card.Root>
         </div>
+        {/if}
       </Tabs.Content>
 
       <Tabs.Content value="muscles">
@@ -157,5 +167,4 @@
       </Tabs.Content>
     </Tabs.Root>
     </div>
-  {/if}
 </div>
