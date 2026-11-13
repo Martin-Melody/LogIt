@@ -45,6 +45,7 @@
   import WorkoutRecapScreen from "$lib/features/session/ui/WorkoutRecapScreen.svelte";
   import type { SessionPR } from "@logit/core/usecases/progression/getSessionPRs";
   import { localInbox, prNotifications, progressionNotification } from "$lib/features/inbox/localInbox";
+  import { notifyGoalsReached } from "$lib/features/goals/goalProgress";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import BodyweightPromptDialog from "$lib/features/bodyweight/BodyweightPromptDialog.svelte";
   import { shouldAskForBodyweight, dismissBodyweightPrompt } from "$lib/features/bodyweight/bodyweight";
@@ -377,6 +378,7 @@
         localInbox.add(
           strength.flatMap((ex, i) => progressionNotification(ex, outputs[i]?.change, now, i) ?? []),
         );
+        void notifyGoalsReached(sessionSnapshot.startedAtMs, now);
       }
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to finish workout";

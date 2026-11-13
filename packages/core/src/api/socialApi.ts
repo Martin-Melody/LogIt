@@ -45,11 +45,17 @@ export interface PublicWeightTrend {
   points: PublicWeightTrendPoint[];
 }
 
-/** Consecutive-calendar-day training streak. "Current" allows today to be still-open (a rest
- * day today doesn't break it until tomorrow with no session logged). */
+/** Training streak in weeks: a week counts once the lifter trained on `weeklyTarget` days in
+ * it, and the week in progress never breaks it. Snapshots from older app versions have only
+ * the day counts (consecutive calendar days), so readers fall back to those. */
 export interface PublicStreak {
-  currentDays: number;
-  bestDays: number;
+  currentWeeks?: number;
+  bestWeeks?: number;
+  weeklyTarget?: number;
+  /** @deprecated day streaks, from older app versions' snapshots. */
+  currentDays?: number;
+  /** @deprecated */
+  bestDays?: number;
 }
 
 /** A small, explicitly bounded v1 badge set — not an open achievement system. Recomputed live
