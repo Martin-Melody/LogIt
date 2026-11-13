@@ -55,9 +55,14 @@ export function changeTagClass(kind: ProgressionChange["kind"]): string {
  */
 export type MeterCell = "hit" | "bonus" | "target" | "rest";
 
-export type MeterRow = { right: string; spoken: string; cells: MeterCell[] };
+export type MeterRow = { right: string; spoken: string; cells: MeterCell[]; converted: boolean };
 
-export function meterRow(done: number, target: number, goalReps: number): MeterRow {
+/**
+ * `logged`: the reps actually typed in, when the set was done at a different
+ * weight from the plan. `done` is then those reps worked out at the planned
+ * weight (see repsAtLoad), so 5 at +2.5 kg reads as ≈6 of 7, not a 5.
+ */
+export function meterRow(done: number, target: number, goalReps: number, logged?: number): MeterRow {
   const aim = target > 0 ? target : done;
   const cells: MeterCell[] = Array.from({ length: goalReps }, (_, c) =>
     c < Math.min(done, aim) ? "hit" : c < done ? "bonus" : c < aim ? "target" : "rest",
@@ -65,6 +70,12 @@ export function meterRow(done: number, target: number, goalReps: number): MeterR
 
   let right: string;
   let spoken: string;
+  if (logged !== undefined && target > 0) {
+    // No ✓ here: the weight only goes up from reps at the weight actually used.
+    right = done < target ? `≈${done}/${target}` : done > target ? `≈${done} +${done - target}` : `≈${done}`;
+    spoken = `${logged} reps at a different weight, about ${done} at the planned weight; ${target} aimed for`;
+    return { right, spoken, cells, converted: true };
+  }
   if (done === 0) {
     right = target > 0 ? `aim ${target}` : "";
     spoken = target > 0 ? `aiming for ${target} reps; the weight goes up at ${goalReps}` : "not done yet";
@@ -81,5 +92,5 @@ export function meterRow(done: number, target: number, goalReps: number): MeterR
     right = target > 0 ? `${done}/${target}` : `${done}`;
     spoken = target > 0 ? `${done} reps, the ${target} aimed for` : `${done} reps`;
   }
-  return { right, spoken, cells };
+  return { right, spoken, cells, converted: false };
 }

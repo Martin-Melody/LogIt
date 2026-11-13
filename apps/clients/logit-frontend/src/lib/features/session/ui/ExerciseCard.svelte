@@ -39,8 +39,10 @@
     setCount?: number;
     /** Working sets ticked off so far. */
     doneCount?: number;
-    /** Per working set: reps done (0 if not yet) and reps planned, for the meter. */
-    meter?: { done: number; target: number }[];
+    /** Per working set: reps done (0 if not yet) and reps planned, for the meter. When
+     * the set was done at a different weight, `done` is worked out at the planned
+     * weight and `logged` holds the reps typed in. */
+    meter?: { done: number; target: number; logged?: number }[];
     saving?: boolean;
     collapsed?: boolean;
     hasActiveTimer?: boolean;
@@ -74,12 +76,13 @@
   // (green), the aim still to do (dashed), or still to go before the weight goes up.
   const meterRows = $derived(
     showMeter && goal
-      ? meter.map((m: { done: number; target: number }, i: number) => ({
+      ? meter.map((m: { done: number; target: number; logged?: number }, i: number) => ({
           label: `${i + 1}`,
-          ...meterRow(m.done, m.target, goal.reps),
+          ...meterRow(m.done, m.target, goal.reps, m.logged),
         }))
       : [],
   );
+  const anyConverted = $derived(meterRows.some((r: { converted: boolean }) => r.converted));
 </script>
 
 <div class="border-b border-border/50">
@@ -228,6 +231,11 @@
         {/each}
         {#if suggestion.change?.detail}
           <p class="text-xs text-muted-foreground">{suggestion.change.detail}</p>
+        {/if}
+        {#if anyConverted}
+          <p class="text-xs text-muted-foreground">
+            ≈ Done at a different weight from the plan, so shown as reps at the planned weight.
+          </p>
         {/if}
         {#if fatiguePct > 0}
           <p class="text-xs text-muted-foreground">
