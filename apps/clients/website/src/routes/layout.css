@@ -14,6 +14,15 @@ html {
   }
 }
 
+/* Faint topographic lines that repeat down the page (see scripts/topo/generate.mjs).
+   Never narrower than 1100px, so on a phone the lines keep their spacing and the sides are cut off. */
+.topo-tile {
+  background-image: url("/topo-tile.svg");
+  background-repeat: repeat-y;
+  background-position: center top;
+  background-size: max(100%, 1100px) auto;
+}
+
 /* Headings a touch brighter than body text, like the app's titles on dark cards. */
 @utility text-heading {
   color: color-mix(in oklch, var(--foreground) 70%, white);

@@ -102,7 +102,7 @@
   </div>
 </section>
 
-<section id="how" class="scroll-mt-6 border-y border-border bg-sidebar px-4 py-20 sm:px-6">
+<section id="how" class="topo-tile scroll-mt-6 border-y border-border bg-sidebar px-4 py-20 [background-position:center_-900px] sm:px-6">
   <div class="mx-auto flex max-w-[1120px] flex-col gap-8">
     <h2 class="text-[28px] font-bold tracking-[-0.03em] text-heading sm:text-[32px]">How subscribing works</h2>
     <ol class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
