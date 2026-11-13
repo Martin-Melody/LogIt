@@ -17,7 +17,7 @@ const HISTORY_WINDOW = 20;
 
 export async function getSuggestion(
   exercise: { id?: string; name: string },
-  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight">,
   plannedTargets?: PlannedTargets,
   currentSession?: WorkoutSession,
   liveInput?: { rpe?: number; readiness?: number },
@@ -53,7 +53,16 @@ export async function getSuggestion(
     { workoutRepo, exerciseRepo },
     { excludeSessionId: currentSession?.id },
   );
-  const history = fullHistory.slice(-HISTORY_WINDOW).reverse();
+  // The lifter's bodyweight around each session, so a bodyweight lead-in set
+  // (12 × BW before 6 × BW+5) can be converted. Plain numbers, like analytics.
+  const bodyweightAt = await (deps.loadBodyweight?.().catch(() => null) ?? null);
+  const history = fullHistory
+    .slice(-HISTORY_WINDOW)
+    .reverse()
+    .map((h) => {
+      const kg = bodyweightAt?.(h.performedAtMs);
+      return kg != null && h.bodyweightKg === undefined ? { ...h, bodyweightKg: kg } : h;
+    });
 
   const exerciseWithMuscles = {
     ...exercise,
@@ -197,7 +206,7 @@ export async function getSuggestion(
 
 export async function refreshProgressionState(
   exercise: { id?: string; name: string },
-  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight">,
 ): Promise<ProgressionOutput | null> {
   const output = await getSuggestion(exercise, deps);
   if (!output) return null;

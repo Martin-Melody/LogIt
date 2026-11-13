@@ -692,6 +692,74 @@ describe("sets done at different weights", () => {
     const again = await linearProgression.suggest({ ...input, state: first.nextState });
     expect(again.sets).toEqual(first.sets);
   });
+
+  describe("lighter sets before a heavier one (lead-ins)", () => {
+    it("works from the heavier weight, counting the lead-in as reps there", async () => {
+      // 15 × 25 kg while finding the weight, then 7 × 30 kg. 15 × 25 ≈ 7 × 30.
+      const out = await linearProgression.suggest(baseInput({ history: [session([[15, 25], [7, 30]])] }));
+      expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[8, 30], [8, 30], [8, 30]]);
+      expect(out.change).toMatchObject({ kind: "reps", text: "+1 rep" });
+      expect(out.change?.detail).toMatch(/15 × 25kg ≈ 7 × 30kg/);
+      expect(out.progressGoal).toEqual({ reps: 8, weight: 32.5 });
+    });
+
+    it("a lead-in worth fewer than the top reps holds the weight", async () => {
+      // 15 × 25 ≈ 7.5 × 30, so not every set reached 8 at 30.
+      const out = await linearProgression.suggest(baseInput({ history: [session([[15, 25], [8, 30], [8, 30]])] }));
+      expect(out.sets.every((s) => s.weight === 30)).toBe(true);
+      expect(out.change?.kind).toBe("reps");
+    });
+
+    it("goes up when every set, converted, hit the top", async () => {
+      // 18 × 25 ≈ 10 × 30.
+      const out = await linearProgression.suggest(baseInput({ history: [session([[18, 25], [8, 30], [8, 30]])] }));
+      expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[5, 32.5], [5, 32.5], [5, 32.5]]);
+      expect(out.change).toMatchObject({ kind: "increase", text: "+2.5kg" });
+    });
+
+    it("ignores an old per-set state that put the lead-in up", async () => {
+      // What the per-set plan saved after this session: 27.5 / 30 / 30, "increase".
+      const out = await linearProgression.suggest(baseInput({
+        history: [session([[15, 25], [7, 30]])],
+        state: { workingWeight: 30, failedAttempts: 0, increment: 2.5, repRange: [5, 8], lastAppliedSessionId: "s1", lastOutcome: "increase" },
+      }));
+      expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[8, 30], [8, 30], [8, 30]]);
+      expect(out.change?.kind).toBe("reps");
+    });
+
+    it("keeps back-off sets after the heaviest one", async () => {
+      // 12 × 60 ≈ 0 × 100: it counts, as set 1, but asks for nothing extra.
+      const out = await linearProgression.suggest(baseInput({ history: [session([[12, 60], [6, 100], [8, 90]])] }));
+      expect(out.sets.map((s) => [s.reps, s.weight])).toEqual([[5, 100], [7, 100], [5, 92.5]]);
+      expect(out.change?.detail).toMatch(/12 × 60kg ≈ 0 × 100kg/);
+    });
+
+    it("converts a bodyweight lead-in with the bodyweight from that session", async () => {
+      // 91 kg: 12 × BW ≈ 9 × BW+5 (91 × 42 / 96 − 30 = 9.8).
+      const out = await linearProgression.suggest(baseInput({
+        exercise: { name: "Dips", primaryMuscles: ["chest"] },
+        history: [{ ...session([[12, 0], [6, 5]]), bodyweightKg: 91 }],
+      }));
+      expect(out.change?.detail).toMatch(/12 × BW ≈ 9 × BW\+5kg/);
+    });
+
+    it("leaves a bodyweight lead-in out when the bodyweight isn't known", async () => {
+      const out = await linearProgression.suggest(baseInput({
+        exercise: { name: "Dips", primaryMuscles: ["chest"] },
+        history: [session([[12, 0], [6, 5]])],
+      }));
+      expect(out.sets.map((s) => s.weight)).toEqual([5, 5, 5]);
+      expect(out.change?.detail).toMatch(/don't count/);
+    });
+
+    it("reads the same however many times it's asked", async () => {
+      const input = baseInput({ history: [session([[15, 25], [7, 30]])] });
+      const first = await linearProgression.suggest(input);
+      const again = await linearProgression.suggest({ ...input, state: first.nextState });
+      expect(again.sets).toEqual(first.sets);
+      expect(again.change).toEqual(first.change);
+    });
+  });
 });
 
 describe("set count", () => {
