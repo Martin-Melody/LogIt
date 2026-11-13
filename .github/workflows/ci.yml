@@ -71,13 +71,9 @@ jobs:
         working-directory: apps/clients/logit-frontend
         run: npm run check
 
-      - name: marketing — build + svelte-check
-        working-directory: apps/clients/logit-marketing
+      - name: website — build + svelte-check
+        working-directory: apps/clients/website
         run: npm run build && npm run check
-
-      - name: docs-site — build
-        working-directory: apps/clients/docs-site
-        run: npm run build
 
   e2e:
     name: E2E (Playwright)

@@ -47,8 +47,10 @@ leave the device.
 |---|---|---|---|
 | `services/api` | Auth, sync, social, billing | AWS App Runner + RDS Postgres — see `infra/aws/README.md` | `api.logit.ie` |
 | `apps/clients/logit-web` | Analytics dashboard | AWS App Runner (same Terraform, no VPC/database access needed) | `app.logit.ie` |
-| `apps/clients/logit-marketing` | Marketing + signup + Stripe checkout | Cloudflare Pages | `logit.ie` |
-| `apps/clients/docs-site` | Project home page + self-hosting guide | Cloudflare Pages (SvelteKit, `adapter-cloudflare` — same as `logit-marketing`) | `docs.logit.ie` or the apex domain, if `logit-marketing` doesn't own it |
+| `apps/clients/website` | The website: home, pricing, legal pages, self-hosting guide, plugin docs | Cloudflare Pages (static SvelteKit, `adapter-cloudflare`) | `logit.ie` |
+
+For launch the API and dashboard move to a single cheap VPS instead of AWS (decided 2026-11-13,
+see `docs/launch-checklist.md`); the AWS notes below describe the earlier setup.
 
 **Important: `logit-web` on AWS is one shared, multi-tenant deployment — not one instance per
 paying customer.** A customer who buys hosting doesn't get their own server; they get an account
@@ -66,27 +68,25 @@ The mobile app (`apps/clients/logit-frontend`) isn't "hosted" anywhere — it's 
 distributed through app stores, and talks to whichever API URL the user configures (the managed
 one by default, or their own self-hosted URL via the connect flow).
 
-### Cloudflare Pages (logit-marketing, docs-site)
+### Cloudflare Pages (website)
 
-Same pattern for both — SvelteKit with `adapter-cloudflare`:
+`apps/clients/website` replaced `logit-marketing` and `docs-site` on 2026-11-13. Every page is
+pre-rendered, so the build output is static files:
 
 ```bash
-cd apps/clients/logit-marketing   # or apps/clients/docs-site
+cd apps/clients/website
 npm run build
-npx wrangler pages deploy .svelte-kit/cloudflare
+npx wrangler pages deploy .svelte-kit/cloudflare --project-name logit-website
 ```
 
-Or connect the repo directly in the Cloudflare dashboard (Pages → Create → connect to Git) as
-two separate Pages projects, each with build command `npm run build --workspace=apps/clients/<name>`
-and output directory `apps/clients/<name>/.svelte-kit/cloudflare`, build watch paths scoped to
-`apps/clients/<name>/**` (plus `packages/core/**` for `logit-marketing`, which depends on it —
-`docs-site` has no shared-package dependency at all, it doesn't call the API) so unrelated
-changes elsewhere in the monorepo don't trigger a rebuild.
+`.github/workflows/deploy-web.yml` does the same on every push to `main` that touches
+`apps/clients/website/**` or `packages/ui/**` (it needs the `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` secrets). The site doesn't call the API. Links, prices and contact
+addresses live in `apps/clients/website/src/lib/site.ts`; the app screenshots in `static/screens`
+are regenerated with `apps/clients/website/scripts/screenshots/`.
 
-`logit-marketing` talks to the production API at the fixed URL baked into
-`packages/core/src/api/client.ts`'s default — no self-host server picker here, that's only in
-`logit-web`/`logit-frontend`. Update
-that default once the real API URL exists.
+The look (colours, Inter, radius) comes from `packages/ui`, shared with the phone app and the
+dashboard. Change it there, not in an app.
 
 ### AWS (services/api + logit-web)
 
@@ -144,7 +144,13 @@ Pending → 403, accept, read succeeds with real data, unrelated third party →
 → 403 again) — this is consent/privacy-sensitive code, so it was checked end-to-end, not just
 type-checked.
 
-## Signup flow (logit.ie)
+## Signup flow (logit.ie): removed for launch
+
+**Since 2026-11-13 the website sells nothing.** Plans are bought in the Android app through
+Google Play Billing, and the old `/signup`, `/success` and `/pt` pages went with
+`logit-marketing`. The API's Stripe endpoints are still there, unused, for selling on the web
+later. The rest of this section describes how that flow worked; the tier enforcement part still
+applies.
 
 `/` → `/pricing` (Free / Pro / Studio) → `/signup?plan=pro|studio` (register, immediately
 redirected to Stripe Checkout for the chosen plan) → `/success` (post-payment landing, polls

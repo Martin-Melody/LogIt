@@ -45,7 +45,7 @@ YOURS TO KEEP
 LogIt is a tracking and planning tool, not medical advice. Check with a qualified
 professional before starting a new training or nutrition programme.
 
-Privacy policy: https://logit-marketing.pages.dev/privacy  (placeholder until logit.ie is bought; see below)
+Privacy policy: https://logit.ie/privacy
 
 ## Category
 Health & Fitness
@@ -54,13 +54,10 @@ Health & Fitness
 workout tracker, gym log, nutrition tracker, calorie counter, habit tracker
 
 ## Contact details
-Email: <your real inbox> — Play needs an address Google can actually reach.
-  Use your personal address for now; switch to hello@logit.ie once the domain
-  and its mailbox exist (the website/privacy/terms pages already point there).
-Website: https://logit-marketing.pages.dev  (placeholder until logit.ie is bought)
+Email: hello@logit.ie (Play needs an address Google can actually reach: set up the
+  mailbox or forwarding first, see docs/launch-checklist.md)
+Website: https://logit.ie
 Phone: (optional)
 
 ## External privacy policy URL (required)
-https://logit-marketing.pages.dev/privacy
-Swap to https://logit.ie/privacy once the domain is attached to the
-logit-marketing Cloudflare Pages project.
+https://logit.ie/privacy

@@ -14,7 +14,7 @@ name: Android release
 #   ANDROID_KEY_PASSWORD        key password
 #   PLAY_SERVICE_ACCOUNT_JSON   (optional) Google Play service-account JSON; omit to skip upload
 # Optional repo variable:
-#   MARKETING_URL               baked into the build (default: https://logit-marketing.pages.dev)
+#   MARKETING_URL               baked into the build (default: https://logit.ie)
 #
 # Without the keystore secrets the build still runs and produces a debug-signed
 # artifact you can smoke-test, but it can't be uploaded to Play.
@@ -73,7 +73,7 @@ jobs:
       - name: Build web bundle
         working-directory: apps/clients/logit-frontend
         env:
-          VITE_MARKETING_URL: ${{ vars.MARKETING_URL || 'https://logit-marketing.pages.dev' }}
+          VITE_MARKETING_URL: ${{ vars.MARKETING_URL || 'https://logit.ie' }}
         run: npm run build
 
       - name: Capacitor sync
