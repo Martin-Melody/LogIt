@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { prText } from "./prText";
   import { goto } from "$app/navigation";
   import { ChevronRight, Dumbbell, Trophy, CalendarDays, Activity, Cpu, LayoutDashboard, Flame } from "lucide-svelte";
   import type { ApiPost, PostType } from "@logit/core/api/socialApi";
@@ -96,8 +97,7 @@
     {:else if post.type === "PersonalRecord" && payload.exerciseName}
       <span class="text-sm font-medium text-foreground">{payload.exerciseName}</span>
       <span class="text-muted-foreground">
-        {#if payload.weight}{payload.weight}{payload.unit ?? "kg"}{/if}
-        {#if payload.reps} × {payload.reps} reps{/if}
+        {prText(payload.weight, payload.unit, payload.reps)}
       </span>
 
     {:else if post.type === "Split" && payload.name}

@@ -191,6 +191,7 @@
           x="date"
           xScale={scaleUtc()}
           yNice={4}
+          padding={{ top: 8, right: 16, bottom: 24, left: 52 }}
           series={[{ key: "value", label: currentSeries?.label ?? "", color: chartConfig.value.color }]}
           props={{
             area: {
@@ -202,9 +203,12 @@
               line: { class: "stroke-1" },
               motion: "tween",
             },
+            // Room for the "120 kg" labels on the left and the last date on the right (both
+            // were cut off), and few enough dates on a phone that they don't run together.
             xAxis: {
               format: (v: Date) =>
                 v.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+              ticks: 4,
             },
             // No rotated axis title: on a phone it overlapped the tick numbers, and the
             // toggle above already names the metric. The unit rides on the ticks.

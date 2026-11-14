@@ -23,6 +23,7 @@
     setMobilityLeadSide,
     moveMobilitySetGroup,
     mobilitySetGroups,
+    clearOtherRests,
   } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
   import { getMobilitySuggestion } from "@logit/core/usecases/progression/getMobilitySuggestion";
@@ -144,13 +145,15 @@
     const otherSide = pair?.kind === "pair" ? (pair.left?.id === set.id ? pair.right : pair.left) : undefined;
     const switchingSides = grouped && !!otherSide && !otherSide.completed;
     const startsRest = !wasCompleted && rest > 0 && !switchingSides;
-    await onMutate((s) =>
-      updateMobilitySet(s, blockId, set.id, {
+    await onMutate((s) => {
+      const next = updateMobilitySet(s, blockId, set.id, {
         ...(startsRest && groupRestMs ? { restDurationMs: groupRestMs } : {}),
         completed: !wasCompleted,
         restStartedAtMs: startsRest ? Date.now() : null,
-      }),
-    );
+      });
+      // One rest at a time: a new rest replaces the previous set's.
+      return startsRest ? clearOtherRests(next, set.id) : next;
+    });
     // The rest service (restTimerService.ts) follows restStartedAtMs from here.
   }
   async function handleDismissRest(setId: string) {
