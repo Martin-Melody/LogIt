@@ -385,6 +385,16 @@ class ApiClient {
     return this.fetch("/billing/status");
   }
 
+  /** Reports a Google Play purchase (after buying, and for each purchase Play lists on start-up)
+   * so the server can check it with Google and switch the plan on. Errors carry a `code`:
+   * invalid_purchase, other_account, store_unavailable, store_not_configured. */
+  async verifyGooglePurchase(purchaseToken: string): Promise<BillingStatus> {
+    return this.fetch("/billing/google/verify", {
+      method: "POST",
+      body: JSON.stringify({ purchaseToken }),
+    });
+  }
+
   /** Reconciles the whole cached auth identity against server truth. `init()` only reads
    * the local user blob, which is written at login and can go stale or belong to a
    * different account (token refresh, another tab logging in on the same origin). Calling
@@ -431,9 +441,40 @@ class ApiClient {
   }
 }
 
+export type BillingSubscriptionState =
+  | "pending"
+  | "active"
+  /** Won't renew; paid up until expiresAt. */
+  | "canceled"
+  /** A payment failed and the store is retrying. Still has access. */
+  | "gracePeriod"
+  /** A payment failed for too long. No access until fixed in the store. */
+  | "onHold"
+  | "paused"
+  | "expired"
+  | "revoked";
+
 export type BillingStatus = {
+  /** The plan in force now. */
   tier: "Free" | "Pro" | "Studio";
+  /** A paid subscription is giving access now. */
   subscriptionActive: boolean;
+  /** A plan given by hand on the admin page, if any. */
+  manualTier?: "Pro" | "Studio" | null;
+  /** The subscription giving access, else the most recent one. */
+  subscription?: {
+    source: "google" | "apple" | "stripe";
+    plan: "Pro" | "Studio";
+    state: BillingSubscriptionState;
+    expiresAt: string | null;
+    autoRenewing: boolean;
+    grantsAccess: boolean;
+    productId: string;
+    /** The store's subscription page. Null for Stripe: use createBillingPortalSession. */
+    manageUrl: string | null;
+  } | null;
+  /** Whether the website sells plans (off at launch: plans are sold in the app). */
+  webCheckout?: boolean;
 };
 
 export const apiClient = new ApiClient();

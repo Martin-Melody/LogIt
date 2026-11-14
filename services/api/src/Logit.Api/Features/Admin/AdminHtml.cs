@@ -296,12 +296,13 @@ public static class AdminHtml
                     <input class="field-input" id="f-username" readonly style="opacity:.5;cursor:default" />
                   </div>
                   <div class="field-group">
-                    <label class="field-label">Tier</label>
+                    <label class="field-label">Plan given by hand</label>
                     <select class="field-input" id="f-tier">
-                      <option value="Free">Free</option>
+                      <option value="Free">None</option>
                       <option value="Pro">Pro</option>
                       <option value="Studio">Studio</option>
                     </select>
+                    <div id="f-tier-note" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
                   </div>
                 </div>
                 <div class="field-group">
@@ -700,7 +701,15 @@ public static class AdminHtml
             document.getElementById('f-displayname').value = u.displayName || '';
             document.getElementById('f-email').value = u.email;
             document.getElementById('f-bio').value = u.bio || '';
-            document.getElementById('f-tier').value = u.tier;
+            document.getElementById('f-tier').value = u.manualTier || 'Free';
+            {
+              const paid = (u.subscriptions || []).map(x =>
+                `${x.plan} via ${x.source}${x.isTest ? ' (test)' : ''}: ${x.state}` +
+                (x.expiresAt ? ` until ${fmtDate(x.expiresAt)}` : ''));
+              document.getElementById('f-tier-note').textContent =
+                `Plan now: ${u.tier}. ` + (paid.length ? `Paid: ${paid.join('; ')}.` : 'No paid subscriptions.') +
+                ' Paid plans always count, whatever is chosen here.';
+            }
 
             // Coaching relationships
             const coachingSection = document.getElementById('coaching-section');
