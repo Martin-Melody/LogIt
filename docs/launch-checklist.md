@@ -94,8 +94,10 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [x] **CI green again** (2026-11-14). The 9 E2E failures were tests left behind by the sessions, goals and
       splits redesigns, plus 36px streak/goal buttons on /progress (now 40px). The dashboard's goal preview now
       handles async nutrition algorithms (the 7 svelte-check errors), and CI builds and checks the dashboard too.
-- [ ] `POST /auth/login` with a missing field returns 500 instead of 400 (seen 2026-11-13; other
-      endpoints probably the same).
+- [x] Failed sign-in shows a message again (2026-11-14). A wrong username/password got a bare 401, which over
+      HTTP/2 has no status text, so the app showed an empty (hidden) error. Login now answers
+      `{ error, code: "invalid_credentials" }`, the app falls back to a message per status when a server sends
+      none, and any endpoint given a body missing a required text field answers 400 (`missing_field`), not 500.
 
 ## After both halves are done
 
