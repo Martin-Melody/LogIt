@@ -43,9 +43,9 @@ test.describe("sessions history", () => {
     await page.goto("/sessions");
     await page.waitForLoadState("networkidle");
 
-    // Stats row + time-bucket header.
-    await expect(page.getByText("this month", { exact: true })).toBeVisible();
-    await expect(page.getByText("This week", { exact: true })).toBeVisible();
+    // Month count under the calendar + time-bucket header (the live session isn't counted).
+    await expect(page.getByText(/· 1 this month$/)).toBeVisible();
+    await expect(page.getByText("This week · 1 workout", { exact: true })).toBeVisible();
     // The 40-day-old one buckets under its month name, not "This week".
     await expect(page.getByRole("main")).toContainText("Deadlift");
 
@@ -83,7 +83,7 @@ test.describe("sessions history", () => {
     await expect(page.getByText("Bench Press")).toBeVisible();
     await expect(page.getByText("Row", { exact: true })).toBeVisible();
     await expect(page.getByText("Squat")).toBeVisible();
-    // Weight column is unit-labelled (kg by default).
-    await expect(page.getByText("Weight (kg)").first()).toBeVisible();
+    // Weight column is headed with the unit (kg by default).
+    await expect(page.getByText("kg", { exact: true }).first()).toBeVisible();
   });
 });
