@@ -180,6 +180,25 @@ export function duplicateDay(split: WorkoutSplit, dayId: string): { split: Worko
   return { split: touchSplit({ ...split, days: next }), copy: next[idx + 1]! };
 }
 
+/** A copy of a whole split under a new name: new ids for it and everything in it. */
+export function duplicateSplit(split: WorkoutSplit, name = `${split.name} (copy)`): WorkoutSplit {
+  const now = Date.now();
+  const days = sortedDays(split).map((d) => {
+    const groupIds = new Map<string, string>((d.groups ?? []).map((g) => [g.id, createId("grp")]));
+    return {
+      ...d,
+      id: createId("day"),
+      blocks: d.blocks.map((b) => ({
+        ...b,
+        id: createId("pb"),
+        ...(b.groupId ? { groupId: groupIds.get(b.groupId) ?? b.groupId } : {}),
+      })),
+      ...(d.groups ? { groups: d.groups.map((g) => ({ ...g, id: groupIds.get(g.id)! })) } : {}),
+    };
+  });
+  return { ...split, id: createId("split"), name: name.trim() || split.name, archived: false, createdAtMs: now, updatedAtMs: now, days };
+}
+
 export function addRestDay(split: WorkoutSplit): WorkoutSplit {
   const days = sortedDays(split);
   return touchSplit({

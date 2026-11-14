@@ -114,4 +114,9 @@ export function getOwnProfile(): Promise<RemoteProfile | null> {
   return profileCache;
 }
 
+/** After the dashboard changes the profile itself, so the next read is fresh. */
+export function invalidateOwnProfile(): void {
+  profileCache = null;
+}
+
 export { fetchClientCheckinSubmissions, fetchClientHabitEntries };

@@ -1,3 +1,4 @@
+import type { WorkoutSplit } from "./WorkoutSplit";
 import { describe, expect, it } from "vitest";
 import { addDays } from "./dateIso";
 import type { SplitDay, WorkoutSplit } from "./WorkoutSplit";
@@ -7,6 +8,7 @@ import {
   nextWorkoutAfter,
   splitTimeline,
   duplicateDay,
+  duplicateSplit,
   planSplit,
   removeDay,
   rotationSlots,
@@ -275,5 +277,32 @@ describe("timeline", () => {
 
   it("by weekday with no weekdays set: nothing to place", () => {
     expect(splitTimeline(split([day("A")], "weekdays"), { last: null }, MON)).toEqual([]);
+  });
+});
+
+describe("duplicateSplit", () => {
+  it("copies everything under new ids, groups still pointing at their own copies", () => {
+    const src: WorkoutSplit = {
+      id: "s1", name: "Upper / Lower", archived: true, createdAtMs: 1, updatedAtMs: 1, schedule: "weekdays",
+      days: [{
+        id: "d1", orderIndex: 0, weekday: 1, name: "Upper",
+        blocks: [
+          { type: "strength", id: "a", orderIndex: 0, exerciseName: "Lateral Raise", groupId: "g1" },
+          { type: "strength", id: "b", orderIndex: 1, exerciseName: "Face Pull", groupId: "g1" },
+        ],
+        groups: [{ id: "g1", rounds: 3 }],
+      }],
+    };
+    const copy = duplicateSplit(src);
+    expect(copy.name).toBe("Upper / Lower (copy)");
+    expect(copy.id).not.toBe("s1");
+    expect(copy.archived).toBe(false);
+    expect(copy.schedule).toBe("weekdays");
+    const day = copy.days[0]!;
+    expect(day.id).not.toBe("d1");
+    expect(day.weekday).toBe(1);
+    expect(day.groups![0]!.id).not.toBe("g1");
+    expect(day.blocks.every((b) => b.groupId === day.groups![0]!.id)).toBe(true);
+    expect(day.blocks.map((b) => b.id)).not.toContain("a");
   });
 });

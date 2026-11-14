@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "./dateIso";
-import { clampWeeklyTarget, computeWeeklyStreak, targetForWeek } from "./weeklyStreak";
+import { clampWeeklyTarget, computeWeeklyStreak, targetForWeek, withWeeklyTarget } from "./weeklyStreak";
 
 // 2026-11-02 is a Monday.
 const MON = "2026-11-02";
@@ -116,5 +116,25 @@ describe("clampWeeklyTarget", () => {
     expect(clampWeeklyTarget(0)).toBe(1);
     expect(clampWeeklyTarget(9)).toBe(7);
     expect(clampWeeklyTarget(4.4)).toBe(4);
+  });
+});
+
+describe("withWeeklyTarget", () => {
+  it("keeps the old target for past weeks on the first change", () => {
+    const next = withWeeklyTarget({ weeklyTarget: 3 }, 4, addDays(MON, 3));
+    expect(next.weeklyTarget).toBe(4);
+    expect(next.targetHistory).toEqual([
+      { fromIso: "0000-01-01", target: 3 },
+      { fromIso: MON, target: 4 },
+    ]);
+    expect(targetForWeek(week(-1), next.targetHistory, 4)).toBe(3);
+    expect(targetForWeek(MON, next.targetHistory, 4)).toBe(4);
+  });
+
+  it("changing twice in a week keeps the last, and clamps", () => {
+    const once = withWeeklyTarget({ weeklyTarget: 3 }, 4, MON);
+    const twice = withWeeklyTarget(once, 12, addDays(MON, 5));
+    expect(twice.weeklyTarget).toBe(7);
+    expect(twice.targetHistory.filter((c) => c.fromIso === MON)).toEqual([{ fromIso: MON, target: 7 }]);
   });
 });
