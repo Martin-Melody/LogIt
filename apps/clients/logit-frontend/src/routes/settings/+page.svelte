@@ -1,5 +1,7 @@
 <script lang="ts">
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
+  import PlanCard from "$lib/components/billing/PlanCard.svelte";
+  import { billing } from "$lib/billing/billing.svelte";
   import { log } from "@logit/core/platform/log";
   import { BETWEEN_EXERCISES_KEY, GET_READY_KEY, circuitDefaultsFrom } from "$lib/features/session/circuit/circuitSettings";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
@@ -74,7 +76,7 @@
     DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID,
   } from "@logit/core/usecases/progression/getMuscleGroupInsightConfig";
   import type { MuscleGroupInsightConfigView } from "@logit/core/usecases/progression/getMuscleGroupInsightConfig";
-  import { Settings2 } from "lucide-svelte";
+  import { Settings2, TriangleAlert } from "lucide-svelte";
   import {
     getAnalyticsConfig,
     setAnalyticsPlugin,
@@ -572,21 +574,11 @@
           {/if}
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium">@{authStore.user.username}</p>
-            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "getlogit.app" : "Self-hosted"} · {authStore.user.tier} plan</p>
+            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "getlogit.app" : "Self-hosted"}</p>
           </div>
         </div>
 
-        <!-- Plan (informational only — no purchase link/button; upgrading is handled entirely
-             on the website, never inside the app, per Apple's in-app purchase rules). -->
-        <div class="border-t border-border py-3">
-          <p class="text-xs text-muted-foreground">
-            {#if authStore.user.tier === "Free"}
-              Free plan — social feed on your phone. Cross-device sync and the web dashboard need Pro or Studio. Manage your plan in a browser at getlogit.app.
-            {:else}
-              {authStore.user.tier} plan. Manage your plan in a browser at getlogit.app.
-            {/if}
-          </p>
-        </div>
+        <PlanCard />
 
         {#if authStore.user.tier !== "Free"}
           <button type="button"
@@ -1318,6 +1310,20 @@
     <Card.Content>
       {#if pendingDeleteAccount}
         <div class="flex flex-col gap-3">
+          {#if authStore.isAuthenticated && billing.paysThroughPlay}
+            <div class="flex gap-2.5 rounded-[10px] border border-warning/30 bg-warning/10 p-3">
+              <TriangleAlert class="mt-0.5 size-[18px] shrink-0 text-warning" />
+              <div class="flex flex-col gap-2">
+                <p class="text-[13px] leading-normal">
+                  You still pay for <strong>{billing.status?.subscription?.plan}</strong> through Google Play. Deleting your account
+                  <strong>doesn't cancel it</strong>. Cancel in Google Play first, or you'll keep being charged.
+                </p>
+                <Button variant="outline" size="sm" class="self-start" onclick={() => void billing.openSubscriptions(billing.status?.subscription?.productId)}>
+                  Cancel {billing.status?.subscription?.plan} in Google Play
+                </Button>
+              </div>
+            </div>
+          {/if}
           <p class="text-sm text-destructive">
             {authStore.isAuthenticated
               ? "This will permanently delete your account from the server and erase all local data. This cannot be undone."
@@ -1369,7 +1375,7 @@
           variant="outline"
           size="sm"
           class="border-destructive/50 text-destructive hover:bg-destructive/10"
-          onclick={() => (pendingDeleteAccount = true)}
+          onclick={() => { pendingDeleteAccount = true; void billing.refreshStatus(); }}
         >
           <Trash2 class="h-3.5 w-3.5 mr-1.5" />
           Delete account and all data
