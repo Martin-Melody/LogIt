@@ -87,6 +87,14 @@ public static class AuthEndpoints
             Registration.ModeName(Registration.GetMode(config)),
             config.GetValue<bool>("Deployment:SelfHosted")));
 
+    /// The same answer for an unknown account and a wrong password, so sign-in can't be used to
+    /// find out which usernames or emails exist. It carries a message: over HTTP/2 a bare 401 has
+    /// no status text, and the app had nothing to show.
+    private static IResult WrongCredentials() =>
+        Results.Json(
+            new { error = "That username or password isn't right.", code = "invalid_credentials" },
+            statusCode: StatusCodes.Status401Unauthorized);
+
     private static async Task<IResult> Login(
         [FromBody] LoginRequest req,
         AppDbContext db,
@@ -103,12 +111,12 @@ public static class AuthEndpoints
         if (user is null)
         {
             loggerFactory.CreateLogger("Logit.Auth").LogInformation("Login failed: no such account");
-            return Results.Unauthorized();
+            return WrongCredentials();
         }
         if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
         {
             loggerFactory.CreateLogger("Logit.Auth").LogInformation("Login failed: wrong password for user {UserId}", user.Id);
-            return Results.Unauthorized();
+            return WrongCredentials();
         }
 
         // Other devices keep their tokens: signing in on a second phone must not sign the

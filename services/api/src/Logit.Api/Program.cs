@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Logit.Api.Data;
+using Logit.Api.Features;
 using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
 using Logit.Api.Features.Billing;
@@ -175,16 +176,20 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-app.MapAuthEndpoints();
-app.MapUserEndpoints();
-app.MapSocialEndpoints();
-app.MapModerationEndpoints();
-app.MapNotificationEndpoints();
-app.MapAdminEndpoints(builder.Configuration, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Logit.Admin"));
-app.MapSyncEndpoints();
-app.MapBillingEndpoints();
-app.MapCoachEndpoints();
-app.MapDiagnosticsEndpoints();
+// Every endpoint answers a body missing a required text field with a 400, not a 500.
+var api = app.MapGroup("");
+api.AddEndpointFilterFactory(RequiredFields.Factory);
+
+api.MapAuthEndpoints();
+api.MapUserEndpoints();
+api.MapSocialEndpoints();
+api.MapModerationEndpoints();
+api.MapNotificationEndpoints();
+api.MapAdminEndpoints(builder.Configuration, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Logit.Admin"));
+api.MapSyncEndpoints();
+api.MapBillingEndpoints();
+api.MapCoachEndpoints();
+api.MapDiagnosticsEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

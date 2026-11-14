@@ -253,6 +253,17 @@ test.describe("online account - requires API", () => {
     await page.locator('input[id="password"]').fill("WrongPassword!");
     await page.locator("form").getByRole("button", { name: "Log in" }).click();
 
-    await expect(page.locator(".text-destructive")).toBeVisible({ timeout: 8000 });
+    await expect(page.locator(".text-destructive")).toHaveText("That username or password isn't right.", { timeout: 8000 });
+  });
+
+  test("login with an account that doesn't exist shows the same error", async ({ page }) => {
+    await setServerMode(page, "selfhosted", API_BASE);
+    await goToAuth(page);
+
+    await page.locator('input[id="username"]').fill(unique("nobody"));
+    await page.locator('input[id="password"]').fill("WhateverPass1!");
+    await page.locator("form").getByRole("button", { name: "Log in" }).click();
+
+    await expect(page.locator(".text-destructive")).toHaveText("That username or password isn't right.", { timeout: 8000 });
   });
 });
