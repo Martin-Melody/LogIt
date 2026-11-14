@@ -87,7 +87,7 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <h1 class="text-lg font-semibold">Progress</h1>
+  <h1 class="text-[26px] font-bold tracking-tight">Progress</h1>
 
   {#if error}
     <Alert.Root variant="destructive">
@@ -115,12 +115,12 @@
       <Tabs.List>
         <Tabs.Trigger value="exercises">Exercises</Tabs.Trigger>
         <Tabs.Trigger value="muscles">Muscle groups</Tabs.Trigger>
-        <Tabs.Trigger value="nutrition">Nutrition</Tabs.Trigger>
+        <Tabs.Trigger value="nutrition">Food &amp; training</Tabs.Trigger>
       </Tabs.List>
 
       <Tabs.Content value="exercises">
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <Card.Root class="xl:col-span-1 p-0">
+        <div class="flex flex-wrap items-start gap-4">
+          <Card.Root class="min-w-0 flex-[1_1_380px] gap-0 p-0">
             <div class="flex items-center justify-between px-3 pt-3">
               <p class="text-xs text-muted-foreground">
                 {#if compareMode}Select up to {MAX_COMPARE} to compare{:else}&nbsp;{/if}
@@ -135,7 +135,6 @@
                   <Table.Row class="text-xs text-muted-foreground">
                     {#if compareMode}<Table.Head class="w-8"></Table.Head>{/if}
                     <Table.Head>Exercise</Table.Head>
-                    <Table.Head></Table.Head>
                     <Table.Head class="text-right">Trend</Table.Head>
                   </Table.Row>
                 </Table.Header>
@@ -155,14 +154,12 @@
                       {/if}
                       <Table.Cell>
                         <div in:popIn={{ duration: 200, delay }}>
-                          <p class="font-medium truncate max-w-40">{ex.exerciseName}</p>
+                          <p class="font-medium truncate max-w-48">{ex.exerciseName}</p>
                           <div class="flex items-center gap-2 mt-1">
                             <ProgressStatusChip status={ex.status} />
+                            <span class="text-xs text-muted-foreground whitespace-nowrap">{formatDate(ex.lastTrainedMs)}</span>
                           </div>
                         </div>
-                      </Table.Cell>
-                      <Table.Cell class="text-xs text-muted-foreground whitespace-nowrap">
-                        <div in:popIn={{ duration: 200, delay }}>{formatDate(ex.lastTrainedMs)}</div>
                       </Table.Cell>
                       <Table.Cell class="text-right">
                         <div class="flex items-center justify-end gap-2" in:popIn={{ duration: 200, delay }}>
@@ -177,7 +174,7 @@
             </div>
           </Card.Root>
 
-          <Card.Root class="xl:col-span-2">
+          <Card.Root class="min-w-0 flex-[999_1_520px]">
             {#if compareMode}
               <div in:reveal>
                 <Card.Header class="pb-2">

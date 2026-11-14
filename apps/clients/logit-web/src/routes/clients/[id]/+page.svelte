@@ -214,7 +214,7 @@
 <div class="flex flex-col gap-4 max-w-3xl">
   <div>
     <a href="/clients" class="text-xs text-muted-foreground hover:text-foreground">&larr; Clients</a>
-    <h1 class="text-lg font-semibold mt-1">@{username}</h1>
+    <h1 class="mt-1 text-[26px] font-bold tracking-tight">@{username}</h1>
   </div>
 
   {#if error}

@@ -95,7 +95,7 @@
 </script>
 
 <div class="flex flex-col gap-3">
-  <h1 class="text-lg font-semibold">Messages</h1>
+  <h1 class="text-[26px] font-bold tracking-tight">Messages</h1>
   {#if error}
     <Alert.Root variant="destructive">
       <Alert.Description>{error}</Alert.Description>
