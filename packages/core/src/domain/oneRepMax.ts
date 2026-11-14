@@ -22,3 +22,14 @@ export function repsAtLoad(reps: number, fromKg: number, toKg: number): number |
   if (!(fromKg > 0) || !(toKg > 0) || reps <= 0) return null;
   return Math.max(0, (fromKg / toKg) * (30 + reps) - 30);
 }
+
+/**
+ * The load for a percentage of a 1RM (e.g. 80% of a 130 kg e1RM), rounded to the nearest
+ * `stepKg` (2.5 kg by default: the smallest jump most gyms can make on a barbell). Null
+ * when either number isn't positive.
+ */
+export function loadFromPercent(oneRepMaxKg: number, percent: number, stepKg = 2.5): number | null {
+  if (!(oneRepMaxKg > 0) || !(percent > 0) || !(stepKg > 0)) return null;
+  const raw = (oneRepMaxKg * percent) / 100;
+  return Math.round(Math.round(raw / stepKg) * stepKg * 1000) / 1000;
+}

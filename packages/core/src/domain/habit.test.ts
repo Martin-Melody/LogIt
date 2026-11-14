@@ -3,6 +3,7 @@ import {
   adherence,
   computeStreak,
   createHabit,
+  createHabitEntry,
   dueOn,
   isSatisfied,
   weekProgress,
@@ -107,5 +108,15 @@ describe("adherence", () => {
     const es = [entry("h2", "2026-06-15"), entry("h2", "2026-06-17")];
     const a = adherence(mwf, es, "2026-06-15", "2026-06-21");
     expect(a).toMatchObject({ satisfied: 2, due: 3 });
+  });
+});
+
+describe("createHabitEntry", () => {
+  it("stamps an edit of an old entry with the time now, so the server takes it", () => {
+    const old = entry("h1", "2026-11-10", { createdAtMs: 1000, updatedAtMs: 2000 });
+    const next = createHabitEntry("h1", "2026-11-10", { ...old, done: false });
+    expect(next.done).toBe(false);
+    expect(next.createdAtMs).toBe(1000);
+    expect(next.updatedAtMs).toBeGreaterThan(2000);
   });
 });
