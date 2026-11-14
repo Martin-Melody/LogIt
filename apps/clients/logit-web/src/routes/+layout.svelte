@@ -21,6 +21,8 @@
     "/sessions": "Sessions",
     "/progress": "Progress",
     "/nutrition": "Nutrition",
+    "/plan": "Plan",
+    "/habits": "Habits & goals",
     "/roster": "Roster",
     "/clients": "Clients",
     "/messages": "Messages",

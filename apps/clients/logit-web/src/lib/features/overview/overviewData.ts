@@ -19,6 +19,9 @@ import { weekProgress, isSatisfied, dueOn, type Habit, type HabitEntry } from "@
 import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { getOwnNutritionDeps, getWebDeps, getWebNutritionDeps, getWebSplitRepo } from "$lib/deps";
+import { sessionVolumeKg } from "$lib/features/sessionVolume";
+import { goalSeries } from "$lib/features/habitsGoals/goalsData";
+import { goalViewFromSeries } from "@logit/core/domain/goalView";
 
 /**
  * Everything the Overview's widgets show, loaded once per visit from the synced data:
@@ -75,19 +78,7 @@ function dayOf(s: WorkoutSession): string {
   return localDateIso(new Date(s.startedAtMs));
 }
 
-/** Working sets only: weight × reps. Bodyweight work without added load counts as 0. */
-export function sessionVolumeKg(s: WorkoutSession): number {
-  let kg = 0;
-  for (const b of s.blocks) {
-    if (b.type !== "strength") continue;
-    for (const set of (b.data as StrengthBlockData).sets) {
-      if (set.setType && set.setType !== "normal") continue;
-      if (set.completed === false) continue;
-      kg += (set.weight || 0) * (set.reps || 0);
-    }
-  }
-  return kg;
-}
+export { sessionVolumeKg } from "$lib/features/sessionVolume";
 
 type GoalsBlob = Record<string, unknown> & {
   streak?: { weeklyTarget?: number; targetHistory?: TargetChange[]; pauses?: StreakPause[] };
@@ -173,34 +164,15 @@ function weeklyVolume(sessions: WorkoutSession[], todayIso: string, weeks = 12) 
 }
 
 async function goalSummaries(goals: Goal[], sessions: WorkoutSession[], clientId: string | undefined): Promise<GoalSummary[]> {
-  const deps = getWebDeps(clientId);
   const nowMs = Date.now();
   const out: GoalSummary[] = [];
   for (const goal of goals.slice(0, 4)) {
     const t = goal.target;
-    let series;
-    if (t.type === "count") {
-      series = countGoalSeries(
-        sessions.map((s) => ({ tMs: s.endedAtMs ?? s.startedAtMs, volumeKg: sessionVolumeKg(s) })),
-        { metric: t.metric, target: t.target, startMs: isoToUtcMs(t.startIso) },
-      );
-    } else {
-      const { history } = await getExerciseHistory({ id: t.exerciseId, name: t.exerciseName }, deps, { includeExcluded: true });
-      series = t.type === "lift" ? liftGoalSeries(history, t) : repsGoalSeries(history, t);
-    }
-    const target = goalTargetValue(t);
-    const achieved = series.achievedAtMs != null;
-    const projection = projectGoal(series.points, {
-      target,
-      nowMs,
-      achieved,
-      deadlineMs: goal.deadlineIso ? isoToUtcMs(goal.deadlineIso) : null,
-      ...(t.type === "count" ? { windowDays: 56, minPoints: 3 } : {}),
-    });
-    const current = t.type === "count" ? (series.points.at(-1)?.value ?? 0) : (projection.current ?? series.points.at(-1)?.value ?? null);
-    const start = t.type === "count" ? 0 : (series.points.find((p) => p.tMs >= goal.createdAtMs) ?? series.points[0])?.value ?? null;
-    const progress = achieved ? 1 : start == null || current == null || start === target ? 0 : Math.max(0, Math.min(1, (current - start) / (target - start)));
-    const unit = series.unit === "kg" ? " kg" : series.unit === "reps" ? " reps" : "";
+    const view = goalViewFromSeries(goal, await goalSeries(goal, sessions, clientId), nowMs);
+    const projection = view.projection;
+    const achieved = view.achievedAtMs != null;
+    const current = t.type === "count" ? (view.points.at(-1)?.value ?? 0) : (projection.current ?? view.points.at(-1)?.value ?? null);
+    const unit = view.unit === "kg" ? " kg" : view.unit === "reps" ? " reps" : "";
     const title =
       t.type === "lift" ? `${t.exerciseName} ${t.weightKg} kg${t.reps > 1 ? ` × ${t.reps}` : ""}`
       : t.type === "reps" ? `${t.exerciseName} × ${t.reps}`
@@ -215,7 +187,7 @@ async function goalSummaries(goals: Goal[], sessions: WorkoutSession[], clientId
     out.push({
       id: goal.id,
       title,
-      progress,
+      progress: view.progress,
       currentText: current == null ? "—" : `${Math.round(current * 10) / 10}${unit}`,
       note,
     });

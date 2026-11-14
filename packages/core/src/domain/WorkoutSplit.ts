@@ -354,6 +354,24 @@ function ownSets(block: PlannedBlock): number | undefined {
   return sets && sets > 0 ? sets : undefined;
 }
 
+/** One row of a split day: a single block, or a group with its members in order. */
+export type PlannedRun =
+  | { kind: "block"; block: PlannedBlock }
+  | { kind: "group"; group: PlannedGroup; members: PlannedBlock[] };
+
+/** The day in order, each group's members together under it. */
+export function plannedRuns(day: SplitDay): PlannedRun[] {
+  const runs: PlannedRun[] = [];
+  for (const block of sortPlannedBlocks(day.blocks)) {
+    const group = plannedGroupOf(day, block);
+    const last = runs.at(-1);
+    if (!group) runs.push({ kind: "block", block });
+    else if (last?.kind === "group" && last.group.id === group.id) last.members.push(block);
+    else runs.push({ kind: "group", group, members: [block] });
+  }
+  return runs;
+}
+
 /**
  * How many sets a planned block gets when the day starts: its group's rounds, else its
  * own set target. Undefined when nothing says (cardio, or no target set).

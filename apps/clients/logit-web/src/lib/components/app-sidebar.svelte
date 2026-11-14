@@ -5,6 +5,8 @@
   import ListIcon from "@lucide/svelte/icons/list";
   import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
   import AppleIcon from "@lucide/svelte/icons/apple";
+  import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
+  import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
   import UsersIcon from "@lucide/svelte/icons/users";
   import ContactIcon from "@lucide/svelte/icons/contact";
   import MessageSquareIcon from "@lucide/svelte/icons/message-square";
@@ -34,8 +36,8 @@
   type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon };
   type NavGroup = { label: string | null; items: NavItem[] };
 
-  // "Me": your own training. Pages that aren't built yet (Plan, Habits & goals, Insights,
-  // Social, Plugins, My coach) join this list as they land.
+  // "Me": your own training. Pages that aren't built yet (Insights, Social, Plugins,
+  // My coach) join this list as they land.
   const meGroups: NavGroup[] = [
     { label: null, items: [{ label: "Overview", href: "/", icon: LayoutDashboardIcon }] },
     {
@@ -43,9 +45,16 @@
       items: [
         { label: "Sessions", href: "/sessions", icon: ListIcon },
         { label: "Progress", href: "/progress", icon: TrendingUpIcon },
+        { label: "Plan", href: "/plan", icon: CalendarDaysIcon },
       ],
     },
-    { label: "Body", items: [{ label: "Nutrition", href: "/nutrition", icon: AppleIcon }] },
+    {
+      label: "Body",
+      items: [
+        { label: "Nutrition", href: "/nutrition", icon: AppleIcon },
+        { label: "Habits & goals", href: "/habits", icon: CircleCheckIcon },
+      ],
+    },
   ];
 
   // "Coaching": a separate workspace, Studio accounts only. Today/Programs/Check-ins come
