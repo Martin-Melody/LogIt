@@ -44,7 +44,7 @@
   </div>
 </section>
 
-<section class="border-y border-border bg-sidebar px-4 py-14 sm:px-6">
+<section class="topo-tile border-y border-border bg-sidebar px-4 py-14 [background-position:center_-2100px] sm:px-6">
   <div class="mx-auto flex max-w-[1120px] flex-col gap-7">
     <h2 class="text-[28px] font-bold tracking-[-0.03em] text-heading">Self-hosting in five steps</h2>
     <ol class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">

@@ -20,7 +20,7 @@
 
 <div class="flex min-h-screen flex-col bg-background text-foreground">
   <SiteHeader />
-  <main id="main" class="flex-1">
+  <main id="main" class="topo-tile flex-1">
     {@render children?.()}
   </main>
   <SiteFooter />

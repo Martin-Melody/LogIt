@@ -14,6 +14,36 @@ html {
   }
 }
 
+/* Faint topographic lines that repeat down the page (see scripts/topo/generate.mjs).
+   Never narrower than 1100px, so on a phone the lines keep their spacing and the sides are cut off. */
+.topo-tile {
+  background-image: url("/topo-tile.svg");
+  background-repeat: repeat-y;
+  background-position: center top;
+  background-size: max(100%, 1100px) auto;
+}
+
+/* Homepage entrance: elements rise in once on load. Set --delay per element. */
+@keyframes site-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise, 24px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise-in {
+  animation: site-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--delay, 0s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: none;
+  }
+}
+
 /* Headings a touch brighter than body text, like the app's titles on dark cards. */
 @utility text-heading {
   color: color-mix(in oklch, var(--foreground) 70%, white);
