@@ -37,6 +37,10 @@
     page.url.pathname.startsWith("/reset-password"),
   );
   const isUpgrade = $derived(page.url.pathname.startsWith("/upgrade"));
+  // A Free account on the hosted server can still reach these: the "plans are in the app"
+  // page, and Account (password, deleting the account, which the store listing promises can
+  // be done on the web).
+  const isFreeAccount = $derived(page.url.pathname.startsWith("/account"));
 
   // apiClient holds plain (non-reactive) fields, not Svelte state — so these must be tied to
   // a value Svelte DOES track to get recomputed at all. page.url.pathname changes on every
@@ -60,7 +64,7 @@
       return;
     }
     if (isBlockedFreeTier) {
-      if (!isUpgrade) await goto("/upgrade");
+      if (!isUpgrade && !isFreeAccount) await goto("/upgrade");
       return;
     }
     if (isUpgrade) await goto("/");
@@ -108,6 +112,13 @@
   {@render children?.()}
 {:else if isUpgrade && apiClient.isAuthenticated()}
   {@render children?.()}
+{:else if isFreeAccount && isBlockedFreeTier && apiClient.isAuthenticated()}
+  <div class="p-4">
+    <div class="mx-auto mb-3 max-w-xl">
+      <a href="/upgrade" class="text-sm text-muted-foreground hover:text-foreground">← Back</a>
+    </div>
+    {@render children?.()}
+  </div>
 {:else if apiClient.isAuthenticated() && !isBlockedFreeTier}
   <Sidebar.Provider>
     <AppSidebar
