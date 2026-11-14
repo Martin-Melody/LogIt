@@ -11,11 +11,15 @@
   import { Toaster } from "$lib/components/ui/sonner";
   import * as Sidebar from "$lib/components/ui/sidebar";
   import AppSidebar from "$lib/components/app-sidebar.svelte";
+  import { isCoachingPath } from "$lib/workspace";
 
   let { children } = $props();
 
+  // The page title in the slim top bar (phones and the collapsed sidebar).
   const PAGE_TITLES: Record<string, string> = {
     "/": "Overview",
+    "/sessions": "Sessions",
+    "/progress": "Progress",
     "/nutrition": "Nutrition",
     "/roster": "Roster",
     "/clients": "Clients",
@@ -25,7 +29,9 @@
   };
   const pageTitle = $derived.by(() => {
     const p = page.url.pathname;
-    const key = Object.keys(PAGE_TITLES).find((k) => (k === "/" ? p === "/" : p.startsWith(k)));
+    const key = Object.keys(PAGE_TITLES)
+      .sort((a, b) => b.length - a.length)
+      .find((k) => (k === "/" ? p === "/" : p.startsWith(k)));
     return key ? PAGE_TITLES[key] : "LogIt";
   });
 
@@ -124,15 +130,24 @@
     <AppSidebar
       {isStudio}
       userName={apiClient.getUser()?.displayName ?? apiClient.getUser()?.username ?? "Account"}
+      tier={apiClient.getUser()?.tier ?? "Free"}
       onLogout={logout}
     />
-    <Sidebar.Inset>
-      <header class="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
+    <Sidebar.Inset class="min-h-svh">
+      <header class="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3 md:hidden">
         <Sidebar.Trigger class="-ml-1" />
         <span class="text-sm font-medium">{pageTitle}</span>
       </header>
-      <main class="flex-1 p-4">
-        {@render children?.()}
+      {#if viewingClient.current && !isCoachingPath(page.url.pathname)}
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-primary px-4 py-2 text-sm text-primary-foreground sm:px-8">
+          <span>Viewing <strong>{viewingClient.current.client.displayName || viewingClient.current.client.username}</strong>'s training</span>
+          <button type="button" class="font-semibold underline underline-offset-4" onclick={() => viewingClient.set(null)}>Back to mine</button>
+        </div>
+      {/if}
+      <main class="flex-1 px-4 py-6 sm:px-8 sm:py-7">
+        <div class="mx-auto w-full max-w-[1120px]">
+          {@render children?.()}
+        </div>
       </main>
     </Sidebar.Inset>
   </Sidebar.Provider>

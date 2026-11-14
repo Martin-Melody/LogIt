@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
+  import ListIcon from "@lucide/svelte/icons/list";
   import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
   import AppleIcon from "@lucide/svelte/icons/apple";
   import UsersIcon from "@lucide/svelte/icons/users";
@@ -13,28 +15,64 @@
   import MoonIcon from "@lucide/svelte/icons/moon";
   import MonitorIcon from "@lucide/svelte/icons/monitor";
   import { resetMode, setMode } from "mode-watcher";
+  import Logo from "@logit/ui/Logo.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import { useSidebar } from "$lib/components/ui/sidebar";
   import { viewingClient } from "$lib/viewingClient.svelte";
+  import { isCoachingPath } from "$lib/workspace";
 
   let {
     isStudio = false,
     userName,
+    tier,
     onLogout,
-  }: { isStudio?: boolean; userName: string; onLogout: () => void } = $props();
+  }: { isStudio?: boolean; userName: string; tier: string; onLogout: () => void } = $props();
 
   const sidebar = useSidebar();
 
-  type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon; show: boolean };
-  const items = $derived<NavItem[]>([
-    { label: "Overview", href: "/", icon: LayoutDashboardIcon, show: true },
-    { label: "Progress", href: "/progress", icon: TrendingUpIcon, show: true },
-    { label: "Nutrition", href: "/nutrition", icon: AppleIcon, show: true },
-    { label: "Roster", href: "/roster", icon: UsersIcon, show: isStudio },
-    { label: "Clients", href: "/clients", icon: ContactIcon, show: true },
-    { label: "Messages", href: "/messages", icon: MessageSquareIcon, show: true },
-  ]);
+  type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon };
+  type NavGroup = { label: string | null; items: NavItem[] };
+
+  // "Me": your own training. Pages that aren't built yet (Plan, Habits & goals, Insights,
+  // Social, Plugins, My coach) join this list as they land.
+  const meGroups: NavGroup[] = [
+    { label: null, items: [{ label: "Overview", href: "/", icon: LayoutDashboardIcon }] },
+    {
+      label: "Training",
+      items: [
+        { label: "Sessions", href: "/sessions", icon: ListIcon },
+        { label: "Progress", href: "/progress", icon: TrendingUpIcon },
+      ],
+    },
+    { label: "Body", items: [{ label: "Nutrition", href: "/nutrition", icon: AppleIcon }] },
+  ];
+
+  // "Coaching": a separate workspace, Studio accounts only. Today/Programs/Check-ins come
+  // with the coaching phase; until then these are the existing coaching pages.
+  const coachGroups: NavGroup[] = [
+    {
+      label: null,
+      items: [
+        { label: "Clients", href: "/clients", icon: ContactIcon },
+        { label: "Roster", href: "/roster", icon: UsersIcon },
+        { label: "Messages", href: "/messages", icon: MessageSquareIcon },
+      ],
+    },
+  ];
+
+  // Without Studio there's no Coaching workspace, but a coach can still invite you and
+  // message you: those pages sit under Me until the "My coach" page replaces them.
+  const clientGroup: NavGroup = {
+    label: "Coach",
+    items: [
+      { label: "My coach", href: "/clients", icon: ContactIcon },
+      { label: "Messages", href: "/messages", icon: MessageSquareIcon },
+    ],
+  };
+
+  const coaching = $derived(isStudio && isCoachingPath(page.url.pathname));
+  const groups = $derived(coaching ? coachGroups : isStudio ? meGroups : [...meGroups, clientGroup]);
 
   function isActive(href: string): boolean {
     return href === "/" ? page.url.pathname === "/" : page.url.pathname.startsWith(href);
@@ -44,29 +82,50 @@
     if (sidebar.isMobile) sidebar.setOpenMobile(false);
   }
 
-  function onSwitcherChange(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    viewingClient.set(value === "" ? null : value);
+  function switchTo(mode: "me" | "coaching") {
+    if (mode === (coaching ? "coaching" : "me")) return;
+    if (mode === "me") viewingClient.set(null);
+    void goto(mode === "me" ? "/" : "/clients");
+    onNavClick();
   }
+
+  function viewClientTraining(e: Event) {
+    const value = (e.target as HTMLSelectElement).value;
+    if (!value) return;
+    viewingClient.set(value);
+    void goto("/progress");
+    onNavClick();
+  }
+
+  const segBase = "h-[30px] rounded-[7px] text-xs transition-colors";
+  const segOn = "bg-primary text-primary-foreground font-semibold";
+  const segOff = "text-sidebar-foreground/70 hover:text-sidebar-foreground";
 </script>
 
 <Sidebar.Root collapsible="icon">
-  <Sidebar.Header>
-    <div class="flex items-center gap-2 px-2 py-1.5">
-      <div class="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold">
-        L
+  <Sidebar.Header class="gap-2">
+    <a href="/" class="flex items-center gap-2.5 px-2 pt-1.5 pb-1" onclick={onNavClick}>
+      <Logo size={24} />
+      <span class="text-base font-bold tracking-tight group-data-[collapsible=icon]:hidden">LogIt</span>
+    </a>
+    {#if isStudio}
+      <div role="tablist" aria-label="Workspace"
+        class="grid grid-cols-2 gap-[3px] rounded-[9px] bg-sidebar-accent p-[3px] group-data-[collapsible=icon]:hidden">
+        <button type="button" role="tab" aria-selected={!coaching}
+          class="{segBase} {coaching ? segOff : segOn}" onclick={() => switchTo("me")}>Me</button>
+        <button type="button" role="tab" aria-selected={coaching}
+          class="{segBase} {coaching ? segOn : segOff}" onclick={() => switchTo("coaching")}>Coaching</button>
       </div>
-      <span class="text-sm font-semibold group-data-[collapsible=icon]:hidden">LogIt</span>
-    </div>
+    {/if}
   </Sidebar.Header>
 
   <Sidebar.Content>
-    <Sidebar.Group>
-      <Sidebar.GroupLabel>Navigation</Sidebar.GroupLabel>
-      <Sidebar.GroupContent>
-        <Sidebar.Menu>
-          {#each items as item (item.href)}
-            {#if item.show}
+    {#each groups as group, gi (gi)}
+      <Sidebar.Group class="py-1">
+        {#if group.label}<Sidebar.GroupLabel class="uppercase tracking-wider text-[11px]">{group.label}</Sidebar.GroupLabel>{/if}
+        <Sidebar.GroupContent>
+          <Sidebar.Menu>
+            {#each group.items as item (item.href)}
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton isActive={isActive(item.href)} tooltipContent={item.label}>
                   {#snippet child({ props })}
@@ -77,22 +136,21 @@
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
-            {/if}
-          {/each}
-        </Sidebar.Menu>
-      </Sidebar.GroupContent>
-    </Sidebar.Group>
+            {/each}
+          </Sidebar.Menu>
+        </Sidebar.GroupContent>
+      </Sidebar.Group>
+    {/each}
 
-    {#if isStudio && viewingClient.clients.length > 0}
+    {#if coaching && viewingClient.clients.length > 0}
       <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
-        <Sidebar.GroupLabel>Viewing</Sidebar.GroupLabel>
+        <Sidebar.GroupLabel class="uppercase tracking-wider text-[11px]">A client's training</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
-          <select
-            class="w-full rounded border border-sidebar-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-            value={viewingClient.id ?? ""}
-            onchange={onSwitcherChange}
-          >
-            <option value="">My data</option>
+          <label for="client-training" class="sr-only">Open a client's training</label>
+          <select id="client-training"
+            class="h-9 w-full rounded-md border border-sidebar-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            value="" onchange={viewClientTraining}>
+            <option value="">Choose a client…</option>
             {#each viewingClient.clients as c (c.relationshipId)}
               <option value={c.client.id}>{c.client.displayName || c.client.username}</option>
             {/each}
@@ -111,12 +169,15 @@
               <Sidebar.MenuButton
                 {...props}
                 size="lg"
-                class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                class="border border-sidebar-border bg-card data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
-                <div class="flex size-7 items-center justify-center rounded bg-sidebar-accent text-sidebar-accent-foreground">
-                  <UserRoundIcon class="size-4" />
+                <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold">
+                  {userName.slice(0, 1).toUpperCase()}
                 </div>
-                <span class="flex-1 truncate text-left">{userName}</span>
+                <span class="flex min-w-0 flex-1 flex-col text-left leading-tight">
+                  <span class="truncate text-sm font-medium">{userName}</span>
+                  <span class="truncate text-xs text-muted-foreground">{tier} · Account</span>
+                </span>
                 <ChevronsUpDownIcon class="size-4" />
               </Sidebar.MenuButton>
             {/snippet}

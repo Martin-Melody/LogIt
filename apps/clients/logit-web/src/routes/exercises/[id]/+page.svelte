@@ -140,7 +140,7 @@
   <div class="flex items-center justify-between">
     <div>
       <a href="/" class="text-xs text-muted-foreground hover:text-foreground">&larr; Overview</a>
-      <h1 class="text-lg font-semibold mt-1">{exercise?.name ?? "Exercise"}</h1>
+      <h1 class="mt-1 text-[26px] font-bold tracking-tight">{exercise?.name ?? "Exercise"}</h1>
     </div>
   </div>
 
