@@ -20,6 +20,18 @@ export interface AuthResponse {
   isSelfHosted: boolean;
 }
 
+export const WRONG_CREDENTIALS_MESSAGE = "That username or password isn't right.";
+
+/** What to show for an error response that carries no message of its own. */
+export function fallbackErrorMessage(status: number): string {
+  if (status === 401) return "You're not signed in, or your session has ended. Sign in again.";
+  if (status === 403) return "You don't have access to that.";
+  if (status === 404) return "That couldn't be found on the server.";
+  if (status === 429) return "Too many attempts. Wait a few minutes and try again.";
+  if (status >= 500) return `Something went wrong on the server (${status}). Try again in a moment.`;
+  return `The server couldn't handle that request (${status}).`;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -191,13 +203,17 @@ class ApiClient {
     const ms = Date.now() - started;
 
     if (!res.ok) {
-      let message = res.statusText;
+      let message = "";
       let code: string | undefined;
       try {
         const body = await res.json();
-        message = body?.error ?? message;
+        if (typeof body?.error === "string") message = body.error;
         if (typeof body?.code === "string") code = body.code;
       } catch {}
+      // Not the status text: over HTTP/2 there is none, so an error without a body reached the
+      // screen as an empty message (the sign-in screen showed nothing), and over HTTP/1.1 it
+      // was a bare "Unauthorized".
+      if (!message.trim()) message = fallbackErrorMessage(res.status);
       const details = { requestId, ms, error: message };
       if (res.status >= 500) log.error("api", `${method} ${route} ${res.status}`, details);
       else log.warn("api", `${method} ${route} ${res.status}`, details);
@@ -245,10 +261,19 @@ class ApiClient {
   }
 
   async login(usernameOrEmail: string, password: string): Promise<AuthUser> {
-    const data: AuthResponse = await this.fetch("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ usernameOrEmail, password }),
-    });
+    let data: AuthResponse;
+    try {
+      data = await this.fetch("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ usernameOrEmail, password }),
+      });
+    } catch (e) {
+      // Servers from before 2026-11-14 answer a failed sign-in with a bare 401.
+      if (e instanceof ApiError && e.status === 401 && !e.code) {
+        throw new ApiError(401, WRONG_CREDENTIALS_MESSAGE, "invalid_credentials");
+      }
+      throw e;
+    }
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
