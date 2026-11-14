@@ -380,6 +380,10 @@ export function classifyTrend(params: {
         computed: {},
         confidence: "high",
         verdict: "new",
+        summary: [
+          `You've logged this ${values.length} ${values.length === 1 ? "time" : "times"}. A trend needs ${MIN_SESSIONS} sessions.`,
+          ...excludedNote(excludedCount),
+        ],
       },
     };
   }
@@ -399,6 +403,9 @@ export function classifyTrend(params: {
         computed: {},
         confidence: "high",
         verdict: "detraining",
+        summary: [
+          `You last trained this ${daysSinceLastTrained} days ago. After ${Math.round(DETRAINING_MS / 86_400_000)} days off, older numbers stop counting as a trend; it picks up again once you train it.`,
+        ],
       },
     };
   }
@@ -471,6 +478,51 @@ export function classifyTrend(params: {
       },
       confidence: trendConfidence(n),
       verdict: status,
+      summary: trendSummary(status, {
+        n,
+        slopePctPerSession,
+        sessionsSincePr,
+        prRecently,
+        fatigueDiscountPct: fatigue.calibrated ? Math.round(fatigue.discountPct * 100) : 0,
+        excludedCount,
+      }),
     },
   };
+}
+
+function excludedNote(excludedCount: number): string[] {
+  return excludedCount > 0
+    ? [`${excludedCount} older ${excludedCount === 1 ? "session was" : "sessions were"} left out because the rep range changed since.`]
+    : [];
+}
+
+/** The trend verdict in plain sentences (see Reasoning.summary). */
+export function trendSummary(
+  status: ProgressStatus,
+  info: {
+    n: number;
+    slopePctPerSession: number;
+    sessionsSincePr: number;
+    prRecently: boolean;
+    fatigueDiscountPct: number;
+    excludedCount: number;
+  },
+): string[] {
+  const pct = Math.abs(info.slopePctPerSession).toFixed(1);
+  const over = `Over your last ${info.n} sessions`;
+  const lines: string[] = [];
+  if (status === "progressing") {
+    lines.push(info.prRecently ? "You set a new best last session." : `${over} it went up about ${pct}% a session.`);
+  } else if (status === "regressing") {
+    lines.push(`${over} it went down about ${pct}% a session.`);
+    if (info.sessionsSincePr > 0) lines.push(`Your best was ${info.sessionsSincePr} ${info.sessionsSincePr === 1 ? "session" : "sessions"} ago.`);
+  } else if (status === "plateaued") {
+    lines.push(
+      `No new best in ${info.sessionsSincePr} ${info.sessionsSincePr === 1 ? "session" : "sessions"}, and ${over.charAt(0).toLowerCase() + over.slice(1)} it's been about level.`,
+    );
+  }
+  if (info.fatigueDiscountPct > 0) {
+    lines.push(`Sets done later in a workout count about ${info.fatigueDiscountPct}% more, since you're more tired by then.`);
+  }
+  return [...lines, ...excludedNote(info.excludedCount)];
 }

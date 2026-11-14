@@ -188,7 +188,14 @@ export async function getExerciseProgressStory(
   const trend = classifyTrend({ values, sessionPositions, comparableToCurrent, lastTrainedMs, nowMs: nowMs() });
   const trendReasoning: Reasoning =
     excludedForTaggedBlock > 0
-      ? { ...trend.reasoning, inputs: { ...trend.reasoning.inputs, excludedForTaggedBlock } }
+      ? {
+          ...trend.reasoning,
+          inputs: { ...trend.reasoning.inputs, excludedForTaggedBlock },
+          summary: [
+            ...(trend.reasoning.summary ?? []),
+            `${excludedForTaggedBlock} ${excludedForTaggedBlock === 1 ? "session" : "sessions"} from a tagged training block ${excludedForTaggedBlock === 1 ? "was" : "were"} left out.`,
+          ],
+        }
       : trend.reasoning;
 
   // Last PR in the primary series.
