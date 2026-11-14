@@ -46,6 +46,7 @@ function createAuthStore() {
     // pushAllLocalData() like everything else here.
     void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
     startBackgroundSync();
+    void import("$lib/billing/billing.svelte").then((m) => m.billing.start());
   }
 
   async function register(username: string, email: string, password: string, displayName: string, inviteCode?: string) {
@@ -55,6 +56,7 @@ function createAuthStore() {
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
     void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
     startBackgroundSync();
+    void import("$lib/billing/billing.svelte").then((m) => m.billing.start());
   }
 
   async function linkOrCreateLocalAccount(serverUser: AuthUser) {
@@ -243,6 +245,13 @@ function createAuthStore() {
     }
   }
 
+  /** Re-reads who the server says we are (the plan, after a purchase or a store notice). */
+  async function refreshUser() {
+    if (!user) return;
+    await apiClient.reconcileSession();
+    user = apiClient.getUser();
+  }
+
   return {
     get user() { return user; },
     get ready() { return ready; },
@@ -254,6 +263,7 @@ function createAuthStore() {
     createOfflineAccount,
     logout,
     deleteAccount,
+    refreshUser,
   };
 }
 

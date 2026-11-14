@@ -13,9 +13,11 @@
   } from "@logit/core/api/coachApi";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
+  import LockCard from "$lib/components/billing/LockCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
 
-  const isStudio = $derived(authStore.user?.tier === "Studio");
+  // Self-hosted servers include everything, so Studio features are always open there.
+  const isStudio = $derived(authStore.user?.tier === "Studio" || apiClient.isSelfHosted());
 
   const ui = $state({ loading: true, error: null as string | null, inviting: false, busyId: null as string | null });
   let clients = $state<ClientRelationship[]>([]);
@@ -108,9 +110,13 @@
     <div class="border-b border-border">
       <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">My clients</p>
       {#if !isStudio}
-        <p class="px-3 pb-3 text-sm text-muted-foreground">
-          Coaching clients is a Studio-tier feature. Manage your plan in a browser at getlogit.app.
-        </p>
+        <div class="px-3 pb-3">
+          <LockCard
+            plan="Studio"
+            title="Coach your own clients"
+            text="With Studio you can invite clients, see their training, nutrition and habits once they accept, and give them programs, macro targets and check-ins."
+          />
+        </div>
       {:else}
         {#if clients.length === 0}
           <p class="px-3 py-2 text-sm text-muted-foreground">No clients yet.</p>

@@ -90,10 +90,15 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       Postgres 17. Setup steps: docs/deployment.md "Billing".
 - [ ] **iOS later**: Apple requires In-App Purchase (StoreKit) for subscriptions. The server is ready for an
       `apple` source; still to build: App Store Server API check + App Store Server Notifications v2.
-- [ ] **Android billing plugin**: list plans, buy (tied to the logged-in Logit account), restore,
-      open Play's subscription page.
-- [ ] **In-app Upgrade screen**: mockup first. Replace the "Manage your plan in a browser at getlogit.app" text
-      (`settings/+page.svelte`, `clients/+page.svelte`).
+- [x] **Android billing plugin** (2026-11-14, `PlayBillingPlugin.java`, Play Billing Library 8.3.0): products,
+      buy (obfuscatedAccountId = Logit user id; Pro <-> Studio replaces the old token), owned purchases, Play's
+      subscription page, `purchasesUpdated` event. Every token goes to `/billing/google/verify`, after buying
+      and on every start (restore, purchases finished while closed).
+- [x] **In-app plan screens** (2026-11-14, approved mockup https://claude.ai/artifact/Qzf4qUQFpVxY91352b7Xin):
+      `/plans`, plan card in Settings › Account (every state, self-hosted too), Studio lock card on Coaching,
+      delete-account warning while a Play subscription renews. Checked on the lab emulator against a local API
+      (no Play Store there, so the "couldn't load prices" path); real purchases need Play Console + license testers.
+      Billing Library 9.x exists; moving to it is a later job (the plan-change call is deprecated in 8.1+).
 - [ ] **logit-web `/upgrade`**: say "subscribe in the app" instead of going to Stripe.
 - [x] **VPS deploy files** (2026-11-13, `deploy/production`): Caddy + API + Postgres 17 + logit-web,
       `deploy-server.yml` builds images to GHCR and deploys on push to main, forwarded headers
