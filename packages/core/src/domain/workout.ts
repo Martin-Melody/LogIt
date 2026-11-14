@@ -1506,3 +1506,24 @@ export function clearRest(session: WorkoutSession, setId: string, startedAtMs?: 
   });
   return changed ? { ...session, blocks } : session;
 }
+
+/**
+ * One rest at a time: ends every running rest except the one on `keepSetId`. Called when a
+ * set starts a rest, so ticking the next set quickly replaces the previous set's timer
+ * instead of running two (two bars, two alerts). Returns the same session object when
+ * nothing changed.
+ */
+export function clearOtherRests(session: WorkoutSession, keepSetId: string): WorkoutSession {
+  let changed = false;
+  const other = (s: { id: string; restStartedAtMs?: number | null }) =>
+    s.id !== keepSetId && typeof s.restStartedAtMs === "number";
+  const blocks = session.blocks.map((block) => {
+    if (block.type !== "strength" && block.type !== "mobility") return block;
+    const data = block.data as StrengthBlockData | MobilityBlockData;
+    if (!data.sets.some(other)) return block;
+    changed = true;
+    const sets = data.sets.map((s) => (other(s) ? { ...s, restStartedAtMs: null } : s));
+    return { ...block, data: { ...data, sets } };
+  });
+  return changed ? { ...session, blocks } : session;
+}

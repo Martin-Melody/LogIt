@@ -24,4 +24,10 @@ export type Reasoning = {
   confidence: ReasoningConfidence;
   /** The label/decision this reasoning produced, restated for display next to the raw numbers. */
   verdict: string;
+  /**
+   * The same reasoning in plain sentences for the person reading it ("You set a new best
+   * last session."). Shown first; the raw inputs/computed numbers sit behind "Show the
+   * numbers". Optional so community plugins that don't write it still work.
+   */
+  summary?: string[];
 };

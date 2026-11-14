@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { prText } from "$lib/components/social/prText";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -247,8 +248,7 @@
       {:else if source.type === "PersonalRecord"}
         <h2 class="text-xl font-bold -mt-1">{payload.exerciseName}</h2>
         <p class="text-sm text-muted-foreground">
-          {#if payload.weight}{payload.weight}{payload.unit ?? "kg"}{/if}
-          {#if payload.reps} × {payload.reps} reps{/if}
+          {prText(payload.weight, payload.unit, payload.reps)}
         </p>
       {/if}
     </div>

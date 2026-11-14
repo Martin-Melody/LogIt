@@ -65,9 +65,9 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [ ] **Launch plugins**: the registry only has samples. Write 5–8 useful ones (e.g. 5/3/1, GZCL,
       RPE-based progression, an RPE calculator card, a deload reminder, kettlebell/machine packs) so the
       marketplace the website sells isn't four demos.
-- [ ] **App bugs seen while taking screenshots**: two rest timers at once when ticking sets quickly;
-      exercise chart y-axis labels clipped and x-axis dates overlapping; PR card "200kg × 1 reps";
-      "Why progressing?" sheet reads like debug output; a habit icon set to a Lucide name shows as text.
+- [x] **App bugs seen while taking screenshots** (2026-11-14): one rest at a time (ticking the next set ends the
+      previous rest); exercise chart labels fit; PR cards say "200 kg × 1 rep"; the "Why?" sheet leads with plain
+      sentences (numbers behind "Show the numbers", app and dashboard); habit icons given as Lucide names draw the icon.
 - [x] **Admin key hardening** (2026-11-13): constant-time check, 10 wrong keys from one address
       lock it out for 15 minutes, startup warning for keys under 24 characters. Applies to the hosted
       server too.
