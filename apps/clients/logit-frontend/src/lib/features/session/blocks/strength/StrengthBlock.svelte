@@ -12,6 +12,7 @@
     setTypeMeta,
     applySetPlan,
     strengthRestMs,
+    clearOtherRests,
   } from "@logit/core/domain/workout";
   import { suggestionToPlan } from "@logit/core/domain/progression";
   import { warmupSets } from "@logit/core/domain/warmup";
@@ -279,14 +280,15 @@
     const setType = patch.setType ?? set.setType;
     const effectiveRest = patch.restDurationMs ?? groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[setType];
     const startsRest = groupRestMs !== 0 && effectiveRest !== undefined;
-    await onMutate((s: WorkoutSession) =>
-      updateSet(s, blockId, setId, {
+    await onMutate((s: WorkoutSession) => {
+      const next = updateSet(s, blockId, setId, {
         ...patch,
         ...(startsRest && groupRest() !== undefined && patch.restDurationMs === undefined ? { restDurationMs: groupRest() } : {}),
         completed: true,
         restStartedAtMs: startsRest ? Date.now() : null,
-      }),
-    );
+      });
+      return startsRest ? clearOtherRests(next, setId) : next;
+    });
     void triggerHaptic();
   }
 
@@ -345,15 +347,17 @@
     const effectiveRest = groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[set.setType];
     const startsRest = groupRestMs !== 0 && effectiveRest !== undefined;
 
-    await onMutate((s: WorkoutSession) =>
-      updateSet(s, blockId, setId, {
+    await onMutate((s: WorkoutSession) => {
+      const next = updateSet(s, blockId, setId, {
         ...(fill ?? {}),
         // The rest bar reads the set's rest, so a group rest is written onto the set.
         ...(!wasCompleted && startsRest && groupRest() !== undefined ? { restDurationMs: groupRest() } : {}),
         completed: !wasCompleted,
         restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
-      }),
-    );
+      });
+      // One rest at a time: a new rest replaces the previous set's.
+      return !wasCompleted && startsRest ? clearOtherRests(next, setId) : next;
+    });
 
     // The rest service (restTimerService.ts) sees restStartedAtMs change and schedules or
     // cancels the alert itself.

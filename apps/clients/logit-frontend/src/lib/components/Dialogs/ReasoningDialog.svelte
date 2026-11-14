@@ -11,18 +11,25 @@
 
   const CONFIDENCE_META: Record<ReasoningConfidence, { label: string; class: string }> = {
     low: {
-      label: "Low confidence — not much data yet",
+      label: "Not much data yet, so take this lightly",
       class: "text-warning border-warning/40 bg-warning/10",
     },
     medium: {
-      label: "Medium confidence",
+      label: "Fairly sure",
       class: "text-info border-info/40 bg-info/10",
     },
     high: {
-      label: "High confidence",
+      label: "Based on plenty of sessions",
       class: "text-success border-success/40 bg-success/10",
     },
   };
+
+  const hasNumbers = $derived(
+    Object.keys(reasoning.inputs).length > 0 || Object.keys(reasoning.computed).length > 0,
+  );
+  const summary = $derived(reasoning.summary?.filter(Boolean) ?? []);
+  // Short verdicts read as a title ("Why progressing?"); long ones go in the body.
+  const shortVerdict = $derived(reasoning.verdict.length <= 24);
 
   // camelCase -> "Camel case" for display, without a dependency.
   function formatKey(key: string): string {
@@ -47,8 +54,10 @@
 
   <Dialog.Content class="sm:max-w-[420px]">
     <Dialog.Header>
-      <Dialog.Title>Why "{reasoning.verdict}"?</Dialog.Title>
-      <Dialog.Description>What this looked at and computed to reach that.</Dialog.Description>
+      <Dialog.Title>{shortVerdict ? `Why ${reasoning.verdict}?` : "Why this suggestion?"}</Dialog.Title>
+      {#if !shortVerdict}
+        <Dialog.Description class="first-letter:uppercase">{reasoning.verdict}</Dialog.Description>
+      {/if}
     </Dialog.Header>
 
     <div class="flex flex-col gap-3 text-sm">
@@ -60,28 +69,41 @@
         {CONFIDENCE_META[reasoning.confidence].label}
       </span>
 
-      {#if Object.keys(reasoning.inputs).length > 0}
-        <div>
-          <p class="text-xs font-medium text-muted-foreground mb-1">Looked at</p>
-          <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
-            {#each Object.entries(reasoning.inputs) as [key, value] (key)}
-              <dt class="text-muted-foreground">{formatKey(key)}</dt>
-              <dd class="text-right tabular-nums">{formatValue(value)}</dd>
-            {/each}
-          </dl>
-        </div>
+      {#if summary.length > 0}
+        <ul class="flex flex-col gap-1.5 text-sm leading-snug">
+          {#each summary as line (line)}<li>{line}</li>{/each}
+        </ul>
       {/if}
 
-      {#if Object.keys(reasoning.computed).length > 0}
-        <div>
-          <p class="text-xs font-medium text-muted-foreground mb-1">Computed</p>
-          <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
-            {#each Object.entries(reasoning.computed) as [key, value] (key)}
-              <dt class="text-muted-foreground">{formatKey(key)}</dt>
-              <dd class="text-right tabular-nums">{formatValue(value)}</dd>
-            {/each}
-          </dl>
-        </div>
+      {#if hasNumbers}
+        <details class="group text-xs" open={summary.length === 0}>
+          <summary class="cursor-pointer select-none text-muted-foreground hover:text-foreground">Show the numbers</summary>
+          <div class="mt-2 flex flex-col gap-3">
+          {#if Object.keys(reasoning.inputs).length > 0}
+            <div>
+              <p class="text-xs font-medium text-muted-foreground mb-1">Looked at</p>
+              <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
+                {#each Object.entries(reasoning.inputs) as [key, value] (key)}
+                  <dt class="text-muted-foreground">{formatKey(key)}</dt>
+                  <dd class="text-right tabular-nums">{formatValue(value)}</dd>
+                {/each}
+              </dl>
+            </div>
+          {/if}
+
+          {#if Object.keys(reasoning.computed).length > 0}
+            <div>
+              <p class="text-xs font-medium text-muted-foreground mb-1">Computed</p>
+              <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
+                {#each Object.entries(reasoning.computed) as [key, value] (key)}
+                  <dt class="text-muted-foreground">{formatKey(key)}</dt>
+                  <dd class="text-right tabular-nums">{formatValue(value)}</dd>
+                {/each}
+              </dl>
+            </div>
+          {/if}
+          </div>
+        </details>
       {/if}
     </div>
 

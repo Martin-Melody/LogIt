@@ -1,4 +1,5 @@
 <script lang="ts">
+  import HabitIcon from "$lib/features/habits/HabitIcon.svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { Button } from "$lib/components/ui/button";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -150,7 +151,7 @@
             ? 'text-muted-foreground line-through'
             : ''}"
         >
-          {#if row.habit.icon}{row.habit.icon}&nbsp;{/if}{row.habit.name}
+          {#if row.habit.icon}<HabitIcon icon={row.habit.icon} />&nbsp;{/if}{row.habit.name}
         </span>
         <span class="text-xs text-muted-foreground">
           {cadenceLabel(row.habit)}
@@ -253,7 +254,7 @@
                 onclick={() => void goto(`/habits/${h.id}`)}
               >
                 <span class="block truncate text-sm font-medium text-muted-foreground">
-                  {#if h.icon}{h.icon}&nbsp;{/if}{h.name}
+                  {#if h.icon}<HabitIcon icon={h.icon} />&nbsp;{/if}{h.name}
                 </span>
                 <span class="text-xs text-muted-foreground">{cadenceLabel(h)}</span>
               </button>
