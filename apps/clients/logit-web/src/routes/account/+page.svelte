@@ -140,7 +140,8 @@
   }
 </script>
 
-<div class="max-w-xl mx-auto flex flex-col gap-4">
+<div class="max-w-[760px] mx-auto flex flex-col gap-4">
+  <h1 class="text-[26px] font-bold tracking-tight">Account</h1>
   <Card.Root>
     <Card.Header class="pb-2">
       <Card.Title>Profile</Card.Title>

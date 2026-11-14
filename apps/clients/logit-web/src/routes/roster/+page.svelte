@@ -86,7 +86,7 @@
 
 <div class="flex flex-col gap-4">
   <div class="flex items-center justify-between">
-    <h1 class="text-lg font-semibold">Roster</h1>
+    <h1 class="text-[26px] font-bold tracking-tight">Roster</h1>
     {#if !loading && roster.length > 0}
       <div class="flex items-center gap-3 text-xs text-muted-foreground">
         <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-red-500"></span>{counts.red} need attention</span>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { curveNatural } from "d3-shape";
+  import { curveMonotoneX } from "d3-shape";
   import { scaleUtc } from "d3-scale";
   import { AreaChart } from "layerchart";
   import * as Chart from "$lib/components/ui/chart";
@@ -123,15 +123,18 @@
       </div>
     {/if}
     {#if chartData.length >= 2}
-      <Chart.Container config={chartConfig} class="max-h-48 w-full">
+      <Chart.Container config={chartConfig} class="h-56 w-full">
         <AreaChart
           data={chartData}
           x="date"
           xScale={scaleUtc()}
+          yNice={4}
+          padding={{ top: 8, right: 16, bottom: 24, left: 56 }}
           series={[{ key: "value", label: currentSeries?.label ?? "", color: chartConfig.value.color }]}
           props={{
             area: {
-              curve: curveNatural,
+              // Monotone: never overshoots the points it joins (curveNatural looped past them).
+              curve: curveMonotoneX,
               fillOpacity: 0.3,
               line: { class: "stroke-1" },
               motion: "tween",
@@ -139,10 +142,15 @@
             xAxis: {
               format: (v: Date) =>
                 v.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+              ticks: 5,
             },
+            // No rotated axis title (it overlapped the numbers); the unit rides on the ticks
+            // and the switcher above names the metric.
             yAxis: {
-              label: currentDef?.unit ? `${currentSeries?.label ?? ""} (${currentDef.unit})` : currentSeries?.label,
-              format: (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
+              format: (v: number) => {
+                const n = Number.isInteger(v) ? String(v) : v.toFixed(1);
+                return currentDef?.unit ? `${n} ${currentDef.unit}` : n;
+              },
               ticks: 4,
             },
           }}

@@ -26,6 +26,9 @@
     </div>
     <span class="text-xs text-muted-foreground">{story.statusDetail}</span>
   </div>
+  {#if story.trendReasoning.summary?.length}
+    <p class="text-[13px] leading-normal">{story.trendReasoning.summary.join(" ")}</p>
+  {/if}
   {#if story.nextTarget}
     <div class="flex items-center gap-2 flex-wrap">
       <p class="text-sm">

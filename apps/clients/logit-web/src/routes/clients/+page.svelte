@@ -107,7 +107,7 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <h1 class="text-lg font-semibold">Clients</h1>
+  <h1 class="text-[26px] font-bold tracking-tight">Clients</h1>
 
   {#if loading}
     <div class="flex flex-col gap-3">

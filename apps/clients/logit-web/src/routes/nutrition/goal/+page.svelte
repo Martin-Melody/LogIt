@@ -206,7 +206,7 @@
 <div class="flex flex-col gap-4 max-w-2xl">
   <div>
     <a href="/nutrition" class="text-xs text-muted-foreground hover:text-foreground">&larr; Nutrition</a>
-    <h1 class="text-lg font-semibold mt-1">Nutrition goal</h1>
+    <h1 class="mt-1 text-[26px] font-bold tracking-tight">Nutrition goal</h1>
   </div>
 
   {#if error}
