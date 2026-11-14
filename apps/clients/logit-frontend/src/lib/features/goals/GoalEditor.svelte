@@ -199,7 +199,7 @@
         <div class="flex h-10 items-center justify-between gap-2 rounded-md bg-muted px-2">
           <span class="truncate text-sm">{exercise.name}</span>
           {#if !seed}
-            <button type="button" class="h-9 shrink-0 text-xs text-primary" onclick={() => (exercise = null)}>Change</button>
+            <button type="button" class="h-10 shrink-0 text-xs text-primary" onclick={() => (exercise = null)}>Change</button>
           {/if}
         </div>
       {:else}
