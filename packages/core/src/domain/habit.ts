@@ -83,8 +83,10 @@ export function createHabitEntry(
     dateIso,
     done: true,
     createdAtMs: now,
-    updatedAtMs: now,
     ...patch,
+    // Always now, even when the patch is the old entry: the server keeps whichever copy is
+    // newer, so an edit stamped with the old time (unticking, changing a number) was dropped.
+    updatedAtMs: now,
   };
 }
 

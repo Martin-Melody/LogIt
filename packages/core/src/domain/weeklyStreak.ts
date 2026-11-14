@@ -56,6 +56,27 @@ export function clampWeeklyTarget(n: number): number {
   return Math.min(MAX_WEEKLY_TARGET, Math.max(1, Math.round(n)));
 }
 
+/**
+ * A new weekly target, recorded from this week on: past weeks keep the target they had, and
+ * changing it twice in one week keeps the last. Returns the new target and history.
+ */
+export function withWeeklyTarget(
+  current: { weeklyTarget: number; targetHistory?: TargetChange[] },
+  n: number,
+  todayIso: string,
+): { weeklyTarget: number; targetHistory: TargetChange[] } {
+  const target = clampWeeklyTarget(n);
+  const thisWeek = weekStartIso(todayIso);
+  // First change: everything before it keeps the old target.
+  const history = current.targetHistory?.length
+    ? current.targetHistory
+    : [{ fromIso: "0000-01-01", target: current.weeklyTarget }];
+  return {
+    weeklyTarget: target,
+    targetHistory: [...history.filter((c) => c.fromIso !== thisWeek), { fromIso: thisWeek, target }],
+  };
+}
+
 function isPaused(iso: string, pauses: StreakPause[], todayIso: string): boolean {
   return pauses.some((p) => iso >= p.startIso && iso <= (p.endIso ?? todayIso));
 }

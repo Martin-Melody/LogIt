@@ -4,10 +4,10 @@ import { createGoal, mergeGoals, type Goal, type GoalTarget } from "@logit/core/
 import {
   clampWeeklyTarget,
   DEFAULT_WEEKLY_TARGET,
+  withWeeklyTarget,
   type StreakPause,
   type TargetChange,
 } from "@logit/core/domain/weeklyStreak";
-import { weekStartIso } from "@logit/core/domain/dateIso";
 import { localDateIso } from "@logit/core/domain/nutrition";
 import { getActiveOwnerId, onActiveOwnerChange } from "$lib/data/activeOwner";
 
@@ -106,15 +106,7 @@ function createGoalsStore() {
     },
     setWeeklyTarget(n: number) {
       const s = read();
-      const target = clampWeeklyTarget(n);
-      const thisWeek = weekStartIso(localDateIso());
-      // First change: everything before it keeps the old target.
-      const history = s.streak.targetHistory?.length
-        ? s.streak.targetHistory
-        : [{ fromIso: "0000-01-01", target: s.streak.weeklyTarget }];
-      // A change applies from this week on; changing it twice in a week keeps the last.
-      const targetHistory = [...history.filter((c) => c.fromIso !== thisWeek), { fromIso: thisWeek, target }];
-      commit({ ...s, streak: { ...s.streak, weeklyTarget: target, targetHistory, updatedAtMs: Date.now() } });
+      commit({ ...s, streak: { ...s.streak, ...withWeeklyTarget(s.streak, n, localDateIso()), updatedAtMs: Date.now() } });
     },
     /** Pause from today until `endIso` (inclusive), or open-ended. */
     startPause(endIso: string | null = null) {
