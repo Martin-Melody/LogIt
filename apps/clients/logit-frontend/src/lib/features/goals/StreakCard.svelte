@@ -57,11 +57,11 @@
       </div>
       <div class="flex flex-col items-end gap-0.5">
         <div class="flex items-center">
-          <button type="button" class="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Fewer days a week" disabled={target <= 1} onclick={() => goalsStore.setWeeklyTarget(target - 1)}>
+          <button type="button" class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Fewer days a week" disabled={target <= 1} onclick={() => goalsStore.setWeeklyTarget(target - 1)}>
             <Minus class="h-4 w-4" />
           </button>
           <span class="w-5 text-center text-sm font-semibold tabular-nums">{target}</span>
-          <button type="button" class="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="More days a week" disabled={target >= MAX_WEEKLY_TARGET} onclick={() => goalsStore.setWeeklyTarget(target + 1)}>
+          <button type="button" class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="More days a week" disabled={target >= MAX_WEEKLY_TARGET} onclick={() => goalsStore.setWeeklyTarget(target + 1)}>
             <Plus class="h-4 w-4" />
           </button>
         </div>
@@ -98,7 +98,7 @@
         <p class="text-xs text-muted-foreground">
           Paused since {fmtIso(openPause.startIso)}{openPause.endIso ? `, until ${fmtIso(openPause.endIso)}` : ""}
         </p>
-        <button type="button" class="flex h-9 items-center gap-1.5 text-xs font-medium text-primary" onclick={() => goalsStore.endPause()}>
+        <button type="button" class="flex h-10 items-center gap-1.5 text-xs font-medium text-primary" onclick={() => goalsStore.endPause()}>
           <Play class="h-3.5 w-3.5" /> Resume
         </button>
       {:else if pausePicker}
@@ -108,10 +108,10 @@
           <button type="button" class={chip(false)} onclick={() => pauseFor(2)}>2 weeks</button>
           <button type="button" class={chip(false)} onclick={() => pauseFor(null)}>Until I resume</button>
         </div>
-        <button type="button" class="h-9 text-xs text-muted-foreground" onclick={() => (pausePicker = false)}>Cancel</button>
+        <button type="button" class="h-10 text-xs text-muted-foreground" onclick={() => (pausePicker = false)}>Cancel</button>
       {:else}
         <p class="text-xs text-muted-foreground">Injured or away? Pausing keeps your streak.</p>
-        <button type="button" class="flex h-9 shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground" onclick={() => (pausePicker = true)}>
+        <button type="button" class="flex h-10 shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground" onclick={() => (pausePicker = true)}>
           <Pause class="h-3.5 w-3.5" /> Pause
         </button>
       {/if}

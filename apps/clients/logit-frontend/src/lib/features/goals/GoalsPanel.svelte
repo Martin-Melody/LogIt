@@ -43,7 +43,7 @@
 
   <div class="flex items-center justify-between px-1 pt-1">
     <h2 class="text-sm font-semibold">Goals</h2>
-    <Button size="sm" variant="ghost" href="/progress/goals/new" class="h-9 gap-1">
+    <Button size="sm" variant="ghost" href="/progress/goals/new" class="h-10 gap-1">
       <Plus class="h-4 w-4" /> Add goal
     </Button>
   </div>

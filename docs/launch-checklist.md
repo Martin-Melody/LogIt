@@ -91,10 +91,9 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [x] **Nightly off-site database backups** to Cloudflare R2 (2026-11-13): 03:30 UTC dump, weekly automatic
       restore test, failure emails to ALERT_EMAIL. Runbook in `deploy/production/README.md`.
 - [x] **Email**: Resend SMTP on the server (2026-11-13); password-reset send succeeded, delivery to be confirmed by Martin.
-- [ ] **Get CI green again (next up, before Play Billing).** 9 E2E tests fail on main since before the invites
-      merge: auth-flow "Use getlogit.app instead"; progression analytics (assisted, bodyweight); sessions history
-      (list, superset detail); splits start-session (Start button, replace confirm, circuit); tap-targets on /progress.
-      Also 7 svelte-check errors in logit-web `routes/nutrition/goal/+page.svelte` (Promise type).
+- [x] **CI green again** (2026-11-14). The 9 E2E failures were tests left behind by the sessions, goals and
+      splits redesigns, plus 36px streak/goal buttons on /progress (now 40px). The dashboard's goal preview now
+      handles async nutrition algorithms (the 7 svelte-check errors), and CI builds and checks the dashboard too.
 - [ ] `POST /auth/login` with a missing field returns 500 instead of 400 (seen 2026-11-13; other
       endpoints probably the same).
 

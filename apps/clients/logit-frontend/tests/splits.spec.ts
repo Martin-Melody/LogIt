@@ -54,7 +54,7 @@ test.describe("start a session from a split day", () => {
     await page.goto(`/splits/${SPLIT_ID}`);
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: /Start a workout from Push/ }).click();
+    await page.getByRole("button", { name: /Start a workout from .*Push/ }).click();
 
     await expect(page).toHaveURL(/\/session\/current$/);
     await expect(page.getByRole("main")).toContainText("Bench Press");
@@ -66,13 +66,13 @@ test.describe("start a session from a split day", () => {
     await page.goto(`/splits/${SPLIT_ID}`);
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: /Start a workout from Push/ }).click();
+    await page.getByRole("button", { name: /Start a workout from .*Push/ }).click();
     await expect(page.getByText("Replace your current workout?")).toBeVisible();
 
     await page.getByRole("button", { name: "Keep current" }).click();
     await expect(page).toHaveURL(/\/splits\//);
 
-    await page.getByRole("button", { name: /Start a workout from Push/ }).click();
+    await page.getByRole("button", { name: /Start a workout from .*Push/ }).click();
     await page.getByRole("button", { name: "Start this day" }).click();
     await expect(page).toHaveURL(/\/session\/current$/);
     await expect(page.getByRole("main")).toContainText("Bench Press");
@@ -114,16 +114,17 @@ test.describe("a split day with a circuit", () => {
       );
     });
     await page.goto("/splits/split-c");
-    await page.getByRole("button", { name: /Start a workout from Hips/ }).click();
+    await page.getByRole("button", { name: /Start a workout from .*Hips/ }).click();
     await page.waitForURL("**/session/current");
 
     await expect(page.getByRole("button", { name: "Edit Hip opener" })).toBeVisible();
-    await expect(page.getByRole("main")).toContainText("2 exercises · 3 rounds · 1 min rest");
+    await expect(page.getByRole("main")).toContainText("Circuit · 2 exercises · round 1 of 3");
     const draft = await page.evaluate(() => JSON.parse(localStorage.getItem("logit:draft:v1") ?? "null"));
     const drills = draft.blocks.filter((b: { type: string }) => b.type === "mobility");
     expect(drills.map((b: { data: { sets: unknown[] } }) => b.data.sets.length)).toEqual([3, 6]);
     expect(drills[0].data.sets.every((s: { targetSec: number }) => s.targetSec === 20)).toBe(true);
     expect(drills.every((b: { data: { superset?: { label: string } } }) => b.data.superset?.label === "Hip opener")).toBe(true);
+    expect(drills[0].data.superset.roundRestMs).toBe(60000);
   });
 });
 
