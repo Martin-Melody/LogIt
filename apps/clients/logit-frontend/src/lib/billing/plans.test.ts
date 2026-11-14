@@ -107,4 +107,13 @@ describe("plan card", () => {
   it("an expired plan reads as Free", () => {
     expect(planCardModel(sub({ state: "expired", grantsAccess: false }), opts).title).toBe("Free");
   });
+
+  it("the dashboard links Google plans to Play's page and Stripe plans to the portal", () => {
+    const web = { ...opts, canBuyHere: false, manageGoogle: true, stripePortal: true };
+    expect(planCardModel(sub({ state: "gracePeriod" }), web).primary?.action).toBe("fixPayment");
+    expect(planCardModel(sub({}), web).secondary).toBeNull();
+    const stripe = planCardModel(sub({ source: "stripe" }), web);
+    expect(stripe.primary).toEqual({ action: "portal", label: "Manage subscription" });
+    expect(planCardModel({ tier: "Free", subscriptionActive: false, subscription: null }, web).text).toContain("Android app");
+  });
 });

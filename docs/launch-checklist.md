@@ -60,8 +60,8 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [x] **Website** (2026-11-13, branch `feat/website`): `apps/clients/website` replaces `logit-marketing`
       and `docs-site`; real app screenshots; shared look in `packages/ui` (app pixel-identical, dashboard
       now uses Inter and the app's radius). Mockup: https://claude.ai/artifact/4f61FUPJXu4rpxdV3qq2Ud
-- [ ] **Let Free users reach the dashboard's Account page** (`logit-web` sends them to /upgrade), so
-      "delete your account on the web" works for everyone, not just Pro/Studio.
+- [x] **Free users can reach the dashboard's Account page** (2026-11-14), so "delete your account on the web"
+      works for everyone, not just Pro/Studio.
 - [ ] **Launch plugins**: the registry only has samples. Write 5–8 useful ones (e.g. 5/3/1, GZCL,
       RPE-based progression, an RPE calculator card, a deload reminder, kettlebell/machine packs) so the
       marketplace the website sells isn't four demos.
@@ -99,7 +99,9 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       delete-account warning while a Play subscription renews. Checked on the lab emulator against a local API
       (no Play Store there, so the "couldn't load prices" path); real purchases need Play Console + license testers.
       Billing Library 9.x exists; moving to it is a later job (the plan-change call is deprecated in 8.1+).
-- [ ] **logit-web `/upgrade`**: say "subscribe in the app" instead of going to Stripe.
+- [x] **logit-web `/upgrade`** (2026-11-14): says "subscribe in the app" (Stripe buttons only if `Billing:WebCheckout`).
+      Account shows the same plan card as the app (`@logit/core/api/planCard`), with Google Play / Stripe portal
+      buttons and the "deleting doesn't cancel it" warning. Stopgap until the dashboard redesign.
 - [x] **VPS deploy files** (2026-11-13, `deploy/production`): Caddy + API + Postgres 17 + logit-web,
       `deploy-server.yml` builds images to GHCR and deploys on push to main, forwarded headers
       (`Proxy:TrustForwardedHeaders`, Caddy trusts CF-Connecting-IP only from Cloudflare). Live and verified.
