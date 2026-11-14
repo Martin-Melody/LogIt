@@ -43,7 +43,7 @@ jobs:
           "$GITHUB_WORKSPACE/scripts/check-migrations-sync.sh"
 
   web:
-    name: Web (core / frontend / marketing)
+    name: Web (core / frontend / dashboard / website)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +70,10 @@ jobs:
       - name: frontend — svelte-check
         working-directory: apps/clients/logit-frontend
         run: npm run check
+
+      - name: dashboard — build + svelte-check
+        working-directory: apps/clients/logit-web
+        run: npm run build && npm run check
 
       - name: website — build + svelte-check
         working-directory: apps/clients/website

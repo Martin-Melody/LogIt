@@ -532,7 +532,7 @@ test.describe("exercise type — assisted", () => {
 // ── Analytics — exercise type and excluded sessions ───────────────────────────
 
 async function goToProgress(page: Page, exerciseName: string) {
-  await page.goto("/progress");
+  await page.goto("/progress?tab=exercises");
   await page.waitForLoadState("networkidle");
   // Click the exercise in the list if it's not already auto-selected
   const btn = page.getByRole("button", { name: exerciseName, exact: false });

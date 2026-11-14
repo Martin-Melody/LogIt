@@ -139,8 +139,9 @@ test.describe("self-hosted server setup", () => {
     await setServerMode(page, "selfhosted", "https://logit.example.com");
     await goToAuth(page);
 
-    await page.getByRole("button", { name: /Connect to a different server/i }).click();
-    await page.getByRole("button", { name: /Use logit\.ie instead/i }).click();
+    // With a self-hosted server saved, the toggle reads "Change server".
+    await page.getByRole("button", { name: "Change server" }).click();
+    await page.getByRole("button", { name: /Use getlogit\.app instead/i }).click();
 
     await expect(page.getByText("getlogit.app")).toBeVisible();
 
