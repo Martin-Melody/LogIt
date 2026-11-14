@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(FileSaverPlugin.class);
+        registerPlugin(PlayBillingPlugin.class);
         super.onCreate(savedInstanceState);
         // The app is served from https://localhost, so without this the WebView's
         // mixed-content policy silently blocks every http:// request to a self-hosted

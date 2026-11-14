@@ -1,27 +1,35 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
   import { apiClient, ApiError } from "@logit/core/api/client";
   import { Button } from "$lib/components/ui/button";
   import * as Alert from "$lib/components/ui/alert";
 
+  // Where a Free account on the hosted server lands. Plans are sold in the Android app
+  // (Google Play); web checkout through Stripe only shows when the server turns it on
+  // (Billing:WebCheckout).
   const user = $derived(apiClient.getUser());
+  const MARKETING_URL: string = import.meta.env.VITE_MARKETING_URL || "https://getlogit.app";
+  const PRICING_URL = `${MARKETING_URL}/pricing`;
+  const PLAY_URL = "https://play.google.com/store/apps/details?id=ie.logit.app";
 
-  // Falls back to the live Cloudflare Pages URL so this works out of the box; set
-  // VITE_MARKETING_URL at build time once getlogit.app is live.
-  const PRICING_URL: string = `${import.meta.env.VITE_MARKETING_URL || "https://getlogit.app"}/pricing`;
-
+  let webCheckout = $state(false);
   let checkoutLoading = $state<"pro" | "studio" | null>(null);
   let checkoutError = $state<string | null>(null);
+
+  onMount(async () => {
+    try {
+      webCheckout = (await apiClient.getBillingStatus()).webCheckout === true;
+    } catch {
+      // Stay on the app-only wording.
+    }
+  });
 
   async function upgrade(plan: "pro" | "studio") {
     checkoutLoading = plan;
     checkoutError = null;
     try {
-      const url = await apiClient.createCheckoutSession(
-        `${location.origin}/`,
-        `${location.origin}/upgrade`,
-        plan,
-      );
+      const url = await apiClient.createCheckoutSession(`${location.origin}/`, `${location.origin}/upgrade`, plan);
       location.href = url;
     } catch (e) {
       checkoutError = e instanceof ApiError ? e.message : "Couldn't start checkout.";
@@ -34,37 +42,45 @@
   }
 </script>
 
-<div class="min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-sm flex flex-col gap-4 text-center">
-    <h1 class="text-lg font-semibold">This account doesn't include the web dashboard</h1>
+<div class="flex min-h-screen items-center justify-center p-4">
+  <div class="flex w-full max-w-sm flex-col gap-4 text-center">
+    <h1 class="text-lg font-semibold">The dashboard comes with Pro and Studio</h1>
     <p class="text-sm text-muted-foreground">
-      Free accounts work in the LogIt mobile app for the social feed. Cross-device sync, this
-      dashboard, and analytics need a Pro or Studio account — or you can self-host LogIt for
-      full access, free.
+      Your account is on Free, which covers everything on your phone. Pro adds sync between devices and this
+      dashboard; Studio adds coaching clients.
     </p>
 
-    <div class="flex gap-2">
-      <Button class="flex-1" disabled={checkoutLoading !== null} onclick={() => void upgrade("pro")}>
-        {checkoutLoading === "pro" ? "Starting…" : "Upgrade to Pro"}
-      </Button>
-      <Button class="flex-1" variant="outline" disabled={checkoutLoading !== null} onclick={() => void upgrade("studio")}>
-        {checkoutLoading === "studio" ? "Starting…" : "Upgrade to Studio"}
-      </Button>
-    </div>
-    {#if checkoutError}
-      <Alert.Root variant="destructive" class="text-left">
-        <Alert.Description>{checkoutError}</Alert.Description>
-      </Alert.Root>
+    {#if webCheckout}
+      <div class="flex gap-2">
+        <Button class="flex-1" disabled={checkoutLoading !== null} onclick={() => void upgrade("pro")}>
+          {checkoutLoading === "pro" ? "Starting…" : "Upgrade to Pro"}
+        </Button>
+        <Button class="flex-1" variant="outline" disabled={checkoutLoading !== null} onclick={() => void upgrade("studio")}>
+          {checkoutLoading === "studio" ? "Starting…" : "Upgrade to Studio"}
+        </Button>
+      </div>
+      {#if checkoutError}
+        <Alert.Root variant="destructive" class="text-left">
+          <Alert.Description>{checkoutError}</Alert.Description>
+        </Alert.Root>
+      {/if}
+    {:else}
+      <div class="rounded-[10px] border border-border bg-card p-4 text-left text-sm leading-relaxed">
+        <p class="font-medium">Subscribe in the LogIt app</p>
+        <p class="mt-1 text-muted-foreground">
+          On your Android phone, open Settings › Account › See plans, signed in as
+          <span class="font-medium text-foreground">@{user?.username}</span>. Google Play takes the payment, and this
+          dashboard opens straight after.
+        </p>
+      </div>
+      <Button href={PLAY_URL} target="_blank" rel="noopener">Get LogIt on Google Play</Button>
     {/if}
 
-    <a href={PRICING_URL} class="text-xs text-muted-foreground hover:text-foreground underline">
-      Compare plans and pricing
-    </a>
+    <a href={PRICING_URL} class="text-xs text-muted-foreground underline hover:text-foreground">Compare plans</a>
     <p class="text-xs text-muted-foreground">
-      Signed in as <span class="font-medium text-foreground">@{user?.username}</span>
+      Signed in as <span class="font-medium text-foreground">@{user?.username}</span> ·
+      <a href="/account" class="underline hover:text-foreground">Account</a> ·
+      <button type="button" class="underline hover:text-foreground" onclick={logout}>Log out</button>
     </p>
-    <button type="button" class="text-xs text-muted-foreground hover:text-foreground underline" onclick={logout}>
-      Log out
-    </button>
   </div>
 </div>

@@ -101,30 +101,76 @@ twice — see the "Database" section of `infra/aws/README.md` for the exact comm
 a hypothetical: it was a real bug (wrong column type, broke on first write) caught by actually
 running the API against a local Postgres container while building this.
 
-## Billing — two tiers
+## Billing
 
-Three tiers exist: **Free** (self-host, no payment), **Pro** (individual — hosted analytics
-dashboard), **Studio** (personal trainers — everything Pro has, plus inviting clients and
-viewing their training data once they explicitly consent). `services/api`'s `/billing/*`
-endpoints (`Features/Billing/BillingEndpoints.cs`) handle Stripe Checkout for whichever plan the
-client requests + webhooks, setting `UserTier` (`Free`/`Pro`/`Studio`) on the `User` entity.
+Three tiers: **Free**, **Pro** (individual: sync, dashboard, analytics) and **Studio** (personal
+trainers: everything in Pro plus clients). Self-hosted servers have no billing; every account
+gets everything.
 
-Needs four real values from your own Stripe dashboard before any of this actually works — one
-webhook secret, two Price objects (Pro and Studio), one secret key — set as config/secrets, not
-committed:
+**Where plans come from.** Every paid subscription is a row in `BillingSubscriptions` with a
+source (`google`, `apple` or `stripe`), a plan, a state and an end date. `User.Tier` is worked
+out from those rows plus `User.ManualTier` (a plan given by hand in the admin page), in
+`Features/Billing/Entitlements.cs`: the higher of the two counts. Active, cancelled-but-paid-up
+and grace-period subscriptions give access; on hold, paused, expired, refunded and replaced ones
+don't. Nothing should set `User.Tier` directly; call `Entitlements.RecomputeAsync`.
 
-- `Stripe:SecretKey`
-- `Stripe:WebhookSecret` (from the webhook endpoint you register in Stripe, pointed at
-  `https://<api-url>/billing/webhook`)
-- `Stripe:ProPriceId`
-- `Stripe:StudioPriceId`
+**At launch only the Android app sells** (Google Play Billing). Web checkout through Stripe is in
+the code but answers 403 `web_checkout_disabled` unless `Billing:WebCheckout` is `true`. The
+Stripe portal and webhook still work for anyone who pays through Stripe. The App Store (iOS) is
+planned: the source already exists, and a store plugs into the hourly sweep through
+`ISubscriptionRefresher`.
 
-Locally these are empty placeholders in `appsettings.Development.json`; in AWS they're delivered
-via SSM Parameter Store (see `infra/aws/secrets.tf` — defaults to a `"not-configured"`
-placeholder so the rest of the infrastructure can go up before Stripe is ready) — none of this
-was testable end-to-end without a real Stripe account. What *was* verified: `/billing/status`
-(pure DB read, no Stripe call) and `/billing/checkout` failing cleanly at the Stripe API boundary
-with a fake key rather than crashing — see the verification notes in `infra/aws/README.md`.
+### Google Play
+
+1. The app buys with Play Billing, passing the Logit user id as `obfuscatedAccountId`, then sends
+   the purchase token to `POST /billing/google/verify`. The server reads the purchase from the
+   Google Play Developer API (never trusting the app), saves it, works out the tier, and then
+   acknowledges it (Google refunds purchases not acknowledged within 3 days). The app calls the
+   same endpoint for every purchase Play reports on start-up, which covers restores and crashes.
+   Answers: 200 with the billing status, 400 `invalid_purchase`, 409 `other_account` (bought for or
+   already owned by another Logit account), 502 `store_unavailable`, 503 `store_not_configured`.
+2. Google sends Real-time developer notifications (renewal, cancel, grace period, account hold,
+   pause, expiry, refund) through Pub/Sub to `POST /billing/google/notifications?token=…`. The
+   notice only names a purchase token; the server reads the real state from Google again. A
+   notice that can't be handled because Google is unreachable gets a 503, so Pub/Sub retries.
+3. `SubscriptionSweeper` runs hourly: it re-reads any live subscription whose paid period has
+   ended or that hasn't been checked for a day (which also retries acknowledgements), and ends
+   access for stores it can't ask once the paid period is over.
+4. An upgrade, downgrade or resubscribe gives a new token with `linkedPurchaseToken`; the old row
+   becomes `Replaced`.
+
+Config (production `.env` names in brackets):
+
+- `GooglePlay:PackageName`: default `ie.logit.app`.
+- `GooglePlay:ProProductId` / `GooglePlay:StudioProductId`: Play Console subscription ids,
+  default `logit_pro` / `logit_studio` (monthly and yearly are base plans of the same product).
+- `GooglePlay:ServiceAccountJson` (`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, the key on one line:
+  `jq -c . key.json`) or `GooglePlay:ServiceAccountKeyFile` (a path). The service account needs
+  "View financial data" and "Manage orders and subscriptions" in Play Console → Users and
+  permissions, and the Google Play Android Developer API enabled in its Cloud project.
+- `GooglePlay:NotificationToken` (`GOOGLE_PLAY_NOTIFICATION_TOKEN`): a long random string. Create
+  a Pub/Sub topic, grant `google-play-developer-notifications@system.gserviceaccount.com` the
+  Publisher role on it, add a **push** subscription to
+  `https://api.getlogit.app/billing/google/notifications?token=<it>`, and put the topic name in
+  Play Console → Monetization setup → Real-time developer notifications. Its "Send test
+  notification" button should log "Google Play test notification received". Without the token
+  the endpoint answers 404.
+
+### Stripe (off)
+
+`Stripe:SecretKey`, `Stripe:WebhookSecret` (webhook at `https://<api-url>/billing/webhook`, events
+`checkout.session.completed` and `customer.subscription.created/updated/deleted`),
+`Stripe:ProPriceId`, `Stripe:StudioPriceId`, plus `Billing:WebCheckout=true` to sell on the web.
+Never tested with real keys. Checkout refuses (409 `already_subscribed`) anyone who already has
+a plan from another store.
+
+### Status for the app and dashboard
+
+`GET /billing/status` → `{ tier, subscriptionActive, manualTier, subscription, webCheckout }`,
+where `subscription` is the one giving access (else the latest) with `source`, `plan`, `state`
+(`active`, `canceled`, `gracePeriod`, `onHold`, …), `expiresAt`, `autoRenewing`, `grantsAccess`
+and `manageUrl` (Google Play's or the App Store's subscription page; null for Stripe, which uses
+`POST /billing/portal`).
 
 ## PT Studio — coach/client consent flow
 

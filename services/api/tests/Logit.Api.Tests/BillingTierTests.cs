@@ -5,6 +5,7 @@ using Stripe;
 
 namespace Logit.Api.Tests;
 
+/// Stripe subscription -> our state and plan.
 public class BillingTierTests
 {
     private static readonly IConfiguration Config = new ConfigurationBuilder()
@@ -15,9 +16,10 @@ public class BillingTierTests
         })
         .Build();
 
-    private static Subscription Sub(string status, string? priceId) => new()
+    private static Subscription Sub(string status, string? priceId, bool cancelAtPeriodEnd = false) => new()
     {
         Status = status,
+        CancelAtPeriodEnd = cancelAtPeriodEnd,
         Items = new StripeList<SubscriptionItem>
         {
             Data = priceId is null ? [] : [new SubscriptionItem { Price = new Price { Id = priceId } }],
@@ -25,23 +27,31 @@ public class BillingTierTests
     };
 
     [Theory]
-    [InlineData("active", "price_pro", UserTier.Pro)]
-    [InlineData("active", "price_studio", UserTier.Studio)]
-    [InlineData("trialing", "price_studio", UserTier.Studio)]
-    // A card that recovers after a failed payment comes back as active: the paid tier returns.
-    [InlineData("past_due", "price_pro", UserTier.Free)]
-    [InlineData("unpaid", "price_studio", UserTier.Free)]
-    [InlineData("canceled", "price_pro", UserTier.Free)]
-    [InlineData("incomplete_expired", "price_pro", UserTier.Free)]
-    public void Tier_follows_status_and_price(string status, string priceId, UserTier expected)
+    [InlineData("active", false, SubscriptionState.Active)]
+    [InlineData("trialing", false, SubscriptionState.Active)]
+    [InlineData("active", true, SubscriptionState.Canceled)] // cancelled, paid up to period end
+    // A card that recovers after a failed payment comes back as active: access returns.
+    [InlineData("past_due", false, SubscriptionState.OnHold)]
+    [InlineData("unpaid", false, SubscriptionState.OnHold)]
+    [InlineData("canceled", false, SubscriptionState.Expired)]
+    [InlineData("incomplete_expired", false, SubscriptionState.Expired)]
+    [InlineData("incomplete", false, SubscriptionState.Pending)]
+    public void State_follows_stripe_status(string status, bool cancelAtPeriodEnd, SubscriptionState expected)
     {
-        Assert.Equal(expected, BillingEndpoints.TierFor(Sub(status, priceId), Config));
+        Assert.Equal(expected, BillingEndpoints.StateFor(Sub(status, "price_pro", cancelAtPeriodEnd)));
     }
 
     [Fact]
-    public void Unknown_price_leaves_the_tier_alone()
+    public void Plan_follows_the_price()
     {
-        Assert.Null(BillingEndpoints.TierFor(Sub("active", "price_someone_else"), Config));
-        Assert.Null(BillingEndpoints.TierFor(Sub("active", null), Config));
+        Assert.Equal(UserTier.Pro, BillingEndpoints.PlanForPrice(Sub("active", "price_pro"), Config));
+        Assert.Equal(UserTier.Studio, BillingEndpoints.PlanForPrice(Sub("active", "price_studio"), Config));
+    }
+
+    [Fact]
+    public void Unknown_price_gives_no_plan()
+    {
+        Assert.Null(BillingEndpoints.PlanForPrice(Sub("active", "price_someone_else"), Config));
+        Assert.Null(BillingEndpoints.PlanForPrice(Sub("active", null), Config));
     }
 }

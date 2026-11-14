@@ -9,6 +9,7 @@
   import { Label } from "$lib/components/ui/label";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
+  import { planCardModel, type PlanAction } from "@logit/core/api/planCard";
 
   const user = $derived(apiClient.getUser());
   const isSelfHosted = apiClient.isSelfHosted();
@@ -34,6 +35,26 @@
       }
     })();
   });
+
+  const plan = $derived(
+    planCardModel(billing, { selfHosted: isSelfHosted, tier: user?.tier ?? "Free", canBuyHere: false, manageGoogle: true, stripePortal: true }),
+  );
+  const BADGE = {
+    success: "text-success bg-success/12",
+    neutral: "text-primary bg-primary/12",
+    warning: "text-warning bg-warning/12",
+    danger: "text-destructive bg-destructive/14",
+  } as const;
+  // A Google Play subscription that will keep charging after the account is deleted.
+  const paysThroughPlay = $derived(
+    billing?.subscription?.source === "google" && billing.subscription.autoRenewing
+      && !["expired", "revoked"].includes(billing.subscription.state),
+  );
+
+  function runPlanAction(action: PlanAction) {
+    if (action === "portal") void openBillingPortal();
+    else if (billing?.subscription?.manageUrl) window.open(billing.subscription.manageUrl, "_blank", "noopener");
+  }
 
   async function openBillingPortal() {
     portalLoading = true;
@@ -141,20 +162,27 @@
       <Card.Title>Plan</Card.Title>
     </Card.Header>
     <Card.Content class="pt-0 pb-3 flex flex-col gap-3">
-      {#if isSelfHosted}
-        <p class="text-sm text-muted-foreground">Self-hosted — full access, no billing.</p>
-      {:else if billingLoading}
+      {#if !isSelfHosted && billingLoading}
         <Skeleton class="h-4 w-24" />
         <Skeleton class="h-8 w-40" />
       {:else}
-        <p class="text-sm">{user?.tier ?? "Free"} plan</p>
-        {#if user?.tier === "Free"}
-          <Button href={PRICING_URL} size="sm" class="self-start">Upgrade to Pro or Studio</Button>
-        {:else}
-          <Button size="sm" class="self-start" disabled={portalLoading} onclick={() => void openBillingPortal()}>
-            {portalLoading ? "Opening…" : "Manage subscription"}
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-semibold">{plan.title}</span>
+          {#if plan.badge}
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {BADGE[plan.badge.tone]}">{plan.badge.text}</span>
+          {/if}
+          {#if plan.source}<span class="ml-auto text-xs text-muted-foreground">{plan.source}</span>{/if}
+        </div>
+        <p class="text-sm text-muted-foreground">{plan.text}</p>
+        {#if plan.primary}
+          <Button size="sm" class="self-start" variant={plan.quietPrimary ? "outline" : "default"}
+            disabled={portalLoading} onclick={() => runPlanAction(plan.primary!.action)}>
+            {portalLoading ? "Opening…" : plan.primary.label}
           </Button>
           {#if portalError}<p class="text-xs text-destructive">{portalError}</p>{/if}
+        {/if}
+        {#if plan.title === "Free"}
+          <a href={PRICING_URL} class="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Compare plans</a>
         {/if}
       {/if}
     </Card.Content>
@@ -196,6 +224,15 @@
               This can't be undone.
             </AlertDialog.Description>
           </AlertDialog.Header>
+          {#if paysThroughPlay}
+            <Alert.Root class="border-warning/40 bg-warning/10">
+              <Alert.Description class="text-foreground">
+                You still pay for <strong>{billing?.subscription?.plan}</strong> through Google Play. Deleting your account
+                <strong>doesn't cancel it</strong>. Cancel in Google Play first, or you'll keep being charged.
+                <a class="mt-1 block font-semibold underline underline-offset-4" href={billing?.subscription?.manageUrl ?? "https://play.google.com/store/account/subscriptions"} target="_blank" rel="noopener">Open Google Play subscriptions</a>
+              </Alert.Description>
+            </Alert.Root>
+          {/if}
           <Input
             type="password"
             placeholder="Confirm your password"

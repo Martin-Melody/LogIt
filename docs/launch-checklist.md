@@ -49,17 +49,19 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       new one. Store the `.jks` and its password in a password manager plus an offline copy.
 - [ ] **Accountant**: registering as a sole trader / company, income tax on Google payouts. (Google
       collects VAT on Play sales to EU customers; confirm.)
-- [ ] **Google Cloud project + service account** linked to Play Console (Claude will walk you through
-      this when the billing code is ready): the API needs it to check purchases, and Pub/Sub for
-      renewal/cancel notices.
+- [ ] **Google Cloud project + service account** linked to Play Console: the API needs it to check
+      purchases, and Pub/Sub for renewal/cancel notices. Steps in docs/deployment.md "Billing → Google Play";
+      the results go in the server's `.env` as `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` and
+      `GOOGLE_PLAY_NOTIFICATION_TOKEN`. Subscription ids in Play Console: `logit_pro` and `logit_studio`
+      (monthly/yearly as base plans), or tell Claude other names.
 
 ## Claude: can build now (no accounts needed)
 
 - [x] **Website** (2026-11-13, branch `feat/website`): `apps/clients/website` replaces `logit-marketing`
       and `docs-site`; real app screenshots; shared look in `packages/ui` (app pixel-identical, dashboard
       now uses Inter and the app's radius). Mockup: https://claude.ai/artifact/4f61FUPJXu4rpxdV3qq2Ud
-- [ ] **Let Free users reach the dashboard's Account page** (`logit-web` sends them to /upgrade), so
-      "delete your account on the web" works for everyone, not just Pro/Studio.
+- [x] **Free users can reach the dashboard's Account page** (2026-11-14), so "delete your account on the web"
+      works for everyone, not just Pro/Studio.
 - [ ] **Launch plugins**: the registry only has samples. Write 5–8 useful ones (e.g. 5/3/1, GZCL,
       RPE-based progression, an RPE calculator card, a deload reminder, kettlebell/machine packs) so the
       marketplace the website sells isn't four demos.
@@ -78,13 +80,28 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       `Deployment:SelfHosted` is on.
 - [x] **Document the admin page** in the self-hosting guide and `.env.example` (2026-11-13).
 - [ ] **Admin page styling** on the shared theme (cosmetic; it's HTML inside `AdminHtml.cs`).
-- [ ] **Server billing**: plan source (google/stripe), purchase check with Google, renewal / cancel /
-      grace-period / account-hold notices, Stripe checkout switched off. Tested against fake Google responses.
-- [ ] **Android billing plugin**: list plans, buy (tied to the logged-in Logit account), restore,
-      open Play's subscription page.
-- [ ] **In-app Upgrade screen**: mockup first. Replace the "Manage your plan in a browser at getlogit.app" text
-      (`settings/+page.svelte`, `clients/+page.svelte`).
-- [ ] **logit-web `/upgrade`**: say "subscribe in the app" instead of going to Stripe.
+- [x] **Server billing** (2026-11-14, branch `feat/play-billing`): `BillingSubscriptions` table (source
+      google/apple/stripe, plan, state, end date); `User.Tier` worked out from those plus an admin-given plan
+      (`ManualTier`; today's plans carried over as that). `POST /billing/google/verify` checks a purchase with
+      Google, ties it to one Logit account and acknowledges it; Pub/Sub notifications at
+      `/billing/google/notifications`; hourly sweep for missed notices; upgrades/downgrades replace the old
+      subscription; richer `/billing/status` for the app and dashboard; Stripe checkout off
+      (`Billing:WebCheckout`). 45 new tests against fake Google responses; migrations checked on SQLite and
+      Postgres 17. Setup steps: docs/deployment.md "Billing".
+- [ ] **iOS later**: Apple requires In-App Purchase (StoreKit) for subscriptions. The server is ready for an
+      `apple` source; still to build: App Store Server API check + App Store Server Notifications v2.
+- [x] **Android billing plugin** (2026-11-14, `PlayBillingPlugin.java`, Play Billing Library 8.3.0): products,
+      buy (obfuscatedAccountId = Logit user id; Pro <-> Studio replaces the old token), owned purchases, Play's
+      subscription page, `purchasesUpdated` event. Every token goes to `/billing/google/verify`, after buying
+      and on every start (restore, purchases finished while closed).
+- [x] **In-app plan screens** (2026-11-14, approved mockup https://claude.ai/artifact/Qzf4qUQFpVxY91352b7Xin):
+      `/plans`, plan card in Settings › Account (every state, self-hosted too), Studio lock card on Coaching,
+      delete-account warning while a Play subscription renews. Checked on the lab emulator against a local API
+      (no Play Store there, so the "couldn't load prices" path); real purchases need Play Console + license testers.
+      Billing Library 9.x exists; moving to it is a later job (the plan-change call is deprecated in 8.1+).
+- [x] **logit-web `/upgrade`** (2026-11-14): says "subscribe in the app" (Stripe buttons only if `Billing:WebCheckout`).
+      Account shows the same plan card as the app (`@logit/core/api/planCard`), with Google Play / Stripe portal
+      buttons and the "deleting doesn't cancel it" warning. Stopgap until the dashboard redesign.
 - [x] **VPS deploy files** (2026-11-13, `deploy/production`): Caddy + API + Postgres 17 + logit-web,
       `deploy-server.yml` builds images to GHCR and deploys on push to main, forwarded headers
       (`Proxy:TrustForwardedHeaders`, Caddy trusts CF-Connecting-IP only from Cloudflare). Live and verified.

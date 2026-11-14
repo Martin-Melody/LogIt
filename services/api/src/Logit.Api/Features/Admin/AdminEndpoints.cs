@@ -1,5 +1,6 @@
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
+using Logit.Api.Features.Billing;
 using Logit.Api.Features.Auth;
 using Microsoft.EntityFrameworkCore;
 
@@ -235,6 +236,7 @@ public static class AdminEndpoints
                 u.Bio,
                 u.AvatarUrl,
                 Tier = u.Tier.ToString(),
+                ManualTier = u.ManualTier.HasValue ? u.ManualTier.Value.ToString() : null,
                 u.CreatedAt,
                 u.UpdatedAt,
                 PostCount = u.Posts.Count(p => p.DeletedAt == null),
@@ -274,7 +276,13 @@ public static class AdminEndpoints
             .Select(r => new { r.Id, UserId = r.Coach.Id, r.Coach.Username, r.Coach.DisplayName, Status = r.Status.ToString() })
             .ToListAsync();
 
-        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
+        var subscriptions = await db.BillingSubscriptions
+            .Where(s => s.UserId == id)
+            .OrderByDescending(s => s.UpdatedAt)
+            .Select(s => new { Source = s.Source.ToString(), Plan = s.Plan.ToString(), State = s.State.ToString(), s.ExpiresAt, s.AutoRenewing, s.IsTest, s.ProductId })
+            .ToListAsync();
+
+        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.ManualTier, Subscriptions = subscriptions, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
     }
 
     private record UpdateUserRequest(string? DisplayName, string? Email, string? Bio, string? Tier);
@@ -293,8 +301,13 @@ public static class AdminEndpoints
                 return Results.Conflict(new { error = "Email already in use." });
             user.Email = email;
         }
+        // The admin page grants a plan by hand (ManualTier). A paid subscription still counts on
+        // top of it, so setting Free here never takes away a plan someone is paying for.
         if (req.Tier is not null && Enum.TryParse<UserTier>(req.Tier, out var tier))
-            user.Tier = tier;
+        {
+            user.ManualTier = tier == UserTier.Free ? null : tier;
+            await Entitlements.RecomputeAsync(db, user, DateTime.UtcNow);
+        }
 
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();

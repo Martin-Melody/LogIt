@@ -7,6 +7,7 @@ using Logit.Api.Features;
 using Logit.Api.Features.Admin;
 using Logit.Api.Features.Auth;
 using Logit.Api.Features.Billing;
+using Logit.Api.Features.Billing.GooglePlay;
 using Logit.Api.Features.Coach;
 using Logit.Api.Features.Diagnostics;
 using Logit.Api.Features.Email;
@@ -71,6 +72,18 @@ builder.Services
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+
+// Billing. Subscriptions come from Google Play (and later the App Store); Stripe web checkout
+// is off unless Billing:WebCheckout is set. GooglePlayApi is a singleton so its access token is cached.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHttpClient("google-play", c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddSingleton<IGooglePlayApi>(sp => new GooglePlayApi(
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("google-play"),
+    sp.GetRequiredService<IConfiguration>(),
+    sp.GetRequiredService<ILogger<GooglePlayApi>>()));
+builder.Services.AddScoped<GooglePlayBilling>();
+builder.Services.AddScoped<ISubscriptionRefresher>(sp => sp.GetRequiredService<GooglePlayBilling>());
+builder.Services.AddHostedService<SubscriptionSweeper>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

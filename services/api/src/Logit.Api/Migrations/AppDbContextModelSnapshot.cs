@@ -17,6 +17,68 @@ namespace Logit.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.34");
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AutoRenewing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CheckedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsTest")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Plan")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReplacesExternalId")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Source", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("State", "ExpiresAt");
+
+                    b.ToTable("BillingSubscriptions");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Block", b =>
                 {
                     b.Property<Guid>("BlockerId")
@@ -1114,6 +1176,9 @@ namespace Logit.Api.Migrations
                     b.Property<Guid?>("InviteId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ManualTier")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("NutritionGoalJson")
                         .HasColumnType("TEXT");
 
@@ -1142,9 +1207,6 @@ namespace Logit.Api.Migrations
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("StripeSubscriptionId")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("Tier")
                         .HasColumnType("INTEGER");
 
@@ -1166,6 +1228,17 @@ namespace Logit.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Block", b =>
@@ -1662,6 +1735,8 @@ namespace Logit.Api.Migrations
                     b.Navigation("Posts");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("Subscriptions");
                 });
 #pragma warning restore 612, 618
         }
