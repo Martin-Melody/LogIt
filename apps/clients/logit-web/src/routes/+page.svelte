@@ -1,279 +1,125 @@
 <script lang="ts">
-  import { curveNatural } from "d3-shape";
-  import { scaleUtc } from "d3-scale";
-  import { AreaChart } from "layerchart";
-  import * as Card from "$lib/components/ui/card";
-  import * as Chart from "$lib/components/ui/chart";
+  import { apiClient } from "@logit/core/api/client";
   import * as Alert from "$lib/components/ui/alert";
+  import { Button } from "$lib/components/ui/button";
   import { Skeleton } from "$lib/components/ui/skeleton";
-  import { getWebDeps } from "$lib/deps";
+  import ArrowLeft from "@lucide/svelte/icons/arrow-left";
+  import ArrowRight from "@lucide/svelte/icons/arrow-right";
+  import X from "@lucide/svelte/icons/x";
   import { viewingClient } from "$lib/viewingClient.svelte";
-  import { getExercises } from "@logit/core/domain/workout";
-  import type { WorkoutSession } from "@logit/core/domain/workout";
-  import { getProgressData, type ExerciseProgressData } from "@logit/core/usecases/progression/getProgressData";
+  import { loadOverview, type OverviewData } from "$lib/features/overview/overviewData";
+  import { createLayout, SIZE_LABEL, SPAN, WIDGETS, type WidgetId } from "$lib/features/overview/layout.svelte";
+  import OverviewWidget from "$lib/features/overview/OverviewWidget.svelte";
 
-  let loading = $state(true);
+  let data = $state<OverviewData | null>(null);
   let error = $state<string | null>(null);
-  let sessions = $state<WorkoutSession[]>([]);
-  let exercises = $state<ExerciseProgressData[]>([]);
+  let editing = $state(false);
+  let dragging = $state<WidgetId | null>(null);
 
-  const today = new Date();
-  const currentYear = today.getFullYear();
-
-  function toKey(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
-
-  function mondayOnOrBefore(d: Date): Date {
-    const day = d.getDay();
-    const diff = (day + 6) % 7;
-    const m = new Date(d);
-    m.setDate(d.getDate() - diff);
-    m.setHours(0, 0, 0, 0);
-    return m;
-  }
-
-  function addDays(d: Date, n: number): Date {
-    const r = new Date(d);
-    r.setDate(r.getDate() + n);
-    return r;
-  }
-
-  const jan1 = new Date(currentYear, 0, 1);
-  const gridStart = mondayOnOrBefore(jan1);
-  const dec31 = new Date(currentYear, 11, 31);
-  const gridEnd = addDays(dec31, (6 - (dec31.getDay() + 6) % 7));
-
-  type DayCell = { date: Date; key: string; inYear: boolean; isFuture: boolean };
-  const columns: DayCell[][] = [];
-  {
-    let cursor = new Date(gridStart);
-    while (cursor <= gridEnd) {
-      const week: DayCell[] = [];
-      for (let d = 0; d < 7; d++) {
-        const date = new Date(cursor);
-        week.push({
-          date,
-          key: toKey(date),
-          inYear: date.getFullYear() === currentYear,
-          isFuture: date > today,
-        });
-        cursor = addDays(cursor, 1);
-      }
-      columns.push(week);
-    }
-  }
-
-  const workedDays = $derived.by(() => {
-    const keys = new Set<string>();
-    for (const s of sessions) {
-      if (!s.endedAtMs) continue;
-      keys.add(toKey(new Date(s.endedAtMs)));
-    }
-    return keys;
-  });
-
-  const statsYear = $derived.by(() => {
-    if (workedDays.size === 0) return { workouts: 0, currentStreak: 0 };
-    const prefix = String(currentYear);
-    const yearDays = [...workedDays].filter((k) => k.startsWith(prefix));
-    let currentStreak = 0;
-    let d = new Date(today);
-    d.setHours(0, 0, 0, 0);
-    while (workedDays.has(toKey(d))) {
-      currentStreak++;
-      d = addDays(d, -1);
-    }
-    return { workouts: yearDays.length, currentStreak };
-  });
-
-  // Session-level total volume (sum across all exercises trained that session),
-  // for an all-exercises volume trend.
-  const volumeSeries = $derived.by(() => {
-    return sessions
-      .filter((s) => s.endedAtMs)
-      .map((s) => {
-        let totalVolume = 0;
-        for (const ex of getExercises(s)) {
-          for (const set of ex.sets) {
-            if (set.setType !== "normal" && set.setType) continue;
-            totalVolume += set.weight * set.reps;
-          }
-        }
-        return { date: new Date(s.endedAtMs!), value: totalVolume };
-      })
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-  });
-
-  const personalRecords = $derived.by(() => {
-    return exercises
-      .map((ex) => {
-        const best = ex.dataPoints.reduce((a, b) => (b.maxWeight > a.maxWeight ? b : a));
-        return { exerciseName: ex.exerciseName, exerciseId: ex.exerciseId, weight: best.maxWeight, date: best.date };
-      })
-      .sort((a, b) => b.weight - a.weight)
-      .slice(0, 8);
-  });
-
-  const chartConfig = {
-    value: { label: "Volume", color: "var(--chart-1)" },
-  } satisfies Chart.ChartConfig;
+  const layout = createLayout(apiClient.getUser()?.id ?? "me");
+  const defs = new Map(WIDGETS.map((w) => [w.id, w]));
+  const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
   async function load(clientId: string | null) {
-    loading = true;
+    data = null;
     error = null;
     try {
-      const deps = getWebDeps(clientId ?? undefined);
-      const [allSessions, progressData] = await Promise.all([
-        deps.workoutRepo.listAllSessions(),
-        getProgressData(deps),
-      ]);
-      sessions = allSessions;
-      exercises = progressData;
+      data = await loadOverview(clientId ?? undefined);
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load data";
-    } finally {
-      loading = false;
+      error = e instanceof Error ? e.message : "Couldn't load your training.";
     }
   }
 
   $effect(() => {
     void load(viewingClient.id);
   });
+
+  function onDrop(target: WidgetId) {
+    if (dragging) layout.moveTo(dragging, target);
+    dragging = null;
+  }
 </script>
 
-{#if loading}
-  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-    <Skeleton class="h-48 xl:col-span-2" />
-    <Skeleton class="h-48" />
-    <Skeleton class="h-64 xl:col-span-3" />
-  </div>
-{:else if error}
-  <Alert.Root variant="destructive">
-    <Alert.Description>{error}</Alert.Description>
-  </Alert.Root>
-{:else}
-  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-    <!-- Stats + heatmap -->
-    <Card.Root class="xl:col-span-2">
-      <Card.Header class="flex flex-row items-center justify-between pb-2">
-        <Card.Title>Activity — {currentYear}</Card.Title>
-        <div class="flex gap-4 text-xs text-muted-foreground">
-          <span><strong class="text-foreground">{statsYear.workouts}</strong> workouts</span>
-          <span><strong class="text-foreground">{statsYear.currentStreak}</strong> day streak</span>
-        </div>
-      </Card.Header>
-      <Card.Content class="pb-3">
-        <div class="overflow-x-auto">
-          <div class="inline-flex flex-col gap-1 min-w-max">
-            <div class="flex gap-0.5 pl-5">
-              {#each columns as _week, ci (ci)}
-                <div class="w-3 text-[9px] text-muted-foreground leading-none"></div>
-              {/each}
-            </div>
-            {#each [0, 1, 2, 3, 4, 5, 6] as rowIdx (rowIdx)}
-              {@const dayInitial = ["M", "T", "W", "T", "F", "S", "S"][rowIdx]}
-              <div class="flex items-center gap-1">
-                <span class="w-4 text-[9px] text-muted-foreground text-right shrink-0 leading-none">
-                  {rowIdx % 2 === 0 ? dayInitial : ""}
-                </span>
-                <div class="flex gap-0.5">
-                  {#each columns as week, ci (ci)}
-                    {@const cell = week[rowIdx]}
-                    {#if cell && cell.inYear}
-                      <div
-                        class="w-3 h-3 rounded-[2px] {cell.isFuture ? 'bg-muted/40' : workedDays.has(cell.key) ? 'bg-primary' : 'bg-muted'}"
-                        title={cell.key}
-                      ></div>
-                    {:else}
-                      <div class="w-3 h-3"></div>
-                    {/if}
-                  {/each}
+<div class="flex flex-col gap-4">
+  {#if editing}
+    <div class="-mx-4 -mt-6 mb-1 flex flex-wrap items-center justify-between gap-3 bg-primary px-4 py-3 text-primary-foreground sm:-mx-8 sm:-mt-7 sm:px-8">
+      <span class="text-sm font-semibold">Editing your Overview: drag or use the arrows to move, pick a size, or add widgets</span>
+      <div class="flex gap-2">
+        <button type="button" class="h-8 rounded-[9px] border border-primary-foreground/30 px-3 text-sm" onclick={() => layout.reset()}>Reset</button>
+        <button type="button" class="h-8 rounded-[9px] bg-primary-foreground px-3.5 text-sm font-semibold text-primary" onclick={() => (editing = false)}>Done</button>
+      </div>
+    </div>
+  {/if}
+
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="mb-1 text-[13px] text-muted-foreground">{today}</p>
+      <h1 class="text-[26px] font-bold tracking-tight">This week</h1>
+    </div>
+    {#if !editing}
+      <Button variant="outline" size="sm" onclick={() => (editing = true)}>Edit layout</Button>
+    {/if}
+  </header>
+
+  {#if error}
+    <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
+  {:else}
+    {#if editing}
+      <section aria-label="Add a widget" class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
+        <h2 class="text-[15px] font-semibold">Add a widget</h2>
+        {#if layout.hidden.length === 0}
+          <p class="text-sm text-muted-foreground">Every widget is on your Overview. Insights and plugin widgets join this list in later updates.</p>
+        {:else}
+          <div class="flex flex-wrap gap-2">
+            {#each layout.hidden as w (w.id)}
+              <button type="button" title={w.description} onclick={() => layout.add(w.id)}
+                class="flex h-9 items-center gap-1.5 rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted">+ {w.title}</button>
+            {/each}
+          </div>
+        {/if}
+      </section>
+    {/if}
+    <div class="flex flex-wrap items-start gap-5">
+      <div class="grid min-w-0 flex-[999_1_640px] grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {#each layout.slots as slot, i (slot.id)}
+          {@const def = defs.get(slot.id)!}
+          <section
+            aria-label={def.title}
+            class="flex min-w-0 flex-col gap-3 rounded-[10px] bg-card px-[18px] py-4 {SPAN[slot.size]}
+              {editing ? 'cursor-grab border-[1.5px] border-dashed border-primary/40' : 'border border-border'}
+              {dragging === slot.id ? 'opacity-50' : ''}"
+            draggable={editing}
+            ondragstart={() => (dragging = slot.id)}
+            ondragend={() => (dragging = null)}
+            ondragover={(e) => { if (editing) e.preventDefault(); }}
+            ondrop={(e) => { e.preventDefault(); onDrop(slot.id); }}
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 class="min-w-0 truncate text-sm font-semibold">{def.title}</h2>
+              {#if editing}
+                <div class="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1">
+                  <span class="flex gap-0.5 rounded-lg bg-muted p-0.5">
+                    {#each def.sizes as size (size)}
+                      <button type="button" aria-label="Size {SIZE_LABEL[size]}" aria-pressed={slot.size === size}
+                        class="h-6 rounded-md px-2 text-[11px] {slot.size === size ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}"
+                        onclick={() => layout.resize(slot.id, size)}>{SIZE_LABEL[size]}</button>
+                    {/each}
+                  </span>
+                  <button type="button" aria-label="Move earlier" disabled={i === 0} class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground disabled:opacity-30" onclick={() => layout.move(slot.id, -1)}><ArrowLeft class="size-3.5" /></button>
+                  <button type="button" aria-label="Move later" disabled={i === layout.slots.length - 1} class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground disabled:opacity-30" onclick={() => layout.move(slot.id, 1)}><ArrowRight class="size-3.5" /></button>
+                  <button type="button" aria-label="Remove {def.title}" class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive" onclick={() => layout.remove(slot.id)}><X class="size-3.5" /></button>
                 </div>
-              </div>
-            {/each}
-          </div>
-        </div>
-      </Card.Content>
-    </Card.Root>
+              {/if}
+            </div>
+            {#if data}
+              <OverviewWidget id={slot.id} {data} />
+            {:else}
+              <Skeleton class="h-14" />
+            {/if}
+          </section>
+        {/each}
+      </div>
 
-    <!-- Personal records -->
-    <Card.Root>
-      <Card.Header class="pb-2">
-        <Card.Title>Personal records</Card.Title>
-      </Card.Header>
-      <Card.Content class="pt-0 pb-2">
-        {#if personalRecords.length === 0}
-          <p class="text-sm text-muted-foreground py-2">No data yet.</p>
-        {:else}
-          {#each personalRecords as pr (pr.exerciseId ?? pr.exerciseName)}
-            <a
-              href={pr.exerciseId ? `/exercises/${pr.exerciseId}` : "#"}
-              class="flex items-center justify-between py-1.5 border-b last:border-0 border-border text-sm hover:text-primary"
-            >
-              <span class="truncate">{pr.exerciseName}</span>
-              <span class="tabular-nums text-muted-foreground shrink-0 ml-2">{pr.weight}kg</span>
-            </a>
-          {/each}
-        {/if}
-      </Card.Content>
-    </Card.Root>
-
-    <!-- Volume trend -->
-    <Card.Root class="xl:col-span-3">
-      <Card.Header class="pb-2">
-        <Card.Title>Volume — all exercises</Card.Title>
-      </Card.Header>
-      <Card.Content class="pb-3">
-        {#if volumeSeries.length >= 2}
-          <Chart.Container config={chartConfig} class="max-h-64 w-full">
-            <AreaChart
-              data={volumeSeries}
-              x="date"
-              xScale={scaleUtc()}
-              series={[{ key: "value", label: "Volume", color: chartConfig.value.color }]}
-              axis="x"
-              props={{
-                area: { curve: curveNatural, fillOpacity: 0.3, line: { class: "stroke-1" }, motion: "tween" },
-                xAxis: { format: (v: Date) => v.toLocaleDateString(undefined, { day: "numeric", month: "short" }) },
-              }}
-            >
-              {#snippet tooltip()}
-                <Chart.Tooltip
-                  labelFormatter={(v: Date) => v.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
-                  indicator="line"
-                />
-              {/snippet}
-            </AreaChart>
-          </Chart.Container>
-        {:else}
-          <p class="text-sm text-muted-foreground py-4">Not enough data to chart yet.</p>
-        {/if}
-      </Card.Content>
-    </Card.Root>
-
-    <!-- Exercise list -->
-    <Card.Root class="xl:col-span-3">
-      <Card.Header class="pb-2">
-        <Card.Title>Exercises</Card.Title>
-      </Card.Header>
-      <Card.Content class="pt-0 pb-2">
-        {#if exercises.length === 0}
-          <p class="text-sm text-muted-foreground py-2">Complete at least 2 sessions with the same exercise to see it here.</p>
-        {:else}
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4">
-            {#each exercises as ex (ex.exerciseId ?? ex.exerciseName)}
-              <a
-                href={ex.exerciseId ? `/exercises/${ex.exerciseId}` : "#"}
-                class="flex items-center justify-between py-1.5 border-b border-border text-sm hover:text-primary"
-              >
-                <span class="truncate">{ex.exerciseName}</span>
-                <span class="tabular-nums text-muted-foreground shrink-0 ml-2">{ex.dataPoints.length} sessions</span>
-              </a>
-            {/each}
-          </div>
-        {/if}
-      </Card.Content>
-    </Card.Root>
-  </div>
-{/if}
+    </div>
+  {/if}
+</div>

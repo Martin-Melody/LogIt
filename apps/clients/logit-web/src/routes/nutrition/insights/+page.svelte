@@ -63,7 +63,7 @@
   <div class="flex items-center justify-between">
     <div>
       <a href="/nutrition" class="text-xs text-muted-foreground hover:text-foreground">&larr; Nutrition</a>
-      <h1 class="text-lg font-semibold mt-1">Insights</h1>
+      <h1 class="mt-1 text-[26px] font-bold tracking-tight">Insights</h1>
     </div>
     <div class="flex gap-1 text-xs">
       {#each [7, 30, 90] as d (d)}

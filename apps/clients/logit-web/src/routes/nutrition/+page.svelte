@@ -26,6 +26,7 @@
     type RecentFood,
   } from "@logit/core/domain/nutrition";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
+  import { addDays, weekStartIso } from "@logit/core/domain/dateIso";
   import { getOwnNutritionDeps, getOwnProfile } from "$lib/deps";
   import MacroBars from "$lib/components/nutrition/MacroBars.svelte";
   import WeightTrendChart from "$lib/components/nutrition/WeightTrendChart.svelte";
@@ -65,6 +66,35 @@
 
   async function loadDay() {
     day = (await deps.nutritionRepo.getDay(dateIso)) ?? null;
+  }
+
+  // ── This week: calories per day against the target ──
+  const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekStart = $derived(weekStartIso(dateIso));
+  const weekDates = $derived(DAY_LABELS.map((_, i) => addDays(weekStart, i)));
+  let weekDays = $state<Map<string, DiaryDay>>(new Map());
+  let loadedWeek = "";
+  async function loadWeek() {
+    const start = weekStart;
+    loadedWeek = start;
+    const days = await deps.nutritionRepo.listDaysInRange(start, addDays(start, 6)).catch(() => []);
+    if (loadedWeek === start) weekDays = new Map(days.map((d) => [d.dateIso, d]));
+  }
+  $effect(() => {
+    if (weekStart !== loadedWeek) void loadWeek();
+  });
+  // The open day comes from `day`, so edits show in the week straight away.
+  const weekTotals = $derived(weekDates.map((d) => (d === dateIso ? totalsFor(day) : totalsFor(weekDays.get(d) ?? null))));
+  const targetKcal = $derived(nut?.targets?.macros.kcal ?? null);
+  const loggedDays = $derived(weekTotals.filter((t, i) => t.kcal > 0 && weekDates[i]! <= localDateIso()));
+  const avgKcal = $derived(loggedDays.length ? Math.round(loggedDays.reduce((a, t) => a + t.kcal, 0) / loggedDays.length) : null);
+  const avgProtein = $derived(loggedDays.length ? Math.round(loggedDays.reduce((a, t) => a + t.proteinG, 0) / loggedDays.length) : null);
+  const onTargetDays = $derived(targetKcal ? loggedDays.filter((t) => Math.abs(t.kcal - targetKcal) / targetKcal <= 0.1).length : null);
+  const barMax = $derived(Math.max(targetKcal ?? 0, ...weekTotals.map((t) => t.kcal), 1) * 1.1);
+  function openDate(d: string) {
+    if (d > localDateIso()) return;
+    dateIso = d;
+    void loadDay();
   }
 
   let recents = $state<RecentFood[]>([]);
@@ -224,13 +254,13 @@
   onMount(load);
 </script>
 
-<div class="flex flex-col gap-4 max-w-2xl">
-  <div class="flex items-center justify-between">
-    <h1 class="text-lg font-semibold">Nutrition</h1>
-    <div class="flex items-center gap-2 text-sm">
-      <a href="/nutrition/insights" class="text-muted-foreground hover:text-foreground">Insights</a>
-      <a href="/nutrition/weight" class="text-muted-foreground hover:text-foreground">Weight</a>
-      <a href="/nutrition/goal" class="text-muted-foreground hover:text-foreground">Goal</a>
+<div class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-[26px] font-bold tracking-tight">Nutrition</h1>
+    <div class="flex flex-wrap items-center gap-2">
+      <Button href="/nutrition/insights" variant="outline" size="sm">Insights</Button>
+      <Button href="/nutrition/weight" variant="outline" size="sm">Weight</Button>
+      <Button href="/nutrition/goal" variant="outline" size="sm">{nut?.goal ? "Change goal" : "Set a goal"}</Button>
     </div>
   </div>
 
@@ -241,10 +271,41 @@
   {#if loading}
     <div class="flex items-center gap-2 text-sm text-muted-foreground"><Spinner class="size-4" /> Loading…</div>
   {:else}
+    <!-- This week -->
+    <section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4" aria-label="This week">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-sm font-semibold">{weekStart === weekStartIso(localDateIso()) ? "This week" : `Week of ${new Date(weekStart + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" })}`}</h2>
+        {#if avgKcal != null}
+          <span class="text-xs text-muted-foreground">
+            Average {fmtKcal(avgKcal)} kcal · {avgProtein} g protein{#if onTargetDays != null} · on target {onTargetDays} of {loggedDays.length} days{/if}
+          </span>
+        {/if}
+      </div>
+      <div class="grid grid-cols-7 items-end gap-2">
+        {#each weekDates as d, i (d)}
+          {@const t = weekTotals[i]!}
+          {@const off = targetKcal && t.kcal > 0 && d < localDateIso() ? Math.abs(t.kcal - targetKcal) / targetKcal > 0.1 : false}
+          <button type="button" onclick={() => openDate(d)} disabled={d > localDateIso()}
+            aria-label="{DAY_LABELS[i]}: {t.kcal > 0 ? `${fmtKcal(t.kcal)} kcal` : 'nothing logged'}"
+            class="flex flex-col items-center gap-1.5 rounded-lg px-1 py-2 text-xs disabled:opacity-50 {d === dateIso ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
+            <span class="relative flex h-28 w-full items-end justify-center">
+              {#if targetKcal}<span class="absolute inset-x-1 border-t border-dashed border-muted-foreground/40" style="bottom: {(targetKcal / barMax) * 100}%"></span>{/if}
+              <span class="w-[22px] rounded-t {d === dateIso ? 'bg-chart-1' : off ? 'bg-warning' : 'bg-chart-1/60'}" style="height: {(t.kcal / barMax) * 100}%"></span>
+            </span>
+            <span class={d === localDateIso() ? "font-semibold" : ""}>{d === localDateIso() ? "Today" : DAY_LABELS[i]}</span>
+            <span class="text-muted-foreground tabular-nums">{t.kcal > 0 ? fmtKcal(t.kcal) : "—"}</span>
+          </button>
+        {/each}
+      </div>
+      {#if targetKcal}<p class="text-xs text-muted-foreground">Dashed line: your {fmtKcal(targetKcal)} kcal target. Orange: more than 10% off it. Click a day to open it.</p>{/if}
+    </section>
+
+    <div class="flex flex-wrap items-start gap-4">
+    <div class="flex min-w-0 flex-[999_1_520px] flex-col gap-4">
     <!-- Date nav -->
     <div class="flex items-center gap-3">
       <Button size="sm" variant="outline" class="h-7 px-2" onclick={() => shiftDate(-1)}>‹</Button>
-      <span class="text-sm font-medium tabular-nums">{isToday ? "Today" : dateIso}</span>
+      <span class="text-sm font-medium tabular-nums">{isToday ? "Today" : new Date(dateIso + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</span>
       <Button size="sm" variant="outline" class="h-7 px-2" disabled={isToday} onclick={() => shiftDate(1)}>›</Button>
       <button type="button" class="ml-auto text-xs text-muted-foreground hover:text-foreground" onclick={toggleCopy}>
         Copy a day
@@ -321,6 +382,8 @@
       </Card.Root>
     {/each}
 
+    </div>
+    <div class="flex min-w-0 flex-[1_1_300px] flex-col gap-4">
     <!-- Weight mini -->
     <Card.Root>
       <Card.Header class="pb-2 flex-row items-center justify-between">
@@ -341,6 +404,8 @@
         {/if}
       </Card.Content>
     </Card.Root>
+    </div>
+    </div>
   {/if}
 </div>
 
