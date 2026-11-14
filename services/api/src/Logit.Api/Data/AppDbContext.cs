@@ -36,6 +36,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<CoachHabit> CoachHabits => Set<CoachHabit>();
     public DbSet<DiagnosticReport> DiagnosticReports => Set<DiagnosticReport>();
     public DbSet<Invite> Invites => Set<Invite>();
+    public DbSet<BillingSubscription> BillingSubscriptions => Set<BillingSubscription>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -153,6 +154,20 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .WithOne(u => u.Invite)
              .HasForeignKey(u => u.InviteId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<BillingSubscription>(e =>
+        {
+            e.HasIndex(s => new { s.Source, s.ExternalId }).IsUnique();
+            e.HasIndex(s => s.UserId);
+            e.HasIndex(s => new { s.State, s.ExpiresAt });
+            e.Property(s => s.ExternalId).HasMaxLength(512);
+            e.Property(s => s.ReplacesExternalId).HasMaxLength(512);
+            e.Property(s => s.ProductId).HasMaxLength(200);
+            e.HasOne(s => s.User)
+             .WithMany(u => u.Subscriptions)
+             .HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<DiagnosticReport>(e =>

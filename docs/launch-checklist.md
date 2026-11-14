@@ -49,9 +49,11 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       new one. Store the `.jks` and its password in a password manager plus an offline copy.
 - [ ] **Accountant**: registering as a sole trader / company, income tax on Google payouts. (Google
       collects VAT on Play sales to EU customers; confirm.)
-- [ ] **Google Cloud project + service account** linked to Play Console (Claude will walk you through
-      this when the billing code is ready): the API needs it to check purchases, and Pub/Sub for
-      renewal/cancel notices.
+- [ ] **Google Cloud project + service account** linked to Play Console: the API needs it to check
+      purchases, and Pub/Sub for renewal/cancel notices. Steps in docs/deployment.md "Billing → Google Play";
+      the results go in the server's `.env` as `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` and
+      `GOOGLE_PLAY_NOTIFICATION_TOKEN`. Subscription ids in Play Console: `logit_pro` and `logit_studio`
+      (monthly/yearly as base plans), or tell Claude other names.
 
 ## Claude: can build now (no accounts needed)
 
@@ -78,8 +80,16 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       `Deployment:SelfHosted` is on.
 - [x] **Document the admin page** in the self-hosting guide and `.env.example` (2026-11-13).
 - [ ] **Admin page styling** on the shared theme (cosmetic; it's HTML inside `AdminHtml.cs`).
-- [ ] **Server billing**: plan source (google/stripe), purchase check with Google, renewal / cancel /
-      grace-period / account-hold notices, Stripe checkout switched off. Tested against fake Google responses.
+- [x] **Server billing** (2026-11-14, branch `feat/play-billing`): `BillingSubscriptions` table (source
+      google/apple/stripe, plan, state, end date); `User.Tier` worked out from those plus an admin-given plan
+      (`ManualTier`; today's plans carried over as that). `POST /billing/google/verify` checks a purchase with
+      Google, ties it to one Logit account and acknowledges it; Pub/Sub notifications at
+      `/billing/google/notifications`; hourly sweep for missed notices; upgrades/downgrades replace the old
+      subscription; richer `/billing/status` for the app and dashboard; Stripe checkout off
+      (`Billing:WebCheckout`). 45 new tests against fake Google responses; migrations checked on SQLite and
+      Postgres 17. Setup steps: docs/deployment.md "Billing".
+- [ ] **iOS later**: Apple requires In-App Purchase (StoreKit) for subscriptions. The server is ready for an
+      `apple` source; still to build: App Store Server API check + App Store Server Notifications v2.
 - [ ] **Android billing plugin**: list plans, buy (tied to the logged-in Logit account), restore,
       open Play's subscription page.
 - [ ] **In-app Upgrade screen**: mockup first. Replace the "Manage your plan in a browser at getlogit.app" text

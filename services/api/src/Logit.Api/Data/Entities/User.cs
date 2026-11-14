@@ -22,15 +22,19 @@ public class User
     /// The user's nutrition goal — a singleton JSON blob synced like ProfileJson.
     public string? NutritionGoalJson { get; set; }
     public long NutritionGoalUpdatedAtMs { get; set; } = 0;
+    /// The plan the user has right now: the higher of ManualTier and any paid subscription
+    /// that currently grants access. Never set it directly; call Entitlements.Recompute.
     public UserTier Tier { get; set; } = UserTier.Free;
+    /// A plan granted by hand in the admin page (friends, testers, refunds). Null = none.
+    public UserTier? ManualTier { get; set; }
     public string? StripeCustomerId { get; set; }
-    public string? StripeSubscriptionId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     /// The invite this account signed up with (invite-only servers). Null for open sign-up.
     public Guid? InviteId { get; set; }
     public Invite? Invite { get; set; }
 
+    public ICollection<BillingSubscription> Subscriptions { get; set; } = [];
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
     public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = [];
     public ICollection<Follow> Followers { get; set; } = [];
