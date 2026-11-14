@@ -22,6 +22,68 @@ namespace Logit.Api.Migrations.Postgres
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AutoRenewing")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("CheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<bool>("IsTest")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Plan")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ReplacesExternalId")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Source", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("State", "ExpiresAt");
+
+                    b.ToTable("BillingSubscriptions");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Block", b =>
                 {
                     b.Property<Guid>("BlockerId")
@@ -1119,6 +1181,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid?>("InviteId")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("ManualTier")
+                        .HasColumnType("integer");
+
                     b.Property<string>("NutritionGoalJson")
                         .HasColumnType("text");
 
@@ -1147,9 +1212,6 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("text");
 
-                    b.Property<string>("StripeSubscriptionId")
-                        .HasColumnType("text");
-
                     b.Property<int>("Tier")
                         .HasColumnType("integer");
 
@@ -1171,6 +1233,17 @@ namespace Logit.Api.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Block", b =>
@@ -1667,6 +1740,8 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Posts");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("Subscriptions");
                 });
 #pragma warning restore 612, 618
         }

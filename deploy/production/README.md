@@ -25,7 +25,7 @@ visitor ─▶ Cloudflare (proxy, "Full (strict)") ─▶ VPS :443 Caddy ─┬�
 | File | |
 |---|---|
 | `compose.yml`, `Caddyfile` | copies of this folder at the deployed commit (the deploy replaces them) |
-| `.env` | secrets (`POSTGRES_PASSWORD`, `JWT_SECRET`, `ADMIN_KEY`, `SMTP_*`) and `LOGIT_TAG`, the deployed commit. Mode 600. Not in git. |
+| `.env` | secrets (`POSTGRES_PASSWORD`, `JWT_SECRET`, `ADMIN_KEY`, `SMTP_*`, `GOOGLE_PLAY_*` once Play Billing is set up) and `LOGIT_TAG`, the deployed commit. Mode 600. Not in git. |
 | `.previous-tag` | the commit before the current one, for rollback |
 | `certs/origin.pem`, `certs/origin.key` | Cloudflare Origin CA certificate for `getlogit.app` + `*.getlogit.app`, valid to 2041. The key was made on the server and has never left it. |
 | `bin/deploy` | `deploy.sh` from this folder |

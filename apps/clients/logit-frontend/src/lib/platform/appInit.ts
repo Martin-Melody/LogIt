@@ -97,6 +97,9 @@ export async function appInit(): Promise<void> {
         }
         void syncAll();
         startBackgroundSync();
+        // Reports Play purchases the server hasn't seen (restores, purchases finished while the
+        // app was closed) and keeps the plan status fresh.
+        void import("$lib/billing/billing.svelte").then((m) => m.billing.start());
       })
       .catch((e) => log.error("auth", "Could not restore the signed-in session", e));
 
