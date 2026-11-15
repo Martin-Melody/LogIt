@@ -39,6 +39,9 @@
   $effect(() => { p = { ...post }; });
 
   const isOwn = $derived(authStore.user?.id === p.authorId);
+  // A plain repost's likes and comments are the original's (the server routes them there),
+  // so you can like your repost of someone else's post, not your own original.
+  const ownContent = $derived(authStore.user?.id === (p.repostOf && !p.body ? p.repostOf.authorId : p.authorId));
   // Posts from private accounts stay with the followers they accepted: no repost or quote.
   const canRepost = $derived(!p.authorIsPrivate && !p.repostOf?.authorIsPrivate && !p.repostOf?.unavailable);
 
@@ -94,7 +97,7 @@
 
   async function toggleLike(e: MouseEvent) {
     e.stopPropagation();
-    if (liking || isOwn) return;
+    if (liking || ownContent) return;
     if (!authStore.isAuthenticated) { void goto("/auth?mode=login&redirect=/social"); return; }
     liking = true;
     const wasLiked = p.isLikedByMe;
@@ -234,8 +237,13 @@
     </button>
 
     <button type="button" class="flex-1 min-w-0 text-left leading-tight" onclick={() => void goto(`/social/${p.authorUsername}`)}>
-      <span class="text-sm font-semibold">{p.authorDisplayName}</span>
-      <span class="text-xs text-muted-foreground"> @{p.authorUsername} · {formatDistanceToNow(new Date(p.createdAt))}</span>
+      {#if isOwn}
+        <span class="text-sm font-semibold">You</span>
+        <span class="text-xs text-muted-foreground">{` · ${formatDistanceToNow(new Date(p.createdAt))}`}</span>
+      {:else}
+        <span class="text-sm font-semibold">{p.authorDisplayName}</span>
+        <span class="text-xs text-muted-foreground">{` @${p.authorUsername} · ${formatDistanceToNow(new Date(p.createdAt))}`}</span>
+      {/if}
       {#if p.editedAt}<span class="text-[11px] text-muted-foreground italic"> · edited</span>{/if}
     </button>
 
@@ -291,8 +299,8 @@
     <button
       type="button"
       class="flex items-center gap-1.5 text-xs transition-colors disabled:opacity-40 {p.isLikedByMe ? 'text-rose-500' : 'text-muted-foreground hover:text-rose-500'}"
-      disabled={liking || isOwn}
-      aria-label={isOwn ? "Your post" : p.isLikedByMe ? "Unlike" : "Like"}
+      disabled={liking || ownContent}
+      aria-label={ownContent ? "Your post" : p.isLikedByMe ? "Unlike" : "Like"}
       onclick={toggleLike}
     >
       <Heart class="h-4 w-4 {p.isLikedByMe ? 'fill-rose-500' : ''}" />

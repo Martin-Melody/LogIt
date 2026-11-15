@@ -147,6 +147,8 @@ public static class SocialEndpoints
             .Include(p => p.Likes)
             .Include(p => p.Comments)
             .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Likes)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Comments)
             .Where(p => p.AuthorId == user.Id && p.DeletedAt == null);
 
         if (before is not null)
@@ -158,6 +160,7 @@ public static class SocialEndpoints
     private static async Task<IResult> LikePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
     {
         var userId = caller.GetUserId();
+        id = await db.SharedPostIdAsync(id);
         var post = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
         if (!await db.CanSeeAsync(userId, post.Author)) return Results.NotFound();
@@ -177,6 +180,14 @@ public static class SocialEndpoints
     private static async Task<IResult> UnlikePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
     {
         var userId = caller.GetUserId();
+        // Likes left on a plain repost by older app versions are removed where they are.
+        if (await db.Likes.FindAsync(userId, id) is { } onRepost)
+        {
+            db.Likes.Remove(onRepost);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        }
+        id = await db.SharedPostIdAsync(id);
         var like = await db.Likes.FindAsync(userId, id);
         if (like is null) return Results.NotFound();
 
@@ -248,6 +259,8 @@ public static class SocialEndpoints
         await db.Entry(repost).Reference(p => p.Author).LoadAsync();
         await db.Entry(repost).Collection(p => p.Likes).LoadAsync();
         await db.Entry(repost).Collection(p => p.Comments).LoadAsync();
+        await db.Entry(target).Collection(p => p.Likes).LoadAsync();
+        await db.Entry(target).Collection(p => p.Comments).LoadAsync();
         return Results.Created($"/posts/{repost.Id}", repost.ToDto(userId));
     }
 
@@ -274,6 +287,8 @@ public static class SocialEndpoints
             .Include(p => p.Likes)
             .Include(p => p.Comments)
             .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Likes)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Comments)
             .Where(p => followedIds.Contains(p.AuthorId) && !blocked.Contains(p.AuthorId) && p.DeletedAt == null);
 
         if (before is not null)
@@ -331,6 +346,8 @@ public static class SocialEndpoints
             .Include(p => p.Likes)
             .Include(p => p.Comments)
             .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Likes)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Comments)
             .FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
         if (post.AuthorId != caller.GetUserId()) return Results.Forbid();
@@ -363,6 +380,8 @@ public static class SocialEndpoints
             .Include(p => p.Likes)
             .Include(p => p.Comments)
             .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Likes)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Comments)
             .FirstOrDefaultAsync(p => p.Id == id && p.DeletedAt == null);
         if (post is null) return Results.NotFound();
 
@@ -383,6 +402,7 @@ public static class SocialEndpoints
         [FromQuery] int limit = 50,
         [FromQuery] string? cursor = null)
     {
+        id = await db.SharedPostIdAsync(id);
         var post = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
 
@@ -423,6 +443,7 @@ public static class SocialEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
+        id = await db.SharedPostIdAsync(id);
         var post = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
         if (!await db.CanSeeAsync(caller.GetUserId(), post.Author)) return Results.NotFound();
@@ -454,6 +475,7 @@ public static class SocialEndpoints
         var comment = await db.Comments
             .Include(c => c.Author)
             .FirstOrDefaultAsync(c => c.Id == commentId);
+        id = await db.SharedPostIdAsync(id);
         if (comment is null || comment.DeletedAt is not null || comment.PostId != id)
             return Results.NotFound();
         if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
@@ -472,6 +494,7 @@ public static class SocialEndpoints
         AppDbContext db)
     {
         var comment = await db.Comments.FindAsync(commentId);
+        id = await db.SharedPostIdAsync(id);
         if (comment is null || comment.DeletedAt is not null || comment.PostId != id)
             return Results.NotFound();
         if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
@@ -484,6 +507,7 @@ public static class SocialEndpoints
     private static async Task<IResult> LikeComment(Guid id, Guid commentId, ClaimsPrincipal caller, AppDbContext db)
     {
         var userId = caller.GetUserId();
+        id = await db.SharedPostIdAsync(id);
         var comment = await db.Comments.Include(c => c.Post).ThenInclude(p => p.Author)
             .FirstOrDefaultAsync(c => c.Id == commentId && c.PostId == id);
         if (comment is null || comment.DeletedAt is not null) return Results.NotFound();

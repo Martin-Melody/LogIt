@@ -49,7 +49,10 @@
   const shared = $derived(plainRepost ? p.repostOf! : null);
   const author = $derived(shared ?? p);
   const canRepost = $derived(!p.authorIsPrivate && !p.repostOf?.authorIsPrivate && !(shared?.unavailable));
-  const link = $derived(`/social/post/${p.id}`);
+  // A plain repost's likes and comments are the original's (the server routes them there),
+  // so it opens the original and you can like it unless the original is yours.
+  const link = $derived(`/social/post/${shared?.id ?? p.id}`);
+  const ownContent = $derived(self?.id === author.authorId);
 
   let followStatus = $state<FollowStatus>("none");
   let liking = $state(false);
@@ -62,7 +65,7 @@
   let confirmBlock = $state(false);
 
   async function like() {
-    if (liking || isOwn) return;
+    if (liking || ownContent) return;
     liking = true;
     const was = p.isLikedByMe;
     p = { ...p, isLikedByMe: !was, likeCount: p.likeCount + (was ? -1 : 1) };
@@ -148,14 +151,19 @@
     <p class="text-xs text-muted-foreground">{#if suggested}<span class="font-semibold text-foreground/80">Suggested</span>{" · "}{/if}{reason}</p>
   {/if}
   {#if plainRepost}
-    <p class="text-xs text-muted-foreground"><a href="/social/{p.authorUsername}" class="hover:underline">{p.authorDisplayName}</a> reposted</p>
+    <p class="text-xs text-muted-foreground">{#if isOwn}You reposted{:else}<a href="/social/{p.authorUsername}" class="hover:underline">{p.authorDisplayName}</a>{" reposted"}{/if}</p>
   {/if}
 
   <div class="flex items-center gap-2.5">
     <a href="/social/{author.authorUsername}" class="shrink-0"><Avatar name={author.authorDisplayName} url={author.authorAvatarUrl} /></a>
     <span class="min-w-0 flex-1 truncate text-[13px] font-semibold">
-      <a href="/social/{author.authorUsername}" class="hover:underline">{author.authorDisplayName}</a>
-      <span class="font-normal text-muted-foreground">@{author.authorUsername} · <a href={link} class="hover:underline">{timeAgo(author.createdAt)}</a>{p.editedAt && !plainRepost ? " · edited" : ""}</span>
+      {#if ownContent}
+        <a href="/social/{author.authorUsername}" class="hover:underline">You</a>
+        <span class="font-normal text-muted-foreground">{"· "}<a href={link} class="hover:underline">{timeAgo(author.createdAt)}</a>{p.editedAt && !plainRepost ? " · edited" : ""}</span>
+      {:else}
+        <a href="/social/{author.authorUsername}" class="hover:underline">{author.authorDisplayName}</a>
+        <span class="font-normal text-muted-foreground">@{author.authorUsername} · <a href={link} class="hover:underline">{timeAgo(author.createdAt)}</a>{p.editedAt && !plainRepost ? " · edited" : ""}</span>
+      {/if}
     </span>
     {#if follow && !isOwn}
       <FollowButton username={author.authorUsername} bind:status={followStatus} isPrivate={!!p.authorIsPrivate} />
@@ -221,8 +229,8 @@
   {/if}
 
   <div class="flex flex-wrap gap-x-5 text-xs text-muted-foreground">
-    <button type="button" onclick={like} disabled={isOwn} aria-pressed={p.isLikedByMe}
-      title={isOwn ? "You can't like your own post" : undefined}
+    <button type="button" onclick={like} disabled={ownContent} aria-pressed={p.isLikedByMe}
+      title={ownContent ? "You can't like your own post" : undefined}
       class="py-1.5 hover:text-foreground disabled:hover:text-muted-foreground {p.isLikedByMe ? 'font-semibold text-rose-600 dark:text-rose-300' : ''}">{p.isLikedByMe ? "Liked" : "Like"}{p.likeCount ? ` · ${p.likeCount}` : ""}</button>
     <a href={link} class="py-1.5 hover:text-foreground">Comment{p.commentCount ? ` · ${p.commentCount}` : ""}</a>
     {#if !isOwn}

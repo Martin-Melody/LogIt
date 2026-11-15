@@ -251,4 +251,43 @@ public class SocialPrivacyTests
         Assert.InRange(inA, 850, 1150);
         Assert.All(ids.Take(50), id => Assert.Equal(exp.ArmFor(id).Name, exp.ArmFor(id).Name));
     }
+
+    [Fact]
+    public async Task A_plain_repost_shares_the_originals_likes_and_comments()
+    {
+        var (conn, db) = await NewDb();
+        await using var _ = conn;
+        var emma = NewUser("emma");
+        var sarah = NewUser("sarah");
+        var alex = NewUser("alex");
+        db.Users.AddRange(emma, sarah, alex);
+        var original = NewPost(emma, "my split");
+        db.Posts.Add(original);
+        var plain = new Post { AuthorId = sarah.Id, Type = PostType.Text, Body = null, RepostOfId = original.Id };
+        var quote = new Post { AuthorId = sarah.Id, Type = PostType.Text, Body = "look at this", RepostOfId = original.Id };
+        db.Posts.AddRange(plain, quote);
+        await db.SaveChangesAsync();
+        db.Likes.Add(new Like { UserId = alex.Id, PostId = original.Id });
+        db.Comments.Add(new Comment { PostId = original.Id, AuthorId = alex.Id, Body = "nice" });
+        await db.SaveChangesAsync();
+
+        Assert.Equal(original.Id, await db.SharedPostIdAsync(plain.Id));
+        Assert.Equal(quote.Id, await db.SharedPostIdAsync(quote.Id));     // a quote is its own post
+        Assert.Equal(original.Id, await db.SharedPostIdAsync(original.Id));
+
+        db.ChangeTracker.Clear();
+        var rows = await db.Posts
+            .Include(p => p.Author).Include(p => p.Likes).Include(p => p.Comments)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Author)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Likes)
+            .Include(p => p.RepostOf!).ThenInclude(r => r.Comments)
+            .ToDictionaryAsync(p => p.Id);
+        var plainDto = rows[plain.Id].ToDto(alex.Id);
+        Assert.Equal(1, plainDto.LikeCount);
+        Assert.True(plainDto.IsLikedByMe);
+        Assert.Equal(1, plainDto.CommentCount);
+        var quoteDto = rows[quote.Id].ToDto(alex.Id);
+        Assert.Equal(0, quoteDto.LikeCount);
+        Assert.Equal(0, quoteDto.CommentCount);
+    }
 }

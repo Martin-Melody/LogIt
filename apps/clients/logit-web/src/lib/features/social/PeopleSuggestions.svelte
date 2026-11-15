@@ -39,7 +39,7 @@
       await socialApi.updateSettings({ hidePeopleSuggestions: true });
       hidden = true;
       onhidden?.();
-      toast.success("Hidden. Turn it back on under Privacy on the Discover tab.");
+      toast.success("Hidden. Turn it back on under Privacy and suggestions, on the Discover tab.");
     } catch {
       toast.error("Couldn't hide it");
     }

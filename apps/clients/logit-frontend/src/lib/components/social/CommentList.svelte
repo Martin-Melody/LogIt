@@ -155,7 +155,7 @@
 
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-1.5 flex-wrap">
-            <span class="text-xs font-medium">{comment.authorDisplayName}</span>
+            <span class="text-xs font-medium">{comment.authorId === authStore.user?.id ? "You" : comment.authorDisplayName}</span>
             <span class="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(comment.createdAt))}</span>
             {#if comment.editedAt}
               <span class="text-[11px] text-muted-foreground italic">edited</span>
