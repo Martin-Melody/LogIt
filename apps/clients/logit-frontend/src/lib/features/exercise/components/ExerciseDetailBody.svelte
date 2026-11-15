@@ -1,6 +1,6 @@
 <script lang="ts">
   import { segment, segmentTrack } from "$lib/components/ui/choice";
-  import { Trash2, RotateCcw, Package } from "lucide-svelte";
+  import { Trash2, RotateCcw, Package, Copy } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
@@ -15,6 +15,14 @@
   import { createId } from "@logit/core/domain/ids";
   import { exportExercisesAsPack, isUserExercise } from "$lib/plugins";
   import { reveal } from "$lib/transitions";
+  import { goto } from "$app/navigation";
+  import type { Equipment, MuscleGroup } from "@logit/core/domain/exercise";
+  import { EQUIPMENT } from "@logit/core/domain/exercise";
+  import { EQUIPMENT_LABEL, cleanCues, copyLibraryItem, type CoachRef } from "@logit/core/domain/library";
+  import { getLibraryRepo } from "$lib/data/repoProvider";
+  import { pushExercise } from "$lib/sync/syncService";
+  import CuesEditor from "$lib/features/library/CuesEditor.svelte";
+  import MusclePicker from "$lib/features/library/MusclePicker.svelte";
 
   const {
     exerciseId,
@@ -46,6 +54,10 @@
   let draftNotes = $state("");
   let draftType = $state<ExerciseType>("normal");
   let newMachineName = $state("");
+  let draftCues = $state<string[]>([]);
+  /** Set when this is a coach's shared exercise you haven't changed: read-only. */
+  let fromCoach = $state<CoachRef | null>(null);
+  const editableDefinition = $derived(!!view.exercise && !view.exercise.isCore && !fromCoach && !view.exercise.id.startsWith("pack:"));
 
   function formatDate(ms: number): string {
     return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -64,6 +76,15 @@
         draftName = view.exercise.name;
         draftNotes = view.exercise.notes ?? "";
         draftType = view.exercise.exerciseType ?? "normal";
+        draftCues = [...(view.exercise.cues ?? [])];
+        fromCoach = null;
+        if (!view.exercise.isCore) {
+          const own = await getExerciseRepo().list({ filter: "mine", limit: 5000 });
+          if (!own.some((e) => e.id === view.exercise!.id)) {
+            const shared = (await getLibraryRepo().listFromCoaches()).find((i) => i.kind === "strength" && i.item.id === view.exercise!.id);
+            fromCoach = shared?.coach ?? null;
+          }
+        }
       }
       onExercise(view.exercise);
     } catch (e) {
@@ -112,6 +133,33 @@
     draftType = type;
     if (!view.exercise || view.exercise.exerciseType === type) return;
     void saveField({ exerciseType: type });
+  }
+
+  let cuesTimer: ReturnType<typeof setTimeout> | null = null;
+  function onCuesChange(next: string[]) {
+    draftCues = next;
+    if (cuesTimer) clearTimeout(cuesTimer);
+    cuesTimer = setTimeout(() => void saveField({ cues: cleanCues(draftCues) }), 600);
+  }
+
+  function setMuscles(m: { primary: MuscleGroup[]; secondary: MuscleGroup[] }) {
+    void saveField({ primaryMuscles: m.primary, secondaryMuscles: m.secondary });
+  }
+
+  function setEquipment(value: string) {
+    void saveField({ equipment: (value || undefined) as Equipment | undefined });
+  }
+
+  async function makeOwnCopy() {
+    if (!view.exercise) return;
+    const repo = getExerciseRepo();
+    let name = view.exercise.name;
+    for (let n = 2; await repo.getByName(name); n++) name = `${view.exercise.name} (${n})`;
+    const copy = copyLibraryItem({ kind: "strength", item: view.exercise }, name);
+    if (copy.kind !== "strength") return;
+    await repo.saveExercise(copy.item);
+    pushExercise(copy.item);
+    void goto(`/exercises/${encodeURIComponent(copy.item.id)}`, { replaceState: true });
   }
 
   async function doDelete() {
@@ -223,9 +271,11 @@
         class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         bind:value={draftName}
         onblur={commitName}
-        disabled={view.exercise.isCore}
+        disabled={view.exercise.isCore || !!fromCoach}
       />
-      {#if view.exercise.isCore}
+      {#if fromCoach}
+        <p class="text-xs text-muted-foreground">From {fromCoach.coachName}, who keeps it up to date. Changing its notes, type or machines here makes it your own copy.</p>
+      {:else if view.exercise.isCore}
         <p class="text-xs text-muted-foreground">Built-in exercises cannot be renamed.</p>
       {/if}
     </div>
@@ -263,15 +313,51 @@
       {/if}
     </div>
 
-    {#if view.exercise.primaryMuscles.length > 0 || view.exercise.secondaryMuscles.length > 0}
-      <div class="flex flex-col gap-1 text-xs text-muted-foreground">
-        {#if view.exercise.primaryMuscles.length > 0}
-          <p>Primary: {view.exercise.primaryMuscles.map(capitalize).join(", ")}</p>
-        {/if}
-        {#if view.exercise.secondaryMuscles.length > 0}
-          <p>Secondary: {view.exercise.secondaryMuscles.map(capitalize).join(", ")}</p>
-        {/if}
+    {#if editableDefinition}
+      <div class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Muscles</span>
+        <MusclePicker primary={view.exercise.primaryMuscles} secondary={view.exercise.secondaryMuscles} onChange={setMuscles} />
       </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium" for="ex-equipment">Equipment</label>
+        <select
+          id="ex-equipment"
+          class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          value={view.exercise.equipment ?? ""}
+          onchange={(e) => setEquipment((e.currentTarget as HTMLSelectElement).value)}
+        >
+          <option value="">Not set</option>
+          {#each EQUIPMENT as eq (eq)}<option value={eq}>{capitalize(EQUIPMENT_LABEL[eq])}</option>{/each}
+        </select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Cues</span>
+        <CuesEditor cues={draftCues} onChange={onCuesChange} idPrefix="ex-cue" />
+      </div>
+    {:else}
+      {#if view.exercise.primaryMuscles.length > 0 || view.exercise.secondaryMuscles.length > 0}
+        <div class="flex flex-col gap-1 text-xs text-muted-foreground">
+          {#if view.exercise.primaryMuscles.length > 0}
+            <p>Primary: {view.exercise.primaryMuscles.map(capitalize).join(", ")}{view.exercise.equipment ? ` · ${EQUIPMENT_LABEL[view.exercise.equipment]}` : ""}</p>
+          {/if}
+          {#if view.exercise.secondaryMuscles.length > 0}
+            <p>Secondary: {view.exercise.secondaryMuscles.map(capitalize).join(", ")}</p>
+          {/if}
+        </div>
+      {/if}
+      {#if view.exercise.cues?.length}
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">Cues</span>
+          <ul class="flex list-disc flex-col gap-0.5 pl-5 text-sm">
+            {#each view.exercise.cues as cue, i (i)}<li>{cue}</li>{/each}
+          </ul>
+        </div>
+      {/if}
+      {#if fromCoach}
+        <button type="button" class="inline-flex h-10 items-center justify-center gap-2 rounded-md border text-sm font-medium" onclick={() => void makeOwnCopy()}>
+          <Copy class="h-4 w-4" /> Make my own copy
+        </button>
+      {/if}
     {/if}
   </div>
 
@@ -388,7 +474,7 @@
   {/if}
 
   <!-- Reset progression -->
-  <div class="px-3 py-4 flex flex-col gap-2 {view.exercise.isCore ? '' : 'border-b border-border'}">
+  <div class="px-3 py-4 flex flex-col gap-2 {editableDefinition ? 'border-b border-border' : ''}">
     <ConfirmDialog
       title="Reset progression for this exercise?"
       description="Clears the saved progression state so the algorithm restarts from scratch next time this exercise appears in a session. Your workout history is not affected."
@@ -412,8 +498,8 @@
     {/if}
   </div>
 
-  <!-- Delete (custom exercises only) -->
-  {#if !view.exercise.isCore}
+  <!-- Delete (your own exercises only) -->
+  {#if editableDefinition}
     <div class="px-3 py-4">
       <ConfirmDialog
         title={`Delete "${view.exercise.name}"?`}

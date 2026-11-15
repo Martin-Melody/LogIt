@@ -38,6 +38,28 @@ export type Machine = {
   weights?: MachineWeights;
 };
 
+/** What an exercise is done with. Shown next to the muscles and used to tell look-alikes apart. */
+export type Equipment =
+  | "barbell"
+  | "dumbbell"
+  | "kettlebell"
+  | "cable"
+  | "machine"
+  | "smith"
+  | "bodyweight"
+  | "band"
+  | "other";
+
+export const EQUIPMENT: readonly Equipment[] = [
+  "barbell", "dumbbell", "kettlebell", "cable", "machine", "smith", "bodyweight", "band", "other",
+] as const;
+
+/**
+ * A photo or clip attached to a library item. Reserved: nothing uploads these yet, but
+ * every kind of item carries the field so adding uploads later needs no data change.
+ */
+export type LibraryMedia = { kind: "image" | "video"; url: string; caption?: string };
+
 export type Exercise = {
   id: string;
   name: string;
@@ -49,9 +71,15 @@ export type Exercise = {
   exerciseType?: ExerciseType;
   machines?: Machine[];
   defaultMachineId?: string;
+  equipment?: Equipment;
+  /** Short how-to points shown with the exercise ("Elbows under the bar"). */
+  cues?: string[];
+  media?: LibraryMedia[];
+  /** Last edit. Missing on exercises from before the library; sync treats that as 0. */
+  updatedAtMs?: number;
 };
 
-export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles" | "exerciseType" | "machines" | "defaultMachineId">>;
+export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles" | "exerciseType" | "machines" | "defaultMachineId" | "equipment" | "cues">>;
 
 /**
  * Whether an exercise's weights are relative to bodyweight (0 = BW, negative =

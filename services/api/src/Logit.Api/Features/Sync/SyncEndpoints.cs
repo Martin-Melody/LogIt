@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
+using Logit.Api.Features.Coach;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,7 +132,7 @@ public static class SyncEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
         if (forbidden is not null) return forbidden;
 
         // Filtered on SyncedAt, not StartedAtMs: StartedAtMs is immutable, so an edit
@@ -211,7 +212,7 @@ public static class SyncEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
         if (forbidden is not null) return forbidden;
 
         var splits = await db.SyncedSplits
@@ -259,6 +260,7 @@ public static class SyncEndpoints
                     // pusher is always the owning account, so overwrite on every push.
                     // Otherwise a rename/edit via updateExercise() never reached the server.
                     stored.DataJson = dto.DataJson ?? string.Empty;
+                    stored.Kind = LibraryKinds.FromDataJson(dto.DataJson);
                     stored.SyncedAt = DateTime.UtcNow;
                 }
             }
@@ -271,6 +273,7 @@ public static class SyncEndpoints
                     CreatedAtMs = dto.CreatedAtMs,
                     DataJson = dto.DataJson ?? string.Empty,
                     DeletedAtMs = dto.DeletedAtMs,
+                    Kind = LibraryKinds.FromDataJson(dto.DataJson),
                 });
             }
         }
@@ -282,19 +285,26 @@ public static class SyncEndpoints
         return Results.NoContent();
     }
 
+    /// `kinds=all` returns cardio and mobility items too. Without it only strength rows come
+    /// back, so app versions from before the library don't file a drill under exercises.
+    /// Edits come back too (SyncedAt moves on every push), not only new rows.
     private static async Task<IResult> PullExercises(
         [FromQuery] long since,
         [FromQuery] Guid? clientId,
+        [FromQuery] string? kinds,
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
         if (forbidden is not null) return forbidden;
 
+        var allKinds = kinds == "all";
+        var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(Math.Max(0, since)).UtcDateTime;
         var exercises = await db.SyncedExercises
-            .Where(e => e.UserId == userId && (e.CreatedAtMs > since || (e.DeletedAtMs != null && e.DeletedAtMs > since)))
+            .Where(e => e.UserId == userId && (allKinds || e.Kind == LibraryKinds.Strength))
+            .Where(e => e.CreatedAtMs > since || e.SyncedAt > sinceUtc || (e.DeletedAtMs != null && e.DeletedAtMs > since))
             .OrderBy(e => e.CreatedAtMs)
-            .Select(e => new ExerciseDto(e.ClientId, e.CreatedAtMs, e.DeletedAtMs == null ? e.DataJson : null, e.DeletedAtMs))
+            .Select(e => new ExerciseDto(e.ClientId, e.CreatedAtMs, e.DeletedAtMs == null ? e.DataJson : null, e.DeletedAtMs, e.Kind, e.SharedWithClients))
             .ToListAsync();
 
         return Results.Ok(new { exercises });
@@ -385,7 +395,7 @@ public static class SyncEndpoints
         AppDbContext db,
         ILoggerFactory loggerFactory)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, null);
         if (forbidden is not null) return forbidden;
 
         var user = await db.Users
@@ -400,6 +410,14 @@ public static class SyncEndpoints
         try
         {
             var profile = JsonSerializer.Deserialize<ProfileDto>(user.ProfileJson);
+            // A coach whose client hides body weight doesn't get it (or the progress photo)
+            // through the profile either.
+            if (clientId is { } cid && profile is not null)
+            {
+                var rel = await CoachAccess.ActiveRelationship(db, caller.GetUserId(), cid);
+                if (rel is not null && !rel.Shares(ShareArea.Bodyweight))
+                    profile = profile with { Weight = null, ProgressPhotoDataUrl = null };
+            }
             return Results.Ok(new { profile });
         }
         catch (Exception ex)
@@ -475,7 +493,7 @@ public static class SyncEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Checkins);
         if (forbidden is not null) return forbidden;
 
         var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
@@ -494,17 +512,18 @@ public static class SyncEndpoints
 
     /// Resolves which user's data a pull request should actually read: the caller's own
     /// (clientId absent — unchanged, self-access) or a client's (clientId present — only if
-    /// the caller has an Active coach relationship with them). Read-only by design: this is
-    /// never called from any push/write handler.
+    /// the caller has an Active coach relationship with them and the client shares `area`
+    /// with that coach; null area = any Active coach, for the profile, which masks the parts
+    /// it hides itself). Read-only by design: never called from a push/write handler.
     private static async Task<(Guid? userId, IResult? forbidden)> ResolveTargetUserId(
-        Guid callerId, Guid? clientId, AppDbContext db)
+        Guid callerId, Guid? clientId, AppDbContext db, ShareArea? area)
     {
         if (clientId is null) return (callerId, null);
 
-        var authorized = await db.CoachClientRelationships.AnyAsync(r =>
-            r.CoachId == callerId && r.ClientId == clientId.Value && r.Status == CoachClientStatus.Active);
-
-        return authorized ? (clientId, null) : (null, Results.Forbid());
+        var relationship = await CoachAccess.ActiveRelationship(db, callerId, clientId.Value);
+        if (relationship is null) return (null, Results.Forbid());
+        if (area is { } a && !relationship.Shares(a)) return (null, CoachAccess.NotShared());
+        return (clientId, null);
     }
 
     // ── Generic client-owned rows ────────────────────────────────────────────
@@ -582,7 +601,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullNutritionDays(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Nutrition);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { days = await PullSyncRows(userId, since, db.SyncedNutritionDays) });
     }
@@ -594,7 +613,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullWeightEntries(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Bodyweight);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedWeightEntries) });
     }
@@ -643,7 +662,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullHabits(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Habits);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { habits = await PullSyncRows(userId, since, db.SyncedHabits) });
     }
@@ -655,7 +674,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullHabitEntries(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Habits);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedHabitEntries) });
     }
@@ -680,7 +699,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullNutritionGoal(
         [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Nutrition);
         if (forbidden is not null) return forbidden;
 
         var row = await db.Users
@@ -703,7 +722,8 @@ public record PushSplitsRequest(List<SplitDto> Splits);
 public record SplitDto(string Id, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);
 
 public record PushExercisesRequest(List<ExerciseDto> Exercises);
-public record ExerciseDto(string Id, long CreatedAtMs, string? DataJson, long? DeletedAtMs = null);
+/// Kind and Shared are filled in on pull only; a push reads the kind from DataJson.
+public record ExerciseDto(string Id, long CreatedAtMs, string? DataJson, long? DeletedAtMs = null, string? Kind = null, bool? Shared = null);
 
 public record PushCheckinSubmissionsRequest(List<CheckinSubmissionDto> Submissions);
 public record CheckinSubmissionDto(string Id, long CreatedAtMs, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);

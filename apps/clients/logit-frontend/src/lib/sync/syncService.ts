@@ -6,6 +6,10 @@ import { coachNutritionPlanApi } from "@logit/core/api/coachNutritionPlanApi";
 import { coachHabitApi } from "@logit/core/api/coachHabitApi";
 import { checkinApi } from "@logit/core/api/checkinApi";
 import { messagesApi } from "@logit/core/api/messagesApi";
+import { libraryApi } from "@logit/core/api/libraryApi";
+import { libraryItemToJson } from "@logit/core/domain/library";
+import type { OwnLibraryItem } from "@logit/core/data/libraryRepo";
+import { mergeOwnLibrary, replaceCoachLibrary } from "$lib/sync/librarySync";
 import {
   getWorkoutRepo,
   getSplitRepo,
@@ -19,6 +23,7 @@ import {
   getCoachNutritionPlanRepo,
   getHabitRepo,
   getAssignedHabitRepo,
+  getLibraryRepo,
 } from "$lib/data/repoProvider";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -224,14 +229,16 @@ export async function pullAndMergeSplits(): Promise<boolean> {
   }
 }
 
-// ── Exercises ─────────────────────────────────────────────────────────────────
+// ── Exercises and the rest of your library ──────────────────────────────────
+// Your own strength exercises, cardio activities and mobility drills all sync through
+// /sync/exercises; cardio and mobility rows carry a "kind" in their JSON.
 
 export function pushExercise(exercise: Exercise): void {
   if (!apiClient.isAuthenticated()) return;
   if (exercise.isCore) return;
   // Exercise-pack items are re-installable plugin content, not user data.
   if (exercise.id.startsWith("pack:")) return;
-  const dto = { id: exercise.id, createdAtMs: exercise.createdAtMs, dataJson: JSON.stringify(exercise) };
+  const dto = { id: exercise.id, createdAtMs: exercise.createdAtMs, dataJson: libraryItemToJson({ kind: "strength", item: exercise }) };
   syncApi.pushExercises([dto]).catch(() => enqueue({ type: "exercise", dto }));
 }
 
@@ -241,13 +248,27 @@ export function pushDeletedExercise(id: string): void {
   syncApi.pushExercises([dto]).catch(() => enqueue({ type: "exercise", dto }));
 }
 
+/** Your own cardio activity or mobility drill. */
+export function pushLibraryItem(entry: OwnLibraryItem): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = { id: entry.item.id, createdAtMs: entry.item.createdAtMs ?? 0, dataJson: libraryItemToJson(entry) };
+  syncApi.pushExercises([dto]).catch(() => enqueue({ type: "exercise", dto }));
+}
+
+export const pushDeletedLibraryItem = pushDeletedExercise;
+
 export async function pushAllExercises(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {
     const repo = getExerciseRepo();
-    const all = await repo.list({ filter: "mine", limit: 1000 });
-    if (all.length === 0) return;
-    const remote = all.map((e) => ({ id: e.id, createdAtMs: e.createdAtMs, dataJson: JSON.stringify(e) }));
+    const mine = await repo.list({ filter: "mine", limit: 1000 });
+    const remote = mine
+      .filter((e) => !e.id.startsWith("pack:"))
+      .map((e) => ({ id: e.id, createdAtMs: e.createdAtMs, dataJson: libraryItemToJson({ kind: "strength", item: e }) }));
+    for (const entry of await getLibraryRepo().listOwn()) {
+      remote.push({ id: entry.item.id, createdAtMs: entry.item.createdAtMs ?? 0, dataJson: libraryItemToJson(entry) });
+    }
+    if (remote.length === 0) return;
     await syncApi.pushExercises(remote);
   } catch (e) { syncWarn("pushAllExercises", e); }
 }
@@ -256,30 +277,31 @@ export async function pullAndMergeExercises(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
     const since = getTimestamp(EXERCISES_LAST_PULLED_KEY);
-    const { exercises: remote } = await syncApi.pullExercises(since);
+    const startedAt = Date.now();
+    const { exercises: remote } = await syncApi.pullLibrary(since);
 
-    if (remote.length === 0) return true;
-
-    const repo = getExerciseRepo();
-    const existing = await repo.list({ filter: "all", limit: 2000 });
-    const existingIds = new Set(existing.map((e) => e.id));
-
-    for (const entry of remote) {
-      if (entry.deletedAtMs) {
-        if (existingIds.has(entry.id)) await repo.remove(entry.id).catch((e) => syncWarn("pullAndMergeExercises", e));
-        continue;
-      }
-      if (existingIds.has(entry.id)) continue;
-      try {
-        const exercise: Exercise = JSON.parse(entry.dataJson!);
-        await repo.saveExercise(exercise);
-      } catch (e) { syncWarn("pullAndMergeExercises", e); }
+    if (remote.length > 0) {
+      await mergeOwnLibrary(remote, getExerciseRepo(), getLibraryRepo(), (e) => syncWarn("pullAndMergeExercises", e));
     }
 
-    setTimestamp(EXERCISES_LAST_PULLED_KEY, Date.now());
+    // Before the request went out, so an edit made during it isn't skipped next time.
+    setTimestamp(EXERCISES_LAST_PULLED_KEY, startedAt);
     return true;
   } catch (e) {
     syncWarn("pullAndMergeExercises", e);
+    return false;
+  }
+}
+
+/** What your coaches share with you. Fetched whole each time; any tier can be coached. */
+export async function pullCoachLibrary(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
+  try {
+    const { items } = await libraryApi.getShared();
+    await replaceCoachLibrary(items, getLibraryRepo());
+    return true;
+  } catch (e) {
+    syncWarn("pullCoachLibrary", e);
     return false;
   }
 }
@@ -1126,6 +1148,7 @@ async function syncOnce(): Promise<boolean> {
     ["splits", pullAndMergeSplits()],
     ["exercises", pullAndMergeExercises()],
     ["coach programs", pullAndMergeCoachPrograms()],
+    ["coach library", pullCoachLibrary()],
     ["coach nutrition plan", pullAndMergeCoachNutritionPlan()],
     ["check-in schedules", pullAndMergeCheckinSchedules()],
     ["check-ins", pullAndMergeCheckinSubmissions()],

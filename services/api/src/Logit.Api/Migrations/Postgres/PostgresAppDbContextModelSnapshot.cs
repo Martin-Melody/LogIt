@@ -102,6 +102,35 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("Blocks");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CheckinReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ReviewedAtMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SubmissionId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientUserId");
+
+                    b.HasIndex("CoachId", "ClientUserId", "SubmissionId")
+                        .IsUnique();
+
+                    b.ToTable("CheckinReviews");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -161,6 +190,27 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("InviteLinkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("RequestedByClient")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShareBodyweight")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShareCheckins")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShareHabits")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShareNutrition")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShareWorkouts")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -170,6 +220,8 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("InviteLinkId");
 
                     b.HasIndex("CoachId", "ClientId")
                         .IsUnique();
@@ -219,6 +271,47 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("RecipientUserId", "SyncedAt");
 
                     b.ToTable("CoachHabits");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachInviteLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoachId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("CoachInviteLinks");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachMessage", b =>
@@ -803,6 +896,14 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<long?>("DeletedAtMs")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<bool>("SharedWithClients")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1265,6 +1366,25 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Blocker");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CheckinReview", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Coach");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Coach")
@@ -1304,9 +1424,16 @@ namespace Logit.Api.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Logit.Api.Data.Entities.CoachInviteLink", "InviteLink")
+                        .WithMany()
+                        .HasForeignKey("InviteLinkId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Client");
 
                     b.Navigation("Coach");
+
+                    b.Navigation("InviteLink");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachHabit", b =>
@@ -1332,6 +1459,17 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Recipient");
 
                     b.Navigation("Relationship");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachInviteLink", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Coach");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachMessage", b =>

@@ -364,8 +364,8 @@ export function startExercisesTour(force = false) {
     {
       element: '[data-tour="exercises-search"]',
       popover: {
-        title: "Search Exercises",
-        description: "Type to filter exercises instantly. Works across built-in and your own custom exercises.",
+        title: "Strength, cardio, mobility",
+        description: "Pick a kind at the top, then type to search. LogIt's items, your own and your coach's are all here.",
         side: "bottom" as const,
         align: "start" as const,
       },
@@ -373,8 +373,8 @@ export function startExercisesTour(force = false) {
     {
       element: '[data-tour="exercises-filter"]',
       popover: {
-        title: "Filter by Type",
-        description: "Switch between All exercises, Built-in (core library), or Mine (exercises you've created).",
+        title: "Where it's from",
+        description: "Show everything, only LogIt's, only yours, or only what your coach shares with you.",
         side: "bottom" as const,
         align: "start" as const,
       },
@@ -382,8 +382,8 @@ export function startExercisesTour(force = false) {
     hasList && {
       element: '[data-tour="exercises-list"]',
       popover: {
-        title: "Exercise Library",
-        description: "Tap any exercise to view or edit it. Built-in exercises can have personal notes added; custom exercises can be fully renamed or deleted.",
+        title: "Your library",
+        description: "Tap anything to see its cues. Your own items can be edited; LogIt's and your coach's have \"Make my own copy\".",
         side: "top" as const,
         align: "start" as const,
       },
@@ -391,8 +391,8 @@ export function startExercisesTour(force = false) {
     {
       element: '[data-tour="exercises-add"]',
       popover: {
-        title: "Create an Exercise",
-        description: "Tap + to add a custom exercise. Give it a name and optional notes — it'll appear alongside the built-in library everywhere in the app.",
+        title: "Add your own",
+        description: "Tap + to add an exercise, cardio activity or drill. It shows up in every picker from then on.",
         side: "bottom" as const,
         align: "end" as const,
       },
