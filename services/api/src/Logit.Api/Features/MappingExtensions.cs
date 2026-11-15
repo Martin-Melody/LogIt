@@ -48,12 +48,20 @@ public static class MappingExtensions
 
     /// `hiddenAuthors`: private accounts the caller isn't allowed to see (Privacy.HiddenAuthorsAsync).
     /// A repost of one of their posts comes back marked Unavailable.
-    public static PostDto ToDto(this Post post, Guid? callerId = null, IReadOnlySet<Guid>? hiddenAuthors = null) =>
+    /// A plain repost (no words of its own) shows the original's likes and comments: liking or
+    /// commenting on it goes to the original (SharedPostIdAsync), so its own rows stay empty.
+    public static PostDto ToDto(this Post post, Guid? callerId = null, IReadOnlySet<Guid>? hiddenAuthors = null)
+    {
+        var counted = post.RepostOf is not null && string.IsNullOrEmpty(post.Body) ? post.RepostOf : post;
+        return ToDto(post, counted, callerId, hiddenAuthors);
+    }
+
+    private static PostDto ToDto(Post post, Post counted, Guid? callerId, IReadOnlySet<Guid>? hiddenAuthors) =>
         new(post.Id, post.AuthorId, post.Author.Username, post.Author.DisplayName, post.Author.AvatarUrl,
             post.Type.ToString(), post.Body, post.PayloadJson, post.CreatedAt, post.EditedAt,
-            post.Likes.Count,
-            callerId.HasValue && post.Likes.Any(l => l.UserId == callerId.Value),
-            post.Comments.Count(c => c.DeletedAt == null),
+            counted.Likes.Count,
+            callerId.HasValue && counted.Likes.Any(l => l.UserId == callerId.Value),
+            counted.Comments.Count(c => c.DeletedAt == null),
             post.RepostOf?.ToRepostSourceDto(hiddenAuthors?.Contains(post.RepostOf.AuthorId) == true),
             post.Author.IsPrivate);
 

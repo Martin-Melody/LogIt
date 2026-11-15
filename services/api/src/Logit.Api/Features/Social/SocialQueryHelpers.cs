@@ -17,6 +17,16 @@ public static class SocialQueryHelpers
             .ToListAsync();
     }
 
+    /// A plain repost (no words of its own) shares its original: likes and comments on it
+    /// belong to the original. Returns the original's id for one, otherwise `id`.
+    public static async Task<Guid> SharedPostIdAsync(this AppDbContext db, Guid id)
+    {
+        var row = await db.Posts.Where(p => p.Id == id)
+            .Select(p => new { p.RepostOfId, p.Body })
+            .FirstOrDefaultAsync();
+        return row?.RepostOfId is { } original && string.IsNullOrEmpty(row.Body) ? original : id;
+    }
+
     // Cursor = base64("<createdAt ticks>"). Tick precision (100ns) makes exact
     // ties between distinct rows vanishingly unlikely for a single user's feed
     // or notifications; a `<` comparison is enough and stays EF-translatable on

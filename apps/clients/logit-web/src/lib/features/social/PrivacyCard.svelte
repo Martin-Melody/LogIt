@@ -2,6 +2,7 @@
   import { toast } from "$lib/components/ui/sonner";
   import * as Dialog from "$lib/components/ui/dialog";
   import { discoverApi, socialApi, type ApiProfile, type SocialSettings } from "@logit/core/api/socialApi";
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import Avatar from "./Avatar.svelte";
 
   // The same switches as the phone's Social settings, saved to the account.
@@ -24,6 +25,12 @@
       toast.error(e instanceof Error ? e.message : "Couldn't save that");
     }
   }
+
+  // Closed until you want it: the one line says how you're set up.
+  let open = $state(false);
+  const summary = $derived(
+    !settings ? "" : settings.isPrivate ? "Private account" : settings.showInDiscover === true ? "Public · in Discover" : "Public · not in Discover",
+  );
 
   let hiddenOpen = $state(false);
   let hiddenPeople = $state<ApiProfile[] | null>(null);
@@ -57,9 +64,21 @@
   ];
 </script>
 
-<section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4" aria-labelledby="privacy-title">
-  <h2 id="privacy-title" class="text-sm font-semibold">Privacy</h2>
-  {#if settings}
+<section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-3.5">
+  <h2 class="m-0">
+    <button type="button" onclick={() => (open = !open)} aria-expanded={open} aria-controls="privacy-body"
+      class="flex w-full items-center justify-between gap-2 text-left">
+      <span>
+        <span class="block text-sm font-semibold">Privacy and suggestions</span>
+        {#if summary}<span class="block text-xs font-normal text-muted-foreground">{summary}</span>{/if}
+      </span>
+      <ChevronDownIcon class="size-4 shrink-0 text-muted-foreground transition-transform {open ? 'rotate-180' : ''}" />
+    </button>
+  </h2>
+  {#if !open}
+    <!-- collapsed -->
+  {:else if settings}
+    <div id="privacy-body" class="contents">
     {#each ROWS as row (row.key)}
       {@const raw = settings[row.key] === true}
       {@const on = row.invert ? !raw : raw}
@@ -73,8 +92,9 @@
     {#if settings.notInterestedCount > 0}
       <button type="button" onclick={openHidden} class="self-start text-xs text-muted-foreground hover:text-foreground">{settings.notInterestedCount} {settings.notInterestedCount === 1 ? "person" : "people"} hidden from Discover ›</button>
     {/if}
+    </div>
   {:else}
-    <p class="text-xs text-muted-foreground">Loading…</p>
+    <p id="privacy-body" class="text-xs text-muted-foreground">Loading…</p>
   {/if}
 </section>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { ApiError } from "@logit/core/api/client";
@@ -17,7 +18,12 @@
     post = null;
     error = null;
     gone = false;
-    socialApi.getPost(want).then((p) => { if (want === id) post = p; }).catch((e) => {
+    socialApi.getPost(want).then((p) => {
+      if (want !== id) return;
+      // A plain repost has nothing of its own: show the post it shares.
+      if (p.repostOf && !p.body && !p.repostOf.deleted) { void goto(`/social/post/${p.repostOf.id}`, { replaceState: true }); return; }
+      post = p;
+    }).catch((e) => {
       if (want !== id) return;
       error = e instanceof ApiError && e.status === 404 ? "This post isn't available. It was deleted, or it's from a private account you don't follow." : "Couldn't load this post.";
     });
