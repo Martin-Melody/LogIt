@@ -48,7 +48,11 @@
       if (!form) return;
       // A missed one comes first: it's the one the coach is waiting for.
       const missed = missedCheckin(form, subs);
-      const period = missed?.periodIndex ?? currentPeriodIndex(form) ?? 0;
+      // The period a check-ins list row asked for, else the missed one, else this one.
+      const asked = Number(page.url.searchParams.get("period"));
+      const period = page.url.searchParams.has("period") && Number.isInteger(asked) && asked >= 0
+        ? asked
+        : missed?.periodIndex ?? currentPeriodIndex(form) ?? 0;
       sub = subs.find((s) => s.scheduleId === form!.id && s.periodIndex === period) ?? createSubmission(form, period);
       if (sub.submittedAtMs === undefined) draftSavedAt = sub.updatedAtMs !== sub.createdAtMs ? sub.updatedAtMs : null;
       await prefillWeight();

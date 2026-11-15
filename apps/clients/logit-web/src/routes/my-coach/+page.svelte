@@ -276,11 +276,12 @@
               {/each}
               {#each sent as s (s.id)}
                 {@const f = forms.find((x) => x.id === s.scheduleId)}
-                <div class="flex justify-between gap-3 border-t border-border py-2.5 text-[13px]">
+                <a href="/my-coach/checkins/{s.id}" class="flex justify-between gap-3 border-t border-border py-2.5 text-[13px] hover:opacity-90">
                   <span>{f?.name ?? "Check-in"} <span class="text-muted-foreground">· week of {shortDate(s.periodStartMs)}</span></span>
-                  <span class="text-xs text-muted-foreground">{reviewed.has(s.id) ? "Reviewed" : "Sent"}</span>
-                </div>
+                  <span class="text-xs text-muted-foreground">{reviewed.has(s.id) ? "Reviewed" : "Sent"} ›</span>
+                </a>
               {/each}
+              <a href="/my-coach/checkins" class="border-t border-border pt-2.5 text-xs text-muted-foreground hover:text-foreground">All check-ins ›</a>
             </section>
           {/if}
 

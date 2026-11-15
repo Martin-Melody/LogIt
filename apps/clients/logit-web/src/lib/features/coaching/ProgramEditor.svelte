@@ -6,6 +6,7 @@
   import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
   import { loadExerciseIndex, type ExerciseIndex } from "$lib/features/plan/exerciseIndex";
+  import type { SwapRule } from "@logit/core/domain/swaps";
 
   // The coach's program editor, for a library program and for a client's own copy.
   // Changes stay here until Save, so a half-built week never reaches a phone.
@@ -14,6 +15,7 @@
     program,
     mode,
     copies = [],
+    swapRule,
     onSave,
   }: {
     program: CoachProgram;
@@ -21,6 +23,8 @@
     mode: "library" | "copy";
     /** Library only: clients' copies of this program, offered for updating on save. */
     copies?: { id: string; label: string }[];
+    /** The swap rule these clients have, for the hint under exercises without alternatives. */
+    swapRule?: SwapRule;
     onSave: (next: CoachProgram, updateCopies: string[]) => Promise<void>;
   } = $props();
 
@@ -36,6 +40,7 @@
   let error = $state<string | null>(null);
   let tick = $state<string[]>([]);
   let index = $state<ExerciseIndex | null>(null);
+  let addingSwap = $state<string | null>(null);
 
   const weeks = $derived([...draft.weeks].sort((a, b) => a.weekNumber - b.weekNumber));
   const week = $derived(weeks.find((w) => w.id === weekId) ?? weeks[0]);
@@ -96,6 +101,41 @@
     el.setCustomValidity("");
     edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, patch!));
   }
+
+  // ── Approved swaps (they apply to the exercise in every week of the program) ──
+
+  const exRef = (b: ProgramStrength) => ({ exerciseName: b.exerciseName, exerciseId: b.exerciseId });
+
+  function addSwap(block: ProgramStrength, name: string) {
+    const id = index?.get(name)?.id;
+    edit((p) => P.addAlternative(p, exRef(block), { exerciseName: name, exerciseId: id }));
+  }
+
+  function removeSwap(block: ProgramStrength, name: string) {
+    edit((p) => P.removeAlternative(p, exRef(block), name));
+  }
+
+  /** Up to six exercises for the same main muscle, not already listed. */
+  function sameMuscleSuggestions(block: ProgramStrength): string[] {
+    const main = index?.get(block.exerciseName)?.primaryMuscles[0];
+    if (!main || !index) return [];
+    const taken = new Set([block.exerciseName, ...(block.alternatives ?? []).map((a) => a.exerciseName)].map((n) => n.toLowerCase()));
+    return index.list
+      .filter((e) => e.primaryMuscles.includes(main) && !taken.has(e.name.toLowerCase()))
+      .sort((a, b) => Number(b.primaryMuscles[0] === main) - Number(a.primaryMuscles[0] === main) || a.name.localeCompare(b.name))
+      .slice(0, 6)
+      .map((e) => e.name);
+  }
+
+  function searchSwaps(block: ProgramStrength) {
+    return (q: string) => searchExercises(q).filter((r) => r.name.toLowerCase() !== block.exerciseName.toLowerCase());
+  }
+
+  const NO_SWAPS_HINT: Record<SwapRule, string> = {
+    any: "none yet, so any exercise",
+    muscles: "none yet, so same-muscle exercises",
+    list: "none yet, so it can't be swapped",
+  };
 
   /** A new set with the same targets as the last one. */
   function addSetLike(day: ProgramDay, block: ProgramStrength) {
@@ -268,6 +308,32 @@
                     <label class="sr-only" for="note-{block.id}">Note for {block.type === "strength" ? block.exerciseName : block.activityName}</label>
                     <input id="note-{block.id}" value={block.note ?? ""} placeholder="Note for the client (optional)" class="mt-1 h-7 w-full rounded-[7px] border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
                       oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateBlock(p, week.id, day.id, block.id, { note: v || undefined })); }} />
+                    {#if block.type === "strength"}
+                      <div class="mt-1 flex flex-wrap items-center gap-1.5 px-1">
+                        <span class="mr-0.5 text-xs text-muted-foreground">Swaps:</span>
+                        {#each block.alternatives ?? [] as alt (alt.exerciseName)}
+                          <span class="inline-flex h-[26px] items-center gap-1 rounded-full bg-muted pl-2.5 pr-1 text-xs">{alt.exerciseName}<button type="button" aria-label="Remove {alt.exerciseName}" class="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground" onclick={() => removeSwap(block, alt.exerciseName)}>✕</button></span>
+                        {:else}
+                          {#if swapRule}<span class="text-xs text-muted-foreground">{NO_SWAPS_HINT[swapRule]}</span>{/if}
+                        {/each}
+                        {#if addingSwap !== block.id}
+                          <button type="button" class="h-[26px] rounded-full border border-dashed border-border px-2.5 text-xs text-muted-foreground hover:text-foreground" onclick={() => (addingSwap = block.id)}>+ Add</button>
+                        {/if}
+                      </div>
+                      {#if addingSwap === block.id}
+                        {@const suggestions = sameMuscleSuggestions(block)}
+                        <div class="mt-1.5 flex max-w-sm flex-col gap-1.5 rounded-[9px] border border-border bg-background px-3 py-2.5">
+                          <NamePicker id="swap-{block.id}" label="Add a swap for {block.exerciseName}" placeholder="Add a swap for {block.exerciseName}" search={searchSwaps(block)} autofocus onPick={(n) => addSwap(block, n)} onCancel={() => (addingSwap = null)} />
+                          {#if suggestions.length}
+                            <span class="text-xs text-muted-foreground">Same muscles as {block.exerciseName}:</span>
+                            <span class="flex flex-wrap gap-1.5">
+                              {#each suggestions as n (n)}<button type="button" class="h-[26px] rounded-full border border-border px-2.5 text-xs hover:bg-muted" onclick={() => addSwap(block, n)}>+ {n}</button>{/each}
+                            </span>
+                          {/if}
+                          <span class="flex justify-between gap-2 text-xs text-muted-foreground">Applies to {block.exerciseName} in every week.<button type="button" class="hover:text-foreground" onclick={() => (addingSwap = null)}>Done</button></span>
+                        </div>
+                      {/if}
+                    {/if}
                   </td>
                 </tr>
                 {#if block.type === "strength"}

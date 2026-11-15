@@ -10,10 +10,11 @@ import { sourceFromProgramDay } from "@logit/core/domain/sessionHistory";
  */
 export async function startSessionFromProgramDay(
   day: ProgramDay,
-  program?: { id: string; name: string },
+  program?: { id: string; name: string; coachId?: string },
 ): Promise<WorkoutSession> {
   const repo = getWorkoutRepo();
   const built = programDaySession(day);
+  // A coach's program also keeps which coach (whose swap rule applies) and their alternatives.
   const session = program ? { ...built, source: sourceFromProgramDay(program, day, built) } : built;
   await repo.saveDraftSession(session);
   return session;
