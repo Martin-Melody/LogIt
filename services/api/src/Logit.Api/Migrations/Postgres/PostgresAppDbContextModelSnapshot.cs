@@ -546,6 +546,55 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("DiagnosticReports");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverDismissal", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HiddenUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "HiddenUserId");
+
+                    b.HasIndex("HiddenUserId");
+
+                    b.ToTable("DiscoverDismissals");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverImpression", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Arm")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Recipe")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("ShownAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "Kind", "TargetId");
+
+                    b.HasIndex("Arm", "Recipe");
+
+                    b.ToTable("DiscoverImpressions");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.Property<Guid>("FollowerId")
@@ -562,6 +611,24 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("FollowedId");
 
                     b.ToTable("Follows");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.FollowRequest", b =>
+                {
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RequesterId", "TargetId");
+
+                    b.HasIndex("TargetId", "CreatedAt");
+
+                    b.ToTable("FollowRequests");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Invite", b =>
@@ -1288,8 +1355,17 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("HideFromSuggestions")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HidePeopleSuggestions")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("InviteId")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("boolean");
 
                     b.Property<int?>("ManualTier")
                         .HasColumnType("integer");
@@ -1318,6 +1394,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<string>("PublicProfileJson")
                         .HasColumnType("text");
+
+                    b.Property<bool?>("ShowInDiscover")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("text");
@@ -1599,6 +1678,32 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverDismissal", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "HiddenUser")
+                        .WithMany()
+                        .HasForeignKey("HiddenUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("HiddenUser");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverImpression", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Followed")
@@ -1616,6 +1721,25 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Followed");
 
                     b.Navigation("Follower");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.FollowRequest", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Requester")
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Target")
+                        .WithMany()
+                        .HasForeignKey("TargetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Requester");
+
+                    b.Navigation("Target");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>

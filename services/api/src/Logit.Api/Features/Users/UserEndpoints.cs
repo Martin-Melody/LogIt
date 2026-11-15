@@ -101,6 +101,7 @@ public static class UserEndpoints
 
         var isSelf = false;
         var isFollowing = false;
+        var requested = false;
 
         if (caller.Identity?.IsAuthenticated == true)
         {
@@ -113,10 +114,11 @@ public static class UserEndpoints
                         (b.BlockerId == user.Id && b.BlockedId == callerId)))
                     return Results.NotFound();
                 isFollowing = await db.Follows.AnyAsync(f => f.FollowerId == callerId && f.FollowedId == user.Id);
+                requested = !isFollowing && await db.FollowRequests.AnyAsync(r => r.RequesterId == callerId && r.TargetId == user.Id);
             }
         }
 
-        return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing));
+        return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing, requested));
     }
 }
 
