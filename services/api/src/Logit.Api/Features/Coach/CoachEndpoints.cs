@@ -55,6 +55,9 @@ public static class CoachEndpoints
         group.MapGet("/messages/all", GetAllMessages);
         group.MapPost("/messages/read", MarkMessagesRead);
         group.MapGet("/messages/unread", GetUnreadCounts);
+
+        CoachLinkEndpoints.Map(group);
+        CheckinReviewEndpoints.Map(group);
     }
 
     private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db)
@@ -77,6 +80,14 @@ public static class CoachEndpoints
         // used to hit the unique index and 500, so a revoked client could never be re-invited.
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
             r.CoachId == coachId && r.ClientId == client.Id);
+        // They already asked through one of this coach's links: inviting them is a yes.
+        if (relationship is { Status: CoachClientStatus.Pending, RequestedByClient: true })
+        {
+            relationship.Status = CoachClientStatus.Active;
+            relationship.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { relationshipId = relationship.Id, accepted = true });
+        }
         if (relationship is not null && relationship.Status != CoachClientStatus.Revoked)
             return Results.Conflict(new { error = "Already invited or connected." });
 
@@ -93,6 +104,9 @@ public static class CoachEndpoints
         else
         {
             relationship.Status = CoachClientStatus.Pending;
+            relationship.RequestedByClient = false;
+            relationship.InviteLinkId = null;
+            relationship.ApplySharing(SharingDto.All);
             relationship.UpdatedAt = DateTime.UtcNow;
         }
         await db.SaveChangesAsync();
@@ -113,6 +127,8 @@ public static class CoachEndpoints
         {
             relationshipId = r.Id,
             client = r.Client.ToProfileDto(false),
+            sharing = r.ToSharingDto(),
+            since = r.UpdatedAt,
         }));
     }
 
@@ -132,9 +148,12 @@ public static class CoachEndpoints
             .OrderBy(r => r.Client.Username)
             .ToListAsync();
         var clientIds = rels.Select(r => r.ClientId).ToList();
+        // Workout and check-in figures only for clients who share them (see CoachAccess).
+        var workoutIds = rels.Where(r => r.ShareWorkouts).Select(r => r.ClientId).ToList();
+        var checkinIds = rels.Where(r => r.ShareCheckins).Select(r => r.ClientId).ToList();
 
         var sessionAgg = (await db.SyncedWorkoutSessions
-            .Where(s => clientIds.Contains(s.UserId) && s.DeletedAtMs == null)
+            .Where(s => workoutIds.Contains(s.UserId) && s.DeletedAtMs == null)
             .GroupBy(s => s.UserId)
             .Select(g => new
             {
@@ -177,7 +196,7 @@ public static class CoachEndpoints
         // so pull the (few) non-deleted rows and parse in memory rather than query into JSON.
         var subsByClient = (await db.SyncedCheckinSubmissions
             .AsNoTracking()
-            .Where(s => clientIds.Contains(s.UserId) && s.DeletedAtMs == null)
+            .Where(s => checkinIds.Contains(s.UserId) && s.DeletedAtMs == null)
             .Select(s => new { s.UserId, s.DataJson })
             .ToListAsync())
             .GroupBy(x => x.UserId)
@@ -219,6 +238,8 @@ public static class CoachEndpoints
                 assignedHabitCount = habitCounts.GetValueOrDefault(r.ClientId, 0),
                 lastCheckinSubmittedAtMs = LatestSubmittedCheckin(r.ClientId),
                 unreadFromClient = unread.GetValueOrDefault(r.ClientId, 0),
+                sharing = r.ToSharingDto(),
+                since = r.UpdatedAt,
             };
         });
 
@@ -238,6 +259,8 @@ public static class CoachEndpoints
         {
             relationshipId = r.Id,
             coach = r.Coach.ToProfileDto(false),
+            sharing = r.ToSharingDto(),
+            since = r.UpdatedAt,
         }));
     }
 
@@ -246,7 +269,7 @@ public static class CoachEndpoints
         var clientId = caller.GetUserId();
         var relationships = await db.CoachClientRelationships
             .Include(r => r.Coach)
-            .Where(r => r.ClientId == clientId && r.Status == CoachClientStatus.Pending)
+            .Where(r => r.ClientId == clientId && r.Status == CoachClientStatus.Pending && !r.RequestedByClient)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
 
@@ -263,7 +286,7 @@ public static class CoachEndpoints
         var coachId = caller.GetUserId();
         var relationships = await db.CoachClientRelationships
             .Include(r => r.Client)
-            .Where(r => r.CoachId == coachId && r.Status == CoachClientStatus.Pending)
+            .Where(r => r.CoachId == coachId && r.Status == CoachClientStatus.Pending && !r.RequestedByClient)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
 
@@ -275,15 +298,19 @@ public static class CoachEndpoints
         }));
     }
 
-    private static async Task<IResult> AcceptInvite(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> AcceptInvite(
+        Guid relationshipId, [FromBody] AcceptInviteRequest? req, ClaimsPrincipal caller, AppDbContext db)
     {
         var clientId = caller.GetUserId();
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
-            r.Id == relationshipId && r.ClientId == clientId && r.Status == CoachClientStatus.Pending);
+            r.Id == relationshipId && r.ClientId == clientId && r.Status == CoachClientStatus.Pending
+            && !r.RequestedByClient);
         // Not found also covers "exists but caller isn't the client" — don't leak existence
         // of other people's pending invites to non-participants.
         if (relationship is null) return Results.NotFound();
 
+        // Older apps send no body and so share everything, as before the switches existed.
+        relationship.ApplySharing(req?.Sharing ?? SharingDto.All);
         relationship.Status = CoachClientStatus.Active;
         relationship.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
@@ -295,10 +322,14 @@ public static class CoachEndpoints
     {
         var clientId = caller.GetUserId();
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
-            r.Id == relationshipId && r.ClientId == clientId && r.Status == CoachClientStatus.Pending);
+            r.Id == relationshipId && r.ClientId == clientId && r.Status == CoachClientStatus.Pending
+            && !r.RequestedByClient);
         if (relationship is null) return Results.NotFound();
 
-        db.CoachClientRelationships.Remove(relationship);
+        // Revoked, not deleted: a re-invited former client's row carries the old messages,
+        // which cascade-delete with it. Revoked rows are invisible and get reopened later.
+        relationship.Status = CoachClientStatus.Revoked;
+        relationship.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
         return Results.NoContent();
@@ -313,16 +344,16 @@ public static class CoachEndpoints
             (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Pending));
         if (relationship is null) return Results.NotFound();
 
-        // A relationship that ends before it started leaves no trace (same as the client
-        // declining). One that was Active is kept as Revoked: programs, check-ins and
-        // messages point at it.
+        // Ending a relationship, or withdrawing before it started, marks it Revoked rather than
+        // deleting it: programs, check-ins and messages point at it (messages cascade-delete),
+        // and a row can carry history from an earlier coaching spell. Revoked rows are
+        // invisible everywhere and get reopened by a new invite or request.
         if (relationship.Status == CoachClientStatus.Pending)
         {
-            // Only the coach withdraws a pending invite; the client declines it instead.
-            if (relationship.CoachId != userId) return Results.NotFound();
-            db.CoachClientRelationships.Remove(relationship);
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+            // Whoever asked can withdraw: the coach an invite, the client a link request. The
+            // other side declines instead.
+            var asker = relationship.RequestedByClient ? relationship.ClientId : relationship.CoachId;
+            if (asker != userId) return Results.NotFound();
         }
 
         relationship.Status = CoachClientStatus.Revoked;
@@ -430,7 +461,8 @@ public static class CoachEndpoints
                 p.UpdatedAtMs,
                 p.DeletedAtMs == null ? p.DataJson : null,
                 p.DeletedAtMs,
-                p.RecipientUserId))
+                p.RecipientUserId,
+                p.StartedAtMs))
             .ToListAsync();
 
         return Results.Ok(new { programs });
@@ -981,6 +1013,8 @@ public static class CoachEndpoints
     }
 }
 
+public record AcceptInviteRequest(SharingDto? Sharing);
+
 public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs, string? ContextDateIso = null);
 public record MarkReadRequest(Guid RelationshipId, long UpToMs);
 public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null);
@@ -1018,7 +1052,9 @@ public record ProgramDto(
     long UpdatedAtMs,
     string? DataJson,
     long? DeletedAtMs,
-    Guid? RecipientUserId);
+    Guid? RecipientUserId,
+    // When the client tapped Start, so the coach sees which week they're on.
+    long? StartedAtMs = null);
 
 public record AssignedProgramDto(
     string ProgramId,

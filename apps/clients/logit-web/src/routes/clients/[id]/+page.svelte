@@ -1,443 +1,204 @@
 <script lang="ts">
-  import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import * as Card from "$lib/components/ui/card";
+  import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
-  import { Button } from "$lib/components/ui/button";
-  import { Spinner } from "$lib/components/ui/spinner";
-  import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
-  import type { MyCheckinSchedule } from "@logit/core/data/checkinRepo";
-  import type { MyCoachHabit } from "@logit/core/data/coachHabitRepo";
-  import { createCoachProgram } from "@logit/core/domain/CoachProgram";
-  import { createCheckinSchedule } from "@logit/core/domain/Checkin";
-  import { createCoachHabit } from "@logit/core/domain/CoachHabit";
+  import { Skeleton } from "$lib/components/ui/skeleton";
+  import LockIcon from "@lucide/svelte/icons/lock";
+  import { SHARE_AREAS } from "@logit/core/api/coachApi";
+  import Avatar from "$lib/features/coaching/Avatar.svelte";
+  import CheckinAnswers from "$lib/features/coaching/CheckinAnswers.svelte";
+  import MessageThread from "$lib/features/coaching/MessageThread.svelte";
+  import ClientTraining from "$lib/features/coaching/client/ClientTraining.svelte";
+  import ClientNutrition from "$lib/features/coaching/client/ClientNutrition.svelte";
+  import ClientHabits from "$lib/features/coaching/client/ClientHabits.svelte";
+  import ClientCheckins from "$lib/features/coaching/client/ClientCheckins.svelte";
+  import ClientPrograms from "$lib/features/coaching/client/ClientPrograms.svelte";
+  import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import {
-    createCoachNutritionPlan,
-    updateCoachNutritionPlan,
-    type CoachNutritionPlan,
-  } from "@logit/core/domain/CoachNutritionPlan";
-  import { getNutritionInsights } from "@logit/core/usecases/nutrition/getNutritionInsights";
-  import type { NutritionInsightsView } from "@logit/core/usecases/nutrition/getNutritionInsights";
-  import { dayTotals, localDateIso, type DiaryDay } from "@logit/core/domain/nutrition";
-  import { coachApi } from "@logit/core/api/coachApi";
-  import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
-  import {
-    getWebCoachProgramRepo,
-    getWebCheckinRepo,
-    getWebCoachNutritionPlanRepo,
-    getWebCoachHabitRepo,
-    getWebNutritionDeps,
-  } from "$lib/deps";
+    loadCoachingOverview,
+    parseSubmission,
+    type ClientSummary,
+    type CoachingOverview,
+  } from "$lib/features/coaching/coachingData";
+  import { sinceLabel, when } from "$lib/features/coaching/format";
+
+  type Tab = "overview" | "training" | "nutrition" | "habits" | "checkins" | "programs" | "messages";
+  const TABS: { id: Tab; label: string; area?: "workouts" | "nutrition" | "habits" | "checkins" }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "training", label: "Training", area: "workouts" },
+    { id: "nutrition", label: "Nutrition", area: "nutrition" },
+    { id: "habits", label: "Habits", area: "habits" },
+    { id: "checkins", label: "Check-ins", area: "checkins" },
+    { id: "programs", label: "Programs" },
+    { id: "messages", label: "Messages" },
+  ];
 
   const clientId = $derived(page.params.id!);
-  const username = $derived(page.url.searchParams.get("u") ?? "");
+  const tab = $derived((page.url.searchParams.get("tab") as Tab | null) ?? "overview");
 
-  let loading = $state(true);
-  let creating = $state(false);
+  let overview = $state<CoachingOverview | null>(null);
   let error = $state<string | null>(null);
-  let programs = $state<MyCoachProgram[]>([]);
-  let checkins = $state<MyCheckinSchedule[]>([]);
-  let habits = $state<MyCoachHabit[]>([]);
-
-  // Nutrition
-  let plan = $state<CoachNutritionPlan | null>(null);
-  let planSaving = $state(false);
-  let planSaved = $state(false);
-  let insights = $state<NutritionInsightsView | null>(null);
-  let recentDiary = $state<DiaryDay[]>([]);
-
-  // Per-day diary comments (ride on the coach↔client message thread).
-  let relationshipId = $state<string | null>(null);
-  let commentsByDate = $state<Record<string, RemoteMessage[]>>({});
-  let commentDraft = $state<Record<string, string>>({});
-  let commentSending = $state<string | null>(null);
-
-  async function loadComments() {
-    if (!relationshipId) return;
-    try {
-      const msgs = await messagesApi.list(relationshipId, 0);
-      const byDate: Record<string, RemoteMessage[]> = {};
-      for (const m of msgs) {
-        if (!m.contextDateIso) continue;
-        (byDate[m.contextDateIso] ??= []).push(m);
-      }
-      commentsByDate = byDate;
-    } catch {
-      /* best-effort */
-    }
-  }
-
-  async function sendComment(dateIso: string) {
-    const body = (commentDraft[dateIso] ?? "").trim();
-    if (!body || !relationshipId || commentSending) return;
-    commentSending = dateIso;
-    try {
-      await messagesApi.send({
-        relationshipId,
-        messageId: crypto.randomUUID(),
-        body,
-        createdAtMs: Date.now(),
-        contextDateIso: dateIso,
-      });
-      commentDraft = { ...commentDraft, [dateIso]: "" };
-      await loadComments();
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to post comment";
-    } finally {
-      commentSending = null;
-    }
-  }
-
-  function fmtTime(ms: number): string {
-    return new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
-  }
+  let programsTab = $state<ClientPrograms | null>(null);
+  // "Assign program" from another tab: the Programs tab opens its dialog when it mounts.
+  let assignOnOpen = $state(false);
 
   async function load() {
-    loading = true;
-    error = null;
     try {
-      const [progs, cks, myPlan, habs] = await Promise.all([
-        getWebCoachProgramRepo().listMyPrograms({ recipientId: clientId }),
-        getWebCheckinRepo().listMySchedules({ recipientId: clientId }),
-        getWebCoachNutritionPlanRepo().getForRecipient(clientId),
-        getWebCoachHabitRepo().listForRecipient(clientId),
-      ]);
-      programs = progs;
-      checkins = cks;
-      plan = myPlan?.plan ?? null;
-      habits = habs;
+      overview = await loadCoachingOverview();
+      coachBadges.fromOverview(overview);
+      error = null;
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load";
-    } finally {
-      loading = false;
-    }
-    // Client nutrition data — best-effort, don't block the page.
-    const nutDeps = getWebNutritionDeps(clientId);
-    getNutritionInsights(nutDeps, { rangeDays: 30 })
-      .then((v) => (insights = v))
-      .catch(() => {});
-    const start = new Date(Date.now() - 7 * 86_400_000);
-    nutDeps.nutritionRepo
-      .listDaysInRange(localDateIso(start), localDateIso())
-      .then((d) => (recentDiary = d.slice().reverse()))
-      .catch(() => {});
-    coachApi
-      .listClients()
-      .then((cs) => {
-        relationshipId = cs.find((c) => c.client.id === clientId)?.relationshipId ?? null;
-        return loadComments();
-      })
-      .catch(() => {});
-  }
-
-  function editPlan(patch: Partial<CoachNutritionPlan>) {
-    plan = updateCoachNutritionPlan(plan ?? createCoachNutritionPlan(`${username}'s targets`), patch);
-    planSaved = false;
-  }
-
-  async function savePlan() {
-    if (!plan || planSaving || !username) return;
-    planSaving = true;
-    error = null;
-    try {
-      await getWebCoachNutritionPlanRepo().savePlan(plan, username);
-      planSaved = true;
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to save plan";
-    } finally {
-      planSaving = false;
+      error = e instanceof Error ? e.message : "Couldn't load this client";
     }
   }
-
-  const metricLabel = (id: string) =>
-    insights?.plugin?.metricDefinitions.find((d) => d.id === id)?.label ?? id;
-  const metricValue = (id: string) => {
-    const m = insights?.output?.metrics.find((x) => x.id === id);
-    return m ? (m.formatted ?? String(m.value)) : "—";
-  };
-
-  async function newProgram() {
-    if (creating || !username) return;
-    creating = true;
-    error = null;
-    try {
-      const p = createCoachProgram(`${username}'s program`);
-      await getWebCoachProgramRepo().saveProgram(p, username);
-      await goto(`/clients/${clientId}/programs/${p.id}?u=${username}`);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to create program";
-      creating = false;
-    }
-  }
-
-  async function newCheckin() {
-    if (creating || !username) return;
-    creating = true;
-    error = null;
-    try {
-      const s = createCheckinSchedule("Weekly check-in");
-      await getWebCheckinRepo().saveSchedule(s, username);
-      await goto(`/clients/${clientId}/checkins/${s.id}?u=${username}`);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to create check-in";
-      creating = false;
-    }
-  }
-
-  async function newHabit() {
-    if (creating || !username) return;
-    creating = true;
-    error = null;
-    try {
-      const h = createCoachHabit("Habit");
-      await getWebCoachHabitRepo().saveHabit(h, username);
-      await goto(`/clients/${clientId}/habits/${h.id}?u=${username}`);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to create habit";
-      creating = false;
-    }
-  }
-
-  function habitCadenceLabel(h: MyCoachHabit["habit"]): string {
-    if (h.cadence.kind === "daily") return "Every day";
-    if (h.cadence.kind === "weekly") return `${h.cadence.timesPerWeek}×/week`;
-    const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    return h.cadence.days.slice().sort((a, b) => a - b).map((d) => names[d]).join(" · ");
-  }
-
   $effect(() => {
     void clientId;
     void load();
   });
+
+  const c = $derived<ClientSummary | null>(overview?.clients.find((x) => x.id === clientId) ?? null);
+  const latest = $derived(c ? (c.toReview[0] ?? overview?.inbox.find((i) => i.clientUserId === c.id) ?? null) : null);
+
+  function setTab(t: Tab) {
+    if (t !== "programs") assignOnOpen = false;
+    const u = new URL(page.url);
+    if (t === "overview") u.searchParams.delete("tab");
+    else u.searchParams.set("tab", t);
+    void goto(u, { noScroll: true, keepFocus: true });
+  }
+
+  function assign() {
+    if (tab === "programs") {
+      programsTab?.openAssignDialog();
+    } else {
+      assignOnOpen = true;
+      setTab("programs");
+    }
+  }
+
+  function programLine(x: ClientSummary): string {
+    const p = x.program;
+    if (!p) return "trains on their own plan";
+    if (p.state === "running") return `${p.program.name}, week ${p.week} of ${p.totalWeeks}`;
+    if (p.state === "scheduled") return `${p.program.name} starts ${when(p.startsAtMs!)}`;
+    return `${p.program.name}, not started yet`;
+  }
 </script>
 
-<div class="flex flex-col gap-4 max-w-3xl">
-  <div>
-    <a href="/clients" class="text-xs text-muted-foreground hover:text-foreground">&larr; Clients</a>
-    <h1 class="mt-1 text-[26px] font-bold tracking-tight">@{username}</h1>
-  </div>
+<div class="flex flex-col gap-4">
+  <a href="/clients" class="w-fit text-[13px] text-muted-foreground hover:text-foreground">‹ Clients</a>
 
   {#if error}
-    <Alert.Root variant="destructive">
-      <Alert.Description>{error}</Alert.Description>
-    </Alert.Root>
-  {/if}
-
-  <Card.Root>
-    <Card.Header class="pb-2 flex-row items-start justify-between">
-      <div>
-        <Card.Title>Programs</Card.Title>
-        <Card.Description>Training programs you've assigned to this client.</Card.Description>
-      </div>
-      <Button size="sm" disabled={creating} onclick={newProgram}>
-        {#if creating}<Spinner class="size-4" />{/if}
-        New
-      </Button>
-    </Card.Header>
-    <Card.Content class="pt-0 pb-2">
-      {#if loading}
-        <p class="text-sm text-muted-foreground py-2">Loading…</p>
-      {:else if programs.length === 0}
-        <p class="text-sm text-muted-foreground py-2">No programs yet.</p>
-      {:else}
-        {#each programs as { program } (program.id)}
-          <a href="/clients/{clientId}/programs/{program.id}?u={username}"
-            class="flex items-center justify-between py-2 border-b last:border-0 border-border text-sm hover:bg-muted/40 -mx-2 px-2 rounded">
-            <span class="font-medium">{program.name}</span>
-            <span class="text-xs text-muted-foreground">{program.weeks.length} week{program.weeks.length === 1 ? "" : "s"}</span>
-          </a>
-        {/each}
-      {/if}
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header class="pb-2 flex-row items-start justify-between">
-      <div>
-        <Card.Title>Check-ins</Card.Title>
-        <Card.Description>Recurring questionnaires this client fills in.</Card.Description>
-      </div>
-      <Button size="sm" variant="outline" disabled={creating} onclick={newCheckin}>New</Button>
-    </Card.Header>
-    <Card.Content class="pt-0 pb-2">
-      {#if loading}
-        <p class="text-sm text-muted-foreground py-2">Loading…</p>
-      {:else if checkins.length === 0}
-        <p class="text-sm text-muted-foreground py-2">No check-ins yet.</p>
-      {:else}
-        {#each checkins as { schedule } (schedule.id)}
-          <a href="/clients/{clientId}/checkins/{schedule.id}?u={username}"
-            class="flex items-center justify-between py-2 border-b last:border-0 border-border text-sm hover:bg-muted/40 -mx-2 px-2 rounded">
-            <span class="font-medium">{schedule.name}</span>
-            <span class="text-xs text-muted-foreground capitalize">{schedule.cadence} · {schedule.questions.length}q</span>
-          </a>
-        {/each}
-      {/if}
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header class="pb-2 flex-row items-start justify-between">
-      <div>
-        <Card.Title>Habits</Card.Title>
-        <Card.Description>Daily habits this client checks off. Shown in their app under “From your coach”.</Card.Description>
-      </div>
-      <Button size="sm" variant="outline" disabled={creating} onclick={newHabit}>New</Button>
-    </Card.Header>
-    <Card.Content class="pt-0 pb-2">
-      {#if loading}
-        <p class="text-sm text-muted-foreground py-2">Loading…</p>
-      {:else if habits.length === 0}
-        <p class="text-sm text-muted-foreground py-2">No habits yet.</p>
-      {:else}
-        {#each habits as { habit } (habit.id)}
-          <a href="/clients/{clientId}/habits/{habit.id}?u={username}"
-            class="flex items-center justify-between py-2 border-b last:border-0 border-border text-sm hover:bg-muted/40 -mx-2 px-2 rounded">
-            <span class="font-medium">{#if habit.icon}{habit.icon} {/if}{habit.name}</span>
-            <span class="text-xs text-muted-foreground">
-              {habitCadenceLabel(habit)}{#if habit.target} · {habit.target.value}{habit.target.unit ? ` ${habit.target.unit}` : ""}{/if}
-            </span>
-          </a>
-        {/each}
-      {/if}
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header class="pb-2">
-      <Card.Title>Nutrition targets</Card.Title>
-      <Card.Description>
-        A daily calorie/macro target for this client. It shows in their app as “From your coach”
-        and overrides their own goal.
-      </Card.Description>
-    </Card.Header>
-    <Card.Content class="pt-0 flex flex-col gap-3">
-      {#if loading}
-        <p class="text-sm text-muted-foreground py-2">Loading…</p>
-      {:else}
-        {@const p = plan}
-        <div class="grid grid-cols-4 gap-2">
-          {#each [["kcal", "Calories", p?.kcalTarget], ["proteinG", "Protein (g)", p?.proteinG], ["carbsG", "Carbs (g)", p?.carbsG], ["fatG", "Fat (g)", p?.fatG]] as [key, label, value] (key)}
-            <label class="flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">{label}</span>
-              <input
-                type="number"
-                min="0"
-                class="h-8 rounded border border-border bg-background px-2 text-sm"
-                value={value ?? ""}
-                oninput={(e) =>
-                  editPlan({ [key as string]: Number(e.currentTarget.value) || undefined } as Partial<CoachNutritionPlan>)}
-              />
-            </label>
-          {/each}
+    <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
+  {:else if !overview}
+    <Skeleton class="h-14 w-80" /><Skeleton class="h-9" /><Skeleton class="h-64" />
+  {:else if !c}
+    <p class="text-[13px] text-muted-foreground">This person isn't one of your clients. <a href="/clients" class="text-primary hover:underline">Back to Clients</a></p>
+  {:else}
+    <header class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3.5">
+        <Avatar name={c.name} url={c.avatarUrl} size={48} />
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">{c.name}</h1>
+          <p class="mt-0.5 text-[13px] text-muted-foreground">@{c.username}{sinceLabel(c.since) ? ` · client since ${sinceLabel(c.since)}` : ""} · {programLine(c)}</p>
         </div>
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-muted-foreground">Note to the client (optional)</span>
-          <textarea
-            rows="2"
-            class="rounded border border-border bg-background px-2 py-1.5 text-sm"
-            value={p?.note ?? ""}
-            oninput={(e) => editPlan({ note: e.currentTarget.value || undefined })}
-          ></textarea>
-        </label>
-        <div class="flex items-center gap-3">
-          <Button size="sm" disabled={planSaving || !plan} onclick={savePlan}>
-            {#if planSaving}<Spinner class="size-4" />{/if}
-            {planSaved ? "Saved" : plan ? "Save targets" : "Set targets"}
-          </Button>
-          {#if !plan}
-            <span class="text-xs text-muted-foreground">Enter a calorie target to start.</span>
-          {:else}
-            <a href="/clients/{clientId}/nutrition?u={username}" class="text-xs text-primary hover:underline">
-              Edit meal plan{#if plan.meals?.length} ({plan.meals.length}){/if} &rarr;
-            </a>
-          {/if}
-        </div>
-      {/if}
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick={() => setTab("messages")} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted">Message</button>
+        <button type="button" onclick={assign} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Assign program</button>
+      </div>
+    </header>
 
-      {#if insights?.output}
-        <div class="mt-1 border-t border-border pt-3">
-          <p class="text-xs text-muted-foreground mb-2">Last 30 days</p>
-          <div class="grid grid-cols-3 gap-3 text-sm">
-            {#each ["avgKcal30", "adherence", "weightChange", "avgProtein", "weeklyRate"] as id (id)}
-              <div>
-                <div class="text-xs text-muted-foreground">{metricLabel(id)}</div>
-                <div class="font-medium tabular-nums">{metricValue(id)}</div>
+    <div role="tablist" aria-label="Client" class="flex flex-wrap gap-0.5 border-b border-border">
+      {#each TABS as t (t.id)}
+        {@const locked = t.area && !c.sharing[t.area]}
+        <button type="button" role="tab" aria-selected={tab === t.id} onclick={() => setTab(t.id)}
+          class="-mb-px inline-flex h-9 items-center gap-1.5 border-b-2 px-3.5 text-[13px] {tab === t.id ? 'border-primary font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'} {locked ? 'opacity-70' : ''}">
+          {#if locked}<LockIcon class="size-3" aria-label="not shared" />{/if}{t.label}
+          {#if t.id === "checkins" && c.toReview.length}<span class="rounded-full bg-warning/12 px-1.5 text-[11px] font-semibold text-warning">{c.toReview.length}</span>{/if}
+          {#if t.id === "messages" && c.unread}<span class="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">{c.unread}</span>{/if}
+        </button>
+      {/each}
+    </div>
+
+    {#key clientId}
+      {#if tab === "overview"}
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
+            <div class="text-xs text-muted-foreground">Sessions, last 7 days</div>
+            <div class="mt-1 text-[22px] font-bold">{c.sharing.workouts ? c.sessions7d : "–"}{#if c.sharing.workouts && c.program?.state === "running"}<span class="text-[13px] font-normal text-muted-foreground">{` of ${c.program.daysPerWeek}`}</span>{/if}</div>
+          </div>
+          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
+            <div class="text-xs text-muted-foreground">Last workout</div>
+            <div class="mt-1 text-[22px] font-bold">{!c.sharing.workouts ? "Not shared" : c.lastSessionAtMs ? when(c.lastSessionAtMs) : "None yet"}</div>
+          </div>
+          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
+            <div class="text-xs text-muted-foreground">Last check-in</div>
+            <div class="mt-1 text-[22px] font-bold">{!c.sharing.checkins ? "Not shared" : c.lastCheckinAtMs ? when(c.lastCheckinAtMs) : c.missed ? "Missed" : "None yet"}</div>
+          </div>
+          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
+            <div class="text-xs text-muted-foreground">Program</div>
+            <div class="mt-1 truncate text-[22px] font-bold">{c.program?.state === "running" ? `Week ${c.program.week} of ${c.program.totalWeeks}` : c.program ? "Not started" : "Own plan"}</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-start gap-4">
+          <section class="flex min-w-0 flex-[2_1_480px] flex-col gap-1 rounded-[10px] border bg-card px-[18px] py-4 {latest && latest.reviewedAtMs == null ? 'border-warning/30' : 'border-border'}">
+            {#if !c.sharing.checkins}
+              <h2 class="text-sm font-semibold">Check-ins</h2>
+              <p class="text-[13px] text-muted-foreground">{c.name} doesn't share check-ins with you.</p>
+            {:else if latest}
+              {@const sub = parseSubmission(latest)}
+              {@const form = overview.schedules.find((s) => s.schedule.id === latest.scheduleId)?.schedule ?? null}
+              <div class="flex items-baseline justify-between gap-2">
+                <h2 class="text-sm font-semibold">{form?.name ?? "Check-in"} · {when(latest.submittedAtMs)}</h2>
+                {#if latest.reviewedAtMs == null}
+                  <a href="/coaching/checkins?id={encodeURIComponent(latest.id)}&client={c.id}" class="h-[30px] rounded-lg bg-primary px-2.5 text-xs font-semibold leading-[30px] text-primary-foreground">Review and reply</a>
+                {:else}
+                  <span class="text-xs text-muted-foreground">Reviewed {when(latest.reviewedAtMs)}</span>
+                {/if}
               </div>
-            {/each}
+              {#if sub}<CheckinAnswers schedule={form} submission={sub} />{/if}
+            {:else}
+              <h2 class="text-sm font-semibold">Check-ins</h2>
+              <p class="text-[13px] text-muted-foreground">{c.scheduleCount ? "Nothing sent yet." : "No check-in form yet."} <button type="button" class="text-primary hover:underline" onclick={() => setTab("checkins")}>{c.scheduleCount ? "See forms" : "Add one"}</button></p>
+            {/if}
+          </section>
+
+          <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
+            <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
+              <div class="flex items-baseline justify-between pb-1.5"><h2 class="text-sm font-semibold">Messages</h2><button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => setTab("messages")}>All ›</button></div>
+              <MessageThread relationshipId={c.relationshipId} otherName={c.name} compact onRead={() => (c.unread = 0)} />
+            </section>
+            <section class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
+              <div class="flex items-baseline justify-between"><h2 class="text-sm font-semibold">What {c.name} shares with you</h2></div>
+              <p class="text-[13px] leading-relaxed text-muted-foreground">
+                {#if SHARE_AREAS.every((a) => c.sharing[a.key])}
+                  Everything: workouts, nutrition diary, body weight, habits and check-ins.
+                {:else}
+                  Shares {SHARE_AREAS.filter((a) => c.sharing[a.key]).map((a) => a.label.toLowerCase()).join(", ") || "nothing yet"}.
+                  Not {SHARE_AREAS.filter((a) => !c.sharing[a.key]).map((a) => a.label.toLowerCase()).join(", ")}.
+                {/if}
+                Never their social posts or other messages. They can change this any time.
+              </p>
+            </section>
           </div>
-          {#if insights.output.insights?.length}
-            <ul class="mt-2 flex flex-col gap-1">
-              {#each insights.output.insights as text (text)}
-                <li class="text-xs text-muted-foreground">{text}</li>
-              {/each}
-            </ul>
-          {/if}
         </div>
+      {:else if tab === "training"}
+        <ClientTraining clientId={c.id} name={c.name} sharing={c.sharing} />
+      {:else if tab === "nutrition"}
+        <ClientNutrition clientId={c.id} username={c.username} name={c.name} relationshipId={c.relationshipId} sharing={c.sharing} />
+      {:else if tab === "habits"}
+        <ClientHabits clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
+      {:else if tab === "checkins"}
+        <ClientCheckins clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
+      {:else if tab === "programs"}
+        <ClientPrograms bind:this={programsTab} openAssign={assignOnOpen} clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
+      {:else if tab === "messages"}
+        <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-2">
+          <MessageThread relationshipId={c.relationshipId} otherName={c.name} onRead={() => (c.unread = 0)} />
+        </section>
       {/if}
-    </Card.Content>
-  </Card.Root>
-
-  {#if recentDiary.length}
-    <Card.Root>
-      <Card.Header class="pb-2">
-        <Card.Title>Recent diary</Card.Title>
-        <Card.Description>What this client logged over the last 7 days.</Card.Description>
-      </Card.Header>
-      <Card.Content class="pt-0 flex flex-col gap-3">
-        {#each recentDiary as d (d.id)}
-          <div>
-            <div class="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>{d.dateIso}</span>
-              <span class="tabular-nums">{dayTotals(d).kcal} kcal · P {Math.round(dayTotals(d).proteinG)}</span>
-            </div>
-            <ul class="flex flex-col gap-1 text-sm">
-              {#each d.items as it (it.id)}
-                <li class="flex items-center gap-2">
-                  {#if it.photoDataUrl}
-                    <img src={it.photoDataUrl} alt="" class="h-9 w-9 rounded object-cover shrink-0" />
-                  {/if}
-                  <span class="flex-1 truncate">{it.name}</span>
-                  <span class="text-xs text-muted-foreground tabular-nums">{it.computed.kcal} kcal</span>
-                </li>
-              {/each}
-            </ul>
-
-            {#if commentsByDate[d.dateIso]?.length}
-              <ul class="mt-2 flex flex-col gap-1">
-                {#each commentsByDate[d.dateIso] as c (c.messageId)}
-                  <li class="text-xs rounded bg-muted/60 px-2 py-1">
-                    <span class="text-muted-foreground">{c.mine ? "You" : "Client"} · {fmtTime(c.createdAtMs)}</span>
-                    <p class="whitespace-pre-wrap break-words">{c.body}</p>
-                  </li>
-                {/each}
-              </ul>
-            {/if}
-            {#if relationshipId}
-              <form
-                class="mt-2 flex items-center gap-2"
-                onsubmit={(e) => { e.preventDefault(); void sendComment(d.dateIso); }}
-              >
-                <input
-                  type="text"
-                  placeholder="Comment on this day…"
-                  class="h-7 flex-1 rounded border border-border bg-background px-2 text-xs"
-                  value={commentDraft[d.dateIso] ?? ""}
-                  oninput={(e) => (commentDraft = { ...commentDraft, [d.dateIso]: e.currentTarget.value })}
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  variant="outline"
-                  disabled={commentSending === d.dateIso || !(commentDraft[d.dateIso] ?? "").trim()}
-                >
-                  Post
-                </Button>
-              </form>
-            {/if}
-          </div>
-        {/each}
-      </Card.Content>
-    </Card.Root>
+    {/key}
   {/if}
 </div>

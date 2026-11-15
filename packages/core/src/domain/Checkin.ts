@@ -181,3 +181,28 @@ export function setAnswer(
 export function markSubmitted(submission: CheckinSubmission): CheckinSubmission {
   return { ...submission, submittedAtMs: nowMs(), updatedAtMs: nowMs() };
 }
+
+// ── Due and missed ────────────────────────────────────────────────────────────
+
+/** When period `index` closes: its check-in can be filled in any time before then. */
+export function periodDueMs(s: CheckinSchedule, index: number): number {
+  return periodStartMs(s, index + 1);
+}
+
+/** The latest closed period with nothing submitted for it, or null. Only the period just
+ * before the current one counts: older gaps are history, not something to chase. Manual
+ * and archived schedules are never missed. */
+export function missedCheckin(
+  s: CheckinSchedule,
+  submissions: CheckinSubmission[],
+  atMs: number = nowMs(),
+): { periodIndex: number; dueMs: number } | null {
+  if (s.archived) return null;
+  const current = currentPeriodIndex(s, atMs);
+  if (current === null || current < 1) return null;
+  const previous = current - 1;
+  const done = submissions.some(
+    (x) => x.scheduleId === s.id && x.periodIndex === previous && x.submittedAtMs !== undefined,
+  );
+  return done ? null : { periodIndex: previous, dueMs: periodDueMs(s, previous) };
+}

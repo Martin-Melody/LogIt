@@ -12,6 +12,7 @@
   import * as Sidebar from "$lib/components/ui/sidebar";
   import AppSidebar from "$lib/components/app-sidebar.svelte";
   import { isCoachingPath } from "$lib/workspace";
+  import { coachBadges } from "$lib/features/coaching/badges.svelte";
 
   let { children } = $props();
 
@@ -23,9 +24,13 @@
     "/nutrition": "Nutrition",
     "/plan": "Plan",
     "/habits": "Habits & goals",
-    "/roster": "Roster",
+    "/coaching": "Today",
+    "/coaching/programs": "Programs",
+    "/coaching/checkins": "Check-ins",
+    "/coaching/links": "Invite links",
     "/clients": "Clients",
     "/messages": "Messages",
+    "/my-coach": "My coach",
     "/account": "Account",
     "/exercises": "Exercise",
   };
@@ -45,6 +50,9 @@
     page.url.pathname.startsWith("/reset-password"),
   );
   const isUpgrade = $derived(page.url.pathname.startsWith("/upgrade"));
+  // An invite link from a coach: any account can open it (a Free account can be coached),
+  // and someone logged out is sent to log in first and brought back.
+  const isInviteLink = $derived(page.url.pathname.startsWith("/c/"));
   // A Free account on the hosted server can still reach these: the "plans are in the app"
   // page, and Account (password, deleting the account, which the store listing promises can
   // be done on the web).
@@ -68,11 +76,12 @@
 
   async function guardRoute() {
     if (!apiClient.isAuthenticated()) {
-      if (!isLogin) await goto("/login");
+      if (isInviteLink) await goto(`/login?next=${encodeURIComponent(page.url.pathname)}`);
+      else if (!isLogin) await goto("/login");
       return;
     }
     if (isBlockedFreeTier) {
-      if (!isUpgrade && !isFreeAccount) await goto("/upgrade");
+      if (!isUpgrade && !isFreeAccount && !isInviteLink) await goto("/upgrade");
       return;
     }
     if (isUpgrade) await goto("/");
@@ -102,6 +111,7 @@
     // app) is what actually triggers this guard to re-check after those transitions.
     void page.url.pathname;
     if (ready) void guardRoute();
+    if (ready && apiClient.isAuthenticated() && !isBlockedFreeTier) void coachBadges.refresh(isStudio);
   });
 
   function logout() {
@@ -120,6 +130,8 @@
   {@render children?.()}
 {:else if isUpgrade && apiClient.isAuthenticated()}
   {@render children?.()}
+{:else if isInviteLink && isBlockedFreeTier && apiClient.isAuthenticated()}
+  <div class="p-4">{@render children?.()}</div>
 {:else if isFreeAccount && isBlockedFreeTier && apiClient.isAuthenticated()}
   <div class="p-4">
     <div class="mx-auto mb-3 max-w-xl">

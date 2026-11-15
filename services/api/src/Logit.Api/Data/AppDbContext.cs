@@ -37,6 +37,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<DiagnosticReport> DiagnosticReports => Set<DiagnosticReport>();
     public DbSet<Invite> Invites => Set<Invite>();
     public DbSet<BillingSubscription> BillingSubscriptions => Set<BillingSubscription>();
+    public DbSet<CoachInviteLink> CoachInviteLinks => Set<CoachInviteLink>();
+    public DbSet<CheckinReview> CheckinReviews => Set<CheckinReview>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -216,6 +218,36 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(r => r.Client)
              .WithMany(u => u.ClientRelationships)
              .HasForeignKey(r => r.ClientId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.InviteLink)
+             .WithMany()
+             .HasForeignKey(r => r.InviteLinkId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<CoachInviteLink>(e =>
+        {
+            e.HasIndex(l => l.Code).IsUnique();
+            e.HasIndex(l => l.CoachId);
+            e.Property(l => l.Code).HasMaxLength(16);
+            e.Property(l => l.Name).HasMaxLength(CoachInviteLinkLimits.MaxNameChars);
+            e.HasOne(l => l.Coach)
+             .WithMany()
+             .HasForeignKey(l => l.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CheckinReview>(e =>
+        {
+            e.HasIndex(r => new { r.CoachId, r.ClientUserId, r.SubmissionId }).IsUnique();
+            e.HasIndex(r => r.ClientUserId);
+            e.HasOne(r => r.Coach)
+             .WithMany()
+             .HasForeignKey(r => r.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Client)
+             .WithMany()
+             .HasForeignKey(r => r.ClientUserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

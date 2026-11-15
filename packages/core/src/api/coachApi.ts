@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { ApiError, apiClient } from "./client";
 
 export interface CoachClientUser {
   id: string;
@@ -7,14 +7,43 @@ export interface CoachClientUser {
   avatarUrl: string | null;
 }
 
+/** What a client lets one coach read. The server enforces it on every coach read; a
+ * switched-off area answers 403 with `code: "not_shared"`. */
+export interface Sharing {
+  workouts: boolean;
+  nutrition: boolean;
+  bodyweight: boolean;
+  habits: boolean;
+  checkins: boolean;
+}
+
+export type ShareArea = keyof Sharing;
+
+export const SHARE_ALL: Sharing = { workouts: true, nutrition: true, bodyweight: true, habits: true, checkins: true };
+
+/** The switches in the order and words the UI shows them. */
+export const SHARE_AREAS: { key: ShareArea; label: string }[] = [
+  { key: "workouts", label: "Workouts" },
+  { key: "nutrition", label: "Nutrition diary" },
+  { key: "bodyweight", label: "Body weight" },
+  { key: "habits", label: "Habits" },
+  { key: "checkins", label: "Check-ins" },
+];
+
 export interface ClientRelationship {
   relationshipId: string;
   client: CoachClientUser;
+  /** Missing from servers older than the sharing switches (= everything shared). */
+  sharing?: Sharing;
+  /** When coaching started (ISO). */
+  since?: string;
 }
 
 export interface CoachRelationship {
   relationshipId: string;
   coach: CoachClientUser;
+  sharing?: Sharing;
+  since?: string;
 }
 
 export interface RosterEntry {
@@ -28,6 +57,66 @@ export interface RosterEntry {
   assignedHabitCount: number;
   lastCheckinSubmittedAtMs: number | null;
   unreadFromClient: number;
+  sharing?: Sharing;
+  since?: string;
+}
+
+export type InviteLinkState = "active" | "off" | "expired" | "full";
+
+export interface InviteLink {
+  id: string;
+  /** "K7M2-Q9XH" */
+  code: string;
+  name: string;
+  createdAt: string;
+  expiresAt: string | null;
+  maxUses: number | null;
+  joined: number;
+  waiting: number;
+  state: InviteLinkState;
+}
+
+/** What someone opening a link sees. */
+export interface InviteLinkInfo {
+  coach: CoachClientUser;
+  state: InviteLinkState;
+  isSelf: boolean;
+  /** "invited" = the coach already invited you by username. */
+  relationship: "none" | "invited" | "requested" | "active";
+  relationshipId: string | null;
+}
+
+/** A client asking to be coached, through a link. */
+export interface CoachingRequest {
+  relationshipId: string;
+  client: CoachClientUser;
+  linkName: string | null;
+  sharing: Sharing;
+  requestedAt: string;
+}
+
+export interface MyCoachingRequest {
+  relationshipId: string;
+  coach: CoachClientUser;
+  sharing: Sharing;
+  requestedAt: string;
+}
+
+/** One submitted check-in in the coach's inbox. `dataJson` is a CheckinSubmission. */
+export interface CheckinInboxItem {
+  relationshipId: string;
+  clientUserId: string;
+  id: string;
+  scheduleId: string;
+  submittedAtMs: number;
+  updatedAtMs: number;
+  dataJson: string;
+  reviewedAtMs: number | null;
+}
+
+/** 403 from a coach read of something the client keeps private. */
+export function isNotShared(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 403 && e.code === "not_shared";
 }
 
 export interface ReceivedInvite {
@@ -70,8 +159,88 @@ export const coachApi = {
     return apiClient.fetch("/coach/invites/sent");
   },
 
-  async acceptInvite(relationshipId: string): Promise<void> {
-    await apiClient.fetch(`/coach/invites/${relationshipId}/accept`, { method: "POST" });
+  /** Accept a coach's invite, choosing what they can see (omitted = everything). */
+  async acceptInvite(relationshipId: string, sharing?: Sharing): Promise<void> {
+    await apiClient.fetch(`/coach/invites/${relationshipId}/accept`, {
+      method: "POST",
+      body: JSON.stringify({ sharing: sharing ?? null }),
+    });
+  },
+
+  /** Client: change what a coach can see. Applies straight away. */
+  async updateSharing(relationshipId: string, sharing: Sharing): Promise<Sharing> {
+    const res = await apiClient.fetch<{ sharing: Sharing }>(`/coach/relationships/${relationshipId}/sharing`, {
+      method: "PUT",
+      body: JSON.stringify(sharing),
+    });
+    return res.sharing;
+  },
+
+  // ── Invite links ──
+
+  async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null }): Promise<InviteLink> {
+    return apiClient.fetch("/coach/links", { method: "POST", body: JSON.stringify(input) });
+  },
+
+  async listLinks(): Promise<InviteLink[]> {
+    const { links } = await apiClient.fetch<{ links: InviteLink[] }>("/coach/links");
+    return links;
+  },
+
+  async turnOffLink(linkId: string): Promise<void> {
+    await apiClient.fetch(`/coach/links/${linkId}`, { method: "DELETE" });
+  },
+
+  async openLink(code: string): Promise<InviteLinkInfo> {
+    return apiClient.fetch(`/coach/links/code/${encodeURIComponent(code)}`);
+  },
+
+  async requestCoaching(code: string, sharing: Sharing): Promise<{ relationshipId: string; status: "requested" | "active" }> {
+    return apiClient.fetch(`/coach/links/code/${encodeURIComponent(code)}/request`, {
+      method: "POST",
+      body: JSON.stringify({ sharing }),
+    });
+  },
+
+  async listRequests(): Promise<CoachingRequest[]> {
+    const { requests } = await apiClient.fetch<{ requests: CoachingRequest[] }>("/coach/requests");
+    return requests;
+  },
+
+  async listMyRequests(): Promise<MyCoachingRequest[]> {
+    const { requests } = await apiClient.fetch<{ requests: MyCoachingRequest[] }>("/coach/requests/mine");
+    return requests;
+  },
+
+  async acceptRequest(relationshipId: string): Promise<void> {
+    await apiClient.fetch(`/coach/requests/${relationshipId}/accept`, { method: "POST" });
+  },
+
+  async declineRequest(relationshipId: string): Promise<void> {
+    await apiClient.fetch(`/coach/requests/${relationshipId}/decline`, { method: "POST" });
+  },
+
+  // ── Check-in inbox ──
+
+  async checkinInbox(days = 120): Promise<CheckinInboxItem[]> {
+    const { items } = await apiClient.fetch<{ items: CheckinInboxItem[] }>(`/coach/checkins/inbox?days=${days}`);
+    return items;
+  },
+
+  async setCheckinReviewed(clientUserId: string, submissionId: string, reviewed: boolean): Promise<number | null> {
+    const res = await apiClient.fetch<{ reviewedAtMs: number | null }>("/coach/checkins/reviews", {
+      method: "POST",
+      body: JSON.stringify({ clientUserId, submissionId, reviewed }),
+    });
+    return res.reviewedAtMs;
+  },
+
+  /** Client: which of my check-ins a coach has reviewed. */
+  async myCheckinReviews(): Promise<{ submissionId: string; coachId: string; reviewedAtMs: number }[]> {
+    const { reviews } = await apiClient.fetch<{ reviews: { submissionId: string; coachId: string; reviewedAtMs: number }[] }>(
+      "/coach/checkins/reviews/mine",
+    );
+    return reviews;
   },
 
   async declineInvite(relationshipId: string): Promise<void> {
