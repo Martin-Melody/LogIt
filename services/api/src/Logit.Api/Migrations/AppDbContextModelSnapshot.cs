@@ -891,6 +891,14 @@ namespace Logit.Api.Migrations
                     b.Property<long?>("DeletedAtMs")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SharedWithClients")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("TEXT");
 

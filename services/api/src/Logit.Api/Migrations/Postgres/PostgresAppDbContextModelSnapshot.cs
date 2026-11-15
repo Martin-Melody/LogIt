@@ -896,6 +896,14 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<long?>("DeletedAtMs")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<bool>("SharedWithClients")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("timestamp with time zone");
 
