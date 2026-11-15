@@ -7,6 +7,7 @@
   import AppleIcon from "@lucide/svelte/icons/apple";
   import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
   import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+  import LibraryIcon from "@lucide/svelte/icons/library";
   import SunriseIcon from "@lucide/svelte/icons/sunrise";
   import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
   import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
@@ -50,6 +51,7 @@
         { label: "Sessions", href: "/sessions", icon: ListIcon },
         { label: "Progress", href: "/progress", icon: TrendingUpIcon },
         { label: "Plan", href: "/plan", icon: CalendarDaysIcon },
+        { label: "Library", href: "/library", icon: LibraryIcon },
       ],
     },
     {
@@ -69,6 +71,7 @@
         { label: "Today", href: "/coaching", icon: SunriseIcon, badge: () => coachBadges.today },
         { label: "Clients", href: "/clients", icon: ContactIcon },
         { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon },
+        { label: "Library", href: "/coaching/library", icon: LibraryIcon },
         { label: "Check-ins", href: "/coaching/checkins", icon: ClipboardCheckIcon, badge: () => coachBadges.checkins },
         { label: "Messages", href: "/messages", icon: MessageSquareIcon, badge: () => coachBadges.messages },
       ],
