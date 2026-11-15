@@ -36,6 +36,9 @@ function ex(
   };
 }
 
+/** Bump when exercises are added, so the phone adds them to existing installs. */
+export const LIBRARY_BANK_VERSION = 1;
+
 export const CORE_EXERCISES: Exercise[] = [
   // ── Chest ──────────────────────────────────────────────────────────────────
   ex("core_bench_press", "Bench Press", ["chest"], ["triceps", "shoulders"], "barbell",

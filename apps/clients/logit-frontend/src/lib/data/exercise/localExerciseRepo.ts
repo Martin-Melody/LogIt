@@ -2,7 +2,7 @@ import { browser } from "$app/environment";
 import type { Exercise, ExercisePatch, ExerciseType } from "@logit/core/domain/exercise";
 import type { ExerciseRepo, ListExercisesOptions } from "@logit/core/data/exercise/exerciseRepo";
 import { createId } from "@logit/core/domain/ids";
-import { CORE_EXERCISES } from "@logit/core/domain/coreExercises";
+import { CORE_EXERCISES, canonicalExerciseId } from "@logit/core/domain/coreExercises";
 
 // Core exercises are always authoritative — never stored in localStorage.
 
@@ -77,7 +77,8 @@ export function createLocalExerciseRepo(): ExerciseRepo {
     },
 
     async getById(id: string) {
-      return all().find((e) => e.id === id) ?? null;
+      const cid = canonicalExerciseId(id);
+      return all().find((e) => e.id === cid) ?? null;
     },
 
     async create(name: string, exerciseType: ExerciseType = "normal") {
@@ -102,7 +103,9 @@ export function createLocalExerciseRepo(): ExerciseRepo {
       return ex;
     },
 
-    async update(id: string, patch: ExercisePatch) {
+    async update(rawId: string, rawPatch: ExercisePatch) {
+      const id = canonicalExerciseId(rawId);
+      const patch: ExercisePatch & { updatedAtMs: number } = { ...rawPatch, updatedAtMs: Date.now() };
       // Core exercises: notes and exerciseType can be overridden via an overlay
       const coreIdx = CORE_EXERCISES.findIndex((e) => e.id === id);
       if (coreIdx !== -1) {

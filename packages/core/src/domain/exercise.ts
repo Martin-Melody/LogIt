@@ -75,6 +75,8 @@ export type Exercise = {
   /** Short how-to points shown with the exercise ("Elbows under the bar"). */
   cues?: string[];
   media?: LibraryMedia[];
+  /** Last edit. Missing on exercises from before the library; sync treats that as 0. */
+  updatedAtMs?: number;
 };
 
 export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles" | "exerciseType" | "machines" | "defaultMachineId" | "equipment" | "cues">>;

@@ -19,6 +19,10 @@ export type RemoteExercise = {
   createdAtMs: number;
   dataJson: string | null;
   deletedAtMs?: number | null;
+  /** Pull only: "strength" | "cardio" | "mobility". */
+  kind?: string | null;
+  /** Pull only: a coach's "clients see it" switch. */
+  shared?: boolean | null;
 };
 
 export type RemoteCheckinSubmission = {
@@ -174,9 +178,16 @@ export const syncApi = {
     });
   },
 
+  /** Strength exercises only (what app versions before the library expect). */
   pullExercises(since: number, clientId?: string): Promise<{ exercises: RemoteExercise[] }> {
     const suffix = clientId ? `&clientId=${clientId}` : "";
     return apiClient.fetch(`/sync/exercises?since=${since}${suffix}`);
+  },
+
+  /** Every library item of yours (or a client's): strength, cardio and mobility. */
+  pullLibrary(since: number, clientId?: string): Promise<{ exercises: RemoteExercise[] }> {
+    const suffix = clientId ? `&clientId=${clientId}` : "";
+    return apiClient.fetch(`/sync/exercises?since=${since}&kinds=all${suffix}`);
   },
 
   pushProfile(profile: RemoteProfile): Promise<void> {

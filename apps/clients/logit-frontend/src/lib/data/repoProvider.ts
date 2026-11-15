@@ -61,6 +61,10 @@ import { createSqliteWorkoutRepo } from "./workouts/workoutRepo.sqlite";
 import { createSqliteSplitRepo } from "./splts/splitRepo.sqlite";
 import { pluginRuntime } from "$lib/plugins";
 import { withExercisePacks } from "$lib/plugins/exercisePackRepo";
+import type { LibraryRepo } from "@logit/core/data/libraryRepo";
+import { createSqliteLibraryRepo } from "$lib/data/library/libraryRepo.sqlite";
+import { createLocalLibraryRepo } from "$lib/data/library/libraryRepo.local";
+import { withCoachExercises } from "$lib/data/library/coachExerciseRepo";
 import { loadActiveOwnerId, getActiveOwnerId, setActiveOwnerId } from "$lib/data/activeOwner";
 import {
   createLocalAccount,
@@ -78,6 +82,7 @@ let didInit = false;
 let workoutRepo: WorkoutRepo | null = null;
 let exerciseRepo: ExerciseRepo | null = null;
 let splitRepo: SplitRepo | null = null;
+let libraryRepo: LibraryRepo | null = null;
 let coachProgramRepo: AssignedProgramRepo | null = null;
 let authoredProgramRepo: AuthoredProgramRepo | null = null;
 let checkinRepo: AssignedCheckinRepo | null = null;
@@ -159,7 +164,8 @@ export async function initRepos(): Promise<void> {
     }
 
     workoutRepo = createSqliteWorkoutRepo();
-    exerciseRepo = withExercisePacks(createSqliteExerciseRepo());
+    libraryRepo = createSqliteLibraryRepo();
+    exerciseRepo = withCoachExercises(withExercisePacks(createSqliteExerciseRepo()), getLibraryRepo);
     splitRepo = createSqliteSplitRepo();
     coachProgramRepo = createSqliteCoachProgramRepo();
     authoredProgramRepo = createSqliteAuthoredProgramRepo();
@@ -190,7 +196,8 @@ export async function initRepos(): Promise<void> {
   loadActiveOwnerId();
 
   workoutRepo = createLocalWorkoutRepo();
-  exerciseRepo = withExercisePacks(createLocalExerciseRepo());
+  libraryRepo = createLocalLibraryRepo();
+  exerciseRepo = withCoachExercises(withExercisePacks(createLocalExerciseRepo()), getLibraryRepo);
   splitRepo = createLocalSplitRepo();
   coachProgramRepo = createLocalCoachProgramRepo();
   authoredProgramRepo = createLocalAuthoredProgramRepo();
@@ -216,6 +223,7 @@ export function resetRepos(): void {
   didInit = false;
   workoutRepo = null;
   exerciseRepo = null;
+  libraryRepo = null;
   splitRepo = null;
   coachProgramRepo = null;
   authoredProgramRepo = null;
@@ -241,6 +249,12 @@ export function getExerciseRepo(): ExerciseRepo {
   if (!exerciseRepo)
     throw new Error("ExerciseRepo not initialized. Call initRepos() first.");
   return exerciseRepo;
+}
+
+export function getLibraryRepo(): LibraryRepo {
+  if (!libraryRepo)
+    throw new Error("LibraryRepo not initialized. Call initRepos() first.");
+  return libraryRepo;
 }
 
 export function getSplitRepo(): SplitRepo {
