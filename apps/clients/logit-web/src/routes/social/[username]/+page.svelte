@@ -13,6 +13,7 @@
   import FollowButton from "$lib/features/social/FollowButton.svelte";
   import PostCard from "$lib/features/social/PostCard.svelte";
   import ProfileCards from "$lib/features/social/ProfileCards.svelte";
+  import ProfileEditor from "$lib/features/social/ProfileEditor.svelte";
   import ReportDialog from "$lib/features/social/ReportDialog.svelte";
   import MentionText from "$lib/features/social/MentionText.svelte";
 
@@ -32,10 +33,12 @@
   let blockOpen = $state(false);
   let removing = $state<ApiProfile | null>(null);
   let removeOpen = $state(false);
+  let editing = $state(false);
 
   const locked = $derived(!!profile && profile.canSeeContent === false);
 
   async function loadProfile(u: string) {
+    editing = false;
     profile = null;
     error = null;
     posts = null;
@@ -121,6 +124,8 @@
     <p class="py-16 text-center text-sm text-muted-foreground">{error}</p>
   {:else if !profile}
     <Skeleton class="h-36" /><Skeleton class="h-48" />
+  {:else if editing && profile.isSelf}
+    <ProfileEditor {profile} oncancel={() => (editing = false)} onsaved={(p) => { profile = { ...profile!, ...p }; editing = false; }} />
   {:else}
     <section class="flex flex-wrap items-center gap-[18px] rounded-[10px] border border-border bg-card px-[22px] py-5">
       <Avatar name={profile.displayName} url={profile.avatarUrl} size={72} />
@@ -135,7 +140,7 @@
       </div>
       <div class="flex items-center gap-2">
         {#if profile.isSelf}
-          <span class="text-xs text-muted-foreground">Edit your profile and cards on your phone</span>
+          <button type="button" onclick={() => (editing = true)} class="h-9 rounded-[9px] border border-border px-3.5 text-[13px] font-medium hover:bg-muted">Edit profile</button>
         {:else}
           <FollowButton username={profile.username} bind:status isPrivate={!!profile.isPrivate} primary class="h-9 px-3.5 text-[13px]" onchange={onFollowChange} />
           <DropdownMenu.Root>

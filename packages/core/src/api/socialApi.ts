@@ -357,6 +357,11 @@ export const socialApi = {
     return apiClient.fetch(`/users/me/social-settings`, { method: "PUT", body: JSON.stringify(change) });
   },
 
+  /** Your name, bio, photo and profile cards. Only the fields given change; "" clears the photo. */
+  async updateMe(change: { displayName?: string; bio?: string; avatarUrl?: string; publicProfileJson?: string }): Promise<ApiProfile> {
+    return apiClient.fetch("/users/me", { method: "PATCH", body: JSON.stringify(change) });
+  },
+
   async updatePublicProfile(data: PublicProfileData): Promise<void> {
     await apiClient.fetch("/users/me", {
       method: "PATCH",
