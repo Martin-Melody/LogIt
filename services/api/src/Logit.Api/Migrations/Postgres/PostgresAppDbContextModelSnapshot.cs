@@ -114,6 +114,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid>("CoachId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Reply")
+                        .HasColumnType("text");
+
                     b.Property<long>("ReviewedAtMs")
                         .HasColumnType("bigint");
 
@@ -213,6 +216,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<string>("SwapRule")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1266,6 +1272,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("text");
 
                     b.Property<string>("Bio")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachSwapRule")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")

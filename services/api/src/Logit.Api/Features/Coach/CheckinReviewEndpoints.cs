@@ -12,6 +12,7 @@ namespace Logit.Api.Features.Coach;
 public static class CheckinReviewEndpoints
 {
     public const int MaxInboxDays = 365;
+    public const int MaxReplyChars = 4000;
 
     public static void Map(RouteGroupBuilder group)
     {
@@ -113,6 +114,8 @@ public static class CheckinReviewEndpoints
             return Results.Ok(new { reviewedAtMs = (long?)null });
         }
 
+        var reply = string.IsNullOrWhiteSpace(req.Reply) ? null : req.Reply.Trim();
+        if (reply is { Length: > MaxReplyChars }) reply = reply[..MaxReplyChars];
         if (existing is null)
         {
             existing = new CheckinReview
@@ -121,11 +124,18 @@ public static class CheckinReviewEndpoints
                 ClientUserId = req.ClientUserId,
                 SubmissionId = req.SubmissionId,
                 ReviewedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Reply = reply,
             };
             db.CheckinReviews.Add(existing);
             await db.SaveChangesAsync();
         }
-        return Results.Ok(new { reviewedAtMs = (long?)existing.ReviewedAtMs });
+        else if (reply is not null && reply != existing.Reply)
+        {
+            // Replying again to a reviewed check-in keeps the first review time, newest reply.
+            existing.Reply = reply;
+            await db.SaveChangesAsync();
+        }
+        return Results.Ok(new { reviewedAtMs = (long?)existing.ReviewedAtMs, reply = existing.Reply });
     }
 
     /// For the client: which of their submissions a coach has reviewed.
@@ -134,7 +144,7 @@ public static class CheckinReviewEndpoints
         var me = caller.GetUserId();
         var reviews = await db.CheckinReviews.AsNoTracking()
             .Where(r => r.ClientUserId == me)
-            .Select(r => new { submissionId = r.SubmissionId, coachId = r.CoachId, reviewedAtMs = r.ReviewedAtMs })
+            .Select(r => new { submissionId = r.SubmissionId, coachId = r.CoachId, reviewedAtMs = r.ReviewedAtMs, reply = r.Reply })
             .ToListAsync();
         return Results.Ok(new { reviews });
     }
@@ -144,4 +154,4 @@ public record InboxItem(
     Guid RelationshipId, Guid ClientUserId, string Id, string ScheduleId, long SubmittedAtMs,
     long UpdatedAtMs, string DataJson, long? ReviewedAtMs);
 
-public record SetReviewedRequest(Guid ClientUserId, string SubmissionId, bool Reviewed = true);
+public record SetReviewedRequest(Guid ClientUserId, string SubmissionId, bool Reviewed = true, string? Reply = null);

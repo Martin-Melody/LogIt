@@ -59,6 +59,7 @@ public static class CoachEndpoints
         CoachLinkEndpoints.Map(group);
         CheckinReviewEndpoints.Map(group);
         CoachLibraryEndpoints.Map(group);
+        SwapRuleEndpoints.Map(group);
     }
 
     private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db)
@@ -130,6 +131,8 @@ public static class CoachEndpoints
             client = r.Client.ToProfileDto(false),
             sharing = r.ToSharingDto(),
             since = r.UpdatedAt,
+            // This client's own rule; null = the coach's default.
+            swapRule = r.SwapRule,
         }));
     }
 
@@ -262,6 +265,8 @@ public static class CoachEndpoints
             coach = r.Coach.ToProfileDto(false),
             sharing = r.ToSharingDto(),
             since = r.UpdatedAt,
+            // The swap rule that applies to me in this coach's programs.
+            swapRule = SwapRules.Effective(r, r.Coach),
         }));
     }
 
@@ -491,7 +496,8 @@ public static class CoachEndpoints
                 p.UpdatedAtMs,
                 p.DeletedAtMs == null ? p.DataJson : null,
                 p.DeletedAtMs,
-                p.StartedAtMs))
+                p.StartedAtMs,
+                p.CoachId))
             .ToListAsync();
 
         return Results.Ok(new { programs });
@@ -1062,7 +1068,9 @@ public record AssignedProgramDto(
     long UpdatedAtMs,
     string? DataJson,
     long? DeletedAtMs,
-    long? StartedAtMs);
+    long? StartedAtMs,
+    // Whose program it is, so the client's phone applies that coach's swap rule.
+    Guid? CoachId = null);
 
 public record StartProgramRequest(long StartedAtMs);
 

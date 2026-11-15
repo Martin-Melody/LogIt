@@ -109,6 +109,9 @@ namespace Logit.Api.Migrations
                     b.Property<Guid>("CoachId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Reply")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("ReviewedAtMs")
                         .HasColumnType("INTEGER");
 
@@ -208,6 +211,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SwapRule")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
@@ -1261,6 +1267,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Bio")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachSwapRule")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
