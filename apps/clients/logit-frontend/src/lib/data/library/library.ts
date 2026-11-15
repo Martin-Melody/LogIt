@@ -37,9 +37,18 @@ export async function loadLibrary(kind?: LibraryKind): Promise<LibraryEntry[]> {
   const groups: LibraryEntry[][] = [];
   const library = getLibraryRepo();
 
+  const fromCoaches = await library.listFromCoaches().catch(() => []);
+
   if (!kind || kind === "strength") {
     // Built-ins come from the database, not the bank, so your machines and muscle edits show.
-    const exercises = await getExerciseRepo().list({ limit: 5000 });
+    // The unfiltered list also has your coach's exercises; those are added below as theirs.
+    // One you've changed is saved as yours under the coach's id, so it stays yours.
+    const repo = getExerciseRepo();
+    const mineIds = new Set((await repo.list({ filter: "mine", limit: 5000 })).map((e) => e.id));
+    const coachOnly = new Set(
+      fromCoaches.filter((e) => e.kind === "strength" && !mineIds.has(e.item.id)).map((e) => e.item.id),
+    );
+    const exercises = (await repo.list({ limit: 5000 })).filter((e) => !coachOnly.has(e.id));
     groups.push(exercises.map((item) => ({ kind: "strength", source: strengthSource(item), item })));
   }
   if (!kind || kind === "cardio") {
@@ -53,7 +62,6 @@ export async function loadLibrary(kind?: LibraryKind): Promise<LibraryEntry[]> {
   const own = await library.listOwn().catch(() => []);
   groups.push(own.filter((e) => !kind || e.kind === kind).map((e) => ({ ...e, source: "mine" }) as LibraryEntry));
 
-  const fromCoaches = await library.listFromCoaches().catch(() => []);
   groups.push(
     fromCoaches
       .filter((e) => !kind || e.kind === kind)

@@ -42,7 +42,7 @@
   let selectedIds = $state<string[]>([]);
   const selectedCount = $derived(selectedIds.length);
   const strengthMine = $derived(
-    all.filter((e) => e.kind === "strength" && isUserExercise(e.item as Exercise)).map((e) => e.item as Exercise),
+    all.filter((e) => e.kind === "strength" && e.source === "mine" && isUserExercise(e.item as Exercise)).map((e) => e.item as Exercise),
   );
   const selectedExercises = $derived(strengthMine.filter((e) => selectedIds.includes(e.id)));
   let suppressNextClick = false;
@@ -101,7 +101,7 @@
   }
 
   function selectable(e: LibraryEntry): boolean {
-    return e.kind === "strength" && isUserExercise(e.item as Exercise);
+    return e.kind === "strength" && e.source === "mine" && isUserExercise(e.item as Exercise);
   }
 
   function startSelection(e: LibraryEntry) {
