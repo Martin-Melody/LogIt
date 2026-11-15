@@ -1,24 +1,22 @@
 // "Copy to mine" — P3 (cheap, id-reference tier: Algorithm/Widget) and P4 (full-fidelity
 // tier: Split/Exercise/Habit) of docs/architecture/profile-progress-redesign.md.
 import { get } from "svelte/store";
-import { createId } from "@logit/core/domain/ids";
-import { nowMs } from "@logit/core/domain/time";
 import { setProgressionAlgorithm } from "@logit/core/usecases/progression/getProgressionConfig";
 import { setAnalyticsPlugin } from "@logit/core/usecases/progression/getAnalyticsConfig";
 import { setNutritionAlgorithm } from "@logit/core/usecases/nutrition/getNutritionAlgorithmConfig";
 import { touchGoal, defaultNutritionGoal } from "@logit/core/domain/nutrition";
-import type {
-  WorkoutSplit,
-  SplitDay,
-  PlannedBlock,
-  PlannedGroup,
-  PlannedMobilityTargets,
-  PlannedTargets,
-} from "@logit/core/domain/WorkoutSplit";
-import { normalizePlannedGroups } from "@logit/core/domain/WorkoutSplit";
-import type { MobilityMetric } from "@logit/core/domain/workout";
-import type { Exercise, MuscleGroup, ExerciseType, Machine } from "@logit/core/domain/exercise";
-import type { Habit, HabitCadence, HabitTone } from "@logit/core/domain/habit";
+import type { Exercise } from "@logit/core/domain/exercise";
+import {
+  habitFromShared,
+  libraryItemFromShared,
+  splitFromShared,
+  type SharedExercise,
+  type SharedHabit,
+  type SharedLibraryItem,
+  type SharedSplit,
+} from "@logit/core/domain/sharedContent";
+import type { OwnLibraryItem } from "@logit/core/data/libraryRepo";
+import { loadLibrary, saveOwnItem } from "$lib/data/library/library";
 import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 import { bumpProgression } from "$lib/progression/store";
 import { getNutritionRepo, getSplitRepo, getExerciseRepo, getHabitRepo } from "$lib/data/repoProvider";
@@ -69,17 +67,13 @@ export function copyWidgetToMine(id: string): boolean {
   return false;
 }
 
-// ── Exercise ──────────────────────────────────────────────────────────────────
+// ── Exercise / library item ───────────────────────────────────────────────────
 
-export type CopyableExercise = {
-  name: string;
-  notes?: string;
-  primaryMuscles?: MuscleGroup[];
-  secondaryMuscles?: MuscleGroup[];
-  exerciseType?: ExerciseType;
-  machines?: Machine[];
-  defaultMachineId?: string;
-};
+// The payload types live in @logit/core (sharedContent) so the web copies the same way.
+export type CopyableExercise = SharedExercise;
+export type CopyableLibraryItem = SharedLibraryItem;
+export type CopyableSplit = SharedSplit;
+export type CopyableHabit = SharedHabit;
 
 /** Returns the local exercise the copier ends up with — either one they already had by this
  * name, or a freshly created copy (always non-core, fresh id — never the source's id, which
@@ -88,171 +82,54 @@ export async function copyExerciseToMine(payload: CopyableExercise): Promise<Exe
   const repo = getExerciseRepo();
   const existing = await repo.getByName(payload.name);
   if (existing) return existing;
-  const exercise: Exercise = {
-    id: createId("ex"),
-    name: payload.name,
-    notes: payload.notes ?? null,
-    isCore: false,
-    createdAtMs: nowMs(),
-    primaryMuscles: payload.primaryMuscles ?? [],
-    secondaryMuscles: payload.secondaryMuscles ?? [],
-    exerciseType: payload.exerciseType,
-    machines: payload.machines,
-    defaultMachineId: payload.defaultMachineId,
-  };
-  await repo.saveExercise(exercise);
-  pushExercise(exercise);
-  return exercise;
+  const copy = libraryItemFromShared(payload);
+  if (copy.kind !== "strength") throw new Error("not a strength exercise");
+  await repo.saveExercise(copy.item);
+  pushExercise(copy.item);
+  return copy.item;
+}
+
+/** Any library item: strength goes to the exercise table, cardio and mobility to your own
+ * library items. One you already have by that name is kept. Returns false when it was already there. */
+export async function copyLibraryItemToMine(payload: CopyableLibraryItem): Promise<boolean> {
+  if (!("kind" in payload) || (payload.kind !== "cardio" && payload.kind !== "mobility")) {
+    const repo = getExerciseRepo();
+    if (await repo.getByName(payload.name)) return false;
+    await copyExerciseToMine(payload as SharedExercise);
+    return true;
+  }
+  const name = payload.name.trim().toLowerCase();
+  const have = (await loadLibrary(payload.kind)).some((e) => e.source === "mine" && e.item.name.trim().toLowerCase() === name);
+  if (have) return false;
+  await saveOwnItem(libraryItemFromShared(payload) as OwnLibraryItem);
+  return true;
 }
 
 // ── Split ─────────────────────────────────────────────────────────────────────
 
-type CopyableBlock =
-  | { type: "strength"; orderIndex: number; exerciseName: string; exerciseId?: string; targets?: PlannedTargets; groupId?: string }
-  | { type: "cardio"; orderIndex: number; activityName: string; groupId?: string }
-  | {
-      type: "mobility";
-      orderIndex: number;
-      drillName: string;
-      drillId?: string;
-      metric: MobilityMetric;
-      perSide: boolean;
-      targets?: PlannedMobilityTargets;
-      groupId?: string;
-    };
-
-export type CopyableSplit = {
-  name: string;
-  days: {
-    name?: string;
-    orderIndex: number;
-    blocks: CopyableBlock[];
-    groups?: PlannedGroup[];
-    rest?: boolean;
-    sameDayAsPrevious?: boolean;
-    weekday?: number;
-  }[];
-  schedule?: WorkoutSplit["schedule"];
-  /** Full definitions of every non-core exercise this split uses, so a copier who doesn't
-   * already have one by that name can get a real local copy instead of a dangling reference —
-   * core/bundled exercises are seeded with the same id everywhere and never need this. */
-  customExercises: CopyableExercise[];
-};
-
-/** A block's `exerciseId` only means something in the *author's* local database — resolve
- * to the copier's own exercise id by trying, in order: a core exercise sharing that exact id
- * (portable, seeded identically everywhere), an existing local exercise with a matching name,
- * or creating a local copy from the embedded `customExercises` entry. Falls back to leaving
- * the block name-only (no id) if none of those resolve. */
-async function resolveExerciseId(
-  name: string,
-  sourceId: string | undefined,
-  customByName: Map<string, CopyableExercise>,
-  cache: Map<string, string | undefined>,
-): Promise<string | undefined> {
-  if (cache.has(name)) return cache.get(name);
-  const repo = getExerciseRepo();
-
-  if (sourceId) {
-    const byId = await repo.getById(sourceId);
-    if (byId?.isCore) { cache.set(name, byId.id); return byId.id; }
-  }
-  const existing = await repo.getByName(name);
-  if (existing) { cache.set(name, existing.id); return existing.id; }
-
-  const source = customByName.get(name);
-  const id = source ? (await copyExerciseToMine(source)).id : undefined;
-  cache.set(name, id);
-  return id;
-}
-
+/** A block's `exerciseId` only means something in the *author's* database — resolve to the
+ * copier's own id: a core exercise with that exact id (the same everywhere), an exercise of
+ * theirs by name, or a copy made from the embedded `customExercises` entry. Otherwise the
+ * block stays name-only. */
 export async function copySplitToMine(payload: CopyableSplit): Promise<void> {
-  const customByName = new Map(payload.customExercises.map((e) => [e.name, e]));
-  const idCache = new Map<string, string | undefined>();
-
-  const days: SplitDay[] = [];
-  for (const d of payload.days) {
-    const blocks: PlannedBlock[] = [];
-    for (const b of d.blocks) {
-      const group = b.groupId ? { groupId: b.groupId } : {};
-      if (b.type === "strength") {
-        blocks.push({
-          type: "strength",
-          id: createId("blk"),
-          orderIndex: b.orderIndex,
-          exerciseName: b.exerciseName,
-          exerciseId: await resolveExerciseId(b.exerciseName, b.exerciseId, customByName, idCache),
-          targets: b.targets,
-          ...group,
-        });
-      } else if (b.type === "mobility") {
-        // Drill ids come from the bundled catalog, the same on every phone.
-        blocks.push({
-          type: "mobility",
-          id: createId("blk"),
-          orderIndex: b.orderIndex,
-          drillName: b.drillName,
-          ...(b.drillId ? { drillId: b.drillId } : {}),
-          metric: b.metric === "reps" ? "reps" : "hold",
-          perSide: !!b.perSide,
-          ...(b.targets ? { targets: b.targets } : {}),
-          ...group,
-        });
-      } else {
-        blocks.push({ type: "cardio", id: createId("blk"), orderIndex: b.orderIndex, activityName: b.activityName, ...group });
-      }
+  const repo = getExerciseRepo();
+  const split = await splitFromShared(payload, async (name, sourceId, custom) => {
+    if (sourceId) {
+      const byId = await repo.getById(sourceId);
+      if (byId?.isCore) return byId.id;
     }
-    // A post from an older app has no groups; one with groups keeps them (ids are per day).
-    const day: SplitDay = {
-      id: createId("day"),
-      orderIndex: d.orderIndex,
-      name: d.name,
-      blocks,
-      ...(d.rest ? { rest: true } : {}),
-      ...(d.sameDayAsPrevious ? { sameDayAsPrevious: true } : {}),
-      ...(typeof d.weekday === "number" && d.weekday >= 0 && d.weekday <= 6 ? { weekday: d.weekday } : {}),
-    };
-    if (d.groups?.length) day.groups = d.groups;
-    days.push(normalizePlannedGroups(day));
-  }
-
-  const now = nowMs();
-  const split: WorkoutSplit = {
-    id: createId("split"),
-    name: payload.name,
-    archived: false,
-    createdAtMs: now,
-    updatedAtMs: now,
-    days,
-    ...(payload.schedule === "weekdays" ? { schedule: "weekdays" as const } : {}),
-  };
+    const existing = await repo.getByName(name);
+    if (existing) return existing.id;
+    return custom ? (await copyExerciseToMine(custom)).id : undefined;
+  });
   await getSplitRepo().saveSplit(split);
   pushSplit(split);
 }
 
 // ── Habit ─────────────────────────────────────────────────────────────────────
 
-export type CopyableHabit = {
-  name: string;
-  cadence: HabitCadence;
-  target?: { value: number; unit?: string };
-  icon?: string;
-  tone?: HabitTone;
-};
-
 export async function copyHabitToMine(payload: CopyableHabit): Promise<void> {
-  const now = nowMs();
-  const habit: Habit = {
-    id: createId("habit"),
-    name: payload.name,
-    cadence: payload.cadence,
-    target: payload.target,
-    icon: payload.icon,
-    tone: payload.tone,
-    archived: false,
-    createdAtMs: now,
-    updatedAtMs: now,
-  };
+  const habit = habitFromShared(payload);
   await getHabitRepo().saveHabit(habit);
   pushHabit(habit);
 }

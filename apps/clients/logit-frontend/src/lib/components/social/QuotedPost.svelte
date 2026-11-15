@@ -43,7 +43,7 @@
 
 {#if source.deleted}
   <div class="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground italic">
-    Original post was deleted.
+    {source.unavailable ? "This post is unavailable." : "Original post was deleted."}
   </div>
 {:else if preview}
   <div class={base}>{@render card()}</div>
