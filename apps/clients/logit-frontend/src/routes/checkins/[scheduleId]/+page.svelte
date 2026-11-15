@@ -6,7 +6,8 @@
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import type { CheckinSchedule, CheckinSubmission, CheckinQuestion } from "@logit/core/domain/Checkin";
-  import { currentPeriodIndex, createSubmission, setAnswer, markSubmitted } from "@logit/core/domain/Checkin";
+  import { currentPeriodIndex, createSubmission, setAnswer, markSubmitted, missedCheckin } from "@logit/core/domain/Checkin";
+  import { page } from "$app/state";
   import { getCheckinRepo } from "$lib/data/repoProvider";
   import { saveCheckinSubmission } from "$lib/usecases/checkins/submitCheckin";
 
@@ -30,8 +31,14 @@
       const repo = getCheckinRepo();
       schedule = await repo.getAssignedSchedule(scheduleId);
       if (!schedule) return;
-      const period = currentPeriodIndex(schedule) ?? 0;
-      const existing = (await repo.listSubmissions(scheduleId)).find((s) => s.periodIndex === period);
+      const subs = await repo.listSubmissions(scheduleId);
+      // The period the list row was for; else a missed one first (the one the coach is
+      // waiting for), else this one.
+      const asked = Number(page.url.searchParams.get("period"));
+      const period = page.url.searchParams.has("period") && Number.isInteger(asked) && asked >= 0
+        ? asked
+        : missedCheckin(schedule, subs)?.periodIndex ?? currentPeriodIndex(schedule) ?? 0;
+      const existing = subs.find((s) => s.periodIndex === period);
       submission = existing ?? createSubmission(schedule, period);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load check-in";

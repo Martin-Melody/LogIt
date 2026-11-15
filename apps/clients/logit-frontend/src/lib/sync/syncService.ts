@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import { apiClient } from "@logit/core/api/client";
+import { refreshCoaches } from "$lib/features/coaching/coachCache";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
 import { coachProgramApi } from "@logit/core/api/coachProgramApi";
 import { coachNutritionPlanApi } from "@logit/core/api/coachNutritionPlanApi";
@@ -61,7 +62,8 @@ function syncWarn(step: string, e: unknown): void {
 const SESSIONS_LAST_PULLED_KEY = "logit:sync:sessionsLastPulledAt";
 const SPLITS_LAST_PULLED_KEY = "logit:sync:splitsLastPulledAt";
 const EXERCISES_LAST_PULLED_KEY = "logit:sync:exercisesLastPulledAt";
-const COACH_PROGRAMS_LAST_PULLED_KEY = "logit:sync:coachProgramsLastPulledAt";
+// v2: pulled once more from the start so programs saved before 2026-11-15 learn their coach.
+const COACH_PROGRAMS_LAST_PULLED_KEY = "logit:sync:coachProgramsLastPulledAt:v2";
 const COACH_NUTRITION_PLANS_LAST_PULLED_KEY = "logit:sync:coachNutritionPlansLastPulledAt";
 const CHECKIN_SCHEDULES_LAST_PULLED_KEY = "logit:sync:checkinSchedulesLastPulledAt";
 const CHECKIN_SUBMISSIONS_LAST_PULLED_KEY = "logit:sync:checkinSubmissionsLastPulledAt";
@@ -336,9 +338,12 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
         // A newer start alone (from the client's other device) also counts as a change.
         const coachChanged = !existing || program.updatedAtMs > existing.updatedAtMs;
         const startChanged = existing?.clientStartedAtMs !== clientStartedAtMs;
-        if (!coachChanged && !startChanged) continue;
+        // Whose program it is (for their swap rule) also lives outside the coach's data.
+        const coachId = entry.coachId ?? existing?.coachId;
+        const coachIdChanged = existing?.coachId !== coachId;
+        if (!coachChanged && !startChanged && !coachIdChanged) continue;
         const base = coachChanged ? program : existing!;
-        await repo.upsertFromRemote({ ...base, clientStartedAtMs: clientStartedAtMs ?? undefined });
+        await repo.upsertFromRemote({ ...base, clientStartedAtMs: clientStartedAtMs ?? undefined, coachId: coachId ?? undefined });
       } catch (e) { syncWarn("pullAndMergeCoachPrograms", e); }
     }
 
@@ -1148,6 +1153,7 @@ async function syncOnce(): Promise<boolean> {
     ["splits", pullAndMergeSplits()],
     ["exercises", pullAndMergeExercises()],
     ["coach programs", pullAndMergeCoachPrograms()],
+    ["coaches", refreshCoaches()],
     ["coach library", pullCoachLibrary()],
     ["coach nutrition plan", pullAndMergeCoachNutritionPlan()],
     ["check-in schedules", pullAndMergeCheckinSchedules()],
