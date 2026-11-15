@@ -97,6 +97,35 @@ namespace Logit.Api.Migrations
                     b.ToTable("Blocks");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CheckinReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ClientUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ReviewedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SubmissionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientUserId");
+
+                    b.HasIndex("CoachId", "ClientUserId", "SubmissionId")
+                        .IsUnique();
+
+                    b.ToTable("CheckinReviews");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -156,6 +185,27 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("InviteLinkId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequestedByClient")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShareBodyweight")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShareCheckins")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShareHabits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShareNutrition")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShareWorkouts")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -165,6 +215,8 @@ namespace Logit.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("InviteLinkId");
 
                     b.HasIndex("CoachId", "ClientId")
                         .IsUnique();
@@ -214,6 +266,47 @@ namespace Logit.Api.Migrations
                     b.HasIndex("RecipientUserId", "SyncedAt");
 
                     b.ToTable("CoachHabits");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachInviteLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoachId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("CoachInviteLinks");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachMessage", b =>
@@ -1260,6 +1353,25 @@ namespace Logit.Api.Migrations
                     b.Navigation("Blocker");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CheckinReview", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Coach");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinSchedule", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Coach")
@@ -1299,9 +1411,16 @@ namespace Logit.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Logit.Api.Data.Entities.CoachInviteLink", "InviteLink")
+                        .WithMany()
+                        .HasForeignKey("InviteLinkId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Client");
 
                     b.Navigation("Coach");
+
+                    b.Navigation("InviteLink");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachHabit", b =>
@@ -1327,6 +1446,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("Recipient");
 
                     b.Navigation("Relationship");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachInviteLink", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Coach");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachMessage", b =>

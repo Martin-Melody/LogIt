@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
+using Logit.Api.Features.Coach;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,7 +132,7 @@ public static class SyncEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
         if (forbidden is not null) return forbidden;
 
         // Filtered on SyncedAt, not StartedAtMs: StartedAtMs is immutable, so an edit
@@ -211,7 +212,7 @@ public static class SyncEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
         if (forbidden is not null) return forbidden;
 
         var splits = await db.SyncedSplits
@@ -288,7 +289,7 @@ public static class SyncEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
         if (forbidden is not null) return forbidden;
 
         var exercises = await db.SyncedExercises
@@ -385,7 +386,7 @@ public static class SyncEndpoints
         AppDbContext db,
         ILoggerFactory loggerFactory)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, null);
         if (forbidden is not null) return forbidden;
 
         var user = await db.Users
@@ -400,6 +401,14 @@ public static class SyncEndpoints
         try
         {
             var profile = JsonSerializer.Deserialize<ProfileDto>(user.ProfileJson);
+            // A coach whose client hides body weight doesn't get it (or the progress photo)
+            // through the profile either.
+            if (clientId is { } cid && profile is not null)
+            {
+                var rel = await CoachAccess.ActiveRelationship(db, caller.GetUserId(), cid);
+                if (rel is not null && !rel.Shares(ShareArea.Bodyweight))
+                    profile = profile with { Weight = null, ProgressPhotoDataUrl = null };
+            }
             return Results.Ok(new { profile });
         }
         catch (Exception ex)
@@ -475,7 +484,7 @@ public static class SyncEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Checkins);
         if (forbidden is not null) return forbidden;
 
         var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
@@ -494,17 +503,18 @@ public static class SyncEndpoints
 
     /// Resolves which user's data a pull request should actually read: the caller's own
     /// (clientId absent — unchanged, self-access) or a client's (clientId present — only if
-    /// the caller has an Active coach relationship with them). Read-only by design: this is
-    /// never called from any push/write handler.
+    /// the caller has an Active coach relationship with them and the client shares `area`
+    /// with that coach; null area = any Active coach, for the profile, which masks the parts
+    /// it hides itself). Read-only by design: never called from a push/write handler.
     private static async Task<(Guid? userId, IResult? forbidden)> ResolveTargetUserId(
-        Guid callerId, Guid? clientId, AppDbContext db)
+        Guid callerId, Guid? clientId, AppDbContext db, ShareArea? area)
     {
         if (clientId is null) return (callerId, null);
 
-        var authorized = await db.CoachClientRelationships.AnyAsync(r =>
-            r.CoachId == callerId && r.ClientId == clientId.Value && r.Status == CoachClientStatus.Active);
-
-        return authorized ? (clientId, null) : (null, Results.Forbid());
+        var relationship = await CoachAccess.ActiveRelationship(db, callerId, clientId.Value);
+        if (relationship is null) return (null, Results.Forbid());
+        if (area is { } a && !relationship.Shares(a)) return (null, CoachAccess.NotShared());
+        return (clientId, null);
     }
 
     // ── Generic client-owned rows ────────────────────────────────────────────
@@ -582,7 +592,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullNutritionDays(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Nutrition);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { days = await PullSyncRows(userId, since, db.SyncedNutritionDays) });
     }
@@ -594,7 +604,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullWeightEntries(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Bodyweight);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedWeightEntries) });
     }
@@ -643,7 +653,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullHabits(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Habits);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { habits = await PullSyncRows(userId, since, db.SyncedHabits) });
     }
@@ -655,7 +665,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullHabitEntries(
         [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Habits);
         if (forbidden is not null) return forbidden;
         return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedHabitEntries) });
     }
@@ -680,7 +690,7 @@ public static class SyncEndpoints
     private static async Task<IResult> PullNutritionGoal(
         [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
     {
-        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db);
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Nutrition);
         if (forbidden is not null) return forbidden;
 
         var row = await db.Users

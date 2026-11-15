@@ -9,8 +9,11 @@ import { coachProgramApi, type RemoteMyCoachProgram } from "../../api/coachProgr
 function parse(entry: RemoteMyCoachProgram): MyCoachProgram | null {
   if (entry.deletedAtMs || !entry.dataJson) return null;
   try {
+    const program = JSON.parse(entry.dataJson) as CoachProgram;
+    // The client's Start lives outside the coach's JSON (see CoachProgram.clientStartedAtMs);
+    // put it back so the coach sees which week the client is on.
     return {
-      program: JSON.parse(entry.dataJson) as CoachProgram,
+      program: entry.startedAtMs ? { ...program, clientStartedAtMs: entry.startedAtMs } : program,
       recipientUserId: entry.recipientUserId,
     };
   } catch {
@@ -36,9 +39,12 @@ export function createRemoteCoachProgramRepo(): CoachProgramAuthoringRepo {
     },
 
     async saveProgram(program: CoachProgram, recipientUsername?: string): Promise<void> {
+      // The client's Start is theirs and stored apart (StartedAtMs); never write it into
+      // the coach's JSON, where a stale copy could outlive a reset.
+      const { clientStartedAtMs: _started, ...authored } = program;
       await coachProgramApi.upsert({
         programId: program.id,
-        dataJson: JSON.stringify(program),
+        dataJson: JSON.stringify(authored),
         updatedAtMs: program.updatedAtMs,
         recipientUsername,
       });

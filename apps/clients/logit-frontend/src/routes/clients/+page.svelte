@@ -7,10 +7,15 @@
   import { apiClient, ApiError } from "@logit/core/api/client";
   import {
     coachApi,
+    SHARE_ALL,
     type ClientRelationship,
+    type CoachRelationship,
+    type MyCoachingRequest,
     type ReceivedInvite,
     type SentInvite,
+    type Sharing,
   } from "@logit/core/api/coachApi";
+  import SharingList from "$lib/components/coaching/SharingList.svelte";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import LockCard from "$lib/components/billing/LockCard.svelte";
@@ -22,6 +27,13 @@
   const ui = $state({ loading: true, error: null as string | null, inviting: false, busyId: null as string | null });
   let clients = $state<ClientRelationship[]>([]);
   let received = $state<ReceivedInvite[]>([]);
+  let coaches = $state<CoachRelationship[]>([]);
+  let requests = $state<MyCoachingRequest[]>([]);
+  // Accepting an invite first asks what the coach may see.
+  let accepting = $state<string | null>(null);
+  let acceptSharing = $state<Sharing>({ ...SHARE_ALL });
+  let openCoach = $state<string | null>(null);
+  let confirmStop = $state<string | null>(null);
   let sent = $state<SentInvite[]>([]);
   let inviteUsername = $state("");
   let inviteError = $state<string | null>(null);
@@ -30,12 +42,16 @@
     ui.loading = true;
     ui.error = null;
     try {
-      const [r, c, s] = await Promise.all([
+      const [r, c, s, mine, reqs] = await Promise.all([
         coachApi.listReceivedInvites(),
         isStudio ? coachApi.listClients() : Promise.resolve([]),
         isStudio ? coachApi.listSentInvites() : Promise.resolve([]),
+        coachApi.listCoaches().catch(() => []),
+        coachApi.listMyRequests().catch(() => []),
       ]);
       received = r;
+      coaches = mine;
+      requests = reqs;
       clients = c;
       sent = s;
     } catch (e) {
@@ -72,6 +88,17 @@
     }
   }
 
+  async function changeSharing(c: CoachRelationship, next: Sharing) {
+    const before = c.sharing ?? SHARE_ALL;
+    c.sharing = next;
+    try {
+      c.sharing = await coachApi.updateSharing(c.relationshipId, next);
+    } catch (e) {
+      c.sharing = before;
+      ui.error = e instanceof Error ? e.message : "Couldn't change what your coach can see";
+    }
+  }
+
   onMount(() => void load());
 </script>
 
@@ -93,14 +120,68 @@
         <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Coach invites</p>
         <ul class="divide-y divide-border">
           {#each received as inv (inv.relationshipId)}
-            <li class="flex items-center justify-between px-3 py-2.5 text-sm">
-              <span>{inv.coach.displayName || inv.coach.username}</span>
-              <div class="flex gap-2">
-                <Button size="sm" disabled={ui.busyId === inv.relationshipId}
-                  onclick={() => act(inv.relationshipId, () => coachApi.acceptInvite(inv.relationshipId))}>Accept</Button>
-                <Button size="sm" variant="outline" disabled={ui.busyId === inv.relationshipId}
-                  onclick={() => act(inv.relationshipId, () => coachApi.declineInvite(inv.relationshipId))}>Decline</Button>
+            <li class="flex flex-col text-sm">
+              <div class="flex items-center justify-between px-3 py-2.5">
+                <span>{inv.coach.displayName || inv.coach.username}</span>
+                {#if accepting !== inv.relationshipId}
+                  <div class="flex gap-2">
+                    <Button size="sm" disabled={ui.busyId === inv.relationshipId}
+                      onclick={() => { accepting = inv.relationshipId; acceptSharing = { ...SHARE_ALL }; }}>Accept</Button>
+                    <Button size="sm" variant="outline" disabled={ui.busyId === inv.relationshipId}
+                      onclick={() => act(inv.relationshipId, () => coachApi.declineInvite(inv.relationshipId))}>Decline</Button>
+                  </div>
+                {/if}
               </div>
+              {#if accepting === inv.relationshipId}
+                <p class="px-3 pb-1 text-xs text-muted-foreground">Pick what {inv.coach.displayName || inv.coach.username} can see. You can change this any time here.</p>
+                <SharingList sharing={acceptSharing} disabled={ui.busyId === inv.relationshipId} onchange={(s) => (acceptSharing = s)} />
+                <div class="flex gap-2 px-3 py-3">
+                  <Button size="sm" disabled={ui.busyId === inv.relationshipId}
+                    onclick={() => act(inv.relationshipId, async () => { await coachApi.acceptInvite(inv.relationshipId, acceptSharing); accepting = null; })}>Accept as my coach</Button>
+                  <Button size="sm" variant="outline" onclick={() => (accepting = null)}>Back</Button>
+                </div>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+
+    {#if coaches.length > 0 || requests.length > 0}
+      <div class="border-b border-border">
+        <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">My coach</p>
+        <ul class="divide-y divide-border">
+          {#each coaches as c (c.relationshipId)}
+            {@const name = c.coach.displayName || c.coach.username}
+            <li class="flex flex-col text-sm">
+              <button type="button" class="flex items-center justify-between px-3 py-3 text-left hover:bg-muted/40" aria-expanded={openCoach === c.relationshipId}
+                onclick={() => (openCoach = openCoach === c.relationshipId ? null : c.relationshipId)}>
+                <span><span class="font-medium">{name}</span><span class="block text-xs text-muted-foreground mt-0.5">What {name} can see</span></span>
+                <span class="text-muted-foreground">{openCoach === c.relationshipId ? "⌃" : "›"}</span>
+              </button>
+              {#if openCoach === c.relationshipId}
+                <p class="px-3 pb-1 text-xs text-muted-foreground">Switching one off hides it from {name} straight away, past entries too.</p>
+                <SharingList sharing={c.sharing ?? SHARE_ALL} onchange={(s) => changeSharing(c, s)} />
+                <div class="px-3 py-3">
+                  {#if confirmStop === c.relationshipId}
+                    <p class="pb-2 text-xs text-muted-foreground">{name} stops seeing your data, and their program, check-ins and habits leave your app. Your own logs stay.</p>
+                    <div class="flex gap-2">
+                      <Button size="sm" variant="destructive" disabled={ui.busyId === c.relationshipId}
+                        onclick={() => act(c.relationshipId, () => coachApi.revokeRelationship(c.relationshipId))}>Stop coaching</Button>
+                      <Button size="sm" variant="outline" onclick={() => (confirmStop = null)}>Keep</Button>
+                    </div>
+                  {:else}
+                    <Button size="sm" variant="outline" class="text-destructive" onclick={() => (confirmStop = c.relationshipId)}>Stop coaching with {name}</Button>
+                  {/if}
+                </div>
+              {/if}
+            </li>
+          {/each}
+          {#each requests as r (r.relationshipId)}
+            <li class="flex items-center justify-between px-3 py-2.5 text-sm">
+              <span><span>{r.coach.displayName || r.coach.username}</span><span class="block text-xs text-muted-foreground">Waiting for them to accept</span></span>
+              <Button size="sm" variant="outline" disabled={ui.busyId === r.relationshipId}
+                onclick={() => act(r.relationshipId, () => coachApi.revokeRelationship(r.relationshipId))}>Cancel</Button>
             </li>
           {/each}
         </ul>

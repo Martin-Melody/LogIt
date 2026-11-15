@@ -26,6 +26,9 @@ export type CoachProgram = {
    * client's own copy, from the server's StartedAtMs column; the coach never authors it.
    * Only read when startMode is "manual". */
   clientStartedAtMs?: number;
+  /** On a client's copy: the library program it was assigned from. Lets the coach push a
+   * library edit to the copies (see updateCopyFromTemplate). */
+  sourceProgramId?: string;
   weeks: ProgramWeek[];
   archived: boolean;
   createdAtMs: number;
@@ -144,6 +147,56 @@ export function renameCoachProgram(program: CoachProgram, name: string): CoachPr
 
 export function archiveCoachProgram(program: CoachProgram, archived = true): CoachProgram {
   return touchCoachProgram({ ...program, archived });
+}
+
+// ── Library → client copies ───────────────────────────────────────────────────
+
+/** A client's own copy of a library program, as assigning creates it: new ids, linked back
+ * to the library program, starting on `start`. */
+export function copyProgramForClient(
+  template: CoachProgram,
+  start: { mode: "manual" } | { mode: "fixed-date"; startDateMs: number },
+): CoachProgram {
+  const now = nowMs();
+  const { startDateMs: _d, clientStartedAtMs: _c, ...rest } = template;
+  const copy: CoachProgram = {
+    ...rest,
+    id: createId("cprog"),
+    sourceProgramId: template.id,
+    archived: false,
+    weeks: template.weeks.map(cloneWeek),
+    createdAtMs: now,
+    updatedAtMs: now,
+  };
+  return setProgramStart(copy, start);
+}
+
+/** A copy brought up to date with its library program: same name, description and weeks;
+ * the client's start (date, or when they tapped Start) and the copy's identity stay, so they
+ * stay on the week they're on. */
+export function updateCopyFromTemplate(copy: CoachProgram, template: CoachProgram): CoachProgram {
+  return touchCoachProgram({
+    ...copy,
+    name: template.name,
+    description: template.description,
+    lengthWeeks: template.lengthWeeks,
+    weeks: template.weeks.map(cloneWeek),
+  });
+}
+
+/** Replaces week `toWeekId`'s days with a copy of week `fromWeekId`'s. */
+export function copyWeekOver(program: CoachProgram, fromWeekId: string, toWeekId: string): CoachProgram {
+  const source = program.weeks.find((w) => w.id === fromWeekId);
+  if (!source || fromWeekId === toWeekId || !program.weeks.some((w) => w.id === toWeekId)) return program;
+  return mapWeek(program, toWeekId, (week) => ({ ...week, days: cloneWeek(source).days }));
+}
+
+function cloneWeek(week: ProgramWeek): ProgramWeek {
+  return {
+    ...week,
+    id: createId("pweek"),
+    days: week.days.map((d) => ({ ...d, id: createId("pday"), blocks: d.blocks.map(cloneBlock) })),
+  };
 }
 
 // ── Weeks ─────────────────────────────────────────────────────────────────────
@@ -431,4 +484,146 @@ function mapStrengthBlock(
     if (!block || block.type !== "strength") return day;
     return { ...day, blocks: day.blocks.map((b, i) => (i === idx ? fn(block) : b)) };
   });
+}
+
+// ── Day and block edits ───────────────────────────────────────────────────────
+
+export function updateDay(
+  program: CoachProgram,
+  weekId: string,
+  dayId: string,
+  patch: Partial<Pick<ProgramDay, "name" | "weekday">>,
+): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => ({ ...day, ...patch }));
+}
+
+export function updateBlock(
+  program: CoachProgram,
+  weekId: string,
+  dayId: string,
+  blockId: string,
+  patch: { note?: string; exerciseName?: string; activityName?: string },
+): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => ({
+    ...day,
+    blocks: day.blocks.map((b) => (b.id === blockId ? ({ ...b, ...patch } as ProgramBlock) : b)),
+  }));
+}
+
+/** Puts a block in a superset with the one before it (joining that one's group, or starting
+ * a new group for the two). */
+export function supersetWithPrevious(program: CoachProgram, weekId: string, dayId: string, blockId: string): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const i = ordered.findIndex((b) => b.id === blockId);
+    if (i < 1) return day;
+    const group = ordered[i - 1].supersetGroup ?? createId("ss");
+    const ids = new Set([ordered[i - 1].id, blockId]);
+    return { ...day, blocks: day.blocks.map((b) => (ids.has(b.id) ? { ...b, supersetGroup: group } : b)) };
+  });
+}
+
+/** Takes a block out of its superset; a group left with one block stops being a superset. */
+export function leaveSuperset(program: CoachProgram, weekId: string, dayId: string, blockId: string): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const group = day.blocks.find((b) => b.id === blockId)?.supersetGroup;
+    if (!group) return day;
+    let blocks = day.blocks.map((b) => (b.id === blockId ? { ...b, supersetGroup: undefined } : b));
+    if (blocks.filter((b) => b.supersetGroup === group).length < 2) {
+      blocks = blocks.map((b) => (b.supersetGroup === group ? { ...b, supersetGroup: undefined } : b));
+    }
+    return { ...day, blocks };
+  });
+}
+
+export function moveBlock(program: CoachProgram, weekId: string, dayId: string, blockId: string, by: -1 | 1): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const i = ordered.findIndex((b) => b.id === blockId);
+    const j = i + by;
+    if (i < 0 || j < 0 || j >= ordered.length) return day;
+    [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+    return { ...day, blocks: ordered.map((b, k) => ({ ...b, orderIndex: k })) };
+  });
+}
+
+/** "A1", "A2", "B1"… for blocks in supersets, by day order; blocks on their own get none. */
+export function supersetLabels(day: ProgramDay): Map<string, string> {
+  const out = new Map<string, string>();
+  const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const letterOf = new Map<string, string>();
+  const count = new Map<string, number>();
+  for (const b of ordered) {
+    const g = b.supersetGroup;
+    if (!g || ordered.filter((x) => x.supersetGroup === g).length < 2) continue;
+    if (!letterOf.has(g)) letterOf.set(g, String.fromCharCode(65 + letterOf.size));
+    const n = (count.get(g) ?? 0) + 1;
+    count.set(g, n);
+    out.set(b.id, `${letterOf.get(g)}${n}`);
+  }
+  return out;
+}
+
+// ── Set targets as text (the web editor's fields) ─────────────────────────────
+
+type RepsFields = Pick<ProgramSet, "reps" | "repsMin" | "repsMax" | "setType">;
+
+/** "8" → 8 reps, "8-10" or "8–10" → a range, "AMRAP" → an AMRAP set, "" → none. Null when
+ * it isn't any of those. Keeps a non-AMRAP set type the set already had. */
+export function parseRepsText(text: string, current: SetType = "normal"): RepsFields | null {
+  const t = text.trim().toLowerCase();
+  const keep: SetType = current === "amrap" ? "normal" : current;
+  if (t === "") return { reps: undefined, repsMin: undefined, repsMax: undefined, setType: keep };
+  if (t === "amrap" || t === "max") return { reps: undefined, repsMin: undefined, repsMax: undefined, setType: "amrap" };
+  const range = /^(\d{1,3})\s*[-–—to]+\s*(\d{1,3})$/.exec(t);
+  if (range) {
+    const a = Number(range[1]);
+    const b = Number(range[2]);
+    if (a === b) return { reps: a, repsMin: undefined, repsMax: undefined, setType: keep };
+    return { reps: undefined, repsMin: Math.min(a, b), repsMax: Math.max(a, b), setType: keep };
+  }
+  if (/^\d{1,3}$/.test(t)) return { reps: Number(t), repsMin: undefined, repsMax: undefined, setType: keep };
+  return null;
+}
+
+export function repsText(set: ProgramSet): string {
+  if (set.setType === "amrap") return "AMRAP";
+  if (set.repsMin != null && set.repsMax != null) return `${set.repsMin}–${set.repsMax}`;
+  return set.reps != null ? String(set.reps) : "";
+}
+
+/** "60" → 60 kg, "72%" → 72% of their best, "" → no load. Null when unreadable. */
+export function parseLoadText(text: string): Pick<ProgramSet, "weight" | "percent1RM"> | null {
+  const t = text.trim().replace(",", ".").replace(/\s*kg$/i, "");
+  if (t === "") return { weight: undefined, percent1RM: undefined };
+  const pct = /^(\d{1,3}(?:\.\d+)?)\s*%$/.exec(t);
+  if (pct) {
+    const n = Number(pct[1]);
+    return n > 0 && n <= 150 ? { weight: undefined, percent1RM: n } : null;
+  }
+  if (/^\d{1,4}(?:\.\d+)?$/.test(t)) return { weight: Number(t), percent1RM: undefined };
+  return null;
+}
+
+export function loadText(set: ProgramSet): string {
+  if (set.percent1RM != null) return `${set.percent1RM}%`;
+  return set.weight != null ? String(set.weight) : "";
+}
+
+/** "2:30" → 150 s, "90" or "90s" → 90 s, "2m" → 120 s, "" → none. Null when unreadable. */
+export function parseRestText(text: string): number | undefined | null {
+  const t = text.trim().toLowerCase();
+  if (t === "") return undefined;
+  const ms = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (ms) return Number(ms[1]) * 60 + Number(ms[2]);
+  const s = /^(\d{1,4})\s*s?$/.exec(t);
+  if (s) return Number(s[1]);
+  const m = /^(\d{1,2}(?:\.\d+)?)\s*m(?:in)?$/.exec(t);
+  if (m) return Math.round(Number(m[1]) * 60);
+  return null;
+}
+
+export function restText(sec: number | undefined): string {
+  if (sec == null) return "";
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 }

@@ -1,152 +1,134 @@
 <script lang="ts">
-  import { onDestroy, tick } from "svelte";
-  import { Button } from "$lib/components/ui/button";
-  import { Badge } from "$lib/components/ui/badge";
-  import { Textarea } from "$lib/components/ui/textarea";
-  import { Skeleton } from "$lib/components/ui/skeleton";
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
+  import { Skeleton } from "$lib/components/ui/skeleton";
+  import { apiClient } from "@logit/core/api/client";
   import { coachApi } from "@logit/core/api/coachApi";
-  import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
+  import { messagesApi } from "@logit/core/api/messagesApi";
+  import Avatar from "$lib/features/coaching/Avatar.svelte";
+  import MessageThread from "$lib/features/coaching/MessageThread.svelte";
+  import { when } from "$lib/features/coaching/format";
 
-  type Thread = { relationshipId: string; name: string; unread: number };
+  // Coaching › Messages: one conversation per client. Your own coach's conversation is in
+  // My coach, so the two don't mix.
 
+  type Thread = {
+    relationshipId: string;
+    clientId: string;
+    name: string;
+    username: string;
+    avatarUrl: string | null;
+    unread: number;
+    last: { body: string; mine: boolean; at: number } | null;
+  };
+
+  let threads = $state<Thread[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  let threads = $state<Thread[]>([]);
-  let activeId = $state<string | null>(null);
-  let messages = $state<RemoteMessage[]>([]);
-  let draft = $state("");
-  let sending = $state(false);
-  let listEl = $state<HTMLDivElement | null>(null);
-  let poll: ReturnType<typeof setInterval> | undefined;
+  let search = $state("");
 
-  const activeThread = $derived(threads.find((t) => t.relationshipId === activeId) ?? null);
+  const activeId = $derived(page.url.searchParams.get("c") ?? threads[0]?.relationshipId ?? null);
+  const active = $derived(threads.find((t) => t.relationshipId === activeId) ?? null);
+  const draft = $derived(page.url.searchParams.get("draft") ?? "");
+  const shown = $derived(
+    threads.filter((t) => !search.trim() || `${t.name} ${t.username}`.toLowerCase().includes(search.trim().toLowerCase())),
+  );
 
-  function fmt(ms: number): string {
-    return new Date(ms).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" });
-  }
-
-  async function loadThreads() {
+  async function load() {
     try {
-      const [coaches, clients, counts] = await Promise.all([
-        coachApi.listCoaches().catch(() => []),
-        coachApi.listClients().catch(() => []),
+      const [clients, counts, all] = await Promise.all([
+        coachApi.listClients(),
         messagesApi.unreadCounts().catch(() => []),
+        messagesApi.listAll(0).catch(() => []),
       ]);
-      const unreadOf = (id: string) => counts.find((c) => c.relationshipId === id)?.unread ?? 0;
-      threads = [
-        ...coaches.map((c) => ({ relationshipId: c.relationshipId, name: c.coach.displayName || c.coach.username, unread: unreadOf(c.relationshipId) })),
-        ...clients.map((c) => ({ relationshipId: c.relationshipId, name: c.client.displayName || c.client.username, unread: unreadOf(c.relationshipId) })),
-      ];
-      if (!activeId && threads.length) void open(threads[0].relationshipId);
+      threads = clients
+        .map((c) => {
+          const last = all.filter((m) => m.relationshipId === c.relationshipId).sort((a, b) => b.createdAtMs - a.createdAtMs)[0];
+          return {
+            relationshipId: c.relationshipId,
+            clientId: c.client.id,
+            name: c.client.displayName || c.client.username,
+            username: c.client.username,
+            avatarUrl: c.client.avatarUrl,
+            unread: counts.find((x) => x.relationshipId === c.relationshipId)?.unread ?? 0,
+            last: last ? { body: last.body, mine: last.mine, at: last.createdAtMs } : null,
+          };
+        })
+        .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
+      error = null;
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load conversations";
+      error = e instanceof Error ? e.message : "Couldn't load conversations";
     } finally {
       loading = false;
     }
   }
 
-  async function open(relationshipId: string) {
-    activeId = relationshipId;
-    await refreshThread();
-  }
-
-  async function refreshThread() {
-    if (!activeId) return;
-    try {
-      messages = await messagesApi.list(activeId, 0);
-      const last = messages.at(-1)?.createdAtMs ?? 0;
-      if (last) {
-        await messagesApi.markRead(activeId, last).catch(() => {});
-        threads = threads.map((t) => (t.relationshipId === activeId ? { ...t, unread: 0 } : t));
-      }
-      await tick();
-      listEl?.scrollTo({ top: listEl.scrollHeight });
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load messages";
-    }
-  }
-
-  async function send() {
-    const body = draft.trim();
-    if (!body || !activeId || sending) return;
-    sending = true;
-    draft = "";
-    try {
-      await messagesApi.send({
-        relationshipId: activeId,
-        messageId: crypto.randomUUID(),
-        body,
-        createdAtMs: Date.now(),
-      });
-      await refreshThread();
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to send";
-    } finally {
-      sending = false;
-    }
-  }
-
-  $effect(() => {
-    void loadThreads();
-    poll = setInterval(() => { void refreshThread(); }, 12_000);
+  onMount(() => {
+    if (apiClient.getUser()?.tier !== "Studio") void goto("/my-coach", { replaceState: true });
+    else void load();
   });
-  onDestroy(() => clearInterval(poll));
+
+  function open(id: string) {
+    const u = new URL(page.url);
+    u.searchParams.set("c", id);
+    u.searchParams.delete("draft");
+    void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
+  }
+
+  function sentInOpen(body: string, at: number) {
+    threads = threads
+      .map((t) => (t.relationshipId === activeId ? { ...t, last: { body, mine: true, at } } : t))
+      .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
+  }
+
+  function markOpenRead() {
+    threads = threads.map((t) => (t.relationshipId === activeId ? { ...t, unread: 0 } : t));
+  }
 </script>
 
-<div class="flex flex-col gap-3">
+<div class="flex flex-col gap-4">
   <h1 class="text-[26px] font-bold tracking-tight">Messages</h1>
+
   {#if error}
-    <Alert.Root variant="destructive">
-      <Alert.Description>{error}</Alert.Description>
-    </Alert.Root>
-  {/if}
-
-  {#if loading}
-    <Skeleton class="w-full" style="height: 70vh" />
+    <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
+  {:else if loading}
+    <div class="flex flex-wrap gap-4"><Skeleton class="h-80 flex-[1_1_280px]" /><Skeleton class="h-[480px] flex-[999_1_560px]" /></div>
   {:else if threads.length === 0}
-    <p class="text-sm text-muted-foreground">No conversations yet.</p>
+    <p class="text-[13px] text-muted-foreground">No clients yet, so no conversations. <a href="/clients" class="text-primary hover:underline">Invite someone</a>.</p>
   {:else}
-    <div class="grid grid-cols-[220px_1fr] gap-4 border border-border rounded-lg overflow-hidden" style="height: 70vh">
-      <ul class="border-r border-border overflow-y-auto">
-        {#each threads as t (t.relationshipId)}
-          <li>
-            <button type="button"
-              class="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-muted/40 {activeId === t.relationshipId ? 'bg-muted/60' : ''}"
-              onclick={() => open(t.relationshipId)}>
-              <span class="flex-1 truncate">{t.name}</span>
-              {#if t.unread > 0}<Badge class="text-xs px-1.5 py-0">{t.unread}</Badge>{/if}
-            </button>
-          </li>
+    <div class="flex flex-wrap items-stretch gap-4">
+      <section aria-label="Conversations" class="flex flex-[1_1_280px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-2">
+        <label for="find-client" class="sr-only">Find a client</label>
+        <input id="find-client" bind:value={search} placeholder="Find a client"
+          class="mx-0.5 mb-1.5 mt-0.5 h-[34px] rounded-lg border border-input bg-background px-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring" />
+        {#each shown as t (t.relationshipId)}
+          <button type="button" onclick={() => open(t.relationshipId)} aria-current={t.relationshipId === activeId ? "true" : undefined}
+            class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left {t.relationshipId === activeId ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
+            <Avatar name={t.name} url={t.avatarUrl} />
+            <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span class="flex justify-between gap-2"><span class="text-[13px] font-semibold">{t.name}</span>{#if t.last}<span class="text-[11px] text-muted-foreground">{when(t.last.at)}</span>{/if}</span>
+              <span class="truncate text-xs text-muted-foreground">{t.last ? `${t.last.mine ? "You: " : ""}${t.last.body}` : "No messages yet"}</span>
+            </span>
+            {#if t.unread}<span class="size-2 shrink-0 rounded-full bg-primary" aria-label="{t.unread} unread"></span>{/if}
+          </button>
         {/each}
-      </ul>
+      </section>
 
-      <div class="flex flex-col min-w-0">
-        {#if activeThread}
-          <div class="px-3 py-2 border-b border-border text-sm font-medium shrink-0">{activeThread.name}</div>
-          <div bind:this={listEl} class="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2">
-            {#if messages.length === 0}
-              <p class="text-sm text-muted-foreground text-center py-8">No messages yet.</p>
-            {:else}
-              {#each messages as m (m.messageId)}
-                <div class="flex {m.mine ? 'justify-end' : 'justify-start'}">
-                  <div class="max-w-[75%] rounded-lg px-3 py-2 text-sm {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">
-                    <p class="whitespace-pre-wrap break-words">{m.body}</p>
-                    <p class="text-[10px] opacity-60 mt-0.5">{fmt(m.createdAtMs)}</p>
-                  </div>
-                </div>
-              {/each}
-            {/if}
+      {#if active}
+        <section aria-label="Conversation with {active.name}" class="flex min-w-0 flex-[999_1_560px] flex-col rounded-[10px] border border-border bg-card">
+          <div class="flex items-center justify-between gap-3 border-b border-border px-[18px] py-3.5">
+            <span class="flex items-center gap-2.5"><Avatar name={active.name} url={active.avatarUrl} /><span class="text-sm font-semibold">{active.name}</span></span>
+            <a href="/clients/{active.clientId}" class="text-xs text-muted-foreground hover:text-foreground">Open client ›</a>
           </div>
-          <form class="flex items-end gap-2 px-3 py-2 border-t border-border shrink-0"
-            onsubmit={(e) => { e.preventDefault(); void send(); }}>
-            <Textarea bind:value={draft} rows={1} placeholder="Message…"
-              class="flex-1 resize-none max-h-32 min-h-0"
-              onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
-            <Button type="submit" size="sm" disabled={sending || !draft.trim()}>Send</Button>
-          </form>
-        {/if}
-      </div>
+          <div class="flex flex-1 flex-col px-[18px] pb-4 pt-2">
+            {#key active.relationshipId}
+              <MessageThread relationshipId={active.relationshipId} otherName={active.name} initialDraft={draft} onRead={markOpenRead} onSent={sentInOpen} />
+            {/key}
+          </div>
+        </section>
+      {/if}
     </div>
   {/if}
 </div>
