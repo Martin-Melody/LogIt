@@ -145,13 +145,13 @@ test.describe("add new exercise", () => {
     await page.waitForTimeout(200);
 
     const input = page.locator('input[placeholder="Search or add exercise…"]');
-    await input.fill("Landmine Press");
+    await input.fill("Zercher Carry Hold");
     await page.waitForTimeout(600);
 
     const shot = await page.screenshot();
     await testInfo.attach("after-typing", { body: shot, contentType: "image/png" });
 
-    const addBtn = page.locator('button').filter({ hasText: /Add "Landmine Press"/ });
+    const addBtn = page.locator('button').filter({ hasText: /Add "Zercher Carry Hold"/ });
     await expect(addBtn).toBeVisible();
 
     const box = await addBtn.boundingBox();
@@ -165,13 +165,13 @@ test.describe("add new exercise", () => {
     await page.waitForTimeout(200);
 
     const input = page.locator('input[placeholder="Search or add exercise…"]');
-    await input.fill("Landmine Press");
+    await input.fill("Zercher Carry Hold");
     await page.waitForTimeout(600);
 
     const beforeShot = await page.screenshot();
     await testInfo.attach("before-click", { body: beforeShot, contentType: "image/png" });
 
-    const addBtn = page.locator('button').filter({ hasText: /Add "Landmine Press"/ });
+    const addBtn = page.locator('button').filter({ hasText: /Add "Zercher Carry Hold"/ });
     await expect(addBtn).toBeVisible();
 
     // Standard click — this is what a desktop browser user does
@@ -184,7 +184,7 @@ test.describe("add new exercise", () => {
     const names = await exerciseNames(page).allTextContents();
     console.log("Exercises after add:", names);
 
-    await expect(exerciseNames(page).filter({ hasText: "Landmine Press" })).toBeVisible();
+    await expect(exerciseNames(page).filter({ hasText: "Zercher Carry Hold" })).toBeVisible();
   });
 
   test("Add button works via pointerdown (simulates Android tap-before-blur)", async ({ page }, testInfo) => {
