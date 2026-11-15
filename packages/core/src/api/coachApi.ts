@@ -1,4 +1,5 @@
 import { ApiError, apiClient } from "./client";
+import type { SwapRule } from "../domain/swaps";
 
 export interface CoachClientUser {
   id: string;
@@ -37,6 +38,8 @@ export interface ClientRelationship {
   sharing?: Sharing;
   /** When coaching started (ISO). */
   since?: string;
+  /** This client's own swap rule; null/missing = the coach's default. */
+  swapRule?: SwapRule | null;
 }
 
 export interface CoachRelationship {
@@ -44,6 +47,17 @@ export interface CoachRelationship {
   coach: CoachClientUser;
   sharing?: Sharing;
   since?: string;
+  /** The swap rule that applies to me in this coach's programs (missing on older servers = any). */
+  swapRule?: SwapRule;
+}
+
+/** A coach's review of one of my check-ins. */
+export interface MyCheckinReview {
+  submissionId: string;
+  coachId: string;
+  reviewedAtMs: number;
+  /** What the coach wrote back, when they replied while reviewing. */
+  reply?: string | null;
 }
 
 export interface RosterEntry {
@@ -227,20 +241,34 @@ export const coachApi = {
     return items;
   },
 
-  async setCheckinReviewed(clientUserId: string, submissionId: string, reviewed: boolean): Promise<number | null> {
+  async setCheckinReviewed(clientUserId: string, submissionId: string, reviewed: boolean, reply?: string): Promise<number | null> {
     const res = await apiClient.fetch<{ reviewedAtMs: number | null }>("/coach/checkins/reviews", {
       method: "POST",
-      body: JSON.stringify({ clientUserId, submissionId, reviewed }),
+      body: JSON.stringify({ clientUserId, submissionId, reviewed, ...(reply?.trim() ? { reply: reply.trim() } : {}) }),
     });
     return res.reviewedAtMs;
   },
 
-  /** Client: which of my check-ins a coach has reviewed. */
-  async myCheckinReviews(): Promise<{ submissionId: string; coachId: string; reviewedAtMs: number }[]> {
-    const { reviews } = await apiClient.fetch<{ reviews: { submissionId: string; coachId: string; reviewedAtMs: number }[] }>(
-      "/coach/checkins/reviews/mine",
-    );
+  /** Client: which of my check-ins a coach has reviewed, with any reply. */
+  async myCheckinReviews(): Promise<MyCheckinReview[]> {
+    const { reviews } = await apiClient.fetch<{ reviews: MyCheckinReview[] }>("/coach/checkins/reviews/mine");
     return reviews;
+  },
+
+  // ── Exercise swaps ──
+
+  /** Coach: my default swap rule for every client. */
+  async getCoachSettings(): Promise<{ swapRule: SwapRule }> {
+    return apiClient.fetch("/coach/settings");
+  },
+
+  async setDefaultSwapRule(swapRule: SwapRule): Promise<{ swapRule: SwapRule }> {
+    return apiClient.fetch("/coach/settings", { method: "PUT", body: JSON.stringify({ swapRule }) });
+  },
+
+  /** Coach: set one client differently; null goes back to my default. */
+  async setClientSwapRule(relationshipId: string, swapRule: SwapRule | null): Promise<{ swapRule: SwapRule | null }> {
+    return apiClient.fetch(`/coach/clients/${relationshipId}/swap-rule`, { method: "PUT", body: JSON.stringify({ swapRule }) });
   },
 
   async declineInvite(relationshipId: string): Promise<void> {

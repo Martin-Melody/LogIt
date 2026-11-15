@@ -193,7 +193,7 @@
       {:else if tab === "checkins"}
         <ClientCheckins clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
       {:else if tab === "programs"}
-        <ClientPrograms bind:this={programsTab} openAssign={assignOnOpen} clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
+        <ClientPrograms bind:this={programsTab} openAssign={assignOnOpen} clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} />
       {:else if tab === "messages"}
         <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-2">
           <MessageThread relationshipId={c.relationshipId} otherName={c.name} onRead={() => (c.unread = 0)} />

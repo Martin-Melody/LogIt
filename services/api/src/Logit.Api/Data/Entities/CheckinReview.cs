@@ -13,4 +13,7 @@ public class CheckinReview
     /// The submission's app-generated id (SyncedCheckinSubmission.ClientId).
     public string SubmissionId { get; set; } = string.Empty;
     public long ReviewedAtMs { get; set; }
+    /// What the coach wrote back when marking it reviewed ("Send and mark reviewed"); also
+    /// sent as a message. Shown with the check-in in the client's history.
+    public string? Reply { get; set; }
 }

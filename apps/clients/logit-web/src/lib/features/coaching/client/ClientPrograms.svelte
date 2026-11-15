@@ -5,7 +5,9 @@
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
-  import type { Sharing } from "@logit/core/api/coachApi";
+  import { coachApi, type Sharing } from "@logit/core/api/coachApi";
+  import { programSwaps, SWAP_RULES, SWAP_WHY_LABEL, swapRuleLabel, type ProgramSwap, type SwapRule } from "@logit/core/domain/swaps";
+  import { loadWebLibrary } from "$lib/features/library/libraryData";
   import {
     archiveCoachProgram,
     copyProgramForClient,
@@ -21,8 +23,8 @@
   import { programStatus, type ProgramStatus } from "../coachingData";
   import { shortDate, weekdayDate } from "../format";
 
-  let { clientId, username, name, sharing, openAssign = false }: {
-    clientId: string; username: string; name: string; sharing: Sharing; openAssign?: boolean;
+  let { clientId, relationshipId, username, name, sharing, openAssign = false }: {
+    clientId: string; relationshipId: string; username: string; name: string; sharing: Sharing; openAssign?: boolean;
   } = $props();
 
   const DAY = 86_400_000;
@@ -32,6 +34,13 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
   let ending = $state<CoachProgram | null>(null);
+
+  // Exercise swaps: your default, this client's own rule (null = your default), and the swaps
+  // in their workouts from your programs over the last four weeks.
+  let defaultRule = $state<SwapRule>("any");
+  let clientRule = $state<SwapRule | null>(null);
+  let savingRule = $state(false);
+  let swaps = $state<ProgramSwap[]>([]);
 
   // Assign dialog
   // svelte-ignore state_referenced_locally
@@ -64,10 +73,54 @@
 
   onMount(async () => {
     await load();
+    void loadRules();
     if (sharing.workouts) {
-      getWebDeps(clientId).workoutRepo.listAllSessions().then((s) => (sessions = s.filter((x) => x.endedAtMs != null))).catch(() => {});
+      getWebDeps(clientId).workoutRepo.listAllSessions().then((s) => {
+        sessions = s.filter((x) => x.endedAtMs != null);
+        void loadSwaps();
+      }).catch(() => {});
     }
   });
+
+  async function loadRules() {
+    try {
+      const [settings, clients] = await Promise.all([coachApi.getCoachSettings(), coachApi.listClients()]);
+      defaultRule = settings.swapRule;
+      clientRule = clients.find((c) => c.relationshipId === relationshipId)?.swapRule ?? null;
+    } catch {
+      /* the card shows the default */
+    }
+  }
+
+  async function loadSwaps() {
+    const mine = new Set(copies.map((p) => p.id));
+    const fromMyPrograms = sessions.filter((x) => x.source?.kind === "program" && mine.has(x.source.parentId));
+    if (!fromMyPrograms.length) return;
+    const library = await loadWebLibrary().then((l) => l.entries).catch(() => []);
+    swaps = programSwaps(fromMyPrograms, library, { sinceMs: Date.now() - 28 * DAY });
+  }
+
+  async function setRule(value: string) {
+    const next = value === "" ? null : (value as SwapRule);
+    const before = clientRule;
+    clientRule = next;
+    savingRule = true;
+    try {
+      clientRule = (await coachApi.setClientSwapRule(relationshipId, next)).swapRule;
+    } catch (e) {
+      clientRule = before;
+      toast.error(e instanceof Error ? e.message : "Couldn't save it");
+    } finally {
+      savingRule = false;
+    }
+  }
+
+  const effectiveRule = $derived(clientRule ?? defaultRule);
+  const RULE_NOTE: Record<SwapRule, string> = {
+    any: "They can swap to anything; your alternatives show first.",
+    muscles: "Your alternatives, plus exercises for the same main muscles.",
+    list: "Exercises without alternatives can't be swapped; they'll see \"Ask to swap\".",
+  };
 
   const statuses = $derived(copies.map((p) => ({ p, s: programStatus(p) })));
   const current = $derived(statuses.filter((x) => !x.p.archived && x.s.state !== "finished"));
@@ -190,9 +243,42 @@
           <button type="button" onclick={openAssignDialog} class="h-8 w-fit rounded-[9px] bg-primary px-3 text-xs font-semibold text-primary-foreground">Assign program</button>
         </section>
       {/each}
+
+      {#if sharing.workouts && current.length}
+        <section class="flex flex-col rounded-[10px] border border-border bg-card px-1.5 py-2">
+          <div class="flex items-baseline justify-between px-3 pb-1 pt-2"><h2 class="text-sm font-semibold">Swaps in their workouts</h2><span class="text-xs text-muted-foreground">Last 4 weeks · {swaps.length}</span></div>
+          {#if swaps.length}
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse text-[13px]">
+                <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Date</th><th class="px-3 py-2 font-medium">Planned</th><th class="px-3 py-2 font-medium">Did instead</th><th class="px-3 py-2 font-medium">Why it was allowed</th></tr></thead>
+                <tbody>
+                  {#each swaps as w, i (w.sessionId + i)}
+                    <tr class="border-t border-border align-top"><td class="px-3 py-2.5">{weekdayDate(w.startedAtMs)}</td><td class="px-3 py-2.5">{w.planned}</td><td class="px-3 py-2.5 font-semibold">{w.didInstead}</td><td class="px-3 py-2.5 text-muted-foreground">{SWAP_WHY_LABEL[w.why]}</td></tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {:else}
+            <p class="px-3 pb-2 text-[13px] text-muted-foreground">No swaps. {name} did every exercise as planned.</p>
+          {/if}
+        </section>
+      {/if}
     </div>
 
-    <section class="flex flex-[1_1_300px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
+    <div class="flex min-w-0 flex-[1_1_300px] flex-col gap-4">
+    <section class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
+      <h2 class="text-sm font-semibold">Exercise swaps for {name}</h2>
+      <label for="swap-rule" class="text-xs font-medium text-muted-foreground">During workouts from your programs</label>
+      <select id="swap-rule" disabled={savingRule} value={clientRule ?? ""} onchange={(e) => setRule(e.currentTarget.value)}
+        class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px]">
+        <option value="">Your default: {swapRuleLabel(defaultRule)}</option>
+        {#each SWAP_RULES as r (r.key)}<option value={r.key}>{r.label}</option>{/each}
+      </select>
+      <p class="text-xs leading-relaxed text-muted-foreground">{clientRule ? "Set differently from your default. " : ""}{RULE_NOTE[effectiveRule]}</p>
+      {#if clientRule}<button type="button" disabled={savingRule} onclick={() => setRule("")} class="w-fit text-xs text-muted-foreground underline hover:text-foreground">Back to your default</button>{/if}
+    </section>
+
+    <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
       <h2 class="pb-1.5 text-sm font-semibold">Finished or ended</h2>
       {#each past as { p } (p.id)}
         <a href="/clients/{clientId}/programs/{p.id}?u={username}" class="flex justify-between gap-3 border-t border-border py-2.5 text-[13px] hover:opacity-80">
@@ -202,6 +288,7 @@
         <p class="border-t border-border py-2.5 text-[13px] text-muted-foreground">None yet.</p>
       {/each}
     </section>
+    </div>
   </div>
 {/if}
 
