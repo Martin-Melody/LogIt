@@ -67,6 +67,9 @@ export type RemoteProfile = {
   /** Goals and weekly-streak settings: { [goalId]: Goal, streak: {...} }. Merged per key
    * (newest `updatedAtMs` wins) on the server and on pull, like splitRotationJson. */
   goalsJson?: string | null;
+  /** Social profile cards (which show, in what order): { slots: [{ id, enabled, orderIndex }] }.
+   * Edited on the phone or the dashboard; replaced with the rest of the profile. */
+  profileConfigJson?: string | null;
 };
 
 // ── Nutrition ────────────────────────────────────────────────────────────────

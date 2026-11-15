@@ -1027,11 +1027,12 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
  */
 export async function buildRemoteProfile(): Promise<RemoteProfile> {
   const { get } = await import("svelte/store");
-  const [{ profile }, { getNavConfigJson }, { getHomeConfigJson }, { getGoalsJson }] = await Promise.all([
+  const [{ profile }, { getNavConfigJson }, { getHomeConfigJson }, { getGoalsJson }, { getProfileConfigJson }] = await Promise.all([
     import("$lib/stores/profile.store"),
     import("$lib/stores/navConfig.store"),
     import("$lib/stores/homeConfig.store"),
     import("$lib/features/goals/goalsStore"),
+    import("$lib/stores/profileConfig.store"),
   ]);
   const p = get(profile);
   const activeSplitId = await getSplitRepo().getActiveSplitId().catch(() => null);
@@ -1057,6 +1058,7 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     activeSplitId,
     splitRotationJson: Object.keys(rotations).length ? JSON.stringify(rotations) : null,
     goalsJson: getGoalsJson(),
+    profileConfigJson: getProfileConfigJson(),
     updatedAtMs: Date.now(),
   };
 }
@@ -1239,6 +1241,14 @@ export async function pullAndApplyProfile(): Promise<boolean> {
       try {
         const { homeConfig } = await import("$lib/stores/homeConfig.store");
         homeConfig.applyRemote(JSON.parse(remote.homeConfigJson));
+      } catch (e) { syncWarn("pullAndApplyProfile", e); }
+    }
+
+    // Social profile cards (which show, in what order), editable on the dashboard too.
+    if (remote.profileConfigJson) {
+      try {
+        const { profileConfig } = await import("$lib/stores/profileConfig.store");
+        profileConfig.applyRemote(JSON.parse(remote.profileConfigJson));
       } catch (e) { syncWarn("pullAndApplyProfile", e); }
     }
 

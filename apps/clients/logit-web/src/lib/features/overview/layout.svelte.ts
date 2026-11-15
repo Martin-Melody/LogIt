@@ -71,15 +71,11 @@ export function createLayout(userId: string) {
       slots = next;
       save();
     },
-    /** Drag and drop: put `id` where `beforeId` is. */
-    moveTo(id: WidgetId, beforeId: WidgetId) {
-      if (id === beforeId) return;
-      const moving = slots.find((s) => s.id === id);
-      if (!moving) return;
-      const rest = slots.filter((s) => s.id !== id);
-      const at = rest.findIndex((s) => s.id === beforeId);
-      rest.splice(at < 0 ? rest.length : at, 0, moving);
-      slots = rest;
+    /** Drag and drop: the widgets in this order (any left out keep their place at the end). */
+    setOrder(ids: WidgetId[]) {
+      const byId = new Map(slots.map((s) => [s.id, s]));
+      const next = ids.map((id) => byId.get(id)).filter((s): s is Slot => s !== undefined);
+      slots = [...next, ...slots.filter((s) => !ids.includes(s.id))];
       save();
     },
     resize(id: WidgetId, size: WidgetSize) {
