@@ -58,6 +58,7 @@ public static class CoachEndpoints
 
         CoachLinkEndpoints.Map(group);
         CheckinReviewEndpoints.Map(group);
+        CoachLibraryEndpoints.Map(group);
     }
 
     private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db)

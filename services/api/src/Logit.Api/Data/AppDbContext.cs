@@ -314,6 +314,13 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // A user's library items. Kind is read from DataJson on push; no database default
+        // on SharedWithClients (a default of true would override an explicit false).
+        model.Entity<SyncedExercise>(e =>
+        {
+            e.Property(s => s.Kind).HasMaxLength(16);
+        });
+
         // Client-owned nutrition rows — all the same shape (see Data/Entities/Nutrition.cs).
         model.Entity<SyncedNutritionDay>(e =>
         {
