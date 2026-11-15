@@ -110,6 +110,19 @@ describe("your coaches' items", () => {
     expect(await exercises.getById("exdb_goblet")).toBeNull();
   });
 
+  it("offers coach exercises in pickers, but not as yours", async () => {
+    const { replaceCoachLibrary } = await import("$lib/sync/librarySync");
+    const { exercises, library } = await repos();
+    await replaceCoachLibrary([
+      shared("exdb_goblet", "strength", { name: "Tempo goblet squat", primaryMuscles: ["quads"], secondaryMuscles: [] }),
+      shared("exdb_squat", "strength", { name: "squat", primaryMuscles: ["quads"], secondaryMuscles: [] }),
+    ], library);
+    const all = await exercises.list({ query: "squat", limit: 200 });
+    expect(all.filter((e) => e.name.toLowerCase() === "squat").map((e) => e.id)).toEqual(["core_squat"]);
+    expect(all.map((e) => e.id)).toContain("exdb_goblet");
+    expect((await exercises.list({ filter: "mine" })).map((e) => e.id)).not.toContain("exdb_goblet");
+  });
+
   it("changing a coach's exercise saves it as yours under the same id", async () => {
     const { replaceCoachLibrary } = await import("$lib/sync/librarySync");
     const { exercises, library } = await repos();
