@@ -10,6 +10,7 @@ using Logit.Api.Features.Billing;
 using Logit.Api.Features.Billing.GooglePlay;
 using Logit.Api.Features.Coach;
 using Logit.Api.Features.Diagnostics;
+using Logit.Api.Features.Discover;
 using Logit.Api.Features.Email;
 using Logit.Api.Features.Social;
 using Logit.Api.Features.Sync;
@@ -76,6 +77,8 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 // Billing. Subscriptions come from Google Play (and later the App Store); Stripe web checkout
 // is off unless Billing:WebCheckout is set. GooglePlayApi is a singleton so its access token is cached.
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<Logit.Api.Features.Discover.DiscoverExperiment>();
+builder.Services.AddScoped<Logit.Api.Features.Discover.DiscoverService>();
 builder.Services.AddHttpClient("google-play", c => c.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddSingleton<IGooglePlayApi>(sp => new GooglePlayApi(
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("google-play"),
@@ -198,6 +201,8 @@ api.MapUserEndpoints();
 api.MapSocialEndpoints();
 api.MapModerationEndpoints();
 api.MapNotificationEndpoints();
+api.MapSocialSettingsEndpoints();
+api.MapDiscoverEndpoints();
 api.MapAdminEndpoints(builder.Configuration, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Logit.Admin"));
 api.MapSyncEndpoints();
 api.MapBillingEndpoints();

@@ -16,6 +16,9 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<Block> Blocks => Set<Block>();
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<FollowRequest> FollowRequests => Set<FollowRequest>();
+    public DbSet<DiscoverDismissal> DiscoverDismissals => Set<DiscoverDismissal>();
+    public DbSet<DiscoverImpression> DiscoverImpressions => Set<DiscoverImpression>();
     public DbSet<CoachClientRelationship> CoachClientRelationships => Set<CoachClientRelationship>();
     public DbSet<SyncedWorkoutSession> SyncedWorkoutSessions => Set<SyncedWorkoutSession>();
     public DbSet<SyncedSplit> SyncedSplits => Set<SyncedSplit>();
@@ -191,6 +194,45 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(r => r.Reporter)
              .WithMany()
              .HasForeignKey(r => r.ReporterId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<FollowRequest>(e =>
+        {
+            e.HasKey(f => new { f.RequesterId, f.TargetId });
+            e.HasIndex(f => new { f.TargetId, f.CreatedAt });
+            e.HasOne(f => f.Requester)
+             .WithMany()
+             .HasForeignKey(f => f.RequesterId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.Target)
+             .WithMany()
+             .HasForeignKey(f => f.TargetId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<DiscoverDismissal>(e =>
+        {
+            e.HasKey(d => new { d.UserId, d.HiddenUserId });
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(d => d.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(d => d.HiddenUser)
+             .WithMany()
+             .HasForeignKey(d => d.HiddenUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<DiscoverImpression>(e =>
+        {
+            e.HasKey(i => new { i.UserId, i.Kind, i.TargetId });
+            e.HasIndex(i => new { i.Arm, i.Recipe });
+            e.Property(i => i.Arm).HasMaxLength(64);
+            e.Property(i => i.Recipe).HasMaxLength(64);
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(i => i.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

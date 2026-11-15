@@ -35,6 +35,10 @@ public static class ModerationEndpoints
                      || (f.FollowerId == target.Id && f.FollowedId == callerId))
             .ToListAsync();
         db.Follows.RemoveRange(follows);
+        db.FollowRequests.RemoveRange(await db.FollowRequests
+            .Where(r => (r.RequesterId == callerId && r.TargetId == target.Id)
+                     || (r.RequesterId == target.Id && r.TargetId == callerId))
+            .ToListAsync());
 
         await db.SaveChangesAsync();
         return Results.NoContent();

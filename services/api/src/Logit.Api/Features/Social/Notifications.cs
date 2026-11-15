@@ -118,4 +118,14 @@ public static class Notifications
             Type = NotificationType.Follow,
         });
     }
+
+    /// A follow request that was answered or withdrawn no longer needs its "asked to follow
+    /// you" row. Caller saves.
+    public static async Task RemoveFollowRequestNotificationAsync(this AppDbContext db, Guid requesterId, Guid targetId)
+    {
+        var rows = await db.Notifications
+            .Where(n => n.UserId == targetId && n.ActorId == requesterId && n.Type == NotificationType.FollowRequest)
+            .ToListAsync();
+        db.Notifications.RemoveRange(rows);
+    }
 }

@@ -38,6 +38,9 @@ public static class AdminEndpoints
             selfHosted = cfg.GetValue<bool>("Deployment:SelfHosted"),
         }));
         api.MapGet("/invites", GetInvites);
+        // Discover experiments: per arm and recipe, what was shown and what people did next.
+        api.MapGet("/discover", async (AppDbContext db, int? days) =>
+            Results.Ok(await Logit.Api.Features.Discover.DiscoverStats.ComputeAsync(db, DateTime.UtcNow.AddDays(-(days ?? 30)))));
         api.MapPost("/invites", CreateInvite);
         api.MapDelete("/invites/{id:guid}", RevokeInvite);
 

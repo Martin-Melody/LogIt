@@ -35,49 +35,89 @@ public static class SocialEndpoints
         follows.MapGet("/{username}/posts", GetUserPosts);
     }
 
+    /// Following a public account follows it straight away; following a private one sends a
+    /// request it has to accept. The answer says which: { status: "following" | "requested" }.
     private static async Task<IResult> Follow(string username, ClaimsPrincipal caller, AppDbContext db)
     {
         var followerId = caller.GetUserId();
         var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
         if (target is null) return Results.NotFound();
         if (target.Id == followerId) return Results.BadRequest(new { error = "Cannot follow yourself." });
+        if (await db.Blocks.AnyAsync(b =>
+                (b.BlockerId == followerId && b.BlockedId == target.Id) ||
+                (b.BlockerId == target.Id && b.BlockedId == followerId)))
+            return Results.NotFound();
 
         var exists = await db.Follows.AnyAsync(f => f.FollowerId == followerId && f.FollowedId == target.Id);
         if (exists) return Results.Conflict(new { error = "Already following." });
 
+        if (target.IsPrivate)
+        {
+            if (!await db.FollowRequests.AnyAsync(r => r.RequesterId == followerId && r.TargetId == target.Id))
+            {
+                db.FollowRequests.Add(new FollowRequest { RequesterId = followerId, TargetId = target.Id });
+                db.Notifications.Add(new Notification
+                {
+                    UserId = target.Id,
+                    ActorId = followerId,
+                    Type = NotificationType.FollowRequest,
+                });
+                await db.SaveChangesAsync();
+            }
+            return Results.Ok(new { status = "requested" });
+        }
+
         db.Follows.Add(new Follow { FollowerId = followerId, FollowedId = target.Id });
         db.AddFollow(followerId, target.Id);
         await db.SaveChangesAsync();
-        return Results.NoContent();
+        return Results.Ok(new { status = "following" });
     }
 
+    /// Unfollows, or cancels a follow request that hasn't been answered yet.
     private static async Task<IResult> Unfollow(string username, ClaimsPrincipal caller, AppDbContext db)
     {
         var followerId = caller.GetUserId();
-        var follow = await db.Follows
-            .Include(f => f.Followed)
-            .FirstOrDefaultAsync(f => f.FollowerId == followerId && f.Followed.Username == username.ToLowerInvariant());
+        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        if (target is null) return Results.NotFound();
 
-        if (follow is null) return Results.NotFound();
-        db.Follows.Remove(follow);
+        var follow = await db.Follows.FindAsync(followerId, target.Id);
+        if (follow is not null)
+        {
+            db.Follows.Remove(follow);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        }
+
+        var request = await db.FollowRequests.FindAsync(followerId, target.Id);
+        if (request is null) return Results.NotFound();
+        db.FollowRequests.Remove(request);
+        await db.RemoveFollowRequestNotificationAsync(followerId, target.Id);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
 
-    private static async Task<IResult> GetFollowers(string username, AppDbContext db)
+    private static async Task<IResult> GetFollowers(string username, ClaimsPrincipal caller, AppDbContext db)
     {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        if (user is null) return Results.NotFound();
+        if (!await db.CanSeeAsync(caller.GetUserIdOrNull(), user)) return Privacy.PrivateAccount();
+
         var follows = await db.Follows
             .Include(f => f.Follower)
-            .Where(f => f.Followed.Username == username.ToLowerInvariant())
+            .Where(f => f.FollowedId == user.Id)
             .ToListAsync();
         return Results.Ok(follows.Select(f => f.Follower.ToProfileDto(false)));
     }
 
-    private static async Task<IResult> GetFollowing(string username, AppDbContext db)
+    private static async Task<IResult> GetFollowing(string username, ClaimsPrincipal caller, AppDbContext db)
     {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        if (user is null) return Results.NotFound();
+        if (!await db.CanSeeAsync(caller.GetUserIdOrNull(), user)) return Privacy.PrivateAccount();
+
         var follows = await db.Follows
             .Include(f => f.Followed)
-            .Where(f => f.Follower.Username == username.ToLowerInvariant())
+            .Where(f => f.FollowerId == user.Id)
             .ToListAsync();
         return Results.Ok(follows.Select(f => f.Followed.ToProfileDto(false)));
     }
@@ -92,11 +132,12 @@ public static class SocialEndpoints
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
         if (user is null) return Results.NotFound();
 
-        Guid? callerId = caller.Identity?.IsAuthenticated == true ? caller.GetUserId() : null;
+        Guid? callerId = caller.GetUserIdOrNull();
         if (callerId is not null && await db.Blocks.AnyAsync(b =>
                 (b.BlockerId == callerId && b.BlockedId == user.Id) ||
                 (b.BlockerId == user.Id && b.BlockedId == callerId)))
             return Results.NotFound();
+        if (!await db.CanSeeAsync(callerId, user)) return Privacy.PrivateAccount();
 
         limit = Math.Clamp(limit, 1, 50);
         var before = SocialQueryHelpers.DecodeCursor(cursor);
@@ -111,14 +152,15 @@ public static class SocialEndpoints
         if (before is not null)
             query = query.Where(p => p.CreatedAt < before);
 
-        return Results.Ok(await PageAsync(query, limit, callerId));
+        return Results.Ok(await PageAsync(db, query, limit, callerId));
     }
 
     private static async Task<IResult> LikePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
     {
         var userId = caller.GetUserId();
-        var post = await db.Posts.FindAsync(id);
+        var post = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
+        if (!await db.CanSeeAsync(userId, post.Author)) return Results.NotFound();
         // Matches CommentLike's self-like guard — client already disables the heart for your
         // own post, this is defense in depth.
         if (post.AuthorId == userId) return Results.BadRequest(new { error = "Cannot like your own post." });
@@ -170,6 +212,11 @@ public static class SocialEndpoints
             target = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == target.RepostOfId);
             if (target is null || target.DeletedAt is not null) return Results.NotFound();
         }
+
+        // A private account's posts stay with the followers it accepted, so they can't be
+        // passed on (not even by the author: the repost would be public).
+        if (target.Author.IsPrivate)
+            return Results.BadRequest(new { error = "Posts from private accounts can't be reposted.", code = "private" });
 
         var body = req.Body?.Trim();
         if (string.IsNullOrEmpty(body)) body = null;
@@ -232,12 +279,12 @@ public static class SocialEndpoints
         if (before is not null)
             query = query.Where(p => p.CreatedAt < before);
 
-        return Results.Ok(await PageAsync(query, limit, userId));
+        return Results.Ok(await PageAsync(db, query, limit, userId));
     }
 
     /// Shared: order newest-first, take limit+1 to detect a next page, project to
     /// DTOs, and hand back an opaque cursor.
-    private static async Task<object> PageAsync(IQueryable<Post> query, int limit, Guid? callerId)
+    private static async Task<object> PageAsync(AppDbContext db, IQueryable<Post> query, int limit, Guid? callerId)
     {
         var rows = await query.OrderByDescending(p => p.CreatedAt).Take(limit + 1).ToListAsync();
         string? nextCursor = null;
@@ -246,7 +293,8 @@ public static class SocialEndpoints
             nextCursor = SocialQueryHelpers.EncodeCursor(rows[limit - 1].CreatedAt);
             rows = rows.Take(limit).ToList();
         }
-        return new { posts = rows.Select(p => p.ToDto(callerId)), nextCursor };
+        var hidden = await db.HiddenRepostAuthorsAsync(callerId, rows);
+        return new { posts = rows.Select(p => p.ToDto(callerId, hidden)), nextCursor };
     }
 
     private static async Task<IResult> CreatePost(
@@ -292,7 +340,8 @@ public static class SocialEndpoints
         post.EditedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        return Results.Ok(post.ToDto(caller.GetUserId()));
+        var hiddenEdit = await db.HiddenRepostAuthorsAsync(post.AuthorId, [post]);
+        return Results.Ok(post.ToDto(post.AuthorId, hiddenEdit));
     }
 
     private static async Task<IResult> DeletePost(Guid id, ClaimsPrincipal caller, AppDbContext db)
@@ -321,8 +370,10 @@ public static class SocialEndpoints
                 (b.BlockerId == userId && b.BlockedId == post.AuthorId) ||
                 (b.BlockerId == post.AuthorId && b.BlockedId == userId)))
             return Results.NotFound();
+        if (!await db.CanSeeAsync(userId, post.Author)) return Results.NotFound();
 
-        return Results.Ok(post.ToDto(userId));
+        var hidden = await db.HiddenRepostAuthorsAsync(userId, [post]);
+        return Results.Ok(post.ToDto(userId, hidden));
     }
 
     private static async Task<IResult> GetComments(
@@ -332,13 +383,14 @@ public static class SocialEndpoints
         [FromQuery] int limit = 50,
         [FromQuery] string? cursor = null)
     {
-        var post = await db.Posts.FindAsync(id);
+        var post = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
 
         limit = Math.Clamp(limit, 1, 100);
         var after = SocialQueryHelpers.DecodeCursor(cursor);
 
-        Guid? callerId = caller.Identity?.IsAuthenticated == true ? caller.GetUserId() : null;
+        Guid? callerId = caller.GetUserIdOrNull();
+        if (!await db.CanSeeAsync(callerId, post.Author)) return Results.NotFound();
 
         var query = db.Comments
             .Include(c => c.Author)
@@ -371,8 +423,9 @@ public static class SocialEndpoints
         ClaimsPrincipal caller,
         AppDbContext db)
     {
-        var post = await db.Posts.FindAsync(id);
+        var post = await db.Posts.Include(p => p.Author).FirstOrDefaultAsync(p => p.Id == id);
         if (post is null || post.DeletedAt is not null) return Results.NotFound();
+        if (!await db.CanSeeAsync(caller.GetUserId(), post.Author)) return Results.NotFound();
 
         if (string.IsNullOrWhiteSpace(req.Body)) return Results.BadRequest(new { error = "Comment body is required." });
 
@@ -431,8 +484,10 @@ public static class SocialEndpoints
     private static async Task<IResult> LikeComment(Guid id, Guid commentId, ClaimsPrincipal caller, AppDbContext db)
     {
         var userId = caller.GetUserId();
-        var comment = await db.Comments.FirstOrDefaultAsync(c => c.Id == commentId && c.PostId == id);
+        var comment = await db.Comments.Include(c => c.Post).ThenInclude(p => p.Author)
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.PostId == id);
         if (comment is null || comment.DeletedAt is not null) return Results.NotFound();
+        if (!await db.CanSeeAsync(userId, comment.Post.Author)) return Results.NotFound();
         // Matches the Instagram-style UX this mirrors: you can't like your own comment — the
         // heart doesn't even render client-side for your own comments, this is defense in depth.
         if (comment.AuthorId == userId) return Results.BadRequest(new { error = "Cannot like your own comment." });
