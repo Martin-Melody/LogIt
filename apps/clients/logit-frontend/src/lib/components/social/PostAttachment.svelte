@@ -55,7 +55,7 @@
     post.type === "WorkoutSession" ? "Workout"
     : post.type === "PersonalRecord" ? "Personal record"
     : post.type === "Split" ? "Split"
-    : post.type === "Exercise" ? "Exercise"
+    : post.type === "Exercise" ? (payload?.kind === "cardio" ? "Cardio" : payload?.kind === "mobility" ? "Mobility" : "Exercise")
     : post.type === "Algorithm" ? "Algorithm"
     : post.type === "Widget" ? "Widget"
     : post.type === "Habit" ? "Habit"
