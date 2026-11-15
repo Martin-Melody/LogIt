@@ -92,10 +92,12 @@
     if (!selected || !overview || busy) return;
     busy = true;
     try {
-      if (sendReply && reply.trim()) {
-        await messagesApi.send({ relationshipId: selected.relationshipId, messageId: createId("msg"), body: reply.trim(), createdAtMs: Date.now() });
+      const text = sendReply ? reply.trim() : "";
+      if (text) {
+        await messagesApi.send({ relationshipId: selected.relationshipId, messageId: createId("msg"), body: text, createdAtMs: Date.now() });
       }
-      const at = await coachApi.setCheckinReviewed(selected.clientUserId, selected.id, reviewedNow);
+      // The reply is kept with the review too, so the client sees it with this check-in.
+      const at = await coachApi.setCheckinReviewed(selected.clientUserId, selected.id, reviewedNow, text || undefined);
       const done = selected;
       overview = {
         ...overview,

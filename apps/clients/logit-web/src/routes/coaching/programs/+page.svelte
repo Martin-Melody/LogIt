@@ -12,6 +12,8 @@
   import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
   import { getWebCoachProgramRepo } from "$lib/deps";
   import ProgramEditor from "$lib/features/coaching/ProgramEditor.svelte";
+  import SwapDefaultCard from "$lib/features/coaching/SwapDefaultCard.svelte";
+  import type { SwapRule } from "@logit/core/domain/swaps";
 
   // Coaching › Programs: your library. Assigning gives a client their own copy (the server
   // keeps one row per client); saving here can push the change to the copies you tick.
@@ -21,6 +23,7 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
   let busy = $state(false);
+  let swapRule = $state<SwapRule>("any");
 
   let assignOpen = $state(false);
   let assignTo = $state("");
@@ -48,7 +51,13 @@
 
   async function load() {
     try {
-      [rows, clients] = await Promise.all([getWebCoachProgramRepo().listMyPrograms(), coachApi.listClients()]);
+      let settings: { swapRule: SwapRule };
+      [rows, clients, settings] = await Promise.all([
+        getWebCoachProgramRepo().listMyPrograms(),
+        coachApi.listClients(),
+        coachApi.getCoachSettings().catch(() => ({ swapRule: "any" as SwapRule })),
+      ]);
+      swapRule = settings.swapRule;
       error = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load your programs";
@@ -158,6 +167,7 @@
   {:else if loading}
     <div class="flex flex-wrap gap-4"><Skeleton class="h-72 flex-[1_1_240px]" /><Skeleton class="h-[480px] flex-[999_1_600px]" /></div>
   {:else}
+    <SwapDefaultCard bind:rule={swapRule} {clients} />
     <div class="flex flex-wrap items-start gap-4">
       <nav aria-label="Library" class="flex flex-[1_1_240px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-1.5">
         {#each active as p (p.id)}
@@ -192,7 +202,7 @@
             </span>
           </div>
           {#key selected.id}
-            <ProgramEditor program={selected} mode="library" {copies} onSave={save} />
+            <ProgramEditor program={selected} mode="library" {copies} {swapRule} onSave={save} />
           {/key}
         </section>
       {/if}

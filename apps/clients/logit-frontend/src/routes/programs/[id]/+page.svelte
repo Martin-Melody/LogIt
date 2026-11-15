@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { coachFor } from "$lib/features/coaching/coachCache";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -90,7 +91,8 @@
         return;
       }
       await getCoachProgramRepo().setActiveProgramId(programId);
-      await currentSession.startFromProgramDay(day, program ? { id: program.id, name: program.name } : undefined);
+      const coachId = program?.coachId ?? coachFor(undefined)?.coachId;
+      await currentSession.startFromProgramDay(day, program ? { id: program.id, name: program.name, coachId } : undefined);
       await goto("/session/current");
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to start workout";

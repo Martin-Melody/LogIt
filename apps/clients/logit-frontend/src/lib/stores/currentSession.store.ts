@@ -24,7 +24,7 @@ type CurrentSessionStore = {
   /** Start a session already built and planned (the "Today's plan" screen). */
   startPlanned: (session: WorkoutSession) => Promise<WorkoutSession>;
   /** `program` names it in the history. */
-  startFromProgramDay: (day: ProgramDay, program?: { id: string; name: string }) => Promise<WorkoutSession>;
+  startFromProgramDay: (day: ProgramDay, program?: { id: string; name: string; coachId?: string }) => Promise<WorkoutSession>;
   /** A copy of a past workout, to do again. */
   repeat: (session: WorkoutSession) => Promise<WorkoutSession>;
   repeatLast: () => Promise<WorkoutSession | null>;
@@ -87,7 +87,7 @@ function createCurrentSessionStore(): CurrentSessionStore {
       return session;
     },
 
-    async startFromProgramDay(day: ProgramDay, program?: { id: string; name: string }) {
+    async startFromProgramDay(day: ProgramDay, program?: { id: string; name: string; coachId?: string }) {
       const session = await startSessionFromProgramDay(day, program);
       store.set({ session, transitioning: false });
       return session;

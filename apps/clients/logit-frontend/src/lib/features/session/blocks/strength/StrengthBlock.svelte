@@ -46,6 +46,9 @@
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
   import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
+  import CoachSwapSheet from "$lib/features/session/ui/CoachSwapSheet.svelte";
+  import { swapTargetFor, type SwapTarget } from "@logit/core/domain/swaps";
+  import { coachFor, type CachedCoach } from "$lib/features/coaching/coachCache";
   import ExerciseDetailSheet from "$lib/features/exercise/components/ExerciseDetailSheet.svelte";
 
   const {
@@ -91,6 +94,17 @@
   );
 
   let swapOpen = $state(false);
+  // Set when this exercise is from a coach's program: their rule and alternatives apply.
+  let coachSwap = $state<{ target: SwapTarget; coach: CachedCoach } | null>(null);
+
+  function openSwap() {
+    const s = get(currentSession);
+    const target = s ? swapTargetFor(s, blockId) : null;
+    // Only coach programs record their coach (built-in programs are "program" workouts too).
+    const coach = target && s?.source?.coachId ? coachFor(s.source.coachId) : undefined;
+    coachSwap = target && coach ? { target, coach } : null;
+    swapOpen = true;
+  }
   let detailExerciseId = $state<string | null>(null);
 
   function openDetail() {
@@ -596,7 +610,7 @@
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
   onOpenDetail={openDetail}
-  onSwap={() => (swapOpen = true)}
+  onSwap={openSwap}
   onSuperset={onGroup}
   {onDelete}
   onDismissNudge={handleDismissNudge}
@@ -773,14 +787,24 @@
   {/if}
 </ExerciseCard>
 
-<AddExerciseDialog
-  open={swapOpen}
-  saving={saving}
-  title="Swap exercise"
-  description="Pick a different exercise — your logged sets stay."
-  onOpenChange={(v) => (swapOpen = v)}
-  onSubmit={handleSwap}
-/>
+{#if coachSwap}
+  <CoachSwapSheet
+    open={swapOpen}
+    target={coachSwap.target}
+    coach={coachSwap.coach}
+    onOpenChange={(v) => (swapOpen = v)}
+    onPick={handleSwap}
+  />
+{:else}
+  <AddExerciseDialog
+    open={swapOpen}
+    saving={saving}
+    title="Swap exercise"
+    description="Pick a different exercise — your logged sets stay."
+    onOpenChange={(v) => (swapOpen = v)}
+    onSubmit={handleSwap}
+  />
+{/if}
 
 <EditSetDialog
   open={editSet.open}
