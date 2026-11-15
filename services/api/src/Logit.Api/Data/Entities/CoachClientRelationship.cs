@@ -25,6 +25,10 @@ public class CoachClientRelationship
     public bool ShareHabits { get; set; } = true;
     public bool ShareCheckins { get; set; } = true;
 
+    /// Which exercise swaps this client may make in workouts from this coach's programs
+    /// (see SwapRules). Null: the coach's default (User.CoachSwapRule).
+    public string? SwapRule { get; set; }
+
     public User Coach { get; set; } = null!;
     public User Client { get; set; } = null!;
 }

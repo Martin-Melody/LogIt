@@ -28,6 +28,8 @@ public class User
     /// A plan granted by hand in the admin page (friends, testers, refunds). Null = none.
     public UserTier? ManualTier { get; set; }
     public string? StripeCustomerId { get; set; }
+    /// As a coach: the swap rule for every client without their own (see SwapRules). Null = "any".
+    public string? CoachSwapRule { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     /// The invite this account signed up with (invite-only servers). Null for open sign-up.
