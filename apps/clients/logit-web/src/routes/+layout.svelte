@@ -23,6 +23,8 @@
     "/progress": "Progress",
     "/nutrition": "Nutrition",
     "/plan": "Plan",
+    "/library": "Library",
+    "/coaching/library": "Library",
     "/habits": "Habits & goals",
     "/coaching": "Today",
     "/coaching/programs": "Programs",

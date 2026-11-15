@@ -32,7 +32,9 @@
     splitDayName,
   } from "@logit/core/domain/splitSchedule";
   import { groupKindOf, groupLabel } from "@logit/core/domain/workout";
-  import { BUILTIN_MOBILITY_DRILLS, findBuiltinMobilityDrill } from "@logit/core/domain/mobilityDrill";
+  import { BUILTIN_MOBILITY_DRILLS, type MobilityDrill } from "@logit/core/domain/mobilityDrill";
+  import { BUILTIN_CARDIO } from "@logit/core/domain/cardioActivity";
+  import { loadWebLibrary } from "$lib/features/library/libraryData";
   import { fromDisplayWeight, toDisplayWeight, trimWeight, type WeightUnit } from "@logit/core/domain/units";
   import type { ExerciseIndex, ExerciseInfo } from "./exerciseIndex";
   import NamePicker, { type PickItem } from "./NamePicker.svelte";
@@ -204,16 +206,29 @@
     onChange(addPlannedStrength(split, dayId, { exerciseName: info?.name ?? name, ...(info?.id ? { exerciseId: info.id } : {}), targets }));
   }
 
+  // Drills and activities come from the library (LogIt's, your own, your coach's), loaded
+  // once; LogIt's lists are there straight away.
+  let drills = $state<MobilityDrill[]>(BUILTIN_MOBILITY_DRILLS);
+  let activities = $state<string[]>(BUILTIN_CARDIO.map((a) => a.name));
+  $effect(() => {
+    void loadWebLibrary()
+      .then((lib) => {
+        drills = lib.entries.filter((e) => e.kind === "mobility").map((e) => e.item as MobilityDrill);
+        activities = lib.entries.filter((e) => e.kind === "cardio").map((e) => e.item.name);
+      })
+      .catch(() => {});
+  });
+
   function searchDrills(q: string): PickItem[] {
     const s = q.trim().toLowerCase();
     if (!s) return [];
-    return BUILTIN_MOBILITY_DRILLS.filter((d) => d.name.toLowerCase().includes(s))
+    return drills.filter((d) => d.name.toLowerCase().includes(s))
       .slice(0, 8)
       .map((d) => ({ name: d.name, detail: `${d.defaultMetric === "hold" ? "hold" : "reps"}${d.perSide ? " · each side" : ""}` }));
   }
 
   function addMobility(name: string) {
-    const d = findBuiltinMobilityDrill(name);
+    const d = drills.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
     const metric = d?.defaultMetric ?? "reps";
     onChange(addPlannedMobility(split, dayId, {
       drillName: d?.name ?? name,
@@ -224,10 +239,9 @@
     }));
   }
 
-  const ACTIVITIES = ["Run", "Bike", "Row", "Walk", "Incline walk", "Stairs", "Elliptical", "Swim", "Ski erg", "Jump rope"];
   function searchActivities(q: string): PickItem[] {
     const s = q.trim().toLowerCase();
-    return s ? ACTIVITIES.filter((a) => a.toLowerCase().includes(s)).map((name) => ({ name })) : [];
+    return s ? activities.filter((a) => a.toLowerCase().includes(s)).slice(0, 8).map((name) => ({ name })) : [];
   }
 
   // ── Day ────────────────────────────────────────────────────────────────────

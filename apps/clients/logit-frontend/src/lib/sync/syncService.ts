@@ -7,8 +7,9 @@ import { coachHabitApi } from "@logit/core/api/coachHabitApi";
 import { checkinApi } from "@logit/core/api/checkinApi";
 import { messagesApi } from "@logit/core/api/messagesApi";
 import { libraryApi } from "@logit/core/api/libraryApi";
-import { libraryItemFromJson, libraryItemToJson } from "@logit/core/domain/library";
-import type { CoachLibraryItem, OwnLibraryItem } from "@logit/core/data/libraryRepo";
+import { libraryItemToJson } from "@logit/core/domain/library";
+import type { OwnLibraryItem } from "@logit/core/data/libraryRepo";
+import { mergeOwnLibrary, replaceCoachLibrary } from "$lib/sync/librarySync";
 import {
   getWorkoutRepo,
   getSplitRepo,
@@ -272,13 +273,6 @@ export async function pushAllExercises(): Promise<void> {
   } catch (e) { syncWarn("pushAllExercises", e); }
 }
 
-/** Newer wins. Items from before the library have no updatedAtMs and count as 0, so a
- * server copy only replaces a local one when someone has edited it since. */
-function remoteIsNewer(remote: { updatedAtMs?: number }, local: { updatedAtMs?: number } | null | undefined): boolean {
-  if (!local) return true;
-  return (remote.updatedAtMs ?? 0) > (local.updatedAtMs ?? 0);
-}
-
 export async function pullAndMergeExercises(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
@@ -287,28 +281,7 @@ export async function pullAndMergeExercises(): Promise<boolean> {
     const { exercises: remote } = await syncApi.pullLibrary(since);
 
     if (remote.length > 0) {
-      const exercises = getExerciseRepo();
-      const library = getLibraryRepo();
-
-      for (const entry of remote) {
-        try {
-          if (entry.deletedAtMs) {
-            if (entry.kind === "cardio" || entry.kind === "mobility") await library.removeOwn(entry.id);
-            else if ((await exercises.getById(entry.id))?.isCore === false) await exercises.remove(entry.id);
-            continue;
-          }
-          const parsed = entry.dataJson ? libraryItemFromJson(entry.dataJson, entry.kind) : null;
-          if (!parsed) continue;
-          if (parsed.kind === "strength") {
-            const local = await exercises.getById(parsed.item.id);
-            if (local?.isCore) continue;
-            if (remoteIsNewer(parsed.item, local)) await exercises.saveExercise(parsed.item);
-          } else {
-            const local = await library.getOwn(parsed.item.id);
-            if (remoteIsNewer(parsed.item, local?.item)) await library.saveOwn(parsed);
-          }
-        } catch (e) { syncWarn("pullAndMergeExercises", e); }
-      }
+      await mergeOwnLibrary(remote, getExerciseRepo(), getLibraryRepo(), (e) => syncWarn("pullAndMergeExercises", e));
     }
 
     // Before the request went out, so an edit made during it isn't skipped next time.
@@ -325,13 +298,7 @@ export async function pullCoachLibrary(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
     const { items } = await libraryApi.getShared();
-    const parsed: CoachLibraryItem[] = [];
-    for (const i of items) {
-      const item = libraryItemFromJson(i.dataJson, i.kind);
-      if (!item) continue;
-      parsed.push({ ...item, coach: { coachId: i.coachId, coachName: i.coachName }, viaProgram: i.viaProgram } as CoachLibraryItem);
-    }
-    await getLibraryRepo().replaceFromCoaches(parsed);
+    await replaceCoachLibrary(items, getLibraryRepo());
     return true;
   } catch (e) {
     syncWarn("pullCoachLibrary", e);
