@@ -13,6 +13,7 @@
   import AppSidebar from "$lib/components/app-sidebar.svelte";
   import { isCoachingPath } from "$lib/workspace";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
+  import { socialBadge } from "$lib/features/social/socialData.svelte";
 
   let { children } = $props();
 
@@ -26,6 +27,7 @@
     "/library": "Library",
     "/coaching/library": "Library",
     "/habits": "Habits & goals",
+    "/social": "Social",
     "/coaching": "Today",
     "/coaching/programs": "Programs",
     "/coaching/checkins": "Check-ins",
@@ -113,7 +115,10 @@
     // app) is what actually triggers this guard to re-check after those transitions.
     void page.url.pathname;
     if (ready) void guardRoute();
-    if (ready && apiClient.isAuthenticated() && !isBlockedFreeTier) void coachBadges.refresh(isStudio);
+    if (ready && apiClient.isAuthenticated() && !isBlockedFreeTier) {
+      void coachBadges.refresh(isStudio);
+      void socialBadge.refresh();
+    }
   });
 
   function logout() {
