@@ -29,6 +29,9 @@ export type CoachProgram = {
   /** On a client's copy: the library program it was assigned from. Lets the coach push a
    * library edit to the copies (see updateCopyFromTemplate). */
   sourceProgramId?: string;
+  /** On a client's copy: the coach it came from, so the phone applies that coach's swap
+   * rule. Set by the client's app from the assigned-programs pull, never by the coach. */
+  coachId?: string;
   weeks: ProgramWeek[];
   archived: boolean;
   createdAtMs: number;
@@ -63,7 +66,12 @@ export type ProgramStrength = {
   exerciseId?: string;
   note?: string;
   sets: ProgramSet[];
+  /** Exercises the coach approves as swaps for this one. Shown first when the client taps
+   * Swap, and always allowed whatever the coach's swap rule (see swaps.ts). */
+  alternatives?: SwapAlternative[];
 };
+
+export type SwapAlternative = { exerciseName: string; exerciseId?: string };
 
 export type ProgramCardio = {
   type: "cardio";
@@ -441,6 +449,7 @@ function cloneBlock(block: ProgramBlock): ProgramBlock {
       ...block,
       id: createId("pblock"),
       sets: block.sets.map((s) => ({ ...s, id: createId("pset") })),
+      ...(block.alternatives ? { alternatives: block.alternatives.map((a) => ({ ...a })) } : {}),
     };
   }
   return { ...block, id: createId("pblock") };
@@ -508,6 +517,62 @@ export function updateBlock(
     ...day,
     blocks: day.blocks.map((b) => (b.id === blockId ? ({ ...b, ...patch } as ProgramBlock) : b)),
   }));
+}
+
+// ── Approved swaps ────────────────────────────────────────────────────────────
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+function isSameExercise(block: ProgramStrength, ref: { exerciseName: string; exerciseId?: string }): boolean {
+  if (block.exerciseId && ref.exerciseId) return block.exerciseId === ref.exerciseId;
+  return sameName(block.exerciseName, ref.exerciseName);
+}
+
+/** Every strength block in the program for the same exercise as `ref` gets `fn` applied.
+ * Approved swaps belong to the exercise, not one week's copy of it: "Leg press instead of
+ * Squat" is meant for the whole program. */
+function mapExercise(
+  program: CoachProgram,
+  ref: { exerciseName: string; exerciseId?: string },
+  fn: (alts: SwapAlternative[]) => SwapAlternative[],
+): CoachProgram {
+  let changed = false;
+  const weeks = program.weeks.map((w) => ({
+    ...w,
+    days: w.days.map((d) => ({
+      ...d,
+      blocks: d.blocks.map((b) => {
+        if (b.type !== "strength" || !isSameExercise(b, ref)) return b;
+        const next = fn(b.alternatives ?? []);
+        changed = true;
+        const { alternatives: _old, ...rest } = b;
+        return next.length ? { ...rest, alternatives: next } : rest;
+      }),
+    })),
+  }));
+  return changed ? touchCoachProgram({ ...program, weeks }) : program;
+}
+
+/** Approve `alt` as a swap for `exercise`, everywhere it's in the program. The exercise
+ * itself and names already on the list are ignored. */
+export function addAlternative(
+  program: CoachProgram,
+  exercise: { exerciseName: string; exerciseId?: string },
+  alt: SwapAlternative,
+): CoachProgram {
+  const name = alt.exerciseName.trim();
+  if (!name || sameName(name, exercise.exerciseName)) return program;
+  const clean: SwapAlternative = { exerciseName: name, ...(alt.exerciseId ? { exerciseId: alt.exerciseId } : {}) };
+  return mapExercise(program, exercise, (alts) =>
+    alts.some((a) => sameName(a.exerciseName, name)) ? alts : [...alts, clean]);
+}
+
+export function removeAlternative(
+  program: CoachProgram,
+  exercise: { exerciseName: string; exerciseId?: string },
+  altName: string,
+): CoachProgram {
+  return mapExercise(program, exercise, (alts) => alts.filter((a) => !sameName(a.exerciseName, altName)));
 }
 
 /** Puts a block in a superset with the one before it (joining that one's group, or starting

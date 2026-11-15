@@ -6,7 +6,7 @@
 import { createId } from "./ids";
 import { estimated1RM } from "./oneRepMax";
 import type { MuscleGroup } from "./exercise";
-import type { ProgramDay } from "./CoachProgram";
+import type { ProgramDay, ProgramStrength } from "./CoachProgram";
 import type { PlannedBlock, PlannedGroup, SplitDay, WorkoutSplit } from "./WorkoutSplit";
 import { plannedBlockName } from "./WorkoutSplit";
 import { dayNumber as splitDayNumber, splitDayName } from "./splitSchedule";
@@ -99,19 +99,39 @@ export function sourceFromSplitDay(
 }
 
 export function sourceFromProgramDay(
-  program: { id: string; name: string },
-  day: Pick<ProgramDay, "id" | "name" | "orderIndex">,
+  program: { id: string; name: string; coachId?: string },
+  day: Pick<ProgramDay, "id" | "name" | "orderIndex"> & { blocks?: ProgramDay["blocks"] },
   planned?: WorkoutSession,
 ): SessionSource {
   return {
     kind: "program",
     parentId: program.id,
     parentName: program.name,
+    ...(program.coachId ? { coachId: program.coachId } : {}),
     dayId: day.id,
     dayName: day.name?.trim() || `Day ${day.orderIndex + 1}`,
     dayNumber: day.orderIndex + 1,
-    ...(planned ? { plan: planSnapshot(planned) } : {}),
+    ...(planned ? { plan: withAlternatives(planSnapshot(planned), day.blocks ?? []) } : {}),
   };
+}
+
+/** The coach's approved swaps, copied onto the planned exercises they belong to, so the
+ * workout has them offline and the history keeps them. Matched by name, in order. */
+function withAlternatives(plan: PlannedItem[], blocks: ProgramDay["blocks"]): PlannedItem[] {
+  const strength = [...blocks]
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .filter((b): b is ProgramStrength => b.type === "strength");
+  const used = new Set<string>();
+  return plan.map((item) => {
+    if (item.type !== "strength") return item;
+    const block = strength.find((b) => !used.has(b.id) && norm(b.exerciseName) === norm(item.name));
+    if (!block) return item;
+    used.add(block.id);
+    const alts = block.alternatives?.filter((a) => a.exerciseName.trim());
+    return alts?.length
+      ? { ...item, alternatives: alts.map((a) => ({ name: a.exerciseName.trim(), ...(a.exerciseId ? { exerciseId: a.exerciseId } : {}) })) }
+      : item;
+  });
 }
 
 // ── Names ───────────────────────────────────────────────────────────────────
