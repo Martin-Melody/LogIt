@@ -206,3 +206,106 @@ export function missedCheckin(
   );
   return done ? null : { periodIndex: previous, dueMs: periodDueMs(s, previous) };
 }
+
+// ── The client's list: this period and earlier ones ─────────────────────────────
+
+/** A coach's review of a submission, as the client sees it. */
+export type CheckinReviewInfo = { reviewedAtMs: number; reply?: string | null; coachId?: string };
+
+export type CheckinRowState = "due" | "draft" | "late" | "sent" | "reviewed" | "not-sent";
+
+export type CheckinRow = {
+  schedule: CheckinSchedule;
+  periodIndex: number;
+  periodStartMs: number;
+  /** When it closes (0 for a manual form). */
+  dueMs: number;
+  state: CheckinRowState;
+  submission?: CheckinSubmission;
+  review?: CheckinReviewInfo;
+};
+
+function rowFor(
+  s: CheckinSchedule,
+  periodIndex: number,
+  submissions: CheckinSubmission[],
+  reviews: ReadonlyMap<string, CheckinReviewInfo>,
+  open: "due" | "late" | "not-sent",
+): CheckinRow {
+  const submission = submissions.find((x) => x.scheduleId === s.id && x.periodIndex === periodIndex);
+  const review = submission ? reviews.get(submission.id) : undefined;
+  const state: CheckinRowState = submission?.submittedAtMs !== undefined
+    ? review ? "reviewed" : "sent"
+    // A late one stays "late" with a draft (the row still has the submission to say so).
+    : submission && open === "due" ? "draft" : open;
+  return {
+    schedule: s,
+    periodIndex,
+    periodStartMs: submission?.periodStartMs ?? periodStartMs(s, periodIndex),
+    dueMs: cadenceMs(s.cadence) === 0 ? 0 : periodDueMs(s, periodIndex),
+    state,
+    ...(submission ? { submission } : {}),
+    ...(review ? { review } : {}),
+  };
+}
+
+/**
+ * The client's check-ins screen. `current`: each form's open period (a missed one first,
+ * then this one), sent or not. `earlier`: everything before, newest first: what was sent
+ * (with the coach's review) and the periods that weren't, back `periodsBack` periods.
+ * Archived forms only show what was sent.
+ */
+export function checkinRows(
+  schedules: CheckinSchedule[],
+  submissions: CheckinSubmission[],
+  reviews: ReadonlyMap<string, CheckinReviewInfo>,
+  atMs: number = nowMs(),
+  periodsBack = 8,
+): { current: CheckinRow[]; earlier: CheckinRow[] } {
+  const current: CheckinRow[] = [];
+  const earlier: CheckinRow[] = [];
+  const shown = new Set<string>();
+  const key = (scheduleId: string, period: number) => `${scheduleId}#${period}`;
+
+  for (const s of schedules) {
+    const now = currentPeriodIndex(s, atMs);
+    if (!s.archived) {
+      const missed = missedCheckin(s, submissions, atMs);
+      if (missed) {
+        current.push(rowFor(s, missed.periodIndex, submissions, reviews, "late"));
+        shown.add(key(s.id, missed.periodIndex));
+      }
+      const thisPeriod = now ?? 0;
+      current.push(rowFor(s, thisPeriod, submissions, reviews, "due"));
+      shown.add(key(s.id, thisPeriod));
+      if (now !== null) {
+        for (let p = Math.max(0, now - periodsBack); p < now; p++) {
+          if (shown.has(key(s.id, p))) continue;
+          earlier.push(rowFor(s, p, submissions, reviews, "not-sent"));
+          shown.add(key(s.id, p));
+        }
+      }
+    }
+    // Anything else that was sent, however old.
+    for (const sub of submissions) {
+      if (sub.scheduleId !== s.id || sub.submittedAtMs === undefined || shown.has(key(s.id, sub.periodIndex))) continue;
+      earlier.push(rowFor(s, sub.periodIndex, submissions, reviews, "not-sent"));
+      shown.add(key(s.id, sub.periodIndex));
+    }
+  }
+  earlier.sort((a, b) => b.periodStartMs - a.periodStartMs);
+  return { current, earlier };
+}
+
+/** "Week of Nov 2", "Month of Oct 5", or the form's name for a manual one. */
+export function checkinPeriodLabel(row: Pick<CheckinRow, "schedule" | "periodStartMs">, formatDate: (ms: number) => string): string {
+  switch (row.schedule.cadence) {
+    case "weekly":
+    case "biweekly":
+      return `Week of ${formatDate(row.periodStartMs)}`;
+    case "monthly":
+      return `Month of ${formatDate(row.periodStartMs)}`;
+    case "manual":
+      return row.schedule.name;
+  }
+}

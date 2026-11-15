@@ -9,6 +9,8 @@ export interface RemoteCoachProgram {
   deletedAtMs?: number | null;
   /** When the client tapped Start. See CoachProgram.clientStartedAtMs. */
   startedAtMs?: number | null;
+  /** Whose program it is (assigned pull only). See CoachProgram.coachId. */
+  coachId?: string | null;
 }
 
 /** Coach-side row: same, plus which client it's assigned to (null = template). */

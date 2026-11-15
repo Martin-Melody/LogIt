@@ -292,6 +292,8 @@ export type SessionSource = {
   /** The split's (or program's) id and name when the workout started. */
   parentId: string;
   parentName: string;
+  /** A coach program's coach (their swap rule applies to this workout). */
+  coachId?: string;
   dayId: string;
   /** "Lower 2", or "Day 5" for an unnamed day. */
   dayName: string;
@@ -312,6 +314,8 @@ export type PlannedItem = {
   groupId?: string;
   /** Strength: the planned sets, warm-ups included. */
   sets?: { setType: SetType; reps: number; repsMax?: number; weight: number }[];
+  /** Strength in a coach program: the swaps the coach approved (see swaps.ts). */
+  alternatives?: { name: string; exerciseId?: string }[];
   /** Mobility: rounds (an L/R pair counts once) and the target of each. */
   rounds?: number;
   targetSec?: number;
