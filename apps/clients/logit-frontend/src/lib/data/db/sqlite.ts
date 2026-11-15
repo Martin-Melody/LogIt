@@ -7,6 +7,7 @@ import {
   type SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
 import { nowMs } from "@logit/core/domain/time";
+import { CORE_EXERCISES, LIBRARY_BANK_VERSION } from "@logit/core/domain/coreExercises";
 
 const DB_NAME = "logit";
 const DB_VERSION = 1;
@@ -147,6 +148,8 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM habits WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM habit_entries WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM coach_habits WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM library_items WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM coach_library_items WHERE owner_id = ?`, [ownerId]);
   await db.execute(`PRAGMA foreign_keys = ON`);
 }
 
@@ -180,6 +183,8 @@ export async function clearAllSqliteData(): Promise<void> {
     DELETE FROM habits;
     DELETE FROM habit_entries;
     DELETE FROM coach_habits;
+    DELETE FROM library_items;
+    DELETE FROM coach_library_items;
     DELETE FROM food_cache;
     PRAGMA foreign_keys = ON;
   `);
@@ -591,6 +596,31 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       synced_at_ms INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_coach_habits_owner ON coach_habits(owner_id);
+
+    -- Your own cardio activities and mobility drills (library, 2026-11). Strength
+    -- exercises stay in the exercises table. data_json is the whole item.
+    CREATE TABLE IF NOT EXISTS library_items (
+      id TEXT PRIMARY KEY NOT NULL,
+      owner_id TEXT NULL,
+      kind TEXT NOT NULL,
+      name TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_library_items_owner ON library_items(owner_id, kind);
+
+    -- Read-only copy of what this account's coaches share with it, replaced whole on
+    -- every fetch. Any kind, strength included.
+    CREATE TABLE IF NOT EXISTS coach_library_items (
+      owner_id TEXT NOT NULL,
+      id TEXT NOT NULL,
+      coach_id TEXT NOT NULL,
+      coach_name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      via_program INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (owner_id, coach_id, id)
+    );
   `);
 
   await migrateSessionSets(db);
@@ -608,7 +638,42 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateMobilityLeadSide(db);
   await migrateSplitGroups(db);
   await migrateSplitSchedule(db);
+  await migrateExerciseLibraryFields(db);
   await seedExercises(db);
+  await seedLibraryBank(db);
+}
+
+// Library (2026-11): cues and equipment on exercises. Built-ins get theirs from the bank
+// in code when the columns are empty (see exerciseRepo.sqlite.ts).
+async function migrateExerciseLibraryFields(db: SQLiteDBConnection): Promise<void> {
+  for (const sql of [
+    "ALTER TABLE exercises ADD COLUMN cues TEXT NULL",
+    "ALTER TABLE exercises ADD COLUMN equipment TEXT NULL",
+    "ALTER TABLE exercises ADD COLUMN updated_at_ms INTEGER NULL",
+  ]) {
+    try {
+      await db.run(sql, []);
+    } catch { /* column already exists */ }
+  }
+}
+
+/**
+ * Adds LogIt bank exercises this install doesn't have yet. Never changes a row that's
+ * there (you may have set its machines or muscles), and skips a name you've already used
+ * for an exercise of your own (names are unique in this table). Runs once per bank version.
+ */
+export async function seedLibraryBank(db: SQLiteDBConnection): Promise<void> {
+  const key = `library_bank_v${LIBRARY_BANK_VERSION}`;
+  const done = await db.query(`SELECT 1 FROM meta WHERE key = ?`, [key]);
+  if ((done.values?.length ?? 0) > 0) return;
+  for (const ex of CORE_EXERCISES) {
+    await db.run(
+      `INSERT OR IGNORE INTO exercises(id, name, notes, is_core, created_at_ms, primary_muscles, secondary_muscles, exercise_type)
+       VALUES(?, ?, NULL, 1, 0, ?, ?, ?)`,
+      [ex.id, ex.name, JSON.stringify(ex.primaryMuscles), JSON.stringify(ex.secondaryMuscles), ex.exerciseType ?? "normal"],
+    );
+  }
+  await db.run(`INSERT INTO meta(key, value) VALUES(?, '1') ON CONFLICT(key) DO UPDATE SET value = '1'`, [key]);
 }
 
 async function migrateProgressPhoto(db: SQLiteDBConnection): Promise<void> {

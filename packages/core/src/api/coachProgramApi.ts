@@ -7,7 +7,7 @@ export interface RemoteCoachProgram {
   updatedAtMs: number;
   dataJson: string | null;
   deletedAtMs?: number | null;
-  /** When the client tapped Start (assigned pull only). See CoachProgram.clientStartedAtMs. */
+  /** When the client tapped Start. See CoachProgram.clientStartedAtMs. */
   startedAtMs?: number | null;
 }
 

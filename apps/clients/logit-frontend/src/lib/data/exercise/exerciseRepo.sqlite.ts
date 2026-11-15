@@ -1,4 +1,5 @@
-import type { Exercise, ExercisePatch, ExerciseType, MuscleGroup, Machine } from "@logit/core/domain/exercise";
+import type { Equipment, Exercise, ExercisePatch, ExerciseType, MuscleGroup, Machine } from "@logit/core/domain/exercise";
+import { canonicalExerciseId, coreExerciseById } from "@logit/core/domain/coreExercises";
 import type { ExerciseRepo, ListExercisesOptions } from "@logit/core/data/exercise/exerciseRepo";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
@@ -15,20 +16,38 @@ function parseMachines(json: string | null | undefined): Machine[] {
   try { return JSON.parse(json) as Machine[]; } catch { return []; }
 }
 
+function parseCues(json: string | null | undefined): string[] | undefined {
+  if (!json) return undefined;
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : undefined;
+  } catch { return undefined; }
+}
+
 function row(r: any): Exercise {
+  const isCore = r.is_core === 1;
+  // A built-in's cues and equipment come from the bank until the row has its own.
+  const bank = isCore ? coreExerciseById(r.id) : undefined;
+  const cues = parseCues(r.cues) ?? bank?.cues;
+  const equipment = (r.equipment as Equipment | null) ?? bank?.equipment;
   return {
     id: r.id,
     name: r.name,
     notes: r.notes ?? null,
-    isCore: r.is_core === 1,
+    isCore,
     createdAtMs: r.createdAtMs ?? r.created_at_ms,
     primaryMuscles: parseMuscles(r.primary_muscles),
     secondaryMuscles: parseMuscles(r.secondary_muscles),
     exerciseType: (r.exercise_type as ExerciseType | undefined) ?? "normal",
     machines: parseMachines(r.machines),
     defaultMachineId: r.default_machine_id ?? undefined,
+    ...(cues ? { cues } : {}),
+    ...(equipment ? { equipment } : {}),
+    ...(r.updated_at_ms ? { updatedAtMs: r.updated_at_ms } : {}),
   };
 }
+
+const COLUMNS = `id, name, notes, is_core, created_at_ms as createdAtMs, primary_muscles, secondary_muscles, exercise_type, machines, default_machine_id, cues, equipment, updated_at_ms`;
 
 export function createSqliteExerciseRepo(): ExerciseRepo {
   return {
@@ -59,7 +78,7 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       params.push(limit, offset);
 
       const res = await db.query(
-        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs, primary_muscles, secondary_muscles, exercise_type, machines, default_machine_id
+        `SELECT ${COLUMNS}
          FROM exercises
          ${where}
          ORDER BY name COLLATE NOCASE ASC
@@ -106,8 +125,8 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       if (!trimmed) return null;
 
       const res = await db.query(
-        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs, primary_muscles, secondary_muscles, exercise_type, machines, default_machine_id
-         FROM exercises WHERE name = ?`,
+        `SELECT ${COLUMNS}
+         FROM exercises WHERE name = ? COLLATE NOCASE`,
         [trimmed],
       );
       const r = res.values?.[0];
@@ -117,9 +136,9 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
     async getById(id: string): Promise<Exercise | null> {
       const db = getDb();
       const res = await db.query(
-        `SELECT id, name, notes, is_core, created_at_ms as createdAtMs, primary_muscles, secondary_muscles, exercise_type, machines, default_machine_id
+        `SELECT ${COLUMNS}
          FROM exercises WHERE id = ?`,
-        [id],
+        [canonicalExerciseId(id)],
       );
       const r = res.values?.[0];
       return r ? row(r) : null;
@@ -137,8 +156,12 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       if (patch.exerciseType !== undefined) { sets.push("exercise_type = ?"); params.push(patch.exerciseType); }
       if (patch.machines !== undefined) { sets.push("machines = ?"); params.push(JSON.stringify(patch.machines)); }
       if (patch.defaultMachineId !== undefined) { sets.push("default_machine_id = ?"); params.push(patch.defaultMachineId); }
+      if (patch.cues !== undefined) { sets.push("cues = ?"); params.push(JSON.stringify(patch.cues)); }
+      if (patch.equipment !== undefined) { sets.push("equipment = ?"); params.push(patch.equipment ?? null); }
 
       if (sets.length) {
+        sets.push("updated_at_ms = ?");
+        params.push(nowMs());
         params.push(id);
         await db.run(`UPDATE exercises SET ${sets.join(", ")} WHERE id = ?`, params);
       }
@@ -158,18 +181,21 @@ export function createSqliteExerciseRepo(): ExerciseRepo {
       if (exercise.isCore) return;
       const db = getDb();
       await db.run(
-        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id, primary_muscles, secondary_muscles, exercise_type, machines, default_machine_id)
-         VALUES(?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO exercises(id, name, notes, is_core, created_at_ms, owner_id, primary_muscles, secondary_muscles, exercise_type, machines, default_machine_id, cues, equipment, updated_at_ms)
+         VALUES(?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            name=excluded.name, notes=excluded.notes,
            primary_muscles=excluded.primary_muscles, secondary_muscles=excluded.secondary_muscles,
            exercise_type=excluded.exercise_type,
-           machines=excluded.machines, default_machine_id=excluded.default_machine_id`,
+           machines=excluded.machines, default_machine_id=excluded.default_machine_id,
+           cues=excluded.cues, equipment=excluded.equipment, updated_at_ms=excluded.updated_at_ms`,
         [
           exercise.id, exercise.name, exercise.notes ?? null, exercise.createdAtMs, getActiveOwnerId(),
           JSON.stringify(exercise.primaryMuscles), JSON.stringify(exercise.secondaryMuscles),
           exercise.exerciseType ?? "normal",
           JSON.stringify(exercise.machines ?? []), exercise.defaultMachineId ?? null,
+          exercise.cues ? JSON.stringify(exercise.cues) : null, exercise.equipment ?? null,
+          exercise.updatedAtMs ?? null,
         ],
       );
     },

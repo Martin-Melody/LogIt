@@ -7,7 +7,11 @@
   import AppleIcon from "@lucide/svelte/icons/apple";
   import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
   import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
-  import UsersIcon from "@lucide/svelte/icons/users";
+  import LibraryIcon from "@lucide/svelte/icons/library";
+  import SunriseIcon from "@lucide/svelte/icons/sunrise";
+  import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
+  import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
+  import LinkIcon from "@lucide/svelte/icons/link";
   import ContactIcon from "@lucide/svelte/icons/contact";
   import MessageSquareIcon from "@lucide/svelte/icons/message-square";
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
@@ -23,6 +27,7 @@
   import { useSidebar } from "$lib/components/ui/sidebar";
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { isCoachingPath } from "$lib/workspace";
+  import { coachBadges } from "$lib/features/coaching/badges.svelte";
 
   let {
     isStudio = false,
@@ -33,7 +38,7 @@
 
   const sidebar = useSidebar();
 
-  type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon };
+  type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon; badge?: () => number };
   type NavGroup = { label: string | null; items: NavItem[] };
 
   // "Me": your own training. Pages that aren't built yet (Insights, Social, Plugins,
@@ -46,6 +51,7 @@
         { label: "Sessions", href: "/sessions", icon: ListIcon },
         { label: "Progress", href: "/progress", icon: TrendingUpIcon },
         { label: "Plan", href: "/plan", icon: CalendarDaysIcon },
+        { label: "Library", href: "/library", icon: LibraryIcon },
       ],
     },
     {
@@ -57,34 +63,41 @@
     },
   ];
 
-  // "Coaching": a separate workspace, Studio accounts only. Today/Programs/Check-ins come
-  // with the coaching phase; until then these are the existing coaching pages.
+  // "Coaching": a separate workspace, Studio accounts only.
   const coachGroups: NavGroup[] = [
     {
       label: null,
       items: [
+        { label: "Today", href: "/coaching", icon: SunriseIcon, badge: () => coachBadges.today },
         { label: "Clients", href: "/clients", icon: ContactIcon },
-        { label: "Roster", href: "/roster", icon: UsersIcon },
-        { label: "Messages", href: "/messages", icon: MessageSquareIcon },
+        { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon },
+        { label: "Library", href: "/coaching/library", icon: LibraryIcon },
+        { label: "Check-ins", href: "/coaching/checkins", icon: ClipboardCheckIcon, badge: () => coachBadges.checkins },
+        { label: "Messages", href: "/messages", icon: MessageSquareIcon, badge: () => coachBadges.messages },
       ],
+    },
+    {
+      label: "Studio",
+      items: [{ label: "Invite links", href: "/coaching/links", icon: LinkIcon, badge: () => coachBadges.links }],
     },
   ];
 
-  // Without Studio there's no Coaching workspace, but a coach can still invite you and
-  // message you: those pages sit under Me until the "My coach" page replaces them.
+  // Your own coach (if you have one): program, messages, check-ins and what they can see.
   const clientGroup: NavGroup = {
     label: "Coach",
-    items: [
-      { label: "My coach", href: "/clients", icon: ContactIcon },
-      { label: "Messages", href: "/messages", icon: MessageSquareIcon },
-    ],
+    items: [{ label: "My coach", href: "/my-coach", icon: UserRoundIcon, badge: () => coachBadges.myCoach }],
   };
 
   const coaching = $derived(isStudio && isCoachingPath(page.url.pathname));
-  const groups = $derived(coaching ? coachGroups : isStudio ? meGroups : [...meGroups, clientGroup]);
+  const groups = $derived(coaching ? coachGroups : [...meGroups, clientGroup]);
 
+  // The longest matching href wins, so /coaching/programs doesn't also light up Today.
+  const allHrefs = $derived(groups.flatMap((g) => g.items.map((i) => i.href)));
   function isActive(href: string): boolean {
-    return href === "/" ? page.url.pathname === "/" : page.url.pathname.startsWith(href);
+    const p = page.url.pathname;
+    const matches = (h: string) => (h === "/" ? p === "/" : p === h || p.startsWith(h + "/"));
+    if (!matches(href)) return false;
+    return !allHrefs.some((h) => h.length > href.length && matches(h));
   }
 
   function onNavClick() {
@@ -94,7 +107,7 @@
   function switchTo(mode: "me" | "coaching") {
     if (mode === (coaching ? "coaching" : "me")) return;
     if (mode === "me") viewingClient.set(null);
-    void goto(mode === "me" ? "/" : "/clients");
+    void goto(mode === "me" ? "/" : "/coaching");
     onNavClick();
   }
 
@@ -123,7 +136,7 @@
         <button type="button" role="tab" aria-selected={!coaching}
           class="{segBase} {coaching ? segOff : segOn}" onclick={() => switchTo("me")}>Me</button>
         <button type="button" role="tab" aria-selected={coaching}
-          class="{segBase} {coaching ? segOn : segOff}" onclick={() => switchTo("coaching")}>Coaching</button>
+          class="{segBase} {coaching ? segOn : segOff}" onclick={() => switchTo("coaching")}>{!coaching && coachBadges.today > 0 ? `Coaching · ${coachBadges.today}` : "Coaching"}</button>
       </div>
     {/if}
   </Sidebar.Header>
@@ -141,6 +154,9 @@
                     <a href={item.href} onclick={onNavClick} {...props}>
                       <item.icon />
                       <span>{item.label}</span>
+                      {#if (item.badge?.() ?? 0) > 0}
+                        <span class="ml-auto rounded-full bg-primary px-[7px] py-px text-[11px] font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">{item.badge?.()}</span>
+                      {/if}
                     </a>
                   {/snippet}
                 </Sidebar.MenuButton>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
   import { apiClient, ApiError, type RegistrationInfo } from "@logit/core/api/client";
   import { getServerMode, setServerMode, getSelfHostUrl } from "@logit/core/api/serverConfig";
@@ -63,6 +64,13 @@
     confirmPassword = "";
   }
 
+  /** Where to go after logging in: `?next=` when it's a path on this site (an invite link
+   * sends people here first), else Overview. */
+  function nextPath(): string {
+    const next = page.url.searchParams.get("next") ?? "";
+    return next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  }
+
   async function submit(e: Event) {
     e.preventDefault();
     if (!canSubmit) return;
@@ -77,7 +85,7 @@
           inviteRequired ? inviteCode : undefined,
         );
       }
-      await goto("/");
+      await goto(nextPath());
     } catch (err) {
       if (err instanceof ApiError && (err.code === "invite_required" || err.code === "invite_invalid")) {
         registration = { mode: "invite", selfHosted: registration?.selfHosted ?? true };

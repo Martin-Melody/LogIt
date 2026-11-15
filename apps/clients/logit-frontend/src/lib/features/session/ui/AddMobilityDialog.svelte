@@ -4,8 +4,10 @@
   import { Timer, Hash, Check } from "lucide-svelte";
   import { reveal } from "$lib/transitions";
   import type { MobilityMetric } from "@logit/core/domain/workout";
-  import type { MobilityDrill } from "@logit/core/domain/mobilityDrill";
-  import { getMobilityDrillCatalog } from "$lib/data/mobilityDrillCatalog";
+  import type { MobilityArea, MobilityDrill } from "@logit/core/domain/mobilityDrill";
+  import { MOBILITY_AREAS } from "@logit/core/domain/mobilityDrill";
+  import { MOBILITY_AREA_LABEL, newMobilityDrill, sourceLabel, type LibraryEntry } from "@logit/core/domain/library";
+  import { loadLibrary, saveOwnItem } from "$lib/data/library/library";
 
   const props = $props<{
     open?: boolean;
@@ -34,19 +36,22 @@
   let perSide = $state(false);
   let touchedMetric = $state(false);
   let touchedPerSide = $state(false);
-  let catalog = $state<MobilityDrill[]>([]);
+  let entries = $state<LibraryEntry[]>([]);
+  const catalog = $derived(entries.map((e) => e.item as MobilityDrill));
+  let area = $state<MobilityArea>("full-body");
   let inputEl = $state<HTMLInputElement | null>(null);
   let listOpen = $state(false);
   let activeIndex = $state(-1);
 
   $effect(() => {
     if (props.open) {
-      void getMobilityDrillCatalog().then((c) => (catalog = c));
+      void loadLibrary("mobility").then((c) => (entries = c));
       queueMicrotask(() => inputEl?.focus());
     } else {
       name = "";
       metric = "hold";
       perSide = false;
+      area = "full-body";
       touchedMetric = false;
       touchedPerSide = false;
       listOpen = false;
@@ -103,10 +108,21 @@
     }
   }
 
+  function tag(d: MobilityDrill): string | null {
+    const e = entries.find((x) => x.item.id === d.id);
+    return e && e.source !== "logit" ? sourceLabel(e) : null;
+  }
+
   async function handleConfirm() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    await onSubmit({ drillName: trimmed, drillId: matched?.id, metric, perSide });
+    let drillId = matched?.id;
+    // A drill that isn't in the library yet is saved to it, so it's there next time.
+    if (!matched) {
+      const saved = await saveOwnItem({ kind: "mobility", item: newMobilityDrill({ name: trimmed, area, defaultMetric: metric, perSide }) });
+      drillId = saved.item.id;
+    }
+    await onSubmit({ drillName: trimmed, drillId, metric, perSide });
     onOpenChange(false);
   }
 </script>
@@ -146,7 +162,10 @@
                   class="w-full px-3 py-2 text-left text-sm transition-colors {activeIndex === i ? 'bg-muted' : 'hover:bg-muted'}"
                   onpointerdown={(e) => { e.preventDefault(); pick(d); }}
                 >
-                  <span class="block">{d.name}</span>
+                  <span class="flex items-baseline justify-between gap-2">
+                    <span>{d.name}</span>
+                    {#if tag(d)}<span class="shrink-0 text-[11px] text-muted-foreground">{tag(d)}</span>{/if}
+                  </span>
                   {#if d.cues?.length}
                     <span class="block text-xs text-muted-foreground truncate">{d.cues[0]}</span>
                   {/if}
@@ -160,7 +179,7 @@
                   class="w-full px-3 py-2 text-left text-sm text-muted-foreground transition-colors {activeIndex === results.length ? 'bg-muted' : 'hover:bg-muted'}"
                   onpointerdown={(e) => { e.preventDefault(); void handleConfirm(); }}
                 >
-                  Add “<span class="text-foreground font-medium">{name.trim()}</span>”
+                  New: “<span class="text-foreground font-medium">{name.trim()}</span>”, saved to your library
                 </button>
               </li>
             {/if}
@@ -172,6 +191,16 @@
         <p class="text-xs text-muted-foreground" transition:reveal>
           {matched.cues.join(" · ")}
         </p>
+      {/if}
+
+      {#if showAddNew}
+        <div class="flex flex-col gap-1.5" transition:reveal>
+          <p class="text-xs text-muted-foreground">“{name.trim()}” is new, so it's saved to your library.</p>
+          <label class="sr-only" for="new-drill-area">Body area</label>
+          <select id="new-drill-area" class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" bind:value={area}>
+            {#each MOBILITY_AREAS as a (a)}<option value={a}>Area: {MOBILITY_AREA_LABEL[a]}</option>{/each}
+          </select>
+        </div>
       {/if}
 
       {#if mode !== "swap"}

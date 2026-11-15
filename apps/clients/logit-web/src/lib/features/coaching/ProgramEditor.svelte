@@ -1,0 +1,343 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import { beforeNavigate } from "$app/navigation";
+  import * as P from "@logit/core/domain/CoachProgram";
+  import type { CoachProgram, ProgramDay, ProgramSet, ProgramStrength } from "@logit/core/domain/CoachProgram";
+  import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
+  import NamePicker from "$lib/features/plan/NamePicker.svelte";
+  import { loadExerciseIndex, type ExerciseIndex } from "$lib/features/plan/exerciseIndex";
+
+  // The coach's program editor, for a library program and for a client's own copy.
+  // Changes stay here until Save, so a half-built week never reaches a phone.
+
+  let {
+    program,
+    mode,
+    copies = [],
+    onSave,
+  }: {
+    program: CoachProgram;
+    /** "library": a reusable program; "copy": one client's own copy (with its start). */
+    mode: "library" | "copy";
+    /** Library only: clients' copies of this program, offered for updating on save. */
+    copies?: { id: string; label: string }[];
+    onSave: (next: CoachProgram, updateCopies: string[]) => Promise<void>;
+  } = $props();
+
+  // svelte-ignore state_referenced_locally
+  let draft = $state<CoachProgram>(structuredClone($state.snapshot(program)) as CoachProgram);
+  // svelte-ignore state_referenced_locally
+  let saved = $state(JSON.stringify(program));
+  let weekId = $state<string>("");
+  let openDay = $state<string | null>(null);
+  let adding = $state<string | null>(null);
+  let copyTo = $state("");
+  let saving = $state(false);
+  let error = $state<string | null>(null);
+  let tick = $state<string[]>([]);
+  let index = $state<ExerciseIndex | null>(null);
+
+  const weeks = $derived([...draft.weeks].sort((a, b) => a.weekNumber - b.weekNumber));
+  const week = $derived(weeks.find((w) => w.id === weekId) ?? weeks[0]);
+  const days = $derived(week ? [...week.days].sort((a, b) => a.orderIndex - b.orderIndex) : []);
+  const dirty = $derived(JSON.stringify(draft) !== saved);
+
+  onMount(async () => {
+    weekId = weeks[0]?.id ?? "";
+    openDay = days[0]?.id ?? null;
+    index = await loadExerciseIndex([]).catch(() => null);
+  });
+
+  beforeNavigate((nav) => {
+    if (dirty && !saving && !confirm("Leave without saving? Your changes to this program will be lost.")) nav.cancel();
+  });
+
+  function edit(fn: (p: CoachProgram) => CoachProgram) {
+    draft = fn($state.snapshot(draft) as CoachProgram);
+  }
+
+  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const setTypes = SET_TYPE_META.filter((m) => m.type !== "amrap");
+
+  function searchExercises(q: string) {
+    return (index?.search(q, 8) ?? []).map((e) => ({ name: e.name, detail: e.primaryMuscles.slice(0, 2).join(", ") || undefined }));
+  }
+
+  function addExercise(day: ProgramDay, name: string) {
+    if (!week) return;
+    const id = index?.get(name)?.id;
+    edit((p) => {
+      let next = P.addStrengthBlock(p, week.id, day.id, { exerciseName: name, exerciseId: id });
+      const nd = next.weeks.find((w) => w.id === week.id)!.days.find((d) => d.id === day.id)!;
+      const block = nd.blocks.at(-1)!;
+      for (let i = 0; i < 3; i++) next = P.addSet(next, week.id, day.id, block.id, { reps: 8, restSec: 120 });
+      return next;
+    });
+    adding = null;
+  }
+
+  function setField(day: ProgramDay, block: ProgramStrength, set: ProgramSet, field: "reps" | "load" | "rpe" | "rest" | "tempo", text: string, el: HTMLInputElement) {
+    if (!week) return;
+    let patch: Partial<ProgramSet> | null = null;
+    if (field === "reps") patch = P.parseRepsText(text, set.setType);
+    else if (field === "load") patch = P.parseLoadText(text);
+    else if (field === "rpe") {
+      const n = text.trim() === "" ? undefined : Number(text.replace(",", "."));
+      patch = n === undefined || (Number.isFinite(n) && n >= 1 && n <= 10) ? { rpe: n } : null;
+    } else if (field === "rest") {
+      const r = P.parseRestText(text);
+      patch = r === null ? null : { restSec: r };
+    } else patch = { tempo: text.trim() || undefined };
+    if (!patch) {
+      el.setCustomValidity(field === "reps" ? "Use 8, 8-10 or AMRAP" : field === "load" ? "Use kilos (60) or a percent (72%)" : field === "rest" ? "Use 2:30 or 90" : "RPE is 1 to 10");
+      el.reportValidity();
+      return;
+    }
+    el.setCustomValidity("");
+    edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, patch!));
+  }
+
+  /** A new set with the same targets as the last one. */
+  function addSetLike(day: ProgramDay, block: ProgramStrength) {
+    if (!week) return;
+    const last = block.sets.at(-1);
+    let like: Partial<ProgramSet> = { reps: 8 };
+    if (last) {
+      const { id: _id, orderIndex: _order, ...rest } = $state.snapshot(last) as ProgramSet;
+      like = rest;
+    }
+    edit((p) => P.addSet(p, week.id, day.id, block.id, like));
+  }
+
+  function copyWeek() {
+    if (!week || !copyTo) return;
+    const target = copyTo;
+    if (target === "__new") edit((p) => P.duplicateWeek(p, week.id));
+    else edit((p) => P.copyWeekOver(p, week.id, target));
+    copyTo = "";
+  }
+
+  function addWeek() {
+    edit((p) => P.addWeek(p));
+    weekId = draft.weeks.at(-1)!.id;
+  }
+
+  function removeWeek() {
+    if (!week || draft.weeks.length <= 1) return;
+    if (week.days.length && !confirm(`Remove week ${week.weekNumber} and its days?`)) return;
+    const id = week.id;
+    edit((p) => P.removeWeek(p, id));
+    weekId = draft.weeks[0]?.id ?? "";
+  }
+
+  function addDay() {
+    if (!week) return;
+    edit((p) => P.addDay(p, week.id, `Day ${week.days.length + 1}`));
+    openDay = draft.weeks.find((w) => w.id === week.id)!.days.at(-1)!.id;
+  }
+
+  async function save() {
+    saving = true;
+    error = null;
+    try {
+      const next = P.touchCoachProgram($state.snapshot(draft) as CoachProgram);
+      await onSave(next, tick);
+      draft = next;
+      saved = JSON.stringify(next);
+      tick = [];
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Couldn't save";
+    } finally {
+      saving = false;
+    }
+  }
+
+  function discard() {
+    draft = JSON.parse(saved);
+    if (!draft.weeks.some((w) => w.id === weekId)) weekId = draft.weeks[0]?.id ?? "";
+  }
+
+  function blockSummary(d: ProgramDay): string {
+    const n = d.blocks.length;
+    return `${n} exercise${n === 1 ? "" : "s"}${d.weekday != null ? ` · ${WEEKDAYS[d.weekday]}` : ""}`;
+  }
+
+  const input = "h-8 rounded-[7px] border border-input bg-background px-2 text-[13px]";
+</script>
+
+<div class="flex flex-col gap-3.5">
+  <div class="flex flex-wrap items-end gap-3">
+    <label class="flex flex-[2_1_220px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Name
+      <input value={draft.name} oninput={(e) => (draft.name = e.currentTarget.value)} class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[15px] font-semibold text-foreground" />
+    </label>
+    <span class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Weeks
+      <span class="flex h-9 items-center gap-1.5 text-[13px] text-foreground">{draft.weeks.length}
+        <button type="button" onclick={addWeek} class="h-8 rounded-[7px] border border-border px-2 text-xs hover:bg-muted">+ Week</button>
+      </span>
+    </span>
+  </div>
+  <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Description (clients see this)
+    <input value={draft.description ?? ""} oninput={(e) => (draft.description = e.currentTarget.value || undefined)} placeholder="Upper / lower, 4 days. Add a rep each week." class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
+  </label>
+
+  {#if mode === "copy"}
+    <div class="flex flex-wrap items-center gap-2 text-[13px]">
+      <label for="start-mode" class="text-muted-foreground">Starts</label>
+      <select id="start-mode" class={input} value={draft.startMode === "fixed-date" ? "fixed-date" : "manual"}
+        onchange={(e) => { const m = e.currentTarget.value; edit((p) => m === "fixed-date" ? P.setProgramStart(p, { mode: "fixed-date", startDateMs: p.startDateMs ?? P.startOfLocalDayMs() }) : P.setProgramStart(p, { mode: "manual" })); }}>
+        <option value="manual">When they tap Start</option>
+        <option value="fixed-date">On a date</option>
+      </select>
+      {#if draft.startMode === "fixed-date"}
+        <input type="date" aria-label="Start date" class={input} value={draft.startDateMs != null ? P.toDateInputValue(draft.startDateMs) : ""}
+          onchange={(e) => { const ms = P.fromDateInputValue(e.currentTarget.value); if (ms != null) edit((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms })); }} />
+      {:else if draft.clientStartedAtMs}
+        <span class="text-xs text-muted-foreground">They started on {new Date(draft.clientStartedAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+      {/if}
+    </div>
+  {/if}
+
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div role="tablist" aria-label="Week" class="flex flex-wrap gap-1">
+      {#each weeks as w (w.id)}
+        <button type="button" role="tab" aria-selected={w.id === week?.id} onclick={() => (weekId = w.id)}
+          class="h-[30px] rounded-lg px-3 text-xs {w.id === week?.id ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}">{w.id === week?.id ? `Week ${w.weekNumber}` : w.weekNumber}{w.name ? ` · ${w.name}` : ""}</button>
+      {/each}
+    </div>
+    <span class="flex flex-wrap items-center gap-2">
+      <label for="copy-week" class="sr-only">Copy this week to</label>
+      <select id="copy-week" bind:value={copyTo} onchange={copyWeek} class="h-[30px] rounded-lg border border-border bg-background px-2 text-xs">
+        <option value="">Copy week {week?.weekNumber} to…</option>
+        {#each weeks.filter((w) => w.id !== week?.id) as w (w.id)}<option value={w.id}>Week {w.weekNumber} (replaces it)</option>{/each}
+        <option value="__new">A new week at the end</option>
+      </select>
+      <button type="button" onclick={addDay} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">+ Day</button>
+      {#if weeks.length > 1}<button type="button" onclick={removeWeek} class="h-[30px] rounded-lg border border-border px-2.5 text-xs text-destructive hover:bg-muted">Remove week</button>{/if}
+    </span>
+  </div>
+
+  {#if week}
+    <label class="flex items-center gap-2 text-xs text-muted-foreground">Week {week.weekNumber} label
+      <input value={week.name ?? ""} placeholder="e.g. deload" class="{input} w-40"
+        oninput={(e) => { const v = e.currentTarget.value; const id = week.id; draft.weeks = draft.weeks.map((w) => (w.id === id ? { ...w, name: v || undefined } : w)); }} />
+    </label>
+  {/if}
+
+  {#each days as day, di (day.id)}
+    {@const labels = P.supersetLabels(day)}
+    {#if openDay === day.id && week}
+      <div class="flex flex-col gap-1 rounded-[10px] bg-muted/60 px-3.5 py-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="flex flex-wrap items-center gap-2">
+            <label class="sr-only" for="dayname-{day.id}">Day name</label>
+            <input id="dayname-{day.id}" value={day.name ?? `Day ${di + 1}`} class="h-8 w-44 rounded-[7px] border border-transparent bg-transparent px-1 text-sm font-semibold hover:border-input focus:border-input"
+              oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { name: v })); }} />
+            <label class="sr-only" for="weekday-{day.id}">Weekday</label>
+            <select id="weekday-{day.id}" class="h-8 rounded-[7px] border border-input bg-background px-1.5 text-xs" value={day.weekday ?? ""}
+              onchange={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { weekday: v === "" ? undefined : Number(v) })); }}>
+              <option value="">Any day</option>
+              {#each WEEKDAYS as w, i (w)}<option value={i}>{w}</option>{/each}
+            </select>
+          </span>
+          <span class="flex gap-3">
+            <button type="button" class="text-xs text-destructive hover:underline" onclick={() => { if (!day.blocks.length || confirm(`Remove ${day.name ?? "this day"}?`)) edit((p) => P.removeDay(p, week.id, day.id)); }}>Remove day</button>
+            <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => (openDay = null)}>Close</button>
+          </span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[640px] border-collapse text-[13px]">
+            <thead><tr class="text-left text-[11px] text-muted-foreground"><th class="w-[30%] px-2 py-1.5 font-medium">Exercise / set</th><th class="px-2 py-1.5 font-medium">Reps</th><th class="px-2 py-1.5 font-medium">Load</th><th class="px-2 py-1.5 font-medium">RPE</th><th class="px-2 py-1.5 font-medium">Rest</th><th class="px-2 py-1.5 font-medium">Tempo</th><th class="px-2 py-1.5 font-medium">Type</th><th></th></tr></thead>
+            <tbody>
+              {#each [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) as block, bi (block.id)}
+                <tr class="border-t border-border">
+                  <td colspan="8" class="px-2 pb-1 pt-3">
+                    <span class="flex flex-wrap items-center gap-2">
+                      {#if labels.get(block.id)}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(block.id)}</span>{/if}
+                      <span class="font-semibold">{block.type === "strength" ? block.exerciseName : block.activityName}</span>
+                      <span class="ml-auto flex flex-wrap gap-2.5 text-[11px] text-muted-foreground">
+                        {#if bi > 0}<button type="button" class="hover:text-foreground" aria-label="Move up" onclick={() => edit((p) => P.moveBlock(p, week.id, day.id, block.id, -1))}>↑</button>{/if}
+                        {#if bi < day.blocks.length - 1}<button type="button" class="hover:text-foreground" aria-label="Move down" onclick={() => edit((p) => P.moveBlock(p, week.id, day.id, block.id, 1))}>↓</button>{/if}
+                        {#if labels.get(block.id)}
+                          <button type="button" class="hover:text-foreground" onclick={() => edit((p) => P.leaveSuperset(p, week.id, day.id, block.id))}>Unpair</button>
+                        {:else if bi > 0}
+                          <button type="button" class="hover:text-foreground" onclick={() => edit((p) => P.supersetWithPrevious(p, week.id, day.id, block.id))}>Superset with above</button>
+                        {/if}
+                        <button type="button" class="hover:text-destructive" onclick={() => edit((p) => P.removeBlock(p, week.id, day.id, block.id))}>Remove</button>
+                      </span>
+                    </span>
+                    <label class="sr-only" for="note-{block.id}">Note for {block.type === "strength" ? block.exerciseName : block.activityName}</label>
+                    <input id="note-{block.id}" value={block.note ?? ""} placeholder="Note for the client (optional)" class="mt-1 h-7 w-full rounded-[7px] border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
+                      oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateBlock(p, week.id, day.id, block.id, { note: v || undefined })); }} />
+                  </td>
+                </tr>
+                {#if block.type === "strength"}
+                  {#each block.sets as set, si (set.id)}
+                    <tr>
+                      <td class="px-2 py-1 text-muted-foreground">Set {si + 1}</td>
+                      <td class="px-2 py-1"><input aria-label="Reps, set {si + 1}" class="{input} w-[72px]" value={P.repsText(set)} onchange={(e) => setField(day, block, set, "reps", e.currentTarget.value, e.currentTarget)} /></td>
+                      <td class="px-2 py-1"><input aria-label="Load, set {si + 1}" class="{input} w-[76px]" value={P.loadText(set)} placeholder="–" onchange={(e) => setField(day, block, set, "load", e.currentTarget.value, e.currentTarget)} /></td>
+                      <td class="px-2 py-1"><input aria-label="RPE, set {si + 1}" class="{input} w-[52px]" value={set.rpe ?? ""} onchange={(e) => setField(day, block, set, "rpe", e.currentTarget.value, e.currentTarget)} /></td>
+                      <td class="px-2 py-1"><input aria-label="Rest, set {si + 1}" class="{input} w-[64px]" value={P.restText(set.restSec)} onchange={(e) => setField(day, block, set, "rest", e.currentTarget.value, e.currentTarget)} /></td>
+                      <td class="px-2 py-1"><input aria-label="Tempo, set {si + 1}" class="{input} w-[80px]" value={set.tempo ?? ""} onchange={(e) => setField(day, block, set, "tempo", e.currentTarget.value, e.currentTarget)} /></td>
+                      <td class="px-2 py-1">
+                        {#if set.setType === "amrap"}<span class="text-xs text-muted-foreground">AMRAP</span>{:else}
+                          <select aria-label="Set type, set {si + 1}" class="{input} px-1" value={set.setType}
+                            onchange={(e) => { const v = e.currentTarget.value as SetType; edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: v })); }}>
+                            {#each setTypes as t (t.type)}<option value={t.type}>{t.label}</option>{/each}
+                          </select>
+                        {/if}
+                      </td>
+                      <td class="px-2 py-1"><button type="button" aria-label="Remove set {si + 1}" class="text-muted-foreground hover:text-destructive" onclick={() => edit((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>✕</button></td>
+                    </tr>
+                  {/each}
+                  <tr><td colspan="8" class="px-2 pb-1"><button type="button" class="text-xs text-muted-foreground hover:text-foreground"
+                    onclick={() => addSetLike(day, block)}>+ Set</button></td></tr>
+                {/if}
+              {:else}
+                <tr><td colspan="8" class="px-2 py-3 text-xs text-muted-foreground">No exercises yet.</td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        {#if adding === day.id}
+          <div class="max-w-sm pt-1">
+            <NamePicker id="add-{day.id}" label="Add an exercise" placeholder="Search exercises" search={searchExercises} autofocus onPick={(n) => addExercise(day, n)} onCancel={() => (adding = null)} />
+          </div>
+        {:else}
+          <div class="pt-1"><button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => (adding = day.id)}>+ Exercise</button></div>
+        {/if}
+      </div>
+    {/if}
+  {/each}
+
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2.5">
+    {#each days.filter((d) => d.id !== openDay) as day (day.id)}
+      <button type="button" onclick={() => (openDay = day.id)} class="rounded-[10px] bg-muted/60 px-3.5 py-3 text-left hover:bg-muted">
+        <span class="block text-[13px] font-semibold">{day.name ?? "Day"}</span>
+        <span class="text-xs text-muted-foreground">{blockSummary(day)}</span>
+      </button>
+    {/each}
+  </div>
+  {#if days.length === 0}<p class="text-[13px] text-muted-foreground">Week {week?.weekNumber} has no days yet. <button type="button" class="text-primary hover:underline" onclick={addDay}>Add one</button>.</p>{/if}
+  <p class="text-xs text-muted-foreground">Reps: 8, 8-10 or AMRAP. Load: kilos (60), a percent of their best (72%), or blank and use RPE. Rest: 2:30 or 90.</p>
+
+  {#if dirty || error}
+    <div class="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-border bg-background px-3.5 py-3 shadow-lg">
+      <div class="flex flex-wrap items-center gap-3.5">
+        <span class="text-[13px] font-semibold">{error ?? "Unsaved changes"}</span>
+        {#if mode === "library" && copies.length}
+          <span class="text-xs text-muted-foreground">Also update:</span>
+          {#each copies as c (c.id)}
+            <label class="flex items-center gap-1.5 text-[13px]"><input type="checkbox" value={c.id} bind:group={tick} /> {c.label}</label>
+          {/each}
+        {/if}
+      </div>
+      <span class="flex gap-2">
+        <button type="button" disabled={saving} onclick={discard} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted">Discard</button>
+        <button type="button" disabled={saving || !dirty} onclick={save} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
+      </span>
+    </div>
+    {#if mode === "library" && copies.length}<p class="-mt-1 text-xs text-muted-foreground">Updating a copy keeps that client's start date and the week they're on. Unticked copies stay as they are.</p>{/if}
+    {#if mode === "copy"}<p class="-mt-1 text-xs text-muted-foreground">Only this client's copy changes. It reaches their phone on its next sync.</p>{/if}
+  {/if}
+</div>
