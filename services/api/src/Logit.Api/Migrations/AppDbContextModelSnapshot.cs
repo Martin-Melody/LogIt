@@ -905,6 +905,9 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
                     b.HasIndex("UserId", "SyncedAt");
 
                     b.ToTable("SyncedCheckinSubmissions");
@@ -985,7 +988,8 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
 
                     b.ToTable("SyncedExercises");
                 });
@@ -1252,7 +1256,8 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
 
                     b.ToTable("SyncedSplits");
                 });
@@ -1324,7 +1329,8 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
 
                     b.ToTable("SyncedWorkoutSessions");
                 });

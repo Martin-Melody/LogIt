@@ -354,9 +354,15 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .OnDelete(DeleteBehavior.SetNull);
         });
 
+        // One row per (user, client id). Without this a push repeating an id inserted
+        // duplicates, and every later push of that id then failed (SyncEndpoints).
+        model.Entity<SyncedWorkoutSession>(e => e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique());
+        model.Entity<SyncedSplit>(e => e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique());
+
         model.Entity<SyncedCheckinSubmission>(e =>
         {
             e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
             e.HasOne(s => s.User)
              .WithMany()
              .HasForeignKey(s => s.UserId)
@@ -368,6 +374,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         model.Entity<SyncedExercise>(e =>
         {
             e.Property(s => s.Kind).HasMaxLength(16);
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
         });
 
         // Client-owned nutrition rows — all the same shape (see Data/Entities/Nutrition.cs).
