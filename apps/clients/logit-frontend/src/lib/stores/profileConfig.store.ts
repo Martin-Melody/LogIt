@@ -18,22 +18,24 @@ function load(): HomeConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
-    const parsed = JSON.parse(raw) as HomeConfig;
-
-    // merge in any new widgets the registry knows about
-    const known = localProfileWidgetRegistry.list();
-    const existing = new Set(parsed.slots.map((s) => s.id));
-    const merged = [...parsed.slots];
-    let nextOrder = merged.length;
-    for (const w of known) {
-      if (!existing.has(w.id)) {
-        merged.push({ id: w.id, enabled: w.defaultEnabled, orderIndex: nextOrder++ });
-      }
-    }
-    return { slots: merged };
+    return withRegistry(JSON.parse(raw) as HomeConfig);
   } catch {
     return defaultConfig();
   }
+}
+
+/** Add any card the registry knows that the saved config doesn't have yet (at the end). */
+function withRegistry(parsed: HomeConfig): HomeConfig {
+  const known = localProfileWidgetRegistry.list();
+  const existing = new Set(parsed.slots.map((s) => s.id));
+  const merged = [...parsed.slots];
+  let nextOrder = merged.length;
+  for (const w of known) {
+    if (!existing.has(w.id)) {
+      merged.push({ id: w.id, enabled: w.defaultEnabled, orderIndex: nextOrder++ });
+    }
+  }
+  return { slots: merged };
 }
 
 function save(config: HomeConfig) {
@@ -41,15 +43,35 @@ function save(config: HomeConfig) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 }
 
+// The card config rides along on the synced profile (profileConfigJson), so the dashboard
+// can edit it too. Same pattern as homeConfig.store.ts.
+function scheduleProfilePush() {
+  if (!browser) return;
+  void import("$lib/sync/syncService").then(({ pushNavConfig }) => pushNavConfig());
+}
+
+let _current: HomeConfig = { slots: [] };
+
 function createProfileConfigStore() {
   const store = writable<HomeConfig>(load());
+  store.subscribe((c) => { _current = c; });
 
   function update(fn: (c: HomeConfig) => HomeConfig) {
     store.update((c) => {
       const next = fn(c);
       save(next);
+      scheduleProfilePush();
       return next;
     });
+  }
+
+  /** A newer config pulled from the server (edited on the dashboard). Doesn't push back. */
+  function applyRemote(config: HomeConfig) {
+    if (!Array.isArray(config?.slots)) return;
+    const known = new Set(localProfileWidgetRegistry.list().map((w) => w.id));
+    const merged = withRegistry({ slots: config.slots.filter((s) => known.has(s.id)) });
+    save(merged);
+    store.set(merged);
   }
 
   function toggleWidget(id: string) {
@@ -79,7 +101,11 @@ function createProfileConfigStore() {
     });
   }
 
-  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown };
+  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown, applyRemote };
 }
 
 export const profileConfig = createProfileConfigStore();
+
+export function getProfileConfigJson(): string {
+  return JSON.stringify(_current);
+}

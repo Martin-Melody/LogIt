@@ -10,4 +10,8 @@ public static class ClaimsPrincipalExtensions
             ?? principal.FindFirstValue("sub");
         return Guid.Parse(value ?? throw new InvalidOperationException("User ID claim missing."));
     }
+
+    /// The caller's id, or null when signed out (endpoints that also serve anonymous readers).
+    public static Guid? GetUserIdOrNull(this ClaimsPrincipal principal) =>
+        principal.Identity?.IsAuthenticated == true ? principal.GetUserId() : null;
 }

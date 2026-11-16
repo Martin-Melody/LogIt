@@ -5,16 +5,28 @@
   import { formatDistanceToNow } from "$lib/utils";
   import ReportSheet from "./ReportSheet.svelte";
   import MentionText from "./MentionText.svelte";
+  import { SvelteSet } from "svelte/reactivity";
+  import { removedByDelete, repliesStartFolded, threadComments, threadIdFor } from "@logit/core/domain/commentThreads";
 
   interface Props {
     comments: ApiComment[];
     postId: string;
-    /** Fires when a comment is removed (-1) — parent updates its post's commentCount. Adds
-     * are the parent's job (it owns the compose box). */
+    /** Fires when comments are removed (negative; a deleted comment takes its replies) — parent
+     * updates its post's commentCount. Adds are the parent's job (it owns the compose box). */
     oncountchange?: (delta: number) => void;
+    /** Reply tapped; the parent's compose box switches to "Replying to …". */
+    onreply?: (comment: ApiComment) => void;
+    /** The reply just sent: its thread opens even if it's folded. */
+    justSent?: ApiComment | null;
   }
 
-  let { comments = $bindable(), postId, oncountchange }: Props = $props();
+  let { comments = $bindable(), postId, oncountchange, onreply, justSent = null }: Props = $props();
+
+  // Instagram-style threads: replies under their comment, folded behind "View N replies" when
+  // there are more than 3. Threads you open (or reply in) stay open.
+  const threads = $derived(threadComments(comments));
+  const opened = new SvelteSet<string>();
+  $effect(() => { if (justSent) opened.add(threadIdFor(justSent)); });
 
   let deletingId = $state<string | null>(null);
   let pendingDeleteId = $state<string | null>(null);
@@ -57,8 +69,9 @@
     deletingId = comment.id;
     try {
       await socialApi.deleteComment(postId, comment.id);
-      comments = comments.filter((c) => c.id !== comment.id);
-      oncountchange?.(-1);
+      const gone = new Set(removedByDelete(comments, comment.id));
+      comments = comments.filter((c) => !gone.has(c.id));
+      oncountchange?.(-gone.size);
       pendingDeleteId = null;
     } catch {
       // ignore
@@ -135,17 +148,13 @@
   }
 </script>
 
-{#if comments.length === 0}
-  <p class="text-sm text-muted-foreground text-center py-10">No comments yet. Be the first!</p>
-{:else}
-  <ul class="flex flex-col divide-y divide-border">
-    {#each comments as comment (comment.id)}
-      {@const isOwn = authStore.user?.id === comment.authorId}
+{#snippet row(comment: ApiComment, reply: boolean)}
+  {@const isOwn = authStore.user?.id === comment.authorId}
       <li
-        class="flex items-start gap-2.5 px-4 py-3 select-none"
+        class="flex items-start gap-2.5 py-2.5 pr-4 select-none {reply ? 'pl-[58px]' : 'pl-4'} {comment.id === justSent?.id ? 'bg-sky-500/10' : ''}"
         use:longPress={() => { if (editingId !== comment.id) menuComment = comment; }}
       >
-        <div class="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold shrink-0 mt-0.5 overflow-hidden">
+        <div class="{reply ? 'h-6 w-6' : 'h-7 w-7'} rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold shrink-0 mt-0.5 overflow-hidden">
           {#if comment.authorAvatarUrl}
             <img src={comment.authorAvatarUrl} alt={comment.authorDisplayName} class="h-full w-full object-cover" />
           {:else}
@@ -155,7 +164,7 @@
 
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-1.5 flex-wrap">
-            <span class="text-xs font-medium">{comment.authorDisplayName}</span>
+            <span class="text-xs font-medium">{comment.authorId === authStore.user?.id ? "You" : comment.authorDisplayName}</span>
             <span class="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(comment.createdAt))}</span>
             {#if comment.editedAt}
               <span class="text-[11px] text-muted-foreground italic">edited</span>
@@ -190,6 +199,14 @@
             </div>
           {:else}
             <MentionText text={comment.body} class="text-sm mt-0.5 break-words" />
+            {#if onreply && !isOwn && authStore.isAuthenticated}
+              <button
+                type="button"
+                class="text-xs font-semibold text-muted-foreground py-1.5 pr-3 -mb-1.5"
+                onpointerdown={(e) => e.stopPropagation()}
+                onclick={() => onreply?.(comment)}
+              >Reply</button>
+            {/if}
           {/if}
         </div>
 
@@ -207,6 +224,30 @@
               <span class="text-[11px] tabular-nums {comment.isLikedByMe ? 'text-rose-500' : 'text-muted-foreground'}">{comment.likeCount}</span>
             {/if}
           </button>
+        {/if}
+      </li>
+{/snippet}
+
+{#if comments.length === 0}
+  <p class="text-sm text-muted-foreground text-center py-10">No comments yet. Be the first!</p>
+{:else}
+  <ul class="flex flex-col divide-y divide-border">
+    {#each threads as thread (thread.comment.id)}
+      {@const folded = repliesStartFolded(thread.replies.length) && !opened.has(thread.comment.id)}
+      <li class="flex flex-col">
+        <ul class="flex flex-col">
+          {@render row(thread.comment, false)}
+          {#if !folded}
+            {#each thread.replies as r (r.id)}{@render row(r, true)}{/each}
+          {/if}
+        </ul>
+        {#if repliesStartFolded(thread.replies.length)}
+          <button
+            type="button"
+            class="flex items-center gap-2.5 ml-[58px] mb-1.5 min-h-9 text-xs font-semibold text-muted-foreground before:content-[''] before:h-px before:w-6 before:bg-muted-foreground/50"
+            aria-expanded={!folded}
+            onclick={() => (folded ? opened.add(thread.comment.id) : opened.delete(thread.comment.id))}
+          >{folded ? `View ${thread.replies.length} replies` : "Hide replies"}</button>
         {/if}
       </li>
     {/each}

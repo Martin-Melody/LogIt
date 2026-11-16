@@ -48,3 +48,18 @@ public class GoalsMergeTests
         Assert.Equal(5, merged["streak"].GetProperty("weeklyTarget").GetInt32());
     }
 }
+
+public class ProfileDtoTests
+{
+    [Fact]
+    public void Profile_card_config_from_the_dashboard_is_kept()
+    {
+        // As the dashboard and phone send it (camelCase), then stored and read back like PushProfile does.
+        var sent = """{"displayName":"Alex","bio":"","avatarDataUrl":null,"progressPhotoDataUrl":null,"height":null,"heightUnit":"cm","weight":null,"weightUnit":"kg","blocksCollapsedByDefault":false,"restDefaultsJson":"{}","navConfigJson":null,"homeConfigJson":null,"activeSplitId":null,"updatedAtMs":5,"profileConfigJson":"{\"slots\":[]}"}""";
+        var dto = JsonSerializer.Deserialize<ProfileDto>(sent, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        Assert.Equal("""{"slots":[]}""", dto.ProfileConfigJson);
+
+        var stored = JsonSerializer.Deserialize<ProfileDto>(JsonSerializer.Serialize(dto))!;
+        Assert.Equal("""{"slots":[]}""", stored.ProfileConfigJson);
+    }
+}

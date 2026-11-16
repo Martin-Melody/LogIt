@@ -755,7 +755,10 @@ public record ProfileDto(
     string? SplitRotationJson = null,
     // Goals + weekly streak settings: { goalId: { ..., updatedAtMs }, streak: { ..., updatedAtMs } }.
     // Merged per key on push like SplitRotationJson.
-    string? GoalsJson = null
+    string? GoalsJson = null,
+    // Social profile cards: { slots: [{ id, enabled, orderIndex }] }. Edited on the phone or the
+    // dashboard; last write wins with the rest of the profile.
+    string? ProfileConfigJson = null
 );
 
 /// One client-owned sync row — nutrition row, habit or habit entry (see ISyncedClientRow).

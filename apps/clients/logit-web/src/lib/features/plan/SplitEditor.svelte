@@ -21,6 +21,8 @@
   import type { WeightUnit } from "@logit/core/domain/units";
   import type { ExerciseIndex } from "./exerciseIndex";
   import DayEditor from "./DayEditor.svelte";
+  import { flip } from "svelte/animate";
+  import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
 
   /**
    * A whole split: its name, how it falls on the calendar (weekdays or a rotation), the
@@ -85,14 +87,37 @@
   }
 
   // ── Drag: weekdays move a workout to another day (Alt copies); rotation reorders ──
+  // Both show where it lands while it's held; nothing changes until it's let go.
   let dragId = $state<string | null>(null);
-  let overKey = $state<string | null>(null);
+  let overWeekday = $state<number | null>(null);
+  let copying = $state(false);
+  const dragged = $derived(dragId ? workouts.find((d) => d.id === dragId) ?? null : null);
+  /** The held workout is shown on another day than its own (as a move or a copy). */
+  const previewing = $derived(dragged != null && overWeekday != null && overWeekday !== dragged.weekday);
+
+  function overWeekdayColumn(e: DragEvent, weekday: number) {
+    if (!dragId) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = e.altKey ? "copy" : "move";
+    overWeekday = weekday;
+    copying = e.altKey;
+  }
+
+  function leaveWeek(e: DragEvent) {
+    const to = e.relatedTarget as Node | null;
+    if (!to || !(e.currentTarget as HTMLElement).contains(to)) overWeekday = null;
+  }
+
+  function endWeekdayDrag() {
+    dragId = null;
+    overWeekday = null;
+    copying = false;
+  }
 
   function dropOnWeekday(e: DragEvent, weekday: number) {
     e.preventDefault();
     const id = dragId;
-    dragId = null;
-    overKey = null;
+    endWeekdayDrag();
     if (!id) return;
     if (e.altKey) {
       const { split: next, copy } = duplicateDay(split, id);
@@ -104,6 +129,14 @@
     }
   }
 
+  /** The rotation's days in this order. */
+  function inOrder(list: SplitDay[]): SplitDay[] {
+    const reindexed = list.map((x, i) => ({ ...x, orderIndex: i }));
+    // The new first day can't be "same day as the one before".
+    if (reindexed[0]?.sameDayAsPrevious) reindexed[0] = { ...reindexed[0], sameDayAsPrevious: undefined };
+    return reindexed;
+  }
+
   function moveDay(fromId: string, toId: string) {
     if (fromId === toId) return;
     const list = [...days];
@@ -112,10 +145,19 @@
     if (from === -1 || to === -1) return;
     const [d] = list.splice(from, 1);
     list.splice(to, 0, d!);
-    const reindexed = list.map((x, i) => ({ ...x, orderIndex: i }));
-    // The new first day can't be "same day as the one before".
-    if (reindexed[0]?.sameDayAsPrevious) reindexed[0] = { ...reindexed[0], sameDayAsPrevious: undefined };
-    onChange(touchSplit({ ...split, days: reindexed }));
+    onChange(touchSplit({ ...split, days: inOrder(list) }));
+  }
+
+  const rotationOrder = createReorder<string>("x");
+  const rotationShown = $derived(
+    rotationSlots(rotationOrder.active ? { ...split, days: inOrder(rotationOrder.arrange(days, (d) => d.id)) } : split),
+  );
+
+  function dropRotation(e: DragEvent) {
+    const ids = rotationOrder.drop(e);
+    if (!ids) return;
+    const byId = new Map(days.map((d) => [d.id, d]));
+    onChange(touchSplit({ ...split, days: inOrder(ids.map((id) => byId.get(id)!).filter(Boolean)) }));
   }
 
   function moveByKey(e: KeyboardEvent, d: SplitDay) {
@@ -168,30 +210,38 @@
   <div class="flex flex-col gap-2">
     {#if byWeekday}
       <div class="overflow-x-auto">
-        <div class="grid min-w-[700px] grid-cols-7 gap-2">
+        <div role="presentation" class="grid min-w-[700px] grid-cols-7 gap-2" ondragleave={leaveWeek}>
           {#each COLUMNS as col (col.n)}
             {@const here = workouts.filter((d) => d.weekday === col.n)}
+            {@const shown = here.filter((d) => !(previewing && !copying && d.id === dragId)).length + (previewing && overWeekday === col.n ? 1 : 0)}
             <div
               role="group"
               aria-label={col.label}
-              class="flex min-w-0 flex-col gap-1.5 rounded-lg p-0.5 {overKey === `wd-${col.n}` ? 'bg-primary/10' : ''}"
-              ondragover={(e) => { if (dragId) { e.preventDefault(); overKey = `wd-${col.n}`; } }}
-              ondragleave={() => { if (overKey === `wd-${col.n}`) overKey = null; }}
+              class="flex min-w-0 flex-col gap-1.5 rounded-lg p-0.5 {previewing && overWeekday === col.n ? 'bg-primary/10' : ''}"
+              ondragenter={(e) => { if (dragId) e.preventDefault(); }}
+              ondragover={(e) => overWeekdayColumn(e, col.n)}
               ondrop={(e) => dropOnWeekday(e, col.n)}
             >
               <span class="text-center text-[11px] font-semibold text-muted-foreground">{col.label}</span>
               {#each here as d (d.id)}
+                <!-- While it's shown on another day, the original stays in the page (hidden) so the drag carries on. -->
                 <button type="button" draggable="true" onclick={() => (selectedId = d.id)} aria-current={selected?.id === d.id ? "true" : undefined}
-                  ondragstart={(e) => { dragId = d.id; e.dataTransfer?.setData("text/plain", d.id); }}
-                  ondragend={() => { dragId = null; overKey = null; }}
-                  class="{card} {selected?.id === d.id ? 'border-primary bg-primary/10' : 'border-transparent bg-muted hover:border-border'} {dragId === d.id ? 'opacity-50' : ''}">
+                  ondragstart={(e) => { dragId = d.id; if (e.dataTransfer) { e.dataTransfer.effectAllowed = "copyMove"; e.dataTransfer.setData("application/x-logit-reorder", d.id); } }}
+                  ondragend={endWeekdayDrag}
+                  class="{card} {selected?.id === d.id ? 'border-primary bg-primary/10' : 'border-transparent bg-muted hover:border-border'} {previewing && !copying && dragId === d.id ? 'hidden' : ''}">
                   <span class="truncate text-[13px] font-semibold">{splitDayName(split, d)}</span>
                   <span class="text-[11px] text-muted-foreground">{dayLine(d)}</span>
                 </button>
               {/each}
+              {#if previewing && overWeekday === col.n && dragged}
+                <div class="{card} border-[1.5px] border-dashed border-primary bg-primary/5">
+                  <span class="truncate text-[13px] font-semibold">{splitDayName(split, dragged)}</span>
+                  <span class="text-[11px] text-primary">{copying ? "Copy" : "Move"} to {col.label}</span>
+                </div>
+              {/if}
               <button type="button" onclick={() => addWorkout(col.n)}
-                class="flex items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground {here.length ? 'h-8' : 'h-[62px]'}">
-                {here.length ? "+ second workout" : "Rest · + add"}
+                class="flex items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground {shown ? 'h-8' : 'h-[62px]'}">
+                {shown ? "+ second workout" : "Rest · + add"}
               </button>
             </div>
           {/each}
@@ -202,29 +252,27 @@
           <span class="text-muted-foreground">Not on a day yet (drag onto one, or pick its day below):</span>
           {#each unplaced as d (d.id)}
             <button type="button" draggable="true" onclick={() => (selectedId = d.id)}
-              ondragstart={(e) => { dragId = d.id; e.dataTransfer?.setData("text/plain", d.id); }}
-              ondragend={() => { dragId = null; overKey = null; }}
-              class="rounded-lg border border-border bg-muted px-2.5 py-1.5 font-medium">{splitDayName(split, d)}</button>
+              ondragstart={(e) => { dragId = d.id; if (e.dataTransfer) { e.dataTransfer.effectAllowed = "copyMove"; e.dataTransfer.setData("application/x-logit-reorder", d.id); } }}
+              ondragend={endWeekdayDrag}
+              class="rounded-lg border border-border bg-muted px-2.5 py-1.5 font-medium {previewing && !copying && dragId === d.id ? 'hidden' : ''}">{splitDayName(split, d)}</button>
           {/each}
         </div>
       {/if}
       <p class="text-xs text-muted-foreground">Drag a workout to another day to move it. Hold Alt while dropping to copy it.</p>
     {:else}
-      <ol class="flex flex-wrap gap-2">
-        {#each rotationSlots(split) as slot, si (slot[0]!.id)}
-          <li class="flex flex-col gap-1">
+      <ol class="flex flex-wrap gap-2" ondragenter={(e) => rotationOrder.allow(e)} ondragover={(e) => rotationOrder.allow(e)} ondrop={dropRotation}>
+        {#each rotationShown as slot, si (slot[0]!.id)}
+          <li class="flex flex-col gap-1" animate:flip={{ duration: SLIDE_MS }}>
             <span class="px-1 text-[11px] font-semibold text-muted-foreground">Day {si + 1}</span>
             <div class="flex gap-1">
               {#each slot as d (d.id)}
                 <button type="button" draggable="true" onclick={() => (selectedId = d.id)} aria-current={selected?.id === d.id ? "true" : undefined}
                   aria-label="{d.rest ? 'Rest day' : splitDayName(split, d)}, move with the left and right arrow keys"
-                  ondragstart={(e) => { dragId = d.id; e.dataTransfer?.setData("text/plain", d.id); }}
-                  ondragend={() => { dragId = null; overKey = null; }}
-                  ondragover={(e) => { if (dragId) { e.preventDefault(); overKey = d.id; } }}
-                  ondragleave={() => { if (overKey === d.id) overKey = null; }}
-                  ondrop={(e) => { e.preventDefault(); if (dragId) moveDay(dragId, d.id); dragId = null; overKey = null; }}
+                  ondragstart={(e) => rotationOrder.start(days.map((x) => x.id), d.id, e)}
+                  ondragend={() => rotationOrder.end()}
+                  ondragover={(e) => rotationOrder.over(d.id, e)}
                   onkeydown={(e) => moveByKey(e, d)}
-                  class="{card} w-32 {d.rest ? 'border-dashed border-border bg-transparent' : selected?.id === d.id ? 'border-primary bg-primary/10' : 'border-transparent bg-muted hover:border-border'} {overKey === d.id ? 'ring-2 ring-primary/50' : ''} {dragId === d.id ? 'opacity-50' : ''} {selected?.id === d.id && d.rest ? 'border-primary' : ''}">
+                  class="{card} w-32 {rotationOrder.held === d.id ? 'border-[1.5px] border-dashed border-primary bg-primary/5 [&>*]:invisible' : d.rest ? 'border-dashed border-border bg-transparent' : selected?.id === d.id ? 'border-primary bg-primary/10' : 'border-transparent bg-muted hover:border-border'} {selected?.id === d.id && d.rest ? 'border-primary' : ''}">
                   <span class="truncate text-[13px] {d.rest ? 'text-muted-foreground' : 'font-semibold'}">{d.rest ? "Rest" : splitDayName(split, d)}</span>
                   {#if !d.rest}<span class="text-[11px] text-muted-foreground">{dayLine(d)}</span>{/if}
                 </button>

@@ -19,7 +19,14 @@
     TrendingDown,
     Target,
   } from "lucide-svelte";
-  import { notificationsApi, type ApiNotification } from "@logit/core/api/socialApi";
+  import {
+    followedByText,
+    notificationsApi,
+    socialApi,
+    type ApiNotification,
+    type FollowRequestItem,
+  } from "@logit/core/api/socialApi";
+  import { toast } from "svelte-sonner";
   import { formatWeight } from "@logit/core/domain/units";
   import { unreadNotifications } from "$lib/stores/notifications.store";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -52,6 +59,19 @@
   const filters = $derived(FILTERS.filter((f) => !f.social || authStore.isAuthenticated));
 
   let social = $state<ApiNotification[]>([]);
+  // Private accounts: people waiting for an answer. Shown above the list, not in it.
+  let requests = $state<FollowRequestItem[]>([]);
+
+  async function answer(r: FollowRequestItem, accept: boolean) {
+    requests = requests.filter((x) => x.user.id !== r.user.id);
+    try {
+      if (accept) await socialApi.acceptFollowRequest(r.user.username);
+      else await socialApi.declineFollowRequest(r.user.username);
+    } catch {
+      requests = [r, ...requests];
+      toast.error("Couldn't do that. Try again.");
+    }
+  }
   let loading = $state(false);
   let loadingMore = $state(false);
   let error = $state<string | null>(null);
@@ -82,6 +102,7 @@
     localInbox.markAllRead();
     await loadSocial();
     if (!authStore.isAuthenticated) return;
+    void socialApi.getFollowRequests().then((r) => (requests = r)).catch(() => {});
     try {
       await notificationsApi.markRead();
       unreadNotifications.clear();
@@ -104,7 +125,7 @@
 
   const rows = $derived.by<Row[]>(() => {
     const all: Row[] = [
-      ...social.map((n) => ({
+      ...social.filter((n) => n.type !== "FollowRequest").map((n) => ({
         source: "social" as const,
         id: `s-${n.id}`,
         atMs: new Date(n.createdAt).getTime(),
@@ -128,7 +149,7 @@
 
   function socialIcon(t: ApiNotification["type"]) {
     return t === "Like" ? Heart
-      : t === "Comment" ? MessageCircle
+      : t === "Comment" || t === "Reply" ? MessageCircle
       : t === "Mention" ? AtSign
       : t === "Repost" ? Repeat2
       : t === "Quote" ? Quote
@@ -138,8 +159,11 @@
   function verb(n: ApiNotification) {
     if (n.type === "Like") return n.commentId ? "liked your comment" : "liked your post";
     if (n.type === "Mention") return n.commentId ? "mentioned you in a comment" : "mentioned you in a post";
+    if (n.type === "Reply") return "replied to your comment";
     if (n.type === "Repost") return "reposted your post";
     if (n.type === "Quote") return "quoted your post";
+    if (n.type === "FollowRequest") return "asked to follow you";
+    if (n.type === "FollowAccepted") return "accepted your follow request";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
@@ -186,6 +210,27 @@
       <p class="text-sm text-muted-foreground">{error}</p>
       <button type="button" class="h-11 shrink-0 text-sm text-primary" onclick={() => loadSocial()}>Try again</button>
     </div>
+  {/if}
+
+  {#if requests.length && (filter === "all" || filter === "social")}
+    <section class="border-t border-border px-3 py-3 flex flex-col gap-2.5" aria-label="Follow requests">
+      <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Follow requests · {requests.length}</p>
+      {#each requests as r (r.user.id)}
+        <div class="flex items-center gap-3">
+          <button type="button" class="flex min-w-0 flex-1 items-center gap-3 text-left" onclick={() => goto(`/social/${r.user.username}`)}>
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold">
+              {#if r.user.avatarUrl}<img src={r.user.avatarUrl} alt="" class="h-full w-full object-cover" />{:else}{r.user.displayName.charAt(0).toUpperCase()}{/if}
+            </span>
+            <span class="min-w-0">
+              <span class="block truncate text-sm font-semibold">{r.user.displayName}</span>
+              <span class="block truncate text-xs text-muted-foreground">@{r.user.username}{followedByText(r.followedBy, r.followedByOthers) ? ` · ${followedByText(r.followedBy, r.followedByOthers)}` : ""}</span>
+            </span>
+          </button>
+          <button type="button" class="h-9 shrink-0 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground" onclick={() => answer(r, true)}>Accept</button>
+          <button type="button" class="h-9 shrink-0 rounded-md border border-border px-3 text-xs" onclick={() => answer(r, false)}>Decline</button>
+        </div>
+      {/each}
+    </section>
   {/if}
 
   {#if loading && rows.length === 0}

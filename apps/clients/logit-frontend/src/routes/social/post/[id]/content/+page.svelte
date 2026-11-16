@@ -21,8 +21,8 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { toast } from "svelte-sonner";
   import {
-    copyAlgorithmToMine, copyWidgetToMine, copySplitToMine, copyExerciseToMine, copyHabitToMine,
-    type AlgorithmFamily, type CopyableSplit, type CopyableExercise, type CopyableHabit,
+    copyAlgorithmToMine, copyWidgetToMine, copySplitToMine, copyLibraryItemToMine, copyHabitToMine,
+    type AlgorithmFamily, type CopyableSplit, type CopyableLibraryItem, type CopyableHabit,
   } from "$lib/features/social/copyToMine";
 
   const id = $derived(page.params.id ?? "");
@@ -57,7 +57,7 @@
       case "WorkoutSession": return { icon: Dumbbell, label: "Workout" };
       case "PersonalRecord": return { icon: Trophy, label: "Personal record" };
       case "Split": return { icon: CalendarDays, label: "Split" };
-      case "Exercise": return { icon: Activity, label: "Exercise" };
+      case "Exercise": return { icon: Activity, label: payload?.kind === "cardio" ? "Cardio" : payload?.kind === "mobility" ? "Mobility" : "Exercise" };
       case "Algorithm": return { icon: Cpu, label: "Algorithm" };
       case "Widget": return { icon: LayoutDashboard, label: "Widget" };
       case "Habit": return { icon: Flame, label: "Habit" };
@@ -109,8 +109,8 @@
         await copySplitToMine(payload as unknown as CopyableSplit);
         toast.success("Split added to your splits");
       } else if (source.type === "Exercise") {
-        await copyExerciseToMine(payload as unknown as CopyableExercise);
-        toast.success("Exercise added to your library");
+        const added = await copyLibraryItemToMine(payload as unknown as CopyableLibraryItem);
+        toast.success(added ? "Added to your library" : "You already have one by that name");
       } else if (source.type === "Habit") {
         await copyHabitToMine(payload as unknown as CopyableHabit);
         toast.success("Habit added to your habits");
@@ -203,6 +203,11 @@
           {/if}
           {#if (payload.machines ?? []).length}
             <p><span class="text-muted-foreground">Machines:</span> {payload.machines.map((m: any) => m.name).join(", ")}</p>
+          {/if}
+          {#if payload.kind === "mobility" && payload.area}<p><span class="text-muted-foreground">Area:</span> {payload.area}{payload.perSide ? " · each side" : ""}</p>{/if}
+          {#if payload.kind === "cardio"}<p><span class="text-muted-foreground">Measured by:</span> {payload.measures === "time" ? "time" : "time and distance"}</p>{/if}
+          {#if (payload.cues ?? []).length}
+            <ul class="list-disc pl-5 pt-1">{#each payload.cues as cue, i (i)}<li>{cue}</li>{/each}</ul>
           {/if}
           {#if payload.notes}<p class="text-muted-foreground whitespace-pre-wrap pt-1">{payload.notes}</p>{/if}
         </div>
