@@ -17,6 +17,7 @@
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
   import UsersRoundIcon from "@lucide/svelte/icons/users-round";
   import PuzzleIcon from "@lucide/svelte/icons/puzzle";
+  import LightbulbIcon from "@lucide/svelte/icons/lightbulb";
   import LogOutIcon from "@lucide/svelte/icons/log-out";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import SunIcon from "@lucide/svelte/icons/sun";
@@ -44,7 +45,7 @@
   type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon; badge?: () => number };
   type NavGroup = { label: string | null; items: NavItem[] };
 
-  // "Me": your own training. Pages that aren't built yet (Insights) join this list as they land.
+  // "Me": your own training.
   const meGroups: NavGroup[] = [
     { label: null, items: [{ label: "Overview", href: "/", icon: LayoutDashboardIcon }] },
     {
@@ -69,7 +70,10 @@
     },
     {
       label: "Extras",
-      items: [{ label: "Plugins", href: "/plugins", icon: PuzzleIcon }],
+      items: [
+        { label: "Insights", href: "/insights", icon: LightbulbIcon },
+        { label: "Plugins", href: "/plugins", icon: PuzzleIcon },
+      ],
     },
   ];
 
@@ -98,7 +102,7 @@
     items: [{ label: "My coach", href: "/my-coach", icon: UserRoundIcon, badge: () => coachBadges.myCoach }],
   };
 
-  const coaching = $derived(isStudio && isCoachingPath(page.url.pathname));
+  const coaching = $derived(isStudio && isCoachingPath(page.url.pathname, page.url.searchParams));
   const groups = $derived(coaching ? coachGroups : [...meGroups, clientGroup]);
 
   // The longest matching href wins, so /coaching/programs doesn't also light up Today.

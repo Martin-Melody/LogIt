@@ -183,7 +183,7 @@ export type MuscleBalanceRow = {
 /**
  * Sets and days per muscle, averaged over the whole weeks in the range (weeks you didn't
  * train count as 0, so a muscle trained once a month doesn't look like it gets 12 a week).
- * `low` marks muscles getting under half the median, and under 8 a week.
+ * `low` marks muscles getting under 60% of the median muscle, and under 8 a week.
  */
 export function muscleBalance(
   insights: MuscleWeeks[],
@@ -212,7 +212,7 @@ export function muscleBalance(
   if (rows.length >= 3) {
     const sorted = rows.map((r) => r.setsPerWeek).sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)]!;
-    for (const r of rows) r.low = r.setsPerWeek < median / 2 && r.setsPerWeek < 8;
+    for (const r of rows) r.low = r.setsPerWeek < median * 0.6 && r.setsPerWeek < 8;
   }
   return rows;
 }
@@ -386,6 +386,8 @@ export type FoodVsLifts = {
 
 /** Sessions the correlation needs before it says anything (nutritionTrainingCorrelation.ts). */
 export const FOOD_VS_LIFTS_MIN_SESSIONS = 20;
+/** Training days each side of the protein split needs (MIN_SAMPLES_PER_BUCKET there). */
+export const FOOD_VS_LIFTS_MIN_BUCKET = 6;
 
 export function foodVsLiftsAnswer(r: FoodVsLifts): InsightAnswer {
   const p = r.dayLevelProtein;
@@ -393,11 +395,23 @@ export function foodVsLiftsAnswer(r: FoodVsLifts): InsightAnswer {
     const inputs = r.dayLevelReasoning.inputs;
     const sessions = Number(inputs.totalSessionSamples ?? inputs.sessionsWithASample ?? 0);
     const withFood = Number(inputs.sessionsWithLoggedProtein ?? 0);
-    const detail =
-      sessions < FOOD_VS_LIFTS_MIN_SESSIONS
-        ? `Needs ${FOOD_VS_LIFTS_MIN_SESSIONS} workouts to compare. You have ${sessions} so far.`
-        : `Needs food logged on ${FOOD_VS_LIFTS_MIN_SESSIONS} training days. You have ${withFood} so far.`;
-    return answer("food-vs-lifts", { state: "empty", answer: "Too early to say", detail, hypothesis: true });
+    const above = Number(inputs.daySamplesAbove ?? 0);
+    const below = Number(inputs.daySamplesBelow ?? 0);
+    if (sessions < FOOD_VS_LIFTS_MIN_SESSIONS) {
+      return answer("food-vs-lifts", { state: "empty", answer: "Too early to say", detail: `Needs ${FOOD_VS_LIFTS_MIN_SESSIONS} workouts to compare. You have ${sessions} so far.`, hypothesis: true });
+    }
+    if (withFood < FOOD_VS_LIFTS_MIN_SESSIONS) {
+      return answer("food-vs-lifts", { state: "empty", answer: "Too early to say", detail: `Needs food logged on ${FOOD_VS_LIFTS_MIN_SESSIONS} training days. You have ${withFood} so far.`, hypothesis: true });
+    }
+    if (Math.min(above, below) < FOOD_VS_LIFTS_MIN_BUCKET) {
+      return answer("food-vs-lifts", { state: "empty", answer: "Too early to say", detail: "Protein has been about the same most days, so there's nothing to compare yet.", hypothesis: true });
+    }
+    return answer("food-vs-lifts", {
+      state: "ready",
+      answer: "No clear difference so far",
+      detail: `Across ${withFood} training days with food logged, workouts went about as well on higher-protein days as on lower ones.`,
+      hypothesis: true,
+    });
   }
   const abovePct = Math.round(p.above.improveRate * 100);
   const belowPct = Math.round(p.below.improveRate * 100);

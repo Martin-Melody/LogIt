@@ -7,7 +7,9 @@
 export type WidgetSize = "s" | "m" | "l" | "xl";
 /** A widget plugin installed on the account: "plugin:<manifest id>". */
 export type PluginWidgetId = `plugin:${string}`;
-export type WidgetId = BuiltinWidgetId | PluginWidgetId;
+/** A saved Insights chart ticked "Overview": "chart:<chart id>". */
+export type ChartWidgetId = `chart:${string}`;
+export type WidgetId = BuiltinWidgetId | PluginWidgetId | ChartWidgetId;
 export type BuiltinWidgetId =
   | "streak"
   | "sessions-week"
@@ -49,6 +51,12 @@ export function isPluginWidget(id: WidgetId): id is PluginWidgetId {
   return id.startsWith("plugin:");
 }
 
+export function isChartWidget(id: WidgetId): id is ChartWidgetId {
+  return id.startsWith("chart:");
+}
+
+export const CHART_SIZES: WidgetSize[] = ["m", "l", "xl"];
+
 function read(userId: string): Slot[] {
   try {
     const raw = localStorage.getItem(key(userId));
@@ -56,10 +64,10 @@ function read(userId: string): Slot[] {
     const known = new Map(WIDGETS.map((w) => [w.id, w]));
     // Plugin widgets stay in the layout even while the plugin is off or not synced yet;
     // the page just doesn't show them until it's back.
-    const slots = (JSON.parse(raw) as Slot[]).filter((s) => known.has(s.id) || isPluginWidget(s.id));
+    const slots = (JSON.parse(raw) as Slot[]).filter((s) => known.has(s.id) || isPluginWidget(s.id) || isChartWidget(s.id));
     return slots.map((s) => {
       const def = known.get(s.id);
-      const sizes = def?.sizes ?? PLUGIN_SIZES;
+      const sizes = def?.sizes ?? (isChartWidget(s.id) ? CHART_SIZES : PLUGIN_SIZES);
       return { id: s.id, size: sizes.includes(s.size) ? s.size : (def?.defaultSize ?? "m") };
     });
   } catch {
@@ -107,8 +115,9 @@ export function createLayout(userId: string) {
     },
     add(id: WidgetId) {
       const def = [...WIDGETS, ...extra].find((w) => w.id === id);
-      if (!def || slots.some((s) => s.id === id)) return;
-      slots = [...slots, { id, size: def.defaultSize }];
+      // A chart can be added before its definition arrives (it comes with the charts' data).
+      if ((!def && !isChartWidget(id)) || slots.some((s) => s.id === id)) return;
+      slots = [...slots, { id, size: def?.defaultSize ?? "l" }];
       save();
     },
     reset() {
