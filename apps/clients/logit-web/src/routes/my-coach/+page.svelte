@@ -24,6 +24,8 @@
   import { programStatus } from "$lib/features/coaching/coachingData";
   import { loadAssignedForms, loadAssignedPrograms, loadMySubmissions } from "$lib/features/coaching/myCoachData";
   import { shortDate, sinceLabel, weekdayDate } from "$lib/features/coaching/format";
+  import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
+  import { clientPaymentNote, shortDate as payDate } from "@logit/core/domain/coachPayments";
 
   // You as a client: your coach, what they've given you, your check-ins and what they can see.
 
@@ -161,6 +163,22 @@
   }
 
   const coachName = (c: { coach: { displayName: string; username: string } }) => c.coach.displayName || c.coach.username;
+
+  // Stop (or keep) paying a coach monthly. Coaching runs to the end of the month paid for.
+  let stoppingPlan = $state<CoachRelationship | null>(null);
+  async function setPlanStop(c: CoachRelationship, stop: boolean) {
+    stoppingPlan = null;
+    busy = c.relationshipId;
+    try {
+      await coachPaymentsApi.stopMyPlan(c.relationshipId, stop);
+      toast.success(stop ? "Your plan stops at the end of the month" : "Your plan carries on");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save");
+    } finally {
+      busy = null;
+    }
+  }
 </script>
 
 <div class="flex flex-col gap-4">
@@ -216,6 +234,8 @@
     {#each coaches as c (c.relationshipId)}
       {@const name = coachName(c)}
       {@const sharing = c.sharing ?? SHARE_ALL}
+      {@const paused = c.status === "paused"}
+      {@const note = clientPaymentNote(c.payment, c.status, name)}
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3.5">
           <Avatar name={name} url={c.coach.avatarUrl} size={48} />
@@ -224,14 +244,21 @@
             <p class="mt-0.5 text-[13px] text-muted-foreground">@{c.coach.username}{sinceLabel(c.since) ? ` · coaching you since ${sinceLabel(c.since)}` : ""}</p>
           </div>
         </div>
-        {#if due[0] && coaches.length === 1}
+        {#if due[0] && coaches.length === 1 && !paused}
           <a href="/my-coach/checkin/{due[0].form.id}" class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold leading-[34px] text-primary-foreground">{due[0].draft ? "Finish" : "Fill in"} {due[0].form.name.toLowerCase()}</a>
         {/if}
       </header>
 
+      {#if note && note.tone !== "ok"}
+        <section role="status" class="flex flex-col gap-1.5 rounded-[10px] border px-[18px] py-4 {note.tone === 'bad' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}">
+          <h2 class="text-sm font-semibold">{note.title}</h2>
+          <p class="text-[13px] leading-relaxed">{note.body}</p>
+        </section>
+      {/if}
+
       <div class="flex flex-wrap items-start gap-4">
         <div class="flex min-w-0 flex-[2_1_520px] flex-col gap-4">
-          {#if coaches.length === 1}
+          {#if coaches.length === 1 && !paused}
             {#each running as { p, s } (p.id)}
               {@const weekNo = s.week ?? 1}
               {@const wk = p.weeks.find((w) => w.weekNumber === weekNo)}
@@ -258,10 +285,12 @@
             {/each}
           {/if}
 
-          <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-3">
-            <h2 class="pb-1 text-sm font-semibold">Messages</h2>
-            <MessageThread relationshipId={c.relationshipId} otherName={name} onRead={() => void coachBadges.refresh(undefined, true)} />
-          </section>
+          {#if !paused}
+            <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-3">
+              <h2 class="pb-1 text-sm font-semibold">Messages</h2>
+              <MessageThread relationshipId={c.relationshipId} otherName={name} onRead={() => void coachBadges.refresh(undefined, true)} />
+            </section>
+          {/if}
         </div>
 
         <div class="flex min-w-0 flex-[1_1_300px] flex-col gap-4">
@@ -285,6 +314,23 @@
             </section>
           {/if}
 
+          {#if c.payment && c.payment.mode === "stripe"}
+            <section class="flex flex-col gap-1 rounded-[10px] border border-border bg-card px-[18px] py-4">
+              <h2 class="text-sm font-semibold">Your plan with {name}</h2>
+              <p class="text-[13px] font-medium">{c.payment.packageName}</p>
+              <p class="text-xs leading-relaxed text-muted-foreground">
+                {note?.tone === "ok" ? note.body : c.payment.state === "ended" ? "Ended." : "Payment problem, see above."}
+              </p>
+              {#if c.payment.canStop}
+                {#if c.payment.stopsAtPeriodEnd}
+                  <button type="button" disabled={busy === c.relationshipId} onclick={() => setPlanStop(c, false)} class="mt-2 h-[34px] w-fit rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted disabled:opacity-50">Keep my plan going</button>
+                {:else}
+                  <button type="button" disabled={busy === c.relationshipId} onclick={() => (stoppingPlan = c)} class="mt-2 h-[34px] w-fit rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted disabled:opacity-50">Stop paying at the end of the month</button>
+                {/if}
+              {/if}
+            </section>
+          {/if}
+
           <section class="flex flex-col gap-1 rounded-[10px] border border-border bg-card px-[18px] py-4">
             <h2 class="text-sm font-semibold">What {name} can see</h2>
             <p class="pb-2 text-xs leading-relaxed text-muted-foreground">Switching one off hides it from {name} straight away, past entries too. Switch it back on and they see it all again.</p>
@@ -301,11 +347,24 @@
   <AlertDialog.Content>
     <AlertDialog.Header>
       <AlertDialog.Title>Stop coaching with {stopping ? coachName(stopping) : ""}?</AlertDialog.Title>
-      <AlertDialog.Description>They stop seeing your data straight away, and their program, check-ins and habits leave your app. Your own workouts and logs stay.</AlertDialog.Description>
+      <AlertDialog.Description>They stop seeing your data straight away, and their program, check-ins and habits leave your app. Your own workouts and logs stay.{stopping?.payment?.mode === "stripe" && stopping.payment.state !== "ended" ? " Your plan with them is cancelled now, so you won't be charged again." : ""}</AlertDialog.Description>
     </AlertDialog.Header>
     <AlertDialog.Footer>
       <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
       <AlertDialog.Action onclick={stop}>Stop coaching</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>
+
+<AlertDialog.Root open={stoppingPlan !== null} onOpenChange={(o) => { if (!o) stoppingPlan = null; }}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Stop paying {stoppingPlan ? coachName(stoppingPlan) : ""}?</AlertDialog.Title>
+      <AlertDialog.Description>You won't be charged again. Coaching carries on until {payDate(stoppingPlan?.payment?.paidUntil)}, the end of the month you've paid for. After that it's up to your coach.</AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={() => stoppingPlan && setPlanStop(stoppingPlan, true)}>Stop paying</AlertDialog.Action>
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>

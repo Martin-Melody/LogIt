@@ -1,5 +1,6 @@
 import { ApiError, apiClient } from "./client";
 import type { SwapRule } from "../domain/swaps";
+import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
 
 export interface CoachClientUser {
   id: string;
@@ -49,6 +50,10 @@ export interface CoachRelationship {
   since?: string;
   /** The swap rule that applies to me in this coach's programs (missing on older servers = any). */
   swapRule?: SwapRule;
+  /** "paused" = coaching stopped until it's paid (missing on older servers = active). */
+  status?: "active" | "paused";
+  /** How I pay this coach through LogIt, if I do. Never carries a price (app store rules). */
+  payment?: ClientPayment | null;
 }
 
 /** A coach's review of one of my check-ins. */
@@ -88,6 +93,9 @@ export interface InviteLink {
   joined: number;
   waiting: number;
   state: InviteLinkState;
+  /** The package people pay for through this link; null = a free link. */
+  packageId?: string | null;
+  packageName?: string | null;
 }
 
 /** What someone opening a link sees. */
@@ -96,8 +104,14 @@ export interface InviteLinkInfo {
   state: InviteLinkState;
   isSelf: boolean;
   /** "invited" = the coach already invited you by username. */
-  relationship: "none" | "invited" | "requested" | "active";
+  relationship: "none" | "invited" | "requested" | "active" | "paused";
   relationshipId: string | null;
+  /** What the link costs; null/missing = free (ask, and the coach accepts). */
+  package?: LinkPackage | null;
+  /** The coach can take payments right now. */
+  paymentsReady?: boolean;
+  /** I already pay this coach through LogIt. */
+  paying?: boolean;
 }
 
 /** A client asking to be coached, through a link. */
@@ -192,7 +206,7 @@ export const coachApi = {
 
   // ── Invite links ──
 
-  async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null }): Promise<InviteLink> {
+  async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null; packageId?: string | null }): Promise<InviteLink> {
     return apiClient.fetch("/coach/links", { method: "POST", body: JSON.stringify(input) });
   },
 

@@ -20,6 +20,8 @@
   import { Button } from "$lib/components/ui/button";
   import LockCard from "$lib/components/billing/LockCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
+  import { clientPaymentNote } from "@logit/core/domain/coachPayments";
 
   // Self-hosted servers include everything, so Studio features are always open there.
   const isStudio = $derived(authStore.user?.tier === "Studio" || apiClient.isSelfHosted());
@@ -153,18 +155,52 @@
         <ul class="divide-y divide-border">
           {#each coaches as c (c.relationshipId)}
             {@const name = c.coach.displayName || c.coach.username}
+            {@const note = clientPaymentNote(c.payment, c.status, name)}
+            {@const problem = note && note.tone !== "ok" ? note : null}
             <li class="flex flex-col text-sm">
-              <button type="button" class="flex items-center justify-between px-3 py-3 text-left hover:bg-muted/40" aria-expanded={openCoach === c.relationshipId}
+              <button type="button" class="flex items-center justify-between gap-2 px-3 py-3 text-left hover:bg-muted/40" aria-expanded={openCoach === c.relationshipId}
                 onclick={() => (openCoach = openCoach === c.relationshipId ? null : c.relationshipId)}>
-                <span><span class="font-medium">{name}</span><span class="block text-xs text-muted-foreground mt-0.5">What {name} can see</span></span>
-                <span class="text-muted-foreground">{openCoach === c.relationshipId ? "⌃" : "›"}</span>
+                <span><span class="font-medium">{name}</span><span class="block text-xs text-muted-foreground mt-0.5">What {name} can see{note ? " · your plan" : ""}</span></span>
+                <span class="flex items-center gap-2">
+                  {#if c.status === "paused"}
+                    <span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Paused</span>
+                  {:else if problem}
+                    <span class="rounded-full bg-destructive/12 px-2 py-0.5 text-[11px] font-semibold text-destructive">Payment issue</span>
+                  {/if}
+                  <span class="text-muted-foreground">{openCoach === c.relationshipId ? "⌃" : "›"}</span>
+                </span>
               </button>
+              {#if problem}
+                <!-- No price, no pay button and no link to pay: the app only says what's happening. -->
+                <div role="status" class="mx-3 mb-3 flex flex-col gap-1 rounded-lg border px-3 py-2.5 {problem.tone === 'bad' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-muted/40'}">
+                  <span class="text-sm font-semibold">{problem.title}</span>
+                  <span class="text-xs leading-relaxed">{problem.body}</span>
+                </div>
+              {/if}
               {#if openCoach === c.relationshipId}
+                {#if note?.tone === "ok" && c.payment}
+                  <div class="flex flex-col gap-1 px-3 pb-3">
+                    <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Your plan with {name}</span>
+                    <span class="text-sm">{note.title}</span>
+                    <span class="text-xs text-muted-foreground">{note.body}</span>
+                    {#if c.payment.canStop}
+                      <div class="pt-1.5">
+                        {#if c.payment.stopsAtPeriodEnd}
+                          <Button size="sm" variant="outline" disabled={ui.busyId === c.relationshipId}
+                            onclick={() => act(c.relationshipId, async () => { await coachPaymentsApi.stopMyPlan(c.relationshipId, false); })}>Keep my plan going</Button>
+                        {:else}
+                          <Button size="sm" variant="outline" disabled={ui.busyId === c.relationshipId}
+                            onclick={() => act(c.relationshipId, async () => { await coachPaymentsApi.stopMyPlan(c.relationshipId, true); })}>Stop paying at the end of the month</Button>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
+                {/if}
                 <p class="px-3 pb-1 text-xs text-muted-foreground">Switching one off hides it from {name} straight away, past entries too.</p>
                 <SharingList sharing={c.sharing ?? SHARE_ALL} onchange={(s) => changeSharing(c, s)} />
                 <div class="px-3 py-3">
                   {#if confirmStop === c.relationshipId}
-                    <p class="pb-2 text-xs text-muted-foreground">{name} stops seeing your data, and their program, check-ins and habits leave your app. Your own logs stay.</p>
+                    <p class="pb-2 text-xs text-muted-foreground">{name} stops seeing your data, and their program, check-ins and habits leave your app. Your own logs stay.{c.payment?.mode === "stripe" && c.payment.state !== "ended" ? " Your plan with them is cancelled now, so you won't be charged again." : ""}</p>
                     <div class="flex gap-2">
                       <Button size="sm" variant="destructive" disabled={ui.busyId === c.relationshipId}
                         onclick={() => act(c.relationshipId, () => coachApi.revokeRelationship(c.relationshipId))}>Stop coaching</Button>
