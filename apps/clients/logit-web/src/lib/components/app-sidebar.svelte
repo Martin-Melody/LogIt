@@ -12,6 +12,7 @@
   import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
   import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
   import LinkIcon from "@lucide/svelte/icons/link";
+  import WalletIcon from "@lucide/svelte/icons/wallet";
   import ContactIcon from "@lucide/svelte/icons/contact";
   import MessageSquareIcon from "@lucide/svelte/icons/message-square";
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
@@ -92,7 +93,10 @@
     },
     {
       label: "Studio",
-      items: [{ label: "Invite links", href: "/coaching/links", icon: LinkIcon, badge: () => coachBadges.links }],
+      items: [
+        { label: "Invite links", href: "/coaching/links", icon: LinkIcon, badge: () => coachBadges.links },
+        { label: "Payments", href: "/coaching/payments", icon: WalletIcon, badge: () => coachBadges.payments },
+      ],
     },
   ];
 

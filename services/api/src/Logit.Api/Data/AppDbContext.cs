@@ -46,6 +46,10 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<PluginRelease> PluginReleases => Set<PluginRelease>();
     public DbSet<SyncedPluginInstall> SyncedPluginInstalls => Set<SyncedPluginInstall>();
     public DbSet<SyncedInsightChart> SyncedInsightCharts => Set<SyncedInsightChart>();
+    public DbSet<CoachPaymentAccount> CoachPaymentAccounts => Set<CoachPaymentAccount>();
+    public DbSet<CoachPackage> CoachPackages => Set<CoachPackage>();
+    public DbSet<CoachClientPayment> CoachClientPayments => Set<CoachClientPayment>();
+    public DbSet<CoachPaymentReceipt> CoachPaymentReceipts => Set<CoachPaymentReceipt>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -287,6 +291,70 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(l => l.Coach)
              .WithMany()
              .HasForeignKey(l => l.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.Package)
+             .WithMany()
+             .HasForeignKey(l => l.PackageId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<CoachPaymentAccount>(e =>
+        {
+            e.HasKey(a => a.CoachId);
+            e.HasIndex(a => a.StripeAccountId).IsUnique();
+            e.Property(a => a.StripeAccountId).HasMaxLength(100);
+            e.Property(a => a.DisplayName).HasMaxLength(200);
+            e.Property(a => a.Currency).HasMaxLength(3);
+            e.Property(a => a.Country).HasMaxLength(2);
+            e.Property(a => a.FailRule).HasMaxLength(10);
+            e.HasOne(a => a.Coach)
+             .WithOne()
+             .HasForeignKey<CoachPaymentAccount>(a => a.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CoachPackage>(e =>
+        {
+            e.HasIndex(p => p.CoachId);
+            e.Property(p => p.Name).HasMaxLength(PaymentLimits.MaxNameChars);
+            e.Property(p => p.Description).HasMaxLength(PaymentLimits.MaxDescriptionChars);
+            e.Property(p => p.Currency).HasMaxLength(3);
+            e.Property(p => p.Interval).HasMaxLength(10);
+            e.HasOne(p => p.Coach)
+             .WithMany()
+             .HasForeignKey(p => p.CoachId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CoachClientPayment>(e =>
+        {
+            e.HasIndex(p => p.RelationshipId).IsUnique();
+            e.HasIndex(p => p.StripeSubscriptionId);
+            e.HasIndex(p => p.UnpaidSince);
+            e.Property(p => p.Mode).HasMaxLength(10);
+            e.Property(p => p.PackageName).HasMaxLength(PaymentLimits.MaxNameChars);
+            e.Property(p => p.Currency).HasMaxLength(3);
+            e.Property(p => p.Interval).HasMaxLength(10);
+            e.Property(p => p.State).HasMaxLength(10);
+            e.Property(p => p.FailRule).HasMaxLength(10);
+            e.Property(p => p.StripeCheckoutSessionId).HasMaxLength(200);
+            e.Property(p => p.StripeSubscriptionId).HasMaxLength(100);
+            e.Property(p => p.StripeCustomerId).HasMaxLength(100);
+            e.HasOne(p => p.Relationship)
+             .WithOne(r => r.Payment)
+             .HasForeignKey<CoachClientPayment>(p => p.RelationshipId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<CoachPaymentReceipt>(e =>
+        {
+            e.HasIndex(r => r.ExternalId).IsUnique();
+            e.HasIndex(r => new { r.CoachId, r.PaidAt });
+            e.Property(r => r.ExternalId).HasMaxLength(200);
+            e.Property(r => r.Currency).HasMaxLength(3);
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(r => r.CoachId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -17,6 +17,10 @@ public class CoachInviteLink
     /// Null = no limit. Counts requests waiting plus people who joined through it.
     public int? MaxUses { get; set; }
     public DateTime? RevokedAt { get; set; }
+    /// What people pay through this link. Null = free: they ask, the coach accepts. With a
+    /// package they pay first and coaching starts straight away.
+    public Guid? PackageId { get; set; }
+    public CoachPackage? Package { get; set; }
 }
 
 public static class CoachInviteLinkLimits

@@ -29,6 +29,15 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       server backups are kept (the delete-account page says 30 and 30 for now).
 - [x] **Cloudflare Pages project** `logit-website`: created by the first deploy 2026-11-13, live at
       https://logit-website.pages.dev. GitHub has `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`, so pushes to main deploy it.
+- [ ] **Stripe for coach payments** (built 2026-11-16, off until this is done; not needed for launch):
+      1. Stripe account for LogIt (Ireland), turn on **Connect** and fill in the platform profile (coaches
+         run their own businesses; LogIt doesn't take a fee).
+      2. Try it in a **sandbox** first: a restricted key there + a Connect webhook endpoint to
+         `https://api.getlogit.app/coach/payments/webhook` (events listed in `docs/deployment.md`,
+         "Coach payments"), then on the VPS put `STRIPE_SECRET_KEY` and `STRIPE_CONNECT_WEBHOOK_SECRET`
+         in `.env` and redeploy. Connect a test coach, make a package, pay with a test card.
+      3. Then the same with live keys.
+      4. Privacy policy/terms: say coach payments go to the coach through Stripe and LogIt isn't the seller.
 - [ ] **Have someone check the privacy policy and terms** (updated 2026-11-13 for Google Play billing,
       EU hosting, plugins and diagnostics; the hosting provider's name is still a TODO in the policy).
 - [x] **VPS**: Hetzner CX23 `logit-prod` (Germany), bought 2026-11-13 with Hetzner backups on. Claude set

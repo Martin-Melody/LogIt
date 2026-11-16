@@ -44,7 +44,8 @@ export async function refreshCoaches(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
     const [coaches, reviews] = await Promise.all([coachApi.listCoaches(), coachApi.myCheckinReviews()]);
-    write("coaches", coaches.map((c): CachedCoach => ({
+    // A paused coach (not paid up) can't message or send programs, so the app leaves them out.
+    write("coaches", coaches.filter((c) => c.status !== "paused").map((c): CachedCoach => ({
       relationshipId: c.relationshipId,
       coachId: c.coach.id,
       name: c.coach.displayName || c.coach.username,
