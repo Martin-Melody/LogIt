@@ -14,3 +14,8 @@
 
 - Attach the real custom domain (`getlogit.app`) to the `logit-website` Cloudflare Pages project
   once ready to go live (DNS change — do deliberately, not as a side effect of other work).
+
+- Insights (dashboard phase 5) left these out on purpose, to do sometime (Martin, 2026-11-16):
+  - "Turn into a plugin widget": open a saved Insights chart in the plugin builder as a widget
+    plugin (the chart recipe becomes the widget's `compute`).
+  - "Share as a post": share a saved chart (or a question's answer) to Social as its own post type.
