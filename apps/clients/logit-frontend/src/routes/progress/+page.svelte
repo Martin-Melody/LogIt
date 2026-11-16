@@ -8,8 +8,8 @@
   import ProgressStatusChip from "$lib/features/exercise/components/ProgressStatusChip.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import Sparkline from "$lib/features/exercise/components/Sparkline.svelte";
-  import MuscleGroupInsightsPanel from "$lib/features/exercise/components/MuscleGroupInsightsPanel.svelte";
-  import NutritionCorrelationPanel from "$lib/features/exercise/components/NutritionCorrelationPanel.svelte";
+  import { goto } from "$app/navigation";
+  import { ChevronRight, Lightbulb } from "lucide-svelte";
   import GoalsPanel from "$lib/features/goals/GoalsPanel.svelte";
   import { getAllExerciseProgressStories } from "@logit/core/usecases/progression/getAllExerciseProgressStories";
   import type { ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
@@ -22,14 +22,13 @@
 
   let stories = $state<ExerciseProgressStory[]>([]);
   let selected = $state<string | null>(null);
-  // The plateau-diagnosis orchestration (§10.3.2) links here with ?tab=muscles
-  // or ?tab=nutrition — a next-step suggestion opens the right tab directly
-  // rather than dropping the user on Exercises and making them find it.
+  // Muscles and food vs training moved to Insights; old links (?tab=muscles, ?tab=nutrition)
+  // open those questions.
   const initialTab = page.url.searchParams.get("tab");
+  if (initialTab === "muscles") void goto("/insights/balance", { replaceState: true });
+  else if (initialTab === "nutrition") void goto("/insights/food-vs-lifts", { replaceState: true });
   // Goals first: it's the tab that works from day one (streak + goals need no history).
-  let tab = $state(
-    initialTab === "muscles" || initialTab === "nutrition" || initialTab === "exercises" ? initialTab : "goals",
-  );
+  let tab = $state(initialTab === "exercises" ? "exercises" : "goals");
 
   const selectedStory = $derived(
     stories.find((s) => s.exerciseName === selected) ?? null,
@@ -69,13 +68,16 @@
   <PageHeader>
     <h1 class="page-title">Progress</h1>
   </PageHeader>
+  <a href="/insights" class="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5">
+    <Lightbulb class="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+    <span class="flex min-w-0 flex-1 flex-col"><span class="text-sm font-semibold">Insights</span><span class="text-xs text-muted-foreground">Which lifts are moving, muscle balance, food and more</span></span>
+    <ChevronRight class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+  </a>
     <div in:fade={{ duration: 160 }}>
     <Tabs.Root bind:value={tab} class="gap-3">
       <Tabs.List class="w-full">
         <Tabs.Trigger value="goals" class="flex-1">Goals</Tabs.Trigger>
         <Tabs.Trigger value="exercises" class="flex-1">Exercises</Tabs.Trigger>
-        <Tabs.Trigger value="muscles" class="flex-1">Muscles</Tabs.Trigger>
-        <Tabs.Trigger value="nutrition" class="flex-1">Nutrition</Tabs.Trigger>
       </Tabs.List>
 
       <Tabs.Content value="goals">
@@ -158,13 +160,6 @@
         {/if}
       </Tabs.Content>
 
-      <Tabs.Content value="muscles">
-        <MuscleGroupInsightsPanel />
-      </Tabs.Content>
-
-      <Tabs.Content value="nutrition">
-        <NutritionCorrelationPanel />
-      </Tabs.Content>
     </Tabs.Root>
     </div>
 </div>

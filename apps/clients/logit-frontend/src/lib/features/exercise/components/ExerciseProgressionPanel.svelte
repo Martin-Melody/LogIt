@@ -141,11 +141,11 @@
             </p>
             <div class="flex flex-wrap gap-3">
               {#if story.plateauNextSteps.muscleGroup}
-                <a href="/progress?tab=muscles" class="text-xs font-medium text-info underline underline-offset-2">
+                <a href="/insights/balance" class="text-xs font-medium text-info underline underline-offset-2">
                   {story.plateauNextSteps.muscleGroup} volume/frequency
                 </a>
               {/if}
-              <a href="/progress?tab=nutrition" class="text-xs font-medium text-info underline underline-offset-2">
+              <a href="/insights/food-vs-lifts" class="text-xs font-medium text-info underline underline-offset-2">
                 Nutrition timing
               </a>
             </div>

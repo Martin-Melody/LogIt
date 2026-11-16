@@ -9,13 +9,14 @@
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
   import { startHomeTour } from "$lib/tour/index";
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
+  import { chartWidgets, insightCharts } from "$lib/features/insights/charts.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import { popIn } from "$lib/transitions";
   import { getNutritionRepo, getHabitRepo } from "$lib/data/repoProvider";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
 
-  let widgets = $state<RuntimeWidgetDefinition[]>(
+  let baseWidgets = $state<RuntimeWidgetDefinition[]>(
     localWidgetRegistry.list().map((widget) => ({
       ...widget,
       source: "builtin" as const,
@@ -23,6 +24,8 @@
       bundleContract: null,
     })),
   );
+  // Saved Insights charts can sit on the home screen too.
+  const widgets = $derived([...baseWidgets, ...chartWidgets(insightCharts.list)]);
 
   const activeWidgets = $derived(
     [...$homeConfig.slots]
@@ -45,8 +48,9 @@
       .then((habits) => homeConfig.seedHabitsWidget(habits.length > 0))
       .catch(() => {});
     void pluginRuntime.listWidgets().then((loaded) => {
-      widgets = loaded;
+      baseWidgets = loaded;
     });
+    void insightCharts.sync();
 
     if (authStore.isAuthenticated) connectionStatus.startPolling();
 

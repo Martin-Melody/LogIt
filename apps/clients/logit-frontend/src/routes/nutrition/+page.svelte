@@ -266,7 +266,7 @@
     <a href="/nutrition/log" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
       <Carrot class="h-4 w-4" /> Foods
     </a>
-    <a href="/nutrition/insights" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
+    <a href="/insights/eating" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
       <ChartNoAxesColumn class="h-4 w-4" /> Insights
     </a>
     <a href="/nutrition/goal" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
