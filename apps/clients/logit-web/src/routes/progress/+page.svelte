@@ -1,16 +1,14 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Card from "$lib/components/ui/card";
   import * as Table from "$lib/components/ui/table";
-  import * as Tabs from "$lib/components/ui/tabs";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
   import ExerciseComparisonChart from "$lib/features/exercise/components/ExerciseComparisonChart.svelte";
   import ProgressStatusChip from "$lib/features/exercise/components/ProgressStatusChip.svelte";
   import Sparkline from "$lib/features/exercise/components/Sparkline.svelte";
-  import MuscleGroupInsightsPanel from "$lib/features/exercise/components/MuscleGroupInsightsPanel.svelte";
-  import NutritionCorrelationPanel from "$lib/features/exercise/components/NutritionCorrelationPanel.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Checkbox } from "$lib/components/ui/checkbox";
   import { getAllExerciseProgressStories } from "@logit/core/usecases/progression/getAllExerciseProgressStories";
@@ -30,10 +28,11 @@
   let compareMode = $state(false);
   let compareSet = $state<Set<string>>(new Set());
 
-  // A plateau next-step links here with ?tab=muscles or ?tab=nutrition — open
-  // the right tab directly rather than dropping the user on the exercise list.
-  const initialTab = page.url.searchParams.get("tab");
-  let tab = $state(initialTab === "muscles" || initialTab === "nutrition" ? initialTab : "exercises");
+  // Muscle balance and food vs lifts moved to Insights; old links (?tab=muscles,
+  // ?tab=nutrition) go to those questions.
+  const oldTab = page.url.searchParams.get("tab");
+  if (oldTab === "muscles") void goto("/insights/balance", { replaceState: true });
+  else if (oldTab === "nutrition") void goto("/insights/food-vs-lifts", { replaceState: true });
 
   const selectedStory = $derived(stories.find((s) => s.exerciseName === selected) ?? null);
 
@@ -111,14 +110,7 @@
     </Card.Root>
   {:else}
     <div in:fade={{ duration: 160 }}>
-    <Tabs.Root bind:value={tab} class="gap-3">
-      <Tabs.List>
-        <Tabs.Trigger value="exercises">Exercises</Tabs.Trigger>
-        <Tabs.Trigger value="muscles">Muscle groups</Tabs.Trigger>
-        <Tabs.Trigger value="nutrition">Food &amp; training</Tabs.Trigger>
-      </Tabs.List>
-
-      <Tabs.Content value="exercises">
+    <div class="flex flex-col gap-3">
         <div class="flex flex-wrap items-start gap-4">
           <Card.Root class="min-w-0 flex-[1_1_380px] gap-0 p-0">
             <div class="flex items-center justify-between px-3 pt-3">
@@ -219,16 +211,8 @@
             {/if}
           </Card.Root>
         </div>
-      </Tabs.Content>
-
-      <Tabs.Content value="muscles">
-        <MuscleGroupInsightsPanel clientId={viewingClient.id ?? undefined} />
-      </Tabs.Content>
-
-      <Tabs.Content value="nutrition">
-        <NutritionCorrelationPanel clientId={viewingClient.id ?? undefined} />
-      </Tabs.Content>
-    </Tabs.Root>
+      <p class="text-xs text-muted-foreground">Sets per muscle and food vs lifts are on <a href="/insights" class="underline hover:text-foreground">Insights</a>.</p>
+    </div>
     </div>
   {/if}
 </div>

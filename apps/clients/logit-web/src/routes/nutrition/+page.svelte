@@ -258,7 +258,7 @@
   <div class="flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-[26px] font-bold tracking-tight">Nutrition</h1>
     <div class="flex flex-wrap items-center gap-2">
-      <Button href="/nutrition/insights" variant="outline" size="sm">Insights</Button>
+      <Button href="/insights/eating" variant="outline" size="sm">Insights</Button>
       <Button href="/nutrition/weight" variant="outline" size="sm">Weight</Button>
       <Button href="/nutrition/goal" variant="outline" size="sm">{nut?.goal ? "Change goal" : "Set a goal"}</Button>
     </div>

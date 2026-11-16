@@ -13,6 +13,7 @@ import {
   MessagesSquare,
   Apple,
   CircleCheckBig,
+  Lightbulb,
 } from "lucide-svelte";
 export type NavItemId =
   | "home"
@@ -26,7 +27,8 @@ export type NavItemId =
   | "nutrition"
   | "habits"
   | "settings"
-  | "plugins";
+  | "plugins"
+  | "insights";
 
 export type NavItemDef = {
   id: NavItemId;
@@ -51,6 +53,7 @@ export const NAV_ITEM_DEFS: NavItemDef[] = [
   { id: "habits",    href: "/habits",     label: "Habits",    icon: CircleCheckBig,    authRequired: false                        },
   { id: "settings",  href: "/settings",   label: "Settings",  icon: Settings,          authRequired: false                        },
   { id: "plugins",   href: "/plugins",    label: "Plugins",   icon: Sparkles,          authRequired: false                        },
+  { id: "insights",  href: "/insights",   label: "Insights",  icon: Lightbulb,         authRequired: false                        },
 ];
 
 /** Number of customisable slots in the bottom bar (excludes the fixed FAB and More button). */

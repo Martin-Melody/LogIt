@@ -13,6 +13,7 @@
   import ClientHabits from "$lib/features/coaching/client/ClientHabits.svelte";
   import ClientCheckins from "$lib/features/coaching/client/ClientCheckins.svelte";
   import ClientPrograms from "$lib/features/coaching/client/ClientPrograms.svelte";
+  import ClientInsights from "$lib/features/coaching/client/ClientInsights.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import {
     loadCoachingOverview,
@@ -22,10 +23,11 @@
   } from "$lib/features/coaching/coachingData";
   import { sinceLabel, when } from "$lib/features/coaching/format";
 
-  type Tab = "overview" | "training" | "nutrition" | "habits" | "checkins" | "programs" | "messages";
+  type Tab = "overview" | "training" | "insights" | "nutrition" | "habits" | "checkins" | "programs" | "messages";
   const TABS: { id: Tab; label: string; area?: "workouts" | "nutrition" | "habits" | "checkins" }[] = [
     { id: "overview", label: "Overview" },
     { id: "training", label: "Training", area: "workouts" },
+    { id: "insights", label: "Insights" },
     { id: "nutrition", label: "Nutrition", area: "nutrition" },
     { id: "habits", label: "Habits", area: "habits" },
     { id: "checkins", label: "Check-ins", area: "checkins" },
@@ -62,6 +64,7 @@
   function setTab(t: Tab) {
     if (t !== "programs") assignOnOpen = false;
     const u = new URL(page.url);
+    u.searchParams.delete("q");
     if (t === "overview") u.searchParams.delete("tab");
     else u.searchParams.set("tab", t);
     void goto(u, { noScroll: true, keepFocus: true });
@@ -186,6 +189,8 @@
         </div>
       {:else if tab === "training"}
         <ClientTraining clientId={c.id} name={c.name} sharing={c.sharing} />
+      {:else if tab === "insights"}
+        <ClientInsights clientId={c.id} name={c.name} sharing={c.sharing} />
       {:else if tab === "nutrition"}
         <ClientNutrition clientId={c.id} username={c.username} name={c.name} relationshipId={c.relationshipId} sharing={c.sharing} />
       {:else if tab === "habits"}
