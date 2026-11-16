@@ -34,7 +34,7 @@
 {#snippet barItem(item: NonNullable<(typeof visibleBar)[number]>)}
   <a
     href={item.href}
-    data-tour={item.tourId}
+    data-guide={item.guideMark}
     aria-current={isActive(item.href) ? "page" : undefined}
     class="relative flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
       {isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}"
@@ -91,7 +91,7 @@
     <!-- More (fixed rightmost) -->
     <button
       type="button"
-      data-tour="nav-more"
+      data-guide="nav-more"
       class="flex min-w-[52px] flex-col items-center gap-0.5 py-2 text-[11px] transition-colors
         {showMore ? 'text-primary' : 'text-muted-foreground'}"
       onclick={() => (showMore = true)}

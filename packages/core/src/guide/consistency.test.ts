@@ -130,7 +130,10 @@ describe("plan locks on the server (docs/generated/tier-gates.json)", () => {
 });
 
 describe("walkthrough steps", () => {
-  const anchors = { web: matchesIn("web", /data-guide="([^"]+)"/g), phone: matchesIn("phone", /data-guide="([^"]+)"/g) };
+  // A mark is data-guide="x" on an element, or a guideMark: "x" / someGuideMark="x" declaration
+  // for one that's rendered from data (the phone's bottom bar items, a component's prop).
+  const MARK = /(?:data-guide|[gG]uideMark)[=:]\s*"([^"]+)"/g;
+  const anchors = { web: matchesIn("web", MARK), phone: matchesIn("phone", MARK) };
   const signals = {
     web: matchesIn("web", /guideSignal\(\s*["']([^"']+)["']/g),
     phone: matchesIn("phone", /guideSignal\(\s*["']([^"']+)["']/g),
@@ -151,7 +154,7 @@ describe("walkthrough steps", () => {
 
   it("never use a computed mark (it couldn't be checked)", () => {
     for (const app of ["web", "phone"] as const) {
-      const computed = sourceFiles(app).filter((f) => /data-guide=\{/.test(readFileSync(f, "utf8")));
+      const computed = sourceFiles(app).filter((f) => /data-guide=\{(?![^}]*[gG]uideMark)/.test(readFileSync(f, "utf8")));
       expect(computed.map((f) => relative(ROOT, f))).toEqual([]);
     }
   });

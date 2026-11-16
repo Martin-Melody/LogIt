@@ -35,7 +35,7 @@
     suggestWeekdays,
     WEEKDAY_SHORT,
   } from "@logit/core/domain/splitSchedule";
-  import { startSplitDetailTour } from "$lib/tour/index";
+  import { autoTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { reveal, popIn } from "$lib/transitions";
   import type { PlannedBlock } from "@logit/core/domain/WorkoutSplit";
@@ -346,7 +346,7 @@
   }
 
   onMount(() => {
-    void load().then(() => startSplitDetailTour());
+    void load().then(() => autoTour("app.split-detail"));
   });
 </script>
 
@@ -379,7 +379,7 @@
         class="flex-1 min-w-0 flex items-center gap-2 text-left"
         onclick={startRename}
         disabled={ui.loading || ui.saving}
-        data-tour="split-detail-name"
+        data-guide="split-detail-name"
       >
         <span class="text-sm font-semibold truncate">
           {split?.name ?? "Split"}
@@ -396,7 +396,7 @@
             class="h-7 px-2 text-xs"
             disabled={ui.saving}
             onclick={() => void setActive()}
-            data-tour="split-detail-set-active"
+            data-guide="split-detail-set-active"
           >
             Set active
           </Button>
@@ -458,7 +458,7 @@
     </div>
 
     <!-- Days section header -->
-    <div class="flex items-center justify-between px-3 py-2 border-b border-border" data-tour="split-detail-days">
+    <div class="flex items-center justify-between px-3 py-2 border-b border-border" data-guide="split-detail-days">
       <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Days · {split.days.filter((d) => !d.rest).length}
       </span>
@@ -479,7 +479,7 @@
           class="h-7 px-2 text-xs gap-1"
           disabled={ui.saving}
           onclick={() => void addDay()}
-          data-tour="split-detail-add-day"
+          data-guide="split-detail-add-day"
         >
           <Plus class="h-3 w-3" />
           Add day

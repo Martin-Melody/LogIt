@@ -478,4 +478,103 @@ export const STUDIO_CHAPTERS: Chapter[] = [
   },
 ];
 
-export const CHAPTERS: Chapter[] = [...PRO_CHAPTERS, ...STUDIO_CHAPTERS];
+
+// ── Phone ───────────────────────────────────────────────────────────────────
+// Short tours on the phone (Settings › Walkthroughs). The "app" ones start by themselves the
+// first time you open each screen; the Pro and Studio ones are the phone side of the web
+// walkthroughs. Phone steps are all "look" steps.
+
+const ph = (id: string, route: string, target: string, title: string, body: string): Chapter["steps"][number] =>
+  ({ id, on: "phone", route, target, title, body, kind: "look" });
+
+export const PHONE_CHAPTERS: Chapter[] = [
+  {
+    id: "app.home", walkthrough: "app", title: "Home", blurb: "Quick Start, today's plan and where things are", minutes: 1, feature: "settings",
+    steps: [
+      ph("quick-start", "/", "quick-start", "Quick Start", "Start today's workout from here. If you have a split set up it loads your planned session automatically; otherwise it starts a blank session."),
+      ph("todays-plan", "/", "todays-plan", "Today's plan", "Shows the exercises scheduled for today from your active split. Tap Edit to jump straight to the split."),
+      ph("customize", "/", "home-customize", "Customise Home", "Rearrange or hide the cards on this page: show only what matters to you."),
+      ph("bell", "/", "header-bell", "Notifications", "Likes, comments, follows and messages from your coach show up here."),
+      ph("sessions", "/", "nav-sessions", "Session history", "Every finished workout is saved here. Tap any session to review your sets, reps and weights."),
+      ph("more", "/", "nav-more", "More", "Splits, Progress, Library, Settings and Plugins all live here. Tap More any time to reach them."),
+      ph("profile", "/", "nav-profile", "Profile", "Your details, stats and personal records."),
+    ],
+  },
+  {
+    id: "app.session", walkthrough: "app", title: "Workout", blurb: "Logging sets and finishing", minutes: 1, feature: "workouts",
+    steps: [
+      ph("card", "/session/current", "session-exercise-header", "Exercise card", "Tap the name for details and history. Use + to add a set, and ⋯ to swap, superset or remove the exercise. Swipe a set left to edit or delete it."),
+      ph("complete", "/session/current", "session-set-complete", "Complete a set", "Tap this circle after finishing a set. It marks the set done and starts your rest timer."),
+      ph("add", "/session/current", "session-add-exercise", "Add an exercise", "Tap + to search your library or add a brand-new exercise."),
+      ph("finish", "/session/current", "session-finish", "Finish", "Tap here when you're done. Your session is saved and your next targets are worked out."),
+    ],
+  },
+  {
+    id: "app.splits", walkthrough: "app", title: "Splits", blurb: "Your plans, and which one is active", minutes: 1, feature: "splits",
+    steps: [
+      ph("new", "/splits", "splits-new", "Make a split", "Tap New to build a training split. Add days (like Push, Pull, Legs) and fill each day with exercises."),
+      ph("active", "/splits", "splits-set-active", "Set active", "Only one split is active at a time. Quick Start on Home loads today's day from it."),
+    ],
+  },
+  {
+    id: "app.split-detail", walkthrough: "app", title: "A split", blurb: "Days and setting it active", minutes: 1, feature: "splits",
+    steps: [
+      ph("name", "/splits/[id]", "split-detail-name", "Rename it", "Tap the name to rename the split, like \"Push / Pull / Legs\"."),
+      ph("active", "/splits/[id]", "split-detail-set-active", "Make it active", "Make this your current split. Quick Start loads today's day from it."),
+      ph("days", "/splits/[id]", "split-detail-days", "Training days", "Each day is its own workout. Drag to reorder them."),
+      ph("add-day", "/splits/[id]", "split-detail-add-day", "Add a day", "Add a day, then tap it to add exercises."),
+    ],
+  },
+  {
+    id: "app.split-day", walkthrough: "app", title: "A training day", blurb: "Naming it and adding exercises", minutes: 1, feature: "splits",
+    steps: [
+      ph("name", "/splits/[id]/days/[dayId]", "split-day-name", "Day name", "Tap to rename this day, like \"Push\" or \"Monday\". The name shows up in Quick Start."),
+      ph("add", "/splits/[id]/days/[dayId]", "split-day-add-block", "Add an exercise", "Tap + to add an exercise, cardio or mobility to this day. Search your library or type a new name to make one."),
+    ],
+  },
+  {
+    id: "app.exercises", walkthrough: "app", title: "Library", blurb: "Finding and adding exercises", minutes: 1, feature: "exercises",
+    steps: [
+      ph("search", "/exercises", "exercises-search", "Strength, cardio, mobility", "Pick a kind at the top, then type to search. LogIt's items, your own and your coach's are all here."),
+      ph("filter", "/exercises", "exercises-filter", "Where it's from", "Show everything, only LogIt's, only yours, or only what your coach shares with you."),
+      ph("list", "/exercises", "exercises-list", "Your library", "Tap anything to see its cues. Your own items can be edited; LogIt's and your coach's have \"Make my own copy\"."),
+      ph("add", "/exercises", "exercises-add", "Add your own", "Tap + to add an exercise, cardio activity or drill. It shows up in every picker from then on."),
+    ],
+  },
+  {
+    id: "app.profile", walkthrough: "app", title: "Profile", blurb: "Your details, widgets and settings", minutes: 1, feature: "settings",
+    steps: [
+      ph("avatar", "/profile", "profile-avatar", "Your profile", "Your picture and name, as others see them if you use Social."),
+      ph("edit", "/profile", "profile-edit", "Edit profile", "Update your name, bio, height and bodyweight here."),
+      ph("widgets", "/profile", "profile-widgets", "Profile widgets", "Stats at a glance: measurements, your active split and personal records. Customise below to reorder or hide them."),
+      ph("settings", "/profile", "profile-settings", "Settings", "Progression, rest timers, backups, walkthroughs and more."),
+    ],
+  },
+  {
+    id: "phone.sync", walkthrough: "pro", title: "Sync and your devices", blurb: "How your phone and the web stay the same", minutes: 1, feature: "sync",
+    steps: [
+      ph("sync", "/settings", "settings-sync", "Synced", "With Pro your workouts, splits, habits, goals and food lists sync by themselves whenever you're online. Sync now does it straight away. Everything is also on the web dashboard at app.getlogit.app."),
+    ],
+  },
+  {
+    id: "phone.insights", walkthrough: "pro", title: "Insights on your phone", blurb: "Questions and the charts you made on the web", minutes: 1, feature: "insight-charts",
+    steps: [
+      ph("questions", "/insights", "phone-insights-questions", "Questions, answered", "Each one is answered from your own data. Tap one to see how."),
+      ph("charts", "/insights", "phone-insights-charts", "Your charts", "Charts you build on the web dashboard show here, and on Home if you chose that. Your phone draws them from its own data."),
+    ],
+  },
+  {
+    id: "phone.clients", walkthrough: "studio", title: "Your clients", blurb: "Coaching from your phone", minutes: 1, feature: "coach-clients",
+    steps: [
+      ph("list", "/clients", "phone-clients-list", "The same clients as on the web", "Tap one to see their training, check-ins and programs. Programs and check-in forms are built on the web dashboard; here you follow along."),
+    ],
+  },
+  {
+    id: "phone.messages", walkthrough: "studio", title: "Messages", blurb: "Talking to clients on the go", minutes: 1, feature: "messages",
+    steps: [
+      ph("list", "/messages", "phone-messages-list", "Every conversation", "Messages with your clients and your own coach. Replies to check-ins you review show up here too."),
+    ],
+  },
+];
+
+export const CHAPTERS: Chapter[] = [...PRO_CHAPTERS, ...STUDIO_CHAPTERS, ...PHONE_CHAPTERS];

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { replayTour } from "$lib/tour/index";
   import { onMount } from "svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -35,6 +36,7 @@
   });
 
   onMount(() => void insightCharts.sync(true));
+  onMount(() => setTimeout(() => replayTour("phone.insights"), 400));
 </script>
 
 <div class="flex flex-col gap-3 p-3 pb-32">
@@ -45,7 +47,7 @@
 
   <RangePicker value={range} onchange={(r) => { range = r; rememberRange(r); }} />
 
-  <section aria-label="Questions" class="rounded-xl border border-border bg-card px-3.5">
+  <section aria-label="Questions" data-guide="phone-insights-questions" class="rounded-xl border border-border bg-card px-3.5">
     {#each answers ?? QUESTIONS.map((q) => ({ id: q.id, question: q.question, answer: "", state: "empty", detail: "" }) as InsightAnswer) as a, i (a.id)}
       {@const locked = a.state === "locked"}
       <a href={locked ? undefined : `/insights/${a.id}?range=${range}`} class="flex min-h-14 items-center gap-2.5 py-2.5 {i ? 'border-t border-border' : ''}">
@@ -62,7 +64,7 @@
     {/each}
   </section>
 
-  <section class="flex flex-col gap-2">
+  <section class="flex flex-col gap-2" data-guide="phone-insights-charts">
     <h2 class="px-0.5 pt-1 text-[15px] font-semibold">Your charts</h2>
     {#each drawn as d (d.chart.id)}
       <a href="/insights/charts/{d.chart.id}" class="flex flex-col gap-2 rounded-xl border border-border bg-card px-3.5 py-3">

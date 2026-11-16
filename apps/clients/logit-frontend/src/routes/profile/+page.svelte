@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { Settings, Pencil, Check, X, SlidersHorizontal, Dumbbell, Rss, Cloud, Server, PenSquare } from "lucide-svelte";
-  import { startProfileTour } from "$lib/tour/index";
+  import { autoTour } from "$lib/tour/index";
   import ProfileAvatar from "$lib/components/ProfileAvatar.svelte";
   import ProfileView from "$lib/components/social/ProfileView.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
@@ -69,7 +69,7 @@
   });
 
   onMount(() => {
-    void startProfileTour();
+    void autoTour("app.profile");
     if (authStore.isAuthenticated) {
       _lastAvatarUrl = $profile.avatarDataUrl; // seed so the effect above doesn't double-fire
       void syncPublicProfile(); // picks up anything (incl. new widgets) enabled since last push
@@ -111,20 +111,20 @@
 
   <PageHeader>
     <h1 class="page-title">Profile</h1>
-    <Button variant="ghost" size="icon" aria-label="Settings" onclick={() => void goto("/settings")} data-tour="profile-settings">
+    <Button variant="ghost" size="icon" aria-label="Settings" onclick={() => void goto("/settings")} data-guide="profile-settings">
       <Settings class="h-4 w-4" />
     </Button>
   </PageHeader>
 
   {#if authStore.isAuthenticated && authStore.user}
     {#key refreshKey}
-      <ProfileView username={authStore.user.username} avatarTourId="profile-avatar">
+      <ProfileView username={authStore.user.username} avatarGuideMark="profile-avatar">
         {#snippet headerActions()}
           {#if editing}
             {@render editForm()}
           {:else}
             <div class="flex items-center gap-2">
-              <Button variant="outline" size="sm" onclick={openEdit} data-tour="profile-edit">
+              <Button variant="outline" size="sm" onclick={openEdit} data-guide="profile-edit">
                 <Pencil class="h-3.5 w-3.5 mr-1.5" /> Edit profile
               </Button>
               <Button variant="outline" size="sm" onclick={() => (showCreatePost = true)}>
@@ -139,7 +139,7 @@
     <!-- Fully local — no server round-trip, works offline. ProfileView can't render here
          (it's 100% server-backed), so this stays its own small implementation. -->
     <div class="flex flex-col items-center gap-3 px-4 pt-2 pb-6">
-      <div data-tour="profile-avatar">
+      <div data-guide="profile-avatar">
         <ProfileAvatar name={$profile.name} avatarDataUrl={$profile.avatarDataUrl} editable={!editing} class="h-24 w-24" />
       </div>
 
@@ -154,7 +154,7 @@
             <p class="text-sm text-muted-foreground italic mt-0.5">Add a bio…</p>
           {/if}
         </div>
-        <Button variant="outline" size="sm" onclick={openEdit} data-tour="profile-edit">
+        <Button variant="outline" size="sm" onclick={openEdit} data-guide="profile-edit">
           <Pencil class="h-3.5 w-3.5 mr-1.5" /> Edit profile
         </Button>
       {/if}
@@ -196,7 +196,7 @@
   <!-- Local profile widgets (personalisation — plugin-facing, see
        feedback_design_for_plugins; distinct from the synced "Training stats" ProfileView
        renders above, which read a snapshot rather than local data live). -->
-  <div class="flex flex-col gap-3 px-3" data-tour="profile-widgets">
+  <div class="flex flex-col gap-3 px-3" data-guide="profile-widgets">
     {#each enabledWidgets as { def } (def.id)}
       <svelte:component this={def.component} {...(def.props ?? {})} />
     {/each}

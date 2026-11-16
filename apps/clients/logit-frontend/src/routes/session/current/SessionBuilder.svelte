@@ -20,7 +20,7 @@
   import { keyboard } from "$lib/stores/keybaord.store";
   import { bottomNavHeight } from "$lib/stores/bottomNav.store";
   import { reveal } from "$lib/transitions";
-  import { startSessionTour, destroyActiveTour } from "$lib/tour/index";
+  import { autoTour, destroyActiveTour } from "$lib/tour/index";
 
   import { listBlockDefs } from "$lib/features/session/blocks/index";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
@@ -55,7 +55,7 @@
   import FinishWorkoutCard from "./Components/FinishWorkoutCard.svelte";
 
   onMount(() => {
-    setTimeout(() => startSessionTour(), 600);
+    setTimeout(() => autoTour("app.session"), 600);
     void getWorkoutRepo()
       .listRecentSessions({ limit: 1 })
       .then((s) => (hasPreviousSession = s.length > 0))
@@ -784,7 +784,7 @@
         class="size-12 rounded-full shadow-lg"
         disabled={ui.saving || ui.finishing}
         aria-label="Add block"
-        data-tour="session-add-exercise"
+        data-guide="session-add-exercise"
         onclick={openAddBlock}
       >
         <Plus class="size-5" />
@@ -793,7 +793,7 @@
 
     <div
       bind:this={finishBarEl}
-      data-tour="session-finish"
+      data-guide="session-finish"
       class="fixed left-0 right-0 z-10 border-t border-border bg-background px-3 py-3"
       style="bottom: {$bottomNavHeight}px"
     >

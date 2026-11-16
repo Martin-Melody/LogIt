@@ -3,6 +3,8 @@ import type { Component } from "svelte";
 export type WidgetId = string;
 
 export interface WidgetDefinition {
+  /** Walkthrough mark (data-guide) for this widget on Home, if a tour points at it. */
+  guideMark?: string;
   id: WidgetId;
   label: string;
   description: string;
