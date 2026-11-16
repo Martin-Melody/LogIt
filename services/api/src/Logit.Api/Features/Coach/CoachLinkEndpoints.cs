@@ -4,6 +4,7 @@ using Logit.Api.Data.Entities;
 using Logit.Api.Features.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Logit.Api.Features.Coach.Payments;
 
 namespace Logit.Api.Features.Coach;
 
@@ -65,6 +66,8 @@ public static class CoachLinkEndpoints
         joined = use.Joined,
         waiting = use.Waiting,
         state = LinkState(l, use.Joined + use.Waiting, now),
+        packageId = l.PackageId,
+        packageName = l.Package?.Name,
     };
 
     // ── Coach: manage links ──────────────────────────────────────────────────
@@ -81,6 +84,9 @@ public static class CoachLinkEndpoints
         if (req.MaxUses is < 1 or > CoachInviteLinkLimits.MaxUses)
             return Results.BadRequest(new { error = $"Max people must be 1 to {CoachInviteLinkLimits.MaxUses}." });
 
+        if (await CoachPaymentEndpoints.CheckPackageForLink(db, caller.GetUserId(), req.PackageId, default) is { } packageError)
+            return packageError;
+
         var now = DateTime.UtcNow;
         string code;
         do { code = Registration.NewCode(); }
@@ -94,9 +100,11 @@ public static class CoachLinkEndpoints
             CreatedAt = now,
             ExpiresAt = req.ExpiresInDays is { } d ? now.AddDays(d) : null,
             MaxUses = req.MaxUses,
+            PackageId = req.PackageId,
         };
         db.CoachInviteLinks.Add(link);
         await db.SaveChangesAsync();
+        if (link.PackageId is not null) await db.Entry(link).Reference(l => l.Package).LoadAsync();
         return Results.Ok(LinkDto(link, (0, 0), now));
     }
 
@@ -104,6 +112,7 @@ public static class CoachLinkEndpoints
     {
         var coachId = caller.GetUserId();
         var links = await db.CoachInviteLinks.AsNoTracking()
+            .Include(l => l.Package)
             .Where(l => l.CoachId == coachId)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
@@ -133,10 +142,28 @@ public static class CoachLinkEndpoints
         var me = caller.GetUserId();
         var use = (await LinkUse(db, [link.Id]))[link.Id];
         var existing = await db.CoachClientRelationships.AsNoTracking()
+            .Include(r => r.Payment)
             .FirstOrDefaultAsync(r => r.CoachId == link.CoachId && r.ClientId == me);
+        var package = link.Package is { Hidden: false } p ? p : null;
+        var account = package is null ? null
+            : await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == link.CoachId);
 
         return Results.Ok(new
         {
+            // What this link costs; null = free (ask, and the coach accepts).
+            package = package is null ? null : new
+            {
+                name = package.Name,
+                description = package.Description,
+                amountCents = package.AmountCents,
+                currency = package.Currency,
+                interval = package.Interval,
+                weeks = package.Weeks,
+            },
+            paymentsReady = account is { CardPaymentsActive: true },
+            // Already paying this coach through LogIt (paying again would charge twice).
+            paying = existing is { Status: CoachClientStatus.Active, Payment: { Mode: PaymentModes.Stripe } ep }
+                && ep.State != PaymentStates.Ended,
             coach = link.Coach.ToProfileDto(false),
             state = link.Coach.Tier != UserTier.Studio ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow),
             isSelf = link.CoachId == me,
@@ -150,6 +177,7 @@ public static class CoachLinkEndpoints
     {
         null or { Status: CoachClientStatus.Revoked } => "none",
         { Status: CoachClientStatus.Active } => "active",
+        { Status: CoachClientStatus.Paused } => "paused",
         { RequestedByClient: true } => "requested",
         _ => "invited",
     };
@@ -167,10 +195,17 @@ public static class CoachLinkEndpoints
         var existing = await db.CoachClientRelationships
             .FirstOrDefaultAsync(r => r.CoachId == link.CoachId && r.ClientId == me);
 
-        switch (RelationshipState(existing))
+        var relState = RelationshipState(existing);
+        if (relState is "none" or "requested" && link.Package is { Hidden: false })
+            return Results.Json(new { error = "This link is paid: pay to start coaching.", code = "payment_required" },
+                statusCode: StatusCodes.Status402PaymentRequired);
+
+        switch (relState)
         {
             case "active":
                 return Results.Conflict(new { error = "You're already coached by them.", code = "already_coached" });
+            case "paused":
+                return Results.Conflict(new { error = "Coaching with them is paused until it's paid.", code = "paused" });
             case "invited":
                 // The coach already asked you, so asking back is a yes.
                 existing!.ApplySharing(sharing);
@@ -215,7 +250,7 @@ public static class CoachLinkEndpoints
     {
         var normalized = Registration.Normalize(code);
         if (normalized is null) return Task.FromResult<CoachInviteLink?>(null);
-        return db.CoachInviteLinks.Include(l => l.Coach).FirstOrDefaultAsync(l => l.Code == normalized);
+        return db.CoachInviteLinks.Include(l => l.Coach).Include(l => l.Package).FirstOrDefaultAsync(l => l.Code == normalized);
     }
 
     // ── Coach: answer requests ───────────────────────────────────────────────
@@ -304,5 +339,5 @@ public static class CoachLinkEndpoints
     }
 }
 
-public record CreateLinkRequest(string? Name, int? ExpiresInDays, int? MaxUses);
+public record CreateLinkRequest(string? Name, int? ExpiresInDays, int? MaxUses, Guid? PackageId = null);
 public record CoachingRequestBody(SharingDto? Sharing);

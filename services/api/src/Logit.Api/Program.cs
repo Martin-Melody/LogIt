@@ -88,6 +88,10 @@ builder.Services.AddSingleton<IGooglePlayApi>(sp => new GooglePlayApi(
 builder.Services.AddScoped<GooglePlayBilling>();
 builder.Services.AddScoped<ISubscriptionRefresher>(sp => sp.GetRequiredService<GooglePlayBilling>());
 builder.Services.AddHostedService<SubscriptionSweeper>();
+// Coach payments: coaches' own Stripe accounts (Connect), see Features/Coach/Payments.
+builder.Services.AddSingleton<Logit.Api.Features.Coach.Payments.ICoachStripe, Logit.Api.Features.Coach.Payments.CoachStripe>();
+builder.Services.AddScoped<Logit.Api.Features.Coach.Payments.CoachPaymentService>();
+builder.Services.AddHostedService<Logit.Api.Features.Coach.Payments.CoachPaymentSweeper>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
