@@ -124,8 +124,6 @@ jobs:
           Jwt__Secret: "ci-e2e-secret-at-least-32-characters-long"
           # the suite registers far more than the default 10 accounts per address per 10 minutes
           Registration__SignupsPer10Minutes: "1000"
-          # the walkthrough suite sets its test accounts to Pro / Studio through the admin API
-          Admin__Key: "ci-e2e-admin-key-that-is-long-enough-123456"
         run: |
           nohup dotnet run --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &
           for i in $(seq 1 60); do
@@ -146,7 +144,8 @@ jobs:
         working-directory: apps/clients/logit-web
         env:
           E2E_API_URL: http://127.0.0.1:5118
-          E2E_ADMIN_KEY: "ci-e2e-admin-key-that-is-long-enough-123456"
+          # the Development admin key (appsettings.Development.json), as the phone's sync tests use
+          E2E_ADMIN_KEY: "dev-admin-key"
         run: npx playwright test
 
       - name: API log on failure

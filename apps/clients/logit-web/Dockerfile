@@ -15,11 +15,14 @@ COPY packages/ui packages/ui
 COPY apps/clients/logit-web apps/clients/logit-web
 RUN npm run -w logit-web build
 
-# adapter-node bundles the app and its dependencies into build/ — no node_modules
-# needed at runtime, so the final image only needs the output directory.
+# adapter-node bundles the app's own code and its devDependencies, but leaves packages listed
+# in "dependencies" (d3-scale, layerchart, bits-ui, …) as imports to resolve at runtime. Without
+# node_modules the server crashed rendering any page that used one (500 on Overview), so the
+# final image carries the installed packages too.
 FROM node:22-alpine AS final
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/clients/logit-web/build ./build
 
 EXPOSE 3000
