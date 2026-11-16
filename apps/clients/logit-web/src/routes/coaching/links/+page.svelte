@@ -9,6 +9,8 @@
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import { ago, shortDate } from "$lib/features/coaching/format";
+  import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
+  import { priceText, type CoachPackage } from "@logit/core/domain/coachPayments";
 
   let links = $state<InviteLink[]>([]);
   let requests = $state<CoachingRequest[]>([]);
@@ -20,14 +22,26 @@
   let name = $state("");
   let expires = $state("");
   let maxUses = $state("");
+  let packageId = $state("");
   let creating = $state(false);
+  // Packages people can pay for through a link; empty until Stripe is connected.
+  let packages = $state<CoachPackage[]>([]);
+  let paymentsReady = $state(false);
   let formError = $state<string | null>(null);
 
   const me = apiClient.getUser();
 
   async function load() {
     try {
-      [links, requests] = await Promise.all([coachApi.listLinks(), coachApi.listRequests()]);
+      const [l, r, payments] = await Promise.all([
+        coachApi.listLinks(),
+        coachApi.listRequests(),
+        coachPaymentsApi.overview().catch(() => null),
+      ]);
+      links = l;
+      requests = r;
+      packages = payments?.packages.filter((p) => !p.hidden) ?? [];
+      paymentsReady = payments?.account.ready ?? false;
       error = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load your links";
@@ -49,11 +63,17 @@
     }
     creating = true;
     try {
-      const link = await coachApi.createLink({ name: name.trim(), expiresInDays: expires ? Number(expires) : null, maxUses: max });
+      const link = await coachApi.createLink({
+        name: name.trim(),
+        expiresInDays: expires ? Number(expires) : null,
+        maxUses: max,
+        packageId: packageId || null,
+      });
       links = [link, ...links];
       name = "";
       maxUses = "";
       expires = "";
+      packageId = "";
       await copy(link);
     } catch (err) {
       formError = err instanceof ApiError ? err.message : "Couldn't create the link.";
@@ -98,6 +118,17 @@
     }
   }
 
+  async function changePackage(link: InviteLink, id: string) {
+    try {
+      await coachPaymentsApi.setLinkPackage(link.id, id || null);
+      const p = packages.find((x) => x.id === id);
+      links = links.map((l) => (l.id === link.id ? { ...l, packageId: id || null, packageName: p?.name ?? null } : l));
+      toast.success(id ? `People now pay for ${p?.name} through "${link.name}"` : `"${link.name}" is free again`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't change the package");
+    }
+  }
+
   function shares(r: CoachingRequest): string {
     const on = SHARE_AREAS.filter((a) => r.sharing[a.key]).map((a) => a.label.toLowerCase());
     return on.length ? `will share ${on.join(", ")}` : "shares nothing yet";
@@ -114,7 +145,7 @@
 <div class="flex flex-col gap-4">
   <header>
     <h1 class="text-[26px] font-bold tracking-tight">Invite links</h1>
-    <p class="mt-1 text-[13px] text-muted-foreground">Share a link in your bio, a group chat or on a poster. People who open it ask you to coach them. Nothing is shared until you accept.</p>
+    <p class="mt-1 text-[13px] text-muted-foreground">Share a link in your bio, a group chat or on a poster. On a free link people ask you to coach them and nothing is shared until you accept. On a link with a package they pay first, then coaching starts.</p>
   </header>
 
   {#if error}
@@ -158,15 +189,28 @@
             <label class="flex flex-[1_1_120px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Max people
               <input bind:value={maxUses} inputmode="numeric" placeholder="No limit" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
+            {#if paymentsReady && packages.length}
+              <label class="flex flex-[1_1_180px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">They pay for
+                <select bind:value={packageId} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
+                  <option value="">Nothing (free link)</option>
+                  {#each packages as p (p.id)}<option value={p.id}>{p.name} · {priceText(p)}</option>{/each}
+                </select>
+              </label>
+            {/if}
             <button type="submit" disabled={creating || !name.trim()} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Create link</button>
           </form>
           {#if formError}<p class="text-xs text-destructive">{formError}</p>{/if}
+          {#if !paymentsReady}
+            <p class="text-xs text-muted-foreground">Want people to pay through a link? <a href="/coaching/payments?tab=setup" class="text-primary hover:underline">Connect Stripe in Payments</a>.</p>
+          {:else if !packages.length}
+            <p class="text-xs text-muted-foreground">Make a package in <a href="/coaching/payments?tab=setup" class="text-primary hover:underline">Payments</a> to charge through a link.</p>
+          {/if}
         </section>
 
         <section class="rounded-[10px] border border-border bg-card px-1.5 py-2">
           <div class="overflow-x-auto">
-            <table class="w-full min-w-[640px] border-collapse text-[13px]">
-              <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Name</th><th class="px-3 py-2 font-medium">Link</th><th class="px-3 py-2 font-medium">People</th><th class="px-3 py-2 font-medium">Stops</th><th></th></tr></thead>
+            <table class="w-full min-w-[760px] border-collapse text-[13px]">
+              <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Name</th><th class="px-3 py-2 font-medium">Link</th><th class="px-3 py-2 font-medium">People</th><th class="px-3 py-2 font-medium">They pay for</th><th class="px-3 py-2 font-medium">Stops</th><th></th></tr></thead>
               <tbody>
                 {#each links as l (l.id)}
                   {@const live = l.state === "active" || l.state === "full"}
@@ -178,6 +222,17 @@
                     </td>
                     <td class="px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</td>
                     <td class="px-3 py-3">
+                      {#if live && paymentsReady && packages.length}
+                        <select value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
+                          class="h-[30px] max-w-[200px] rounded-lg border border-input bg-background px-1.5 text-xs">
+                          <option value="">Free</option>
+                          {#each packages as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+                        </select>
+                      {:else}
+                        <span class="text-muted-foreground">{l.packageName ?? "Free"}</span>
+                      {/if}
+                    </td>
+                    <td class="px-3 py-3">
                       {#if stateLabel[l.state]}<span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{stateLabel[l.state]}</span>{:else}<span class="text-muted-foreground">{l.expiresAt ? shortDate(Date.parse(l.expiresAt)) : "Never"}</span>{/if}
                     </td>
                     <td class="px-3 py-3 text-right">
@@ -185,7 +240,7 @@
                     </td>
                   </tr>
                 {:else}
-                  <tr><td colspan="5" class="px-3 py-6 text-center text-muted-foreground">No links yet. Make one above.</td></tr>
+                  <tr><td colspan="6" class="px-3 py-6 text-center text-muted-foreground">No links yet. Make one above.</td></tr>
                 {/each}
               </tbody>
             </table>
