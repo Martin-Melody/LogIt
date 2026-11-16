@@ -576,14 +576,13 @@ test("the My foods button lists your foods, and one logs from the add screen", a
   await page.getByRole("tab", { name: /Foods/ }).click();
   await expect(page.getByText("Skyr, plain")).toBeVisible();
 
-  // The floating button logs to the meal for this time of day; the search finds the food
-  // whatever the word order.
+  // A meal's Add food opens the search, which finds the food whatever the word order.
   await page.goto("/nutrition");
-  await page.getByRole("link", { name: "Log food" }).click();
+  await page.getByTestId("meal-lunch").getByRole("link", { name: "Add food" }).click();
   await page.waitForURL(/\/nutrition\/log/);
   await page.getByLabel("Search foods").fill("plain skyr");
   await page.getByRole("button", { name: /Skyr, plain/ }).first().click();
-  await page.getByRole("dialog").getByRole("button", { name: /^Add to (Breakfast|Lunch|Dinner|Snacks)$/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Add to Lunch" }).click();
   await expect(page.getByText(/^1 added/)).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
   await page.waitForURL(/\/nutrition$/);
