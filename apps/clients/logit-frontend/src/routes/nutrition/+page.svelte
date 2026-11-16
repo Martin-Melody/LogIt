@@ -45,7 +45,6 @@
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { pushMealTemplate, lastSyncedAt } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
-  import { bottomNavHeight } from "$lib/stores/bottomNav.store";
   import { fmtWeight, totalsFor, type NutritionState, type WeightUnit } from "$lib/features/nutrition/nutrition";
   import { basisForItem } from "$lib/features/nutrition/resolveFood";
   import { addItems, saveDay } from "$lib/features/nutrition/diary";
@@ -53,7 +52,7 @@
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import QuickAddSheet from "$lib/features/nutrition/ui/QuickAddSheet.svelte";
   import WeekStrip from "$lib/features/nutrition/ui/WeekStrip.svelte";
-  import { MEAL_LABELS, fmtNum, macroLine, mealForNow } from "$lib/features/nutrition/ui/meals";
+  import { MEAL_LABELS, fmtNum, macroLine } from "$lib/features/nutrition/ui/meals";
   import { chip } from "$lib/features/nutrition/ui/style";
 
   const ui = $state({ loading: true, error: null as string | null });
@@ -310,7 +309,7 @@
   </a>
 </PageHeader>
 
-<div class="flex flex-col pb-28">
+<div class="flex flex-col pb-8">
   <WeekStrip
     endIso={stripEnd}
     selectedIso={dateIso}
@@ -423,9 +422,13 @@
                 <Plus class="size-[18px]" />Add food
               </a>
               {#if yesterday.length}
-                <button type="button" class="flex h-11 flex-[1.3] items-center justify-center gap-1.5 rounded-xl border border-border text-[13px]" onclick={() => void copyFrom(addDays(dateIso, -1), m)}>
-                  <Copy class="size-4" />Same as yesterday
-                  <span class="text-muted-foreground tabular-nums">{fmtNum(yesterday.reduce((n, i) => n + i.computed.kcal, 0))}</span>
+                <button
+                  type="button"
+                  class="flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border text-[13px]"
+                  aria-label="Same as yesterday, {fmtNum(yesterday.reduce((n, i) => n + i.computed.kcal, 0))} kcal"
+                  onclick={() => void copyFrom(addDays(dateIso, -1), m)}
+                >
+                  <Copy class="size-4 shrink-0" />Same as yesterday
                 </button>
               {/if}
             </div>
@@ -452,13 +455,6 @@
   {/if}
 </div>
 
-<a
-  href={addHref(mealForNow())}
-  class="fixed right-4 z-30 flex h-13 items-center gap-2 rounded-full bg-primary pl-4 pr-5 font-semibold text-primary-foreground shadow-xl"
-  style="bottom: {$bottomNavHeight + 16}px"
->
-  <Plus class="size-5" strokeWidth={2.4} />Log food
-</a>
 
 {#if editing}
   {@const ed = editing}

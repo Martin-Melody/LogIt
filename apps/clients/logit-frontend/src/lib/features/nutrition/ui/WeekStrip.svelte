@@ -40,15 +40,15 @@
   }
 </script>
 
-<div class="flex items-center px-1 pb-2">
+<div class="flex items-center px-1 pt-3 pb-3">
   <button type="button" class="flex h-11 w-8 shrink-0 items-center justify-center text-muted-foreground" aria-label="Earlier week" onclick={() => onshift(-1)}>
     <ChevronLeft class="size-4" />
   </button>
-  <div class="flex flex-1 justify-between">
+  <div class="flex min-w-0 flex-1 gap-0.5">
     {#each days as d (d.iso)}
       <button
         type="button"
-        class="flex w-11 flex-col items-center gap-1 rounded-xl py-1.5 {d.iso === selectedIso ? 'bg-muted' : ''}"
+        class="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2 {d.iso === selectedIso ? 'bg-muted' : ''}"
         aria-current={d.iso === selectedIso ? "date" : undefined}
         aria-label="{d.iso}{d.kcal ? `, ${Math.round(d.kcal)} kcal` : ', nothing logged'}"
         onclick={() => onselect(d.iso)}
