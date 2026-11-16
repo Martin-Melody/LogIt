@@ -199,7 +199,7 @@
                     <button {...props} type="button" aria-label="Manage {nameOf(c)}" class="inline-flex h-[30px] items-center gap-1 rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Manage <MoreHorizontalIcon class="size-3.5" /></button>
                   {/snippet}
                 </DropdownMenu.Trigger>
-                <DropdownMenu.Content align="end">
+                <DropdownMenu.Content align="end" class="w-72">
                   {#if c.mode === "stripe"}
                     <DropdownMenu.Item onclick={() => openRule(c)}>If a payment fails: {c.ownRule ? ruleText(c.rule, c.days) : `your default (${ruleText(c.rule, c.days).toLowerCase()})`}…</DropdownMenu.Item>
                   {/if}
