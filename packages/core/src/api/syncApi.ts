@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient, type ApiFetcher } from "./client";
 
 export type RemoteSession = {
   id: string;
@@ -152,191 +152,196 @@ export type RemoteHabitEntry = {
   deletedAtMs?: number | null;
 };
 
-export const syncApi = {
-  pushSessions(sessions: RemoteSession[]): Promise<void> {
-    return apiClient.fetch("/sync/sessions", {
-      method: "POST",
-      body: JSON.stringify({ sessions }),
-    });
-  },
+/** The same calls as `syncApi`, made with another identity (a sandbox sample client's token). */
+export function syncApiFor(api: ApiFetcher) {
+  return {
+    pushSessions(sessions: RemoteSession[]): Promise<void> {
+      return api.fetch("/sync/sessions", {
+        method: "POST",
+        body: JSON.stringify({ sessions }),
+      });
+    },
 
-  pullSessions(since: number, clientId?: string): Promise<{ sessions: RemoteSession[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/sessions?since=${since}${suffix}`);
-  },
+    pullSessions(since: number, clientId?: string): Promise<{ sessions: RemoteSession[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/sessions?since=${since}${suffix}`);
+    },
 
-  pushSplits(splits: RemoteSplit[]): Promise<void> {
-    return apiClient.fetch("/sync/splits", {
-      method: "POST",
-      body: JSON.stringify({ splits }),
-    });
-  },
+    pushSplits(splits: RemoteSplit[]): Promise<void> {
+      return api.fetch("/sync/splits", {
+        method: "POST",
+        body: JSON.stringify({ splits }),
+      });
+    },
 
-  pullSplits(since: number, clientId?: string): Promise<{ splits: RemoteSplit[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/splits?since=${since}${suffix}`);
-  },
+    pullSplits(since: number, clientId?: string): Promise<{ splits: RemoteSplit[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/splits?since=${since}${suffix}`);
+    },
 
-  pushExercises(exercises: RemoteExercise[]): Promise<void> {
-    return apiClient.fetch("/sync/exercises", {
-      method: "POST",
-      body: JSON.stringify({ exercises }),
-    });
-  },
+    pushExercises(exercises: RemoteExercise[]): Promise<void> {
+      return api.fetch("/sync/exercises", {
+        method: "POST",
+        body: JSON.stringify({ exercises }),
+      });
+    },
 
-  /** Strength exercises only (what app versions before the library expect). */
-  pullExercises(since: number, clientId?: string): Promise<{ exercises: RemoteExercise[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/exercises?since=${since}${suffix}`);
-  },
+    /** Strength exercises only (what app versions before the library expect). */
+    pullExercises(since: number, clientId?: string): Promise<{ exercises: RemoteExercise[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/exercises?since=${since}${suffix}`);
+    },
 
-  /** Every library item of yours (or a client's): strength, cardio and mobility. */
-  pullLibrary(since: number, clientId?: string): Promise<{ exercises: RemoteExercise[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/exercises?since=${since}&kinds=all${suffix}`);
-  },
+    /** Every library item of yours (or a client's): strength, cardio and mobility. */
+    pullLibrary(since: number, clientId?: string): Promise<{ exercises: RemoteExercise[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/exercises?since=${since}&kinds=all${suffix}`);
+    },
 
-  pushProfile(profile: RemoteProfile): Promise<void> {
-    return apiClient.fetch("/sync/profile", {
-      method: "POST",
-      body: JSON.stringify(profile),
-    });
-  },
+    pushProfile(profile: RemoteProfile): Promise<void> {
+      return api.fetch("/sync/profile", {
+        method: "POST",
+        body: JSON.stringify(profile),
+      });
+    },
 
-  pushCheckinSubmissions(submissions: RemoteCheckinSubmission[]): Promise<void> {
-    return apiClient.fetch("/sync/checkins", {
-      method: "POST",
-      body: JSON.stringify({ submissions }),
-    });
-  },
+    pushCheckinSubmissions(submissions: RemoteCheckinSubmission[]): Promise<void> {
+      return api.fetch("/sync/checkins", {
+        method: "POST",
+        body: JSON.stringify({ submissions }),
+      });
+    },
 
-  pullCheckinSubmissions(
-    since: number,
-    clientId?: string,
-  ): Promise<{ submissions: RemoteCheckinSubmission[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/checkins?since=${since}${suffix}`);
-  },
+    pullCheckinSubmissions(
+      since: number,
+      clientId?: string,
+    ): Promise<{ submissions: RemoteCheckinSubmission[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/checkins?since=${since}${suffix}`);
+    },
 
-  pullProfile(clientId?: string): Promise<{ profile: RemoteProfile | null }> {
-    const suffix = clientId ? `?clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/profile${suffix}`);
-  },
+    pullProfile(clientId?: string): Promise<{ profile: RemoteProfile | null }> {
+      const suffix = clientId ? `?clientId=${clientId}` : "";
+      return api.fetch(`/sync/profile${suffix}`);
+    },
 
-  // ── Nutrition ──────────────────────────────────────────────────────────────
+    // ── Nutrition ──────────────────────────────────────────────────────────────
 
-  pushNutritionDays(days: RemoteNutritionDay[]): Promise<void> {
-    return apiClient.fetch("/sync/nutrition/days", {
-      method: "POST",
-      body: JSON.stringify({ days }),
-    });
-  },
+    pushNutritionDays(days: RemoteNutritionDay[]): Promise<void> {
+      return api.fetch("/sync/nutrition/days", {
+        method: "POST",
+        body: JSON.stringify({ days }),
+      });
+    },
 
-  pullNutritionDays(
-    since: number,
-    clientId?: string,
-  ): Promise<{ days: RemoteNutritionDay[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/nutrition/days?since=${since}${suffix}`);
-  },
+    pullNutritionDays(
+      since: number,
+      clientId?: string,
+    ): Promise<{ days: RemoteNutritionDay[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/nutrition/days?since=${since}${suffix}`);
+    },
 
-  pushCustomFoods(foods: RemoteCustomFood[]): Promise<void> {
-    return apiClient.fetch("/sync/nutrition/custom-foods", {
-      method: "POST",
-      body: JSON.stringify({ foods }),
-    });
-  },
+    pushCustomFoods(foods: RemoteCustomFood[]): Promise<void> {
+      return api.fetch("/sync/nutrition/custom-foods", {
+        method: "POST",
+        body: JSON.stringify({ foods }),
+      });
+    },
 
-  pullCustomFoods(since: number): Promise<{ foods: RemoteCustomFood[] }> {
-    return apiClient.fetch(`/sync/nutrition/custom-foods?since=${since}`);
-  },
+    pullCustomFoods(since: number): Promise<{ foods: RemoteCustomFood[] }> {
+      return api.fetch(`/sync/nutrition/custom-foods?since=${since}`);
+    },
 
-  pushRecipes(recipes: RemoteRecipe[]): Promise<void> {
-    return apiClient.fetch("/sync/nutrition/recipes", {
-      method: "POST",
-      body: JSON.stringify({ recipes }),
-    });
-  },
+    pushRecipes(recipes: RemoteRecipe[]): Promise<void> {
+      return api.fetch("/sync/nutrition/recipes", {
+        method: "POST",
+        body: JSON.stringify({ recipes }),
+      });
+    },
 
-  pullRecipes(since: number): Promise<{ recipes: RemoteRecipe[] }> {
-    return apiClient.fetch(`/sync/nutrition/recipes?since=${since}`);
-  },
+    pullRecipes(since: number): Promise<{ recipes: RemoteRecipe[] }> {
+      return api.fetch(`/sync/nutrition/recipes?since=${since}`);
+    },
 
-  pushFavorites(favorites: RemoteFavoriteFood[]): Promise<void> {
-    return apiClient.fetch("/sync/nutrition/favorites", {
-      method: "POST",
-      body: JSON.stringify({ favorites }),
-    });
-  },
+    pushFavorites(favorites: RemoteFavoriteFood[]): Promise<void> {
+      return api.fetch("/sync/nutrition/favorites", {
+        method: "POST",
+        body: JSON.stringify({ favorites }),
+      });
+    },
 
-  pullFavorites(since: number): Promise<{ favorites: RemoteFavoriteFood[] }> {
-    return apiClient.fetch(`/sync/nutrition/favorites?since=${since}`);
-  },
+    pullFavorites(since: number): Promise<{ favorites: RemoteFavoriteFood[] }> {
+      return api.fetch(`/sync/nutrition/favorites?since=${since}`);
+    },
 
-  pushMealTemplates(templates: RemoteMealTemplate[]): Promise<void> {
-    return apiClient.fetch("/sync/nutrition/meal-templates", {
-      method: "POST",
-      body: JSON.stringify({ templates }),
-    });
-  },
+    pushMealTemplates(templates: RemoteMealTemplate[]): Promise<void> {
+      return api.fetch("/sync/nutrition/meal-templates", {
+        method: "POST",
+        body: JSON.stringify({ templates }),
+      });
+    },
 
-  pullMealTemplates(since: number): Promise<{ templates: RemoteMealTemplate[] }> {
-    return apiClient.fetch(`/sync/nutrition/meal-templates?since=${since}`);
-  },
+    pullMealTemplates(since: number): Promise<{ templates: RemoteMealTemplate[] }> {
+      return api.fetch(`/sync/nutrition/meal-templates?since=${since}`);
+    },
 
-  pushWeightEntries(entries: RemoteWeightEntry[]): Promise<void> {
-    return apiClient.fetch("/sync/nutrition/weight", {
-      method: "POST",
-      body: JSON.stringify({ entries }),
-    });
-  },
+    pushWeightEntries(entries: RemoteWeightEntry[]): Promise<void> {
+      return api.fetch("/sync/nutrition/weight", {
+        method: "POST",
+        body: JSON.stringify({ entries }),
+      });
+    },
 
-  pullWeightEntries(
-    since: number,
-    clientId?: string,
-  ): Promise<{ entries: RemoteWeightEntry[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/nutrition/weight?since=${since}${suffix}`);
-  },
+    pullWeightEntries(
+      since: number,
+      clientId?: string,
+    ): Promise<{ entries: RemoteWeightEntry[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/nutrition/weight?since=${since}${suffix}`);
+    },
 
-  pushNutritionGoal(goal: RemoteNutritionGoal): Promise<void> {
-    return apiClient.fetch("/sync/nutrition/goal", {
-      method: "POST",
-      body: JSON.stringify(goal),
-    });
-  },
+    pushNutritionGoal(goal: RemoteNutritionGoal): Promise<void> {
+      return api.fetch("/sync/nutrition/goal", {
+        method: "POST",
+        body: JSON.stringify(goal),
+      });
+    },
 
-  pullNutritionGoal(clientId?: string): Promise<{ goal: RemoteNutritionGoal | null }> {
-    const suffix = clientId ? `?clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/nutrition/goal${suffix}`);
-  },
+    pullNutritionGoal(clientId?: string): Promise<{ goal: RemoteNutritionGoal | null }> {
+      const suffix = clientId ? `?clientId=${clientId}` : "";
+      return api.fetch(`/sync/nutrition/goal${suffix}`);
+    },
 
-  // ── Habits ─────────────────────────────────────────────────────────────────
+    // ── Habits ─────────────────────────────────────────────────────────────────
 
-  pushHabits(habits: RemoteHabit[]): Promise<void> {
-    return apiClient.fetch("/sync/habits", {
-      method: "POST",
-      body: JSON.stringify({ habits }),
-    });
-  },
+    pushHabits(habits: RemoteHabit[]): Promise<void> {
+      return api.fetch("/sync/habits", {
+        method: "POST",
+        body: JSON.stringify({ habits }),
+      });
+    },
 
-  pullHabits(since: number, clientId?: string): Promise<{ habits: RemoteHabit[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/habits?since=${since}${suffix}`);
-  },
+    pullHabits(since: number, clientId?: string): Promise<{ habits: RemoteHabit[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/habits?since=${since}${suffix}`);
+    },
 
-  pushHabitEntries(entries: RemoteHabitEntry[]): Promise<void> {
-    return apiClient.fetch("/sync/habit-entries", {
-      method: "POST",
-      body: JSON.stringify({ entries }),
-    });
-  },
+    pushHabitEntries(entries: RemoteHabitEntry[]): Promise<void> {
+      return api.fetch("/sync/habit-entries", {
+        method: "POST",
+        body: JSON.stringify({ entries }),
+      });
+    },
 
-  pullHabitEntries(
-    since: number,
-    clientId?: string,
-  ): Promise<{ entries: RemoteHabitEntry[] }> {
-    const suffix = clientId ? `&clientId=${clientId}` : "";
-    return apiClient.fetch(`/sync/habit-entries?since=${since}${suffix}`);
-  },
-};
+    pullHabitEntries(
+      since: number,
+      clientId?: string,
+    ): Promise<{ entries: RemoteHabitEntry[] }> {
+      const suffix = clientId ? `&clientId=${clientId}` : "";
+      return api.fetch(`/sync/habit-entries?since=${since}${suffix}`);
+    },
+  };
+}
+
+export const syncApi = syncApiFor(apiClient);

@@ -18,7 +18,8 @@
     "./usecases/nutrition/*": "./src/usecases/nutrition/*.ts",
     "./usecases/*": "./src/usecases/*.ts",
     "./api/*": "./src/api/*.ts",
-    "./platform/*": "./src/platform/*.ts"
+    "./platform/*": "./src/platform/*.ts",
+    "./guide/*": "./src/guide/*.ts"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.1",

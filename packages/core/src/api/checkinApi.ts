@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient, type ApiFetcher } from "./client";
 
 /** Wire shape of a coach check-in schedule row — `dataJson` is a serialised
  * `CheckinSchedule` (domain/Checkin.ts), null on a tombstone. */
@@ -21,29 +21,34 @@ export interface UpsertCheckinScheduleInput {
   deletedAtMs?: number;
 }
 
-export const checkinApi = {
-  /** Coach: create/update a schedule. Studio-tier only (server-enforced). */
-  async upsert(input: UpsertCheckinScheduleInput): Promise<{ id: string; scheduleId: string; updatedAtMs: number }> {
-    return apiClient.fetch("/coach/checkins", { method: "POST", body: JSON.stringify(input) });
-  },
+/** The same calls as `checkinApi`, made with another identity (a sandbox sample client's token). */
+export function checkinApiFor(api: ApiFetcher) {
+  return {
+    /** Coach: create/update a schedule. Studio-tier only (server-enforced). */
+    async upsert(input: UpsertCheckinScheduleInput): Promise<{ id: string; scheduleId: string; updatedAtMs: number }> {
+      return api.fetch("/coach/checkins", { method: "POST", body: JSON.stringify(input) });
+    },
 
-  /** Coach: list own authored schedules. */
-  async listMine(opts?: { recipientId?: string; templates?: boolean }): Promise<RemoteMyCheckinSchedule[]> {
-    const params = new URLSearchParams();
-    if (opts?.recipientId) params.set("recipientId", opts.recipientId);
-    if (opts?.templates) params.set("templates", "true");
-    const qs = params.toString();
-    const { schedules } = await apiClient.fetch<{ schedules: RemoteMyCheckinSchedule[] }>(
-      `/coach/checkins${qs ? `?${qs}` : ""}`,
-    );
-    return schedules;
-  },
+    /** Coach: list own authored schedules. */
+    async listMine(opts?: { recipientId?: string; templates?: boolean }): Promise<RemoteMyCheckinSchedule[]> {
+      const params = new URLSearchParams();
+      if (opts?.recipientId) params.set("recipientId", opts.recipientId);
+      if (opts?.templates) params.set("templates", "true");
+      const qs = params.toString();
+      const { schedules } = await api.fetch<{ schedules: RemoteMyCheckinSchedule[] }>(
+        `/coach/checkins${qs ? `?${qs}` : ""}`,
+      );
+      return schedules;
+    },
 
-  /** Client: incremental pull of schedules assigned to the caller (read-only). */
-  async pullAssigned(since: number): Promise<RemoteCheckinSchedule[]> {
-    const { schedules } = await apiClient.fetch<{ schedules: RemoteCheckinSchedule[] }>(
-      `/coach/checkins/assigned?since=${since}`,
-    );
-    return schedules;
-  },
-};
+    /** Client: incremental pull of schedules assigned to the caller (read-only). */
+    async pullAssigned(since: number): Promise<RemoteCheckinSchedule[]> {
+      const { schedules } = await api.fetch<{ schedules: RemoteCheckinSchedule[] }>(
+        `/coach/checkins/assigned?since=${since}`,
+      );
+      return schedules;
+    },
+  };
+}
+
+export const checkinApi = checkinApiFor(apiClient);
