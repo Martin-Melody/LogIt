@@ -251,24 +251,49 @@ export async function getPluginManifest(
   return installed?.manifest ?? null;
 }
 
+/** A local change to the installed list, for syncing it (see pluginSync.ts). */
+export type InstalledPluginChange =
+  | { kind: "saved"; plugin: InstalledPlugin }
+  | { kind: "removed"; id: string; createdAtMs: number; updatedAtMs: number };
+
+let changeListener: ((change: InstalledPluginChange) => void) | null = null;
+
+/** pluginSync registers here so installs, removals and switches reach your other devices. */
+export function onInstalledPluginChange(listener: (change: InstalledPluginChange) => void): void {
+  changeListener = listener;
+}
+
+/** `fromSync`: the change came from another device, so it isn't pushed back. */
+export type InstallChangeOptions = {
+  fromSync?: boolean;
+  updatedAtMs?: number;
+  source?: InstalledPlugin["source"];
+};
+
 export async function installPlugin(
   manifest: PluginManifest,
   enabled = true,
+  opts: InstallChangeOptions = {},
 ): Promise<void> {
   validateInstallableManifest(manifest);
 
   const installed = loadInstalled();
+  const existing = installed.find((plugin) => plugin.manifest.id === manifest.id);
+  const now = Date.now();
   const next: InstalledPlugin = {
     manifest,
     enabled,
-    installedAtMs: Date.now(),
+    installedAtMs: existing?.installedAtMs ?? now,
+    updatedAtMs: opts.updatedAtMs ?? Math.max(now, (existing?.updatedAtMs ?? 0) + 1),
+    source: opts.source ?? existing?.source ?? "registry",
   };
   const filtered = installed.filter((plugin) => plugin.manifest.id !== manifest.id);
   saveInstalled([...filtered, next]);
   syncHomeWidgets(manifest, "add");
+  if (!opts.fromSync) changeListener?.({ kind: "saved", plugin: next });
 }
 
-export async function uninstallPlugin(id: string): Promise<void> {
+export async function uninstallPlugin(id: string, opts: InstallChangeOptions = {}): Promise<void> {
   const installed = loadInstalled();
   const next = installed.filter((plugin) => plugin.manifest.id !== id);
   const removed = installed.find((plugin) => plugin.manifest.id === id) ?? null;
@@ -282,16 +307,33 @@ export async function uninstallPlugin(id: string): Promise<void> {
     } else {
       removeStoredBundle(id);
     }
+    if (!opts.fromSync) {
+      changeListener?.({
+        kind: "removed",
+        id,
+        createdAtMs: removed.installedAtMs,
+        updatedAtMs: Math.max(Date.now(), (removed.updatedAtMs ?? 0) + 1),
+      });
+    }
   }
 }
 
 export async function setPluginEnabled(
   id: string,
   enabled: boolean,
+  opts: InstallChangeOptions = {},
 ): Promise<void> {
   const installed = loadInstalled();
-  const next = installed.map((plugin) =>
-    plugin.manifest.id === id ? { ...plugin, enabled } : plugin,
-  );
+  let changed: InstalledPlugin | null = null;
+  const next = installed.map((plugin) => {
+    if (plugin.manifest.id !== id) return plugin;
+    changed = {
+      ...plugin,
+      enabled,
+      updatedAtMs: opts.updatedAtMs ?? Math.max(Date.now(), (plugin.updatedAtMs ?? 0) + 1),
+    };
+    return changed;
+  });
   saveInstalled(next);
+  if (changed && !opts.fromSync) changeListener?.({ kind: "saved", plugin: changed });
 }

@@ -3,6 +3,7 @@ import type { RemoteSession, RemoteSplit, RemoteExercise, RemoteProfile } from "
 import { coachProgramApi, type UpsertCoachProgramInput } from "@logit/core/api/coachProgramApi";
 import { checkinApi, type UpsertCheckinScheduleInput } from "@logit/core/api/checkinApi";
 import { messagesApi, type SendMessageInput } from "@logit/core/api/messagesApi";
+import { pluginsApi, type RemotePluginInstall } from "@logit/core/api/pluginsApi";
 import type {
   RemoteCheckinSubmission,
   RemoteCustomFood,
@@ -44,7 +45,8 @@ type OutboxEntry =
   | { type: "weightEntry"; dto: RemoteWeightEntry }
   | { type: "nutritionGoal"; dto: RemoteNutritionGoal }
   | { type: "habit"; dto: RemoteHabit }
-  | { type: "habitEntry"; dto: RemoteHabitEntry };
+  | { type: "habitEntry"; dto: RemoteHabitEntry }
+  | { type: "pluginInstall"; dto: RemotePluginInstall };
 
 function key(): string {
   const k = syncStorageKey(LEGACY_KEY);
@@ -179,6 +181,9 @@ export async function flush(): Promise<void> {
   const habitEntries = entries
     .filter((e): e is Extract<OutboxEntry, { type: "habitEntry" }> => e.type === "habitEntry")
     .map((e) => e.dto);
+  const pluginInstalls = entries
+    .filter((e): e is Extract<OutboxEntry, { type: "pluginInstall" }> => e.type === "pluginInstall")
+    .map((e) => e.dto);
 
   const failed: OutboxEntry[] = [];
 
@@ -253,6 +258,10 @@ export async function flush(): Promise<void> {
   if (habitEntries.length) {
     try { await syncApi.pushHabitEntries(habitEntries); }
     catch { habitEntries.forEach((dto) => failed.push({ type: "habitEntry", dto })); }
+  }
+  if (pluginInstalls.length) {
+    try { await pluginsApi.pushInstalls(pluginInstalls); }
+    catch { pluginInstalls.forEach((dto) => failed.push({ type: "pluginInstall", dto })); }
   }
 
   // Drop what was sent: keep the failures (first, so they retry first) and anything queued

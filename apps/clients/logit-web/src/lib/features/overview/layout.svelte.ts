@@ -5,7 +5,10 @@
  */
 
 export type WidgetSize = "s" | "m" | "l" | "xl";
-export type WidgetId =
+/** A widget plugin installed on the account: "plugin:<manifest id>". */
+export type PluginWidgetId = `plugin:${string}`;
+export type WidgetId = BuiltinWidgetId | PluginWidgetId;
+export type BuiltinWidgetId =
   | "streak"
   | "sessions-week"
   | "volume-week"
@@ -40,13 +43,25 @@ function key(userId: string): string {
   return `logit-web:overview-layout:v1:${userId}`;
 }
 
+export const PLUGIN_SIZES: WidgetSize[] = ["s", "m", "l"];
+
+export function isPluginWidget(id: WidgetId): id is PluginWidgetId {
+  return id.startsWith("plugin:");
+}
+
 function read(userId: string): Slot[] {
   try {
     const raw = localStorage.getItem(key(userId));
     if (!raw) return DEFAULT_LAYOUT;
     const known = new Map(WIDGETS.map((w) => [w.id, w]));
-    const slots = (JSON.parse(raw) as Slot[]).filter((s) => known.has(s.id));
-    return slots.map((s) => ({ id: s.id, size: known.get(s.id)!.sizes.includes(s.size) ? s.size : known.get(s.id)!.defaultSize }));
+    // Plugin widgets stay in the layout even while the plugin is off or not synced yet;
+    // the page just doesn't show them until it's back.
+    const slots = (JSON.parse(raw) as Slot[]).filter((s) => known.has(s.id) || isPluginWidget(s.id));
+    return slots.map((s) => {
+      const def = known.get(s.id);
+      const sizes = def?.sizes ?? PLUGIN_SIZES;
+      return { id: s.id, size: sizes.includes(s.size) ? s.size : (def?.defaultSize ?? "m") };
+    });
   } catch {
     return DEFAULT_LAYOUT;
   }
@@ -54,6 +69,8 @@ function read(userId: string): Slot[] {
 
 export function createLayout(userId: string) {
   let slots = $state<Slot[]>(read(userId));
+  /** Widget plugins installed and switched on, which can go on the Overview. */
+  let extra = $state<WidgetDef[]>([]);
 
   function save() {
     try { localStorage.setItem(key(userId), JSON.stringify(slots)); } catch {}
@@ -61,7 +78,9 @@ export function createLayout(userId: string) {
 
   return {
     get slots() { return slots; },
-    get hidden() { return WIDGETS.filter((w) => !slots.some((s) => s.id === w.id)); },
+    get hidden() { return [...WIDGETS, ...extra].filter((w) => !slots.some((s) => s.id === w.id)); },
+    get extra() { return extra; },
+    setExtra(defs: WidgetDef[]) { extra = defs; },
     move(id: WidgetId, by: -1 | 1) {
       const i = slots.findIndex((s) => s.id === id);
       const j = i + by;
@@ -87,7 +106,7 @@ export function createLayout(userId: string) {
       save();
     },
     add(id: WidgetId) {
-      const def = WIDGETS.find((w) => w.id === id);
+      const def = [...WIDGETS, ...extra].find((w) => w.id === id);
       if (!def || slots.some((s) => s.id === id)) return;
       slots = [...slots, { id, size: def.defaultSize }];
       save();

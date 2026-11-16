@@ -32,3 +32,27 @@ describe("integrity", () => {
     expect(isIntegrityString(42)).toBe(false);
   });
 });
+
+describe("the fallback SHA-256 (no Web Crypto on plain http)", () => {
+  it("matches Web Crypto for empty, short, block-boundary and long input", async () => {
+    const { sha256 } = await import("./integrity");
+    for (const text of ["", "abc", "a".repeat(55), "a".repeat(56), "a".repeat(64), "é plugin ✓ ".repeat(500)]) {
+      const data = new TextEncoder().encode(text);
+      const expected = new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+      expect(Array.from(sha256(data))).toEqual(Array.from(expected));
+    }
+  });
+
+  it("is used when crypto.subtle is missing", async () => {
+    const { computeIntegrity } = await import("./integrity");
+    const real = await computeIntegrity("hello plugin");
+    const desc = Object.getOwnPropertyDescriptor(globalThis.crypto, "subtle") ?? Object.getOwnPropertyDescriptor(Object.getPrototypeOf(globalThis.crypto), "subtle")!;
+    Object.defineProperty(globalThis.crypto, "subtle", { value: undefined, configurable: true });
+    try {
+      expect(await computeIntegrity("hello plugin")).toBe(real);
+    } finally {
+      delete (globalThis.crypto as { subtle?: unknown }).subtle;
+      if (!globalThis.crypto.subtle) Object.defineProperty(globalThis.crypto, "subtle", desc);
+    }
+  });
+});

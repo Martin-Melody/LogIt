@@ -12,6 +12,7 @@ using Logit.Api.Features.Coach;
 using Logit.Api.Features.Diagnostics;
 using Logit.Api.Features.Discover;
 using Logit.Api.Features.Email;
+using Logit.Api.Features.Plugins;
 using Logit.Api.Features.Social;
 using Logit.Api.Features.Sync;
 using Logit.Api.Features.Users;
@@ -208,6 +209,7 @@ api.MapSyncEndpoints();
 api.MapBillingEndpoints();
 api.MapCoachEndpoints();
 api.MapDiagnosticsEndpoints();
+api.MapPluginEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

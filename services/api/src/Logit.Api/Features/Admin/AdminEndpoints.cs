@@ -50,6 +50,8 @@ public static class AdminEndpoints
         api.MapGet("/diagnostics", GetDiagnosticReports);
         api.MapGet("/diagnostics/{id:guid}", GetDiagnosticReport);
         api.MapDelete("/diagnostics/{id:guid}", DeleteDiagnosticReport);
+
+        Logit.Api.Features.Plugins.PluginEndpoints.MapPluginAdmin(api);
     }
 
     // ── Diagnostics reports (sent from the app's Settings → Diagnostics) ─────

@@ -28,6 +28,7 @@
     "/coaching/library": "Library",
     "/habits": "Habits & goals",
     "/social": "Social",
+    "/plugins": "Plugins",
     "/coaching": "Today",
     "/coaching/programs": "Programs",
     "/coaching/checkins": "Check-ins",

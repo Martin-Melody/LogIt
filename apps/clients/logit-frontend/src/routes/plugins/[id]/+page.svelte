@@ -2,7 +2,7 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
-  import { Send, ToggleLeft, Trash2 } from "lucide-svelte";
+  import { ToggleLeft, Trash2 } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -16,7 +16,9 @@
   } from "$lib/plugins";
   import { type InstalledPlugin, type PluginManifest } from "$lib/plugins";
   import type { ExercisePack } from "@logit/core/plugins/exercisePack";
-  import { enqueuePublish } from "$lib/plugins/publishQueue";
+  import { isCodeFamily, pluginCan, pluginGets } from "@logit/core/plugins/pluginInfo";
+  // Installs, switches and removals reach your other devices.
+  import "$lib/plugins/pluginSync";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
 
   const props = $props<{ params: { id: string } }>();
@@ -26,7 +28,6 @@
     loading: true,
     saving: false,
     removing: false,
-    queuing: false,
     error: null as string | null,
     success: null as string | null,
   });
@@ -34,21 +35,14 @@
   let manifest = $state<PluginManifest | null>(null);
   let installed = $state<InstalledPlugin | null>(null);
   let pack = $state<ExercisePack | null>(null);
-  let actorUrl = $state("");
 
   const isEnabled = $derived(installed?.enabled ?? false);
   const isBuiltin = $derived(manifest?.distribution.origin === "builtin");
 
-  const actorSourceUrl = $derived(
-    manifest
-      ? manifest.fediverse?.actorUrl ??
-        (manifest.distribution.origin === "activitypub" ? manifest.distribution.actorUrl : null)
-      : null,
-  );
-  const isShareable = $derived(actorSourceUrl !== null);
-
   const originLabel = $derived(
-    manifest?.distribution.origin === "builtin" ? "Built in"
+    installed?.source === "draft" ? "Your draft, from the web builder"
+    : installed?.source === "link" ? "Shared by link"
+    : manifest?.distribution.origin === "builtin" ? "Built in"
     : manifest?.distribution.origin === "manual" ? "Manual install"
     : manifest?.distribution.origin === "url" ? "URL install"
     : manifest?.distribution.origin === "activitypub" ? "Fediverse"
@@ -84,11 +78,6 @@
       installed = installedPlugin;
       pack =
         pluginManifest?.family === "exercise-pack" ? getStoredPack(pluginManifest.id) : null;
-      actorUrl =
-        pluginManifest?.fediverse?.actorUrl ??
-        (pluginManifest?.distribution.origin === "activitypub"
-          ? pluginManifest.distribution.actorUrl
-          : "") ?? "";
     } catch (error) {
       ui.error = error instanceof Error ? error.message : "Failed to load plugin";
       manifest = null;
@@ -123,22 +112,6 @@
       ui.error = error instanceof Error ? error.message : "Failed to remove plugin";
     } finally {
       ui.removing = false;
-    }
-  }
-
-  async function queuePublishPackage() {
-    if (!manifest || !actorUrl.trim() || ui.queuing) return;
-    ui.queuing = true;
-    ui.error = null;
-    ui.success = null;
-    try {
-      enqueuePublish({ actorUrl: actorUrl.trim(), manifest });
-      ui.success = "Added to publish queue.";
-      await goto("/plugins/publish");
-    } catch (error) {
-      ui.error = error instanceof Error ? error.message : "Failed to queue publish package";
-    } finally {
-      ui.queuing = false;
     }
   }
 
@@ -203,6 +176,27 @@
         </Card.Content>
       </Card.Root>
 
+      {#if !isBuiltin}
+        <Card.Root class="w-full">
+          <Card.Header>
+            <Card.Title>What it gets</Card.Title>
+          </Card.Header>
+          <Card.Content class="flex flex-col gap-2.5">
+            {#if isCodeFamily(manifest.family)}
+              {#each pluginGets(manifest.family, (manifest as PluginManifest & { needs?: string[] }).needs) as g (g.label)}
+                <div class="text-sm"><p class="font-medium">{g.label}</p><p class="text-xs text-muted-foreground">{g.detail}</p></div>
+              {/each}
+              <p class="text-xs text-muted-foreground">No internet, no storage, nothing else.</p>
+            {:else}
+              <p class="text-sm text-muted-foreground">Nothing: it's data and runs no code.</p>
+            {/if}
+            {#each pluginCan(manifest.family) as c (c)}
+              <p class="text-xs text-muted-foreground">Can: {c.charAt(0).toLowerCase() + c.slice(1)}</p>
+            {/each}
+          </Card.Content>
+        </Card.Root>
+      {/if}
+
       <!-- Actions — installed community plugins only -->
       {#if installed && !isBuiltin}
         <Card.Root class="w-full">
@@ -229,7 +223,7 @@
             </Button>
             <ConfirmDialog
               title="Remove this plugin?"
-              description="Removes the locally installed plugin. The original source is not affected."
+              description="Removes it from this phone, and from your other devices and the dashboard when they next sync."
               confirmLabel="Remove"
               cancelLabel="Cancel"
               saving={ui.removing}
@@ -300,44 +294,6 @@
         </Card.Root>
       {/if}
 
-      <!-- Publish — installed plugins only, for plugin authors -->
-      {#if installed && !isBuiltin}
-        <Card.Root class="w-full">
-          <Card.Header>
-            <Card.Title>Share to fediverse</Card.Title>
-            <Card.Description>
-              If you built this plugin, enter your actor URL to announce it to the fediverse through the publish queue.
-            </Card.Description>
-          </Card.Header>
-          <Card.Content class="flex flex-col gap-3">
-            <div class="flex flex-col gap-1">
-              <label class="text-xs text-muted-foreground" for="actor-url">Your actor URL</label>
-              <input
-                id="actor-url"
-                type="url"
-                class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                bind:value={actorUrl}
-                placeholder="https://mastodon.social/@you"
-              />
-            </div>
-            {#if !isShareable}
-              <p class="text-xs text-muted-foreground">
-                This plugin doesn't have actor metadata yet — enter your URL above to prepare a publish package.
-              </p>
-            {/if}
-            <Button
-              variant="outline"
-              size="sm"
-              class="self-start"
-              disabled={ui.queuing || !actorUrl.trim()}
-              onclick={() => void queuePublishPackage()}
-            >
-              <Send class="mr-1.5 h-3.5 w-3.5" />
-              Add to publish queue
-            </Button>
-          </Card.Content>
-        </Card.Root>
-      {/if}
     {/if}
   </div>
 </div>

@@ -1,6 +1,7 @@
 import { browser } from "$app/environment";
 import { writable } from "svelte/store";
 import type { PluginFamily } from "./types";
+import { pluginsApi } from "@logit/core/api/pluginsApi";
 
 export type RegistryEntry = {
   id: string;
@@ -11,6 +12,10 @@ export type RegistryEntry = {
   manifestUrl: string;
   tags?: string[];
   featured?: boolean;
+  /** LogIt's own registry adds these: what a widget asks for, its version, whether it was reviewed. */
+  needs?: string[] | null;
+  version?: string;
+  reviewed?: boolean;
   /** Filled in by the client — which registry this entry came from. */
   sourceUrl: string;
   sourceLabel: string;
@@ -38,14 +43,17 @@ const COMMUNITY_REGISTRY_URL = import.meta.env.DEV
 const BUNDLED_REGISTRY_URL = "/sample-plugins/registry.json";
 
 export function builtinRegistrySources(): RegistrySource[] {
-  // Bundled first: it's same-origin, always reachable, and its entries win the
-  // de-dupe. The remote community registry is a bonus that must never gate the UI.
+  // LogIt's reviewed registry on the server you sign in to (plugins people build on the
+  // dashboard) first, then the bundled examples (same-origin, always reachable), then the
+  // community registry, a bonus that must never gate the UI. Earlier sources win the de-dupe.
   const sources: RegistrySource[] = [
+    // The server address lives in localStorage, so not during the server render.
+    ...(browser ? [{ url: pluginsApi.registryUrl(), label: "LogIt", builtin: true }] : []),
     { url: BUNDLED_REGISTRY_URL, label: "Bundled examples", builtin: true },
   ];
   // In dev the community URL already points at the bundled file — don't list it twice.
   if (BUNDLED_REGISTRY_URL !== COMMUNITY_REGISTRY_URL) {
-    sources.push({ url: COMMUNITY_REGISTRY_URL, label: "Logit registry", builtin: true });
+    sources.push({ url: COMMUNITY_REGISTRY_URL, label: "Community", builtin: true });
   }
   return sources;
 }
