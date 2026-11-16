@@ -352,7 +352,10 @@ public static class SyncEndpoints
         // Plugin settings (the community plugins switch) the same way.
         var pluginSettings = MergeByTimestamp(stored?.PluginSettingsJson, dto.PluginSettingsJson, "updatedAtMs");
 
-        if (dto.UpdatedAtMs > user.ProfileUpdatedAtMs)
+        // The first profile is stored even when it's dated 0: the dashboard stores one like that
+        // for the plugins switch before any phone has synced, and a phone never takes a profile
+        // that isn't newer than its own.
+        if (dto.UpdatedAtMs > user.ProfileUpdatedAtMs || user.ProfileJson is null)
         {
             user.ProfileJson = JsonSerializer.Serialize(dto with { SplitRotationJson = rotations, GoalsJson = goals, PluginSettingsJson = pluginSettings });
             user.ProfileUpdatedAtMs = dto.UpdatedAtMs;

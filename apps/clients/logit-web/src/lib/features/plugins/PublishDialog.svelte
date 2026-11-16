@@ -179,7 +179,7 @@
       <Dialog.Footer class="items-center">
         <span class="mr-auto text-xs text-muted-foreground">{who === "files" ? "Nothing is sent anywhere." : "Published versions can't be changed, only replaced by a newer one."}</span>
         <button type="button" onclick={() => (open = false)} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px]">Cancel</button>
-        <button type="button" disabled={busy || !version.trim()} onclick={submit} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">
+        <button type="button" disabled={busy || !version.trim()} onclick={submit} class="h-[34px] rounded-[9px] bg-primary px-3 whitespace-nowrap text-[13px] font-semibold text-primary-foreground disabled:opacity-50">
           {who === "listed" ? "Send for review" : who === "link" ? "Publish and get the link" : "Download"}
         </button>
       </Dialog.Footer>

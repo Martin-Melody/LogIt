@@ -1,5 +1,6 @@
 import { pluginsApi, type HostedRegistryEntry, type ServedManifest } from "@logit/core/api/pluginsApi";
 import { syncApi } from "@logit/core/api/syncApi";
+import { apiClient } from "@logit/core/api/client";
 import {
   installRow,
   parseInstallRow,
@@ -108,8 +109,33 @@ class PluginState {
   /** The community plugins switch, for your whole account. */
   async setCommunity(enabled: boolean): Promise<void> {
     const setting = { enabled, acknowledgedRisk: enabled || this.community?.acknowledgedRisk === true, updatedAtMs: Date.now() };
-    // Merged per key on the server, so the rest of the profile isn't touched (no bump).
-    await updateOwnProfile(() => ({ pluginSettingsJson: writeCommunitySetting(setting) }), { bump: false });
+    const json = writeCommunitySetting(setting);
+    const { profile } = await syncApi.pullProfile();
+    if (profile && profile.updatedAtMs > 0) {
+      // Merged per key on the server, so the rest of the profile isn't touched (no bump).
+      await updateOwnProfile(() => ({ pluginSettingsJson: json }), { bump: false });
+    } else {
+      // No profile from a phone yet. Store one dated 0, so a phone never takes its (empty)
+      // fields: its own profile wins the moment it syncs. The switch merges on its own time.
+      const user = apiClient.getUser();
+      await syncApi.pushProfile({
+        displayName: user?.displayName ?? user?.username ?? "",
+        bio: "",
+        avatarDataUrl: null,
+        progressPhotoDataUrl: null,
+        height: null,
+        heightUnit: "cm",
+        weight: null,
+        weightUnit: "kg",
+        blocksCollapsedByDefault: false,
+        restDefaultsJson: "{}",
+        navConfigJson: null,
+        homeConfigJson: null,
+        activeSplitId: null,
+        updatedAtMs: 0,
+        pluginSettingsJson: json,
+      });
+    }
     this.community = setting;
   }
 }
