@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
@@ -233,7 +234,7 @@
   <header class="flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-[26px] font-bold tracking-tight">Habits &amp; goals</h1>
     <div class="flex gap-2">
-      <Button variant="outline" disabled={!index} onclick={() => { editingGoal = null; goalDialog = true; }}>+ New goal</Button>
+      <Button variant="outline" data-guide="habits-new-goal" disabled={!index} onclick={() => { editingGoal = null; goalDialog = true; }}>+ New goal</Button>
       <Button variant="outline" onclick={() => { editingHabit = null; habitDialog = true; }}>+ New habit</Button>
     </div>
   </header>
@@ -248,7 +249,7 @@
     <Skeleton class="h-64" />
   {:else}
     <div class="flex flex-wrap gap-4">
-      <section class="flex flex-[1_1_340px] flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border bg-card px-[18px] py-4">
+      <section data-guide="habits-week" class="flex flex-[1_1_340px] flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border bg-card px-[18px] py-4">
         <div class="flex flex-col gap-1">
           <h2 class="text-sm font-semibold">Workouts a week</h2>
           <p class="text-xs leading-relaxed text-muted-foreground">
@@ -290,7 +291,7 @@
     </div>
 
     <!-- Goals -->
-    <section class="flex flex-col gap-3.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
+    <section data-guide="habits-goals" class="flex flex-col gap-3.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
       <h2 class="text-sm font-semibold">Goals</h2>
       {#if views.length === 0}
         <p class="text-[13px] text-muted-foreground">No goals yet. A lift, a rep count or a number of workouts: <button type="button" class="text-primary hover:underline" onclick={() => { editingGoal = null; goalDialog = true; }}>set one</button>.</p>
@@ -341,7 +342,7 @@
     </section>
 
     <!-- Habits -->
-    <section class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-2 pt-4 pb-2">
+    <section data-guide="habits-list" class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-2 pt-4 pb-2">
       <div class="flex flex-wrap items-baseline justify-between gap-2 px-2.5">
         <h2 class="text-sm font-semibold">Habits</h2>
         <span class="text-xs text-muted-foreground">You tick them on your phone. Click a past day here to fix it.</span>
@@ -436,6 +437,6 @@
 </div>
 
 {#if index}
-  <GoalDialog bind:open={goalDialog} goal={editingGoal} {index} {sessions} {unit} onSaved={() => void loadGoals()} />
+  <GoalDialog bind:open={goalDialog} goal={editingGoal} {index} {sessions} {unit} onSaved={() => { void loadGoals(); guideSignal("goal.saved"); }} />
 {/if}
 <HabitDialog bind:open={habitDialog} habit={editingHabit} onSaved={() => void reloadHabits()} />

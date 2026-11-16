@@ -14,6 +14,13 @@
   import { isCoachingPath } from "$lib/workspace";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import { socialBadge } from "$lib/features/social/socialData.svelte";
+  import GuideLayer from "$lib/features/guide/GuideLayer.svelte";
+  import GuidePanel from "$lib/features/guide/GuidePanel.svelte";
+  import StudioModeDialog from "$lib/features/guide/StudioModeDialog.svelte";
+  import StudioFinishDialog from "$lib/features/guide/StudioFinishDialog.svelte";
+  import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
+  import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
+  import { sandbox } from "$lib/features/guide/sandbox.svelte";
 
   let { children } = $props();
 
@@ -118,8 +125,16 @@
     if (ready) void guardRoute();
     if (ready && apiClient.isAuthenticated() && !isBlockedFreeTier) {
       void coachBadges.refresh(isStudio);
+      // Once per signed-in account (load() ignores repeat calls for the same account).
+      void guide.load();
+      if ((isStudio || apiClient.isSelfHosted()) && !sandbox.loaded) void sandbox.refresh();
       void socialBadge.refresh();
     }
+  });
+
+  const walkthroughs = $derived.by(() => {
+    void page.url.pathname;
+    return walkthroughsFor(apiClient.getUser()?.tier, apiClient.isSelfHosted());
   });
 
   function logout() {
@@ -160,6 +175,7 @@
         <Sidebar.Trigger class="-ml-1" />
         <span class="text-sm font-medium">{pageTitle}</span>
       </header>
+      {#if isCoachingPath(page.url.pathname, page.url.searchParams)}<SandboxBanner />{/if}
       {#if viewingClient.current && !isCoachingPath(page.url.pathname, page.url.searchParams)}
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-primary px-4 py-2 text-sm text-primary-foreground sm:px-8">
           <span>Viewing <strong>{viewingClient.current.client.displayName || viewingClient.current.client.username}</strong>'s training</span>
@@ -173,4 +189,8 @@
       </main>
     </Sidebar.Inset>
   </Sidebar.Provider>
+  <GuidePanel {walkthroughs} />
+  <GuideLayer />
+  <StudioModeDialog />
+  <StudioFinishDialog />
 {/if}

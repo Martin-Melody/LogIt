@@ -100,7 +100,7 @@
       <Skeleton class="h-96" />
     </div>
   {:else if stories.length === 0}
-    <Card.Root>
+    <Card.Root data-guide="progress-lifts" data-guide-empty>
       <Card.Header>
         <Card.Title>No progress data yet</Card.Title>
         <Card.Description>
@@ -112,7 +112,7 @@
     <div in:fade={{ duration: 160 }}>
     <div class="flex flex-col gap-3">
         <div class="flex flex-wrap items-start gap-4">
-          <Card.Root class="min-w-0 flex-[1_1_380px] gap-0 p-0">
+          <Card.Root class="min-w-0 flex-[1_1_380px] gap-0 p-0" data-guide="progress-lifts">
             <div class="flex items-center justify-between px-3 pt-3">
               <p class="text-xs text-muted-foreground">
                 {#if compareMode}Select up to {MAX_COMPARE} to compare{:else}&nbsp;{/if}
@@ -166,7 +166,7 @@
             </div>
           </Card.Root>
 
-          <Card.Root class="min-w-0 flex-[999_1_520px]">
+          <Card.Root class="min-w-0 flex-[999_1_520px]" data-guide="progress-chart">
             {#if compareMode}
               <div in:reveal>
                 <Card.Header class="pb-2">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -41,6 +42,7 @@
     try {
       const s = createCheckinSchedule("Weekly check-in");
       await getWebCheckinRepo().saveSchedule(s, username);
+      guideSignal("checkin-form.added");
       await goto(`/clients/${clientId}/checkins/${s.id}?u=${username}`);
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't create the form";
@@ -71,7 +73,7 @@
       {/if}
     </section>
 
-    <section class="flex flex-[1_1_300px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
+    <section data-guide="client-forms" class="flex flex-[1_1_300px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
       <div class="flex items-baseline justify-between pb-1.5">
         <h2 class="text-sm font-semibold">Forms</h2>
         <button type="button" disabled={creating} onclick={newForm} class="h-[30px] rounded-lg border border-border px-2.5 text-xs font-medium hover:bg-muted disabled:opacity-50">Add form</button>

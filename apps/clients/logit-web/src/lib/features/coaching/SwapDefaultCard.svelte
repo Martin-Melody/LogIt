@@ -35,7 +35,7 @@
   const nameOf = (c: ClientRelationship) => c.client.displayName || c.client.username;
 </script>
 
-<section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4">
+<section data-guide="swap-default" class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4">
   <div class="flex flex-wrap items-baseline justify-between gap-2">
     <div>
       <h2 class="text-sm font-semibold">Exercise swaps</h2>

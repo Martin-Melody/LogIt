@@ -7,6 +7,8 @@ export interface CoachClientUser {
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  /** A sample client in your sandbox (only ever seen by its own coach). */
+  isSample?: boolean;
 }
 
 /** What a client lets one coach read. The server enforces it on every coach read; a

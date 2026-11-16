@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
+  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
+  import SandboxCard from "$lib/features/guide/SandboxCard.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { apiClient, ApiError } from "@logit/core/api/client";
@@ -43,6 +47,13 @@
     if (apiClient.getUser()?.tier !== "Studio") void goto("/my-coach", { replaceState: true });
     else void load();
   });
+  onMount(() => onSampleActivity(() => void load()));
+
+  let show = $state<"all" | "real" | "sample">("all");
+  const shownClients = $derived(
+    (overview?.clients ?? []).filter((c) => show === "all" || (show === "sample") === c.isSample),
+  );
+  const sampleCount = $derived((overview?.clients ?? []).filter((c) => c.isSample).length);
 
   async function invite(e: Event) {
     e.preventDefault();
@@ -147,7 +158,18 @@
       </section>
     {/if}
 
-    <section class="rounded-[10px] border border-border bg-card px-1.5 py-2">
+    <div id="sandbox" class="scroll-mt-16"><SandboxCard /></div>
+
+    {#if sampleCount > 0}
+      <div role="group" aria-label="Show" class="flex w-fit gap-[3px] rounded-[9px] bg-muted p-[3px]">
+        {#each [["all", `All ${overview.clients.length}`], ["real", `Real ${overview.clients.length - sampleCount}`], ["sample", `Sample ${sampleCount}`]] as [k, label] (k)}
+          <button type="button" aria-pressed={show === k} onclick={() => (show = k as typeof show)}
+            class="h-7 rounded-[7px] px-3 text-xs {show === k ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}">{label}</button>
+        {/each}
+      </div>
+    {/if}
+
+    <section data-guide="clients-list" class="rounded-[10px] border border-border bg-card px-1.5 py-2">
       <div class="overflow-x-auto">
         <table class="w-full min-w-[760px] border-collapse text-[13px]">
           <thead>
@@ -161,13 +183,13 @@
             </tr>
           </thead>
           <tbody>
-            {#each overview.clients as c (c.relationshipId)}
+            {#each shownClients as c (c.relationshipId)}
               {@const ck = checkinCell(c)}
               <tr class="border-t border-border align-middle">
                 <td class="px-3 py-3">
-                  <a href="/clients/{c.id}" class="flex items-center gap-2.5">
+                  <a href="/clients/{c.id}" class="flex items-center gap-2.5" onclick={() => guideSignal("client.opened")}>
                     <Avatar name={c.name} url={c.avatarUrl} size={30} />
-                    <span><span class="block font-medium">{c.name}</span><span class="text-xs text-muted-foreground">@{c.username}</span></span>
+                    <span><span class="block font-medium">{c.name}{#if c.isSample}<SampleBadge />{/if}</span><span class="text-xs text-muted-foreground">{c.isSample ? "Sample client" : `@${c.username}`}</span></span>
                   </a>
                 </td>
                 {#if c.sharing.workouts}

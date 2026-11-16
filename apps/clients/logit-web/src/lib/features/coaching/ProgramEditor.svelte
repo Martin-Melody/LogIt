@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { beforeNavigate } from "$app/navigation";
   import * as P from "@logit/core/domain/CoachProgram";
@@ -182,6 +183,7 @@
     try {
       const next = P.touchCoachProgram($state.snapshot(draft) as CoachProgram);
       await onSave(next, tick);
+      guideSignal("program.saved");
       draft = next;
       saved = JSON.stringify(next);
       tick = [];
@@ -205,7 +207,7 @@
   const input = "h-8 rounded-[7px] border border-input bg-background px-2 text-[13px]";
 </script>
 
-<div class="flex flex-col gap-3.5">
+<div class="flex flex-col gap-3.5" data-guide="program-editor">
   <div class="flex flex-wrap items-end gap-3">
     <label class="flex flex-[2_1_220px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Name
       <input value={draft.name} oninput={(e) => (draft.name = e.currentTarget.value)} class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[15px] font-semibold text-foreground" />
@@ -400,7 +402,7 @@
       </div>
       <span class="flex gap-2">
         <button type="button" disabled={saving} onclick={discard} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted">Discard</button>
-        <button type="button" disabled={saving || !dirty} onclick={save} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
+        <button type="button" data-guide="program-save" disabled={saving || !dirty} onclick={save} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
       </span>
     </div>
     {#if mode === "library" && copies.length}<p class="-mt-1 text-xs text-muted-foreground">Updating a copy keeps that client's start date and the week they're on. Unticked copies stay as they are.</p>{/if}

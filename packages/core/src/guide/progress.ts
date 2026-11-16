@@ -58,3 +58,12 @@ export function markUndone(p: GuideProgress, chapterId: string): GuideProgress {
   delete done[chapterId];
   return { ...p, done };
 }
+
+/** Does a SvelteKit route id ("/clients/[id]") match a path ("/clients/abc")? */
+export function routeMatches(routeId: string, pathname: string): boolean {
+  const pattern = routeId
+    .split("/")
+    .map((seg) => (/^\[.+\]$/.test(seg) ? "[^/]+" : seg.replace(/[.*+?^${}()|\\]/g, "\\$&")))
+    .join("/");
+  return new RegExp(`^${pattern}/?$`).test(pathname);
+}

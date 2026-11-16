@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
+  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { onDestroy, tick } from "svelte";
   import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
   import { createId } from "@logit/core/domain/ids";
@@ -70,6 +72,9 @@
     }
   });
   poll = setInterval(() => void refresh(false), 12_000);
+  // A sandbox sample client's reply shows straight away rather than at the next poll.
+  const stopSampleWatch = onSampleActivity(() => void refresh(true));
+  onDestroy(stopSampleWatch);
   onDestroy(() => clearInterval(poll));
 
   async function send() {
@@ -80,6 +85,7 @@
       const at = Date.now();
       await messagesApi.send({ relationshipId, messageId: createId("msg"), body, createdAtMs: at });
       draft = "";
+      guideSignal("message.sent");
       onSent?.(body, at);
       await refresh(true);
     } catch (e) {
@@ -132,7 +138,7 @@
     {/each}
   </div>
   {#if error}<p class="pt-1 text-xs text-destructive">{error}</p>{/if}
-  <form class="flex flex-col gap-1.5 border-t border-border pt-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
+  <form data-guide="message-compose" class="flex flex-col gap-1.5 border-t border-border pt-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
     <div class="flex items-end gap-2">
       <label for="compose-{relationshipId}" class="sr-only">Message {otherName}</label>
       <textarea id="compose-{relationshipId}" bind:value={draft} onkeydown={onKey} rows={compact ? 1 : 2} placeholder="Message {otherName}"
