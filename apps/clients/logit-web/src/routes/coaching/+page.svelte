@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { apiClient } from "@logit/core/api/client";
+  import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -28,6 +31,7 @@
     }
   }
   onMount(load);
+  onMount(() => onSampleActivity(() => void load()));
 
   const items = $derived(overview ? needsYou(overview) : []);
   const stats = $derived.by(() => {
@@ -91,6 +95,8 @@
     <h1 class="text-[26px] font-bold tracking-tight">Today</h1>
   </header>
 
+  <WelcomeCard walkthrough="studio" name={(apiClient.getUser()?.displayName || apiClient.getUser()?.username || "").split(" ")[0]} />
+
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
   {:else if !overview || !stats}
@@ -119,7 +125,7 @@
     </div>
 
     <div class="flex flex-wrap items-start gap-4">
-      <section class="flex min-w-0 flex-[2_1_520px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
+      <section data-guide="today-needs-you" class="flex min-w-0 flex-[2_1_520px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
         <div class="flex items-baseline justify-between pb-1">
           <h2 class="text-sm font-semibold">Needs you</h2>
           <span class="text-xs text-muted-foreground">Newest first</span>
@@ -153,7 +159,7 @@
         {/each}
       </section>
 
-      <section class="flex min-w-0 flex-[1_1_300px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
+      <section data-guide="today-week" class="flex min-w-0 flex-[1_1_300px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
         <div class="flex items-baseline justify-between pb-1">
           <h2 class="text-sm font-semibold">This week</h2>
           <span class="text-xs text-muted-foreground">Last 7 days</span>

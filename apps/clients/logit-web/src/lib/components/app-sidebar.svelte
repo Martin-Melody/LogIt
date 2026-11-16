@@ -24,6 +24,11 @@
   import SunIcon from "@lucide/svelte/icons/sun";
   import MoonIcon from "@lucide/svelte/icons/moon";
   import MonitorIcon from "@lucide/svelte/icons/monitor";
+  import CompassIcon from "@lucide/svelte/icons/compass";
+  import BookOpenIcon from "@lucide/svelte/icons/book-open";
+  import { guide, walkthroughsFor, chaptersOf } from "$lib/features/guide/guide.svelte";
+  import { docsUrl } from "$lib/features/guide/docs";
+  import { apiClient } from "@logit/core/api/client";
   import { resetMode, setMode } from "mode-watcher";
   import Logo from "@logit/ui/Logo.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
@@ -42,6 +47,14 @@
   }: { isStudio?: boolean; userName: string; tier: string; onLogout: () => void } = $props();
 
   const sidebar = useSidebar();
+
+  // "3 of 8" on the Guide button: chapters done across this plan's walkthroughs.
+  const guideCount = $derived.by(() => {
+    const ws = walkthroughsFor(tier, apiClient.isSelfHosted());
+    const total = ws.reduce((n, w) => n + chaptersOf(w).length, 0);
+    const done = ws.reduce((n, w) => n + guide.doneCount(w), 0);
+    return total > 0 && done < total ? `${done} of ${total}` : null;
+  });
 
   type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon; badge?: () => number };
   type NavGroup = { label: string | null; items: NavItem[] };
@@ -205,6 +218,29 @@
 
   <Sidebar.Footer>
     <Sidebar.Menu>
+      <Sidebar.MenuItem>
+        <Sidebar.MenuButton tooltipContent="Guide" onclick={() => { guide.panelOpen = true; onNavClick(); }}>
+          {#snippet child({ props })}
+            <button type="button" data-guide="sidebar-guide" {...props}>
+              <CompassIcon />
+              <span>Guide</span>
+              {#if guideCount}
+                <span class="ml-auto rounded-full bg-primary px-[7px] py-px text-[11px] font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">{guideCount}</span>
+              {/if}
+            </button>
+          {/snippet}
+        </Sidebar.MenuButton>
+      </Sidebar.MenuItem>
+      <Sidebar.MenuItem>
+        <Sidebar.MenuButton tooltipContent="Help and docs">
+          {#snippet child({ props })}
+            <a href={docsUrl()} target="_blank" rel="noopener" {...props}>
+              <BookOpenIcon />
+              <span>Help and docs</span>
+            </a>
+          {/snippet}
+        </Sidebar.MenuButton>
+      </Sidebar.MenuItem>
       <Sidebar.MenuItem>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger>

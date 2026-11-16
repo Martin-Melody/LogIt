@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { beforeNavigate, goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -117,6 +118,7 @@
       draft = structuredClone(saved);
       base = saved;
       conflict = null;
+      guideSignal("plan.saved");
     } catch (e) {
       if (e instanceof SplitConflictError) conflict = { latest: e.latest };
       else saveError = e instanceof Error ? e.message : "Couldn't save.";
@@ -193,7 +195,7 @@
     <div class="flex flex-wrap gap-4"><Skeleton class="h-72 flex-[1_1_220px]" /><Skeleton class="h-[32rem] flex-[999_1_640px]" /></div>
   {:else}
     <div class="flex flex-wrap items-start gap-4">
-      <nav aria-label="Your splits" class="flex max-w-full flex-[1_1_220px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-2">
+      <nav aria-label="Your splits" data-guide="plan-splits" class="flex max-w-full flex-[1_1_220px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-2">
         <p class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your splits</p>
         {#if draft && base == null}
           <span class="flex flex-col gap-0.5 rounded-lg bg-muted px-3 py-2.5 ring-1 ring-border">
@@ -231,7 +233,7 @@
         </p>
       </nav>
 
-      <section class="flex min-w-0 flex-[999_1_640px] flex-col gap-4 rounded-[10px] border border-border bg-card px-[22px] py-5">
+      <section data-guide="plan-editor" data-guide-empty={draft ? undefined : ""} class="flex min-w-0 flex-[999_1_640px] flex-col gap-4 rounded-[10px] border border-border bg-card px-[22px] py-5">
         {#if draft}
           <div class="flex flex-wrap items-center justify-end gap-2">
             {#if draft.archived}
@@ -257,7 +259,7 @@
   {/if}
 
   {#if draft && (dirty || saveError)}
-    <div role="region" aria-label="Unsaved changes"
+    <div role="region" aria-label="Unsaved changes" data-guide="plan-save"
       class="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-popover px-4 py-3 shadow-lg">
       <span class="text-[13px]">
         {#if saveError}<span class="text-destructive">{saveError}</span>

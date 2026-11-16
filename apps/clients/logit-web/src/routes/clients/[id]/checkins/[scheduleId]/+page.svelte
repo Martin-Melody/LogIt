@@ -95,7 +95,7 @@
   });
 </script>
 
-<div class="flex flex-col gap-4 max-w-3xl">
+<div class="flex flex-col gap-4 max-w-3xl" data-guide="checkin-form-editor">
   <div class="flex items-center justify-between">
     <a href="/clients/{clientId}?u={username}" class="text-xs text-muted-foreground hover:text-foreground">&larr; @{username}</a>
     {#if schedule}

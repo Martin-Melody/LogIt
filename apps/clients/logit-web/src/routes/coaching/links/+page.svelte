@@ -1,4 +1,7 @@
 <script lang="ts">
+  import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
+  import { guideSignal } from "$lib/features/guide/signal";
+  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
@@ -50,6 +53,7 @@
     }
   }
   onMount(load);
+  onMount(() => onSampleActivity(() => void load()));
 
   const url = (code: string) => `${location.origin}/c/${code}`;
 
@@ -70,6 +74,7 @@
         packageId: packageId || null,
       });
       links = [link, ...links];
+      guideSignal("link.created");
       name = "";
       maxUses = "";
       expires = "";
@@ -108,6 +113,7 @@
     try {
       if (accept) await coachApi.acceptRequest(r.relationshipId);
       else await coachApi.declineRequest(r.relationshipId);
+      if (accept) guideSignal("request.accepted");
       toast.success(accept ? `${r.client.displayName || r.client.username} is now your client` : "Request declined");
       await load();
       void coachBadges.refresh(true, true);
@@ -156,14 +162,14 @@
     <div class="flex flex-wrap items-start gap-4">
       <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
         {#if requests.length}
-          <section class="flex flex-col gap-2.5 rounded-[10px] border border-warning/30 bg-card px-[18px] py-4">
+          <section data-guide="links-requests" class="flex flex-col gap-2.5 rounded-[10px] border border-warning/30 bg-card px-[18px] py-4">
             <div class="flex items-baseline justify-between"><h2 class="text-sm font-semibold">Requests waiting</h2><span class="text-xs text-muted-foreground">{requests.length}</span></div>
             {#each requests as r (r.relationshipId)}
               {@const who = r.client.displayName || r.client.username}
               <div class="flex flex-wrap items-center gap-3 rounded-lg bg-muted px-3 py-2.5">
                 <Avatar name={who} url={r.client.avatarUrl} />
                 <span class="flex min-w-0 flex-[1_1_220px] flex-col gap-0.5">
-                  <span class="text-[13px] font-medium">{who} · @{r.client.username}</span>
+                  <span class="text-[13px] font-medium">{#if r.client.isSample}{who}<SampleBadge />{:else}{who} · @{r.client.username}{/if}</span>
                   <span class="text-xs text-muted-foreground">Via {r.linkName ? `"${r.linkName}"` : "a link"} · {ago(Date.parse(r.requestedAt))} · {shares(r)}</span>
                 </span>
                 <span class="flex gap-2">
@@ -175,7 +181,7 @@
           </section>
         {/if}
 
-        <section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4">
+        <section data-guide="links-new" class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4">
           <h2 class="text-sm font-semibold">New link</h2>
           <form class="flex flex-wrap items-end gap-3" onsubmit={create}>
             <label class="flex flex-[2_1_200px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Name (only you see it)
@@ -207,7 +213,7 @@
           {/if}
         </section>
 
-        <section class="rounded-[10px] border border-border bg-card px-1.5 py-2">
+        <section data-guide="links-table" class="rounded-[10px] border border-border bg-card px-1.5 py-2">
           <div class="overflow-x-auto">
             <table class="w-full min-w-[760px] border-collapse text-[13px]">
               <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Name</th><th class="px-3 py-2 font-medium">Link</th><th class="px-3 py-2 font-medium">People</th><th class="px-3 py-2 font-medium">They pay for</th><th class="px-3 py-2 font-medium">Stops</th><th></th></tr></thead>

@@ -148,7 +148,7 @@
   <div class="flex min-w-0 flex-[999_1_520px] flex-col gap-3.5">
     <header class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-[26px] font-bold tracking-tight">Social</h1>
-      <div role="tablist" aria-label="Feed" class="flex gap-1 rounded-[10px] border border-border bg-card p-1">
+      <div role="tablist" aria-label="Feed" data-guide="social-tabs" class="flex gap-1 rounded-[10px] border border-border bg-card p-1">
         {#each [["following", "Following"], ["discover", "Discover"], ["notifications", socialBadge.count ? `Notifications · ${socialBadge.count}` : "Notifications"]] as [t, label] (t)}
           <button type="button" role="tab" aria-selected={tab === t} onclick={() => go(t as Tab)}
             class="h-8 rounded-lg px-3 text-[13px] {tab === t ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">{label}</button>

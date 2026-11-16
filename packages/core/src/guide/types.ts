@@ -59,6 +59,9 @@ export type Step = {
   kind: StepKind;
   /** For "do" steps: the name the app passes to guideSignal() when you've done it. */
   signal?: string;
+  /** For a step whose target appears later (a sample client's request, a check-in arriving):
+   * shown while waiting for it, instead of "not showing right now". */
+  arrives?: string;
   /** Shown instead of `body` when the page has nothing to show yet (no synced data). */
   empty?: string;
   /** Leave this step out of the docs how-to (e.g. "here's the sidebar"). */
