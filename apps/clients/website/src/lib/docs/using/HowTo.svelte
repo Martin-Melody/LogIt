@@ -2,15 +2,17 @@
      screenshot of that step when the docs deploy took one (static/docs/shots, made by playing
      the walkthroughs: see .github/workflows/deploy-web.yml). -->
 <script lang="ts">
-  import { chapter, docsSteps } from "./guide";
+  import { chapter, chapterApp, docsSteps } from "./guide";
   let { id }: { id: string } = $props();
   const c = $derived(chapter(id));
-  const steps = $derived(docsSteps(c));
+  const app = $derived(chapterApp(c));
+  const steps = $derived(docsSteps(c, app));
 
   const shots = new Set(
     Object.keys(import.meta.glob("/static/docs/shots/*.jpg")).map((p) => p.replace("/static", "")),
   );
   const shotOf = (stepId: string) => {
+    if (app === "phone") return null; // phone tours have no screenshots yet
     const path = `/docs/shots/${c.id}--${stepId}.jpg`;
     return shots.has(path) ? path : null;
   };

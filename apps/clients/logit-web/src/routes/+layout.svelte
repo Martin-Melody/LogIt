@@ -88,8 +88,10 @@
 
   async function guardRoute() {
     if (!apiClient.isAuthenticated()) {
-      if (isInviteLink) await goto(`/login?next=${encodeURIComponent(page.url.pathname)}`);
-      else if (!isLogin) await goto("/login");
+      // Come back to where you were going after signing in: an invite link, or a docs page's
+      // "Show me in the app" (/?guide=<chapter>), or any other page.
+      const here = page.url.pathname + page.url.search;
+      if (!isLogin) await goto(here === "/" ? "/login" : `/login?next=${encodeURIComponent(here)}`);
       return;
     }
     if (isBlockedFreeTier) {

@@ -93,11 +93,72 @@ describe("docs pages", () => {
     expect(missing).toEqual([]);
   });
 
-  it("publish every walkthrough chapter's steps as a how-to on its feature's page", () => {
-    const missing = CHAPTERS.filter((c) => c.steps.some((s) => s.on === "web" && !s.notInDocs))
+  it("publish every walkthrough chapter and phone tour as a how-to on its feature's page", () => {
+    const missing = CHAPTERS.filter((c) => c.steps.some((s) => !s.notInDocs))
       .filter((c) => !pageSource(featureById(c.feature)!.docs).includes(`<HowTo id="${c.id}"`))
       .map((c) => `${featureById(c.feature)!.docs}: add <HowTo id="${c.id}" />`);
     expect(missing).toEqual([]);
+  });
+});
+
+describe("words the docs and walkthroughs use", () => {
+  const docsFiles = walk(join(DOCS_ROUTES, "(docs)", "docs")).filter((f) => f.endsWith(".svx") && !f.includes(`${sep}plugins${sep}`))
+    .concat(join(DOCS_ROUTES, "(docs)", "docs", "+page.svx"));
+  const docsPages = new Set(routeIds(DOCS_ROUTES, /\+page\.(svx|svelte)$/));
+  const slug = (t: string) => t.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
+
+  it("link only to docs pages and sections that exist", () => {
+    const broken: string[] = [];
+    for (const file of [...new Set(docsFiles)]) {
+      const src = readFileSync(file, "utf8");
+      for (const m of src.matchAll(/\]\((\/[^)\s]*)\)|href="(\/[^"]*)"/g)) {
+        const [path, hash] = (m[1] ?? m[2]).split("#");
+        if (path.startsWith("/docs/shots")) continue;
+        if (!docsPages.has(path.replace(/\/$/, "") || "/")) { broken.push(`${relative(ROOT, file)}: ${m[1] ?? m[2]}`); continue; }
+        if (hash) {
+          const target = join(DOCS_ROUTES, "(docs)", path, "+page.svx");
+          const headings = existsSync(target) ? [...readFileSync(target, "utf8").matchAll(/^#{2,4} (.+)$/gm)].map((h) => slug(h[1])) : [];
+          if (!headings.includes(hash)) broken.push(`${relative(ROOT, file)}: ${m[1] ?? m[2]} (no such section)`);
+        }
+      }
+    }
+    for (const f of FEATURES) {
+      const [path, hash] = f.docs.split("#");
+      if (!hash) continue;
+      const src = readFileSync(join(DOCS_ROUTES, "(docs)", path, "+page.svx"), "utf8");
+      if (![...src.matchAll(/^#{2,4} (.+)$/gm)].some((h) => slug(h[1]) === hash)) broken.push(`features.ts ${f.id}: ${f.docs} (no such section)`);
+    }
+    expect(broken).toEqual([]);
+  });
+
+  // "Open Coaching › Check-ins" names menu items. Each item must still be a label somewhere in the
+  // web or phone app, or the docs send people to something that's been renamed or moved.
+  it("name menu items (A › B) that the apps still show", () => {
+    const appText = [...sourceFiles("web"), ...sourceFiles("phone")].map((f) => readFileSync(f, "utf8")).join("\n")
+      .replace(/&amp;/g, "&");
+    const shown = (label: string) => {
+      const esc = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`(["'>\`]|^\\s*)${esc}(\\s*["'<\`]|\\s*$| ·)`, "m").test(appText);
+    };
+    const texts: { where: string; text: string }[] = [
+      ...[...new Set(docsFiles)].map((f) => ({ where: relative(ROOT, f), text: readFileSync(f, "utf8") })),
+      ...CHAPTERS.flatMap((c) => c.steps.map((st) => ({ where: `walkthroughs ${c.id}/${st.id}`, text: `${st.body} ${st.empty ?? ""} ${st.arrives ?? ""}` }))),
+      ...FEATURES.map((f) => ({ where: `features ${f.id}`, text: `${f.whereWeb ?? ""}\n${f.wherePhone ?? ""}` })),
+    ];
+    const missing = new Set<string>();
+    for (const { where, text } of texts) {
+      for (const m of text.matchAll(/([^\n.:;(]*?)((?: › [^\n.:;›(]+)+)/g)) {
+        // A comma ends a label: "Home › Quick Start, and Sessions".
+        const parts = [m[1], ...m[2].split(" › ").slice(1).map((p) => p.split(",")[0])].map((p) => p.trim().split(/\s+/));
+        parts.forEach((words, i) => {
+          // Before the first ›: the last words ("Open Coaching" -> "Coaching"); after: the first words.
+          const candidates = words.map((_, n) => (i === 0 ? words.slice(words.length - 1 - n) : words.slice(0, n + 1)).join(" "));
+          if (!words[0] || !/^[A-Z+]/.test(i === 0 ? words.at(-1)! : words[0])) return; // "a client": a placeholder
+          if (!candidates.some(shown)) missing.add(`${where}: "${i === 0 ? words.at(-1) : words[0]}…" in "${(m[1] + m[2]).trim()}"`);
+        });
+      }
+    }
+    expect([...missing]).toEqual([]);
   });
 });
 

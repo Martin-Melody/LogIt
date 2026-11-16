@@ -4,6 +4,7 @@ title: Exercises and your library
 
 <script>
   import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
 </script>
 
 <FeatureFacts id="exercises" />
@@ -11,3 +12,7 @@ title: Exercises and your library
 The library has LogIt's exercises, cardio activities and mobility drills, with cues for each. Add your
 own with + and they show up in every picker. Your coach can share theirs with you; LogIt's and your
 coach's items have Make my own copy if you want to change them.
+
+## The tour on the phone
+
+<HowTo id="app.exercises" />

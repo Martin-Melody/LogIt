@@ -16,6 +16,13 @@ exercises and sets. One split is **active**; Quick Start trains from it.
 ## On the phone
 
 Open Splits, then New. Add days, then open a day to add exercises. Set it active from the split's page.
+The app's tours of these screens:
+
+<HowTo id="app.splits" />
+
+<HowTo id="app.split-detail" />
+
+<HowTo id="app.split-day" />
 
 ## Edit a split on the web (Pro)
 

@@ -19,4 +19,8 @@ eating is on track. Each answer says how it was worked out. Insights is free on 
 
 <HowTo id="pro.insights" />
 
+## On the phone
+
+<HowTo id="phone.insights" />
+
 <CanCant ids={["insights", "insight-charts"]} />

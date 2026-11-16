@@ -22,7 +22,10 @@ export function chapter(id: string): Chapter {
 }
 
 /** The steps a docs how-to lists: the web ones, minus "here's the sidebar" ones. */
-export const docsSteps = (c: Chapter): Step[] => c.steps.filter((s) => s.on === "web" && !s.notInDocs);
+export const docsSteps = (c: Chapter, on: "web" | "phone" = "web"): Step[] => c.steps.filter((s) => s.on === on && !s.notInDocs);
+
+/** Which app a chapter runs in: the web walkthroughs, or the phone's short tours. */
+export const chapterApp = (c: Chapter): "web" | "phone" => (c.steps.some((s) => s.on === "web") ? "web" : "phone");
 
 /** The walkthrough chapter that shows a feature, for "Show me in the app". */
 export const chapterFor = (featureId: string): Chapter | undefined => CHAPTERS.find((c) => c.feature === featureId);

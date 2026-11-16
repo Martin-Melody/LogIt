@@ -29,6 +29,14 @@ without the walkthroughs and docs following.
 - *A step's mark doesn't exist*: the element lost its `data-guide`; put it back, or change the step.
 - *A mark or signal no step uses*: remove it, or add the step that uses it.
 - *A chapter's how-to isn't on its docs page*: add `<HowTo id="chapter.id" />` to that page.
+- *A link goes nowhere*: a docs link (or a feature's `docs` with `#section`) points at a page or
+  heading that doesn't exist.
+- *A menu item isn't shown any more*: the docs or a step say "Extras › Insights" but the app has no
+  "Extras" label now. Update the words to the new name.
+
+**The docs prose itself** can't be checked by a test. On a pull request that changes a feature's
+pages but not its docs page, CI leaves a warning naming the docs page to re-read
+(`guide/docsReview.ts`). It never fails the build.
 
 **API tests (`TierGateSnapshotTests`)**: you added, removed or changed a `RequireTier`. If that's
 on purpose, run `UPDATE_TIER_GATES=1 dotnet test --filter TierGateSnapshotTests` (with
