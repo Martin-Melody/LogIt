@@ -59,6 +59,10 @@ public static class SyncEndpoints
         // habits locally but doesn't sync them, so the coach only sees Pro/Studio clients'
         // adherence for now — a dedicated assigned-only feed could lift that later.
         group.MapPost("/plugins", PushPluginInstalls).RequireTier(UserTier.Pro);
+        // Saved Insights charts. Saving is Pro; pulling is open to every tier so a chart a
+        // coach makes for a Free client still reaches their phone.
+        group.MapPost("/charts", PushInsightCharts).RequireTier(UserTier.Pro);
+        group.MapGet("/charts", PullInsightCharts);
         group.MapGet("/plugins", PullPluginInstalls).RequireTier(UserTier.Pro);
         group.MapPost("/habits", PushHabits).RequireTier(UserTier.Pro);
         group.MapGet("/habits", PullHabits).RequireTier(UserTier.Pro);
@@ -712,6 +716,16 @@ public static class SyncEndpoints
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
         => Results.Ok(new { plugins = await PullSyncRows(caller.GetUserId(), since, db.SyncedPluginInstalls) });
 
+    // ── Saved Insights charts ────────────────────────────────────────────────
+
+    private static Task<IResult> PushInsightCharts(
+        [FromBody] PushInsightChartsRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushSyncRows(caller.GetUserId(), req.Charts, db.SyncedInsightCharts, db);
+
+    private static async Task<IResult> PullInsightCharts(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { charts = await PullSyncRows(caller.GetUserId(), since, db.SyncedInsightCharts) });
+
     // Goal — a singleton on User, synced like the profile blob.
 
     private static async Task<IResult> PushNutritionGoal(
@@ -810,6 +824,7 @@ public record PushMealTemplatesRequest(List<SyncRowDto> Templates);
 public record PushWeightEntriesRequest(List<SyncRowDto> Entries);
 public record PushHabitsRequest(List<SyncRowDto> Habits);
 public record PushPluginInstallsRequest(List<SyncRowDto> Plugins);
+public record PushInsightChartsRequest(List<SyncRowDto> Charts);
 public record PushHabitEntriesRequest(List<SyncRowDto> Entries);
 
 public record NutritionGoalDto(string DataJson, long UpdatedAtMs);
