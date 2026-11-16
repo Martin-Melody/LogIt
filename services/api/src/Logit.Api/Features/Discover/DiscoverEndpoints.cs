@@ -67,7 +67,7 @@ public static class DiscoverEndpoints
     private static async Task<IResult> NotInterested(string username, ClaimsPrincipal caller, AppDbContext db)
     {
         var userId = caller.GetUserId();
-        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (target is null) return Results.NotFound();
         if (target.Id == userId) return Results.BadRequest(new { error = "That's you." });
         if (!await db.DiscoverDismissals.AnyAsync(d => d.UserId == userId && d.HiddenUserId == target.Id))

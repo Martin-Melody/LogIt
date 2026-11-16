@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -79,6 +80,7 @@
       await getWebCoachProgramRepo().saveProgram(p);
       rows = [...rows, { program: p, recipientUserId: null }];
       select(p.id);
+      guideSignal("program.created");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't create it");
     } finally {
@@ -144,6 +146,7 @@
       await getWebCoachProgramRepo().saveProgram(copy, c.client.username);
       rows = [...rows, { program: copy, recipientUserId: c.client.id }];
       assignOpen = false;
+      guideSignal("program.assigned");
       toast.success(`${selected.name} assigned to ${c.client.displayName || c.client.username}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't assign it");
@@ -159,7 +162,7 @@
       <h1 class="text-[26px] font-bold tracking-tight">Programs</h1>
       <p class="mt-1 text-[13px] text-muted-foreground">Your library. Assigning a program gives the client their own copy.</p>
     </div>
-    <button type="button" disabled={busy} onclick={create} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">New program</button>
+    <button type="button" data-guide="programs-new" disabled={busy} onclick={create} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">New program</button>
   </header>
 
   {#if error}
@@ -169,7 +172,7 @@
   {:else}
     <SwapDefaultCard bind:rule={swapRule} {clients} />
     <div class="flex flex-wrap items-start gap-4">
-      <nav aria-label="Library" class="flex flex-[1_1_240px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-1.5">
+      <nav aria-label="Library" data-guide="programs-library" class="flex flex-[1_1_240px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-1.5">
         {#each active as p (p.id)}
           <button type="button" onclick={() => select(p.id)} aria-current={p.id === selectedId ? "true" : undefined}
             class="flex flex-col gap-0.5 rounded-lg px-3 py-2.5 text-left {p.id === selectedId ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
@@ -196,7 +199,7 @@
               <button type="button" disabled={busy} onclick={duplicate} class="h-[30px] rounded-lg border border-border px-2.5 text-xs font-medium hover:bg-muted">Duplicate</button>
               <button type="button" onclick={() => setArchived(!selected.archived)} class="h-[30px] rounded-lg border border-border px-2.5 text-xs font-medium hover:bg-muted">{selected.archived ? "Unarchive" : "Archive"}</button>
               {#if !selected.archived}
-                <button type="button" disabled={clients.length === 0} onclick={() => { assignTo = clients[0]?.client.id ?? ""; assignOpen = true; }}
+                <button type="button" data-guide="programs-assign" disabled={clients.length === 0} onclick={() => { assignTo = clients[0]?.client.id ?? ""; assignOpen = true; }}
                   class="h-[30px] rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">Assign to client</button>
               {/if}
             </span>

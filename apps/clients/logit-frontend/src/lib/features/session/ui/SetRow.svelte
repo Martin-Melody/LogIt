@@ -211,7 +211,7 @@
   {:else}
   <button
     type="button"
-    data-tour="session-set-complete"
+    data-guide="session-set-complete"
     class="flex h-11 w-11 items-center justify-center justify-self-center"
     onclick={() => void onComplete()}
     {disabled}

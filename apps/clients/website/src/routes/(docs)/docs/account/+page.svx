@@ -1,0 +1,31 @@
+---
+title: Your account
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="account" />
+
+You can use LogIt without an account: everything stays on your phone. An account lets you sync,
+use the web dashboard, follow people and have a coach.
+
+## Sign in or create an account
+
+On the phone, open Settings and choose Log in. On the web, go to app.getlogit.app.
+
+## Change your plan
+
+In the Android app, open Settings and use the plan card under Account. Pick Pro or Studio, monthly or
+yearly; Google Play takes the payment. The web dashboard's Upgrade page explains the plans but can't take
+payment. See [What each plan can do](/docs/plans).
+
+## Delete your account
+
+On the web, open Account (the card at the bottom of the sidebar) and choose Delete account. You'll be
+asked for your password. Everything stored on the server goes, including your posts and, for coaches,
+any sample clients. What's on your phone stays on your phone.
+
+<CanCant ids={["account"]} />

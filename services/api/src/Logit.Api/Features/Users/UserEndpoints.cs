@@ -71,7 +71,7 @@ public static class UserEndpoints
             .ToListAsync();
 
         var results = await db.Users
-            .Where(u => u.Id != callerId && !blocked.Contains(u.Id) && (
+            .Where(u => u.Id != callerId && !u.IsSample && !blocked.Contains(u.Id) && (
                 u.Username.Contains(search) ||
                 u.DisplayName.Contains(search)))
             .OrderBy(u => u.Username.StartsWith(search) ? 0 : 1)
@@ -93,7 +93,7 @@ public static class UserEndpoints
 
     private static async Task<IResult> GetProfile(string username, AppDbContext db, ClaimsPrincipal caller)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (user is null) return Results.NotFound();
 
         var followerCount = await db.Follows.CountAsync(f => f.FollowedId == user.Id);

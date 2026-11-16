@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -78,7 +79,7 @@
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
   {/if}
 
-  <section aria-label="Questions" class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5">
+  <section aria-label="Questions" data-guide="insights-questions" class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5">
     {#if answers}
       {#each answers as a (a.id)}
         <AnswerCard answer={a} href="/insights/{a.id}?range={range}" />
@@ -99,7 +100,7 @@
         <h2 class="text-[17px] font-bold">Your charts</h2>
         <p class="mt-0.5 text-xs text-muted-foreground">Saved on your account. Each one draws from your latest data wherever it shows.</p>
       </div>
-      <a href="/insights/charts/new" class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold leading-9 text-primary-foreground">New chart</a>
+      <a href="/insights/charts/new" data-guide="insights-new-chart" onclick={() => guideSignal("chart.builder-opened")} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold leading-9 text-primary-foreground">New chart</a>
     </div>
     {#if charts === null}
       <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5"><Skeleton class="h-40" /><Skeleton class="h-40" /></div>

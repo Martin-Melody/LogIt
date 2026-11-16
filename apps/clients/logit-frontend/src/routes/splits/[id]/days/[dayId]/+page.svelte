@@ -71,7 +71,7 @@
     Check,
     Zap,
   } from "lucide-svelte";
-  import { startSplitDayTour } from "$lib/tour/index";
+  import { autoTour } from "$lib/tour/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
@@ -521,7 +521,7 @@
   }
 
   onMount(() => {
-    void load().then(() => startSplitDayTour());
+    void load().then(() => autoTour("app.split-day"));
   });
 </script>
 
@@ -555,7 +555,7 @@
         class="flex-1 min-w-0 text-left"
         onclick={startRenameDay}
         disabled={ui.loading || ui.saving || !day}
-        data-tour="split-day-name"
+        data-guide="split-day-name"
       >
         <span class="text-sm font-semibold">
           {#if day}
@@ -572,7 +572,7 @@
           disabled={!day || ui.saving}
           onclick={() => (pickerOpen = true)}
           aria-label="Add block"
-          data-tour="split-day-add-block"
+          data-guide="split-day-add-block"
         >
           <Plus class="h-3.5 w-3.5" />
         </Button>

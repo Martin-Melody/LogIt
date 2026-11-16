@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { replayTour } from "$lib/tour/index";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -102,6 +103,7 @@
   }
 
   onMount(() => void load());
+  onMount(() => setTimeout(() => replayTour("phone.clients"), 600));
 </script>
 
 <div class="flex flex-col pb-24">
@@ -238,7 +240,7 @@
         {#if clients.length === 0}
           <p class="px-3 py-2 text-sm text-muted-foreground">No clients yet.</p>
         {:else}
-          <ul class="divide-y divide-border">
+          <ul class="divide-y divide-border" data-guide="phone-clients-list">
             {#each clients as c (c.relationshipId)}
               <li class="flex items-center">
                 <button type="button" class="flex-1 min-w-0 px-3 py-3 text-left hover:bg-muted/40"

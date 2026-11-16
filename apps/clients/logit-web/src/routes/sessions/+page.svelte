@@ -123,10 +123,10 @@
   {:else if loading}
     <div class="flex flex-wrap gap-4"><Skeleton class="h-96 flex-[1_1_300px]" /><Skeleton class="h-96 flex-[999_1_520px]" /></div>
   {:else if sessions.length === 0}
-    <p class="rounded-[10px] border border-border bg-card p-6 text-sm text-muted-foreground">No workouts synced yet. Log one in the app and it appears here.</p>
+    <p data-guide="sessions-list" data-guide-empty class="rounded-[10px] border border-border bg-card p-6 text-sm text-muted-foreground">No workouts synced yet. Log one in the app and it appears here.</p>
   {:else}
     <div class="flex flex-wrap items-start gap-4">
-      <nav aria-label="Sessions" class="flex max-h-[calc(100svh-9rem)] flex-[1_1_300px] flex-col overflow-y-auto rounded-[10px] border border-border bg-card p-1.5">
+      <nav aria-label="Sessions" data-guide="sessions-list" class="flex max-h-[calc(100svh-9rem)] flex-[1_1_300px] flex-col overflow-y-auto rounded-[10px] border border-border bg-card p-1.5">
         {#if groups.length === 0}<p class="p-4 text-sm text-muted-foreground">No sessions match “{query}”.</p>{/if}
         {#each groups as g (g.label)}
           <p class="px-3.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</p>
@@ -146,7 +146,7 @@
 
       {#if selected}
         {@const sessionPrs = prs.get(selected.id) ?? []}
-        <section bind:this={detailEl} class="flex min-w-0 flex-[999_1_520px] scroll-mt-14 flex-col gap-4 rounded-[10px] border border-border bg-card px-[22px] py-5">
+        <section bind:this={detailEl} data-guide="session-detail" class="flex min-w-0 flex-[999_1_520px] scroll-mt-14 flex-col gap-4 rounded-[10px] border border-border bg-card px-[22px] py-5">
           <div>
             <h2 class="text-xl font-bold">{sessionTitle(selected)}</h2>
             <p class="mt-1 text-[13px] text-muted-foreground">

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
+  import { guideSignal } from "$lib/features/guide/signal";
   import { apiClient } from "@logit/core/api/client";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
@@ -120,6 +122,7 @@
     const order = reorder.drop(e);
     if (order) layout.setOrder(order);
   }
+  const firstName = (apiClient.getUser()?.displayName || apiClient.getUser()?.username || "").split(" ")[0];
 </script>
 
 <div class="flex flex-col gap-4">
@@ -139,15 +142,17 @@
       <h1 class="text-[26px] font-bold tracking-tight">This week</h1>
     </div>
     {#if !editing}
-      <Button variant="outline" size="sm" onclick={() => (editing = true)}>Edit layout</Button>
+      <Button variant="outline" size="sm" data-guide="overview-edit" onclick={() => { editing = true; guideSignal("overview.edit-opened"); }}>Edit layout</Button>
     {/if}
   </header>
+
+  {#if !editing}<WelcomeCard walkthrough="pro" name={firstName} />{/if}
 
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
   {:else}
     {#if editing}
-      <section aria-label="Add a widget" class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
+      <section aria-label="Add a widget" data-guide="overview-add" class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
         <h2 class="text-[15px] font-semibold">Add a widget</h2>
         {#if layout.hidden.length === 0}
           <p class="text-sm text-muted-foreground">Every widget is on your Overview. Widget plugins you install show up here too.</p>
@@ -162,7 +167,7 @@
       </section>
     {/if}
     <div class="flex flex-wrap items-start gap-5">
-      <div role="list" class="grid min-w-0 flex-[999_1_640px] grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"
+      <div role="list" data-guide="overview-widgets" class="grid min-w-0 flex-[999_1_640px] grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"
         ondragenter={(e) => reorder.allow(e)} ondragover={(e) => reorder.allow(e)} ondrop={onDrop}>
         {#each reorder.arrange(shownSlots, (s) => s.id) as slot, i (slot.id)}
           {@const def = defs.get(slot.id)!}

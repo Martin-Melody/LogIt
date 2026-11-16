@@ -3,7 +3,7 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { startSplitsTour } from "$lib/tour/index";
+  import { autoTour } from "$lib/tour/index";
   import { Plus } from "lucide-svelte";
 
   import { Button } from "$lib/components/ui/button";
@@ -108,7 +108,7 @@
 
   onMount(() => {
     void load();
-    setTimeout(() => startSplitsTour(), 400);
+    setTimeout(() => autoTour("app.splits"), 400);
   });
 </script>
 
@@ -119,7 +119,7 @@
       <Button size="sm" variant="outline" onclick={() => goto("/programs/browse")}>
         Browse programs
       </Button>
-      <Button size="sm" disabled={ui.creating} data-tour="splits-new" onclick={() => void newSplit()}>
+      <Button size="sm" disabled={ui.creating} data-guide="splits-new" onclick={() => void newSplit()}>
         <Plus class="h-3.5 w-3.5 mr-1" />
         New
       </Button>
@@ -233,7 +233,7 @@
             {#if $activeSplit?.id !== s.id}
               <button
                 type="button"
-                data-tour="splits-set-active"
+                data-guide="splits-set-active"
                 class="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline py-3"
                 disabled={ui.settingActive === s.id}
                 onclick={(e) => void setActive(s.id, e)}

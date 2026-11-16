@@ -87,7 +87,7 @@
 
 <div class="border-b border-border/50">
 <!-- Exercise section header -->
-<div class="border-t border-border bg-muted/20" data-tour="session-exercise-header">
+<div class="border-t border-border bg-muted/20" data-guide="session-exercise-header">
   <!-- Every control here is a 44px target. Swap / superset / remove live in the
        ⋯ menu so the row doesn't need six icons and the name keeps its room. -->
   <div class="flex items-center {roundView ? 'pl-3' : 'pl-1'} pr-1">

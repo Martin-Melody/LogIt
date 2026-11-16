@@ -1,14 +1,27 @@
 ---
-title: Documentation
+title: Using LogIt
 ---
 
-<p class="lead">How to run your own LogIt server and how to build plugins for the app.</p>
+<script>
+  import PlanTable from "$lib/docs/using/PlanTable.svelte";
+  import DocsSearch from "$lib/docs/using/DocsSearch.svelte";
+</script>
 
-## Sections
+<p class="lead">How to do things in the LogIt app and on the web dashboard, what each plan includes, and what you can't do (yet).</p>
 
-- **[Self-hosting](/self-hosting)**: run the sync server and web dashboard yourself with Docker Compose.
-- **[Plugins](/docs/plugins)**: build and share progression rules, nutrition targets, analytics, home-screen widgets and exercise packs. Code plugins run in a sandbox with no access to the network or the rest of the app's data.
+<DocsSearch />
 
-## Source
+## Where to start
 
-Everything is on [GitHub](https://github.com/Martin-Melody/LogIt) under the MIT licence. The app is SvelteKit with Capacitor; shared logic lives in `@logit/core` and the shared look in `@logit/ui`.
+- **[New to LogIt](/docs/workouts)**: log your first workout, set up a [split](/docs/splits), track [food](/docs/nutrition) and [habits](/docs/habits-and-goals).
+- **[Got Pro](/docs/web-dashboard)**: [sync](/docs/sync), the web dashboard, [your own charts](/docs/insights#your-charts), [building plugins](/docs/add-plugins#build-your-own).
+- **[Coaching](/docs/coaching)** (Studio): [invite clients](/docs/coaching/invite-links), [programs](/docs/coaching/programs), [check-ins](/docs/coaching/checkins), [messages](/docs/coaching/messages), [getting paid](/docs/coaching/payments).
+- **[Have a coach](/docs/having-a-coach)**: join with their link, choose what they see, send check-ins.
+
+## What each plan can do
+
+<PlanTable />
+
+## Developers
+
+Run your own server with [Self-hosting](/self-hosting), or make plugins with [Building plugins](/docs/plugins).

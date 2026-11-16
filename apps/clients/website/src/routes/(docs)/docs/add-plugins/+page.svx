@@ -1,0 +1,25 @@
+---
+title: Plugins
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="plugins" />
+
+Plugins add widgets, progression rules, nutrition targets, analytics and exercise or mobility packs.
+Code plugins run in a sandbox with no access to the network or the rest of your data. See
+[Trust & the sandbox](/docs/plugins/trust).
+
+<HowTo id="pro.plugins" />
+
+## Build your own
+
+<FeatureFacts id="plugin-builder" />
+
+For the details of each plugin type, see [Building plugins](/docs/plugins).
+
+<CanCant ids={["plugins", "plugin-builder"]} />

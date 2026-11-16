@@ -57,6 +57,11 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         {
             e.HasIndex(u => u.Username).IsUnique();
             e.HasIndex(u => u.Email).IsUnique();
+            e.HasIndex(u => u.SampleOwnerId);
+            e.HasOne(u => u.SampleOwner)
+             .WithMany()
+             .HasForeignKey(u => u.SampleOwnerId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<RefreshToken>(e =>

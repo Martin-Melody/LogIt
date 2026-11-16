@@ -1,7 +1,11 @@
 name: Deploy website (Cloudflare Pages)
 
 # Deploys getlogit.app (apps/clients/website, a static SvelteKit site) to Cloudflare Pages on
-# every push to main that touches it or the shared look in packages/ui.
+# every push to main that touches it, the shared look in packages/ui, or anything the user docs
+# show: the feature list and walkthroughs (packages/core/src/guide) and the web dashboard, whose
+# screenshots the docs carry. Before building, it plays every walkthrough against a throwaway
+# API and saves a screenshot of each step into static/docs/shots, so the docs always show the
+# dashboard as it is. If a walkthrough doesn't play through, nothing is deployed.
 #
 # Required repo secrets:
 #   CLOUDFLARE_API_TOKEN    token with "Cloudflare Pages: Edit"
@@ -13,6 +17,8 @@ on:
     paths:
       - "apps/clients/website/**"
       - "packages/ui/**"
+      - "packages/core/src/guide/**"
+      - "apps/clients/logit-web/**"
       - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
@@ -44,6 +50,34 @@ jobs:
           cache: npm
       - run: npm ci
         if: steps.secret.outputs.configured == 'true'
+      - uses: actions/setup-dotnet@v4
+        if: steps.secret.outputs.configured == 'true'
+        with:
+          dotnet-version: "8.0.x"
+      - name: Start a throwaway API for the screenshots
+        if: steps.secret.outputs.configured == 'true'
+        working-directory: services/api/src/Logit.Api
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://127.0.0.1:5118
+          Deployment__SelfHosted: "true"
+          ConnectionStrings__Default: "Data Source=docs-shots.db"
+          Jwt__Secret: "docs-shots-secret-at-least-32-characters-long"
+          Registration__SignupsPer10Minutes: "1000"
+          Admin__Key: "docs-shots-admin-key-that-is-long-enough-123"
+        run: |
+          nohup dotnet run --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:5118/health && break; sleep 1; done
+      - name: Play the walkthroughs and take the docs screenshots
+        if: steps.secret.outputs.configured == 'true'
+        working-directory: apps/clients/logit-web
+        env:
+          E2E_API_URL: http://127.0.0.1:5118
+          E2E_ADMIN_KEY: "docs-shots-admin-key-that-is-long-enough-123"
+        run: |
+          npx playwright install --with-deps chromium
+          mkdir -p ../website/static/docs/shots
+          DOCS_SCREENSHOTS_DIR="$(cd ../website/static/docs/shots && pwd)" npx playwright test
       - name: Build
         if: steps.secret.outputs.configured == 'true'
         working-directory: apps/clients/website

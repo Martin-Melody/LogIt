@@ -1,0 +1,21 @@
+---
+title: Messages
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="messages" />
+
+<HowTo id="studio.messages" />
+
+You can also comment on a day in a client's food diary; the message shows that day with it.
+
+## On the phone
+
+<HowTo id="phone.messages" />
+
+<CanCant ids={["messages"]} />

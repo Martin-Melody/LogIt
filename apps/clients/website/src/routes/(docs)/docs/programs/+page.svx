@@ -1,0 +1,21 @@
+---
+title: Programs
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="programs" />
+
+Programs run over several weeks. LogIt has ready-made ones you can copy into a split and change; your
+coach can also give you programs they've written.
+
+## A program from your coach
+
+It appears under Splits › From your coach. If your coach set it to start when you're ready, tap Start program.
+Each workout from it loads the day's sets, with loads worked out from your own lifts when your coach
+wrote them as a percentage.
+
+<CanCant ids={["programs"]} />

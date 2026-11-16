@@ -222,7 +222,7 @@
 
     {#if coaches.length === 0 && invites.length === 0 && requests.length === 0}
       <header><h1 class="text-[26px] font-bold tracking-tight">My coach</h1></header>
-      <section class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
+      <section data-guide="my-coach-page" class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
         <h2 class="text-sm font-semibold">You don't have a coach on LogIt</h2>
         <p class="text-[13px] leading-relaxed text-muted-foreground">
           A coach can invite you by your username (@{apiClient.getUser()?.username}), or send you an invite link. Either way you choose what they see,
@@ -236,7 +236,7 @@
       {@const sharing = c.sharing ?? SHARE_ALL}
       {@const paused = c.status === "paused"}
       {@const note = clientPaymentNote(c.payment, c.status, name)}
-      <header class="flex flex-wrap items-center justify-between gap-3">
+      <header data-guide="my-coach-page" class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3.5">
           <Avatar name={name} url={c.coach.avatarUrl} size={48} />
           <div>

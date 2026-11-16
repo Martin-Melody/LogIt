@@ -1,0 +1,21 @@
+---
+title: Programs for clients
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="coach-programs" />
+
+## Build a program
+
+<HowTo id="studio.program" />
+
+## Give it to a client
+
+<HowTo id="studio.assign" />
+
+<CanCant ids={["coach-programs"]} />

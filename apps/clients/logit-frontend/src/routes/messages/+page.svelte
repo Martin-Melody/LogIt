@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { replayTour } from "$lib/tour/index";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -40,6 +41,7 @@
   }
 
   onMount(() => void load());
+  onMount(() => setTimeout(() => replayTour("phone.messages"), 600));
 </script>
 
 <div class="flex flex-col pb-24">
@@ -58,7 +60,7 @@
       <p class="text-sm">No conversations yet.</p>
     </div>
   {:else}
-    <ul class="divide-y divide-border">
+    <ul class="divide-y divide-border" data-guide="phone-messages-list">
       {#each threads as t (t.relationshipId)}
         <li>
           <button type="button" class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-muted/40"

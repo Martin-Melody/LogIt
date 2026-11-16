@@ -64,7 +64,7 @@
   ];
 </script>
 
-<section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-3.5">
+<section data-guide="social-privacy" class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-3.5">
   <h2 class="m-0">
     <button type="button" onclick={() => (open = !open)} aria-expanded={open} aria-controls="privacy-body"
       class="flex w-full items-center justify-between gap-2 text-left">
