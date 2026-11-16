@@ -10,7 +10,7 @@
 <div class="flex flex-col min-h-full">
   <PageHeader>
     <BackButton onclick={() => history.back()} />
-    <span class="text-base font-semibold truncate">@{username}</span>
+    <h1 class="page-title">@{username}</h1>
   </PageHeader>
 
   {#key username}

@@ -5,9 +5,9 @@ import { createSession, addExercise, addSet, finishSession } from "../../domain/
 import type { WorkoutSession } from "../../domain/workout";
 import type { ProgressionDeps } from "./deps";
 
-function session(name: string, weight: number, reps: number, endedAtMs: number): WorkoutSession {
+function session(name: string, weight: number, reps: number, endedAtMs: number, exerciseId?: string): WorkoutSession {
   let s = createSession(endedAtMs - 3_600_000);
-  s = addExercise(s, { exerciseName: name });
+  s = addExercise(s, { exerciseName: name, ...(exerciseId ? { exerciseId } : {}) });
   s = addSet(s, s.blocks[0]!.id, { weight, reps, setType: "normal" });
   return finishSession(s, endedAtMs);
 }
@@ -42,6 +42,18 @@ describe("getAllExerciseProgressStories", () => {
 
   it("doesn't duplicate an exercise trained across many sessions", async () => {
     const history = [1, 2, 3].map((n) => session("Bench", 100 + n, 5, now - (4 - n) * DAY));
+    const stories = await getAllExerciseProgressStories(deps(history));
+    expect(stories).toHaveLength(1);
+  });
+
+  it("shows a lift once when it was logged under several exercise ids", async () => {
+    // The built-in "Dips" and two library copies with the same name: history matches by
+    // name, so they're one lift with one story.
+    const history = [
+      session("Dips", 0, 8, now - 3 * DAY, "core_dips"),
+      session("Dips", 5, 8, now - 2 * DAY, "exdb_a"),
+      session("dips ", 7.5, 8, now - DAY, "exdb_b"),
+    ];
     const stories = await getAllExerciseProgressStories(deps(history));
     expect(stories).toHaveLength(1);
   });

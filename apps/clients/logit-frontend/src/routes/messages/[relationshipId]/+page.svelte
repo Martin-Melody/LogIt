@@ -62,7 +62,7 @@
 <div class="flex h-full flex-col">
   <PageHeader>
     <BackButton onclick={() => back("/messages")} />
-    <p class="text-base font-semibold truncate">{name}</p>
+    <h1 class="page-title">{name}</h1>
   </PageHeader>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive shrink-0">{ui.error}</p>{/if}

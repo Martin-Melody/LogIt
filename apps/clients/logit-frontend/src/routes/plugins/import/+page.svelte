@@ -179,7 +179,7 @@
 <div class="flex flex-col pb-24">
   <PageHeader>
     <BackButton onclick={() => void goto("/plugins")} />
-    <span class="text-base font-semibold">Add plugin</span>
+    <h1 class="page-title">Add plugin</h1>
   </PageHeader>
 
   <div class="flex flex-col gap-3 p-3">
