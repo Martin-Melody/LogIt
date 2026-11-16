@@ -45,6 +45,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<HostedPlugin> HostedPlugins => Set<HostedPlugin>();
     public DbSet<PluginRelease> PluginReleases => Set<PluginRelease>();
     public DbSet<SyncedPluginInstall> SyncedPluginInstalls => Set<SyncedPluginInstall>();
+    public DbSet<SyncedInsightChart> SyncedInsightCharts => Set<SyncedInsightChart>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -503,6 +504,16 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         {
             e.HasIndex(s => new { s.UserId, s.SyncedAt });
             e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Saved Insights charts, same shape as habits plus the coach who sent one.
+        model.Entity<SyncedInsightChart>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasIndex(s => s.SentByUserId);
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
