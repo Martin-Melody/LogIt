@@ -40,7 +40,7 @@ public static class SocialEndpoints
     private static async Task<IResult> Follow(string username, ClaimsPrincipal caller, AppDbContext db)
     {
         var followerId = caller.GetUserId();
-        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (target is null) return Results.NotFound();
         if (target.Id == followerId) return Results.BadRequest(new { error = "Cannot follow yourself." });
         if (await db.Blocks.AnyAsync(b =>
@@ -77,7 +77,7 @@ public static class SocialEndpoints
     private static async Task<IResult> Unfollow(string username, ClaimsPrincipal caller, AppDbContext db)
     {
         var followerId = caller.GetUserId();
-        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (target is null) return Results.NotFound();
 
         var follow = await db.Follows.FindAsync(followerId, target.Id);
@@ -98,7 +98,7 @@ public static class SocialEndpoints
 
     private static async Task<IResult> GetFollowers(string username, ClaimsPrincipal caller, AppDbContext db)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (user is null) return Results.NotFound();
         if (!await db.CanSeeAsync(caller.GetUserIdOrNull(), user)) return Privacy.PrivateAccount();
 
@@ -111,7 +111,7 @@ public static class SocialEndpoints
 
     private static async Task<IResult> GetFollowing(string username, ClaimsPrincipal caller, AppDbContext db)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (user is null) return Results.NotFound();
         if (!await db.CanSeeAsync(caller.GetUserIdOrNull(), user)) return Privacy.PrivateAccount();
 
@@ -129,7 +129,7 @@ public static class SocialEndpoints
         [FromQuery] int limit = 20,
         [FromQuery] string? cursor = null)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (user is null) return Results.NotFound();
 
         Guid? callerId = caller.GetUserIdOrNull();

@@ -15,19 +15,22 @@ public class TokenService(IConfiguration config)
     private readonly int _accessTokenMinutes = int.Parse(config["Jwt:AccessTokenMinutes"] ?? "15");
     private readonly int _refreshTokenDays = int.Parse(config["Jwt:RefreshTokenDays"] ?? "30");
 
-    public string CreateAccessToken(User user)
+    /// `sample`: a token for a sandbox sample client, handed to its coach's app. It carries the
+    /// "sample" claim, which SampleTokenGuard checks to keep it to the client-side coaching routes.
+    public string CreateAccessToken(User user, bool sample = false)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim("tier", user.Tier.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.UniqueName, user.Username),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new("tier", user.Tier.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
+        if (sample) claims.Add(new Claim(Sandbox.SandboxEndpoints.SampleClaim, "1"));
 
         var token = new JwtSecurityToken(
             issuer: _issuer,

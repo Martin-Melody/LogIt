@@ -111,7 +111,8 @@ public static class AuthEndpoints
 
         // The response doesn't say which one it was; the log does, for "I can't sign in" help.
         // The typed identifier isn't logged (it may be an email address).
-        if (user is null)
+        // Sandbox sample clients have no password anyone knows; nobody signs in as one.
+        if (user is null || user.IsSample)
         {
             loggerFactory.CreateLogger("Logit.Auth").LogInformation("Login failed: no such account");
             return WrongCredentials();
@@ -203,6 +204,7 @@ public static class AuthEndpoints
         if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
             return Results.BadRequest(new { error = "Password is incorrect." });
 
+        await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         db.Users.Remove(user);
         await db.SaveChangesAsync();
 
@@ -248,7 +250,7 @@ public static class AuthEndpoints
             return Results.Ok(new { error = "Password reset by email isn't configured on this server. Contact your administrator." });
 
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail && !u.IsSample);
         if (user is null) return Results.Ok();
 
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));

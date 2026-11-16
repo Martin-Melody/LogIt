@@ -16,6 +16,8 @@ using Logit.Api.Features.Plugins;
 using Logit.Api.Features.Social;
 using Logit.Api.Features.Sync;
 using Logit.Api.Features.Users;
+using Logit.Api.Features.Sandbox;
+using Logit.Api.Features.Guide;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -195,6 +197,7 @@ app.UseCors();
 app.UseJsonExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseSampleTokenGuard();
 app.UseRateLimiter();
 
 // Every endpoint answers a body missing a required text field with a 400, not a 500.
@@ -214,6 +217,8 @@ api.MapBillingEndpoints();
 api.MapCoachEndpoints();
 api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
+api.MapSandboxEndpoints();
+api.MapGuideEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

@@ -53,7 +53,7 @@ public sealed class DiscoverService(AppDbContext db, DiscoverExperiment experime
     public static IQueryable<User> EligiblePeople(DiscoverContext ctx)
     {
         var excluded = ctx.Excluded.ToList();
-        return ctx.Db.Users.Where(u => !u.HideFromSuggestions && u.Origin == null && !excluded.Contains(u.Id));
+        return ctx.Db.Users.Where(u => !u.HideFromSuggestions && !u.IsSample && u.Origin == null && !excluded.Contains(u.Id));
     }
 
     /// Takes the recipes' lists in turn: each recipe adds its best item not already in the
