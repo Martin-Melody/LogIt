@@ -10,6 +10,8 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import PostCard from "$lib/components/social/PostCard.svelte";
   import CommentList from "$lib/components/social/CommentList.svelte";
+  import ReplyingTo from "$lib/components/social/ReplyingTo.svelte";
+  import { replyDraft } from "@logit/core/domain/commentThreads";
 
   const id = $derived(page.params.id ?? "");
 
@@ -24,6 +26,20 @@
 
   let draft = $state("");
   let submitting = $state(false);
+  let replyTo = $state<ApiComment | null>(null);
+  let justSent = $state<ApiComment | null>(null);
+  let input = $state<HTMLTextAreaElement | null>(null);
+
+  function startReply(c: ApiComment) {
+    replyTo = c;
+    draft = replyDraft(c, draft);
+    input?.focus();
+  }
+
+  function cancelReply() {
+    if (replyTo && draft.trim().toLowerCase() === `@${replyTo.authorUsername}`.toLowerCase()) draft = "";
+    replyTo = null;
+  }
 
   onMount(() => {
     void loadPost();
@@ -64,8 +80,10 @@
     const text = draft.trim();
     draft = "";
     try {
-      const c = await socialApi.addComment(id, text);
+      const c = await socialApi.addComment(id, text, replyTo?.id);
       comments = [...comments, c];
+      justSent = replyTo ? c : null;
+      replyTo = null;
       if (post) post = { ...post, commentCount: post.commentCount + 1 };
     } catch {
       draft = text;
@@ -102,6 +120,8 @@
         bind:comments
         postId={id}
         oncountchange={(d) => { if (post) post = { ...post, commentCount: Math.max(0, post.commentCount + d) }; }}
+        onreply={startReply}
+        {justSent}
       />
       {#if nextCursor}
         <button type="button" class="w-full text-xs text-muted-foreground py-3 disabled:opacity-50" disabled={loadingMore} onclick={() => loadComments(true)}>
@@ -114,17 +134,21 @@
   <div class="flex-1"></div>
 
   {#if post && authStore.isAuthenticated}
-    <div class="sticky bottom-0 bg-background border-t border-border px-3 py-2 flex items-end gap-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+    <div class="sticky bottom-0 bg-background border-t border-border">
+    {#if replyTo}<ReplyingTo comment={replyTo} oncancel={cancelReply} />{/if}
+    <div class="px-3 py-2 flex items-end gap-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
       <textarea
+        bind:this={input}
         bind:value={draft}
         rows={1}
-        placeholder="Add a comment…"
+        placeholder={replyTo ? `Reply to ${replyTo.authorDisplayName}…` : "Add a comment…"}
         class="flex-1 resize-none rounded-full border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-24"
         onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}
       ></textarea>
       <button type="button" class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40" disabled={!draft.trim() || submitting} onclick={submit} aria-label="Send">
         {#if submitting}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Send class="h-4 w-4" />{/if}
       </button>
+    </div>
     </div>
   {/if}
 </div>

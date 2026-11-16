@@ -149,7 +149,7 @@
 
   function socialIcon(t: ApiNotification["type"]) {
     return t === "Like" ? Heart
-      : t === "Comment" ? MessageCircle
+      : t === "Comment" || t === "Reply" ? MessageCircle
       : t === "Mention" ? AtSign
       : t === "Repost" ? Repeat2
       : t === "Quote" ? Quote
@@ -159,6 +159,7 @@
   function verb(n: ApiNotification) {
     if (n.type === "Like") return n.commentId ? "liked your comment" : "liked your post";
     if (n.type === "Mention") return n.commentId ? "mentioned you in a comment" : "mentioned you in a post";
+    if (n.type === "Reply") return "replied to your comment";
     if (n.type === "Repost") return "reposted your post";
     if (n.type === "Quote") return "quoted your post";
     if (n.type === "FollowRequest") return "asked to follow you";

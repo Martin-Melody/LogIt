@@ -6,6 +6,8 @@
   import MentionText from "./MentionText.svelte";
   import ReportDialog from "./ReportDialog.svelte";
   import { me, timeAgo } from "./socialData.svelte";
+  import { SvelteSet } from "svelte/reactivity";
+  import { removedByDelete, repliesStartFolded, replyDraft, threadComments, threadIdFor } from "@logit/core/domain/commentThreads";
 
   let { postId, postAuthorId, count = $bindable(0) }: { postId: string; postAuthorId: string; count?: number } = $props();
 
@@ -20,6 +22,13 @@
   let reportOpen = $state(false);
   let deleteId = $state<string | null>(null);
   let deleteOpen = $state(false);
+  let replyTo = $state<ApiComment | null>(null);
+  let justSent = $state<string | null>(null);
+
+  // Instagram-style threads: replies under their comment, folded behind "View N replies" when
+  // there are more than 3. Threads you open (or reply in) stay open.
+  const threads = $derived(threadComments(comments ?? []));
+  const opened = new SvelteSet<string>();
 
   async function load(more = false) {
     try {
@@ -36,10 +45,15 @@
     if (!draft.trim() || sending) return;
     sending = true;
     try {
-      const c = await socialApi.addComment(postId, draft.trim());
+      const c = await socialApi.addComment(postId, draft.trim(), replyTo?.id);
       comments = [...(comments ?? []), c];
       count += 1;
       draft = "";
+      if (replyTo) {
+        opened.add(threadIdFor(replyTo));
+        justSent = c.id;
+      }
+      replyTo = null;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't post the comment");
     } finally {
@@ -74,16 +88,24 @@
     if (!deleteId) return;
     try {
       await socialApi.deleteComment(postId, deleteId);
-      comments = (comments ?? []).filter((x) => x.id !== deleteId);
-      count = Math.max(0, count - 1);
+      const gone = new Set(removedByDelete(comments ?? [], deleteId));
+      comments = (comments ?? []).filter((x) => !gone.has(x.id));
+      count = Math.max(0, count - gone.size);
+      if (replyTo && gone.has(replyTo.id)) replyTo = null;
     } catch {
       toast.error("Couldn't delete the comment");
     }
   }
 
   function reply(c: ApiComment) {
-    draft = `@${c.authorUsername} ${draft}`;
+    replyTo = c;
+    draft = replyDraft(c, draft);
     document.getElementById("new-comment")?.focus();
+  }
+
+  function cancelReply() {
+    if (replyTo && draft.trim().toLowerCase() === `@${replyTo.authorUsername}`.toLowerCase()) draft = "";
+    replyTo = null;
   }
 </script>
 
@@ -94,9 +116,9 @@
   {:else if comments.length === 0}
     <p class="text-xs text-muted-foreground">No comments yet.</p>
   {/if}
-  {#each comments ?? [] as c (c.id)}
-    <div class="flex gap-2.5">
-      <a href="/social/{c.authorUsername}"><Avatar name={c.authorDisplayName} url={c.authorAvatarUrl} size={30} /></a>
+  {#snippet comment(c: ApiComment, isReply: boolean)}
+    <div class="flex gap-2.5 {isReply ? 'ml-10' : ''} {c.id === justSent ? 'rounded-lg bg-sky-500/10 ring-[6px] ring-sky-500/10' : ''}">
+      <a href="/social/{c.authorUsername}"><Avatar name={c.authorDisplayName} url={c.authorAvatarUrl} size={isReply ? 24 : 30} /></a>
       <div class="flex min-w-0 flex-1 flex-col gap-0.5">
         <span class="text-xs font-semibold"><a href="/social/{c.authorUsername}" class="hover:underline">{c.authorId === self?.id ? "You" : c.authorDisplayName}</a> <span class="font-normal text-muted-foreground">· {timeAgo(c.createdAt)}{c.authorId === postAuthorId ? " · author" : ""}{c.editedAt ? " · edited" : ""}</span></span>
         {#if editingId === c.id}
@@ -119,16 +141,42 @@
         {/if}
       </div>
     </div>
+  {/snippet}
+  {#each threads as t (t.comment.id)}
+    {@const foldable = repliesStartFolded(t.replies.length)}
+    {@const folded = foldable && !opened.has(t.comment.id)}
+    {@render comment(t.comment, false)}
+    {#if !folded}
+      {#each t.replies as r (r.id)}{@render comment(r, true)}{/each}
+    {/if}
+    {#if foldable}
+      <button type="button" aria-expanded={!folded}
+        onclick={() => (folded ? opened.add(t.comment.id) : opened.delete(t.comment.id))}
+        class="-my-1 ml-10 flex items-center gap-2.5 self-start py-1.5 text-xs font-semibold text-muted-foreground before:h-px before:w-6 before:bg-muted-foreground/50 before:content-[''] hover:text-foreground">
+        {folded ? `View ${t.replies.length} replies` : "Hide replies"}
+      </button>
+    {/if}
   {/each}
   {#if next}
     <button type="button" onclick={() => load(true)} class="h-8 self-start rounded-[9px] border border-border px-3 text-xs">Show more</button>
   {/if}
-  <div class="flex gap-2 border-t border-border pt-3">
-    <label for="new-comment" class="sr-only">Add a comment</label>
-    <input id="new-comment" bind:value={draft} maxlength="1000" placeholder="Add a comment, @ to mention"
-      onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-      class="h-9 min-w-0 flex-1 rounded-[9px] border border-border bg-background px-3 text-[13px]" />
+  <div class="flex flex-col gap-2 border-t border-border pt-3">
+  {#if replyTo}
+    <div class="flex items-center justify-between text-xs text-muted-foreground">
+      <span>Replying to <strong class="font-semibold text-foreground">{replyTo.authorDisplayName}</strong></span>
+      <button type="button" onclick={cancelReply} class="py-1 hover:text-foreground">Cancel</button>
+    </div>
+  {/if}
+  <div class="flex gap-2">
+    <label for="new-comment" class="sr-only">{replyTo ? `Reply to ${replyTo.authorDisplayName}` : "Add a comment"}</label>
+    <input id="new-comment" bind:value={draft} maxlength="1000" placeholder={replyTo ? `Reply to ${replyTo.authorDisplayName}` : "Add a comment, @ to mention"}
+      onkeydown={(e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
+        if (e.key === "Escape" && replyTo) cancelReply();
+      }}
+      class="h-9 min-w-0 flex-1 rounded-[9px] border bg-background px-3 text-[13px] {replyTo ? 'border-sky-500/50' : 'border-border'}" />
     <button type="button" disabled={!draft.trim() || sending} onclick={send} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send</button>
+  </div>
   </div>
 </div>
 

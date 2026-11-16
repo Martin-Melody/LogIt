@@ -26,7 +26,7 @@ public record RepostSourceDto(Guid Id, Guid AuthorId, string AuthorUsername, str
     // so Body/PayloadJson are withheld (Deleted is also true, so older clients grey it out).
     bool AuthorIsPrivate = false, bool Unavailable = false);
 
-public record CommentDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Body, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe);
+public record CommentDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Body, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, Guid? ParentCommentId = null);
 
 public static class MappingExtensions
 {
@@ -82,5 +82,6 @@ public static class MappingExtensions
         new(comment.Id, comment.AuthorId, comment.Author.Username, comment.Author.DisplayName,
             comment.Author.AvatarUrl, comment.Body, comment.CreatedAt, comment.EditedAt,
             comment.Likes.Count,
-            callerId.HasValue && comment.Likes.Any(l => l.UserId == callerId.Value));
+            callerId.HasValue && comment.Likes.Any(l => l.UserId == callerId.Value),
+            comment.ParentCommentId);
 }

@@ -412,14 +412,17 @@ public static class SocialEndpoints
         Guid? callerId = caller.GetUserIdOrNull();
         if (!await db.CanSeeAsync(callerId, post.Author)) return Results.NotFound();
 
+        // Pages are top-level comments, oldest first; each page brings all of its comments'
+        // replies along (also oldest first), so a thread is never split across pages.
         var query = db.Comments
             .Include(c => c.Author)
             .Include(c => c.Likes)
-            .Where(c => c.PostId == id && c.DeletedAt == null);
+            .Where(c => c.PostId == id && c.DeletedAt == null && c.ParentCommentId == null);
 
+        List<Guid> blocked = [];
         if (callerId is not null)
         {
-            var blocked = await db.BlockedUserIdsAsync(callerId.Value);
+            blocked = await db.BlockedUserIdsAsync(callerId.Value);
             query = query.Where(c => !blocked.Contains(c.AuthorId));
         }
 
@@ -434,7 +437,16 @@ public static class SocialEndpoints
             rows = rows.Take(limit).ToList();
         }
 
-        return Results.Ok(new { comments = rows.Select(c => c.ToDto(callerId)), nextCursor });
+        var parentIds = rows.Select(c => c.Id).ToList();
+        var replies = await db.Comments
+            .Include(c => c.Author)
+            .Include(c => c.Likes)
+            .Where(c => c.ParentCommentId != null && parentIds.Contains(c.ParentCommentId.Value)
+                && c.DeletedAt == null && !blocked.Contains(c.AuthorId))
+            .OrderBy(c => c.CreatedAt)
+            .ToListAsync();
+
+        return Results.Ok(new { comments = rows.Concat(replies).Select(c => c.ToDto(callerId)), nextCursor });
     }
 
     private static async Task<IResult> AddComment(
@@ -450,16 +462,36 @@ public static class SocialEndpoints
 
         if (string.IsNullOrWhiteSpace(req.Body)) return Results.BadRequest(new { error = "Comment body is required." });
 
+        // A reply to a reply joins the same top-level comment (one level of threading).
+        Comment? parent = null;
+        if (req.ParentCommentId is { } parentId)
+        {
+            parent = await db.Comments.FirstOrDefaultAsync(c => c.Id == parentId && c.PostId == id && c.DeletedAt == null);
+            if (parent is null) return Results.NotFound(new { error = "That comment was deleted." });
+            if (parent.ParentCommentId is { } topId)
+                parent = await db.Comments.FirstOrDefaultAsync(c => c.Id == topId && c.DeletedAt == null);
+            if (parent is null) return Results.NotFound(new { error = "That comment was deleted." });
+        }
+
         var comment = new Comment
         {
             PostId = id,
             AuthorId = caller.GetUserId(),
             Body = req.Body.Trim(),
+            ParentCommentId = parent?.Id,
         };
 
         db.Comments.Add(comment);
         db.AddComment(caller.GetUserId(), post, comment.Id);
-        await db.AddMentionsAsync(comment.AuthorId, comment.Body, post.Id, comment.Id);
+        // The person replied to hears "replied to your comment": that's the one they replied to
+        // directly (it may itself be a reply), not the thread's top comment.
+        var repliedTo = req.ParentCommentId is { } directId
+            ? await db.Comments.Where(c => c.Id == directId).Select(c => (Guid?)c.AuthorId).FirstOrDefaultAsync()
+            : null;
+        var skipMention = new List<Guid>();
+        if (repliedTo is { } repliedToId && await db.AddReplyAsync(comment.AuthorId, repliedToId, post, comment.Id))
+            skipMention.Add(repliedToId);
+        await db.AddMentionsAsync(comment.AuthorId, comment.Body, post.Id, comment.Id, skipMention);
         await db.SaveChangesAsync();
         await db.Entry(comment).Reference(c => c.Author).LoadAsync();
 
@@ -499,7 +531,11 @@ public static class SocialEndpoints
             return Results.NotFound();
         if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
 
-        comment.DeletedAt = DateTime.UtcNow;
+        // Deleting a top-level comment takes its replies with it (as on Instagram).
+        var now = DateTime.UtcNow;
+        comment.DeletedAt = now;
+        var replies = await db.Comments.Where(c => c.ParentCommentId == comment.Id && c.DeletedAt == null).ToListAsync();
+        foreach (var reply in replies) reply.DeletedAt = now;
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
@@ -539,5 +575,5 @@ public static class SocialEndpoints
 
 public record CreatePostRequest(PostType Type, string? Body, string? PayloadJson);
 public record RepostRequest(string? Body);
-public record AddCommentRequest(string Body);
+public record AddCommentRequest(string Body, Guid? ParentCommentId = null);
 public record EditBodyRequest(string Body);

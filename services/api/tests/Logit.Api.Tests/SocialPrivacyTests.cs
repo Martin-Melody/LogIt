@@ -290,4 +290,50 @@ public class SocialPrivacyTests
         Assert.Equal(0, quoteDto.LikeCount);
         Assert.Equal(0, quoteDto.CommentCount);
     }
+
+    [Fact]
+    public async Task Replying_notifies_the_comment_author_once_and_never_yourself()
+    {
+        var (conn, db) = await NewDb();
+        await using var _ = conn;
+        var alex = NewUser("alex"); var niamh = NewUser("niamh"); var conor = NewUser("conor");
+        db.Users.AddRange(alex, niamh, conor);
+        var post = NewPost(alex, "PB today");
+        db.Posts.Add(post);
+        await db.SaveChangesAsync();
+
+        // Conor replies to Niamh: she gets a Reply, and his "@niamh" doesn't add a Mention too.
+        var reply = Guid.NewGuid();
+        var notified = await db.AddReplyAsync(conor.Id, niamh.Id, post, reply);
+        await db.AddMentionsAsync(conor.Id, "@niamh agreed", post.Id, reply, notified ? [niamh.Id] : null);
+        // Replying to the post's author: they already get "commented on your post".
+        Assert.True(await db.AddReplyAsync(conor.Id, alex.Id, post, Guid.NewGuid()));
+        // Replying to yourself: nothing.
+        Assert.False(await db.AddReplyAsync(conor.Id, conor.Id, post, Guid.NewGuid()));
+        await db.SaveChangesAsync();
+
+        var rows = await db.Notifications.ToListAsync();
+        Assert.Single(rows);
+        Assert.Equal((niamh.Id, NotificationType.Reply, reply), (rows[0].UserId, rows[0].Type, rows[0].CommentId!.Value));
+    }
+
+    [Fact]
+    public async Task Deleting_an_account_takes_replies_to_its_comments_with_it()
+    {
+        var (conn, db) = await NewDb();
+        await using var _ = conn;
+        await db.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON;");
+        var alex = NewUser("alex"); var niamh = NewUser("niamh"); var conor = NewUser("conor");
+        db.Users.AddRange(alex, niamh, conor);
+        var post = NewPost(alex, "PB today");
+        db.Posts.Add(post);
+        var top = new Comment { PostId = post.Id, AuthorId = niamh.Id, Body = "nice" };
+        db.Comments.Add(top);
+        db.Comments.Add(new Comment { PostId = post.Id, AuthorId = conor.Id, Body = "@niamh agreed", ParentCommentId = top.Id });
+        db.Comments.Add(new Comment { PostId = post.Id, AuthorId = conor.Id, Body = "congrats" });
+        await db.SaveChangesAsync();
+
+        await db.Users.Where(u => u.Id == niamh.Id).ExecuteDeleteAsync();
+        Assert.Equal(["congrats"], await db.Comments.Select(c => c.Body).ToListAsync());
+    }
 }

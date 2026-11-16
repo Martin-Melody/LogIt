@@ -470,6 +470,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime?>("EditedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ParentCommentId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("PostId")
                         .HasColumnType("TEXT");
 
@@ -478,6 +481,8 @@ namespace Logit.Api.Migrations
                     b.HasIndex("AuthorId");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ParentCommentId");
 
                     b.HasIndex("PostId");
 
@@ -1632,6 +1637,11 @@ namespace Logit.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Logit.Api.Data.Entities.Comment", "ParentComment")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentCommentId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Logit.Api.Data.Entities.Post", "Post")
                         .WithMany("Comments")
                         .HasForeignKey("PostId")
@@ -1639,6 +1649,8 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Author");
+
+                    b.Navigation("ParentComment");
 
                     b.Navigation("Post");
                 });
@@ -1971,6 +1983,8 @@ namespace Logit.Api.Migrations
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>
                 {
                     b.Navigation("Likes");
+
+                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Invite", b =>

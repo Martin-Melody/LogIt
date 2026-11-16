@@ -6,6 +6,8 @@
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
   import CommentList from "./social/CommentList.svelte";
+  import ReplyingTo from "./social/ReplyingTo.svelte";
+  import { replyDraft } from "@logit/core/domain/commentThreads";
 
   interface Props {
     post: ApiPost | null;
@@ -19,6 +21,20 @@
   let loading = $state(false);
   let submitting = $state(false);
   let body = $state("");
+  let replyTo = $state<ApiComment | null>(null);
+  let justSent = $state<ApiComment | null>(null);
+  let input = $state<HTMLTextAreaElement | null>(null);
+
+  function startReply(c: ApiComment) {
+    replyTo = c;
+    body = replyDraft(c, body);
+    input?.focus();
+  }
+
+  function cancelReply() {
+    if (replyTo && body.trim().toLowerCase() === `@${replyTo.authorUsername}`.toLowerCase()) body = "";
+    replyTo = null;
+  }
 
   $effect(() => {
     if (post) {
@@ -30,6 +46,8 @@
   $effect(() => {
     if (post) {
       comments = [];
+      replyTo = null;
+      justSent = null;
       loading = true;
       socialApi.getComments(post.id).then((page) => {
         comments = page.comments;
@@ -46,8 +64,10 @@
     const text = body.trim();
     body = "";
     try {
-      const comment = await socialApi.addComment(post.id, text);
+      const comment = await socialApi.addComment(post.id, text, replyTo?.id);
       comments = [...comments, comment];
+      justSent = replyTo ? comment : null;
+      replyTo = null;
       oncommentcountchange?.(post.id, 1);
     } catch {
       body = text;
@@ -89,17 +109,21 @@
           bind:comments
           postId={post.id}
           oncountchange={(d) => oncommentcountchange?.(post.id, d)}
+          onreply={startReply}
+          {justSent}
         />
       {/if}
     </div>
 
     <!-- Compose -->
     {#if authStore.isAuthenticated}
-      <div class="flex items-end gap-2 px-4 py-3 border-t border-border shrink-0">
+      {#if replyTo}<div class="border-t border-border"><ReplyingTo comment={replyTo} oncancel={cancelReply} /></div>{/if}
+      <div class="flex items-end gap-2 px-4 py-3 shrink-0 {replyTo ? 'pt-1' : 'border-t border-border'}">
         <textarea
+          bind:this={input}
           bind:value={body}
           rows={1}
-          placeholder="Add a comment…"
+          placeholder={replyTo ? `Reply to ${replyTo.authorDisplayName}…` : "Add a comment…"}
           class="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring min-h-[38px] max-h-32"
           onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(); } }}
         ></textarea>

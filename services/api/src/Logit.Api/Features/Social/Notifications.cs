@@ -17,7 +17,8 @@ public static class Notifications
     /// Scans a just-created post/comment body for @mentions and raises a Mention notification
     /// for each real username found — skipping the author's own, duplicates, and anyone
     /// blocked-with the author (mutual invisibility, same rule as everywhere else social).
-    public static async Task AddMentionsAsync(this AppDbContext db, Guid actorId, string? body, Guid postId, Guid? commentId = null)
+    public static async Task AddMentionsAsync(this AppDbContext db, Guid actorId, string? body, Guid postId, Guid? commentId = null,
+        IReadOnlyCollection<Guid>? alreadyNotified = null)
     {
         if (string.IsNullOrWhiteSpace(body)) return;
         var usernames = MentionPattern.Matches(body)
@@ -30,6 +31,7 @@ public static class Notifications
         var mentioned = await db.Users
             .Where(u => usernames.Contains(u.Username) && u.Id != actorId && !blocked.Contains(u.Id))
             .ToListAsync();
+        if (alreadyNotified is not null) mentioned = mentioned.Where(u => !alreadyNotified.Contains(u.Id)).ToList();
 
         foreach (var user in mentioned)
         {
@@ -106,6 +108,25 @@ public static class Notifications
             PostId = post.Id,
             CommentId = commentId,
         });
+    }
+
+    /// "Replied to your comment" for the author of the comment replied to. Skipped for your own
+    /// comment, a blocked pair, and the post's author (who already gets the Comment notification).
+    /// Returns whether one was added, so the reply's @mention of them doesn't notify twice.
+    public static async Task<bool> AddReplyAsync(this AppDbContext db, Guid actorId, Guid repliedToId, Post post, Guid commentId)
+    {
+        if (repliedToId == actorId) return false;
+        if (repliedToId == post.AuthorId) return true;
+        if ((await db.BlockedUserIdsAsync(actorId)).Contains(repliedToId)) return false;
+        db.Notifications.Add(new Notification
+        {
+            UserId = repliedToId,
+            ActorId = actorId,
+            Type = NotificationType.Reply,
+            PostId = post.Id,
+            CommentId = commentId,
+        });
+        return true;
     }
 
     public static void AddFollow(this AppDbContext db, Guid actorId, Guid followedId)
