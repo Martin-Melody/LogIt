@@ -1,3 +1,4 @@
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import type { FoodDbRepo, FoodSearchOptions } from "../foodDbRepo";
 import type { FoodRef } from "../../domain/nutrition";
 
@@ -6,12 +7,17 @@ import type { FoodRef } from "../../domain/nutrition";
 // Generic ("usda") whole foods aren't available here; the UI still has custom foods/recipes.
 
 const OFF_BASE = "https://world.openfoodfacts.org";
-const FIELDS = "code,product_name,brands,nutriments,serving_quantity,serving_size";
+/** Search-a-licious: OFF's newer search. Much better ranking than cgi/search.pl, and it
+ * tolerates typos and word order. */
+const OFF_SEARCH = "https://search.openfoodfacts.org/search";
+const FIELDS = "code,product_name,product_name_en,brands,nutriments,serving_quantity,serving_size";
 
 type OffProduct = {
   code?: string;
   product_name?: string;
-  brands?: string;
+  product_name_en?: string;
+  /** A comma-separated string from the product API, an array from search-a-licious. */
+  brands?: string | string[];
   serving_quantity?: number | string;
   serving_size?: string;
   nutriments?: Record<string, number | string>;
@@ -31,7 +37,7 @@ function macro(v: unknown): number {
 
 function toFoodRef(p: OffProduct): FoodRef | null {
   const barcode = String(p.code ?? "").trim();
-  const name = String(p.product_name ?? "").trim();
+  const name = String(p.product_name_en || p.product_name || "").trim();
   const energy = kcal(p.nutriments);
   if (!barcode || !name || !Number.isFinite(energy)) return null;
 
@@ -45,7 +51,7 @@ function toFoodRef(p: OffProduct): FoodRef | null {
     id: `off:${barcode}`,
     source: "off",
     name,
-    brand: String(p.brands ?? "").split(",")[0].trim() || undefined,
+    brand: (Array.isArray(p.brands) ? String(p.brands[0] ?? "") : String(p.brands ?? "").split(",")[0]).trim() || undefined,
     barcode,
     per100g: {
       kcal: Math.round(Math.min(energy, 950) * 10) / 10,
@@ -57,6 +63,48 @@ function toFoodRef(p: OffProduct): FoodRef | null {
   };
 }
 
+function parse(products: OffProduct[] | undefined): FoodRef[] {
+  return (products ?? []).map(toFoodRef).filter((f): f is FoodRef => f !== null);
+}
+
+/**
+ * null when the service didn't answer, so the caller can try the old endpoint. The new
+ * search sends no CORS headers, so it only works from the native app (CapacitorHttp makes
+ * the request outside the web view); the web build goes straight to the old endpoint.
+ */
+async function searchNew(q: string, limit: number): Promise<FoodRef[] | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+  try {
+    const res = await CapacitorHttp.get({
+      url: `${OFF_SEARCH}?q=${encodeURIComponent(q)}&page_size=${limit}&fields=${FIELDS}`,
+      responseType: "json",
+      // Open Food Facts asks apps to identify themselves.
+      headers: { "User-Agent": "LogIt/1.0 (https://getlogit.app)" },
+      connectTimeout: 8000,
+      readTimeout: 8000,
+    });
+    if (res.status < 200 || res.status >= 300) return null;
+    const body = (typeof res.data === "string" ? JSON.parse(res.data) : res.data) as { hits?: OffProduct[] };
+    return Array.isArray(body?.hits) ? parse(body.hits) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function searchLegacy(q: string, limit: number): Promise<FoodRef[]> {
+  try {
+    const res = await fetch(
+      `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}` +
+        `&search_simple=1&action=process&json=1&page_size=${limit}&fields=${FIELDS}`,
+    );
+    if (!res.ok) return [];
+    const body = (await res.json()) as { products?: OffProduct[] };
+    return parse(body.products);
+  } catch {
+    return [];
+  }
+}
+
 export function createOpenFoodFactsRepo(): FoodDbRepo {
   return {
     isOfflineAvailable: () => false,
@@ -64,19 +112,9 @@ export function createOpenFoodFactsRepo(): FoodDbRepo {
     async searchFoods(q, opts: FoodSearchOptions = {}) {
       if (!q.trim()) return [];
       const limit = Math.min(opts.limit ?? 25, 50);
-      const url =
-        `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}` +
-        `&search_simple=1&action=process&json=1&page_size=${limit}&fields=${FIELDS}`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return [];
-        const body = (await res.json()) as { products?: OffProduct[] };
-        return (body.products ?? [])
-          .map(toFoodRef)
-          .filter((f): f is FoodRef => f !== null);
-      } catch {
-        return [];
-      }
+      const fromNew = await searchNew(q, limit);
+      if (fromNew !== null) return fromNew;
+      return searchLegacy(q, limit);
     },
 
     async getFood(id) {

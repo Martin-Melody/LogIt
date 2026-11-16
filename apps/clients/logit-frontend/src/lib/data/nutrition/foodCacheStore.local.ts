@@ -1,3 +1,4 @@
+import { rankByQuery } from "@logit/core/nutrition/foodSearch";
 import { browser } from "$app/environment";
 import type { FoodCacheStore } from "@logit/core/data/cachingFoodDbRepo";
 import type { FoodRef } from "@logit/core/domain/nutrition";
@@ -39,16 +40,9 @@ export function createLocalFoodCacheStore(): FoodCacheStore {
     },
 
     async search(q, limit) {
-      const ql = q.trim().toLowerCase();
-      if (!ql) return [];
-      return Object.values(readAll())
-        .filter(
-          (f) =>
-            f.name.toLowerCase().includes(ql) ||
-            (f.brand ?? "").toLowerCase().includes(ql),
-        )
-        .sort((a, b) => b.cachedAtMs - a.cachedAtMs)
-        .slice(0, limit);
+      if (!q.trim()) return [];
+      const newestFirst = Object.values(readAll()).sort((a, b) => b.cachedAtMs - a.cachedAtMs);
+      return rankByQuery(newestFirst, q, (f) => f, limit);
     },
 
     async put(foods) {

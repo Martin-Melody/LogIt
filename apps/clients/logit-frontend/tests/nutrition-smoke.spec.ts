@@ -72,7 +72,7 @@ test("nutrition personal flow", async ({ page }) => {
   // ── Today, before a goal is set ──
   await page.goto("/nutrition");
   await expect(page.getByRole("heading", { name: "Nutrition" })).toBeVisible();
-  await expect(page.getByText("Set a goal for calorie")).toBeVisible();
+  await expect(page.getByText("Set a goal to get calorie")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/01-today-no-goal.png`, fullPage: true });
 
   // ── Goal wizard ──
@@ -95,33 +95,30 @@ test("nutrition personal flow", async ({ page }) => {
   await page.waitForURL("**/nutrition");
 
   // ── Today, with an adaptive target and seeded history ──
-  await expect(page.getByText("Daily target")).toBeVisible();
+  await expect(page.getByText("Calories left")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/03-today-with-target.png`, fullPage: true });
 
   // ── Log a food (quick-add) ──
   const today = new Date().toISOString().slice(0, 10);
   await page.goto(`/nutrition/log?meal=lunch&date=${today}`);
   await page.getByRole("button", { name: "Quick add" }).click();
-  await page.getByPlaceholder("Name").fill("Chicken & rice bowl");
-  await page.getByPlaceholder("kcal").fill("650");
-  await page.getByPlaceholder("P", { exact: true }).fill("55");
-  await page.getByPlaceholder("C", { exact: true }).fill("70");
-  await page.getByPlaceholder("F", { exact: true }).fill("15");
+  await page.getByLabel(/What was it/).fill("Chicken & rice bowl");
+  await page.getByLabel("kcal", { exact: true }).fill("650");
+  await page.getByLabel("Protein", { exact: true }).fill("55");
+  await page.getByLabel("Carbs", { exact: true }).fill("70");
+  await page.getByLabel("Fat", { exact: true }).fill("15");
   await page.screenshot({ path: `${SHOTS}/04-log-quick-add.png`, fullPage: true });
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await page.waitForURL(/\/nutrition$/);
-  await expect(page.getByText("Chicken & rice bowl")).toBeVisible();
-  // the per-item "add photo" control exists and doesn't blow up (headless: no camera)
-  await page.getByRole("button", { name: "Add photo" }).first().click();
-  await page.waitForTimeout(300);
+  await page.getByRole("button", { name: "Add to Lunch" }).click();
+  await page.goto("/nutrition");
   await expect(page.getByText("Chicken & rice bowl")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/05-today-logged.png`, fullPage: true });
 
-  // ── Fast logging: the Recent tab re-logs a past food in one tap ──
+  // ── Fast logging: the "+" on a recent re-logs it in one tap ──
   await page.goto(`/nutrition/log?meal=dinner&date=${today}`);
   await expect(page.getByRole("tab", { name: "Recent" })).toBeVisible();
-  await page.getByRole("button", { name: /Chicken & rice bowl/ }).click();
-  await page.waitForURL(/\/nutrition$/);
+  await page.getByRole("button", { name: "Add Chicken & rice bowl" }).click();
+  await expect(page.getByText("1 added to Dinner")).toBeVisible();
+  await page.goto("/nutrition");
   // now logged in both lunch (original) and dinner
   await expect(page.getByText("Chicken & rice bowl")).toHaveCount(2);
   await page.screenshot({ path: `${SHOTS}/05b-recent-relog.png`, fullPage: true });
@@ -133,23 +130,39 @@ test("nutrition personal flow", async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/06-weight-trend.png`, fullPage: true });
 
   // ── Custom food ──
-  await page.goto("/nutrition/foods");
-  await page.getByRole("button", { name: "New" }).nth(1).click();
-  await page.getByPlaceholder("Name").fill("Skyr, plain");
-  await page.getByPlaceholder("kcal").fill("63");
-  await page.getByPlaceholder("P", { exact: true }).fill("11");
-  await page.getByPlaceholder("C", { exact: true }).fill("4");
-  await page.getByPlaceholder("F", { exact: true }).fill("0.2");
-  await page.getByRole("button", { name: "Save food" }).click();
+  await page.goto("/nutrition/foods?tab=foods");
+  await page.getByRole("button", { name: "New food" }).click();
+  await page.getByLabel("Name").fill("Skyr, plain");
+  await page.getByLabel("kcal", { exact: true }).fill("63");
+  await page.getByLabel("Protein", { exact: true }).fill("11");
+  await page.getByLabel("Carbs", { exact: true }).fill("4");
+  await page.getByLabel("Fat", { exact: true }).fill("0.2");
+  await expect(page.getByText("Macros add up to 62 kcal")).toBeVisible();
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Skyr, plain")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/07-foods.png`, fullPage: true });
 
-  // ── Recipe editor ──
-  await page.getByRole("button", { name: "New" }).first().click();
-  await page.waitForURL("**/nutrition/foods/recipe/**");
-  await expect(page.getByRole("heading", { name: "Recipe" })).toBeVisible();
-  await page.getByRole("textbox").first().fill("Overnight oats");
+  // ── Recipe editor: an ingredient from your foods, portioned by the cooked weight ──
+  await page.getByRole("tab", { name: /Recipes/ }).click();
+  await page.getByRole("link", { name: "New recipe" }).click();
+  await page.waitForURL("**/nutrition/foods/recipe/new");
+  await page.getByLabel("Recipe name").fill("Overnight oats");
+  await page.waitForURL(/\/nutrition\/foods\/recipe\/rcp_/); // stored once it has a name
+  await page.getByRole("button", { name: "Add ingredient" }).click();
+  await page.getByRole("tab", { name: "My foods" }).click();
+  await page.getByRole("button", { name: /Skyr, plain/ }).first().click();
+  await page.getByTestId("amount-input").fill("300");
+  await page.getByRole("button", { name: "Add to recipe" }).click();
+  await expect(page.getByText("Ingredients · 1")).toBeVisible();
+  await page.getByRole("radio", { name: "By cooked weight" }).click();
+  await page.getByLabel("Cooked weight in grams").fill("300");
+  await expect(page.getByText("kcal per 100 g cooked")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/08-recipe-editor.png`, fullPage: true });
+  await page.waitForTimeout(700); // autosave
+  const saved = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem("logit:recipes:v1") ?? "{}")) as { name: string; portionMode?: string; cookedWeightG?: number; ingredients: unknown[] }[]);
+  expect(saved).toHaveLength(1);
+  expect(saved[0]).toMatchObject({ name: "Overnight oats", portionMode: "weight", cookedWeightG: 300 });
+  expect(saved[0].ingredients).toHaveLength(1);
 
   // ── Insights: Nutrition › Insights opens the "Is my eating on track?" question ──
   await page.goto("/nutrition/insights");
@@ -252,7 +265,8 @@ test("copy a previous day pulls yesterday's items into today", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Nutrition" })).toBeVisible();
   await expect(page.getByText("Seeded day")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Copy a day" }).click();
+  await page.getByRole("button", { name: "Dinner options" }).click();
+  await page.getByRole("button", { name: "Copy from another day…" }).click();
   // The date field defaults to yesterday; just confirm.
   await page.getByRole("button", { name: "Copy", exact: true }).click();
 
@@ -352,16 +366,15 @@ test("a coach comment on a diary day shows inline on that day", async ({ page })
   await page.screenshot({ path: `${SHOTS}/12-coach-comment.png`, fullPage: true });
 });
 
-test("diary items expose a drag handle, and a move persists", async ({ page }) => {
-  // The real pointer-drag is exercised by hand / on device (svelte-dnd-action's state
-  // machine doesn't drive reliably from synthetic mouse events). Here we check the handles
-  // render and that the finalize path — setDiaryItems with re-tagged meals — persists.
+test("a meal's items move to another meal from its menu, and the move persists", async ({ page }) => {
   const today = new Date().toISOString().slice(0, 10);
   await page.addInitScript(
     (dateIso) => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
       localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
       localStorage.setItem("logit:had_account", "1");
+      // Only seed once, so the reload below sees what the move saved.
+      if (localStorage.getItem("logit:nutritionDays:v1")?.includes("Movable Oats")) return;
       localStorage.setItem(
         "logit:nutritionDays:v1",
         JSON.stringify({
@@ -384,8 +397,14 @@ test("diary items expose a drag handle, and a move persists", async ({ page }) =
   await page.goto("/nutrition");
   await expect(page.getByText("Movable Oats")).toBeVisible();
   await expect(page.getByText("Chicken wrap")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Drag to move/ })).toHaveCount(2);
-  await page.screenshot({ path: `${SHOTS}/14-diary-drag-handles.png`, fullPage: true });
+  await page.getByRole("button", { name: "Breakfast options" }).click();
+  await page.getByRole("button", { name: "Move to another meal…" }).click();
+  await page.getByRole("button", { name: "Snacks", exact: true }).click();
+  await expect(page.getByTestId("meal-snack")).toContainText("Movable Oats");
+  await page.reload();
+  await expect(page.getByTestId("meal-snack")).toContainText("Movable Oats");
+  await expect(page.getByTestId("meal-breakfast")).toContainText("Nothing yet");
+  await page.screenshot({ path: `${SHOTS}/14-diary-move.png`, fullPage: true });
 });
 
 test("save a meal as a template, then log it into another meal in one tap", async ({ page }) => {
@@ -420,16 +439,17 @@ test("save a meal as a template, then log it into another meal in one tap", asyn
 
   await page.goto("/nutrition");
   await expect(page.getByText("Oats")).toBeVisible();
-  await page.getByRole("button", { name: /Save Breakfast as a meal/i }).click();
-  await page.getByPlaceholder("Meal name").fill("Usual breakfast");
+  await page.getByRole("button", { name: "Breakfast options" }).click();
+  await page.getByRole("button", { name: /Save as a meal/ }).click();
+  await page.getByLabel("Name").fill("Usual breakfast");
   await page.getByRole("button", { name: "Save meal" }).click();
   await page.waitForTimeout(200);
 
   await page.goto(`/nutrition/log?meal=dinner&date=${today}`);
   await page.getByRole("tab", { name: "Meals" }).click();
   await expect(page.getByText("Usual breakfast")).toBeVisible();
-  await page.getByRole("button", { name: /Usual breakfast/ }).click();
-  await page.waitForURL(/\/nutrition$/);
+  await page.getByRole("button", { name: "Add Usual breakfast" }).click();
+  await expect(page.getByText("2 added to Dinner")).toBeVisible();
 
   const day = await page.evaluate((dateIso) => {
     const d = JSON.parse(localStorage.getItem("logit:nutritionDays:v1")!);
@@ -471,13 +491,13 @@ test("favourites tab lists pinned foods and logs one in a tap", async ({ page })
   await expect(page.getByText("Oatly Barista")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/13-favourites.png`, fullPage: true });
 
-  await page.getByRole("button", { name: /Oatly Barista/ }).click();
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Add Oatly Barista" }).click();
+  await page.getByRole("button", { name: "Done" }).click();
   await page.waitForURL(/\/nutrition$/);
   await expect(page.getByText("Oatly Barista")).toBeVisible();
 });
 
-test("tapping a diary item opens its detail page and editing the amount rescales it", async ({
+test("tapping a diary item opens its amount sheet and editing the amount rescales it", async ({
   page,
 }) => {
   const today = new Date().toISOString().slice(0, 10);
@@ -512,16 +532,14 @@ test("tapping a diary item opens its detail page and editing the amount rescales
   );
 
   await page.goto("/nutrition");
-  await page.getByRole("link", { name: /Rice, cooked/ }).click();
-  await page.waitForURL(/\/nutrition\/entry\//);
+  await page.getByRole("button", { name: /Rice, cooked/ }).click();
   await expect(page.getByRole("heading", { name: "Rice, cooked" })).toBeVisible();
-  await expect(page.getByText("260 kcal", { exact: false })).toBeVisible(); // ring centre
+  await expect(page.getByTestId("adds-kcal")).toHaveText("260");
 
-  const amount = page.getByLabel("Amount");
-  await amount.fill("250");
+  await page.getByTestId("amount-input").fill("250");
+  await expect(page.getByTestId("adds-kcal")).toHaveText("325");
   await page.screenshot({ path: `${SHOTS}/16-edit-entry.png`, fullPage: true });
   await page.getByRole("button", { name: "Save" }).click();
-  await page.waitForURL(/\/nutrition$/);
 
   // 200 g → 250 g rescales 260 kcal → 325
   const row = page.getByRole("listitem").filter({ hasText: "Rice, cooked" });
@@ -529,7 +547,7 @@ test("tapping a diary item opens its detail page and editing the amount rescales
   await expect(row).toContainText("325");
 });
 
-test("the Foods link opens the log screen in browse mode with a Custom tab", async ({ page }) => {
+test("the My foods button lists your foods, and one logs from the add screen", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
     localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
@@ -553,20 +571,23 @@ test("the Foods link opens the log screen in browse mode with a Custom tab", asy
   });
 
   await page.goto("/nutrition");
-  await page.getByRole("link", { name: "Foods" }).click();
-  await page.waitForURL(/\/nutrition\/log$/);
-  await expect(page.getByRole("heading", { name: "Foods" })).toBeVisible();
-  await expect(page.getByText("Adding to")).toBeVisible();
-
-  // Custom tab lists the seeded custom food; tapping it opens the portion panel
-  await page.getByRole("tab", { name: "Custom" }).click();
-  await page.getByRole("button", { name: /Skyr, plain/ }).click();
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  // browse mode stays on the log screen after adding
-  await expect(page).toHaveURL(/\/nutrition\/log$/);
-
-  await page.goto("/nutrition");
+  await page.getByRole("link", { name: "My foods and recipes" }).click();
+  await page.waitForURL(/\/nutrition\/foods/);
+  await page.getByRole("tab", { name: /Foods/ }).click();
   await expect(page.getByText("Skyr, plain")).toBeVisible();
+
+  // The floating button logs to the meal for this time of day; the search finds the food
+  // whatever the word order.
+  await page.goto("/nutrition");
+  await page.getByRole("link", { name: "Log food" }).click();
+  await page.waitForURL(/\/nutrition\/log/);
+  await page.getByLabel("Search foods").fill("plain skyr");
+  await page.getByRole("button", { name: /Skyr, plain/ }).first().click();
+  await page.getByRole("dialog").getByRole("button", { name: /^Add to (Breakfast|Lunch|Dinner|Snacks)$/ }).click();
+  await expect(page.getByText(/^1 added/)).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.waitForURL(/\/nutrition$/);
+  await expect(page.locator("[data-testid^=meal-]").getByText("Skyr, plain")).toBeVisible();
 });
 
 test("a custom food can be edited in place, keeping its id", async ({ page }) => {
@@ -592,14 +613,14 @@ test("a custom food can be edited in place, keeping its id", async ({ page }) =>
     );
   });
 
-  await page.goto("/nutrition/foods");
-  await page.getByRole("button", { name: "Edit" }).click();
-  await expect(page.getByText("Edit custom food")).toBeVisible();
-  await page.getByPlaceholder("Name").fill("Protein shake v2");
-  await page.getByPlaceholder("kcal").fill("110");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.goto("/nutrition/foods?tab=foods");
+  await page.getByRole("button", { name: /Protein shake/ }).click();
+  await expect(page.getByRole("heading", { name: "Edit food" })).toBeVisible();
+  await page.getByLabel("Name").fill("Protein shake v2");
+  await page.getByLabel("kcal", { exact: true }).fill("110");
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Protein shake v2")).toBeVisible();
-  await expect(page.getByText("110/100g")).toBeVisible();
+  await expect(page.getByText(/100 g · 110 kcal/)).toBeVisible();
 
   const stored = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("logit:customFoods:v1") ?? "{}"),

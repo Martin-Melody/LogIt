@@ -33,6 +33,12 @@ CREATE VIRTUAL TABLE foods_fts USING fts5(
   tokenize='unicode61 remove_diacritics 2'
 );
 
+-- Every searchable word with how many foods use it, for typo correction in the app.
+CREATE TABLE vocab (
+  term TEXT PRIMARY KEY,
+  docs INTEGER NOT NULL
+) WITHOUT ROWID;
+
 -- Provenance / attribution, surfaced in the app's "About" screen.
 CREATE TABLE meta (
   key   TEXT PRIMARY KEY,

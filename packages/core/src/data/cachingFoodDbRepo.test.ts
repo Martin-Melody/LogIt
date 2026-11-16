@@ -127,9 +127,23 @@ describe("createCachingFoodDbRepo", () => {
 
     const results = await repo.searchFoods("oat");
     expect(onlineCalls).toBe(1);
-    expect(results.map((r) => r.id)).toEqual(["usda:1", "off:5", "off:6"]);
+    // Local first; online hits ranked by match ("Oat bar" beats "Oatly Barista" for "oat").
+    expect(results.map((r) => r.id)).toEqual(["usda:1", "off:6", "off:5"]);
     expect(cache.puts).toBe(1);
     expect(cache.store.size).toBe(2);
+  });
+
+  it("asks online when the caller wants it even if local results are plenty", async () => {
+    let onlineCalls = 0;
+    const thick = Array.from({ length: 10 }, (_, i) => food(`usda:${i}`, `Oats ${i}`));
+    const repo = createCachingFoodDbRepo({
+      bundled: fakeRepo({ search: thick }),
+      cache: memoryCache(),
+      online: fakeRepo({ onCall: () => onlineCalls++ }),
+      isOnline: () => true,
+    });
+    await repo.searchFoods("oats", { online: true });
+    expect(onlineCalls).toBe(1);
   });
 
   it("never calls online when offline", async () => {
