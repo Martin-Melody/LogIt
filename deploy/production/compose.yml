@@ -46,6 +46,9 @@ services:
       GooglePlay__PackageName: ie.logit.app
       GooglePlay__ServiceAccountJson: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:-}
       GooglePlay__NotificationToken: ${GOOGLE_PLAY_NOTIFICATION_TOKEN:-}
+      # Coach payments (Stripe Connect). Empty = off. See docs/deployment.md "Coach payments".
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY:-}
+      Stripe__ConnectWebhookSecret: ${STRIPE_CONNECT_WEBHOOK_SECRET:-}
     depends_on:
       db:
         condition: service_healthy
