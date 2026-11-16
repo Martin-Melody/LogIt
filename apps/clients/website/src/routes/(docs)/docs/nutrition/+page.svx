@@ -8,9 +8,19 @@ title: Nutrition
 
 <FeatureFacts id="nutrition" />
 
-Log food by searching, scanning a barcode, or from your recent foods, recipes and saved meals. Set your
-calorie and macro targets under Nutrition › Goal, and the diary shows how each day adds up. If your
-coach sets your targets, theirs are shown.
+Log food by searching, scanning a barcode or a nutrition label, or from your recent foods, recipes and
+saved meals. Search doesn't need the exact name: word order, plurals, small typos and UK or US names
+("mince", "ground beef") all find the same food. The barcode button is in every food search, including
+when you add ingredients to a recipe.
+
+Tap the calories card at the top of the diary to set your calorie and macro targets. If your coach sets
+your targets, theirs are shown. Each meal's ··· menu copies a meal from another day, saves it as a meal
+to log again in one tap, or moves it to another meal.
+
+A recipe can be split into servings, or logged by weight: weigh the cooked food in the pot, and then log
+the grams on your plate. Paste an ingredient list ("500 g chicken breast", "2 tins chopped tomatoes")
+and each line is matched to a food for you to check. Your recipes, foods and saved meals are under My
+foods (the book button on the diary).
 
 With Pro, your custom foods, recipes, favourites and saved meals sync between devices, and the web
 dashboard shows a week at a glance.

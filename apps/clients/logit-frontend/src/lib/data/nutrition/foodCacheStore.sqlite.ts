@@ -1,3 +1,4 @@
+import { queryWords, rankByQuery } from "@logit/core/nutrition/foodSearch";
 import type { FoodCacheStore } from "@logit/core/data/cachingFoodDbRepo";
 import type { FoodRef, ServingOption } from "@logit/core/domain/nutrition";
 import { getDb } from "$lib/data/db/sqlite";
@@ -65,15 +66,18 @@ export function createSqliteFoodCacheStore(): FoodCacheStore {
     },
 
     async search(q, limit) {
-      const like = `%${q.trim().replace(/[%_]/g, "")}%`;
+      // Candidates share the start of some word with the query (loose enough for typos
+      // later in a word), then the shared matcher ranks them.
+      const stems = queryWords(q)
+        .slice(0, 5)
+        .map((w) => w.slice(0, 3));
+      if (stems.length === 0) return [];
+      const where = stems.map(() => "(name LIKE ? OR brand LIKE ?)").join(" OR ");
       const rows = await query(
-        `SELECT ${COLS} FROM food_cache
-         WHERE name LIKE ? OR brand LIKE ?
-         ORDER BY cached_at_ms DESC
-         LIMIT ?`,
-        [like, like, Math.min(limit, 100)],
+        `SELECT ${COLS} FROM food_cache WHERE ${where} ORDER BY cached_at_ms DESC LIMIT 500`,
+        stems.flatMap((s) => [`%${s}%`, `%${s}%`]),
       );
-      return rows.map(toFoodRef);
+      return rankByQuery(rows.map(toFoodRef), q, (f) => f, Math.min(limit, 100));
     },
 
     async put(foods) {

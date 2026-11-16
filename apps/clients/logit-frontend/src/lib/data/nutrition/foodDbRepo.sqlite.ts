@@ -1,6 +1,15 @@
 import type { FoodDbRepo, FoodSearchOptions } from "@logit/core/data/foodDbRepo";
 import type { FoodRef, ServingOption } from "@logit/core/domain/nutrition";
 import { getFoodDb } from "$lib/data/db/sqlite";
+import {
+  closestTerms,
+  ftsQueries,
+  normalizeText,
+  prepareQuery,
+  queryWords,
+  sameFoodKey,
+  scoreName,
+} from "@logit/core/nutrition/foodSearch";
 
 type FoodRow = {
   id: string;
@@ -13,6 +22,8 @@ type FoodRow = {
   carb_100g: number;
   fat_100g: number;
   serving_json: string;
+  popularity?: number;
+  curated?: number;
 };
 
 function toFoodRef(r: FoodRow): FoodRef {
@@ -42,17 +53,6 @@ function toFoodRef(r: FoodRow): FoodRef {
   };
 }
 
-/** "chicken br" -> "chicken* br*" — prefix tokens for FTS5. */
-function ftsQuery(input: string): string {
-  return input
-    .trim()
-    .split(/\s+/)
-    .map((t) => t.replace(/[^\p{L}\p{N}]/gu, ""))
-    .filter(Boolean)
-    .map((t) => `${t}*`)
-    .join(" ");
-}
-
 const COL_LIST = [
   "id",
   "source",
@@ -64,9 +64,40 @@ const COL_LIST = [
   "carb_100g",
   "fat_100g",
   "serving_json",
+  "popularity",
 ];
 const COLS = COL_LIST.join(", ");
 const F_COLS = COL_LIST.map((c) => `f.${c}`).join(", ");
+
+function dedupeRows(a: FoodRow[], b: FoodRow[]): FoodRow[] {
+  const seen = new Set(a.map((r) => r.id));
+  return [...a, ...b.filter((r) => !seen.has(r.id))];
+}
+
+/** Text match first; curated staples and popular products break near-ties. The same
+ * product listed twice (same name and brand) shows once. */
+function rerank(q: string, rows: FoodRow[], limit: number, fixes?: Map<string, string[]>): FoodRef[] {
+  const pq = prepareQuery(q, fixes);
+  const seen = new Set<string>();
+  return rows
+    .map((r, i) => {
+      const text = scoreName(pq, r.name, r.brand);
+      const pop = Math.min(Math.log10((r.popularity ?? 0) + 1), 3) * 0.04;
+      const generic = r.source !== "off" ? 0.05 : 0;
+      const staple = r.curated && text >= 0.9 ? 0.2 : 0;
+      return { r, i, s: text > 0 ? text + staple + pop + generic : 0 };
+    })
+    .filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s || a.i - b.i)
+    .filter((x) => {
+      const k = sameFoodKey(x.r.name, x.r.brand);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .slice(0, limit)
+    .map((x) => toFoodRef(x.r));
+}
 
 export function createSqliteFoodDbRepo(): FoodDbRepo {
   // null = not probed yet
@@ -104,6 +135,46 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
     return curatedOk;
   }
 
+  let vocabOk: boolean | null = null;
+  async function hasVocab(): Promise<boolean> {
+    if (vocabOk !== null) return vocabOk;
+    try {
+      await query("SELECT term FROM vocab LIMIT 1", []);
+      vocabOk = true;
+    } catch {
+      vocabOk = false;
+    }
+    return vocabOk;
+  }
+
+  /** Much more common close spellings for each query word ("chiken" → "chicken"). */
+  async function typoFixes(q: string): Promise<Map<string, string[]>> {
+    const fixes = new Map<string, string[]>();
+    if (!(await hasVocab())) return fixes;
+    for (const w of queryWords(q)) {
+      if (w.length < 4 || /[^a-z]/.test(w)) continue;
+      const db = getFoodDb();
+      if (!db) break;
+      const known = await db.query("SELECT docs FROM vocab WHERE term = ? LIMIT 1", [w]);
+      const docs = Number((known.values?.[0] as { docs?: number } | undefined)?.docs ?? 0);
+      // Typos rarely hit the first letter; compare against words sharing it.
+      const near = await vocabNear(w[0], w.length);
+      const best = closestTerms(normalizeText(w), near, 2, docs);
+      if (best.length) fixes.set(w, best);
+    }
+    return fixes;
+  }
+
+  async function vocabNear(first: string, len: number): Promise<{ term: string; docs: number }[]> {
+    const db = getFoodDb();
+    if (!db) return [];
+    const res = await db.query(
+      "SELECT term, docs FROM vocab WHERE term >= ? AND term < ? AND length(term) BETWEEN ? AND ?",
+      [first, `${first}{`, len - 2, len + 2],
+    );
+    return (res.values ?? []) as { term: string; docs: number }[];
+  }
+
   return {
     isOfflineAvailable: () => getFoodDb() !== null,
 
@@ -113,39 +184,46 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
       const limit = Math.min(opts.limit ?? 25, 100);
       const sourceClause = opts.source ? " AND f.source = ?" : "";
       const sourceParam = opts.source ? [opts.source] : [];
+      const curated = await hasCurated();
+      const curatedCol = curated ? ", f.curated" : "";
 
-      if (await hasFts()) {
-        const match = ftsQuery(q);
-        if (!match) return [];
-        // Hand-curated staples first (common-foods.json), in curator order (higher
-        // popularity = earlier in the list). Everything else blends BM25 relevance (`rank`,
-        // negative — lower is better) with a small bounded popularity nudge (≤2 rank-points),
-        // so a bare "banana" surfaces the generic entry ahead of an obscure branded
-        // "…Bananallama…" without letting a high-scan brand name swamp relevance. Generic
-        // USDA/CIQUAL foods carry popularity ~400.
-        const order = (await hasCurated())
-          ? "f.curated DESC, CASE WHEN f.curated = 1 THEN -f.popularity ELSE rank - (MIN(f.popularity, 800) / 400.0) END"
-          : "rank - (MIN(f.popularity, 800) / 400.0)";
+      if (!(await hasFts())) {
+        // LIKE fallback (platforms without FTS5): any word, ranked in JS below.
+        const ws = queryWords(q).slice(0, 4);
+        if (ws.length === 0) return [];
+        const where = ws.map(() => "(name LIKE ? OR brand LIKE ?)").join(" OR ");
+        const params = ws.flatMap((w) => [`%${w}%`, `%${w}%`]);
         const rows = await query(
-          `SELECT ${F_COLS} FROM foods_fts
-           JOIN foods f ON f.rowid = foods_fts.rowid
-           WHERE foods_fts MATCH ?${sourceClause}
-           ORDER BY ${order} LIMIT ?`,
-          [match, ...sourceParam, limit],
+          `SELECT ${COLS}${curated ? ", curated" : ""} FROM foods
+           WHERE (${where})${opts.source ? " AND source = ?" : ""}
+           ORDER BY popularity DESC LIMIT ?`,
+          [...params, ...sourceParam, limit * 4],
         );
-        return rows.map(toFoodRef);
+        return rerank(q, rows, limit);
       }
 
-      // LIKE fallback (platforms without FTS5).
-      const like = `%${q.trim().replace(/[%_]/g, "")}%`;
-      const curatedFirst = (await hasCurated()) ? "curated DESC, " : "";
-      const rows = await query(
-        `SELECT ${COLS} FROM foods
-         WHERE (name LIKE ? OR brand LIKE ?)${opts.source ? " AND source = ?" : ""}
-         ORDER BY ${curatedFirst}popularity DESC, length(name) LIMIT ?`,
-        [like, like, ...sourceParam, limit],
-      );
-      return rows.map(toFoodRef);
+      // Pull a generous candidate set from FTS (every word first, then any word), then
+      // rank it with the same rules as the rest of the app's food search. Likely typo
+      // corrections ride along as extra spellings. Generic foods get their own small pass
+      // so 250k packaged products can't crowd plain "Egg, whole" out of the pool.
+      const pool = limit * 4;
+      async function run(match: string, n: number, genericOnly = false): Promise<FoodRow[]> {
+        return query(
+          `SELECT ${F_COLS}${curatedCol} FROM foods_fts
+           JOIN foods f ON f.rowid = foods_fts.rowid
+           WHERE foods_fts MATCH ?${sourceClause}${genericOnly ? " AND f.source != 'off'" : ""}
+           ORDER BY ${genericOnly && curated ? "f.curated DESC, " : ""}rank - (MIN(f.popularity, 800) / 400.0) LIMIT ?`,
+          [match, ...sourceParam, n],
+        ).catch(() => []);
+      }
+
+      const fixes = await typoFixes(q);
+      const fq = ftsQueries(q, fixes);
+      if (!fq) return [];
+      const generics = opts.source === "off" ? [] : await run(fq.all, 12, true);
+      let rows = dedupeRows(generics, await run(fq.all, pool));
+      if (rows.length < limit) rows = dedupeRows(rows, await run(fq.any, pool));
+      return rerank(q, rows, limit, fixes);
     },
 
     async getFood(id) {

@@ -230,6 +230,21 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] Nutrition redesign (2026-11-16, mockups: https://claude.ai/artifact/RQWwFuZhMzGzgBx74TwMNt, branch
+      `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US
+      synonyms, typo budget, ranking) used everywhere (bundled DB, cache, custom foods, recipes, meals);
+      the bundled DB gets a `vocab` table (food.db v3) for typo correction, a generic-foods pass and
+      dedupe; online search uses search-a-licious via CapacitorHttp on native (no CORS on web, which
+      falls back to the old endpoint). Release workflow now builds/caches `food.zip` (it never shipped
+      before, so phones only had online OFF search). Shared `FoodSearchPanel` (barcode + label scan in
+      every search, incl. recipe ingredients), `AmountSheet`, `FoodEditor`, `QuickAddSheet`. Diary:
+      week strip, calories-left card (opens Goal), meal cards with a ··· menu (copy yesterday / another
+      day, save as meal, move, clear), tap an entry to edit in the sheet (drag reorder dropped). Add
+      food stays open with a running tally + Undo. My foods page (Foods/Recipes/Meals). Recipes:
+      `portionMode` servings|weight, `cookedWeightG`, `cookedOn` (pot left = weight − grams logged
+      since), `notes`, ingredients keep `amount`/`portionId`; paste a list (`parseIngredientList`).
+      More units (kg, l, lb, tsp, tbsp, cup). Removed the "food packs" text (they never existed).
+
 - [x] Sessions overhaul (2026-11-13, mockups: https://claude.ai/artifact/JmwnCcUfaC7Kr6HmPDAcGL). A session
       keeps `name` and `source` (split/program day + `plan` snapshot as shown on the plan screen; phone
       SQLite `sessions.name`, `sessions.source_json`; synced inside the session JSON). Core

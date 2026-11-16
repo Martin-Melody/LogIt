@@ -70,6 +70,25 @@ jobs:
       - name: Install
         run: npm ci
 
+      # The offline food database (USDA + Open Food Facts, ~21 MB zipped). Without it the
+      # app can only search Open Food Facts online, which finds packaged products and no
+      # plain foods. Rebuilt when the build script or its curation changes, otherwise
+      # restored from the cache. Bump the "v" in the key to pull fresh source data.
+      - name: Food database cache
+        id: fooddb
+        uses: actions/cache@v4
+        with:
+          path: scripts/build-food-db/dist/food.zip
+          key: food-db-v1-${{ hashFiles('scripts/build-food-db/*.mjs', 'scripts/build-food-db/lib/**', 'scripts/build-food-db/common-foods.json', 'scripts/build-food-db/schema.sql') }}
+
+      - name: Build food database
+        if: steps.fooddb.outputs.cache-hit != 'true'
+        working-directory: scripts/build-food-db
+        run: npm run download && npm run build
+
+      - name: Bundle food database
+        run: cp scripts/build-food-db/dist/food.zip apps/clients/logit-frontend/static/assets/databases/food.zip
+
       - name: Build web bundle
         working-directory: apps/clients/logit-frontend
         env:

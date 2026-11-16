@@ -19,8 +19,9 @@ const FOOD_DB_NAME = "food";
 
 /** Bump when a shipped food.db change must reach devices that already unpacked an older
  * copy (copyFromAssets skips DBs already in the app store). Must match `meta.build_version`
- * written by scripts/build-food-db (config.dbVersion). v2 = curated common-foods column. */
-const FOOD_DB_VERSION = 2;
+ * written by scripts/build-food-db (config.dbVersion). v2 = curated common-foods column,
+ * v3 = vocab table for typo correction. */
+const FOOD_DB_VERSION = 3;
 
 let sqlite: SQLiteConnection | null = null;
 let db: SQLiteDBConnection | null = null;

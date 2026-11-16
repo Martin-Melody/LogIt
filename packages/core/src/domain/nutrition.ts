@@ -81,14 +81,24 @@ export function gramServing(): ServingOption {
 }
 
 /** Raw amount units the diary accepts alongside named servings. Volume assumes a
- * density of ~1 (g ≈ ml), the same assumption `per100g` already makes for liquids. */
-export const MEASURE_UNITS = ["g", "ml", "oz"] as const;
+ * density of ~1 (g ≈ ml), the same assumption `per100g` already makes for liquids, so the
+ * spoon/cup sizes are approximate (the picker shows their grams). */
+export const MEASURE_UNITS = ["g", "ml", "oz", "kg", "l", "lb", "tsp", "tbsp", "cup"] as const;
 export type MeasureUnit = (typeof MEASURE_UNITS)[number];
 
-const GRAMS_PER_UNIT: Record<MeasureUnit, number> = {
+/** The units offered up front; the rest sit behind "more units". */
+export const COMMON_MEASURE_UNITS: readonly MeasureUnit[] = ["g", "ml", "oz"];
+
+export const GRAMS_PER_UNIT: Record<MeasureUnit, number> = {
   g: 1,
   ml: 1,
   oz: 28.349523125, // international avoirdupois ounce
+  kg: 1000,
+  l: 1000,
+  lb: 453.59237,
+  tsp: 5,
+  tbsp: 15,
+  cup: 240,
 };
 
 export function isMeasureUnit(v: string): v is MeasureUnit {
@@ -119,6 +129,9 @@ export type LoggedItem = {
   grams: number;
   /** Human portion for display, e.g. "2 × medium (236 g)". */
   servingLabel?: string;
+  /** The portion as picked (e.g. 2 of serving "medium"), so editing reopens it the same way. */
+  amount?: number;
+  portionId?: string;
   computed: MacroTotals;
   /** Optional meal photo (small jpeg data URL). Rides in the synced day blob; a coach sees
    * it in the client's diary. */
@@ -210,21 +223,28 @@ export function tombstoneDay(day: DiaryDay): DiaryDay {
   return { ...day, items: [], deletedAtMs: now, updatedAtMs: now };
 }
 
-/** Build a LoggedItem from a food and a chosen portion. */
+/** Recipe ids carry the "rcp" prefix (createRecipe). */
+export function isRecipeId(id: string | undefined): boolean {
+  return !!id && id.startsWith("rcp_");
+}
+
+/** Build a LoggedItem from a food (or a recipe via recipeAsFood) and a chosen portion. */
 export function loggedItemFromFood(
   food: FoodRef,
   meal: MealSlot,
   grams: number,
   servingLabel?: string,
+  portion?: { amount: number; portionId: string },
 ): Omit<LoggedItem, "id"> {
   return {
     meal,
     sourceId: food.id,
-    sourceKind: "food",
+    sourceKind: isRecipeId(food.id) ? "recipe" : "food",
     name: food.name,
     brand: food.brand,
     grams,
     servingLabel,
+    ...(portion ? { amount: portion.amount, portionId: portion.portionId } : {}),
     computed: roundMacros(scaleMacros(food.per100g, grams)),
   };
 }
@@ -349,6 +369,8 @@ export type RecentFood = {
   brand?: string;
   grams: number;
   servingLabel?: string;
+  amount?: number;
+  portionId?: string;
   computed: MacroTotals;
   sourceId?: string;
   sourceKind?: "food" | "recipe";
@@ -358,7 +380,7 @@ export type RecentFood = {
   count: number;
 };
 
-function recentKey(it: Pick<LoggedItem, "sourceId" | "name" | "brand">): string {
+export function recentKey(it: Pick<LoggedItem, "sourceId" | "name" | "brand">): string {
   return it.sourceId ?? `${it.name} ${it.brand ?? ""}`;
 }
 
@@ -367,6 +389,16 @@ function recentKey(it: Pick<LoggedItem, "sourceId" | "name" | "brand">): string 
  * Recency is by calendar date (the diary has no per-item timestamps); later items within a
  * day count as more recent.
  */
+/** Keys (see recentKey) of foods logged at this meal at least `min` times. */
+export function usualAtMeal(days: readonly DiaryDay[], meal: MealSlot, min = 2): Set<string> {
+  const counts = new Map<string, number>();
+  for (const d of days) {
+    if (d.deletedAtMs) continue;
+    for (const it of d.items) if (it.meal === meal) counts.set(recentKey(it), (counts.get(recentKey(it)) ?? 0) + 1);
+  }
+  return new Set([...counts].filter(([, n]) => n >= min).map(([k]) => k));
+}
+
 export function recentFoodsFromDays(days: DiaryDay[], limit = 40): RecentFood[] {
   const byKey = new Map<string, RecentFood>();
   const sorted = [...days]
@@ -383,6 +415,8 @@ export function recentFoodsFromDays(days: DiaryDay[], limit = 40): RecentFood[] 
         brand: it.brand,
         grams: it.grams,
         servingLabel: it.servingLabel,
+        amount: it.amount,
+        portionId: it.portionId,
         computed: it.computed,
         sourceId: it.sourceId,
         sourceKind: it.sourceKind,
@@ -407,6 +441,7 @@ export function loggedItemFromRecent(r: RecentFood, meal: MealSlot): Omit<Logged
     brand: r.brand,
     grams: r.grams,
     servingLabel: r.servingLabel,
+    ...(r.amount != null && r.portionId ? { amount: r.amount, portionId: r.portionId } : {}),
     computed: r.computed,
   };
 }
@@ -487,8 +522,13 @@ export type RecipeIngredient = {
   brand?: string;
   grams: number;
   servingLabel?: string;
+  /** The amount as picked ("3" of portion "tin"), so editing reopens it the same way. */
+  amount?: number;
+  portionId?: string;
   computed: MacroTotals;
 };
+
+export type RecipePortionMode = "servings" | "weight";
 
 export type Recipe = {
   id: string;
@@ -498,6 +538,15 @@ export type Recipe = {
   ingredients: RecipeIngredient[];
   /** Cached per-serving totals; recomputed on every edit via recomputeRecipe(). */
   perServing: MacroTotals;
+  /** "servings" (default, also for older recipes): logged as equal servings. "weight":
+   * logged as grams of the cooked dish, per 100 g = whole recipe ÷ cookedWeightG. */
+  portionMode?: RecipePortionMode;
+  /** Grams of cooked food the recipe made (weigh the pot, minus the pot). Required for
+   * "weight" mode; in "servings" mode it gives each serving its real weight. */
+  cookedWeightG?: number;
+  /** Day the current pot was cooked (YYYY-MM-DD), for "what's left in the pot". */
+  cookedOn?: string;
+  notes?: string;
   createdAtMs: number;
   updatedAtMs: number;
   deletedAtMs?: number;
@@ -516,12 +565,13 @@ export function createRecipe(name: string, servings = 1): Recipe {
   };
 }
 
+export function recipeTotals(recipe: Pick<Recipe, "ingredients">): MacroTotals {
+  return recipe.ingredients.reduce((acc, ing) => addMacros(acc, ing.computed), { ...ZERO_MACROS });
+}
+
 /** Recompute perServing from ingredients + servings; call after any structural edit. */
 export function recomputeRecipe(recipe: Recipe): Recipe {
-  const total = recipe.ingredients.reduce(
-    (acc, ing) => addMacros(acc, ing.computed),
-    { ...ZERO_MACROS },
-  );
+  const total = recipeTotals(recipe);
   const per = Math.max(1, recipe.servings);
   return {
     ...recipe,
@@ -535,9 +585,40 @@ export function recomputeRecipe(recipe: Recipe): Recipe {
   };
 }
 
-/** A recipe presented as a food so it can be searched and logged like one — one "serving"
- * portion, plus a whole-recipe portion. Grams are notional (1 serving = 100 units). */
+function hasCookedWeight(recipe: Recipe): recipe is Recipe & { cookedWeightG: number } {
+  return typeof recipe.cookedWeightG === "number" && recipe.cookedWeightG > 0;
+}
+
+export function isWeightRecipe(recipe: Recipe): boolean {
+  return recipe.portionMode === "weight" && hasCookedWeight(recipe);
+}
+
+/** Macros per 100 g of the cooked dish, or null until the pot has been weighed. */
+export function recipePer100gCooked(recipe: Recipe): MacroTotals | null {
+  if (!hasCookedWeight(recipe)) return null;
+  return roundMacros(scaleMacros(recipeTotals(recipe), (100 * 100) / recipe.cookedWeightG));
+}
+
+/** A recipe presented as a food so it can be searched and logged like one. Once the pot
+ * has been weighed, grams are real grams of cooked food (servings are fractions of the
+ * pot); before that, 1 serving is a notional 100 "grams". */
 export function recipeAsFood(recipe: Recipe): FoodRef {
+  const per100 = recipePer100gCooked(recipe);
+  if (per100 && hasCookedWeight(recipe)) {
+    const w = recipe.cookedWeightG;
+    const n = Math.max(1, recipe.servings);
+    const servings: ServingOption[] = [];
+    if (n > 1) {
+      const each = Math.round(w / n);
+      servings.push({
+        id: "serving",
+        label: isWeightRecipe(recipe) ? `1/${n} of the pot (${each} g)` : `1 serving (${each} g)`,
+        grams: w / n,
+      });
+    }
+    servings.push({ id: "whole", label: `whole pot (${Math.round(w)} g)`, grams: w });
+    return { id: recipe.id, source: "custom", name: recipe.name, per100g: per100, servings };
+  }
   return {
     id: recipe.id,
     source: "custom",
@@ -548,6 +629,153 @@ export function recipeAsFood(recipe: Recipe): FoodRef {
       { id: "whole", label: `whole recipe (${recipe.servings})`, grams: 100 * recipe.servings },
     ],
   };
+}
+
+/** Whether amounts logged from this recipe are real grams (so plain g/oz units make sense). */
+export function recipeHasRealGrams(recipe: Recipe): boolean {
+  return hasCookedWeight(recipe);
+}
+
+/**
+ * What's left of the current pot: its cooked weight minus the grams logged from this recipe
+ * since it was cooked. Null when the pot was never weighed or has no cook date. Only counts
+ * this person's diary, so a shared pot shows more left than there really is.
+ */
+export function potRemaining(
+  recipe: Recipe,
+  days: readonly DiaryDay[],
+): { cookedOn: string; leftG: number; eatenG: number } | null {
+  if (!hasCookedWeight(recipe) || !recipe.cookedOn) return null;
+  let eaten = 0;
+  for (const d of days) {
+    if (d.deletedAtMs || d.dateIso < recipe.cookedOn) continue;
+    for (const it of d.items) if (it.sourceId === recipe.id) eaten += it.grams;
+  }
+  return { cookedOn: recipe.cookedOn, eatenG: eaten, leftG: Math.max(0, recipe.cookedWeightG - eaten) };
+}
+
+// ── Ingredient lists ──────────────────────────────────────────────────────────
+
+/** Unit words in pasted ingredient lists that aren't plain measures, with a typical weight. */
+const COUNT_UNITS: Record<string, { label: string; grams: number | null }> = {
+  tin: { label: "tin", grams: 400 },
+  tins: { label: "tin", grams: 400 },
+  can: { label: "tin", grams: 400 },
+  cans: { label: "tin", grams: 400 },
+  clove: { label: "clove", grams: 5 },
+  cloves: { label: "clove", grams: 5 },
+  cube: { label: "cube", grams: 10 },
+  cubes: { label: "cube", grams: 10 },
+  pinch: { label: "pinch", grams: 0.5 },
+  handful: { label: "handful", grams: 30 },
+  handfuls: { label: "handful", grams: 30 },
+  slice: { label: "slice", grams: null },
+  slices: { label: "slice", grams: null },
+  pack: { label: "pack", grams: null },
+  packs: { label: "pack", grams: null },
+  pot: { label: "pot", grams: null },
+  pots: { label: "pot", grams: null },
+};
+
+const UNIT_ALIASES: Record<string, MeasureUnit> = {
+  g: "g", gram: "g", grams: "g", gr: "g",
+  kg: "kg", kgs: "kg", kilo: "kg", kilos: "kg", kilogram: "kg", kilograms: "kg",
+  ml: "ml", millilitre: "ml", milliliter: "ml", millilitres: "ml", milliliters: "ml",
+  l: "l", litre: "l", liter: "l", litres: "l", liters: "l",
+  oz: "oz", ounce: "oz", ounces: "oz",
+  lb: "lb", lbs: "lb", pound: "lb", pounds: "lb",
+  tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp",
+  tbsp: "tbsp", tbs: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
+  cup: "cup", cups: "cup",
+};
+
+export type ParsedIngredientLine = {
+  /** The line as typed. */
+  text: string;
+  /** What to search for. */
+  name: string;
+  amount: number;
+  /** A plain measure, when the line used one. */
+  unit: MeasureUnit | null;
+  /** A count word such as "tin" or "clove", when the line used one. */
+  countUnit: string | null;
+  /** Grams when the line says it outright (a measure, "2 x 400 g", a usual tin). Null =
+   * a count of things ("3 eggs") whose weight comes from the matched food's servings. */
+  grams: number | null;
+};
+
+const FRACTIONS: Record<string, number> = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3 };
+
+function parseNumber(s: string): number | null {
+  const t = s.trim();
+  if (FRACTIONS[t] != null) return FRACTIONS[t];
+  const mixed = /^(\d+)\s*([½¼¾⅓⅔])$/.exec(t);
+  if (mixed) return Number(mixed[1]) + FRACTIONS[mixed[2]];
+  const frac = /^(\d+)\/(\d+)$/.exec(t);
+  if (frac) return Number(frac[2]) ? Number(frac[1]) / Number(frac[2]) : null;
+  const n = Number(t.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Reads one line of an ingredient list: "500 g chicken breast", "2 tins chopped tomatoes",
+ * "1½ tbsp olive oil", "2 x 400g tins kidney beans", "3 eggs", "Salt". Text after a "|"
+ * (a category tag) or in brackets is ignored. Null for blank lines and headings.
+ */
+export function parseIngredientLine(line: string): ParsedIngredientLine | null {
+  const text = line.trim();
+  let rest = text
+    .replace(/\|.*$/, "")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/^[-*•\d]+[.)]\s+(?=\D)/, "") // list bullets / "1. " numbering
+    .replace(/^[-*•]\s*/, "")
+    .trim();
+  if (!rest || /:$/.test(rest)) return null;
+
+  let amount = 1;
+  let unit: MeasureUnit | null = null;
+  let countUnit: string | null = null;
+  let grams: number | null = null;
+
+  // "2 x 400g" / "2x400 g"
+  const multi = /^(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)\b\s*/.exec(rest);
+  if (multi && UNIT_ALIASES[multi[3].toLowerCase()]) {
+    const count = Number(multi[1].replace(",", "."));
+    const each = Number(multi[2].replace(",", "."));
+    unit = UNIT_ALIASES[multi[3].toLowerCase()];
+    amount = count * each;
+    rest = rest.slice(multi[0].length);
+    const cu = /^([a-zA-Z]+)\b\s*/.exec(rest);
+    if (cu && COUNT_UNITS[cu[1].toLowerCase()]) rest = rest.slice(cu[0].length);
+  } else {
+    const num = /^(\d+\s*[½¼¾⅓⅔]|[½¼¾⅓⅔]|\d+\/\d+|\d+(?:[.,]\d+)?)\s*/.exec(rest);
+    if (num) {
+      amount = parseNumber(num[1]) ?? 1;
+      rest = rest.slice(num[0].length);
+      const u = /^([a-zA-Z]+)\.?(?=\s|$)\s*/.exec(rest);
+      const word = u?.[1].toLowerCase();
+      if (u && word && UNIT_ALIASES[word]) {
+        unit = UNIT_ALIASES[word];
+        rest = rest.slice(u[0].length);
+      } else if (u && word && COUNT_UNITS[word]) {
+        countUnit = COUNT_UNITS[word].label;
+        const each = COUNT_UNITS[word].grams;
+        if (each != null) grams = amount * each;
+        rest = rest.slice(u[0].length);
+      }
+    }
+  }
+  rest = rest.replace(/^of\s+/i, "").replace(/[,;].*$/, "").trim();
+  if (!rest) return null;
+  if (unit) grams = unitToGrams(amount, unit);
+  return { text, name: rest, amount, unit, countUnit, grams };
+}
+
+export function parseIngredientList(text: string): ParsedIngredientLine[] {
+  return text
+    .split(/\r?\n/)
+    .map(parseIngredientLine)
+    .filter((x): x is ParsedIngredientLine => x !== null);
 }
 
 // ── Weight ────────────────────────────────────────────────────────────────────

@@ -60,7 +60,9 @@ describe("macro helpers", () => {
     expect(unitToGrams(250, "ml")).toBe(250);
     expect(unitToGrams(1, "oz")).toBeCloseTo(28.3495, 3);
     expect(isMeasureUnit("oz")).toBe(true);
-    expect(isMeasureUnit("cup")).toBe(false);
+    expect(isMeasureUnit("cup")).toBe(true);
+    expect(unitToGrams(2, "tbsp")).toBe(30);
+    expect(isMeasureUnit("tin")).toBe(false);
   });
 });
 

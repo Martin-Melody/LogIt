@@ -21,9 +21,7 @@ cp dist/food.zip ../../apps/clients/logit-frontend/static/assets/databases/food.
 
 The archive contains `food.db`; the plugin installs it as `foodSQLite.db`.
 
-`*.zip` / `*.db` here are gitignored — the release build drops `food.zip` in before
-`cap sync`. If it's absent the app falls back to the Open Food Facts API for search +
-barcode.
-
-The **full tier** (`food-full.zip`) is *not* bundled — it's fetched by the optional
-"download full food database" flow.
+`*.zip` / `*.db` here are gitignored — the Android release workflow builds (or restores
+from its cache) `food.zip` and drops it in before `cap sync`. For a local device build, run
+the commands above once. If it's absent the app falls back to the Open Food Facts API for
+search + barcode, which only knows packaged products.

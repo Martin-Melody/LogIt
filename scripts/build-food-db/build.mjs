@@ -167,6 +167,14 @@ async function main() {
   db.exec("INSERT INTO foods_fts(rowid, name, brand) SELECT rowid, name, brand FROM foods");
   db.exec("INSERT INTO foods_fts(foods_fts) VALUES('optimize')");
 
+  // Word list for typo correction: the app looks up terms near a misspelt word here
+  // ("chiken" -> "chicken") and searches again. Plain letters only, seen in 2+ foods.
+  db.exec(`CREATE VIRTUAL TABLE temp.foods_vocab USING fts5vocab(main, 'foods_fts', 'row')`);
+  db.exec(`INSERT INTO vocab(term, docs)
+           SELECT term, doc FROM temp.foods_vocab
+           WHERE doc >= 2 AND length(term) >= 3 AND term GLOB '[a-z]*' AND term NOT GLOB '*[^a-z]*'`);
+  db.exec("DROP TABLE temp.foods_vocab");
+
   const counts = db.prepare("SELECT source, COUNT(*) c FROM foods GROUP BY source").all();
   const curatedCount = db.prepare("SELECT COUNT(*) c FROM foods WHERE curated = 1").get().c;
   const meta = {

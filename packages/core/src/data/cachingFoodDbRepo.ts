@@ -1,5 +1,6 @@
 import type { FoodDbRepo, FoodSearchOptions } from "./foodDbRepo";
 import type { FoodRef } from "../domain/nutrition";
+import { rankByQuery } from "../nutrition/foodSearch";
 
 /**
  * A small writable store for foods pulled from the online Open Food Facts lookup, so they're
@@ -84,10 +85,12 @@ export function createCachingFoodDbRepo(deps: CachingFoodDbRepoDeps): FoodDbRepo
 
       // Reach online when local coverage is thin. Online only has packaged ("off") foods,
       // so skip it when the caller asked specifically for generics.
-      if (merged.length < THIN_RESULTS && opts.source !== "usda" && isOnline()) {
+      const wantOnline = opts.online || merged.length < THIN_RESULTS;
+      if (wantOnline && opts.source !== "usda" && isOnline()) {
         const fromOnline = await online.searchFoods(q, { ...opts, limit }).catch(() => []);
         await cachePut(fromOnline);
-        merged = dedupe(merged, fromOnline);
+        // Online hits go after the local ones, ranked by the same rules.
+        merged = dedupe(merged, rankByQuery(fromOnline, q, (f) => f, limit));
       }
 
       return merged.slice(0, limit);

@@ -12,7 +12,7 @@ const addDays = (d, k) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 
 let seed = 7;
 const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
-const TODAY = new Date(2026, 10, 13); // Fri 13 Nov 2026
+const TODAY = new Date(2026, 10, 16); // Mon 16 Nov 2026
 const START = new Date(2026, 8, 7); // Mon 7 Sep 2026
 
 // ── Split ───────────────────────────────────────────────────────────────

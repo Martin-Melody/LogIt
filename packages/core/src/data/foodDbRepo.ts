@@ -24,4 +24,7 @@ export type FoodSearchOptions = {
   limit?: number;
   /** Restrict to one source, e.g. only whole foods ("usda") or only packaged ("off"). */
   source?: FoodRef["source"];
+  /** Also ask the online database even when local results look like enough
+   * (the "Search online" button). Ignored by repos with no online side. */
+  online?: boolean;
 };
