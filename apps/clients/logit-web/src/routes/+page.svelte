@@ -10,8 +10,10 @@
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
   import { loadOverview, type OverviewData } from "$lib/features/overview/overviewData";
-  import { createLayout, SIZE_LABEL, SPAN, WIDGETS, type WidgetId } from "$lib/features/overview/layout.svelte";
+  import { createLayout, isPluginWidget, PLUGIN_SIZES, SIZE_LABEL, SPAN, WIDGETS, type BuiltinWidgetId, type WidgetId } from "$lib/features/overview/layout.svelte";
   import OverviewWidget from "$lib/features/overview/OverviewWidget.svelte";
+  import { plugins } from "$lib/features/plugins/pluginData.svelte";
+  import PluginWidget from "$lib/features/plugins/PluginWidget.svelte";
 
   let data = $state<OverviewData | null>(null);
   let error = $state<string | null>(null);
@@ -19,7 +21,30 @@
   const reorder = createReorder<WidgetId>("grid");
 
   const layout = createLayout(apiClient.getUser()?.id ?? "me");
-  const defs = new Map(WIDGETS.map((w) => [w.id, w]));
+  const defs = $derived(new Map([...WIDGETS, ...layout.extra].map((w) => [w.id, w])));
+  // Plugin widgets whose plugin is gone or off stay in the saved layout but aren't shown.
+  const shownSlots = $derived(layout.slots.filter((s) => defs.has(s.id)));
+
+  // Widget plugins installed on your account (and switched on) can go on your own Overview.
+  $effect(() => {
+    if (!viewingClient.id && !plugins.installsLoaded) void plugins.loadInstalls().catch(() => {});
+  });
+  $effect(() => {
+    const own = !viewingClient.id;
+    layout.setExtra(
+      own && plugins.communityOn
+        ? plugins.installed
+            .filter((p) => p.enabled && p.manifest.family === "widget")
+            .map((p) => ({
+              id: `plugin:${p.manifest.id}` as const,
+              title: p.manifest.name,
+              description: typeof p.manifest.description === "string" ? p.manifest.description : "Plugin",
+              defaultSize: "m" as const,
+              sizes: PLUGIN_SIZES,
+            }))
+        : [],
+    );
+  });
   const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
   async function load(clientId: string | null) {
@@ -70,7 +95,7 @@
       <section aria-label="Add a widget" class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
         <h2 class="text-[15px] font-semibold">Add a widget</h2>
         {#if layout.hidden.length === 0}
-          <p class="text-sm text-muted-foreground">Every widget is on your Overview. Insights and plugin widgets join this list in later updates.</p>
+          <p class="text-sm text-muted-foreground">Every widget is on your Overview. Widget plugins you install show up here too.</p>
         {:else}
           <div class="flex flex-wrap gap-2">
             {#each layout.hidden as w (w.id)}
@@ -84,7 +109,7 @@
     <div class="flex flex-wrap items-start gap-5">
       <div role="list" class="grid min-w-0 flex-[999_1_640px] grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"
         ondragenter={(e) => reorder.allow(e)} ondragover={(e) => reorder.allow(e)} ondrop={onDrop}>
-        {#each reorder.arrange(layout.slots, (s) => s.id) as slot, i (slot.id)}
+        {#each reorder.arrange(shownSlots, (s) => s.id) as slot, i (slot.id)}
           {@const def = defs.get(slot.id)!}
           {@const isGap = reorder.held === slot.id}
           <section
@@ -95,7 +120,7 @@
               {isGap ? 'border-[1.5px] border-dashed border-primary bg-primary/5 [&>*:not(.drop-label)]:invisible'
                 : editing ? 'cursor-grab border-[1.5px] border-dashed border-primary/40 bg-card' : 'border border-border bg-card'}"
             draggable={editing}
-            ondragstart={(e) => reorder.start(layout.slots.map((s) => s.id), slot.id, e)}
+            ondragstart={(e) => reorder.start(shownSlots.map((s) => s.id), slot.id, e)}
             ondragend={() => reorder.end()}
             ondragover={(e) => reorder.over(slot.id, e)}
           >
@@ -114,13 +139,16 @@
                     {/each}
                   </span>
                   <button type="button" aria-label="Move earlier" disabled={i === 0} class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground disabled:opacity-30" onclick={() => layout.move(slot.id, -1)}><ArrowLeft class="size-3.5" /></button>
-                  <button type="button" aria-label="Move later" disabled={i === layout.slots.length - 1} class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground disabled:opacity-30" onclick={() => layout.move(slot.id, 1)}><ArrowRight class="size-3.5" /></button>
+                  <button type="button" aria-label="Move later" disabled={i === shownSlots.length - 1} class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground disabled:opacity-30" onclick={() => layout.move(slot.id, 1)}><ArrowRight class="size-3.5" /></button>
                   <button type="button" aria-label="Remove {def.title}" class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive" onclick={() => layout.remove(slot.id)}><X class="size-3.5" /></button>
                 </div>
               {/if}
             </div>
-            {#if data}
-              <OverviewWidget id={slot.id} {data} />
+            {#if isPluginWidget(slot.id)}
+              {@const plugin = plugins.get(slot.id.slice("plugin:".length))}
+              {#if plugin}<PluginWidget {plugin} />{/if}
+            {:else if data}
+              <OverviewWidget id={slot.id as BuiltinWidgetId} {data} />
             {:else}
               <Skeleton class="h-14" />
             {/if}

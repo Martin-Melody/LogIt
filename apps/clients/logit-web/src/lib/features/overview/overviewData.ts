@@ -98,7 +98,7 @@ function parseGoals(profile: RemoteProfile | null): { goals: Goal[]; streak: Goa
   }
 }
 
-function progressFor(split: WorkoutSplit, profile: RemoteProfile | null, todayIso: string): SplitProgress {
+export function progressFor(split: WorkoutSplit, profile: RemoteProfile | null, todayIso: string): SplitProgress {
   try {
     const all = profile?.splitRotationJson ? JSON.parse(profile.splitRotationJson) : {};
     const state = all?.[split.id] as { lastDayId?: string; recordedAtMs?: number; doneOnDay?: string[] } | undefined;
@@ -195,7 +195,7 @@ async function goalSummaries(goals: Goal[], sessions: WorkoutSession[], clientId
   return out;
 }
 
-function parseRows<T>(rows: { dataJson: string | null; deletedAtMs?: number | null }[]): T[] {
+export function parseRows<T>(rows: { dataJson: string | null; deletedAtMs?: number | null }[]): T[] {
   const out: T[] = [];
   for (const r of rows) {
     if (r.deletedAtMs || !r.dataJson) continue;

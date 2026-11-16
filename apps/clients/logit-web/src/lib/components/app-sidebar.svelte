@@ -16,6 +16,7 @@
   import MessageSquareIcon from "@lucide/svelte/icons/message-square";
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
   import UsersRoundIcon from "@lucide/svelte/icons/users-round";
+  import PuzzleIcon from "@lucide/svelte/icons/puzzle";
   import LogOutIcon from "@lucide/svelte/icons/log-out";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import SunIcon from "@lucide/svelte/icons/sun";
@@ -43,8 +44,7 @@
   type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon; badge?: () => number };
   type NavGroup = { label: string | null; items: NavItem[] };
 
-  // "Me": your own training. Pages that aren't built yet (Insights, Plugins) join this
-  // list as they land.
+  // "Me": your own training. Pages that aren't built yet (Insights) join this list as they land.
   const meGroups: NavGroup[] = [
     { label: null, items: [{ label: "Overview", href: "/", icon: LayoutDashboardIcon }] },
     {
@@ -66,6 +66,10 @@
     {
       label: "People",
       items: [{ label: "Social", href: "/social", icon: UsersRoundIcon, badge: () => socialBadge.count }],
+    },
+    {
+      label: "Extras",
+      items: [{ label: "Plugins", href: "/plugins", icon: PuzzleIcon }],
     },
   ];
 
