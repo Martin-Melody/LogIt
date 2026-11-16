@@ -631,6 +631,64 @@ namespace Logit.Api.Migrations
                     b.ToTable("FollowRequests");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DraftManifestJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DraftSource")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DraftToken")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("DraftUpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Family")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinkToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PluginId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DraftToken")
+                        .IsUnique();
+
+                    b.HasIndex("LinkToken")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PluginId")
+                        .IsUnique();
+
+                    b.ToTable("HostedPlugins");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Invite", b =>
                 {
                     b.Property<Guid>("Id")
@@ -755,6 +813,56 @@ namespace Logit.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("PasswordResetTokens");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PluginRelease", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChangeNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("HostedPluginId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Integrity")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManifestJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("HostedPluginId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("PluginReleases");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
@@ -1187,6 +1295,45 @@ namespace Logit.Api.Migrations
                     b.HasIndex("UserId", "SyncedAt");
 
                     b.ToTable("SyncedNutritionDays");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedPluginInstall", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedPluginInstalls");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedRecipe", b =>
@@ -1755,6 +1902,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("Target");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Like", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.Post", "Post")
@@ -1802,6 +1960,17 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PluginRelease", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.HostedPlugin", "Plugin")
+                        .WithMany("Releases")
+                        .HasForeignKey("HostedPluginId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Plugin");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Post", b =>
@@ -1932,6 +2101,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedPluginInstall", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedRecipe", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
@@ -1991,6 +2171,11 @@ namespace Logit.Api.Migrations
                     b.Navigation("Likes");
 
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
+                {
+                    b.Navigation("Releases");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Invite", b =>

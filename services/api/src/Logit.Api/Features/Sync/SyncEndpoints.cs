@@ -58,6 +58,8 @@ public static class SyncEndpoints
         // definitions + check-offs, for adherence review). A Free coached client keeps
         // habits locally but doesn't sync them, so the coach only sees Pro/Studio clients'
         // adherence for now — a dedicated assigned-only feed could lift that later.
+        group.MapPost("/plugins", PushPluginInstalls).RequireTier(UserTier.Pro);
+        group.MapGet("/plugins", PullPluginInstalls).RequireTier(UserTier.Pro);
         group.MapPost("/habits", PushHabits).RequireTier(UserTier.Pro);
         group.MapGet("/habits", PullHabits).RequireTier(UserTier.Pro);
         group.MapPost("/habit-entries", PushHabitEntries).RequireTier(UserTier.Pro);
@@ -347,16 +349,22 @@ public static class SyncEndpoints
         var rotations = MergeSplitRotations(stored?.SplitRotationJson, dto.SplitRotationJson);
         // Goals the same way, per goal on its updatedAtMs.
         var goals = MergeByTimestamp(stored?.GoalsJson, dto.GoalsJson, "updatedAtMs");
+        // Plugin settings (the community plugins switch) the same way.
+        var pluginSettings = MergeByTimestamp(stored?.PluginSettingsJson, dto.PluginSettingsJson, "updatedAtMs");
 
-        if (dto.UpdatedAtMs > user.ProfileUpdatedAtMs)
+        // The first profile is stored even when it's dated 0: the dashboard stores one like that
+        // for the plugins switch before any phone has synced, and a phone never takes a profile
+        // that isn't newer than its own.
+        if (dto.UpdatedAtMs > user.ProfileUpdatedAtMs || user.ProfileJson is null)
         {
-            user.ProfileJson = JsonSerializer.Serialize(dto with { SplitRotationJson = rotations, GoalsJson = goals });
+            user.ProfileJson = JsonSerializer.Serialize(dto with { SplitRotationJson = rotations, GoalsJson = goals, PluginSettingsJson = pluginSettings });
             user.ProfileUpdatedAtMs = dto.UpdatedAtMs;
             await db.SaveChangesAsync();
         }
-        else if (stored is not null && (rotations != stored.SplitRotationJson || goals != stored.GoalsJson))
+        else if (stored is not null && (rotations != stored.SplitRotationJson || goals != stored.GoalsJson
+                                        || pluginSettings != stored.PluginSettingsJson))
         {
-            user.ProfileJson = JsonSerializer.Serialize(stored with { SplitRotationJson = rotations, GoalsJson = goals });
+            user.ProfileJson = JsonSerializer.Serialize(stored with { SplitRotationJson = rotations, GoalsJson = goals, PluginSettingsJson = pluginSettings });
             await db.SaveChangesAsync();
         }
 
@@ -691,6 +699,19 @@ public static class SyncEndpoints
         return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedHabitEntries) });
     }
 
+    // ── Installed plugins ────────────────────────────────────────────────────
+    // One row per installed plugin (keyed by manifest id), so installing, switching off or
+    // removing a plugin on one device reaches the others. Each device still downloads the
+    // code itself and checks it against the manifest's integrity hash.
+
+    private static Task<IResult> PushPluginInstalls(
+        [FromBody] PushPluginInstallsRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushSyncRows(caller.GetUserId(), req.Plugins, db.SyncedPluginInstalls, db);
+
+    private static async Task<IResult> PullPluginInstalls(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { plugins = await PullSyncRows(caller.GetUserId(), since, db.SyncedPluginInstalls) });
+
     // Goal — a singleton on User, synced like the profile blob.
 
     private static async Task<IResult> PushNutritionGoal(
@@ -770,7 +791,10 @@ public record ProfileDto(
     string? GoalsJson = null,
     // Social profile cards: { slots: [{ id, enabled, orderIndex }] }. Edited on the phone or the
     // dashboard; last write wins with the rest of the profile.
-    string? ProfileConfigJson = null
+    string? ProfileConfigJson = null,
+    // Plugin settings: { community: { enabled, acknowledgedRisk, updatedAtMs } }. Merged per key
+    // on push like GoalsJson, so the community plugins switch is the same on every device.
+    string? PluginSettingsJson = null
 );
 
 /// One client-owned sync row — nutrition row, habit or habit entry (see ISyncedClientRow).
@@ -785,6 +809,7 @@ public record PushFavoritesRequest(List<SyncRowDto> Favorites);
 public record PushMealTemplatesRequest(List<SyncRowDto> Templates);
 public record PushWeightEntriesRequest(List<SyncRowDto> Entries);
 public record PushHabitsRequest(List<SyncRowDto> Habits);
+public record PushPluginInstallsRequest(List<SyncRowDto> Plugins);
 public record PushHabitEntriesRequest(List<SyncRowDto> Entries);
 
 public record NutritionGoalDto(string DataJson, long UpdatedAtMs);

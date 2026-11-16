@@ -42,6 +42,9 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<BillingSubscription> BillingSubscriptions => Set<BillingSubscription>();
     public DbSet<CoachInviteLink> CoachInviteLinks => Set<CoachInviteLink>();
     public DbSet<CheckinReview> CheckinReviews => Set<CheckinReview>();
+    public DbSet<HostedPlugin> HostedPlugins => Set<HostedPlugin>();
+    public DbSet<PluginRelease> PluginReleases => Set<PluginRelease>();
+    public DbSet<SyncedPluginInstall> SyncedPluginInstalls => Set<SyncedPluginInstall>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -473,6 +476,34 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(m => m.Sender)
              .WithMany()
              .HasForeignKey(m => m.SenderUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Plugins built on the dashboard (see Data/Entities/Plugins.cs).
+        model.Entity<HostedPlugin>(e =>
+        {
+            e.HasIndex(p => p.PluginId).IsUnique();
+            e.HasIndex(p => p.DraftToken).IsUnique();
+            e.HasIndex(p => p.LinkToken).IsUnique();
+            e.HasIndex(p => p.OwnerId);
+            e.HasOne(p => p.Owner).WithMany().HasForeignKey(p => p.OwnerId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<PluginRelease>(e =>
+        {
+            e.HasIndex(r => new { r.HostedPluginId, r.Version }).IsUnique();
+            e.HasIndex(r => r.Status);
+            e.HasOne(r => r.Plugin).WithMany(p => p.Releases).HasForeignKey(r => r.HostedPluginId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Installed plugins, same shape as habits.
+        model.Entity<SyncedPluginInstall>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
     }
