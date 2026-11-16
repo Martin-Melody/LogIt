@@ -31,6 +31,10 @@ public class CoachClientRelationship
 
     public User Coach { get; set; } = null!;
     public User Client { get; set; } = null!;
+    public CoachClientPayment? Payment { get; set; }
 }
 
-public enum CoachClientStatus { Pending, Active, Revoked }
+/// Paused: coaching stopped because the client isn't paid up (see CoachClientPayment). Only
+/// Active relationships give the coach access, so a paused one behaves like no coaching until
+/// it's paid again. Appended last: the column stores the number.
+public enum CoachClientStatus { Pending, Active, Revoked, Paused }
