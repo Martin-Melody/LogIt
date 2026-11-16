@@ -318,7 +318,14 @@ public static class PluginEndpoints
         var result = PluginPublishing.CreateRelease(p, body.Version, body.ChangeNote, body.Listed, DateTime.UtcNow);
         if (result.Error is not null) return Results.BadRequest(new { error = result.Error });
 
-        await db.SaveChangesAsync();
+        // Added to its table explicitly: found only through the tracked plugin's list, EF takes
+        // a row that already has its Guid for an existing one and UPDATEs nothing.
+        db.PluginReleases.Add(result.Release!);
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateException)
+        {
+            return Results.Conflict(new { error = "That version was just published from somewhere else. Use a newer one." });
+        }
         return Results.Ok(MineDto(p, req, withDraft: true));
     }
 
@@ -365,6 +372,7 @@ public static class PluginEndpoints
             .Select(x => new
             {
                 x.Id,
+                x.HostedPluginId,
                 x.Plugin.PluginId,
                 x.Plugin.Family,
                 x.Version,
@@ -376,15 +384,24 @@ public static class PluginEndpoints
                 x.ReviewNote,
                 x.SubmittedAt,
                 Owner = x.Plugin.Owner.Username,
-                // The version before, so a reviewer can see what changed.
-                Previous = x.Plugin.Releases
-                    .Where(o => o.Id != x.Id && o.Status == PluginReleaseStatus.Approved)
-                    .OrderByDescending(o => o.SubmittedAt)
-                    .Select(o => new { o.Version, o.Source })
-                    .FirstOrDefault(),
             })
             .FirstOrDefaultAsync();
-        return r is null ? Results.NotFound(new { error = "No such version." }) : Results.Ok(r);
+        if (r is null) return Results.NotFound(new { error = "No such version." });
+
+        // The last approved version, so a reviewer can see what changed. A second query: as a
+        // subquery it needs SQL APPLY, which SQLite (self-hosted servers) doesn't have.
+        var previous = await db.PluginReleases
+            .AsNoTracking()
+            .Where(o => o.HostedPluginId == r.HostedPluginId && o.Id != r.Id && o.Status == PluginReleaseStatus.Approved)
+            .OrderByDescending(o => o.SubmittedAt)
+            .Select(o => new { o.Version, o.Source })
+            .FirstOrDefaultAsync();
+
+        return Results.Ok(new
+        {
+            r.Id, r.PluginId, r.Family, r.Version, r.Status, r.ManifestJson, r.Source, r.Integrity,
+            r.ChangeNote, r.ReviewNote, r.SubmittedAt, r.Owner, Previous = previous,
+        });
     }
 
     private static async Task<IResult> Review(
