@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { OverviewData } from "./overviewData";
-  import type { WidgetId } from "./layout.svelte";
+  import type { BuiltinWidgetId } from "./layout.svelte";
 
   // One Overview widget's content. The frame (title, edit controls) is drawn by the page.
-  const { id, data }: { id: WidgetId; data: OverviewData } = $props();
+  const { id, data }: { id: BuiltinWidgetId; data: OverviewData } = $props();
 
   const tonnes = (kg: number) => `${(kg / 1000).toFixed(kg >= 10000 ? 1 : 2).replace(/\.?0+$/, "")} t`;
   const dayMonth = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
