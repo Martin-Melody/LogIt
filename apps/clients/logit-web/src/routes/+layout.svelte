@@ -160,7 +160,7 @@
         <Sidebar.Trigger class="-ml-1" />
         <span class="text-sm font-medium">{pageTitle}</span>
       </header>
-      {#if viewingClient.current && !isCoachingPath(page.url.pathname)}
+      {#if viewingClient.current && !isCoachingPath(page.url.pathname, page.url.searchParams)}
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-primary px-4 py-2 text-sm text-primary-foreground sm:px-8">
           <span>Viewing <strong>{viewingClient.current.client.displayName || viewingClient.current.client.username}</strong>'s training</span>
           <button type="button" class="font-semibold underline underline-offset-4" onclick={() => viewingClient.set(null)}>Back to mine</button>

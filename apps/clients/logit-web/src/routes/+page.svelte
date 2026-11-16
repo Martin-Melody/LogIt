@@ -10,7 +10,10 @@
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
   import { loadOverview, type OverviewData } from "$lib/features/overview/overviewData";
-  import { createLayout, isPluginWidget, PLUGIN_SIZES, SIZE_LABEL, SPAN, WIDGETS, type BuiltinWidgetId, type WidgetId } from "$lib/features/overview/layout.svelte";
+  import { CHART_SIZES, createLayout, isChartWidget, isPluginWidget, PLUGIN_SIZES, SIZE_LABEL, SPAN, WIDGETS, type BuiltinWidgetId, type WidgetDef, type WidgetId } from "$lib/features/overview/layout.svelte";
+  import InsightChartView from "$lib/features/insights/InsightChartView.svelte";
+  import { drawCharts, insightsSetup, loadMyCharts, saveMyChart, type DrawnChart } from "$lib/features/insights/insightsData";
+  import type { WeightUnit } from "@logit/core/domain/units";
   import OverviewWidget from "$lib/features/overview/OverviewWidget.svelte";
   import { plugins } from "$lib/features/plugins/pluginData.svelte";
   import PluginWidget from "$lib/features/plugins/PluginWidget.svelte";
@@ -29,9 +32,34 @@
   $effect(() => {
     if (!viewingClient.id && !plugins.installsLoaded) void plugins.loadInstalls().catch(() => {});
   });
+  // Saved Insights charts ticked "Overview" show here (your own Overview only).
+  let charts = $state<DrawnChart[]>([]);
+  let chartUnit = $state<WeightUnit>("kg");
+  $effect(() => {
+    if (viewingClient.id) {
+      charts = [];
+      return;
+    }
+    void (async () => {
+      try {
+        const all = await loadMyCharts();
+        const setup = await insightsSetup();
+        chartUnit = setup.unit;
+        charts = await drawCharts(all, setup);
+        // The tick on the chart decides: a chart ticked on Insights (here or on the phone)
+        // joins the Overview at the end, an unticked or deleted one leaves it.
+        const on = new Set(all.filter((c) => c.showOn.overview).map((c) => `chart:${c.id}`));
+        for (const slot of layout.slots) if (isChartWidget(slot.id) && !on.has(slot.id)) layout.remove(slot.id);
+        for (const id of on) layout.add(id as WidgetId);
+      } catch {
+        charts = [];
+      }
+    })();
+  });
+
   $effect(() => {
     const own = !viewingClient.id;
-    layout.setExtra(
+    const pluginDefs: WidgetDef[] =
       own && plugins.communityOn
         ? plugins.installed
             .filter((p) => p.enabled && p.manifest.family === "widget")
@@ -42,9 +70,36 @@
               defaultSize: "m" as const,
               sizes: PLUGIN_SIZES,
             }))
-        : [],
-    );
+        : [];
+    const chartDefs: WidgetDef[] = own
+      ? charts.map((d) => ({
+          id: `chart:${d.chart.id}` as const,
+          title: d.chart.name || "Chart",
+          description: "Your chart from Insights",
+          defaultSize: "l" as const,
+          sizes: CHART_SIZES,
+        }))
+      : [];
+    layout.setExtra([...pluginDefs, ...chartDefs]);
   });
+
+  /** Ticking or unticking "Overview" on the chart itself, so Insights and the phone agree. */
+  function setChartOnOverview(id: WidgetId, on: boolean) {
+    const d = charts.find((x) => `chart:${x.chart.id}` === id);
+    if (!d || d.chart.showOn.overview === on) return;
+    d.chart = { ...d.chart, showOn: { ...d.chart.showOn, overview: on } };
+    void saveMyChart(d.chart).catch(() => {});
+  }
+
+  function removeWidget(id: WidgetId) {
+    layout.remove(id);
+    if (isChartWidget(id)) setChartOnOverview(id, false);
+  }
+
+  function addWidget(id: WidgetId) {
+    layout.add(id);
+    if (isChartWidget(id)) setChartOnOverview(id, true);
+  }
   const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
   async function load(clientId: string | null) {
@@ -99,7 +154,7 @@
         {:else}
           <div class="flex flex-wrap gap-2">
             {#each layout.hidden as w (w.id)}
-              <button type="button" title={w.description} onclick={() => layout.add(w.id)}
+              <button type="button" title={w.description} onclick={() => addWidget(w.id)}
                 class="flex h-9 items-center gap-1.5 rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted">+ {w.title}</button>
             {/each}
           </div>
@@ -140,13 +195,19 @@
                   </span>
                   <button type="button" aria-label="Move earlier" disabled={i === 0} class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground disabled:opacity-30" onclick={() => layout.move(slot.id, -1)}><ArrowLeft class="size-3.5" /></button>
                   <button type="button" aria-label="Move later" disabled={i === shownSlots.length - 1} class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground disabled:opacity-30" onclick={() => layout.move(slot.id, 1)}><ArrowRight class="size-3.5" /></button>
-                  <button type="button" aria-label="Remove {def.title}" class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive" onclick={() => layout.remove(slot.id)}><X class="size-3.5" /></button>
+                  <button type="button" aria-label="Remove {def.title}" class="flex size-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive" onclick={() => removeWidget(slot.id)}><X class="size-3.5" /></button>
                 </div>
               {/if}
             </div>
             {#if isPluginWidget(slot.id)}
               {@const plugin = plugins.get(slot.id.slice("plugin:".length))}
               {#if plugin}<PluginWidget {plugin} />{/if}
+            {:else if isChartWidget(slot.id)}
+              {@const d = charts.find((x) => `chart:${x.chart.id}` === slot.id)}
+              {#if d}
+                <InsightChartView lines={d.lines} bucket={d.chart.bucket} unit={chartUnit} height={slot.size === "m" ? 220 : 240} />
+                <a href="/insights/charts/{d.chart.id}" class="w-fit text-xs text-muted-foreground hover:text-foreground">Open in Insights ›</a>
+              {/if}
             {:else if data}
               <OverviewWidget id={slot.id as BuiltinWidgetId} {data} />
             {:else}

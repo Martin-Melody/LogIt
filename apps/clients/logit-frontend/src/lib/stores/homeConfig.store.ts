@@ -179,6 +179,37 @@ function createHomeConfigStore() {
     }));
   }
 
+  /**
+   * Saved Insights charts ("chart:<id>"): a new chart gets a slot (on when ticked "phone
+   * home"), a changed tick switches its slot, a chart that's gone loses its slot.
+   */
+  function syncChartSlots(charts: { id: string; on: boolean; changed: boolean }[]): void {
+    const current = _current.slots;
+    const wanted = new Map(charts.map((c) => [c.id, c]));
+    let dirty = false;
+    let nextOrder = current.length;
+    const slots = current
+      .filter((s) => {
+        const keep = !s.id.startsWith("chart:") || wanted.has(s.id);
+        if (!keep) dirty = true;
+        return keep;
+      })
+      .map((s) => {
+        const c = wanted.get(s.id);
+        if (c?.changed && s.enabled !== c.on) {
+          dirty = true;
+          return { ...s, enabled: c.on };
+        }
+        return s;
+      });
+    for (const c of charts) {
+      if (slots.some((s) => s.id === c.id)) continue;
+      slots.push({ id: c.id, enabled: c.on, orderIndex: nextOrder++ });
+      dirty = true;
+    }
+    if (dirty) update(() => ({ slots }));
+  }
+
   /** Applied by pullAndApplyProfile() (syncService.ts) when a newer remote config lands. */
   function applyRemote(config: HomeConfig) {
     const merged = mergeWithRegistry(config.slots);
@@ -194,6 +225,7 @@ function createHomeConfigStore() {
     reconcilePlugins,
     seedNutritionWidgets,
     seedHabitsWidget,
+    syncChartSlots,
     applyRemote,
   };
 }

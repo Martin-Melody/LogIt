@@ -60,6 +60,7 @@ public static class CoachEndpoints
         CheckinReviewEndpoints.Map(group);
         CoachLibraryEndpoints.Map(group);
         SwapRuleEndpoints.Map(group);
+        InsightChartEndpoints.Map(group);
     }
 
     private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db)

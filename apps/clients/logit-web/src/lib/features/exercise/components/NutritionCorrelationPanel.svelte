@@ -12,7 +12,8 @@
   import { getWebDeps, getOwnNutritionDeps, getWebNutritionDeps } from "$lib/deps";
   import { popIn } from "$lib/transitions";
 
-  const { clientId }: { clientId?: string } = $props();
+  // `preloaded`: Insights already worked it out for a chosen range, so show that instead of loading.
+  const { clientId, preloaded }: { clientId?: string; preloaded?: NutritionTrainingCorrelationResult } = $props();
 
   const ui = $state({ loading: true, error: null as string | null });
   let result = $state<NutritionTrainingCorrelationResult | null>(null);
@@ -33,7 +34,12 @@
     }
   }
 
-  onMount(() => { void load(); });
+  onMount(() => {
+    if (preloaded) {
+      result = preloaded;
+      ui.loading = false;
+    } else void load();
+  });
 </script>
 
 {#if ui.loading}
