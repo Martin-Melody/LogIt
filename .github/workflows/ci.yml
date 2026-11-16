@@ -112,6 +112,8 @@ jobs:
           Jwt__Secret: "ci-e2e-secret-at-least-32-characters-long"
           # the suite registers far more than the default 10 accounts per address per 10 minutes
           Registration__SignupsPer10Minutes: "1000"
+          # the walkthrough suite sets its test accounts to Pro / Studio through the admin API
+          Admin__Key: "ci-e2e-admin-key-that-is-long-enough-123456"
         run: |
           nohup dotnet run --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &
           for i in $(seq 1 60); do
@@ -126,6 +128,15 @@ jobs:
         working-directory: apps/clients/logit-frontend
         run: npx playwright test
 
+      # Plays every Pro and Studio walkthrough chapter on the web dashboard, doing each step
+      # for real (sample clients included). A page change that breaks a walkthrough fails here.
+      - name: Run walkthroughs (web dashboard)
+        working-directory: apps/clients/logit-web
+        env:
+          E2E_API_URL: http://127.0.0.1:5118
+          E2E_ADMIN_KEY: "ci-e2e-admin-key-that-is-long-enough-123456"
+        run: npx playwright test
+
       - name: API log on failure
         if: failure()
         run: cat "$RUNNER_TEMP/api.log" || true
@@ -134,5 +145,7 @@ jobs:
         if: failure()
         with:
           name: playwright-report
-          path: apps/clients/logit-frontend/playwright-report/
+          path: |
+            apps/clients/logit-frontend/playwright-report/
+            apps/clients/logit-web/playwright-report/
           retention-days: 7

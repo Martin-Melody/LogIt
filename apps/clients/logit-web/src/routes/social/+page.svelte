@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import CheckIcon from "@lucide/svelte/icons/check";
@@ -33,6 +34,7 @@
   );
   function go(t: Tab) {
     void goto(t === "following" ? "/social" : `/social?tab=${t}`, { noScroll: true, keepFocus: true });
+    if (t === "discover") guideSignal("social.discover-opened");
   }
 
   const self = me();

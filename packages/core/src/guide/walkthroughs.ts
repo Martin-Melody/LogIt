@@ -91,6 +91,7 @@ export const PRO_CHAPTERS: Chapter[] = [
         id: "save", on: "web", route: "/plan", target: "plan-save", kind: "do", signal: "plan.saved",
         title: "Save it to your phone",
         body: "Choose Save. Your phone gets the change the next time it syncs. If you changed the same split on the phone meanwhile, you're asked which one to keep.",
+        arrives: "Change something in the split first: the Save bar appears at the bottom.",
       },
     ],
   },
@@ -110,7 +111,7 @@ export const PRO_CHAPTERS: Chapter[] = [
       {
         id: "new-goal", on: "web", route: "/habits", target: "habits-new-goal", kind: "do", signal: "goal.saved",
         title: "Set a goal",
-        body: "Choose + New goal, pick a lift, a rep count or a number of workouts, and a target. Before you save, it shows how far off you are and when you'd get there at your current rate.",
+        body: "Choose + New goal, pick a lift, a rep count or a number of workouts, and a target. Before you save, it shows how far off you are and when you'd get there at your current rate. (Goals are kept with your phone's profile, so open the app on your phone once first.)",
       },
       {
         id: "goals", on: "web", route: "/habits", target: "habits-goals", kind: "look",
@@ -171,6 +172,11 @@ export const PRO_CHAPTERS: Chapter[] = [
         id: "tabs", on: "web", route: "/social", target: "social-tabs", kind: "look",
         title: "Following and Discover",
         body: "Open People › Social. Following is people you follow, newest first. Discover suggests posts from people you don't follow yet. Notifications has likes, comments, replies and follow requests.",
+      },
+      {
+        id: "discover", on: "web", route: "/social", target: "social-tabs", kind: "do", signal: "social.discover-opened",
+        title: "Discover",
+        body: "Choose Discover.",
       },
       {
         id: "privacy", on: "web", route: "/social", target: "social-privacy", kind: "look",
@@ -307,6 +313,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
         id: "save", on: "web", route: "/coaching/programs", target: "program-save", kind: "do", signal: "program.saved",
         title: "Save it to your library",
         body: "Choose Save. Nothing reaches a client until you give it to them, and changes you make later can be sent to clients' copies when you save.",
+        arrives: "Change something in the program first, like its name: then Save appears.",
       },
     ],
   },

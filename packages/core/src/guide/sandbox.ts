@@ -4,7 +4,10 @@
 // check-in answers, program-day workouts), so a change to those shapes reaches the samples
 // too, and sandbox.test.ts checks the result still reads back the way the apps read it.
 
-import { SHARE_ALL, type Sharing } from "../api/coachApi";
+import type { Sharing } from "../api/coachApi";
+
+// Everything shared (same as coachApi's SHARE_ALL; not imported so this file has no API code in it).
+const SHARE_ALL: Sharing = { workouts: true, nutrition: true, bodyweight: true, habits: true, checkins: true };
 import type { RemoteMessage } from "../api/messagesApi";
 import {
   createSubmission, currentPeriodIndex, markSubmitted, setAnswer,
