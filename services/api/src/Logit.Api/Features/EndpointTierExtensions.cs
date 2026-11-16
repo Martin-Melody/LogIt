@@ -4,6 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Logit.Api.Features;
 
+/// Endpoint metadata saying which plan an endpoint needs. RequireTier adds it, so the list of
+/// locked endpoints can be read from the app itself (TierGateSnapshotTests writes it to
+/// docs/generated/tier-gates.json, which the docs' feature list is checked against).
+public sealed record TierRequirement(UserTier MinimumTier, bool OrActivelyCoached);
+
 public static class EndpointTierExtensions
 {
     /// Rejects the request with 403 unless the caller's current tier (read fresh from the DB,
@@ -19,6 +24,7 @@ public static class EndpointTierExtensions
         this TBuilder builder, UserTier minimumTier, bool orActivelyCoached = false)
         where TBuilder : IEndpointConventionBuilder
     {
+        builder.WithMetadata(new TierRequirement(minimumTier, orActivelyCoached));
         builder.AddEndpointFilter(async (context, next) =>
         {
             var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();

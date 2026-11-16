@@ -185,7 +185,7 @@ public static class AdminEndpoints
 
     private static async Task<IResult> GetStats(AppDbContext db)
     {
-        var userCount = await db.Users.CountAsync();
+        var userCount = await db.Users.CountAsync(u => !u.IsSample);
         var postCount = await db.Posts.CountAsync(p => p.DeletedAt == null);
         var activeTokens = await db.RefreshTokens.CountAsync(t => t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow);
         var workoutCount = await db.SyncedWorkoutSessions.CountAsync(s => s.DeletedAtMs == null);
@@ -195,7 +195,7 @@ public static class AdminEndpoints
 
     private static async Task<IResult> GetUsers(AppDbContext db, string? search = null, int page = 1, int pageSize = 100)
     {
-        var query = db.Users.AsQueryable();
+        var query = db.Users.Where(u => !u.IsSample);
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim().ToLowerInvariant();
@@ -323,6 +323,7 @@ public static class AdminEndpoints
     {
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
+        await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         db.Users.Remove(user);
         await db.SaveChangesAsync();
         return Results.NoContent();

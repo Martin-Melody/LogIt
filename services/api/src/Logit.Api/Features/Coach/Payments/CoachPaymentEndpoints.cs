@@ -120,7 +120,8 @@ public static class CoachPaymentEndpoints
 
         var rels = await db.CoachClientRelationships.AsNoTracking()
             .Include(r => r.Client).Include(r => r.Payment)
-            .Where(r => r.CoachId == coachId && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
+            // Sandbox sample clients never pay and never show in Payments.
+            .Where(r => r.CoachId == coachId && !r.Client.IsSample && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
             .OrderBy(r => r.Client.Username)
             .ToListAsync(ct);
 
@@ -377,7 +378,7 @@ public static class CoachPaymentEndpoints
 
     private static Task<CoachClientRelationship?> CoachRel(AppDbContext db, Guid relId, Guid coachId, CancellationToken ct) =>
         db.CoachClientRelationships.Include(r => r.Payment)
-            .FirstOrDefaultAsync(r => r.Id == relId && r.CoachId == coachId
+            .FirstOrDefaultAsync(r => r.Id == relId && r.CoachId == coachId && !r.Client.IsSample
                 && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused), ct);
 
     private static async Task<IResult> PutClientRule(

@@ -77,7 +77,8 @@ public static class CoachEndpoints
                 new { error = "Only Studio-tier accounts can invite clients." },
                 statusCode: StatusCodes.Status403Forbidden);
 
-        var client = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        // Sandbox sample clients are only ever coached by their own coach, set up by the sandbox.
+        var client = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (client is null) return Results.NotFound();
         if (client.Id == coachId) return Results.BadRequest(new { error = "Cannot invite yourself." });
 

@@ -22,7 +22,7 @@ public static class ModerationEndpoints
     private static async Task<IResult> Block(string username, ClaimsPrincipal caller, AppDbContext db)
     {
         var callerId = caller.GetUserId();
-        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (target is null) return Results.NotFound();
         if (target.Id == callerId) return Results.BadRequest(new { error = "Cannot block yourself." });
 
@@ -47,7 +47,7 @@ public static class ModerationEndpoints
     private static async Task<IResult> Unblock(string username, ClaimsPrincipal caller, AppDbContext db)
     {
         var callerId = caller.GetUserId();
-        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant());
+        var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (target is null) return Results.NotFound();
 
         var block = await db.Blocks.FindAsync(callerId, target.Id);

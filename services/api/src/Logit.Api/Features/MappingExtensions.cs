@@ -14,7 +14,9 @@ public record ProfileDto(
     // account: "none", "requested" or "following" (null when IsSelf). When CanSeeContent is
     // false the caller is not an accepted follower of a private account: PublicProfileJson is
     // withheld and posts / follow lists answer 403.
-    bool IsPrivate = false, string? FollowStatus = null, bool CanSeeContent = true);
+    bool IsPrivate = false, string? FollowStatus = null, bool CanSeeContent = true,
+    // A sandbox sample client (Features/Sandbox). Only its own coach ever sees one.
+    bool IsSample = false);
 
 public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount, RepostSourceDto? RepostOf, bool AuthorIsPrivate = false);
 
@@ -43,7 +45,8 @@ public static class MappingExtensions
             isSelf ? user.OnboardingCompleted : null,
             user.IsPrivate,
             isSelf ? null : isFollowing ? "following" : requested ? "requested" : "none",
-            canSee);
+            canSee,
+            user.IsSample);
     }
 
     /// `hiddenAuthors`: private accounts the caller isn't allowed to see (Privacy.HiddenAuthorsAsync).

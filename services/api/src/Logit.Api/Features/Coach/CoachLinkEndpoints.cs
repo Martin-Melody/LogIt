@@ -191,12 +191,19 @@ public static class CoachLinkEndpoints
         var me = caller.GetUserId();
         if (link.CoachId == me) return Results.BadRequest(new { error = "This is your own link." });
 
+        // A sandbox sample client only ever asks its own coach, and doesn't pay: the walkthrough
+        // has it use whatever link the coach made, paid or not.
+        var sampleOwner = await db.Users.Where(u => u.Id == me && u.IsSample).Select(u => u.SampleOwnerId).FirstOrDefaultAsync();
+        var isSample = sampleOwner is not null;
+        if (isSample && sampleOwner != link.CoachId)
+            return Results.NotFound(new { error = "That link doesn't exist." });
+
         var sharing = req.Sharing ?? SharingDto.All;
         var existing = await db.CoachClientRelationships
             .FirstOrDefaultAsync(r => r.CoachId == link.CoachId && r.ClientId == me);
 
         var relState = RelationshipState(existing);
-        if (relState is "none" or "requested" && link.Package is { Hidden: false })
+        if (!isSample && relState is "none" or "requested" && link.Package is { Hidden: false })
             return Results.Json(new { error = "This link is paid: pay to start coaching.", code = "payment_required" },
                 statusCode: StatusCodes.Status402PaymentRequired);
 
