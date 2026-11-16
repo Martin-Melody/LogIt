@@ -118,8 +118,17 @@
 
   async function copy() {
     if (!shareUrl) return;
-    await navigator.clipboard?.writeText(shareUrl).catch(() => {});
-    toast.success("Link copied");
+    try {
+      // Not there on plain http pages (a self-hosted server without https).
+      if (!navigator.clipboard) throw new Error("no clipboard");
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Link copied");
+    } catch {
+      const input = document.getElementById("share-url") as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+      toast("The link is selected: copy it with Ctrl+C (or long-press on a phone).");
+    }
   }
 
   const OPTIONS: [Who, string, string][] = [
