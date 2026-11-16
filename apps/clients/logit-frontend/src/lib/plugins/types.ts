@@ -136,4 +136,8 @@ export type InstalledPlugin = {
   manifest: PluginManifest;
   enabled: boolean;
   installedAtMs: number;
+  /** Last install / switch change, for syncing the list between devices (newest wins). */
+  updatedAtMs?: number;
+  /** Where it came from: a registry, a share link, your own draft from the web builder, or a file. */
+  source?: "registry" | "link" | "draft" | "file";
 };

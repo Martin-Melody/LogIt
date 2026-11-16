@@ -3,7 +3,7 @@
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Compass, Plus, Send, ShieldAlert, ShieldCheck } from "lucide-svelte";
+  import { Compass, Plus, ShieldAlert, ShieldCheck } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
@@ -14,6 +14,10 @@
     isExecutablePluginFamily,
   } from "$lib/plugins";
   import type { InstalledPlugin, PluginManifest } from "$lib/plugins";
+  import { apiClient } from "@logit/core/api/client";
+  import { lastSyncedAt } from "$lib/sync/syncService";
+  // Installs, switches and removals reach your other devices.
+  import "$lib/plugins/pluginSync";
 
   let enableDialogOpen = $state(false);
 
@@ -40,6 +44,10 @@
   );
   const analyticsPlugins = $derived(sortByName(builtins.filter((p) => p.family === "analytics")));
   const installedPlugins = $derived(sortByName(installed.map((p) => p.manifest)));
+  // Your own drafts from the web builder, on this phone to try.
+  const trying = $derived(installed.filter((p) => p.source === "draft"));
+  const kept = $derived(installed.filter((p) => p.source !== "draft"));
+  const synced = $derived(apiClient.isAuthenticated());
 
   function capabilityLabel(manifest: PluginManifest): string {
     const cap = manifest.capabilities[0];
@@ -87,6 +95,20 @@
   onMount(() => {
     void load();
   });
+
+  // Another device or the dashboard may have changed the list: reload after each sync.
+  $effect(() => {
+    if ($lastSyncedAt) void load();
+  });
+
+  function ago(ms: number | undefined): string {
+    if (!ms) return "";
+    const min = Math.round((Date.now() - ms) / 60000);
+    if (min < 1) return "just now";
+    if (min < 60) return `${min} min ago`;
+    const h = Math.round(min / 60);
+    return h < 24 ? `${h} h ago` : new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
 </script>
 
 <svelte:head>
@@ -98,9 +120,6 @@
     <BackButton onclick={() => void goto("/profile")} />
     <span class="text-base font-semibold">Plugins</span>
     <div class="ml-auto flex items-center gap-1">
-      <Button variant="ghost" size="icon" title="Publish queue" onclick={() => void goto("/plugins/publish")}>
-        <Send class="h-4 w-4" />
-      </Button>
       <Button variant="ghost" size="icon" title="Browse" onclick={() => void goto("/plugins/browse")}>
         <Compass class="h-4 w-4" />
       </Button>
@@ -151,12 +170,14 @@
     <Card.Root class="w-full">
       <Card.Header>
         <Card.Title>Installed</Card.Title>
-        <Card.Description>Community plugins installed on this device.</Card.Description>
+        <Card.Description>
+          {synced ? "On all your devices. Switch one off here and it's off on the dashboard too." : "Community plugins installed on this phone."}
+        </Card.Description>
       </Card.Header>
       <Card.Content>
         {#if ui.loading}
           <p class="text-sm text-muted-foreground">Loading…</p>
-        {:else if installedPlugins.length === 0}
+        {:else if kept.length === 0}
           <div class="flex flex-col items-center gap-3 py-6 text-center">
             <p class="text-sm text-muted-foreground">No plugins installed yet.</p>
             <div class="flex gap-2">
@@ -171,7 +192,7 @@
           </div>
         {:else}
           <ul class="flex flex-col gap-2">
-            {#each installed as plugin (plugin.manifest.id)}
+            {#each kept as plugin (plugin.manifest.id)}
               <li class="rounded-md border p-3 {plugin.enabled ? 'border-border' : 'border-border opacity-60'}">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex-1">
@@ -208,6 +229,29 @@
         {/if}
       </Card.Content>
     </Card.Root>
+
+    {#if trying.length}
+      <Card.Root class="w-full border-sky-500/40">
+        <Card.Header>
+          <Card.Title>Trying</Card.Title>
+          <Card.Description>Only on your account. Edit it at app.getlogit.app; it updates here at the next sync.</Card.Description>
+        </Card.Header>
+        <Card.Content class="flex flex-col gap-2">
+          {#each trying as plugin (plugin.manifest.id)}
+            <div class="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium">
+                  {plugin.manifest.name}
+                  <span class="ml-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-200">Draft {plugin.manifest.version}</span>
+                </p>
+                <p class="mt-0.5 text-xs text-muted-foreground">From your web builder · updated {ago(plugin.updatedAtMs)}</p>
+              </div>
+              <Button variant="ghost" size="sm" class="shrink-0" onclick={() => void goto(`/plugins/${plugin.manifest.id}`)}>Manage</Button>
+            </div>
+          {/each}
+        </Card.Content>
+      </Card.Root>
+    {/if}
 
     {#if !ui.loading}
       <Card.Root class="w-full">
@@ -298,6 +342,13 @@
         </Card.Content>
       </Card.Root>
     {/if}
+
+    <section class="flex flex-col gap-1 px-1 py-1">
+      <p class="text-sm font-medium">Want to make your own?</p>
+      <p class="text-xs leading-relaxed text-muted-foreground">
+        Plugins are built on the web, with a code editor and a live preview on your own data: app.getlogit.app/plugins
+      </p>
+    </section>
   </div>
 </div>
 

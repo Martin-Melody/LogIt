@@ -33,7 +33,7 @@ public static partial class PluginRules
     /// What a widget can ask for (core plugins/widgetView WidgetDataNeed).
     public static readonly HashSet<string> WidgetNeeds =
     [
-        "workouts", "exercises", "session", "todaysPlan", "progressionTargets", "nutrition", "bodyweight", "habits",
+        "workouts", "exercises", "session", "todaysPlan", "progressionTargets", "nutrition", "bodyweight", "habits", "mobility",
     ];
 
     // Prefixes for LogIt's own and built-in plugins.
@@ -124,7 +124,8 @@ public static partial class PluginRules
             ["id"] = pluginId,
             ["family"] = family,
             ["name"] = f.Name,
-            ["description"] = f.Description,
+            // The app treats an empty description as a broken manifest; the name stands in.
+            ["description"] = f.Description.Length > 0 ? f.Description : f.Name,
             ["version"] = version,
             ["author"] = author,
             ["capabilities"] = new JsonArray(Capability(family, pluginId)),

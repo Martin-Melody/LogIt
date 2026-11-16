@@ -50,6 +50,7 @@ import { enqueue, flush as flushOutbox, outboxSize } from "$lib/sync/outbox";
 import { syncStorageKey } from "$lib/sync/syncKeys";
 import { singleFlight } from "$lib/sync/singleFlight";
 import { log } from "@logit/core/platform/log";
+import { readCommunitySetting, writeCommunitySetting } from "@logit/core/plugins/pluginInstalls";
 
 /** A sync step that failed and was skipped. API failures are also logged by the API client
  * with their status and request id; this says which step they broke. */
@@ -1027,13 +1028,15 @@ export function pushProfile(remoteProfile: RemoteProfile): void {
  */
 export async function buildRemoteProfile(): Promise<RemoteProfile> {
   const { get } = await import("svelte/store");
-  const [{ profile }, { getNavConfigJson }, { getHomeConfigJson }, { getGoalsJson }, { getProfileConfigJson }] = await Promise.all([
+  const [{ profile }, { getNavConfigJson }, { getHomeConfigJson }, { getGoalsJson }, { getProfileConfigJson }, { communitySettingForSync }] = await Promise.all([
     import("$lib/stores/profile.store"),
     import("$lib/stores/navConfig.store"),
     import("$lib/stores/homeConfig.store"),
     import("$lib/features/goals/goalsStore"),
     import("$lib/stores/profileConfig.store"),
+    import("$lib/plugins/settings"),
   ]);
+  const community = communitySettingForSync();
   const p = get(profile);
   const activeSplitId = await getSplitRepo().getActiveSplitId().catch(() => null);
   // Only this profile's splits: rotation keys aren't per profile on the phone.
@@ -1059,6 +1062,7 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     splitRotationJson: Object.keys(rotations).length ? JSON.stringify(rotations) : null,
     goalsJson: getGoalsJson(),
     profileConfigJson: getProfileConfigJson(),
+    pluginSettingsJson: community ? writeCommunitySetting(community) : null,
     updatedAtMs: Date.now(),
   };
 }
@@ -1131,6 +1135,7 @@ export async function pushAllLocalData(): Promise<void> {
     pushPendingMessages(),
     pushAllNutrition(),
     pushAllHabits(),
+    import("$lib/plugins/pluginSync").then((m) => m.pushAllPluginInstalls()),
   ]);
 }
 
@@ -1164,6 +1169,9 @@ async function syncOnce(): Promise<boolean> {
     ["nutrition", pullAndMergeNutrition()],
     ["habits", pullAndMergeHabits()],
     ["assigned habits", pullAndMergeAssignedHabits()],
+    // Loaded lazily (it pulls in the plugin runtime); loading it also starts pushing local
+    // installs, so the first sync after the app opens switches that on.
+    ["plugins", import("$lib/plugins/pluginSync").then((m) => m.pullAndMergePluginInstalls())],
     ["profile", pullAndApplyProfile()],
   ];
   const results = await Promise.all(pulls.map(([, p]) => p));
@@ -1202,6 +1210,15 @@ export async function pullAndApplyProfile(): Promise<boolean> {
       try {
         const { goalsStore } = await import("$lib/features/goals/goalsStore");
         goalsStore.applyRemote(JSON.parse(remote.goalsJson));
+      } catch (e) { syncWarn("pullAndApplyProfile", e); }
+    }
+
+    // The community plugins switch too, on its own timestamp.
+    const community = readCommunitySetting(remote.pluginSettingsJson);
+    if (community) {
+      try {
+        const { pluginSettings } = await import("$lib/plugins/settings");
+        pluginSettings.applyRemote(community);
       } catch (e) { syncWarn("pullAndApplyProfile", e); }
     }
 

@@ -1,4 +1,4 @@
-import { installPlugin } from "./catalog";
+import { installPlugin, type InstallChangeOptions } from "./catalog";
 import { fetchAndStoreExercisePack } from "./packStore";
 import { fetchAndStoreMobilityPack } from "./mobilityPackStore";
 import { fetchAndStoreBundle, storeBundleMeta } from "./bundleStore";
@@ -19,6 +19,7 @@ import type { PluginManifest } from "./types";
 export async function installPluginFromManifest(
   manifest: PluginManifest,
   enabled = true,
+  opts: InstallChangeOptions = {},
 ): Promise<void> {
   // Inline distribution embeds an artifact in the manifest — only ever allowed
   // for content families, never executable code.
@@ -40,5 +41,5 @@ export async function installPluginFromManifest(
   }
   // Widgets still load their bundle lazily by URL — Phase 6.
 
-  await installPlugin(manifest, enabled);
+  await installPlugin(manifest, enabled, opts);
 }

@@ -35,12 +35,14 @@ export type PluginSettings = {
   communityPluginsEnabled: boolean;
   /** Set once the user has seen and dismissed the enable-time warning. */
   acknowledgedRisk: boolean;
+  /** When the switch last changed, for syncing it across devices (newest wins). 0 = never. */
+  updatedAtMs: number;
 };
 
 const STORAGE_KEY = "logit:plugin-settings:v1";
 
 function defaults(): PluginSettings {
-  return { communityPluginsEnabled: false, acknowledgedRisk: false };
+  return { communityPluginsEnabled: false, acknowledgedRisk: false, updatedAtMs: 0 };
 }
 
 function load(): PluginSettings {
@@ -52,6 +54,7 @@ function load(): PluginSettings {
     return {
       communityPluginsEnabled: parsed.communityPluginsEnabled === true,
       acknowledgedRisk: parsed.acknowledgedRisk === true,
+      updatedAtMs: typeof parsed.updatedAtMs === "number" ? parsed.updatedAtMs : 0,
     };
   } catch {
     return defaults();
@@ -71,13 +74,26 @@ function createPluginSettingsStore() {
   const store = writable<PluginSettings>(current);
 
   function set(patch: Partial<PluginSettings>): void {
-    const next = { ...current, ...patch };
+    const next = { ...current, ...patch, updatedAtMs: Math.max(Date.now(), current.updatedAtMs + 1) };
     persist(next);
     store.set(next);
+    // The switch is per account: it rides on the synced profile (merged per key, newest wins).
+    void import("$lib/sync/syncService").then((m) => m.pushNavConfig()).catch(() => {});
   }
 
   return {
     subscribe: store.subscribe,
+    /** A newer switch from another device or the dashboard; doesn't push back. */
+    applyRemote(remote: { enabled: boolean; acknowledgedRisk: boolean; updatedAtMs: number }): void {
+      if (remote.updatedAtMs <= current.updatedAtMs) return;
+      const next = {
+        communityPluginsEnabled: remote.enabled,
+        acknowledgedRisk: remote.acknowledgedRisk || current.acknowledgedRisk,
+        updatedAtMs: remote.updatedAtMs,
+      };
+      persist(next);
+      store.set(next);
+    },
     /** Enable community plugins and record that the warning was acknowledged. */
     enableCommunityPlugins(): void {
       set({ communityPluginsEnabled: true, acknowledgedRisk: true });
@@ -93,4 +109,11 @@ export const pluginSettings = createPluginSettingsStore();
 /** Synchronous gate for the runtime. Never executes a community bundle when false. */
 export function isCommunityPluginsEnabled(): boolean {
   return current.communityPluginsEnabled === true;
+}
+
+/** The switch as the synced profile carries it (core plugins/pluginInstalls.ts), or null if never set here. */
+export function communitySettingForSync(): { enabled: boolean; acknowledgedRisk: boolean; updatedAtMs: number } | null {
+  return current.updatedAtMs > 0
+    ? { enabled: current.communityPluginsEnabled, acknowledgedRisk: current.acknowledgedRisk, updatedAtMs: current.updatedAtMs }
+    : null;
 }
