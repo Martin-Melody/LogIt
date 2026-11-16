@@ -128,7 +128,7 @@
 <div class="flex flex-col pb-24">
   <PageHeader>
     <BackButton onclick={() => void goto("/plugins")} />
-    <span class="text-base font-semibold truncate">{manifest?.name ?? "Plugin"}</span>
+    <h1 class="page-title">{manifest?.name ?? "Plugin"}</h1>
   </PageHeader>
 
   <div class="flex flex-col gap-3 p-3">

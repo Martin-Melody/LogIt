@@ -16,6 +16,13 @@
   import { sessionMatches } from "@logit/core/domain/sessionHistory";
   import { splitDayName } from "@logit/core/domain/splitSchedule";
   import { localDateIso } from "@logit/core/domain/nutrition";
+  import { dropUnloggedPlannedSets, finishSession, getExercises, type WorkoutSession } from "@logit/core/domain/workout";
+  import { getWorkoutRepo } from "$lib/data/repoProvider";
+  import { pushSession } from "$lib/sync/syncService";
+  import { loadDraftSession } from "$lib/usecases/loadDraftSession";
+  import { deleteSession } from "$lib/usecases/deleteSession";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import { toast } from "$lib/components/ui/sonner";
 
   const unit = $derived($profile.weightUnit);
 
@@ -28,7 +35,41 @@
   let calendarExpanded = $state(true);
   let searchEl = $state<HTMLInputElement | null>(null);
 
+  // The workout running now; other sessions with no end time are leftovers from older
+  // versions (a new workout started over an old one) and can be finished or deleted.
+  let draftId = $state<string | null | undefined>(undefined);
+
+  /** When a leftover was last touched: its latest rest start, else when it started. */
+  function lastActivityMs(s: WorkoutSession): number {
+    let last = s.startedAtMs;
+    for (const ex of getExercises(s)) for (const set of ex.sets) if (set.restStartedAtMs && set.restStartedAtMs > last) last = set.restStartedAtMs;
+    return last;
+  }
+
+  async function finishLeftover(e: HistoryEntry) {
+    const s = e.session;
+    const done = finishSession(dropUnloggedPlannedSets(s), lastActivityMs(s));
+    await getWorkoutRepo().saveSession(done);
+    pushSession(done);
+    await sessionHistory.refresh();
+    toast(`Saved ${e.title}`);
+  }
+
+  let deleting = $state<HistoryEntry[] | null>(null);
+  const emptyLeftovers = $derived(
+    ($sessionHistory?.entries ?? []).filter((e) => e.inProgress && draftId !== undefined && e.session.id !== draftId && e.setCount === 0),
+  );
+
+  async function confirmDelete() {
+    const list = deleting ?? [];
+    deleting = null;
+    for (const e of list) await deleteSession(e.session.id);
+    await sessionHistory.refresh();
+    toast(list.length === 1 ? "Deleted" : `Deleted ${list.length} workouts`);
+  }
+
   onMount(() => {
+    loadDraftSession().then((d) => (draftId = d?.id ?? null)).catch(() => (draftId = null));
     sessionHistory.refresh().catch((e) => (error = e instanceof Error ? e.message : "Couldn't load your sessions"));
     loadWeeklyStreak().then((s) => (streak = s)).catch(() => {});
   });
@@ -168,7 +209,7 @@
   }
 
   function open(e: HistoryEntry) {
-    void goto(e.inProgress ? "/session/current" : `/sessions/${e.session.id}`);
+    void goto(e.inProgress && e.session.id === draftId ? "/session/current" : `/sessions/${e.session.id}`);
   }
 
   const filterLabel = $derived(
@@ -269,12 +310,24 @@
         <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {sec.key === "now" ? sec.label : `${sec.label} · ${sec.count} workout${sec.count === 1 ? "" : "s"}`}
         </span>
-        {#if sec.volumeKg > 0 && sec.key !== "now"}
+        {#if sec.key === "now" && emptyLeftovers.length > 1}
+          <button type="button" class="text-xs font-medium text-destructive" onclick={() => (deleting = emptyLeftovers)}>
+            Delete {emptyLeftovers.length} empty
+          </button>
+        {:else if sec.volumeKg > 0 && sec.key !== "now"}
           <span class="text-xs text-muted-foreground tabular-nums">{volumeLabel(sec.volumeKg, unit)}</span>
         {/if}
       </div>
       {#each sec.days as day (day.key)}
-        <SessionCard entries={day.entries} {unit} query={q} onOpen={open} />
+        <SessionCard
+          entries={day.entries}
+          {unit}
+          query={q}
+          onOpen={open}
+          {draftId}
+          onFinish={(e) => void finishLeftover(e)}
+          onDelete={(e) => (deleting = [e])}
+        />
       {/each}
     {/each}
 
@@ -285,3 +338,12 @@
     {/if}
   {/if}
 </div>
+
+<ConfirmDialog
+  open={deleting !== null}
+  onOpenChange={(v) => { if (!v) deleting = null; }}
+  title={deleting && deleting.length > 1 ? `Delete ${deleting.length} unfinished workouts?` : "Delete this unfinished workout?"}
+  description={deleting && deleting.every((e) => e.setCount === 0) ? "Nothing was logged in it. It's removed from your other devices too." : "Its sets are deleted too, here and on your other devices."}
+  confirmLabel="Delete"
+  onConfirm={confirmDelete}
+/>
