@@ -1,0 +1,30 @@
+---
+title: Start coaching
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="coach-today" />
+
+With Studio, the dashboard has a Coaching side (switch at the top of the sidebar). The Studio
+walkthrough in Guide takes you through it in ten short chapters, doing each thing for real.
+
+## Practise on sample clients
+
+The first Studio chapter offers three sample clients: Niamh, who asks to join through your first
+invite link; Conor, already your client, who answers check-ins and messages; and Dara, who shares only
+her training. They act on their own a few seconds after you do something, and only you ever see them.
+
+Keep them as a sandbox to try programs and forms on. Manage them from Clients › Sandbox: Reset to fresh
+puts back their starting four weeks, Remove deletes them and everything they sent, and Add sample
+clients brings them back.
+
+## Your Today page
+
+<HowTo id="studio.today" />
+
+<CanCant ids={["coach-today"]} />

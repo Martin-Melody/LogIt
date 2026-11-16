@@ -1,0 +1,24 @@
+---
+title: Logging a workout
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="workouts" />
+
+## On the phone
+
+Tap Quick Start on Home. With an active split, today's day loads with its planned sets; otherwise you
+start an empty workout. Tap the circle on a set when you've done it: it fills in what was planned and
+starts your rest timer. Add exercises with +, and swipe a set to edit or delete it. Choose Finish when
+you're done; progression works out your next targets from it.
+
+## On the web
+
+<HowTo id="pro.sessions" />
+
+<CanCant ids={["workouts"]} />

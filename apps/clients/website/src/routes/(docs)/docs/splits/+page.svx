@@ -1,0 +1,24 @@
+---
+title: Splits and schedules
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="splits" />
+
+A split is your plan: training days (Push, Pull, Legs, or Monday, Wednesday, Friday), each with its
+exercises and sets. One split is **active**; Quick Start trains from it.
+
+## On the phone
+
+Open Splits, then New. Add days, then open a day to add exercises. Set it active from the split's page.
+
+## Edit a split on the web (Pro)
+
+<HowTo id="pro.plan" />
+
+<CanCant ids={["splits"]} />

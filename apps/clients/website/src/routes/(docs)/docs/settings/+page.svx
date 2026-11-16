@@ -1,0 +1,24 @@
+---
+title: Settings and your home screen
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="settings" />
+
+## Home screen and bottom bar
+
+Choose what the home screen shows, and in what order, with the Customise home button (the sliders) at
+the top of Home. Settings › Customise navigation decides which pages sit in the bottom bar; the rest are
+under More.
+
+## Walkthroughs
+
+Settings › Walkthroughs has short tours of each part of the app. You can replay any of them. If you have
+Pro or Studio, the full walkthroughs are on the web dashboard under Guide, and the chapters you finish
+are ticked on both.
+
+<CanCant ids={["settings"]} />

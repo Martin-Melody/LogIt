@@ -1,0 +1,21 @@
+---
+title: Clients and sharing
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="coach-clients" />
+
+<HowTo id="studio.clients" />
+
+## Sharing
+
+Each client chooses what you see: workouts, nutrition diary, bodyweight, habits and check-ins. They can
+change it any time; if they turn something off, that tab shows Not shared. Charts a client chooses to
+show you appear on their Insights tab, and you can build charts for them too.
+
+<CanCant ids={["coach-clients"]} />

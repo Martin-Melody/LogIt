@@ -1,0 +1,16 @@
+---
+title: Nutrition
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+</script>
+
+<FeatureFacts id="nutrition" />
+
+Log food by searching, scanning a barcode, or from your recent foods, recipes and saved meals. Set your
+calorie and macro targets under Nutrition › Goal, and the diary shows how each day adds up. If your
+coach sets your targets, theirs are shown.
+
+With Pro, your custom foods, recipes, favourites and saved meals sync between devices, and the web
+dashboard shows a week at a glance.

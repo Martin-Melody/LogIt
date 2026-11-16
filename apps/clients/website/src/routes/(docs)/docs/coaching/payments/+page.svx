@@ -1,0 +1,25 @@
+---
+title: Getting paid
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="coach-payments" />
+
+<HowTo id="studio.payments" />
+
+## Set up
+
+Payments › Packages and settings › Connect Stripe opens Stripe's own sign-up. You're the seller: your
+own VAT, receipts and refunds, all in Stripe. Stripe's card fees are yours; LogIt takes nothing.
+
+## When a payment fails
+
+Stripe retries the card and emails the client a link to update it. You choose what happens to coaching
+meanwhile, for everyone or per client.
+
+<CanCant ids={["coach-payments"]} />

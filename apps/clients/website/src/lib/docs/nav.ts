@@ -1,18 +1,28 @@
+import { SECTION_ORDER, usingPages } from "./using/guide";
 export type DocLink = { title: string; href: string };
 export type DocSection = { title: string; links: DocLink[] };
 
+// "Using LogIt" pages come from the app's feature list (one page per feature's docs link), so
+// a feature added to packages/core/src/guide/features.ts shows up here and must get a page.
+const SECTION_TITLES: Record<string, string> = { Pro: "Pro", Coaching: "Coaching (Studio)" };
+
+const usingSections: DocSection[] = SECTION_ORDER.map((section) => ({
+  title: SECTION_TITLES[section] ?? section,
+  links: [
+    ...(section === "Start here"
+      ? [{ title: "Using LogIt", href: "/docs" }, { title: "What each plan can do", href: "/docs/plans" }]
+      : []),
+    ...usingPages().filter((p) => p.section === section).map((p) => ({ title: p.title, href: p.href })),
+  ],
+}));
+
 export const docsNav: DocSection[] = [
+  ...usingSections,
   {
-    title: "Getting started",
+    title: "Developers",
     links: [
-      { title: "Overview", href: "/docs" },
       { title: "Self-hosting", href: "/self-hosting" },
-    ],
-  },
-  {
-    title: "Plugins",
-    links: [
-      { title: "Introduction", href: "/docs/plugins" },
+      { title: "Building plugins", href: "/docs/plugins" },
       { title: "Trust & the sandbox", href: "/docs/plugins/trust" },
       { title: "Exercise packs", href: "/docs/plugins/exercise-packs" },
       { title: "Mobility packs", href: "/docs/plugins/mobility-packs" },

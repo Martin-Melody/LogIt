@@ -85,6 +85,18 @@ class Guide {
     this.loaded = true;
   }
 
+  /** "Show me in the app" on a docs page links to /?guide=<chapter>: start it once loaded. */
+  async startFromLink(url: URL) {
+    const id = url.searchParams.get("guide");
+    if (!id) return;
+    await this.load();
+    if (!CHAPTERS.some((c) => c.id === id)) return;
+    const clean = new URL(url);
+    clean.searchParams.delete("guide");
+    await goto(clean.pathname + clean.search, { replaceState: true });
+    this.start(id);
+  }
+
   private persist() {
     void guideApi.save(this.progress).then((merged) => (this.progress = merged)).catch(() => {});
   }

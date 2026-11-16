@@ -1,0 +1,20 @@
+---
+title: Check-ins
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="coach-checkins" />
+
+<HowTo id="studio.checkins" />
+
+## What your client sees
+
+The form shows as Due under Check-ins on their phone, or My coach on the web. After you review it,
+they see it as Reviewed, with your reply, and can look back at every check-in they've sent.
+
+<CanCant ids={["coach-checkins"]} />

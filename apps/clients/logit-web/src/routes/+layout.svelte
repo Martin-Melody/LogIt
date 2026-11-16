@@ -126,7 +126,8 @@
     if (ready && apiClient.isAuthenticated() && !isBlockedFreeTier) {
       void coachBadges.refresh(isStudio);
       // Once per signed-in account (load() ignores repeat calls for the same account).
-      void guide.load();
+      if (page.url.searchParams.has("guide")) void guide.startFromLink(page.url);
+      else void guide.load();
       if ((isStudio || apiClient.isSelfHosted()) && !sandbox.loaded) void sandbox.refresh();
       void socialBadge.refresh();
     }
