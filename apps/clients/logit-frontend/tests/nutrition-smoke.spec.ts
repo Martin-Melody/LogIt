@@ -532,7 +532,7 @@ test("tapping a diary item opens its amount sheet and editing the amount rescale
   );
 
   await page.goto("/nutrition");
-  await page.getByRole("button", { name: /Rice, cooked/ }).click();
+  await page.getByRole("button", { name: /^Rice, cooked/ }).click();
   await expect(page.getByRole("heading", { name: "Rice, cooked" })).toBeVisible();
   await expect(page.getByTestId("adds-kcal")).toHaveText("260");
 
@@ -676,4 +676,59 @@ test("look up a food without logging it: see its numbers, star it, and add it on
   await expect(page.getByText("Added to Dinner")).toBeVisible();
   await page.goto("/nutrition");
   await expect(page.getByTestId("meal-dinner")).toContainText("Chopped tomatoes");
+});
+
+test("meals fold and stay folded, and a food drags to another meal (folded ones too)", async ({ page }) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await page.addInitScript((dateIso) => {
+    if (localStorage.getItem("logit:nutritionDays:v1")?.includes("Drag me")) return;
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
+    localStorage.setItem("logit:had_account", "1");
+    localStorage.setItem(
+      "logit:nutritionDays:v1",
+      JSON.stringify({
+        [`nday_${dateIso}`]: {
+          id: `nday_${dateIso}`, dateIso, createdAtMs: 1, updatedAtMs: 2,
+          items: [
+            { id: "a", meal: "breakfast", name: "Drag me", grams: 50, computed: { kcal: 190, proteinG: 6, carbsG: 30, fatG: 4 } },
+            { id: "b", meal: "breakfast", name: "Stay put", grams: 100, computed: { kcal: 100, proteinG: 5, carbsG: 10, fatG: 2 } },
+            { id: "c", meal: "dinner", name: "Already dinner", grams: 200, computed: { kcal: 300, proteinG: 30, carbsG: 20, fatG: 10 } },
+          ],
+        },
+      }),
+    );
+  }, today);
+
+  await page.goto("/nutrition");
+  await expect(page.getByText("Drag me")).toBeVisible();
+
+  // Fold Dinner: its food hides, the header keeps the totals; it stays folded after a reload.
+  await page.getByTestId("meal-dinner").getByRole("button", { name: /^Dinner/, expanded: true }).click();
+  await expect(page.getByText("Already dinner")).toBeHidden();
+  await expect(page.getByTestId("meal-dinner")).toContainText("1 item");
+  await page.reload();
+  await expect(page.getByText("Drag me")).toBeVisible();
+  await expect(page.getByText("Already dinner")).toBeHidden();
+
+  // Drag "Drag me" by its grip onto the folded Dinner.
+  const grip = await page.getByLabel("Drag to move Drag me").boundingBox();
+  const sx = grip!.x + grip!.width / 2;
+  const sy = grip!.y + grip!.height / 2;
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx + 3, sy - 10, { steps: 3 });
+  await expect(page.getByTestId("meal-dinner").locator("ul")).toHaveClass(/border-dashed/); // drop strip
+  const zone = await page.locator("#meal-items-dinner").boundingBox();
+  await page.mouse.move(zone!.x + zone!.width / 2, zone!.y + zone!.height / 2, { steps: 20 });
+  await page.waitForTimeout(300);
+  await page.mouse.up();
+
+  await expect(page.getByText("Moved Drag me to dinner")).toBeVisible();
+  await expect(page.getByTestId("meal-dinner")).toContainText("2 items");
+  const meals = await page.evaluate((dateIso) => {
+    const d = JSON.parse(localStorage.getItem("logit:nutritionDays:v1")!)[`nday_${dateIso}`];
+    return Object.fromEntries(d.items.map((i: { name: string; meal: string }) => [i.name, i.meal]));
+  }, today);
+  expect(meals).toEqual({ "Drag me": "dinner", "Stay put": "breakfast", "Already dinner": "dinner" });
 });
