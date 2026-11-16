@@ -13,6 +13,8 @@
   import { popIn } from "$lib/transitions";
   import { loadVolumeContext, sessionVolumeKg } from "$lib/features/bodyweight/bodyweight";
 
+  // `preloaded`: Insights already worked it out for a chosen range, so show that instead of loading.
+  const { preloaded }: { preloaded?: NutritionTrainingCorrelationResult } = $props();
   const ui = $state({ loading: true, error: null as string | null });
   let result = $state<NutritionTrainingCorrelationResult | null>(null);
 
@@ -33,7 +35,12 @@
     }
   }
 
-  onMount(() => { void load(); });
+  onMount(() => {
+    if (preloaded) {
+      result = preloaded;
+      ui.loading = false;
+    } else void load();
+  });
 </script>
 
 {#if ui.loading}

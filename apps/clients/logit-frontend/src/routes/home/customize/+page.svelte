@@ -9,9 +9,10 @@
   import { homeConfig } from "$lib/stores/homeConfig.store";
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
+  import { chartWidgets, insightCharts } from "$lib/features/insights/charts.svelte";
   import { onMount } from "svelte";
 
-  let widgets = $state<RuntimeWidgetDefinition[]>(
+  let baseWidgets = $state<RuntimeWidgetDefinition[]>(
     localWidgetRegistry.list().map((widget) => ({
       ...widget,
       source: "builtin" as const,
@@ -19,6 +20,8 @@
       bundleContract: null,
     })),
   );
+  // Saved Insights charts can sit on the home screen too.
+  const widgets = $derived([...baseWidgets, ...chartWidgets(insightCharts.list)]);
 
   const orderedSlots = $derived(
     [...$homeConfig.slots].sort((a, b) => a.orderIndex - b.orderIndex),
@@ -27,8 +30,9 @@
   onMount(() => {
     void homeConfig.reconcilePlugins();
     void pluginRuntime.listWidgets().then((loaded) => {
-      widgets = loaded;
+      baseWidgets = loaded;
     });
+    void insightCharts.sync();
   });
 </script>
 
@@ -69,7 +73,7 @@
                 >
                   <ArrowDown class="h-3.5 w-3.5" />
                 </Button>
-                <Switch checked={slot.enabled} label={slot.enabled ? "Disable widget" : "Enable widget"} onchange={() => homeConfig.toggleWidget(slot.id)} />
+                <Switch checked={slot.enabled} label={slot.enabled ? "Disable widget" : "Enable widget"} onchange={() => (slot.id.startsWith("chart:") ? void insightCharts.setPhoneHome(slot.id.slice(6), !slot.enabled) : homeConfig.toggleWidget(slot.id))} />
               </div>
             </li>
           {/if}
