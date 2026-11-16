@@ -175,3 +175,49 @@ test.describe("nutrition log — custom foods", () => {
     await expect(page.getByText("Homemade granola")).toBeVisible();
   });
 });
+
+// ── Sheets close with a swipe ─────────────────────────────────────────────────
+
+test.describe("nutrition log — amount sheet swipe", () => {
+  async function openSheet(page: Page) {
+    await seedNutrition(page, {
+      favorites: { fav_food1: makeFavorite("food1", { name: "Greek yoghurt" }) },
+    });
+    await goToLog(page);
+    await page.getByRole("tab", { name: "Favourites" }).click();
+    await page.getByText("Greek yoghurt").click();
+    await expect(page.getByRole("dialog", { name: "Greek yoghurt" })).toBeVisible();
+    await page.waitForTimeout(400); // let it finish sliding up
+  }
+
+  async function swipe(page: Page, fromY: number, toY: number, steps = 10, msPerStep = 16) {
+    const cdp = await page.context().newCDPSession(page);
+    const x = 180;
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: fromY }] });
+    for (let i = 1; i <= steps; i++) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x, y: fromY + ((toY - fromY) * i) / steps }],
+      });
+      await page.waitForTimeout(msPerStep);
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  }
+
+  test("a long pull down closes it", async ({ page }) => {
+    await openSheet(page);
+    const box = (await page.getByRole("dialog", { name: "Greek yoghurt" }).boundingBox())!;
+    await swipe(page, box.y + 40, box.y + 340, 15, 30);
+    await expect(page.getByRole("dialog", { name: "Greek yoghurt" })).toHaveCount(0);
+  });
+
+  test("a short pull springs back", async ({ page }) => {
+    await openSheet(page);
+    const sheet = page.getByRole("dialog", { name: "Greek yoghurt" });
+    const box = (await sheet.boundingBox())!;
+    await swipe(page, box.y + 40, box.y + 90, 10, 40);
+    await page.waitForTimeout(400);
+    await expect(sheet).toBeVisible();
+    expect((await sheet.boundingBox())!.y).toBeCloseTo(box.y, 0);
+  });
+});
