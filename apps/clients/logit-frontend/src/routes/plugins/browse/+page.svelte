@@ -46,6 +46,14 @@
   let sourceError = $state<string | null>(null);
 
   const installedIds = $derived(new Set(installed.map((p) => p.manifest.id)));
+  const installedById = $derived(new Map(installed.map((p) => [p.manifest.id, p])));
+  /** "Update" when the registry has another version; "Install published" over your own draft. */
+  function replaceLabel(entry: RegistryEntry): string | null {
+    const have = installedById.get(entry.id);
+    if (!have) return null;
+    if (have.source === "draft") return "Install published";
+    return entry.version && entry.version !== have.manifest.version ? "Update" : null;
+  }
 
   const filtered = $derived(
     entries
@@ -326,7 +334,11 @@
                       {/if}
                     </div>
                     <div class="flex shrink-0 flex-col gap-1.5 items-end">
-                      {#if isInstalled}
+                      {#if isInstalled && replaceLabel(entry)}
+                        <Button size="sm" disabled={isInstalling} onclick={() => (confirming = entry)}>
+                          {replaceLabel(entry)}
+                        </Button>
+                      {:else if isInstalled}
                         <Button variant="ghost" size="sm" onclick={() => void goto(`/plugins/${entry.id}`)}>
                           Open
                         </Button>
@@ -379,7 +391,11 @@
                       {/if}
                     </div>
                     <div class="flex shrink-0 flex-col gap-1.5 items-end">
-                      {#if isInstalled}
+                      {#if isInstalled && replaceLabel(entry)}
+                        <Button size="sm" disabled={isInstalling} onclick={() => (confirming = entry)}>
+                          {replaceLabel(entry)}
+                        </Button>
+                      {:else if isInstalled}
                         <Button variant="ghost" size="sm" onclick={() => void goto(`/plugins/${entry.id}`)}>
                           Open
                         </Button>

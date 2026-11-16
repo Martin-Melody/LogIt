@@ -160,7 +160,7 @@
               {#if have && have.manifest.version === e.version}
                 <span class="text-xs text-muted-foreground">Installed</span>
               {:else}
-                <button type="button" disabled={busyId === e.id} onclick={() => openInstall(e)} class={btnPri}>{have ? "Update" : "Install"}</button>
+                <button type="button" disabled={busyId === e.id} onclick={() => openInstall(e)} class={btnPri}>{have?.source === "draft" ? "Install published" : have ? "Update" : "Install"}</button>
               {/if}
             </div>
           </article>

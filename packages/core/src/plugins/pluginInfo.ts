@@ -79,18 +79,23 @@ export function isWidgetNeed(need: string): need is WidgetDataNeed {
 }
 
 /** Short, lower-case summary for cards: "your recent workouts, habits". */
-export function getsSummary(family: string, needs: readonly string[] | undefined): string {
+export function getsSummary(family: string, needs: readonly string[] | null | undefined): string {
   if (!isCodeFamily(family)) return "Data only, runs no code";
+  if (family === "widget" && (needs === undefined || needs === null)) return "not listed";
   return pluginGets(family, needs)
     .map((g) => g.label.charAt(0).toLowerCase() + g.label.slice(1))
     .join(", ");
 }
 
 /** Everything a plugin of this type gets, for the install sheet and the plugin page. */
-export function pluginGets(family: string, needs: readonly string[] | undefined): GetsLine[] {
+export function pluginGets(family: string, needs: readonly string[] | null | undefined): GetsLine[] {
   switch (family) {
     case "widget": {
-      const lines = (needs ?? []).flatMap((n) => {
+      // Older registries don't say; the host still only passes what the code asks for.
+      if (needs === undefined || needs === null) {
+        return [{ label: "Not listed by its registry", detail: "It only ever gets the data its code asks for, and nothing outside LogIt" }];
+      }
+      const lines = needs.flatMap((n) => {
         const info = NEED_INDEX.get(n);
         return info ? [{ label: info.label, detail: info.detail }] : [];
       });

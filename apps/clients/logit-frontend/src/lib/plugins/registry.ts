@@ -47,7 +47,8 @@ export function builtinRegistrySources(): RegistrySource[] {
   // dashboard) first, then the bundled examples (same-origin, always reachable), then the
   // community registry, a bonus that must never gate the UI. Earlier sources win the de-dupe.
   const sources: RegistrySource[] = [
-    { url: pluginsApi.registryUrl(), label: "LogIt", builtin: true },
+    // The server address lives in localStorage, so not during the server render.
+    ...(browser ? [{ url: pluginsApi.registryUrl(), label: "LogIt", builtin: true }] : []),
     { url: BUNDLED_REGISTRY_URL, label: "Bundled examples", builtin: true },
   ];
   // In dev the community URL already points at the bundled file — don't list it twice.

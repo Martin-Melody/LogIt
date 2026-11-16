@@ -18,7 +18,8 @@ export async function updateOwnProfile(
   opts: { bump: boolean },
 ): Promise<RemoteProfile> {
   const { profile } = await syncApi.pullProfile();
-  if (!profile) throw new Error("Your profile hasn't synced from the app yet. Open LogIt on your phone once, then try again.");
+  // Dated 0: only the dashboard's placeholder for the plugins switch, not the phone's profile.
+  if (!profile || profile.updatedAtMs === 0) throw new Error("Your profile hasn't synced from the app yet. Open LogIt on your phone once, then try again.");
   const next: RemoteProfile = { ...profile, ...change(profile) };
   if (opts.bump) next.updatedAtMs = Math.max(Date.now(), profile.updatedAtMs + 1);
   await syncApi.pushProfile(next);
