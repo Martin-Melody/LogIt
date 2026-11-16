@@ -44,6 +44,9 @@
     /** Show meal chips starting on this meal; null hides them (recipe ingredients). */
     meal?: MealSlot | null;
     confirmText?: (meal: MealSlot | null) => string;
+    /** Looking a food up: the button first says "Add to diary…" and shows the meal chips
+     * (starting on this meal); only the second tap logs. */
+    askMeal?: MealSlot | null;
     favourite?: { on: boolean; toggle: () => void } | null;
     ondelete?: (() => void) | null;
     extra?: Snippet<[{ grams: number }]>;
@@ -61,6 +64,7 @@
     day = null,
     meal: initialMeal = null,
     confirmText = (m) => (m ? `Add to ${MEAL_LABELS[m]}` : "Add"),
+    askMeal = null,
     favourite = null,
     ondelete = null,
     extra,
@@ -116,6 +120,10 @@
 
   function confirm() {
     if (grams <= 0) return;
+    if (askMeal && !meal) {
+      meal = askMeal;
+      return;
+    }
     onconfirm({
       grams,
       label: portionLabel(amount, active, grams),
@@ -283,11 +291,11 @@
   {#snippet footer()}
     <button
       type="button"
-      class="h-13 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-50"
+      class="h-13 w-full rounded-xl text-base font-semibold disabled:opacity-50 {askMeal && !meal ? 'bg-muted text-foreground' : 'bg-primary text-primary-foreground'}"
       disabled={grams <= 0}
       onclick={confirm}
     >
-      {confirmText(meal)}
+      {askMeal && !meal ? "Add to diary…" : confirmText(meal)}
     </button>
   {/snippet}
 </BottomSheet>

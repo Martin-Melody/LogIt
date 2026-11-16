@@ -627,3 +627,53 @@ test("a custom food can be edited in place, keeping its id", async ({ page }) =>
   expect(Object.keys(stored)).toEqual(["food_shake"]);
   expect(stored.food_shake.food.name).toBe("Protein shake v2");
 });
+
+test("look up a food without logging it: see its numbers, star it, and add it only if you want", async ({ page }) => {
+  await page.addInitScript(() => {
+    if (localStorage.getItem("logit:customFoods:v1")) return;
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, nutrition: true }));
+    localStorage.setItem("logit:had_account", "1");
+    localStorage.setItem(
+      "logit:customFoods:v1",
+      JSON.stringify({
+        food_tom: {
+          food: {
+            id: "food_tom",
+            source: "custom",
+            name: "Chopped tomatoes",
+            per100g: { kcal: 22, proteinG: 1.1, carbsG: 3.8, fatG: 0.2 },
+            servings: [{ id: "g", label: "100 g", grams: 100 }, { id: "tin", label: "tin (400 g)", grams: 400 }],
+          },
+          createdAtMs: 1,
+          updatedAtMs: 2,
+        },
+      }),
+    );
+  });
+
+  await page.goto("/nutrition");
+  await page.getByRole("link", { name: "Look up a food" }).click();
+  await page.waitForURL(/\/nutrition\/lookup/);
+  await expect(page.getByRole("button", { name: "Scan barcode" }).first()).toBeVisible();
+  await page.getByLabel("Search foods").fill("tomatoes chopped");
+  await page.getByRole("button", { name: /Chopped tomatoes/ }).first().click();
+
+  // Its numbers for the food's own portion, no meal picked yet.
+  await expect(page.getByTestId("adds-kcal")).toHaveText("88");
+  await expect(page.getByRole("button", { name: "Lunch", exact: true })).toHaveCount(0);
+  await page.screenshot({ path: `${SHOTS}/17-lookup.png`, fullPage: true });
+
+  await page.getByRole("button", { name: "Add to favourites" }).click();
+  await expect(page.getByRole("button", { name: "Remove from favourites" })).toBeVisible();
+  const favs = await page.evaluate(() => JSON.parse(localStorage.getItem("logit:favoriteFoods:v1") ?? "{}"));
+  expect(Object.values(favs).map((f) => (f as { food: { id: string } }).food.id)).toContain("food_tom");
+
+  // Nothing is logged until asked: the first tap shows the meals, the second adds.
+  await page.getByRole("button", { name: "Add to diary…" }).click();
+  await page.getByRole("button", { name: "Dinner", exact: true }).click();
+  await page.getByRole("button", { name: "Add to Dinner" }).click();
+  await expect(page.getByText("Added to Dinner")).toBeVisible();
+  await page.goto("/nutrition");
+  await expect(page.getByTestId("meal-dinner")).toContainText("Chopped tomatoes");
+});

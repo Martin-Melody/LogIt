@@ -13,6 +13,7 @@
     Ellipsis,
     MoveHorizontal,
     Plus,
+    Search,
     Target,
     Trash2,
     UtensilsCrossed,
@@ -301,6 +302,9 @@
 <PageHeader>
   <BackButton onclick={() => back("/")} />
   <h1 class="page-title flex-1">Nutrition</h1>
+  <a href="/nutrition/lookup" class="flex size-11 items-center justify-center rounded-lg text-muted-foreground" aria-label="Look up a food">
+    <Search class="size-5" />
+  </a>
   <a href="/insights/eating" class="flex size-11 items-center justify-center rounded-lg text-muted-foreground" aria-label="Insights">
     <ChartNoAxesColumn class="size-5" />
   </a>
