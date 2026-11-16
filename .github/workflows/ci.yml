@@ -47,6 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the docs review reminder compares the pull request with its base branch
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -58,6 +61,15 @@ jobs:
 
       - name: core — unit tests
         run: npm run test --workspace @logit/core
+
+      # Pages changed without their docs page: a warning on the pull request naming the docs
+      # page to re-read (packages/core/src/guide/docsReview.ts). Never fails the build.
+      - name: core — docs to re-read
+        if: github.event_name == 'pull_request'
+        working-directory: packages/core
+        env:
+          DOCS_REVIEW_BASE: origin/${{ github.base_ref }}
+        run: npx vitest run src/guide/docsReview.test.ts
 
       - name: frontend — build
         working-directory: apps/clients/logit-frontend
