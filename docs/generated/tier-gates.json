@@ -1,0 +1,440 @@
+[
+  {
+    "method": "GET",
+    "route": "/coach/checkins",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/checkins",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/checkins/inbox",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/checkins/reviews",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/clients/{clientId:guid}/charts",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "DELETE",
+    "route": "/coach/clients/{clientId:guid}/charts/{chartId}",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/clients/{clientId:guid}/charts/{chartId}",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/clients/{relationshipId:guid}/swap-rule",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/habits",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/habits",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/library/sharing",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/links",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/links",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "DELETE",
+    "route": "/coach/links/{linkId:guid}",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/links/{linkId:guid}/package",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/nutrition-plans",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/nutrition-plans",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/payments",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/clients/{relationshipId:guid}/paid-elsewhere",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/payments/clients/{relationshipId:guid}/rule",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/clients/{relationshipId:guid}/stop",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/connect",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/packages",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/payments/packages/{packageId:guid}",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/refresh",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/payments/settings",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/programs",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/programs",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/requests",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/requests/{relationshipId:guid}/accept",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/requests/{relationshipId:guid}/decline",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/roster",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/sandbox/",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/sandbox/clients/{userId:guid}/token",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/settings",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/settings",
+    "plan": "Studio",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/plugins/mine/",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/plugins/mine/",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "DELETE",
+    "route": "/plugins/mine/{pluginId}",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/plugins/mine/{pluginId}",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "PUT",
+    "route": "/plugins/mine/{pluginId}",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/plugins/mine/{pluginId}/releases",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/charts",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/checkins",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "POST",
+    "route": "/sync/checkins",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "GET",
+    "route": "/sync/exercises",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/exercises",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/habit-entries",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/habit-entries",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/habits",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/habits",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/nutrition/custom-foods",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/nutrition/custom-foods",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/nutrition/days",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "POST",
+    "route": "/sync/nutrition/days",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "GET",
+    "route": "/sync/nutrition/favorites",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/nutrition/favorites",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/nutrition/goal",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "POST",
+    "route": "/sync/nutrition/goal",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "GET",
+    "route": "/sync/nutrition/meal-templates",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/nutrition/meal-templates",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/nutrition/recipes",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/nutrition/recipes",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/nutrition/weight",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "POST",
+    "route": "/sync/nutrition/weight",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "GET",
+    "route": "/sync/plugins",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/plugins",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/profile",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/profile",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
+    "route": "/sync/sessions",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "POST",
+    "route": "/sync/sessions",
+    "plan": "Pro",
+    "orActivelyCoached": true
+  },
+  {
+    "method": "GET",
+    "route": "/sync/splits",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/splits",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  }
+]

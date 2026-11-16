@@ -40,6 +40,16 @@ public class User
     public bool HideFromSuggestions { get; set; }
     /// Don't show "People you might know" to this account (they closed the section).
     public bool HidePeopleSuggestions { get; set; }
+    /// A sample client in a Studio coach's sandbox (see Features/Sandbox). Nobody signs in as one:
+    /// it has no usable password, only its coach gets short-lived tokens for it, and it's left
+    /// out of social, search, suggestions, admin counts and payments.
+    public bool IsSample { get; set; }
+    /// The coach whose sandbox this sample client belongs to. Deleting the coach deletes it.
+    public Guid? SampleOwnerId { get; set; }
+    public User? SampleOwner { get; set; }
+    /// Walkthrough progress (chapters done, welcome card seen), shared by web and phone.
+    /// Opaque JSON written by the apps, see packages/core/src/guide.
+    public string? GuideJson { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     /// The invite this account signed up with (invite-only servers). Null for open sign-up.

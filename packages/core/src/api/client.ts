@@ -169,13 +169,15 @@ class ApiClient {
     const requestId = newRequestId();
     const started = Date.now();
 
+    // A caller that brings its own token (withToken) keeps it, and a 401 isn't retried with ours.
+    const ownToken = !!(init.headers as Record<string, string> | undefined)?.["Authorization"];
     const doRequest = async (token: string | null) => {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "X-Request-Id": requestId,
         ...(init.headers as Record<string, string>),
       };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (token && !ownToken) headers["Authorization"] = `Bearer ${token}`;
       return fetch(`${getBaseUrl()}${path}`, { ...init, headers });
     };
 
@@ -183,7 +185,7 @@ class ApiClient {
     try {
       res = await doRequest(this.tokens?.accessToken ?? null);
 
-      if (res.status === 401 && this.tokens) {
+      if (res.status === 401 && this.tokens && !ownToken) {
         const refreshed = await this.refreshTokens();
         if (refreshed) {
           res = await doRequest(this.tokens!.accessToken);
@@ -478,3 +480,20 @@ export type BillingStatus = {
 };
 
 export const apiClient = new ApiClient();
+
+/** Anything with the API client's fetch: apiClient itself, or withToken(...). */
+export interface ApiFetcher {
+  fetch<T>(path: string, init?: RequestInit): Promise<T>;
+}
+
+/** Calls the API as someone else: a sandbox sample client, with the short-lived token its
+ * coach got from POST /coach/sandbox/clients/{id}/token. Same base URL, logging and errors. */
+export function withToken(token: string): ApiFetcher {
+  return {
+    fetch: <T>(path: string, init: RequestInit = {}) =>
+      apiClient.fetch<T>(path, {
+        ...init,
+        headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` },
+      }),
+  };
+}

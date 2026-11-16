@@ -1,7 +1,8 @@
 <script lang="ts">
   import Check from "@lucide/svelte/icons/check";
-  import Minus from "@lucide/svelte/icons/minus";
   import PlayBadge from "$lib/site/PlayBadge.svelte";
+  // The comparison comes from the app's own feature list, so it always says what each plan unlocks.
+  import PlanTable from "$lib/docs/using/PlanTable.svelte";
   import { PLAY_CANCEL_PATH, PRICES } from "$lib/site";
 
   const plans = [
@@ -35,16 +36,6 @@
     },
   ];
 
-  const rows: [string, boolean | string, boolean | string, boolean | string][] = [
-    ["Workout logging, progression, goals", true, true, true],
-    ["Nutrition and habits", true, true, true],
-    ["Works offline, data export", true, true, true],
-    ["Plugins", true, true, true],
-    ["Social feed", "Free account", true, true],
-    ["Backup and sync between devices", false, true, true],
-    ["Web dashboard", false, true, true],
-    ["Coach clients", false, false, true],
-  ];
 
   const steps = [
     { title: "Install LogIt", text: "Get it from Google Play and create an account in Settings › Account." },
@@ -121,30 +112,7 @@
 <section class="px-4 py-20 sm:px-6">
   <div class="mx-auto flex max-w-[880px] flex-col gap-6">
     <h2 class="text-[28px] font-bold tracking-[-0.03em] text-heading sm:text-[32px]">Compare plans</h2>
-    <div class="overflow-x-auto rounded-[14px] border border-border">
-      <table class="w-full min-w-[560px] border-collapse text-[15px]">
-        <thead>
-          <tr class="bg-card text-left">
-            <th scope="col" class="px-5 py-3.5"><span class="sr-only">Feature</span></th>
-            {#each ["Free", "Pro", "Studio"] as col (col)}<th scope="col" class="w-[110px] px-5 py-3.5 font-semibold text-heading">{col}</th>{/each}
-          </tr>
-        </thead>
-        <tbody>
-          {#each rows as [label, ...cells] (label)}
-            <tr class="border-t border-border">
-              <th scope="row" class="px-5 py-3.5 text-left font-normal text-foreground">{label}</th>
-              {#each cells as cell, ci (ci)}
-                <td class="px-5 py-3.5">
-                  {#if cell === true}<Check class="size-[18px] text-success" strokeWidth={2.4} aria-label="Included" />
-                  {:else if cell === false}<Minus class="size-[18px] text-muted-foreground/60" aria-label="Not included" />
-                  {:else}<span class="text-sm text-foreground/85">{cell}</span>{/if}
-                </td>
-              {/each}
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    <PlanTable />
     <div class="flex flex-wrap items-center justify-between gap-4 rounded-[14px] border border-border bg-card p-6">
       <div class="min-w-0 flex-[1_1_400px]">
         <h3 class="mb-1.5 text-lg font-semibold text-heading">Rather run it yourself?</h3>

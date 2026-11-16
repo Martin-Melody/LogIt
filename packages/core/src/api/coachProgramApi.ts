@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient, type ApiFetcher } from "./client";
 
 /** Wire shape of a coach program row — `dataJson` is a serialised `CoachProgram`
  * (domain/CoachProgram.ts), null on a tombstone. */
@@ -28,42 +28,47 @@ export interface UpsertCoachProgramInput {
   deletedAtMs?: number;
 }
 
-export const coachProgramApi = {
-  /** Coach: create/update a program. Studio-tier only (server-enforced). */
-  async upsert(input: UpsertCoachProgramInput): Promise<{ id: string; programId: string; updatedAtMs: number }> {
-    return apiClient.fetch("/coach/programs", {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  },
+/** The same calls as `coachProgramApi`, made with another identity (a sandbox sample client's token). */
+export function coachProgramApiFor(api: ApiFetcher) {
+  return {
+    /** Coach: create/update a program. Studio-tier only (server-enforced). */
+    async upsert(input: UpsertCoachProgramInput): Promise<{ id: string; programId: string; updatedAtMs: number }> {
+      return api.fetch("/coach/programs", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+    },
 
-  /** Coach: list own authored programs. Pass `recipientId` to filter to one client, or
-   * `templates: true` for the unassigned template library. */
-  async listMine(opts?: { recipientId?: string; templates?: boolean }): Promise<RemoteMyCoachProgram[]> {
-    const params = new URLSearchParams();
-    if (opts?.recipientId) params.set("recipientId", opts.recipientId);
-    if (opts?.templates) params.set("templates", "true");
-    const qs = params.toString();
-    const { programs } = await apiClient.fetch<{ programs: RemoteMyCoachProgram[] }>(
-      `/coach/programs${qs ? `?${qs}` : ""}`,
-    );
-    return programs;
-  },
+    /** Coach: list own authored programs. Pass `recipientId` to filter to one client, or
+     * `templates: true` for the unassigned template library. */
+    async listMine(opts?: { recipientId?: string; templates?: boolean }): Promise<RemoteMyCoachProgram[]> {
+      const params = new URLSearchParams();
+      if (opts?.recipientId) params.set("recipientId", opts.recipientId);
+      if (opts?.templates) params.set("templates", "true");
+      const qs = params.toString();
+      const { programs } = await api.fetch<{ programs: RemoteMyCoachProgram[] }>(
+        `/coach/programs${qs ? `?${qs}` : ""}`,
+      );
+      return programs;
+    },
 
-  /** Client: start an assigned program. The first start wins; the reply carries the
-   * start the server kept, which may be an earlier one from another device. */
-  async startAssigned(programId: string, startedAtMs: number): Promise<{ startedAtMs: number }> {
-    return apiClient.fetch(`/coach/programs/assigned/${encodeURIComponent(programId)}/start`, {
-      method: "POST",
-      body: JSON.stringify({ startedAtMs }),
-    });
-  },
+    /** Client: start an assigned program. The first start wins; the reply carries the
+     * start the server kept, which may be an earlier one from another device. */
+    async startAssigned(programId: string, startedAtMs: number): Promise<{ startedAtMs: number }> {
+      return api.fetch(`/coach/programs/assigned/${encodeURIComponent(programId)}/start`, {
+        method: "POST",
+        body: JSON.stringify({ startedAtMs }),
+      });
+    },
 
-  /** Client: incremental pull of programs assigned to the caller (read-only). */
-  async pullAssigned(since: number): Promise<RemoteCoachProgram[]> {
-    const { programs } = await apiClient.fetch<{ programs: RemoteCoachProgram[] }>(
-      `/coach/programs/assigned?since=${since}`,
-    );
-    return programs;
-  },
-};
+    /** Client: incremental pull of programs assigned to the caller (read-only). */
+    async pullAssigned(since: number): Promise<RemoteCoachProgram[]> {
+      const { programs } = await api.fetch<{ programs: RemoteCoachProgram[] }>(
+        `/coach/programs/assigned?since=${since}`,
+      );
+      return programs;
+    },
+  };
+}
+
+export const coachProgramApi = coachProgramApiFor(apiClient);

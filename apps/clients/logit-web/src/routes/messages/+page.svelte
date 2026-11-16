@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canCoach } from "$lib/workspace";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -66,7 +67,7 @@
   }
 
   onMount(() => {
-    if (apiClient.getUser()?.tier !== "Studio") void goto("/my-coach", { replaceState: true });
+    if (!canCoach()) void goto("/my-coach", { replaceState: true });
     else void load();
   });
 
@@ -99,7 +100,7 @@
     <p class="text-[13px] text-muted-foreground">No clients yet, so no conversations. <a href="/clients" class="text-primary hover:underline">Invite someone</a>.</p>
   {:else}
     <div class="flex flex-wrap items-stretch gap-4">
-      <section aria-label="Conversations" class="flex flex-[1_1_280px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-2">
+      <section aria-label="Conversations" data-guide="messages-list" class="flex flex-[1_1_280px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-2">
         <label for="find-client" class="sr-only">Find a client</label>
         <input id="find-client" bind:value={search} placeholder="Find a client"
           class="mx-0.5 mb-1.5 mt-0.5 h-[34px] rounded-lg border border-input bg-background px-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring" />
@@ -117,7 +118,7 @@
       </section>
 
       {#if active}
-        <section aria-label="Conversation with {active.name}" class="flex min-w-0 flex-[999_1_560px] flex-col rounded-[10px] border border-border bg-card">
+        <section aria-label="Conversation with {active.name}" data-guide="messages-thread" class="flex min-w-0 flex-[999_1_560px] flex-col rounded-[10px] border border-border bg-card">
           <div class="flex items-center justify-between gap-3 border-b border-border px-[18px] py-3.5">
             <span class="flex items-center gap-2.5"><Avatar name={active.name} url={active.avatarUrl} /><span class="text-sm font-semibold">{active.name}</span></span>
             <a href="/clients/{active.clientId}" class="text-xs text-muted-foreground hover:text-foreground">Open client ›</a>

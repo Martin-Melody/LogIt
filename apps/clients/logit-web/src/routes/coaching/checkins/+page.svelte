@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
+  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -40,6 +42,7 @@
     }
   }
   onMount(load);
+  onMount(() => onSampleActivity(() => void load()));
 
   const clientOf = (id: string): ClientSummary | undefined => overview?.clients.find((c) => c.id === id);
   const toReview = $derived(overview?.inbox.filter((i) => i.reviewedAtMs == null) ?? []);
@@ -106,6 +109,7 @@
       for (const c of overview.clients) c.toReview = overview.inbox.filter((i) => i.clientUserId === c.id && i.reviewedAtMs == null);
       coachBadges.fromOverview(overview);
       reply = "";
+      if (reviewedNow) guideSignal("checkin.reviewed");
       toast.success(reviewedNow ? (sendReply ? "Reply sent, marked as reviewed" : "Marked as reviewed") : "Moved back to review");
       // Go on to the next one waiting.
       const u = new URL(page.url);
@@ -129,7 +133,7 @@
       <h1 class="text-[26px] font-bold tracking-tight">Check-ins</h1>
       <p class="mt-1 text-[13px] text-muted-foreground">Your clients' answers in one place. Reviewed ones move out of the way on every device.</p>
     </div>
-    <div role="tablist" aria-label="Show" class="flex flex-wrap gap-1 rounded-[10px] border border-border bg-card p-[3px]">
+    <div role="tablist" aria-label="Show" data-guide="checkins-tabs" class="flex flex-wrap gap-1 rounded-[10px] border border-border bg-card p-[3px]">
       {#each [["review", `To review · ${toReview.length}`], ["missed", `Missed · ${missed.length}`], ["reviewed", "Reviewed"], ["forms", "Forms"]] as [f, label] (f)}
         <button type="button" role="tab" aria-selected={filter === f} onclick={() => setFilter(f as Filter)}
           class="{segBase} {filter === f ? 'bg-muted font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'}">{label}</button>
@@ -196,7 +200,7 @@
       </section>
 
       {#if selected && selSubmission}
-        <section class="flex min-w-0 flex-[999_1_560px] flex-col gap-1 rounded-[10px] border border-border bg-card px-[22px] py-5">
+        <section data-guide="checkin-review" class="flex min-w-0 flex-[999_1_560px] flex-col gap-1 rounded-[10px] border border-border bg-card px-[22px] py-5">
           <div class="flex flex-wrap justify-between gap-2.5 pb-2">
             <div class="flex items-center gap-3">
               <Avatar name={selClient?.name ?? "?"} url={selClient?.avatarUrl ?? null} size={40} />

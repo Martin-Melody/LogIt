@@ -1,0 +1,24 @@
+---
+title: Sync and devices
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+</script>
+
+<FeatureFacts id="sync" />
+
+With Pro, sign in on each device and LogIt keeps them the same: workouts, splits, exercises, habits,
+goals, food lists and settings. Changes made offline sync when you're back online. If the same split
+was changed on two devices, you're asked which one to keep.
+
+## On the phone
+
+<HowTo id="phone.sync" />
+
+## Coached
+
+<FeatureFacts id="coached-sync" />
+
+Your coach only ever sees what you share with them. See [Having a coach](/docs/having-a-coach).

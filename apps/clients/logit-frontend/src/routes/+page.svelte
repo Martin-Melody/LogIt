@@ -7,7 +7,7 @@
   import { homeConfig } from "$lib/stores/homeConfig.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
-  import { startHomeTour } from "$lib/tour/index";
+  import { autoTour } from "$lib/tour/index";
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
   import { chartWidgets, insightCharts } from "$lib/features/insights/charts.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -56,7 +56,7 @@
 
     // Small delay so widgets render before the tour tries to find them
     setTimeout(() => {
-      if ($onboarding.completed) startHomeTour();
+      if ($onboarding.completed) autoTour("app.home");
     }, 400);
   });
 
@@ -74,7 +74,7 @@
         variant="ghost"
         size="icon"
         aria-label="Customise home"
-        data-tour="home-customize"
+        data-guide="home-customize"
         onclick={() => void goto("/home/customize")}
       >
         <SlidersHorizontal class="h-4 w-4" />
@@ -84,7 +84,7 @@
 
   {#each activeWidgets as widget, i (widget.id)}
     {@const WidgetComponent = widget.component}
-    <div in:popIn={{ duration: 220, delay: Math.min(i * 40, 320) }}>
+    <div in:popIn={{ duration: 220, delay: Math.min(i * 40, 320) }} data-guide={widget.guideMark}>
       <WidgetComponent {...(widget.props ?? {})} />
     </div>
   {/each}

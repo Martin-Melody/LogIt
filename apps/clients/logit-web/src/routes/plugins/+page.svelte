@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -65,6 +66,7 @@
     if (t === "browse") url.searchParams.delete("tab");
     else url.searchParams.set("tab", t);
     void goto(url, { noScroll: true, keepFocus: true });
+    if (t === "mine") guideSignal("plugins.mine-opened");
   }
 
   async function openInstall(entry: HostedRegistryEntry) {
@@ -112,7 +114,7 @@
     <a href="/plugins/builder/new" class="inline-flex h-[34px] items-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Build a plugin</a>
   </header>
 
-  <div role="tablist" aria-label="Plugins" class="flex gap-[22px] border-b border-border">
+  <div role="tablist" aria-label="Plugins" data-guide="plugins-tabs" class="flex gap-[22px] border-b border-border">
     <button type="button" role="tab" aria-selected={tab === "browse"} class={tabClass(tab === "browse")} onclick={() => setTab("browse")}>Browse</button>
     <button type="button" role="tab" aria-selected={tab === "installed"} class={tabClass(tab === "installed")} onclick={() => setTab("installed")}>Installed{plugins.installsLoaded ? ` · ${plugins.installed.length}` : ""}</button>
     <button type="button" role="tab" aria-selected={tab === "mine"} class={tabClass(tab === "mine")} onclick={() => setTab("mine")}>My plugins{mine ? ` · ${mine.length}` : ""}</button>
@@ -227,7 +229,7 @@
       </p>
     {/if}
   {:else}
-    <section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4">
+    <section data-guide="plugins-mine" class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4">
       <div class="flex flex-wrap items-center justify-between gap-2.5">
         <div>
           <h2 class="text-sm font-semibold">My plugins</h2>

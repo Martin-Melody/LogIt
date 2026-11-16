@@ -37,15 +37,15 @@ export type NavItemDef = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any;
   authRequired: boolean;
-  tourId?: string;
+  guideMark?: string;
 };
 
 export const NAV_ITEM_DEFS: NavItemDef[] = [
-  { id: "home",      href: "/",          label: "Home",      icon: House,             authRequired: false, tourId: "nav-home"     },
+  { id: "home",      href: "/",          label: "Home",      icon: House,             authRequired: false                          },
   { id: "social",    href: "/social",     label: "Social",    icon: Rss,               authRequired: true                         },
   { id: "messages",  href: "/messages",   label: "Messages",  icon: MessagesSquare,    authRequired: true                         },
-  { id: "sessions",  href: "/sessions",   label: "Sessions",  icon: List,              authRequired: false, tourId: "nav-sessions" },
-  { id: "profile",   href: "/profile",    label: "Profile",   icon: User,              authRequired: false, tourId: "nav-profile"  },
+  { id: "sessions",  href: "/sessions",   label: "Sessions",  icon: List,              authRequired: false, guideMark: "nav-sessions" },
+  { id: "profile",   href: "/profile",    label: "Profile",   icon: User,              authRequired: false, guideMark: "nav-profile"  },
   { id: "splits",    href: "/splits",     label: "Splits",    icon: SquareChartGantt,  authRequired: false                        },
   { id: "progress",  href: "/progress",   label: "Progress",  icon: ChartNoAxesColumn, authRequired: false                        },
   { id: "exercises", href: "/exercises",  label: "Library",   icon: Library,           authRequired: false                        },

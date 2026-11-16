@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -128,6 +129,7 @@
     if (!chart || chart.lifts.length >= MAX_CHART_LINES) return;
     chart.lifts.push({ exerciseName: name });
     liftQuery = "";
+    guideSignal("chart.lift-added");
   }
 
   function toggle(list: string[], v: string, max = Infinity) {
@@ -149,7 +151,10 @@
       const c = $state.snapshot(chart) as InsightChart;
       if (!c.name.trim()) c.name = defaultChartName(c, habitName);
       if (clientId) await insightChartsApi.sendToClient(clientId, c);
-      else await saveMyChart(c);
+      else {
+        await saveMyChart(c);
+        guideSignal("chart.saved");
+      }
       await goto(backHref);
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't save the chart";
@@ -207,7 +212,7 @@
         </div>
 
         {#if def?.pick === "lifts"}
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5" data-guide="chart-for">
             <span class={label}>For</span>
             <span class="flex flex-wrap gap-1.5">
               {#each chart.lifts as l, i (l.exerciseName)}
@@ -303,7 +308,7 @@
           {/if}
         </section>
 
-        <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
+        <section data-guide="chart-show-on" class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
           <h2 class="mb-1 text-sm font-semibold">Show it on</h2>
           {#if clientId}
             <label class="flex items-start gap-2.5 py-2 text-[13px] leading-snug">
@@ -334,7 +339,7 @@
           </div>
           <div class="flex gap-2">
             <a href={backHref} class="h-9 rounded-[9px] border border-border px-3.5 text-[13px] font-medium leading-9 hover:bg-muted">Cancel</a>
-            <button type="button" disabled={saving || !!chartProblem(chart)} onclick={save} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">
+            <button type="button" data-guide="chart-save" disabled={saving || !!chartProblem(chart)} onclick={save} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">
               {saving ? "Saving…" : clientId ? (isNew ? `Send to ${client?.name}` : "Save changes") : "Save chart"}
             </button>
           </div>

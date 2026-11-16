@@ -39,6 +39,8 @@ export type ClientSummary = {
   username: string;
   name: string;
   avatarUrl: string | null;
+  /** A sandbox sample client. */
+  isSample: boolean;
   sharing: Sharing;
   since: string | null;
   sessions7d: number;
@@ -139,6 +141,7 @@ function summarise(
     username: r.client.username,
     name: r.client.displayName || r.client.username,
     avatarUrl: r.client.avatarUrl,
+    isSample: !!r.client.isSample,
     sharing,
     since: r.since ?? null,
     sessions7d: r.sessions7d,

@@ -1,4 +1,4 @@
-import { ApiError, apiClient } from "./client";
+import { ApiError, apiClient, type ApiFetcher } from "./client";
 import type { SwapRule } from "../domain/swaps";
 import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
 
@@ -7,6 +7,8 @@ export interface CoachClientUser {
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  /** A sample client in your sandbox (only ever seen by its own coach). */
+  isSample?: boolean;
 }
 
 /** What a client lets one coach read. The server enforces it on every coach read; a
@@ -159,137 +161,142 @@ export interface SentInvite {
   createdAt: string;
 }
 
-export const coachApi = {
-  async inviteClient(username: string): Promise<void> {
-    await apiClient.fetch(`/coach/clients/${username}/invite`, { method: "POST" });
-  },
+/** The same calls as `coachApi`, made with another identity (a sandbox sample client's token). */
+export function coachApiFor(api: ApiFetcher) {
+  return {
+    async inviteClient(username: string): Promise<void> {
+      await api.fetch(`/coach/clients/${username}/invite`, { method: "POST" });
+    },
 
-  async listClients(): Promise<ClientRelationship[]> {
-    return apiClient.fetch("/coach/clients");
-  },
+    async listClients(): Promise<ClientRelationship[]> {
+      return api.fetch("/coach/clients");
+    },
 
-  /** The current user's active coaches (the mirror of listClients). */
-  async listCoaches(): Promise<CoachRelationship[]> {
-    return apiClient.fetch("/coach/coaches");
-  },
+    /** The current user's active coaches (the mirror of listClients). */
+    async listCoaches(): Promise<CoachRelationship[]> {
+      return api.fetch("/coach/coaches");
+    },
 
-  /** Per-client adherence summary for the coach dashboard (Studio-tier only). */
-  async getRoster(): Promise<RosterEntry[]> {
-    const { roster } = await apiClient.fetch<{ roster: RosterEntry[] }>("/coach/roster");
-    return roster;
-  },
+    /** Per-client adherence summary for the coach dashboard (Studio-tier only). */
+    async getRoster(): Promise<RosterEntry[]> {
+      const { roster } = await api.fetch<{ roster: RosterEntry[] }>("/coach/roster");
+      return roster;
+    },
 
-  async listReceivedInvites(): Promise<ReceivedInvite[]> {
-    return apiClient.fetch("/coach/invites/received");
-  },
+    async listReceivedInvites(): Promise<ReceivedInvite[]> {
+      return api.fetch("/coach/invites/received");
+    },
 
-  async listSentInvites(): Promise<SentInvite[]> {
-    return apiClient.fetch("/coach/invites/sent");
-  },
+    async listSentInvites(): Promise<SentInvite[]> {
+      return api.fetch("/coach/invites/sent");
+    },
 
-  /** Accept a coach's invite, choosing what they can see (omitted = everything). */
-  async acceptInvite(relationshipId: string, sharing?: Sharing): Promise<void> {
-    await apiClient.fetch(`/coach/invites/${relationshipId}/accept`, {
-      method: "POST",
-      body: JSON.stringify({ sharing: sharing ?? null }),
-    });
-  },
+    /** Accept a coach's invite, choosing what they can see (omitted = everything). */
+    async acceptInvite(relationshipId: string, sharing?: Sharing): Promise<void> {
+      await api.fetch(`/coach/invites/${relationshipId}/accept`, {
+        method: "POST",
+        body: JSON.stringify({ sharing: sharing ?? null }),
+      });
+    },
 
-  /** Client: change what a coach can see. Applies straight away. */
-  async updateSharing(relationshipId: string, sharing: Sharing): Promise<Sharing> {
-    const res = await apiClient.fetch<{ sharing: Sharing }>(`/coach/relationships/${relationshipId}/sharing`, {
-      method: "PUT",
-      body: JSON.stringify(sharing),
-    });
-    return res.sharing;
-  },
+    /** Client: change what a coach can see. Applies straight away. */
+    async updateSharing(relationshipId: string, sharing: Sharing): Promise<Sharing> {
+      const res = await api.fetch<{ sharing: Sharing }>(`/coach/relationships/${relationshipId}/sharing`, {
+        method: "PUT",
+        body: JSON.stringify(sharing),
+      });
+      return res.sharing;
+    },
 
-  // ── Invite links ──
+    // ── Invite links ──
 
-  async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null; packageId?: string | null }): Promise<InviteLink> {
-    return apiClient.fetch("/coach/links", { method: "POST", body: JSON.stringify(input) });
-  },
+    async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null; packageId?: string | null }): Promise<InviteLink> {
+      return api.fetch("/coach/links", { method: "POST", body: JSON.stringify(input) });
+    },
 
-  async listLinks(): Promise<InviteLink[]> {
-    const { links } = await apiClient.fetch<{ links: InviteLink[] }>("/coach/links");
-    return links;
-  },
+    async listLinks(): Promise<InviteLink[]> {
+      const { links } = await api.fetch<{ links: InviteLink[] }>("/coach/links");
+      return links;
+    },
 
-  async turnOffLink(linkId: string): Promise<void> {
-    await apiClient.fetch(`/coach/links/${linkId}`, { method: "DELETE" });
-  },
+    async turnOffLink(linkId: string): Promise<void> {
+      await api.fetch(`/coach/links/${linkId}`, { method: "DELETE" });
+    },
 
-  async openLink(code: string): Promise<InviteLinkInfo> {
-    return apiClient.fetch(`/coach/links/code/${encodeURIComponent(code)}`);
-  },
+    async openLink(code: string): Promise<InviteLinkInfo> {
+      return api.fetch(`/coach/links/code/${encodeURIComponent(code)}`);
+    },
 
-  async requestCoaching(code: string, sharing: Sharing): Promise<{ relationshipId: string; status: "requested" | "active" }> {
-    return apiClient.fetch(`/coach/links/code/${encodeURIComponent(code)}/request`, {
-      method: "POST",
-      body: JSON.stringify({ sharing }),
-    });
-  },
+    async requestCoaching(code: string, sharing: Sharing): Promise<{ relationshipId: string; status: "requested" | "active" }> {
+      return api.fetch(`/coach/links/code/${encodeURIComponent(code)}/request`, {
+        method: "POST",
+        body: JSON.stringify({ sharing }),
+      });
+    },
 
-  async listRequests(): Promise<CoachingRequest[]> {
-    const { requests } = await apiClient.fetch<{ requests: CoachingRequest[] }>("/coach/requests");
-    return requests;
-  },
+    async listRequests(): Promise<CoachingRequest[]> {
+      const { requests } = await api.fetch<{ requests: CoachingRequest[] }>("/coach/requests");
+      return requests;
+    },
 
-  async listMyRequests(): Promise<MyCoachingRequest[]> {
-    const { requests } = await apiClient.fetch<{ requests: MyCoachingRequest[] }>("/coach/requests/mine");
-    return requests;
-  },
+    async listMyRequests(): Promise<MyCoachingRequest[]> {
+      const { requests } = await api.fetch<{ requests: MyCoachingRequest[] }>("/coach/requests/mine");
+      return requests;
+    },
 
-  async acceptRequest(relationshipId: string): Promise<void> {
-    await apiClient.fetch(`/coach/requests/${relationshipId}/accept`, { method: "POST" });
-  },
+    async acceptRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/accept`, { method: "POST" });
+    },
 
-  async declineRequest(relationshipId: string): Promise<void> {
-    await apiClient.fetch(`/coach/requests/${relationshipId}/decline`, { method: "POST" });
-  },
+    async declineRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/decline`, { method: "POST" });
+    },
 
-  // ── Check-in inbox ──
+    // ── Check-in inbox ──
 
-  async checkinInbox(days = 120): Promise<CheckinInboxItem[]> {
-    const { items } = await apiClient.fetch<{ items: CheckinInboxItem[] }>(`/coach/checkins/inbox?days=${days}`);
-    return items;
-  },
+    async checkinInbox(days = 120): Promise<CheckinInboxItem[]> {
+      const { items } = await api.fetch<{ items: CheckinInboxItem[] }>(`/coach/checkins/inbox?days=${days}`);
+      return items;
+    },
 
-  async setCheckinReviewed(clientUserId: string, submissionId: string, reviewed: boolean, reply?: string): Promise<number | null> {
-    const res = await apiClient.fetch<{ reviewedAtMs: number | null }>("/coach/checkins/reviews", {
-      method: "POST",
-      body: JSON.stringify({ clientUserId, submissionId, reviewed, ...(reply?.trim() ? { reply: reply.trim() } : {}) }),
-    });
-    return res.reviewedAtMs;
-  },
+    async setCheckinReviewed(clientUserId: string, submissionId: string, reviewed: boolean, reply?: string): Promise<number | null> {
+      const res = await api.fetch<{ reviewedAtMs: number | null }>("/coach/checkins/reviews", {
+        method: "POST",
+        body: JSON.stringify({ clientUserId, submissionId, reviewed, ...(reply?.trim() ? { reply: reply.trim() } : {}) }),
+      });
+      return res.reviewedAtMs;
+    },
 
-  /** Client: which of my check-ins a coach has reviewed, with any reply. */
-  async myCheckinReviews(): Promise<MyCheckinReview[]> {
-    const { reviews } = await apiClient.fetch<{ reviews: MyCheckinReview[] }>("/coach/checkins/reviews/mine");
-    return reviews;
-  },
+    /** Client: which of my check-ins a coach has reviewed, with any reply. */
+    async myCheckinReviews(): Promise<MyCheckinReview[]> {
+      const { reviews } = await api.fetch<{ reviews: MyCheckinReview[] }>("/coach/checkins/reviews/mine");
+      return reviews;
+    },
 
-  // ── Exercise swaps ──
+    // ── Exercise swaps ──
 
-  /** Coach: my default swap rule for every client. */
-  async getCoachSettings(): Promise<{ swapRule: SwapRule }> {
-    return apiClient.fetch("/coach/settings");
-  },
+    /** Coach: my default swap rule for every client. */
+    async getCoachSettings(): Promise<{ swapRule: SwapRule }> {
+      return api.fetch("/coach/settings");
+    },
 
-  async setDefaultSwapRule(swapRule: SwapRule): Promise<{ swapRule: SwapRule }> {
-    return apiClient.fetch("/coach/settings", { method: "PUT", body: JSON.stringify({ swapRule }) });
-  },
+    async setDefaultSwapRule(swapRule: SwapRule): Promise<{ swapRule: SwapRule }> {
+      return api.fetch("/coach/settings", { method: "PUT", body: JSON.stringify({ swapRule }) });
+    },
 
-  /** Coach: set one client differently; null goes back to my default. */
-  async setClientSwapRule(relationshipId: string, swapRule: SwapRule | null): Promise<{ swapRule: SwapRule | null }> {
-    return apiClient.fetch(`/coach/clients/${relationshipId}/swap-rule`, { method: "PUT", body: JSON.stringify({ swapRule }) });
-  },
+    /** Coach: set one client differently; null goes back to my default. */
+    async setClientSwapRule(relationshipId: string, swapRule: SwapRule | null): Promise<{ swapRule: SwapRule | null }> {
+      return api.fetch(`/coach/clients/${relationshipId}/swap-rule`, { method: "PUT", body: JSON.stringify({ swapRule }) });
+    },
 
-  async declineInvite(relationshipId: string): Promise<void> {
-    await apiClient.fetch(`/coach/invites/${relationshipId}/decline`, { method: "POST" });
-  },
+    async declineInvite(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/invites/${relationshipId}/decline`, { method: "POST" });
+    },
 
-  async revokeRelationship(relationshipId: string): Promise<void> {
-    await apiClient.fetch(`/coach/relationships/${relationshipId}`, { method: "DELETE" });
-  },
-};
+    async revokeRelationship(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/relationships/${relationshipId}`, { method: "DELETE" });
+    },
+  };
+}
+
+export const coachApi = coachApiFor(apiClient);

@@ -29,7 +29,7 @@ public static class Notifications
 
         var blocked = await db.BlockedUserIdsAsync(actorId);
         var mentioned = await db.Users
-            .Where(u => usernames.Contains(u.Username) && u.Id != actorId && !blocked.Contains(u.Id))
+            .Where(u => usernames.Contains(u.Username) && !u.IsSample && u.Id != actorId && !blocked.Contains(u.Id))
             .ToListAsync();
         if (alreadyNotified is not null) mentioned = mentioned.Where(u => !alreadyNotified.Contains(u.Id)).ToList();
 

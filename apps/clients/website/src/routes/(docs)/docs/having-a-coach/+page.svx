@@ -1,0 +1,26 @@
+---
+title: Having a coach
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="my-coach" />
+
+## Join a coach
+
+Your coach sends you a link (or invites you by username). Open it, choose what they may see, and send
+the request. Nothing is shared until they accept. Some coaches charge through their link: you pay on
+the link's page before coaching starts.
+
+<HowTo id="pro.coach" />
+
+## Check-ins
+
+When your coach gives you a check-in form, it shows as Due under Check-ins on the phone, or My coach on
+the web. After they review it you'll see their reply with it.
+
+<CanCant ids={["my-coach"]} />

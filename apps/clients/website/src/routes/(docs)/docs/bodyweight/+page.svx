@@ -1,0 +1,12 @@
+---
+title: Bodyweight
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+</script>
+
+<FeatureFacts id="bodyweight" />
+
+Log your weight under Nutrition › Weight. LogIt shows the trend rather than each day's ups and downs.
+Bodyweight also counts towards lifts like pull-ups and dips.

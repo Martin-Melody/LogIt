@@ -1,0 +1,19 @@
+---
+title: Progress and progression
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+</script>
+
+<FeatureFacts id="progress" />
+
+## Your lifts
+
+Progress lists every exercise you've done at least twice, with its trend and a chart of your estimated
+one-rep max. On the web (Pro) you can put several lifts on one chart with Compare.
+
+## Progression
+
+After each workout, LogIt suggests the next targets for each exercise. How it does that is up to you:
+pick a progression rule per exercise type in Settings, or install one as a plugin.

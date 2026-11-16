@@ -51,3 +51,6 @@ apps/clients/*/screenshots/
 
 # Claude Code local settings (personal permission allowlist, machine-specific)
 .claude/settings.local.json
+
+# Walkthrough screenshots for the docs, taken fresh on every docs deploy
+apps/clients/website/static/docs/shots/

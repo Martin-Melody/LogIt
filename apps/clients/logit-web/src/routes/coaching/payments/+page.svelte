@@ -70,7 +70,7 @@
     {/if}
   </header>
 
-  <div role="tablist" aria-label="Payments" class="flex gap-[22px] border-b border-border">
+  <div role="tablist" aria-label="Payments" data-guide="payments-tabs" class="flex gap-[22px] border-b border-border">
     <button type="button" role="tab" aria-selected={tab === "clients"} onclick={() => setTab("clients")}
       class="-mb-px h-[34px] border-b-2 px-1 text-sm {tab === 'clients' ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground'}">Clients</button>
     <button type="button" role="tab" aria-selected={tab === "setup"} onclick={() => setTab("setup")}

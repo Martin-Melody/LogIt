@@ -2,6 +2,7 @@ import { writable } from "svelte/store";
 import { apiClient } from "@logit/core/api/client";
 import { refreshCoaches } from "$lib/features/coaching/coachCache";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
+import { checkinSubmissionDto, nutritionRowDto, sessionDto } from "@logit/core/api/syncDtos";
 import { coachProgramApi } from "@logit/core/api/coachProgramApi";
 import { coachNutritionPlanApi } from "@logit/core/api/coachNutritionPlanApi";
 import { coachHabitApi } from "@logit/core/api/coachHabitApi";
@@ -108,7 +109,7 @@ export function reloadLastSyncedAt(): void {
 
 export function pushSession(session: WorkoutSession): void {
   if (!apiClient.isAuthenticated()) return;
-  const dto = { id: session.id, startedAtMs: session.startedAtMs, dataJson: JSON.stringify(session) };
+  const dto = sessionDto(session);
   syncApi.pushSessions([dto]).catch(() => enqueue({ type: "session", dto }));
 }
 
@@ -496,13 +497,7 @@ export async function pullAndMergeCheckinSubmissions(): Promise<boolean> {
 
 export function pushCheckinSubmission(sub: CheckinSubmission, deleted = false): void {
   if (!apiClient.isAuthenticated()) return;
-  const dto = {
-    id: sub.id,
-    createdAtMs: sub.createdAtMs,
-    updatedAtMs: sub.updatedAtMs,
-    dataJson: deleted ? null : JSON.stringify(sub),
-    deletedAtMs: deleted ? Date.now() : undefined,
-  };
+  const dto = checkinSubmissionDto(sub, deleted ? Date.now() : undefined);
   syncApi.pushCheckinSubmissions([dto]).catch(() => enqueue({ type: "checkinSubmission", dto }));
 }
 
@@ -634,17 +629,6 @@ export async function markThreadRead(relationshipId: string, upToMs: number): Pr
 // submissions (client-owned, LWW by updatedAtMs, tombstoned). The goal is a singleton
 // blob. Deletions ride along in the blob (deletedAtMs) rather than a separate signal.
 
-type NutritionRow = { createdAtMs: number; updatedAtMs: number; deletedAtMs?: number };
-
-function nutritionRowDto(id: string, row: NutritionRow) {
-  return {
-    id,
-    createdAtMs: row.createdAtMs,
-    updatedAtMs: row.updatedAtMs,
-    dataJson: row.deletedAtMs ? null : JSON.stringify(row),
-    deletedAtMs: row.deletedAtMs,
-  };
-}
 
 export function pushNutritionDay(day: DiaryDay): void {
   if (!apiClient.isAuthenticated()) return;

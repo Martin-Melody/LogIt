@@ -1803,6 +1803,9 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("GuideJson")
+                        .HasColumnType("text");
+
                     b.Property<bool>("HideFromSuggestions")
                         .HasColumnType("boolean");
 
@@ -1813,6 +1816,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsPrivate")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSample")
                         .HasColumnType("boolean");
 
                     b.Property<int?>("ManualTier")
@@ -1843,6 +1849,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("PublicProfileJson")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("SampleOwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool?>("ShowInDiscover")
                         .HasColumnType("boolean");
 
@@ -1865,6 +1874,8 @@ namespace Logit.Api.Migrations.Postgres
                         .IsUnique();
 
                     b.HasIndex("InviteId");
+
+                    b.HasIndex("SampleOwnerId");
 
                     b.HasIndex("Username")
                         .IsUnique();
@@ -2518,7 +2529,14 @@ namespace Logit.Api.Migrations.Postgres
                         .HasForeignKey("InviteId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Logit.Api.Data.Entities.User", "SampleOwner")
+                        .WithMany()
+                        .HasForeignKey("SampleOwnerId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.Navigation("Invite");
+
+                    b.Navigation("SampleOwner");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>

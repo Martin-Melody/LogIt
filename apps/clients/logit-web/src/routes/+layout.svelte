@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canCoach } from "$lib/workspace";
   import "./layout.css";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -14,6 +15,13 @@
   import { isCoachingPath } from "$lib/workspace";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import { socialBadge } from "$lib/features/social/socialData.svelte";
+  import GuideLayer from "$lib/features/guide/GuideLayer.svelte";
+  import GuidePanel from "$lib/features/guide/GuidePanel.svelte";
+  import StudioModeDialog from "$lib/features/guide/StudioModeDialog.svelte";
+  import StudioFinishDialog from "$lib/features/guide/StudioFinishDialog.svelte";
+  import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
+  import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
+  import { sandbox } from "$lib/features/guide/sandbox.svelte";
 
   let { children } = $props();
 
@@ -69,7 +77,7 @@
   // fresh read of apiClient's auth state each time it actually changes.
   const isStudio = $derived.by(() => {
     void page.url.pathname;
-    return apiClient.getUser()?.tier === "Studio";
+    return canCoach();
   });
   // Self-hosted deployments don't do billing — every local account gets full access
   // regardless of the `Free` tier the DB defaults to there. `isSelfHosted()` reflects what
@@ -81,8 +89,10 @@
 
   async function guardRoute() {
     if (!apiClient.isAuthenticated()) {
-      if (isInviteLink) await goto(`/login?next=${encodeURIComponent(page.url.pathname)}`);
-      else if (!isLogin) await goto("/login");
+      // Come back to where you were going after signing in: an invite link, or a docs page's
+      // "Show me in the app" (/?guide=<chapter>), or any other page.
+      const here = page.url.pathname + page.url.search;
+      if (!isLogin) await goto(here === "/" ? "/login" : `/login?next=${encodeURIComponent(here)}`);
       return;
     }
     if (isBlockedFreeTier) {
@@ -118,8 +128,17 @@
     if (ready) void guardRoute();
     if (ready && apiClient.isAuthenticated() && !isBlockedFreeTier) {
       void coachBadges.refresh(isStudio);
+      // Once per signed-in account (load() ignores repeat calls for the same account).
+      if (page.url.searchParams.has("guide")) void guide.startFromLink(page.url);
+      else void guide.load();
+      if ((isStudio || apiClient.isSelfHosted()) && !sandbox.loaded) void sandbox.refresh();
       void socialBadge.refresh();
     }
+  });
+
+  const walkthroughs = $derived.by(() => {
+    void page.url.pathname;
+    return walkthroughsFor(apiClient.getUser()?.tier, apiClient.isSelfHosted());
   });
 
   function logout() {
@@ -160,6 +179,7 @@
         <Sidebar.Trigger class="-ml-1" />
         <span class="text-sm font-medium">{pageTitle}</span>
       </header>
+      {#if isCoachingPath(page.url.pathname, page.url.searchParams)}<SandboxBanner />{/if}
       {#if viewingClient.current && !isCoachingPath(page.url.pathname, page.url.searchParams)}
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-primary px-4 py-2 text-sm text-primary-foreground sm:px-8">
           <span>Viewing <strong>{viewingClient.current.client.displayName || viewingClient.current.client.username}</strong>'s training</span>
@@ -173,4 +193,8 @@
       </main>
     </Sidebar.Inset>
   </Sidebar.Provider>
+  <GuidePanel {walkthroughs} />
+  <GuideLayer />
+  <StudioModeDialog />
+  <StudioFinishDialog />
 {/if}

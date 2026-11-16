@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { guideSignal } from "$lib/features/guide/signal";
+  import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -68,6 +70,7 @@
     if (t === "overview") u.searchParams.delete("tab");
     else u.searchParams.set("tab", t);
     void goto(u, { noScroll: true, keepFocus: true });
+    if (t === "checkins") guideSignal("client.tab-checkins");
   }
 
   function assign() {
@@ -102,17 +105,17 @@
       <div class="flex items-center gap-3.5">
         <Avatar name={c.name} url={c.avatarUrl} size={48} />
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">{c.name}</h1>
-          <p class="mt-0.5 text-[13px] text-muted-foreground">@{c.username}{sinceLabel(c.since) ? ` · client since ${sinceLabel(c.since)}` : ""} · {programLine(c)}</p>
+          <h1 class="text-2xl font-bold tracking-tight">{c.name}{#if c.isSample}<SampleBadge />{/if}</h1>
+          <p class="mt-0.5 text-[13px] text-muted-foreground">{c.isSample ? "Sample client" : `@${c.username}`}{sinceLabel(c.since) ? ` · client since ${sinceLabel(c.since)}` : ""} · {programLine(c)}</p>
         </div>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2" data-guide="client-actions">
         <button type="button" onclick={() => setTab("messages")} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted">Message</button>
         <button type="button" onclick={assign} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Assign program</button>
       </div>
     </header>
 
-    <div role="tablist" aria-label="Client" class="flex flex-wrap gap-0.5 border-b border-border">
+    <div role="tablist" aria-label="Client" data-guide="client-tabs" class="flex flex-wrap gap-0.5 border-b border-border">
       {#each TABS as t (t.id)}
         {@const locked = t.area && !c.sharing[t.area]}
         <button type="button" role="tab" aria-selected={tab === t.id} onclick={() => setTab(t.id)}

@@ -1,0 +1,20 @@
+---
+title: Habits and goals
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="habits-goals" />
+
+## Goals
+
+<HowTo id="pro.habits" />
+
+On the phone, goals live under Progress, and habits under Habits. Your coach can also give you habits;
+they show with your own.
+
+<CanCant ids={["habits-goals"]} />
