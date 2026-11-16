@@ -62,6 +62,9 @@ public static class AuthEndpoints
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
             DisplayName = req.DisplayName.Trim(),
             InviteId = inviteId,
+            // New accounts start in Discover (they can turn it off in Social settings); older
+            // accounts are asked once, see User.ShowInDiscover.
+            ShowInDiscover = true,
         };
 
         var refresh = tokens.CreateRefreshToken(user.Id);

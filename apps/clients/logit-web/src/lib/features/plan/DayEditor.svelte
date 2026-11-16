@@ -1,5 +1,7 @@
 <script lang="ts">
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
+  import { flip } from "svelte/animate";
+  import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
   import XIcon from "@lucide/svelte/icons/x";
   import {
     addPlannedCardio,
@@ -107,9 +109,11 @@
   }
 
   // ── Order: whole rows (a group moves as one), or members inside their group ──
-  type Drag = { kind: "run"; from: number } | { kind: "member"; groupId: string; from: number };
-  let drag = $state<Drag | null>(null);
-  let dropAt = $state<string | null>(null);
+  // Dragging shows the new order live; nothing changes until it's let go.
+  const runOrder = createReorder<string>("y");
+  const memberOrder = createReorder<string>("y");
+  let memberGroup = $state<string | null>(null);
+  const runKey = (r: PlannedRun) => (r.kind === "block" ? r.block.id : r.group.id);
 
   function flatIds(rs: PlannedRun[]): string[] {
     return rs.flatMap((r) => (r.kind === "block" ? [r.block.id] : r.members.map((m) => m.id)));
@@ -142,13 +146,26 @@
     else if (e.key === "ArrowDown") { e.preventDefault(); move(at + 1); }
   }
 
-  function onDrop(target: Drag) {
-    const d = drag;
-    drag = null;
-    dropAt = null;
-    if (!d) return;
-    if (d.kind === "run" && target.kind === "run") moveRun(d.from, target.from);
-    else if (d.kind === "member" && target.kind === "member" && d.groupId === target.groupId) moveMember(d.groupId, d.from, target.from);
+  function dropRuns(e: DragEvent) {
+    const keys = runOrder.drop(e);
+    if (!keys) return;
+    const byKey = new Map(runs.map((r) => [runKey(r), r]));
+    const next = keys.map((k) => byKey.get(k)).filter((r): r is PlannedRun => r !== undefined);
+    editDay((d) => orderPlannedBlocks(d, flatIds(next)));
+  }
+
+  function dropMembers(e: DragEvent, groupId: string) {
+    if (!memberOrder.active) return;
+    e.stopPropagation();
+    const ids = memberOrder.drop(e);
+    memberGroup = null;
+    if (!ids) return;
+    const next = runs.map((r) => {
+      if (r.kind !== "group" || r.group.id !== groupId) return r;
+      const byId = new Map(r.members.map((m) => [m.id, m]));
+      return { ...r, members: ids.map((id) => byId.get(id)!).filter(Boolean) };
+    });
+    editDay((d) => orderPlannedBlocks(d, flatIds(next)));
   }
 
   // ── Grouping ───────────────────────────────────────────────────────────────
@@ -330,14 +347,13 @@
                 <th class="w-9 px-1 py-2"><span class="sr-only">Remove</span></th>
               </tr>
             </thead>
-            <tbody>
-              {#each runs as run, ri (run.kind === "block" ? run.block.id : run.group.id)}
-                {@const key = run.kind === "block" ? run.block.id : run.group.id}
+            <tbody ondragenter={(e) => runOrder.allow(e)} ondragover={(e) => runOrder.allow(e)} ondrop={dropRuns}>
+              {#each runOrder.arrange(runs, runKey) as run, ri (runKey(run))}
+                {@const key = runKey(run)}
                 <tr
-                  class="border-t border-border {dropAt === key ? 'bg-primary/5' : ''} {drag?.kind === 'run' && drag.from === ri ? 'opacity-50' : ''}"
-                  ondragover={(e) => { if (drag?.kind === "run") { e.preventDefault(); dropAt = key; } }}
-                  ondragleave={() => { if (dropAt === key) dropAt = null; }}
-                  ondrop={(e) => { e.preventDefault(); onDrop({ kind: "run", from: ri }); }}
+                  animate:flip={{ duration: SLIDE_MS }}
+                  class="border-t border-border {runOrder.held === key ? 'bg-primary/10 outline-dashed outline-[1.5px] -outline-offset-2 outline-primary [&>td]:text-transparent [&>td>*]:invisible' : ''}"
+                  ondragover={(e) => runOrder.over(key, e)}
                 >
                   {#if run.kind === "block"}
                     {@const b = run.block}
@@ -347,8 +363,8 @@
                         <input type="checkbox" aria-label="Pick {plannedBlockName(b)}" checked={picked.includes(b.id)} onchange={() => togglePick(b.id)} class="ml-1.5" />
                       {:else}
                         <button type="button" draggable="true" aria-label="Move {plannedBlockName(b)} (arrow keys)"
-                          ondragstart={(e) => { drag = { kind: "run", from: ri }; e.dataTransfer?.setData("text/plain", b.id); }}
-                          ondragend={() => { drag = null; dropAt = null; }}
+                          ondragstart={(e) => runOrder.start(runs.map(runKey), key, e, (e.currentTarget as HTMLElement).closest("tr"))}
+                          ondragend={() => runOrder.end()}
                           onkeydown={(e) => handleKeys(e, (to) => moveRun(ri, to), ri)}
                           class="flex h-8 w-6 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                           <GripVerticalIcon class="size-4" />
@@ -386,11 +402,14 @@
                     {@const g = run.group}
                     {@const kind = groupKindOf(run.members.length, g.kind)}
                     <td colspan="7" class="py-2.5">
-                      <div class="flex flex-col gap-2 rounded-[10px] border border-primary/35 bg-primary/5 px-3 py-2.5">
+                      <div role="group" aria-label={groupLabel(run.members.length, g.label, g.kind)} class="flex flex-col gap-2 rounded-[10px] border border-primary/35 bg-primary/5 px-3 py-2.5"
+                        ondragenter={(e) => { if (memberGroup === g.id) memberOrder.allow(e); }}
+                        ondragover={(e) => { if (memberGroup === g.id) { memberOrder.allow(e); e.stopPropagation(); } }}
+                        ondrop={(e) => dropMembers(e, g.id)}>
                         <div class="flex flex-wrap items-center gap-2.5 text-xs">
                           <button type="button" draggable="true" aria-label="Move {groupLabel(run.members.length, g.label, g.kind)} (arrow keys)"
-                            ondragstart={(e) => { drag = { kind: "run", from: ri }; e.dataTransfer?.setData("text/plain", g.id); }}
-                            ondragend={() => { drag = null; dropAt = null; }}
+                            ondragstart={(e) => runOrder.start(runs.map(runKey), key, e, (e.currentTarget as HTMLElement).closest("tr"))}
+                            ondragend={() => runOrder.end()}
                             onkeydown={(e) => handleKeys(e, (to) => moveRun(ri, to), ri)}
                             class="flex h-7 w-5 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                             <GripVerticalIcon class="size-4" />
@@ -413,19 +432,18 @@
                           <span class="flex-1"></span>
                           <button type="button" onclick={() => editDay((d) => ungroupPlanned(d, g.id))} class="h-7 rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Ungroup</button>
                         </div>
-                        {#each run.members as m, mi (m.id)}
+                        {#each memberGroup === g.id ? memberOrder.arrange(run.members, (x) => x.id) : run.members as m, mi (m.id)}
                           {@const info = m.type === "strength" ? index.get(m.exerciseName) : undefined}
-                          {@const mkey = `m-${m.id}`}
                           <div
                             role="group"
                             aria-label={plannedBlockName(m)}
-                            class="grid grid-cols-[22px_minmax(140px,1fr)_70px_110px_minmax(120px,1fr)_34px] items-center gap-2 rounded-md {dropAt === mkey ? 'bg-primary/10' : ''}"
-                            ondragover={(e) => { if (drag?.kind === "member" && drag.groupId === g.id) { e.preventDefault(); e.stopPropagation(); dropAt = mkey; } }}
-                            ondrop={(e) => { e.preventDefault(); e.stopPropagation(); onDrop({ kind: "member", groupId: g.id, from: mi }); }}
+                            animate:flip={{ duration: SLIDE_MS }}
+                            class="grid grid-cols-[22px_minmax(140px,1fr)_70px_110px_minmax(120px,1fr)_34px] items-center gap-2 rounded-md {memberOrder.held === m.id ? 'bg-primary/10 outline-dashed outline-[1.5px] outline-primary [&>*]:invisible' : ''}"
+                            ondragover={(e) => { if (memberGroup === g.id) { memberOrder.over(m.id, e); e.stopPropagation(); } }}
                           >
                             <button type="button" draggable="true" aria-label="Move {plannedBlockName(m)} within the group (arrow keys)"
-                              ondragstart={(e) => { e.stopPropagation(); drag = { kind: "member", groupId: g.id, from: mi }; e.dataTransfer?.setData("text/plain", m.id); }}
-                              ondragend={() => { drag = null; dropAt = null; }}
+                              ondragstart={(e) => { e.stopPropagation(); memberGroup = g.id; memberOrder.start(run.members.map((x) => x.id), m.id, e, (e.currentTarget as HTMLElement).parentElement); }}
+                              ondragend={() => { memberOrder.end(); memberGroup = null; }}
                               onkeydown={(e) => handleKeys(e, (to) => moveMember(g.id, mi, to), mi)}
                               class="flex h-8 w-5 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                               <GripVerticalIcon class="size-4" />

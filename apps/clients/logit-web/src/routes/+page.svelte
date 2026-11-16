@@ -6,7 +6,9 @@
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
   import ArrowRight from "@lucide/svelte/icons/arrow-right";
   import X from "@lucide/svelte/icons/x";
+  import { flip } from "svelte/animate";
   import { viewingClient } from "$lib/viewingClient.svelte";
+  import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
   import { loadOverview, type OverviewData } from "$lib/features/overview/overviewData";
   import { createLayout, SIZE_LABEL, SPAN, WIDGETS, type WidgetId } from "$lib/features/overview/layout.svelte";
   import OverviewWidget from "$lib/features/overview/OverviewWidget.svelte";
@@ -14,7 +16,7 @@
   let data = $state<OverviewData | null>(null);
   let error = $state<string | null>(null);
   let editing = $state(false);
-  let dragging = $state<WidgetId | null>(null);
+  const reorder = createReorder<WidgetId>("grid");
 
   const layout = createLayout(apiClient.getUser()?.id ?? "me");
   const defs = new Map(WIDGETS.map((w) => [w.id, w]));
@@ -34,9 +36,9 @@
     void load(viewingClient.id);
   });
 
-  function onDrop(target: WidgetId) {
-    if (dragging) layout.moveTo(dragging, target);
-    dragging = null;
+  function onDrop(e: DragEvent) {
+    const order = reorder.drop(e);
+    if (order) layout.setOrder(order);
   }
 </script>
 
@@ -80,20 +82,26 @@
       </section>
     {/if}
     <div class="flex flex-wrap items-start gap-5">
-      <div class="grid min-w-0 flex-[999_1_640px] grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {#each layout.slots as slot, i (slot.id)}
+      <div role="list" class="grid min-w-0 flex-[999_1_640px] grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"
+        ondragenter={(e) => reorder.allow(e)} ondragover={(e) => reorder.allow(e)} ondrop={onDrop}>
+        {#each reorder.arrange(layout.slots, (s) => s.id) as slot, i (slot.id)}
           {@const def = defs.get(slot.id)!}
+          {@const isGap = reorder.held === slot.id}
           <section
+            role="listitem"
             aria-label={def.title}
-            class="flex min-w-0 flex-col gap-3 rounded-[10px] bg-card px-[18px] py-4 {SPAN[slot.size]}
-              {editing ? 'cursor-grab border-[1.5px] border-dashed border-primary/40' : 'border border-border'}
-              {dragging === slot.id ? 'opacity-50' : ''}"
+            animate:flip={{ duration: SLIDE_MS }}
+            class="relative flex min-w-0 flex-col gap-3 rounded-[10px] px-[18px] py-4 {SPAN[slot.size]}
+              {isGap ? 'border-[1.5px] border-dashed border-primary bg-primary/5 [&>*:not(.drop-label)]:invisible'
+                : editing ? 'cursor-grab border-[1.5px] border-dashed border-primary/40 bg-card' : 'border border-border bg-card'}"
             draggable={editing}
-            ondragstart={() => (dragging = slot.id)}
-            ondragend={() => (dragging = null)}
-            ondragover={(e) => { if (editing) e.preventDefault(); }}
-            ondrop={(e) => { e.preventDefault(); onDrop(slot.id); }}
+            ondragstart={(e) => reorder.start(layout.slots.map((s) => s.id), slot.id, e)}
+            ondragend={() => reorder.end()}
+            ondragover={(e) => reorder.over(slot.id, e)}
           >
+            {#if isGap}
+              <span class="drop-label absolute inset-0 flex flex-col items-center justify-center text-[13px] text-primary"><span class="font-semibold">{def.title}</span>lands here</span>
+            {/if}
             <div class="flex flex-wrap items-center justify-between gap-2">
               <h2 class="min-w-0 truncate text-sm font-semibold">{def.title}</h2>
               {#if editing}

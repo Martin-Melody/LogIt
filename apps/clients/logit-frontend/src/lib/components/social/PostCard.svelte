@@ -2,9 +2,9 @@
   import { goto } from "$app/navigation";
   import {
     Heart, MessageCircle, MoreHorizontal, Loader2, Check, X,
-    Link2, Flag, Ban, Pencil, Trash2, Repeat2, Quote,
+    Link2, Flag, Ban, Pencil, Trash2, Repeat2, Quote, EyeOff,
   } from "lucide-svelte";
-  import { socialApi, type ApiPost } from "@logit/core/api/socialApi";
+  import { discoverApi, socialApi, type ApiPost, type FollowStatus } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
   import { authStore } from "$lib/api/authStore.svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -24,15 +24,59 @@
     onopencomments?: (post: ApiPost) => void;
     /** null = the post is gone (deleted or author blocked); a post = updated in place. */
     onchange?: (post: ApiPost | null) => void;
+    /** Why Discover picked it ("Popular this week"). Adds "Not interested" to the menu. */
+    reason?: string | null;
+    /** Under "You're all caught up": prefix the reason with "Suggested". */
+    suggested?: boolean;
+    /** Show a Follow button (posts from people you don't follow). */
+    follow?: boolean;
   }
 
-  const { post, href = true, onopencomments, onchange }: Props = $props();
+  const { post, href = true, onopencomments, onchange, reason = null, suggested = false, follow = false }: Props = $props();
 
   // Local snapshot for optimistic like / edit; re-synced if the prop changes.
   let p = $state({ ...post });
   $effect(() => { p = { ...post }; });
 
   const isOwn = $derived(authStore.user?.id === p.authorId);
+  // A plain repost's likes and comments are the original's (the server routes them there),
+  // so you can like your repost of someone else's post, not your own original.
+  const ownContent = $derived(authStore.user?.id === (p.repostOf && !p.body ? p.repostOf.authorId : p.authorId));
+  // Posts from private accounts stay with the followers they accepted: no repost or quote.
+  const canRepost = $derived(!p.authorIsPrivate && !p.repostOf?.authorIsPrivate && !p.repostOf?.unavailable);
+
+  let followStatus = $state<FollowStatus>("none");
+  let followBusy = $state(false);
+  async function toggleFollow(e: MouseEvent) {
+    e.stopPropagation();
+    if (followBusy) return;
+    followBusy = true;
+    try {
+      if (followStatus === "none") followStatus = await socialApi.follow(p.authorUsername);
+      else {
+        await socialApi.unfollow(p.authorUsername);
+        followStatus = "none";
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) followStatus = "following";
+      else toast.error("Couldn't do that");
+    } finally {
+      followBusy = false;
+    }
+  }
+
+  async function notInterested() {
+    menuOpen = false;
+    try {
+      await discoverApi.notInterested(p.authorUsername);
+      onchange?.(null);
+      toast.success(`You won't see @${p.authorUsername} in Discover`, {
+        action: { label: "Undo", onClick: () => void discoverApi.undoNotInterested(p.authorUsername) },
+      });
+    } catch {
+      toast.error("Couldn't do that");
+    }
+  }
 
   let liking = $state(false);
   let menuOpen = $state(false);
@@ -53,7 +97,7 @@
 
   async function toggleLike(e: MouseEvent) {
     e.stopPropagation();
-    if (liking || isOwn) return;
+    if (liking || ownContent) return;
     if (!authStore.isAuthenticated) { void goto("/auth?mode=login&redirect=/social"); return; }
     liking = true;
     const wasLiked = p.isLikedByMe;
@@ -165,6 +209,9 @@
 {/snippet}
 
 <article class="px-4 py-3 flex flex-col gap-2">
+  {#if reason}
+    <p class="text-xs text-muted-foreground -mb-0.5">{#if suggested}<span class="font-semibold text-foreground/80">Suggested</span>{" · "}{/if}{reason}</p>
+  {/if}
   {#if p.repostOf && !p.body}
     <button
       type="button"
@@ -190,11 +237,22 @@
     </button>
 
     <button type="button" class="flex-1 min-w-0 text-left leading-tight" onclick={() => void goto(`/social/${p.authorUsername}`)}>
-      <span class="text-sm font-semibold">{p.authorDisplayName}</span>
-      <span class="text-xs text-muted-foreground"> @{p.authorUsername} · {formatDistanceToNow(new Date(p.createdAt))}</span>
+      {#if isOwn}
+        <span class="text-sm font-semibold">You</span>
+        <span class="text-xs text-muted-foreground">{` · ${formatDistanceToNow(new Date(p.createdAt))}`}</span>
+      {:else}
+        <span class="text-sm font-semibold">{p.authorDisplayName}</span>
+        <span class="text-xs text-muted-foreground">{` @${p.authorUsername} · ${formatDistanceToNow(new Date(p.createdAt))}`}</span>
+      {/if}
       {#if p.editedAt}<span class="text-[11px] text-muted-foreground italic"> · edited</span>{/if}
     </button>
 
+    {#if follow && !isOwn}
+      <button type="button" class="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold disabled:opacity-50 {followStatus === 'none' ? 'border border-border' : 'border border-border text-muted-foreground'}"
+        disabled={followBusy} onclick={toggleFollow}>
+        {followStatus === "following" ? "Following" : followStatus === "requested" ? "Requested" : p.authorIsPrivate ? "Request" : "Follow"}
+      </button>
+    {/if}
     <button type="button" class="p-1 -mr-1 text-muted-foreground shrink-0" aria-label="More" onclick={(e) => { e.stopPropagation(); menuOpen = true; }}>
       <MoreHorizontal class="h-4 w-4" />
     </button>
@@ -241,8 +299,8 @@
     <button
       type="button"
       class="flex items-center gap-1.5 text-xs transition-colors disabled:opacity-40 {p.isLikedByMe ? 'text-rose-500' : 'text-muted-foreground hover:text-rose-500'}"
-      disabled={liking || isOwn}
-      aria-label={isOwn ? "Your post" : p.isLikedByMe ? "Unlike" : "Like"}
+      disabled={liking || ownContent}
+      aria-label={ownContent ? "Your post" : p.isLikedByMe ? "Unlike" : "Like"}
       onclick={toggleLike}
     >
       <Heart class="h-4 w-4 {p.isLikedByMe ? 'fill-rose-500' : ''}" />
@@ -267,15 +325,17 @@
       <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={copyLink}>
         <Link2 class="h-4 w-4 text-muted-foreground" /> Copy link
       </button>
-      {#if !isOwn}
+      {#if !isOwn && canRepost}
         <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50 disabled:opacity-50" disabled={reposting} onclick={() => void doRepost()}>
           {#if reposting}<Loader2 class="h-4 w-4 text-muted-foreground animate-spin" />{:else}<Repeat2 class="h-4 w-4 text-muted-foreground" />{/if}
           Repost
         </button>
       {/if}
-      <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={() => { menuOpen = false; quoteOpen = true; }}>
-        <Quote class="h-4 w-4 text-muted-foreground" /> Quote
-      </button>
+      {#if canRepost}
+        <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={() => { menuOpen = false; quoteOpen = true; }}>
+          <Quote class="h-4 w-4 text-muted-foreground" /> Quote
+        </button>
+      {/if}
       {#if isOwn}
         <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={startEdit}>
           <Pencil class="h-4 w-4 text-muted-foreground" /> Edit post
@@ -284,6 +344,11 @@
           <Trash2 class="h-4 w-4" /> Delete post
         </button>
       {:else}
+        {#if reason}
+          <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={notInterested}>
+            <EyeOff class="h-4 w-4 text-muted-foreground" /> Not interested
+          </button>
+        {/if}
         <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={() => { menuOpen = false; reportOpen = true; }}>
           <Flag class="h-4 w-4 text-muted-foreground" /> Report post
         </button>

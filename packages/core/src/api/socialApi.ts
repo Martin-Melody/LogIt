@@ -96,7 +96,16 @@ export interface ApiProfile {
   followingCount: number;
   isFollowing: boolean;
   publicProfileJson: string | null;
+  /** Older servers don't send these: treat missing as public / visible. */
+  isPrivate?: boolean;
+  /** The caller's relation to this account; null for yourself. */
+  followStatus?: FollowStatus | null;
+  /** False: a private account you aren't an accepted follower of. Posts, profile cards and
+   * follow lists are withheld (they answer 403 with code "private"). */
+  canSeeContent?: boolean;
 }
+
+export type FollowStatus = "none" | "requested" | "following";
 
 export type PostType = "Text" | "WorkoutSession" | "PersonalRecord" | "Split" | "Exercise" | "Algorithm" | "Widget" | "Habit";
 
@@ -115,6 +124,8 @@ export interface ApiPost {
   commentCount: number;
   editedAt: string | null;
   repostOf: RepostSource | null;
+  /** Posts from private accounts can't be reposted or quoted. */
+  authorIsPrivate?: boolean;
 }
 
 /** Display-only snapshot of the post a repost points at — not a full ApiPost (no like/comment
@@ -130,6 +141,9 @@ export interface RepostSource {
   payloadJson: string | null;
   createdAt: string;
   deleted: boolean;
+  authorIsPrivate?: boolean;
+  /** The original's author is private and you aren't their follower (deleted is true too). */
+  unavailable?: boolean;
 }
 
 export interface FeedPage {
@@ -148,6 +162,8 @@ export interface ApiComment {
   editedAt: string | null;
   likeCount: number;
   isLikedByMe: boolean;
+  /** Set on a reply: the top-level comment it sits under. */
+  parentCommentId?: string | null;
 }
 
 export interface CommentPage {
@@ -168,7 +184,64 @@ export type ReportReason =
   | "Spam" | "Harassment" | "HateSpeech" | "Violence"
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
-export type NotificationKind = "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote";
+export type NotificationKind =
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply";
+
+export interface SocialSettings {
+  isPrivate: boolean;
+  /** null: never asked (accounts from before Discover). Ask once. */
+  showInDiscover: boolean | null;
+  hideFromSuggestions: boolean;
+  hidePeopleSuggestions: boolean;
+  pendingRequests: number;
+  notInterestedCount: number;
+}
+
+export interface FollowRequestItem {
+  user: ApiProfile;
+  createdAt: string;
+  /** Someone you follow who follows them, and how many more do. */
+  followedBy: string | null;
+  followedByOthers: number;
+}
+
+export interface DiscoverPost {
+  post: ApiPost;
+  /** Why it's here: "Popular this week", "Niamh follows Rory". */
+  reason: string;
+  recipe: string;
+}
+
+export interface DiscoverPage {
+  items: DiscoverPost[];
+  nextCursor: string | null;
+  arm: string;
+}
+
+export interface SuggestedPerson {
+  user: ApiProfile;
+  reason: string;
+  recipe: string;
+}
+
+export interface SuggestedPeople {
+  people: SuggestedPerson[];
+  /** The caller closed "People you might know". */
+  hidden: boolean;
+}
+
+/** "Someone you follow follows them" in a few words: "Conor follows", "Conor and 2 others follow". */
+export function followedByText(name: string | null, others: number): string | null {
+  if (!name) return null;
+  if (others <= 0) return `${name} follows`;
+  return `${name} and ${others} other${others === 1 ? "" : "s"} follow`;
+}
+
+/** True when an error from a profile/posts/followers call means "private account": show the lock. */
+export function isPrivateError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { status?: number }).status === 403
+    && (e as { code?: string }).code === "private";
+}
 
 export interface ApiNotification {
   id: string;
@@ -239,9 +312,14 @@ export const socialApi = {
   },
 
   // Follow
-  async follow(username: string): Promise<void> {
-    return apiClient.fetch(`/users/${username}/follow`, { method: "POST" });
+  /** Follows a public account straight away; asks a private one ("requested"). Older servers
+   * answer with no body, which means "following". */
+  async follow(username: string): Promise<"following" | "requested"> {
+    const res = await apiClient.fetch<{ status?: string } | undefined>(`/users/${username}/follow`, { method: "POST" });
+    return res?.status === "requested" ? "requested" : "following";
   },
+
+  /** Unfollows, or withdraws a request that hasn't been answered. */
 
   async unfollow(username: string): Promise<void> {
     return apiClient.fetch(`/users/${username}/follow`, { method: "DELETE" });
@@ -253,6 +331,37 @@ export const socialApi = {
 
   async getFollowing(username: string): Promise<ApiProfile[]> {
     return apiClient.fetch(`/users/${username}/following`);
+  },
+
+  /** Stops someone following you, without blocking them. */
+  async removeFollower(username: string): Promise<void> {
+    return apiClient.fetch(`/users/me/followers/${username}`, { method: "DELETE" });
+  },
+
+  async getFollowRequests(): Promise<FollowRequestItem[]> {
+    return apiClient.fetch(`/users/me/follow-requests`);
+  },
+
+  async acceptFollowRequest(username: string): Promise<void> {
+    return apiClient.fetch(`/users/me/follow-requests/${username}/accept`, { method: "POST" });
+  },
+
+  async declineFollowRequest(username: string): Promise<void> {
+    return apiClient.fetch(`/users/me/follow-requests/${username}`, { method: "DELETE" });
+  },
+
+  async getSettings(): Promise<SocialSettings> {
+    return apiClient.fetch(`/users/me/social-settings`);
+  },
+
+  /** Only the fields given change. */
+  async updateSettings(change: Partial<Omit<SocialSettings, "pendingRequests" | "notInterestedCount">>): Promise<SocialSettings> {
+    return apiClient.fetch(`/users/me/social-settings`, { method: "PUT", body: JSON.stringify(change) });
+  },
+
+  /** Your name, bio, photo and profile cards. Only the fields given change; "" clears the photo. */
+  async updateMe(change: { displayName?: string; bio?: string; avatarUrl?: string; publicProfileJson?: string }): Promise<ApiProfile> {
+    return apiClient.fetch("/users/me", { method: "PATCH", body: JSON.stringify(change) });
   },
 
   async updatePublicProfile(data: PublicProfileData): Promise<void> {
@@ -276,10 +385,12 @@ export const socialApi = {
     return apiClient.fetch(`/posts/${postId}/comments?${pageParams(50, cursor)}`);
   },
 
-  async addComment(postId: string, body: string): Promise<ApiComment> {
+  /** `replyTo` is the comment being answered (a reply to a reply is fine: the server files it
+   * under the same top-level comment). */
+  async addComment(postId: string, body: string, replyTo?: string): Promise<ApiComment> {
     return apiClient.fetch(`/posts/${postId}/comments`, {
       method: "POST",
-      body: JSON.stringify({ body }),
+      body: JSON.stringify(replyTo ? { body, parentCommentId: replyTo } : { body }),
     });
   },
 
@@ -348,5 +459,30 @@ export const notificationsApi = {
       method: "POST",
       body: JSON.stringify({ ids: ids ?? null }),
     });
+  },
+};
+
+/** Discover: posts and people from outside who you follow, picked on the server (see the
+ * server's Features/Discover). */
+export const discoverApi = {
+  async posts(limit = 20, cursor?: string): Promise<DiscoverPage> {
+    return apiClient.fetch(`/discover/posts?${pageParams(limit, cursor)}`);
+  },
+
+  async people(limit = 8): Promise<SuggestedPeople> {
+    return apiClient.fetch(`/discover/people?limit=${limit}`);
+  },
+
+  /** "Not interested": Discover stops showing this person. */
+  async notInterested(username: string): Promise<void> {
+    return apiClient.fetch(`/discover/not-interested/${username}`, { method: "POST" });
+  },
+
+  async undoNotInterested(username: string): Promise<void> {
+    return apiClient.fetch(`/discover/not-interested/${username}`, { method: "DELETE" });
+  },
+
+  async listNotInterested(): Promise<{ user: ApiProfile; createdAt: string }[]> {
+    return apiClient.fetch(`/discover/not-interested`);
   },
 };

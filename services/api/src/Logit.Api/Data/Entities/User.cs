@@ -30,6 +30,16 @@ public class User
     public string? StripeCustomerId { get; set; }
     /// As a coach: the swap rule for every client without their own (see SwapRules). Null = "any".
     public string? CoachSwapRule { get; set; }
+    /// Social privacy (see Features/Social/Privacy.cs). A private account's follows need its
+    /// approval, and only accepted followers see its posts, profile cards and follow lists.
+    public bool IsPrivate { get; set; }
+    /// Whether this account's posts may appear in other people's Discover. Null = never asked
+    /// (accounts from before Discover existed); treated as "no" until they answer once.
+    public bool? ShowInDiscover { get; set; }
+    /// Keep this account out of other people's "People you might know".
+    public bool HideFromSuggestions { get; set; }
+    /// Don't show "People you might know" to this account (they closed the section).
+    public bool HidePeopleSuggestions { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     /// The invite this account signed up with (invite-only servers). Null for open sign-up.

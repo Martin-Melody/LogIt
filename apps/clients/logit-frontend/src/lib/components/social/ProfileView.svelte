@@ -3,9 +3,9 @@
   import { goto } from "$app/navigation";
   import {
     Loader2, UserPlus, UserCheck, MoreHorizontal, Flag, Ban,
-    ChevronDown, ChevronRight, Dumbbell, Pencil,
+    ChevronDown, ChevronRight, Dumbbell, Pencil, Lock, Clock,
   } from "lucide-svelte";
-  import { socialApi, type ApiProfile, type ApiPost, type PublicProfileData } from "@logit/core/api/socialApi";
+  import { socialApi, type ApiProfile, type ApiPost, type FollowStatus, type PublicProfileData } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
   import { authStore } from "$lib/api/authStore.svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -48,10 +48,16 @@
   let commentPost = $state<ApiPost | null>(null);
 
   const isSelf = $derived(profile?.isSelf ?? authStore.user?.username === username);
+  // Older servers don't send followStatus/canSeeContent: fall back to isFollowing / visible.
+  const followStatus = $derived<FollowStatus>(profile?.followStatus ?? (profile?.isFollowing ? "following" : "none"));
+  // A private account you aren't an accepted follower of: header only, and a lock.
+  const locked = $derived(!!profile && profile.canSeeContent === false);
 
-  onMount(() => {
-    void loadProfile();
-    void loadPosts();
+  onMount(async () => {
+    await loadProfile();
+    // A private account you can't see: its posts would only answer "private".
+    if (!locked) void loadPosts();
+    else postsLoading = false;
   });
 
   $effect(() => {
@@ -103,17 +109,35 @@
     return () => io.disconnect();
   });
 
+  /** Follow (or ask to, for a private account); tapping again unfollows or withdraws the request. */
   async function toggleFollow() {
     if (!authStore.isAuthenticated) { void goto("/auth?mode=login"); return; }
     if (!profile || profile.isSelf || followLoading) return;
     followLoading = true;
-    const was = profile.isFollowing;
-    profile = { ...profile, isFollowing: !was, followerCount: profile.followerCount + (was ? -1 : 1) };
+    const before = profile;
     try {
-      if (was) await socialApi.unfollow(username);
-      else await socialApi.follow(username);
-    } catch {
-      profile = { ...profile, isFollowing: was, followerCount: profile.followerCount + (was ? 1 : -1) };
+      if (followStatus === "none") {
+        const status = await socialApi.follow(username);
+        profile = {
+          ...profile, followStatus: status, isFollowing: status === "following",
+          followerCount: profile.followerCount + (status === "following" ? 1 : 0),
+        };
+      } else {
+        await socialApi.unfollow(username);
+        profile = {
+          ...profile, followStatus: "none", isFollowing: false,
+          followerCount: profile.followerCount - (followStatus === "following" ? 1 : 0),
+        };
+      }
+      // On a private account, following or unfollowing changes what you can see.
+      if (before.isPrivate && before.isFollowing !== profile.isFollowing) {
+        await loadProfile();
+        void loadPosts();
+      }
+    } catch (e) {
+      profile = before;
+      if (e instanceof ApiError && e.status === 409) { profile = { ...before, followStatus: "following", isFollowing: true }; return; }
+      toast.error("Couldn't do that. Try again.");
     } finally {
       followLoading = false;
     }
@@ -188,7 +212,7 @@
     </div>
 
     <div class="text-center">
-      <p class="text-lg font-bold leading-tight">{profile.displayName}</p>
+      <p class="text-lg font-bold leading-tight inline-flex items-center gap-1.5">{profile.displayName}{#if profile.isPrivate}<Lock class="h-3.5 w-3.5 text-muted-foreground" aria-label="Private account" />{/if}</p>
       <p class="text-sm text-muted-foreground">@{profile.username}</p>
     </div>
 
@@ -197,11 +221,11 @@
     {/if}
 
     <div class="flex items-center gap-6 text-sm">
-      <button type="button" class="text-center" onclick={() => goto(`/social/${username}/followers`)}>
+      <button type="button" class="text-center" disabled={locked} onclick={() => goto(`/social/${username}/followers`)}>
         <span class="font-semibold tabular-nums">{profile.followerCount}</span>
-        <span class="text-xs text-muted-foreground block">followers</span>
+        <span class="text-xs text-muted-foreground block">{profile.followerCount === 1 ? "follower" : "followers"}</span>
       </button>
-      <button type="button" class="text-center" onclick={() => goto(`/social/${username}/following`)}>
+      <button type="button" class="text-center" disabled={locked} onclick={() => goto(`/social/${username}/following`)}>
         <span class="font-semibold tabular-nums">{profile.followingCount}</span>
         <span class="text-xs text-muted-foreground block">following</span>
       </button>
@@ -220,11 +244,13 @@
         <button
           type="button"
           class="flex items-center gap-1.5 px-5 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50
-            {profile.isFollowing ? 'border border-border bg-background hover:bg-muted/40' : 'bg-primary text-primary-foreground'}"
+            {followStatus !== 'none' ? 'border border-border bg-background hover:bg-muted/40' : 'bg-primary text-primary-foreground'}"
           disabled={followLoading}
           onclick={toggleFollow}
         >
-          {#if profile.isFollowing}<UserCheck class="h-4 w-4" /> Following{:else}<UserPlus class="h-4 w-4" /> Follow{/if}
+          {#if followStatus === "following"}<UserCheck class="h-4 w-4" /> Following
+          {:else if followStatus === "requested"}<Clock class="h-4 w-4" /> Requested
+          {:else}<UserPlus class="h-4 w-4" /> {profile.isPrivate ? "Request to follow" : "Follow"}{/if}
         </button>
         <button type="button" class="p-2 rounded-md border border-border text-muted-foreground" aria-label="More" onclick={() => (menuOpen = true)}>
           <MoreHorizontal class="h-4 w-4" />
@@ -233,6 +259,17 @@
     {/if}
   </div>
 
+  {#if locked}
+    <div class="flex flex-col items-center gap-2 px-8 py-14 text-center">
+      <span class="h-14 w-14 rounded-full border border-border flex items-center justify-center"><Lock class="h-5 w-5" /></span>
+      <p class="text-base font-semibold mt-1">This account is private</p>
+      <p class="text-sm text-muted-foreground">
+        {followStatus === "requested"
+          ? `Your request is waiting. You'll see ${profile.displayName}'s posts once they accept it.`
+          : `Follow ${profile.displayName} to see their posts and profile cards. They'll get your request.`}
+      </p>
+    </div>
+  {:else}
   <!-- Stats (collapsible) -->
   {#if stats.length > 0}
     <div class="border-b border-border">
@@ -313,6 +350,7 @@
     {#if loadingMore}
       <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
     {/if}
+  {/if}
   {/if}
 {/if}
 

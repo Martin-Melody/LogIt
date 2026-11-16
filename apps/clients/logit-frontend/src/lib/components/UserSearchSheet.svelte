@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { toast } from "svelte-sonner";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
   import { goto } from "$app/navigation";
@@ -66,22 +67,26 @@
     }
   }
 
+  // Private accounts you asked to follow (search results don't say; this session only).
+  let requestedIds = $state(new Set<string>());
+
   async function toggleFollow(user: UserSearchResult) {
     if (togglingId === user.id) return;
     togglingId = user.id;
     const wasFollowing = followingIds.has(user.id);
-    // Optimistic update
-    followingIds = new Set(followingIds);
-    if (wasFollowing) followingIds.delete(user.id);
-    else followingIds.add(user.id);
+    const wasRequested = requestedIds.has(user.id);
     try {
-      if (wasFollowing) await socialApi.unfollow(user.username);
-      else await socialApi.follow(user.username);
+      if (wasFollowing || wasRequested) {
+        await socialApi.unfollow(user.username);
+        followingIds = new Set([...followingIds].filter((id) => id !== user.id));
+        requestedIds = new Set([...requestedIds].filter((id) => id !== user.id));
+      } else {
+        const status = await socialApi.follow(user.username);
+        if (status === "requested") requestedIds = new Set([...requestedIds, user.id]);
+        else followingIds = new Set([...followingIds, user.id]);
+      }
     } catch {
-      // Revert
-      followingIds = new Set(followingIds);
-      if (wasFollowing) followingIds.add(user.id);
-      else followingIds.delete(user.id);
+      toast.error("Couldn't do that. Try again.");
     } finally {
       togglingId = null;
     }
@@ -151,6 +156,7 @@
         <ul class="divide-y divide-border pb-8">
           {#each results as user (user.id)}
             {@const isFollowing = followingIds.has(user.id)}
+            {@const isRequested = requestedIds.has(user.id)}
             <li class="flex items-center gap-3 px-4 py-3">
               <!-- Avatar (tappable → profile) -->
               <button
@@ -179,7 +185,7 @@
               <button
                 type="button"
                 class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50
-                  {isFollowing
+                  {isFollowing || isRequested
                     ? 'border border-border text-foreground bg-background hover:bg-muted/40'
                     : 'bg-primary text-primary-foreground'}"
                 disabled={togglingId === user.id}
@@ -189,6 +195,8 @@
                   <Loader2 class="h-3 w-3 animate-spin" />
                 {:else if isFollowing}
                   <UserCheck class="h-3 w-3" /> Following
+                {:else if isRequested}
+                  Requested
                 {:else}
                   <UserPlus class="h-3 w-3" /> Follow
                 {/if}
