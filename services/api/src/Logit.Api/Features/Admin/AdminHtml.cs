@@ -192,6 +192,7 @@ public static class AdminHtml
               <div class="stat"><span class="stat-val" id="stat-workouts">—</span><span class="stat-label">Workouts</span></div>
               <button type="button" class="stat stat-button" id="stat-invites-wrap" style="display:none" onclick="toggleInvites()"><span class="stat-val" id="stat-invites">—</span><span class="stat-label">Invites</span></button>
               <div class="stat" style="cursor:pointer" onclick="toggleReports()"><span class="stat-val" id="stat-reports">—</span><span class="stat-label">Open reports</span></div>
+              <div class="stat" style="cursor:pointer" onclick="togglePlugins()"><span class="stat-val" id="stat-plugins">—</span><span class="stat-label">Plugins to review</span></div>
               <div class="stat" id="stat-diagnostics-wrap" style="cursor:pointer" onclick="toggleDiagnostics()"><span class="stat-val" id="stat-diagnostics">—</span><span class="stat-label">Diagnostics</span></div>
             </div>
             <button class="topbar-logout" onclick="logout()">Sign out</button>
@@ -233,6 +234,16 @@ public static class AdminHtml
               </table>
               <div id="inv-empty" class="empty" style="display:none;padding:14px">No invites yet.</div>
             </div>
+          </div>
+
+          <!-- Plugin reviews panel -->
+          <div id="plugins-panel" style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);max-height:75vh;overflow-y:auto">
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px">
+              <h3 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Plugins waiting for review</h3>
+              <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="plugins-all" onchange="loadPlugins()" /> Show reviewed too</label>
+            </div>
+            <div id="plugins-list"></div>
+            <div id="plugin-review" style="display:none;margin-top:12px"></div>
           </div>
 
           <!-- Diagnostics reports panel -->
@@ -400,7 +411,7 @@ public static class AdminHtml
           }
 
           async function loadAll() {
-            await Promise.all([loadStats(), loadUsers(), loadReports(), loadServer()]);
+            await Promise.all([loadStats(), loadUsers(), loadReports(), loadServer(), loadPluginCount()]);
           }
 
           // ── Server settings + invites ─────────────────────────────────────
@@ -581,6 +592,61 @@ public static class AdminHtml
             await api(`/diagnostics/${id}`, { method: 'DELETE' });
             document.getElementById('diagnostics-log').style.display = 'none';
             await loadDiagnostics();
+          }
+
+          // ── Plugin reviews ──────────────────────────────────────────────
+          async function togglePlugins() {
+            const p = document.getElementById('plugins-panel');
+            const open = p.style.display === 'none';
+            p.style.display = open ? 'block' : 'none';
+            if (open) await loadPlugins();
+          }
+          async function loadPluginCount() {
+            const { releases } = await api('/plugins');
+            document.getElementById('stat-plugins').textContent = releases.length.toLocaleString();
+          }
+          async function loadPlugins() {
+            const all = document.getElementById('plugins-all').checked;
+            const { releases } = await api('/plugins' + (all ? '?status=all' : ''));
+            if (!all) document.getElementById('stat-plugins').textContent = releases.length.toLocaleString();
+            const el = document.getElementById('plugins-list');
+            document.getElementById('plugin-review').style.display = 'none';
+            if (!releases.length) { el.innerHTML = '<div class="empty">Nothing waiting for review.</div>'; return; }
+            el.innerHTML = releases.map(r => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+                <div><strong>${esc(r.name)}</strong> ${esc(r.version)} · ${esc(r.family)} · ${esc(r.pluginId)} · by @${esc(r.owner)} · ${new Date(utc(r.submittedAt)).toLocaleString()} · ${(r.chars / 1024).toFixed(1)} KB · <em>${esc(r.status)}</em></div>
+                ${r.changeNote ? `<div style="font-size:12px;margin-top:2px">What's new: ${esc(r.changeNote)}</div>` : ''}
+                ${r.reviewNote ? `<div style="font-size:12px;margin-top:2px;color:var(--muted)">Review note: ${esc(r.reviewNote)}</div>` : ''}
+                <div style="margin-top:6px"><button class="btn-warn" onclick="openPlugin('${esc(r.id)}')">Read the code</button></div>
+              </div>`).join('');
+          }
+          async function openPlugin(id) {
+            const r = await api(`/plugins/releases/${id}`);
+            const el = document.getElementById('plugin-review');
+            const pre = 'margin-top:6px;padding:10px;background:var(--surface,#111);border:1px solid var(--border);border-radius:6px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-all;max-height:50vh;overflow:auto';
+            el.innerHTML = `<div style="font-size:13px"><strong>${esc(r.pluginId)} ${esc(r.version)}</strong> by @${esc(r.owner)} · ${esc(r.integrity)}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">Manifest</div><pre style="${pre}">${esc(JSON.stringify(JSON.parse(r.manifestJson), null, 2))}</pre>
+              <div style="font-size:12px;color:var(--muted);margin-top:8px">Code (${(r.source.length / 1024).toFixed(1)} KB)</div><pre style="${pre}">${esc(r.source)}</pre>
+              ${r.previous ? `<details style="margin-top:8px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">Last approved version (${esc(r.previous.version)})</summary><pre style="${pre}">${esc(r.previous.source)}</pre></details>` : ''}
+              ${r.status === 'Pending' ? `<div class="field-group" style="margin-top:10px">
+                  <label class="field-label" for="plugin-note">Note to the author (needed to turn it down)</label>
+                  <textarea class="field-input" id="plugin-note" rows="3" maxlength="2000"></textarea>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+                  <button class="btn-primary" onclick="reviewPlugin('${esc(r.id)}', true)">Approve and list</button>
+                  <button class="btn-danger" onclick="reviewPlugin('${esc(r.id)}', false)">Ask for changes</button>
+                  <span id="plugin-err" style="color:var(--danger);font-size:12px"></span>
+                </div>` : ''}`;
+            el.style.display = 'block';
+            el.scrollIntoView({ block: 'nearest' });
+          }
+          async function reviewPlugin(id, approve) {
+            const note = document.getElementById('plugin-note').value;
+            try {
+              await api(`/plugins/releases/${id}/review`, { method: 'POST', body: JSON.stringify({ approve, note }) });
+              await loadPlugins();
+            } catch (e) {
+              document.getElementById('plugin-err').textContent = e.message;
+            }
           }
 
           let reports = [], reportPreviews = {};
