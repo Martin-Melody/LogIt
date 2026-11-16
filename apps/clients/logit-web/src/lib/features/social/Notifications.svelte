@@ -41,7 +41,7 @@
   const shown = $derived(
     (items ?? []).filter((n) =>
       filter === "all" ? n.type !== "FollowRequest"
-      : filter === "mentions" ? n.type === "Mention" || n.type === "Comment" || n.type === "Quote"
+      : filter === "mentions" ? n.type === "Mention" || n.type === "Comment" || n.type === "Reply" || n.type === "Quote"
       : n.type === "Follow" || n.type === "FollowAccepted"),
   );
   const unread = $derived(shown.filter((n) => !n.readAt));
@@ -81,6 +81,7 @@
     switch (n.type) {
       case "Like": return n.commentId ? "liked your comment" : `liked your post${snippet}`;
       case "Comment": return `commented on your post${snippet}`;
+      case "Reply": return `replied to your comment${n.postBody ? ` on "${n.postBody.slice(0, 60)}${n.postBody.length > 60 ? "…" : ""}"` : ""}`;
       case "Mention": return n.commentId ? `mentioned you in a comment${n.postBody ? ` on "${n.postBody.slice(0, 60)}${n.postBody.length > 60 ? "…" : ""}"` : ""}` : `mentioned you${snippet}`;
       case "Repost": return `reposted your post${snippet}`;
       case "Quote": return `quoted your post${snippet}`;

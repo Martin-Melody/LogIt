@@ -113,6 +113,13 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         {
             e.HasIndex(c => c.PostId);
             e.HasIndex(c => c.CreatedAt);
+            e.HasIndex(c => c.ParentCommentId);
+            // Replies go with their comment: soft deletes do it by hand (DeleteComment), and a hard
+            // delete (account deletion cascading the author's comments) cascades here.
+            e.HasOne(c => c.ParentComment)
+             .WithMany(c => c.Replies)
+             .HasForeignKey(c => c.ParentCommentId)
+             .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(c => c.Post)
              .WithMany(p => p.Comments)
              .HasForeignKey(c => c.PostId)

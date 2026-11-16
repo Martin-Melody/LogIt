@@ -162,6 +162,8 @@ export interface ApiComment {
   editedAt: string | null;
   likeCount: number;
   isLikedByMe: boolean;
+  /** Set on a reply: the top-level comment it sits under. */
+  parentCommentId?: string | null;
 }
 
 export interface CommentPage {
@@ -183,7 +185,7 @@ export type ReportReason =
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
 export type NotificationKind =
-  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted";
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply";
 
 export interface SocialSettings {
   isPrivate: boolean;
@@ -383,10 +385,12 @@ export const socialApi = {
     return apiClient.fetch(`/posts/${postId}/comments?${pageParams(50, cursor)}`);
   },
 
-  async addComment(postId: string, body: string): Promise<ApiComment> {
+  /** `replyTo` is the comment being answered (a reply to a reply is fine: the server files it
+   * under the same top-level comment). */
+  async addComment(postId: string, body: string, replyTo?: string): Promise<ApiComment> {
     return apiClient.fetch(`/posts/${postId}/comments`, {
       method: "POST",
-      body: JSON.stringify({ body }),
+      body: JSON.stringify(replyTo ? { body, parentCommentId: replyTo } : { body }),
     });
   },
 
