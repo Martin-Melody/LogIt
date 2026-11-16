@@ -232,7 +232,10 @@ export function balanceAnswer(rows: MuscleBalanceRow[], opts: { anyTagged: boole
   const fmt = (n: number) => String(Math.round(n));
   let text: string;
   let detail: string;
-  if (low.length === 0) {
+  if (low.length === 0 && rows[0]!.setsPerWeek < 10) {
+    text = "Every muscle gets under 10 sets a week";
+    detail = `Between ${fmt(rows[rows.length - 1]!.setsPerWeek)} and ${fmt(rows[0]!.setsPerWeek)} working sets a week per muscle. 10 to 20 is a common range for growth.`;
+  } else if (low.length === 0) {
     text = "No muscle is far behind";
     detail = `Between ${fmt(rows[rows.length - 1]!.setsPerWeek)} and ${fmt(rows[0]!.setsPerWeek)} working sets a week per muscle.`;
   } else {

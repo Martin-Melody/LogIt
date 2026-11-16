@@ -231,26 +231,39 @@ function dayMs(iso: string, bucket: ChartBucket): number {
   return isoToUtcMs(iso);
 }
 
-/** Every bucket start in the range, for sums where an empty week is a real 0. */
-function allBuckets(startMs: number, nowMs: number, bucket: ChartBucket): number[] {
+function nextBucket(t: number, bucket: ChartBucket): number {
+  if (bucket === "week") return t + 7 * 86_400_000;
+  const d = new Date(t);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+}
+
+/**
+ * The whole weeks (or months) in the range, for totals: a week the range cuts in half and
+ * the week still going would both look like a drop, so they're left out, and a week with
+ * nothing in it is a real 0.
+ */
+function wholeBuckets(startMs: number, nowMs: number, bucket: ChartBucket): number[] {
   if (bucket === "session") return [];
   const out: number[] = [];
-  let t = bucketStart(startMs, bucket);
-  const end = bucketStart(nowMs, bucket);
-  while (t <= end) {
+  const first = bucketStart(startMs, bucket);
+  // The range starting mid-week means the first week isn't whole.
+  let t = first < isoToUtcMs(localDateIso(new Date(startMs))) ? nextBucket(first, bucket) : first;
+  const current = bucketStart(nowMs, bucket);
+  while (t < current) {
     out.push(t);
-    if (bucket === "week") t += 7 * 86_400_000;
-    else {
-      const d = new Date(t);
-      t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
-    }
+    t = nextBucket(t, bucket);
   }
   return out;
 }
 
 function aggregate(samples: ChartPoint[], agg: Agg, fill: number[] | null): ChartPoint[] {
   const by = new Map<number, number[]>();
-  for (const s of samples) (by.get(s.tMs) ?? by.set(s.tMs, []).get(s.tMs)!).push(s.value);
+  // With whole buckets given, samples outside them (a cut-off first week, this week) are dropped.
+  const allowed = fill ? new Set(fill) : null;
+  for (const s of samples) {
+    if (allowed && !allowed.has(s.tMs)) continue;
+    (by.get(s.tMs) ?? by.set(s.tMs, []).get(s.tMs)!).push(s.value);
+  }
   if (fill) for (const t of fill) if (!by.has(t)) by.set(t, []);
   return [...by.entries()]
     .sort((a, b) => a[0] - b[0])
@@ -310,7 +323,7 @@ function metricLines(
 ): ChartLine[] {
   const def = metricDef(metric);
   const { bucket } = chart;
-  const fill = def.agg === "sum" ? allBuckets(ctx.startMs, ctx.nowMs, bucket) : null;
+  const fill = def.agg === "sum" && bucket !== "session" ? wholeBuckets(ctx.startMs, ctx.nowMs, bucket) : null;
   const startIso = localDateIso(new Date(ctx.startMs));
   const line = (key: string, label: string, samples: ChartPoint[]): ChartLine => ({
     key,
