@@ -81,7 +81,7 @@ function isPaused(iso: string, pauses: StreakPause[], todayIso: string): boolean
   return pauses.some((p) => iso >= p.startIso && iso <= (p.endIso ?? todayIso));
 }
 
-export function computeWeeklyStreak(input: {
+type StreakInput = {
   /** Days with at least one workout, YYYY-MM-DD (duplicates are fine). */
   trainedDaysIso: Iterable<string>;
   weeklyTarget: number;
@@ -89,12 +89,13 @@ export function computeWeeklyStreak(input: {
   targetHistory?: TargetChange[];
   pauses?: StreakPause[];
   todayIso: string;
-}): WeeklyStreak {
+};
+
+/** Judges any week (by its Monday) the way the streak does. */
+function weekJudge(input: StreakInput) {
   const pauses = input.pauses ?? [];
   const today = input.todayIso;
   const thisWeekStart = weekStartIso(today);
-  const target = targetForWeek(thisWeekStart, input.targetHistory, input.weeklyTarget);
-
   const days = new Set([...input.trainedDaysIso].filter((d) => d <= today));
   const doneByWeek = new Map<string, number>();
   for (const d of days) {
@@ -119,6 +120,20 @@ export function computeWeeklyStreak(input: {
     else outcome = "missed";
     return { startIso, done, needed, outcome };
   };
+  return { days, pauses, today, thisWeekStart, weekResult };
+}
+
+/** Every week from the one holding `fromIso` up to this week, oldest first, judged like the streak. */
+export function weekResults(input: StreakInput & { fromIso: string }): WeekResult[] {
+  const { thisWeekStart, weekResult } = weekJudge(input);
+  const out: WeekResult[] = [];
+  for (let w = weekStartIso(input.fromIso); w <= thisWeekStart; w = addDays(w, 7)) out.push(weekResult(w));
+  return out;
+}
+
+export function computeWeeklyStreak(input: StreakInput): WeeklyStreak {
+  const { days, pauses, today, thisWeekStart, weekResult } = weekJudge(input);
+  const target = targetForWeek(thisWeekStart, input.targetHistory, input.weeklyTarget);
 
   const thisWeek = weekResult(thisWeekStart);
   const pausedNow = isPaused(today, pauses, today);
