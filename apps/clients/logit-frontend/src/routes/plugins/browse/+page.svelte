@@ -22,6 +22,10 @@
   import { resolvePluginManifest } from "$lib/plugins/discovery";
   import { homeConfig } from "$lib/stores/homeConfig.store";
   import type { InstalledPlugin } from "$lib/plugins";
+  import { getsSummary } from "@logit/core/plugins/pluginInfo";
+  import InstallSheet from "$lib/features/plugins/InstallSheet.svelte";
+  // Installs reach your other devices.
+  import "$lib/plugins/pluginSync";
 
   const ui = $state({
     loading: true,
@@ -110,26 +114,19 @@
     await load();
   }
 
-  function blockedByRestrictedMode(family: PluginFamily): boolean {
-    return isExecutablePluginFamily(family) && !$pluginSettings.communityPluginsEnabled;
-  }
+  // The install sheet (what it gets) opens first; Install there does the work.
+  let confirming = $state<RegistryEntry | null>(null);
 
   async function install(entry: RegistryEntry) {
     if (installingIds[entry.id]) return;
-    if (blockedByRestrictedMode(entry.family)) {
-      installErrors = {
-        ...installErrors,
-        [entry.id]: "Turn on community plugins to install this.",
-      };
-      return;
-    }
     installingIds = { ...installingIds, [entry.id]: true };
     installErrors = { ...installErrors, [entry.id]: "" };
     try {
       const manifest = await resolvePluginManifest({ kind: "url", url: entry.manifestUrl });
-      await installPluginFromManifest(manifest, true);
+      await installPluginFromManifest(manifest, true, { source: "registry" });
       await homeConfig.reconcilePlugins();
       installed = await listInstalledPluginManifests();
+      confirming = null;
     } catch (error) {
       installErrors = {
         ...installErrors,
@@ -324,6 +321,9 @@
                       <p class="mt-1 text-xs text-muted-foreground">
                         {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
+                      {#if entry.needs || !isExecutablePluginFamily(entry.family)}
+                        <p class="mt-0.5 text-xs text-muted-foreground">Gets: {getsSummary(entry.family, entry.needs ?? undefined)}</p>
+                      {/if}
                     </div>
                     <div class="flex shrink-0 flex-col gap-1.5 items-end">
                       {#if isInstalled}
@@ -333,8 +333,8 @@
                       {:else}
                         <Button
                           size="sm"
-                          disabled={isInstalling || blockedByRestrictedMode(entry.family)}
-                          onclick={() => void install(entry)}
+                          disabled={isInstalling}
+                          onclick={() => (confirming = entry)}
                         >
                           {isInstalling ? "Installing…" : "Install"}
                         </Button>
@@ -374,6 +374,9 @@
                       <p class="mt-1 text-xs text-muted-foreground">
                         {familyLabel(entry.family)}{entry.author ? ` · ${entry.author}` : ""}{$registrySources.length > 1 ? ` · ${entry.sourceLabel}` : ""}
                       </p>
+                      {#if entry.needs || !isExecutablePluginFamily(entry.family)}
+                        <p class="mt-0.5 text-xs text-muted-foreground">Gets: {getsSummary(entry.family, entry.needs ?? undefined)}</p>
+                      {/if}
                     </div>
                     <div class="flex shrink-0 flex-col gap-1.5 items-end">
                       {#if isInstalled}
@@ -383,8 +386,8 @@
                       {:else}
                         <Button
                           size="sm"
-                          disabled={isInstalling || blockedByRestrictedMode(entry.family)}
-                          onclick={() => void install(entry)}
+                          disabled={isInstalling}
+                          onclick={() => (confirming = entry)}
                         >
                           {isInstalling ? "Installing…" : "Install"}
                         </Button>
@@ -408,3 +411,11 @@
     {/if}
   </div>
 </div>
+
+<InstallSheet
+  target={confirming}
+  busy={confirming ? !!installingIds[confirming.id] : false}
+  error={confirming ? installErrors[confirming.id] || null : null}
+  onInstall={() => confirming && void install(confirming)}
+  onClose={() => (confirming = null)}
+/>

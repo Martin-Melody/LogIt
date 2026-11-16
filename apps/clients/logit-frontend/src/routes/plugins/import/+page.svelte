@@ -14,7 +14,10 @@
     isExecutablePluginFamily,
   } from "$lib/plugins";
   import type { InstalledPlugin, PluginManifest } from "$lib/plugins";
-  import { resolvePluginManifest, type PluginImportSource } from "$lib/plugins/discovery";
+  import { isPluginManifest, resolvePluginManifest, type PluginImportSource } from "$lib/plugins/discovery";
+  import { linkTokenFromUrl, pluginsApi } from "@logit/core/api/pluginsApi";
+  // Installs reach your other devices.
+  import "$lib/plugins/pluginSync";
 
   type ImportMode = "url" | "activitypub" | "json" | "file";
 
@@ -32,6 +35,8 @@
   let manifestJson = $state("");
   let fileName = $state("");
   let reviewed = $state<PluginManifest | null>(null);
+  /** Set when the URL was a LogIt share link: whether LogIt reviewed that version. */
+  let shared = $state<{ reviewed: boolean; author: string } | null>(null);
   let installed = $state<InstalledPlugin[]>([]);
 
   const reviewedId = $derived(reviewed?.id ?? null);
@@ -91,7 +96,17 @@
     ui.error = null;
     ui.success = null;
     reviewed = null;
+    shared = null;
     try {
+      // A share link from the LogIt dashboard (…/plugins/link/<token>).
+      const token = mode === "url" ? linkTokenFromUrl(manifestUrl) : null;
+      if (token) {
+        const linked = await pluginsApi.byLink(token);
+        if (!isPluginManifest(linked.manifest)) throw new Error("That link doesn't point to a plugin this app can install.");
+        reviewed = linked.manifest as unknown as PluginManifest;
+        shared = { reviewed: linked.reviewed, author: linked.author };
+        return;
+      }
       reviewed = await resolvePluginManifest(source());
       if (!reviewed.sourceUrl && mode === "url") {
         reviewed = { ...reviewed, sourceUrl: manifestUrl.trim() };
@@ -117,7 +132,9 @@
     ui.error = null;
     ui.success = null;
     try {
-      await installPluginFromManifest(reviewed, true);
+      await installPluginFromManifest(reviewed, true, {
+        source: shared ? (shared.reviewed ? "registry" : "link") : mode === "url" ? "registry" : "file",
+      });
       ui.success = `${reviewed.name} installed.`;
       await loadInstalled();
       await goto(`/plugins/${reviewed.id}`);
@@ -244,7 +261,7 @@
           </div>
         {:else if mode === "url"}
           <div class="flex flex-col gap-1">
-            <label class="text-xs text-muted-foreground" for="manifest-url">Manifest URL</label>
+            <label class="text-xs text-muted-foreground" for="manifest-url">Share link or manifest URL</label>
             <input
               id="manifest-url"
               type="url"
@@ -252,6 +269,7 @@
               placeholder="https://example.com/plugin.json"
               bind:value={manifestUrl}
             />
+            <p class="text-xs text-muted-foreground">A link someone shared from the LogIt dashboard works here too.</p>
           </div>
         {:else if mode === "activitypub"}
           <div class="flex flex-col gap-1">
@@ -303,6 +321,11 @@
           <Card.Description>{reviewed.description}</Card.Description>
         </Card.Header>
         <Card.Content class="flex flex-col gap-4">
+          {#if shared && !shared.reviewed}
+            <p class="rounded-md bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+              Shared by link: LogIt hasn't looked at this one. It still runs in the sandbox and only gets what it lists, but install it only if you trust {shared.author}.
+            </p>
+          {/if}
           <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <dt class="text-muted-foreground">Type</dt>
             <dd>{capabilityLabel(reviewed)}</dd>
