@@ -9,6 +9,8 @@
     Camera,
     ChartNoAxesColumn,
     CalendarDays,
+    ChevronDown,
+    GripVertical,
     Copy,
     Ellipsis,
     MoveHorizontal,
@@ -20,6 +22,8 @@
     Zap,
   } from "lucide-svelte";
   import { back } from "$lib/navigation";
+  import { dragHandleZone, dragHandle, TRIGGERS } from "svelte-dnd-action";
+  import { flip } from "svelte/animate";
   import { toast } from "$lib/components/ui/sonner";
   import DateField from "$lib/components/ui/date-field";
   import {
@@ -204,6 +208,62 @@
     void loadWeek();
   }
 
+  // ── Folding meals ──
+  const COLLAPSED_KEY = "logit:nutrition:collapsedMeals:v1";
+  function readCollapsed(): MealSlot[] {
+    try {
+      const v = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]");
+      return Array.isArray(v) ? v.filter((x): x is MealSlot => MEAL_SLOTS.includes(x)) : [];
+    } catch {
+      return [];
+    }
+  }
+  let collapsed = $state<MealSlot[]>(readCollapsed());
+  function toggleMeal(m: MealSlot) {
+    collapsed = collapsed.includes(m) ? collapsed.filter((x) => x !== m) : [...collapsed, m];
+    try {
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
+    } catch {
+      /* remembered for this visit only */
+    }
+  }
+
+  // ── Dragging foods (svelte-dnd-action handle zones, one per meal) ──
+  // Every meal keeps a zone, folded ones too (with no rows), because the library only
+  // knows the zones that exist when a drag starts.
+  const FLIP_MS = 150;
+  let dragging = $state(false);
+  let dndItems = $state<Record<MealSlot, LoggedItem[]>>({ breakfast: [], lunch: [], dinner: [], snack: [] });
+
+  $effect(() => {
+    const next: Record<MealSlot, LoggedItem[]> = { breakfast: [], lunch: [], dinner: [], snack: [] };
+    for (const it of day?.items ?? []) if (!collapsed.includes(it.meal)) next[it.meal].push({ ...it });
+    dndItems = next;
+  });
+
+  function onConsider(m: MealSlot, e: CustomEvent<{ items: LoggedItem[]; info: { trigger: string } }>) {
+    dndItems[m] = e.detail.items;
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED) dragging = true;
+  }
+
+  async function onFinalize(m: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
+    dndItems[m] = e.detail.items;
+    dragging = false;
+    if (!day) return;
+    const inZones = new Set(Object.values(dndItems).flat().map((d) => d.id));
+    const items: LoggedItem[] = [];
+    for (const slot of MEAL_SLOTS) {
+      // A folded meal's own foods aren't in its zone; keep them, then add anything dropped on it.
+      if (collapsed.includes(slot)) items.push(...day.items.filter((it) => it.meal === slot && !inZones.has(it.id)));
+      for (const it of dndItems[slot]) items.push({ ...it, meal: slot });
+    }
+    const before = day.items.map((it) => `${it.id}:${it.meal}`).join();
+    if (items.map((it) => `${it.id}:${it.meal}`).join() === before) return;
+    const moved = e.detail.items.find((it) => day!.items.find((d) => d.id === it.id)?.meal !== m);
+    await commit(setDiaryItems(day, items));
+    if (moved && collapsed.includes(m)) toast(`Moved ${moved.name} to ${MEAL_LABELS[m].toLowerCase()}`);
+  }
+
   // ── Meal menu ──
   let menuFor = $state<MealSlot | null>(null);
   let menuMode = $state<"menu" | "copyDay" | "save" | "move">("menu");
@@ -381,61 +441,83 @@
         </a>
       {/if}
 
-      <!-- Meals -->
+      <!-- Meals: tap a header to fold it; drag a food by its grip to reorder it or move it
+           to another meal (folded and empty meals show a drop strip while dragging). -->
       {#each MEAL_SLOTS as m (m)}
-        {@const items = itemsIn(day, m)}
+        {@const all = itemsIn(day, m)}
         {@const mt = day ? mealTotals(day, m) : null}
         {@const yesterday = itemsIn(prevDay, m)}
-        <section class="overflow-hidden rounded-2xl bg-card border border-border dark:border-transparent" data-testid="meal-{m}">
-          <div class="flex items-center py-1.5 pl-4 pr-1">
-            <div class="min-w-0 flex-1">
-              <h2 class="text-[15px] font-semibold">{MEAL_LABELS[m]}</h2>
-              <p class="text-xs text-muted-foreground tabular-nums">
-                {#if items.length && mt}{fmtNum(mt.kcal)} kcal · {macroLine(mt)}{:else}Nothing yet{/if}
-              </p>
-            </div>
-            <button type="button" class="flex size-11 items-center justify-center rounded-lg text-muted-foreground" aria-label="{MEAL_LABELS[m]} options" onclick={() => openMenu(m)}>
+        {@const open = !collapsed.includes(m)}
+        <section class="select-none overflow-hidden rounded-2xl border border-border bg-card dark:border-transparent" data-testid="meal-{m}">
+          <div class="flex items-center py-0.5 pl-1 pr-1">
+            <button
+              type="button"
+              class="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-lg pl-2 text-left"
+              aria-expanded={open}
+              aria-controls="meal-items-{m}"
+              onclick={() => toggleMeal(m)}
+            >
+              <ChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform {open ? '' : '-rotate-90'}" />
+              <span class="min-w-0 flex-1">
+                <span class="block text-[15px] font-semibold">{MEAL_LABELS[m]}</span>
+                <span class="block truncate text-xs text-muted-foreground tabular-nums">
+                  {#if all.length && mt}{fmtNum(mt.kcal)} kcal · {macroLine(mt)}{#if !open}{` · ${all.length} item${all.length === 1 ? "" : "s"}`}{/if}{:else}Nothing yet{/if}
+                </span>
+              </span>
+            </button>
+            <a href={addHref(m)} class="flex size-11 shrink-0 items-center justify-center" aria-label="Add food to {MEAL_LABELS[m]}">
+              <span class="flex size-8 items-center justify-center rounded-full bg-muted"><Plus class="size-4" strokeWidth={2.4} /></span>
+            </a>
+            <button type="button" class="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground" aria-label="{MEAL_LABELS[m]} options" onclick={() => openMenu(m)}>
               <Ellipsis class="size-5" />
             </button>
           </div>
 
-          {#if items.length}
-            <ul>
-              {#each items as it (it.id)}
-                <li class="border-t border-border first:border-t-0">
-                  <button type="button" class="flex min-h-[52px] w-full items-center gap-3 px-4 text-left" onclick={() => void openItem(it)}>
-                    {#if it.photoDataUrl}<img src={it.photoDataUrl} alt="" class="size-8 shrink-0 rounded-md object-cover" />{/if}
-                    <span class="min-w-0 flex-1">
-                      <span class="block truncate">
-                        {it.name}
-                        {#if it.sourceKind === "recipe"}<span class="ml-1 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground">Recipe</span>{/if}
-                      </span>
-                      <span class="block truncate text-xs text-muted-foreground">{it.servingLabel ?? (it.grams > 0 ? `${Math.round(it.grams)} g` : "Quick add")}</span>
-                    </span>
-                    <span class="font-medium tabular-nums">{fmtNum(it.computed.kcal)}</span>
-                  </button>
-                </li>
-              {/each}
-            </ul>
-            <a href={addHref(m)} class="flex min-h-[46px] items-center gap-3 border-t border-border px-4 font-medium">
-              <Plus class="size-[18px]" />Add food
-            </a>
-          {:else}
-            <div class="flex gap-2 px-3 pt-1 pb-3">
-              <a href={addHref(m)} class="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-muted font-medium">
-                <Plus class="size-[18px]" />Add food
-              </a>
-              {#if yesterday.length}
-                <button
-                  type="button"
-                  class="flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border text-[13px]"
-                  aria-label="Same as yesterday, {fmtNum(yesterday.reduce((n, i) => n + i.computed.kcal, 0))} kcal"
-                  onclick={() => void copyFrom(addDays(dateIso, -1), m)}
+          <ul
+            id="meal-items-{m}"
+            class="flex flex-col {dragging && dndItems[m].length === 0 ? `mx-3 mb-3 min-h-12 items-center justify-center rounded-xl border border-dashed border-muted-foreground/40 after:text-xs after:text-muted-foreground after:content-['Drop_here']` : ''}"
+            use:dragHandleZone={{
+              items: dndItems[m],
+              flipDurationMs: FLIP_MS,
+              type: "diary-item",
+              dropTargetStyle: {},
+            }}
+            onconsider={(e) => onConsider(m, e)}
+            onfinalize={(e) => onFinalize(m, e)}
+          >
+            {#each dndItems[m] as it (it.id)}
+              <li animate:flip={{ duration: FLIP_MS }} class="flex w-full items-center border-t border-border bg-card">
+                <span
+                  use:dragHandle
+                  aria-label="Drag to move {it.name}"
+                  class="flex h-[52px] w-9 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground/50 active:cursor-grabbing"
                 >
-                  <Copy class="size-4 shrink-0" />Same as yesterday
+                  <GripVertical class="size-4" />
+                </span>
+                <button type="button" class="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 pr-4 text-left" aria-label="{it.name}, {fmtNum(it.computed.kcal)} kcal" onclick={() => void openItem(it)}>
+                  {#if it.photoDataUrl}<img src={it.photoDataUrl} alt="" class="size-8 shrink-0 rounded-md object-cover" />{/if}
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate">
+                      {it.name}
+                      {#if it.sourceKind === "recipe"}<span class="ml-1 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground">Recipe</span>{/if}
+                    </span>
+                    <span class="block truncate text-xs text-muted-foreground">{it.servingLabel ?? (it.grams > 0 ? `${Math.round(it.grams)} g` : "Quick add")}</span>
+                  </span>
+                  <span class="font-medium tabular-nums">{fmtNum(it.computed.kcal)}</span>
                 </button>
-              {/if}
-            </div>
+              </li>
+            {/each}
+          </ul>
+
+          {#if open && all.length === 0 && !dragging && yesterday.length}
+            <button
+              type="button"
+              class="flex h-10 w-full items-center gap-2 px-4 pb-1 text-left text-[13px] text-muted-foreground"
+              onclick={() => void copyFrom(addDays(dateIso, -1), m)}
+            >
+              <Copy class="size-4 shrink-0" />
+              <span class="tabular-nums">Same as yesterday · {fmtNum(yesterday.reduce((n, i) => n + i.computed.kcal, 0))} kcal</span>
+            </button>
           {/if}
         </section>
       {/each}

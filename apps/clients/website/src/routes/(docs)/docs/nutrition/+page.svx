@@ -15,8 +15,9 @@ when you add ingredients to a recipe. To look a food up without logging it, use 
 the top of the diary: scan or search, see its numbers for any amount, and star it for later.
 
 Tap the calories card at the top of the diary to set your calorie and macro targets. If your coach sets
-your targets, theirs are shown. Each meal's ··· menu copies a meal from another day, saves it as a meal
-to log again in one tap, or moves it to another meal.
+your targets, theirs are shown. Tap a meal's name to fold it away. Drag a food by its grip to reorder it,
+or onto another meal (folded ones too) if you logged it in the wrong place. Each meal's ··· menu copies
+a meal from another day, saves it as a meal to log again in one tap, or moves it to another meal.
 
 A recipe can be split into servings, or logged by weight: weigh the cooked food in the pot, and then log
 the grams on your plate. Paste an ingredient list ("500 g chicken breast", "2 tins chopped tomatoes")
