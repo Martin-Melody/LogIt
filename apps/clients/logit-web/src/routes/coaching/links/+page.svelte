@@ -217,10 +217,10 @@
                   <tr class="border-t border-border">
                     <td class="px-3 py-3 font-medium {live ? '' : 'text-muted-foreground'}">{l.name}</td>
                     <td class="px-3 py-3">
-                      <span class="font-mono text-xs {live ? '' : 'text-muted-foreground'}">{location.host}/c/{l.code}</span>
-                      {#if live}<button type="button" onclick={() => copy(l)} class="ml-1.5 h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Copy</button>{/if}
+                      <span class="whitespace-nowrap font-mono text-xs {live ? '' : 'text-muted-foreground'}">{location.host}/c/{l.code}</span>
+                      {#if live}<button type="button" onclick={() => copy(l)} class="ml-1.5 h-[30px] whitespace-nowrap rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Copy</button>{/if}
                     </td>
-                    <td class="px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</td>
+                    <td class="whitespace-nowrap px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</td>
                     <td class="px-3 py-3">
                       {#if live && paymentsReady && packages.length}
                         <select value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
@@ -236,7 +236,7 @@
                       {#if stateLabel[l.state]}<span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{stateLabel[l.state]}</span>{:else}<span class="text-muted-foreground">{l.expiresAt ? shortDate(Date.parse(l.expiresAt)) : "Never"}</span>{/if}
                     </td>
                     <td class="px-3 py-3 text-right">
-                      {#if l.state !== "off"}<button type="button" onclick={() => (turningOff = l)} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Turn off</button>{/if}
+                      {#if l.state !== "off"}<button type="button" onclick={() => (turningOff = l)} class="h-[30px] whitespace-nowrap rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Turn off</button>{/if}
                     </td>
                   </tr>
                 {:else}

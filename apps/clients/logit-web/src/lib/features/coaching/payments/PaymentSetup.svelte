@@ -163,7 +163,7 @@
               <tr class="border-t border-border">
                 <td class="px-3 py-3">
                   <span class="block font-medium {p.hidden ? 'text-muted-foreground' : ''}">{p.name}</span>
-                  {#if p.description}<span class="line-clamp-1 text-xs text-muted-foreground">{p.description}</span>{/if}
+                  {#if p.description}<span class="line-clamp-1 text-xs text-muted-foreground">{p.description.split(/\n+/).join(" · ")}</span>{/if}
                 </td>
                 <td class="px-3 py-3 {p.hidden ? 'text-muted-foreground' : ''}">{priceText(p)}</td>
                 <td class="px-3 py-3 {p.links.length ? '' : 'text-muted-foreground'}">{p.links.length ? p.links.join(", ") : "None"}</td>
