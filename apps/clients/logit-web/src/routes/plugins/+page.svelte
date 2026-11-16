@@ -109,7 +109,7 @@
         Install here or on your phone and it's on both. Plugins run in a sandbox and only get the data they ask for.
       </p>
     </div>
-    <a href="/plugins/build/new" class="inline-flex h-[34px] items-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Build a plugin</a>
+    <a href="/plugins/builder/new" class="inline-flex h-[34px] items-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Build a plugin</a>
   </header>
 
   <div role="tablist" aria-label="Plugins" class="flex gap-[22px] border-b border-border">
@@ -213,7 +213,7 @@
                 </td>
                 <td class="px-2.5 py-3 text-right whitespace-nowrap">
                   {#if update && listed}<button type="button" class={btnPri} onclick={() => openInstall(listed)}>Review update</button>{/if}
-                  {#if p.source === "draft"}<a class={btn} href="/plugins/build/{encodeURIComponent(p.manifest.id)}">Open</a>{/if}
+                  {#if p.source === "draft"}<a class={btn} href="/plugins/builder/{encodeURIComponent(p.manifest.id)}">Open</a>{/if}
                   <button type="button" class={btn} onclick={() => remove(p.manifest.id, p.manifest.name)}>Remove</button>
                 </td>
               </tr>
@@ -233,7 +233,7 @@
           <h2 class="text-sm font-semibold">My plugins</h2>
           <p class="mt-0.5 text-xs text-muted-foreground">Plugins you're building. Only you can see a draft until you publish it.</p>
         </div>
-        <a href="/plugins/build/new" class={btn}>New plugin</a>
+        <a href="/plugins/builder/new" class={btn}>New plugin</a>
       </div>
       {#if !mine}
         <Skeleton class="h-16" />
@@ -256,7 +256,7 @@
                 <span class="text-xs text-amber-700 dark:text-amber-300">To change: {status.release.reviewNote}</span>
               {/if}
             </span>
-            <a href="/plugins/build/{encodeURIComponent(m.pluginId)}" class={btnPri}>Open</a>
+            <a href="/plugins/builder/{encodeURIComponent(m.pluginId)}" class={btnPri}>Open</a>
           </div>
         {/each}
       {/if}
