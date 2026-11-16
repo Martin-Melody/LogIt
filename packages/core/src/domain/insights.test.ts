@@ -218,3 +218,16 @@ describe("goalsAnswer", () => {
     expect(aroundDate(Date.UTC(2028, 2, 5), NOW)).toBe("March 2028");
   });
 });
+
+describe("foodVsLiftsAnswer without a pattern", () => {
+  it("says there's no clear difference when there's enough data", () => {
+    const a = foodVsLiftsAnswer({ dayLevelReasoning: { inputs: { totalSessionSamples: 40, sessionsWithLoggedProtein: 33, daySamplesAbove: 17, daySamplesBelow: 16 }, confidence: "low" } });
+    expect(a.state).toBe("ready");
+    expect(a.answer).toBe("No clear difference so far");
+  });
+
+  it("asks for more variety when protein barely changes", () => {
+    const a = foodVsLiftsAnswer({ dayLevelReasoning: { inputs: { totalSessionSamples: 40, sessionsWithLoggedProtein: 33, daySamplesAbove: 30, daySamplesBelow: 3 }, confidence: "low" } });
+    expect(a.answer).toBe("Too early to say");
+  });
+});
