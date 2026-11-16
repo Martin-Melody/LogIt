@@ -6,7 +6,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { Plus, Search, X, ChevronRight, Package, Check } from "lucide-svelte";
-  import { startExercisesTour } from "$lib/tour/index";
+  import { autoTour } from "$lib/tour/index";
   import { back } from "$lib/navigation";
   import { Drawer } from "vaul-svelte";
   import { longpress } from "$lib/swipe";
@@ -62,7 +62,7 @@
   }
 
   onMount(() => {
-    void load().then(() => startExercisesTour());
+    void load().then(() => autoTour("app.exercises"));
   });
 
   function setKind(k: LibraryKind) {
@@ -185,7 +185,7 @@
         class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
         onclick={() => (newOpen = true)}
         aria-label="New {KIND_LABEL[kind].toLowerCase()} item"
-        data-tour="exercises-add"
+        data-guide="exercises-add"
       >
         <Plus class="h-5 w-5" />
       </button>
@@ -201,7 +201,7 @@
       {/each}
     </div>
 
-    <div class="relative" data-tour="exercises-search">
+    <div class="relative" data-guide="exercises-search">
       <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
         type="search"
@@ -217,7 +217,7 @@
       {/if}
     </div>
 
-    <div class="-mx-3 flex gap-2 overflow-x-auto px-3" data-tour="exercises-filter">
+    <div class="-mx-3 flex gap-2 overflow-x-auto px-3" data-guide="exercises-filter">
       {#each sourceChips as c (c.value)}
         <button type="button" class={chip(source === c.value)} aria-pressed={source === c.value} onclick={() => (source = c.value)}>
           {c.label}
@@ -234,7 +234,7 @@
     {#if kind === "strength" && !selecting && strengthMine.length > 0 && (source === "all" || source === "mine")}
       <p class="px-3 pb-1 text-[11px] text-muted-foreground">Long-press one of your own exercises to select several and export them as a pack.</p>
     {/if}
-    <div data-tour="exercises-list">
+    <div data-guide="exercises-list">
       {#each sections as s (s.key)}
         <h2 class="px-3 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</h2>
         <ul class="divide-y divide-border border-y border-border">

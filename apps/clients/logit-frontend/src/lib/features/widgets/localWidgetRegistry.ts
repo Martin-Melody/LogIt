@@ -17,6 +17,7 @@ import { mobilityWidget } from "@logit/core/plugins/builtinWidgets/mobility";
 const BUNDLED: WidgetDefinition[] = [
   {
     id: "quick-start",
+    guideMark: "quick-start",
     label: "Quick Start",
     description: "Start or continue a workout.",
     component: WidgetCard,
@@ -26,6 +27,7 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "todays-plan",
+    guideMark: "todays-plan",
     label: "Today's Plan",
     description: "See today's exercises from your active split.",
     component: WidgetCard,

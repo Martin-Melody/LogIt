@@ -34,7 +34,9 @@ export function walkthroughsFor(tier: string | undefined, selfHosted: boolean): 
   return [];
 }
 
-export const chaptersOf = (w: Walkthrough): Chapter[] => CHAPTERS.filter((c) => c.walkthrough === w);
+/** The web chapters of a walkthrough (the phone's short tours have only phone steps). */
+export const chaptersOf = (w: Walkthrough): Chapter[] =>
+  CHAPTERS.filter((c) => c.walkthrough === w && c.steps.some((s) => s.on === "web"));
 
 class Guide {
   progress = $state<GuideProgress>(emptyProgress());

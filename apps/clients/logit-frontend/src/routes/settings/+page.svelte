@@ -31,11 +31,7 @@
   import { onboarding } from "$lib/stores/onboarding.store";
   import {
     resetTours,
-    startHomeTour,
-    startSessionTour,
-    startSplitsTour,
-    startExercisesTour,
-    startProfileTour,
+    replayTour,
   } from "$lib/tour/index";
   import { clearAllData } from "$lib/usecases/clearAllData";
   import { isNativePlatform } from "$lib/platform/isNative";
@@ -522,6 +518,7 @@
     }
   }
 
+  onMount(() => setTimeout(() => replayTour("phone.sync"), 600));
   onMount(() => {
     void loadProgression();
     void loadMobilityProgression();
@@ -581,7 +578,7 @@
         <PlanCard />
 
         {#if authStore.user.tier !== "Free"}
-          <button type="button"
+          <button type="button" data-guide="settings-sync"
             class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             disabled={syncing || serverMode === "offline"}
             onclick={() => void manualSync()}>
@@ -1226,49 +1223,15 @@
   <!-- Blocked accounts (social) -->
   <BlockedAccounts />
 
-  <!-- App Tour -->
+  <!-- Walkthroughs -->
   <Card.Root>
     <Card.Header>
-      <Card.Title>App Tour</Card.Title>
-      <Card.Description
-        >Replay a walkthrough for any part of the app.</Card.Description
-      >
+      <Card.Title>Walkthroughs</Card.Title>
+      <Card.Description>Short tours of each part of the app. Replay any of them.</Card.Description>
     </Card.Header>
-    <Card.Content class="flex flex-col gap-2">
-      <Button
-        variant="outline"
-        class="justify-start"
-        onclick={() => startHomeTour(true)}
-      >
-        <RotateCcw class="h-3.5 w-3.5 mr-2" /> Home overview
-      </Button>
-      <Button
-        variant="outline"
-        class="justify-start"
-        onclick={() => startSessionTour(true)}
-      >
-        <RotateCcw class="h-3.5 w-3.5 mr-2" /> Workout session
-      </Button>
-      <Button
-        variant="outline"
-        class="justify-start"
-        onclick={() => startSplitsTour(true)}
-      >
-        <RotateCcw class="h-3.5 w-3.5 mr-2" /> Training splits
-      </Button>
-      <Button
-        variant="outline"
-        class="justify-start"
-        onclick={() => startExercisesTour(true)}
-      >
-        <RotateCcw class="h-3.5 w-3.5 mr-2" /> Library
-      </Button>
-      <Button
-        variant="outline"
-        class="justify-start"
-        onclick={() => startProfileTour(true)}
-      >
-        <RotateCcw class="h-3.5 w-3.5 mr-2" /> Profile page
+    <Card.Content>
+      <Button variant="outline" class="w-full justify-between" onclick={() => goto("/settings/walkthroughs")}>
+        Open walkthroughs <ChevronRight class="h-4 w-4" />
       </Button>
     </Card.Content>
   </Card.Root>
