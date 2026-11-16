@@ -26,7 +26,7 @@
       ]);
       const repo = getMessagesRepo();
       const rows: Omit<Thread, "unread">[] = [
-        ...coaches.map((c) => ({ relationshipId: c.relationshipId, name: c.coach.displayName || c.coach.username })),
+        ...coaches.filter((c) => c.status !== "paused").map((c) => ({ relationshipId: c.relationshipId, name: c.coach.displayName || c.coach.username })),
         ...clients.map((c) => ({ relationshipId: c.relationshipId, name: c.client.displayName || c.client.username })),
       ];
       threads = await Promise.all(

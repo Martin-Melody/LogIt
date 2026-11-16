@@ -172,6 +172,28 @@ where `subscription` is the one giving access (else the latest) with `source`, `
 and `manageUrl` (Google Play's or the App Store's subscription page; null for Stripe, which uses
 `POST /billing/portal`).
 
+## Coach payments (Stripe Connect)
+
+Studio coaches can be paid by their clients through their **own** Stripe accounts. LogIt is a Stripe
+Connect platform: each coach is a connected account made with Accounts v2 (`dashboard: full`, Stripe
+collects its fees from the coach and covers losses, `merchant.card_payments` requested). Every charge
+is a direct charge on the coach's account, so the coach is the seller (their VAT, refunds, disputes).
+LogIt takes no fee. Code: `Features/Coach/Payments`.
+
+Paying only happens on the web (the invite link page, `/c/<code>`), never in the app, because of
+Google Play's payments policy. The app only shows the status.
+
+Settings:
+
+| Setting | What it is |
+| --- | --- |
+| `Stripe:SecretKey` | The platform's key. A restricted key needs write access to Accounts (v2), Account Links, Checkout Sessions and Subscriptions, on connected accounts too. Without it the Payments page says payments aren't switched on. |
+| `Stripe:ConnectWebhookSecret` | The signing secret of a **Connect** webhook endpoint (events from connected accounts) pointed at `https://<api>/coach/payments/webhook`, with `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated` and `customer.subscription.deleted`. Without it the endpoint answers 404 and payments are only picked up when the client returns to the link page. |
+
+An hourly sweep (`CoachPaymentSweeper`) ends one-off packages that ran out and applies each coach's
+rule (keep, pause or end coaching N days after a client stopped being paid up). Paused is a
+relationship status, so a paused coach can't read the client's data, message them or send programs.
+
 ## PT Studio — coach/client consent flow
 
 A Studio-tier account can invite another account (any tier) to become a client, by username.

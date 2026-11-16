@@ -173,6 +173,98 @@ namespace Logit.Api.Migrations
                     b.ToTable("CheckinSchedules");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AmountCents")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CoachEmailedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("FailDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FailRule")
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PaidUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("PausedForPayment")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("RelationshipId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("StopsAtPeriodEnd")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StripeCheckoutSessionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeCustomerId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeSubscriptionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UnpaidSince")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelationshipId")
+                        .IsUnique();
+
+                    b.HasIndex("StripeSubscriptionId");
+
+                    b.HasIndex("UnpaidSince");
+
+                    b.ToTable("CoachClientPayments");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
                 {
                     b.Property<Guid>("Id")
@@ -302,6 +394,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("TEXT");
 
@@ -311,6 +406,8 @@ namespace Logit.Api.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("PackageId");
 
                     b.ToTable("CoachInviteLinks");
                 });
@@ -399,6 +496,155 @@ namespace Logit.Api.Migrations
                     b.HasIndex("RecipientUserId", "SyncedAt");
 
                     b.ToTable("CoachNutritionPlans");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AmountCents")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Hidden")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Weeks")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoachId");
+
+                    b.ToTable("CoachPackages");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachPaymentAccount", b =>
+                {
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CardPaymentsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("EmailOnFail")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FailDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FailRule")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequirementsDue")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShowClientNote")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StatusCheckedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeAccountId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("CoachId");
+
+                    b.HasIndex("StripeAccountId")
+                        .IsUnique();
+
+                    b.ToTable("CoachPaymentAccounts");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachPaymentReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AmountCents")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("CoachId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RelationshipId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("CoachId", "PaidAt");
+
+                    b.ToTable("CoachPaymentReceipts");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachProgram", b =>
@@ -1695,6 +1941,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("Relationship");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientPayment", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
+                        .WithOne("Payment")
+                        .HasForeignKey("Logit.Api.Data.Entities.CoachClientPayment", "RelationshipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Relationship");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Client")
@@ -1754,7 +2011,14 @@ namespace Logit.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Logit.Api.Data.Entities.CoachPackage", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Coach");
+
+                    b.Navigation("Package");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachMessage", b =>
@@ -1799,6 +2063,37 @@ namespace Logit.Api.Migrations
                     b.Navigation("Recipient");
 
                     b.Navigation("Relationship");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachPackage", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Coach");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachPaymentAccount", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Coach")
+                        .WithOne()
+                        .HasForeignKey("Logit.Api.Data.Entities.CoachPaymentAccount", "CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Coach");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachPaymentReceipt", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CoachId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachProgram", b =>
@@ -2219,6 +2514,11 @@ namespace Logit.Api.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Invite");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>
+                {
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Comment", b =>

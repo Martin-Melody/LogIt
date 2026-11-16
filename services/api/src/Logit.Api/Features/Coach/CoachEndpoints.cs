@@ -4,6 +4,7 @@ using Logit.Api.Data;
 using Logit.Api.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Logit.Api.Features.Coach.Payments;
 
 namespace Logit.Api.Features.Coach;
 
@@ -61,6 +62,8 @@ public static class CoachEndpoints
         CoachLibraryEndpoints.Map(group);
         SwapRuleEndpoints.Map(group);
         InsightChartEndpoints.Map(group);
+        CoachPaymentEndpoints.Map(group);
+        CoachPaymentEndpoints.MapWebhook(app);
     }
 
     private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db)
@@ -254,11 +257,17 @@ public static class CoachEndpoints
     private static async Task<IResult> GetCoaches(ClaimsPrincipal caller, AppDbContext db)
     {
         var clientId = caller.GetUserId();
+        // Paused coaching (not paid up) is listed too, so My coach can say why it stopped.
         var relationships = await db.CoachClientRelationships
             .Include(r => r.Coach)
-            .Where(r => r.ClientId == clientId && r.Status == CoachClientStatus.Active)
+            .Include(r => r.Payment)
+            .Where(r => r.ClientId == clientId
+                && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
             .OrderBy(r => r.Coach.Username)
             .ToListAsync();
+        var coachIds = relationships.Select(r => r.CoachId).ToList();
+        var accounts = await db.CoachPaymentAccounts.AsNoTracking()
+            .Where(a => coachIds.Contains(a.CoachId)).ToDictionaryAsync(a => a.CoachId);
 
         return Results.Ok(relationships.Select(r => new
         {
@@ -268,6 +277,8 @@ public static class CoachEndpoints
             since = r.UpdatedAt,
             // The swap rule that applies to me in this coach's programs.
             swapRule = SwapRules.Effective(r, r.Coach),
+            status = r.Status == CoachClientStatus.Paused ? "paused" : "active",
+            payment = CoachPaymentEndpoints.ClientPaymentDto(r.Payment, accounts.GetValueOrDefault(r.CoachId)),
         }));
     }
 
@@ -342,13 +353,15 @@ public static class CoachEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> RevokeRelationship(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> RevokeRelationship(
+        Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, CoachPaymentService payments, CancellationToken ct)
     {
         var userId = caller.GetUserId();
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
             r.Id == relationshipId &&
             (r.CoachId == userId || r.ClientId == userId) &&
-            (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Pending));
+            (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Pending
+                || r.Status == CoachClientStatus.Paused), ct);
         if (relationship is null) return Results.NotFound();
 
         // Ending a relationship, or withdrawing before it started, marks it Revoked rather than
@@ -365,7 +378,9 @@ public static class CoachEndpoints
 
         relationship.Status = CoachClientStatus.Revoked;
         relationship.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
+        // No more charges once coaching has ended, whoever ended it.
+        await payments.CoachingEndedAsync(relationship, DateTime.UtcNow, ct);
 
         return Results.NoContent();
     }
