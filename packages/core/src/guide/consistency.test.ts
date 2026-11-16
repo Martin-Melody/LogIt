@@ -79,6 +79,28 @@ describe("feature list", () => {
   });
 });
 
+describe("docs pages", () => {
+  const pageSource = (docs: string) => {
+    const path = join(DOCS_ROUTES, "(docs)", docs.split("#")[0], "+page.svx");
+    return existsSync(path) ? readFileSync(path, "utf8") : "";
+  };
+
+  it("show each feature's facts or can/can't list on its own page", () => {
+    const missing = FEATURES.filter((f) => {
+      const src = pageSource(f.docs);
+      return src && !new RegExp(`(id="${f.id}"|"${f.id}"[\\],])`).test(src);
+    }).map((f) => `${f.docs}: add <FeatureFacts id="${f.id}" /> or <CanCant ids={["${f.id}"]} />`);
+    expect(missing).toEqual([]);
+  });
+
+  it("publish every walkthrough chapter's steps as a how-to on its feature's page", () => {
+    const missing = CHAPTERS.filter((c) => c.steps.some((s) => s.on === "web" && !s.notInDocs))
+      .filter((c) => !pageSource(featureById(c.feature)!.docs).includes(`<HowTo id="${c.id}"`))
+      .map((c) => `${featureById(c.feature)!.docs}: add <HowTo id="${c.id}" />`);
+    expect(missing).toEqual([]);
+  });
+});
+
 describe("plan locks on the server (docs/generated/tier-gates.json)", () => {
   type Gate = { method: string; route: string; plan: string; orActivelyCoached: boolean };
   const gates = JSON.parse(readFileSync(GATES, "utf8")) as Gate[];

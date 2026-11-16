@@ -1,0 +1,18 @@
+---
+title: Exercise swaps
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="coach-swaps" />
+
+<HowTo id="studio.swaps" />
+
+In a program, list approved swaps under each exercise; they're shown to the client first and always
+allowed.
+
+<CanCant ids={["coach-swaps"]} />

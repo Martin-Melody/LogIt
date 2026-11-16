@@ -1,0 +1,23 @@
+---
+title: The web dashboard
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="web-dashboard" />
+
+Sign in at app.getlogit.app with your LogIt account. The dashboard is for looking back and planning:
+logging stays on the phone.
+
+<HowTo id="pro.dashboard" />
+
+## Walkthroughs
+
+Guide, in the sidebar, has short chapters for every part of the dashboard. They run on your own
+account, and you can stop any time: Guide remembers your place.
+
+<CanCant ids={["web-dashboard"]} />

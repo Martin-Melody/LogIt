@@ -1,0 +1,18 @@
+---
+title: Invite links
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="invite-links" />
+
+<HowTo id="studio.invite" />
+
+You can also invite someone by username from Clients. A link with a package attached takes payment
+first; see [Getting paid](/docs/coaching/payments).
+
+<CanCant ids={["invite-links"]} />

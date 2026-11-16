@@ -1,0 +1,12 @@
+---
+title: Habits and macro targets
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+</script>
+
+<FeatureFacts id="coach-habits-nutrition" />
+
+<HowTo id="studio.habits" />

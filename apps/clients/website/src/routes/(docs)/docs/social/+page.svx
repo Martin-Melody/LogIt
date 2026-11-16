@@ -1,0 +1,18 @@
+---
+title: Social
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="social" />
+
+Share workouts, PRs, splits and library items; follow people; like, comment and reply. Social on the
+phone is free; on the web it needs Pro.
+
+<HowTo id="pro.social" />
+
+<CanCant ids={["social"]} />

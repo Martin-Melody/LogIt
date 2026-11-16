@@ -1,0 +1,12 @@
+---
+title: Your exercise library
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+</script>
+
+<FeatureFacts id="coach-library" />
+
+Add your own exercises and drills under Coaching › Library, with your cues. Choose whether clients see
+them: shared items show in their library and pickers as yours.

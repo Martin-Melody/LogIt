@@ -1,0 +1,22 @@
+---
+title: Insights
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+  import HowTo from "$lib/docs/using/HowTo.svelte";
+  import CanCant from "$lib/docs/using/CanCant.svelte";
+</script>
+
+<FeatureFacts id="insights" />
+
+Insights answers questions about your own data, such as whether your training is balanced or your
+eating is on track. Each answer says how it was worked out. Insights is free on the phone.
+
+## Your charts
+
+<FeatureFacts id="insight-charts" />
+
+<HowTo id="pro.insights" />
+
+<CanCant ids={["insights", "insight-charts"]} />
