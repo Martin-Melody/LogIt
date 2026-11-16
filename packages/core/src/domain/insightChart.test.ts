@@ -55,12 +55,17 @@ describe("chartLines", () => {
     expect(lines[0]!.points.map((p) => p.value)).toEqual([2, 1, 1]);
   });
 
-  it("fills empty weeks with 0 for counts", () => {
-    const lines = chartLines(chart({ metric: "workouts", bucket: "week", range: "4w" }), { sessions }, NOW);
-    const values = lines[0]!.points.map((p) => p.value);
-    expect(values.length).toBeGreaterThanOrEqual(5);
-    expect(values.reduce((a, b) => a + b, 0)).toBe(3);
-    expect(values).toContain(0);
+  it("counts whole weeks only, with empty weeks as 0", () => {
+    // 4 weeks back from Monday 16 Nov: 19 Oct to 9 Nov. This week isn't finished, so it's left out.
+    const lines = chartLines(chart({ metric: "workouts", bucket: "week", range: "4w" }), { sessions: [...sessions, session(0, [lift("Squat", [set(100, 5)])])] }, NOW);
+    expect(lines[0]!.points.map((p) => p.value)).toEqual([0, 2, 0, 1]);
+  });
+
+  it("leaves out a week the range cuts in half", () => {
+    const tuesday = NOW + 86_400_000;
+    const lines = chartLines(chart({ metric: "workouts", bucket: "week", range: "4w" }), { sessions }, tuesday);
+    // Starts 20 Oct (a Tuesday), so the week of 19 Oct isn't whole.
+    expect(lines[0]!.points).toHaveLength(3);
   });
 
   it("counts muscle sets, a helping muscle at 0.4", () => {

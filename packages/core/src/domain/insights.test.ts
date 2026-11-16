@@ -98,6 +98,11 @@ describe("muscleBalance + balanceAnswer", () => {
     expect(a.detail).toBe("Between 10 and 14 working sets a week per muscle.");
   });
 
+  it("says when every muscle is under the usual range", () => {
+    const rows = muscleBalance([g("back", [7]), g("quads", [6]), g("chest", [5])], { startBucket: 100, currentBucket: 101 });
+    expect(balanceAnswer(rows, { anyTagged: true }).answer).toBe("Every muscle gets under 10 sets a week");
+  });
+
   it("asks for muscle tags when nothing is tagged", () => {
     expect(balanceAnswer([], { anyTagged: false }).answer).toBe("Tag your exercises' muscles");
   });
