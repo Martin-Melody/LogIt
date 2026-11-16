@@ -151,12 +151,12 @@ test("nutrition personal flow", async ({ page }) => {
   await page.getByRole("textbox").first().fill("Overnight oats");
   await page.screenshot({ path: `${SHOTS}/08-recipe-editor.png`, fullPage: true });
 
-  // ── Insights (nutrition-analytics plugin) ──
+  // ── Insights: Nutrition › Insights opens the "Is my eating on track?" question ──
   await page.goto("/nutrition/insights");
-  await expect(page.getByRole("heading", { name: "Insights" })).toBeVisible();
-  await expect(page.getByText("Avg calories (30d)")).toBeVisible();
-  await expect(page.getByText("On-target days")).toBeVisible();
-  await expect(page.getByText("Weight change")).toBeVisible();
+  await expect(page).toHaveURL(/\/insights\/eating/);
+  await expect(page.getByRole("heading", { name: "Is my eating on track?" })).toBeVisible();
+  await expect(page.getByText("Calories a day")).toBeVisible();
+  await expect(page.getByText("Protein a day")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/09-insights.png`, fullPage: true });
 });
 
