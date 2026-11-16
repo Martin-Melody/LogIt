@@ -44,6 +44,7 @@
   //
   // mode "log": logging to the diary (quick add, saved meals, one-tap "+").
   // mode "ingredient": adding to a recipe (your foods and the database only).
+  // mode "lookup": just looking a food up (macros, favourite); foods and recipes, no meals.
   export type Picked = {
     food: FoodRef;
     kind: FoundFood["kind"];
@@ -53,7 +54,7 @@
   };
 
   interface Props {
-    mode: "log" | "ingredient";
+    mode: "log" | "ingredient" | "lookup";
     /** The meal being logged to, for "Usually at lunch". */
     meal?: MealSlot | null;
     onpick: (p: Picked) => void;
@@ -147,7 +148,7 @@
     try {
       const r = await searchFoods(q, {
         filter,
-        includeRecipes: mode === "log",
+        includeRecipes: mode !== "ingredient",
         includeMeals: mode === "log",
         online,
         mine,
@@ -265,7 +266,7 @@
       : [["recent", "Recent"], ["favourites", "Favourites"], ["mine", "My foods"]],
   );
   const myFoundList = $derived<FoundFood[]>([
-    ...(mode === "log" ? mine.recipes.map(recipeFound) : []),
+    ...(mode !== "ingredient" ? mine.recipes.map(recipeFound) : []),
     ...mine.custom.map((c): FoundFood => ({ food: c.food, kind: "custom" })),
   ]);
 </script>
@@ -302,7 +303,7 @@
         type="search"
         enterkeyhint="search"
         autocomplete="off"
-        placeholder={mode === "log" ? "Search foods, recipes, meals" : "Search for an ingredient"}
+        placeholder={mode === "log" ? "Search foods, recipes, meals" : mode === "lookup" ? "Search or scan a food" : "Search for an ingredient"}
         class="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none [&::-webkit-search-cancel-button]:hidden"
         aria-label="Search foods"
       />

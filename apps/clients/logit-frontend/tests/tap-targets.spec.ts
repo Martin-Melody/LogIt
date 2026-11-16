@@ -7,7 +7,7 @@ import { test, expect } from "@playwright/test";
 const ROUTES = [
   "/", "/sessions", "/settings", "/exercises", "/splits", "/profile", "/progress",
   "/habits", "/habits/new", "/plugins", "/settings/navbar",
-  "/nutrition", "/nutrition/log", "/nutrition/weight", "/nutrition/goal", "/insights", "/insights/balance",
+  "/nutrition", "/nutrition/log", "/nutrition/lookup", "/nutrition/weight", "/nutrition/goal", "/insights", "/insights/balance",
 ];
 
 test.beforeEach(async ({ page }) => {

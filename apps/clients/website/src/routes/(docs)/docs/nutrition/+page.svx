@@ -11,7 +11,8 @@ title: Nutrition
 Log food by searching, scanning a barcode or a nutrition label, or from your recent foods, recipes and
 saved meals. Search doesn't need the exact name: word order, plurals, small typos and UK or US names
 ("mince", "ground beef") all find the same food. The barcode button is in every food search, including
-when you add ingredients to a recipe.
+when you add ingredients to a recipe. To look a food up without logging it, use the search button at
+the top of the diary: scan or search, see its numbers for any amount, and star it for later.
 
 Tap the calories card at the top of the diary to set your calorie and macro targets. If your coach sets
 your targets, theirs are shown. Each meal's ··· menu copies a meal from another day, saves it as a meal
