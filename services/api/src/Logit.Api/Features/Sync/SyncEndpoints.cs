@@ -108,14 +108,18 @@ public static class SyncEndpoints
             }
             else
             {
-                toInsert.Add(new SyncedWorkoutSession
+                var row = new SyncedWorkoutSession
                 {
                     ClientId = dto.Id,
                     UserId = userId,
                     StartedAtMs = dto.StartedAtMs,
                     DataJson = dto.DataJson ?? string.Empty,
                     DeletedAtMs = dto.DeletedAtMs,
-                });
+                };
+                toInsert.Add(row);
+                // The app's offline queue keeps one entry per edit, so one push can carry the
+                // same id several times. Later copies must update this row, not insert another.
+                existingMap[dto.Id] = row;
             }
         }
 
@@ -188,14 +192,16 @@ public static class SyncEndpoints
             }
             else
             {
-                toInsert.Add(new SyncedSplit
+                var row = new SyncedSplit
                 {
                     ClientId = dto.Id,
                     UserId = userId,
                     UpdatedAtMs = dto.UpdatedAtMs,
                     DataJson = dto.DataJson ?? string.Empty,
                     DeletedAtMs = dto.DeletedAtMs,
-                });
+                };
+                toInsert.Add(row);
+                existingMap[dto.Id] = row; // same id again later in this push → update (see PushSessions)
             }
         }
 
@@ -266,7 +272,7 @@ public static class SyncEndpoints
             }
             else
             {
-                toInsert.Add(new SyncedExercise
+                var row = new SyncedExercise
                 {
                     ClientId = dto.Id,
                     UserId = userId,
@@ -274,7 +280,9 @@ public static class SyncEndpoints
                     DataJson = dto.DataJson ?? string.Empty,
                     DeletedAtMs = dto.DeletedAtMs,
                     Kind = LibraryKinds.FromDataJson(dto.DataJson),
-                });
+                };
+                toInsert.Add(row);
+                existingMap[dto.Id] = row; // same id again later in this push → update (see PushSessions)
             }
         }
 
@@ -468,7 +476,7 @@ public static class SyncEndpoints
             }
             else
             {
-                toInsert.Add(new SyncedCheckinSubmission
+                var row = new SyncedCheckinSubmission
                 {
                     ClientId = dto.Id,
                     UserId = userId,
@@ -476,7 +484,9 @@ public static class SyncEndpoints
                     UpdatedAtMs = dto.UpdatedAtMs,
                     DataJson = dto.DataJson ?? string.Empty,
                     DeletedAtMs = dto.DeletedAtMs,
-                });
+                };
+                toInsert.Add(row);
+                existingMap[dto.Id] = row; // same id again later in this push → update (see PushSessions)
             }
         }
 
@@ -563,7 +573,7 @@ public static class SyncEndpoints
             }
             else
             {
-                toInsert.Add(new T
+                var row = new T
                 {
                     ClientId = dto.Id,
                     UserId = userId,
@@ -571,7 +581,9 @@ public static class SyncEndpoints
                     UpdatedAtMs = dto.UpdatedAtMs,
                     DataJson = dto.DataJson ?? string.Empty,
                     DeletedAtMs = dto.DeletedAtMs,
-                });
+                };
+                toInsert.Add(row);
+                existingMap[dto.Id] = row; // same id again later in this push → update (see PushSessions)
             }
         }
 
