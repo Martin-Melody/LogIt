@@ -70,6 +70,9 @@ export type RemoteProfile = {
   /** Social profile cards (which show, in what order): { slots: [{ id, enabled, orderIndex }] }.
    * Edited on the phone or the dashboard; replaced with the rest of the profile. */
   profileConfigJson?: string | null;
+  /** Plugin settings: { community: { enabled, acknowledgedRisk, updatedAtMs } } (see
+   * plugins/pluginInstalls.ts). Merged per key (newest wins) like goalsJson. */
+  pluginSettingsJson?: string | null;
 };
 
 // ── Nutrition ────────────────────────────────────────────────────────────────
