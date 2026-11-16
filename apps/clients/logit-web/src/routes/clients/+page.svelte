@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canCoach } from "$lib/workspace";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
@@ -44,7 +45,7 @@
 
   onMount(() => {
     // Without Studio there's no coaching workspace; your own coach lives in My coach.
-    if (apiClient.getUser()?.tier !== "Studio") void goto("/my-coach", { replaceState: true });
+    if (!canCoach()) void goto("/my-coach", { replaceState: true });
     else void load();
   });
   onMount(() => onSampleActivity(() => void load()));

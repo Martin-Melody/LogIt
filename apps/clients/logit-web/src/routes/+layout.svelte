@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canCoach } from "$lib/workspace";
   import "./layout.css";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -76,7 +77,7 @@
   // fresh read of apiClient's auth state each time it actually changes.
   const isStudio = $derived.by(() => {
     void page.url.pathname;
-    return apiClient.getUser()?.tier === "Studio";
+    return canCoach();
   });
   // Self-hosted deployments don't do billing — every local account gets full access
   // regardless of the `Free` tier the DB defaults to there. `isSelfHosted()` reflects what

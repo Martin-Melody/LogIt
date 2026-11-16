@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { canCoach } from "$lib/workspace";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -66,7 +67,7 @@
   }
 
   onMount(() => {
-    if (apiClient.getUser()?.tier !== "Studio") void goto("/my-coach", { replaceState: true });
+    if (!canCoach()) void goto("/my-coach", { replaceState: true });
     else void load();
   });
 
