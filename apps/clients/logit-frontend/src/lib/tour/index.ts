@@ -3,6 +3,7 @@
 // data-guide mark exists here. A screen calls autoTour("app.home") when it opens: the tour
 // runs the first time only, or when Settings › Walkthroughs asked to replay it.
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem, removeAccountItem } from "$lib/data/accountStorage";
 import { writable, get } from "svelte/store";
 import { driver as createDriver, type DriveStep } from "driver.js";
 import { CHAPTERS } from "@logit/core/guide/walkthroughs";
@@ -35,9 +36,9 @@ function load(): TourState {
   const state: TourState = { seen: {}, done: {} };
   if (!browser) return state;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getAccountItem(STORAGE_KEY);
     if (raw) return { ...state, ...(JSON.parse(raw) as Partial<TourState>) };
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) ?? "{}") as Record<string, boolean>;
+    const legacy = JSON.parse(getAccountItem(LEGACY_KEY) ?? "{}") as Record<string, boolean>;
     for (const [k, v] of Object.entries(legacy)) if (v && LEGACY[k]) state.seen[LEGACY[k]] = true;
   } catch {
     // Unreadable: start fresh.
@@ -52,7 +53,7 @@ function save(next: TourState) {
   _store.set(next);
   if (browser) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setAccountItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
       // Storage full or blocked: the tour may show again, nothing worse.
     }
@@ -61,7 +62,7 @@ function save(next: TourState) {
 
 export function resetTours() {
   save({ seen: {}, done: {} });
-  if (browser) localStorage.removeItem(LEGACY_KEY);
+  if (browser) removeAccountItem(LEGACY_KEY);
 }
 
 /** The chapters that have phone steps, for Settings › Walkthroughs. */

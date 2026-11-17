@@ -78,12 +78,9 @@ describe("signing out and into a different account", () => {
     expect(await phone.isPrivate()).toBe(false);
   });
 
-  // KNOWN BUG: layout settings (nav bar, home screen, profile cards, installed plugins and
-  // their settings, tours) are stored once per phone in localStorage, not per profile. So the
-  // next person on the phone inherits them — and, when they sync, uploads them to their own
-  // account. `it.fails` keeps CI green while the bug is open and turns red once it's fixed:
-  // then change it to `it`.
-  it.fails("layout settings belong to the account: the next account on the phone starts with its own", async () => {
+  // Layout settings (nav bar, home, profile cards, plugins, tours…) are stored per account:
+  // lib/data/accountStorage.ts.
+  it("layout settings belong to the account: the next account on the phone starts with its own", async () => {
     const a = await createAccount("cloud", newUser("layout"), "Pro");
     const b = await createAccount("cloud", newUser("fresh"), "Pro");
     const phone = await new Device().launch();
@@ -186,8 +183,7 @@ describe("local profiles side by side", () => {
     expect(phone.profileName).toBe("Sam");
   });
 
-  // KNOWN BUG: same root cause as the layout-settings test above.
-  it.fails("each offline profile keeps its own layout settings", async () => {
+  it("each offline profile keeps its own layout settings", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam" });
     const sam = (await phone.activeProfile())!;
