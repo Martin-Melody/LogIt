@@ -55,3 +55,24 @@ export function removeAccountItem(key: string): void {
     // Nothing to remove.
   }
 }
+
+/**
+ * Removes everything stored for one account on the phone: its settings, its sync bookkeeping
+ * (syncStorageKey) and its sign-in (the core client's `key@<account>` keys), when the account
+ * leaves the phone. Secure-storage tokens are cleared separately (the API client signs out).
+ */
+export function forgetAccountStorage(ownerId: string): void {
+  try {
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (key.startsWith(`logit:acct:${ownerId}:`) || key.startsWith(`logit:sync:${ownerId}:`) || key.endsWith(`@${ownerId}`)) {
+        doomed.push(key);
+      }
+    }
+    for (const key of doomed) localStorage.removeItem(key);
+  } catch {
+    // Storage blocked: nothing to remove.
+  }
+}

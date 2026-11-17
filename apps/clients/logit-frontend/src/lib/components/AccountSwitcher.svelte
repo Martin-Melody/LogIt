@@ -18,9 +18,6 @@
   let busyId = $state<string | null>(null);
   let adding = $state(false);
   let error = $state<string | null>(null);
-  // Profiles that still have a local password (being retired) ask for it before switching.
-  let passwordFor = $state<string | null>(null);
-  let password = $state("");
 
   async function describe(account: LocalAccount): Promise<Row> {
     if (!account.serverUserId) return { account, detail: "No account · on this phone only", signedIn: false };
@@ -48,16 +45,10 @@
 
   async function switchTo(account: LocalAccount) {
     if (account.id === activeId) return;
-    if (account.passwordHash && passwordFor !== account.id) {
-      passwordFor = account.id;
-      password = "";
-      error = null;
-      return;
-    }
     error = null;
     busyId = account.id;
     try {
-      await authStore.loginOfflineAccount(account.id, password);
+      await authStore.loginOfflineAccount(account.id);
       await goto(postSwitchDestination(account, authStore.isAuthenticated));
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't switch. Try again.";
@@ -109,14 +100,6 @@
             <Check class="h-5 w-5" aria-label="Current account" />
           {/if}
         </button>
-        {#if passwordFor === row.account.id}
-          <form class="flex gap-2 px-2 pb-2" onsubmit={(e) => { e.preventDefault(); void switchTo(row.account); }}>
-            <label class="sr-only" for="switch-password-{row.account.id}">Password for this profile</label>
-            <input id="switch-password-{row.account.id}" type="password" bind:value={password} placeholder="Profile password"
-              class="h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm" />
-            <button type="submit" class="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Open</button>
-          </form>
-        {/if}
       </li>
     {/each}
     <li>

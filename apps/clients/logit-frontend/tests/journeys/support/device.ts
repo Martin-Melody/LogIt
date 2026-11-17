@@ -233,9 +233,13 @@ export class Device {
     await this.settle();
   }
 
-  /** Settings › Sign out. On a phone this reloads the app on /accounts or /auth. */
-  async signOut(): Promise<void> {
-    await this.app.auth.authStore.logout();
+  /**
+   * Settings › Sign out of @name (design canvas 7): the account's training leaves the phone and
+   * the next account opens (or the welcome screen). `keepHere`: "Keep using it here without the
+   * account" instead. Reloads the app.
+   */
+  async signOut(opts: { keepHere?: boolean } = {}): Promise<void> {
+    await this.app.auth.authStore.signOutOfAccount(opts);
     await this.settle();
     await this.followReload();
   }
@@ -248,9 +252,9 @@ export class Device {
   }
 
   /** Profiles screen (src/routes/accounts switchTo()). */
-  async switchProfile(profileId: string, password = ""): Promise<void> {
+  async switchProfile(profileId: string): Promise<void> {
     const { auth, accounts } = this.app;
-    await auth.authStore.loginOfflineAccount(profileId, password);
+    await auth.authStore.loginOfflineAccount(profileId);
     const account = await accounts.getLocalAccount(profileId);
     this.routes.push(account ? accounts.postSwitchDestination(account, auth.authStore.isAuthenticated) : "/");
     await this.settle();

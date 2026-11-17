@@ -202,15 +202,14 @@ function createAuthStore() {
    * Activate an existing local account by ID.
    * Password is optional — only verified when the account has one set.
    */
-  async function loginOfflineAccount(accountId: string, password = ""): Promise<void> {
+  async function loginOfflineAccount(accountId: string): Promise<void> {
     if (!isNativePlatform()) return; // offline accounts only exist on native
 
-    const { getLocalAccount, verifyLocalPassword } = await import("$lib/data/localAccountRepo");
+    // Local profile passwords are retired (accounts plan, step 5d): accounts each keep their own
+    // sign-in, and the phone's own lock protects the phone. A stored hash is simply ignored.
+    const { getLocalAccount } = await import("$lib/data/localAccountRepo");
     const account = await getLocalAccount(accountId);
     if (!account) throw new Error("Account not found.");
-
-    const ok = await verifyLocalPassword(account, password);
-    if (!ok) throw new Error("Incorrect password.");
 
     // Switching restores that account's own sign-in when it has one (each account keeps its
     // session: sessionScope.ts); the account left behind stays signed in. A profile that was
@@ -248,7 +247,7 @@ function createAuthStore() {
     const { listLocalAccounts: listAll } = await import("$lib/data/localAccountRepo");
     const existing = (await listAll()).find((a) => !a.serverUserId);
     if (existing) {
-      if (existing.id !== getActiveOwnerId()) await loginOfflineAccount(existing.id, password);
+      if (existing.id !== getActiveOwnerId()) await loginOfflineAccount(existing.id);
       return "opened";
     }
 
@@ -259,7 +258,6 @@ function createAuthStore() {
     const { createLocalAccount, listLocalAccounts, claimOrphanedData, orphanClaimTarget } =
       await import("$lib/data/localAccountRepo");
 
-    const effectivePassword = password.trim() || undefined;
 
     const activeOwnerIdBeforeCreate = getActiveOwnerId();
     const all = await listLocalAccounts();
@@ -273,7 +271,6 @@ function createAuthStore() {
       // something like "local_1789636452490"; a user who didn't clear it before typing their
       // real name ended up with the two concatenated.
       displayName: displayName.trim(),
-      password: effectivePassword,
     });
     setActiveOwnerId(account.id);
     // See orphanClaimTarget(): true first-launch adopts orphaned (owner_id IS NULL) rows
@@ -311,6 +308,84 @@ function createAuthStore() {
     }
   }
 
+  /** Takes an account and everything it made off the phone (its server copy is untouched). */
+  async function removeFromPhone(ownerId: string): Promise<void> {
+    const { clearOwnerData, getDb } = await import("$lib/data/db/sqlite");
+    await clearOwnerData(ownerId);
+    await getDb().run(`DELETE FROM local_accounts WHERE id = ?`, [ownerId]);
+    const { forgetAccountStorage } = await import("$lib/data/accountStorage");
+    forgetAccountStorage(ownerId);
+  }
+
+  /**
+   * After an account leaves the phone: open the next one, or the welcome screen when none is
+   * left. A full reload, so nothing of the account that left stays in memory.
+   */
+  async function openNextAccount(): Promise<void> {
+    const { listLocalAccounts } = await import("$lib/data/localAccountRepo");
+    const next = (await listLocalAccounts())[0];
+    if (next) {
+      try {
+        await loginOfflineAccount(next.id);
+        window.location.href = "/";
+        return;
+      } catch {
+        // Couldn't open it: let the user pick.
+        setActiveOwnerId(null);
+        window.location.href = "/accounts";
+        return;
+      }
+    }
+    setActiveOwnerId(null);
+    // Nobody left: start like a new phone (the welcome screen), not at a sign-in wall.
+    localStorage.removeItem("logit:had_account");
+    window.location.href = "/";
+  }
+
+  /**
+   * Settings › Sign out of @name (design canvas 7). Signs this account out on the phone; the
+   * other accounts aren't touched.
+   * - default: its training leaves the phone. Only offer this plainly when everything is backed
+   *   up (everythingBackedUp); otherwise the screen saves a copy first.
+   * - keepHere: the training stays as the phone's space without an account (Pro → offline).
+   *   Only when the phone has no such space already.
+   */
+  /** Whether "Keep using it here without the account" can be offered: the phone has no other space without an account. */
+  async function canKeepHere(): Promise<boolean> {
+    if (!isNativePlatform()) return false;
+    const ownerId = getActiveOwnerId();
+    const { listLocalAccounts } = await import("$lib/data/localAccountRepo");
+    return !(await listLocalAccounts()).some((a) => !a.serverUserId && a.id !== ownerId);
+  }
+
+  async function signOutOfAccount(opts: { keepHere?: boolean } = {}): Promise<void> {
+    if (!isNativePlatform()) return logout();
+    if (opts.keepHere && !(await canKeepHere())) {
+      throw new Error("This phone already has training without an account.");
+    }
+    const ownerId = getActiveOwnerId();
+    if (user) {
+      try { await apiClient.logout(); } catch (e) { log.warn("auth", "Server sign-out failed (signed out locally anyway)", e); }
+    }
+    log.info("auth", opts.keepHere ? "Signed out, kept on the phone" : "Signed out and removed from the phone");
+    user = null;
+    stopBackgroundSync();
+    if (!ownerId) {
+      window.location.href = "/auth";
+      return;
+    }
+    if (opts.keepHere) {
+      const { updateLocalAccount } = await import("$lib/data/localAccountRepo");
+      await updateLocalAccount(ownerId, { serverUserId: null });
+      setServerMode("offline");
+      apiClient.resetBaseUrl();
+      window.location.href = "/";
+      return;
+    }
+    await removeFromPhone(ownerId);
+    await openNextAccount();
+  }
+
   async function deleteAccount(password = "") {
     // 1. Delete from server if online. This now requires the account password — let a
     // failure (wrong password, offline) propagate so we DON'T wipe local data while the
@@ -322,16 +397,11 @@ function createAuthStore() {
     stopBackgroundSync();
 
     if (isNativePlatform()) {
-      const { clearOwnerData, getDb } = await import("$lib/data/db/sqlite");
+      // Everything of this account leaves the phone too; the next account opens, or the
+      // welcome screen when nobody is left (as after signing out).
       const ownerId = getActiveOwnerId();
-      if (ownerId) {
-        // Wipe all data belonging to this owner, then remove the account row itself
-        await clearOwnerData(ownerId);
-        const db = getDb();
-        await db.run(`DELETE FROM local_accounts WHERE id = ?`, [ownerId]);
-      }
-      setActiveOwnerId(null);
-      window.location.href = "/auth";
+      if (ownerId) await removeFromPhone(ownerId);
+      await openNextAccount();
     } else {
       const { clearAllData } = await import("$lib/usecases/clearAllData");
       await clearAllData();
@@ -360,6 +430,8 @@ function createAuthStore() {
     createOfflineAccount,
     beginAddingAccount,
     offlineTrainingToAsk,
+    signOutOfAccount,
+    canKeepHere,
     logout,
     deleteAccount,
     refreshUser,
