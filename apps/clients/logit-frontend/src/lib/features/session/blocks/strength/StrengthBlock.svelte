@@ -25,6 +25,7 @@
   import { acceptRepRangeExperiment } from "@logit/core/usecases/progression/acceptRepRangeExperiment";
   import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
   import { getExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
+  import { playSound } from "$lib/features/sound/sounds";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { currentSession } from "$lib/stores/currentSession.store";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
@@ -344,10 +345,8 @@
   }
 
   async function triggerHaptic() {
-    try {
-      const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
-      await Haptics.impact({ style: ImpactStyle.Medium });
-    } catch {}
+    // Set logged: a vibration, and the tap sound when Settings › Sounds › Taps is on.
+    playSound("tap");
   }
 
   async function handleComplete(setId: string) {
