@@ -695,6 +695,12 @@
             Switch or add account
             <ChevronRight class="h-4 w-4 shrink-0" />
           </button>
+          <button type="button"
+            class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onclick={() => goto("/settings/move-server")}>
+            Move to another server
+            <ChevronRight class="h-4 w-4 shrink-0" />
+          </button>
         {/if}
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"

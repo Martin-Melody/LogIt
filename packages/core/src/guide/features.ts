@@ -13,7 +13,7 @@ export const FEATURES: Feature[] = [
     plan: "Free",
     summary: "Sign in, change your plan, and delete your account.",
     web: ["/account", "/upgrade"],
-    phone: ["/accounts", "/plans"],
+    phone: ["/accounts", "/plans", "/settings/move-server"],
     whereWeb: "The account card at the bottom of the sidebar",
     wherePhone: "Settings › Account",
     docs: "/docs/account",
@@ -21,6 +21,7 @@ export const FEATURES: Feature[] = [
       "Use the app without an account; everything stays on your phone",
       "Upgrade to Pro or Studio in the Android app, monthly or yearly",
       "Delete your account and everything stored on the server",
+      "Move your account to another server, training included",
     ],
     cant: [
       "Pay on the website yet: plans are bought through Google Play",
