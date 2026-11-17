@@ -8,6 +8,7 @@ function session(sets: { reps: number; weight: number; completed?: boolean; targ
   } as unknown as WorkoutSession;
 }
 const targets = (s: WorkoutSession) => (s.blocks[0]!.data as { sets: { target?: unknown }[] }).sets.map((x) => x.target ?? null);
+const weights = (s: WorkoutSession) => (s.blocks[0]!.data as { sets: { weight: number }[] }).sets.map((x) => x.weight);
 
 describe("an exercise's first ever set plans the rest (canvas O4)", () => {
   it("same weight, one rep fewer each, never under the range", () => {
@@ -21,6 +22,7 @@ describe("an exercise's first ever set plans the rest (canvas O4)", () => {
     expect(targets(planRestFromFirstSet(s, "b", "s1", 5)).slice(1)).toEqual([
       { reps: 7, weight: 60 }, { reps: 6, weight: 60 }, { reps: 5, weight: 60 }, { reps: 5, weight: 60 },
     ]);
+    expect(weights(planRestFromFirstSet(s, "b", "s1", 5))).toEqual([60, 60, 60, 60, 60]);
   });
 
   it("leaves sets with something entered, and does nothing before the first set is logged", () => {
