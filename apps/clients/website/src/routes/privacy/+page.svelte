@@ -2,7 +2,7 @@
   import TextPage from "$lib/site/TextPage.svelte";
   import { PRIVACY_EMAIL } from "$lib/site";
 
-  const UPDATED = "13 November 2026";
+  const UPDATED = "17 November 2026";
 </script>
 
 <svelte:head>
@@ -62,6 +62,18 @@
     you sync.
   </p>
 
+  <h2>Music controls (Android)</h2>
+  <p>
+    If you switch on the music bar, Android asks you to give LogIt <em>Notification access</em>. Android
+    only lets an app see and control other apps' music through that access. LogIt uses it only to show
+    what's playing (title, artist, cover, app) and to play, pause, skip and seek. It does not read,
+    store or send your notifications, and what's playing never leaves your device. You can turn the
+    access off any time in Android's settings.
+  </p>
+  <p>
+    Playlist links you save in Settings › Music are kept on your device and are not synced.
+  </p>
+
   <h2>Diagnostics</h2>
   <p>
     The app keeps a log on your device to help fix problems (Settings › Diagnostics). It leaves
@@ -93,6 +105,12 @@
       because Open Food Facts' search doesn't accept requests straight from web pages. The server
       passes on only the search words, and keeps recent answers for a few hours (not who asked) so
       a repeated search isn't sent again.
+    </li>
+    <li>
+      <strong>Spotify and YouTube:</strong> when you save a playlist link in Settings › Music, the link
+      is sent to Spotify's or YouTube's public oEmbed service (open.spotify.com or www.youtube.com) to
+      look up the playlist's name and cover. Only the link is sent, with no account information.
+      Opening a playlist hands the link to the Spotify or YouTube Music app on your phone.
     </li>
     <li><strong>Hosting:</strong> the managed service runs on servers in the European Union. <!-- TODO(launch): name the VPS provider once chosen. --></li>
     <li><strong>Google Play:</strong> app distribution and subscription payments.</li>
