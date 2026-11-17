@@ -196,3 +196,112 @@ describe("local profiles side by side", () => {
     expect(phone.swipeOn).toBe(false);
   });
 });
+
+describe("several signed-in accounts on one phone", () => {
+  async function twoAccounts() {
+    const a = await createAccount("cloud", newUser("first"), "Pro");
+    const b = await createAccount("cloud", newUser("second"), "Studio");
+    const phone = await new Device().launch();
+    await phone.signIn(a);
+    await phone.finishOnboarding({ name: "First", split: "First split" });
+    const aProfile = (await phone.activeProfile())!;
+    await phone.addAccount(b);
+    await phone.finishOnboarding({ name: "Second", split: "Second split" });
+    const bProfile = (await phone.activeProfile())!;
+    return { phone, a, b, aProfile, bProfile };
+  }
+
+  it("adding a second account keeps the first one's data and gives the second its own", async () => {
+    const { phone, b } = await twoAccounts();
+
+    expect(phone.user?.username).toBe(b.username);
+    expect(await phone.splitNames()).toEqual(["Second split"]);
+    expect(await phone.profiles()).toHaveLength(2);
+  });
+
+  it("switching back to the first account needs no password and opens it signed in", async () => {
+    const { phone, a, aProfile } = await twoAccounts();
+
+    await phone.switchProfile(aProfile.id);
+
+    expect(phone.signedIn).toBe(true);
+    expect(phone.user?.username).toBe(a.username);
+    expect(phone.route).toBe("/");
+    expect(phone.profileName).toBe("First");
+    expect(await phone.splitNames()).toEqual(["First split"]);
+  });
+
+  it("each account keeps syncing to its own account after switching", async () => {
+    const { phone, a, b, aProfile, bProfile } = await twoAccounts();
+
+    await phone.switchProfile(aProfile.id);
+    await phone.saveSplit("Made on A");
+    await phone.switchProfile(bProfile.id);
+    await phone.saveSplit("Made on B");
+
+    expect((await serverData("cloud", a)).splitNames).toEqual(["First split", "Made on A"]);
+    expect((await serverData("cloud", b)).splitNames).toEqual(["Made on B", "Second split"]);
+  });
+
+  it("the phone reopens on the last account used, still signed in", async () => {
+    const { phone, a, aProfile } = await twoAccounts();
+    await phone.switchProfile(aProfile.id);
+
+    await phone.launch();
+
+    expect(phone.signedIn).toBe(true);
+    expect(phone.user?.username).toBe(a.username);
+  });
+
+  it("signing out of one account leaves the other signed in", async () => {
+    const { phone, a, aProfile } = await twoAccounts();
+
+    await phone.signOut(); // out of the second account
+    await phone.switchProfile(aProfile.id);
+
+    expect(phone.signedIn).toBe(true);
+    expect(phone.user?.username).toBe(a.username);
+  });
+
+  it("a getlogit.app account and a self-hosted account on one phone each use their own server", async () => {
+    const cloud = await createAccount("cloud", newUser("cloudy"), "Pro");
+    const phone = await new Device().launch();
+    await phone.signIn(cloud);
+    await phone.finishOnboarding({ name: "Cloud" });
+    const cloudProfile = (await phone.activeProfile())!;
+    const own = newUser("ownserver");
+    await phone.addAccount(own, "self-host", "register");
+    await phone.finishOnboarding({ name: "Own" });
+    const ownProfile = (await phone.activeProfile())!;
+
+    await phone.switchProfile(cloudProfile.id);
+    let before = phone.requests.length;
+    await phone.sync();
+    expect(phone.requests.slice(before).filter((r) => r.includes(" self-host "))).toEqual([]);
+
+    await phone.switchProfile(ownProfile.id);
+    before = phone.requests.length;
+    await phone.sync();
+    const after = phone.requests.slice(before);
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.filter((r) => r.includes(" cloud "))).toEqual([]);
+  });
+
+  it("switching to an offline profile and back keeps the account signed in", async () => {
+    const a = await createAccount("cloud", newUser("keep"), "Pro");
+    const phone = await new Device().launch();
+    await phone.finishOnboarding({ name: "Offline me" });
+    const offline = (await phone.activeProfile())!;
+    await phone.addAccount(a);
+    await phone.finishOnboarding({ name: "Online me" });
+    const online = (await phone.activeProfile())!;
+
+    await phone.switchProfile(offline.id);
+    expect(phone.signedIn).toBe(false);
+    expect(phone.profileName).toBe("Offline me");
+    await phone.switchProfile(online.id);
+
+    expect(phone.signedIn).toBe(true);
+    expect(phone.user?.username).toBe(a.username);
+  });
+});

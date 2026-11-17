@@ -23,18 +23,22 @@ describe("orphanClaimTarget", () => {
 });
 
 describe("postSwitchDestination", () => {
-  it("a previously-synced profile is sent to re-auth, not silently dropped on '/'", () => {
-    expect(postSwitchDestination({ serverUserId: "srv_1", username: "martin" })).toBe(
+  it("a signed-in account goes straight home: switching restored its session", () => {
+    expect(postSwitchDestination({ serverUserId: "srv_1", username: "martin" }, true)).toBe("/");
+  });
+
+  it("an account whose sign-in has ended is sent to sign in again, username filled in", () => {
+    expect(postSwitchDestination({ serverUserId: "srv_1", username: "martin" }, false)).toBe(
       "/auth?resume=martin",
     );
   });
 
-  it("a local-only profile goes straight home — there was never a session to restore", () => {
-    expect(postSwitchDestination({ serverUserId: null, username: "local_test" })).toBe("/");
+  it("a local-only profile goes straight home: there was never a session to restore", () => {
+    expect(postSwitchDestination({ serverUserId: null, username: "local_test" }, false)).toBe("/");
   });
 
   it("encodes usernames that aren't URL-safe on their own", () => {
-    expect(postSwitchDestination({ serverUserId: "srv_1", username: "a b+c" })).toBe(
+    expect(postSwitchDestination({ serverUserId: "srv_1", username: "a b+c" }, false)).toBe(
       "/auth?resume=a%20b%2Bc",
     );
   });
