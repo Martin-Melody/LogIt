@@ -27,6 +27,9 @@ public class User
     public UserTier Tier { get; set; } = UserTier.Free;
     /// A plan granted by hand in the admin page (friends, testers, refunds). Null = none.
     public UserTier? ManualTier { get; set; }
+    /// The phone that holds a Free account's backup (Features/Sync/FreeBackup.cs). Null until a
+    /// phone backs up; signing in on another phone moves it there.
+    public string? BackupDeviceId { get; set; }
     public string? StripeCustomerId { get; set; }
     /// As a coach: the swap rule for every client without their own (see SwapRules). Null = "any".
     public string? CoachSwapRule { get; set; }

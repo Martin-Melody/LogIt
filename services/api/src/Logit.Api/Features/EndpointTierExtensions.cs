@@ -48,6 +48,23 @@ public static class EndpointTierExtensions
                 if (coachedByStudio) return await next(context);
             }
 
+            // Free accounts back up one phone: the /sync endpoints let the phone holding the
+            // backup through (Features/Sync/FreeBackup.cs).
+            var request = context.HttpContext.Request;
+            switch (Sync.FreeBackup.Check(user, minimumTier, request.Path, request.Headers[Sync.FreeBackup.DeviceHeader]))
+            {
+                case Sync.FreeBackup.Decision.Allowed:
+                    return await next(context);
+                case Sync.FreeBackup.Decision.Claim:
+                    Sync.FreeBackup.MoveTo(user, request.Headers[Sync.FreeBackup.DeviceHeader]);
+                    await db.SaveChangesAsync();
+                    return await next(context);
+                case Sync.FreeBackup.Decision.OtherDevice:
+                    return Results.Json(
+                        new { error = Sync.FreeBackup.OtherDeviceMessage, code = Sync.FreeBackup.OtherDeviceCode },
+                        statusCode: StatusCodes.Status403Forbidden);
+            }
+
             return Results.Json(
                 new { error = $"This feature requires a {minimumTier}-tier account or higher." },
                 statusCode: StatusCodes.Status403Forbidden);

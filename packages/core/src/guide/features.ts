@@ -249,20 +249,35 @@ export const FEATURES: Feature[] = [
     table: "Build and share plugins",
   },
 
+  {
+    // Free accounts back up one phone (decision A, 2026-11-17; the server's FreeBackup). It
+    // uses the sync endpoints, which stay listed under "sync": the server lets Free through
+    // only from the phone that holds the backup.
+    id: "free-backup",
+    title: "Back up one phone",
+    section: "Start here",
+    plan: "Free",
+    summary: "A free account backs up the phone you use it on, so a new or lost phone gets everything back.",
+    phone: ["/settings"],
+    wherePhone: "Settings › Account",
+    docs: "/docs/sync#free-backup",
+    table: "Back up your phone",
+  },
+
   // ── Pro ───────────────────────────────────────────────────────────────────
   {
     id: "sync",
     title: "Sync and devices",
     section: "Pro",
     plan: "Pro",
-    summary: "Your splits, exercises, habits, food lists and settings, the same on every device.",
+    summary: "Your splits, exercises, habits, food lists and settings, the same on every phone and on the web.",
     docs: "/docs/sync",
     server: [
       "/sync/splits", "/sync/exercises", "/sync/exercise-settings", "/sync/progression-recipes", "/sync/profile", "/sync/habits", "/sync/habit-entries",
       "/sync/nutrition/custom-foods", "/sync/nutrition/favorites", "/sync/nutrition/meal-templates",
       "/sync/nutrition/recipes", "/sync/plugins",
     ],
-    table: "Sync and the web dashboard",
+    table: "Sync several phones and the web dashboard",
   },
   {
     id: "coached-sync",

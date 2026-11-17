@@ -121,10 +121,13 @@
   });
   // What the account card says about backup (design canvas 6). Free accounts on getlogit.app
   // don't sync yet; self-hosted servers include everything.
+  // Free accounts back up one phone (the one they last signed in on).
   const backupLine = $derived(
-    authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted()
-      ? "Not backed up: sync is a Pro feature"
-      : `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`,
+    authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()
+      ? "Your free backup is on another phone. Sign in again here to move it, or get Pro to sync both"
+      : $lastSyncedAt
+        ? `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`
+        : "Not backed up yet",
   );
   // Sign out of one account on the phone (design canvas 7). Plain "Sign out" takes its training
   // off the phone, so it's only offered as-is when everything is backed up; otherwise a copy is
@@ -724,8 +727,8 @@
         <div class="mb-3 flex flex-col gap-3 rounded-xl bg-muted p-4">
           <p class="text-[15px] font-semibold">Make an account</p>
           <div class="flex flex-col gap-2 text-sm">
-            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Free</span><span class="text-muted-foreground">Social: share workouts, follow friends, get coached</span></p>
-            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Pro</span><span class="text-muted-foreground">Backup and sync across phones, web dashboard</span></p>
+            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Free</span><span class="text-muted-foreground">Back up this phone, train with friends, get coached</span></p>
+            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Pro</span><span class="text-muted-foreground">Sync every phone, the web dashboard</span></p>
           </div>
           <p class="text-xs text-muted-foreground">Everything already on this phone comes with you.</p>
           <div class="flex gap-2">

@@ -42,7 +42,7 @@ describe("changing plan", () => {
     expect((await serverData("cloud", user)).workoutNames).toEqual(["Lower A", "Upper A"]);
   });
 
-  it("a plan that ends keeps everything on the phone, and the app keeps working", async () => {
+  it("a plan that ends keeps everything on the phone, and this phone keeps backing up (Free)", async () => {
     const { phone, user } = await onPlan("Pro");
 
     await setTier("cloud", phone.user!.id, "Free");
@@ -53,9 +53,7 @@ describe("changing plan", () => {
     expect(phone.signedIn).toBe(true);
     expect(phone.user?.tier).toBe("Free");
     expect(await phone.workoutNames()).toEqual(["Lower A", "Upper A"]);
-    // Frozen on the server, not deleted (decision #3 in account-model.md).
-    await setTier("cloud", phone.user!.id, "Pro");
-    expect((await serverData("cloud", user)).workoutNames).toEqual(["Upper A"]);
+    expect((await serverData("cloud", user, phone)).workoutNames).toEqual(["Lower A", "Upper A"]);
   });
 
   it("resubscribing uploads what was logged while the plan had lapsed", async () => {

@@ -78,8 +78,8 @@ export function planCardModel(
       badge: null,
       source: null,
       text: opts.canBuyHere
-        ? "Everything on this phone is free. Pro adds backup and sync between devices and the web dashboard."
-        : "The app itself is free. Pro adds backup and sync between devices and the web dashboard. Plans are bought in the LogIt Android app.",
+        ? "Everything on this phone is free, backup included. Pro adds sync between phones and the web dashboard."
+        : "The app itself is free, and a free account backs up one phone. Pro adds sync between phones and the web dashboard. Plans are bought in the LogIt Android app.",
       primary: opts.canBuyHere ? { action: "plans", label: "See plans" } : null,
       secondary: null,
     };
