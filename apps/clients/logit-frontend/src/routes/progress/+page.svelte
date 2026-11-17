@@ -9,7 +9,7 @@
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import Sparkline from "$lib/features/exercise/components/Sparkline.svelte";
   import { goto } from "$app/navigation";
-  import { ChevronRight, Lightbulb } from "lucide-svelte";
+  import { ChartColumn, ChevronRight, Lightbulb } from "lucide-svelte";
   import GoalsPanel from "$lib/features/goals/GoalsPanel.svelte";
   import { getAllExerciseProgressStories } from "@logit/core/usecases/progression/getAllExerciseProgressStories";
   import type { ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
@@ -71,6 +71,11 @@
   <a href="/insights" class="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5">
     <Lightbulb class="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
     <span class="flex min-w-0 flex-1 flex-col"><span class="text-sm font-semibold">Insights</span><span class="text-xs text-muted-foreground">Which lifts are moving, muscle balance, food and more</span></span>
+    <ChevronRight class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+  </a>
+  <a href="/progress/weekly-sets" class="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5">
+    <ChartColumn class="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+    <span class="flex min-w-0 flex-1 flex-col"><span class="text-sm font-semibold">Sets this week</span><span class="text-xs text-muted-foreground">Hard sets per muscle against a target, and how your split adds up</span></span>
     <ChevronRight class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
   </a>
     <div in:fade={{ duration: 160 }}>

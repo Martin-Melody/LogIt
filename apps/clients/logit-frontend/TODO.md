@@ -242,8 +242,13 @@ the same features in their own algorithms.
       algorithm per exercise (falls back to the general one if the plugin is gone), passes `repRange` and the
       lift `goal` (pace from `liftGoalPace`), and adds a goal line to every "Why?". Adaptive pushes the first
       set one step when behind and asked to. Exercise page › How it progresses; Settings lists overrides.
-      Not yet in data export/import. Next: weekly sets per muscle + split scoring, block builder, food
-      adjustment. Sleep waits for wearables.
+      Not yet in data export/import.
+      Step 3: `domain/weeklySets.ts` (default targets per muscle, ~10–16 big / 6–12 small, moved by a
+      medium/high-confidence muscle-group insight; planned weekly sets from a split: weekdays once a week,
+      rotation with rest days 7/length, without rest days the weekly workout target; scoring with fixes).
+      `/progress/weekly-sets` (Sets this week + the active split scored), linked from Progress, the split
+      page and the exercise's How it progresses. Targets aren't editable yet. Next: block builder (step 4),
+      food adjustment (step 5). Sleep waits for wearables.
 
 - [x] Nutrition redesign (2026-11-16, branch
       `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US
