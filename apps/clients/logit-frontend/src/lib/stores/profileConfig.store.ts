@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable } from "svelte/store";
 import type { HomeConfig, WidgetSlot } from "$lib/features/widgets/widget";
 import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
@@ -16,7 +18,7 @@ function defaultConfig(): HomeConfig {
 function load(): HomeConfig {
   if (!browser) return { slots: [] };
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getAccountItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
     return withRegistry(JSON.parse(raw) as HomeConfig);
   } catch {
@@ -40,7 +42,7 @@ function withRegistry(parsed: HomeConfig): HomeConfig {
 
 function save(config: HomeConfig) {
   if (!browser) return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  setAccountItem(STORAGE_KEY, JSON.stringify(config));
 }
 
 // The card config rides along on the synced profile (profileConfigJson), so the dashboard
@@ -101,10 +103,12 @@ function createProfileConfigStore() {
     });
   }
 
-  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown, applyRemote };
+  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown, applyRemote, reloadForAccount: () => store.set(load()) };
 }
 
 export const profileConfig = createProfileConfigStore();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => profileConfig.reloadForAccount());
 
 export function getProfileConfigJson(): string {
   return JSON.stringify(_current);

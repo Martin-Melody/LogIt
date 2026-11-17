@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -225,7 +226,7 @@
   const COLLAPSED_KEY = "logit:nutrition:collapsedMeals:v1";
   function readCollapsed(): MealSlot[] {
     try {
-      const v = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]");
+      const v = JSON.parse(getAccountItem(COLLAPSED_KEY) ?? "[]");
       return Array.isArray(v) ? v.filter((x): x is MealSlot => MEAL_SLOTS.includes(x)) : [];
     } catch {
       return [];
@@ -235,7 +236,7 @@
   function toggleMeal(m: MealSlot) {
     collapsed = collapsed.includes(m) ? collapsed.filter((x) => x !== m) : [...collapsed, m];
     try {
-      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
+      setAccountItem(COLLAPSED_KEY, JSON.stringify(collapsed));
     } catch {
       /* remembered for this visit only */
     }
