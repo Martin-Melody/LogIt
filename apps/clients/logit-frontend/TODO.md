@@ -229,6 +229,15 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] LogIt Adaptive, step 1 of the progression redesign (2026-11-17, branch `feat/adaptive-progression`). New built-in
+      `logit-adaptive` (default for new accounts): plans every set from a strength estimate (best Epley e1RM
+      of the last ≤4 sessions within 6 weeks, −5% after 3 weeks off), weight = heaviest that fits the rep range
+      at the chosen reps in reserve, reps per set from the lifter's learned set-to-set drop, sets under the range
+      get lighter instead. Big lifts (3+ muscles) 5–8, single-muscle 8–12, split day reps win. Fatigue trim only
+      once calibrated. Bodyweight/assisted handed to Linear Progression. Fatigue maths moved to
+      `progression/fatigue.ts`. Next: per-exercise algorithm + rep range (synced), goal pace, weekly sets per
+      muscle + split scoring, block builder, food adjustment. Sleep waits for wearables.
+
 - [x] Nutrition redesign (2026-11-16, branch
       `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US
       synonyms, typo budget, ranking) used everywhere (bundled DB, cache, custom foods, recipes, meals);

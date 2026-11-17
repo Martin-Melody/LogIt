@@ -1,3 +1,4 @@
+import { DEFAULT_PROGRESSION_ALGORITHM_ID } from "@logit/core/progression/localAlgorithmRegistry";
 import { getDb } from "$lib/data/db/sqlite";
 import { createId } from "@logit/core/domain/ids";
 import { nowMs } from "@logit/core/domain/time";
@@ -120,7 +121,7 @@ export async function createLocalAccount(
   // Seeding it as a real row means disabling it later is a real, respected, persisted choice.
   await db.run(
     `INSERT INTO progression_config(owner_id, data) VALUES(?, ?)`,
-    [account.id, JSON.stringify({ algorithmId: "linear-progression" })],
+    [account.id, JSON.stringify({ algorithmId: DEFAULT_PROGRESSION_ALGORITHM_ID })],
   );
 
   // Permanent marker so ensureLocalAccount() knows this device has had at least one
