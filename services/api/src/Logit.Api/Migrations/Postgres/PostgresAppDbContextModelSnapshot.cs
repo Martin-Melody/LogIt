@@ -1864,6 +1864,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("text");
 
+                    b.Property<string>("BackupDeviceId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Bio")
                         .HasColumnType("text");
 

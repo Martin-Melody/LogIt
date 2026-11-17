@@ -30,7 +30,8 @@ public static class AuthEndpoints
         [FromBody] RegisterRequest req,
         AppDbContext db,
         TokenService tokens,
-        IConfiguration config)
+        IConfiguration config,
+        HttpRequest httpRequest)
     {
         var normalizedUsername = req.Username.Trim().ToLowerInvariant();
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
@@ -67,6 +68,8 @@ public static class AuthEndpoints
             ShowInDiscover = true,
         };
 
+        // The phone signing in holds a Free account's backup from now on (FreeBackup).
+        Sync.FreeBackup.MoveTo(user, httpRequest.Headers[Sync.FreeBackup.DeviceHeader]);
         var refresh = tokens.CreateRefreshToken(user.Id);
         user.RefreshTokens.Add(refresh);
 
@@ -103,7 +106,8 @@ public static class AuthEndpoints
         AppDbContext db,
         TokenService tokens,
         IConfiguration config,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        HttpRequest httpRequest)
     {
         var identifier = req.UsernameOrEmail.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u =>
@@ -125,6 +129,8 @@ public static class AuthEndpoints
 
         // Other devices keep their tokens: signing in on a second phone must not sign the
         // first one out. Every token is revoked only on a password reset (ResetPassword).
+        // The phone signing in holds a Free account's backup from now on (FreeBackup).
+        Sync.FreeBackup.MoveTo(user, httpRequest.Headers[Sync.FreeBackup.DeviceHeader]);
         var refresh = tokens.CreateRefreshToken(user.Id);
         db.RefreshTokens.Add(refresh);
         await db.SaveChangesAsync();

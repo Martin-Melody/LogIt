@@ -28,15 +28,34 @@ describe("offline → account on getlogit.app", () => {
     expect((await serverData("cloud", user)).me.onboardingCompleted).toBe(true);
   });
 
-  it("a Free account doesn't upload anything (sync is a paid feature)", async () => {
+  it("a Free account backs up this phone (Free accounts back up one phone)", async () => {
     const phone = await offlineUser();
     const user = newUser("freeonly");
 
     await phone.register(user);
 
-    const server = await serverData("cloud", user);
-    expect(server.splitNames).toBeNull();
-    expect(server.workoutNames).toBeNull();
+    const server = await serverData("cloud", user, phone);
+    expect(server.splitNames).toEqual(["Push Pull Legs"]);
+    expect(server.workoutNames).toEqual(["Push day"]);
+  });
+
+  it("a Free account's backup belongs to one phone: a second phone is refused until it signs in again", async () => {
+    const user = newUser("onephone");
+    const first = await new Device("first phone").launch();
+    await first.register(user);
+    await first.finishOnboarding({ name: "Sam", split: "First split" });
+
+    const second = await new Device("second phone").launch();
+    await second.signIn(user); // signing in moves the backup to this phone
+    await second.saveSplit("Second split");
+    await first.launch();
+    await first.saveSplit("Made on the first phone");
+    await first.sync();
+
+    expect(first.app.client.apiClient.isBackupElsewhere()).toBe(true);
+    const fromSecond = await serverData("cloud", user, second);
+    expect(fromSecond.splitNames).toEqual(["First split", "Second split"]);
+    expect((await serverData("cloud", user, first)).splitNames).toBeNull(); // refused
   });
 
   for (const tier of ["Pro", "Studio"] as Tier[]) {

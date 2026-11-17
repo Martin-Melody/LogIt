@@ -68,10 +68,10 @@
   ];
 
   const faq = [
-    { q: "Do I need an account?", a: "No. Everything works on your phone without one. A free account adds the social feed; Pro adds sync and the web dashboard." },
+    { q: "Do I need an account?", a: "No. Everything works on your phone without one. A free account backs up your phone and adds the social feed; Pro adds sync between phones and the web dashboard." },
     { q: "What's free and what's paid?", a: "The whole app is free on your phone, with no limits and no ads. You pay only if you want us to host sync and the dashboard (Pro) or to coach clients (Studio)." },
     { q: "How do I cancel?", a: `In the Play Store: ${PLAY_CANCEL_PATH.replace("Play Store › ", "")}.` },
-    { q: "Where is my data kept?", a: "On your phone. With Pro it's also kept on our servers in the EU so your devices stay in sync. You can export it or delete your account any time." },
+    { q: "Where is my data kept?", a: "On your phone. With an account it's also backed up on our servers in the EU (Pro keeps several devices in sync). You can export it or delete your account any time." },
     { q: "Is there an iPhone app?", a: "Not yet. Android comes first; iPhone is planned." },
   ];
 </script>
@@ -249,8 +249,8 @@
         <a href="/pricing" class="rounded-lg bg-primary px-[18px] py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Compare plans</a>
       </div>
       <div class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
-        <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px]"><span class="font-semibold text-heading">Free · €0</span><span class="text-sm leading-normal text-muted-foreground">The whole app on your phone. Free account for the social feed.</span></div>
-        <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px] ring-1 ring-primary/35"><span class="font-semibold text-heading">Pro · {PRICES.pro.monthly}/mo</span><span class="text-sm leading-normal text-muted-foreground">Backup and sync across devices, plus the web dashboard.</span></div>
+        <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px]"><span class="font-semibold text-heading">Free · €0</span><span class="text-sm leading-normal text-muted-foreground">The whole app on your phone. A free account backs it up and adds the social feed.</span></div>
+        <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px] ring-1 ring-primary/35"><span class="font-semibold text-heading">Pro · {PRICES.pro.monthly}/mo</span><span class="text-sm leading-normal text-muted-foreground">Sync between phones, plus the web dashboard.</span></div>
         <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px]"><span class="font-semibold text-heading">Studio · {PRICES.studio.monthly}/mo</span><span class="text-sm leading-normal text-muted-foreground">For coaches: clients, programs, check-ins, messages.</span></div>
       </div>
     </div>

@@ -9,8 +9,8 @@ title: Your account
 
 <FeatureFacts id="account" />
 
-You can use LogIt without an account: everything stays on your phone. An account lets you sync,
-use the web dashboard, follow people and have a coach.
+You can use LogIt without an account: everything stays on your phone. A free account backs up your phone,
+lets you follow people and have a coach; Pro adds sync between phones and the web dashboard.
 
 ## Sign in or create an account
 

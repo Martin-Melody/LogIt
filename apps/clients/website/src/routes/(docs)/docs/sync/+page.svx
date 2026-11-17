@@ -13,6 +13,15 @@ With Pro, sign in on each device and LogIt keeps them the same: workouts, splits
 goals, food lists and settings. Changes made offline sync when you're back online. If the same split
 was changed on two devices, you're asked which one to keep.
 
+## Free backup
+
+<FeatureFacts id="free-backup" />
+
+A free account backs up the phone you use it on: workouts, splits, exercises, habits, goals, food
+lists and settings. Get a new phone, sign in, and everything comes back. The backup belongs to one
+phone at a time. Signing in on another phone moves it there, and the first phone stops backing up
+until you sign in on it again. To keep two phones the same, or to use the web dashboard, get Pro.
+
 ## On the phone
 
 <HowTo id="phone.sync" />

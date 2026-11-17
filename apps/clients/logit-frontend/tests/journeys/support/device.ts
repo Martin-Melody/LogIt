@@ -379,6 +379,11 @@ export class Device {
 
   // ── What the app shows ─────────────────────────────────────────────────────────────────
 
+  /** This install's id, sent as X-Logit-Device (a Free account's backup belongs to one phone). */
+  get deviceId(): string | null {
+    return this.storage.getItem("logit:device-id");
+  }
+
   get signedIn(): boolean {
     return this.app.auth.authStore.isAuthenticated;
   }
