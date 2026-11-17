@@ -64,6 +64,31 @@
     }
   }
 
+  let sharingLink = $state(false);
+  let shareError = $state<string | null>(null);
+
+  /** Shares the coach's invite link (their first active one, or a new one) through Android's share sheet. */
+  async function shareInviteLink() {
+    sharingLink = true;
+    shareError = null;
+    try {
+      const links = await coachApi.listLinks().catch(() => []);
+      const link = links.find((l) => l.state === "active" && !l.packageId) ?? (await coachApi.createLink({ name: "My invite link" }));
+      const url = `${import.meta.env.VITE_WEB_URL || "https://app.getlogit.app"}/c/${link.code}`;
+      try {
+        const { Share } = await import("@capacitor/share");
+        await Share.share({ title: "Train with me on Logit", text: "Here's my coaching link on Logit:", url });
+      } catch {
+        await navigator.clipboard?.writeText(url);
+        shareError = "Link copied. Paste it to your client.";
+      }
+    } catch (e) {
+      shareError = e instanceof Error ? e.message : "Couldn't make your link";
+    } finally {
+      sharingLink = false;
+    }
+  }
+
   async function invite(e: Event) {
     e.preventDefault();
     const username = inviteUsername.trim();
@@ -238,7 +263,14 @@
         </div>
       {:else}
         {#if clients.length === 0}
-          <p class="px-3 py-2 text-sm text-muted-foreground">No clients yet.</p>
+          <!-- A coach's first day (design canvas C2): invite the first client. -->
+          <div class="mx-3 mb-3 flex flex-col gap-2.5 rounded-[14px] bg-primary p-4 text-primary-foreground">
+            <span class="text-base font-bold">Invite your first client</span>
+            <span class="text-sm opacity-80">They open your link, choose what you can see, and you're connected.</span>
+            <button type="button" class="h-11 rounded-lg bg-primary-foreground text-sm font-semibold text-primary disabled:opacity-60"
+              disabled={sharingLink} onclick={() => void shareInviteLink()}>{sharingLink ? "Making your link…" : "Share link"}</button>
+            {#if shareError}<span class="text-xs">{shareError}</span>{/if}
+          </div>
         {:else}
           <ul class="divide-y divide-border" data-guide="phone-clients-list">
             {#each clients as c (c.relationshipId)}
