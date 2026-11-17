@@ -1214,6 +1214,18 @@
           {/if}
         </div>
       </div>
+
+      <button
+        type="button"
+        class="flex min-h-11 items-center justify-between border-t border-border pt-1 -mb-1 text-left text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onclick={() => goto("/settings/music")}
+      >
+        <span>
+          <span class="block">Music</span>
+          <span class="block text-xs">Control Spotify or YouTube Music from a workout, and your workout playlists.</span>
+        </span>
+        <ChevronRight class="h-4 w-4 shrink-0" />
+      </button>
     </Card.Content>
   </Card.Root>
 

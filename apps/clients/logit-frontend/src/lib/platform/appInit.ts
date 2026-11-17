@@ -107,6 +107,10 @@ export async function appInit(): Promise<void> {
     const { startRestTimers } = await import("$lib/services/restTimerService");
     startRestTimers();
 
+    // Starts the day's playlist when a workout starts (Settings › Music; Android only).
+    const { initSessionMusic } = await import("$lib/features/music/sessionMusic");
+    initSessionMusic();
+
     await rehydrateStores();
 
     try {
