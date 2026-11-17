@@ -133,6 +133,7 @@ function createAuthStore() {
       // another device still arrives through the synced profile.
       setActiveOwnerId(account.id);
       await updateLocalAccount(account.id, {
+        username: serverUser.username,
         displayName: account.displayName.trim() || serverUser.displayName || account.displayName,
         serverUserId: serverUser.id,
         onboardingCompleted: account.onboardingCompleted || serverUser.onboardingCompleted,
@@ -149,7 +150,10 @@ function createAuthStore() {
           // (someone who onboarded offline and then makes an account used to be sent through
           // it a second time, because a new account says false).
           const onboardingCompleted = current.onboardingCompleted || serverUser.onboardingCompleted;
+          // The account's username replaces the space's placeholder ("local"), which the
+          // account switcher showed as "@local".
           await updateLocalAccount(currentId, {
+            username: serverUser.username,
             serverUserId: serverUser.id,
             // Prefer the name the user already set locally; fall back to server if blank
             displayName: current.displayName.trim() || serverUser.displayName || current.displayName,
@@ -159,7 +163,7 @@ function createAuthStore() {
             apiClient.updateOnboardingCompleted(true)
               .catch((e) => log.warn("auth", "Could not save onboarding status to the server", e));
           }
-          account = { ...current, serverUserId: serverUser.id, onboardingCompleted };
+          account = { ...current, username: serverUser.username, serverUserId: serverUser.id, onboardingCompleted };
         }
       }
 
