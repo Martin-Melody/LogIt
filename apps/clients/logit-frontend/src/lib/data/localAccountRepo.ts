@@ -193,8 +193,16 @@ export async function updateLocalAccount(
  * offline mode. Route straight to sign-in with that username prefilled instead of landing on
  * "/" and letting the user discover it's not actually synced.
  */
-export function postSwitchDestination(account: Pick<LocalAccount, "serverUserId" | "username">): string {
-  return account.serverUserId ? `/auth?resume=${encodeURIComponent(account.username)}` : "/";
+/**
+ * Where the app goes after switching profiles: home, unless the profile had a sign-in that has
+ * since ended (then the sign-in screen, its username filled in). A signed-in account's session is
+ * restored by the switch itself.
+ */
+export function postSwitchDestination(
+  account: Pick<LocalAccount, "serverUserId" | "username">,
+  signedIn: boolean,
+): string {
+  return account.serverUserId && !signedIn ? `/auth?resume=${encodeURIComponent(account.username)}` : "/";
 }
 
 /**

@@ -1,8 +1,12 @@
 import { tokenStorage, type StoredTokens } from "./tokenStorage";
+import { getSessionScope, sessionKey } from "./sessionScope";
 import { log } from "../platform/log";
 
 const USER_KEY = "logit:auth:user";
 const SELF_HOSTED_KEY = "logit:auth:selfHosted";
+// serverConfig.ts's MODE_KEY (it imports this file, so the name is repeated here).
+const SERVER_MODE_KEY = "logit:server:mode";
+// Each of these is stored per account on the phone: see sessionScope.ts.
 
 export interface AuthUser {
   id: string;
@@ -56,7 +60,7 @@ const BASE_URL_KEY = "logit:api:baseUrl";
 const DEFAULT_BASE_URL: string = import.meta.env.VITE_API_URL || "https://api.getlogit.app";
 
 function getBaseUrl(): string {
-  return localStorage.getItem(BASE_URL_KEY) ?? DEFAULT_BASE_URL;
+  return localStorage.getItem(sessionKey(BASE_URL_KEY)) ?? DEFAULT_BASE_URL;
 }
 
 /** The server this app talks to: the hosted one, or the self-hosted one picked at sign-in. */
@@ -89,13 +93,44 @@ class ApiClient {
     this.tokens = await tokenStorage.get();
     if (this.tokens) {
       try {
-        const raw = localStorage.getItem(USER_KEY);
+        const raw = localStorage.getItem(sessionKey(USER_KEY));
         this.cachedUser = raw ? (JSON.parse(raw) as AuthUser) : null;
       } catch {
         this.cachedUser = null;
       }
-      this.cachedIsSelfHosted = localStorage.getItem(SELF_HOSTED_KEY) === "true";
+      this.cachedIsSelfHosted = localStorage.getItem(sessionKey(SELF_HOSTED_KEY)) === "true";
     }
+  }
+
+  /**
+   * Forget the session in memory and load the current scope's (another account's, after a
+   * switch). Nothing is revoked or deleted: the account left behind stays signed in.
+   */
+  async reloadSession(): Promise<void> {
+    this.tokens = null;
+    this.cachedUser = null;
+    this.cachedIsSelfHosted = false;
+    await this.init();
+  }
+
+  /**
+   * A sign-in made in `fromScope` belongs to the account now in scope (the phone signs in first
+   * and only then knows which account on it the session is for): store it there, server address
+   * and mode included, and remove it from where it was made.
+   */
+  async moveSessionFrom(fromScope: string | null): Promise<void> {
+    if (fromScope === getSessionScope()) return;
+    for (const key of [BASE_URL_KEY, SERVER_MODE_KEY]) {
+      const value = localStorage.getItem(sessionKey(key, fromScope));
+      if (value !== null) localStorage.setItem(sessionKey(key), value);
+      else localStorage.removeItem(sessionKey(key));
+      localStorage.removeItem(sessionKey(key, fromScope));
+    }
+    if (this.tokens) await tokenStorage.set(this.tokens);
+    if (this.cachedUser) this.saveUser(this.cachedUser, this.cachedIsSelfHosted);
+    await tokenStorage.clear(fromScope);
+    localStorage.removeItem(sessionKey(USER_KEY, fromScope));
+    localStorage.removeItem(sessionKey(SELF_HOSTED_KEY, fromScope));
   }
 
   isAuthenticated(): boolean {
@@ -115,15 +150,15 @@ class ApiClient {
   private saveUser(user: AuthUser, isSelfHosted: boolean): void {
     this.cachedUser = user;
     this.cachedIsSelfHosted = isSelfHosted;
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    localStorage.setItem(SELF_HOSTED_KEY, String(isSelfHosted));
+    localStorage.setItem(sessionKey(USER_KEY), JSON.stringify(user));
+    localStorage.setItem(sessionKey(SELF_HOSTED_KEY), String(isSelfHosted));
   }
 
   private clearUser(): void {
     this.cachedUser = null;
     this.cachedIsSelfHosted = false;
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(SELF_HOSTED_KEY);
+    localStorage.removeItem(sessionKey(USER_KEY));
+    localStorage.removeItem(sessionKey(SELF_HOSTED_KEY));
   }
 
   private async refreshTokens(): Promise<boolean> {
@@ -343,7 +378,7 @@ class ApiClient {
   // Self-hosting
 
   setBaseUrl(url: string): void {
-    localStorage.setItem(BASE_URL_KEY, url.replace(/\/$/, ""));
+    localStorage.setItem(sessionKey(BASE_URL_KEY), url.replace(/\/$/, ""));
   }
 
   getBaseUrl(): string {
@@ -351,7 +386,7 @@ class ApiClient {
   }
 
   resetBaseUrl(): void {
-    localStorage.removeItem(BASE_URL_KEY);
+    localStorage.removeItem(sessionKey(BASE_URL_KEY));
   }
 
   async updateDisplayName(displayName: string): Promise<void> {

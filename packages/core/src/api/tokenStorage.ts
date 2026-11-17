@@ -1,8 +1,9 @@
 import { SecureStoragePlugin } from "capacitor-secure-storage-plugin";
 import { isNativePlatform } from "../platform/isNative";
+import { sessionKey } from "./sessionScope";
 
-const ACCESS_KEY = "logit:auth:access";
-const REFRESH_KEY = "logit:auth:refresh";
+const ACCESS = "logit:auth:access";
+const REFRESH = "logit:auth:refresh";
 
 export interface StoredTokens {
   accessToken: string;
@@ -18,8 +19,11 @@ async function secureGet(key: string): Promise<string | null> {
   }
 }
 
+// Every method takes the scope to use; leaving it out means the current one (sessionScope.ts).
 export const tokenStorage = {
-  async get(): Promise<StoredTokens | null> {
+  async get(scope?: string | null): Promise<StoredTokens | null> {
+    const ACCESS_KEY = sessionKey(ACCESS, scope);
+    const REFRESH_KEY = sessionKey(REFRESH, scope);
     if (isNativePlatform()) {
       // Keychain (iOS) / EncryptedSharedPreferences (Android) — tokens are the most sensitive
       // thing this app stores locally, unlike general app settings which stay in Preferences.
@@ -33,7 +37,9 @@ export const tokenStorage = {
     return { accessToken: raw, refreshToken: refresh };
   },
 
-  async set(tokens: StoredTokens): Promise<void> {
+  async set(tokens: StoredTokens, scope?: string | null): Promise<void> {
+    const ACCESS_KEY = sessionKey(ACCESS, scope);
+    const REFRESH_KEY = sessionKey(REFRESH, scope);
     if (isNativePlatform()) {
       await Promise.all([
         SecureStoragePlugin.set({ key: ACCESS_KEY, value: tokens.accessToken }),
@@ -45,7 +51,9 @@ export const tokenStorage = {
     localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
   },
 
-  async clear(): Promise<void> {
+  async clear(scope?: string | null): Promise<void> {
+    const ACCESS_KEY = sessionKey(ACCESS, scope);
+    const REFRESH_KEY = sessionKey(REFRESH, scope);
     if (isNativePlatform()) {
       await Promise.all([
         SecureStoragePlugin.remove({ key: ACCESS_KEY }).catch(() => {}),

@@ -1,7 +1,8 @@
 import { apiClient, type AuthUser } from "@logit/core/api/client";
 import { getServerMode } from "@logit/core/api/serverConfig";
 import { isNativePlatform } from "$lib/platform/isNative";
-import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId } from "$lib/data/activeOwner";
+import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId, onActiveOwnerChange } from "$lib/data/activeOwner";
+import { getSessionScope, setSessionScope } from "@logit/core/api/sessionScope";
 import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
@@ -17,6 +18,10 @@ async function switchActiveOwner(isOnlineAccount: boolean): Promise<void> {
   needsAccountAuth.set(false);
   if (!isOnlineAccount) navConfig.reconcileForOffline();
 }
+
+// On the phone every account keeps its own sign-in (tokens, server, cached user): the API client
+// uses the active account's. The web has one account per browser and no scope.
+onActiveOwnerChange(() => setSessionScope(isNativePlatform() ? getActiveOwnerId() : null));
 
 function createAuthStore() {
   let user = $state<AuthUser | null>(null);
@@ -72,6 +77,9 @@ function createAuthStore() {
       orphanClaimTarget,
     } = await import("$lib/data/localAccountRepo");
 
+    // Where the sign-in was made: the account in use (re-signing in, or linking an offline
+    // profile) or no account at all (adding one). It's moved to the account it belongs to below.
+    const signedInFrom = getSessionScope();
     let account = await getLocalAccountByServerUserId(serverUser.id);
 
     if (account) {
@@ -131,7 +139,20 @@ function createAuthStore() {
       }
     }
 
+    await apiClient.moveSessionFrom(signedInFrom);
     await switchActiveOwner(true);
+  }
+
+  /**
+   * Account menu › Add account: leave the account in use signed in and sign in from no account,
+   * so the new sign-in can't land on top of the current one. linkOrCreateLocalAccount() then
+   * gives it its own space.
+   */
+  async function beginAddingAccount(): Promise<void> {
+    stopBackgroundSync();
+    user = null;
+    setActiveOwnerId(null);
+    await apiClient.reloadSession();
   }
 
   // ── Offline login / create ───────────────────────────────────────────────
@@ -150,15 +171,20 @@ function createAuthStore() {
     const ok = await verifyLocalPassword(account, password);
     if (!ok) throw new Error("Incorrect password.");
 
-    // Always clear online auth when entering local account mode. The local accounts tab
-    // means offline use — even if the account was previously linked, online auth must be
-    // re-established explicitly via the /auth screen.
-    user = null;
+    // Switching restores that account's own sign-in when it has one (each account keeps its
+    // session: sessionScope.ts); the account left behind stays signed in. A profile that was
+    // never signed in, or whose sign-in has ended, opens offline.
     stopBackgroundSync();
-    await apiClient.clearLocal();
-
     setActiveOwnerId(account.id);
-    await switchActiveOwner(false);
+    await apiClient.reloadSession();
+    user = apiClient.getUser();
+    await switchActiveOwner(user !== null);
+    if (user) {
+      void syncAll();
+      startBackgroundSync();
+      // Check the restored sign-in is still good (and pick up a plan change) in the background.
+      void refreshUser();
+    }
   }
 
   /**
@@ -173,10 +199,9 @@ function createAuthStore() {
       return;
     }
 
-    // Creating a new local account means going offline — clear any stale online auth.
+    // The new profile starts with no sign-in; the account in use stays signed in.
     user = null;
     stopBackgroundSync();
-    await apiClient.clearLocal();
 
     const { createLocalAccount, listLocalAccounts, claimOrphanedData, orphanClaimTarget } =
       await import("$lib/data/localAccountRepo");
@@ -204,6 +229,7 @@ function createAuthStore() {
     // profile silently inherited the first profile's un-migrated splits/workouts.
     const claimTarget = orphanClaimTarget(all.length, activeOwnerIdBeforeCreate, account.id);
     if (claimTarget) await claimOrphanedData(claimTarget);
+    await apiClient.reloadSession();
     await switchActiveOwner(false);
   }
 
@@ -278,6 +304,7 @@ function createAuthStore() {
     register,
     loginOfflineAccount,
     createOfflineAccount,
+    beginAddingAccount,
     logout,
     deleteAccount,
     refreshUser,
