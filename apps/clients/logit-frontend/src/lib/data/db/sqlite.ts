@@ -131,6 +131,7 @@ export async function clearOwnerData(ownerId: string): Promise<void> {
   await db.run(`DELETE FROM exercises WHERE owner_id = ? AND is_core = 0`, [ownerId]);
   await db.run(`DELETE FROM progression_states WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM exercise_progression_settings WHERE owner_id = ?`, [ownerId]);
+  await db.run(`DELETE FROM progression_recipes WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM progression_config WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM analytics_config WHERE owner_id = ?`, [ownerId]);
   await db.run(`DELETE FROM coach_programs WHERE owner_id = ?`, [ownerId]);
@@ -341,6 +342,15 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       data TEXT NOT NULL DEFAULT '{}',
       updated_at_ms INTEGER NOT NULL,
       PRIMARY KEY (owner_id, key)
+    );
+
+    -- Progression algorithms built from blocks (Settings › Progression › Build). Synced JSON.
+    CREATE TABLE IF NOT EXISTS progression_recipes (
+      owner_id TEXT NOT NULL,
+      id TEXT NOT NULL,
+      data TEXT NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      PRIMARY KEY (owner_id, id)
     );
 
     -- How each exercise progresses, set by the lifter (algorithm, rep range, goal pace).

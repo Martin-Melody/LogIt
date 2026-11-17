@@ -2,6 +2,7 @@ import { browser } from "$app/environment";
 import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
 import type { ExerciseProgressionSettings, ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
 import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
+import { normalizeRecipe, type ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
 import type { UserMobilityProgressionConfig } from "@logit/core/domain/mobilityProgression";
 import type { UserMuscleGroupInsightConfig } from "@logit/core/domain/muscleGroupInsight";
 
@@ -13,6 +14,7 @@ const STORAGE_KEYS = {
   analyticsConfig: "logit:analytics:config:v1",
   algorithmPrefs: "logit:progression:prefs:v1",
   exerciseSettings: "logit:progression:exercise-settings:v1",
+  recipes: "logit:progression:recipes:v1",
 } as const;
 
 function ensureBrowser(): void {
@@ -49,6 +51,16 @@ export function createLocalProgressionRepo(): ProgressionRepo {
       const all = readJson<Record<string, ExerciseProgressionSettings>>(STORAGE_KEYS.exerciseSettings, {});
       all[settings.key] = settings;
       writeJson(STORAGE_KEYS.exerciseSettings, all);
+    },
+
+    async listRecipes(): Promise<ProgressionRecipe[]> {
+      return Object.values(readJson<Record<string, ProgressionRecipe>>(STORAGE_KEYS.recipes, {})).map(normalizeRecipe);
+    },
+
+    async saveRecipe(recipe: ProgressionRecipe): Promise<void> {
+      const all = readJson<Record<string, ProgressionRecipe>>(STORAGE_KEYS.recipes, {});
+      all[recipe.id] = recipe;
+      writeJson(STORAGE_KEYS.recipes, all);
     },
 
     async getConfig(): Promise<UserProgressionConfig | null> {

@@ -85,6 +85,15 @@ export type ProgressionInput = {
   /** A lift goal set on this exercise, how it's going, and what the lifter wants done
    * when it falls behind. */
   goal?: ProgressionGoalInput;
+  /** The lifter's current strength for this exercise: the best estimated 1RM from the last
+   * few sessions (see LogIt Adaptive), with the set it came from. */
+  strengthEstimate?: { kg: number; fromWeightKg: number; fromReps: number; performedAtMs: number };
+  /** This week's hard sets for the exercise's main muscle against that muscle's target
+   * (Progress › Sets this week). */
+  muscleWeek?: { muscle: MuscleGroup; done: number; lo: number; hi: number };
+  /** Eating over the last week, when food is logged: average calories on logged days and
+   * the maintenance estimate they're compared with. */
+  food?: { avgKcal: number; maintenanceKcal: number; daysLogged: number };
 };
 
 export type ProgressionGoalInput = {

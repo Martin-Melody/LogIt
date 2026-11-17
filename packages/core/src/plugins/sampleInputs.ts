@@ -117,6 +117,15 @@ export function sampleFamilyInput(family: string, now: number, empty = false): u
         history,
         state: {},
         userPreferences: {},
+        ...(empty
+          ? {}
+          : {
+              repRange: [5, 8],
+              strengthEstimate: { kg: 126.7, fromWeightKg: 100, fromReps: 8, performedAtMs: now - DAY },
+              goal: { weightKg: 140, reps: 1, deadlineIso: null, pace: "unknown", currentKg: 126.7, neededPerWeekKg: null, ratePerWeekKg: 1.2, behindPace: "show" },
+              muscleWeek: { muscle: "quads", done: 6, lo: 10, hi: 16 },
+              food: { avgKcal: 2950, maintenanceKcal: 2900, daysLogged: 6 },
+            }),
       };
     case "analytics":
       return { exercise: { id: "squat", name: "Back squat", exerciseType: "normal" }, history: [...history].reverse() };

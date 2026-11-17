@@ -122,7 +122,7 @@ export const FEATURES: Feature[] = [
     summary: "Charts per lift, and the rules that suggest your next weights.",
     web: ["/progress"],
     phone: [
-      "/progress", "/progress/weekly-sets", "/settings/progression/[algorithmId]",
+      "/progress", "/progress/weekly-sets", "/settings/progression/[algorithmId]", "/settings/progression/build/[id]",
       "/settings/mobility-progression/[algorithmId]", "/settings/muscle-group-insight/[algorithmId]",
     ],
     whereWeb: "Training › Progress",
@@ -257,7 +257,7 @@ export const FEATURES: Feature[] = [
     summary: "Your splits, exercises, habits, food lists and settings, the same on every device.",
     docs: "/docs/sync",
     server: [
-      "/sync/splits", "/sync/exercises", "/sync/exercise-settings", "/sync/profile", "/sync/habits", "/sync/habit-entries",
+      "/sync/splits", "/sync/exercises", "/sync/exercise-settings", "/sync/progression-recipes", "/sync/profile", "/sync/habits", "/sync/habit-entries",
       "/sync/nutrition/custom-foods", "/sync/nutrition/favorites", "/sync/nutrition/meal-templates",
       "/sync/nutrition/recipes", "/sync/plugins",
     ],

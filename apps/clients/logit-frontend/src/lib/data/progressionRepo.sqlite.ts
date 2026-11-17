@@ -1,6 +1,7 @@
 import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
 import type { ExerciseProgressionSettings, ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
 import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
+import { normalizeRecipe, type ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
 import type { UserMobilityProgressionConfig } from "@logit/core/domain/mobilityProgression";
 import type { UserMuscleGroupInsightConfig } from "@logit/core/domain/muscleGroupInsight";
 import { getDb } from "$lib/data/db/sqlite";
@@ -171,6 +172,21 @@ export function createSqliteProgressionRepo(): ProgressionRepo {
         `INSERT INTO exercise_progression_settings(owner_id, key, data, updated_at_ms) VALUES(?, ?, ?, ?)
          ON CONFLICT(owner_id, key) DO UPDATE SET data = excluded.data, updated_at_ms = excluded.updated_at_ms`,
         [owner(), settings.key, JSON.stringify(settings), settings.updatedAtMs],
+      );
+    },
+
+    async listRecipes(): Promise<ProgressionRecipe[]> {
+      const res = await getDb().query(`SELECT data FROM progression_recipes WHERE owner_id = ? ORDER BY updated_at_ms DESC`, [owner()]);
+      return ((res.values ?? []) as { data: string }[]).flatMap((row) => {
+        try { return [normalizeRecipe(JSON.parse(row.data) as ProgressionRecipe)]; } catch { return []; }
+      });
+    },
+
+    async saveRecipe(recipe: ProgressionRecipe): Promise<void> {
+      await getDb().run(
+        `INSERT INTO progression_recipes(owner_id, id, data, updated_at_ms) VALUES(?, ?, ?, ?)
+         ON CONFLICT(owner_id, id) DO UPDATE SET data = excluded.data, updated_at_ms = excluded.updated_at_ms`,
+        [owner(), recipe.id, JSON.stringify(recipe), recipe.updatedAtMs],
       );
     },
 
