@@ -43,3 +43,24 @@ export async function scanBarcodeNative(): Promise<string | null> {
     throw e;
   }
 }
+
+/**
+ * Scans a QR code (a coach's invite) and returns its text, or null if cancelled. Same
+ * scanner as food barcodes.
+ */
+export async function scanQrNative(): Promise<string | null> {
+  const { BarcodeScanner, BarcodeFormat } = await import("@capacitor-mlkit/barcode-scanning");
+  const avail = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable().catch(() => ({ available: true }));
+  if (!avail.available) {
+    await BarcodeScanner.installGoogleBarcodeScannerModule().catch(() => {});
+    throw new Error("scanner-preparing");
+  }
+  try {
+    const { barcodes } = await BarcodeScanner.scan({ formats: [BarcodeFormat.QrCode] });
+    return barcodes[0]?.rawValue ?? barcodes[0]?.displayValue ?? null;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/cancel/i.test(msg)) return null;
+    throw e;
+  }
+}
