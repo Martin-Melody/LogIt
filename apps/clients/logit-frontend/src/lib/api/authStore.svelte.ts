@@ -435,6 +435,8 @@ function createAuthStore() {
     logout,
     deleteAccount,
     refreshUser,
+    /** Picks up a sign-in the API client changed underneath (moving server). */
+    reloadUser() { user = apiClient.getUser(); },
   };
 }
 
