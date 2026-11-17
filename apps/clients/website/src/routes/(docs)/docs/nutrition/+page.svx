@@ -19,6 +19,12 @@ your targets, theirs are shown. Tap a meal's name to fold it away. Drag a food b
 or onto another meal (folded ones too) if you logged it in the wrong place. Each meal's ··· menu copies
 a meal from another day, saves it as a meal to log again in one tap, or moves it to another meal.
 
+Under the macros, the diary shows fibre, sugar, saturated fat and salt for the day. Tap All nutrients
+for those plus 16 vitamins and minerals as a share of the UK and EU daily reference amounts, and tap one
+to see which foods it came from. Plain foods (from the USDA and the French CIQUAL tables) carry vitamins
+and minerals; packaged foods usually only list the label four, so the page says how much of your day it
+covers. A new food takes the whole label in the order it's printed, and a recipe adds up its ingredients.
+
 A recipe can be split into servings, or logged by weight: weigh the cooked food in the pot, and then log
 the grams on your plate. Paste an ingredient list ("500 g chicken breast", "2 tins chopped tomatoes")
 and each line is matched to a food for you to check. Your recipes, foods and saved meals are under My

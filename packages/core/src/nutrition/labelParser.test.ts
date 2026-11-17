@@ -18,6 +18,7 @@ describe("parseNutritionLabel — EU labels", () => {
     const r = parseNutritionLabel(text);
     expect(r.layout).toBe("eu");
     expect(r.per100g).toEqual({ kcal: 250, proteinG: 9.5, carbsG: 45, fatG: 3.2 });
+    expect(r.labelNutrients).toEqual({ satFatG: 0.6, sugarG: 4.1, fibreG: 6.5, saltG: 0.5 });
     expect(r.warnings).toHaveLength(0);
     expect(r.confidence).toBe(1);
   });
@@ -167,6 +168,20 @@ describe("parseNutritionLabel — US labels", () => {
     const f = 100 / 55;
     expect(r.per100g?.kcal).toBe(Math.round(230 * f)); // 418
     expect(r.per100g?.fatG).toBeCloseTo(Math.round(8 * f * 10) / 10, 5);
+    expect(r.labelNutrients).toEqual({ satFatG: 1.82, sugarG: 21.82, fibreG: 7.27 });
+  });
+
+  it("turns sodium in mg into salt", () => {
+    const r = parseNutritionLabel(`
+      Nutrition Facts
+      Serving size 1 bar (50g)
+      Calories 200
+      Total Fat 7g
+      Sodium 200mg
+      Total Carbohydrate 25g
+      Protein 10g
+    `);
+    expect(r.labelNutrients?.saltG).toBe(1); // 0.5 g salt per 50 g serving
   });
 
   it("falls back to per-serving values (with a warning) when serving size is unreadable", () => {

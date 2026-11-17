@@ -246,6 +246,12 @@ the same features in their own algorithms.
       `portionMode` servings|weight, `cookedWeightG`, `cookedOn` (pot left = weight − grams logged
       since), `notes`, ingredients keep `amount`/`portionId`; paste a list (`parseIngredientList`).
       More units (kg, l, lb, tsp, tbsp, cup). Removed the "food packs" text (they never existed).
+      Nutrients (2026-11-17, mockups boards 11–14 on the same canvas): core `domain/nutrients.ts` (fibre,
+      sugar, sat fat, salt + 16 vitamins/minerals, UK/EU daily amounts, `dayNutrients` with coverage and
+      sources). Optional `nutrients` on FoodRef / LoggedItem / RecipeIngredient / templates / recents.
+      food.db v4: label columns + `micros_json` (USDA, CIQUAL; packaged products keep only the label four,
+      since the OFF export's vitamins are estimates). Food sheet, diary card line, `/nutrition/nutrients`,
+      label-order food editor, label scan reads saturates/sugars/fibre/salt. Web dashboard doesn't show them.
 
 - [x] Sessions overhaul (2026-11-13). A session
       keeps `name` and `source` (split/program day + `plan` snapshot as shown on the plan screen; phone

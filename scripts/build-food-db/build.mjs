@@ -141,8 +141,9 @@ async function main() {
 
   const insert = db.prepare(
     `INSERT INTO foods
-       (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, popularity, curated, serving_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g,
+        fibre_100g, sugar_100g, satfat_100g, salt_100g, micros_json, popularity, curated, serving_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   db.exec("BEGIN");
   let n = 0;
@@ -157,6 +158,11 @@ async function main() {
       r.protein_100g,
       r.carb_100g,
       r.fat_100g,
+      r.fibre_100g ?? null,
+      r.sugar_100g ?? null,
+      r.satfat_100g ?? null,
+      r.salt_100g ?? null,
+      r.micros_json ?? null,
       Math.round(r.popularity ?? 0),
       r.curated ? 1 : 0,
       JSON.stringify(r.servings),

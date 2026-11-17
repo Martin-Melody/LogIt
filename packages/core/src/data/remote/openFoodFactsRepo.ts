@@ -1,6 +1,6 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import type { FoodDbRepo, FoodSearchOptions } from "../foodDbRepo";
-import type { FoodRef } from "../../domain/nutrition";
+import { nutrientDef, type FoodRef, type NutrientId, type Nutrients } from "../../domain/nutrition";
 import { apiBaseUrl } from "../../api/client";
 
 // An online-only FoodDbRepo backed by the Open Food Facts API. Used where there's no
@@ -37,11 +37,45 @@ function macro(v: unknown): number {
   return Number.isFinite(x) && x >= 0 ? Math.min(x, 100) : 0;
 }
 
+/** Open Food Facts nutriment keys. Every *_100g value there is in grams, whatever the unit
+ * on the pack. */
+const OFF_NUTRIENTS: [NutrientId, string][] = [
+  ["fibreG", "fiber"], ["sugarG", "sugars"], ["satFatG", "saturated-fat"], ["saltG", "salt"],
+  ["vitAUg", "vitamin-a"], ["thiaminMg", "vitamin-b1"], ["riboflavinMg", "vitamin-b2"],
+  ["niacinMg", "vitamin-pp"], ["vitB6Mg", "vitamin-b6"], ["folateUg", "vitamin-b9"],
+  ["vitB12Ug", "vitamin-b12"], ["vitCMg", "vitamin-c"], ["vitDUg", "vitamin-d"],
+  ["vitEMg", "vitamin-e"], ["vitKUg", "vitamin-k"], ["calciumMg", "calcium"], ["ironMg", "iron"],
+  ["magnesiumMg", "magnesium"], ["potassiumMg", "potassium"], ["zincMg", "zinc"],
+];
+const FROM_GRAMS = { g: 1, mg: 1000, "µg": 1_000_000 } as const;
+
+/** What a product's nutriments say per 100 g, in our units. Values that can't be right
+ * (more than 100 g, or 20 days' worth of a vitamin in 100 g: a unit typed wrong) are left out. */
+export function offNutrients(n: Record<string, number | string> = {}): Nutrients | undefined {
+  const out: Nutrients = {};
+  let any = false;
+  for (const [id, key] of OFF_NUTRIENTS) {
+    let grams = Number(n[`${key}_100g`]);
+    if (id === "saltG" && !(Number.isFinite(grams) && n[`${key}_100g`] !== "")) {
+      const sodium = Number(n["sodium_100g"]);
+      grams = Number.isFinite(sodium) && n["sodium_100g"] !== "" ? sodium * 2.5 : Number.NaN;
+    }
+    if (!Number.isFinite(grams) || grams < 0 || grams > 100) continue;
+    const def = nutrientDef(id);
+    const v = grams * FROM_GRAMS[def.unit];
+    if (def.group !== "label" && def.daily && v > def.daily * 20) continue;
+    out[id] = Math.round(v * 1000) / 1000;
+    any = true;
+  }
+  return any ? out : undefined;
+}
+
 function toFoodRef(p: OffProduct): FoodRef | null {
   const barcode = String(p.code ?? "").trim();
   const name = String(p.product_name_en || p.product_name || "").trim();
   const energy = kcal(p.nutriments);
   if (!barcode || !name || !Number.isFinite(energy)) return null;
+  const nutrients = offNutrients(p.nutriments);
 
   const servings = [{ id: "g", label: "100 g", grams: 100 }];
   const sq = Number(p.serving_quantity);
@@ -61,6 +95,7 @@ function toFoodRef(p: OffProduct): FoodRef | null {
       carbsG: macro(p.nutriments?.["carbohydrates_100g"]),
       fatG: macro(p.nutriments?.["fat_100g"]),
     },
+    ...(nutrients ? { nutrients } : {}),
     servings,
   };
 }

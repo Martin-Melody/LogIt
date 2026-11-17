@@ -19,6 +19,7 @@ import {
   clampKcal,
   clampMacro,
   parseLooseNumber,
+  nutrientFields,
   r2,
 } from "./normalize.mjs";
 import { config } from "../config.mjs";
@@ -78,9 +79,33 @@ export async function loadCiqualTable(path) {
     protein: findColumn(folded, [["proteines", "jones"], ["proteine"], ["protein"]]),
     carb: findColumn(folded, [["glucides"], ["glucide"], ["carbohydrate"]]),
     fat: findColumn(folded, [["lipides"], ["lipide"], ["fat"], ["lipid"]]),
-    fibre: findColumn(folded, [["fibres"], ["fibre"], ["fiber"]]),
+    fibre: findColumn(folded, [["fibres", "g100g"], ["fibre", "g100g"], ["fiber", "g100g"]]),
     alcohol: findColumn(folded, [["alcool"], ["alcohol"]]),
   };
+
+  // Our nutrient id -> its column. English headers first, French ones for a French export.
+  const nutrientCol = {
+    sugarG: findColumn(folded, [["sugars"], ["sucres"]]),
+    satFatG: findColumn(folded, [["fa", "saturated"], ["ag", "satures"]]),
+    saltG: findColumn(folded, [["salt"], ["sel", "chlorure"]]),
+    thiaminMg: findColumn(folded, [["vitaminb1or"], ["vitamineb1"]]),
+    riboflavinMg: findColumn(folded, [["vitaminb2"], ["vitamineb2"]]),
+    niacinMg: findColumn(folded, [["vitaminb3"], ["vitamineb3"]]),
+    vitB6Mg: findColumn(folded, [["vitaminb6"], ["vitamineb6"]]),
+    folateUg: findColumn(folded, [["vitaminb9"], ["vitamineb9"]]),
+    vitB12Ug: findColumn(folded, [["vitaminb12"], ["vitamineb12"]]),
+    vitCMg: findColumn(folded, [["vitaminc"], ["vitaminec"]]),
+    vitDUg: findColumn(folded, [["vitamind"], ["vitamined"]]),
+    vitEMg: findColumn(folded, [["vitamine", "mg"]]),
+    vitKUg: findColumn(folded, [["vitamink1"]]),
+    calciumMg: findColumn(folded, [["calcium"]]),
+    ironMg: findColumn(folded, [["iron"], ["fer", "mg"]]),
+    magnesiumMg: findColumn(folded, [["magnesium"]]),
+    potassiumMg: findColumn(folded, [["potassium"]]),
+    zincMg: findColumn(folded, [["zinc"]]),
+  };
+  const retinolCol = findColumn(folded, [["retinol"]]);
+  const caroteneCol = findColumn(folded, [["betacarotene"], ["betacarotene"]]);
 
   const nameCol = col.nameEn >= 0 ? col.nameEn : col.nameFr;
   if (nameCol < 0 || col.kcal < 0) {
@@ -119,6 +144,17 @@ export async function loadCiqualTable(path) {
       popularity: config.genericPopularity,
       servings: buildServings(),
     };
+    // "< 0,5" (below what the lab can measure) counts as 0 here, not as 0.5.
+    const nutrientNum = (c) => (c >= 0 && /^\s*</.test(String(r[c] ?? "")) ? 0 : num(c));
+    const nutrients = { fibreG: nutrientNum(col.fibre) };
+    for (const [id, c] of Object.entries(nutrientCol)) nutrients[id] = nutrientNum(c);
+    // Vitamin A as retinol activity: retinol + beta-carotene / 12.
+    const retinol = nutrientNum(retinolCol);
+    const carotene = nutrientNum(caroteneCol);
+    if (Number.isFinite(retinol) || Number.isFinite(carotene)) {
+      nutrients.vitAUg = (Number.isFinite(retinol) ? retinol : 0) + (Number.isFinite(carotene) ? carotene / 12 : 0);
+    }
+    Object.assign(row, nutrientFields(nutrients, { carb: row.carb_100g, fat: row.fat_100g }));
     const kept = acceptRow(row);
     if (kept) out.push(kept);
   }

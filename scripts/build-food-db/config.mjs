@@ -26,7 +26,8 @@ export const config = {
   // Written to meta.build_version. Bump when a shipped DB change must reach devices that
   // already unpacked an older copy — must match FOOD_DB_VERSION in the app's sqlite.ts.
   // v2 = `curated` column + common-foods.json staples. v3 = `vocab` table (typo correction).
-  dbVersion: 3,
+  // v4 = fibre/sugar/satfat/salt columns + micros_json (vitamins and minerals).
+  dbVersion: 4,
 
   usda: {
     // USDA FoodData Central CSV bundles. Public domain. Update these URLs when USDA

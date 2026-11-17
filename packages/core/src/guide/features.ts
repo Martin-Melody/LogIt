@@ -139,7 +139,7 @@ export const FEATURES: Feature[] = [
     summary: "Log food, set calorie and macro targets, save recipes and meals.",
     web: ["/nutrition", "/nutrition/goal", "/nutrition/insights"],
     phone: [
-      "/nutrition", "/nutrition/log", "/nutrition/lookup", "/nutrition/goal", "/nutrition/plan", "/nutrition/insights",
+      "/nutrition", "/nutrition/log", "/nutrition/lookup", "/nutrition/nutrients", "/nutrition/goal", "/nutrition/plan", "/nutrition/insights",
       "/nutrition/foods", "/nutrition/food/[id]", "/nutrition/foods/recipe/[id]", "/nutrition/entry/[date]/[item]",
     ],
     whereWeb: "Body › Nutrition",

@@ -1,13 +1,19 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
   import { fly } from "svelte/transition";
-  import { AlertTriangle, Check, Plus, ScanBarcode, ScanText, X } from "lucide-svelte";
+  import { AlertTriangle, Check, ChevronDown, Plus, ScanBarcode, ScanText, X } from "lucide-svelte";
   import {
+    MICRO_NUTRIENT_IDS,
+    cleanNutrients,
     createCustomFood,
     gramServing,
+    hasMicros,
     kcalFromMacros,
+    nutrientDef,
     updateCustomFood,
     type CustomFood,
+    type NutrientId,
+    type Nutrients,
     type ServingOption,
   } from "@logit/core/domain/nutrition";
   import { getNutritionRepo } from "$lib/data/repoProvider";
@@ -51,6 +57,9 @@
   function r1(n: number): string {
     return String(Math.round(n * 10) / 10);
   }
+  function r2(n: number): string {
+    return String(Math.round(n * 100) / 100);
+  }
 
   // Opened fresh per food: starting values are read once.
   const f = untrack(() => existing?.food);
@@ -65,7 +74,16 @@
     protein: f ? r1(f.per100g.proteinG) : "",
     carbs: f ? r1(f.per100g.carbsG) : "",
     fat: f ? r1(f.per100g.fatG) : "",
+    satFat: f?.nutrients?.satFatG !== undefined ? r2(f.nutrients.satFatG) : "",
+    sugar: f?.nutrients?.sugarG !== undefined ? r2(f.nutrients.sugarG) : "",
+    fibre: f?.nutrients?.fibreG !== undefined ? r2(f.nutrients.fibreG) : "",
+    salt: f?.nutrients?.saltG !== undefined ? r2(f.nutrients.saltG) : "",
   });
+  // Vitamins and minerals as typed, by nutrient id; folded away unless the food has some.
+  const micros = $state<Record<string, string>>(
+    Object.fromEntries(MICRO_NUTRIENT_IDS.map((id) => [id, f?.nutrients?.[id] !== undefined ? r2(f.nutrients[id]!) : ""])),
+  );
+  let showMicros = $state(untrack(() => hasMicros(f?.nutrients)));
   let servings = $state<{ id: string; label: string; grams: string }[]>(
     (f?.servings ?? [])
       .filter((s) => s.id !== "g" && s.grams > 0)
@@ -108,6 +126,13 @@
       form.carbs = r1(m.carbsG);
       form.fat = r1(m.fatG);
     }
+    const n = r.labelNutrients;
+    if (n) {
+      if (n.satFatG !== undefined) form.satFat = r2(n.satFatG);
+      if (n.sugarG !== undefined) form.sugar = r2(n.sugarG);
+      if (n.fibreG !== undefined) form.fibre = r2(n.fibreG);
+      if (n.saltG !== undefined) form.salt = r2(n.saltG);
+    }
     warnings = r.warnings;
   }
 
@@ -134,8 +159,25 @@
       carbsG: num(form.carbs) || 0,
       fatG: num(form.fat) || 0,
     };
+    // Everything typed beyond the macros, empty boxes left out.
+    const typed: Record<string, number> = {};
+    for (const [id, text] of [
+      ["satFatG", form.satFat],
+      ["sugarG", form.sugar],
+      ["fibreG", form.fibre],
+      ["saltG", form.salt],
+      ...MICRO_NUTRIENT_IDS.map((mid) => [mid, micros[mid]]),
+    ] as [NutrientId, string][]) {
+      if (String(text).trim() !== "" && Number.isFinite(num(text))) typed[id] = num(text);
+    }
+    let nutrients: Nutrients | undefined = cleanNutrients(typed);
     if (form.basis === "serving") {
       const k = 100 / servingN;
+      if (nutrients) {
+        nutrients = cleanNutrients(
+          Object.fromEntries(Object.entries(nutrients).map(([id, v]) => [id, Math.round(v * k * 1000) / 1000])),
+        );
+      }
       per100g = {
         kcal: Math.round(per100g.kcal * k * 10) / 10,
         proteinG: Math.round(per100g.proteinG * k * 10) / 10,
@@ -161,6 +203,7 @@
         name: form.name,
         brand: form.brand.trim() || null,
         per100g,
+        nutrients: nutrients ?? null,
         servings: all,
       });
       saved = { ...saved, food: { ...saved.food, barcode: form.barcode.trim() || undefined } };
@@ -170,6 +213,7 @@
         brand: form.brand.trim() || undefined,
         barcode: form.barcode.trim() || undefined,
         per100g,
+        nutrients,
         servings: all,
       });
     }
@@ -177,6 +221,18 @@
     pushCustomFood(saved);
     onsave(saved);
   }
+
+  type FieldKey = "kcal" | "fat" | "satFat" | "carbs" | "sugar" | "fibre" | "protein" | "salt";
+  const LABEL_ROWS: { key: FieldKey; label: string; unit: string; sub?: boolean; optional?: boolean; color?: string }[] = [
+    { key: "kcal", label: "Energy", unit: "kcal" },
+    { key: "fat", label: "Fat", unit: "g", color: "text-macro-fat" },
+    { key: "satFat", label: "of which saturates", unit: "g", sub: true, optional: true },
+    { key: "carbs", label: "Carbohydrate", unit: "g", color: "text-macro-carbs" },
+    { key: "sugar", label: "of which sugars", unit: "g", sub: true, optional: true },
+    { key: "fibre", label: "Fibre", unit: "g", optional: true },
+    { key: "protein", label: "Protein", unit: "g", color: "text-macro-protein" },
+    { key: "salt", label: "Salt", unit: "g", optional: true },
+  ];
 
   const inputCls =
     "h-12 w-full rounded-xl bg-muted px-3 text-[15px] outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/70";
@@ -269,18 +325,26 @@
             <span class="text-muted-foreground">g</span>
           </label>
         {/if}
-        <div class="grid grid-cols-4 gap-2">
-          {#each [["kcal", "kcal", ""], ["protein", "Protein", "text-macro-protein"], ["carbs", "Carbs", "text-macro-carbs"], ["fat", "Fat", "text-macro-fat"]] as [key, label, color] (key)}
-            <label class="flex min-w-0 flex-col gap-1">
-              <span class="text-center text-xs font-medium {color || 'text-muted-foreground'}">{label}</span>
+        <!-- Same order as a UK / EU label, so you can copy straight down it. -->
+        <div class="overflow-hidden rounded-xl bg-card" data-testid="label-fields">
+          {#each LABEL_ROWS as row, i (row.key)}
+            <label class="flex min-h-12 items-center gap-2.5 px-3.5 {i > 0 ? 'border-t border-border' : ''}">
+              <span class="flex-1 {row.sub ? 'pl-3.5 text-[13px] text-muted-foreground' : 'text-[15px]'} {row.color ?? ''}">
+                {row.label}{#if row.optional}<span class="sr-only"> (optional)</span>{/if}
+              </span>
               <input
-                class="{inputCls} text-center font-semibold tabular-nums {key === 'kcal' && (kcalMissing || !macrosAgree) ? 'ring-2 ' + (kcalMissing ? 'ring-destructive' : 'ring-warning') : ''}"
+                class="h-9 w-24 rounded-lg bg-muted px-2.5 text-right font-medium tabular-nums outline-none focus:ring-2 focus:ring-ring
+                  {row.key === 'kcal' && (kcalMissing || !macrosAgree) ? 'ring-2 ' + (kcalMissing ? 'ring-destructive' : 'ring-warning') : ''}"
                 inputmode="decimal"
-                bind:value={form[key as "kcal" | "protein" | "carbs" | "fat"]}
+                bind:value={form[row.key]}
+                aria-label={row.label}
+                data-testid="field-{row.key}"
               />
+              <span class="w-8 text-xs text-muted-foreground">{row.unit}</span>
             </label>
           {/each}
         </div>
+        <p class="text-xs text-muted-foreground">Only energy, fat, carbohydrate and protein are needed. Leave the others empty if the label doesn't have them.</p>
         {#if hasMacros && kcalN > 0}
           {#if macrosAgree}
             <p class="flex items-center gap-1.5 text-xs text-success"><Check class="size-3.5" />Macros add up to {Math.round(macroKcal)} kcal</p>
@@ -290,6 +354,35 @@
               Protein, carbs and fat add up to {Math.round(macroKcal)} kcal, not {Math.round(kcalN)}. Worth a second look.
             </p>
           {/if}
+        {/if}
+      </div>
+
+      <div class="overflow-hidden rounded-xl bg-card">
+        <button
+          type="button"
+          class="flex min-h-12 w-full items-center gap-2.5 px-3.5 text-left font-medium"
+          aria-expanded={showMicros}
+          onclick={() => (showMicros = !showMicros)}
+        >
+          <Plus class="size-4 {showMicros ? 'hidden' : ''}" />
+          <ChevronDown class="size-4 {showMicros ? 'rotate-180' : 'hidden'}" />
+          <span class="flex-1">Vitamins or minerals on the label</span>
+          <span class="text-xs font-normal text-muted-foreground">optional</span>
+        </button>
+        {#if showMicros}
+          {#each MICRO_NUTRIENT_IDS as id (id)}
+            {@const def = nutrientDef(id)}
+            <label class="flex min-h-11 items-center gap-2.5 border-t border-border px-3.5">
+              <span class="flex-1 text-sm">{def.name}</span>
+              <input
+                class="h-9 w-24 rounded-lg bg-muted px-2.5 text-right tabular-nums outline-none focus:ring-2 focus:ring-ring"
+                inputmode="decimal"
+                bind:value={micros[id]}
+                aria-label={def.name}
+              />
+              <span class="w-8 text-xs text-muted-foreground">{def.unit}</span>
+            </label>
+          {/each}
         {/if}
       </div>
 

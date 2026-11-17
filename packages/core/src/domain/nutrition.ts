@@ -1,5 +1,8 @@
 import { createId } from "./ids";
 import { nowMs } from "./time";
+import { addNutrients, cleanNutrients, roundNutrients, scaleNutrients, type Nutrients } from "./nutrients";
+
+export * from "./nutrients";
 
 // Nutrition domain. Personal-use first (food/weight logging + goal-driven, trend-adaptive
 // calorie/macro targets), extended into a PT coaching tool later. Pure data + transforms —
@@ -72,6 +75,8 @@ export type FoodRef = {
   barcode?: string;
   /** Macros per 100 g. Liquids are treated as g ≈ ml. */
   per100g: MacroTotals;
+  /** Fibre, sugar, sat fat, salt, vitamins and minerals per 100 g, as far as known. */
+  nutrients?: Nutrients;
   /** Named portions; always offer a raw "100 g" too in the UI. */
   servings: ServingOption[];
 };
@@ -133,6 +138,8 @@ export type LoggedItem = {
   amount?: number;
   portionId?: string;
   computed: MacroTotals;
+  /** Other nutrients for this amount, as far as the food knew them. */
+  nutrients?: Nutrients;
   /** Optional meal photo (small jpeg data URL). Rides in the synced day blob; a coach sees
    * it in the client's diary. */
   photoDataUrl?: string;
@@ -246,7 +253,14 @@ export function loggedItemFromFood(
     servingLabel,
     ...(portion ? { amount: portion.amount, portionId: portion.portionId } : {}),
     computed: roundMacros(scaleMacros(food.per100g, grams)),
+    ...nutrientsFor(food, grams),
   };
+}
+
+/** `{ nutrients }` for this many grams of a food, or nothing when the food has none. */
+export function nutrientsFor(food: Pick<FoodRef, "nutrients">, grams: number): { nutrients?: Nutrients } {
+  const n = roundNutrients(scaleNutrients(food.nutrients, grams));
+  return n && Object.keys(n).length > 0 ? { nutrients: n } : {};
 }
 
 /**
@@ -289,6 +303,7 @@ export type MealTemplateItem = {
   grams: number;
   servingLabel?: string;
   computed: MacroTotals;
+  nutrients?: Nutrients;
 };
 
 export type MealTemplate = {
@@ -309,7 +324,7 @@ export function createMealTemplate(name: string, items: MealTemplateItem[] = [])
 export function mealTemplateFromDay(day: DiaryDay, meal: MealSlot, name: string): MealTemplate {
   const items: MealTemplateItem[] = day.items
     .filter((it) => it.meal === meal)
-    .map(({ name: n, brand, sourceId, sourceKind, grams, servingLabel, computed }) => ({
+    .map(({ name: n, brand, sourceId, sourceKind, grams, servingLabel, computed, nutrients }) => ({
       name: n,
       brand,
       sourceId,
@@ -317,6 +332,7 @@ export function mealTemplateFromDay(day: DiaryDay, meal: MealSlot, name: string)
       grams,
       servingLabel,
       computed,
+      ...(nutrients ? { nutrients } : {}),
     }));
   return createMealTemplate(name, items);
 }
@@ -372,6 +388,7 @@ export type RecentFood = {
   amount?: number;
   portionId?: string;
   computed: MacroTotals;
+  nutrients?: Nutrients;
   sourceId?: string;
   sourceKind?: "food" | "recipe";
   /** ISO date of the most recent time it was logged. */
@@ -418,6 +435,7 @@ export function recentFoodsFromDays(days: DiaryDay[], limit = 40): RecentFood[] 
         amount: it.amount,
         portionId: it.portionId,
         computed: it.computed,
+        ...(it.nutrients ? { nutrients: it.nutrients } : {}),
         sourceId: it.sourceId,
         sourceKind: it.sourceKind,
         lastLoggedIso: day.dateIso,
@@ -443,6 +461,7 @@ export function loggedItemFromRecent(r: RecentFood, meal: MealSlot): Omit<Logged
     servingLabel: r.servingLabel,
     ...(r.amount != null && r.portionId ? { amount: r.amount, portionId: r.portionId } : {}),
     computed: r.computed,
+    ...(r.nutrients ? { nutrients: r.nutrients } : {}),
   };
 }
 
@@ -460,9 +479,11 @@ export function createCustomFood(input: {
   brand?: string;
   barcode?: string;
   per100g: MacroTotals;
+  nutrients?: Nutrients;
   servings?: ServingOption[];
 }): CustomFood {
   const now = nowMs();
+  const nutrients = cleanNutrients(input.nutrients);
   return {
     food: {
       id: createId("food"),
@@ -471,6 +492,7 @@ export function createCustomFood(input: {
       brand: input.brand?.trim() || undefined,
       barcode: input.barcode?.trim() || undefined,
       per100g: input.per100g,
+      ...(nutrients ? { nutrients } : {}),
       servings: input.servings ?? [gramServing()],
     },
     createdAtMs: now,
@@ -490,14 +512,18 @@ export function updateCustomFood(
     brand?: string | null;
     barcode?: string | null;
     per100g?: MacroTotals;
+    /** Replaces the whole set; null clears it. */
+    nutrients?: Nutrients | null;
     servings?: ServingOption[];
   },
 ): CustomFood {
-  const f = existing.food;
+  const { nutrients: oldNutrients, ...f } = existing.food;
+  const nutrients = patch.nutrients === undefined ? oldNutrients : cleanNutrients(patch.nutrients);
   return {
     ...existing,
     food: {
       ...f,
+      ...(nutrients ? { nutrients } : {}),
       name: patch.name?.trim() || f.name,
       brand: patch.brand === undefined ? f.brand : patch.brand?.trim() || undefined,
       barcode: patch.barcode === undefined ? f.barcode : patch.barcode?.trim() || undefined,
@@ -526,6 +552,7 @@ export type RecipeIngredient = {
   amount?: number;
   portionId?: string;
   computed: MacroTotals;
+  nutrients?: Nutrients;
 };
 
 export type RecipePortionMode = "servings" | "weight";
@@ -567,6 +594,11 @@ export function createRecipe(name: string, servings = 1): Recipe {
 
 export function recipeTotals(recipe: Pick<Recipe, "ingredients">): MacroTotals {
   return recipe.ingredients.reduce((acc, ing) => addMacros(acc, ing.computed), { ...ZERO_MACROS });
+}
+
+/** Other nutrients of the whole recipe, from the ingredients that know them. */
+export function recipeNutrientTotals(recipe: Pick<Recipe, "ingredients">): Nutrients | undefined {
+  return recipe.ingredients.reduce<Nutrients | undefined>((acc, ing) => addNutrients(acc, ing.nutrients), undefined);
 }
 
 /** Recompute perServing from ingredients + servings; call after any structural edit. */
@@ -617,13 +649,16 @@ export function recipeAsFood(recipe: Recipe): FoodRef {
       });
     }
     servings.push({ id: "whole", label: `whole pot (${Math.round(w)} g)`, grams: w });
-    return { id: recipe.id, source: "custom", name: recipe.name, per100g: per100, servings };
+    const nutrients = roundNutrients(scaleNutrients(recipeNutrientTotals(recipe), (100 * 100) / w));
+    return { id: recipe.id, source: "custom", name: recipe.name, per100g: per100, servings, ...(nutrients ? { nutrients } : {}) };
   }
+  const perServing = roundNutrients(scaleNutrients(recipeNutrientTotals(recipe), 100 / Math.max(1, recipe.servings)));
   return {
     id: recipe.id,
     source: "custom",
     name: recipe.name,
     per100g: recipe.perServing, // 100 "grams" == 1 serving
+    ...(perServing ? { nutrients: perServing } : {}),
     servings: [
       { id: "serving", label: "1 serving", grams: 100 },
       { id: "whole", label: `whole recipe (${recipe.servings})`, grams: 100 * recipe.servings },
