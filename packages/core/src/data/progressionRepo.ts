@@ -1,5 +1,6 @@
 import type { ExerciseProgressionSettings, ExerciseProgressionState, UserProgressionConfig } from "../domain/progression";
 import type { UserAnalyticsConfig } from "../domain/analytics";
+import type { ProgressionRecipe } from "../domain/progressionRecipe";
 import type { UserMobilityProgressionConfig } from "../domain/mobilityProgression";
 import type { UserMuscleGroupInsightConfig } from "../domain/muscleGroupInsight";
 
@@ -43,4 +44,8 @@ export interface ProgressionRepo {
   /** Every row, deleted ones too (for sync). */
   listExerciseSettings?(): Promise<ExerciseProgressionSettings[]>;
   saveExerciseSettings?(settings: ExerciseProgressionSettings): Promise<void>;
+
+  /** Algorithms built from blocks, deleted ones too (for sync). Optional, like the above. */
+  listRecipes?(): Promise<ProgressionRecipe[]>;
+  saveRecipe?(recipe: ProgressionRecipe): Promise<void>;
 }

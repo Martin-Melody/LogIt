@@ -27,6 +27,17 @@ public class ExerciseSettingsSyncTests
     }
 
     [Fact]
+    public async Task Built_algorithms_round_trip()
+    {
+        using var factory = new ApiFactory();
+        var (http, _, _) = await factory.SignUpAsync("builder", UserTier.Pro);
+        var body = new { recipes = new[] { new { id = "rcpp_1", createdAtMs = 1, updatedAtMs = 2, dataJson = "{\"name\":\"My 5/3/1\"}" } } };
+        Assert.Equal(HttpStatusCode.NoContent, (await http.PostAsJsonAsync("/sync/progression-recipes", body)).StatusCode);
+        var pulled = await http.GetFromJsonAsync<JsonElement>("/sync/progression-recipes?since=0", ApiFactory.Json);
+        Assert.Contains("My 5/3/1", Assert.Single(pulled.GetProperty("recipes").EnumerateArray()).GetProperty("dataJson").GetString());
+    }
+
+    [Fact]
     public async Task Free_accounts_cannot_sync_them()
     {
         using var factory = new ApiFactory();

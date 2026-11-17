@@ -899,6 +899,17 @@
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
+                  {#if algo.id.startsWith("recipe:")}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Edit" aria-label="Edit {algo.name}"
+                      onclick={() => goto(`/settings/progression/build/${algo.id.slice("recipe:".length)}`)}
+                    >
+                      <Settings2 class="h-4 w-4" />
+                    </Button>
+                  {/if}
                   {#if algo.hasPreferences}
                     <Button
                       size="sm"
@@ -933,6 +944,9 @@
             Disable suggestions
           </Button>
         {/if}
+        <Button variant="outline" class="self-start" onclick={() => goto("/settings/progression/build/new")}>
+          Build an algorithm
+        </Button>
         <div class="flex flex-col gap-1.5" data-testid="exercise-overrides">
           <p class="text-sm font-medium">Exercises set differently</p>
           {#if exerciseOverrides.length === 0}

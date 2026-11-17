@@ -427,6 +427,18 @@
   },
   {
     "method": "GET",
+    "route": "/sync/progression-recipes",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/progression-recipes",
+    "plan": "Pro",
+    "orActivelyCoached": false
+  },
+  {
+    "method": "GET",
     "route": "/sync/sessions",
     "plan": "Pro",
     "orActivelyCoached": true

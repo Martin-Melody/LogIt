@@ -35,6 +35,10 @@ public static class SyncEndpoints
         group.MapPost("/exercise-settings", PushExerciseSettings).RequireTier(UserTier.Pro);
         group.MapGet("/exercise-settings", PullExerciseSettings).RequireTier(UserTier.Pro);
 
+        // Progression algorithms built from blocks.
+        group.MapPost("/progression-recipes", PushProgressionRecipes).RequireTier(UserTier.Pro);
+        group.MapGet("/progression-recipes", PullProgressionRecipes).RequireTier(UserTier.Pro);
+
         group.MapPost("/profile", PushProfile).RequireTier(UserTier.Pro);
         group.MapGet("/profile", PullProfile).RequireTier(UserTier.Pro);
 
@@ -678,6 +682,14 @@ public static class SyncEndpoints
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
         => Results.Ok(new { settings = await PullSyncRows(caller.GetUserId(), since, db.SyncedExerciseSettings) });
 
+    private static Task<IResult> PushProgressionRecipes(
+        [FromBody] PushProgressionRecipesRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushSyncRows(caller.GetUserId(), req.Recipes, db.SyncedProgressionRecipes, db);
+
+    private static async Task<IResult> PullProgressionRecipes(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { recipes = await PullSyncRows(caller.GetUserId(), since, db.SyncedProgressionRecipes) });
+
     private static Task<IResult> PushMealTemplates(
         [FromBody] PushMealTemplatesRequest req, ClaimsPrincipal caller, AppDbContext db)
         => PushSyncRows(caller.GetUserId(), req.Templates, db.SyncedMealTemplates, db);
@@ -834,6 +846,7 @@ public record PushRecipesRequest(List<SyncRowDto> Recipes);
 public record PushFavoritesRequest(List<SyncRowDto> Favorites);
 public record PushMealTemplatesRequest(List<SyncRowDto> Templates);
 public record PushExerciseSettingsRequest(List<SyncRowDto> Settings);
+public record PushProgressionRecipesRequest(List<SyncRowDto> Recipes);
 public record PushWeightEntriesRequest(List<SyncRowDto> Entries);
 public record PushHabitsRequest(List<SyncRowDto> Habits);
 public record PushPluginInstallsRequest(List<SyncRowDto> Plugins);

@@ -303,6 +303,14 @@ export function syncApiFor(api: ApiFetcher) {
       return api.fetch(`/sync/exercise-settings?since=${since}`);
     },
 
+    pushProgressionRecipes(recipes: RemoteExerciseSetting[]): Promise<void> {
+      return api.fetch("/sync/progression-recipes", { method: "POST", body: JSON.stringify({ recipes }) });
+    },
+
+    pullProgressionRecipes(since: number): Promise<{ recipes: RemoteExerciseSetting[] }> {
+      return api.fetch(`/sync/progression-recipes?since=${since}`);
+    },
+
     pushWeightEntries(entries: RemoteWeightEntry[]): Promise<void> {
       return api.fetch("/sync/nutrition/weight", {
         method: "POST",

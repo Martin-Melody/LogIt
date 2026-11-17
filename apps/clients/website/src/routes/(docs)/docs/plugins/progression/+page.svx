@@ -3,8 +3,14 @@ title: Progression algorithms
 ---
 
 A progression algorithm decides your next sets for an exercise, given its
-history. The user picks one in **Settings → Progression**; the app calls it
-every time it needs a suggestion.
+history. The user picks one in **Settings → Progression**, or for a single
+exercise from its **How it progresses**; the app calls it every time it needs
+a suggestion.
+
+Many rules don't need code: **Settings → Progression → Build an algorithm**
+puts one together from blocks (where the weight comes from, rep range, effort,
+set layout, stalls, weekly sets, food). Write a plugin for anything beyond
+that.
 
 ## The contract
 
@@ -53,6 +59,11 @@ export const algorithm = {
 | `liveInput` | Optional, no built-in algorithm reads it: `{ rpe?, readiness? }`, a live today-only signal for autoregulation plugins. `rpe` mirrors the 6-10 `SetEntry.rpe` scale; `readiness` is deliberately unscaled — define your own meaning. |
 | `suggestedTrialRepRange` | Optional `[min, max]` warm-start value for a rep-range experiment on this exercise, informed by what's already worked for sibling exercises sharing its primary muscle. Bespoke to the rep-range-experimentation feature (see [reasoning and nudges](#reasoning-and-nudges) below) — you can ignore it unless you're implementing something similar. |
 | `siblingRuledOutRepRanges` | Optional `[min, max][]` — rep ranges a sibling exercise's own experiment already ran to conclusion without switching (ruled out). Only meaningful alongside `suggestedTrialRepRange`. |
+| `repRange` | Optional `[min, max]`: the lifter's own rep range for this exercise (Exercise › How it progresses). Use it over your defaults; a split day's `plannedTargets.reps` still wins on that day. |
+| `strengthEstimate` | Optional `{ kg, fromWeightKg, fromReps, performedAtMs }`: the best estimated 1RM (Epley) from the last few sessions, the same number LogIt Adaptive plans from. |
+| `goal` | Optional lift goal on this exercise: `{ weightKg, reps, deadlineIso, pace, currentKg, neededPerWeekKg, ratePerWeekKg, behindPace }`. `pace` is `"on_pace"`, `"behind"`, `"achieved"` or `"unknown"`; `behindPace` is the lifter's choice, `"show"` or `"push"`. |
+| `muscleWeek` | Optional `{ muscle, done, lo, hi }`: this week's hard sets for the exercise's main muscle (secondary muscles count 0.4) against that muscle's target range. |
+| `food` | Optional `{ avgKcal, maintenanceKcal, daysLogged }`: average calories over the last 7 full days with food logged, against the maintenance estimate. Missing when nothing is logged. |
 
 ## Output
 

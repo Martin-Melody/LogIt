@@ -29,5 +29,6 @@ export function getProgressionDeps(): ProgressionDeps {
     muscleGroupInsightAlgorithmRegistry: getMuscleGroupInsightAlgorithmRegistry(),
     loadBodyweight: loadBodyweightLookup,
     loadGoals: async () => activeGoals(get(goalsStore)),
+    loadFood: () => import("$lib/features/nutrition/recentEating").then((m) => m.loadRecentEating()),
   };
 }

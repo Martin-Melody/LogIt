@@ -247,8 +247,16 @@ the same features in their own algorithms.
       medium/high-confidence muscle-group insight; planned weekly sets from a split: weekdays once a week,
       rotation with rest days 7/length, without rest days the weekly workout target; scoring with fixes).
       `/progress/weekly-sets` (Sets this week + the active split scored), linked from Progress, the split
-      page and the exercise's How it progresses. Targets aren't editable yet. Next: block builder (step 4),
-      food adjustment (step 5). Sleep waits for wearables.
+      page and the exercise's How it progresses. Targets aren't editable yet.
+      Steps 4–5: algorithms built from blocks (`domain/progressionRecipe.ts`, engine
+      `progression/algorithms/recipe.ts`, id `recipe:<id>`, joined to the registry by `withRecipes`):
+      weight from the strength estimate (via Adaptive, layouts straight / top + back-offs / same reps
+      dropping), last session (via Linear, deload or hold) or a 5/3/1 wave on a 90% training max; sets fixed
+      or ±1 from the muscle's weekly target; hold the weight in a calorie deficit (avg of the last 7 full
+      logged days < maintenance − 250). Builder at `/settings/progression/build/[id]` with a live preview on
+      real history (getSuggestion's `algorithmOverride`); synced at `/sync/progression-recipes`. Every
+      algorithm (plugins too) now also gets `strengthEstimate`, `muscleWeek` and `food`. Sharing recipes
+      isn't built. Sleep waits for wearables.
 
 - [x] Nutrition redesign (2026-11-16, branch
       `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US

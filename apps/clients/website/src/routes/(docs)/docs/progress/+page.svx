@@ -27,7 +27,12 @@ in Settings › Progression:
   hits the top of the range.
 - **Disable suggestions** turns planning off; you add sets yourself.
 
-You can also install a progression plugin.
+You can also build your own without code: **Build an algorithm** puts one together from blocks. Pick where
+the weight comes from (your strength estimate, last session's sets, or a 5/3/1-style weekly wave), the rep
+range, how hard, the set layout (same weight, a top set with back-offs, or the same reps getting lighter),
+what happens when it stalls, the number of sets (or let the weekly target per muscle add or take one), and
+whether to hold the weight on weeks you eat under maintenance. A live preview shows what it would plan for
+your next session. Or install a progression plugin.
 
 Any exercise can be set differently: open it and use **How it progresses** to give it its own rep
 range, its own algorithm (or no suggestions), and, if it has a lift goal, choose what happens when you

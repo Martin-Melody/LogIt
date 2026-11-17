@@ -29,6 +29,7 @@ import {
   getProgressionRepo,
 } from "$lib/data/repoProvider";
 import type { ExerciseProgressionSettings } from "@logit/core/domain/progression";
+import { normalizeRecipe, type ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
@@ -79,6 +80,7 @@ const RECIPES_LAST_PULLED_KEY = "logit:sync:recipesLastPulledAt";
 const FAVORITES_LAST_PULLED_KEY = "logit:sync:favoritesLastPulledAt";
 const MEAL_TEMPLATES_LAST_PULLED_KEY = "logit:sync:mealTemplatesLastPulledAt";
 const EXERCISE_SETTINGS_LAST_PULLED_KEY = "logit:sync:exerciseSettingsLastPulledAt";
+const PROGRESSION_RECIPES_LAST_PULLED_KEY = "logit:sync:progressionRecipesLastPulledAt";
 const WEIGHT_ENTRIES_LAST_PULLED_KEY = "logit:sync:weightEntriesLastPulledAt";
 const HABITS_LAST_PULLED_KEY = "logit:sync:habitsLastPulledAt";
 const HABIT_ENTRIES_LAST_PULLED_KEY = "logit:sync:habitEntriesLastPulledAt";
@@ -348,6 +350,53 @@ export async function pullAndMergeExerciseSettings(): Promise<boolean> {
     return true;
   } catch (e) {
     syncWarn("pullAndMergeExerciseSettings", e);
+    return false;
+  }
+}
+
+// ── Algorithms built from blocks ─────────────────────────────────────────────
+
+function recipeDto(r: ProgressionRecipe) {
+  return { id: r.id, createdAtMs: r.createdAtMs, updatedAtMs: r.updatedAtMs, dataJson: r.deletedAtMs ? null : JSON.stringify(r), deletedAtMs: r.deletedAtMs ?? null };
+}
+
+export function pushProgressionRecipe(r: ProgressionRecipe): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = recipeDto(r);
+  syncApi.pushProgressionRecipes([dto]).catch(() => enqueue({ type: "progressionRecipe", dto }));
+}
+
+export async function pushAllProgressionRecipes(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const rows = (await getProgressionRepo().listRecipes?.()) ?? [];
+    if (rows.length) await syncApi.pushProgressionRecipes(rows.map(recipeDto));
+  } catch (e) { syncWarn("pushAllProgressionRecipes", e); }
+}
+
+export async function pullAndMergeProgressionRecipes(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
+  const repo = getProgressionRepo();
+  if (!repo.saveRecipe || !repo.listRecipes) return true;
+  try {
+    const since = getTimestamp(PROGRESSION_RECIPES_LAST_PULLED_KEY);
+    const startedAt = Date.now();
+    const { recipes } = await syncApi.pullProgressionRecipes(since);
+    const local = new Map((await repo.listRecipes()).map((r) => [r.id, r]));
+    for (const r of recipes) {
+      const mine = local.get(r.id);
+      if (mine && mine.updatedAtMs >= r.updatedAtMs) continue;
+      try {
+        const row = r.deletedAtMs || !r.dataJson
+          ? normalizeRecipe({ ...(mine ?? {}), id: r.id, createdAtMs: r.createdAtMs, updatedAtMs: r.updatedAtMs, deletedAtMs: r.deletedAtMs ?? r.updatedAtMs })
+          : normalizeRecipe(JSON.parse(r.dataJson) as ProgressionRecipe);
+        await repo.saveRecipe(row);
+      } catch (e) { syncWarn("pullAndMergeProgressionRecipes", e); }
+    }
+    setTimestamp(PROGRESSION_RECIPES_LAST_PULLED_KEY, startedAt);
+    return true;
+  } catch (e) {
+    syncWarn("pullAndMergeProgressionRecipes", e);
     return false;
   }
 }
@@ -1169,6 +1218,7 @@ export async function pushAllLocalData(): Promise<void> {
     pushAllSplits(),
     pushAllExercises(),
     pushAllExerciseSettings(),
+    pushAllProgressionRecipes(),
     pushAllAuthoredPrograms(),
     pushAllCheckinSubmissions(),
     pushAllAuthoredCheckinSchedules(),
@@ -1200,6 +1250,7 @@ async function syncOnce(): Promise<boolean> {
     ["splits", pullAndMergeSplits()],
     ["exercises", pullAndMergeExercises()],
     ["exercise settings", pullAndMergeExerciseSettings()],
+    ["progression recipes", pullAndMergeProgressionRecipes()],
     ["coach programs", pullAndMergeCoachPrograms()],
     ["coaches", refreshCoaches()],
     ["coach library", pullCoachLibrary()],
