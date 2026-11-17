@@ -246,8 +246,18 @@ export class Device {
     const { auth, accounts } = this.app;
     await auth.authStore.loginOfflineAccount(profileId, password);
     const account = await accounts.getLocalAccount(profileId);
-    this.routes.push(account ? accounts.postSwitchDestination(account) : "/");
+    this.routes.push(account ? accounts.postSwitchDestination(account, auth.authStore.isAuthenticated) : "/");
     await this.settle();
+  }
+
+  /**
+   * Account menu › Add account, then sign in: the account in use stays signed in and the new
+   * one gets its own space (authStore.beginAddingAccount, then the sign-in screen).
+   */
+  async addAccount(user: { username: string; password: string; email?: string }, server: ServerName = "cloud", mode: "signIn" | "register" = "signIn"): Promise<void> {
+    await this.app.auth.authStore.beginAddingAccount();
+    if (mode === "register") await this.register({ username: user.username, email: user.email ?? `${user.username}@journey.test`, password: user.password }, server);
+    else await this.signIn(user, server);
   }
 
   /** Profiles screen › Add profile (src/routes/accounts addProfile()). */
