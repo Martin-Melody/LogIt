@@ -25,6 +25,8 @@ describe("this week of a weekday plan", () => {
     expect(p.slots[2]!.movedFromWeekday).toBe(2);
     expect(p.moves).toEqual([{ dayId: loA!.id, dayName: "Lower A", fromWeekday: 2, toWeekday: 3 }]);
     expect(weekPlanLine(p, 3)).toBe("Tuesday's workout moved to today. Three to go, five days left.");
+    // After "Make it 3 this week": two more for this week's three.
+    expect(weekPlanLine(p, 3, 3)).toBe("Tuesday's workout moved to today. Two to go, five days left.");
   });
 
   it("two missed days push the last workouts into the weekend, and what can't fit is said kindly", () => {
