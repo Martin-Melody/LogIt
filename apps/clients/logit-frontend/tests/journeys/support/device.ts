@@ -65,6 +65,8 @@ export class Device {
   readonly requests: string[] = [];
   /** No signal: every request fails the way fetch() does offline. */
   networkDown = false;
+  /** Requests matching this ("METHOD server /path") get a 503, like a server falling over halfway. */
+  failRequests: RegExp | null = null;
   private inFlight = 0;
   private lastActivity = Date.now();
   private _app: App | null = null;
@@ -150,7 +152,9 @@ export class Device {
       }
       if (device.networkDown) throw new TypeError("Failed to fetch");
       const server = url.startsWith(CLOUD) ? "cloud" : "self-host";
-      device.requests.push(`${(init?.method ?? "GET").toUpperCase()} ${server} ${new URL(url).pathname}`);
+      const request = `${(init?.method ?? "GET").toUpperCase()} ${server} ${new URL(url).pathname}`;
+      device.requests.push(request);
+      if (device.failRequests?.test(request)) return new Response("server fell over", { status: 503 });
       device.inFlight++;
       device.lastActivity = Date.now();
       try {
@@ -271,6 +275,22 @@ export class Device {
   }
 
   /** Profiles screen › Add profile (src/routes/accounts addProfile()). */
+  /**
+   * Settings › Move to another server (design canvas 9): `to` is where to ("nowhere" is an
+   * address with no Logit server behind it). Returns what the screen shows afterwards.
+   */
+  async moveServer(
+    to: ServerName | "nowhere",
+    user: { username: string; password: string; email?: string },
+    account: "new" | "existing" = "new",
+  ) {
+    const { moveToServer } = await import("$lib/accounts/moveServer");
+    const url = to === "cloud" ? null : to === "self-host" ? SELF_HOST : "http://127.0.0.1:5299";
+    const result = await moveToServer({ url, account, username: user.username, password: user.password, email: user.email });
+    await this.settle();
+    return result;
+  }
+
   async addProfile(): Promise<void> {
     const result = await this.app.auth.authStore.createOfflineAccount("", "");
     this.routes.push(result === "created" ? "/onboarding" : "/");

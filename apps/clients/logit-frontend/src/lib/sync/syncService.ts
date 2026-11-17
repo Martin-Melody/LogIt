@@ -1262,6 +1262,11 @@ export function everythingBackedUp(): boolean {
   return planIncludesSync() && outboxSize() === 0 && fullUploadState() === null;
 }
 
+/** True when no full upload is waiting: the last one asked for has landed. */
+export function fullUploadFinished(): boolean {
+  return fullUploadState() === null;
+}
+
 /** Asks the next sync to send everything on this profile, not just what changed. */
 export function markFullUploadDue(): void {
   setFullUpload("signedIn");
