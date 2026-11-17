@@ -86,11 +86,12 @@ export async function serverData(
       if (e.message.includes(": 403 ")) return null;
       throw e;
     });
-  const [splits, sessions, profile, me] = await Promise.all([
+  const [splits, sessions, profile, me, settings] = await Promise.all([
     synced<{ splits: Row[] }>("/sync/splits?since=0"),
     synced<{ sessions: Row[] }>("/sync/sessions?since=0"),
     synced<{ profile: Record<string, unknown> | null }>("/sync/profile"),
     call<{ onboardingCompleted?: boolean; tier?: string; displayName?: string }>(server, "/users/me", { token }),
+    synced<{ settings: Row[] }>("/sync/exercise-settings?since=0"),
   ]);
   const names = (rows: Row[]) =>
     rows.filter((r) => !r.deletedAtMs).map((r) => (JSON.parse(r.dataJson ?? "{}") as { name?: string }).name ?? "").sort();
@@ -99,6 +100,13 @@ export async function serverData(
     workoutNames: sessions ? names(sessions.sessions) : null,
     profile: profile?.profile ?? null,
     me,
+    /** Rep range per exercise name, from Exercise › How it progresses (or onboarding's plan). */
+    repRanges: settings
+      ? Object.fromEntries(settings.settings.filter((r) => !r.deletedAtMs).map((r) => {
+          const row = JSON.parse(r.dataJson ?? "{}") as { exerciseName?: string; repRange?: [number, number] };
+          return [row.exerciseName ?? "", row.repRange ?? null];
+        }))
+      : null,
   };
 }
 
