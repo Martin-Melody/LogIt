@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable } from "svelte/store";
 import type { PluginFamily } from "./types";
 
@@ -48,7 +50,7 @@ function defaults(): PluginSettings {
 function load(): PluginSettings {
   if (!browser) return defaults();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getAccountItem(STORAGE_KEY);
     if (!raw) return defaults();
     const parsed = JSON.parse(raw) as Partial<PluginSettings>;
     return {
@@ -67,7 +69,7 @@ let current: PluginSettings = load();
 
 function persist(next: PluginSettings): void {
   current = next;
-  if (browser) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  if (browser) setAccountItem(STORAGE_KEY, JSON.stringify(next));
 }
 
 function createPluginSettingsStore() {
@@ -83,6 +85,10 @@ function createPluginSettingsStore() {
 
   return {
     subscribe: store.subscribe,
+    reloadForAccount(): void {
+      current = load();
+      store.set(current);
+    },
     /** A newer switch from another device or the dashboard; doesn't push back. */
     applyRemote(remote: { enabled: boolean; acknowledgedRisk: boolean; updatedAtMs: number }): void {
       if (remote.updatedAtMs <= current.updatedAtMs) return;
@@ -105,6 +111,8 @@ function createPluginSettingsStore() {
 }
 
 export const pluginSettings = createPluginSettingsStore();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => pluginSettings.reloadForAccount());
 
 /** Synchronous gate for the runtime. Never executes a community bundle when false. */
 export function isCommunityPluginsEnabled(): boolean {

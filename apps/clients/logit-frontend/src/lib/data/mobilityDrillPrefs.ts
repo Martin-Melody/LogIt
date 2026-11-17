@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { mobilityDrillSlug } from "@logit/core/domain/mobilityDrill";
 import type { MobilitySide } from "@logit/core/domain/workout";
@@ -21,7 +22,7 @@ export function mobilityDrillKey(drillId: string | undefined, name: string): str
 function readWebMap(): Record<string, MobilitySide> {
   if (!browser) return {};
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
+    return JSON.parse(getAccountItem(STORAGE_KEY) ?? "{}");
   } catch {
     return {};
   }
@@ -69,5 +70,5 @@ export async function setMobilityDrillLeadSide(
   const map = readWebMap();
   if (leadSide) map[drillKey] = leadSide;
   else delete map[drillKey];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  setAccountItem(STORAGE_KEY, JSON.stringify(map));
 }

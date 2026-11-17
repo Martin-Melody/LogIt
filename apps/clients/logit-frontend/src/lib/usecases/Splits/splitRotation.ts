@@ -1,4 +1,5 @@
 import type { WorkoutSplit, SplitDay } from "@logit/core/domain/WorkoutSplit";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import { planSplit, splitTimeline, type SplitPlan, type SplitProgress, type TimelineEntry } from "@logit/core/domain/splitSchedule";
 import { localDateIso } from "@logit/core/domain/nutrition";
 
@@ -17,13 +18,13 @@ const RESET_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 export function getScheduleMode(): ScheduleMode {
   if (typeof localStorage === "undefined") return "bump";
   try {
-    return localStorage.getItem(SCHEDULE_MODE_KEY) === "original" ? "original" : "bump";
+    return getAccountItem(SCHEDULE_MODE_KEY) === "original" ? "original" : "bump";
   } catch { return "bump"; }
 }
 
 export function setScheduleMode(mode: ScheduleMode): void {
   if (typeof localStorage === "undefined") return;
-  try { localStorage.setItem(SCHEDULE_MODE_KEY, mode); } catch {}
+  try { setAccountItem(SCHEDULE_MODE_KEY, mode); } catch {}
 }
 
 function storageKey(splitId: string) {

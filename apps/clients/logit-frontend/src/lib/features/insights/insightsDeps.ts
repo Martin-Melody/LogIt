@@ -1,4 +1,5 @@
 import { get } from "svelte/store";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import type { InsightDeps } from "@logit/core/usecases/insights/getInsightAnswers";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import type { WeightUnit } from "@logit/core/domain/units";
@@ -35,7 +36,7 @@ const RANGE_KEY = "logit:insights-range:v1";
 
 export function savedRange(): InsightRange {
   try {
-    const v = localStorage.getItem(RANGE_KEY);
+    const v = getAccountItem(RANGE_KEY);
     return isInsightRange(v) ? v : DEFAULT_INSIGHT_RANGE;
   } catch {
     return DEFAULT_INSIGHT_RANGE;
@@ -43,5 +44,5 @@ export function savedRange(): InsightRange {
 }
 
 export function rememberRange(r: InsightRange): void {
-  try { localStorage.setItem(RANGE_KEY, r); } catch {}
+  try { setAccountItem(RANGE_KEY, r); } catch {}
 }

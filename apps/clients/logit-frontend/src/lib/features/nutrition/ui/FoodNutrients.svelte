@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import { ChevronDown, Info } from "lucide-svelte";
   import {
     LABEL_NUTRIENT_IDS,
@@ -26,7 +27,7 @@
   const OPEN_KEY = "logit:nutrition:microsOpen:v1";
   function readOpen(): boolean {
     try {
-      return localStorage.getItem(OPEN_KEY) === "1";
+      return getAccountItem(OPEN_KEY) === "1";
     } catch {
       return false;
     }
@@ -35,7 +36,7 @@
   function toggle() {
     open = !open;
     try {
-      localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+      setAccountItem(OPEN_KEY, open ? "1" : "0");
     } catch {
       /* private mode */
     }

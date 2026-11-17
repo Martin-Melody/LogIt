@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable } from "svelte/store";
 import type { WorkoutPlaylist } from "./workoutPlaylists";
 
@@ -50,7 +52,7 @@ export function parseMusicSettings(raw: string | null): MusicSettings {
 function load(): MusicSettings {
   if (!browser) return { ...DEFAULT_MUSIC_SETTINGS };
   try {
-    return parseMusicSettings(localStorage.getItem(STORAGE_KEY));
+    return parseMusicSettings(getAccountItem(STORAGE_KEY));
   } catch {
     return { ...DEFAULT_MUSIC_SETTINGS };
   }
@@ -61,13 +63,14 @@ function createMusicSettings() {
   store.subscribe((v) => {
     if (!browser) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(v));
+      setAccountItem(STORAGE_KEY, JSON.stringify(v));
     } catch {
       // Storage full or blocked: the settings still hold for this run.
     }
   });
   return {
     subscribe: store.subscribe,
+    reloadForAccount: () => store.set(load()),
     patch(p: Partial<MusicSettings>) {
       store.update((s) => ({ ...s, ...p }));
     },
@@ -87,3 +90,5 @@ function createMusicSettings() {
 }
 
 export const musicSettings = createMusicSettings();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => musicSettings.reloadForAccount());

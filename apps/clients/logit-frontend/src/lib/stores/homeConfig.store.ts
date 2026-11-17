@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable, type Writable } from "svelte/store";
 import type { HomeConfig, WidgetSlot } from "$lib/features/widgets/widget";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
@@ -48,7 +50,7 @@ function mergeWithRegistry(slots: WidgetSlot[]): HomeConfig {
 function load(): HomeConfig {
   if (!browser) return { slots: [] };
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getAccountItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
     return mergeWithRegistry((JSON.parse(raw) as HomeConfig).slots);
   } catch {
@@ -93,7 +95,7 @@ async function reconcileInstalledWidgets(store: Writable<HomeConfig>): Promise<v
 
 function save(config: HomeConfig) {
   if (typeof localStorage === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  setAccountItem(STORAGE_KEY, JSON.stringify(config));
 }
 
 // Same pattern as navConfig.store.ts: push the whole profile (this config rides along on
@@ -158,8 +160,8 @@ function createHomeConfigStore() {
   /** One-shot: enable the nutrition widgets the first time the user has a goal. */
   function seedNutritionWidgets(hasGoal: boolean): void {
     if (!browser || !hasGoal) return;
-    if (localStorage.getItem(NUTRITION_SEED_KEY)) return;
-    localStorage.setItem(NUTRITION_SEED_KEY, "1");
+    if (getAccountItem(NUTRITION_SEED_KEY)) return;
+    setAccountItem(NUTRITION_SEED_KEY, "1");
     update((c) => ({
       ...c,
       slots: c.slots.map((s) =>
@@ -171,8 +173,8 @@ function createHomeConfigStore() {
   /** One-shot: enable the Habits widget the first time the user has a habit. */
   function seedHabitsWidget(hasHabit: boolean): void {
     if (!browser || !hasHabit) return;
-    if (localStorage.getItem(HABITS_SEED_KEY)) return;
-    localStorage.setItem(HABITS_SEED_KEY, "1");
+    if (getAccountItem(HABITS_SEED_KEY)) return;
+    setAccountItem(HABITS_SEED_KEY, "1");
     update((c) => ({
       ...c,
       slots: c.slots.map((s) => (s.id === "habits" ? { ...s, enabled: true } : s)),
@@ -219,6 +221,7 @@ function createHomeConfigStore() {
 
   return {
     subscribe: store.subscribe,
+    reloadForAccount: () => store.set(load()),
     toggleWidget,
     moveUp,
     moveDown,
@@ -231,6 +234,8 @@ function createHomeConfigStore() {
 }
 
 export const homeConfig = createHomeConfigStore();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => homeConfig.reloadForAccount());
 
 export function getHomeConfigJson(): string {
   return JSON.stringify(_current);
