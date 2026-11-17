@@ -77,6 +77,31 @@ export function withWeeklyTarget(
   };
 }
 
+/**
+ * A target for this week only ("Make it 3 this week" after a missed day, design canvas O8):
+ * from next week the target goes back to what it was. `weeklyTarget` doesn't change.
+ */
+export function withTargetThisWeekOnly(
+  current: { weeklyTarget: number; targetHistory?: TargetChange[] },
+  n: number,
+  todayIso: string,
+): { weeklyTarget: number; targetHistory: TargetChange[] } {
+  const thisWeek = weekStartIso(todayIso);
+  const nextWeek = addDays(thisWeek, 7);
+  const usual = current.weeklyTarget;
+  const history = current.targetHistory?.length
+    ? current.targetHistory
+    : [{ fromIso: "0000-01-01", target: usual }];
+  return {
+    weeklyTarget: usual,
+    targetHistory: [
+      ...history.filter((c) => c.fromIso !== thisWeek && c.fromIso !== nextWeek),
+      { fromIso: thisWeek, target: clampWeeklyTarget(n) },
+      { fromIso: nextWeek, target: usual },
+    ],
+  };
+}
+
 function isPaused(iso: string, pauses: StreakPause[], todayIso: string): boolean {
   return pauses.some((p) => iso >= p.startIso && iso <= (p.endIso ?? todayIso));
 }

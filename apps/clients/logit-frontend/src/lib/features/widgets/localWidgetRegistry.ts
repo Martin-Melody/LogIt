@@ -3,6 +3,7 @@ import type { WidgetRegistry } from "./widgetRegistry";
 
 import WidgetCard from "./render/WidgetCard.svelte";
 import GoalsWidget from "$lib/features/goals/GoalsWidget.svelte";
+import ThisWeekWidget from "$lib/features/onboarding/ThisWeekWidget.svelte";
 import { quickStartWidget } from "@logit/core/plugins/builtinWidgets/quickStart";
 import { todaysPlanWidget } from "@logit/core/plugins/builtinWidgets/todaysPlan";
 import { muscleFocusWidget } from "@logit/core/plugins/builtinWidgets/muscleFocus";
@@ -15,6 +16,15 @@ import { habitsWidget } from "@logit/core/plugins/builtinWidgets/habits";
 import { mobilityWidget } from "@logit/core/plugins/builtinWidgets/mobility";
 
 const BUNDLED: WidgetDefinition[] = [
+  {
+    // Shows only for a split on a weekday schedule; "Your first week" during week one.
+    id: "this-week",
+    label: "This week",
+    description: "Your training days this week; a missed one moves forward instead of being lost.",
+    component: ThisWeekWidget,
+    defaultEnabled: true,
+    defaultOrder: -1,
+  },
   {
     id: "quick-start",
     guideMark: "quick-start",
