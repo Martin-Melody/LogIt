@@ -138,7 +138,8 @@
 
   function resolveRedirect(): string {
     const { completed } = get(onboarding);
-    return completed ? redirectTo : "/onboarding";
+    // Onboarding's own screens (the coach ones) ask to come back after signing in.
+    return completed || redirectTo.startsWith("/onboarding/") ? redirectTo : "/onboarding";
   }
 
   function switchMode(m: Mode) {
