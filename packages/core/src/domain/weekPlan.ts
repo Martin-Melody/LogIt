@@ -139,18 +139,20 @@ const NUMBER_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven
  * The line under the week: "Tuesday's workout moved to today. Three to go, three days left."
  * Never "missed", never red.
  */
-export function weekPlanLine(plan: WeekPlan, todayWeekday: number): string {
+export function weekPlanLine(plan: WeekPlan, todayWeekday: number, target?: number): string {
+  // "To go" counts toward this week's target when it's lower than the plan ("Make it 3").
+  const toGo = target === undefined ? plan.remaining : Math.min(plan.remaining, Math.max(0, target - plan.done));
   const parts: string[] = [];
   const toToday = plan.moves.find((m) => m.toWeekday === todayWeekday);
   if (toToday) parts.push(`${WEEKDAY_NAMES[toToday.fromWeekday]}'s workout moved to today.`);
   else if (plan.moves.length) parts.push(`${WEEKDAY_NAMES[plan.moves[0]!.fromWeekday]}'s workout moved to ${WEEKDAY_NAMES[plan.moves[0]!.toWeekday]}.`);
   if (plan.leftOver.length) {
     parts.push(`${plan.leftOver.map((d) => d.dayName).join(" and ")} won't fit this week. Next week starts fresh.`);
-  } else if (plan.remaining === 0) {
+  } else if (toGo === 0) {
     parts.push("All done this week.");
   } else {
     const left = plan.daysLeft === 1 ? "today left" : `${NUMBER_WORDS[plan.daysLeft]?.toLowerCase() ?? plan.daysLeft} days left`;
-    parts.push(`${NUMBER_WORDS[plan.remaining] ?? plan.remaining} to go, ${left}.`);
+    parts.push(`${NUMBER_WORDS[toGo] ?? toGo} to go, ${left}.`);
   }
   return parts.join(" ");
 }

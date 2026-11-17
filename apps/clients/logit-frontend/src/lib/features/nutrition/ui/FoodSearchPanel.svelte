@@ -251,9 +251,16 @@
 
   /** A favourite is a copy of the food from when it was starred; use the food as it is now
    * (it may have gained nutrients since), falling back to the copy. */
+  /**
+   * The food as it is now (a later fix to a custom food), else the copy the list holds. A
+   * custom food never looks in the bundled database, and nothing waits on it for more than a
+   * moment: tapping a favourite used to sit there while that database opened.
+   */
   async function latest(food: FoodRef): Promise<FoodRef> {
     const { resolveFoodRef } = await import("../resolveFood");
-    return (await resolveFoodRef(food.id).catch(() => null)) ?? food;
+    const lookup = resolveFoodRef(food.id, { referenceDb: food.source !== "custom" }).catch(() => null);
+    const waited = await Promise.race([lookup, new Promise<null>((r) => setTimeout(() => r(null), 600))]);
+    return waited ?? food;
   }
 
   function pickFound(f: FoundFood) {

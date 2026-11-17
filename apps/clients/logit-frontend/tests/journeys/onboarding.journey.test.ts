@@ -126,6 +126,22 @@ describe("first launch, with an account", () => {
   });
 });
 
+describe("the phone's own space becoming an account", () => {
+  it("takes the account's username, so the account switcher doesn't show '@local'", async () => {
+    const phone = await new Device().launch();
+    await phone.finishOnboarding({ name: "Sam" });
+    const user = newUser("namer");
+    await phone.register(user);
+    expect((await phone.activeProfile())?.username).toBe(user.username);
+
+    const other = await createAccount("cloud", newUser("signin"));
+    const second = await new Device("second phone").launch();
+    await second.finishOnboarding({ name: "Alex" });
+    await second.signIn(other, "cloud", "add");
+    expect((await second.activeProfile())?.username).toBe(other.username);
+  });
+});
+
 describe("the plan onboarding builds (design canvas O1–O3)", () => {
   const answers = { goal: "both", experience: "under2", days: 4, equipment: "gym", minutes: 45 } as const;
 
