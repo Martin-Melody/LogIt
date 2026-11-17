@@ -46,6 +46,7 @@
   import type { SessionPR } from "@logit/core/usecases/progression/getSessionPRs";
   import { localInbox, prNotifications, progressionNotification } from "$lib/features/inbox/localInbox";
   import { notifyGoalsReached } from "$lib/features/goals/goalProgress";
+  import { afterWorkoutRoute } from "$lib/features/onboarding/afterWorkout";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import BodyweightPromptDialog from "$lib/features/bodyweight/BodyweightPromptDialog.svelte";
   import { shouldAskForBodyweight, dismissBodyweightPrompt } from "$lib/features/bodyweight/bodyweight";
@@ -350,7 +351,9 @@
     currentSession.beginTransition();
 
     try {
-      await goto("/");
+      // The first workout of a plan from onboarding goes on to "When will you train?".
+      const workoutsBefore = sessionSnapshot ? (await getWorkoutRepo().listAllSessions()).length : 0;
+      await goto(sessionSnapshot ? afterWorkoutRoute(sessionSnapshot.id, workoutsBefore) : "/");
       await currentSession.finish();
       onWorkoutFinished();
       void recentSessions.refresh(5);

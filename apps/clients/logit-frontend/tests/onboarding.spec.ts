@@ -211,6 +211,43 @@ test.describe("your plan", () => {
   });
 });
 
+// ── The first workout (O4) and after it (O5, O6) ────────────────────────────
+
+test.describe("first workout", () => {
+  const answers = { goal: "both", experience: "under2", days: 4, equipment: "gym", minutes: 45 };
+
+  test("an exercise never done before says how heavy to go for the first set", async ({ page }) => {
+    await seedAnswers(page, 4, answers);
+    await goToOnboarding(page);
+    await page.getByRole("button", { name: "Start Upper A now" }).click();
+    await page.waitForURL(/\/session\/current/, { timeout: 10_000 });
+
+    await page.keyboard.press("Escape"); // the workout walkthrough
+    // Bench Press is in the 5–8 range: "about 8 times". The first exercise opens by itself.
+    await expect(page.getByText("First time? Pick a weight you could lift about 8 times.").first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("after workout 3, 'Not now' to saving the training goes home", async ({ page }) => {
+    await seedAtStep(page, 0);
+    await page.addInitScript(() => localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 })));
+    await page.goto("/onboarding/first-workout?id=x&save=again");
+
+    await expect(page.getByRole("dialog", { name: /workouts on this phone only/ })).toBeVisible();
+    await page.getByRole("button", { name: "Not now" }).click();
+    await page.waitForURL(atHome);
+    expect(await page.evaluate(() => localStorage.getItem("logit:onboarding:saveAsked"))).toBe("1");
+  });
+
+  test("'Save to a free account' opens sign-up", async ({ page }) => {
+    await seedAtStep(page, 0);
+    await page.addInitScript(() => localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 })));
+    await page.goto("/onboarding/first-workout?id=x&save=again");
+
+    await page.getByRole("button", { name: "Save to a free account" }).click();
+    await page.waitForURL(/\/auth\?mode=register/);
+  });
+});
+
 // ── Returning user via the welcome-screen login link — requires live API ─────
 
 test.describe("returning user - requires API", () => {

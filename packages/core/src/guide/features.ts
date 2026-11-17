@@ -35,7 +35,7 @@ export const FEATURES: Feature[] = [
     summary: "Arrange your home screen and bottom bar, set rest timers, and pick how progression works.",
     phone: [
       "/", "/settings", "/settings/walkthroughs", "/settings/navbar", "/settings/diagnostics", "/settings/music", "/home/customize",
-      "/profile", "/profile/customize", "/onboarding",
+      "/profile", "/profile/customize", "/onboarding", "/onboarding/first-workout",
     ],
     wherePhone: "Settings",
     docs: "/docs/settings",
