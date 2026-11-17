@@ -60,6 +60,8 @@
     setProgressionAlgorithm,
   } from "@logit/core/usecases/progression/getProgressionConfig";
   import type { ProgressionConfigView } from "@logit/core/usecases/progression/getProgressionConfig";
+  import { listExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
+  import { PROGRESSION_OFF, type ExerciseProgressionSettings } from "@logit/core/domain/progression";
   import {
     getMobilityProgressionConfig,
     setMobilityProgressionAlgorithm,
@@ -212,12 +214,26 @@
     error: null as string | null,
   });
   let view = $state<ProgressionConfigView>({ config: null, algorithms: [] });
+  let exerciseOverrides = $state<ExerciseProgressionSettings[]>([]);
+
+  /** "Rep range 3–5 · LogIt Adaptive · pushes when behind" */
+  function overrideSummary(s: ExerciseProgressionSettings): string {
+    const parts: string[] = [];
+    if (s.repRange) parts.push(`${s.repRange[0]}–${s.repRange[1]} reps`);
+    if (s.algorithmId === PROGRESSION_OFF) parts.push("No suggestions");
+    else if (s.algorithmId) parts.push(view.algorithms.find((a) => a.id === s.algorithmId)?.name ?? "Removed algorithm");
+    if (s.behindPace === "push") parts.push("pushes when behind on its goal");
+    return parts.join(" · ");
+  }
 
   async function loadProgression() {
     progUi.loading = true;
     progUi.error = null;
     try {
       view = await getProgressionConfig(getProgressionDeps());
+      exerciseOverrides = (await listExerciseProgressionSettings(getProgressionDeps())).sort((a, b) =>
+        a.exerciseName.localeCompare(b.exerciseName),
+      );
     } catch (e) {
       progUi.error = e instanceof Error ? e.message : "Failed to load settings";
     } finally {
@@ -917,6 +933,28 @@
             Disable suggestions
           </Button>
         {/if}
+        <div class="flex flex-col gap-1.5" data-testid="exercise-overrides">
+          <p class="text-sm font-medium">Exercises set differently</p>
+          {#if exerciseOverrides.length === 0}
+            <p class="text-xs text-muted-foreground">
+              None yet. Open an exercise and use How it progresses to give it its own rep range or algorithm.
+            </p>
+          {:else}
+            <ul class="flex flex-col divide-y divide-border rounded-md border border-border">
+              {#each exerciseOverrides as o (o.key)}
+                <li>
+                  <a
+                    href={o.exerciseId ? `/exercises/${o.exerciseId}` : undefined}
+                    class="flex min-h-12 flex-col justify-center px-3 py-2 text-inherit no-underline"
+                  >
+                    <span class="text-sm font-medium">{o.exerciseName}</span>
+                    <span class="text-xs text-muted-foreground">{overrideSummary(o)}</span>
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {/if}
     </Card.Content>
   </Card.Root>

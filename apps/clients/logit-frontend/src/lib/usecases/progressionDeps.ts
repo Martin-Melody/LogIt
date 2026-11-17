@@ -10,6 +10,8 @@ import {
   getMuscleGroupInsightAlgorithmRegistry,
 } from "$lib/data/repoProvider";
 import { loadBodyweightLookup } from "$lib/features/bodyweight/bodyweight";
+import { get } from "svelte/store";
+import { activeGoals, goalsStore } from "$lib/features/goals/goalsStore";
 
 /** The mobile app's repo/registry bundle for the @logit/core progression
  * usecases, which take their dependencies as an explicit parameter instead
@@ -26,5 +28,6 @@ export function getProgressionDeps(): ProgressionDeps {
     trainingBlockTagRepo: getTrainingBlockTagRepo(),
     muscleGroupInsightAlgorithmRegistry: getMuscleGroupInsightAlgorithmRegistry(),
     loadBodyweight: loadBodyweightLookup,
+    loadGoals: async () => activeGoals(get(goalsStore)),
   };
 }

@@ -26,7 +26,9 @@ import {
   getHabitRepo,
   getAssignedHabitRepo,
   getLibraryRepo,
+  getProgressionRepo,
 } from "$lib/data/repoProvider";
+import type { ExerciseProgressionSettings } from "@logit/core/domain/progression";
 import { isNativePlatform } from "$lib/platform/isNative";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
@@ -76,6 +78,7 @@ const CUSTOM_FOODS_LAST_PULLED_KEY = "logit:sync:customFoodsLastPulledAt";
 const RECIPES_LAST_PULLED_KEY = "logit:sync:recipesLastPulledAt";
 const FAVORITES_LAST_PULLED_KEY = "logit:sync:favoritesLastPulledAt";
 const MEAL_TEMPLATES_LAST_PULLED_KEY = "logit:sync:mealTemplatesLastPulledAt";
+const EXERCISE_SETTINGS_LAST_PULLED_KEY = "logit:sync:exerciseSettingsLastPulledAt";
 const WEIGHT_ENTRIES_LAST_PULLED_KEY = "logit:sync:weightEntriesLastPulledAt";
 const HABITS_LAST_PULLED_KEY = "logit:sync:habitsLastPulledAt";
 const HABIT_ENTRIES_LAST_PULLED_KEY = "logit:sync:habitEntriesLastPulledAt";
@@ -293,6 +296,58 @@ export async function pullAndMergeExercises(): Promise<boolean> {
     return true;
   } catch (e) {
     syncWarn("pullAndMergeExercises", e);
+    return false;
+  }
+}
+
+// ── How each exercise progresses ─────────────────────────────────────────────
+
+function exerciseSettingDto(s: ExerciseProgressionSettings) {
+  return {
+    id: s.key,
+    createdAtMs: s.createdAtMs,
+    updatedAtMs: s.updatedAtMs,
+    dataJson: s.deletedAtMs ? null : JSON.stringify(s),
+    deletedAtMs: s.deletedAtMs ?? null,
+  };
+}
+
+export function pushExerciseSetting(s: ExerciseProgressionSettings): void {
+  if (!apiClient.isAuthenticated()) return;
+  const dto = exerciseSettingDto(s);
+  syncApi.pushExerciseSettings([dto]).catch(() => enqueue({ type: "exerciseSetting", dto }));
+}
+
+export async function pushAllExerciseSettings(): Promise<void> {
+  if (!apiClient.isAuthenticated()) return;
+  try {
+    const rows = (await getProgressionRepo().listExerciseSettings?.()) ?? [];
+    if (rows.length) await syncApi.pushExerciseSettings(rows.map(exerciseSettingDto));
+  } catch (e) { syncWarn("pushAllExerciseSettings", e); }
+}
+
+export async function pullAndMergeExerciseSettings(): Promise<boolean> {
+  if (!apiClient.isAuthenticated()) return true;
+  const repo = getProgressionRepo();
+  if (!repo.saveExerciseSettings || !repo.getExerciseSettings) return true;
+  try {
+    const since = getTimestamp(EXERCISE_SETTINGS_LAST_PULLED_KEY);
+    const startedAt = Date.now();
+    const { settings } = await syncApi.pullExerciseSettings(since);
+    for (const r of settings) {
+      const local = await repo.getExerciseSettings(r.id);
+      if (local && local.updatedAtMs >= r.updatedAtMs) continue;
+      try {
+        const row: ExerciseProgressionSettings = r.deletedAtMs || !r.dataJson
+          ? { key: r.id, exerciseName: local?.exerciseName ?? r.id, createdAtMs: r.createdAtMs, updatedAtMs: r.updatedAtMs, deletedAtMs: r.deletedAtMs ?? r.updatedAtMs }
+          : (JSON.parse(r.dataJson) as ExerciseProgressionSettings);
+        await repo.saveExerciseSettings(row);
+      } catch (e) { syncWarn("pullAndMergeExerciseSettings", e); }
+    }
+    setTimestamp(EXERCISE_SETTINGS_LAST_PULLED_KEY, startedAt);
+    return true;
+  } catch (e) {
+    syncWarn("pullAndMergeExerciseSettings", e);
     return false;
   }
 }
@@ -1113,6 +1168,7 @@ export async function pushAllLocalData(): Promise<void> {
     pushAllSessions(),
     pushAllSplits(),
     pushAllExercises(),
+    pushAllExerciseSettings(),
     pushAllAuthoredPrograms(),
     pushAllCheckinSubmissions(),
     pushAllAuthoredCheckinSchedules(),
@@ -1143,6 +1199,7 @@ async function syncOnce(): Promise<boolean> {
     ["sessions", pullAndMergeSessions()],
     ["splits", pullAndMergeSplits()],
     ["exercises", pullAndMergeExercises()],
+    ["exercise settings", pullAndMergeExerciseSettings()],
     ["coach programs", pullAndMergeCoachPrograms()],
     ["coaches", refreshCoaches()],
     ["coach library", pullCoachLibrary()],

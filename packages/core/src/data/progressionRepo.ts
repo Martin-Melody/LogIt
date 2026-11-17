@@ -1,4 +1,4 @@
-import type { ExerciseProgressionState, UserProgressionConfig } from "../domain/progression";
+import type { ExerciseProgressionSettings, ExerciseProgressionState, UserProgressionConfig } from "../domain/progression";
 import type { UserAnalyticsConfig } from "../domain/analytics";
 import type { UserMobilityProgressionConfig } from "../domain/mobilityProgression";
 import type { UserMuscleGroupInsightConfig } from "../domain/muscleGroupInsight";
@@ -36,4 +36,11 @@ export interface ProgressionRepo {
 
   getAlgorithmPreferences(algorithmId: string): Promise<unknown>;
   setAlgorithmPreferences(algorithmId: string, prefs: unknown): Promise<void>;
+
+  /** The lifter's settings for one exercise (algorithm, rep range, goal pace), synced.
+   * Optional: read-only and test repos can leave them out, which reads as "none". */
+  getExerciseSettings?(key: string): Promise<ExerciseProgressionSettings | null>;
+  /** Every row, deleted ones too (for sync). */
+  listExerciseSettings?(): Promise<ExerciseProgressionSettings[]>;
+  saveExerciseSettings?(settings: ExerciseProgressionSettings): Promise<void>;
 }

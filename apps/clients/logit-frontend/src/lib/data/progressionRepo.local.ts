@@ -1,6 +1,6 @@
 import { browser } from "$app/environment";
 import type { ProgressionRepo } from "@logit/core/data/progressionRepo";
-import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
+import type { ExerciseProgressionSettings, ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
 import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 import type { UserMobilityProgressionConfig } from "@logit/core/domain/mobilityProgression";
 import type { UserMuscleGroupInsightConfig } from "@logit/core/domain/muscleGroupInsight";
@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   states: "logit:progression:states:v1",
   analyticsConfig: "logit:analytics:config:v1",
   algorithmPrefs: "logit:progression:prefs:v1",
+  exerciseSettings: "logit:progression:exercise-settings:v1",
 } as const;
 
 function ensureBrowser(): void {
@@ -36,6 +37,20 @@ function writeJson<T>(key: string, value: T): void {
 
 export function createLocalProgressionRepo(): ProgressionRepo {
   return {
+    async getExerciseSettings(key: string): Promise<ExerciseProgressionSettings | null> {
+      return readJson<Record<string, ExerciseProgressionSettings>>(STORAGE_KEYS.exerciseSettings, {})[key] ?? null;
+    },
+
+    async listExerciseSettings(): Promise<ExerciseProgressionSettings[]> {
+      return Object.values(readJson<Record<string, ExerciseProgressionSettings>>(STORAGE_KEYS.exerciseSettings, {}));
+    },
+
+    async saveExerciseSettings(settings: ExerciseProgressionSettings): Promise<void> {
+      const all = readJson<Record<string, ExerciseProgressionSettings>>(STORAGE_KEYS.exerciseSettings, {});
+      all[settings.key] = settings;
+      writeJson(STORAGE_KEYS.exerciseSettings, all);
+    },
+
     async getConfig(): Promise<UserProgressionConfig | null> {
       return readJson<UserProgressionConfig | null>(STORAGE_KEYS.config, null);
     },
