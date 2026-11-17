@@ -91,7 +91,7 @@
         {#if firstWeek && !week.moves.length}
           {week.done} of {target} done. {week.done >= target ? "That's your first week on the streak." : `Finish all ${target === 1 ? "of it" : target === 2 ? "both" : target} for your first week on the streak.`}
         {:else}
-          {weekPlanLine(week, dayOfWeek(todayIso))}
+          {weekPlanLine(week, dayOfWeek(todayIso), target)}
         {/if}
       </p>
       {#if week.moves.length && week.remaining > 0}
