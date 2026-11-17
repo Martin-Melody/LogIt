@@ -11,6 +11,7 @@
   import { loadWeeklyStreak } from "$lib/features/goals/streak";
   import { getWorkoutReminders, mondayFirst } from "$lib/features/onboarding/workoutReminders";
   import { getExercises } from "@logit/core/domain/workout";
+  import { playSound } from "$lib/features/sound/sounds";
   import { formatWeight } from "@logit/core/domain/units";
 
   const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -22,6 +23,7 @@
   let weekTwo = $state<string | null>(null);
 
   onMount(async () => {
+    playSound("week");
     const unit = get(profile).weightUnit;
     const sessions = (await getWorkoutRepo().listAllSessions()).sort((a, b) => a.startedAtMs - b.startedAtMs);
     const streak = await loadWeeklyStreak().catch(() => null);

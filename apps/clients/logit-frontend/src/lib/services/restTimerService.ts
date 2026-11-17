@@ -4,6 +4,7 @@ import { goto } from "$app/navigation";
 import { currentSession } from "$lib/stores/currentSession.store";
 import { profile } from "$lib/stores/profile.store";
 import { clearRest, getRunningRests, type RunningRest, type WorkoutSession } from "@logit/core/domain/workout";
+import { playSound } from "$lib/features/sound/sounds";
 
 // ── The rest timer ────────────────────────────────────────────────────────────
 // A set's `restStartedAtMs` is the only record of a running rest. The session blocks set it
@@ -23,7 +24,9 @@ import { clearRest, getRunningRests, type RunningRest, type WorkoutSession } fro
  * background (timers pause there), so the phone notification has already alerted. */
 const LATE_MS = 2_000;
 
-type Scheduled = { endsAtMs: number; timeoutId: ReturnType<typeof setTimeout> };
+type Scheduled = { endsAtMs: number; timeoutId: ReturnType<typeof setTimeout>; warnId?: ReturnType<typeof setTimeout> };
+/** "10 seconds left": one soft Iron tick (rests longer than 20 s only). */
+const WARN_MS = 10_000;
 const scheduled = new Map<string, Scheduled>();
 let started = false;
 
@@ -45,6 +48,7 @@ function reconcile(session: WorkoutSession | null): void {
   for (const [setId, entry] of scheduled) {
     if (live.has(setId)) continue;
     clearTimeout(entry.timeoutId);
+    if (entry.warnId) clearTimeout(entry.warnId);
     scheduled.delete(setId);
     void cancelOsNotification(setId);
   }
@@ -52,7 +56,10 @@ function reconcile(session: WorkoutSession | null): void {
   for (const rest of running) {
     const existing = scheduled.get(rest.setId);
     if (existing?.endsAtMs === rest.endsAtMs) continue;
-    if (existing) clearTimeout(existing.timeoutId);
+    if (existing) {
+      clearTimeout(existing.timeoutId);
+      if (existing.warnId) clearTimeout(existing.warnId);
+    }
 
     if (rest.endsAtMs <= now) {
       // Already over: it ended before a reload, or while the app was closed. The phone
@@ -67,7 +74,13 @@ function reconcile(session: WorkoutSession | null): void {
       const hidden = typeof document !== "undefined" && document.visibilityState === "hidden";
       void finish(rest, { alert: !late && !hidden });
     }, rest.endsAtMs - now);
-    scheduled.set(rest.setId, { endsAtMs: rest.endsAtMs, timeoutId });
+    const warnAt = rest.endsAtMs - WARN_MS;
+    const warnId = rest.endsAtMs - rest.startedAtMs > 2 * WARN_MS && warnAt > now
+      ? setTimeout(() => {
+          if (typeof document === "undefined" || document.visibilityState !== "hidden") playSound("warn");
+        }, warnAt - now)
+      : undefined;
+    scheduled.set(rest.setId, { endsAtMs: rest.endsAtMs, timeoutId, warnId });
     void scheduleOsNotification(rest.setId, rest.endsAtMs);
   }
 }
@@ -77,7 +90,7 @@ async function finish(rest: RunningRest, { alert }: { alert: boolean }): Promise
   if (alert) {
     // In the foreground the toast takes over from the phone notification.
     void cancelOsNotification(rest.setId);
-    void buzz();
+    playSound("rest");
     const onSessionPage = typeof location !== "undefined" && location.pathname.startsWith("/session/current");
     toast("Rest complete — time for your next set!", onSessionPage
       ? undefined
@@ -87,12 +100,6 @@ async function finish(rest: RunningRest, { alert }: { alert: boolean }): Promise
   await currentSession.mutate((s) => clearRest(s, rest.setId, rest.startedAtMs)).catch(() => {});
 }
 
-async function buzz(): Promise<void> {
-  try {
-    const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
-    await Haptics.impact({ style: ImpactStyle.Light });
-  } catch {}
-}
 
 // ── Phone notification ────────────────────────────────────────────────────────
 

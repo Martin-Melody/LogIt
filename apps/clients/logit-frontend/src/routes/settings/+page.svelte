@@ -1299,6 +1299,17 @@
         </span>
         <ChevronRight class="h-4 w-4 shrink-0" />
       </button>
+      <button
+        type="button"
+        class="flex min-h-11 items-center justify-between border-t border-border pt-1 -mb-1 text-left text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onclick={() => goto("/settings/sounds")}
+      >
+        <span>
+          <span class="block">Sounds</span>
+          <span class="block text-xs">Rest over, countdowns and PRs, so you can follow a workout without looking.</span>
+        </span>
+        <ChevronRight class="h-4 w-4 shrink-0" />
+      </button>
     </Card.Content>
   </Card.Root>
 
