@@ -1,7 +1,7 @@
 import { createId } from "./ids";
 import { addDays, dayOfWeek } from "./dateIso";
 import { touchSplit, type PlannedBlock, type PlannedGroup, type SplitDay, type WorkoutSplit } from "./WorkoutSplit";
-import { planWeek } from "./weekPlan";
+import { dayIdsDoneOn, planWeek } from "./weekPlan";
 
 /**
  * Which of a weekday split's workouts fall on a date. With `progress.week`, this week's
@@ -85,6 +85,9 @@ export function planSplit(split: WorkoutSplit, progress: SplitProgress, todayIso
 
 function doneTodaySet(split: WorkoutSplit, progress: SplitProgress, todayIso: string): Set<string> {
   const ids = new Set(progress.doneTodayIds ?? []);
+  // A plan from onboarding knows today's workouts from the workouts themselves (one started
+  // straight from onboarding never went through the plan screen that records the rotation).
+  if (progress.week) for (const id of dayIdsDoneOn(progress.week.sessions, todayIso)) ids.add(id);
   if (progress.last?.dateIso === todayIso) ids.add(progress.last.dayId);
   // Only days still in the split.
   return new Set([...ids].filter((id) => split.days.some((d) => d.id === id)));
