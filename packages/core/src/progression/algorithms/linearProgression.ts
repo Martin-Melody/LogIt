@@ -1,4 +1,4 @@
-import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, PrecedingExercise, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField, ProgressionChange } from "../../domain/progression";
+import type { ProgressionAlgorithm, ProgressionInput, ProgressionOutput, SuggestedSet, ExerciseHistoryEntry, AlgorithmPreferencesField, ProgressionChange } from "../../domain/progression";
 import { classifyTrend } from "../../domain/progression";
 import type { MuscleGroup } from "../../domain/exercise";
 import { usesBodyweightLoad } from "../../domain/exercise";
@@ -6,6 +6,7 @@ import type { Reasoning, ReasoningConfidence } from "../../domain/reasoning";
 import { estimated1RM, repsAtLoad } from "../../domain/oneRepMax";
 import { effectiveLoadKg, getLoadMode } from "../../domain/bodyweight";
 import { nowMs } from "../../domain/time";
+import { MAX_FATIGUE_DISCOUNT, calibrateSensitivity, computeFatigueScore } from "../fatigue";
 
 // A single-variable-at-a-time experiment on this exercise's rep range — see
 // docs/architecture/adaptive-progression-engine.md §10. One rung of a bounded,
@@ -141,11 +142,6 @@ const DEFAULT_STATE: LinearState = {
 };
 const DELOAD_THRESHOLD = 2;
 const DELOAD_FACTOR = 0.9;
-// Max weight reduction from fatigue at default sensitivity: 15%.
-const MAX_FATIGUE_DISCOUNT = 0.15;
-const REFERENCE_SETS = 3;
-// Minimum sessions in each group (fresh / fatigued) before calibration kicks in.
-const MIN_CALIBRATION_SAMPLES = 3;
 // Don't ask for help calibrating until there's been enough history to make the
 // ask meaningful — no point nagging on session #2.
 const MIN_SESSIONS_BEFORE_ASKING = 6;
@@ -246,52 +242,6 @@ function seedFromHistory(history: ProgressionInput["history"]): LinearState | nu
   if (workingSets.length === 0) return null;
   const maxWeight = Math.max(...workingSets.map((s) => s.weight));
   return { ...DEFAULT_STATE, workingWeight: maxWeight };
-}
-
-// Computes a fatigue score [0, 1] based on how much the preceding exercises
-// have loaded the muscles the current exercise primarily uses.
-//
-// Primary-on-primary overlap counts fully; secondary-on-primary overlap
-// counts at 40% since those muscles are working assistively, not maximally.
-// Each preceding exercise's contribution is scaled by its effortFactor when
-// available (intensity-weighted set load), otherwise by completed set count
-// relative to a reference block of 3 sets.
-function computeFatigueScore(
-  targetPrimary: MuscleGroup[],
-  preceding: PrecedingExercise[],
-): number {
-  if (targetPrimary.length === 0 || preceding.length === 0) return 0;
-
-  let total = 0;
-
-  for (const prev of preceding) {
-    const primaryHitByPrimary =
-      prev.primaryMuscles.filter((m) => targetPrimary.includes(m)).length /
-      targetPrimary.length;
-
-    const primaryHitBySecondary =
-      prev.secondaryMuscles.filter((m) => targetPrimary.includes(m)).length /
-      targetPrimary.length;
-
-    const overlapScore = primaryHitByPrimary + primaryHitBySecondary * 0.4;
-
-    // effortFactor already normalises for set count and intensity type.
-    // Fall back to raw set count ratio if unavailable (e.g. from a third-party caller).
-    const intensityFactor =
-      prev.effortFactor ?? Math.min(prev.completedSets, REFERENCE_SETS * 2) / REFERENCE_SETS;
-
-    total += overlapScore * intensityFactor;
-  }
-
-  return Math.min(total, 1);
-}
-
-// Returns avg reps across working sets as a fraction of the rep ceiling.
-function performanceScore(entry: ExerciseHistoryEntry, repCeiling: number): number {
-  const working = entry.sets.filter((s) => s.setType === "normal" || !s.setType);
-  if (working.length === 0) return 0;
-  const avgReps = working.reduce((sum, s) => sum + s.reps, 0) / working.length;
-  return avgReps / repCeiling;
 }
 
 // Best estimated 1RM across a session's working sets — the same per-session value
@@ -400,51 +350,6 @@ function nextRungNudge(
   };
 }
 
-type FatigueCalibration = {
-  sensitivity: number;
-  freshSamples: number;
-  fatiguedSamples: number;
-  calibrated: boolean;
-};
-
-// Derives a personal fatigue sensitivity multiplier from history by comparing
-// performance when the exercise was done first vs. later in a session.
-// Returns sensitivity 1.0 (no change to default discount), calibrated: false,
-// until MIN_CALIBRATION_SAMPLES sessions exist in both groups — the sample
-// counts are surfaced so callers can report confidence honestly rather than
-// applying a personalized multiplier with the same authority as a guess.
-//
-// A user who shows no rep degradation when fatigued gets a lower multiplier
-// (smaller discount); one who degrades more than the 10% baseline gets a
-// higher multiplier. Clamped to [0.1, 2.0].
-function calibrateSensitivity(
-  history: ProgressionInput["history"],
-  repCeiling: number,
-): FatigueCalibration {
-  const fresh = history.filter((h) => (h.sessionPosition ?? 0) === 0);
-  const fatigued = history.filter((h) => (h.sessionPosition ?? 0) > 0);
-  const freshSamples = fresh.length;
-  const fatiguedSamples = fatigued.length;
-
-  if (freshSamples < MIN_CALIBRATION_SAMPLES || fatiguedSamples < MIN_CALIBRATION_SAMPLES) {
-    return { sensitivity: 1.0, freshSamples, fatiguedSamples, calibrated: false };
-  }
-
-  const freshAvg = fresh.reduce((s, h) => s + performanceScore(h, repCeiling), 0) / freshSamples;
-  const fatiguedAvg = fatigued.reduce((s, h) => s + performanceScore(h, repCeiling), 0) / fatiguedSamples;
-
-  if (freshAvg <= 0) {
-    return { sensitivity: 1.0, freshSamples, fatiguedSamples, calibrated: true };
-  }
-
-  // How much do reps drop, relative to the fresh baseline?
-  const degradation = Math.max(0, (freshAvg - fatiguedAvg) / freshAvg);
-  // Normalise: 10% degradation maps to a sensitivity of 1.0 (the default).
-  const sensitivity = Math.max(0.1, Math.min(2.0, degradation / 0.1));
-
-  return { sensitivity, freshSamples, fatiguedSamples, calibrated: true };
-}
-
 function suggest(input: ProgressionInput): ProgressionOutput {
   const prefs: LinearPreferences = { ...DEFAULT_PREFERENCES, ...(input.userPreferences as Partial<LinearPreferences> ?? {}) };
 
@@ -459,6 +364,10 @@ function suggest(input: ProgressionInput): ProgressionOutput {
 
   if (input.incrementOverride !== undefined) {
     state = { ...state, increment: input.incrementOverride };
+  }
+  // The lifter's own rep range for this exercise wins over the saved one.
+  if (input.repRange && (input.repRange[0] !== state.repRange[0] || input.repRange[1] !== state.repRange[1])) {
+    state = { ...state, repRange: [input.repRange[0], Math.max(input.repRange[0], input.repRange[1])] };
   }
 
   const isAssisted = input.exercise.exerciseType === "assisted";
@@ -940,7 +849,7 @@ export const linearProgression: ProgressionAlgorithm = {
   id: "linear-progression",
   name: "Linear Progression",
   description:
-    "Add weight each session when you hit the top of your rep range. Deload after two consecutive failures. Adjusts for muscle fatigue within a session, calibrated to your personal fatigue response over time.",
+    "The simple option. Each set aims for one more rep than last time, and the weight goes up 2.5 kg once every set hits the top of your rep range. Two sessions under the range in a row means 10% off.",
   author: "logit",
   defaultState: DEFAULT_STATE,
   defaultPreferences: DEFAULT_PREFERENCES,

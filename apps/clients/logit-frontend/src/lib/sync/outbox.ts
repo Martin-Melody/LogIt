@@ -1,5 +1,5 @@
 import { syncApi } from "@logit/core/api/syncApi";
-import type { RemoteSession, RemoteSplit, RemoteExercise, RemoteProfile } from "@logit/core/api/syncApi";
+import type { RemoteSession, RemoteSplit, RemoteExercise, RemoteExerciseSetting, RemoteProfile } from "@logit/core/api/syncApi";
 import { coachProgramApi, type UpsertCoachProgramInput } from "@logit/core/api/coachProgramApi";
 import { checkinApi, type UpsertCheckinScheduleInput } from "@logit/core/api/checkinApi";
 import { messagesApi, type SendMessageInput } from "@logit/core/api/messagesApi";
@@ -42,6 +42,8 @@ type OutboxEntry =
   | { type: "recipe"; dto: RemoteRecipe }
   | { type: "favoriteFood"; dto: RemoteFavoriteFood }
   | { type: "mealTemplate"; dto: RemoteMealTemplate }
+  | { type: "exerciseSetting"; dto: RemoteExerciseSetting }
+  | { type: "progressionRecipe"; dto: RemoteExerciseSetting }
   | { type: "weightEntry"; dto: RemoteWeightEntry }
   | { type: "nutritionGoal"; dto: RemoteNutritionGoal }
   | { type: "habit"; dto: RemoteHabit }
@@ -171,6 +173,12 @@ export async function flush(): Promise<void> {
   const weightEntries = entries
     .filter((e): e is Extract<OutboxEntry, { type: "weightEntry" }> => e.type === "weightEntry")
     .map((e) => e.dto);
+  const exerciseSettings = entries
+    .filter((e): e is Extract<OutboxEntry, { type: "exerciseSetting" }> => e.type === "exerciseSetting")
+    .map((e) => e.dto);
+  const progressionRecipes = entries
+    .filter((e): e is Extract<OutboxEntry, { type: "progressionRecipe" }> => e.type === "progressionRecipe")
+    .map((e) => e.dto);
   const nutritionGoal = entries
     .filter((e): e is Extract<OutboxEntry, { type: "nutritionGoal" }> => e.type === "nutritionGoal")
     .map((e) => e.dto)
@@ -242,6 +250,14 @@ export async function flush(): Promise<void> {
   if (mealTemplates.length) {
     try { await syncApi.pushMealTemplates(mealTemplates); }
     catch { mealTemplates.forEach((dto) => failed.push({ type: "mealTemplate", dto })); }
+  }
+  if (progressionRecipes.length) {
+    try { await syncApi.pushProgressionRecipes(progressionRecipes); }
+    catch { progressionRecipes.forEach((dto) => failed.push({ type: "progressionRecipe", dto })); }
+  }
+  if (exerciseSettings.length) {
+    try { await syncApi.pushExerciseSettings(exerciseSettings); }
+    catch { exerciseSettings.forEach((dto) => failed.push({ type: "exerciseSetting", dto })); }
   }
   if (weightEntries.length) {
     try { await syncApi.pushWeightEntries(weightEntries); }

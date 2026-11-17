@@ -23,10 +23,12 @@
     Users,
   } from "lucide-svelte";
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { toast } from "svelte-sonner";
   import { back } from "$lib/navigation";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
+  import AddRecipeFromCodeSheet from "$lib/features/progression/AddRecipeFromCodeSheet.svelte";
   import { profile } from "$lib/stores/profile.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import {
@@ -60,6 +62,8 @@
     setProgressionAlgorithm,
   } from "@logit/core/usecases/progression/getProgressionConfig";
   import type { ProgressionConfigView } from "@logit/core/usecases/progression/getProgressionConfig";
+  import { listExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
+  import { PROGRESSION_OFF, type ExerciseProgressionSettings } from "@logit/core/domain/progression";
   import {
     getMobilityProgressionConfig,
     setMobilityProgressionAlgorithm,
@@ -212,12 +216,38 @@
     error: null as string | null,
   });
   let view = $state<ProgressionConfigView>({ config: null, algorithms: [] });
+  let exerciseOverrides = $state<ExerciseProgressionSettings[]>([]);
+  let addingFromCode = $state(false);
+  let codeFromLink = $state("");
+  // Opened from a shared algorithm's link: show it, ready to add.
+  $effect(() => {
+    const code = page.url.searchParams.get("algorithmCode");
+    if (!code) return;
+    codeFromLink = code;
+    addingFromCode = true;
+    const url = new URL(page.url);
+    url.searchParams.delete("algorithmCode");
+    void goto(url.pathname + url.search + url.hash, { replaceState: true, noScroll: true, keepFocus: true });
+  });
+
+  /** "Rep range 3–5 · LogIt Adaptive · pushes when behind" */
+  function overrideSummary(s: ExerciseProgressionSettings): string {
+    const parts: string[] = [];
+    if (s.repRange) parts.push(`${s.repRange[0]}–${s.repRange[1]} reps`);
+    if (s.algorithmId === PROGRESSION_OFF) parts.push("No suggestions");
+    else if (s.algorithmId) parts.push(view.algorithms.find((a) => a.id === s.algorithmId)?.name ?? "Removed algorithm");
+    if (s.behindPace === "push") parts.push("pushes when behind on its goal");
+    return parts.join(" · ");
+  }
 
   async function loadProgression() {
     progUi.loading = true;
     progUi.error = null;
     try {
       view = await getProgressionConfig(getProgressionDeps());
+      exerciseOverrides = (await listExerciseProgressionSettings(getProgressionDeps())).sort((a, b) =>
+        a.exerciseName.localeCompare(b.exerciseName),
+      );
     } catch (e) {
       progUi.error = e instanceof Error ? e.message : "Failed to load settings";
     } finally {
@@ -883,6 +913,17 @@
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
+                  {#if algo.id.startsWith("recipe:")}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      class="h-11 w-11 p-0 text-muted-foreground hover:text-foreground"
+                      title="Edit" aria-label="Edit {algo.name}"
+                      onclick={() => goto(`/settings/progression/build/${algo.id.slice("recipe:".length)}`)}
+                    >
+                      <Settings2 class="h-4 w-4" />
+                    </Button>
+                  {/if}
                   {#if algo.hasPreferences}
                     <Button
                       size="sm"
@@ -917,6 +958,36 @@
             Disable suggestions
           </Button>
         {/if}
+        <div class="flex flex-wrap gap-2">
+          <Button variant="outline" onclick={() => goto("/settings/progression/build/new")}>
+            Build an algorithm
+          </Button>
+          <Button variant="outline" onclick={() => (addingFromCode = true)}>
+            Add from a code
+          </Button>
+        </div>
+        <div class="flex flex-col gap-1.5" data-testid="exercise-overrides">
+          <p class="text-sm font-medium">Exercises set differently</p>
+          {#if exerciseOverrides.length === 0}
+            <p class="text-xs text-muted-foreground">
+              None yet. Open an exercise and use How it progresses to give it its own rep range or algorithm.
+            </p>
+          {:else}
+            <ul class="flex flex-col divide-y divide-border rounded-md border border-border">
+              {#each exerciseOverrides as o (o.key)}
+                <li>
+                  <a
+                    href={o.exerciseId ? `/exercises/${o.exerciseId}` : undefined}
+                    class="flex min-h-12 flex-col justify-center px-3 py-2 text-inherit no-underline"
+                  >
+                    <span class="text-sm font-medium">{o.exerciseName}</span>
+                    <span class="text-xs text-muted-foreground">{overrideSummary(o)}</span>
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {/if}
     </Card.Content>
   </Card.Root>
@@ -1473,3 +1544,14 @@
     </Card.Content>
   </Card.Root>
 </div>
+
+{#if addingFromCode}
+  <AddRecipeFromCodeSheet
+    initialText={codeFromLink}
+    onclose={() => {
+      addingFromCode = false;
+      codeFromLink = "";
+    }}
+    onadded={() => void loadProgression()}
+  />
+{/if}

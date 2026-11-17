@@ -7,6 +7,7 @@ import type {
   ProgressionOutput,
 } from "@logit/core/domain/progression";
 import { createLocalAlgorithmRegistry } from "@logit/core/progression/localAlgorithmRegistry";
+import { withRecipes } from "@logit/core/progression/withRecipes";
 import { createLocalMobilityAlgorithmRegistry } from "@logit/core/progression/localMobilityAlgorithmRegistry";
 import { createLocalMuscleGroupInsightAlgorithmRegistry } from "@logit/core/progression/localMuscleGroupInsightAlgorithmRegistry";
 import { createLocalAnalyticsRegistry } from "@logit/core/progression/localAnalyticsRegistry";
@@ -506,6 +507,15 @@ function analyticsRegistry(): AnalyticsRegistry {
 }
 
 function algorithmRegistry(): AlgorithmRegistry {
+  // The lifter's own block-built algorithms join the built-ins and installed plugins.
+  // Loaded lazily: repoProvider imports this module.
+  return withRecipes(pluginAlgorithmRegistry(), async () => {
+    const { getProgressionRepo } = await import("$lib/data/repoProvider");
+    return (await getProgressionRepo().listRecipes?.()) ?? [];
+  });
+}
+
+function pluginAlgorithmRegistry(): AlgorithmRegistry {
   const builtin = createLocalAlgorithmRegistry();
 
   return {

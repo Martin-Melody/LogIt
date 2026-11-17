@@ -230,6 +230,43 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] LogIt Adaptive, step 1 of the progression redesign (2026-11-17, mockups:
+      https://claude.ai/artifact/AbazCfeu1P9U9v5NAqRqnG, branch `feat/adaptive-progression`). New built-in
+      `logit-adaptive` (default for new accounts): plans every set from a strength estimate (best Epley e1RM
+      of the last ≤4 sessions within 6 weeks, −5% after 3 weeks off), weight = heaviest that fits the rep range
+      at the chosen reps in reserve, reps per set from the lifter's learned set-to-set drop, sets under the range
+      get lighter instead. Big lifts (3+ muscles) 5–8, single-muscle 8–12, split day reps win. Fatigue trim only
+      once calibrated. Bodyweight/assisted handed to Linear Progression. Fatigue maths moved to
+      `progression/fatigue.ts`.
+      Step 2 (same branch): per-exercise settings (`ExerciseProgressionSettings`: algorithm or "off", rep
+      range, behind-pace "show"/"push"), stored in `exercise_progression_settings` (phone) / localStorage
+      (web), synced via `/sync/exercise-settings` (Pro, generic rows, tombstones). getSuggestion resolves the
+      algorithm per exercise (falls back to the general one if the plugin is gone), passes `repRange` and the
+      lift `goal` (pace from `liftGoalPace`), and adds a goal line to every "Why?". Adaptive pushes the first
+      set one step when behind and asked to. Exercise page › How it progresses; Settings lists overrides.
+      Not yet in data export/import.
+      Step 3: `domain/weeklySets.ts` (default targets per muscle, ~10–16 big / 6–12 small, moved by a
+      medium/high-confidence muscle-group insight; planned weekly sets from a split: weekdays once a week,
+      rotation with rest days 7/length, without rest days the weekly workout target; scoring with fixes).
+      `/progress/weekly-sets` (Sets this week + the active split scored), linked from Progress, the split
+      page and the exercise's How it progresses. Targets aren't editable yet.
+      Steps 4–5: algorithms built from blocks (`domain/progressionRecipe.ts`, engine
+      `progression/algorithms/recipe.ts`, id `recipe:<id>`, joined to the registry by `withRecipes`):
+      weight from the strength estimate (via Adaptive, layouts straight / top + back-offs / same reps
+      dropping), last session (via Linear, deload or hold) or a 5/3/1 wave on a 90% training max; sets fixed
+      or ±1 from the muscle's weekly target; hold the weight in a calorie deficit (avg of the last 7 full
+      logged days < maintenance − 250). Builder at `/settings/progression/build/[id]` with a live preview on
+      real history (getSuggestion's `algorithmOverride`); synced at `/sync/progression-recipes`. Every
+      algorithm (plugins too) now also gets `strengthEstimate`, `muscleWeek` and `food`. Sleep waits for wearables.
+      Follow-ups (2026-11-17, mockups boards 7–10 on the same canvas): data export carries exercise settings,
+      recipes and algorithm settings; tap a muscle on Sets this week to set your own range (stored as an
+      exercise-settings row keyed `muscle:<group>`, so it syncs with no server change; wins over learned and
+      default in the weekly view, split score and `muscleWeek`); share a built algorithm from the builder:
+      a post whose algorithm payload carries `recipe` (blocks only; readers see a preview on their own
+      history and "Add to my algorithms" saves a copy), or a `logit-alg1:` code (base64url JSON) added via
+      Settings › Progression › Add from a code. Later: a link that opens the app (needs a server page),
+      and the native share sheet (`@capacitor/share`) instead of Copy on Android.
+
 - [x] Nutrition redesign (2026-11-16, mockups: https://claude.ai/artifact/RQWwFuZhMzGzgBx74TwMNt, branch
       `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US
       synonyms, typo budget, ranking) used everywhere (bundled DB, cache, custom foods, recipes, meals);

@@ -7,6 +7,8 @@ import type { MobilityProgressionAlgorithmRegistry } from "../../domain/mobility
 import type { TrainingBlockTagRepo } from "../../data/trainingBlockTagRepo";
 import type { MuscleGroupInsightAlgorithmRegistry } from "../../domain/muscleGroupInsight";
 import type { BodyweightLookup } from "../../domain/bodyweight";
+import type { Goal } from "../../domain/goals";
+import type { ProgressionInput } from "../../domain/progression";
 
 /** Full set of repos/registries the progression usecases can draw from.
  * Each usecase only requires the subset it needs (via Pick) — callers can
@@ -23,4 +25,8 @@ export type ProgressionDeps = {
   /** The lifter's bodyweight by date, for the volume of bodyweight exercises.
    * Optional: without it those exercises are charted by reps only. */
   loadBodyweight?: () => Promise<BodyweightLookup>;
+  /** The lifter's goals, so a lift goal can steer that exercise's plan. Optional. */
+  loadGoals?: () => Promise<Goal[]>;
+  /** Eating over the last week against maintenance, when food is logged. Optional. */
+  loadFood?: () => Promise<ProgressionInput["food"] | null>;
 };

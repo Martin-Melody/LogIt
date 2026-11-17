@@ -11,12 +11,12 @@
       n: "01",
       label: "Plan",
       title: "Open the app and today is ready.",
-      text: "Set up your split once. LogIt keeps it in order, knows which day is next, and fills in every set's weight and reps from how the last ones went.",
+      text: "Set up your split once. LogIt keeps it in order, knows which day is next, and fills in every set's weight and reps from your current strength, not just last time's numbers.",
       points: [
         "Splits in order or on set weekdays, with rest days and two-a-days",
         "Built-in programs: full body, upper/lower, PPL, 5×5",
-        "Learns the rep ranges and weekly sets that work for you",
-        "Save any past workout as a split day",
+        "Weekly sets per muscle, tuned to what works for you",
+        "Your own progression rule per lift, built from blocks",
       ],
       screen: { name: "home", alt: "Home screen: quick start for Day 4, Lower B, today's plan and recent sessions" },
     },
@@ -55,7 +55,7 @@
   ];
 
   const outside = [
-    { name: "nutrition", title: "Food", alt: "Nutrition diary with calorie and macro bars", text: "Scan a barcode or the label, or search 250,000 foods offline. Recipes, saved meals and a calorie target that follows your weight trend." },
+    { name: "nutrition", title: "Food", alt: "Nutrition diary with calorie and macro bars", text: "Scan a barcode or the label, or search 250,000 foods offline, with fibre, vitamins and minerals. Recipes, saved meals and a calorie target that follows your weight trend." },
     { name: "habits", title: "Habits", alt: "Habits with daily check-offs and streaks", text: "Sleep, steps, stretching, creatine. Daily or weekly, each with its own streak." },
     { name: "feed", title: "Friends", alt: "Feed with a deadlift PR and a workout from friends", text: "Follow the people you train with. Share a PR or a whole split and they can copy it in one tap. Optional, and off until you sign up." },
   ];

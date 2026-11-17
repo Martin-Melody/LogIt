@@ -21,9 +21,17 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { toast } from "svelte-sonner";
   import {
-    copyAlgorithmToMine, copyWidgetToMine, copySplitToMine, copyLibraryItemToMine, copyHabitToMine,
+    copyAlgorithmToMine, copyWidgetToMine, copySplitToMine, copyLibraryItemToMine, copyHabitToMine, addSharedRecipeToMine,
     type AlgorithmFamily, type CopyableSplit, type CopyableLibraryItem, type CopyableHabit,
   } from "$lib/features/social/copyToMine";
+
+  import RecipeBlocks from "$lib/features/progression/RecipeBlocks.svelte";
+  import { normalizeRecipe, toSharedRecipe, type SharedRecipe } from "@logit/core/domain/progressionRecipe";
+  import { previewProgressionRecipe } from "@logit/core/usecases/progression/progressionRecipes";
+  import { getExercises } from "@logit/core/domain/workout";
+  import type { ProgressionOutput } from "@logit/core/domain/progression";
+  import { getWorkoutRepo } from "$lib/data/repoProvider";
+  import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 
   const id = $derived(page.params.id ?? "");
 
@@ -44,6 +52,36 @@
     if (!source?.payloadJson) return null;
     try { return JSON.parse(source.payloadJson); } catch { return null; }
   });
+
+  // A progression algorithm someone built from blocks carries the blocks, so you get a copy.
+  const sharedRecipe = $derived.by((): SharedRecipe | null => {
+    if (source?.type !== "Algorithm" || !payload?.recipe || typeof payload.recipe !== "object") return null;
+    try {
+      return toSharedRecipe(normalizeRecipe({ ...payload.recipe, id: "shared" }));
+    } catch {
+      return null;
+    }
+  });
+
+  // What it would plan for your most recent weighted lift, from your own history.
+  let recipePreview = $state<{ exercise: string; out: ProgressionOutput } | null>(null);
+  $effect(() => {
+    const r = sharedRecipe;
+    if (!r) return;
+    void (async () => {
+      const sessions = await getWorkoutRepo().listRecentSessions({ limit: 10 }).catch(() => []);
+      for (const s of sessions) {
+        const ex = getExercises(s).find((e) => e.sets.some((x) => x.weight > 0));
+        if (!ex) continue;
+        const target = { id: ex.exerciseId, name: ex.exerciseName };
+        const out = await previewProgressionRecipe({ ...r, id: "preview", createdAtMs: 0, updatedAtMs: 0 }, target, getProgressionDeps()).catch(() => null);
+        if (out && out.sets.length > 0) recipePreview = { exercise: ex.exerciseName, out };
+        return;
+      }
+    })();
+  });
+  const setsText = (out: ProgressionOutput) =>
+    out.sets.map((s) => `${Math.round(s.weight * 100) / 100} kg × ${Array.isArray(s.reps) ? `${s.reps[0]}–${s.reps[1]}` : s.reps}${s.setType === "amrap" ? "+" : ""}`).join(" · ");
 
   const copyable = $derived(
     !!source
@@ -95,7 +133,10 @@
     if (copying || !copyable || !payload || !source) return;
     copying = true;
     try {
-      if (source.type === "Algorithm") {
+      if (source.type === "Algorithm" && sharedRecipe) {
+        const row = await addSharedRecipeToMine(sharedRecipe);
+        toast.success(`Added ${row.name}. Pick it in Progression, or on any exercise.`);
+      } else if (source.type === "Algorithm") {
         if (!payload.id) throw new Error("missing id");
         await copyAlgorithmToMine(payload.id, (payload.family ?? "progression") as AlgorithmFamily);
         toast.success("Added to your settings");
@@ -219,8 +260,25 @@
             <span class="capitalize rounded-md border border-border px-1.5 py-0.5 text-[11px]">{payload.family}</span>
           {/if}
         </div>
-        {#if payload.description}<p class="text-sm text-muted-foreground whitespace-pre-wrap">{payload.description}</p>{/if}
-        {#if payload.author}<p class="text-xs text-muted-foreground">by {payload.author}</p>{/if}
+        {#if sharedRecipe}
+          <p class="text-xs text-muted-foreground">Built from blocks by @{source.authorUsername}</p>
+          <div class="rounded-lg border border-border p-3">
+            <RecipeBlocks recipe={sharedRecipe} />
+          </div>
+          {#if recipePreview}
+            <div class="flex flex-col gap-1 rounded-xl bg-primary/10 px-3 py-2.5" data-testid="shared-recipe-preview">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-primary">On your next {recipePreview.exercise}</p>
+              <p class="text-sm font-semibold tabular-nums">{setsText(recipePreview.out)}</p>
+              <p class="text-xs text-muted-foreground">From your own history, before you add it.</p>
+            </div>
+          {/if}
+          {#if copyable}
+            <p class="text-xs text-muted-foreground">It's added as your own copy, so changing it doesn't change theirs. Then pick it in Progression, or on any exercise.</p>
+          {/if}
+        {:else}
+          {#if payload.description}<p class="text-sm text-muted-foreground whitespace-pre-wrap">{payload.description}</p>{/if}
+          {#if payload.author}<p class="text-xs text-muted-foreground">by {payload.author}</p>{/if}
+        {/if}
 
       {:else if source.type === "Habit"}
         <h2 class="text-xl font-bold -mt-1">{payload.name}</h2>
@@ -267,7 +325,7 @@
           onclick={copyToMine}
         >
           {#if copying}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Download class="h-4 w-4" />{/if}
-          Copy to mine
+          {sharedRecipe ? "Add to my algorithms" : "Copy to mine"}
         </button>
       </div>
     {/if}

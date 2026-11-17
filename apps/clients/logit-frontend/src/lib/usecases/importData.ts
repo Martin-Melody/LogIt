@@ -1,3 +1,5 @@
+import { normalizeRecipe } from "@logit/core/domain/progressionRecipe";
+import { pushExerciseSetting, pushProgressionRecipe } from "$lib/sync/syncService";
 import { browser } from "$app/environment";
 import {
   getExerciseRepo,
@@ -114,6 +116,25 @@ export async function importData(
     }
     for (const state of data.progression.states) {
       await progressionRepo.saveExerciseState(state);
+    }
+    // Newest wins per row, the same as sync, then pushed so other devices get them.
+    const localSettings = new Map(((await progressionRepo.listExerciseSettings?.()) ?? []).map((s) => [s.key, s]));
+    for (const s of data.progression.exerciseSettings ?? []) {
+      const mine = localSettings.get(s.key);
+      if (mine && mine.updatedAtMs >= s.updatedAtMs) continue;
+      await progressionRepo.saveExerciseSettings?.(s);
+      pushExerciseSetting(s);
+    }
+    const localRecipes = new Map(((await progressionRepo.listRecipes?.()) ?? []).map((r) => [r.id, r]));
+    for (const raw of data.progression.recipes ?? []) {
+      const r = normalizeRecipe(raw);
+      const mine = localRecipes.get(r.id);
+      if (mine && mine.updatedAtMs >= r.updatedAtMs) continue;
+      await progressionRepo.saveRecipe?.(r);
+      pushProgressionRecipe(r);
+    }
+    for (const [algorithmId, prefs] of Object.entries(data.progression.preferences ?? {})) {
+      await progressionRepo.setAlgorithmPreferences(algorithmId, prefs);
     }
   }
 

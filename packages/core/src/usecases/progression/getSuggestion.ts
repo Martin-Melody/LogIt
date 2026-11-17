@@ -1,4 +1,10 @@
-import type { ProgressionOutput, PrecedingExercise } from "../../domain/progression";
+import type { ProgressionAlgorithm, ProgressionGoalInput, ProgressionInput, ProgressionOutput, PrecedingExercise } from "../../domain/progression";
+import { liftGoalPace, sameExercise, type Goal } from "../../domain/goals";
+import { getExerciseProgressionSettings, getMuscleSetTargets, resolveAlgorithmId } from "./exerciseProgressionSettings";
+import { strengthEstimate } from "../../progression/algorithms/adaptiveProgression";
+import { setTargetFor, SECONDARY_SET_WEIGHT } from "../../domain/weeklySets";
+import { weekBucket } from "../../domain/time";
+import type { MuscleGroup } from "../../domain/exercise";
 import { exerciseKey, resolveExerciseIncrement, resolveExerciseMachine } from "../../domain/progression";
 import { snapToMachine } from "../../domain/machine";
 import { getExercises, isUnloggedPlannedSet } from "../../domain/workout";
@@ -17,18 +23,27 @@ const HISTORY_WINDOW = 20;
 
 export async function getSuggestion(
   exercise: { id?: string; name: string },
-  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight" | "loadGoals" | "loadFood">,
   plannedTargets?: PlannedTargets,
   currentSession?: WorkoutSession,
   liveInput?: { rpe?: number; readiness?: number },
+  /** Run this algorithm instead of the one set for the exercise (the builder's preview). */
+  algorithmOverride?: ProgressionAlgorithm,
 ): Promise<ProgressionOutput | null> {
   const { progressionRepo, workoutRepo, exerciseRepo, algorithmRegistry: registry } = deps;
 
-  const config = await progressionRepo.getConfig();
-  if (!config) return null;
-
-  const algorithm = await registry.get(config.algorithmId);
-  if (!algorithm) return null;
+  // This exercise's own algorithm if it has one, else the general one. An override
+  // whose plugin has since been removed falls back to the general one too.
+  const exerciseSettings = await getExerciseProgressionSettings(exercise, deps);
+  let algorithmId = algorithmOverride?.id ?? (await resolveAlgorithmId(exercise, deps, exerciseSettings));
+  if (!algorithmId) return null;
+  let algorithm = algorithmOverride ?? (await registry.get(algorithmId));
+  if (!algorithm && exerciseSettings?.algorithmId) {
+    algorithmId = (await progressionRepo.getConfig())?.algorithmId ?? null;
+    algorithm = algorithmId ? await registry.get(algorithmId) : null;
+  }
+  if (!algorithm || !algorithmId) return null;
+  const config = { algorithmId };
 
   const key = exerciseKey(exercise);
   let saved = await progressionRepo.getExerciseState(key);
@@ -160,6 +175,13 @@ export async function getSuggestion(
     }
   }
 
+  const goal = await goalFor(exercise, fullHistory, exerciseSettings?.behindPace ?? "show", deps);
+  const estimate = strengthEstimate(history, nowMs());
+  const [muscleWeek, food] = await Promise.all([
+    muscleWeekFor(exerciseWithMuscles.primaryMuscles[0], deps),
+    deps.loadFood?.().catch(() => null) ?? Promise.resolve(null),
+  ]);
+
   let output = await algorithm.suggest({
     exercise: exerciseWithMuscles,
     history,
@@ -172,7 +194,19 @@ export async function getSuggestion(
     siblingRuledOutRepRanges: siblingRuledOutRepRanges.length > 0 ? siblingRuledOutRepRanges : undefined,
     liveInput,
     stateSavedAtMs: saved?.algorithmId === config.algorithmId ? saved.updatedAtMs : undefined,
+    repRange: exerciseSettings?.repRange,
+    goal,
+    strengthEstimate: estimate
+      ? { kg: Math.round(estimate.kg * 10) / 10, fromWeightKg: estimate.from.weight, fromReps: estimate.from.reps, performedAtMs: estimate.from.performedAtMs }
+      : undefined,
+    muscleWeek,
+    food: food ?? undefined,
   });
+
+  // Every algorithm's "Why?" says how a goal on this exercise is going.
+  if (goal && output.reasoning) {
+    output = { ...output, reasoning: { ...output.reasoning, summary: [...(output.reasoning.summary ?? []), goalLine(goal)] } };
+  }
 
   // An algorithm decides *whether* to ask for help generating signal; whether the
   // user has already seen and dismissed that specific ask is a generic concern the
@@ -206,7 +240,7 @@ export async function getSuggestion(
 
 export async function refreshProgressionState(
   exercise: { id?: string; name: string },
-  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight" | "loadGoals" | "loadFood">,
 ): Promise<ProgressionOutput | null> {
   const output = await getSuggestion(exercise, deps);
   if (!output) return null;
@@ -218,11 +252,14 @@ export async function refreshProgressionState(
 export async function applySessionProgression(
   exercise: { id?: string; name: string },
   output: ProgressionOutput,
-  deps: Pick<ProgressionDeps, "progressionRepo">,
+  // The exercise library lets a name-only block find settings saved under its id, the same
+  // way getSuggestion does, so the state is saved for the algorithm that made the plan.
+  deps: Pick<ProgressionDeps, "progressionRepo"> & Partial<Pick<ProgressionDeps, "exerciseRepo">>,
 ): Promise<void> {
   const progressionRepo = deps.progressionRepo;
-  const config = await progressionRepo.getConfig();
-  if (!config) return;
+  const algorithmId = await resolveAlgorithmId(exercise, deps);
+  if (!algorithmId) return;
+  const config = { algorithmId };
 
   const key = exerciseKey(exercise);
 
@@ -256,4 +293,80 @@ export async function applySessionProgression(
     dismissedNudges: existing?.dismissedNudges,
     activeExperiment,
   });
+}
+
+// ── Goals ────────────────────────────────────────────────────────────────────
+
+/** The live lift goal on this exercise, if any, with how it's going. */
+async function goalFor(
+  exercise: { id?: string; name: string },
+  historyOldestFirst: Parameters<typeof liftGoalPace>[0],
+  behindPace: "show" | "push",
+  deps: Pick<ProgressionDeps, "loadGoals">,
+): Promise<ProgressionGoalInput | undefined> {
+  const goals: Goal[] = (await deps.loadGoals?.().catch(() => [])) ?? [];
+  const goal = goals.find(
+    (g) => !g.deletedAtMs && g.target.type === "lift" && sameExercise(g.target, exercise),
+  );
+  if (!goal || goal.target.type !== "lift") return undefined;
+  const target = goal.target;
+  const pace = liftGoalPace(historyOldestFirst, { weightKg: target.weightKg, reps: target.reps, deadlineIso: goal.deadlineIso }, nowMs());
+  return { weightKg: target.weightKg, reps: target.reps, deadlineIso: goal.deadlineIso ?? null, ...pace, behindPace };
+}
+
+function fmtKg(kg: number): string {
+  return `${Math.round(kg * 10) / 10} kg`;
+}
+
+function goalLine(goal: ProgressionGoalInput): string {
+  const name = `${fmtKg(goal.weightKg).replace(" kg", "")} × ${goal.reps}`;
+  const by = goal.deadlineIso
+    ? ` by ${new Date(`${goal.deadlineIso}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+    : "";
+  if (goal.pace === "achieved") return `Goal ${name}${by}: done.`;
+  if (goal.pace === "unknown" || goal.neededPerWeekKg == null || goal.ratePerWeekKg == null) {
+    return goal.currentKg != null
+      ? `Goal ${name}${by}: you're at about ${fmtKg(goal.currentKg)} for ${goal.reps}.`
+      : `Goal ${name}${by}.`;
+  }
+  const rate = `${goal.ratePerWeekKg >= 0 ? "+" : "−"}${fmtKg(Math.abs(goal.ratePerWeekKg))} a week`;
+  const need = `+${fmtKg(goal.neededPerWeekKg)}`;
+  return goal.pace === "on_pace"
+    ? `Goal ${name}${by}: on pace. Needs about ${need} a week; you're at ${rate}.`
+    : `Goal ${name}${by}: behind. Needs about ${need} a week; you're at ${rate}.`;
+}
+
+// ── This week's sets for a muscle ────────────────────────────────────────────
+
+/** Hard sets for `muscle` this calendar week (main muscle 1, also-worked 0.4), against its
+ * default target. From the last 30 sessions, which always covers a week. */
+async function muscleWeekFor(
+  muscle: MuscleGroup | undefined,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo" | "progressionRepo">,
+): Promise<ProgressionInput["muscleWeek"]> {
+  if (!muscle) return undefined;
+  const sessions = await deps.workoutRepo.listRecentSessions({ limit: 30 }).catch(() => []);
+  const week = weekBucket(nowMs());
+  const tags = new Map<string, { primary: MuscleGroup[]; secondary: MuscleGroup[] } | null>();
+  let done = 0;
+  for (const s of sessions) {
+    if (s.excludeFromProgression) continue;
+    if (weekBucket(s.endedAtMs ?? s.startedAtMs) !== week) continue;
+    for (const ex of getExercises(s)) {
+      const n = ex.sets.filter((x) => (x.setType === "normal" || !x.setType) && x.completed !== false && x.reps > 0).length;
+      if (n === 0) continue;
+      const key = ex.exerciseId ?? ex.exerciseName.toLowerCase();
+      if (!tags.has(key)) {
+        const data = ex.exerciseId ? await deps.exerciseRepo.getById(ex.exerciseId) : await deps.exerciseRepo.getByName(ex.exerciseName);
+        tags.set(key, data ? { primary: data.primaryMuscles ?? [], secondary: data.secondaryMuscles ?? [] } : null);
+      }
+      const t = tags.get(key);
+      if (!t) continue;
+      if (t.primary.includes(muscle)) done += n;
+      else if (t.secondary.includes(muscle)) done += n * SECONDARY_SET_WEIGHT;
+    }
+  }
+  const custom = (await getMuscleSetTargets(deps).catch(() => null))?.[muscle];
+  const target = setTargetFor(muscle, undefined, custom);
+  return { muscle, done: Math.round(done * 10) / 10, lo: target.lo, hi: target.hi };
 }

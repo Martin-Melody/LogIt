@@ -443,6 +443,9 @@
           One day after another, whenever you train. Add rest days to space them out.
         {/if}
       </p>
+      <a href="/progress/weekly-sets" class="text-xs font-medium underline underline-offset-2" data-testid="split-weekly-sets-link">
+        Check the weekly sets per muscle for this split
+      </a>
       {#if byWeekday && split.days.length > 0}
         <div class="grid grid-cols-7 gap-1 pt-1">
           {#each weekOverview(split.days) as w (w.wd)}

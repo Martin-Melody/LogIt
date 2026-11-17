@@ -1,8 +1,12 @@
 import type { AlgorithmRegistry } from "./algorithmRegistry";
 import type { ProgressionAlgorithm, ProgressionAlgorithmMeta } from "../domain/progression";
 import { linearProgression } from "./algorithms/linearProgression";
+import { adaptiveProgression } from "./algorithms/adaptiveProgression";
 
-const BUNDLED: ProgressionAlgorithm[] = [linearProgression];
+/** The default for new accounts. Linear Progression stays as the simple option. */
+export const DEFAULT_PROGRESSION_ALGORITHM_ID = adaptiveProgression.id;
+
+const BUNDLED: ProgressionAlgorithm[] = [adaptiveProgression, linearProgression];
 
 export function createLocalAlgorithmRegistry(): AlgorithmRegistry {
   return {

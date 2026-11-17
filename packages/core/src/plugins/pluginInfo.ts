@@ -102,7 +102,12 @@ export function pluginGets(family: string, needs: readonly string[] | null | und
       return lines.length > 0 ? lines : [{ label: "Nothing", detail: "Only the date and your weight unit" }];
     }
     case "progression-algorithm":
-      return [{ label: "That exercise's history", detail: "Your past sets for the exercise it's set on, and its own saved state" }];
+      return [
+        { label: "That exercise's history", detail: "Your past sets for the exercise it's set on, and its own saved state" },
+        { label: "Your plan for it", detail: "Its rep range, your strength estimate, and a lift goal on it with how it's going" },
+        { label: "This week's sets", detail: "Hard sets this week for the exercise's main muscle, against its target" },
+        { label: "Recent eating", detail: "Average calories over the last week against maintenance, when you log food" },
+      ];
     case "mobility-progression":
       return [{ label: "That drill's history", detail: "Your past holds or reps for the drill it's set on" }];
     case "analytics":
