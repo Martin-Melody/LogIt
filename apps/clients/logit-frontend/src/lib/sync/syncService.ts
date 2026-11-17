@@ -1247,6 +1247,15 @@ export function planIncludesSync(): boolean {
   return apiClient.isSelfHosted() || user.tier === "Pro" || user.tier === "Studio";
 }
 
+/**
+ * Everything on this profile is on its server: the plan syncs, nothing is waiting to be sent,
+ * and the upload after signing in has gone through. Signing out can then take the training off
+ * the phone without anything being lost; otherwise the user is offered a copy first.
+ */
+export function everythingBackedUp(): boolean {
+  return planIncludesSync() && outboxSize() === 0 && fullUploadState() === null;
+}
+
 /** Asks the next sync to send everything on this profile, not just what changed. */
 export function markFullUploadDue(): void {
   setFullUpload("signedIn");
