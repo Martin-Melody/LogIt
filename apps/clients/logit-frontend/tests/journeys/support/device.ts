@@ -199,7 +199,22 @@ export class Device {
 
   // ── What the user does ─────────────────────────────────────────────────────────────────
 
-  /** Onboarding screen (src/routes/onboarding): name step, optional split, finish. */
+  /**
+   * The onboarding questions (design canvas O1, E0, O2, O3) answered, and "I'll start later":
+   * the plan they build is saved and onboarding ends.
+   */
+  async onboardWithPlan(answers: import("@logit/core/domain/starterPlan").StarterAnswers) {
+    const { buildStarterPlan } = await import("@logit/core/domain/starterPlan");
+    const { saveStarterPlan } = await import("$lib/features/onboarding/saveStarterPlan");
+    const plan = buildStarterPlan(answers);
+    const split = await saveStarterPlan(plan);
+    this.app.onboardingStore.onboarding.complete();
+    this.routes.push("/");
+    await this.settle();
+    return { plan, split };
+  }
+
+  /** Onboarding screen before 2026-11-17 (name step, optional split, finish); still how most journeys set up. */
   async finishOnboarding(opts: { name?: string; split?: string } = {}): Promise<void> {
     const { profileStore, onboardingStore } = this.app;
     if (opts.name) profileStore.profile.save({ name: opts.name });
