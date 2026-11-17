@@ -1077,8 +1077,8 @@ export async function pushNavConfig(): Promise<void> {
  * before an authenticated session existed to push it *to*.
  *
  * Deliberately NOT part of pushAllLocalData() below, unlike every other pushAllXxx() —
- * call it only *after* syncAll() has pulled first (see login()/register() in
- * authStore.svelte.ts). Every other data type here is a list, so pushAllXxx() has a natural
+ * call it only *after* syncAll() has pulled first (syncOnce() does, when a full upload is
+ * due after a sign-in). Every other data type here is a list, so pushAllXxx() has a natural
  * "nothing local yet" guard (`if (all.length === 0) return`) that makes push-before-pull
  * safe. Profile is a single always-present object with no such guard — on every fresh
  * install its fields start out blank, and since this always builds a fresh (newer)
@@ -1123,6 +1123,44 @@ export async function pushAllLocalData(): Promise<void> {
   ]);
 }
 
+// ── Uploading everything once ────────────────────────────────────────────────────────────
+// Signing in or up has to send what was made on the phone before the account existed. That
+// can't happen straight away when the plan has no sync yet (a Free account is refused) or the
+// phone has no signal, and it used to be tried once at sign-in and then never again: someone
+// who made a Free account and bought Pro later never got their earlier history uploaded unless
+// they found Settings › Sync now. Now sign-in marks it as due: the first sync after it always
+// tries (a Free client of a Studio coach may send workouts, check-ins and nutrition), and
+// after that every sync tries again while the plan includes sync, until one gets through.
+
+const FULL_UPLOAD_KEY = "logit:sync:fullUploadDue";
+
+/** Sync is part of the plan: Pro or Studio on getlogit.app, every account on a self-hosted server. */
+export function planIncludesSync(): boolean {
+  const user = apiClient.getUser();
+  if (!user) return false;
+  return apiClient.isSelfHosted() || user.tier === "Pro" || user.tier === "Studio";
+}
+
+/** Asks the next sync to send everything on this profile, not just what changed. */
+export function markFullUploadDue(): void {
+  setFullUpload("signedIn");
+}
+
+/** "signedIn": not tried since the sign-in. "retry": tried, didn't all get through. */
+function fullUploadState(): "signedIn" | "retry" | null {
+  try {
+    const v = localStorage.getItem(syncStorageKey(FULL_UPLOAD_KEY));
+    return v === "signedIn" || v === "retry" ? v : null;
+  } catch { return null; }
+}
+
+function setFullUpload(state: "signedIn" | "retry" | null): void {
+  try {
+    if (state) localStorage.setItem(syncStorageKey(FULL_UPLOAD_KEY), state);
+    else localStorage.removeItem(syncStorageKey(FULL_UPLOAD_KEY));
+  } catch (e) { syncWarn("setFullUpload", e); }
+}
+
 /** Sync now. One sync at a time: login, the 5-minute timer, the app coming back to the
  * foreground and the Settings button all call this, and two overlapping runs used to flush
  * the outbox twice and pull the same data twice. A call during a run joins it and asks for
@@ -1139,6 +1177,13 @@ async function syncOnce(): Promise<boolean> {
   // latest local state before we merge its response back.
   await flushOutbox();
   await pushPendingMessages();
+  // Read once: a sign-in during this run marks it again for the next run.
+  const due = fullUploadState();
+  const fullUpload = due === "signedIn" || (due === "retry" && planIncludesSync());
+  if (fullUpload) {
+    if (due === "signedIn") setFullUpload("retry");
+    await pushAllLocalData();
+  }
   const pulls: [string, Promise<boolean>][] = [
     ["sessions", pullAndMergeSessions()],
     ["splits", pullAndMergeSplits()],
@@ -1160,6 +1205,18 @@ async function syncOnce(): Promise<boolean> {
   ];
   const results = await Promise.all(pulls.map(([, p]) => p));
   const ok = results.every(Boolean);
+  // The workout, split and profile pulls answering means the server accepted this account's
+  // sync, so the uploads that went first got through too (pushAllLocalData() doesn't report
+  // failures). Only those: an unrelated pull failing (say, the coach library) mustn't make
+  // every later sync upload the whole history again.
+  const uploadLanded = pulls.every(([name], i) => !["sessions", "splits", "profile"].includes(name) || results[i]);
+  if (fullUpload && uploadLanded) {
+    // The profile last, after the pulls above: see pushCurrentProfile() for why.
+    await pushCurrentProfile();
+    // Unless a sign-in during this run asked for another one.
+    if (fullUploadState() === "retry") setFullUpload(null);
+    log.info("sync", "Uploaded everything on this profile");
+  }
   const ms = Date.now() - started;
   if (ok) {
     const now = Date.now();
