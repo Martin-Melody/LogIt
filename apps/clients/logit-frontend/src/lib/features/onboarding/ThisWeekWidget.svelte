@@ -40,6 +40,8 @@
   });
 
   const target = $derived(targetForWeek(weekStartIso(todayIso), $goalsStore.streak.targetHistory, $goalsStore.streak.weeklyTarget));
+  // Lowered for this week already ("Make it 3"): don't offer to lower it again.
+  const lowered = $derived(target < $goalsStore.streak.weeklyTarget);
   const today = $derived(week?.slots.find((s) => s.dateIso === todayIso) ?? null);
   // Only the workout days (and days trained on) in the first week, like the mockup; a whole week after.
   const shown = $derived(week ? (firstWeek ? week.slots.filter((s) => s.state !== "rest") : week.slots) : []);
@@ -89,12 +91,12 @@
         {#if firstWeek && !week.moves.length}
           {week.done} of {target} done. {week.done >= target ? "That's your first week on the streak." : `Finish all ${target === 1 ? "of it" : target === 2 ? "both" : target} for your first week on the streak.`}
         {:else}
-          {weekPlanLine(week, dayOfWeek(todayIso))}
+          {weekPlanLine(week, dayOfWeek(todayIso), target)}
         {/if}
       </p>
       {#if week.moves.length && week.remaining > 0}
         <div class="flex gap-2">
-          {#if target > 1}
+          {#if target > 1 && !lowered}
             <button type="button" class="flex-1 h-10 rounded-lg border border-border text-[13px] font-medium"
               onclick={() => goalsStore.setTargetThisWeekOnly(Math.max(1, Math.min(target - 1, week!.done + week!.remaining - week!.leftOver.length)))}>
               Make it {Math.max(1, Math.min(target - 1, week.done + week.remaining - week.leftOver.length))} this week

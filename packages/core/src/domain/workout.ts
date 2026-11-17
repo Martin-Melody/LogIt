@@ -509,6 +509,37 @@ export function updateSet(
   }));
 }
 
+/**
+ * An exercise done for the first time ever (design canvas O4): its first working set is the
+ * starting point, so the working sets after it that are still empty get planned from it at
+ * the same weight, one rep fewer each (60 kg × 8, then × 7, × 6), never under `minReps`.
+ * Sets already logged or with something entered are left alone.
+ */
+export function planRestFromFirstSet(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  firstSetId: string,
+  minReps = 1,
+): WorkoutSession {
+  return updateStrengthBlock(session, exerciseEntryId, (data) => {
+    const sorted = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+    const first = sorted.find((x) => x.id === firstSetId);
+    if (!first || !first.completed || first.weight <= 0 || first.reps <= 0) return data;
+    let k = 0;
+    const planned = new Map<string, SetTarget>();
+    for (const set of sorted) {
+      if (set.orderIndex <= first.orderIndex || set.completed) continue;
+      if (set.setType === "warmup" || isContinuationSet(set.setType)) continue;
+      if (set.reps !== 0 || set.weight > 0 || (set.target?.weight ?? 0) > 0) continue;
+      k++;
+      planned.set(set.id, { reps: Math.max(minReps, first.reps - k), weight: first.weight });
+    }
+    if (planned.size === 0) return data;
+    // Like applySetPlan: the weight goes on the set too (that's what its weight box shows).
+    return { ...data, sets: data.sets.map((x) => (planned.has(x.id) ? { ...x, weight: first.weight, target: planned.get(x.id)! } : x)) };
+  });
+}
+
 export function removeSet(
   session: WorkoutSession,
   exerciseEntryId: string,

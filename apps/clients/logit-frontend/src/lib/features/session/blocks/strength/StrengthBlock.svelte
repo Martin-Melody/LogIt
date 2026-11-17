@@ -13,6 +13,7 @@
     applySetPlan,
     strengthRestMs,
     clearOtherRests,
+    planRestFromFirstSet,
   } from "@logit/core/domain/workout";
   import { suggestionToPlan } from "@logit/core/domain/progression";
   import { warmupSets } from "@logit/core/domain/warmup";
@@ -78,6 +79,20 @@
   // the plan works from, so it says how heavy to go instead of asking for a max.
   let prevLoaded = $state(false);
   let firstTimeReps = $state(8);
+  let firstTimeMin = $state(1);
+  const firstEver = $derived(prevLoaded && prevSets === null);
+  const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
+  // The hint says how heavy to go and the first set plans the rest, so the algorithm's own
+  // "First time" line would only repeat it, before and after that set.
+  const cardSuggestion = $derived(
+    firstEver && suggestion?.change?.kind === "first" ? { ...suggestion, change: undefined, label: undefined } : suggestion,
+  );
+
+  /** The first working set of a never-done exercise plans the empty sets after it. */
+  function withFirstSetPlan(s: WorkoutSession, setId: string): WorkoutSession {
+    if (!firstEver || data.sets.some((x) => x.completed && x.id !== setId)) return s;
+    return planRestFromFirstSet(s, blockId, setId, firstTimeMin);
+  }
 
   const prevLeadSets = $derived(
     prevSets ? prevSets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)) : [],
@@ -161,6 +176,7 @@
       if (!last) {
         const settings = await getExerciseProgressionSettings({ id: exerciseId, name }, getProgressionDeps()).catch(() => null);
         firstTimeReps = settings?.repRange?.[1] ?? 8;
+        firstTimeMin = settings?.repRange?.[0] ?? 1;
         // The workout's first exercise opens so the first-set hint is seen.
         if (get(currentSession)?.blocks[0]?.id === blockId && !data.sets.some((s) => s.completed)) collapsed = false;
       }
@@ -315,7 +331,8 @@
         completed: true,
         restStartedAtMs: startsRest ? Date.now() : null,
       });
-      return startsRest ? clearOtherRests(next, setId) : next;
+      const planned = withFirstSetPlan(next, setId);
+      return startsRest ? clearOtherRests(planned, setId) : planned;
     });
     void triggerHaptic();
   }
@@ -381,8 +398,9 @@
         completed: !wasCompleted,
         restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
       });
+      const planned = wasCompleted ? next : withFirstSetPlan(next, setId);
       // One rest at a time: a new rest replaces the previous set's.
-      return !wasCompleted && startsRest ? clearOtherRests(next, setId) : next;
+      return !wasCompleted && startsRest ? clearOtherRests(planned, setId) : planned;
     });
 
     // The rest service (restTimerService.ts) sees restStartedAtMs change and schedules or
@@ -610,7 +628,7 @@
   {doneCount}
   {meter}
   {saving}
-  {suggestion}
+  suggestion={cardSuggestion}
   collapsed={round === undefined ? collapsed : false}
   roundView={round !== undefined}
   {hasActiveTimer}
@@ -681,7 +699,7 @@
         + Warm-up ramp
       </button>
     {/if}
-    {#if prevLoaded && prevSets === null && !data.sets.some((s) => s.completed)}
+    {#if showFirstSetHint}
       <div class="mx-3 my-2 flex flex-col gap-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
         <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
         <p class="text-xs text-muted-foreground">Logit plans every set after this one from it. No need to know your max.</p>
