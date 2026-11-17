@@ -13,7 +13,6 @@
   import { resetTours } from "$lib/tour/index";
   import { splits } from "$lib/stores/splits.store";
   import { currentSession } from "$lib/stores/currentSession.store";
-  import { selectDayOverride } from "$lib/stores/todaysPlan.store";
   import { goalsStore } from "$lib/features/goals/goalsStore";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import { saveStarterPlan } from "$lib/features/onboarding/saveStarterPlan";
@@ -149,8 +148,7 @@
     busy = "later";
     error = null;
     try {
-      const split = await savePlan();
-      selectDayOverride(split.id, split.days[0]!.id);
+      await savePlan();
       await goto("/");
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't save the plan. Try again.";
