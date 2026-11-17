@@ -126,6 +126,39 @@
       ? "Not backed up: sync is a Pro feature"
       : `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`,
   );
+  // Sign out of one account on the phone (design canvas 7). Plain "Sign out" takes its training
+  // off the phone, so it's only offered as-is when everything is backed up; otherwise a copy is
+  // saved first. "Keep using it here" keeps the training as the phone's space without an account.
+  let signOutSheet = $state<{ backedUp: boolean; canKeepHere: boolean } | null>(null);
+  let signingOut = $state(false);
+  let signOutError = $state<string | null>(null);
+
+  async function openSignOut() {
+    if (!isNativePlatform()) {
+      void authStore.logout();
+      return;
+    }
+    const { everythingBackedUp } = await import("$lib/sync/syncService");
+    signOutError = null;
+    signOutSheet = { backedUp: everythingBackedUp(), canKeepHere: await authStore.canKeepHere() };
+  }
+
+  async function confirmSignOut(choice: "remove" | "keep-here") {
+    if (!signOutSheet) return;
+    signingOut = true;
+    signOutError = null;
+    try {
+      if (choice === "remove" && !signOutSheet.backedUp) {
+        const { exportData, downloadExport } = await import("$lib/usecases/exportData");
+        await downloadExport(await exportData());
+      }
+      await authStore.signOutOfAccount({ keepHere: choice === "keep-here" });
+    } catch (e) {
+      signOutError = e instanceof Error ? e.message : "Couldn't sign out. Try again.";
+      signingOut = false;
+    }
+  }
+
   function initialsOf(name: string): string {
     return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   }
@@ -689,7 +722,7 @@
         {/if}
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => void authStore.logout()}>
+          onclick={() => void openSignOut()}>
           Sign out of @{authStore.user.username}
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
@@ -1573,4 +1606,37 @@
     }}
     onadded={() => void loadProgression()}
   />
+{/if}
+
+{#if signOutSheet && authStore.user}
+  {@const who = authStore.user.username}
+  <div class="fixed inset-0 z-50 flex flex-col justify-end bg-black/50" role="presentation">
+    <div class="rounded-t-2xl bg-background px-6 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby="signout-title">
+      <div class="h-1 w-10 rounded-full bg-muted-foreground/30 self-center"></div>
+      <div>
+        <h2 id="signout-title" class="text-lg font-bold">Sign out of @{who} on this phone?</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          {#if signOutSheet.backedUp}
+            Everything is backed up on {serverHost}. @{who}'s training leaves this phone, and you can sign back in any time. Other accounts here aren't touched.
+          {:else}
+            @{who}'s training is only on this phone. Save a copy before it leaves, or keep using it here.
+          {/if}
+        </p>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <Button class="h-12" disabled={signingOut} onclick={() => void confirmSignOut("remove")}>
+          {#if signingOut}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+          {signOutSheet.backedUp ? "Sign out" : "Save a copy, then sign out"}
+        </Button>
+        {#if signOutSheet.canKeepHere}
+          <button type="button" class="flex flex-col items-start gap-0.5 rounded-lg border border-border px-3.5 py-3 text-left" disabled={signingOut} onclick={() => void confirmSignOut("keep-here")}>
+            <span class="text-[15px] font-medium">Keep using it here without the account</span>
+            <span class="text-sm text-muted-foreground">Your training stays on this phone, offline</span>
+          </button>
+        {/if}
+        <button type="button" class="h-11 text-sm font-medium text-muted-foreground" disabled={signingOut} onclick={() => (signOutSheet = null)}>Cancel</button>
+        {#if signOutError}<p class="text-sm text-destructive">{signOutError}</p>{/if}
+      </div>
+    </div>
+  </div>
 {/if}
