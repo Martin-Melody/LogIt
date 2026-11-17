@@ -119,5 +119,6 @@ vi.mock("@capacitor/keyboard", () => ({ Keyboard: noopPlugin(), KeyboardResize: 
 vi.mock("@capacitor/local-notifications", () => ({ LocalNotifications: noopPlugin() }));
 vi.mock("@capacitor/splash-screen", () => ({ SplashScreen: noopPlugin() }));
 vi.mock("@capacitor/status-bar", () => ({ StatusBar: noopPlugin(), Style: enumLike() }));
+vi.mock("@capacitor/share", () => ({ Share: noopPlugin() }));
 vi.mock("@capacitor-mlkit/barcode-scanning", () => ({ BarcodeScanner: noopPlugin(), BarcodeFormat: enumLike() }));
 vi.mock("@capacitor-mlkit/text-recognition", () => ({ TextRecognition: noopPlugin() }));

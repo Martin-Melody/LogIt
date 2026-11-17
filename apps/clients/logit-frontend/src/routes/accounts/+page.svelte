@@ -50,7 +50,7 @@
     busy = true;
     try {
       await authStore.loginOfflineAccount(account.id, password);
-      await goto(postSwitchDestination(account));
+      await goto(postSwitchDestination(account, authStore.isAuthenticated));
     } catch (e) {
       error = e instanceof Error ? e.message : "Could not switch profile.";
     } finally {
@@ -110,12 +110,6 @@
 
           {#if selectedId === account.id && account.id !== activeId}
             <div class="px-4 pb-3 flex flex-col gap-2">
-              {#if account.serverUserId}
-                <p class="text-[11px] text-muted-foreground">
-                  This profile syncs to the cloud, but switching won't restore that session —
-                  you'll need to sign in again afterwards to resume syncing.
-                </p>
-              {/if}
               {#if account.passwordHash}
                 <div class="relative">
                   <input
