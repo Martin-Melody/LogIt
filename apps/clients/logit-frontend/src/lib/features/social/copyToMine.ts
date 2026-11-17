@@ -20,7 +20,9 @@ import { loadLibrary, saveOwnItem } from "$lib/data/library/library";
 import { getProgressionDeps } from "$lib/usecases/progressionDeps";
 import { bumpProgression } from "$lib/progression/store";
 import { getNutritionRepo, getSplitRepo, getExerciseRepo, getHabitRepo } from "$lib/data/repoProvider";
-import { pushNutritionGoal, pushSplit, pushExercise, pushHabit } from "$lib/sync/syncService";
+import { pushNutritionGoal, pushSplit, pushExercise, pushHabit, pushProgressionRecipe } from "$lib/sync/syncService";
+import { recipeFromShared, uniqueRecipeName, type ProgressionRecipe, type SharedRecipe } from "@logit/core/domain/progressionRecipe";
+import { listProgressionRecipes, saveProgressionRecipe } from "@logit/core/usecases/progression/progressionRecipes";
 import { profileConfig } from "$lib/stores/profileConfig.store";
 import { homeConfig } from "$lib/stores/homeConfig.store";
 import { localProfileWidgetRegistry } from "$lib/features/profileWidgets/localProfileWidgetRegistry";
@@ -132,4 +134,19 @@ export async function copyHabitToMine(payload: CopyableHabit): Promise<void> {
   const habit = habitFromShared(payload);
   await getHabitRepo().saveHabit(habit);
   pushHabit(habit);
+}
+
+/**
+ * A built algorithm someone shared (on a post or as a code), saved as a new one of your own
+ * with a name that doesn't clash. It isn't switched on: you pick it in Progression or on an
+ * exercise, like one you built.
+ */
+export async function addSharedRecipeToMine(shared: Partial<SharedRecipe>): Promise<ProgressionRecipe> {
+  const deps = getProgressionDeps();
+  const taken = (await listProgressionRecipes(deps)).map((r) => r.name);
+  const fresh = recipeFromShared(shared);
+  const row = await saveProgressionRecipe({ ...fresh, name: uniqueRecipeName(fresh.name, taken) }, deps);
+  pushProgressionRecipe(row);
+  bumpProgression();
+  return row;
 }

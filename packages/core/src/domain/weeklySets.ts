@@ -13,7 +13,7 @@ import { rotationSlots, sortedDays } from "./splitSchedule";
 // little lower for small muscles that also get worked by bigger lifts. Once there's enough
 // of the lifter's own history, the muscle-group insight's finding moves the range.
 
-export type SetTarget = { lo: number; hi: number; learned?: boolean };
+export type SetTarget = { lo: number; hi: number; learned?: boolean; custom?: boolean };
 
 export const SECONDARY_SET_WEIGHT = 0.4;
 
@@ -65,7 +65,13 @@ export const EXAMPLE_EXERCISE: Record<MuscleGroup, string> = {
  * sets went with better sessions above N" raises the bottom of the range to N; "fewer" lowers
  * the top to N.
  */
-export function setTargetFor(muscle: MuscleGroup, insight?: { volumeInsight?: MuscleGroupVolumeInsight; confidence?: string }): SetTarget {
+export function setTargetFor(
+  muscle: MuscleGroup,
+  insight?: { volumeInsight?: MuscleGroupVolumeInsight; confidence?: string },
+  /** The lifter's own range, which wins over everything. */
+  custom?: { lo: number; hi: number } | null,
+): SetTarget {
+  if (custom) return { lo: custom.lo, hi: Math.max(custom.lo, custom.hi), custom: true };
   const base = DEFAULT_SET_TARGETS[muscle];
   const v = insight?.volumeInsight;
   if (!v || insight?.confidence === "low") return { ...base };

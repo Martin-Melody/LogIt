@@ -148,3 +148,20 @@ describe("lift goal pace", () => {
     expect(liftGoalPace(history, { weightKg: 140, reps: 1 }, now).pace).toBe("unknown");
   });
 });
+
+describe("a muscle's own weekly target", async () => {
+  const { getMuscleSetTargets, saveMuscleSetTarget } = await import("./exerciseProgressionSettings");
+  const { setTargetFor } = await import("../../domain/weeklySets");
+
+  it("saves, wins over the default and learned ranges, and goes back to default", async () => {
+    const repo = memoryRepo("general");
+    const d = deps(repo);
+    await saveMuscleSetTarget("chest", { lo: 18, hi: 12 }, d);
+    const targets = await getMuscleSetTargets(d);
+    expect(targets.chest).toEqual({ lo: 18, hi: 18 });
+    expect(setTargetFor("chest", undefined, targets.chest)).toEqual({ lo: 18, hi: 18, custom: true });
+    expect(await listExerciseProgressionSettings(d)).toEqual([]); // not listed as an exercise
+    await saveMuscleSetTarget("chest", null, d);
+    expect((await getMuscleSetTargets(d)).chest).toBeUndefined();
+  });
+});
