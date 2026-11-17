@@ -16,6 +16,14 @@ CREATE TABLE foods (
   protein_100g REAL NOT NULL,
   carb_100g    REAL NOT NULL,
   fat_100g     REAL NOT NULL,
+  -- The rest of a UK/EU label, per 100 g; NULL when the source doesn't say.
+  fibre_100g   REAL,
+  sugar_100g   REAL,
+  satfat_100g  REAL,
+  salt_100g    REAL,
+  -- Vitamins and minerals per 100 g as JSON ({"ironMg":2.3,"vitCMg":12,…}, keys as the app's
+  -- NutrientId); NULL for most packaged products.
+  micros_json  TEXT,
   popularity   INTEGER NOT NULL DEFAULT 0,
   curated      INTEGER NOT NULL DEFAULT 0,   -- 1 for hand-curated staples (see common-foods.json); sorted first
   serving_json TEXT NOT NULL DEFAULT '[]'

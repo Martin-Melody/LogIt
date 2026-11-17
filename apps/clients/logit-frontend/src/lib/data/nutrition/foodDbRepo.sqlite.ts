@@ -1,5 +1,5 @@
 import type { FoodDbRepo, FoodSearchOptions } from "@logit/core/data/foodDbRepo";
-import type { FoodRef, ServingOption } from "@logit/core/domain/nutrition";
+import { cleanNutrients, type FoodRef, type Nutrients, type ServingOption } from "@logit/core/domain/nutrition";
 import { getFoodDb } from "$lib/data/db/sqlite";
 import {
   closestTerms,
@@ -24,7 +24,31 @@ type FoodRow = {
   serving_json: string;
   popularity?: number;
   curated?: number;
+  fibre_100g?: number | null;
+  sugar_100g?: number | null;
+  satfat_100g?: number | null;
+  salt_100g?: number | null;
+  micros_json?: string | null;
 };
+
+/** The label columns and the vitamins JSON (food.db v4+) as one set. */
+function rowNutrients(r: FoodRow): Nutrients | undefined {
+  let micros: unknown = {};
+  if (r.micros_json) {
+    try {
+      micros = JSON.parse(r.micros_json);
+    } catch {
+      micros = {};
+    }
+  }
+  return cleanNutrients({
+    ...(micros as object),
+    fibreG: r.fibre_100g ?? undefined,
+    sugarG: r.sugar_100g ?? undefined,
+    satFatG: r.satfat_100g ?? undefined,
+    saltG: r.salt_100g ?? undefined,
+  });
+}
 
 function toFoodRef(r: FoodRow): FoodRef {
   let servings: ServingOption[];
@@ -37,6 +61,7 @@ function toFoodRef(r: FoodRow): FoodRef {
   } catch {
     servings = [{ id: "g", label: "100 g", grams: 100 }];
   }
+  const nutrients = rowNutrients(r);
   return {
     id: r.id,
     source: (r.source === "off" ? "off" : "usda") as FoodRef["source"],
@@ -49,6 +74,7 @@ function toFoodRef(r: FoodRow): FoodRef {
       carbsG: r.carb_100g,
       fatG: r.fat_100g,
     },
+    ...(nutrients ? { nutrients } : {}),
     servings,
   };
 }
@@ -65,6 +91,11 @@ const COL_LIST = [
   "fat_100g",
   "serving_json",
   "popularity",
+  "fibre_100g",
+  "sugar_100g",
+  "satfat_100g",
+  "salt_100g",
+  "micros_json",
 ];
 const COLS = COL_LIST.join(", ");
 const F_COLS = COL_LIST.map((c) => `f.${c}`).join(", ");

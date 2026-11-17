@@ -21,7 +21,7 @@ const FOOD_DB_NAME = "food";
  * copy (copyFromAssets skips DBs already in the app store). Must match `meta.build_version`
  * written by scripts/build-food-db (config.dbVersion). v2 = curated common-foods column,
  * v3 = vocab table for typo correction. */
-const FOOD_DB_VERSION = 3;
+const FOOD_DB_VERSION = 4;
 
 let sqlite: SQLiteConnection | null = null;
 let db: SQLiteDBConnection | null = null;
@@ -561,6 +561,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       carb_100g    REAL NOT NULL,
       fat_100g     REAL NOT NULL,
       serving_json TEXT NOT NULL DEFAULT '[]',
+      nutrients_json TEXT NULL,
       cached_at_ms INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_food_cache_barcode ON food_cache(barcode) WHERE barcode IS NOT NULL;
@@ -640,8 +641,17 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateSplitGroups(db);
   await migrateSplitSchedule(db);
   await migrateExerciseLibraryFields(db);
+  await migrateFoodCacheNutrients(db);
   await seedExercises(db);
   await seedLibraryBank(db);
+}
+
+// Nutrients (2026-11): fibre, sugar, sat fat, salt, vitamins and minerals of a cached
+// online food, as the FoodRef's `nutrients` JSON.
+async function migrateFoodCacheNutrients(db: SQLiteDBConnection): Promise<void> {
+  try {
+    await db.run("ALTER TABLE food_cache ADD COLUMN nutrients_json TEXT NULL", []);
+  } catch { /* column already exists */ }
 }
 
 // Library (2026-11): cues and equipment on exercises. Built-ins get theirs from the bank

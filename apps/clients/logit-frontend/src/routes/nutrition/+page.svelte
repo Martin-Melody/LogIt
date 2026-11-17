@@ -20,6 +20,7 @@
     Trash2,
     UtensilsCrossed,
     Zap,
+    ChevronRight,
   } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import { dragHandleZone, dragHandle, TRIGGERS } from "svelte-dnd-action";
@@ -30,6 +31,9 @@
     copyDiaryItems,
     createDiaryDay,
     dayTotals,
+    dayNutrients,
+    hasLabelNutrients,
+    hasMicros,
     localDateIso,
     mealTemplateFromDay,
     mealTotals,
@@ -154,7 +158,15 @@
     }
     editing = {
       item: it,
-      food: { id: it.sourceId ?? it.id, source: "custom", name: it.name, brand: it.brand, per100g: basis.per100g, servings: basis.servings },
+      food: {
+        id: it.sourceId ?? it.id,
+        source: "custom",
+        name: it.name,
+        brand: it.brand,
+        per100g: basis.per100g,
+        servings: basis.servings,
+        ...(basis.nutrients ? { nutrients: basis.nutrients } : {}),
+      },
       realGrams: !(it.sourceKind === "recipe" && basis.servings.some((s) => s.label === "1 serving")),
     };
   }
@@ -167,6 +179,7 @@
       amount: r.amount,
       portionId: r.portionId,
       computed: r.computed,
+      nutrients: r.nutrients,
       meal: r.meal ?? editing.item.meal,
     });
     editing = null;
@@ -357,6 +370,20 @@
     return of && of > 0 ? Math.max(0, Math.min(100, (n / of) * 100)) : 0;
   }
   const kcalLeft = $derived(target ? target.kcal - eaten.kcal : null);
+
+  // Fibre, sugar, sat fat and salt so far, once anything logged today knows them.
+  const dayLabel = $derived.by(() => {
+    const items = day?.items ?? [];
+    if (!items.some((it) => hasLabelNutrients(it.nutrients) || hasMicros(it.nutrients))) return null;
+    const totals = dayNutrients(items).totals;
+    const fmt = (v: number | undefined, dp: number) => (v === undefined ? "–" : String(Math.round(v * 10 ** dp) / 10 ** dp));
+    return [
+      { id: "fibreG", label: "fibre g", value: fmt(totals.fibreG, 0), goal: "30" },
+      { id: "sugarG", label: "sugar g", value: fmt(totals.sugarG, 0), goal: "" },
+      { id: "satFatG", label: "sat fat g", value: fmt(totals.satFatG, 0), goal: "30" },
+      { id: "saltG", label: "salt g", value: fmt(totals.saltG, 1), goal: "6" },
+    ];
+  });
 </script>
 
 <PageHeader>
@@ -390,7 +417,8 @@
   {:else}
     <div class="flex flex-col gap-3 px-3">
       <!-- Summary: opens the goal -->
-      <a href="/nutrition/goal" class="block rounded-2xl bg-card p-4 text-inherit border border-border dark:border-transparent" data-testid="day-summary">
+      <div class="rounded-2xl border border-border bg-card dark:border-transparent">
+      <a href="/nutrition/goal" class="block rounded-2xl p-4 text-inherit" data-testid="day-summary">
         {#if !nut?.goal && !nut?.coachPlan}
           <span class="flex items-center gap-2 text-sm font-medium"><Target class="size-4" /> Set a goal to get calorie and macro targets</span>
           <span class="mt-1 block text-xs text-muted-foreground tabular-nums">Eaten so far: {fmtNum(eaten.kcal)} kcal · {macroLine(eaten)}</span>
@@ -419,6 +447,24 @@
           {/if}
         {/if}
       </a>
+      {#if dayLabel}
+        <a
+          href="/nutrition/nutrients?date={dateIso}"
+          class="mx-4 flex min-h-12 items-center gap-2.5 border-t border-border py-1.5 text-inherit"
+          data-testid="day-nutrients-link"
+        >
+          <span class="grid flex-1 grid-cols-4 gap-1.5">
+            {#each dayLabel as n (n.id)}
+              <span class="block">
+                <span class="block text-[13px] font-semibold tabular-nums">{n.value}{#if n.goal}<span class="font-normal text-muted-foreground">/{n.goal}</span>{/if}</span>
+                <span class="block text-[11px] text-muted-foreground">{n.label}</span>
+              </span>
+            {/each}
+          </span>
+          <span class="flex items-center gap-0.5 whitespace-nowrap text-xs font-medium">All nutrients<ChevronRight class="size-4" /></span>
+        </a>
+      {/if}
+      </div>
 
       {#if nut?.coachPlan?.note}
         <p class="whitespace-pre-line px-1 text-xs text-muted-foreground">{nut.coachPlan.note}</p>

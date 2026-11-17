@@ -249,6 +249,13 @@
     });
   }
 
+  /** A favourite is a copy of the food from when it was starred; use the food as it is now
+   * (it may have gained nutrients since), falling back to the copy. */
+  async function latest(food: FoodRef): Promise<FoodRef> {
+    const { resolveFoodRef } = await import("../resolveFood");
+    return (await resolveFoodRef(food.id).catch(() => null)) ?? food;
+  }
+
   function pickFound(f: FoundFood) {
     onpick({ food: f.food, kind: f.kind, realGrams: f.realGrams });
   }
@@ -379,8 +386,8 @@
               <FoodRow
                 name={f.food.name}
                 detail={foodDetail(f.food, kind)}
-                onopen={() => onpick({ food: f.food, kind })}
-                onadd={onaddfood ? () => onaddfood({ food: f.food, kind }) : null}
+                onopen={() => void latest(f.food).then((food) => onpick({ food, kind }))}
+                onadd={onaddfood ? () => void latest(f.food).then((food) => onaddfood({ food, kind })) : null}
                 added={added.has(f.food.id)}
               />
             {/each}

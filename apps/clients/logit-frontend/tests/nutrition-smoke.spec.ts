@@ -133,9 +133,9 @@ test("nutrition personal flow", async ({ page }) => {
   await page.goto("/nutrition/foods?tab=foods");
   await page.getByRole("button", { name: "New food" }).click();
   await page.getByLabel("Name").fill("Skyr, plain");
-  await page.getByLabel("kcal", { exact: true }).fill("63");
+  await page.getByLabel("Energy", { exact: true }).fill("63");
   await page.getByLabel("Protein", { exact: true }).fill("11");
-  await page.getByLabel("Carbs", { exact: true }).fill("4");
+  await page.getByLabel("Carbohydrate", { exact: true }).fill("4");
   await page.getByLabel("Fat", { exact: true }).fill("0.2");
   await expect(page.getByText("Macros add up to 62 kcal")).toBeVisible();
   await page.getByRole("button", { name: "Save" }).click();
@@ -616,7 +616,7 @@ test("a custom food can be edited in place, keeping its id", async ({ page }) =>
   await page.getByRole("button", { name: /Protein shake/ }).click();
   await expect(page.getByRole("heading", { name: "Edit food" })).toBeVisible();
   await page.getByLabel("Name").fill("Protein shake v2");
-  await page.getByLabel("kcal", { exact: true }).fill("110");
+  await page.getByLabel("Energy", { exact: true }).fill("110");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Protein shake v2")).toBeVisible();
   await expect(page.getByText(/100 g · 110 kcal/)).toBeVisible();

@@ -12,6 +12,7 @@
     createRecipe,
     localDateIso,
     loggedItemPer100g,
+    nutrientsFor,
     recipePer100gCooked,
     recipeTotals,
     recomputeRecipe,
@@ -128,6 +129,7 @@
       amount: r.amount,
       portionId: r.portionId,
       computed: roundMacros(scaleMacros(food.per100g, r.grams)),
+      ...nutrientsFor(food, r.grams),
     };
   }
 

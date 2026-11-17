@@ -13,6 +13,7 @@
     updateDiaryItem,
     roundMacros,
     scaleMacros,
+    nutrientsFor,
     MEAL_SLOTS,
     type DiaryDay,
     type FoodRef,
@@ -41,6 +42,7 @@
   let day = $state<DiaryDay | null>(null);
   let item = $state<LoggedItem | null>(null);
   let basis = $state<MacroTotals | null>(null);
+  let basisNutrients = $state<FoodRef["nutrients"]>(undefined);
   let fromSource = $state(true);
   let sourceFood = $state<FoodRef | null>(null);
 
@@ -99,6 +101,7 @@
       const b = await basisForItem(it);
       if (b) {
         basis = b.per100g;
+        basisNutrients = b.nutrients;
         fromSource = b.fromSource;
         portionId = "g";
         amount = Math.round(it.grams * 100) / 100;
@@ -128,6 +131,7 @@
         patch.grams = grams;
         patch.servingLabel = portionLabel(Number(amount) || 0, activePortion, grams);
         patch.computed = roundMacros(scaleMacros(basis, grams));
+        patch.nutrients = nutrientsFor({ nutrients: basisNutrients }, grams).nutrients;
       } else {
         patch.computed = {
           kcal: Number(raw.kcal) || 0,

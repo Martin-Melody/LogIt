@@ -4,11 +4,15 @@
   import {
     MEAL_SLOTS,
     roundMacros,
+    roundNutrients,
     scaleMacros,
+    scaleNutrients,
     type FoodRef,
     type MacroTotals,
     type MealSlot,
+    type Nutrients,
   } from "@logit/core/domain/nutrition";
+  import FoodNutrients from "./FoodNutrients.svelte";
   import { chip, cn } from "./style";
   import BottomSheet from "./BottomSheet.svelte";
   import { MEAL_LABELS, fmtNum } from "./meals";
@@ -31,6 +35,8 @@
     portionId: string;
     meal: MealSlot | null;
     computed: MacroTotals;
+    /** Other nutrients for this amount; undefined when the food has none. */
+    nutrients: Nutrients | undefined;
   };
 
   interface Props {
@@ -87,6 +93,7 @@
   const amount = $derived(Math.max(0, Number(amountText.replace(",", ".")) || 0));
   const grams = $derived(portionToGrams(amount, active));
   const adds = $derived(roundMacros(scaleMacros(food.per100g, grams)));
+  const addsNutrients = $derived(roundNutrients(scaleNutrients(food.nutrients, grams)));
 
   const unitHint = $derived.by(() => {
     if (!active) return "";
@@ -131,6 +138,7 @@
       portionId,
       meal,
       computed: adds,
+      nutrients: addsNutrients,
     });
   }
 
@@ -248,6 +256,7 @@
         <div class="text-[11px] text-muted-foreground">fat g</div>
       </div>
     </div>
+    <FoodNutrients part="label" nutrients={addsNutrients} />
 
     {#if day && target}
       {@const left = target.kcal - kcalAfter}
@@ -277,6 +286,8 @@
       {@render extra({ grams })}
     {/if}
   </div>
+
+  <FoodNutrients part="micros" nutrients={addsNutrients} packaged={food.source === "off"} />
 
   {#if meal}
     <div class="grid grid-cols-4 gap-1.5 px-4 pt-3.5" role="group" aria-label="Meal">

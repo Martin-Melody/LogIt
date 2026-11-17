@@ -17,7 +17,7 @@ describe("open food facts search in a browser", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("goes through the LogIt server's /foods/search", async () => {
-    const fetch = vi.fn(async () => respond({ hits: [hit] }));
+    const fetch = vi.fn(async (_url: string) => respond({ hits: [hit] }));
     vi.stubGlobal("fetch", fetch);
 
     const found = await createOpenFoodFactsRepo().searchFoods("skyr", { limit: 5 });
@@ -36,5 +36,21 @@ describe("open food facts search in a browser", () => {
 
     expect(String(fetch.mock.calls[1][0])).toContain("world.openfoodfacts.org/cgi/search.pl");
     expect(found[0]?.brand).toBe("Arla");
+  });
+});
+
+describe("open food facts nutrients", async () => {
+  const { offNutrients } = await import("./openFoodFactsRepo");
+
+  it("converts grams to our units and works salt out from sodium", () => {
+    expect(
+      offNutrients({ fiber_100g: 6.5, sugars_100g: "12", "saturated-fat_100g": 1.2, sodium_100g: 0.2, iron_100g: 0.0084, "vitamin-d_100g": 0.0000042 }),
+    ).toEqual({ fibreG: 6.5, sugarG: 12, satFatG: 1.2, saltG: 0.5, ironMg: 8.4, vitDUg: 4.2 });
+  });
+
+  it("drops values that can't be right", () => {
+    // 5 g of iron per 100 g is a unit typed wrong (mg entered as g).
+    expect(offNutrients({ iron_100g: 5, fiber_100g: 400 })).toBeUndefined();
+    expect(offNutrients({})).toBeUndefined();
   });
 });

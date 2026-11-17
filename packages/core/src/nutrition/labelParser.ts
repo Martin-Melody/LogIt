@@ -1,4 +1,4 @@
-import { kcalFromMacros, type MacroTotals } from "../domain/nutrition";
+import { cleanNutrients, kcalFromMacros, type MacroTotals, type Nutrients } from "../domain/nutrition";
 
 // Extracts per-100 g macros from the raw text of a photographed nutrition label.
 // Pure and OCR-agnostic: the caller feeds in whatever text a recognizer produced
@@ -16,6 +16,9 @@ export interface ParsedLabel {
   perServing?: MacroTotals;
   /** Printed serving size in grams (ml treated as g). */
   servingSizeG?: number;
+  /** Saturates, sugars, fibre and salt where the label lists them, on the same basis as
+   *  `per100g` when that's present, else as `perServing`. */
+  labelNutrients?: Nutrients;
   /** 0..1 — share of the four macro fields that resolved cleanly, less a penalty per warning. */
   confidence: number;
   warnings: string[];
@@ -158,7 +161,7 @@ function assemble(
   layout: LabelLayout,
   raw: string,
   macros: { kcal: number | null; fatG: number | null; carbsG: number | null; proteinG: number | null },
-  opts: { per100g?: MacroTotals; perServing?: MacroTotals; servingSizeG?: number } = {},
+  opts: { per100g?: MacroTotals; perServing?: MacroTotals; servingSizeG?: number; labelNutrients?: Nutrients } = {},
 ): ParsedLabel {
   const warnings: string[] = [];
   const present = (["kcal", "fatG", "carbsG", "proteinG"] as const).filter(
@@ -199,6 +202,7 @@ function assemble(
     per100g,
     perServing: opts.perServing,
     servingSizeG: opts.servingSizeG,
+    ...(opts.labelNutrients ? { labelNutrients: opts.labelNutrients } : {}),
     confidence,
     warnings,
     raw,
@@ -220,11 +224,30 @@ function parseEu(raw: string, lines: string[], layout: LabelLayout): ParsedLabel
   );
   const proteinRow = findRow(lines, /protein|prot[eé][iï]?n|eiwei|eiwit/);
 
-  return assemble(layout, raw, {
-    kcal: energyKcal(energyRow, col),
-    fatG: gramsValue(fatRow, col),
-    carbsG: gramsValue(carbRow, col),
-    proteinG: gramsValue(proteinRow, col),
+  return assemble(
+    layout,
+    raw,
+    {
+      kcal: energyKcal(energyRow, col),
+      fatG: gramsValue(fatRow, col),
+      carbsG: gramsValue(carbRow, col),
+      proteinG: gramsValue(proteinRow, col),
+    },
+    { labelNutrients: euLabelNutrients(lines, col) },
+  );
+}
+
+/** The rest of a UK/EU label: saturates, sugars, fibre, salt (in the chosen column). */
+function euLabelNutrients(lines: string[], col: 0 | 1): Nutrients | undefined {
+  const sat = findRow(lines, /satur|ges[äa]ttigt|verzadigd/);
+  const sugar = findRow(lines, /sugars?|sucres|zucker|az[uú]car|zuccheri|suiker/, /satur/);
+  const fibre = findRow(lines, /fib(re|er|ra)s?\b|ballaststoff|vezel/);
+  const salt = findRow(lines, /\bsalt\b|\bsel\b|\bsalz\b|\bsal\b|\bsale\b|\bzout\b/);
+  return cleanNutrients({
+    satFatG: gramsValue(sat, col) ?? undefined,
+    sugarG: gramsValue(sugar, col) ?? undefined,
+    fibreG: gramsValue(fibre, col) ?? undefined,
+    saltG: gramsValue(salt, col) ?? undefined,
   });
 }
 
@@ -234,6 +257,14 @@ function parseUs(raw: string, lines: string[]): ParsedLabel {
   const fatRow = findRow(lines, /total fat|\bfat\b/, /saturated|trans|% daily/);
   const carbRow = findRow(lines, /total carb|carbohydrate/, /dietary fiber|sugars|% daily/);
   const proteinRow = findRow(lines, /protein/);
+  // US labels: per serving, sodium in mg (gramsValue turns it into g).
+  const sodium = gramsValue(findRow(lines, /sodium/), 0);
+  const servingNutrients = cleanNutrients({
+    satFatG: gramsValue(findRow(lines, /saturated/), 0) ?? undefined,
+    sugarG: gramsValue(findRow(lines, /total sugars|\bsugars\b/, /added/), 0) ?? undefined,
+    fibreG: gramsValue(findRow(lines, /fiber|fibre/), 0) ?? undefined,
+    saltG: sodium !== null ? Math.round(sodium * 2.5 * 100) / 100 : undefined,
+  });
 
   const perServing = {
     kcal: energyKcal(calRow, 0) ?? gramsValue(calRow, 0),
@@ -256,10 +287,15 @@ function parseUs(raw: string, lines: string[]): ParsedLabel {
       carbsG: Math.round(ps.carbsG * f * 10) / 10,
       fatG: Math.round(ps.fatG * f * 10) / 10,
     };
-    return assemble("us", raw, perServing, { per100g, perServing: ps, servingSizeG });
+    const labelNutrients = servingNutrients
+      ? cleanNutrients(
+          Object.fromEntries(Object.entries(servingNutrients).map(([k, v]) => [k, Math.round(v * f * 100) / 100])),
+        )
+      : undefined;
+    return assemble("us", raw, perServing, { per100g, perServing: ps, servingSizeG, labelNutrients });
   }
 
-  const out = assemble("us", raw, perServing, {});
+  const out = assemble("us", raw, perServing, { labelNutrients: servingNutrients });
   out.perServing = out.per100g; // values were per serving; we couldn't rebase them
   delete out.per100g;
   out.warnings.unshift("Serving size not read — values below are per serving, not per 100 g.");

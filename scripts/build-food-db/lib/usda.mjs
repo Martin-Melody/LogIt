@@ -7,17 +7,42 @@
 //   food_portion.csv   fdc_id, amount, modifier, gram_weight, portion_description
 //
 // Nutrients of interest, by USDA "nutrient_nbr":
-//   208 Energy (kcal) · 203 Protein · 204 Total lipid (fat) · 205 Carbohydrate, by difference
+//   208 Energy (kcal) · 203 Protein · 204 Total lipid (fat) · 205 Carbohydrate, by difference,
+//   plus fibre, sugars, saturates, sodium and 16 vitamins/minerals (NUTRIENT_NBRS below)
 // (Foundation foods sometimes carry energy as nbr 957/958 Atwater — 208 is preferred, with
 // a fallback below.)
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseCsvObjects } from "./csv.mjs";
-import { acceptRow, buildServings, cleanName, clampKcal, clampMacro, r2 } from "./normalize.mjs";
+import { acceptRow, buildServings, cleanName, clampKcal, clampMacro, nutrientFields, r2 } from "./normalize.mjs";
 import { config } from "../config.mjs";
 
 const NBR = { energy: "208", energyAtwaterGeneral: "957", energyAtwaterSpecific: "958", protein: "203", fat: "204", carb: "205" };
+
+/** Our nutrient id -> USDA nutrient_nbr candidates (first one present wins) and a factor. */
+const NUTRIENT_NBRS = {
+  fibreG: [["291"]], sugarG: [["269"], ["269.3"]], satFatG: [["606"]],
+  saltG: [["307", 2.5 / 1000]], // sodium mg -> salt g
+  vitAUg: [["320"]], thiaminMg: [["404"]], riboflavinMg: [["405"]], niacinMg: [["406"]],
+  vitB6Mg: [["415"]], folateUg: [["417"], ["435"]], vitB12Ug: [["418"]], vitCMg: [["401"]],
+  vitDUg: [["328"], ["324", 0.025]], // IU -> µg
+  vitEMg: [["323"]], vitKUg: [["430"]], calciumMg: [["301"]], ironMg: [["303"]],
+  magnesiumMg: [["304"]], potassiumMg: [["306"]], zincMg: [["309"]],
+};
+
+function usdaNutrients(n) {
+  const out = {};
+  for (const [id, candidates] of Object.entries(NUTRIENT_NBRS)) {
+    for (const [nbr, factor = 1] of candidates) {
+      if (Number.isFinite(n[nbr])) {
+        out[id] = n[nbr] * factor;
+        break;
+      }
+    }
+  }
+  return out;
+}
 
 async function csv(dir, file) {
   return parseCsvObjects(await readFile(join(dir, file), "utf8"));
@@ -70,6 +95,9 @@ export async function loadUsdaBundle(dir) {
       n[NBR.energy] ?? n[NBR.energyAtwaterSpecific] ?? n[NBR.energyAtwaterGeneral];
     if (kcal == null) continue;
 
+    const protein = r2(clampMacro(n[NBR.protein] ?? 0));
+    const carb = r2(clampMacro(n[NBR.carb] ?? 0));
+    const fat = r2(clampMacro(n[NBR.fat] ?? 0));
     const row = acceptRow({
       id: `usda:${f.fdc_id}`,
       source: "usda",
@@ -77,9 +105,10 @@ export async function loadUsdaBundle(dir) {
       brand: null,
       barcode: null,
       kcal_100g: clampKcal(kcal),
-      protein_100g: r2(clampMacro(n[NBR.protein] ?? 0)),
-      carb_100g: r2(clampMacro(n[NBR.carb] ?? 0)),
-      fat_100g: r2(clampMacro(n[NBR.fat] ?? 0)),
+      protein_100g: protein,
+      carb_100g: carb,
+      fat_100g: fat,
+      ...nutrientFields(usdaNutrients(n), { carb, fat }),
       popularity: config.genericPopularity,
       servings: buildServings(portionsByFood.get(f.fdc_id) ?? []),
     });
