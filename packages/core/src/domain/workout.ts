@@ -535,7 +535,8 @@ export function planRestFromFirstSet(
       planned.set(set.id, { reps: Math.max(minReps, first.reps - k), weight: first.weight });
     }
     if (planned.size === 0) return data;
-    return { ...data, sets: data.sets.map((x) => (planned.has(x.id) ? { ...x, target: planned.get(x.id)! } : x)) };
+    // Like applySetPlan: the weight goes on the set too (that's what its weight box shows).
+    return { ...data, sets: data.sets.map((x) => (planned.has(x.id) ? { ...x, weight: first.weight, target: planned.get(x.id)! } : x)) };
   });
 }
 

@@ -81,11 +81,11 @@
   let firstTimeReps = $state(8);
   let firstTimeMin = $state(1);
   const firstEver = $derived(prevLoaded && prevSets === null);
-  // Until the first set is logged the hint says how heavy to go, so the algorithm's own
-  // "First time" line would only repeat it.
   const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
+  // The hint says how heavy to go and the first set plans the rest, so the algorithm's own
+  // "First time" line would only repeat it, before and after that set.
   const cardSuggestion = $derived(
-    showFirstSetHint && suggestion?.change?.kind === "first" ? { ...suggestion, change: undefined, label: undefined } : suggestion,
+    firstEver && suggestion?.change?.kind === "first" ? { ...suggestion, change: undefined, label: undefined } : suggestion,
   );
 
   /** The first working set of a never-done exercise plans the empty sets after it. */
