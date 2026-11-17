@@ -110,13 +110,30 @@ describe("signing out and into a different account", () => {
   });
 });
 
-describe("local profiles side by side", () => {
-  it("a new profile starts empty, offline, at onboarding", async () => {
+describe("the space without an account", () => {
+  // A phone has at most one space without an account: the owner's training before they sign
+  // up. Anyone else on the phone signs into their own account (Free is enough).
+
+  it("asking for another profile without an account opens the existing one instead of making a second", async () => {
+    const phone = await new Device().launch();
+    await phone.finishOnboarding({ name: "Sam", split: "Sam split" });
+    await phone.addAccount(newUser("other"), "cloud", "register");
+    await phone.finishOnboarding({ name: "Other" });
+
+    await phone.addProfile();
+
+    expect(await phone.profiles()).toHaveLength(2);
+    expect(phone.profileName).toBe("Sam");
+    expect(await phone.splitNames()).toEqual(["Sam split"]);
+    expect(phone.route).toBe("/");
+  });
+
+  it("a second person on the phone gets an account and starts empty, at onboarding", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam", split: "Full Body" });
     await phone.logWorkout("Day 1");
 
-    await phone.addProfile();
+    await phone.addAccount(newUser("partner"), "cloud", "register");
 
     expect(phone.route).toBe("/onboarding");
     expect(phone.onboardingDone).toBe(false);
@@ -125,27 +142,11 @@ describe("local profiles side by side", () => {
     expect(await phone.profiles()).toHaveLength(2);
   });
 
-  it("adding a profile while signed in doesn't sign the new profile in or upload to the account", async () => {
-    const pro = await createAccount("cloud", newUser("host"), "Pro");
-    const phone = await new Device().launch();
-    await phone.signIn(pro);
-    await phone.finishOnboarding({ name: "Sam" });
-
-    await phone.addProfile();
-    await phone.finishOnboarding({ name: "Guest", split: "Guest split" });
-    await phone.logWorkout("Guest workout");
-
-    expect(phone.signedIn).toBe(false);
-    const server = await serverData("cloud", pro);
-    expect(server.splitNames).toEqual([]);
-    expect(server.workoutNames).toEqual([]);
-  });
-
-  it("switching between two offline profiles shows each one's own data", async () => {
+  it("switching between the space without an account and an account shows each one's own data", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam", split: "Sam split" });
     const sam = (await phone.activeProfile())!;
-    await phone.addProfile();
+    await phone.addAccount(newUser("alex"), "cloud", "register");
     await phone.finishOnboarding({ name: "Alex", split: "Alex split" });
     const alex = (await phone.activeProfile())!;
 
@@ -161,34 +162,23 @@ describe("local profiles side by side", () => {
   it("the phone reopens on the profile that was in use", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam" });
-    await phone.addProfile();
+    const sam = (await phone.activeProfile())!;
+    await phone.addAccount(newUser("alex"), "cloud", "register");
     await phone.finishOnboarding({ name: "Alex" });
+    await phone.switchProfile(sam.id);
 
     await phone.launch();
 
-    expect(phone.profileName).toBe("Alex");
+    expect(phone.profileName).toBe("Sam");
     expect(phone.route).toBe("/");
   });
 
-  it("a password-protected profile can't be opened with the wrong password", async () => {
-    const phone = await new Device().launch();
-    await phone.finishOnboarding({ name: "Sam" });
-    await phone.app.auth.authStore.createOfflineAccount("Locked", "secret-1");
-    await phone.finishOnboarding({ name: "Locked" });
-    const locked = (await phone.activeProfile())!;
-    const sam = (await phone.profiles()).find((p) => p.id !== locked.id)!;
-    await phone.switchProfile(sam.id);
-
-    await expect(phone.switchProfile(locked.id, "wrong")).rejects.toThrow("Incorrect password.");
-    expect(phone.profileName).toBe("Sam");
-  });
-
-  it("each offline profile keeps its own layout settings", async () => {
+  it("the space without an account and an account each keep their own layout settings", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam" });
     const sam = (await phone.activeProfile())!;
     phone.setSwipe(false);
-    await phone.addProfile();
+    await phone.addAccount(newUser("alex"), "cloud", "register");
     await phone.finishOnboarding({ name: "Alex" });
 
     expect(phone.swipeOn).toBe(true);
