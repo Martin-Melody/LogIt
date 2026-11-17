@@ -6,8 +6,8 @@ title: What each plan can do
   import PlanTable from "$lib/docs/using/PlanTable.svelte";
 </script>
 
-LogIt is free on your phone, with no account needed. **Pro** adds sync between your devices and the
-web dashboard. **Studio** is for coaches and personal trainers. This table is made from the same list
+LogIt is free on your phone, with no account needed. A free account also backs up your phone.
+**Pro** adds sync between several phones and the web dashboard. **Studio** is for coaches and personal trainers. This table is made from the same list
 the app uses, so it always matches what each plan really unlocks.
 
 <PlanTable />

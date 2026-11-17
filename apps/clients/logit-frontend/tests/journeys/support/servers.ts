@@ -72,11 +72,17 @@ export async function tokenFor(server: ServerName, user: { username: string; pas
  * What the server holds for an account, read as a second device would. Deleted rows are left
  * out. Synced data is null when the plan doesn't include sync (Free on the cloud).
  */
-export async function serverData(server: ServerName, user: { username: string; password: string }) {
+export async function serverData(
+  server: ServerName,
+  user: { username: string; password: string },
+  /** Read as this phone (its X-Logit-Device): a Free account's backup is only readable from the phone that holds it. */
+  asPhone?: { deviceId: string | null },
+) {
   const token = await tokenFor(server, user);
   type Row = { dataJson?: string | null; deletedAtMs?: number | null };
+  const deviceHeaders: Record<string, string> = asPhone?.deviceId ? { "X-Logit-Device": asPhone.deviceId } : {};
   const synced = <T>(path: string) =>
-    call<T>(server, path, { token }).catch((e: Error) => {
+    call<T>(server, path, { token, headers: deviceHeaders }).catch((e: Error) => {
       if (e.message.includes(": 403 ")) return null;
       throw e;
     });

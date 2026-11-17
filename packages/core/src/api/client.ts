@@ -1,6 +1,30 @@
 import { tokenStorage, type StoredTokens } from "./tokenStorage";
 import { getSessionScope, sessionKey } from "./sessionScope";
 import { log } from "../platform/log";
+import { isNativePlatform } from "../platform/isNative";
+
+const DEVICE_ID_KEY = "logit:device-id";
+
+/**
+ * A random id for this install of the phone app, the same for every account on it. Sent as
+ * X-Logit-Device so a Free account's backup belongs to one phone (the server's FreeBackup).
+ * The web app sends none, so the web dashboard stays a Pro feature.
+ */
+function deviceId(): string | null {
+  if (!isNativePlatform()) return null;
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      const bytes = new Uint8Array(12);
+      crypto.getRandomValues(bytes);
+      id = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
 
 const USER_KEY = "logit:auth:user";
 const SELF_HOSTED_KEY = "logit:auth:selfHosted";
@@ -88,6 +112,8 @@ class ApiClient {
   private cachedUser: AuthUser | null = null;
   private cachedIsSelfHosted = false;
   private refreshPromise: Promise<boolean> | null = null;
+  /** A Free account whose backup is held by another phone (the server said so); signing in here moves it back. */
+  private backupElsewhere = false;
 
   async init(): Promise<void> {
     this.tokens = await tokenStorage.get();
@@ -110,6 +136,7 @@ class ApiClient {
     this.tokens = null;
     this.cachedUser = null;
     this.cachedIsSelfHosted = false;
+    this.backupElsewhere = false;
     await this.init();
   }
 
@@ -158,6 +185,11 @@ class ApiClient {
       selfHosted: localStorage.getItem(sessionKey(SELF_HOSTED_KEY, scope)) === "true",
       server,
     };
+  }
+
+  /** The server refused this phone's sync because another phone holds this Free account's backup. */
+  isBackupElsewhere(): boolean {
+    return this.backupElsewhere;
   }
 
   isAuthenticated(): boolean {
@@ -242,6 +274,7 @@ class ApiClient {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "X-Request-Id": requestId,
+        ...(deviceId() ? { "X-Logit-Device": deviceId()! } : {}),
         ...(init.headers as Record<string, string>),
       };
       if (token && !ownToken) headers["Authorization"] = `Bearer ${token}`;
@@ -286,6 +319,7 @@ class ApiClient {
       const details = { requestId, ms, error: message };
       if (res.status >= 500) log.error("api", `${method} ${route} ${res.status}`, details);
       else log.warn("api", `${method} ${route} ${res.status}`, details);
+      if (code === "backup_other_device") this.backupElsewhere = true;
       throw new ApiError(res.status, message, code);
     }
 
@@ -312,6 +346,7 @@ class ApiClient {
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
+    this.backupElsewhere = false; // signing in on this phone moves a Free backup here
     return data.user;
   }
 
@@ -346,6 +381,7 @@ class ApiClient {
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
+    this.backupElsewhere = false; // signing in on this phone moves a Free backup here
     return data.user;
   }
 
