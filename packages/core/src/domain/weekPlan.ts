@@ -37,6 +37,11 @@ type DoneSession = { startedAtMs: number; source?: { dayId?: string } | null };
 /** Monday-first position of a weekday (Monday 0 … Sunday 6). */
 const pos = (weekday: number) => (weekday + 6) % 7;
 
+/** The split days done on a local date, from the workouts' sources. */
+export function dayIdsDoneOn(sessions: DoneSession[], iso: string): string[] {
+  return sessions.filter((s) => localIso(s.startedAtMs) === iso).map((s) => s.source?.dayId).filter((id): id is string => !!id);
+}
+
 function localIso(ms: number): string {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
