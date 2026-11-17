@@ -46,7 +46,7 @@
   import type { SessionPR } from "@logit/core/usecases/progression/getSessionPRs";
   import { localInbox, prNotifications, progressionNotification } from "$lib/features/inbox/localInbox";
   import { notifyGoalsReached } from "$lib/features/goals/goalProgress";
-  import { afterWorkoutRoute } from "$lib/features/onboarding/afterWorkout";
+  import { afterWorkoutRoute, completesFirstWeek } from "$lib/features/onboarding/afterWorkout";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import BodyweightPromptDialog from "$lib/features/bodyweight/BodyweightPromptDialog.svelte";
   import { shouldAskForBodyweight, dismissBodyweightPrompt } from "$lib/features/bodyweight/bodyweight";
@@ -353,7 +353,8 @@
     try {
       // The first workout of a plan from onboarding goes on to "When will you train?".
       const workoutsBefore = sessionSnapshot ? (await getWorkoutRepo().listAllSessions()).length : 0;
-      await goto(sessionSnapshot ? afterWorkoutRoute(sessionSnapshot.id, workoutsBefore) : "/");
+      const weekDone = sessionSnapshot ? await completesFirstWeek(sessionSnapshot).catch(() => false) : false;
+      await goto(sessionSnapshot ? afterWorkoutRoute(sessionSnapshot.id, workoutsBefore, weekDone) : "/");
       await currentSession.finish();
       onWorkoutFinished();
       void recentSessions.refresh(5);

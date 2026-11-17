@@ -5,6 +5,7 @@ import {
   clampWeeklyTarget,
   DEFAULT_WEEKLY_TARGET,
   withWeeklyTarget,
+  withTargetThisWeekOnly,
   type StreakPause,
   type TargetChange,
 } from "@logit/core/domain/weeklyStreak";
@@ -107,6 +108,11 @@ function createGoalsStore() {
     setWeeklyTarget(n: number) {
       const s = read();
       commit({ ...s, streak: { ...s.streak, ...withWeeklyTarget(s.streak, n, localDateIso()), updatedAtMs: Date.now() } });
+    },
+    /** This week only ("Make it 3 this week"); next week goes back to the usual target. */
+    setTargetThisWeekOnly(n: number) {
+      const s = read();
+      commit({ ...s, streak: { ...s.streak, ...withTargetThisWeekOnly(s.streak, n, localDateIso()), updatedAtMs: Date.now() } });
     },
     /** Pause from today until `endIso` (inclusive), or open-ended. */
     startPause(endIso: string | null = null) {
