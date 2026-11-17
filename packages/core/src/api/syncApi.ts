@@ -119,6 +119,15 @@ export type RemoteMealTemplate = {
   deletedAtMs?: number | null;
 };
 
+/** How one exercise progresses (ExerciseProgressionSettings as JSON); id = exercise key. */
+export type RemoteExerciseSetting = {
+  id: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
+};
+
 export type RemoteWeightEntry = {
   id: string;
   createdAtMs: number;
@@ -284,6 +293,22 @@ export function syncApiFor(api: ApiFetcher) {
 
     pullMealTemplates(since: number): Promise<{ templates: RemoteMealTemplate[] }> {
       return api.fetch(`/sync/nutrition/meal-templates?since=${since}`);
+    },
+
+    pushExerciseSettings(settings: RemoteExerciseSetting[]): Promise<void> {
+      return api.fetch("/sync/exercise-settings", { method: "POST", body: JSON.stringify({ settings }) });
+    },
+
+    pullExerciseSettings(since: number): Promise<{ settings: RemoteExerciseSetting[] }> {
+      return api.fetch(`/sync/exercise-settings?since=${since}`);
+    },
+
+    pushProgressionRecipes(recipes: RemoteExerciseSetting[]): Promise<void> {
+      return api.fetch("/sync/progression-recipes", { method: "POST", body: JSON.stringify({ recipes }) });
+    },
+
+    pullProgressionRecipes(since: number): Promise<{ recipes: RemoteExerciseSetting[] }> {
+      return api.fetch(`/sync/progression-recipes?since=${since}`);
     },
 
     pushWeightEntries(entries: RemoteWeightEntry[]): Promise<void> {

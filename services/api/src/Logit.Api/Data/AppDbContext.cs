@@ -33,6 +33,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedRecipe> SyncedRecipes => Set<SyncedRecipe>();
     public DbSet<SyncedFavoriteFood> SyncedFavoriteFoods => Set<SyncedFavoriteFood>();
     public DbSet<SyncedMealTemplate> SyncedMealTemplates => Set<SyncedMealTemplate>();
+    public DbSet<SyncedExerciseSetting> SyncedExerciseSettings => Set<SyncedExerciseSetting>();
+    public DbSet<SyncedProgressionRecipe> SyncedProgressionRecipes => Set<SyncedProgressionRecipe>();
     public DbSet<SyncedWeightEntry> SyncedWeightEntries => Set<SyncedWeightEntry>();
     public DbSet<SyncedHabit> SyncedHabits => Set<SyncedHabit>();
     public DbSet<SyncedHabitEntry> SyncedHabitEntries => Set<SyncedHabitEntry>();
@@ -480,6 +482,22 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         });
 
         model.Entity<SyncedFavoriteFood>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<SyncedProgressionRecipe>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<SyncedExerciseSetting>(e =>
         {
             e.HasIndex(s => new { s.UserId, s.SyncedAt });
             e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();

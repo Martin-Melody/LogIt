@@ -15,5 +15,41 @@ one-rep max. On the web (Pro) you can put several lifts on one chart with Compar
 
 ## Progression
 
-After each workout, LogIt suggests the next targets for each exercise. How it does that is up to you:
-pick a progression rule per exercise type in Settings, or install one as a plugin.
+After each workout, LogIt suggests the next targets for each exercise. How it does that is up to you,
+in Settings › Progression:
+
+- **LogIt Adaptive** (the default) plans every set from your current strength: the best estimated
+  one-rep max from your last few sessions. The weight is the heaviest that fits the rep range (5–8 for
+  big lifts, 8–12 for single-muscle lifts, close to failure, all changeable), and the reps per set allow
+  for how much yours usually drop from set to set. Light warm-up or back-off sets don't hold it back, and
+  beating the planned reps raises the weight next time. Tap **Why?** on an exercise to see the numbers.
+- **Linear Progression** is the simple option: one more rep each time, and 2.5 kg more once every set
+  hits the top of the range.
+- **Disable suggestions** turns planning off; you add sets yourself.
+
+You can also build your own without code: **Build an algorithm** puts one together from blocks. Pick where
+the weight comes from (your strength estimate, last session's sets, or a 5/3/1-style weekly wave), the rep
+range, how hard, the set layout (same weight, a top set with back-offs, or the same reps getting lighter),
+what happens when it stalls, the number of sets (or let the weekly target per muscle add or take one), and
+whether to hold the weight on weeks you eat under maintenance. A live preview shows what it would plan for
+your next session. Or install a progression plugin.
+
+To share one you built, open it and tap **Share**. **Post to your feed** attaches it to a post, and
+anyone who sees the post can tap **Add to my algorithms**; they first see what it would plan for their
+own next session. **Send as a code** opens your phone's share menu with a link: whoever gets it opens
+the link, sees the algorithm and taps **Open in LogIt**, no account needed. They can also paste the
+message under Settings › Progression › **Add from a code**. Only the blocks are
+shared, nothing about your lifts, and each person gets their own copy to change.
+
+Any exercise can be set differently: open it and use **How it progresses** to give it its own rep
+range, its own algorithm (or no suggestions), and, if it has a lift goal, choose what happens when you
+fall behind pace: just show it, or push the first set a little heavier (LogIt Adaptive). A split day
+that sets its own reps still wins on that day. These settings sync with Pro.
+
+**Sets this week** (on Progress) shows the hard sets each muscle got this week against a target range:
+a set counts fully for the muscles an exercise mainly works and 40% for the ones it also works. Most
+muscles start at around 10–16 sets a week and smaller ones lower, and once LogIt has enough of your weeks
+a range moves to what has worked for you. Your active split is scored against the same ranges, with a fix
+for anything it leaves short, like "Add 2 sets of Romanian deadlift on Legs". Tap a muscle to set
+your own range instead. It's used everywhere the target is: this week's view, scoring your split, and
+any algorithm set to adjust its sets to weekly targets. **Back to default** hands it back to LogIt.

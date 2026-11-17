@@ -15,7 +15,7 @@ export async function setupNativeShell(): Promise<void> {
 
   if (!Capacitor.isNativePlatform()) return;
 
-  await Promise.allSettled([syncStatusBar(), hideSplash(), wireBackButton()]);
+  await Promise.allSettled([syncStatusBar(), hideSplash(), wireBackButton(), wireAppLinks()]);
 }
 
 async function hideSplash(): Promise<void> {
@@ -64,6 +64,29 @@ async function wireBackButton(): Promise<void> {
         void App.exitApp();
       }
     });
+  } catch {
+    // plugin not present
+  }
+}
+
+/** Where a link that opened the app should go, or null to ignore it. */
+export function routeForAppLink(url: string): string | null {
+  // A shared algorithm: logit://a?c=logit-alg1:… or https://getlogit.app/a#logit-alg1:…
+  const code = url.match(/logit-alg1:[A-Za-z0-9_-]+/)?.[0];
+  if (code) return `/settings?algorithmCode=${encodeURIComponent(code)}#sec-progression`;
+  return null;
+}
+
+async function wireAppLinks(): Promise<void> {
+  try {
+    const { App } = await import("@capacitor/app");
+    const { goto } = await import("$app/navigation");
+    const open = (url: string | undefined) => {
+      const route = url ? routeForAppLink(url) : null;
+      if (route) void goto(route);
+    };
+    open((await App.getLaunchUrl())?.url);
+    await App.addListener("appUrlOpen", ({ url }) => open(url));
   } catch {
     // plugin not present
   }

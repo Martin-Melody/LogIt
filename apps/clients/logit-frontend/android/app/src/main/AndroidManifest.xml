@@ -24,6 +24,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Shared algorithms: the "Open in LogIt" button on getlogit.app/a opens logit://a?c=<code>. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="logit" android:host="a" />
+            </intent-filter>
+
+            <!-- The share link itself (https://getlogit.app/a#<code>). Opens the app directly once
+                 getlogit.app/.well-known/assetlinks.json lists the Play signing key; until then
+                 it opens the web page, which has the button above. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="getlogit.app" android:path="/a" />
+            </intent-filter>
+
         </activity>
 
         <provider
