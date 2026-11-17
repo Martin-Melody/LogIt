@@ -12,9 +12,6 @@
   import {
     RotateCcw,
     Sparkles,
-    Cloud,
-    Server,
-    WifiOff,
     Loader2,
     Trash2,
     ChevronRight,
@@ -117,6 +114,21 @@
 
   // --- Account ---
   let serverMode = $state<ServerMode>(getServerMode());
+  // The server the account in use lives on, as people know it.
+  const serverHost = $derived.by(() => {
+    if (serverMode !== "selfhosted") return "getlogit.app";
+    try { return new URL(apiClient.getBaseUrl()).host; } catch { return "Your own server"; }
+  });
+  // What the account card says about backup (design canvas 6). Free accounts on getlogit.app
+  // don't sync yet; self-hosted servers include everything.
+  const backupLine = $derived(
+    authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted()
+      ? "Not backed up: sync is a Pro feature"
+      : `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`,
+  );
+  function initialsOf(name: string): string {
+    return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  }
   let pendingDeleteAccount = $state(false);
   let deletingAccount = $state(false);
   let deleteAccountPassword = $state("");
@@ -588,21 +600,23 @@
     </Card.Header>
     <Card.Content class="flex flex-col gap-0">
       {#if authStore.isAuthenticated && authStore.user}
-        <!-- Identity row -->
-        <div class="flex items-center gap-3 pb-3">
-          {#if serverMode === "cloud"}
-            <div class="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Cloud class="h-4 w-4 text-primary" />
+        <!-- Who's signed in (design canvas 6) -->
+        <div class="mb-3 flex flex-col gap-3 rounded-xl border border-border p-3.5">
+          <div class="flex items-center gap-3">
+            <div class="h-11 w-11 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden text-sm font-semibold">
+              {#if $profile.avatarDataUrl}
+                <img src={$profile.avatarDataUrl} alt="" class="h-full w-full object-cover" />
+              {:else}
+                {initialsOf($profile.name || authStore.user.username)}
+              {/if}
             </div>
-          {:else}
-            <div class="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-              <Server class="h-4 w-4 text-muted-foreground" />
+            <div class="flex-1 min-w-0">
+              <p class="truncate text-[15px] font-medium">{$profile.name || authStore.user.username} <span class="font-normal text-muted-foreground">@{authStore.user.username}</span></p>
+              <p class="truncate text-xs text-muted-foreground">{serverHost}</p>
             </div>
-          {/if}
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium">@{authStore.user.username}</p>
-            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "getlogit.app" : "Self-hosted"}</p>
+            <span class="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">{apiClient.isSelfHosted() ? "Own server" : authStore.user.tier}</span>
           </div>
+          <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><ConnectionDot /> {backupLine}</p>
         </div>
 
         <PlanCard />
@@ -665,37 +679,48 @@
             </div>
           </div>
         {/if}
+        {#if isNativePlatform()}
+          <button type="button"
+            class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onclick={() => goto("/accounts")}>
+            Switch or add account
+            <ChevronRight class="h-4 w-4 shrink-0" />
+          </button>
+        {/if}
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onclick={() => void authStore.logout()}>
-          Sign out
+          Sign out of @{authStore.user.username}
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
 
       {:else if getActiveOwnerId()}
-        <!-- Identity row -->
+        <!-- No account yet (design canvas 5) -->
         <div class="flex items-center gap-3 pb-3">
-          <div class="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-            <WifiOff class="h-4 w-4 text-muted-foreground" />
+          <div class="h-11 w-11 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden text-sm font-semibold">
+            {#if $profile.avatarDataUrl}
+              <img src={$profile.avatarDataUrl} alt="" class="h-full w-full object-cover" />
+            {:else}
+              {initialsOf($profile.name)}
+            {/if}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium">{$profile.name || "Local account"}</p>
-            <p class="text-xs text-muted-foreground">Offline · data stored on this device</p>
+            <p class="truncate text-[15px] font-medium">{$profile.name || "No name yet"}</p>
+            <p class="text-xs text-muted-foreground">On this phone only · not backed up</p>
           </div>
         </div>
-        <!-- Action rows -->
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 text-sm hover:text-primary transition-colors"
-          onclick={() => goto("/auth?mode=register")}>
-          Create an account
-          <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
-        </button>
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => goto("/auth?mode=login")}>
-          Log in
-          <ChevronRight class="h-4 w-4 shrink-0" />
-        </button>
+        <div class="mb-3 flex flex-col gap-3 rounded-xl bg-muted p-4">
+          <p class="text-[15px] font-semibold">Make an account</p>
+          <div class="flex flex-col gap-2 text-sm">
+            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Free</span><span class="text-muted-foreground">Social: share workouts, follow friends, get coached</span></p>
+            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Pro</span><span class="text-muted-foreground">Backup and sync across phones, web dashboard</span></p>
+          </div>
+          <p class="text-xs text-muted-foreground">Everything already on this phone comes with you.</p>
+          <div class="flex gap-2">
+            <Button class="flex-1" onclick={() => goto("/auth?mode=register")}>Create account</Button>
+            <Button class="flex-1" variant="outline" onclick={() => goto("/auth?mode=login")}>Sign in</Button>
+          </div>
+        </div>
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onclick={() => goto("/accounts")}>
@@ -740,12 +765,6 @@
             </div>
           </div>
         {/if}
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => void authStore.logout()}>
-          Sign out
-          <ChevronRight class="h-4 w-4 shrink-0" />
-        </button>
 
       {:else}
         <!-- No account -->
