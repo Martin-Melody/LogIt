@@ -16,7 +16,7 @@ import { getNutritionRepo, getFoodDbRepo } from "$lib/data/repoProvider";
  * foods, their recipes, and the bundled reference DB. Returns null if none match (e.g. a
  * reference food that isn't in this build of the DB).
  */
-export async function resolveFoodRef(id: string): Promise<FoodRef | null> {
+export async function resolveFoodRef(id: string, opts: { referenceDb?: boolean } = {}): Promise<FoodRef | null> {
   const repo = getNutritionRepo();
   const custom = await repo.getCustomFood(id).catch(() => null);
   if (custom && !custom.deletedAtMs) return custom.food;
@@ -24,6 +24,9 @@ export async function resolveFoodRef(id: string): Promise<FoodRef | null> {
   const recipe = await repo.getRecipe(id).catch(() => null);
   if (recipe && !recipe.deletedAtMs) return recipeAsFood(recipe);
 
+  // The bundled database can take seconds to open the first time; callers that know the
+  // food isn't in it skip it.
+  if (opts.referenceDb === false) return null;
   return getFoodDbRepo().getFood(id).catch(() => null);
 }
 
