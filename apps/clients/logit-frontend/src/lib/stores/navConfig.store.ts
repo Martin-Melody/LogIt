@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable } from "svelte/store";
 import {
   House,
@@ -87,7 +89,7 @@ function ensureComplete(config: NavConfig): NavConfig {
 function load(): NavConfig {
   if (!browser) return defaultConfig();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getAccountItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
     const parsed = JSON.parse(raw) as NavConfig;
     return ensureComplete({ bar: parsed.bar ?? [], more: parsed.more ?? [], swipe: parsed.swipe });
@@ -101,7 +103,7 @@ let _current: NavConfig = defaultConfig();
 
 function saveToStorage(config: NavConfig) {
   if (!browser) return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  setAccountItem(STORAGE_KEY, JSON.stringify(config));
 }
 
 function createNavConfigStore() {
@@ -216,6 +218,7 @@ function createNavConfigStore() {
 
   return {
     subscribe: store.subscribe,
+    reloadForAccount: () => store.set(load()),
     reorderBar,
     reorderMore,
     moveToBar,
@@ -231,6 +234,8 @@ function createNavConfigStore() {
 }
 
 export const navConfig = createNavConfigStore();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => navConfig.reloadForAccount());
 
 export function getNavConfigJson(): string {
   return JSON.stringify(_current);

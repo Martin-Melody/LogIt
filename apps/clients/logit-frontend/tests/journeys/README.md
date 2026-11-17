@@ -61,18 +61,11 @@ same server state a purchase does), and real Android storage. Those still need a
 
 ## Known bugs (`it.fails`)
 
-An `it.fails` test passes while its bug is open and fails once the bug is fixed. Then change
-it to `it`.
-
-- **Layout settings are per phone, not per account.** The nav bar, home screen layout,
-  profile cards, installed plugins and their settings, and which tours have been seen are
-  kept in localStorage under one key for the whole phone. The next account or profile on the
-  phone inherits them, and syncs them up to its own account.
-  (`switching` › "layout settings belong to the account…", "each offline profile keeps its own
-  layout settings")
+None open. An `it.fails` test passes while its bug is open and fails once the bug is fixed;
+then change it to `it`. (Layout settings per account was the first one, fixed 2026-11-17.)
 
 ## Open questions (`it.todo`)
 
-- **Should moving from getlogit.app to a self-hosted server bring the data along?** Today the
-  self-hosted account starts empty and the getlogit.app profile stays on the phone untouched.
-  The only way across is Settings › Backup → export, then import.
+- **Moving from getlogit.app to a self-hosted server brings the data along** (decided
+  2026-11-17; phase 1 step 8 of the accounts plan). Until it's built, the self-hosted account
+  starts empty and the getlogit.app profile stays on the phone untouched.

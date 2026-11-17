@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable } from "svelte/store";
 import type { BarbellConfig } from "@logit/core/domain/plates";
 import { DEFAULT_BARBELL } from "@logit/core/domain/plates";
@@ -23,7 +25,7 @@ export const defaultEquipment: EquipmentConfig = {
 function load(): EquipmentConfig {
   if (!browser) return defaultEquipment;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getAccountItem(STORAGE_KEY);
     if (!raw) return defaultEquipment;
     const parsed = JSON.parse(raw) as { barbell?: Partial<BarbellConfig> };
     const bar: Partial<BarbellConfig> = parsed.barbell ?? {};
@@ -46,12 +48,13 @@ function createEquipmentStore() {
 
   return {
     subscribe: store.subscribe,
+    reloadForAccount: () => store.set(load()),
     save(patch: Partial<EquipmentConfig>) {
       store.update((cur) => {
         const next = { ...cur, ...patch };
         if (browser) {
           try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            setAccountItem(STORAGE_KEY, JSON.stringify(next));
           } catch {}
         }
         return next;
@@ -64,3 +67,5 @@ function createEquipmentStore() {
 }
 
 export const equipment = createEquipmentStore();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => equipment.reloadForAccount());

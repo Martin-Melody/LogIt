@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { apiClient } from "@logit/core/api/client";
 import { chartToRow, chartsFromRows, insightChartsApi } from "@logit/core/api/insightChartsApi";
 import {
@@ -36,7 +38,7 @@ const APPLIED_KEY = "logit:insight-charts-home-applied:v1";
 function readCache(): InsightChart[] {
   if (!browser) return [];
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? "[]") as unknown[];
+    const raw = JSON.parse(getAccountItem(KEY) ?? "[]") as unknown[];
     return raw.map((c) => parseInsightChart(JSON.stringify(c))).filter((c): c is InsightChart => !!c);
   } catch {
     return [];
@@ -45,7 +47,7 @@ function readCache(): InsightChart[] {
 
 function readApplied(): Record<string, boolean> {
   try {
-    return JSON.parse(localStorage.getItem(APPLIED_KEY) ?? "{}") as Record<string, boolean>;
+    return JSON.parse(getAccountItem(APPLIED_KEY) ?? "{}") as Record<string, boolean>;
   } catch {
     return {};
   }
@@ -59,7 +61,7 @@ function createChartsStore() {
   let lastSync = 0;
 
   function persist() {
-    try { localStorage.setItem(KEY, JSON.stringify(charts)); } catch {}
+    try { setAccountItem(KEY, JSON.stringify(charts)); } catch {}
   }
 
   function applyToHome() {
@@ -72,7 +74,7 @@ function createChartsStore() {
         return { id: chartWidgetId(c.id), on, changed: applied[c.id] !== on };
       }),
     );
-    try { localStorage.setItem(APPLIED_KEY, JSON.stringify(next)); } catch {}
+    try { setAccountItem(APPLIED_KEY, JSON.stringify(next)); } catch {}
   }
 
   async function doSync() {
@@ -89,6 +91,9 @@ function createChartsStore() {
   }
 
   return {
+    reloadForAccount() {
+      charts = readCache();
+    },
     get list() { return charts; },
     get(id: string) { return charts.find((c) => c.id === id) ?? null; },
     /** Pull the charts (at most every 30 s unless forced). */
@@ -113,6 +118,8 @@ function createChartsStore() {
 }
 
 export const insightCharts = createChartsStore();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => insightCharts.reloadForAccount());
 
 // ── Drawing ─────────────────────────────────────────────────────────────────
 

@@ -1,4 +1,5 @@
 import { get } from "svelte/store";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import { profile } from "$lib/stores/profile.store";
 import { getExerciseRepo, getNutritionRepo } from "$lib/data/repoProvider";
 import { pushWeightEntry } from "$lib/sync/syncService";
@@ -88,7 +89,7 @@ const DISMISS_FOR_MS = 7 * 24 * 60 * 60 * 1000;
 export async function shouldAskForBodyweight(name: string, exerciseType: ExerciseType | undefined): Promise<boolean> {
   if (getLoadMode(exerciseType, [], name) === "external") return false;
   try {
-    const at = Number(localStorage.getItem(DISMISSED_KEY));
+    const at = Number(getAccountItem(DISMISSED_KEY));
     if (at && Date.now() - at < DISMISS_FOR_MS) return false;
   } catch {}
   return !(await hasBodyweight());
@@ -96,6 +97,6 @@ export async function shouldAskForBodyweight(name: string, exerciseType: Exercis
 
 export function dismissBodyweightPrompt(): void {
   try {
-    localStorage.setItem(DISMISSED_KEY, String(Date.now()));
+    setAccountItem(DISMISSED_KEY, String(Date.now()));
   } catch {}
 }

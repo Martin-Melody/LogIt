@@ -1,4 +1,5 @@
 import { get } from "svelte/store";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import { browser } from "$app/environment";
 import { toast } from "svelte-sonner";
 import { currentSession } from "$lib/stores/currentSession.store";
@@ -27,8 +28,8 @@ export function initSessionMusic(): void {
     const settings = get(musicSettings);
     if (!settings.autoplay) return;
     try {
-      if (localStorage.getItem(STARTED_KEY) === s.id) return;
-      localStorage.setItem(STARTED_KEY, s.id);
+      if (getAccountItem(STARTED_KEY) === s.id) return;
+      setAccountItem(STARTED_KEY, s.id);
     } catch {
       // No storage: start it anyway.
     }
