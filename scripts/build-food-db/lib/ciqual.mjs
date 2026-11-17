@@ -78,6 +78,8 @@ export async function loadCiqualTable(path) {
     protein: findColumn(folded, [["proteines", "jones"], ["proteine"], ["protein"]]),
     carb: findColumn(folded, [["glucides"], ["glucide"], ["carbohydrate"]]),
     fat: findColumn(folded, [["lipides"], ["lipide"], ["fat"], ["lipid"]]),
+    fibre: findColumn(folded, [["fibres"], ["fibre"], ["fiber"]]),
+    alcohol: findColumn(folded, [["alcool"], ["alcohol"]]),
   };
 
   const nameCol = col.nameEn >= 0 ? col.nameEn : col.nameFr;
@@ -93,6 +95,16 @@ export async function loadCiqualTable(path) {
     const name = cleanName(r[nameCol]);
     if (!name) continue;
     const code = String(r[col.code] ?? "").trim() || String(i);
+    const num = (c) => (c >= 0 ? parseLooseNumber(r[c]) : NaN);
+    const [protein, carb, fat] = [num(col.protein), num(col.carb), num(col.fat)];
+    // A food without measured protein, carbs and fat can't be logged sensibly.
+    if (![protein, carb, fat].every(Number.isFinite)) continue;
+    // About a quarter of the table has no energy value (mostly prepared dishes). Work it out
+    // with the EU label factors, as the table itself does.
+    let kcal = num(col.kcal);
+    if (!Number.isFinite(kcal)) {
+      kcal = 4 * protein + 4 * carb + 9 * fat + 2 * (num(col.fibre) || 0) + 7 * (num(col.alcohol) || 0);
+    }
 
     const row = {
       id: `ciqual:${code}`,
@@ -100,10 +112,10 @@ export async function loadCiqualTable(path) {
       name,
       brand: null,
       barcode: null,
-      kcal_100g: clampKcal(parseLooseNumber(r[col.kcal])),
-      protein_100g: r2(clampMacro(col.protein >= 0 ? parseLooseNumber(r[col.protein]) : 0)),
-      carb_100g: r2(clampMacro(col.carb >= 0 ? parseLooseNumber(r[col.carb]) : 0)),
-      fat_100g: r2(clampMacro(col.fat >= 0 ? parseLooseNumber(r[col.fat]) : 0)),
+      kcal_100g: clampKcal(kcal),
+      protein_100g: r2(clampMacro(protein)),
+      carb_100g: r2(clampMacro(carb)),
+      fat_100g: r2(clampMacro(fat)),
       popularity: config.genericPopularity,
       servings: buildServings(),
     };

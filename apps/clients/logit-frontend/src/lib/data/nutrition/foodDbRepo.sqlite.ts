@@ -182,8 +182,11 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
       const db = getFoodDb();
       if (!db || !q.trim()) return [];
       const limit = Math.min(opts.limit ?? 25, 100);
-      const sourceClause = opts.source ? " AND f.source = ?" : "";
-      const sourceParam = opts.source ? [opts.source] : [];
+      // "usda" stands for every generic table (USDA and CIQUAL); the app's FoodRef has no
+      // separate CIQUAL source.
+      const generic = opts.source === "usda";
+      const sourceClause = !opts.source ? "" : generic ? " AND f.source != 'off'" : " AND f.source = ?";
+      const sourceParam = opts.source && !generic ? [opts.source] : [];
       const curated = await hasCurated();
       const curatedCol = curated ? ", f.curated" : "";
 
@@ -195,7 +198,7 @@ export function createSqliteFoodDbRepo(): FoodDbRepo {
         const params = ws.flatMap((w) => [`%${w}%`, `%${w}%`]);
         const rows = await query(
           `SELECT ${COLS}${curated ? ", curated" : ""} FROM foods
-           WHERE (${where})${opts.source ? " AND source = ?" : ""}
+           WHERE (${where})${sourceClause.replace("f.source", "source")}
            ORDER BY popularity DESC LIMIT ?`,
           [...params, ...sourceParam, limit * 4],
         );

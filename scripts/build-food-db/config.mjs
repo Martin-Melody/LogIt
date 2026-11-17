@@ -41,10 +41,11 @@ export const config = {
 
   ciqual: {
     // ANSES CIQUAL — the French/EU generic food-composition table (~3.2k foods, lab data).
-    // Etalab Licence Ouverte 2.0 (attribution). The official distribution is an XLSX; the
-    // script consumes a CSV export of it. See README for the one conversion step and the
-    // data.gouv.fr mirror.
-    csvPath: "data/ciqual/ciqual.csv",
+    // Etalab Licence Ouverte 2.0 (attribution). The official distribution is an XLS; a CSV
+    // export of the 2020 English table is committed in sources/ so builds (CI included)
+    // don't depend on ciqual.anses.fr being up. A newer export saved to overridePath wins.
+    csvPath: "sources/ciqual-2020.csv",
+    overridePath: "data/ciqual/ciqual.csv",
   },
 
   off: {
