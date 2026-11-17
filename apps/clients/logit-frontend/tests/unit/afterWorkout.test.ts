@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { afterWorkoutRoute, markFirstWorkoutPending, markSaveAsked } from "$lib/features/onboarding/afterWorkout";
 import { mondayFirst, reminderSentence } from "$lib/features/onboarding/workoutReminders";
+import { firstWeekEndIso, inFirstWeek, markPlanStarted } from "$lib/features/onboarding/firstWeek";
 import { setActiveOwnerId } from "$lib/data/activeOwner";
 
 beforeEach(() => {
@@ -46,5 +47,21 @@ describe("the reminder sentence", () => {
     expect(reminderSentence([0, 6], "18:30")).toBe("I'll train Sat and Sun at 18:30.");
     expect(reminderSentence([3], "06:00")).toBe("I'll train Wed at 6:00.");
     expect(mondayFirst([0, 1, 6])).toEqual([1, 6, 0]);
+  });
+});
+
+describe("the first week", () => {
+  it("runs to that Sunday, or the next one when the plan starts Friday or at the weekend", () => {
+    expect(firstWeekEndIso("2026-11-17")).toBe("2026-11-22"); // Tuesday
+    expect(firstWeekEndIso("2026-11-20")).toBe("2026-11-29"); // Friday
+    expect(firstWeekEndIso("2026-11-22")).toBe("2026-11-29"); // Sunday
+    markPlanStarted("2026-11-17");
+    expect(inFirstWeek("2026-11-22")).toBe(true);
+    expect(inFirstWeek("2026-11-23")).toBe(false);
+  });
+
+  it("finishing it shows the week-complete screen once", () => {
+    expect(afterWorkoutRoute("s4", 3, true)).toBe("/onboarding/week-done");
+    expect(afterWorkoutRoute("s5", 4, true)).toBe("/");
   });
 });

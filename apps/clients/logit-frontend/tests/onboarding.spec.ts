@@ -248,6 +248,34 @@ test.describe("first workout", () => {
   });
 });
 
+// ── Week one (O7, O9) ────────────────────────────────────────────────────────
+
+test.describe("week one", () => {
+  const answers = { goal: "both", experience: "under2", days: 4, equipment: "gym", minutes: 45 };
+
+  test("Home shows 'Your first week' with the plan's days", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-17T09:00:00")); // a Tuesday
+    await seedAnswers(page, 4, answers);
+    await goToOnboarding(page);
+    await page.getByRole("button", { name: "I'll start later" }).click();
+    await page.waitForURL(atHome, { timeout: 10_000 });
+
+    await expect(page.getByText("Your first week", { exact: true })).toBeVisible();
+    await expect(page.getByText("0 of 4 done. Finish all 4 for your first week on the streak.")).toBeVisible();
+    await page.screenshot({ path: "test-results/first-week-home.png" });
+  });
+
+  test("the week-complete screen says who they are now", async ({ page }) => {
+    await seedAtStep(page, 0);
+    await page.addInitScript(() => localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true, step: 0 })));
+    await page.goto("/onboarding/week-done");
+
+    await expect(page.getByRole("heading", { name: /You're someone who trains/ })).toBeVisible();
+    await page.getByRole("button", { name: "Onto week 2" }).click();
+    await page.waitForURL(atHome);
+  });
+});
+
 // ── Returning user via the welcome-screen login link — requires live API ─────
 
 test.describe("returning user - requires API", () => {

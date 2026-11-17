@@ -10,6 +10,9 @@ import { saveExerciseProgressionSettings } from "@logit/core/usecases/progressio
 import { starterPlanToSplit, starterRepRanges, type StarterPlan } from "@logit/core/domain/starterPlan";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 import { markFirstWorkoutPending } from "./afterWorkout";
+import { markPlanStarted } from "./firstWeek";
+import { setMovesMissed } from "./weekSessions";
+import { localDateIso } from "@logit/core/domain/nutrition";
 
 export async function saveStarterPlan(plan: StarterPlan): Promise<WorkoutSplit> {
   const split = starterPlanToSplit(plan);
@@ -22,5 +25,7 @@ export async function saveStarterPlan(plan: StarterPlan): Promise<WorkoutSplit> 
     if (row) pushExerciseSetting(row);
   }
   markFirstWorkoutPending();
+  markPlanStarted(localDateIso());
+  setMovesMissed(split.id);
   return split;
 }

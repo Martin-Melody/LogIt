@@ -2,6 +2,8 @@ import type { WorkoutSplit, SplitDay } from "@logit/core/domain/WorkoutSplit";
 import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import { planSplit, splitTimeline, type SplitPlan, type SplitProgress, type TimelineEntry } from "@logit/core/domain/splitSchedule";
 import { localDateIso } from "@logit/core/domain/nutrition";
+import { movesMissed, weekSessions } from "$lib/features/onboarding/weekSessions";
+import { planStartIso } from "$lib/features/onboarding/firstWeek";
 
 export type RotationState = {
   lastDayId: string;
@@ -101,6 +103,10 @@ function progressOf(split: WorkoutSplit, todayIso: string): SplitProgress {
   const last = state ? { dayId: state.lastDayId, dateIso: localDateIso(new Date(state.recordedAtMs)) } : null;
   // doneOnDay belongs to the day it was recorded; yesterday's list says nothing about today.
   const doneTodayIds = last?.dateIso === todayIso ? (state?.doneOnDay ?? []) : [];
+  // A plan from onboarding carries a missed workout forward through the week.
+  if (split.schedule === "weekdays" && movesMissed(split.id)) {
+    return { last, doneTodayIds, week: { sessions: weekSessions(), planStartIso: planStartIso() } };
+  }
   return { last, doneTodayIds };
 }
 
