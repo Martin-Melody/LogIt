@@ -58,11 +58,13 @@
     }
   }
 
-  async function addProfile() {
+  // A second person on the phone signs into their own account (Free is enough); the account in
+  // use stays signed in. A phone keeps at most one profile without an account.
+  async function addAccount() {
     creating = true;
     try {
-      await authStore.createOfflineAccount("", "");
-      await goto("/onboarding");
+      await authStore.beginAddingAccount();
+      await goto("/auth?mode=login");
     } finally {
       creating = false;
     }
@@ -145,9 +147,9 @@
     <button type="button"
       class="mt-4 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:border-muted-foreground/50 transition-colors disabled:opacity-50"
       disabled={creating}
-      onclick={() => void addProfile()}>
+      onclick={() => void addAccount()}>
       {#if creating}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Plus class="h-4 w-4" />{/if}
-      Add another profile
+      Add account
     </button>
   {/if}
 </div>

@@ -191,12 +191,24 @@ function createAuthStore() {
    * Create a new local-only account (or finalise the auto-created first-launch account).
    * Password is optional — only required if the user wants to protect the account.
    */
-  async function createOfflineAccount(displayName: string, password: string): Promise<void> {
+  /**
+   * The space without an account: open it, or make it when the phone has none. A phone has at
+   * most one (the owner's training before they sign up); anyone else on the phone signs into
+   * their own account (beginAddingAccount). "opened" when one already existed.
+   */
+  async function createOfflineAccount(displayName: string, password: string): Promise<"created" | "opened"> {
     if (!isNativePlatform()) {
       // Web: just update the profile store — no local account infra on web
       const { profile } = await import("$lib/stores/profile.store");
       if (displayName.trim()) profile.save({ name: displayName.trim() });
-      return;
+      return "created";
+    }
+
+    const { listLocalAccounts: listAll } = await import("$lib/data/localAccountRepo");
+    const existing = (await listAll()).find((a) => !a.serverUserId);
+    if (existing) {
+      if (existing.id !== getActiveOwnerId()) await loginOfflineAccount(existing.id, password);
+      return "opened";
     }
 
     // The new profile starts with no sign-in; the account in use stays signed in.
@@ -231,6 +243,7 @@ function createAuthStore() {
     if (claimTarget) await claimOrphanedData(claimTarget);
     await apiClient.reloadSession();
     await switchActiveOwner(false);
+    return "created";
   }
 
   // ── Logout / delete ──────────────────────────────────────────────────────

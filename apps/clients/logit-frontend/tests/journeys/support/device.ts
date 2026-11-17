@@ -262,8 +262,8 @@ export class Device {
 
   /** Profiles screen › Add profile (src/routes/accounts addProfile()). */
   async addProfile(): Promise<void> {
-    await this.app.auth.authStore.createOfflineAccount("", "");
-    this.routes.push("/onboarding");
+    const result = await this.app.auth.authStore.createOfflineAccount("", "");
+    this.routes.push(result === "created" ? "/onboarding" : "/");
     await this.settle();
   }
 
