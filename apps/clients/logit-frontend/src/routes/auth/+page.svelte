@@ -143,6 +143,24 @@
     showConfirmPassword = false;
   }
 
+  // "Is the training on this phone yours?" Asked before signing in from the space without an
+  // account when it holds training (authStore.offlineTrainingToAsk). Neither answer is the
+  // default: the safe one depends on who's holding the phone.
+  type OfflineTraining = { workouts: number; splits: number; name: string };
+  let whoseTraining = $state<OfflineTraining | null>(null);
+  let answerWhose: ((choice: "add" | "keep-separate" | null) => void) | null = null;
+
+  function askWhoseTraining(found: OfflineTraining): Promise<"add" | "keep-separate" | null> {
+    whoseTraining = found;
+    return new Promise((resolve) => {
+      answerWhose = (choice) => {
+        whoseTraining = null;
+        answerWhose = null;
+        resolve(choice);
+      };
+    });
+  }
+
   async function submit() {
     if (mode === "register" && form.password !== form.confirmPassword) {
       authError = "Passwords don't match.";
@@ -157,7 +175,14 @@
 
     try {
       if (mode === "login") {
-        await authStore.login(form.username.trim(), form.password);
+        const found = await authStore.offlineTrainingToAsk();
+        let offlineTraining: "add" | "keep-separate" | undefined;
+        if (found) {
+          const choice = await askWhoseTraining(found);
+          if (!choice) return;
+          offlineTraining = choice;
+        }
+        await authStore.login(form.username.trim(), form.password, { offlineTraining });
       } else {
         const displayName = get(profile).name.trim() || form.username.trim();
         await authStore.register(
@@ -424,3 +449,31 @@
     </div>
   {/if}
 </div>
+
+{#if whoseTraining}
+  <div class="fixed inset-0 z-50 flex flex-col justify-end bg-black/50" role="presentation">
+    <div class="rounded-t-2xl bg-background px-6 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby="whose-title">
+      <div class="h-1 w-10 rounded-full bg-muted-foreground/30 self-center"></div>
+      <div>
+        <h2 id="whose-title" class="text-lg font-bold">Is the training on this phone yours, @{form.username.trim()}?</h2>
+        <p class="mt-1 text-sm text-muted-foreground">This phone has training that isn't in any account yet.</p>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-lg bg-muted p-2.5"><p class="text-lg font-bold">{whoseTraining.workouts}</p><p class="text-xs text-muted-foreground">workout{whoseTraining.workouts === 1 ? "" : "s"}</p></div>
+        <div class="rounded-lg bg-muted p-2.5"><p class="text-lg font-bold">{whoseTraining.splits}</p><p class="text-xs text-muted-foreground">split{whoseTraining.splits === 1 ? "" : "s"}</p></div>
+        <div class="rounded-lg bg-muted p-2.5"><p class="text-lg font-bold truncate">{whoseTraining.name || "No name"}</p><p class="text-xs text-muted-foreground">name on it</p></div>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <button type="button" class="flex flex-col items-start gap-0.5 rounded-lg border border-border px-3.5 py-3 text-left" onclick={() => answerWhose?.("keep-separate")}>
+          <span class="text-[15px] font-medium">No, it's someone else's</span>
+          <span class="text-sm text-muted-foreground">It stays as it is. You start with your own</span>
+        </button>
+        <button type="button" class="flex flex-col items-start gap-0.5 rounded-lg border border-border px-3.5 py-3 text-left" onclick={() => answerWhose?.("add")}>
+          <span class="text-[15px] font-medium">Yes, add it to @{form.username.trim()}</span>
+          <span class="text-sm text-muted-foreground">It joins your account's history</span>
+        </button>
+        <button type="button" class="h-11 text-sm font-medium text-muted-foreground" onclick={() => answerWhose?.(null)}>Cancel</button>
+      </div>
+    </div>
+  </div>
+{/if}
