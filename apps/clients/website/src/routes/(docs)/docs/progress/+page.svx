@@ -15,5 +15,16 @@ one-rep max. On the web (Pro) you can put several lifts on one chart with Compar
 
 ## Progression
 
-After each workout, LogIt suggests the next targets for each exercise. How it does that is up to you:
-pick a progression rule per exercise type in Settings, or install one as a plugin.
+After each workout, LogIt suggests the next targets for each exercise. How it does that is up to you,
+in Settings › Progression:
+
+- **LogIt Adaptive** (the default) plans every set from your current strength: the best estimated
+  one-rep max from your last few sessions. The weight is the heaviest that fits the rep range (5–8 for
+  big lifts, 8–12 for single-muscle lifts, close to failure, all changeable), and the reps per set allow
+  for how much yours usually drop from set to set. Light warm-up or back-off sets don't hold it back, and
+  beating the planned reps raises the weight next time. Tap **Why?** on an exercise to see the numbers.
+- **Linear Progression** is the simple option: one more rep each time, and 2.5 kg more once every set
+  hits the top of the range.
+- **Disable suggestions** shows what you did last time instead.
+
+You can also install a progression plugin.
