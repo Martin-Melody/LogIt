@@ -11,6 +11,7 @@ import {
   type SplitScoreRow,
 } from "../../domain/weeklySets";
 import { getMuscleGroupInsights } from "./getMuscleGroupInsights";
+import { getMuscleSetTargets } from "./exerciseProgressionSettings";
 import type { ProgressionDeps } from "./deps";
 
 export type WeeklySetsRow = {
@@ -19,7 +20,10 @@ export type WeeklySetsRow = {
   /** Hard sets done this week (secondary muscles at 40%). */
   done: number;
   target: SetTarget;
-  /** One line on where the target came from, when it was learned. */
+  /** The built-in range, and the learned one when LogIt has one (for the editor). */
+  defaultTarget: SetTarget;
+  learnedTarget?: SetTarget;
+  /** One line on where the learned range came from. */
   note?: string;
 };
 
@@ -40,20 +44,29 @@ export async function getWeeklySets(
   >,
   opts: { split?: WorkoutSplit | null; workoutsPerWeek: number },
 ): Promise<WeeklySetsView> {
-  const { insights } = await getMuscleGroupInsights(deps);
+  const [{ insights }, custom] = await Promise.all([getMuscleGroupInsights(deps), getMuscleSetTargets(deps)]);
   const byMuscle = new Map(insights.map((i) => [i.muscleGroup, i]));
   const targets = {} as Record<MuscleGroup, SetTarget>;
 
   const rows: WeeklySetsRow[] = (Object.keys(DEFAULT_SET_TARGETS) as MuscleGroup[]).map((muscle) => {
     const insight = byMuscle.get(muscle);
-    const target = setTargetFor(muscle, insight ? { volumeInsight: insight.volumeInsight, confidence: insight.reasoning.confidence } : undefined);
-    targets[muscle] = target;
+    const fromInsight = setTargetFor(muscle, insight ? { volumeInsight: insight.volumeInsight, confidence: insight.reasoning.confidence } : undefined);
+    const effective = custom[muscle] ? setTargetFor(muscle, undefined, custom[muscle]) : fromInsight;
+    targets[muscle] = effective;
     const v = insight?.volumeInsight;
     const note =
-      target.learned && v
+      fromInsight.learned && v
         ? `Your ${MUSCLE_LABELS[muscle].toLowerCase()} sessions improved more often in weeks ${v.direction === "higher" ? "with" : "under"} about ${Math.round(v.thresholdSets)} sets (${insight!.weeksWithData} weeks of data).`
         : undefined;
-    return { muscle, label: MUSCLE_LABELS[muscle], done: insight?.currentWeekSets ?? 0, target, note };
+    return {
+      muscle,
+      label: MUSCLE_LABELS[muscle],
+      done: insight?.currentWeekSets ?? 0,
+      target: effective,
+      defaultTarget: { ...DEFAULT_SET_TARGETS[muscle] },
+      ...(fromInsight.learned ? { learnedTarget: fromInsight } : {}),
+      note,
+    };
   });
 
   let split: WeeklySetsView["split"] = null;

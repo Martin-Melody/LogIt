@@ -108,3 +108,91 @@ export function describeRecipe(r: ProgressionRecipe): string {
   if (r.food === "diary") parts.push("holds in a deficit");
   return parts.join(" · ");
 }
+
+// ── Sharing ───────────────────────────────────────────────────────────────────
+
+/** What's shared: the blocks and the name, nothing about the sharer's lifts. */
+export type SharedRecipe = Omit<ProgressionRecipe, "id" | "createdAtMs" | "updatedAtMs" | "deletedAtMs">;
+
+export function toSharedRecipe(r: ProgressionRecipe): SharedRecipe {
+  const { id: _id, createdAtMs: _c, updatedAtMs: _u, deletedAtMs: _d, ...blocks } = normalizeRecipe(r);
+  void _id;
+  void _c;
+  void _u;
+  void _d;
+  return blocks;
+}
+
+/** A shared recipe as a new one of your own (new id), named `name` when given. */
+export function recipeFromShared(shared: Partial<SharedRecipe>, name?: string): ProgressionRecipe {
+  const fresh = createProgressionRecipe();
+  return normalizeRecipe({ ...shared, id: fresh.id, name: name ?? shared.name, createdAtMs: fresh.createdAtMs, updatedAtMs: fresh.updatedAtMs });
+}
+
+/** A name that doesn't clash with one you already have: "Top sets", "Top sets (2)", … */
+export function uniqueRecipeName(name: string, taken: string[]): string {
+  const lower = new Set(taken.map((t) => t.trim().toLowerCase()));
+  if (!lower.has(name.trim().toLowerCase())) return name;
+  for (let i = 2; ; i++) {
+    const candidate = `${name} (${i})`;
+    if (!lower.has(candidate.toLowerCase())) return candidate;
+  }
+}
+
+const CODE_PREFIX = "logit-alg1:";
+
+function toBase64Url(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(code: string): string {
+  const b64 = code.replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+
+/** A recipe as a code to paste anywhere: "logit-alg1:" + base64url JSON of its blocks. */
+export function recipeShareCode(r: ProgressionRecipe): string {
+  return CODE_PREFIX + toBase64Url(JSON.stringify(toSharedRecipe(r)));
+}
+
+/** The message sent with a code, so whoever gets it knows what to do with it. */
+export function recipeShareMessage(r: ProgressionRecipe): string {
+  return `"${r.name}", a LogIt progression algorithm. To add it: Settings › Progression › Add from a code, and paste this:\n${recipeShareCode(r)}`;
+}
+
+/**
+ * The shared recipe in a code, or in a whole pasted message containing one. Null when there's
+ * no valid code in the text.
+ */
+export function parseRecipeShareCode(text: string): SharedRecipe | null {
+  const match = text.match(/logit-alg1:([A-Za-z0-9_-]+)/);
+  if (!match) return null;
+  try {
+    const raw = JSON.parse(fromBase64Url(match[1]!)) as Partial<SharedRecipe>;
+    if (!raw || typeof raw !== "object" || typeof raw.weightFrom !== "string") return null;
+    return toSharedRecipe(normalizeRecipe({ ...raw, id: "shared" }));
+  } catch {
+    return null;
+  }
+}
+
+/** The blocks as label/value lines, for showing a shared or pasted algorithm. */
+export function recipeBlockLines(r: SharedRecipe): [string, string][] {
+  const lines: [string, string][] = [
+    ["Weight from", r.weightFrom === "estimate" ? "Strength estimate" : r.weightFrom === "last" ? "Last session's sets" : "Weekly wave (5/3/1)"],
+  ];
+  if (r.weightFrom !== "wave") lines.push(["Rep range", r.repRange ? `${r.repRange[0]}–${r.repRange[1]}` : "Default (5–8 big lifts, 8–12 others)"]);
+  if (r.weightFrom === "estimate") {
+    lines.push(["How hard", r.repsInReserve === 0 ? "Close to failure" : `${r.repsInReserve} left in the tank`]);
+    lines.push(["Set layout", r.setLayout === "straight" ? "Same weight" : r.setLayout === "topBackoff" ? "Top set + back-offs" : "Same reps, drop weight"]);
+  } else {
+    lines.push(["When it stalls", r.whenStalled === "deload" ? "Deload 10%" : "Hold"]);
+  }
+  lines.push(["Sets", `${r.sets.count}${r.sets.mode === "weekly" ? ", adjusted to weekly targets" : ""}`]);
+  if (r.food === "diary") lines.push(["Food", "Holds in a calorie deficit"]);
+  return lines;
+}

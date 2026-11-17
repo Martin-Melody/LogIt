@@ -255,8 +255,15 @@ the same features in their own algorithms.
       or ±1 from the muscle's weekly target; hold the weight in a calorie deficit (avg of the last 7 full
       logged days < maintenance − 250). Builder at `/settings/progression/build/[id]` with a live preview on
       real history (getSuggestion's `algorithmOverride`); synced at `/sync/progression-recipes`. Every
-      algorithm (plugins too) now also gets `strengthEstimate`, `muscleWeek` and `food`. Sharing recipes
-      isn't built. Sleep waits for wearables.
+      algorithm (plugins too) now also gets `strengthEstimate`, `muscleWeek` and `food`. Sleep waits for wearables.
+      Follow-ups (2026-11-17, mockups boards 7–10 on the same canvas): data export carries exercise settings,
+      recipes and algorithm settings; tap a muscle on Sets this week to set your own range (stored as an
+      exercise-settings row keyed `muscle:<group>`, so it syncs with no server change; wins over learned and
+      default in the weekly view, split score and `muscleWeek`); share a built algorithm from the builder:
+      a post whose algorithm payload carries `recipe` (blocks only; readers see a preview on their own
+      history and "Add to my algorithms" saves a copy), or a `logit-alg1:` code (base64url JSON) added via
+      Settings › Progression › Add from a code. Later: a link that opens the app (needs a server page),
+      and the native share sheet (`@capacitor/share`) instead of Copy on Android.
 
 - [x] Nutrition redesign (2026-11-16, branch
       `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US

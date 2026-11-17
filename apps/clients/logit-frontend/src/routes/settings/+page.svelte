@@ -27,6 +27,7 @@
   import { back } from "$lib/navigation";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
+  import AddRecipeFromCodeSheet from "$lib/features/progression/AddRecipeFromCodeSheet.svelte";
   import { profile } from "$lib/stores/profile.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import {
@@ -215,6 +216,7 @@
   });
   let view = $state<ProgressionConfigView>({ config: null, algorithms: [] });
   let exerciseOverrides = $state<ExerciseProgressionSettings[]>([]);
+  let addingFromCode = $state(false);
 
   /** "Rep range 3–5 · LogIt Adaptive · pushes when behind" */
   function overrideSummary(s: ExerciseProgressionSettings): string {
@@ -944,9 +946,14 @@
             Disable suggestions
           </Button>
         {/if}
-        <Button variant="outline" class="self-start" onclick={() => goto("/settings/progression/build/new")}>
-          Build an algorithm
-        </Button>
+        <div class="flex flex-wrap gap-2">
+          <Button variant="outline" onclick={() => goto("/settings/progression/build/new")}>
+            Build an algorithm
+          </Button>
+          <Button variant="outline" onclick={() => (addingFromCode = true)}>
+            Add from a code
+          </Button>
+        </div>
         <div class="flex flex-col gap-1.5" data-testid="exercise-overrides">
           <p class="text-sm font-medium">Exercises set differently</p>
           {#if exerciseOverrides.length === 0}
@@ -1513,3 +1520,7 @@
     </Card.Content>
   </Card.Root>
 </div>
+
+{#if addingFromCode}
+  <AddRecipeFromCodeSheet onclose={() => (addingFromCode = false)} onadded={() => void loadProgression()} />
+{/if}

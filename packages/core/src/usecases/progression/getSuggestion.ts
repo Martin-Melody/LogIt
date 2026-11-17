@@ -1,6 +1,6 @@
 import type { ProgressionAlgorithm, ProgressionGoalInput, ProgressionInput, ProgressionOutput, PrecedingExercise } from "../../domain/progression";
 import { liftGoalPace, sameExercise, type Goal } from "../../domain/goals";
-import { getExerciseProgressionSettings, resolveAlgorithmId } from "./exerciseProgressionSettings";
+import { getExerciseProgressionSettings, getMuscleSetTargets, resolveAlgorithmId } from "./exerciseProgressionSettings";
 import { strengthEstimate } from "../../progression/algorithms/adaptiveProgression";
 import { setTargetFor, SECONDARY_SET_WEIGHT } from "../../domain/weeklySets";
 import { weekBucket } from "../../domain/time";
@@ -342,7 +342,7 @@ function goalLine(goal: ProgressionGoalInput): string {
  * default target. From the last 30 sessions, which always covers a week. */
 async function muscleWeekFor(
   muscle: MuscleGroup | undefined,
-  deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "exerciseRepo" | "progressionRepo">,
 ): Promise<ProgressionInput["muscleWeek"]> {
   if (!muscle) return undefined;
   const sessions = await deps.workoutRepo.listRecentSessions({ limit: 30 }).catch(() => []);
@@ -366,6 +366,7 @@ async function muscleWeekFor(
       else if (t.secondary.includes(muscle)) done += n * SECONDARY_SET_WEIGHT;
     }
   }
-  const target = setTargetFor(muscle);
+  const custom = (await getMuscleSetTargets(deps).catch(() => null))?.[muscle];
+  const target = setTargetFor(muscle, undefined, custom);
   return { muscle, done: Math.round(done * 10) / 10, lo: target.lo, hi: target.hi };
 }

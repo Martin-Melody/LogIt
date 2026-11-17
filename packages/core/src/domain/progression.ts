@@ -242,15 +242,20 @@ export type ExerciseProgressionSettings = {
   repRange?: [number, number];
   /** When a lift goal on this exercise falls behind: just say so, or push a little. */
   behindPace?: "show" | "push";
+  /** Rows keyed "muscle:<group>" hold that muscle's weekly hard-set target instead. */
+  setTarget?: { lo: number; hi: number };
   createdAtMs: number;
   updatedAtMs: number;
   deletedAtMs?: number;
 };
 
 /** True when the settings change nothing (so the row can be dropped). */
-export function isDefaultExerciseSettings(s: Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace">): boolean {
-  return !s.algorithmId && !s.repRange && (!s.behindPace || s.behindPace === "show");
+export function isDefaultExerciseSettings(s: Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace" | "setTarget">): boolean {
+  return !s.algorithmId && !s.repRange && (!s.behindPace || s.behindPace === "show") && !s.setTarget;
 }
+
+/** Key prefix for the rows holding a muscle's weekly set target. */
+export const MUSCLE_SETTINGS_PREFIX = "muscle:";
 
 export function exerciseKey(exercise: { id?: string; name: string }): string {
   return exercise.id ?? exercise.name.toLowerCase().trim();

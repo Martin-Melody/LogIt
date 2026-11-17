@@ -28,12 +28,16 @@
   import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
   import type { ProgressionAlgorithmMeta } from "@logit/core/domain/progression";
   import type { AnalyticsPluginMeta } from "@logit/core/domain/analytics";
+  import { isRecipeAlgorithmId, RECIPE_ID_PREFIX, toSharedRecipe } from "@logit/core/domain/progressionRecipe";
+  import { getProgressionRecipe } from "@logit/core/usecases/progression/progressionRecipes";
 
-  const { open, onclose, onposted, prefillSession } = $props<{
+  const { open, onclose, onposted, prefillSession, prefillAlgorithmId } = $props<{
     open: boolean;
     onclose: () => void;
     onposted?: (post: ApiPost) => void;
     prefillSession?: WorkoutSession | null;
+    /** Start with this progression algorithm attached (sharing from the builder). */
+    prefillAlgorithmId?: string | null;
   }>();
 
   type AttachmentType = "none" | "workout" | "pr" | "split" | "exercise" | "algorithm" | "widget" | "habit";
@@ -149,6 +153,13 @@
         ...nutrition.algorithms.map((a): AlgoEntry => ({ ...a, family: "nutrition" })),
       ];
       algorithmsLoading = false;
+      if (prefillAlgorithmId) {
+        selectedAlgo = algorithms.find((a) => a.family === "progression" && a.id === prefillAlgorithmId) ?? null;
+        if (selectedAlgo) {
+          attachmentType = "algorithm";
+          showAttach = true;
+        }
+      }
     }).catch(() => { algorithmsLoading = false; });
   });
 
@@ -255,12 +266,18 @@
       }
       case "algorithm": {
         if (!selectedAlgo) return undefined;
+        // One you built from blocks only exists on your devices, so the blocks go with it and
+        // the reader gets a copy of their own. Nothing about your lifts is included.
+        const built = selectedAlgo.family === "progression" && isRecipeAlgorithmId(selectedAlgo.id)
+          ? await getProgressionRecipe(selectedAlgo.id.slice(RECIPE_ID_PREFIX.length), getProgressionDeps())
+          : null;
         return JSON.stringify({
           id: selectedAlgo.id,
           name: selectedAlgo.name,
           family: selectedAlgo.family,
           description: selectedAlgo.description,
-          author: selectedAlgo.author,
+          author: built ? undefined : selectedAlgo.author,
+          ...(built ? { recipe: toSharedRecipe(built) } : {}),
         });
       }
       case "widget": {

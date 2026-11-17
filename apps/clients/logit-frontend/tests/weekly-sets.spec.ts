@@ -53,3 +53,31 @@ test("shows this week's sets per muscle and scores the split", async ({ page }) 
   await expect(score).toContainText("Back: Nothing in this split works back directly");
   await expect(score.getByRole("link", { name: "Open the split" })).toHaveAttribute("href", "/splits/split-ws");
 });
+
+test("you can set a muscle's weekly target, and go back to the default", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+    localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, session: true, splits: true }));
+  });
+  await page.goto("/progress/weekly-sets");
+  const chest = page.getByTestId("weekly-sets").getByRole("listitem").filter({ hasText: "Chest" });
+  await expect(chest).toContainText("0 of 10–16");
+
+  await chest.getByRole("button").click();
+  const editor = page.getByTestId("target-editor");
+  await editor.getByRole("button", { name: "At least: more" }).click();
+  await editor.getByRole("button", { name: "At least: more" }).click();
+  await editor.getByRole("button", { name: "At most: more" }).click();
+  await expect(page.getByTestId("target-lo")).toHaveText("12");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(chest).toContainText("0 of 12–17");
+  await expect(chest).toContainText("Yours");
+
+  // Kept after a reload, then reset.
+  await page.reload();
+  await expect(chest).toContainText("0 of 12–17");
+  await chest.getByRole("button").click();
+  await page.getByRole("button", { name: "Back to default" }).click();
+  await expect(chest).toContainText("0 of 10–16");
+  await expect(chest).not.toContainText("Yours");
+});

@@ -1,10 +1,12 @@
 import {
+  MUSCLE_SETTINGS_PREFIX,
   PROGRESSION_OFF,
   exerciseKey,
   isDefaultExerciseSettings,
   type ExerciseProgressionSettings,
 } from "../../domain/progression";
 import { nowMs } from "../../domain/time";
+import type { MuscleGroup } from "../../domain/exercise";
 import type { ProgressionDeps } from "./deps";
 
 type Exercise = { id?: string; name: string };
@@ -30,7 +32,7 @@ export async function getExerciseProgressionSettings(exercise: Exercise, deps: D
   return row && !row.deletedAtMs ? row : null;
 }
 
-export type ExerciseSettingsPatch = Partial<Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace">>;
+export type ExerciseSettingsPatch = Partial<Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace" | "setTarget">>;
 
 /**
  * Change an exercise's settings. A field set to undefined goes back to "same as every
@@ -55,6 +57,7 @@ export async function saveExerciseProgressionSettings(
     algorithmId: existing && !existing.deletedAtMs ? existing.algorithmId : undefined,
     repRange: existing && !existing.deletedAtMs ? existing.repRange : undefined,
     behindPace: existing && !existing.deletedAtMs ? existing.behindPace : undefined,
+    setTarget: existing && !existing.deletedAtMs ? existing.setTarget : undefined,
     ...patch,
     updatedAtMs: Math.max(now, (existing?.updatedAtMs ?? 0) + 1),
   };
@@ -74,10 +77,32 @@ function stripUndefined<T extends object>(o: T): T {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
 }
 
-/** Every exercise set differently from the rest (live rows only). */
+/** Every exercise set differently from the rest (live rows only; muscle targets left out). */
 export async function listExerciseProgressionSettings(deps: Deps): Promise<ExerciseProgressionSettings[]> {
   const rows = (await deps.progressionRepo.listExerciseSettings?.()) ?? [];
-  return rows.filter((r) => !r.deletedAtMs);
+  return rows.filter((r) => !r.deletedAtMs && !r.key.startsWith(MUSCLE_SETTINGS_PREFIX));
+}
+
+// ── A muscle's weekly set target ─────────────────────────────────────────────
+
+/** The lifter's own weekly set targets, by muscle. */
+export async function getMuscleSetTargets(deps: Deps): Promise<Partial<Record<MuscleGroup, { lo: number; hi: number }>>> {
+  const out: Partial<Record<MuscleGroup, { lo: number; hi: number }>> = {};
+  for (const r of (await deps.progressionRepo.listExerciseSettings?.()) ?? []) {
+    if (r.deletedAtMs || !r.setTarget || !r.key.startsWith(MUSCLE_SETTINGS_PREFIX)) continue;
+    out[r.key.slice(MUSCLE_SETTINGS_PREFIX.length) as MuscleGroup] = r.setTarget;
+  }
+  return out;
+}
+
+/** Set a muscle's weekly target, or null to go back to the default. Returns the row, for pushing. */
+export async function saveMuscleSetTarget(muscle: MuscleGroup, target: { lo: number; hi: number } | null, deps: Deps) {
+  const t = target ? { lo: Math.max(0, Math.round(target.lo)), hi: Math.max(Math.round(target.lo), Math.round(target.hi)) } : undefined;
+  return saveExerciseProgressionSettings(
+    { id: `${MUSCLE_SETTINGS_PREFIX}${muscle}`, name: muscle },
+    { setTarget: t },
+    { progressionRepo: deps.progressionRepo },
+  );
 }
 
 /**
