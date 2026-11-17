@@ -65,6 +65,22 @@ test("share a built algorithm as a code and add it back from the code", async ({
   await expect.poll(() => recipesStored(page)).toContain("Top and back-offs (2)");
 });
 
+test("opening a shared link shows the algorithm, ready to add", async ({ page }) => {
+  await seed(page, { recipe: true });
+  await page.goto(`/settings/progression/build/${RECIPE.id}`);
+  await page.getByRole("button", { name: "Share" }).click();
+  const message = (await page.getByTestId("share-code").textContent()) ?? "";
+  const link = message.match(/https:\/\/getlogit\.app\/a#(logit-alg1:[A-Za-z0-9_-]+)/);
+  expect(link).not.toBeNull();
+
+  // What the app does with logit://a?c=<code> or the https link (nativeShell.routeForAppLink).
+  await page.goto(`/settings?algorithmCode=${encodeURIComponent(link![1]!)}#sec-progression`);
+  await expect(page.getByTestId("recipe-blocks")).toContainText("Top set + back-offs");
+  await expect(page).not.toHaveURL(/algorithmCode/);
+  await page.getByRole("button", { name: "Add to my algorithms" }).click();
+  await expect.poll(() => recipesStored(page)).toContain("Top and back-offs (2)");
+});
+
 test.describe("sharing to the feed - requires API", () => {
   async function register(username: string) {
     const res = await fetch(`${API}/auth/register`, {

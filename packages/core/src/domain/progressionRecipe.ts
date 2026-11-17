@@ -159,9 +159,17 @@ export function recipeShareCode(r: ProgressionRecipe): string {
   return CODE_PREFIX + toBase64Url(JSON.stringify(toSharedRecipe(r)));
 }
 
-/** The message sent with a code, so whoever gets it knows what to do with it. */
+/** The page on the website that shows a shared algorithm and opens LogIt to add it. The code
+ * goes after the #, so it never reaches a server. */
+export const RECIPE_SHARE_PAGE = "https://getlogit.app/a";
+
+export function recipeShareLink(r: ProgressionRecipe): string {
+  return `${RECIPE_SHARE_PAGE}#${recipeShareCode(r)}`;
+}
+
+/** The message sent with a code: a link that opens LogIt, and how to paste it by hand. */
 export function recipeShareMessage(r: ProgressionRecipe): string {
-  return `"${r.name}", a LogIt progression algorithm. To add it: Settings › Progression › Add from a code, and paste this:\n${recipeShareCode(r)}`;
+  return `"${r.name}", a LogIt progression algorithm. Open this on your phone to add it:\n${recipeShareLink(r)}\n\nOr in LogIt: Settings › Progression › Add from a code, and paste this message.`;
 }
 
 /**

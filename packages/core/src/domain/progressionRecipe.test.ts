@@ -24,6 +24,7 @@ describe("sharing a built algorithm", () => {
     expect(code).toMatch(/^logit-alg1:[A-Za-z0-9_-]+$/);
     expect(parseRecipeShareCode(code)).toEqual(toSharedRecipe(mine));
     expect(parseRecipeShareCode(`Try this!\n${recipeShareMessage(mine)}\nCheers`)?.name).toBe("Top and back-offs");
+    expect(recipeShareMessage(mine)).toContain(`https://getlogit.app/a#${code}`);
   });
 
   it("keeps names with any characters", () => {

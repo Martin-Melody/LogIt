@@ -23,6 +23,7 @@
     Users,
   } from "lucide-svelte";
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { toast } from "svelte-sonner";
   import { back } from "$lib/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -217,6 +218,17 @@
   let view = $state<ProgressionConfigView>({ config: null, algorithms: [] });
   let exerciseOverrides = $state<ExerciseProgressionSettings[]>([]);
   let addingFromCode = $state(false);
+  let codeFromLink = $state("");
+  // Opened from a shared algorithm's link: show it, ready to add.
+  $effect(() => {
+    const code = page.url.searchParams.get("algorithmCode");
+    if (!code) return;
+    codeFromLink = code;
+    addingFromCode = true;
+    const url = new URL(page.url);
+    url.searchParams.delete("algorithmCode");
+    void goto(url.pathname + url.search + url.hash, { replaceState: true, noScroll: true, keepFocus: true });
+  });
 
   /** "Rep range 3–5 · LogIt Adaptive · pushes when behind" */
   function overrideSummary(s: ExerciseProgressionSettings): string {
@@ -1522,5 +1534,12 @@
 </div>
 
 {#if addingFromCode}
-  <AddRecipeFromCodeSheet onclose={() => (addingFromCode = false)} onadded={() => void loadProgression()} />
+  <AddRecipeFromCodeSheet
+    initialText={codeFromLink}
+    onclose={() => {
+      addingFromCode = false;
+      codeFromLink = "";
+    }}
+    onadded={() => void loadProgression()}
+  />
 {/if}

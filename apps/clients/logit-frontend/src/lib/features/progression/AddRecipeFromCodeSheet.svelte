@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import RecipeBlocks from "./RecipeBlocks.svelte";
   import { toast } from "$lib/components/ui/sonner";
@@ -6,9 +7,9 @@
   import { parseRecipeShareCode } from "@logit/core/domain/progressionRecipe";
 
   // Paste a code (or the whole message it came in) someone sent, see the blocks, add a copy.
-  const { onclose, onadded }: { onclose: () => void; onadded?: () => void } = $props();
+  const { onclose, onadded, initialText = "" }: { onclose: () => void; onadded?: () => void; initialText?: string } = $props();
 
-  let text = $state("");
+  let text = $state(untrack(() => initialText));
   let adding = $state(false);
   const shared = $derived(text.trim() ? parseRecipeShareCode(text) : null);
 
