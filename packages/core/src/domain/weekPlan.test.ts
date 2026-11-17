@@ -75,6 +75,16 @@ describe("Today's plan follows the moved week (canvas O8)", () => {
     expect(timeline.at(-1)!.day?.name).toBe("Lower A");
   });
 
+  it("a workout done today counts as done even when it wasn't started from the plan screen", async () => {
+    const { planSplit, splitTimeline } = await import("./splitSchedule");
+    const progress = { last: null, week: { sessions: [did("2026-11-17", upA!.id)] } };
+    const plan = planSplit(split, progress, "2026-11-17");
+    expect(plan.doneToday.map((d) => d.name)).toEqual(["Upper A"]);
+    expect(plan.laterToday).toEqual([]);
+    expect(plan.startNext?.name).toBe("Lower A");
+    expect(splitTimeline(split, progress, "2026-11-17")[0]).toMatchObject({ done: true });
+  });
+
   it("without the week, each workout stays on its weekday (splits people set up themselves)", async () => {
     const { planSplit } = await import("./splitSchedule");
     expect(planSplit(split, { last: null }, "2026-11-18").startNext?.name).toBe("Upper B");
