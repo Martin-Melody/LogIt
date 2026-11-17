@@ -3,6 +3,7 @@ import { getServerMode } from "@logit/core/api/serverConfig";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId, onActiveOwnerChange } from "$lib/data/activeOwner";
 import { getSessionScope, setSessionScope } from "@logit/core/api/sessionScope";
+import { getSelfHostUrl, setServerMode } from "@logit/core/api/serverConfig";
 import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
@@ -39,8 +40,48 @@ function createAuthStore() {
 
   // ── Online login / register ──────────────────────────────────────────────
 
-  async function login(usernameOrEmail: string, password: string) {
-    const serverUser = await apiClient.login(usernameOrEmail, password);
+  /**
+   * Signing in from the space without an account while it holds training: the sign-in screen
+   * asks whether it's the person's own ("add" links it to the account) or someone else's
+   * ("keep-separate" leaves it and gives the account its own space). Null when there's nothing
+   * to ask: no training there, an account in use, or the web.
+   */
+  async function offlineTrainingToAsk(): Promise<{ workouts: number; splits: number; name: string } | null> {
+    if (!isNativePlatform()) return null;
+    const ownerId = getActiveOwnerId();
+    if (!ownerId) return null;
+    const { getLocalAccount } = await import("$lib/data/localAccountRepo");
+    const account = await getLocalAccount(ownerId);
+    if (!account || account.serverUserId) return null;
+    const { getWorkoutRepo, getSplitRepo } = await import("$lib/data/repoProvider");
+    const workouts = (await getWorkoutRepo().listAllSessions()).length;
+    const splits = (await getSplitRepo().getListSplits({ includeArchived: true })).length;
+    if (workouts + splits === 0) return null;
+    return { workouts, splits, name: account.displayName };
+  }
+
+  async function login(
+    usernameOrEmail: string,
+    password: string,
+    opts: { offlineTraining?: "add" | "keep-separate" } = {},
+  ) {
+    // "Someone else's": sign in from no account, so the offline training isn't linked, taking
+    // the server picked on the sign-in screen along. A failed sign-in goes back to it.
+    let returnTo: string | null = null;
+    if (opts.offlineTraining === "keep-separate" && isNativePlatform() && getActiveOwnerId()) {
+      returnTo = getActiveOwnerId();
+      const picked = { mode: getServerMode(), url: getSelfHostUrl() };
+      setServerMode("offline");
+      await beginAddingAccount();
+      setServerMode(picked.mode, picked.url);
+    }
+    let serverUser: AuthUser;
+    try {
+      serverUser = await apiClient.login(usernameOrEmail, password);
+    } catch (e) {
+      if (returnTo) await loginOfflineAccount(returnTo);
+      throw e;
+    }
     user = serverUser;
     log.info("auth", "Signed in", { tier: serverUser.tier, selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
@@ -318,6 +359,7 @@ function createAuthStore() {
     loginOfflineAccount,
     createOfflineAccount,
     beginAddingAccount,
+    offlineTrainingToAsk,
     logout,
     deleteAccount,
     refreshUser,
