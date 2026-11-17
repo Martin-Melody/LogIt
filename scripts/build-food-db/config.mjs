@@ -25,8 +25,9 @@ const CORE_COUNTRIES = [
 export const config = {
   // Written to meta.build_version. Bump when a shipped DB change must reach devices that
   // already unpacked an older copy — must match FOOD_DB_VERSION in the app's sqlite.ts.
-  // v2 = `curated` column + common-foods.json staples.
-  dbVersion: 2,
+  // v2 = `curated` column + common-foods.json staples. v3 = `vocab` table (typo correction).
+  // v4 = fibre/sugar/satfat/salt columns + micros_json (vitamins and minerals).
+  dbVersion: 4,
 
   usda: {
     // USDA FoodData Central CSV bundles. Public domain. Update these URLs when USDA
@@ -41,10 +42,11 @@ export const config = {
 
   ciqual: {
     // ANSES CIQUAL — the French/EU generic food-composition table (~3.2k foods, lab data).
-    // Etalab Licence Ouverte 2.0 (attribution). The official distribution is an XLSX; the
-    // script consumes a CSV export of it. See README for the one conversion step and the
-    // data.gouv.fr mirror.
-    csvPath: "data/ciqual/ciqual.csv",
+    // Etalab Licence Ouverte 2.0 (attribution). The official distribution is an XLS; a CSV
+    // export of the 2020 English table is committed in sources/ so builds (CI included)
+    // don't depend on ciqual.anses.fr being up. A newer export saved to overridePath wins.
+    csvPath: "sources/ciqual-2020.csv",
+    overridePath: "data/ciqual/ciqual.csv",
   },
 
   off: {

@@ -85,9 +85,14 @@
   <h2>Third parties</h2>
   <ul>
     <li>
-      <strong>Open Food Facts:</strong> when a food search or barcode has no match in the app's
-      built-in database, the search is sent to the <a href="https://world.openfoodfacts.org">Open Food Facts</a>
-      public API. No account information is included.
+      <strong>Open Food Facts:</strong> when a food search or barcode has few or no matches in the
+      app's built-in database, or you tap "Search online for more products", the search words or
+      barcode are sent to the <a href="https://world.openfoodfacts.org">Open Food Facts</a> public API
+      (world.openfoodfacts.org and search.openfoodfacts.org). No account information is included.
+      In a web browser, food searches go through the LogIt server on their way to Open Food Facts,
+      because Open Food Facts' search doesn't accept requests straight from web pages. The server
+      passes on only the search words, and keeps recent answers for a few hours (not who asked) so
+      a repeated search isn't sent again.
     </li>
     <li><strong>Hosting:</strong> the managed service runs on servers in the European Union. <!-- TODO(launch): name the VPS provider once chosen. --></li>
     <li><strong>Google Play:</strong> app distribution and subscription payments.</li>

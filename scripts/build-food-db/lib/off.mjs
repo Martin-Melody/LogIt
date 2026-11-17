@@ -18,6 +18,7 @@ import {
   clampMacro,
   completeness,
   detach,
+  nutrientFields,
   r2,
 } from "./normalize.mjs";
 
@@ -94,8 +95,39 @@ export function normalizeOffProduct(view, tier) {
         : [],
     ),
   };
+  // Only the label four. The export fills vitamins and minerals for many products with
+  // estimates worked out from the ingredients, not what the pack says; a product's declared
+  // vitamins still come through when it's looked up online.
+  const fields = nutrientFields(offNutrients(view), { carb: row.carb_100g, fat: row.fat_100g });
+  Object.assign(row, fields, { micros_json: null });
   return acceptRow(row);
 }
+
+/** Our nutrient id -> OFF nutriment key. OFF stores every *_100g value in grams. */
+const OFF_NUTRIENT_KEYS = {
+  fibreG: "fiber", sugarG: "sugars", satFatG: "saturated-fat", saltG: "salt",
+  vitAUg: "vitamin-a", thiaminMg: "vitamin-b1", riboflavinMg: "vitamin-b2", niacinMg: "vitamin-pp",
+  vitB6Mg: "vitamin-b6", folateUg: "vitamin-b9", vitB12Ug: "vitamin-b12", vitCMg: "vitamin-c",
+  vitDUg: "vitamin-d", vitEMg: "vitamin-e", vitKUg: "vitamin-k", calciumMg: "calcium",
+  ironMg: "iron", magnesiumMg: "magnesium", potassiumMg: "potassium", zincMg: "zinc",
+};
+const FROM_GRAMS = { G: 1, Mg: 1000, Ug: 1_000_000 };
+
+function offNutrients(view) {
+  const out = {};
+  for (const [id, key] of Object.entries(OFF_NUTRIENT_KEYS)) {
+    const raw = view[`${key}_100g`];
+    let g = raw === "" || raw == null ? NaN : Number(raw);
+    if (id === "saltG" && !Number.isFinite(g)) {
+      const na = view["sodium_100g"];
+      g = na === "" || na == null ? NaN : Number(na) * 2.5;
+    }
+    if (Number.isFinite(g)) out[id] = g * FROM_GRAMS[id.match(/(G|Mg|Ug)$/)[1]];
+  }
+  return out;
+}
+
+const NUTRIENT_COLUMNS = [...Object.values(OFF_NUTRIENT_KEYS), "sodium"].map((k) => `${k}_100g`);
 
 // ── format adapters: raw line -> a flat "view" normalizeOffProduct understands ────────────
 
@@ -117,6 +149,7 @@ function viewFromJson(p) {
     proteins_100g: n.proteins_100g,
     carbohydrates_100g: n.carbohydrates_100g,
     fat_100g: n.fat_100g,
+    ...Object.fromEntries(NUTRIENT_COLUMNS.map((c) => [c, n[c]])),
     unique_scans_n: p.unique_scans_n,
     scans_n: p.scans_n,
     popularity_tags: p.popularity_tags ?? [],
@@ -167,6 +200,7 @@ function viewFromCsvValues(values, slotOf) {
     proteins_100g: at("proteins_100g"),
     carbohydrates_100g: at("carbohydrates_100g"),
     fat_100g: at("fat_100g"),
+    ...Object.fromEntries(NUTRIENT_COLUMNS.map((c) => [c, at(c)])),
     unique_scans_n: at("unique_scans_n"),
     scans_n: at("scans_n"),
     popularity_tags: splitTags(at("popularity_tags")),
@@ -209,7 +243,7 @@ export async function loadOffExport(path, tier) {
       const header = line.split("\t");
       slotOf = {};
       const idxs = [];
-      for (const c of CSV_COLUMNS) {
+      for (const c of [...CSV_COLUMNS, ...NUTRIENT_COLUMNS]) {
         const i = header.indexOf(c);
         if (i >= 0) idxs.push([c, i]);
       }

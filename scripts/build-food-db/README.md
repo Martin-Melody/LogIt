@@ -46,7 +46,6 @@ npm test                       # unit tests for the curation pipeline
 npm run build:sample           # -> dist/food.db (+ .zip) from fixtures, no download
 
 npm run download               # -> data/  (OFF CSV ~1 GB; USDA zips)
-#   ... then save the CIQUAL table as data/ciqual/ciqual.csv (see below) ...
 npm run build                  # -> dist/food.db      + dist/food.zip   (core tier)
 npm run build:full             # -> dist/food-full.db + dist/food-full.zip
 ```
@@ -55,13 +54,18 @@ npm run build:full             # -> dist/food-full.db + dist/food-full.zip
 
 ### CIQUAL (EU generic foods)
 
-CIQUAL is distributed by ANSES as an XLSX. Download the current *Table CIQUAL* from
-<https://ciqual.anses.fr/> (or the CSV resource on
-<https://www.data.gouv.fr/fr/datasets/table-de-composition-nutritionnelle-des-aliments-ciqual/>),
-save it as **`data/ciqual/ciqual.csv`**, and re-run `npm run build`. The loader is tolerant
-of the usual quirks (`;` delimiter, decimal commas, `traces` / `-`, header wording changes)
-and prefers the English name column when present. If the file is absent the build simply
-skips CIQUAL and warns.
+CIQUAL is distributed by ANSES as an XLS (Etalab Licence Ouverte 2.0, attribution required).
+A `;`-delimited CSV export of the **2020 English table** is committed as
+`sources/ciqual-2020.csv` (all columns, including vitamins and minerals), so every build,
+CI included, gets it without depending on ciqual.anses.fr. It came from the Internet
+Archive copy of the official file while the ANSES site was down (Nov 2026).
+
+To use a newer release, download it from <https://ciqual.anses.fr/>, save it as CSV to
+**`data/ciqual/ciqual.csv`** (that path wins over the committed one), and re-run
+`npm run build`. The loader copes with the usual quirks (`;` delimiter, decimal commas,
+`traces` / `-` / `< 0,1`, header wording changes) and prefers the English name column. Rows
+without measured protein, carbs and fat are skipped; a missing energy value (about a quarter
+of the table) is worked out with the EU label factors.
 
 ## Installing the built database in the app
 

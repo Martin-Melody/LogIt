@@ -8,9 +8,27 @@ title: Nutrition
 
 <FeatureFacts id="nutrition" />
 
-Log food by searching, scanning a barcode, or from your recent foods, recipes and saved meals. Set your
-calorie and macro targets under Nutrition › Goal, and the diary shows how each day adds up. If your
-coach sets your targets, theirs are shown.
+Log food by searching, scanning a barcode or a nutrition label, or from your recent foods, recipes and
+saved meals. Search doesn't need the exact name: word order, plurals, small typos and UK or US names
+("mince", "ground beef") all find the same food. The barcode button is in every food search, including
+when you add ingredients to a recipe. To look a food up without logging it, use the search button at
+the top of the diary: scan or search, see its numbers for any amount, and star it for later.
+
+Tap the calories card at the top of the diary to set your calorie and macro targets. If your coach sets
+your targets, theirs are shown. Tap a meal's name to fold it away. Drag a food by its grip to reorder it,
+or onto another meal (folded ones too) if you logged it in the wrong place. Each meal's ··· menu copies
+a meal from another day, saves it as a meal to log again in one tap, or moves it to another meal.
+
+Under the macros, the diary shows fibre, sugar, saturated fat and salt for the day. Tap All nutrients
+for those plus 16 vitamins and minerals as a share of the UK and EU daily reference amounts, and tap one
+to see which foods it came from. Plain foods (from the USDA and the French CIQUAL tables) carry vitamins
+and minerals; packaged foods usually only list the label four, so the page says how much of your day it
+covers. A new food takes the whole label in the order it's printed, and a recipe adds up its ingredients.
+
+A recipe can be split into servings, or logged by weight: weigh the cooked food in the pot, and then log
+the grams on your plate. Paste an ingredient list ("500 g chicken breast", "2 tins chopped tomatoes")
+and each line is matched to a food for you to check. Your recipes, foods and saved meals are under My
+foods (the book button on the diary).
 
 With Pro, your custom foods, recipes, favourites and saved meals sync between devices, and the web
 dashboard shows a week at a glance.

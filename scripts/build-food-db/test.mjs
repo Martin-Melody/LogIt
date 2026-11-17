@@ -14,6 +14,7 @@ import {
   parseLooseNumber,
   completeness,
   buildServings,
+  nutrientFields,
 } from "./lib/normalize.mjs";
 import { normalizeOffProduct, loadOffExport } from "./lib/off.mjs";
 import { loadCiqualTable } from "./lib/ciqual.mjs";
@@ -77,6 +78,42 @@ test("normalizeOffProduct derives kcal from kJ when kcal is absent", () => {
   );
   assert.ok(row);
   assert.ok(Math.abs(row.kcal_100g - 43) < 2);
+});
+
+test("nutrientFields keeps the label four in columns and vitamins as JSON", () => {
+  const f = nutrientFields({ fibreG: 6.123, sugarG: 30, satFatG: 2, saltG: 0.5, ironMg: 2.345, vitCMg: 9000 }, { carb: 20, fat: 5 });
+  assert.equal(f.fibre_100g, 6.12);
+  assert.equal(f.sugar_100g, null); // more sugar than carbs: wrong
+  assert.equal(f.satfat_100g, 2);
+  assert.equal(f.salt_100g, 0.5);
+  assert.deepEqual(JSON.parse(f.micros_json), { ironMg: 2.35 }); // 9000 mg vitamin C: a unit typed wrong
+  assert.equal(nutrientFields({}).micros_json, null);
+  assert.equal(nutrientFields({ ironMg: 0, vitCMg: 0 }).micros_json, null);
+});
+
+test("normalizeOffProduct reads the label nutrients in grams", () => {
+  const row = normalizeOffProduct(
+    {
+      code: "3", product_name: "Cereal", brands: "B", countries_tags: ["en:ireland"],
+      kcal_100g_raw: 380, proteins_100g: 8, carbohydrates_100g: 80, fat_100g: 2,
+      fiber_100g: "4.5", sugars_100g: "", sodium_100g: "0.4", "iron_100g": "0.0119", "vitamin-d_100g": "0.0000042",
+    },
+    CORE,
+  );
+  assert.equal(row.fibre_100g, 4.5);
+  assert.equal(row.sugar_100g, null);
+  assert.equal(row.salt_100g, 1);
+  assert.equal(row.micros_json, null); // packaged: label four only (see normalizeOffProduct)
+});
+
+test("loadCiqualTable reads vitamins and minerals from the committed table", async () => {
+  const rows = await loadCiqualTable(join(HERE, config.ciqual.csvPath));
+  const spinach = rows.find((r) => r.name === "Spinach, raw");
+  assert.equal(spinach.fibre_100g, 2.37);
+  const m = JSON.parse(spinach.micros_json);
+  assert.equal(m.ironMg, 3.61);
+  assert.equal(m.vitKUg, 521);
+  assert.ok(m.vitAUg > 400); // retinol + beta-carotene / 12
 });
 
 test("loadOffExport reads the CSV (TSV) fixture and curates by tier", async () => {

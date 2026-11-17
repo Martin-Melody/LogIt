@@ -291,7 +291,7 @@
           Community plugins are off. Widgets, progression and analytics plugins
           can't be installed until you
           <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins")}>turn them on</button>.
-          Exercise and food packs still install.
+          Exercise and mobility packs still install.
         </span>
       </div>
     {/if}
