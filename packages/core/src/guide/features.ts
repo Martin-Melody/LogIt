@@ -122,7 +122,7 @@ export const FEATURES: Feature[] = [
     summary: "Charts per lift, and the rules that suggest your next weights.",
     web: ["/progress"],
     phone: [
-      "/progress", "/settings/progression/[algorithmId]",
+      "/progress", "/progress/weekly-sets", "/settings/progression/[algorithmId]",
       "/settings/mobility-progression/[algorithmId]", "/settings/muscle-group-insight/[algorithmId]",
     ],
     whereWeb: "Training › Progress",

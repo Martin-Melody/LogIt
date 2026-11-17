@@ -33,3 +33,9 @@ Any exercise can be set differently: open it and use **How it progresses** to gi
 range, its own algorithm (or no suggestions), and, if it has a lift goal, choose what happens when you
 fall behind pace: just show it, or push the first set a little heavier (LogIt Adaptive). A split day
 that sets its own reps still wins on that day. These settings sync with Pro.
+
+**Sets this week** (on Progress) shows the hard sets each muscle got this week against a target range:
+a set counts fully for the muscles an exercise mainly works and 40% for the ones it also works. Most
+muscles start at around 10–16 sets a week and smaller ones lower, and once LogIt has enough of your weeks
+a range moves to what has worked for you. Your active split is scored against the same ranges, with a fix
+for anything it leaves short, like "Add 2 sets of Romanian deadlift on Legs".

@@ -205,4 +205,6 @@
       <a href="/progress/goals/new" class="text-sm font-medium underline underline-offset-2">Set a lift goal for {exercise.name}</a>
     {/if}
   </div>
+
+  <a href="/progress/weekly-sets" class="text-sm font-medium underline underline-offset-2">Sets this week for each muscle</a>
 </section>
