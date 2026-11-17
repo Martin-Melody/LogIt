@@ -24,6 +24,10 @@ runtime, no new dependencies (Node 22.5+'s sqlite module is already used by
 
 ## What it deliberately does NOT cover
 
+(The account journeys in `tests/journeys` do go through `authStore` and app startup, with the
+phone simulated and real APIs — see that folder's README.)
+
+
 Tests here go through repo functions directly (`createLocalAccount`, `claimOrphanedData`,
 `createSqliteSplitRepo()`, …), not through `authStore.svelte.ts`'s orchestration functions
 (`createOfflineAccount`, `loginOfflineAccount`, …) — those pull in the full

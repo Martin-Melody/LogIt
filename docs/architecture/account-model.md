@@ -164,6 +164,8 @@ guessing further at the code.
   - Add the explicit "unlink this profile" action (§3 row 9) so users aren't stuck choosing
     only between "stay linked" and "delete everything."
 - **P3 — coverage:**
+  - **Covered since 2026-11-17** by `apps/clients/logit-frontend/tests/journeys` (the phone
+    app's real code against real APIs; see its README). What follows is the earlier state.
   - This whole matrix has **zero automated test coverage** today — `tests/onboarding.spec.ts` /
     `tests/auth-flow.spec.ts` cover single-profile onboarding/auth only (per
     `project_auth_app_first_redo` memory). Add Playwright coverage for at least: add-profile

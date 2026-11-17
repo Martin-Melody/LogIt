@@ -91,6 +91,41 @@ jobs:
         working-directory: apps/clients/website
         run: npm run build && npm run check
 
+  journeys:
+    # Every way into and out of an account — offline, sign-up, buying Pro/Studio, signing out,
+    # self-hosting, deleting, switching accounts — run as the phone app (local profiles and
+    # the on-device database included, which Playwright's web build can't reach) against two
+    # real APIs: one standing in for getlogit.app, one self-hosted.
+    name: Account journeys
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Start the two APIs (getlogit.app stand-in :5219, self-hosted :5218)
+        env:
+          JOURNEY_API_DIR: ${{ runner.temp }}/journey-apis
+        run: ./scripts/journey-apis.sh
+
+      - name: Run account journeys
+        working-directory: apps/clients/logit-frontend
+        run: npm run test:journeys
+
+      - name: API logs on failure
+        if: failure()
+        run: tail -n 200 "$RUNNER_TEMP"/journey-apis/*.log || true
+
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
