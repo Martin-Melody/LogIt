@@ -53,6 +53,8 @@
 
   import CurrentSessionHeader from "./Components/CurrentSessionHeader.svelte";
   import FinishWorkoutCard from "./Components/FinishWorkoutCard.svelte";
+  import MusicBar from "$lib/features/music/MusicBar.svelte";
+  import { onWorkoutFinished } from "$lib/features/music/sessionMusic";
 
   onMount(() => {
     setTimeout(() => autoTour("app.session"), 600);
@@ -100,6 +102,8 @@
   let finishBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
   let finishBarHeight = $state(0);
+  // The music bar sits in the finish bar; the list leaves room for it when it's there.
+  let musicBarVisible = $state(false);
   // The finish bar sits on top of the bottom nav, and the add button just above the bar.
   const addButtonBottom = $derived(finishBarHeight > 0 ? $bottomNavHeight + finishBarHeight + 12 : 0);
 
@@ -348,6 +352,7 @@
     try {
       await goto("/");
       await currentSession.finish();
+      onWorkoutFinished();
       void recentSessions.refresh(5);
 
       if (sessionSnapshot) {
@@ -598,7 +603,9 @@
 </script>
 
 <div
-  class="flex flex-col {circuitBarShown ? 'pb-72' : 'pb-48'}"
+  class="flex flex-col {circuitBarShown
+    ? musicBarVisible ? 'pb-[360px]' : 'pb-72'
+    : musicBarVisible ? 'pb-[264px]' : 'pb-48'}"
   onpointerdown={(e) => {
     if (!(e.target as HTMLElement).closest("input, textarea")) {
       const active = document.activeElement as HTMLElement | null;
@@ -797,6 +804,7 @@
       class="fixed left-0 right-0 z-10 border-t border-border bg-background px-3 py-3"
       style="bottom: {$bottomNavHeight}px"
     >
+      <MusicBar bind:visible={musicBarVisible} />
       <FinishWorkoutCard
         canFinish={!!$currentSession && !$currentSession.endedAtMs && hasLoggableWork}
         saving={ui.saving || ui.finishing}
