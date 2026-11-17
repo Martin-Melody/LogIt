@@ -6,7 +6,7 @@ import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
 import { navConfig } from "$lib/stores/navConfig.store";
-import { syncAll, pushAllLocalData, pushCurrentProfile } from "$lib/sync/syncService";
+import { syncAll, markFullUploadDue, planIncludesSync } from "$lib/sync/syncService";
 import { log } from "@logit/core/platform/log";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
@@ -39,12 +39,13 @@ function createAuthStore() {
     user = serverUser;
     log.info("auth", "Signed in", { tier: serverUser.tier, selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
-    // Push this device's existing local history first — otherwise only records
-    // created after this sign-in ever reach the server, and everything logged
-    // offline up to now stays without a cloud copy. Profile pushes only *after* syncAll()
-    // pulls — see pushCurrentProfile()'s comment for why it can't safely run alongside
-    // pushAllLocalData() like everything else here.
-    void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
+    // Send this device's existing local history too — otherwise only records created after
+    // this sign-in ever reach the server, and everything logged offline up to now stays
+    // without a cloud copy. syncAll() does it, the profile after its pulls (see
+    // pushCurrentProfile()), and keeps trying on later syncs until the plan allows it and it
+    // gets through (see markFullUploadDue).
+    markFullUploadDue();
+    void syncAll();
     startBackgroundSync();
     void import("$lib/billing/billing.svelte").then((m) => m.billing.start());
   }
@@ -54,7 +55,8 @@ function createAuthStore() {
     user = serverUser;
     log.info("auth", "Account created and signed in", { selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
-    void pushAllLocalData().then(() => syncAll()).then(() => pushCurrentProfile());
+    markFullUploadDue();
+    void syncAll();
     startBackgroundSync();
     void import("$lib/billing/billing.svelte").then((m) => m.billing.start());
   }
@@ -76,11 +78,15 @@ function createAuthStore() {
       // Known server user — switch to their local account. Re-sync onboarding status from
       // the server every time, not just on first link: it's the source of truth (e.g. they
       // could have completed onboarding on a different device since this one last saw them).
+      // The name stays the one on this phone when it has one: the account's display name
+      // can lag behind it (a name typed in onboarding after signing up used to stay on the
+      // phone only), and signing back in used to replace it with the username. A rename on
+      // another device still arrives through the synced profile.
       setActiveOwnerId(account.id);
       await updateLocalAccount(account.id, {
-        displayName: serverUser.displayName ?? account.displayName,
+        displayName: account.displayName.trim() || serverUser.displayName || account.displayName,
         serverUserId: serverUser.id,
-        onboardingCompleted: serverUser.onboardingCompleted,
+        onboardingCompleted: account.onboardingCompleted || serverUser.onboardingCompleted,
       });
     } else {
       // Try to link the currently active unlinked local account (e.g. created during onboarding)
@@ -88,16 +94,23 @@ function createAuthStore() {
       if (currentId) {
         const current = await getLocalAccount(currentId);
         if (current && !current.serverUserId) {
+          // Onboarding is done if it was done on either side: on the server (an account that
+          // finished it on another device — a fresh local profile defaults to false, and
+          // logging in from one used to mean onboarding again every time) or on this phone
+          // (someone who onboarded offline and then makes an account used to be sent through
+          // it a second time, because a new account says false).
+          const onboardingCompleted = current.onboardingCompleted || serverUser.onboardingCompleted;
           await updateLocalAccount(currentId, {
             serverUserId: serverUser.id,
             // Prefer the name the user already set locally; fall back to server if blank
             displayName: current.displayName.trim() || serverUser.displayName || current.displayName,
-            // The local-only account defaults to onboardingCompleted: false — without this,
-            // logging into an already-onboarded server account from a fresh/local-only
-            // profile sent the user through onboarding again every time.
-            onboardingCompleted: serverUser.onboardingCompleted,
+            onboardingCompleted,
           });
-          account = { ...current, serverUserId: serverUser.id, onboardingCompleted: serverUser.onboardingCompleted };
+          if (onboardingCompleted && !serverUser.onboardingCompleted) {
+            apiClient.updateOnboardingCompleted(true)
+              .catch((e) => log.warn("auth", "Could not save onboarding status to the server", e));
+          }
+          account = { ...current, serverUserId: serverUser.id, onboardingCompleted };
         }
       }
 
@@ -248,8 +261,12 @@ function createAuthStore() {
   /** Re-reads who the server says we are (the plan, after a purchase or a store notice). */
   async function refreshUser() {
     if (!user) return;
+    const couldSync = planIncludesSync();
     await apiClient.reconcileSession();
     user = apiClient.getUser();
+    // Just bought (or got back) a plan with sync: send what's waiting now rather than at the
+    // next 5-minute sync.
+    if (user && !couldSync && planIncludesSync()) void syncAll();
   }
 
   return {
