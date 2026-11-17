@@ -1,6 +1,7 @@
 import { log } from "@logit/core/platform/log";
 import { browser } from "$app/environment";
-import { writable } from "svelte/store";
+import { get, writable } from "svelte/store";
+import { profile } from "$lib/stores/profile.store";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { apiClient } from "@logit/core/api/client";
 import { getServerMode } from "@logit/core/api/serverConfig";
@@ -70,6 +71,14 @@ function createOnboardingStore() {
       persist(next);
       if (browser && getServerMode() !== "offline" && apiClient.isAuthenticated()) {
         apiClient.updateOnboardingCompleted(true).catch((e) => log.warn("onboarding", "Could not save onboarding status to the server", e));
+        // Someone who signed up first and typed their name in onboarding afterwards: the
+        // account was made with the username as its name, and the name typed here used to
+        // stay on the phone (others saw the username on Social, and signing in again brought
+        // the username back).
+        const name = get(profile).name.trim();
+        if (name && name !== apiClient.getUser()?.displayName) {
+          apiClient.updateDisplayName(name).catch((e) => log.warn("onboarding", "Could not save the name to the server", e));
+        }
       }
     },
 
