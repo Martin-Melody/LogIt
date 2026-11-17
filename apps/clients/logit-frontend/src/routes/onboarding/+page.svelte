@@ -232,6 +232,10 @@
           </button>
         {/each}
       </div>
+      <div class="mt-4 grid grid-cols-2 gap-2">
+        <button type="button" class="min-h-11 rounded-[10px] bg-muted text-sm font-medium" onclick={() => goto("/onboarding/coaching")}>I coach people</button>
+        <button type="button" class="min-h-11 rounded-[10px] bg-muted text-sm font-medium" onclick={() => goto("/onboarding/coach")}>I have a coach</button>
+      </div>
     </div>
 
   {:else if step === 2}
