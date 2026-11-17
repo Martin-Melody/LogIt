@@ -93,6 +93,11 @@ export function resolveCommonFoods(rows, list, { popularity }) {
       protein_100g: best.protein_100g,
       carb_100g: best.carb_100g,
       fat_100g: best.fat_100g,
+      fibre_100g: best.fibre_100g ?? null,
+      sugar_100g: best.sugar_100g ?? null,
+      satfat_100g: best.satfat_100g ?? null,
+      salt_100g: best.salt_100g ?? null,
+      micros_json: best.micros_json ?? null,
       // Descend by list position so the app can order the curated block by the curator's
       // judgement (JSON order) rather than by BM25, which mis-ranks prefix hits ("egg"
       // scoring "eggplant" above "Egg, whole, raw").

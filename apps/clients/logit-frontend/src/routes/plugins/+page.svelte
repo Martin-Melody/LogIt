@@ -145,7 +145,7 @@
           <Card.Description>
             Widgets, progression and analytics plugins from the community run code
             inside the app. They stay disabled until you turn them on. Exercise and
-            food packs are plain data and always install.
+            mobility packs are plain data and always install.
           </Card.Description>
         </Card.Header>
         <Card.Content>

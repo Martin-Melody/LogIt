@@ -4,7 +4,10 @@ import {
   type FoodRef,
   type LoggedItem,
   type MacroTotals,
+  type Nutrients,
   type ServingOption,
+  roundNutrients,
+  scaleNutrients,
 } from "@logit/core/domain/nutrition";
 import { getNutritionRepo, getFoodDbRepo } from "$lib/data/repoProvider";
 
@@ -29,6 +32,8 @@ export type ItemBasis = {
   per100g: MacroTotals;
   /** Portions to offer (always includes raw units in the UI). */
   servings: ServingOption[];
+  /** Other nutrients per 100 g, when known. */
+  nutrients?: Nutrients;
   /** True when the numbers came from the live source food, false when recovered from the
    * logged snapshot (source gone, or a quick-add). */
   fromSource: boolean;
@@ -42,9 +47,12 @@ export type ItemBasis = {
 export async function basisForItem(item: LoggedItem): Promise<ItemBasis | null> {
   if (item.sourceId) {
     const food = await resolveFoodRef(item.sourceId);
-    if (food) return { per100g: food.per100g, servings: food.servings, fromSource: true };
+    if (food) return { per100g: food.per100g, servings: food.servings, nutrients: food.nutrients, fromSource: true };
   }
   const per100g = loggedItemPer100g(item);
-  if (per100g) return { per100g, servings: [{ id: "g", label: "100 g", grams: 100 }], fromSource: false };
+  if (per100g) {
+    const nutrients = item.grams > 0 ? roundNutrients(scaleNutrients(item.nutrients, (100 * 100) / item.grams)) : undefined;
+    return { per100g, servings: [{ id: "g", label: "100 g", grams: 100 }], nutrients, fromSource: false };
+  }
   return null;
 }

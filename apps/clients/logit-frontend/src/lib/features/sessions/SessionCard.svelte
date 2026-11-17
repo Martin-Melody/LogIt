@@ -12,15 +12,25 @@
     unit,
     query = "",
     onOpen,
+    draftId = undefined,
+    onFinish,
+    onDelete,
   }: {
     entries: HistoryEntry[];
     unit: WeightUnit;
     query?: string;
     onOpen: (entry: HistoryEntry) => void;
+    /** The workout running now (undefined while loading). Any other unfinished session is a
+     * leftover that never got an end time, and gets Finish / Delete instead of Resume. */
+    draftId?: string | null;
+    onFinish?: (entry: HistoryEntry) => void;
+    onDelete?: (entry: HistoryEntry) => void;
   } = $props();
 
   const main = $derived(entries[0]!);
   const more = $derived(entries.slice(1));
+  const leftover = $derived(main.inProgress && draftId !== undefined && main.session.id !== draftId);
+  const hasLogged = $derived(main.setCount > 0);
 
   function names(e: HistoryEntry): string {
     const all = [...e.session.blocks].sort((a, b) => a.orderIndex - b.orderIndex).map(blockDisplayName);
@@ -42,6 +52,9 @@
 
   function when(e: HistoryEntry): string {
     const s = e.session;
+    if (e.inProgress && e.session.id !== draftId && draftId !== undefined) {
+      return `Not finished · ${dayLabel(s.startedAtMs)}, ${timeLabel(s.startedAtMs)}`;
+    }
     if (e.inProgress) return `In progress · started ${timeLabel(s.startedAtMs)}`;
     const parts = [dayLabel(s.startedAtMs), timeLabel(s.startedAtMs)];
     if (s.endedAtMs) parts.push(durationLabel(s.endedAtMs - s.startedAtMs));
@@ -96,7 +109,7 @@
   {/if}
 {/snippet}
 
-<div class="overflow-hidden rounded-xl border bg-card {main.inProgress ? 'border-primary/40' : ''}">
+<div class="overflow-hidden rounded-xl border bg-card {main.inProgress && !leftover ? 'border-primary/40' : ''}">
   <button
     type="button"
     class="flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors hover:bg-muted/30 active:bg-muted/50"
@@ -105,9 +118,11 @@
     <div class="flex w-full items-start gap-2">
       <div class="min-w-0 flex-1">
         <p class="truncate text-[15px] font-semibold">{main.title}</p>
-        <p class="truncate text-xs {main.inProgress ? 'font-medium text-primary' : 'text-muted-foreground'}">{when(main)}</p>
+        <p class="truncate text-xs {main.inProgress && !leftover ? 'font-medium text-primary' : 'text-muted-foreground'}">{when(main)}</p>
       </div>
-      {#if main.inProgress}
+      {#if leftover}
+        <span class="shrink-0 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground">Unfinished</span>
+      {:else if main.inProgress}
         <span class="shrink-0 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">Resume</span>
       {:else if main.prs.length}
         <span class="flex h-[22px] shrink-0 items-center gap-1 rounded-md border border-highlight-fill/50 bg-highlight-fill/15 px-1.5 text-[11px] font-semibold text-highlight">
@@ -139,6 +154,17 @@
       <p class="text-[13px] text-muted-foreground">Nothing logged</p>
     {/if}
   </button>
+
+  {#if leftover && (onFinish || onDelete)}
+    <div class="flex gap-2 border-t border-border px-3 py-2">
+      {#if hasLogged && onFinish}
+        <button type="button" class="h-10 flex-1 rounded-lg bg-muted text-sm font-medium" onclick={() => onFinish(main)}>Finish</button>
+      {/if}
+      {#if onDelete}
+        <button type="button" class="h-10 flex-1 rounded-lg border border-border text-sm font-medium text-destructive" onclick={() => onDelete(main)}>Delete</button>
+      {/if}
+    </div>
+  {/if}
 
   {#each more as e (e.session.id)}
     <button

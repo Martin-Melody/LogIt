@@ -16,10 +16,14 @@ export async function getAllExerciseProgressStories(
 ): Promise<ExerciseProgressStory[]> {
   const sessions = await deps.workoutRepo.listRecentSessions({ limit: HISTORY_LIMIT });
 
+  // One story per lift *name*: history already matches by name (findExerciseIndexInSession),
+  // so the same lift saved under several exercise ids (the built-in "Dips" and a library
+  // copy, say) would otherwise show up once per id with identical numbers. Sessions come
+  // newest first, so the id kept is the one used most recently.
   const seen = new Map<string, { id?: string; name: string }>();
   for (const session of sessions) {
     for (const ex of getExercises(session)) {
-      const key = ex.exerciseId ?? ex.exerciseName.toLowerCase().trim();
+      const key = ex.exerciseName.toLowerCase().trim();
       if (!seen.has(key)) seen.set(key, { id: ex.exerciseId, name: ex.exerciseName });
     }
   }

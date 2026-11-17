@@ -229,6 +229,30 @@ the same features in their own algorithms.
 
 ## Done
 
+- [x] Nutrition redesign (2026-11-16, branch
+      `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US
+      synonyms, typo budget, ranking) used everywhere (bundled DB, cache, custom foods, recipes, meals);
+      the bundled DB gets a `vocab` table (food.db v3) for typo correction, a generic-foods pass and
+      dedupe; online search uses search-a-licious via CapacitorHttp on native; browsers go through the
+      API's anonymous `GET /foods/search` (forwards to it, 6 h cache, 60/min per address), falling back
+      to the old endpoint. CIQUAL 2020 (~3k EU generic foods) is committed in
+      `scripts/build-food-db/sources/` (ANSES site was down; taken from the Internet Archive copy).
+      Release workflow now builds/caches `food.zip` (it never shipped
+      before, so phones only had online OFF search). Shared `FoodSearchPanel` (barcode + label scan in
+      every search, incl. recipe ingredients), `AmountSheet`, `FoodEditor`, `QuickAddSheet`. Diary:
+      week strip, calories-left card (opens Goal), meal cards with a ··· menu (copy yesterday / another
+      day, save as meal, move, clear), tap an entry to edit in the sheet (drag reorder dropped). Add
+      food stays open with a running tally + Undo. My foods page (Foods/Recipes/Meals). Recipes:
+      `portionMode` servings|weight, `cookedWeightG`, `cookedOn` (pot left = weight − grams logged
+      since), `notes`, ingredients keep `amount`/`portionId`; paste a list (`parseIngredientList`).
+      More units (kg, l, lb, tsp, tbsp, cup). Removed the "food packs" text (they never existed).
+      Nutrients (2026-11-17, mockups boards 11–14 on the same canvas): core `domain/nutrients.ts` (fibre,
+      sugar, sat fat, salt + 16 vitamins/minerals, UK/EU daily amounts, `dayNutrients` with coverage and
+      sources). Optional `nutrients` on FoodRef / LoggedItem / RecipeIngredient / templates / recents.
+      food.db v4: label columns + `micros_json` (USDA, CIQUAL; packaged products keep only the label four,
+      since the OFF export's vitamins are estimates). Food sheet, diary card line, `/nutrition/nutrients`,
+      label-order food editor, label scan reads saturates/sugars/fibre/salt. Web dashboard doesn't show them.
+
 - [x] Sessions overhaul (2026-11-13). A session
       keeps `name` and `source` (split/program day + `plan` snapshot as shown on the plan screen; phone
       SQLite `sessions.name`, `sessions.source_json`; synced inside the session JSON). Core

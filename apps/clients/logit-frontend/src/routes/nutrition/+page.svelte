@@ -1,28 +1,39 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
-  import { onMount } from "svelte";
   import {
+    BookMarked,
+    Bookmark,
+    Camera,
     ChartNoAxesColumn,
-    ChevronLeft,
-    ChevronRight,
+    CalendarDays,
+    ChevronDown,
+    GripVertical,
+    Copy,
+    Ellipsis,
+    MoveHorizontal,
     Plus,
+    Search,
     Target,
-    Scale,
     Trash2,
     UtensilsCrossed,
-    Camera,
-    Carrot,
+    Zap,
+    ChevronRight,
   } from "lucide-svelte";
-  import { GripVertical, BookmarkPlus, CopyPlus } from "lucide-svelte";
-  import { dragHandleZone, dragHandle } from "svelte-dnd-action";
-  import { flip } from "svelte/animate";
-  import { reveal, popIn } from "$lib/transitions";
   import { back } from "$lib/navigation";
-  import { Badge } from "$lib/components/ui/badge";
+  import { dragHandleZone, dragHandle, TRIGGERS } from "svelte-dnd-action";
+  import { flip } from "svelte/animate";
+  import { toast } from "$lib/components/ui/sonner";
+  import DateField from "$lib/components/ui/date-field";
   import {
     copyDiaryItems,
     createDiaryDay,
+    dayTotals,
+    dayNutrients,
+    hasLabelNutrients,
+    hasMicros,
     localDateIso,
     mealTemplateFromDay,
     mealTotals,
@@ -31,116 +42,97 @@
     updateDiaryItem,
     MEAL_SLOTS,
     type DiaryDay,
+    type FoodRef,
     type LoggedItem,
+    type MacroTotals,
     type MealSlot,
   } from "@logit/core/domain/nutrition";
-  import DateField from "$lib/components/ui/date-field";
   import { getNutritionRepo, getMessagesRepo } from "$lib/data/repoProvider";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { onForeground } from "$lib/lifecycle";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
-  import { pushNutritionDay, pushMealTemplate, lastSyncedAt } from "$lib/sync/syncService";
+  import { pushMealTemplate, lastSyncedAt } from "$lib/sync/syncService";
   import { profile } from "$lib/stores/profile.store";
-  import MacroBars from "$lib/features/nutrition/MacroBars.svelte";
-  import WeightTrendChart from "$lib/features/nutrition/WeightTrendChart.svelte";
-  import {
-    fmtKcal,
-    fmtWeight,
-    totalsFor,
-    type NutritionState,
-    type WeightUnit,
-  } from "$lib/features/nutrition/nutrition";
+  import { fmtWeight, totalsFor, type NutritionState, type WeightUnit } from "$lib/features/nutrition/nutrition";
+  import { basisForItem } from "$lib/features/nutrition/resolveFood";
+  import { addItems, saveDay } from "$lib/features/nutrition/diary";
+  import AmountSheet, { type AmountResult } from "$lib/features/nutrition/ui/AmountSheet.svelte";
+  import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
+  import QuickAddSheet from "$lib/features/nutrition/ui/QuickAddSheet.svelte";
+  import WeekStrip from "$lib/features/nutrition/ui/WeekStrip.svelte";
+  import { MEAL_LABELS, fmtNum, macroLine } from "$lib/features/nutrition/ui/meals";
+  import { chip } from "$lib/features/nutrition/ui/style";
 
   const ui = $state({ loading: true, error: null as string | null });
   let dateIso = $state(localDateIso());
+  let stripEnd = $state(localDateIso());
   let day = $state<DiaryDay | null>(null);
+  let prevDay = $state<DiaryDay | null>(null);
+  let weekKcal = $state<Record<string, number>>({});
   let nut = $state<NutritionState | null>(null);
   let coachComments = $state<CoachMessage[]>([]);
 
   const unit = $derived(($profile.weightUnit ?? "kg") as WeightUnit);
-  const consumed = $derived(totalsFor(day));
+  const eaten = $derived(totalsFor(day));
+  const target = $derived<MacroTotals | null>(nut?.targets?.macros ?? null);
   const isToday = $derived(dateIso === localDateIso());
-  const mealLabels: Record<MealSlot, string> = {
-    breakfast: "Breakfast",
-    lunch: "Lunch",
-    dinner: "Dinner",
-    snack: "Snacks",
-  };
-
-  // Stays true while the user is looking at "today" — so a midnight rollover while the
-  // app is backgrounded advances the view, but we don't yank them off a day they picked.
   let followingToday = $state(true);
 
-  function shiftDate(deltaDays: number) {
-    const d = new Date(`${dateIso}T12:00:00`);
-    d.setDate(d.getDate() + deltaDays);
-    dateIso = localDateIso(d);
-    followingToday = dateIso === localDateIso();
-    void loadDay();
-  }
-
-  // ── Copy a previous day ──
-  let showCopy = $state(false);
-  let copyFromIso = $state("");
-  let copyBusy = $state(false);
-  let copyMsg = $state<string | null>(null);
-
-  function dayBefore(iso: string): string {
+  function addDays(iso: string, n: number): string {
     const d = new Date(`${iso}T12:00:00`);
-    d.setDate(d.getDate() - 1);
+    d.setDate(d.getDate() + n);
     return localDateIso(d);
   }
 
-  function toggleCopy() {
-    showCopy = !showCopy;
-    copyMsg = null;
-    if (showCopy && !copyFromIso) copyFromIso = dayBefore(dateIso);
+  function selectDate(iso: string) {
+    generation++;
+    dateIso = iso;
+    followingToday = iso === localDateIso();
+    void loadDay();
   }
 
-  async function doCopy() {
-    if (!copyFromIso || copyBusy) return;
-    copyBusy = true;
-    copyMsg = null;
-    try {
-      const repo = getNutritionRepo();
-      const src = await repo.getDay(copyFromIso);
-      const items = src?.items ?? [];
-      if (items.length === 0) {
-        copyMsg = "Nothing logged on that day.";
-        return;
-      }
-      const next = copyDiaryItems(day ?? createDiaryDay(dateIso), items);
-      day = next;
-      await repo.saveDay(next);
-      pushNutritionDay(next);
-      showCopy = false;
-    } finally {
-      copyBusy = false;
-    }
+  function shiftWeek(weeks: number) {
+    const today = localDateIso();
+    const next = addDays(stripEnd, weeks * 7);
+    stripEnd = next > today ? today : next;
+    selectDate(stripEnd);
+    void loadWeek();
   }
+
+  // Bumped on every edit and date change, so a reload that started earlier can't put an
+  // older copy of the day back on screen.
+  let generation = 0;
 
   async function loadDay() {
-    day = (await getNutritionRepo().getDay(dateIso)) ?? null;
-    coachComments = await getMessagesRepo()
-      .listCommentsForDate(dateIso)
-      .catch(() => []);
+    const repo = getNutritionRepo();
+    const gen = generation;
+    const [d, p, comments] = await Promise.all([
+      repo.getDay(dateIso),
+      repo.getDay(addDays(dateIso, -1)),
+      getMessagesRepo().listCommentsForDate(dateIso).catch(() => []),
+    ]);
+    if (gen !== generation) return;
+    day = d;
+    prevDay = p;
+    coachComments = comments;
+  }
+
+  async function loadWeek() {
+    const days = await getNutritionRepo().listDaysInRange(addDays(stripEnd, -6), stripEnd);
+    weekKcal = Object.fromEntries(days.filter((d) => !d.deletedAtMs).map((d) => [d.dateIso, dayTotals(d).kcal]));
   }
 
   async function load() {
-    ui.loading = true;
     ui.error = null;
     try {
-      const repo = getNutritionRepo();
       const fallbackKg = $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
-      const [d, n, comments] = await Promise.all([
-        repo.getDay(dateIso),
+      const [n] = await Promise.all([
         getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg }),
-        getMessagesRepo().listCommentsForDate(dateIso).catch(() => []),
+        loadDay(),
+        loadWeek(),
       ]);
-      day = d;
       nut = n;
-      coachComments = comments;
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load";
     } finally {
@@ -148,92 +140,208 @@
     }
   }
 
-  async function deleteItem(itemId: string) {
-    if (!day) return;
-    const next = removeDiaryItem(day, itemId);
+  async function commit(next: DiaryDay) {
+    generation++;
     day = next;
-    await getNutritionRepo().saveDay(next);
-    pushNutritionDay(next);
+    await saveDay(next);
+    void loadWeek();
   }
 
-  // ── Drag to reorder / move between meals (svelte-dnd-action handle zones) ──
-  const FLIP_MS = 150;
-  let dndItems = $state<Record<MealSlot, LoggedItem[]>>({
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-    snack: [],
-  });
+  // ── Editing an entry ──
+  let editing = $state<null | { item: LoggedItem; food: FoodRef; realGrams: boolean }>(null);
 
-  // Re-derive the drag zones from the day whenever it changes (load, day switch, finalize).
-  $effect(() => {
-    const next: Record<MealSlot, LoggedItem[]> = { breakfast: [], lunch: [], dinner: [], snack: [] };
-    for (const it of day?.items ?? []) next[it.meal].push({ ...it });
-    dndItems = next;
-  });
-
-  function onConsider(meal: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
-    dndItems[meal] = e.detail.items;
-  }
-
-  // ── Save a meal as a reusable template ──
-  let savingMeal = $state<MealSlot | null>(null);
-  let templateName = $state("");
-
-  function startSaveMeal(meal: MealSlot) {
-    savingMeal = meal;
-    templateName = `${mealLabels[meal]}`;
-  }
-
-  async function confirmSaveMeal() {
-    if (!day || !savingMeal) return;
-    const t = mealTemplateFromDay(day, savingMeal, templateName || mealLabels[savingMeal]);
-    if (t.items.length === 0) {
-      savingMeal = null;
+  async function openItem(it: LoggedItem) {
+    const basis = await basisForItem(it);
+    if (!basis) {
+      quickEdit = it;
       return;
     }
-    await getNutritionRepo().saveMealTemplate(t);
-    pushMealTemplate(t);
-    savingMeal = null;
+    editing = {
+      item: it,
+      food: {
+        id: it.sourceId ?? it.id,
+        source: "custom",
+        name: it.name,
+        brand: it.brand,
+        per100g: basis.per100g,
+        servings: basis.servings,
+        ...(basis.nutrients ? { nutrients: basis.nutrients } : {}),
+      },
+      realGrams: !(it.sourceKind === "recipe" && basis.servings.some((s) => s.label === "1 serving")),
+    };
   }
 
-  async function onFinalize(meal: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
-    dndItems[meal] = e.detail.items;
+  async function saveEdit(r: AmountResult) {
+    if (!editing || !day) return;
+    const next = updateDiaryItem(day, editing.item.id, {
+      grams: r.grams,
+      servingLabel: r.label,
+      amount: r.amount,
+      portionId: r.portionId,
+      computed: r.computed,
+      nutrients: r.nutrients,
+      meal: r.meal ?? editing.item.meal,
+    });
+    editing = null;
+    await commit(next);
+  }
+
+  async function deleteItem(it: LoggedItem) {
     if (!day) return;
-    const items: LoggedItem[] = [];
-    for (const m of MEAL_SLOTS) for (const it of dndItems[m]) items.push({ ...it, meal: m });
-    const next = setDiaryItems(day, items);
-    day = next;
-    await getNutritionRepo().saveDay(next);
-    pushNutritionDay(next);
+    const before = day;
+    editing = null;
+    await commit(removeDiaryItem(day, it.id));
+    toast(`Removed ${it.name}`, { action: { label: "Undo", onClick: () => void commit(before) } });
   }
 
-  async function addPhoto(itemId: string) {
+  async function addPhoto(it: LoggedItem) {
     if (!day) return;
     const { captureMealPhoto } = await import("$lib/features/nutrition/mealPhoto");
     const photoDataUrl = await captureMealPhoto();
-    if (!photoDataUrl) return;
-    const next = updateDiaryItem(day, itemId, { photoDataUrl });
-    day = next;
-    await getNutritionRepo().saveDay(next);
-    pushNutritionDay(next);
+    if (!photoDataUrl || !day) return;
+    editing = null;
+    await commit(updateDiaryItem(day, it.id, { photoDataUrl }));
   }
 
-  const sourceBadge = $derived.by(() => {
-    if (!nut) return null;
-    if (!nut.goal && !nut.coachPlan) return null;
-    if (!nut.targets) {
-      return { label: nut.targetsHint ?? "Add height & birth date", variant: "outline" as const };
+  // Quick-add entries (no weight): edit the numbers directly.
+  let quickEdit = $state<LoggedItem | null>(null);
+  let quickNew = $state<MealSlot | null>(null);
+
+  async function saveQuick(r: { name: string; computed: MacroTotals; meal: MealSlot }) {
+    if (quickEdit && day) {
+      const id = quickEdit.id;
+      quickEdit = null;
+      await commit(updateDiaryItem(day, id, { name: r.name, computed: r.computed, meal: r.meal }));
+      return;
     }
-    const prominent = nut.targets.source === "coach" || nut.targets.sourceLabel === "Adaptive";
-    return { label: nut.targets.sourceLabel, variant: prominent ? ("secondary" as const) : ("outline" as const) };
+    quickNew = null;
+    const { day: d } = await addItems(dateIso, [{ meal: r.meal, name: r.name, grams: 0, computed: r.computed }]);
+    generation++;
+    day = d;
+    void loadWeek();
+  }
+
+  // ── Folding meals ──
+  const COLLAPSED_KEY = "logit:nutrition:collapsedMeals:v1";
+  function readCollapsed(): MealSlot[] {
+    try {
+      const v = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]");
+      return Array.isArray(v) ? v.filter((x): x is MealSlot => MEAL_SLOTS.includes(x)) : [];
+    } catch {
+      return [];
+    }
+  }
+  let collapsed = $state<MealSlot[]>(readCollapsed());
+  function toggleMeal(m: MealSlot) {
+    collapsed = collapsed.includes(m) ? collapsed.filter((x) => x !== m) : [...collapsed, m];
+    try {
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
+    } catch {
+      /* remembered for this visit only */
+    }
+  }
+
+  // ── Dragging foods (svelte-dnd-action handle zones, one per meal) ──
+  // Every meal keeps a zone, folded ones too (with no rows), because the library only
+  // knows the zones that exist when a drag starts.
+  const FLIP_MS = 150;
+  let dragging = $state(false);
+  let dndItems = $state<Record<MealSlot, LoggedItem[]>>({ breakfast: [], lunch: [], dinner: [], snack: [] });
+
+  $effect(() => {
+    const next: Record<MealSlot, LoggedItem[]> = { breakfast: [], lunch: [], dinner: [], snack: [] };
+    for (const it of day?.items ?? []) if (!collapsed.includes(it.meal)) next[it.meal].push({ ...it });
+    dndItems = next;
   });
 
-  // Login kicks off a background sync (authStore.login() doesn't wait for it — otherwise
-  // the sign-in screen would sit on a spinner for however long a full sync takes). If this
-  // page mounts before that sync lands, targets can look "incomplete" (e.g. weight history
-  // not pulled yet) even though the goal is fully set. Reload once the sync that's already
-  // in flight actually finishes, instead of leaving the stale/incomplete state on screen.
+  function onConsider(m: MealSlot, e: CustomEvent<{ items: LoggedItem[]; info: { trigger: string } }>) {
+    dndItems[m] = e.detail.items;
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED) dragging = true;
+  }
+
+  async function onFinalize(m: MealSlot, e: CustomEvent<{ items: LoggedItem[] }>) {
+    dndItems[m] = e.detail.items;
+    dragging = false;
+    if (!day) return;
+    const inZones = new Set(Object.values(dndItems).flat().map((d) => d.id));
+    const items: LoggedItem[] = [];
+    for (const slot of MEAL_SLOTS) {
+      // A folded meal's own foods aren't in its zone; keep them, then add anything dropped on it.
+      if (collapsed.includes(slot)) items.push(...day.items.filter((it) => it.meal === slot && !inZones.has(it.id)));
+      for (const it of dndItems[slot]) items.push({ ...it, meal: slot });
+    }
+    const before = day.items.map((it) => `${it.id}:${it.meal}`).join();
+    if (items.map((it) => `${it.id}:${it.meal}`).join() === before) return;
+    const moved = e.detail.items.find((it) => day!.items.find((d) => d.id === it.id)?.meal !== m);
+    await commit(setDiaryItems(day, items));
+    if (moved && collapsed.includes(m)) toast(`Moved ${moved.name} to ${MEAL_LABELS[m].toLowerCase()}`);
+  }
+
+  // ── Meal menu ──
+  let menuFor = $state<MealSlot | null>(null);
+  let menuMode = $state<"menu" | "copyDay" | "save" | "move">("menu");
+  let copyFromIso = $state("");
+  let templateName = $state("");
+
+  function openMenu(m: MealSlot) {
+    menuFor = m;
+    menuMode = "menu";
+    copyFromIso = addDays(dateIso, -1);
+    templateName = MEAL_LABELS[m];
+  }
+
+  function itemsIn(d: DiaryDay | null, m: MealSlot): LoggedItem[] {
+    return (d?.items ?? []).filter((it) => it.meal === m);
+  }
+
+  async function copyFrom(fromIso: string, m: MealSlot) {
+    const src = fromIso === addDays(dateIso, -1) ? prevDay : await getNutritionRepo().getDay(fromIso);
+    const items = itemsIn(src, m);
+    menuFor = null;
+    if (items.length === 0) {
+      toast(`Nothing logged at ${MEAL_LABELS[m].toLowerCase()} that day.`);
+      return;
+    }
+    const base = day ?? createDiaryDay(dateIso);
+    await commit(copyDiaryItems(base, items, m));
+  }
+
+  async function saveTemplate(m: MealSlot) {
+    if (!day) return;
+    const t = mealTemplateFromDay(day, m, templateName.trim() || MEAL_LABELS[m]);
+    menuFor = null;
+    if (t.items.length === 0) return;
+    await getNutritionRepo().saveMealTemplate(t);
+    pushMealTemplate(t);
+    toast(`Saved "${t.name}". Find it under Meals when adding food.`);
+  }
+
+  async function moveAll(from: MealSlot, to: MealSlot) {
+    if (!day) return;
+    menuFor = null;
+    await commit(setDiaryItems(day, day.items.map((it) => (it.meal === from ? { ...it, meal: to } : it))));
+  }
+
+  async function clearMeal(m: MealSlot) {
+    if (!day) return;
+    const before = day;
+    menuFor = null;
+    await commit(setDiaryItems(day, day.items.filter((it) => it.meal !== m)));
+    toast(`Cleared ${MEAL_LABELS[m].toLowerCase()}`, { action: { label: "Undo", onClick: () => void commit(before) } });
+  }
+
+  function addHref(m: MealSlot): string {
+    return `/nutrition/log?meal=${m}&date=${dateIso}`;
+  }
+
+  // ── Targets badge ──
+  const sourceBadge = $derived.by(() => {
+    if (!nut || (!nut.goal && !nut.coachPlan)) return null;
+    if (!nut.targets) return nut.targetsHint ?? "Add height & birth date";
+    return nut.targets.sourceLabel;
+  });
+
+  // Login starts a background sync; reload once it lands so targets aren't stale.
   let lastSyncSeen = $state<number | null>(null);
   $effect(() => {
     const t = $lastSyncedAt;
@@ -250,219 +358,322 @@
   onMount(() => {
     void load();
     return onForeground(() => {
-      if (followingToday && dateIso !== localDateIso()) dateIso = localDateIso();
+      if (followingToday && dateIso !== localDateIso()) {
+        dateIso = localDateIso();
+        stripEnd = dateIso;
+      }
       void load();
     });
   });
+
+  function pct(n: number, of: number | undefined): number {
+    return of && of > 0 ? Math.max(0, Math.min(100, (n / of) * 100)) : 0;
+  }
+  const kcalLeft = $derived(target ? target.kcal - eaten.kcal : null);
+
+  // Fibre, sugar, sat fat and salt so far, once anything logged today knows them.
+  const dayLabel = $derived.by(() => {
+    const items = day?.items ?? [];
+    if (!items.some((it) => hasLabelNutrients(it.nutrients) || hasMicros(it.nutrients))) return null;
+    const totals = dayNutrients(items).totals;
+    const fmt = (v: number | undefined, dp: number) => (v === undefined ? "–" : String(Math.round(v * 10 ** dp) / 10 ** dp));
+    return [
+      { id: "fibreG", label: "fibre g", value: fmt(totals.fibreG, 0), goal: "30" },
+      { id: "sugarG", label: "sugar g", value: fmt(totals.sugarG, 0), goal: "" },
+      { id: "satFatG", label: "sat fat g", value: fmt(totals.satFatG, 0), goal: "30" },
+      { id: "saltG", label: "salt g", value: fmt(totals.saltG, 1), goal: "6" },
+    ];
+  });
 </script>
 
-<div class="flex flex-col pb-24">
-  <PageHeader>
-    <BackButton onclick={() => back("/")} />
-    <h1 class="page-title">Nutrition</h1>
-  </PageHeader>
+<PageHeader>
+  <BackButton onclick={() => back("/")} />
+  <h1 class="page-title flex-1">Nutrition</h1>
+  <a href="/nutrition/lookup" class="flex size-11 items-center justify-center rounded-lg text-muted-foreground" aria-label="Look up a food">
+    <Search class="size-5" />
+  </a>
+  <a href="/insights/eating" class="flex size-11 items-center justify-center rounded-lg text-muted-foreground" aria-label="Insights">
+    <ChartNoAxesColumn class="size-5" />
+  </a>
+  <a href="/nutrition/foods" class="-mr-1 flex size-11 items-center justify-center rounded-lg text-muted-foreground" aria-label="My foods and recipes">
+    <BookMarked class="size-5" />
+  </a>
+</PageHeader>
 
-  <nav class="flex items-center gap-1 px-1 border-b border-border text-sm text-muted-foreground">
-    <a href="/nutrition/log" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
-      <Carrot class="h-4 w-4" /> Foods
-    </a>
-    <a href="/insights/eating" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
-      <ChartNoAxesColumn class="h-4 w-4" /> Insights
-    </a>
-    <a href="/nutrition/goal" class="h-11 px-2.5 flex items-center gap-1.5 hover:text-foreground">
-      <Target class="h-4 w-4" /> Goal
-    </a>
-  </nav>
+<div class="flex flex-col pb-8">
+  <WeekStrip
+    endIso={stripEnd}
+    selectedIso={dateIso}
+    kcalByDate={weekKcal}
+    targetKcal={target?.kcal ?? null}
+    onselect={selectDate}
+    onshift={shiftWeek}
+  />
 
-  {#if ui.error}<p class="px-3 py-2 text-sm text-destructive">{ui.error}</p>{/if}
-
-  <!-- Date nav -->
-  <div class="flex items-center justify-between px-1 border-b border-border">
-    <button type="button" class="h-11 w-11 flex items-center justify-center" onclick={() => shiftDate(-1)} aria-label="Previous day">
-      <ChevronLeft class="h-4 w-4" />
-    </button>
-    <span class="text-sm font-medium">{isToday ? "Today" : dateIso}</span>
-    <button
-      type="button"
-      class="h-11 w-11 flex items-center justify-center disabled:opacity-30"
-      onclick={() => shiftDate(1)}
-      disabled={isToday}
-      aria-label="Next day"
-    >
-      <ChevronRight class="h-4 w-4" />
-    </button>
-  </div>
+  {#if ui.error}<p class="px-4 py-2 text-sm text-destructive">{ui.error}</p>{/if}
 
   {#if ui.loading}
-    <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
+    <p class="px-4 py-6 text-sm text-muted-foreground">Loading…</p>
   {:else}
-    <!-- Targets -->
-    <div class="px-3 py-3 border-b border-border">
-      {#if !nut?.goal && !nut?.coachPlan}
-        <a href="/nutrition/goal" class="mb-3 flex min-h-11 items-center gap-2 text-sm text-primary">
-          <Target class="h-4 w-4" /> Set a goal for calorie &amp; macro targets
-        </a>
-      {:else}
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-muted-foreground">Daily target</span>
-          {#if sourceBadge}<Badge variant={sourceBadge.variant} class="text-[11px]">{sourceBadge.label}</Badge>{/if}
-        </div>
-        {#if nut?.coachPlan?.note}
-          <p class="text-[11px] text-muted-foreground mb-2 whitespace-pre-line">{nut.coachPlan.note}</p>
+    <div class="flex flex-col gap-3 px-3">
+      <!-- Summary: opens the goal -->
+      <div class="rounded-2xl border border-border bg-card dark:border-transparent">
+      <a href="/nutrition/goal" class="block rounded-2xl p-4 text-inherit" data-testid="day-summary">
+        {#if !nut?.goal && !nut?.coachPlan}
+          <span class="flex items-center gap-2 text-sm font-medium"><Target class="size-4" /> Set a goal to get calorie and macro targets</span>
+          <span class="mt-1 block text-xs text-muted-foreground tabular-nums">Eaten so far: {fmtNum(eaten.kcal)} kcal · {macroLine(eaten)}</span>
+        {:else}
+          <span class="flex items-center justify-between">
+            <span class="text-xs font-medium text-muted-foreground">{kcalLeft !== null && kcalLeft < 0 ? "Over by" : "Calories left"}</span>
+            {#if sourceBadge}<span class="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">{sourceBadge}</span>{/if}
+          </span>
+          <span class="mt-1 flex items-baseline gap-2.5">
+            <span class="text-[40px] font-bold leading-tight tracking-tight tabular-nums">{kcalLeft !== null ? fmtNum(Math.abs(kcalLeft)) : fmtNum(eaten.kcal)}</span>
+            {#if target}<span class="text-xs text-muted-foreground tabular-nums">{fmtNum(target.kcal)} goal − {fmtNum(eaten.kcal)} eaten</span>{/if}
+          </span>
+          <span class="mt-2.5 block h-2 overflow-hidden rounded-full bg-muted">
+            <span class="block h-full rounded-full {kcalLeft !== null && kcalLeft < 0 ? 'bg-destructive' : 'bg-foreground'}" style="width: {pct(eaten.kcal, target?.kcal)}%"></span>
+          </span>
+          {#if target}
+            <span class="mt-4 grid grid-cols-3 gap-3.5">
+              {#each [["Protein", eaten.proteinG, target.proteinG, "bg-macro-protein"], ["Carbs", eaten.carbsG, target.carbsG, "bg-macro-carbs"], ["Fat", eaten.fatG, target.fatG, "bg-macro-fat"]] as [label, got, goal, color] (label)}
+                <span class="block">
+                  <span class="flex justify-between text-xs"><span class="font-semibold">{label}</span><span class="text-muted-foreground tabular-nums">{Math.round(got as number)}/{Math.round(goal as number)}</span></span>
+                  <span class="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-muted"><span class="block h-full rounded-full {color}" style="width: {pct(got as number, goal as number)}%"></span></span>
+                  <span class="mt-1 block text-[11px] text-muted-foreground tabular-nums">{(goal as number) - (got as number) >= 0 ? `${Math.round((goal as number) - (got as number))} g left` : `${Math.round((got as number) - (goal as number))} g over`}</span>
+                </span>
+              {/each}
+            </span>
+          {/if}
         {/if}
+      </a>
+      {#if dayLabel}
+        <a
+          href="/nutrition/nutrients?date={dateIso}"
+          class="mx-4 flex min-h-12 items-center gap-2.5 border-t border-border py-1.5 text-inherit"
+          data-testid="day-nutrients-link"
+        >
+          <span class="grid flex-1 grid-cols-4 gap-1.5">
+            {#each dayLabel as n (n.id)}
+              <span class="block">
+                <span class="block text-[13px] font-semibold tabular-nums">{n.value}{#if n.goal}<span class="font-normal text-muted-foreground">/{n.goal}</span>{/if}</span>
+                <span class="block text-[11px] text-muted-foreground">{n.label}</span>
+              </span>
+            {/each}
+          </span>
+          <span class="flex items-center gap-0.5 whitespace-nowrap text-xs font-medium">All nutrients<ChevronRight class="size-4" /></span>
+        </a>
       {/if}
-      <MacroBars consumed={consumed} target={nut?.targets?.macros ?? null} />
-    </div>
+      </div>
 
-    {#if coachComments.length}
-      <div class="px-3 py-2.5 border-b border-border flex flex-col gap-1.5">
-        <span class="text-xs text-muted-foreground">Coach comments · {isToday ? "today" : dateIso}</span>
-        {#each coachComments as c (c.id)}
-          <div class="rounded-md bg-muted/50 px-2 py-1.5 text-[11px]">
-            <span class="text-muted-foreground">{c.mine ? "You" : "Coach"}</span>
-            <p class="whitespace-pre-line">{c.body}</p>
+      {#if nut?.coachPlan?.note}
+        <p class="whitespace-pre-line px-1 text-xs text-muted-foreground">{nut.coachPlan.note}</p>
+      {/if}
+      {#if coachComments.length}
+        <div class="flex flex-col gap-1.5 rounded-2xl border border-border bg-card p-3 dark:border-transparent">
+          <span class="text-xs text-muted-foreground">Coach comments · {isToday ? "today" : dateIso}</span>
+          {#each coachComments as c (c.id)}
+            <div class="rounded-lg bg-muted/60 px-2.5 py-1.5 text-xs">
+              <span class="text-muted-foreground">{c.mine ? "You" : "Coach"}</span>
+              <p class="whitespace-pre-line">{c.body}</p>
+            </div>
+          {/each}
+        </div>
+      {/if}
+      {#if nut?.coachPlan?.meals?.length}
+        <a href="/nutrition/plan" class="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium dark:border-transparent">
+          <UtensilsCrossed class="size-4" /> Your coach's meal plan
+          <span class="ml-auto text-xs text-muted-foreground">{nut.coachPlan.meals.length} meals</span>
+        </a>
+      {/if}
+
+      <!-- Meals: tap a header to fold it; drag a food by its grip to reorder it or move it
+           to another meal (folded and empty meals show a drop strip while dragging). -->
+      {#each MEAL_SLOTS as m (m)}
+        {@const all = itemsIn(day, m)}
+        {@const mt = day ? mealTotals(day, m) : null}
+        {@const yesterday = itemsIn(prevDay, m)}
+        {@const open = !collapsed.includes(m)}
+        <section class="select-none overflow-hidden rounded-2xl border border-border bg-card dark:border-transparent" data-testid="meal-{m}">
+          <div class="flex items-center py-0.5 pl-1 pr-1">
+            <button
+              type="button"
+              class="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-lg pl-2 text-left"
+              aria-expanded={open}
+              aria-controls="meal-items-{m}"
+              onclick={() => toggleMeal(m)}
+            >
+              <ChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform {open ? '' : '-rotate-90'}" />
+              <span class="min-w-0 flex-1">
+                <span class="block text-[15px] font-semibold">{MEAL_LABELS[m]}</span>
+                <span class="block truncate text-xs text-muted-foreground tabular-nums">
+                  {#if all.length && mt}{fmtNum(mt.kcal)} kcal · {macroLine(mt)}{#if !open}{` · ${all.length} item${all.length === 1 ? "" : "s"}`}{/if}{:else}Nothing yet{/if}
+                </span>
+              </span>
+            </button>
+            <a href={addHref(m)} class="flex size-11 shrink-0 items-center justify-center" aria-label="Add food to {MEAL_LABELS[m]}">
+              <span class="flex size-8 items-center justify-center rounded-full bg-muted"><Plus class="size-4" strokeWidth={2.4} /></span>
+            </a>
+            <button type="button" class="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground" aria-label="{MEAL_LABELS[m]} options" onclick={() => openMenu(m)}>
+              <Ellipsis class="size-5" />
+            </button>
           </div>
+
+          <ul
+            id="meal-items-{m}"
+            class="flex flex-col {dragging && dndItems[m].length === 0 ? `mx-3 mb-3 min-h-12 items-center justify-center rounded-xl border border-dashed border-muted-foreground/40 after:text-xs after:text-muted-foreground after:content-['Drop_here']` : ''}"
+            use:dragHandleZone={{
+              items: dndItems[m],
+              flipDurationMs: FLIP_MS,
+              type: "diary-item",
+              dropTargetStyle: {},
+            }}
+            onconsider={(e) => onConsider(m, e)}
+            onfinalize={(e) => onFinalize(m, e)}
+          >
+            {#each dndItems[m] as it (it.id)}
+              <li animate:flip={{ duration: FLIP_MS }} class="flex w-full items-center border-t border-border bg-card">
+                <span
+                  use:dragHandle
+                  aria-label="Drag to move {it.name}"
+                  class="flex h-[52px] w-9 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground/50 active:cursor-grabbing"
+                >
+                  <GripVertical class="size-4" />
+                </span>
+                <button type="button" class="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 pr-4 text-left" aria-label="{it.name}, {fmtNum(it.computed.kcal)} kcal" onclick={() => void openItem(it)}>
+                  {#if it.photoDataUrl}<img src={it.photoDataUrl} alt="" class="size-8 shrink-0 rounded-md object-cover" />{/if}
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate">
+                      {it.name}
+                      {#if it.sourceKind === "recipe"}<span class="ml-1 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground">Recipe</span>{/if}
+                    </span>
+                    <span class="block truncate text-xs text-muted-foreground">{it.servingLabel ?? (it.grams > 0 ? `${Math.round(it.grams)} g` : "Quick add")}</span>
+                  </span>
+                  <span class="font-medium tabular-nums">{fmtNum(it.computed.kcal)}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+
+          {#if open && all.length === 0 && !dragging && yesterday.length}
+            <button
+              type="button"
+              class="flex h-10 w-full items-center gap-2 px-4 pb-1 text-left text-[13px] text-muted-foreground"
+              onclick={() => void copyFrom(addDays(dateIso, -1), m)}
+            >
+              <Copy class="size-4 shrink-0" />
+              <span class="tabular-nums">Same as yesterday · {fmtNum(yesterday.reduce((n, i) => n + i.computed.kcal, 0))} kcal</span>
+            </button>
+          {/if}
+        </section>
+      {/each}
+
+      <!-- Weight -->
+      <a href="/nutrition/weight" class="flex items-center gap-3.5 rounded-2xl bg-card px-4 py-3.5 border border-border dark:border-transparent">
+        <span class="min-w-0 flex-1">
+          <span class="block text-xs font-medium text-muted-foreground">Weight trend</span>
+          <span class="flex items-baseline gap-2">
+            <span class="text-[22px] font-bold tabular-nums">{fmtWeight(nut?.trend.currentKg ?? null, unit)}</span>
+            {#if nut && Math.abs(nut.trend.weeklyRateKg) >= 0.05}
+              <span class="text-xs text-muted-foreground tabular-nums">
+                {nut.trend.weeklyRateKg > 0 ? "+" : ""}{(unit === "lbs" ? nut.trend.weeklyRateKg * 2.2046 : nut.trend.weeklyRateKg).toFixed(2)} / wk
+              </span>
+            {/if}
+          </span>
+        </span>
+        <span class="rounded-lg bg-muted px-3.5 py-2 text-[13px] font-medium">Log</span>
+      </a>
+    </div>
+  {/if}
+</div>
+
+
+{#if editing}
+  {@const ed = editing}
+  <AmountSheet
+    food={ed.food}
+    subtitle={ed.item.brand}
+    rawUnits={ed.realGrams}
+    initial={{ amount: ed.item.amount, portionId: ed.item.portionId, grams: ed.item.grams }}
+    day={target ? { eaten: { kcal: eaten.kcal - ed.item.computed.kcal, proteinG: eaten.proteinG - ed.item.computed.proteinG, carbsG: eaten.carbsG - ed.item.computed.carbsG, fatG: eaten.fatG - ed.item.computed.fatG }, target } : null}
+    meal={ed.item.meal}
+    confirmText={() => "Save"}
+    ondelete={() => void deleteItem(ed.item)}
+    onconfirm={(r) => void saveEdit(r)}
+    onclose={() => (editing = null)}
+  >
+    {#snippet extra()}
+      <button type="button" class="flex items-center gap-2 text-xs font-medium" onclick={() => void addPhoto(ed.item)}>
+        <Camera class="size-4" />{ed.item.photoDataUrl ? "Change photo" : "Add a photo"}
+      </button>
+    {/snippet}
+  </AmountSheet>
+{/if}
+
+{#if quickNew || quickEdit}
+  <QuickAddSheet meal={quickEdit?.meal ?? quickNew ?? "snack"} onadd={(r) => void saveQuick(r)} onclose={() => { quickNew = null; quickEdit = null; }} />
+{/if}
+
+{#if menuFor}
+  {@const m = menuFor}
+  {@const items = itemsIn(day, m)}
+  {@const yest = itemsIn(prevDay, m)}
+  {@const mt = day ? mealTotals(day, m) : null}
+  <BottomSheet label="{MEAL_LABELS[m]} options" onclose={() => (menuFor = null)}>
+    <div class="border-b border-border px-5 pt-1 pb-3">
+      <h2 class="text-lg font-bold">{MEAL_LABELS[m]}</h2>
+      <p class="text-xs text-muted-foreground tabular-nums">
+        {#if items.length && mt}{items.length} item{items.length === 1 ? "" : "s"} · {fmtNum(mt.kcal)} kcal · {macroLine(mt)}{:else}Nothing logged{/if}
+      </p>
+    </div>
+    {#if menuMode === "menu"}
+      {@const opt = "flex min-h-14 w-full items-center gap-3.5 px-5 text-left"}
+      <div class="py-1">
+        <button type="button" class={opt} onclick={() => goto(addHref(m))}><Plus class="size-5 text-muted-foreground" />Add food</button>
+        <button type="button" class={opt} onclick={() => { menuFor = null; quickNew = m; }}><Zap class="size-5 text-muted-foreground" />Quick add calories</button>
+        <div class="my-1 h-px bg-border"></div>
+        {#if yest.length}
+          <button type="button" class={opt} onclick={() => void copyFrom(addDays(dateIso, -1), m)}>
+            <Copy class="size-5 shrink-0 text-muted-foreground" />
+            <span class="min-w-0 flex-1">
+              <span class="block">Copy yesterday's {MEAL_LABELS[m].toLowerCase()}</span>
+              <span class="block truncate text-xs text-muted-foreground">{yest.map((i) => i.name).join(", ")} · {fmtNum(yest.reduce((n, i) => n + i.computed.kcal, 0))} kcal</span>
+            </span>
+          </button>
+        {/if}
+        <button type="button" class={opt} onclick={() => (menuMode = "copyDay")}><CalendarDays class="size-5 text-muted-foreground" />Copy from another day…</button>
+        {#if items.length}
+          <button type="button" class={opt} onclick={() => (menuMode = "save")}>
+            <Bookmark class="size-5 shrink-0 text-muted-foreground" />
+            <span class="min-w-0 flex-1"><span class="block">Save as a meal</span><span class="block text-xs text-muted-foreground">Log all {items.length} again in one tap</span></span>
+          </button>
+          <div class="my-1 h-px bg-border"></div>
+          <button type="button" class={opt} onclick={() => (menuMode = "move")}><MoveHorizontal class="size-5 text-muted-foreground" />Move to another meal…</button>
+          <button type="button" class="{opt} text-destructive" onclick={() => void clearMeal(m)}><Trash2 class="size-5" />Clear {MEAL_LABELS[m].toLowerCase()}</button>
+        {/if}
+      </div>
+    {:else if menuMode === "copyDay"}
+      <div class="flex flex-col gap-3 px-5 py-4">
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted-foreground">Copy {MEAL_LABELS[m].toLowerCase()} from</span>
+          <DateField bind:value={copyFromIso} maxIso={localDateIso()} aria-label="Copy from date" />
+        </label>
+        <button type="button" class="h-12 rounded-xl bg-primary font-semibold text-primary-foreground" onclick={() => void copyFrom(copyFromIso, m)}>Copy</button>
+      </div>
+    {:else if menuMode === "save"}
+      <form class="flex flex-col gap-3 px-5 py-4" onsubmit={(e) => { e.preventDefault(); void saveTemplate(m); }}>
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted-foreground">Name</span>
+          <input class="h-12 rounded-xl bg-muted px-3 outline-none focus:ring-2 focus:ring-ring" bind:value={templateName} />
+        </label>
+        <button type="submit" class="h-12 rounded-xl bg-primary font-semibold text-primary-foreground">Save meal</button>
+      </form>
+    {:else if menuMode === "move"}
+      <div class="grid grid-cols-3 gap-2 px-5 py-4">
+        {#each MEAL_SLOTS.filter((x) => x !== m) as to (to)}
+          <button type="button" class={chip(false)} onclick={() => void moveAll(m, to)}>{MEAL_LABELS[to]}</button>
         {/each}
       </div>
     {/if}
-
-    {#if nut?.coachPlan?.meals?.length}
-      <a href="/nutrition/plan" class="flex items-center gap-2 px-3 py-2.5 border-b border-border text-sm text-primary">
-        <UtensilsCrossed class="h-4 w-4" /> Your coach's meal plan
-        <span class="ml-auto text-xs text-muted-foreground">{nut.coachPlan.meals.length} meals</span>
-      </a>
-    {/if}
-
-    <!-- Copy a previous day -->
-    <div class="px-3 border-b border-border">
-      <button
-        type="button"
-        class="min-h-11 flex items-center gap-1.5 text-sm text-muted-foreground"
-        onclick={toggleCopy}
-      >
-        <CopyPlus class="h-3.5 w-3.5" /> Copy a day
-      </button>
-      {#if showCopy}
-        <div class="pb-3 flex flex-wrap items-end gap-2" transition:reveal>
-          <label class="flex flex-col gap-1">
-            <span class="text-[11px] text-muted-foreground">Copy meals from</span>
-            <DateField bind:value={copyFromIso} maxIso={localDateIso()} aria-label="Copy from date" class="w-[9.5rem]" />
-          </label>
-          <button
-            type="button"
-            class="h-10 px-2 text-sm text-primary"
-            onclick={() => (copyFromIso = dayBefore(dateIso))}
-          >
-            Yesterday
-          </button>
-          <button
-            type="button"
-            class="h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium px-4 disabled:opacity-50"
-            disabled={copyBusy}
-            onclick={() => void doCopy()}
-          >
-            {copyBusy ? "Copying…" : "Copy"}
-          </button>
-        </div>
-        {#if copyMsg}<p class="pb-3 text-xs text-muted-foreground">{copyMsg}</p>{/if}
-      {/if}
-    </div>
-
-    <!-- Meals — items drag to reorder within a meal or move between meals -->
-    {#each MEAL_SLOTS as meal (meal)}
-      {@const mt = day ? mealTotals(day, meal) : null}
-      <div class="border-b border-border">
-        <div class="flex items-center justify-between pl-3 pr-1">
-          <div class="flex items-baseline gap-2">
-            <span class="text-sm font-semibold">{mealLabels[meal]}</span>
-            {#if mt && mt.kcal > 0}<span class="text-xs text-muted-foreground tabular-nums">{fmtKcal(mt.kcal)} kcal</span>{/if}
-          </div>
-          <div class="flex items-center gap-1">
-            {#if dndItems[meal].length > 0}
-              <button
-                type="button"
-                class="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-foreground"
-                aria-label="Save {mealLabels[meal]} as a meal"
-                onclick={() => (savingMeal === meal ? (savingMeal = null) : startSaveMeal(meal))}
-              >
-                <BookmarkPlus class="h-4 w-4" />
-              </button>
-            {/if}
-            <a
-              href="/nutrition/log?meal={meal}&date={dateIso}"
-              class="h-11 px-3 flex items-center gap-1 text-sm text-primary"
-            >
-              <Plus class="h-4 w-4" /> Add
-            </a>
-          </div>
-        </div>
-        {#if savingMeal === meal}
-          <form
-            class="flex items-center gap-2 px-3 pb-2"
-            onsubmit={(e) => { e.preventDefault(); void confirmSaveMeal(); }}
-          >
-            <input
-              class="h-10 flex-1 bg-muted rounded-md px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
-              placeholder="Meal name"
-              bind:value={templateName}
-            />
-            <button type="submit" class="h-10 px-3 text-sm font-medium text-primary">Save meal</button>
-          </form>
-        {/if}
-        <ul
-          class="pl-1 pr-1 pb-1 flex flex-col min-h-[10px]"
-          use:dragHandleZone={{
-            items: dndItems[meal],
-            flipDurationMs: FLIP_MS,
-            type: "diary-item",
-            dropTargetStyle: { outline: "2px dashed rgb(148 163 184 / 0.45)", outlineOffset: "-3px", borderRadius: "6px" },
-          }}
-          onconsider={(e) => onConsider(meal, e)}
-          onfinalize={(e) => onFinalize(meal, e)}
-        >
-          {#each dndItems[meal] as it (it.id)}
-            <li animate:flip={{ duration: FLIP_MS }} transition:popIn class="flex min-h-11 items-center gap-1 text-sm">
-              <span
-                use:dragHandle
-                class="h-11 w-8 shrink-0 flex items-center justify-center text-muted-foreground touch-none cursor-grab active:cursor-grabbing"
-                aria-label="Drag to move {it.name}"
-              >
-                <GripVertical class="h-4 w-4" />
-              </span>
-              {#if it.photoDataUrl}
-                <img src={it.photoDataUrl} alt="" class="h-8 w-8 rounded-md object-cover shrink-0" />
-              {/if}
-              <a href="/nutrition/entry/{dateIso}/{it.id}" class="flex-1 min-w-0 min-h-11 flex items-center"><span class="truncate">
-                {it.name}
-                {#if it.servingLabel}<span class="text-muted-foreground"> · {it.servingLabel}</span>{/if}
-              </span></a>
-              <span class="tabular-nums text-xs text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
-              <button type="button" class="h-11 w-10 shrink-0 flex items-center justify-center text-muted-foreground hover:text-foreground" onclick={() => void addPhoto(it.id)} aria-label="Add photo">
-                <Camera class="h-4 w-4" />
-              </button>
-              <button type="button" class="h-11 w-10 shrink-0 flex items-center justify-center text-muted-foreground hover:text-destructive" onclick={() => void deleteItem(it.id)} aria-label="Remove">
-                <Trash2 class="h-4 w-4" />
-              </button>
-            </li>
-          {/each}
-        </ul>
-      </div>
-    {/each}
-
-    <!-- Weight -->
-    <a href="/nutrition/weight" class="block px-3 py-3">
-      <div class="flex items-center justify-between mb-1">
-        <span class="text-sm font-semibold flex items-center gap-1.5"><Scale class="h-4 w-4" /> Weight</span>
-        <span class="text-xs tabular-nums">
-          {fmtWeight(nut?.trend.currentKg ?? null, unit)}
-          {#if nut && Math.abs(nut.trend.weeklyRateKg) >= 0.05}
-            <span class="text-muted-foreground">
-              ({nut.trend.weeklyRateKg > 0 ? "+" : ""}{(unit === "lbs" ? nut.trend.weeklyRateKg * 2.2046 : nut.trend.weeklyRateKg).toFixed(2)}/wk)
-            </span>
-          {/if}
-        </span>
-      </div>
-      {#if nut}<WeightTrendChart trend={nut.trend} unit={unit} targetKg={nut.goal?.targetWeightKg ?? null} />{/if}
-    </a>
-  {/if}
-</div>
+  </BottomSheet>
+{/if}

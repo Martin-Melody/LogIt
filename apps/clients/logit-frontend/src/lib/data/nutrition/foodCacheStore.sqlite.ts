@@ -1,5 +1,6 @@
+import { queryWords, rankByQuery } from "@logit/core/nutrition/foodSearch";
 import type { FoodCacheStore } from "@logit/core/data/cachingFoodDbRepo";
-import type { FoodRef, ServingOption } from "@logit/core/domain/nutrition";
+import { cleanNutrients, type FoodRef, type ServingOption } from "@logit/core/domain/nutrition";
 import { getDb } from "$lib/data/db/sqlite";
 
 type Row = {
@@ -13,7 +14,17 @@ type Row = {
   carb_100g: number;
   fat_100g: number;
   serving_json: string;
+  nutrients_json?: string | null;
 };
+
+function parseNutrients(json: string | null | undefined): FoodRef["nutrients"] {
+  if (!json) return undefined;
+  try {
+    return cleanNutrients(JSON.parse(json));
+  } catch {
+    return undefined;
+  }
+}
 
 function toFoodRef(r: Row): FoodRef {
   let servings: ServingOption[];
@@ -24,6 +35,7 @@ function toFoodRef(r: Row): FoodRef {
   } catch {
     servings = [{ id: "g", label: "100 g", grams: 100 }];
   }
+  const nutrients = parseNutrients(r.nutrients_json);
   return {
     id: r.id,
     source: (r.source === "usda" ? "usda" : "off") as FoodRef["source"],
@@ -36,12 +48,13 @@ function toFoodRef(r: Row): FoodRef {
       carbsG: r.carb_100g,
       fatG: r.fat_100g,
     },
+    ...(nutrients ? { nutrients } : {}),
     servings,
   };
 }
 
 const COLS =
-  "id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, serving_json";
+  "id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, serving_json, nutrients_json";
 
 /** SQLite-backed cache of online Open Food Facts lookups (native builds). */
 export function createSqliteFoodCacheStore(): FoodCacheStore {
@@ -65,15 +78,18 @@ export function createSqliteFoodCacheStore(): FoodCacheStore {
     },
 
     async search(q, limit) {
-      const like = `%${q.trim().replace(/[%_]/g, "")}%`;
+      // Candidates share the start of some word with the query (loose enough for typos
+      // later in a word), then the shared matcher ranks them.
+      const stems = queryWords(q)
+        .slice(0, 5)
+        .map((w) => w.slice(0, 3));
+      if (stems.length === 0) return [];
+      const where = stems.map(() => "(name LIKE ? OR brand LIKE ?)").join(" OR ");
       const rows = await query(
-        `SELECT ${COLS} FROM food_cache
-         WHERE name LIKE ? OR brand LIKE ?
-         ORDER BY cached_at_ms DESC
-         LIMIT ?`,
-        [like, like, Math.min(limit, 100)],
+        `SELECT ${COLS} FROM food_cache WHERE ${where} ORDER BY cached_at_ms DESC LIMIT 500`,
+        stems.flatMap((s) => [`%${s}%`, `%${s}%`]),
       );
-      return rows.map(toFoodRef);
+      return rankByQuery(rows.map(toFoodRef), q, (f) => f, Math.min(limit, 100));
     },
 
     async put(foods) {
@@ -83,8 +99,8 @@ export function createSqliteFoodCacheStore(): FoodCacheStore {
       for (const f of foods) {
         await db.run(
           `INSERT INTO food_cache
-             (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, serving_json, cached_at_ms)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             (id, source, name, brand, barcode, kcal_100g, protein_100g, carb_100g, fat_100g, serving_json, nutrients_json, cached_at_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              name = excluded.name,
              brand = excluded.brand,
@@ -94,6 +110,7 @@ export function createSqliteFoodCacheStore(): FoodCacheStore {
              carb_100g = excluded.carb_100g,
              fat_100g = excluded.fat_100g,
              serving_json = excluded.serving_json,
+             nutrients_json = excluded.nutrients_json,
              cached_at_ms = excluded.cached_at_ms`,
           [
             f.id,
@@ -106,6 +123,7 @@ export function createSqliteFoodCacheStore(): FoodCacheStore {
             f.per100g.carbsG,
             f.per100g.fatG,
             JSON.stringify(f.servings),
+            f.nutrients ? JSON.stringify(f.nutrients) : null,
             now,
           ],
         );

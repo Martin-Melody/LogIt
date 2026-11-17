@@ -1,175 +1,348 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
+  import { ClipboardPaste, CookingPot, Plus, Trash2 } from "lucide-svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
-  import { onMount } from "svelte";
-  import { page } from "$app/state";
-  import { Search, Trash2 } from "lucide-svelte";
   import { back } from "$lib/navigation";
-  import { Button } from "$lib/components/ui/button";
+  import { toast } from "$lib/components/ui/sonner";
   import { createId } from "@logit/core/domain/ids";
   import {
+    createRecipe,
+    localDateIso,
+    loggedItemPer100g,
+    nutrientsFor,
+    recipePer100gCooked,
+    recipeTotals,
     recomputeRecipe,
-    scaleMacros,
     roundMacros,
+    scaleMacros,
     type FoodRef,
     type Recipe,
+    type RecipeIngredient,
   } from "@logit/core/domain/nutrition";
-  import { getNutritionRepo, getFoodDbRepo } from "$lib/data/repoProvider";
+  import { getNutritionRepo } from "$lib/data/repoProvider";
   import { pushRecipe } from "$lib/sync/syncService";
-  import { fmtKcal } from "$lib/features/nutrition/nutrition";
+  import { resolveFoodRef } from "$lib/features/nutrition/resolveFood";
+  import type { MatchedLine } from "$lib/features/nutrition/foodFinder";
+  import AmountSheet, { type AmountResult } from "$lib/features/nutrition/ui/AmountSheet.svelte";
+  import IngredientPicker from "$lib/features/nutrition/ui/IngredientPicker.svelte";
+  import PasteIngredients from "$lib/features/nutrition/ui/PasteIngredients.svelte";
+  import type { Picked } from "$lib/features/nutrition/ui/FoodSearchPanel.svelte";
+  import { fmtNum, macroLine } from "$lib/features/nutrition/ui/meals";
+  import { segment, segmentTrack } from "$lib/features/nutrition/ui/style";
 
-  const recipeId = page.params.id ?? "";
-  const ui = $state({ loading: true, query: "", searching: false, grams: "100" });
+  // Build a recipe: ingredients add up, and it's portioned either into servings or by the
+  // weight of the cooked pot (weigh it, then log grams on the plate). Saves as you go; a
+  // new recipe is only stored once it has a name or an ingredient.
+  const isNew = page.params.id === "new";
   let recipe = $state<Recipe | null>(null);
-  let results = $state<FoodRef[]>([]);
-  let picked = $state<FoodRef | null>(null);
+  let stored = $state(!isNew);
+  let status = $state<"saved" | "saving" | "idle">("idle");
+  let loading = $state(true);
 
+  let potText = $state("");
+  let servingsText = $state("");
+
+  onMount(async () => {
+    if (isNew) {
+      recipe = { ...createRecipe(""), name: "" };
+    } else {
+      recipe = await getNutritionRepo().getRecipe(page.params.id ?? "");
+    }
+    if (recipe) {
+      potText = recipe.cookedWeightG ? String(Math.round(recipe.cookedWeightG)) : "";
+      servingsText = String(recipe.servings);
+      status = isNew ? "idle" : "saved";
+    }
+    loading = false;
+  });
+
+  // ── Saving ──
   let timer: ReturnType<typeof setTimeout>;
-  function onInput() {
+  function changed(next: Recipe, now = false) {
+    recipe = recomputeRecipe(next);
     clearTimeout(timer);
-    timer = setTimeout(() => void search(), 250);
+    if (now) void persist();
+    else timer = setTimeout(() => void persist(), 500);
   }
-  async function search() {
-    const q = ui.query.trim();
-    if (!q) return (results = []);
-    ui.searching = true;
-    try {
-      const repo = getNutritionRepo();
-      const [foods, customs] = await Promise.all([
-        getFoodDbRepo().searchFoods(q, { limit: 25 }),
-        repo.listCustomFoods(),
-      ]);
-      const ql = q.toLowerCase();
-      results = [
-        ...customs.filter((c) => c.food.name.toLowerCase().includes(ql)).map((c) => c.food),
-        ...foods,
-      ];
-    } finally {
-      ui.searching = false;
+
+  async function persist() {
+    if (!recipe) return;
+    if (!stored && !recipe.name.trim() && recipe.ingredients.length === 0) return;
+    status = "saving";
+    const toSave = { ...recipe, name: recipe.name.trim() || "Untitled recipe" };
+    await getNutritionRepo().saveRecipe(toSave);
+    pushRecipe(toSave);
+    status = "saved";
+    if (!stored) {
+      stored = true;
+      void goto(`/nutrition/foods/recipe/${recipe.id}`, { replaceState: true, keepFocus: true, noScroll: true });
     }
   }
 
-  function addIngredient() {
-    if (!recipe || !picked) return;
-    const grams = Number(ui.grams) || 0;
-    if (grams <= 0) return;
-    recipe.ingredients = [
-      ...recipe.ingredients,
-      {
-        id: createId("ing"),
-        sourceId: picked.id,
-        name: picked.name,
-        brand: picked.brand,
-        grams,
-        computed: roundMacros(scaleMacros(picked.per100g, grams)),
-      },
-    ];
-    recipe = recomputeRecipe(recipe);
-    picked = null;
-    ui.query = "";
-    results = [];
+  async function leave() {
+    clearTimeout(timer);
+    await persist();
+    back("/nutrition/foods?tab=recipes");
   }
 
-  function removeIngredient(id: string) {
+  // ── Portioning ──
+  const byWeight = $derived(recipe?.portionMode === "weight");
+  const totals = $derived(recipe ? recipeTotals(recipe) : null);
+  const per100 = $derived(recipe ? recipePer100gCooked(recipe) : null);
+
+  function setMode(mode: "servings" | "weight") {
+    if (!recipe || recipe.portionMode === mode) return;
+    changed({ ...recipe, portionMode: mode }, true);
+  }
+
+  function onPot() {
     if (!recipe) return;
-    recipe.ingredients = recipe.ingredients.filter((i) => i.id !== id);
-    recipe = recomputeRecipe(recipe);
+    const g = Number(potText.replace(",", "."));
+    const weight = Number.isFinite(g) && g > 0 ? g : undefined;
+    if (weight === recipe.cookedWeightG) return;
+    // A new weight is a new pot: "what's left" counts from today.
+    changed({ ...recipe, cookedWeightG: weight, cookedOn: weight ? localDateIso() : undefined });
   }
 
-  function setServings(v: string) {
+  function onServings() {
     if (!recipe) return;
-    recipe.servings = Math.max(1, Number(v) || 1);
-    recipe = recomputeRecipe(recipe);
+    const n = Math.max(1, Math.round(Number(servingsText) || 1));
+    if (n !== recipe.servings) changed({ ...recipe, servings: n });
   }
 
-  async function save() {
+  // ── Ingredients ──
+  let picking = $state(false);
+  let pasting = $state(false);
+  let sheet = $state<null | { food: FoodRef; editing: RecipeIngredient | null }>(null);
+
+  function ingredientFrom(food: FoodRef, r: { grams: number; label: string; amount: number; portionId: string }, id = createId("ing")): RecipeIngredient {
+    return {
+      id,
+      sourceId: food.id.startsWith("snapshot:") ? undefined : food.id,
+      name: food.name,
+      brand: food.brand,
+      grams: r.grams,
+      servingLabel: r.label,
+      amount: r.amount,
+      portionId: r.portionId,
+      computed: roundMacros(scaleMacros(food.per100g, r.grams)),
+      ...nutrientsFor(food, r.grams),
+    };
+  }
+
+  function onPicked(p: Picked) {
+    picking = false;
+    sheet = { food: p.food, editing: null };
+  }
+
+  async function openIngredient(ing: RecipeIngredient) {
+    const food =
+      (ing.sourceId ? await resolveFoodRef(ing.sourceId) : null) ??
+      (() => {
+        const per = loggedItemPer100g(ing);
+        return per ? ({ id: `snapshot:${ing.id}`, source: "custom", name: ing.name, brand: ing.brand, per100g: per, servings: [] } as FoodRef) : null;
+      })();
+    if (!food) return;
+    sheet = { food, editing: ing };
+  }
+
+  function confirmIngredient(r: AmountResult) {
+    if (!recipe || !sheet) return;
+    const { food, editing } = sheet;
+    sheet = null;
+    const ing = ingredientFrom(food, r, editing?.id);
+    const ingredients = editing
+      ? recipe.ingredients.map((x) => (x.id === editing.id ? { ...ing, sourceId: editing.sourceId ?? ing.sourceId } : x))
+      : [...recipe.ingredients, ing];
+    changed({ ...recipe, ingredients }, true);
+  }
+
+  function removeIngredient(ing: RecipeIngredient) {
     if (!recipe) return;
-    recipe.name = recipe.name.trim() || "Recipe";
-    const next = recomputeRecipe(recipe);
-    await getNutritionRepo().saveRecipe(next);
-    pushRecipe(next);
-    back("/nutrition/foods");
+    sheet = null;
+    const before = recipe;
+    changed({ ...recipe, ingredients: recipe.ingredients.filter((x) => x.id !== ing.id) }, true);
+    toast(`Removed ${ing.name}`, { action: { label: "Undo", onClick: () => changed(before, true) } });
   }
 
-  onMount(async () => {
-    recipe = await getNutritionRepo().getRecipe(recipeId);
-    ui.loading = false;
-  });
+  function addPasted(lines: MatchedLine[]) {
+    pasting = false;
+    if (!recipe) return;
+    const added = lines
+      .filter((l) => l.food && l.grams)
+      .map((l) => ingredientFrom(l.food!, { grams: l.grams!, label: l.label, amount: l.amount, portionId: l.portionId }));
+    changed({ ...recipe, ingredients: [...recipe.ingredients, ...added] }, true);
+  }
+
+  async function deleteRecipe() {
+    if (!recipe) return;
+    clearTimeout(timer);
+    if (stored) {
+      await getNutritionRepo().deleteRecipe(recipe.id);
+      pushRecipe({ ...recipe, deletedAtMs: Date.now(), updatedAtMs: Date.now() });
+    }
+    toast(`Deleted ${recipe.name || "recipe"}`);
+    stored = false;
+    recipe = null;
+    back("/nutrition/foods?tab=recipes");
+  }
+
+  function amountPill(ing: RecipeIngredient): string {
+    const l = ing.servingLabel ?? `${Math.round(ing.grams)} g`;
+    return l.replace(/\s*\((\d+(\.\d+)?)\s*g\)$/, "");
+  }
+
+  const box = 420;
 </script>
 
-<div class="flex flex-col pb-24">
-  <PageHeader>
-    <BackButton onclick={() => back("/nutrition/foods")} />
-    <h1 class="page-title">Recipe</h1>
-    <button type="button" class="ml-auto h-11 px-3 -mr-1 text-sm font-medium text-primary" onclick={() => void save()}>Save</button>
-  </PageHeader>
+<PageHeader>
+  <BackButton onclick={() => void leave()} />
+  <span class="flex-1 text-[13px] text-muted-foreground">
+    {#if status === "saving"}Saving…{:else if status === "saved"}Recipe · saved{:else}New recipe{/if}
+  </span>
+  {#if recipe}
+    <button type="button" class="-mr-1 flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive" aria-label="Delete recipe" onclick={() => void deleteRecipe()}>
+      <Trash2 class="size-5" />
+    </button>
+  {/if}
+</PageHeader>
 
-  {#if ui.loading}
-    <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
-  {:else if !recipe}
-    <p class="px-3 py-4 text-sm text-destructive">Recipe not found.</p>
-  {:else}
-    <div class="px-3 py-3 border-b border-border flex flex-col gap-2">
-      <input class="bg-muted rounded-md px-2 h-10 text-sm outline-none font-medium focus:ring-1 focus:ring-ring" bind:value={recipe.name} />
-      <label class="flex items-center gap-2 text-xs text-muted-foreground">
-        Makes
-        <input
-          class="w-16 bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring"
-          inputmode="numeric"
-          value={recipe.servings}
-          oninput={(e) => setServings(e.currentTarget.value)}
-        />
-        servings
-      </label>
-      <div class="text-sm tabular-nums">
-        <span class="font-semibold">{fmtKcal(recipe.perServing.kcal)} kcal</span>
-        <span class="text-muted-foreground">
-          / serving · P {Math.round(recipe.perServing.proteinG)} · C {Math.round(recipe.perServing.carbsG)} · F {Math.round(recipe.perServing.fatG)}
-        </span>
+{#if loading}
+  <p class="px-4 py-6 text-sm text-muted-foreground">Loading…</p>
+{:else if !recipe}
+  <p class="px-4 py-6 text-sm text-destructive">Recipe not found.</p>
+{:else}
+  {@const r = recipe}
+  <div class="flex flex-col gap-3.5 px-4 pb-32">
+    <input
+      aria-label="Recipe name"
+      placeholder="Recipe name"
+      class="w-full bg-transparent py-1 text-[26px] font-bold tracking-tight outline-none placeholder:text-muted-foreground/60"
+      value={r.name}
+      oninput={(e) => changed({ ...r, name: e.currentTarget.value })}
+    />
+
+    <!-- How it's portioned -->
+    <section class="rounded-2xl border border-border bg-card p-3.5 dark:border-transparent">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">How you portion it</p>
+      <div class={segmentTrack} role="radiogroup" aria-label="How you portion it">
+        <button type="button" role="radio" aria-checked={!byWeight} class={segment(!byWeight)} onclick={() => setMode("servings")}>Into servings</button>
+        <button type="button" role="radio" aria-checked={byWeight} class={segment(byWeight)} onclick={() => setMode("weight")}>By cooked weight</button>
       </div>
-    </div>
+
+      <label class="mt-3.5 flex items-center gap-2.5">
+        <span class="flex-1">
+          <span class="block font-medium">{byWeight ? "Usually split into" : "Makes"}</span>
+          <span class="block text-xs text-muted-foreground">{byWeight ? "Boxes or plates, for a quick pick when logging" : "Equal servings"}</span>
+        </span>
+        <input class="h-11 w-16 rounded-xl bg-muted text-center font-semibold tabular-nums outline-none focus:ring-2 focus:ring-ring" inputmode="numeric" bind:value={servingsText} onchange={onServings} onblur={onServings} aria-label="Servings" />
+      </label>
+
+      <label class="mt-3 flex items-center gap-2.5">
+        <CookingPot class="size-[22px] shrink-0 text-muted-foreground" />
+        <span class="flex-1">
+          <span class="block font-medium">Food in the pot {#if !byWeight}<span class="font-normal text-muted-foreground">(optional)</span>{/if}</span>
+          <span class="block text-xs text-muted-foreground">Weigh after cooking, minus the pot</span>
+        </span>
+        <input class="h-11 w-24 rounded-xl bg-muted px-3 text-right font-semibold tabular-nums outline-none focus:ring-2 focus:ring-ring {byWeight && !r.cookedWeightG ? 'ring-2 ring-warning' : ''}" inputmode="decimal" bind:value={potText} oninput={onPot} aria-label="Cooked weight in grams" />
+        <span class="text-muted-foreground">g</span>
+      </label>
+
+      <div class="my-3.5 h-px bg-border"></div>
+      {#if r.ingredients.length === 0}
+        <p class="text-sm text-muted-foreground">Add ingredients and the numbers show up here.</p>
+      {:else if byWeight}
+        {#if per100}
+          <p class="flex items-baseline gap-2"><span class="text-[28px] font-bold tabular-nums">{fmtNum(per100.kcal)}</span><span class="text-[13px] text-muted-foreground">kcal per 100 g cooked</span></p>
+          <p class="mt-1 flex gap-3.5 text-[13px] tabular-nums">
+            <span class="text-macro-protein">P {Math.round(per100.proteinG * 10) / 10}</span>
+            <span class="text-macro-carbs">C {Math.round(per100.carbsG * 10) / 10}</span>
+            <span class="text-macro-fat">F {Math.round(per100.fatG * 10) / 10}</span>
+          </p>
+          {#if totals}
+            <p class="mt-2 text-xs text-muted-foreground tabular-nums">
+              Whole pot {fmtNum(totals.kcal)} kcal · P {fmtNum(totals.proteinG)} g. A {box} g box is {fmtNum((per100.kcal * box) / 100)} kcal, P {Math.round((per100.proteinG * box) / 100)}.
+            </p>
+          {/if}
+        {:else}
+          <p class="text-sm">Weigh the pot after cooking to log this by the gram.</p>
+          {#if totals}<p class="mt-1 text-xs text-muted-foreground tabular-nums">Whole recipe {fmtNum(totals.kcal)} kcal · {macroLine(totals)}</p>{/if}
+        {/if}
+      {:else}
+        <p class="flex items-baseline gap-2"><span class="text-[28px] font-bold tabular-nums">{fmtNum(r.perServing.kcal)}</span><span class="text-[13px] text-muted-foreground">kcal per serving{r.cookedWeightG ? ` (${fmtNum(r.cookedWeightG / r.servings)} g)` : ""}</span></p>
+        <p class="mt-1 flex gap-3.5 text-[13px] tabular-nums">
+          <span class="text-macro-protein">P {Math.round(r.perServing.proteinG)}</span>
+          <span class="text-macro-carbs">C {Math.round(r.perServing.carbsG)}</span>
+          <span class="text-macro-fat">F {Math.round(r.perServing.fatG)}</span>
+        </p>
+        {#if totals}<p class="mt-2 text-xs text-muted-foreground tabular-nums">Whole recipe {fmtNum(totals.kcal)} kcal · P {fmtNum(totals.proteinG)} g</p>{/if}
+      {/if}
+    </section>
 
     <!-- Ingredients -->
-    <ul class="divide-y divide-border">
-      {#each recipe.ingredients as ing (ing.id)}
-        <li class="flex min-h-11 items-center gap-2 pl-3 pr-1 text-sm">
-          <span class="flex-1 min-w-0 truncate">{ing.name} <span class="text-muted-foreground">· {Math.round(ing.grams)} g</span></span>
-          <span class="text-xs text-muted-foreground tabular-nums">{fmtKcal(ing.computed.kcal)}</span>
-          <button type="button" class="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-destructive" onclick={() => removeIngredient(ing.id)} aria-label="Remove {ing.name}">
-            <Trash2 class="h-4 w-4" />
-          </button>
-        </li>
-      {/each}
-    </ul>
-
-    <!-- Add ingredient -->
-    <div class="px-3 py-3 border-t border-border flex flex-col gap-2">
-      {#if picked}
-        <div class="flex items-center gap-2">
-          <span class="flex-1 text-sm truncate">{picked.name}</span>
-          <input class="w-20 bg-muted rounded-md px-2 h-10 text-sm outline-none focus:ring-1 focus:ring-ring" inputmode="numeric" bind:value={ui.grams} />
-          <span class="text-xs text-muted-foreground">g</span>
-          <Button onclick={addIngredient}>Add</Button>
-          <Button size="icon" variant="ghost" onclick={() => (picked = null)} aria-label="Cancel">×</Button>
-        </div>
-      {:else}
-        <div class="flex items-center gap-2">
-          <Search class="h-4 w-4 text-muted-foreground" />
-          <input class="flex-1 bg-transparent text-sm outline-none h-11" placeholder="Add an ingredient" bind:value={ui.query} oninput={onInput} />
-        </div>
-        {#if results.length > 0}
-          <ul class="divide-y divide-border border-t border-border">
-            {#each results as f (f.id)}
-              <li>
-                <button type="button" class="w-full text-left px-1 py-2 text-sm" onclick={() => (picked = f)}>
-                  {f.name}
-                  {#if f.brand}<span class="text-muted-foreground text-xs"> · {f.brand}</span>{/if}
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      {/if}
+    <div class="mt-1 flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Ingredients · {r.ingredients.length}</span>
+      <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg bg-muted px-2.5 text-[13px] font-medium" onclick={() => (pasting = true)}>
+        <ClipboardPaste class="size-[15px]" />Paste a list
+      </button>
     </div>
-  {/if}
-</div>
+    <section class="overflow-hidden rounded-2xl border border-border bg-card dark:border-transparent">
+      <ul>
+        {#each r.ingredients as ing (ing.id)}
+          <li class="border-t border-border first:border-t-0">
+            <button type="button" class="flex min-h-[52px] w-full items-center gap-2.5 pl-2.5 pr-3.5 text-left" onclick={() => void openIngredient(ing)}>
+              <span class="flex h-8 min-w-[74px] max-w-[45%] shrink-0 items-center justify-center truncate rounded-lg bg-muted px-2 text-[13px] font-semibold tabular-nums">{amountPill(ing)}</span>
+              <span class="min-w-0 flex-1 truncate">{ing.name}</span>
+              <span class="tabular-nums text-muted-foreground">{fmtNum(ing.computed.kcal)}</span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+      <button type="button" class="flex min-h-[52px] w-full items-center gap-2.5 px-4 font-medium {r.ingredients.length ? 'border-t border-border' : ''}" onclick={() => (picking = true)}>
+        <Plus class="size-[18px]" />Add ingredient
+      </button>
+    </section>
+
+    <section class="rounded-2xl border border-border bg-card px-3.5 py-3 dark:border-transparent">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Notes</span>
+        <textarea
+          rows="3"
+          placeholder="Method, links, what to change next time"
+          class="w-full resize-none bg-transparent outline-none placeholder:text-muted-foreground/70"
+          value={r.notes ?? ""}
+          oninput={(e) => changed({ ...r, notes: e.currentTarget.value || undefined })}
+        ></textarea>
+      </label>
+    </section>
+
+    {#if stored && r.ingredients.length}
+      <a href="/nutrition/log?pick={r.id}" class="flex h-13 items-center justify-center rounded-xl bg-primary text-base font-semibold text-primary-foreground" onclick={() => void persist()}>
+        Log a portion
+      </a>
+    {/if}
+  </div>
+{/if}
+
+{#if picking}
+  <IngredientPicker onpick={onPicked} onclose={() => (picking = false)} />
+{/if}
+{#if pasting}
+  <PasteIngredients onadd={addPasted} onclose={() => (pasting = false)} />
+{/if}
+{#if sheet}
+  {@const s = sheet}
+  <AmountSheet
+    food={s.food}
+    subtitle={s.food.brand}
+    initial={s.editing ? { amount: s.editing.amount, portionId: s.editing.portionId, grams: s.editing.grams } : undefined}
+    meal={null}
+    confirmText={() => (s.editing ? "Save" : "Add to recipe")}
+    ondelete={s.editing ? () => removeIngredient(s.editing!) : null}
+    onconfirm={confirmIngredient}
+    onclose={() => (sheet = null)}
+  />
+{/if}

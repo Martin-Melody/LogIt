@@ -61,11 +61,7 @@ async function goToLog(page: Page, qs = "?meal=breakfast&date=2026-01-01") {
 async function goToLogViaNutritionPage(page: Page): Promise<string> {
   await page.goto("/nutrition");
   await page.waitForLoadState("networkidle");
-  await page
-    .locator("div.border-b.border-border")
-    .filter({ hasText: "Breakfast" })
-    .getByRole("link", { name: "Add" })
-    .click();
+  await page.getByTestId("meal-breakfast").getByRole("link", { name: "Add food" }).click();
   await page.waitForURL(/\/nutrition\/log\?meal=breakfast&date=(.+)/);
   await page.waitForLoadState("networkidle");
   return new URL(page.url()).searchParams.get("date")!;
@@ -89,18 +85,21 @@ test.describe("nutrition log — add to meal", () => {
     await expect(page.getByText("lunch")).toBeVisible();
   });
 
-  test("Quick add logs an item and returns to the diary", async ({ page }) => {
+  test("Quick add logs an item, then Done returns to the diary", async ({ page }) => {
     await seedNutrition(page);
     const dateIso = await goToLogViaNutritionPage(page);
 
     await page.getByRole("button", { name: "Quick add" }).click();
-    await page.getByPlaceholder("Name").fill("Protein shake");
-    await page.getByPlaceholder("kcal").fill("200");
-    await page.getByPlaceholder("P", { exact: true }).fill("30");
-    await page.getByPlaceholder("C", { exact: true }).fill("10");
-    await page.getByPlaceholder("F", { exact: true }).fill("2");
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByLabel(/What was it/).fill("Protein shake");
+    await page.getByLabel("kcal", { exact: true }).fill("200");
+    await page.getByLabel("Protein", { exact: true }).fill("30");
+    await page.getByLabel("Carbs", { exact: true }).fill("10");
+    await page.getByLabel("Fat", { exact: true }).fill("2");
+    await page.getByRole("button", { name: "Add to Breakfast" }).click();
 
+    // A running tally while adding several things; Done goes back.
+    await expect(page.getByText("1 added to Breakfast")).toBeVisible();
+    await page.getByRole("button", { name: "Done" }).click();
     await page.waitForURL(/\/nutrition$/);
 
     const raw = await page.evaluate(() => localStorage.getItem("logit:nutritionDays:v1"));
@@ -124,7 +123,7 @@ test.describe("nutrition log — favourites", () => {
     await goToLog(page);
 
     await page.getByRole("tab", { name: "Favourites" }).click();
-    await expect(page.getByText("Star a food while logging to pin it here.")).toBeVisible();
+    await expect(page.getByText("Tap the star on any food to keep it here.")).toBeVisible();
   });
 
   test("selecting a favourite shows the macro preview scaled to the portion", async ({ page }) => {
@@ -136,7 +135,11 @@ test.describe("nutrition log — favourites", () => {
     await page.getByRole("tab", { name: "Favourites" }).click();
     await page.getByText("Greek yoghurt").click();
 
-    await expect(page.getByText(/100 kcal/)).toBeVisible();
+    // The amount sheet opens on 100 g (the food has no named serving).
+    await expect(page.getByTestId("amount-input")).toHaveValue("100");
+    await expect(page.getByTestId("adds-kcal")).toHaveText("100");
+    await page.getByTestId("amount-input").fill("150");
+    await expect(page.getByTestId("adds-kcal")).toHaveText("150");
   });
 
   test("adding a selected favourite logs it to the diary", async ({ page }) => {
@@ -147,7 +150,8 @@ test.describe("nutrition log — favourites", () => {
 
     await page.getByRole("tab", { name: "Favourites" }).click();
     await page.getByText("Greek yoghurt").click();
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByRole("button", { name: "Add to Breakfast" }).click();
+    await page.getByRole("button", { name: "Done" }).click();
 
     await page.waitForURL(/\/nutrition$/);
 
@@ -167,7 +171,53 @@ test.describe("nutrition log — custom foods", () => {
     });
     await goToLog(page);
 
-    await page.getByRole("tab", { name: "Custom" }).click();
+    await page.getByRole("tab", { name: "My foods" }).click();
     await expect(page.getByText("Homemade granola")).toBeVisible();
+  });
+});
+
+// ── Sheets close with a swipe ─────────────────────────────────────────────────
+
+test.describe("nutrition log — amount sheet swipe", () => {
+  async function openSheet(page: Page) {
+    await seedNutrition(page, {
+      favorites: { fav_food1: makeFavorite("food1", { name: "Greek yoghurt" }) },
+    });
+    await goToLog(page);
+    await page.getByRole("tab", { name: "Favourites" }).click();
+    await page.getByText("Greek yoghurt").click();
+    await expect(page.getByRole("dialog", { name: "Greek yoghurt" })).toBeVisible();
+    await page.waitForTimeout(400); // let it finish sliding up
+  }
+
+  async function swipe(page: Page, fromY: number, toY: number, steps = 10, msPerStep = 16) {
+    const cdp = await page.context().newCDPSession(page);
+    const x = 180;
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: fromY }] });
+    for (let i = 1; i <= steps; i++) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x, y: fromY + ((toY - fromY) * i) / steps }],
+      });
+      await page.waitForTimeout(msPerStep);
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  }
+
+  test("a long pull down closes it", async ({ page }) => {
+    await openSheet(page);
+    const box = (await page.getByRole("dialog", { name: "Greek yoghurt" }).boundingBox())!;
+    await swipe(page, box.y + 40, box.y + 340, 15, 30);
+    await expect(page.getByRole("dialog", { name: "Greek yoghurt" })).toHaveCount(0);
+  });
+
+  test("a short pull springs back", async ({ page }) => {
+    await openSheet(page);
+    const sheet = page.getByRole("dialog", { name: "Greek yoghurt" });
+    const box = (await sheet.boundingBox())!;
+    await swipe(page, box.y + 40, box.y + 90, 10, 40);
+    await page.waitForTimeout(400);
+    await expect(sheet).toBeVisible();
+    expect((await sheet.boundingBox())!.y).toBeCloseTo(box.y, 0);
   });
 });
