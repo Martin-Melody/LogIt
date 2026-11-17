@@ -18,35 +18,24 @@ async function onPlan(tier: Tier) {
 
 for (const tier of ["Pro", "Studio"] as Tier[]) {
   describe(`${tier} → offline`, () => {
-    it("signing out keeps the data on the phone and opens the profile picker", async () => {
+    it("\"Keep using it here\" signs out and keeps the training on the phone, with no account", async () => {
       const { phone } = await onPlan(tier);
       const profile = (await phone.activeProfile())!;
 
-      await phone.signOut();
+      await phone.signOut({ keepHere: true });
 
-      expect(phone.route).toBe("/accounts");
+      expect(phone.route).toBe("/");
       expect(phone.signedIn).toBe(false);
-      expect(await phone.rowsOwnedBy(profile.id)).toBeGreaterThan(0);
-    });
-
-    it("the profile can be opened offline afterwards with everything still there", async () => {
-      const { phone } = await onPlan(tier);
-      const profile = (await phone.activeProfile())!;
-      await phone.signOut();
-
-      await phone.switchProfile(profile.id);
-
-      expect(phone.signedIn).toBe(false);
+      expect((await phone.activeProfile())?.id).toBe(profile.id);
+      expect((await phone.activeProfile())?.serverUserId).toBeNull();
       expect(phone.profileName).toBe("Sam");
       expect(await phone.splitNames()).toEqual(["Push Pull Legs"]);
       expect(await phone.workoutNames()).toEqual(["Push day"]);
     });
 
-    it("working offline after signing out doesn't talk to the server", async () => {
+    it("working offline after that doesn't talk to the server", async () => {
       const { phone } = await onPlan(tier);
-      const profile = (await phone.activeProfile())!;
-      await phone.signOut();
-      await phone.switchProfile(profile.id);
+      await phone.signOut({ keepHere: true });
       const before = phone.requests.length;
 
       await phone.logWorkout("Legs");
@@ -54,6 +43,22 @@ for (const tier of ["Pro", "Studio"] as Tier[]) {
 
       expect(phone.requests.slice(before)).toEqual([]);
       expect(await phone.workoutNames()).toEqual(["Legs", "Push day"]);
+    });
+
+    it("plain \"Sign out\" takes the training off the phone; signing in again brings it back", async () => {
+      const { phone, user } = await onPlan(tier);
+      const profile = (await phone.activeProfile())!;
+
+      await phone.signOut();
+
+      expect(await phone.rowsOwnedBy(profile.id)).toBe(0);
+      expect((await phone.profiles()).map((p) => p.id)).not.toContain(profile.id);
+      expect(phone.signedIn).toBe(false);
+      expect(phone.route).toBe("/onboarding"); // the welcome screen: nobody left on the phone
+
+      await phone.signIn(user);
+      expect(await phone.splitNames()).toEqual(["Push Pull Legs"]);
+      expect(await phone.workoutNames()).toEqual(["Push day"]);
     });
 
     it("the account and its synced data are still on getlogit.app after signing out", async () => {
@@ -68,23 +73,46 @@ for (const tier of ["Pro", "Studio"] as Tier[]) {
   });
 
   describe(`${tier} → self-host`, () => {
-    it("signing into a self-hosted server doesn't touch the getlogit.app profile", async () => {
+    it("signing out and into a self-hosted server leaves the getlogit.app account and its data as they were", async () => {
       const { phone, user } = await onPlan(tier);
-      const cloudProfile = (await phone.activeProfile())!;
       await phone.signOut();
 
       await phone.register(newUser("moved"), "self-host");
 
-      expect((await phone.activeProfile())!.id).not.toBe(cloudProfile.id);
-      expect(await phone.rowsOwnedBy(cloudProfile.id)).toBeGreaterThan(0);
+      expect(phone.signedIn).toBe(true);
       expect((await serverData("cloud", user)).workoutNames).toEqual(["Push day"]);
     });
 
-    // DECISION NEEDED (see tests/journeys/README.md "Open questions"): today the self-hosted
-    // account starts empty; the only way across is Settings › Backup → export, then import.
+    // Decided: moving server brings the data along (accounts plan, phase 1 step 8).
     it.todo("moving to a self-hosted server brings the user's workouts and splits with them");
   });
 }
+
+describe("the sign-out screen's choices", () => {
+  it("offers a plain sign out only when everything is backed up: Pro after a sync, not Free", async () => {
+    const { phone } = await onPlan("Pro");
+    const { everythingBackedUp } = await import("$lib/sync/syncService");
+    expect(everythingBackedUp()).toBe(true);
+
+    const free = await new Device().launch();
+    await free.register(newUser("freeone"));
+    await free.finishOnboarding({ name: "Free" });
+    const freeSync = await import("$lib/sync/syncService");
+    expect(freeSync.everythingBackedUp()).toBe(false);
+    void phone;
+  });
+
+  it("doesn't offer \"keep using it here\" when the phone already has training without an account", async () => {
+    const phone = await new Device().launch();
+    await phone.finishOnboarding({ name: "Offline me" });
+    await phone.addAccount(newUser("second"), "cloud", "register");
+    await phone.finishOnboarding({ name: "Second" });
+
+    expect(await phone.app.auth.authStore.canKeepHere()).toBe(false);
+    await expect(phone.signOut({ keepHere: true })).rejects.toThrow();
+    expect(await phone.profiles()).toHaveLength(2);
+  });
+});
 
 describe("deleting the account", () => {
   it("deleting a getlogit.app account removes it from the server and its data from the phone", async () => {
@@ -97,7 +125,7 @@ describe("deleting the account", () => {
     expect(await phone.rowsOwnedBy(profile.id)).toBe(0);
     expect((await phone.profiles()).map((p) => p.id)).not.toContain(profile.id);
     expect(phone.signedIn).toBe(false);
-    expect(phone.route).toBe("/auth");
+    expect(phone.route).toBe("/onboarding"); // nobody left: the welcome screen, not a sign-in wall
   });
 
   it("a wrong password deletes nothing, on the server or the phone", async () => {
@@ -123,7 +151,7 @@ describe("deleting the account", () => {
     expect(await phone.rowsOwnedBy(profile.id)).toBeGreaterThan(0);
   });
 
-  it("deleting an offline profile wipes it and the next launch doesn't bring it back", async () => {
+  it("deleting everything on a phone with no account wipes it and starts over at the welcome screen", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam", split: "Full Body" });
     await phone.logWorkout("Day 1");
@@ -133,8 +161,9 @@ describe("deleting the account", () => {
     await phone.launch();
 
     expect(await phone.rowsOwnedBy(profile.id)).toBe(0);
-    expect(await phone.profiles()).toHaveLength(0);
-    expect(phone.route).toBe("/auth");
+    expect((await phone.profiles()).map((p) => p.id)).not.toContain(profile.id);
+    expect(await phone.splitNames()).toEqual([]);
+    expect(phone.route).toBe("/onboarding");
   });
 
   it("deleting an account leaves the space without an account alone", async () => {
