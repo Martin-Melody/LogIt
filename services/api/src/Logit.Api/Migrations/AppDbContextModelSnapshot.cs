@@ -1859,6 +1859,9 @@ namespace Logit.Api.Migrations
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BackupDeviceId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Bio")
                         .HasColumnType("TEXT");
 

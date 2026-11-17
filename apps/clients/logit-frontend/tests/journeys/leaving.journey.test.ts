@@ -89,17 +89,18 @@ for (const tier of ["Pro", "Studio"] as Tier[]) {
 }
 
 describe("the sign-out screen's choices", () => {
-  it("offers a plain sign out only when everything is backed up: Pro after a sync, not Free", async () => {
+  it("offers a plain sign out when everything is backed up: Pro, and Free on its backup phone", async () => {
     const { phone } = await onPlan("Pro");
     const { everythingBackedUp } = await import("$lib/sync/syncService");
     expect(everythingBackedUp()).toBe(true);
+    void phone;
 
     const free = await new Device().launch();
     await free.register(newUser("freeone"));
     await free.finishOnboarding({ name: "Free" });
+    await free.sync();
     const freeSync = await import("$lib/sync/syncService");
-    expect(freeSync.everythingBackedUp()).toBe(false);
-    void phone;
+    expect(freeSync.everythingBackedUp()).toBe(true);
   });
 
   it("doesn't offer \"keep using it here\" when the phone already has training without an account", async () => {
