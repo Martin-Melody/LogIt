@@ -7,6 +7,8 @@ pnpm-debug.log*
 # SvelteKit / Vite
 .svelte-kit/
 build/
+# …except the progression builder route (/settings/progression/build/[id]).
+!apps/clients/logit-frontend/src/routes/settings/progression/build/
 dist/
 .vite/
 vite.config.*.timestamp-*
