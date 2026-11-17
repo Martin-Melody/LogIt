@@ -47,16 +47,18 @@ test.describe("social redesign - requires API", () => {
   test("feed, post detail, notifications, report, block", async ({ page }) => {
     const alice = await register(uniq("soc_alice"));
     const bob = await register(uniq("soc_bob"));
+    // Unique per run: the feed also shows other accounts' posts left by earlier runs.
+    const smoke = `redesigned feed smoke test ${uniq("")}`;
 
     // bob follows alice; alice posts (text + PR); bob likes + comments -> alice gets notifications
     await fetch(`${API}/users/${alice.user.username}/follow`, { method: "POST", headers: authed(bob.accessToken) });
     const post = await (await fetch(`${API}/posts`, {
       method: "POST", headers: authed(alice.accessToken),
-      body: JSON.stringify({ type: "Text", body: "redesigned feed smoke test" }),
+      body: JSON.stringify({ type: "Text", body: smoke }),
     })).json();
     await fetch(`${API}/posts`, {
       method: "POST", headers: authed(alice.accessToken),
-      body: JSON.stringify({ type: "PersonalRecord", body: "PR!", payloadJson: JSON.stringify({ exerciseName: "Squat", weight: 140, unit: "kg", reps: 3 }) }),
+      body: JSON.stringify({ type: "PersonalRecord", body: `PR! ${smoke}`, payloadJson: JSON.stringify({ exerciseName: "Squat", weight: 140, unit: "kg", reps: 3 }) }),
     });
     await fetch(`${API}/posts/${post.id}/like`, { method: "POST", headers: authed(bob.accessToken) });
     await fetch(`${API}/posts/${post.id}/comments`, {
@@ -67,13 +69,13 @@ test.describe("social redesign - requires API", () => {
     await asUser(page, bob);
     await page.goto("/social");
     await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
-    await expect(page.getByText("redesigned feed smoke test")).toBeVisible();
-    await expect(page.getByText("PERSONAL RECORD")).toBeVisible();
+    await expect(page.getByText(smoke, { exact: true })).toBeVisible();
+    await expect(page.locator("article").filter({ hasText: `PR! ${smoke}` })).toContainText("personal record", { ignoreCase: true });
     // no back-arrow on the feed (it's a bottom-nav destination)
     await expect(page.locator("header").getByRole("button", { name: /back/i })).toHaveCount(0);
 
     // ---- Post detail via tapping the post body ----
-    await page.getByText("redesigned feed smoke test").click();
+    await page.getByText(smoke, { exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/social/post/${post.id}`));
     await expect(page.getByText("nice work")).toBeVisible();
     await expect(page.getByPlaceholder("Add a comment…")).toBeVisible();
@@ -101,7 +103,7 @@ test.describe("social redesign - requires API", () => {
     await fetch(`${API}/users/${bob.user.username}/block`, { method: "POST", headers: authed(alice.accessToken) });
     await asUser(page, bob);
     await page.goto("/social");
-    await expect(page.getByText("redesigned feed smoke test")).toHaveCount(0);
+    await expect(page.getByText(smoke, { exact: true })).toHaveCount(0);
   });
 
   test("repost + quote: feed rendering, dedup guard, notifications", async ({ page }) => {

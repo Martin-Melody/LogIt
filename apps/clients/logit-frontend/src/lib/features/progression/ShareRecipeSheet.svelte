@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Copy, Rss, Share2 } from "lucide-svelte";
+  import { Capacitor } from "@capacitor/core";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import { toast } from "$lib/components/ui/sonner";
   import { recipeShareMessage, type ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
@@ -17,7 +18,9 @@
   let codeOpened = $state(false);
   const showCode = $derived(codeOpened || !canPost);
   const message = $derived(recipeShareMessage(recipe));
-  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  // The phone's share menu on Android/iOS (WebView has no Web Share), the browser's elsewhere.
+  const native = Capacitor.isNativePlatform();
+  const canNativeShare = native || (typeof navigator !== "undefined" && typeof navigator.share === "function");
 
   async function copy() {
     try {
@@ -30,7 +33,12 @@
 
   async function share() {
     try {
-      await navigator.share({ title: recipe.name, text: message });
+      if (native) {
+        const { Share } = await import("@capacitor/share");
+        await Share.share({ title: recipe.name, text: message, dialogTitle: `Share ${recipe.name}` });
+      } else {
+        await navigator.share({ title: recipe.name, text: message });
+      }
     } catch {
       // Cancelled, or not allowed here.
     }

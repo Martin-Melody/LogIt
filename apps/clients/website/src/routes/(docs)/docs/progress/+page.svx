@@ -36,8 +36,9 @@ your next session. Or install a progression plugin.
 
 To share one you built, open it and tap **Share**. **Post to your feed** attaches it to a post, and
 anyone who sees the post can tap **Add to my algorithms**; they first see what it would plan for their
-own next session. **Send as a code** gives you a message to paste into any app, and whoever gets it
-adds it under Settings › Progression › **Add from a code**, no account needed. Only the blocks are
+own next session. **Send as a code** opens your phone's share menu with a link: whoever gets it opens
+the link, sees the algorithm and taps **Open in LogIt**, no account needed. They can also paste the
+message under Settings › Progression › **Add from a code**. Only the blocks are
 shared, nothing about your lifts, and each person gets their own copy to change.
 
 Any exercise can be set differently: open it and use **How it progresses** to give it its own rep
