@@ -699,7 +699,7 @@
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onclick={() => goto("/accounts")}>
-          Switch profile
+          Switch or add account
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
         <button type="button"
@@ -755,7 +755,7 @@
             <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=login")}>Log in</Button>
             <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=register")}>Create account</Button>
             {#if isNativePlatform()}
-              <Button variant="outline" size="sm" onclick={() => goto("/accounts")}>Switch profile</Button>
+              <Button variant="outline" size="sm" onclick={() => goto("/accounts")}>Switch or add account</Button>
             {/if}
           </div>
         </div>

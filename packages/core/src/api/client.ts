@@ -133,6 +133,33 @@ class ApiClient {
     localStorage.removeItem(sessionKey(SELF_HOSTED_KEY, fromScope));
   }
 
+  /**
+   * Who an account on the phone is signed in as, read from its stored sign-in without loading
+   * it (the account switcher lists every account this way). `server` is a host name to show:
+   * getlogit.app for the hosted server.
+   */
+  async sessionSummary(scope: string): Promise<{ signedIn: boolean; user: AuthUser | null; selfHosted: boolean; server: string }> {
+    const tokens = await tokenStorage.get(scope);
+    let user: AuthUser | null = null;
+    try {
+      const raw = localStorage.getItem(sessionKey(USER_KEY, scope));
+      user = raw ? (JSON.parse(raw) as AuthUser) : null;
+    } catch {
+      user = null;
+    }
+    const baseUrl = localStorage.getItem(sessionKey(BASE_URL_KEY, scope));
+    let server = "getlogit.app";
+    if (baseUrl) {
+      try { server = new URL(baseUrl).host; } catch { server = baseUrl; }
+    }
+    return {
+      signedIn: tokens !== null,
+      user,
+      selfHosted: localStorage.getItem(sessionKey(SELF_HOSTED_KEY, scope)) === "true",
+      server,
+    };
+  }
+
   isAuthenticated(): boolean {
     return this.tokens !== null;
   }
