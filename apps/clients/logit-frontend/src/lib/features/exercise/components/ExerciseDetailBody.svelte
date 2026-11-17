@@ -4,6 +4,7 @@
   import { Button } from "$lib/components/ui/button";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ExerciseProgressionPanel from "$lib/features/exercise/components/ExerciseProgressionPanel.svelte";
+  import ExerciseProgressionSettingsPanel from "$lib/features/exercise/components/ExerciseProgressionSettingsPanel.svelte";
   import MachineWeightEditor from "$lib/features/exercise/components/MachineWeightEditor.svelte";
   import type { Exercise, ExercisePatch, ExerciseType, Machine } from "@logit/core/domain/exercise";
   import { getExerciseRepo } from "$lib/data/repoProvider";
@@ -396,6 +397,13 @@
   <!-- Progression -->
   <div class="px-3 py-4 border-b border-border">
     <ExerciseProgressionPanel exercise={{ id: view.exercise.id, name: view.exercise.name }} />
+  </div>
+
+  <!-- How it progresses -->
+  <div class="px-3 py-4 border-b border-border">
+    {#key view.exercise.id}
+      <ExerciseProgressionSettingsPanel exercise={view.exercise} />
+    {/key}
   </div>
 
   <!-- Machines -->

@@ -1348,6 +1348,45 @@ namespace Logit.Api.Migrations
                     b.ToTable("SyncedExercises");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExerciseSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SyncedAt");
+
+                    b.ToTable("SyncedExerciseSettings");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedFavoriteFood", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2386,6 +2425,17 @@ namespace Logit.Api.Migrations
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExercise", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.SyncedExerciseSetting", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany()

@@ -235,8 +235,15 @@ the same features in their own algorithms.
       at the chosen reps in reserve, reps per set from the lifter's learned set-to-set drop, sets under the range
       get lighter instead. Big lifts (3+ muscles) 5–8, single-muscle 8–12, split day reps win. Fatigue trim only
       once calibrated. Bodyweight/assisted handed to Linear Progression. Fatigue maths moved to
-      `progression/fatigue.ts`. Next: per-exercise algorithm + rep range (synced), goal pace, weekly sets per
-      muscle + split scoring, block builder, food adjustment. Sleep waits for wearables.
+      `progression/fatigue.ts`.
+      Step 2 (same branch): per-exercise settings (`ExerciseProgressionSettings`: algorithm or "off", rep
+      range, behind-pace "show"/"push"), stored in `exercise_progression_settings` (phone) / localStorage
+      (web), synced via `/sync/exercise-settings` (Pro, generic rows, tombstones). getSuggestion resolves the
+      algorithm per exercise (falls back to the general one if the plugin is gone), passes `repRange` and the
+      lift `goal` (pace from `liftGoalPace`), and adds a goal line to every "Why?". Adaptive pushes the first
+      set one step when behind and asked to. Exercise page › How it progresses; Settings lists overrides.
+      Not yet in data export/import. Next: weekly sets per muscle + split scoring, block builder, food
+      adjustment. Sleep waits for wearables.
 
 - [x] Nutrition redesign (2026-11-16, branch
       `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US

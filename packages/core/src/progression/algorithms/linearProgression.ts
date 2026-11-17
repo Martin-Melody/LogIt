@@ -365,6 +365,10 @@ function suggest(input: ProgressionInput): ProgressionOutput {
   if (input.incrementOverride !== undefined) {
     state = { ...state, increment: input.incrementOverride };
   }
+  // The lifter's own rep range for this exercise wins over the saved one.
+  if (input.repRange && (input.repRange[0] !== state.repRange[0] || input.repRange[1] !== state.repRange[1])) {
+    state = { ...state, repRange: [input.repRange[0], Math.max(input.repRange[0], input.repRange[1])] };
+  }
 
   const isAssisted = input.exercise.exerciseType === "assisted";
   // Weights relative to bodyweight (0 = BW, −25 = assisted, +10 = added) progress

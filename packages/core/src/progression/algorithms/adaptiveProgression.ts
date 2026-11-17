@@ -194,9 +194,13 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
 
   const compound = isCompound(input.exercise);
   const plannedReps = input.plannedTargets?.reps && input.plannedTargets.reps > 0 ? input.plannedTargets.reps : undefined;
+  // A split day's reps win on that day, then the lifter's own range for this exercise,
+  // then the big-lift / single-muscle default.
   const [lo, hi]: [number, number] = plannedReps
     ? [plannedReps, plannedReps]
-    : compound
+    : input.repRange
+      ? [input.repRange[0], Math.max(input.repRange[0], input.repRange[1])]
+      : compound
       ? [prefs.compoundRepMin, Math.max(prefs.compoundRepMin, prefs.compoundRepMax)]
       : [prefs.isolationRepMin, Math.max(prefs.isolationRepMin, prefs.isolationRepMax)];
   const plannedSets = input.plannedTargets?.sets && input.plannedTargets.sets > 0 ? input.plannedTargets.sets : undefined;
@@ -258,14 +262,17 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   const fatigueScore = computeFatigueScore((input.exercise.primaryMuscles ?? []) as MuscleGroup[], preceding);
   const calibration = calibrateSensitivity(input.history, hi);
   const discount = calibration.calibrated ? fatigueScore * MAX_FATIGUE_DISCOUNT * calibration.sensitivity : 0;
-  const startWeight = discount > 0 ? roundTo(topWeight * (1 - discount), step) : topWeight;
+  const fatigued = discount > 0 ? roundTo(topWeight * (1 - discount), step) : topWeight;
+  // Behind on a lift goal and asked to push: the first set goes one weight step heavier.
+  const pushGoal = input.goal?.pace === "behind" && input.goal.behindPace === "push";
 
   const sets: SuggestedSet[] = [];
   let dropped = false;
+  const startWeight = fatigued;
   for (let i = 0; i < setCount; i++) {
     const reps = Math.round(firstReps - drop.drop * i);
     if (reps >= lo) {
-      sets.push({ reps, weight: startWeight, setType: "normal" });
+      sets.push({ reps, weight: i === 0 && pushGoal ? startWeight + step : startWeight, setType: "normal" });
     } else {
       // A set that would fall under the range keeps the bottom rep count and gets lighter:
       // one weight step for each rep it would have been short.
@@ -307,6 +314,7 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
     ...(lightSets.length > 0
       ? [`Last time's ${[...new Set(lightSets.map((s) => fmtKg(s.weight)))].join(" and ")} ${lightSets.length === 1 ? "set was" : "sets were"} well under what you can do for ${rangeText}, so ${lightSets.length === 1 ? "it doesn't" : "they don't"} set today's weights.`]
       : []),
+    ...(pushGoal ? [`You're behind on your goal and asked to push, so the first set is ${fmtKg(step)} heavier.`] : []),
     `Beat these reps and the estimate goes up; the weight follows next time.`,
   ];
 

@@ -79,6 +79,27 @@ export type ProgressionInput = {
   // from storage. Lets an algorithm tell whether the newest history entry is
   // already folded into a state saved before it started recording that itself.
   stateSavedAtMs?: number;
+  /** The lifter's own rep range for this exercise (Exercise › How it progresses). Wins over
+   * an algorithm's defaults; a split day's planned reps still win on that day. */
+  repRange?: [number, number];
+  /** A lift goal set on this exercise, how it's going, and what the lifter wants done
+   * when it falls behind. */
+  goal?: ProgressionGoalInput;
+};
+
+export type ProgressionGoalInput = {
+  weightKg: number;
+  reps: number;
+  deadlineIso?: string | null;
+  /** "behind": the trend won't reach it by the deadline. "unknown": no deadline or not
+   * enough sessions to tell. */
+  pace: "achieved" | "on_pace" | "behind" | "unknown";
+  /** Estimated weight for the goal's reps today, and the change a week it needs/shows. */
+  currentKg: number | null;
+  neededPerWeekKg: number | null;
+  ratePerWeekKg: number | null;
+  /** The lifter's choice for when it falls behind. */
+  behindPace: "show" | "push";
 };
 
 export type SuggestedSet = {
@@ -195,6 +216,32 @@ export type ExerciseProgressionState = {
 export type UserProgressionConfig = {
   algorithmId: string;
 };
+
+/** Pseudo algorithm id: no suggestions for this exercise. */
+export const PROGRESSION_OFF = "off";
+
+/**
+ * How one exercise progresses, set by the lifter (Exercise › How it progresses). Every
+ * field is optional: missing means "same as every other exercise". Synced, newest wins.
+ */
+export type ExerciseProgressionSettings = {
+  key: string; // exerciseKey()
+  exerciseId?: string;
+  exerciseName: string;
+  /** Algorithm for this exercise, PROGRESSION_OFF for none; missing = the general one. */
+  algorithmId?: string;
+  repRange?: [number, number];
+  /** When a lift goal on this exercise falls behind: just say so, or push a little. */
+  behindPace?: "show" | "push";
+  createdAtMs: number;
+  updatedAtMs: number;
+  deletedAtMs?: number;
+};
+
+/** True when the settings change nothing (so the row can be dropped). */
+export function isDefaultExerciseSettings(s: Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace">): boolean {
+  return !s.algorithmId && !s.repRange && (!s.behindPace || s.behindPace === "show");
+}
 
 export function exerciseKey(exercise: { id?: string; name: string }): string {
   return exercise.id ?? exercise.name.toLowerCase().trim();

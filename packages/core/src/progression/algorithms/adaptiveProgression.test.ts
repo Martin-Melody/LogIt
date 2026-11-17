@@ -75,7 +75,7 @@ describe("LogIt Adaptive", () => {
   it("drops a set's weight rather than planning it under the range", async () => {
     const history = [entry(2, [[100, 8], [100, 6], [100, 4]]), entry(5, [[100, 8], [100, 6], [100, 4]])];
     const out = await adaptiveProgression.suggest(input({ history, plannedTargets: { sets: 4 } }));
-    const reps = out.sets.map((s) => s.reps);
+    const reps = out.sets.map((s) => s.reps as number);
     expect(Math.min(...reps)).toBeGreaterThanOrEqual(5);
     expect(out.sets[3]!.weight).toBeLessThan(out.sets[0]!.weight);
   });
@@ -106,5 +106,26 @@ describe("LogIt Adaptive", () => {
     );
     expect(out.reasoning?.summary?.[0]).toMatch(/simple way/);
     expect((out.nextState as { linear?: unknown }).linear).toBeDefined();
+  });
+});
+
+describe("LogIt Adaptive — the lifter's own settings", () => {
+  it("uses the exercise's own rep range, but a split day's reps still win", async () => {
+    const history = [entry(3, [[100, 5], [100, 4], [100, 3]])];
+    const own = await adaptiveProgression.suggest(input({ history, repRange: [3, 5] }));
+    expect(own.sets.map((s) => s.reps)).toEqual([5, 4, 3]);
+    const split = await adaptiveProgression.suggest(input({ history, repRange: [3, 5], plannedTargets: { reps: 8 } }));
+    expect(split.sets.every((s) => s.reps === 8)).toBe(true);
+  });
+
+  it("pushes the first set when behind on a goal and asked to", async () => {
+    const history = [entry(3, [[95, 7], [95, 6], [95, 5]])];
+    const goal = { weightKg: 120, reps: 1, pace: "behind" as const, currentKg: 117, neededPerWeekKg: 1, ratePerWeekKg: 0.2 };
+    const show = await adaptiveProgression.suggest(input({ history, goal: { ...goal, behindPace: "show" } }));
+    const push = await adaptiveProgression.suggest(input({ history, goal: { ...goal, behindPace: "push" } }));
+    expect(show.sets[0]!.weight).toBe(95);
+    expect(push.sets[0]!.weight).toBe(97.5);
+    expect(push.sets[1]!.weight).toBe(95);
+    expect(push.reasoning?.summary?.join(" ")).toMatch(/behind on your goal/);
   });
 });

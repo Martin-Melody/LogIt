@@ -25,6 +25,11 @@ in Settings › Progression:
   beating the planned reps raises the weight next time. Tap **Why?** on an exercise to see the numbers.
 - **Linear Progression** is the simple option: one more rep each time, and 2.5 kg more once every set
   hits the top of the range.
-- **Disable suggestions** shows what you did last time instead.
+- **Disable suggestions** turns planning off; you add sets yourself.
 
 You can also install a progression plugin.
+
+Any exercise can be set differently: open it and use **How it progresses** to give it its own rep
+range, its own algorithm (or no suggestions), and, if it has a lift goal, choose what happens when you
+fall behind pace: just show it, or push the first set a little heavier (LogIt Adaptive). A split day
+that sets its own reps still wins on that day. These settings sync with Pro.

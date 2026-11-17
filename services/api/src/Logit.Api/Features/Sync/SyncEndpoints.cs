@@ -31,6 +31,10 @@ public static class SyncEndpoints
         group.MapPost("/exercises", PushExercises).RequireTier(UserTier.Pro);
         group.MapGet("/exercises", PullExercises).RequireTier(UserTier.Pro);
 
+        // How each exercise progresses (its own algorithm, rep range, goal pace).
+        group.MapPost("/exercise-settings", PushExerciseSettings).RequireTier(UserTier.Pro);
+        group.MapGet("/exercise-settings", PullExerciseSettings).RequireTier(UserTier.Pro);
+
         group.MapPost("/profile", PushProfile).RequireTier(UserTier.Pro);
         group.MapGet("/profile", PullProfile).RequireTier(UserTier.Pro);
 
@@ -666,6 +670,14 @@ public static class SyncEndpoints
         [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
         => Results.Ok(new { favorites = await PullSyncRows(caller.GetUserId(), since, db.SyncedFavoriteFoods) });
 
+    private static Task<IResult> PushExerciseSettings(
+        [FromBody] PushExerciseSettingsRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushSyncRows(caller.GetUserId(), req.Settings, db.SyncedExerciseSettings, db);
+
+    private static async Task<IResult> PullExerciseSettings(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { settings = await PullSyncRows(caller.GetUserId(), since, db.SyncedExerciseSettings) });
+
     private static Task<IResult> PushMealTemplates(
         [FromBody] PushMealTemplatesRequest req, ClaimsPrincipal caller, AppDbContext db)
         => PushSyncRows(caller.GetUserId(), req.Templates, db.SyncedMealTemplates, db);
@@ -821,6 +833,7 @@ public record PushCustomFoodsRequest(List<SyncRowDto> Foods);
 public record PushRecipesRequest(List<SyncRowDto> Recipes);
 public record PushFavoritesRequest(List<SyncRowDto> Favorites);
 public record PushMealTemplatesRequest(List<SyncRowDto> Templates);
+public record PushExerciseSettingsRequest(List<SyncRowDto> Settings);
 public record PushWeightEntriesRequest(List<SyncRowDto> Entries);
 public record PushHabitsRequest(List<SyncRowDto> Habits);
 public record PushPluginInstallsRequest(List<SyncRowDto> Plugins);

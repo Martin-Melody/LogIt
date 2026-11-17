@@ -338,3 +338,42 @@ export function mergeGoals(local: Goal[], remote: Goal[]): Goal[] {
   }
   return [...byId.values()].sort((a, b) => a.createdAtMs - b.createdAtMs);
 }
+
+// ── Pace, for progression ───────────────────────────────────────────────────
+
+export type LiftGoalPace = {
+  pace: "achieved" | "on_pace" | "behind" | "unknown";
+  currentKg: number | null;
+  neededPerWeekKg: number | null;
+  ratePerWeekKg: number | null;
+};
+
+/**
+ * Whether a lift goal is on pace for its deadline: the robust trend of the estimated
+ * weight for the goal's reps, against what's needed a week from today to the deadline.
+ * "unknown" without a deadline or with too few recent sessions.
+ */
+export function liftGoalPace(
+  history: ExerciseHistoryEntry[],
+  goal: { weightKg: number; reps: number; deadlineIso?: string | null },
+  nowMs: number,
+): LiftGoalPace {
+  const series = liftGoalSeries(history, goal);
+  const deadlineMs = goal.deadlineIso ? Date.parse(`${goal.deadlineIso}T23:59:59`) : null;
+  const projection = projectGoal(series.points, {
+    target: goal.weightKg,
+    nowMs,
+    deadlineMs,
+    achieved: series.achievedAtMs != null,
+  });
+  const currentKg = projection.current;
+  const ratePerWeekKg = projection.ratePerWeek;
+  if (projection.status === "achieved") return { pace: "achieved", currentKg, neededPerWeekKg: null, ratePerWeekKg };
+  if (deadlineMs == null || !Number.isFinite(deadlineMs) || currentKg == null || ratePerWeekKg == null) {
+    return { pace: "unknown", currentKg, neededPerWeekKg: null, ratePerWeekKg };
+  }
+  const weeksLeft = Math.max((deadlineMs - nowMs) / WEEK_MS, 0.5);
+  const neededPerWeekKg = Math.max(0, (goal.weightKg - currentKg) / weeksLeft);
+  const onPace = projection.status === "ready" || ratePerWeekKg >= neededPerWeekKg;
+  return { pace: onPace ? "on_pace" : "behind", currentKg, neededPerWeekKg, ratePerWeekKg };
+}
