@@ -40,7 +40,12 @@ section as optional.
 
   "progression": {
     "config": { /* UserProgressionConfig */ } | null,
-    "states": [ /* ExerciseProgressionState[] */ ]
+    "states": [ /* ExerciseProgressionState[] */ ],
+    // Optional, added Nov 2026 (still version 2: older files just don't have them):
+    "exerciseSettings": [ /* ExerciseProgressionSettings[]: per-exercise algorithm, rep range, goal pace;
+                             keys starting "muscle:" are a muscle's weekly set target */ ],
+    "recipes":     [ /* ProgressionRecipe[]: algorithms built from blocks */ ],
+    "preferences": { /* algorithm id → that algorithm's settings */ }
   },
 
   "nutrition": {
@@ -79,7 +84,8 @@ unit converts from kg itself.
 
 - `profile`, `exercises`, `splits`, `sessions`, `progression`, `plugins` —
   **replace**: the category's existing data is cleared, then the file's data is
-  written.
+  written. Exception: `progression.exerciseSettings` and `progression.recipes`
+  **merge** like nutrition (newest `updatedAtMs` wins) and are pushed to sync.
 - `nutrition`, `habits` — **merge**: rows are upserted (last-write-wins by
   `updatedAtMs`, same as cloud sync). Nothing local is deleted.
 

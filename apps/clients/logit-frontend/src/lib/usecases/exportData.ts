@@ -2,7 +2,9 @@ import { get } from "svelte/store";
 import type { Exercise } from "@logit/core/domain/exercise";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
-import type { ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
+import type { ExerciseProgressionSettings, ExerciseProgressionState, UserProgressionConfig } from "@logit/core/domain/progression";
+import type { ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
+import { getAlgorithmRegistry } from "$lib/data/repoProvider";
 import type {
   CustomFood,
   DiaryDay,
@@ -73,7 +75,16 @@ export type ExportData = {
   exercises: Exercise[];
   splits: { splits: WorkoutSplit[]; activeSplitId: string | null };
   sessions: WorkoutSession[];
-  progression: { config: UserProgressionConfig | null; states: ExerciseProgressionState[] };
+  progression: {
+    config: UserProgressionConfig | null;
+    states: ExerciseProgressionState[];
+    /** Added in 2026-11 (optional, so older files still import): each exercise's own
+     * algorithm / rep range / goal pace and each muscle's weekly set target, the algorithms
+     * built from blocks, and every algorithm's settings by algorithm id. */
+    exerciseSettings?: ExerciseProgressionSettings[];
+    recipes?: ProgressionRecipe[];
+    preferences?: Record<string, unknown>;
+  };
   nutrition: NutritionExport;
   habits: HabitsExport;
   plugins: PluginsExport;
@@ -130,6 +141,13 @@ export async function exportData(): Promise<ExportData> {
 
   const progressionConfig = await progressionRepo.getConfig();
   const progressionStates = await progressionRepo.listExerciseStates();
+  const exerciseSettings = ((await progressionRepo.listExerciseSettings?.()) ?? []).filter((s) => !s.deletedAtMs);
+  const recipes = ((await progressionRepo.listRecipes?.()) ?? []).filter((r) => !r.deletedAtMs);
+  const preferences: Record<string, unknown> = {};
+  for (const a of await getAlgorithmRegistry().list().catch(() => [])) {
+    const prefs = await progressionRepo.getAlgorithmPreferences(a.id).catch(() => null);
+    if (prefs != null) preferences[a.id] = prefs;
+  }
 
   const [nutrition, habits] = await Promise.all([collectNutrition(), collectHabits()]);
 
@@ -148,6 +166,9 @@ export async function exportData(): Promise<ExportData> {
     progression: {
       config: progressionConfig,
       states: progressionStates,
+      exerciseSettings,
+      recipes,
+      preferences,
     },
     nutrition,
     habits,
