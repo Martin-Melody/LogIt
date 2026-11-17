@@ -220,9 +220,15 @@ export class Device {
   }
 
   /** Log in on the sign-in screen (src/routes/auth submit()). */
-  async signIn(user: { username: string; password: string }, server: ServerName = "cloud"): Promise<void> {
+  async signIn(
+    user: { username: string; password: string },
+    server: ServerName = "cloud",
+    offlineTraining?: "add" | "keep-separate",
+  ): Promise<void> {
     this.pickServer(server);
-    await this.app.auth.authStore.login(user.username, user.password);
+    // The sign-in screen asks "Is the training on this phone yours?" first when there is
+    // training without an account (offlineTrainingToAsk); `offlineTraining` is the answer.
+    await this.app.auth.authStore.login(user.username, user.password, offlineTraining ? { offlineTraining } : undefined);
     this.routes.push(this.afterAuthRoute());
     await this.settle();
   }
