@@ -17,6 +17,7 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { overlayOpen } from "$lib/stores/overlay.store";
   import { tabHrefs, neighbourTab, tabDirection, tabSwipe } from "$lib/features/navigation/tabSwipe";
+  import { launchRedirect, isAccountScreen } from "$lib/platform/launchRedirect";
 
   let { children } = $props();
 
@@ -33,19 +34,16 @@
     onSwipe: (href: string) => void goto(href),
   });
 
-  const isOnboarding = $derived(
-    page.url.pathname.startsWith("/onboarding") ||
-    page.url.pathname.startsWith("/auth") ||
-    page.url.pathname.startsWith("/accounts"),
-  );
+  const isOnboarding = $derived(isAccountScreen(page.url.pathname));
 
   $effect(() => {
-    if ($appReady && !$onboarding.completed && !isOnboarding) {
-      void goto("/onboarding");
-    }
-    if ($appReady && $needsAccountAuth && !isOnboarding) {
-      void goto("/auth");
-    }
+    const to = launchRedirect({
+      ready: $appReady,
+      onboardingCompleted: $onboarding.completed,
+      needsAccountAuth: $needsAccountAuth,
+      path: page.url.pathname,
+    });
+    if (to) void goto(to);
   });
 
   onMount(async () => {
