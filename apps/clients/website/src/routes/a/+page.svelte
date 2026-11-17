@@ -26,9 +26,10 @@
     return () => window.removeEventListener("hashchange", read);
   });
 
-  // Opens the app at Add from a code; Chrome goes to the Play Store when LogIt isn't installed.
+  // Opens the app at Add from a code; Chrome goes to the Play Store when LogIt isn't installed. No
+  // package= so test builds (ie.logit.app.dev) open too; only LogIt handles logit://.
   const openUrl = $derived(
-    `intent://a?c=${code}#Intent;scheme=logit;package=ie.logit.app;S.browser_fallback_url=${encodeURIComponent(PLAY_URL)};end`,
+    `intent://a?c=${code}#Intent;scheme=logit;S.browser_fallback_url=${encodeURIComponent(PLAY_URL)};end`,
   );
 
   async function copy() {
