@@ -33,7 +33,7 @@ export const FEATURES: Feature[] = [
     plan: "Free",
     summary: "Arrange your home screen and bottom bar, set rest timers, and pick how progression works.",
     phone: [
-      "/", "/settings", "/settings/walkthroughs", "/settings/navbar", "/settings/diagnostics", "/home/customize",
+      "/", "/settings", "/settings/walkthroughs", "/settings/navbar", "/settings/diagnostics", "/settings/music", "/home/customize",
       "/profile", "/profile/customize", "/onboarding",
     ],
     wherePhone: "Settings",
@@ -42,6 +42,7 @@ export const FEATURES: Feature[] = [
       "Reorder or hide home screen cards and bottom bar tabs",
       "Replay any walkthrough from Settings › Walkthroughs",
       "Send a diagnostics report when something goes wrong",
+      "Control Spotify, YouTube Music or any music app from a workout (Android)",
     ],
   },
 

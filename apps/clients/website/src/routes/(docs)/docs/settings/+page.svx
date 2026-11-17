@@ -16,6 +16,18 @@ Choose what the home screen shows, and in what order, with the Customise home bu
 the top of Home. Settings › Customise navigation decides which pages sit in the bottom bar; the rest are
 under More.
 
+## Music during a workout
+
+In the Android app, a music bar above Finish workout shows what's playing in Spotify, YouTube Music or
+any other music app, with play, pause and skip. Tap it for the full controls and your workout playlists.
+The first time, LogIt asks you to switch it on in Android's Notification access. LogIt only uses that
+access to see and control what's playing; it doesn't read your notifications, and no Spotify or Google
+sign-in is needed.
+
+Settings › Session › Music has the rest: paste a playlist's share link to save it, link a playlist to a
+day of your split, start that playlist when a workout starts, and pause the music when you finish. The
+music bar isn't on iPhone or the web.
+
 ## Walkthroughs
 
 Settings › Walkthroughs has short tours of each part of the app. You can replay any of them. If you have
