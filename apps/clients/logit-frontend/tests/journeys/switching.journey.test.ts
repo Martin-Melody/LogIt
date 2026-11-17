@@ -253,6 +253,27 @@ describe("several signed-in accounts on one phone", () => {
     expect(phone.user?.username).toBe(a.username);
   });
 
+  it("the account switcher shows each account's plan and server, and who is signed out", async () => {
+    const { phone, a, b, aProfile, bProfile } = await twoAccounts();
+    const own = newUser("ownlist");
+    await phone.addAccount(own, "self-host", "register");
+    const ownProfile = (await phone.activeProfile())!;
+    await phone.switchProfile(aProfile.id);
+    await phone.signOut();
+    const client = phone.app.client.apiClient;
+
+    const first = await client.sessionSummary(aProfile.id);
+    const second = await client.sessionSummary(bProfile.id);
+    const mine = await client.sessionSummary(ownProfile.id);
+
+    expect(first.signedIn).toBe(false);
+    expect(second).toMatchObject({ signedIn: true, server: "getlogit.app", selfHosted: false });
+    expect(second.user?.username).toBe(b.username);
+    expect(second.user?.tier).toBe("Studio");
+    expect(mine).toMatchObject({ signedIn: true, server: "127.0.0.1:5218", selfHosted: true });
+    void a;
+  });
+
   it("a getlogit.app account and a self-hosted account on one phone each use their own server", async () => {
     const cloud = await createAccount("cloud", newUser("cloudy"), "Pro");
     const phone = await new Device().launch();
