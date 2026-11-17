@@ -44,7 +44,9 @@ const paths = sample
     }
   : {
       usda: [join(HERE, "data/usda/foundation"), join(HERE, "data/usda/sr_legacy")],
-      ciqual: join(HERE, config.ciqual.csvPath),
+      ciqual: existsSync(join(HERE, config.ciqual.overridePath))
+        ? join(HERE, config.ciqual.overridePath)
+        : join(HERE, config.ciqual.csvPath),
       off: firstExisting(
         join(HERE, "data/off/en.openfoodfacts.org.products.csv.gz"),
         join(HERE, "data/off/en.openfoodfacts.org.products.csv"),

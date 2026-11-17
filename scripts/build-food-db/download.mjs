@@ -5,8 +5,8 @@
 //   node download.mjs off       Open Food Facts CSV export only
 //
 // The Open Food Facts CSV export is ~1 GB compressed (the full JSONL dump is ~9 GB — this
-// script uses the CSV). CIQUAL is not fetched here: download the XLSX, save it as CSV to
-// data/ciqual/ciqual.csv — see README.
+// script uses the CSV). CIQUAL is not fetched here: the 2020 table is committed in
+// sources/ — see README.
 
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -78,10 +78,6 @@ async function downloadOff() {
 const run = async () => {
   if (which === "all" || which === "usda") await downloadUsda();
   if (which === "all" || which === "off") await downloadOff();
-  if (!existsSync(join(DATA, "ciqual/ciqual.csv"))) {
-    console.log("\nnote: CIQUAL not present. Save the ANSES CIQUAL table as CSV to");
-    console.log("      data/ciqual/ciqual.csv (see README) for EU generic-food coverage.");
-  }
   console.log("\ndone. Next: npm run build");
 };
 

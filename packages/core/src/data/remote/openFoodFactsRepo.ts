@@ -1,10 +1,12 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import type { FoodDbRepo, FoodSearchOptions } from "../foodDbRepo";
 import type { FoodRef } from "../../domain/nutrition";
+import { apiBaseUrl } from "../../api/client";
 
 // An online-only FoodDbRepo backed by the Open Food Facts API. Used where there's no
-// bundled food.db — the web builds, and a mobile build that shipped without the asset.
-// Generic ("usda") whole foods aren't available here; the UI still has custom foods/recipes.
+// bundled food.db (the web builds, and a mobile build that shipped without the asset), and
+// on top of it for packaged products the bundled copy doesn't have. Generic ("usda") whole
+// foods aren't available here; the UI still has custom foods/recipes.
 
 const OFF_BASE = "https://world.openfoodfacts.org";
 /** Search-a-licious: OFF's newer search. Much better ranking than cgi/search.pl, and it
@@ -69,11 +71,12 @@ function parse(products: OffProduct[] | undefined): FoodRef[] {
 
 /**
  * null when the service didn't answer, so the caller can try the old endpoint. The new
- * search sends no CORS headers, so it only works from the native app (CapacitorHttp makes
- * the request outside the web view); the web build goes straight to the old endpoint.
+ * search sends no CORS headers, so only the native app calls it directly (CapacitorHttp makes
+ * the request outside the web view); a browser goes through the LogIt server's
+ * /foods/search, which forwards to it.
  */
 async function searchNew(q: string, limit: number): Promise<FoodRef[] | null> {
-  if (!Capacitor.isNativePlatform()) return null;
+  if (!Capacitor.isNativePlatform()) return searchViaServer(q, limit);
   try {
     const res = await CapacitorHttp.get({
       url: `${OFF_SEARCH}?q=${encodeURIComponent(q)}&page_size=${limit}&fields=${FIELDS}`,
@@ -85,6 +88,19 @@ async function searchNew(q: string, limit: number): Promise<FoodRef[] | null> {
     });
     if (res.status < 200 || res.status >= 300) return null;
     const body = (typeof res.data === "string" ? JSON.parse(res.data) : res.data) as { hits?: OffProduct[] };
+    return Array.isArray(body?.hits) ? parse(body.hits) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function searchViaServer(q: string, limit: number): Promise<FoodRef[] | null> {
+  try {
+    const res = await fetch(`${apiBaseUrl()}/foods/search?q=${encodeURIComponent(q)}&limit=${limit}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { hits?: OffProduct[] };
     return Array.isArray(body?.hits) ? parse(body.hits) : null;
   } catch {
     return null;

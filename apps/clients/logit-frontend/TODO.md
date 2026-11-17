@@ -234,8 +234,11 @@ the same features in their own algorithms.
       `feat/nutrition-redesign`). Search: core `nutrition/foodSearch.ts` (word order, plurals, UK/US
       synonyms, typo budget, ranking) used everywhere (bundled DB, cache, custom foods, recipes, meals);
       the bundled DB gets a `vocab` table (food.db v3) for typo correction, a generic-foods pass and
-      dedupe; online search uses search-a-licious via CapacitorHttp on native (no CORS on web, which
-      falls back to the old endpoint). Release workflow now builds/caches `food.zip` (it never shipped
+      dedupe; online search uses search-a-licious via CapacitorHttp on native; browsers go through the
+      API's anonymous `GET /foods/search` (forwards to it, 6 h cache, 60/min per address), falling back
+      to the old endpoint. CIQUAL 2020 (~3k EU generic foods) is committed in
+      `scripts/build-food-db/sources/` (ANSES site was down; taken from the Internet Archive copy).
+      Release workflow now builds/caches `food.zip` (it never shipped
       before, so phones only had online OFF search). Shared `FoodSearchPanel` (barcode + label scan in
       every search, incl. recipe ingredients), `AmountSheet`, `FoodEditor`, `QuickAddSheet`. Diary:
       week strip, calories-left card (opens Goal), meal cards with a ··· menu (copy yesterday / another

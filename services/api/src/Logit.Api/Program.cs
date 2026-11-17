@@ -18,6 +18,7 @@ using Logit.Api.Features.Sync;
 using Logit.Api.Features.Users;
 using Logit.Api.Features.Sandbox;
 using Logit.Api.Features.Guide;
+using Logit.Api.Features.Foods;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -83,6 +84,14 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<Logit.Api.Features.Discover.DiscoverExperiment>();
 builder.Services.AddScoped<Logit.Api.Features.Discover.DiscoverService>();
 builder.Services.AddHttpClient("google-play", c => c.Timeout = TimeSpan.FromSeconds(20));
+// Food search for the browser app (see FoodSearchEndpoints). Open Food Facts asks apps to
+// identify themselves.
+builder.Services.AddHttpClient(Logit.Api.Features.Foods.FoodSearchEndpoints.HttpClientName, c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(8);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("LogIt/1.0 (https://getlogit.app)");
+});
+builder.Services.AddSingleton<Logit.Api.Features.Foods.FoodSearchCache>();
 builder.Services.AddSingleton<IGooglePlayApi>(sp => new GooglePlayApi(
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("google-play"),
     sp.GetRequiredService<IConfiguration>(),
@@ -149,6 +158,18 @@ builder.Services.AddRateLimiter(o =>
             {
                 PermitLimit = signupLimit,
                 Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+            }));
+    // Food search from the browser app: someone typing fires a search every few keystrokes,
+    // so 60 a minute per address. FoodSearch:PerMinute overrides it.
+    var foodSearchLimit = Math.Max(1, builder.Configuration.GetValue("FoodSearch:PerMinute", 60));
+    o.AddPolicy(Logit.Api.Features.Foods.FoodSearchEndpoints.RateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = foodSearchLimit,
+                Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
     // Diagnostics reports: a handful per user per hour is plenty.
@@ -219,6 +240,7 @@ api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
 api.MapSandboxEndpoints();
 api.MapGuideEndpoints();
+api.MapFoodSearchEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

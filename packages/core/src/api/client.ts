@@ -59,6 +59,11 @@ function getBaseUrl(): string {
   return localStorage.getItem(BASE_URL_KEY) ?? DEFAULT_BASE_URL;
 }
 
+/** The server this app talks to: the hosted one, or the self-hosted one picked at sign-in. */
+export function apiBaseUrl(): string {
+  return getBaseUrl();
+}
+
 /** Sent as X-Request-Id; the server logs it with the request and echoes it back, so an entry
  * in the app's diagnostics log can be matched to the server's log line. */
 function newRequestId(): string {
