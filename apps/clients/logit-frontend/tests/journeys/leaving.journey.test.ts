@@ -137,17 +137,19 @@ describe("deleting the account", () => {
     expect(phone.route).toBe("/auth");
   });
 
-  it("deleting one offline profile leaves the other profiles on the phone alone", async () => {
+  it("deleting an account leaves the space without an account alone", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam", split: "Full Body" });
     const sam = (await phone.activeProfile())!;
-    await phone.addProfile();
+    const alex = newUser("alex");
+    await phone.addAccount(alex, "cloud", "register");
     await phone.finishOnboarding({ name: "Alex", split: "Bro Split" });
 
-    await phone.deleteAccount();
+    await phone.deleteAccount(alex.password);
     await phone.switchProfile(sam.id);
 
     expect(phone.profileName).toBe("Sam");
     expect(await phone.splitNames()).toEqual(["Full Body"]);
+    expect(await phone.profiles()).toHaveLength(1);
   });
 });
