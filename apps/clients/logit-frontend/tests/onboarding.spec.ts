@@ -276,6 +276,31 @@ test.describe("week one", () => {
   });
 });
 
+// ── Coaching (C1, C3) ────────────────────────────────────────────────────────
+
+test.describe("coaching from the goal screen", () => {
+  test("'I have a coach' asks for a free account first, and comes back after", async ({ page }) => {
+    await seedAtStep(page, 1);
+    await goToOnboarding(page);
+
+    await page.getByRole("button", { name: "I have a coach" }).click();
+    await expect(page.getByRole("heading", { name: "Connect with your coach" })).toBeVisible();
+    await page.getByRole("button", { name: "Create a free account" }).click();
+    await page.waitForURL(/\/auth\?mode=register&redirect=%2Fonboarding%2Fcoach/);
+  });
+
+  test("'I coach people' shows a coach's day and the way in", async ({ page }) => {
+    await seedAtStep(page, 1);
+    await goToOnboarding(page);
+
+    await page.getByRole("button", { name: "I coach people" }).click();
+    await expect(page.getByRole("heading", { name: "Coach from your pocket" })).toBeVisible();
+    await expect(page.getByText("Who needs you today")).toBeVisible();
+    await page.getByRole("button", { name: "Make an account to coach" }).click();
+    await page.waitForURL(/\/auth\?mode=register&redirect=%2Fonboarding%2Fcoaching/);
+  });
+});
+
 // ── Returning user via the welcome-screen login link — requires live API ─────
 
 test.describe("returning user - requires API", () => {
