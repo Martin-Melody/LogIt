@@ -368,7 +368,7 @@ test.describe("returning user - requires API", () => {
 
     await page.locator('input[id="username"]').fill(username);
     await page.locator('input[id="password"]').fill("TestPass123!");
-    await page.locator("form").getByRole("button", { name: "Log in" }).click();
+    await page.locator("form").getByRole("button", { name: "Sign in" }).click();
 
     await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 15_000 });
     expect(page.url()).toBe("http://localhost:5173/");

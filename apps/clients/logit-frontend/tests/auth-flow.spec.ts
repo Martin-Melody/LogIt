@@ -50,7 +50,7 @@ test.describe("auth surface", () => {
     await resetState(page);
     await goToAuth(page);
 
-    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
     await expect(page.getByText("getlogit.app")).toBeVisible();
     await expect(page.getByText("No server configured")).not.toBeVisible();
   });
@@ -59,24 +59,24 @@ test.describe("auth surface", () => {
     await resetState(page);
     await goToAuth(page, "?mode=register");
 
-    await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
     await expect(page.locator('input[id="email"]')).toBeVisible();
     await expect(page.locator('input[id="confirm-password"]')).toBeVisible();
   });
 
-  test("can toggle between Log in and Sign up", async ({ page }) => {
+  test("can toggle between Sign in and Create account", async ({ page }) => {
     await resetState(page);
     await goToAuth(page);
 
-    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
     await expect(page.locator('input[id="email"]')).not.toBeVisible();
 
-    await page.getByRole("button", { name: "Sign up" }).click();
-    await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
+    await page.getByRole("button", { name: "Create account" }).first().click();
+    await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
     await expect(page.locator('input[id="email"]')).toBeVisible();
 
-    await page.getByRole("button", { name: "Log in" }).first().click();
-    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await page.getByRole("button", { name: "Sign in" }).first().click();
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   });
 
   test("register shows an inline error when passwords don't match", async ({ page }) => {
@@ -94,7 +94,7 @@ test.describe("auth surface", () => {
 // ── Forgot password ──────────────────────────────────────────────────────────
 
 test.describe("forgot password", () => {
-  test("'Forgot password?' opens the reset view and can return to log in", async ({ page }) => {
+  test("'Forgot password?' opens the reset view and can return to sign in", async ({ page }) => {
     await resetState(page);
     await goToAuth(page);
 
@@ -103,21 +103,21 @@ test.describe("forgot password", () => {
     await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
     await expect(page.locator('input[id="forgot-email"]')).toBeVisible();
 
-    await page.getByRole("button", { name: "Back to log in" }).click();
-    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await page.getByRole("button", { name: "Back to sign in" }).click();
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   });
 });
 
 // ── Self-hosted server setup ─────────────────────────────────────────────────
 
 test.describe("self-hosted server setup", () => {
-  test("'Connect to a different server' reveals the URL panel", async ({ page }) => {
+  test("'Advanced' reveals the server choice", async ({ page }) => {
     await resetState(page);
     await goToAuth(page);
 
-    await page.getByRole("button", { name: /Connect to a different server/i }).click();
+    await page.getByRole("button", { name: /Advanced/ }).click();
 
-    await expect(page.getByText("Connect to a self-hosted server")).toBeVisible();
+    await expect(page.getByText("Which server?")).toBeVisible();
     await expect(page.locator('input[type="url"]')).toBeVisible();
   });
 
@@ -125,9 +125,9 @@ test.describe("self-hosted server setup", () => {
     await resetState(page);
     await goToAuth(page);
 
-    await page.getByRole("button", { name: /Connect to a different server/i }).click();
+    await page.getByRole("button", { name: /Advanced/ }).click();
     await page.locator('input[type="url"]').fill("https://logit.example.com");
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "Use this server" }).click();
 
     await expect(page.getByText("logit.example.com")).toBeVisible();
 
@@ -135,13 +135,12 @@ test.describe("self-hosted server setup", () => {
     expect(mode).toBe("selfhosted");
   });
 
-  test("'Use getlogit.app instead' reverts a self-hosted selection", async ({ page }) => {
+  test("picking getlogit.app reverts a self-hosted selection", async ({ page }) => {
     await setServerMode(page, "selfhosted", "https://logit.example.com");
     await goToAuth(page);
 
-    // With a self-hosted server saved, the toggle reads "Change server".
-    await page.getByRole("button", { name: "Change server" }).click();
-    await page.getByRole("button", { name: /Use getlogit\.app instead/i }).click();
+    await page.getByRole("button", { name: /Advanced/ }).click();
+    await page.getByRole("button", { name: /^getlogit\.app/ }).click();
 
     await expect(page.getByText("getlogit.app")).toBeVisible();
 
@@ -227,7 +226,7 @@ test.describe("online account - requires API", () => {
 
     await page.locator('input[id="username"]').fill(username);
     await page.locator('input[id="password"]').fill("TestPass123!");
-    await page.locator("form").getByRole("button", { name: "Log in" }).click();
+    await page.locator("form").getByRole("button", { name: "Sign in" }).click();
 
     await page.waitForURL(/^http:\/\/localhost:5173\/$/, { timeout: 15_000 });
     expect(page.url()).toBe("http://localhost:5173/");
@@ -251,7 +250,7 @@ test.describe("online account - requires API", () => {
 
     await page.locator('input[id="username"]').fill(username);
     await page.locator('input[id="password"]').fill("WrongPassword!");
-    await page.locator("form").getByRole("button", { name: "Log in" }).click();
+    await page.locator("form").getByRole("button", { name: "Sign in" }).click();
 
     await expect(page.locator(".text-destructive")).toHaveText("That username or password isn't right.", { timeout: 8000 });
   });
@@ -262,7 +261,7 @@ test.describe("online account - requires API", () => {
 
     await page.locator('input[id="username"]').fill(unique("nobody"));
     await page.locator('input[id="password"]').fill("WhateverPass1!");
-    await page.locator("form").getByRole("button", { name: "Log in" }).click();
+    await page.locator("form").getByRole("button", { name: "Sign in" }).click();
 
     await expect(page.locator(".text-destructive")).toHaveText("That username or password isn't right.", { timeout: 8000 });
   });
