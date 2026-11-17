@@ -125,7 +125,7 @@ describe("deleting the account", () => {
     expect(await phone.rowsOwnedBy(profile.id)).toBe(0);
     expect((await phone.profiles()).map((p) => p.id)).not.toContain(profile.id);
     expect(phone.signedIn).toBe(false);
-    expect(phone.route).toBe("/auth");
+    expect(phone.route).toBe("/onboarding"); // nobody left: the welcome screen, not a sign-in wall
   });
 
   it("a wrong password deletes nothing, on the server or the phone", async () => {
@@ -151,7 +151,7 @@ describe("deleting the account", () => {
     expect(await phone.rowsOwnedBy(profile.id)).toBeGreaterThan(0);
   });
 
-  it("deleting an offline profile wipes it and the next launch doesn't bring it back", async () => {
+  it("deleting everything on a phone with no account wipes it and starts over at the welcome screen", async () => {
     const phone = await new Device().launch();
     await phone.finishOnboarding({ name: "Sam", split: "Full Body" });
     await phone.logWorkout("Day 1");
@@ -161,8 +161,9 @@ describe("deleting the account", () => {
     await phone.launch();
 
     expect(await phone.rowsOwnedBy(profile.id)).toBe(0);
-    expect(await phone.profiles()).toHaveLength(0);
-    expect(phone.route).toBe("/auth");
+    expect((await phone.profiles()).map((p) => p.id)).not.toContain(profile.id);
+    expect(await phone.splitNames()).toEqual([]);
+    expect(phone.route).toBe("/onboarding");
   });
 
   it("deleting an account leaves the space without an account alone", async () => {
