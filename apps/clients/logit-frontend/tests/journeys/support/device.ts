@@ -252,9 +252,9 @@ export class Device {
   }
 
   /** Profiles screen (src/routes/accounts switchTo()). */
-  async switchProfile(profileId: string, password = ""): Promise<void> {
+  async switchProfile(profileId: string): Promise<void> {
     const { auth, accounts } = this.app;
-    await auth.authStore.loginOfflineAccount(profileId, password);
+    await auth.authStore.loginOfflineAccount(profileId);
     const account = await accounts.getLocalAccount(profileId);
     this.routes.push(account ? accounts.postSwitchDestination(account, auth.authStore.isAuthenticated) : "/");
     await this.settle();

@@ -202,15 +202,14 @@ function createAuthStore() {
    * Activate an existing local account by ID.
    * Password is optional — only verified when the account has one set.
    */
-  async function loginOfflineAccount(accountId: string, password = ""): Promise<void> {
+  async function loginOfflineAccount(accountId: string): Promise<void> {
     if (!isNativePlatform()) return; // offline accounts only exist on native
 
-    const { getLocalAccount, verifyLocalPassword } = await import("$lib/data/localAccountRepo");
+    // Local profile passwords are retired (accounts plan, step 5d): accounts each keep their own
+    // sign-in, and the phone's own lock protects the phone. A stored hash is simply ignored.
+    const { getLocalAccount } = await import("$lib/data/localAccountRepo");
     const account = await getLocalAccount(accountId);
     if (!account) throw new Error("Account not found.");
-
-    const ok = await verifyLocalPassword(account, password);
-    if (!ok) throw new Error("Incorrect password.");
 
     // Switching restores that account's own sign-in when it has one (each account keeps its
     // session: sessionScope.ts); the account left behind stays signed in. A profile that was
@@ -248,7 +247,7 @@ function createAuthStore() {
     const { listLocalAccounts: listAll } = await import("$lib/data/localAccountRepo");
     const existing = (await listAll()).find((a) => !a.serverUserId);
     if (existing) {
-      if (existing.id !== getActiveOwnerId()) await loginOfflineAccount(existing.id, password);
+      if (existing.id !== getActiveOwnerId()) await loginOfflineAccount(existing.id);
       return "opened";
     }
 
@@ -259,7 +258,6 @@ function createAuthStore() {
     const { createLocalAccount, listLocalAccounts, claimOrphanedData, orphanClaimTarget } =
       await import("$lib/data/localAccountRepo");
 
-    const effectivePassword = password.trim() || undefined;
 
     const activeOwnerIdBeforeCreate = getActiveOwnerId();
     const all = await listLocalAccounts();
@@ -273,7 +271,6 @@ function createAuthStore() {
       // something like "local_1789636452490"; a user who didn't clear it before typing their
       // real name ended up with the two concatenated.
       displayName: displayName.trim(),
-      password: effectivePassword,
     });
     setActiveOwnerId(account.id);
     // See orphanClaimTarget(): true first-launch adopts orphaned (owner_id IS NULL) rows
@@ -333,7 +330,7 @@ function createAuthStore() {
         window.location.href = "/";
         return;
       } catch {
-        // A profile with a local password: let the user open it.
+        // Couldn't open it: let the user pick.
         setActiveOwnerId(null);
         window.location.href = "/accounts";
         return;
@@ -400,18 +397,11 @@ function createAuthStore() {
     stopBackgroundSync();
 
     if (isNativePlatform()) {
-      const { clearOwnerData, getDb } = await import("$lib/data/db/sqlite");
+      // Everything of this account leaves the phone too; the next account opens, or the
+      // welcome screen when nobody is left (as after signing out).
       const ownerId = getActiveOwnerId();
-      if (ownerId) {
-        // Wipe all data belonging to this owner, then remove the account row itself
-        await clearOwnerData(ownerId);
-        const db = getDb();
-        await db.run(`DELETE FROM local_accounts WHERE id = ?`, [ownerId]);
-        const { forgetAccountStorage } = await import("$lib/data/accountStorage");
-        forgetAccountStorage(ownerId);
-      }
-      setActiveOwnerId(null);
-      window.location.href = "/auth";
+      if (ownerId) await removeFromPhone(ownerId);
+      await openNextAccount();
     } else {
       const { clearAllData } = await import("$lib/usecases/clearAllData");
       await clearAllData();

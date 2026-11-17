@@ -167,65 +167,6 @@
   let deleteAccountPassword = $state("");
   let deleteAccountError = $state<string | null>(null);
 
-  // --- Local account password ---
-  let localAccountHasPassword = $state(false);
-  let showPasswordForm = $state(false);
-  let passwordForm = $state({ current: "", next: "", confirm: "" });
-  let passwordError = $state<string | null>(null);
-  let savingPassword = $state(false);
-
-  $effect(() => {
-    const ownerId = getActiveOwnerId();
-    if (!ownerId || !isNativePlatform()) return;
-    void (async () => {
-      try {
-        const { getLocalAccount } = await import("$lib/data/localAccountRepo");
-        const acct = await getLocalAccount(ownerId);
-        localAccountHasPassword = !!acct?.passwordHash;
-      } catch {}
-    })();
-  });
-
-  async function saveLocalAccountPassword(remove = false) {
-    passwordError = null;
-    if (!remove && passwordForm.next !== passwordForm.confirm) {
-      passwordError = "Passwords don't match.";
-      return;
-    }
-    if (localAccountHasPassword && !passwordForm.current.trim()) {
-      passwordError = "Enter your current password to continue.";
-      return;
-    }
-    savingPassword = true;
-    try {
-      const { getLocalAccount, verifyLocalPassword, updateLocalAccount } =
-        await import("$lib/data/localAccountRepo");
-      const ownerId = getActiveOwnerId();
-      if (!ownerId) throw new Error("No active account.");
-      const acct = await getLocalAccount(ownerId);
-      if (!acct) throw new Error("Account not found.");
-      if (localAccountHasPassword) {
-        const ok = await verifyLocalPassword(acct, passwordForm.current);
-        if (!ok) {
-          passwordError = "Current password is incorrect.";
-          return;
-        }
-      }
-      const newPassword = remove
-        ? undefined
-        : passwordForm.next.trim() || undefined;
-      await updateLocalAccount(ownerId, { password: newPassword });
-      localAccountHasPassword = !remove && !!passwordForm.next.trim();
-      showPasswordForm = false;
-      passwordForm = { current: "", next: "", confirm: "" };
-    } catch (e) {
-      passwordError =
-        e instanceof Error ? e.message : "Failed to update password.";
-    } finally {
-      savingPassword = false;
-    }
-  }
-
   // --- Online account password ---
   let showOnlinePasswordForm = $state(false);
   let onlinePasswordForm = $state({ current: "", next: "", confirm: "" });
@@ -533,6 +474,38 @@
     await clearAllData();
   }
 
+  // Delete (design canvas 8): what goes, a copy first if wanted, then the password.
+  let localWorkoutCount = $state<number | null>(null);
+  let savingCopy = $state(false);
+  let copySaved = $state(false);
+
+  async function openDelete() {
+    pendingDeleteAccount = true;
+    copySaved = false;
+    void billing.refreshStatus();
+    try {
+      const { getWorkoutRepo } = await import("$lib/data/repoProvider");
+      localWorkoutCount = (await getWorkoutRepo().listAllSessions()).length;
+    } catch {
+      localWorkoutCount = null;
+    }
+    document.getElementById("sec-danger")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function saveCopyBeforeDelete() {
+    savingCopy = true;
+    deleteAccountError = null;
+    try {
+      const { exportData, downloadExport } = await import("$lib/usecases/exportData");
+      await downloadExport(await exportData());
+      copySaved = true;
+    } catch (e) {
+      deleteAccountError = e instanceof Error ? e.message : "Couldn't save a copy.";
+    } finally {
+      savingCopy = false;
+    }
+  }
+
   async function confirmDeleteAccount() {
     if (authStore.isAuthenticated && !deleteAccountPassword) {
       deleteAccountError = "Enter your password to delete your account.";
@@ -726,6 +699,12 @@
           Sign out of @{authStore.user.username}
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 mt-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
+          onclick={() => void openDelete()}>
+          Delete account
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
 
       {:else if getActiveOwnerId()}
         <!-- No account yet (design canvas 5) -->
@@ -760,44 +739,6 @@
           Switch or add account
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => { showPasswordForm = !showPasswordForm; passwordError = null; passwordForm = { current: "", next: "", confirm: "" }; }}>
-          <span class="flex items-center gap-2">
-            <Lock class="h-3.5 w-3.5" />
-            {localAccountHasPassword ? "Change password" : "Set a password"}
-          </span>
-          <ChevronRight class="h-4 w-4 shrink-0 transition-transform {showPasswordForm ? 'rotate-90' : ''}" />
-        </button>
-        {#if showPasswordForm}
-          <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
-            {#if localAccountHasPassword}
-              <input type="password" placeholder="Current password" autocomplete="current-password"
-                class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                bind:value={passwordForm.current} />
-            {/if}
-            <input type="password" placeholder={localAccountHasPassword ? "New password" : "Password"} autocomplete="new-password"
-              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              bind:value={passwordForm.next} />
-            <input type="password" placeholder="Confirm password" autocomplete="new-password"
-              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              bind:value={passwordForm.confirm} />
-            {#if passwordError}
-              <p class="text-xs text-destructive">{passwordError}</p>
-            {/if}
-            <div class="flex gap-2 pt-1">
-              <Button size="sm" disabled={savingPassword} onclick={() => void saveLocalAccountPassword()}>
-                {savingPassword ? "Saving…" : "Save"}
-              </Button>
-              {#if localAccountHasPassword}
-                <Button variant="outline" size="sm" disabled={savingPassword} onclick={() => void saveLocalAccountPassword(true)}>
-                  Remove
-                </Button>
-              {/if}
-              <Button variant="ghost" size="sm" onclick={() => { showPasswordForm = false; passwordError = null; }}>Cancel</Button>
-            </div>
-          </div>
-        {/if}
 
       {:else}
         <!-- No account -->
@@ -1422,13 +1363,25 @@
               </div>
             </div>
           {/if}
-          <p class="text-sm text-destructive">
-            {authStore.isAuthenticated
-              ? "This will permanently delete your account from the server and erase all local data. This cannot be undone."
-              : getActiveOwnerId()
-                ? "This will erase all local data and remove this account from the device. This cannot be undone."
-                : "This will erase all local data on this device. This cannot be undone."}
-          </p>
+          <div>
+            <p class="text-lg font-bold">
+              {authStore.isAuthenticated && authStore.user ? `Delete @${authStore.user.username}?` : "Delete everything on this phone?"}
+            </p>
+            <p class="text-sm text-muted-foreground">This can't be undone.</p>
+          </div>
+          <div class="flex flex-col gap-1.5 rounded-[10px] bg-destructive/10 p-3 text-sm text-destructive">
+            <p class="font-semibold">What goes</p>
+            {#if authStore.isAuthenticated}
+              <p>• Your account and everything on {serverHost}{localWorkoutCount !== null ? `: ${localWorkoutCount} workout${localWorkoutCount === 1 ? "" : "s"}` : ""}, posts, followers, coaching</p>
+              <p>• Everything of yours on this phone</p>
+            {:else}
+              <p>• Everything on this phone{localWorkoutCount !== null ? `: ${localWorkoutCount} workout${localWorkoutCount === 1 ? "" : "s"}` : ""}, splits, food, habits, settings</p>
+            {/if}
+          </div>
+          <Button variant="outline" size="sm" class="self-start" disabled={savingCopy || deletingAccount} onclick={() => void saveCopyBeforeDelete()}>
+            {#if savingCopy}<Loader2 class="h-3.5 w-3.5 mr-1.5 animate-spin" />{/if}
+            {copySaved ? "Copy saved" : "Save a copy first"}
+          </Button>
           {#if authStore.isAuthenticated}
             <input
               type="password"
@@ -1452,7 +1405,7 @@
               {#if deletingAccount}
                 <Loader2 class="h-3.5 w-3.5 mr-1.5 animate-spin" />
               {/if}
-              Yes, delete everything
+              {authStore.isAuthenticated ? "Delete account" : "Delete everything on this phone"}
             </Button>
             <Button
               variant="outline"
@@ -1473,10 +1426,10 @@
           variant="outline"
           size="sm"
           class="border-destructive/50 text-destructive hover:bg-destructive/10"
-          onclick={() => { pendingDeleteAccount = true; void billing.refreshStatus(); }}
+          onclick={() => void openDelete()}
         >
           <Trash2 class="h-3.5 w-3.5 mr-1.5" />
-          Delete account and all data
+          {authStore.isAuthenticated ? "Delete account" : "Delete everything on this phone"}
         </Button>
       {/if}
     </Card.Content>
