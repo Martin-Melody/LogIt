@@ -19,6 +19,8 @@
   import { saveStarterPlan } from "$lib/features/onboarding/saveStarterPlan";
   import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import { createSplit } from "@logit/core/domain/WorkoutSplit";
+  import { sourceFromSplitDay } from "@logit/core/domain/sessionHistory";
+  import { planSplitDay } from "$lib/usecases/startSessionFromSplitDay";
   import {
     buildStarterPlan, otherPlanKinds, planKindFor,
     EQUIPMENT_LABELS, GOAL_LABELS, LENGTH_LABELS,
@@ -132,7 +134,10 @@
     error = null;
     try {
       const split = await savePlan();
-      await currentSession.startFromSplitDay(split.days[0]!);
+      // Planned like the plan screen does, and kept with where it came from (its name in the history).
+      const day = split.days[0]!;
+      const { session } = await planSplitDay(day);
+      await currentSession.startPlanned({ ...session, source: sourceFromSplitDay(split, day, session) });
       await goto("/session/current");
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't start. Try again.";

@@ -9,6 +9,7 @@ import { pushExerciseSetting } from "$lib/sync/syncService";
 import { saveExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
 import { starterPlanToSplit, starterRepRanges, type StarterPlan } from "@logit/core/domain/starterPlan";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+import { markFirstWorkoutPending } from "./afterWorkout";
 
 export async function saveStarterPlan(plan: StarterPlan): Promise<WorkoutSplit> {
   const split = starterPlanToSplit(plan);
@@ -20,5 +21,6 @@ export async function saveStarterPlan(plan: StarterPlan): Promise<WorkoutSplit> 
     const row = await saveExerciseProgressionSettings({ id: r.id, name: r.name }, { repRange: r.repRange }, deps);
     if (row) pushExerciseSetting(row);
   }
+  markFirstWorkoutPending();
   return split;
 }

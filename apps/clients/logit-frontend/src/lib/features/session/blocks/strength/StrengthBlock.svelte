@@ -24,6 +24,7 @@
   import { dismissProgressionNudge } from "@logit/core/usecases/progression/dismissProgressionNudge";
   import { acceptRepRangeExperiment } from "@logit/core/usecases/progression/acceptRepRangeExperiment";
   import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
+  import { getExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { currentSession } from "$lib/stores/currentSession.store";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
@@ -72,6 +73,10 @@
   let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string; exerciseType?: ExerciseType } | null>(null);
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
+  // An exercise never done before (design canvas O4): its first set is the starting point
+  // the plan works from, so it says how heavy to go instead of asking for a max.
+  let prevLoaded = $state(false);
+  let firstTimeReps = $state(8);
 
   const prevLeadSets = $derived(
     prevSets ? prevSets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)) : [],
@@ -152,8 +157,16 @@
       prevSets = last
         ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
         : null;
+      if (!last) {
+        const settings = await getExerciseProgressionSettings({ id: exerciseId, name }, getProgressionDeps()).catch(() => null);
+        firstTimeReps = settings?.repRange?.[1] ?? 8;
+        // The workout's first exercise opens so the first-set hint is seen.
+        if (get(currentSession)?.blocks[0]?.id === blockId && !data.sets.some((s) => s.completed)) collapsed = false;
+      }
     } catch {
       prevSets = null;
+    } finally {
+      prevLoaded = true;
     }
   }
 
@@ -668,6 +681,12 @@
       >
         + Warm-up ramp
       </button>
+    {/if}
+    {#if prevLoaded && prevSets === null && !data.sets.some((s) => s.completed)}
+      <div class="mx-3 my-2 flex flex-col gap-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
+        <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
+        <p class="text-xs text-muted-foreground">Logit plans every set after this one from it. No need to know your max.</p>
+      </div>
     {/if}
     <SetsTableHeader weightUnit={$profile.weightUnit} />
     {@const sortedSets = [...data.sets].sort(sortByOrderIndex)}
