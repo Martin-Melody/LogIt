@@ -92,6 +92,7 @@ async function signUp(request: APIRequestContext, prefix: string, tier: "Pro" | 
 async function signIn(page: Page, username: string) {
   await page.goto("/login");
   await page.getByLabel("Username or email").fill(username);
+  await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("button", { name: /Guide/ })).toBeVisible({ timeout: 30_000 });

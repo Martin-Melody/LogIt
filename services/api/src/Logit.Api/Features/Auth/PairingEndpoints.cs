@@ -103,7 +103,15 @@ public static class PairingEndpoints
     {
         var request = await FindOpen(db, req.Code);
         if (request is null) return Expired;
-        return Results.Ok(new { device = request.Device, createdAt = request.CreatedAt, expiresAt = request.ExpiresAt });
+        // SQLite hands times back without a kind; say UTC, and give the seconds left so the
+        // phone's countdown doesn't depend on its clock or time zone.
+        var expiresAt = DateTime.SpecifyKind(request.ExpiresAt, DateTimeKind.Utc);
+        return Results.Ok(new
+        {
+            device = request.Device,
+            expiresAt,
+            secondsLeft = Math.Max(0, (int)(expiresAt - DateTime.UtcNow).TotalSeconds),
+        });
     }
 
     private static async Task<IResult> Answer([FromBody] AnswerRequest req, AppDbContext db, ClaimsPrincipal caller)

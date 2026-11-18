@@ -1,3 +1,4 @@
+import { coachTrial } from "$lib/workspace";
 import {
   coachApi,
   SHARE_ALL,
@@ -109,7 +110,8 @@ export async function loadCoachingOverview(): Promise<CoachingOverview> {
     coachApi.checkinInbox().catch(() => [] as CheckinInboxItem[]),
     getWebCheckinRepo().listMySchedules(),
     getWebCoachProgramRepo().listMyPrograms(),
-    coachApi.listRequests().catch(() => [] as CoachingRequest[]),
+    // Requests come through invite links, which are Studio-only: none while trying samples.
+    coachTrial() ? Promise.resolve([] as CoachingRequest[]) : coachApi.listRequests().catch(() => [] as CoachingRequest[]),
     coachApi.listSentInvites().catch(() => [] as SentInvite[]),
   ]);
   const now = Date.now();
