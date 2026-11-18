@@ -34,7 +34,7 @@
   </p>
 
   <h2>If you create an account</h2>
-  <p>Creating an account is optional. It turns on the social feed and, with Pro or Studio, sync. When you sign in, the following is stored on the server:</p>
+  <p>Creating an account is optional. It backs up your phone, turns on the social feed and, with Pro or Studio, syncs several devices. When you sign in, the following is stored on the server:</p>
   <ul>
     <li><strong>Account details:</strong> your email address, a securely hashed password, and a display name and username.</li>
     <li><strong>Your training and health data</strong> (with Pro or Studio): workouts, splits, food diary entries and any meal photos you attach, body weight, habits and goals, so they are available on your other devices.</li>

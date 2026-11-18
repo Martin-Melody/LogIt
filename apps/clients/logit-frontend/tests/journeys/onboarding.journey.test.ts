@@ -2,7 +2,7 @@
 // rows 1, 3 and 5.
 import { describe, expect, it } from "vitest";
 import { Device } from "./support/device";
-import { createAccount, newUser, serverData } from "./support/servers";
+import { createAccount, newUser, serverData, setTier } from "./support/servers";
 
 describe("first launch, fully offline", () => {
   it("a new phone opens on onboarding with one local profile and no account", async () => {
@@ -123,5 +123,58 @@ describe("first launch, with an account", () => {
 
     expect(await phone.profiles()).toHaveLength(1);
     expect(phone.route).toBe("/");
+  });
+});
+
+describe("the phone's own space becoming an account", () => {
+  it("takes the account's username, so the account switcher doesn't show '@local'", async () => {
+    const phone = await new Device().launch();
+    await phone.finishOnboarding({ name: "Sam" });
+    const user = newUser("namer");
+    await phone.register(user);
+    expect((await phone.activeProfile())?.username).toBe(user.username);
+
+    const other = await createAccount("cloud", newUser("signin"));
+    const second = await new Device("second phone").launch();
+    await second.finishOnboarding({ name: "Alex" });
+    await second.signIn(other, "cloud", "add");
+    expect((await second.activeProfile())?.username).toBe(other.username);
+  });
+});
+
+describe("the plan onboarding builds (design canvas O1–O3)", () => {
+  const answers = { goal: "both", experience: "under2", days: 4, equipment: "gym", minutes: 45 } as const;
+
+  it("offline: the plan is the active split on its weekdays, with rep ranges and the weekly target, across a restart", async () => {
+    const phone = await new Device().launch();
+    await phone.onboardWithPlan(answers);
+    await phone.launch();
+
+    expect(phone.route).toBe("/");
+    expect(await phone.splitNames()).toEqual(["Upper / Lower"]);
+    const { activeSplit } = await import("$lib/stores/activeSplit.store");
+    const { get } = await import("svelte/store");
+    expect(get(activeSplit)?.days.map((d) => d.weekday)).toEqual([1, 2, 4, 5]);
+    const { goalsStore } = await import("$lib/features/goals/goalsStore");
+    expect(get(goalsStore).streak.weeklyTarget).toBe(4);
+    const { getExerciseProgressionSettings } = await import("@logit/core/usecases/progression/exerciseProgressionSettings");
+    const { getProgressionDeps } = await import("$lib/usecases/progressionDeps");
+    expect((await getExerciseProgressionSettings({ id: "core_bench_press", name: "Bench Press" }, getProgressionDeps()))?.repRange).toEqual([5, 8]);
+    expect(phone.requests).toEqual([]);
+  });
+
+  it("signing up afterwards uploads the plan and its rep ranges", async () => {
+    const phone = await new Device().launch();
+    await phone.onboardWithPlan({ ...answers, goal: "strength" });
+    const user = newUser("planner");
+    await phone.register(user);
+    await setTier("cloud", phone.user!.id, "Pro");
+    await phone.refreshPlan();
+    await phone.sync();
+
+    const server = await serverData("cloud", user, phone);
+    expect(server.splitNames).toEqual(["Upper / Lower"]);
+    expect(server.repRanges?.["Bench Press"]).toEqual([3, 6]);
+    expect(server.repRanges?.["Bicep Curl"]).toEqual([6, 10]);
   });
 });

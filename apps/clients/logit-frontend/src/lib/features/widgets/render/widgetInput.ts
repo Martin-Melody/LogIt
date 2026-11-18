@@ -13,6 +13,7 @@ import { activeSplit } from "$lib/stores/activeSplit.store";
 import { selectedDayOverride } from "$lib/stores/todaysPlan.store";
 import { getTodaySplitDay } from "$lib/domain/todaySplitDay";
 import { getSplitPlan, getSplitTimeline } from "$lib/usecases/Splits/splitRotation";
+import { refreshWeekSessions } from "$lib/features/onboarding/weekSessions";
 import { defaultTimelineIndex, nextWorkoutAfter, splitDayName, splitDayTitle } from "@logit/core/domain/splitSchedule";
 import type { SplitDay, WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 import { get } from "svelte/store";
@@ -99,6 +100,8 @@ function todaysPlanInput(
 
 export async function gatherWidgetInput(needs: WidgetDataNeed[]): Promise<WidgetInput> {
   const p = get(profile);
+  // Today's plan of a plan from onboarding moves missed workouts: it needs this week's.
+  await refreshWeekSessions();
   return gatherWidgetInputFrom(needs, {
     workoutRepo: getWorkoutRepo(),
     exerciseRepo: getExerciseRepo(),

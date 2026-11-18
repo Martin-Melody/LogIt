@@ -13,6 +13,16 @@ title: Splits and schedules
 A split is your plan: training days (Push, Pull, Legs, or Monday, Wednesday, Friday), each with its
 exercises and sets. One split is **active**; Quick Start trains from it.
 
+## Your first plan
+
+The first time you open LogIt it asks three things: what you want from training, how long you've
+been lifting, and how many days a week you can train. From those it makes a plan: full body for 2 or
+3 days, upper/lower for 4, or upper/lower plus push/pull/legs for 5 or 6, each day on a weekday. On
+the plan screen you can say what equipment you have (full gym, home gym, dumbbells only) and how long
+a workout can be, and the exercises change to match. Your goal sets each exercise's rep range (for
+example 5–8 on the big lifts for "stronger and bigger"), and the days become your weekly target.
+It's an ordinary split afterwards: change anything in it, or tap Other plans and then Build my own.
+
 ## On the phone
 
 Open Splits, then New. Add days, then open a day to add exercises. Set it active from the split's page.

@@ -34,6 +34,9 @@ type SeedOpts = {
 };
 
 async function seedNutrition(page: Page, opts: SeedOpts = {}) {
+  // The log opens on the meal for the time of day; these tests add to Breakfast, so it's
+  // always morning for them (they used to fail every evening).
+  await page.clock.setFixedTime(new Date("2026-03-10T08:30:00"));
   await page.addInitScript(
     ({ favorites, customFoods, days }) => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));

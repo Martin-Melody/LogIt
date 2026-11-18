@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { playSound } from "$lib/features/sound/sounds";
   import { onMount } from "svelte";
   import { fly, fade, scale } from "svelte/transition";
   import { backOut } from "svelte/easing";
@@ -122,6 +123,8 @@
     void (async () => {
       try {
         prs = await getSessionPRs(session, getProgressionDeps());
+        // The signature sound, or the PR one when there's a PR (it vibrates too).
+        playSound(prs.length > 0 ? "pr" : "finish");
         onPrs?.(prs);
       } catch {
         prs = [];
@@ -142,12 +145,6 @@
       exerciseTypes = Object.fromEntries(found.filter((ex) => !!ex).map((ex) => [ex!.id, ex!.exerciseType]));
     })();
 
-    void (async () => {
-      try {
-        const { Haptics, NotificationType } = await import("@capacitor/haptics");
-        await Haptics.notification({ type: NotificationType.Success });
-      } catch {}
-    })();
   });
 
   // Only worth showing alongside the raw set once reps > 1 — at 1 rep the estimate

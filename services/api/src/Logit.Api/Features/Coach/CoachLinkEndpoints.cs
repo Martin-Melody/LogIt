@@ -134,7 +134,7 @@ public static class CoachLinkEndpoints
 
     // ── Anyone: open a link, ask to be coached ───────────────────────────────
 
-    private static async Task<IResult> GetLinkByCode(string code, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> GetLinkByCode(string code, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
     {
         var link = await FindLink(db, code);
         if (link is null) return Results.NotFound(new { error = "That link doesn't exist." });
@@ -165,7 +165,7 @@ public static class CoachLinkEndpoints
             paying = existing is { Status: CoachClientStatus.Active, Payment: { Mode: PaymentModes.Stripe } ep }
                 && ep.State != PaymentStates.Ended,
             coach = link.Coach.ToProfileDto(false),
-            state = link.Coach.Tier != UserTier.Studio ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow),
+            state = !CoachingAccess.CanCoach(link.Coach, config) ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow),
             isSelf = link.CoachId == me,
             // "none", "invited" (the coach already invited you), "requested" or "active".
             relationship = RelationshipState(existing),
@@ -183,7 +183,7 @@ public static class CoachLinkEndpoints
     };
 
     private static async Task<IResult> RequestCoaching(
-        string code, [FromBody] CoachingRequestBody req, ClaimsPrincipal caller, AppDbContext db)
+        string code, [FromBody] CoachingRequestBody req, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
     {
         var link = await FindLink(db, code);
         if (link is null) return Results.NotFound(new { error = "That link doesn't exist." });
@@ -228,7 +228,7 @@ public static class CoachLinkEndpoints
         }
 
         var use = (await LinkUse(db, [link.Id]))[link.Id];
-        var state = link.Coach.Tier != UserTier.Studio ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow);
+        var state = !CoachingAccess.CanCoach(link.Coach, config) ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow);
         if (state != "active")
             return Results.Json(new { error = LinkStateMessage(state), code = state }, statusCode: StatusCodes.Status410Gone);
 

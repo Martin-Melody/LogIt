@@ -1240,11 +1240,31 @@ export async function pushAllLocalData(): Promise<void> {
 
 const FULL_UPLOAD_KEY = "logit:sync:fullUploadDue";
 
-/** Sync is part of the plan: Pro or Studio on getlogit.app, every account on a self-hosted server. */
+/**
+ * This phone's training is uploaded: Pro or Studio on getlogit.app, every account on a
+ * self-hosted server, and a Free account on the phone that holds its backup (Free accounts
+ * back up one phone; the server's FreeBackup). False on a second phone of a Free account, and
+ * on the web for Free (the web dashboard is Pro).
+ */
 export function planIncludesSync(): boolean {
   const user = apiClient.getUser();
   if (!user) return false;
-  return apiClient.isSelfHosted() || user.tier === "Pro" || user.tier === "Studio";
+  if (apiClient.isSelfHosted() || user.tier === "Pro" || user.tier === "Studio") return true;
+  return isNativePlatform() && !apiClient.isBackupElsewhere();
+}
+
+/**
+ * Everything on this profile is on its server: the plan syncs, nothing is waiting to be sent,
+ * and the upload after signing in has gone through. Signing out can then take the training off
+ * the phone without anything being lost; otherwise the user is offered a copy first.
+ */
+export function everythingBackedUp(): boolean {
+  return planIncludesSync() && outboxSize() === 0 && fullUploadState() === null;
+}
+
+/** True when no full upload is waiting: the last one asked for has landed. */
+export function fullUploadFinished(): boolean {
+  return fullUploadState() === null;
 }
 
 /** Asks the next sync to send everything on this profile, not just what changed. */

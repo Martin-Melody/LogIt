@@ -65,6 +65,8 @@ export class Device {
   readonly requests: string[] = [];
   /** No signal: every request fails the way fetch() does offline. */
   networkDown = false;
+  /** Requests matching this ("METHOD server /path") get a 503, like a server falling over halfway. */
+  failRequests: RegExp | null = null;
   private inFlight = 0;
   private lastActivity = Date.now();
   private _app: App | null = null;
@@ -150,7 +152,9 @@ export class Device {
       }
       if (device.networkDown) throw new TypeError("Failed to fetch");
       const server = url.startsWith(CLOUD) ? "cloud" : "self-host";
-      device.requests.push(`${(init?.method ?? "GET").toUpperCase()} ${server} ${new URL(url).pathname}`);
+      const request = `${(init?.method ?? "GET").toUpperCase()} ${server} ${new URL(url).pathname}`;
+      device.requests.push(request);
+      if (device.failRequests?.test(request)) return new Response("server fell over", { status: 503 });
       device.inFlight++;
       device.lastActivity = Date.now();
       try {
@@ -195,7 +199,22 @@ export class Device {
 
   // ── What the user does ─────────────────────────────────────────────────────────────────
 
-  /** Onboarding screen (src/routes/onboarding): name step, optional split, finish. */
+  /**
+   * The onboarding questions (design canvas O1, E0, O2, O3) answered, and "I'll start later":
+   * the plan they build is saved and onboarding ends.
+   */
+  async onboardWithPlan(answers: import("@logit/core/domain/starterPlan").StarterAnswers) {
+    const { buildStarterPlan } = await import("@logit/core/domain/starterPlan");
+    const { saveStarterPlan } = await import("$lib/features/onboarding/saveStarterPlan");
+    const plan = buildStarterPlan(answers);
+    const split = await saveStarterPlan(plan);
+    this.app.onboardingStore.onboarding.complete();
+    this.routes.push("/");
+    await this.settle();
+    return { plan, split };
+  }
+
+  /** Onboarding screen before 2026-11-17 (name step, optional split, finish); still how most journeys set up. */
   async finishOnboarding(opts: { name?: string; split?: string } = {}): Promise<void> {
     const { profileStore, onboardingStore } = this.app;
     if (opts.name) profileStore.profile.save({ name: opts.name });
@@ -220,16 +239,26 @@ export class Device {
   }
 
   /** Log in on the sign-in screen (src/routes/auth submit()). */
-  async signIn(user: { username: string; password: string }, server: ServerName = "cloud"): Promise<void> {
+  async signIn(
+    user: { username: string; password: string },
+    server: ServerName = "cloud",
+    offlineTraining?: "add" | "keep-separate",
+  ): Promise<void> {
     this.pickServer(server);
-    await this.app.auth.authStore.login(user.username, user.password);
+    // The sign-in screen asks "Is the training on this phone yours?" first when there is
+    // training without an account (offlineTrainingToAsk); `offlineTraining` is the answer.
+    await this.app.auth.authStore.login(user.username, user.password, offlineTraining ? { offlineTraining } : undefined);
     this.routes.push(this.afterAuthRoute());
     await this.settle();
   }
 
-  /** Settings › Sign out. On a phone this reloads the app on /accounts or /auth. */
-  async signOut(): Promise<void> {
-    await this.app.auth.authStore.logout();
+  /**
+   * Settings › Sign out of @name (design canvas 7): the account's training leaves the phone and
+   * the next account opens (or the welcome screen). `keepHere`: "Keep using it here without the
+   * account" instead. Reloads the app.
+   */
+  async signOut(opts: { keepHere?: boolean } = {}): Promise<void> {
+    await this.app.auth.authStore.signOutOfAccount(opts);
     await this.settle();
     await this.followReload();
   }
@@ -242,18 +271,44 @@ export class Device {
   }
 
   /** Profiles screen (src/routes/accounts switchTo()). */
-  async switchProfile(profileId: string, password = ""): Promise<void> {
+  async switchProfile(profileId: string): Promise<void> {
     const { auth, accounts } = this.app;
-    await auth.authStore.loginOfflineAccount(profileId, password);
+    await auth.authStore.loginOfflineAccount(profileId);
     const account = await accounts.getLocalAccount(profileId);
-    this.routes.push(account ? accounts.postSwitchDestination(account) : "/");
+    this.routes.push(account ? accounts.postSwitchDestination(account, auth.authStore.isAuthenticated) : "/");
     await this.settle();
   }
 
+  /**
+   * Account menu › Add account, then sign in: the account in use stays signed in and the new
+   * one gets its own space (authStore.beginAddingAccount, then the sign-in screen).
+   */
+  async addAccount(user: { username: string; password: string; email?: string }, server: ServerName = "cloud", mode: "signIn" | "register" = "signIn"): Promise<void> {
+    await this.app.auth.authStore.beginAddingAccount();
+    if (mode === "register") await this.register({ username: user.username, email: user.email ?? `${user.username}@journey.test`, password: user.password }, server);
+    else await this.signIn(user, server);
+  }
+
   /** Profiles screen › Add profile (src/routes/accounts addProfile()). */
+  /**
+   * Settings › Move to another server (design canvas 9): `to` is where to ("nowhere" is an
+   * address with no Logit server behind it). Returns what the screen shows afterwards.
+   */
+  async moveServer(
+    to: ServerName | "nowhere",
+    user: { username: string; password: string; email?: string },
+    account: "new" | "existing" = "new",
+  ) {
+    const { moveToServer } = await import("$lib/accounts/moveServer");
+    const url = to === "cloud" ? null : to === "self-host" ? SELF_HOST : "http://127.0.0.1:5299";
+    const result = await moveToServer({ url, account, username: user.username, password: user.password, email: user.email });
+    await this.settle();
+    return result;
+  }
+
   async addProfile(): Promise<void> {
-    await this.app.auth.authStore.createOfflineAccount("", "");
-    this.routes.push("/onboarding");
+    const result = await this.app.auth.authStore.createOfflineAccount("", "");
+    this.routes.push(result === "created" ? "/onboarding" : "/");
     await this.settle();
   }
 
@@ -358,6 +413,11 @@ export class Device {
   }
 
   // ── What the app shows ─────────────────────────────────────────────────────────────────
+
+  /** This install's id, sent as X-Logit-Device (a Free account's backup belongs to one phone). */
+  get deviceId(): string | null {
+    return this.storage.getItem("logit:device-id");
+  }
 
   get signedIn(): boolean {
     return this.app.auth.authStore.isAuthenticated;

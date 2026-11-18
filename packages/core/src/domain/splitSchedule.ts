@@ -1,6 +1,22 @@
 import { createId } from "./ids";
 import { addDays, dayOfWeek } from "./dateIso";
 import { touchSplit, type PlannedBlock, type PlannedGroup, type SplitDay, type WorkoutSplit } from "./WorkoutSplit";
+import { dayIdsDoneOn, planWeek } from "./weekPlan";
+
+/**
+ * Which of a weekday split's workouts fall on a date. With `progress.week`, this week's
+ * missed workouts have moved forward; otherwise (and from next week) each is on its weekday.
+ */
+function daysOnDate(split: WorkoutSplit, scheduled: SplitDay[], progress: SplitProgress, todayIso: string) {
+  const week = progress.week ? planWeek(split, progress.week.sessions, todayIso, progress.week.planStartIso) : null;
+  return (iso: string): SplitDay[] => {
+    const slot = week?.slots.find((s) => s.dateIso === iso);
+    if (!slot) return scheduled.filter((d) => d.weekday === dayOfWeek(iso));
+    if (slot.state === "done") return iso === todayIso ? scheduled.filter((d) => d.id === slot.dayId) : [];
+    const day = slot.dayId ? scheduled.find((d) => d.id === slot.dayId) : undefined;
+    return day ? [day] : [];
+  };
+}
 
 /**
  * Where a split puts you on the calendar: what's done today, what's still to do today, and
@@ -19,6 +35,12 @@ export type SplitProgress = {
   last: { dayId: string; dateIso: string } | null;
   /** Days done today (any order), when known. */
   doneTodayIds?: string[];
+  /**
+   * Weekday schedules that carry a missed workout forward (plans from onboarding, design
+   * canvas O8): the workouts done lately, so this week's days can move (weekPlan.ts).
+   * Unset: each workout stays on its weekday.
+   */
+  week?: { sessions: { startedAtMs: number; source?: { dayId?: string } | null }[]; planStartIso?: string };
 };
 
 export type SplitPlan = {
@@ -63,6 +85,9 @@ export function planSplit(split: WorkoutSplit, progress: SplitProgress, todayIso
 
 function doneTodaySet(split: WorkoutSplit, progress: SplitProgress, todayIso: string): Set<string> {
   const ids = new Set(progress.doneTodayIds ?? []);
+  // A plan from onboarding knows today's workouts from the workouts themselves (one started
+  // straight from onboarding never went through the plan screen that records the rotation).
+  if (progress.week) for (const id of dayIdsDoneOn(progress.week.sessions, todayIso)) ids.add(id);
   if (progress.last?.dateIso === todayIso) ids.add(progress.last.dayId);
   // Only days still in the split.
   return new Set([...ids].filter((id) => split.days.some((d) => d.id === id)));
@@ -126,7 +151,7 @@ function planWeekdays(split: WorkoutSplit, progress: SplitProgress, todayIso: st
   const scheduled = days.filter((d) => d.weekday != null);
   const done = doneTodaySet(split, progress, todayIso);
   const doneToday = days.filter((d) => done.has(d.id));
-  const onDate = (iso: string) => scheduled.filter((d) => d.weekday === dayOfWeek(iso));
+  const onDate = daysOnDate(split, scheduled, progress, todayIso);
 
   const today = onDate(todayIso);
   const laterToday = openToday(today, doneToday, done);
@@ -348,10 +373,11 @@ function weekdayTimeline(split: WorkoutSplit, progress: SplitProgress, todayIso:
   const scheduled = days.filter((d) => d.weekday != null);
   if (scheduled.length === 0) return [];
   const done = doneTodaySet(split, progress, todayIso);
+  const onDate = daysOnDate(split, scheduled, progress, todayIso);
   const out: TimelineEntry[] = [];
   for (let i = 0; i < 7; i++) {
     const iso = addDays(todayIso, i);
-    const onDay = scheduled.filter((d) => d.weekday === dayOfWeek(iso));
+    const onDay = onDate(iso);
     if (i === 0) {
       // Something from another weekday done today shows as done, first, and takes the
       // place of one of today's own.

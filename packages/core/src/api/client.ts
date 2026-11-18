@@ -1,8 +1,36 @@
 import { tokenStorage, type StoredTokens } from "./tokenStorage";
+import { getSessionScope, sessionKey } from "./sessionScope";
 import { log } from "../platform/log";
+import { isNativePlatform } from "../platform/isNative";
+
+const DEVICE_ID_KEY = "logit:device-id";
+
+/**
+ * A random id for this install of the phone app, the same for every account on it. Sent as
+ * X-Logit-Device so a Free account's backup belongs to one phone (the server's FreeBackup).
+ * The web app sends none, so the web dashboard stays a Pro feature.
+ */
+function deviceId(): string | null {
+  if (!isNativePlatform()) return null;
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      const bytes = new Uint8Array(12);
+      crypto.getRandomValues(bytes);
+      id = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
 
 const USER_KEY = "logit:auth:user";
 const SELF_HOSTED_KEY = "logit:auth:selfHosted";
+// serverConfig.ts's MODE_KEY (it imports this file, so the name is repeated here).
+const SERVER_MODE_KEY = "logit:server:mode";
+// Each of these is stored per account on the phone: see sessionScope.ts.
 
 export interface AuthUser {
   id: string;
@@ -56,7 +84,7 @@ const BASE_URL_KEY = "logit:api:baseUrl";
 const DEFAULT_BASE_URL: string = import.meta.env.VITE_API_URL || "https://api.getlogit.app";
 
 function getBaseUrl(): string {
-  return localStorage.getItem(BASE_URL_KEY) ?? DEFAULT_BASE_URL;
+  return localStorage.getItem(sessionKey(BASE_URL_KEY)) ?? DEFAULT_BASE_URL;
 }
 
 /** The server this app talks to: the hosted one, or the self-hosted one picked at sign-in. */
@@ -84,18 +112,84 @@ class ApiClient {
   private cachedUser: AuthUser | null = null;
   private cachedIsSelfHosted = false;
   private refreshPromise: Promise<boolean> | null = null;
+  /** A Free account whose backup is held by another phone (the server said so); signing in here moves it back. */
+  private backupElsewhere = false;
 
   async init(): Promise<void> {
     this.tokens = await tokenStorage.get();
     if (this.tokens) {
       try {
-        const raw = localStorage.getItem(USER_KEY);
+        const raw = localStorage.getItem(sessionKey(USER_KEY));
         this.cachedUser = raw ? (JSON.parse(raw) as AuthUser) : null;
       } catch {
         this.cachedUser = null;
       }
-      this.cachedIsSelfHosted = localStorage.getItem(SELF_HOSTED_KEY) === "true";
+      this.cachedIsSelfHosted = localStorage.getItem(sessionKey(SELF_HOSTED_KEY)) === "true";
     }
+  }
+
+  /**
+   * Forget the session in memory and load the current scope's (another account's, after a
+   * switch). Nothing is revoked or deleted: the account left behind stays signed in.
+   */
+  async reloadSession(): Promise<void> {
+    this.tokens = null;
+    this.cachedUser = null;
+    this.cachedIsSelfHosted = false;
+    this.backupElsewhere = false;
+    await this.init();
+  }
+
+  /**
+   * A sign-in made in `fromScope` belongs to the account now in scope (the phone signs in first
+   * and only then knows which account on it the session is for): store it there, server address
+   * and mode included, and remove it from where it was made.
+   */
+  async moveSessionFrom(fromScope: string | null): Promise<void> {
+    if (fromScope === getSessionScope()) return;
+    for (const key of [BASE_URL_KEY, SERVER_MODE_KEY]) {
+      const value = localStorage.getItem(sessionKey(key, fromScope));
+      if (value !== null) localStorage.setItem(sessionKey(key), value);
+      else localStorage.removeItem(sessionKey(key));
+      localStorage.removeItem(sessionKey(key, fromScope));
+    }
+    if (this.tokens) await tokenStorage.set(this.tokens);
+    if (this.cachedUser) this.saveUser(this.cachedUser, this.cachedIsSelfHosted);
+    await tokenStorage.clear(fromScope);
+    localStorage.removeItem(sessionKey(USER_KEY, fromScope));
+    localStorage.removeItem(sessionKey(SELF_HOSTED_KEY, fromScope));
+  }
+
+  /**
+   * Who an account on the phone is signed in as, read from its stored sign-in without loading
+   * it (the account switcher lists every account this way). `server` is a host name to show:
+   * getlogit.app for the hosted server.
+   */
+  async sessionSummary(scope: string): Promise<{ signedIn: boolean; user: AuthUser | null; selfHosted: boolean; server: string }> {
+    const tokens = await tokenStorage.get(scope);
+    let user: AuthUser | null = null;
+    try {
+      const raw = localStorage.getItem(sessionKey(USER_KEY, scope));
+      user = raw ? (JSON.parse(raw) as AuthUser) : null;
+    } catch {
+      user = null;
+    }
+    const baseUrl = localStorage.getItem(sessionKey(BASE_URL_KEY, scope));
+    let server = "getlogit.app";
+    if (baseUrl) {
+      try { server = new URL(baseUrl).host; } catch { server = baseUrl; }
+    }
+    return {
+      signedIn: tokens !== null,
+      user,
+      selfHosted: localStorage.getItem(sessionKey(SELF_HOSTED_KEY, scope)) === "true",
+      server,
+    };
+  }
+
+  /** The server refused this phone's sync because another phone holds this Free account's backup. */
+  isBackupElsewhere(): boolean {
+    return this.backupElsewhere;
   }
 
   isAuthenticated(): boolean {
@@ -115,15 +209,15 @@ class ApiClient {
   private saveUser(user: AuthUser, isSelfHosted: boolean): void {
     this.cachedUser = user;
     this.cachedIsSelfHosted = isSelfHosted;
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    localStorage.setItem(SELF_HOSTED_KEY, String(isSelfHosted));
+    localStorage.setItem(sessionKey(USER_KEY), JSON.stringify(user));
+    localStorage.setItem(sessionKey(SELF_HOSTED_KEY), String(isSelfHosted));
   }
 
   private clearUser(): void {
     this.cachedUser = null;
     this.cachedIsSelfHosted = false;
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(SELF_HOSTED_KEY);
+    localStorage.removeItem(sessionKey(USER_KEY));
+    localStorage.removeItem(sessionKey(SELF_HOSTED_KEY));
   }
 
   private async refreshTokens(): Promise<boolean> {
@@ -180,6 +274,7 @@ class ApiClient {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "X-Request-Id": requestId,
+        ...(deviceId() ? { "X-Logit-Device": deviceId()! } : {}),
         ...(init.headers as Record<string, string>),
       };
       if (token && !ownToken) headers["Authorization"] = `Bearer ${token}`;
@@ -224,6 +319,7 @@ class ApiClient {
       const details = { requestId, ms, error: message };
       if (res.status >= 500) log.error("api", `${method} ${route} ${res.status}`, details);
       else log.warn("api", `${method} ${route} ${res.status}`, details);
+      if (code === "backup_other_device") this.backupElsewhere = true;
       throw new ApiError(res.status, message, code);
     }
 
@@ -250,6 +346,7 @@ class ApiClient {
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
+    this.backupElsewhere = false; // signing in on this phone moves a Free backup here
     return data.user;
   }
 
@@ -284,6 +381,7 @@ class ApiClient {
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
+    this.backupElsewhere = false; // signing in on this phone moves a Free backup here
     return data.user;
   }
 
@@ -343,7 +441,7 @@ class ApiClient {
   // Self-hosting
 
   setBaseUrl(url: string): void {
-    localStorage.setItem(BASE_URL_KEY, url.replace(/\/$/, ""));
+    localStorage.setItem(sessionKey(BASE_URL_KEY), url.replace(/\/$/, ""));
   }
 
   getBaseUrl(): string {
@@ -351,7 +449,7 @@ class ApiClient {
   }
 
   resetBaseUrl(): void {
-    localStorage.removeItem(BASE_URL_KEY);
+    localStorage.removeItem(sessionKey(BASE_URL_KEY));
   }
 
   async updateDisplayName(displayName: string): Promise<void> {

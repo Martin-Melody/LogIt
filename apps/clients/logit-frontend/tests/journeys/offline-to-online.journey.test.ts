@@ -28,15 +28,34 @@ describe("offline → account on getlogit.app", () => {
     expect((await serverData("cloud", user)).me.onboardingCompleted).toBe(true);
   });
 
-  it("a Free account doesn't upload anything (sync is a paid feature)", async () => {
+  it("a Free account backs up this phone (Free accounts back up one phone)", async () => {
     const phone = await offlineUser();
     const user = newUser("freeonly");
 
     await phone.register(user);
 
-    const server = await serverData("cloud", user);
-    expect(server.splitNames).toBeNull();
-    expect(server.workoutNames).toBeNull();
+    const server = await serverData("cloud", user, phone);
+    expect(server.splitNames).toEqual(["Push Pull Legs"]);
+    expect(server.workoutNames).toEqual(["Push day"]);
+  });
+
+  it("a Free account's backup belongs to one phone: a second phone is refused until it signs in again", async () => {
+    const user = newUser("onephone");
+    const first = await new Device("first phone").launch();
+    await first.register(user);
+    await first.finishOnboarding({ name: "Sam", split: "First split" });
+
+    const second = await new Device("second phone").launch();
+    await second.signIn(user); // signing in moves the backup to this phone
+    await second.saveSplit("Second split");
+    await first.launch();
+    await first.saveSplit("Made on the first phone");
+    await first.sync();
+
+    expect(first.app.client.apiClient.isBackupElsewhere()).toBe(true);
+    const fromSecond = await serverData("cloud", user, second);
+    expect(fromSecond.splitNames).toEqual(["First split", "Second split"]);
+    expect((await serverData("cloud", user, first)).splitNames).toBeNull(); // refused
   });
 
   for (const tier of ["Pro", "Studio"] as Tier[]) {
@@ -126,5 +145,70 @@ describe("offline → own server (self-host)", () => {
     const after = phone.requests.slice(before);
     expect(after.length).toBeGreaterThan(0);
     expect(after.filter((r) => r.includes(" cloud "))).toEqual([]);
+  });
+});
+
+describe("signing in on a phone that has training without an account", () => {
+  it("the sign-in screen asks whose it is, with what's there", async () => {
+    const phone = await offlineUser();
+
+    expect(await phone.app.auth.authStore.offlineTrainingToAsk()).toEqual({ workouts: 1, splits: 1, name: "Sam" });
+  });
+
+  it("nobody is asked when the phone has no training yet", async () => {
+    const phone = await new Device().launch();
+
+    expect(await phone.app.auth.authStore.offlineTrainingToAsk()).toBeNull();
+  });
+
+  it("\"Yes, add it\" puts the training into the account", async () => {
+    const user = await createAccount("cloud", newUser("mine"), "Pro");
+    const phone = await offlineUser();
+
+    await phone.signIn(user, "cloud", "add");
+
+    expect(await phone.profiles()).toHaveLength(1);
+    expect(await phone.splitNames()).toEqual(["Push Pull Legs"]);
+    expect((await serverData("cloud", user)).splitNames).toEqual(["Push Pull Legs"]);
+  });
+
+  it("\"No, it's someone else's\" leaves it where it is and gives the account its own space", async () => {
+    const user = await createAccount("cloud", newUser("visitor"), "Pro");
+    const phone = await offlineUser();
+    const offline = (await phone.activeProfile())!;
+
+    await phone.signIn(user, "cloud", "keep-separate");
+
+    expect(phone.signedIn).toBe(true);
+    expect(await phone.profiles()).toHaveLength(2);
+    expect(await phone.splitNames()).toEqual([]);
+    expect((await serverData("cloud", user)).splitNames).toEqual([]);
+    await phone.switchProfile(offline.id);
+    expect(phone.profileName).toBe("Sam");
+    expect(await phone.splitNames()).toEqual(["Push Pull Legs"]);
+  });
+
+  it("a wrong password after \"someone else's\" goes back to the training on the phone", async () => {
+    const user = await createAccount("cloud", newUser("typo"), "Pro");
+    const phone = await offlineUser();
+    const offline = (await phone.activeProfile())!;
+
+    await expect(phone.signIn({ ...user, password: "wrong-password" }, "cloud", "keep-separate")).rejects.toThrow();
+
+    expect((await phone.activeProfile())?.id).toBe(offline.id);
+    expect(phone.signedIn).toBe(false);
+    expect(await phone.splitNames()).toEqual(["Push Pull Legs"]);
+  });
+
+  it("\"someone else's\" on a self-hosted server signs in there, not to getlogit.app", async () => {
+    const user = await createAccount("self-host", newUser("ownvisitor"));
+    const phone = await offlineUser();
+    const before = phone.requests.length;
+
+    await phone.signIn(user, "self-host", "keep-separate");
+    await phone.sync();
+
+    expect(phone.signedIn).toBe(true);
+    expect(phone.requests.slice(before).filter((r) => r.includes(" cloud "))).toEqual([]);
   });
 });

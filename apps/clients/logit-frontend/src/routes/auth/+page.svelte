@@ -4,7 +4,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { ArrowLeft, Cloud, Server, Eye, EyeOff, Loader2, CheckCircle, XCircle, Ticket } from "lucide-svelte";
+  import { ArrowLeft, ChevronRight, Eye, EyeOff, Loader2, CheckCircle, XCircle, Ticket } from "lucide-svelte";
   import { get } from "svelte/store";
   import { authStore } from "$lib/api/authStore.svelte";
   import { profile } from "$lib/stores/profile.store";
@@ -73,6 +73,14 @@
   let selfHostUrl = $state(getSelfHostUrl() || "https://");
   let urlTestResult = $state<ConnectionResult>("idle");
 
+  // The address is checked as it's typed (design canvas 3), so there's no separate Test button.
+  let checkTimer: ReturnType<typeof setTimeout> | null = null;
+  function checkAsTyped() {
+    urlTestResult = "idle";
+    if (checkTimer) clearTimeout(checkTimer);
+    checkTimer = setTimeout(() => void testServerUrl(), 600);
+  }
+
   async function testServerUrl() {
     const url = selfHostUrl.trim().replace(/\/$/, "");
     if (!url || url === "https:/") return;
@@ -130,7 +138,8 @@
 
   function resolveRedirect(): string {
     const { completed } = get(onboarding);
-    return completed ? redirectTo : "/onboarding";
+    // Onboarding's own screens (the coach ones) ask to come back after signing in.
+    return completed || redirectTo.startsWith("/onboarding/") ? redirectTo : "/onboarding";
   }
 
   function switchMode(m: Mode) {
@@ -141,6 +150,24 @@
     form.confirmPassword = "";
     showPassword = false;
     showConfirmPassword = false;
+  }
+
+  // "Is the training on this phone yours?" Asked before signing in from the space without an
+  // account when it holds training (authStore.offlineTrainingToAsk). Neither answer is the
+  // default: the safe one depends on who's holding the phone.
+  type OfflineTraining = { workouts: number; splits: number; name: string };
+  let whoseTraining = $state<OfflineTraining | null>(null);
+  let answerWhose: ((choice: "add" | "keep-separate" | null) => void) | null = null;
+
+  function askWhoseTraining(found: OfflineTraining): Promise<"add" | "keep-separate" | null> {
+    whoseTraining = found;
+    return new Promise((resolve) => {
+      answerWhose = (choice) => {
+        whoseTraining = null;
+        answerWhose = null;
+        resolve(choice);
+      };
+    });
   }
 
   async function submit() {
@@ -157,7 +184,14 @@
 
     try {
       if (mode === "login") {
-        await authStore.login(form.username.trim(), form.password);
+        const found = await authStore.offlineTrainingToAsk();
+        let offlineTraining: "add" | "keep-separate" | undefined;
+        if (found) {
+          const choice = await askWhoseTraining(found);
+          if (!choice) return;
+          offlineTraining = choice;
+        }
+        await authStore.login(form.username.trim(), form.password, { offlineTraining });
       } else {
         const displayName = get(profile).name.trim() || form.username.trim();
         await authStore.register(
@@ -214,16 +248,16 @@
       </button>
       <button type="button" class="w-full py-2 text-sm text-muted-foreground"
         onclick={() => (showForgotPassword = false)}>
-        Back to log in
+        Back to sign in
       </button>
     </div>
   {:else}
 
-    <h1 class="text-xl font-bold mb-1">{mode === "login" ? "Welcome back" : "Create your account"}</h1>
-    <p class="text-xs text-muted-foreground mb-5">
+    <h1 class="text-xl font-bold mb-1">{mode === "login" ? "Sign in" : "Create account"}</h1>
+    <p class="text-sm text-muted-foreground mb-5">
       {mode === "login"
-        ? "Log in to sync across devices and use the social feed."
-        : "Sync your training across devices and follow other lifters."}
+        ? "Your workouts, splits and settings come back with you."
+        : "Back up your training, train with friends, get coached."}
     </p>
 
     <!-- Log in / Sign up toggle -->
@@ -231,12 +265,12 @@
       <button type="button"
         class={segment(mode === 'login')} aria-pressed={mode === 'login'}
         onclick={() => switchMode("login")}>
-        Log in
+        Sign in
       </button>
       <button type="button"
         class={segment(mode === 'register')} aria-pressed={mode === 'register'}
         onclick={() => switchMode("register")}>
-        Sign up
+        Create account
       </button>
     </div>
 
@@ -359,68 +393,98 @@
         disabled={submitDisabled}>
         {#if authLoading}
           <Loader2 class="h-4 w-4 animate-spin" />
-          {mode === "login" ? "Logging in…" : "Creating account…"}
+          {mode === "login" ? "Signing in…" : "Creating account…"}
         {:else}
-          {mode === "login" ? "Log in" : "Create account"}
+          {mode === "login" ? "Sign in" : "Create account"}
         {/if}
       </button>
     </form>
 
-    <!-- Server selector -->
-    <div class="mt-6 pt-4 border-t border-border">
+    <!-- Server (design canvas 2 and 3): getlogit.app unless changed under Advanced -->
+    <div class="mt-6">
       {#if !showServerSetup}
-        <div class="flex items-center gap-2 text-xs text-muted-foreground">
-          {#if serverMode === "selfhosted"}
-            <Server class="h-3.5 w-3.5 shrink-0" />
-            <span class="truncate">{getSelfHostUrl() || "Self-hosted"}</span>
-            {#if registration?.mode === "invite"}
-              <span class="shrink-0 rounded-full bg-highlight/12 px-2 py-0.5 text-[11px] font-semibold text-highlight">Invite-only</span>
-            {/if}
-          {:else}
-            <Cloud class="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>getlogit.app</span>
-          {/if}
-          <button type="button" class="ml-auto underline hover:text-foreground shrink-0"
-            onclick={() => { showServerSetup = true; urlTestResult = "idle"; }}>
-            {serverMode === "selfhosted" ? "Change server" : "Connect to a different server"}
-          </button>
-        </div>
+        <button type="button" class="w-full min-h-11 flex items-center justify-between gap-3 rounded-lg border border-border px-3.5 py-2.5 text-left"
+          onclick={() => { showServerSetup = true; urlTestResult = "idle"; }}>
+          <span class="flex min-w-0 flex-col">
+            <span class="text-xs text-muted-foreground">Server</span>
+            <span class="flex items-center gap-2 truncate text-sm font-medium">
+              {serverMode === "selfhosted" ? getSelfHostUrl().replace(/^https?:\/\//, "") || "Your own server" : "getlogit.app"}
+              {#if serverMode === "selfhosted" && registration?.mode === "invite"}
+                <span class="shrink-0 rounded-full bg-highlight/12 px-2 py-0.5 text-[11px] font-semibold text-highlight">Invite-only</span>
+              {/if}
+            </span>
+          </span>
+          <span class="flex shrink-0 items-center gap-1 text-[13px] text-muted-foreground">Advanced <ChevronRight class="h-3.5 w-3.5" /></span>
+        </button>
       {:else}
-        <div class="rounded-md border border-border p-4 flex flex-col gap-3">
-          <p class="text-xs font-medium">Connect to a self-hosted server</p>
-          <input type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
-            class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            oninput={() => (urlTestResult = "idle")}
-            bind:value={selfHostUrl} />
-          {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
-            <p class="text-xs text-warning">HTTP is unencrypted — use HTTPS if possible.</p>
-          {/if}
-          <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex flex-col gap-3">
+          <div>
+            <p class="text-base font-bold">Which server?</p>
+            <p class="text-sm text-muted-foreground">Most people use getlogit.app. If you run Logit on your own server, enter its address.</p>
+          </div>
+          <button type="button" class="flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left {serverMode === 'cloud' ? 'border-2 border-primary' : 'border-border'}"
+            aria-pressed={serverMode === "cloud"} onclick={useCloud}>
+            <span class="h-5 w-5 shrink-0 rounded-full {serverMode === 'cloud' ? 'border-[6px] border-primary' : 'border-2 border-muted-foreground/50'}"></span>
+            <span class="flex flex-col"><span class="text-[15px] font-medium">getlogit.app</span><span class="text-xs text-muted-foreground">Free, with Pro and Studio plans</span></span>
+          </button>
+          <div class="flex flex-col gap-3 rounded-lg border px-3.5 py-3 {serverMode === 'selfhosted' ? 'border-2 border-primary' : 'border-border'}">
+            <span class="flex items-center gap-3">
+              <span class="h-5 w-5 shrink-0 rounded-full {serverMode === 'selfhosted' ? 'border-[6px] border-primary' : 'border-2 border-muted-foreground/50'}"></span>
+              <span class="flex flex-col"><span class="text-[15px] font-medium">My own server</span><span class="text-xs text-muted-foreground">Everything included, on your hardware</span></span>
+            </span>
+            <label class="text-sm font-medium" for="server-address">Server address</label>
+            <input id="server-address" type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
+              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              oninput={checkAsTyped}
+              bind:value={selfHostUrl} />
+            {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
+              <p class="text-xs text-warning">HTTP is unencrypted. Use HTTPS if you can.</p>
+            {/if}
+            {#if urlTestResult === "testing"}
+              <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 class="h-3.5 w-3.5 animate-spin" /> Checking…</p>
+            {:else if urlTestResult === "ok"}
+              <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Found a Logit server</p>
+            {:else if urlTestResult === "error"}
+              <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach a Logit server there</p>
+            {/if}
             <button type="button"
-              class="px-3 py-1.5 rounded-md border border-border text-xs disabled:opacity-50 hover:border-muted-foreground/50 transition-colors"
-              disabled={!selfHostUrl.trim() || selfHostUrl.trim().replace(/\/$/, "") === "https:/" || urlTestResult === "testing"}
-              onclick={() => void testServerUrl()}>
-              {urlTestResult === "testing" ? "Testing…" : "Test connection"}
-            </button>
-            <button type="button"
-              class="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs disabled:opacity-50"
+              class="h-11 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
               disabled={!selfHostUrl.trim() || selfHostUrl.trim().replace(/\/$/, "") === "https:/"}
               onclick={saveServerUrl}>
-              Save
+              Use this server
             </button>
-            {#if serverMode === "selfhosted"}
-              <button type="button" class="text-xs text-muted-foreground" onclick={useCloud}>Use getlogit.app instead</button>
-            {:else}
-              <button type="button" class="text-xs text-muted-foreground" onclick={() => (showServerSetup = false)}>Cancel</button>
-            {/if}
           </div>
-          {#if urlTestResult === "ok"}
-            <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Reachable</p>
-          {:else if urlTestResult === "error"}
-            <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach server</p>
-          {/if}
+          <button type="button" class="h-11 text-sm text-muted-foreground" onclick={() => (showServerSetup = false)}>Back</button>
         </div>
       {/if}
     </div>
   {/if}
 </div>
+
+{#if whoseTraining}
+  <div class="fixed inset-0 z-50 flex flex-col justify-end bg-black/50" role="presentation">
+    <div class="rounded-t-2xl bg-background px-6 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby="whose-title">
+      <div class="h-1 w-10 rounded-full bg-muted-foreground/30 self-center"></div>
+      <div>
+        <h2 id="whose-title" class="text-lg font-bold">Is the training on this phone yours, @{form.username.trim()}?</h2>
+        <p class="mt-1 text-sm text-muted-foreground">This phone has training that isn't in any account yet.</p>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-lg bg-muted p-2.5"><p class="text-lg font-bold">{whoseTraining.workouts}</p><p class="text-xs text-muted-foreground">workout{whoseTraining.workouts === 1 ? "" : "s"}</p></div>
+        <div class="rounded-lg bg-muted p-2.5"><p class="text-lg font-bold">{whoseTraining.splits}</p><p class="text-xs text-muted-foreground">split{whoseTraining.splits === 1 ? "" : "s"}</p></div>
+        <div class="rounded-lg bg-muted p-2.5"><p class="text-lg font-bold truncate">{whoseTraining.name || "No name"}</p><p class="text-xs text-muted-foreground">name on it</p></div>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <button type="button" class="flex flex-col items-start gap-0.5 rounded-lg border border-border px-3.5 py-3 text-left" onclick={() => answerWhose?.("keep-separate")}>
+          <span class="text-[15px] font-medium">No, it's someone else's</span>
+          <span class="text-sm text-muted-foreground">It stays as it is. You start with your own</span>
+        </button>
+        <button type="button" class="flex flex-col items-start gap-0.5 rounded-lg border border-border px-3.5 py-3 text-left" onclick={() => answerWhose?.("add")}>
+          <span class="text-[15px] font-medium">Yes, add it to @{form.username.trim()}</span>
+          <span class="text-sm text-muted-foreground">It joins your account's history</span>
+        </button>
+        <button type="button" class="h-11 text-sm font-medium text-muted-foreground" onclick={() => answerWhose?.(null)}>Cancel</button>
+      </div>
+    </div>
+  </div>
+{/if}
