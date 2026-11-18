@@ -1003,10 +1003,10 @@ test.describe("circuit countdown", () => {
     await overlay.getByRole("button", { name: "End" }).click();
     await expect(overlay).toHaveCount(0);
     await expect(bar).toHaveCount(0);
-    // The add button is back above the finish bar, not stuck at the bottom.
+    // The add button is back above the bottom nav, not stuck at the bottom.
     const fab = await page.getByRole("button", { name: "Add block" }).boundingBox();
-    const finish = await page.getByRole("button", { name: "Finish workout" }).boundingBox();
-    expect(fab!.y + fab!.height).toBeLessThan(finish!.y);
+    const nav = await page.getByRole("navigation", { name: "Main navigation" }).boundingBox();
+    expect(fab!.y + fab!.height).toBeLessThan(nav!.y);
     const sets = await draftSets(page);
     expect(sets["ham-1"]?.completed).toBeFalsy();
     await expect(page.getByRole("button", { name: "Start superset" })).toBeVisible();
@@ -1394,7 +1394,8 @@ test.describe("discard session", () => {
     });
     await goToSession(page);
 
-    await page.getByRole("button", { name: "Discard workout" }).click();
+    await page.getByRole("button", { name: "Workout options" }).click();
+    await page.getByRole("menuitem", { name: "Discard workout" }).click();
 
     // Confirm dialog — the draft is untouched until the user confirms
     await expect(page.getByText("Discard this workout?")).toBeVisible();
@@ -1414,7 +1415,8 @@ test.describe("discard session", () => {
     });
     await goToSession(page);
 
-    await page.getByRole("button", { name: "Discard workout" }).click();
+    await page.getByRole("button", { name: "Workout options" }).click();
+    await page.getByRole("menuitem", { name: "Discard workout" }).click();
     await page.getByRole("button", { name: "Discard", exact: true }).click();
 
     await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });
