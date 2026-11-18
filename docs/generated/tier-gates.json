@@ -470,6 +470,20 @@
   },
   {
     "method": "GET",
+    "route": "/sync/places",
+    "plan": "Pro",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/sync/places",
+    "plan": "Pro",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "GET",
     "route": "/sync/plugins",
     "plan": "Pro",
     "orActivelyCoached": false,

@@ -1303,6 +1303,17 @@
       <button
         type="button"
         class="flex min-h-11 items-center justify-between border-t border-border pt-1 -mb-1 text-left text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onclick={() => goto("/settings/places")}
+      >
+        <span>
+          <span class="block">Your places</span>
+          <span class="block text-xs">Your gym, home, wherever you train: the machines, plates and dumbbells there.</span>
+        </span>
+        <ChevronRight class="h-4 w-4 shrink-0" />
+      </button>
+      <button
+        type="button"
+        class="flex min-h-11 items-center justify-between border-t border-border pt-1 -mb-1 text-left text-sm text-muted-foreground hover:text-foreground transition-colors"
         onclick={() => goto("/settings/music")}
       >
         <span>

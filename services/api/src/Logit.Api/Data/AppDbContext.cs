@@ -38,6 +38,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<SyncedProgressionRecipe> SyncedProgressionRecipes => Set<SyncedProgressionRecipe>();
     public DbSet<SyncedWeightEntry> SyncedWeightEntries => Set<SyncedWeightEntry>();
     public DbSet<SyncedHabit> SyncedHabits => Set<SyncedHabit>();
+    public DbSet<SyncedPlace> SyncedPlaces => Set<SyncedPlace>();
     public DbSet<SyncedHabitEntry> SyncedHabitEntries => Set<SyncedHabitEntry>();
     public DbSet<CoachHabit> CoachHabits => Set<CoachHabit>();
     public DbSet<DiagnosticReport> DiagnosticReports => Set<DiagnosticReport>();
@@ -535,6 +536,15 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 
         // Personal habits + their check-offs — same shape (see Data/Entities/Habits.cs).
         model.Entity<SyncedHabit>(e =>
+        {
+            e.HasIndex(s => new { s.UserId, s.SyncedAt });
+            e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Places you train (My gym) — same shape (see Data/Entities/Places.cs).
+        model.Entity<SyncedPlace>(e =>
         {
             e.HasIndex(s => new { s.UserId, s.SyncedAt });
             e.HasIndex(s => new { s.UserId, s.ClientId }).IsUnique();

@@ -76,6 +76,9 @@ public static class SyncEndpoints
         group.MapGet("/habits", PullHabits).RequireTier(UserTier.Pro);
         group.MapPost("/habit-entries", PushHabitEntries).RequireTier(UserTier.Pro);
         group.MapGet("/habit-entries", PullHabitEntries).RequireTier(UserTier.Pro);
+        // Places you train (My gym): synced like habits; Free backs up one phone (FreeBackup).
+        group.MapPost("/places", PushPlaces).RequireTier(UserTier.Pro);
+        group.MapGet("/places", PullPlaces).RequireTier(UserTier.Pro);
     }
 
     // ── Sessions ─────────────────────────────────────────────────────────────
@@ -731,6 +734,16 @@ public static class SyncEndpoints
         return Results.Ok(new { entries = await PullSyncRows(userId, since, db.SyncedHabitEntries) });
     }
 
+    // ── Places (My gym) ─────────────────────────────────────────────────────
+
+    private static Task<IResult> PushPlaces(
+        [FromBody] PushPlacesRequest req, ClaimsPrincipal caller, AppDbContext db)
+        => PushSyncRows(caller.GetUserId(), req.Places, db.SyncedPlaces, db);
+
+    private static async Task<IResult> PullPlaces(
+        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
+        => Results.Ok(new { places = await PullSyncRows(caller.GetUserId(), since, db.SyncedPlaces) });
+
     // ── Installed plugins ────────────────────────────────────────────────────
     // One row per installed plugin (keyed by manifest id), so installing, switching off or
     // removing a plugin on one device reaches the others. Each device still downloads the
@@ -857,6 +870,7 @@ public record PushExerciseSettingsRequest(List<SyncRowDto> Settings);
 public record PushProgressionRecipesRequest(List<SyncRowDto> Recipes);
 public record PushWeightEntriesRequest(List<SyncRowDto> Entries);
 public record PushHabitsRequest(List<SyncRowDto> Habits);
+public record PushPlacesRequest(List<SyncRowDto> Places);
 public record PushPluginInstallsRequest(List<SyncRowDto> Plugins);
 public record PushInsightChartsRequest(List<SyncRowDto> Charts);
 public record PushHabitEntriesRequest(List<SyncRowDto> Entries);
