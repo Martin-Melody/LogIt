@@ -513,7 +513,7 @@ export const PHONE_CHAPTERS: Chapter[] = [
       ph("card", "/session/current", "session-exercise-header", "Exercise card", "Tap the name for details and history. Use + to add a set, and ⋯ to swap, superset or remove the exercise. Swipe a set left to edit or delete it."),
       ph("complete", "/session/current", "session-set-complete", "Complete a set", "Tap this circle after finishing a set. It marks the set done and starts your rest timer."),
       ph("add", "/session/current", "session-add-exercise", "Add an exercise", "Tap + to search your library or add a brand-new exercise."),
-      ph("finish", "/session/current", "session-finish", "Finish", "Tap here when you're done. Your session is saved and your next targets are worked out."),
+      ph("finish", "/session/current", "session-finish", "Finish", "Tap Finish when you're done. Your session is saved and your next targets are worked out. To throw a workout away, use the ⋯ menu next to it."),
     ],
   },
   {
