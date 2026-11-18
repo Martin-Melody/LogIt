@@ -351,7 +351,7 @@
         </div>
         <div class="pb-1.5">
           {#each sets as s, i (s.id)}
-            <SwipeRevealRow disabled={saving} actionsWidth={48} onEdit={() => (openSetId = openSetId === s.id ? null : s.id)}>
+            <SwipeRevealRow disabled={saving} actionsWidth={48} onEdit={() => (openSetId = openSetId === s.id ? null : s.id)} onSwipeRight={() => { if (openSetId === s.id) openSetId = null; }}>
             <SetRow
               setNumber={workingNumber(sets, s.id)}
               setType={s.setType}
@@ -380,6 +380,7 @@
                 showRest={false}
                 disabled={saving}
                 onChange={(patch) => apply((x) => updateSet(x, b.id, s.id, patch))}
+                onDone={() => (openSetId = null)}
               /></div>
             {/if}
           {:else}

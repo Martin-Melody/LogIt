@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+  import { ChevronDown, MapPin, Plus, Rows3 } from "lucide-svelte";
   import { toast } from "$lib/components/ui/sonner/index";
 
   import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
@@ -818,22 +819,23 @@
   {#snippet chip()}
     {#if place && chosen}
       <button type="button" onclick={() => (machinePickerOpen = true)} in:popIn
-        class="flex min-h-9 max-w-full items-center gap-1.5 rounded-full bg-muted px-3 text-left text-[13px]"
+        class="flex h-9 max-w-full items-center gap-2 rounded-full bg-muted pl-2.5 pr-2 text-left text-[13px] transition-colors active:bg-muted/70"
         aria-label="Machine: {chosen.name} at {place.name}. Change">
-        <span class="truncate"><strong class="font-semibold">{chosen.name}</strong> · {place.name}{machineDetail(chosen) ? ` · ${machineDetail(chosen)}` : ""}</span>
-        {#if chosen.status === "out"}<span class="shrink-0 rounded bg-warning/15 px-1 text-[11px] text-warning">Out of order</span>{/if}
-        <span aria-hidden="true" class="shrink-0 text-muted-foreground">▾</span>
+        <Rows3 class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span class="min-w-0 truncate"><span class="font-semibold">{chosen.name}</span><span class="text-muted-foreground">{` at ${place.name}`}</span></span>
+        {#if chosen.status === "out"}<span class="shrink-0 rounded-md bg-warning/15 px-1.5 py-0.5 text-[11px] font-medium text-warning">Out of order</span>{/if}
+        <ChevronDown class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </button>
     {:else if exercise && machineKinds.includes(exercise.equipment ?? "")}
       {#if !place && placesStore.active.length > 0}
-        <button type="button" onclick={() => (whereOpen = true)}
-          class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
-          Which gym are you at? Pick one for real weights
+        <button type="button" onclick={() => (whereOpen = true)} in:popIn
+          class="flex h-9 max-w-full items-center gap-2 rounded-full border border-dashed border-border pl-2.5 pr-3 text-[13px] text-muted-foreground">
+          <MapPin class="h-4 w-4 shrink-0" aria-hidden="true" /><span class="truncate">Which gym are you at?</span>
         </button>
       {:else}
-        <button type="button" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: null }; }}
-          class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
-          {place ? `Which machine at ${place.name}? Add it` : "Which machine? Add it for real weights"}
+        <button type="button" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: null }; }} in:popIn
+          class="flex h-9 max-w-full items-center gap-2 rounded-full border border-dashed border-border pl-2.5 pr-3 text-[13px] text-muted-foreground">
+          <Plus class="h-4 w-4 shrink-0" aria-hidden="true" /><span class="truncate">{place ? `Add the machine you use at ${place.name}` : "Add the machine you use"}</span>
         </button>
       {/if}
     {/if}
@@ -863,6 +865,7 @@
         disabled={saving}
         actionsWidth={80}
         onDelete={() => handleDeleteSet(roundSet.id)}
+        onSwipeRight={() => { if (optionsSetId === roundSet.id) optionsSetId = null; }}
         onEdit={() => openEditSet(roundSet.id, roundNum || null)}
       >
         <SetRow
@@ -928,6 +931,7 @@
             disabled={saving}
             actionsWidth={80}
             onDelete={() => handleDeleteSet(lead.id)}
+        onSwipeRight={() => { if (optionsSetId === lead.id) optionsSetId = null; }}
             onEdit={() => openEditSet(lead.id, group.leadNum)}
           >
             <SetRow
@@ -970,6 +974,7 @@
                 disabled={saving}
                 actionsWidth={80}
                 onDelete={() => handleDeleteSet(drop.id)}
+        onSwipeRight={() => { if (optionsSetId === drop.id) optionsSetId = null; }}
                 onEdit={() => openEditSet(drop.id)}
               >
                 <SetRow
@@ -1069,6 +1074,7 @@
         restMs={restFor(set)}
         disabled={saving}
         onChange={(patch) => patchSet(set.id, patch)}
+        onDone={() => (optionsSetId = null)}
       />
     </div>
   {:else if effortSetId === set.id}

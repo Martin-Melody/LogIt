@@ -187,7 +187,8 @@
   </div>
 
   {#if !collapsed && !roundView && chip}
-    <div class="px-3 pb-2">{@render chip()}</div>
+    <!-- Lined up under the exercise name (past the grip and collapse buttons). -->
+    <div class="pb-2 pl-[4.75rem] pr-3">{@render chip()}</div>
   {/if}
 
   {#if !collapsed && !roundView && suggestion && suggestion.sets.length > 0}

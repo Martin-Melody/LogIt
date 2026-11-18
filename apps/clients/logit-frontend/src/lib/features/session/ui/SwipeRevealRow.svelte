@@ -8,12 +8,15 @@
     disabled = false,
     onDelete,
     onEdit,
+    onSwipeRight,
     children,
   } = $props<{
     actionsWidth?: number;
     disabled?: boolean;
     onDelete?: (() => void) | undefined;
     onEdit?: (() => void) | undefined;
+    /** A swipe right while the actions are closed (e.g. closes the set's details). */
+    onSwipeRight?: (() => void) | undefined;
     children?: import("svelte").Snippet;
   }>();
 
@@ -36,6 +39,7 @@
   function swipeAction(node: HTMLElement) {
     let startX = 0;
     let startY = 0;
+    let lastDX = 0;
     let dir: "h" | "v" | null = null;
 
     function onTouchStart(e: TouchEvent) {
@@ -43,6 +47,7 @@
       const t = e.touches[0]!;
       startX = t.clientX;
       startY = t.clientY;
+      lastDX = 0;
       dir = null;
       dragging = false;
     }
@@ -54,6 +59,7 @@
 
       const dX = t.clientX - startX;
       const dY = t.clientY - startY;
+      lastDX = dX;
 
       if (!dir) {
         if (Math.abs(dX) + Math.abs(dY) < LOCK_PX) return;
@@ -69,6 +75,9 @@
     }
 
     function onTouchEnd() {
+      if (dir === "h" && !open && lastDX > 40 && onSwipeRight) {
+        onSwipeRight();
+      }
       if (dir === "h") {
         open = dx < -(actionsWidth * 0.35);
         dx = open ? -actionsWidth : 0;
@@ -125,6 +134,7 @@
 
   <div
     use:swipeAction
+    data-no-tab-swipe
     role="row"
     class="relative bg-background"
     style="transform: translate3d({dx}px, 0, 0); transition: {dragging ? 'none' : 'transform 140ms ease'};"
