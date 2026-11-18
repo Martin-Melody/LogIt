@@ -1,4 +1,6 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable } from "svelte/store";
 import type { PluginFamily } from "./types";
 import { pluginsApi } from "@logit/core/api/pluginsApi";
@@ -71,7 +73,7 @@ const KNOWN_FAMILIES: ReadonlySet<string> = new Set<PluginFamily>([
 function loadUserSources(): RegistrySource[] {
   if (!browser) return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getAccountItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -88,7 +90,7 @@ function loadUserSources(): RegistrySource[] {
 
 function saveUserSources(sources: RegistrySource[]): void {
   if (!browser) return;
-  localStorage.setItem(
+  setAccountItem(
     STORAGE_KEY,
     JSON.stringify(sources.map((s) => ({ url: s.url, label: s.label }))),
   );
@@ -112,6 +114,7 @@ function createRegistrySourcesStore() {
 
   return {
     subscribe: store.subscribe,
+    reloadForAccount: () => store.set([...builtinRegistrySources(), ...loadUserSources()]),
     add(url: string, label?: string): void {
       const trimmed = url.trim();
       if (!trimmed) return;
@@ -141,6 +144,8 @@ function createRegistrySourcesStore() {
 }
 
 export const registrySources = createRegistrySourcesStore();
+// Each account on the phone has its own copy (lib/data/accountStorage.ts): reload on a switch.
+onActiveOwnerChange(() => registrySources.reloadForAccount());
 
 // ── Fetching + merging ───────────────────────────────────────────────────────
 

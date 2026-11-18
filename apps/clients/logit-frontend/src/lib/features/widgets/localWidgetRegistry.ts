@@ -3,6 +3,8 @@ import type { WidgetRegistry } from "./widgetRegistry";
 
 import WidgetCard from "./render/WidgetCard.svelte";
 import GoalsWidget from "$lib/features/goals/GoalsWidget.svelte";
+import ThisWeekWidget from "$lib/features/onboarding/ThisWeekWidget.svelte";
+import NextStepWidget from "$lib/features/onboarding/NextStepWidget.svelte";
 import { quickStartWidget } from "@logit/core/plugins/builtinWidgets/quickStart";
 import { todaysPlanWidget } from "@logit/core/plugins/builtinWidgets/todaysPlan";
 import { muscleFocusWidget } from "@logit/core/plugins/builtinWidgets/muscleFocus";
@@ -15,6 +17,15 @@ import { habitsWidget } from "@logit/core/plugins/builtinWidgets/habits";
 import { mobilityWidget } from "@logit/core/plugins/builtinWidgets/mobility";
 
 const BUNDLED: WidgetDefinition[] = [
+  {
+    // Shows only for a split on a weekday schedule; "Your first week" during week one.
+    id: "this-week",
+    label: "This week",
+    description: "Your training days this week; a missed one moves forward instead of being lost.",
+    component: ThisWeekWidget,
+    defaultEnabled: true,
+    defaultOrder: -1,
+  },
   {
     id: "quick-start",
     guideMark: "quick-start",
@@ -34,6 +45,15 @@ const BUNDLED: WidgetDefinition[] = [
     props: { plugin: todaysPlanWidget },
     defaultEnabled: true,
     defaultOrder: 1,
+  },
+  {
+    // One suggestion at a time after a plan from onboarding; shows nothing otherwise.
+    id: "next-step",
+    label: "Next step",
+    description: "One suggestion at a time in your first weeks: food, friends, your week in numbers.",
+    component: NextStepWidget,
+    defaultEnabled: true,
+    defaultOrder: 2,
   },
   // WidgetView model — a compute() returning a declarative view the host
   // renders. See @logit/core/plugins/widgetView. Community widgets use the same

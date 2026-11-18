@@ -66,13 +66,13 @@ public static class CoachEndpoints
         CoachPaymentEndpoints.MapWebhook(app);
     }
 
-    private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var coach = await db.Users.FindAsync(coachId);
         if (coach is null) return Results.NotFound();
 
-        if (coach.Tier != UserTier.Studio)
+        if (!CoachingAccess.CanCoach(coach, config))
             return Results.Json(
                 new { error = "Only Studio-tier accounts can invite clients." },
                 statusCode: StatusCodes.Status403Forbidden);

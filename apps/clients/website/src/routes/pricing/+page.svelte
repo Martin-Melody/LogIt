@@ -12,7 +12,7 @@
       price: "€0",
       per: "",
       yearly: "",
-      items: ["The whole app: training, progression, goals, nutrition, habits", "Works offline, no account needed", "Plugins, export, self-hosting", "Free account for the social feed"],
+      items: ["The whole app: training, progression, goals, nutrition, habits", "Works offline, no account needed", "Plugins, export, self-hosting", "A free account backs up your phone and adds the social feed"],
       cta: "play",
     },
     {
@@ -21,7 +21,7 @@
       price: PRICES.pro.monthly,
       per: "/ month",
       yearly: `or ${PRICES.pro.yearly} a year`,
-      items: ["Everything in Free", "Backup and sync between your devices", "The web dashboard at app.getlogit.app", "Deeper charts: e1RM, volume, nutrition against performance"],
+      items: ["Everything in Free", "Sync between all your phones", "The web dashboard at app.getlogit.app", "Deeper charts: e1RM, volume, nutrition against performance"],
       cta: "app",
       featured: true,
     },
@@ -46,14 +46,14 @@
   const faq = [
     { q: "Can I pay on the website?", a: "Not yet. Subscriptions are bought in the Android app, through Google Play." },
     { q: "Refunds?", a: "Google Play handles payments and refunds. Request one from your Google Play order history." },
-    { q: "What happens if I stop paying?", a: "Your data stays on your phone and the app keeps working. Sync and the web dashboard stop." },
+    { q: "What happens if I stop paying?", a: "Your data stays on your phone and the app keeps working. That phone keeps backing up; sync with other devices and the web dashboard stop." },
     { q: "Do self-hosters pay?", a: "No. Run the server yourself and sync and the dashboard are free." },
   ];
 </script>
 
 <svelte:head>
   <title>Pricing · LogIt</title>
-  <meta name="description" content="LogIt is free on your phone. Pro adds sync and the web dashboard; Studio is for coaches. Subscribe in the app, cancel any time in Google Play." />
+  <meta name="description" content="LogIt is free on your phone, with a free backup. Pro adds sync and the web dashboard; Studio is for coaches. Subscribe in the app, cancel any time in Google Play." />
 </svelte:head>
 
 <section class="px-4 pb-10 pt-14 sm:px-6 sm:pt-20">

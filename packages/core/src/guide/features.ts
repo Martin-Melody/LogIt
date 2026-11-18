@@ -13,7 +13,7 @@ export const FEATURES: Feature[] = [
     plan: "Free",
     summary: "Sign in, change your plan, and delete your account.",
     web: ["/account", "/upgrade"],
-    phone: ["/accounts", "/plans"],
+    phone: ["/accounts", "/plans", "/settings/move-server"],
     whereWeb: "The account card at the bottom of the sidebar",
     wherePhone: "Settings › Account",
     docs: "/docs/account",
@@ -21,6 +21,7 @@ export const FEATURES: Feature[] = [
       "Use the app without an account; everything stays on your phone",
       "Upgrade to Pro or Studio in the Android app, monthly or yearly",
       "Delete your account and everything stored on the server",
+      "Move your account to another server, training included",
     ],
     cant: [
       "Pay on the website yet: plans are bought through Google Play",
@@ -33,8 +34,8 @@ export const FEATURES: Feature[] = [
     plan: "Free",
     summary: "Arrange your home screen and bottom bar, set rest timers, and pick how progression works.",
     phone: [
-      "/", "/settings", "/settings/walkthroughs", "/settings/navbar", "/settings/diagnostics", "/settings/music", "/home/customize",
-      "/profile", "/profile/customize", "/onboarding",
+      "/", "/settings", "/settings/walkthroughs", "/settings/navbar", "/settings/diagnostics", "/settings/music", "/settings/sounds", "/home/customize",
+      "/profile", "/profile/customize", "/onboarding", "/onboarding/first-workout", "/onboarding/week-done", "/onboarding/coaching", "/onboarding/coach",
     ],
     wherePhone: "Settings",
     docs: "/docs/settings",
@@ -249,20 +250,35 @@ export const FEATURES: Feature[] = [
     table: "Build and share plugins",
   },
 
+  {
+    // Free accounts back up one phone (decision A, 2026-11-17; the server's FreeBackup). It
+    // uses the sync endpoints, which stay listed under "sync": the server lets Free through
+    // only from the phone that holds the backup.
+    id: "free-backup",
+    title: "Back up one phone",
+    section: "Start here",
+    plan: "Free",
+    summary: "A free account backs up the phone you use it on, so a new or lost phone gets everything back.",
+    phone: ["/settings"],
+    wherePhone: "Settings › Account",
+    docs: "/docs/sync#free-backup",
+    table: "Back up your phone",
+  },
+
   // ── Pro ───────────────────────────────────────────────────────────────────
   {
     id: "sync",
     title: "Sync and devices",
     section: "Pro",
     plan: "Pro",
-    summary: "Your splits, exercises, habits, food lists and settings, the same on every device.",
+    summary: "Your splits, exercises, habits, food lists and settings, the same on every phone and on the web.",
     docs: "/docs/sync",
     server: [
       "/sync/splits", "/sync/exercises", "/sync/exercise-settings", "/sync/progression-recipes", "/sync/profile", "/sync/habits", "/sync/habit-entries",
       "/sync/nutrition/custom-foods", "/sync/nutrition/favorites", "/sync/nutrition/meal-templates",
       "/sync/nutrition/recipes", "/sync/plugins",
     ],
-    table: "Sync and the web dashboard",
+    table: "Sync several phones and the web dashboard",
   },
   {
     id: "coached-sync",

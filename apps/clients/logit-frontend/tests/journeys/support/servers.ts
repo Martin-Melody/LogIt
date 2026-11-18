@@ -72,19 +72,26 @@ export async function tokenFor(server: ServerName, user: { username: string; pas
  * What the server holds for an account, read as a second device would. Deleted rows are left
  * out. Synced data is null when the plan doesn't include sync (Free on the cloud).
  */
-export async function serverData(server: ServerName, user: { username: string; password: string }) {
+export async function serverData(
+  server: ServerName,
+  user: { username: string; password: string },
+  /** Read as this phone (its X-Logit-Device): a Free account's backup is only readable from the phone that holds it. */
+  asPhone?: { deviceId: string | null },
+) {
   const token = await tokenFor(server, user);
   type Row = { dataJson?: string | null; deletedAtMs?: number | null };
+  const deviceHeaders: Record<string, string> = asPhone?.deviceId ? { "X-Logit-Device": asPhone.deviceId } : {};
   const synced = <T>(path: string) =>
-    call<T>(server, path, { token }).catch((e: Error) => {
+    call<T>(server, path, { token, headers: deviceHeaders }).catch((e: Error) => {
       if (e.message.includes(": 403 ")) return null;
       throw e;
     });
-  const [splits, sessions, profile, me] = await Promise.all([
+  const [splits, sessions, profile, me, settings] = await Promise.all([
     synced<{ splits: Row[] }>("/sync/splits?since=0"),
     synced<{ sessions: Row[] }>("/sync/sessions?since=0"),
     synced<{ profile: Record<string, unknown> | null }>("/sync/profile"),
     call<{ onboardingCompleted?: boolean; tier?: string; displayName?: string }>(server, "/users/me", { token }),
+    synced<{ settings: Row[] }>("/sync/exercise-settings?since=0"),
   ]);
   const names = (rows: Row[]) =>
     rows.filter((r) => !r.deletedAtMs).map((r) => (JSON.parse(r.dataJson ?? "{}") as { name?: string }).name ?? "").sort();
@@ -93,6 +100,13 @@ export async function serverData(server: ServerName, user: { username: string; p
     workoutNames: sessions ? names(sessions.sessions) : null,
     profile: profile?.profile ?? null,
     me,
+    /** Rep range per exercise name, from Exercise › How it progresses (or onboarding's plan). */
+    repRanges: settings
+      ? Object.fromEntries(settings.settings.filter((r) => !r.deletedAtMs).map((r) => {
+          const row = JSON.parse(r.dataJson ?? "{}") as { exerciseName?: string; repRange?: [number, number] };
+          return [row.exerciseName ?? "", row.repRange ?? null];
+        }))
+      : null,
   };
 }
 

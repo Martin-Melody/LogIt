@@ -1,6 +1,7 @@
 import { normalizeRecipe } from "@logit/core/domain/progressionRecipe";
 import { pushExerciseSetting, pushProgressionRecipe } from "$lib/sync/syncService";
 import { browser } from "$app/environment";
+import { setAccountItem } from "$lib/data/accountStorage";
 import {
   getExerciseRepo,
   getSplitRepo,
@@ -10,7 +11,7 @@ import {
   getHabitRepo,
 } from "$lib/data/repoProvider";
 import { profile } from "$lib/stores/profile.store";
-import { type ExportData, EXPORT_VERSION, PLUGIN_KEYS } from "./exportData";
+import { type ExportData, EXPORT_VERSION, PLUGIN_KEYS, DEVICE_PLUGIN_KEYS } from "./exportData";
 
 export type { ExportData };
 
@@ -78,8 +79,8 @@ export async function importData(
   if (categories.profile && data.profile) {
     profile.save(data.profile);
     if (browser) {
-      if (data.homeConfig) localStorage.setItem(HOME_CONFIG_KEY, JSON.stringify(data.homeConfig));
-      if (data.profileConfig) localStorage.setItem(PROFILE_CONFIG_KEY, JSON.stringify(data.profileConfig));
+      if (data.homeConfig) setAccountItem(HOME_CONFIG_KEY, JSON.stringify(data.homeConfig));
+      if (data.profileConfig) setAccountItem(PROFILE_CONFIG_KEY, JSON.stringify(data.profileConfig));
     }
   }
 
@@ -162,7 +163,9 @@ export async function importData(
   if (categories.plugins && data.plugins && browser) {
     for (const key of PLUGIN_KEYS) {
       const raw = data.plugins[key];
-      if (typeof raw === "string") localStorage.setItem(key, raw);
+      if (typeof raw !== "string") continue;
+      if (DEVICE_PLUGIN_KEYS.has(key)) localStorage.setItem(key, raw);
+      else setAccountItem(key, raw);
     }
     // The registry cache is derived — drop it so it rebuilds from the restored sources.
     localStorage.removeItem("logit:plugins:registry-cache:v1");

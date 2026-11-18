@@ -1,252 +1,368 @@
 <script lang="ts">
+  // First launch (design canvas row 2: welcome, O1 goal, E0 experience, O2 days, O3 plan).
+  // One tap per question, no Continue buttons, no account or name: four taps from "Get
+  // started" to a workout. The answers build a plan (core domain/starterPlan.ts) that is
+  // saved as an ordinary split on a weekday schedule, with each exercise's rep range set
+  // from the goal and the days a week as the weekly target.
   import { goto } from "$app/navigation";
-  import { Dumbbell, ChevronRight, ArrowLeft } from "lucide-svelte";
+  import { onMount } from "svelte";
+  import { fade } from "svelte/transition";
+  import { ArrowLeft, ChevronDown, Dumbbell, Loader2 } from "lucide-svelte";
 
-  import { profile } from "$lib/stores/profile.store";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { resetTours } from "$lib/tour/index";
   import { splits } from "$lib/stores/splits.store";
+  import { currentSession } from "$lib/stores/currentSession.store";
+  import { goalsStore } from "$lib/features/goals/goalsStore";
   import { saveSplit } from "$lib/usecases/Splits/saveSplit";
-  import { createSplit, addDay, addPlannedStrength } from "@logit/core/domain/WorkoutSplit";
-  import { BUILTIN_PROGRAMS } from "@logit/core/domain/builtinPrograms";
-  import { getCoachProgramRepo } from "$lib/data/repoProvider";
+  import { saveStarterPlan } from "$lib/features/onboarding/saveStarterPlan";
+  import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+  import { createSplit } from "@logit/core/domain/WorkoutSplit";
+  import { sourceFromSplitDay } from "@logit/core/domain/sessionHistory";
+  import { planSplitDay } from "$lib/usecases/startSessionFromSplitDay";
+  import {
+    buildStarterPlan, otherPlanKinds, planKindFor,
+    EQUIPMENT_LABELS, GOAL_LABELS, LENGTH_LABELS,
+    type DaysPerWeek, type PlanEquipment, type PlanKind, type PlanLength, type TrainingExperience, type TrainingGoal,
+  } from "@logit/core/domain/starterPlan";
 
-  type PresetDay = { name: string; exercises: string[] };
-  type Preset = { id: string; name: string; description: string; days: PresetDay[] };
+  /** Kept per account so a half-finished onboarding picks up where it was. */
+  const ANSWERS_KEY = "logit:onboarding:answers";
 
-  const PRESETS: Preset[] = [
-    {
-      id: "ppl",
-      name: "Push / Pull / Legs",
-      description: "3 days · push, pull, and leg movements",
-      days: [
-        { name: "Push", exercises: ["Bench Press", "Overhead Press", "Lateral Raise", "Tricep Pushdown"] },
-        { name: "Pull", exercises: ["Pull-Up", "Barbell Row", "Bicep Curl", "Rear Delt Fly"] },
-        { name: "Legs", exercises: ["Squat", "Romanian Deadlift", "Leg Press", "Leg Curl", "Calf Raise"] },
-      ],
-    },
-    {
-      id: "upper_lower",
-      name: "Upper / Lower",
-      description: "2 days · alternate upper and lower body",
-      days: [
-        { name: "Upper", exercises: ["Bench Press", "Barbell Row", "Overhead Press", "Bicep Curl", "Tricep Pushdown"] },
-        { name: "Lower", exercises: ["Squat", "Romanian Deadlift", "Leg Press", "Leg Curl", "Calf Raise"] },
-      ],
-    },
-    {
-      id: "full_body",
-      name: "Full Body",
-      description: "1 day · all major muscle groups each session",
-      days: [
-        { name: "Full Body", exercises: ["Squat", "Bench Press", "Barbell Row", "Overhead Press", "Deadlift"] },
-      ],
-    },
-    { id: "blank", name: "Start blank", description: "Create your own split from scratch", days: [] },
-  ];
+  type Answers = {
+    goal: TrainingGoal | null;
+    experience: TrainingExperience | null;
+    days: DaysPerWeek | null;
+    equipment: PlanEquipment;
+    minutes: PlanLength;
+    kind: PlanKind | null;
+  };
 
+  function loadAnswers(): Answers {
+    const empty: Answers = { goal: null, experience: null, days: null, equipment: "gym", minutes: 45, kind: null };
+    try {
+      const raw = getAccountItem(ANSWERS_KEY);
+      return raw ? { ...empty, ...(JSON.parse(raw) as Partial<Answers>) } : empty;
+    } catch {
+      return empty;
+    }
+  }
+
+  let answers = $state<Answers>(loadAnswers());
   const step = $derived($onboarding.step);
+  let building = $state(false);
+  let showOtherPlans = $state(false);
+  let busy = $state<"start" | "later" | "own" | null>(null);
+  let error = $state<string | null>(null);
 
-  let name = $state($profile.name);
-  let selectedPreset = $state<string | null>(null);
-  // A full guided program (§2, §6) is mutually exclusive with a split -- picking
-  // one clears the other, since they're two different first-run paths ("hand me
-  // a plan" vs "I'll build my own"), not a combination.
-  let selectedProgramId = $state<string | null>(null);
-  let saving = $state(false);
-
-  function pickPreset(id: string) {
-    selectedPreset = id;
-    selectedProgramId = null;
+  function save(patch: Partial<Answers>) {
+    answers = { ...answers, ...patch };
+    setAccountItem(ANSWERS_KEY, JSON.stringify(answers));
   }
 
-  function pickProgram(id: string) {
-    selectedProgramId = id;
-    selectedPreset = null;
-  }
+  // Steps: 0 welcome, 1 goal, 2 experience, 3 days, 4 plan. An old saved step past the end
+  // (the name step of the previous onboarding) starts again from the goal.
+  onMount(() => {
+    if (step > 4 || (step >= 2 && !answers.goal) || (step >= 3 && !answers.experience) || (step === 4 && !answers.days)) onboarding.setStep(answers.goal ? 2 : 1);
+  });
 
-  async function applySplit() {
-    if (!selectedPreset) return;
-    const preset = PRESETS.find((p) => p.id === selectedPreset);
-    if (!preset) return;
-    let split = createSplit(preset.id === "blank" ? "My Split" : preset.name);
-    for (const day of preset.days) {
-      split = addDay(split, day.name);
-      const dayId = split.days[split.days.length - 1].id;
-      for (const exerciseName of day.exercises) {
-        split = addPlannedStrength(split, dayId, { exerciseName });
+  function go(next: number) {
+    onboarding.setStep(next);
+    if (next === 4) {
+      // About a second of the plan visibly filling in from the answers, never longer
+      // (skipped for anyone who has asked for less motion).
+      const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reduce) {
+        building = true;
+        setTimeout(() => (building = false), 900);
       }
     }
-    await saveSplit(split);
-    await splits.setActive(split.id);
   }
 
-  async function finishOnboarding() {
+  const GOALS: TrainingGoal[] = ["strength", "muscle", "both", "fit", "leaner"];
+  const EXPERIENCE: { id: TrainingExperience; title: string; blurb: string }[] = [
+    { id: "new", title: "Just starting", blurb: "A simple plan; we'll show you the ropes" },
+    { id: "under2", title: "Under 2 years", blurb: "Steady progress that keeps coming" },
+    { id: "2plus", title: "2+ years", blurb: "A plan that keeps up with you" },
+    { id: "compete", title: "I compete", blurb: "Powerlifting: the big three come first" },
+  ];
+  const DAYS: { days: DaysPerWeek; label: string; blurb: string }[] = [
+    { days: 2, label: "2 days", blurb: "Busy weeks" },
+    { days: 3, label: "3 days", blurb: "Steady progress" },
+    { days: 4, label: "4 days", blurb: "The sweet spot" },
+    { days: 5, label: "5–6 days", blurb: "All in" },
+  ];
+  const WEEK = [1, 2, 3, 4, 5, 6, 0];
+  const WEEK_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+
+  const echo = $derived(answers.goal ? GOAL_LABELS[answers.goal].echo : "");
+  const plan = $derived(
+    answers.goal && answers.experience && answers.days
+      ? buildStarterPlan(
+          { goal: answers.goal, experience: answers.experience, days: answers.days, equipment: answers.equipment, minutes: answers.minutes },
+          answers.kind ?? planKindFor(answers.days),
+        )
+      : null,
+  );
+  const firstDay = $derived(plan?.days[0] ?? null);
+
+  function pickGoal(goal: TrainingGoal) {
+    save({ goal });
+    go(2);
+  }
+  function pickExperience(experience: TrainingExperience) {
+    save({ experience });
+    go(3);
+  }
+  function pickDays(days: DaysPerWeek) {
+    save({ days, kind: null });
+    go(4);
+  }
+
+  /** Saves the plan as the active split, its rep ranges and the weekly target; ends onboarding. */
+  async function savePlan() {
+    if (!plan) throw new Error("No plan yet");
+    const split = await saveStarterPlan(plan);
     resetTours();
     onboarding.complete();
-    await goto("/");
+    return split;
   }
 
-  function onNameContinue() {
-    const trimmed = name.trim();
-    if (trimmed) profile.save({ name: trimmed });
-    onboarding.setStep(2);
-  }
-
-  async function onSplitContinue() {
-    if (!selectedPreset && !selectedProgramId) return;
-    saving = true;
+  async function startNow() {
+    busy = "start";
+    error = null;
     try {
-      if (selectedProgramId) {
-        await getCoachProgramRepo().setActiveProgramId(selectedProgramId);
-      } else {
-        await applySplit();
-      }
-      await finishOnboarding();
-    } finally {
-      saving = false;
+      const split = await savePlan();
+      // Planned like the plan screen does, and kept with where it came from (its name in the history).
+      const day = split.days[0]!;
+      const { session } = await planSplitDay(day);
+      await currentSession.startPlanned({ ...session, source: sourceFromSplitDay(split, day, session) });
+      await goto("/session/current");
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Couldn't start. Try again.";
+      busy = null;
     }
+  }
+
+  async function startLater() {
+    busy = "later";
+    error = null;
+    try {
+      await savePlan();
+      await goto("/");
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Couldn't save the plan. Try again.";
+      busy = null;
+    }
+  }
+
+  async function buildMyOwn() {
+    busy = "own";
+    try {
+      const split = createSplit("My split");
+      await saveSplit(split);
+      await splits.setActive(split.id);
+      if (answers.days) goalsStore.setWeeklyTarget(answers.days);
+      resetTours();
+      onboarding.complete();
+      await goto(`/splits/${split.id}`);
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Couldn't make the split. Try again.";
+      busy = null;
+    }
+  }
+
+  function setsLabel(ex: { sets: number; repRange: [number, number] }) {
+    return `${ex.sets} × ${ex.repRange[0]}–${ex.repRange[1]}`;
   }
 </script>
 
-<div class="flex flex-col min-h-screen bg-background text-foreground">
+{#snippet header(back: number, current: number)}
+  <div class="flex items-center min-h-11">
+    <button type="button" class="flex items-center gap-1 min-h-11 text-sm text-muted-foreground" onclick={() => go(back)}>
+      <ArrowLeft class="h-4 w-4" /> Back
+    </button>
+  </div>
+  <div class="grid grid-cols-4 gap-1 mt-2 mb-7" role="img" aria-label="Step {current} of 4">
+    {#each [1, 2, 3, 4] as s (s)}
+      <span class="h-1 rounded-full {s <= current ? 'bg-primary' : 'bg-muted'}"></span>
+    {/each}
+  </div>
+{/snippet}
 
-  <!-- Step 0: Welcome -->
+<div class="flex flex-col min-h-screen bg-background text-foreground">
   {#if step === 0}
-    <div class="flex flex-col flex-1 items-center justify-center gap-8 px-8 text-center">
+    <div class="flex flex-col flex-1 items-center justify-center gap-9 px-8 text-center" in:fade={{ duration: 150 }}>
       <div class="flex flex-col items-center gap-4">
         <div class="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center">
           <Dumbbell class="h-8 w-8 text-primary-foreground" />
         </div>
         <div>
           <h1 class="text-3xl font-bold tracking-tight">Logit</h1>
-          <p class="mt-2 text-muted-foreground">Track your training. Own your data.</p>
+          <p class="mt-2 text-[15px] text-muted-foreground">Get stronger every week,<br />without guessing the weights.</p>
         </div>
       </div>
-
-      <div class="flex flex-col gap-2 w-full max-w-xs text-left text-sm text-muted-foreground">
-        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Track every set, rep, and PR</p>
-        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Works fully offline — no account needed</p>
-        <p class="flex items-center gap-2"><span class="text-foreground">✓</span> Open source — your data stays yours</p>
+      <div class="flex flex-col gap-2.5 w-full max-w-[300px] text-left text-sm text-muted-foreground">
+        <p class="flex items-center gap-2.5"><span class="font-semibold text-foreground">✓</span> Know what to lift, every set</p>
+        <p class="flex items-center gap-2.5"><span class="font-semibold text-foreground">✓</span> See yourself getting stronger, week by week</p>
+        <p class="flex items-center gap-2.5"><span class="font-semibold text-foreground">✓</span> Start in under a minute, no account needed</p>
       </div>
-
-      <div class="flex flex-col items-center gap-3 w-full max-w-xs">
-        <button
-          type="button"
-          class="flex items-center justify-center gap-2 w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium"
-          onclick={() => onboarding.setStep(1)}
-        >
-          Get started <ChevronRight class="h-4 w-4" />
+      <div class="flex flex-col gap-3 w-full max-w-[300px]">
+        <button type="button" class="h-12 rounded-lg bg-primary text-primary-foreground text-[15px] font-medium" onclick={() => go(1)}>
+          Get started
         </button>
-        <a href="/auth?mode=login" class="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Already have an account? <span class="text-foreground font-medium">Log in</span>
-        </a>
+        <button type="button" class="h-12 rounded-lg border border-border text-[15px] font-medium" onclick={() => goto("/auth?mode=login")}>
+          I already have an account
+        </button>
       </div>
     </div>
 
-  <!-- Step 1: Name -->
   {:else if step === 1}
-    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(0)}>
-        <ArrowLeft class="h-4 w-4" /> Back
-      </button>
-      <div class="mb-6">
-        <h2 class="text-xl font-bold">What should we call you?</h2>
-        <p class="text-sm text-muted-foreground mt-1">Stored on your device. You can change it any time.</p>
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      {@render header(0, 1)}
+      <h2 class="text-2xl font-bold leading-tight mb-1.5">What do you want from training?</h2>
+      <p class="text-sm text-muted-foreground mb-6">Your plan and weights are built around it.</p>
+      <div class="flex flex-col gap-2">
+        {#each GOALS as goal (goal)}
+          <button type="button"
+            class="flex flex-col gap-0.5 min-h-[66px] rounded-xl px-4 py-3 text-left {answers.goal === goal ? 'border-2 border-primary bg-muted/50' : 'border border-border'}"
+            onclick={() => pickGoal(goal)}>
+            <span class="text-base font-semibold">{GOAL_LABELS[goal].title}</span>
+            <span class="text-sm text-muted-foreground">{GOAL_LABELS[goal].blurb}</span>
+          </button>
+        {/each}
       </div>
-
-      <div class="flex flex-col gap-1.5 flex-1">
-        <label class="text-sm font-medium" for="name">Name</label>
-        <input id="name" type="text" autocomplete="name" placeholder="Your name"
-          class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          bind:value={name}
-          onkeydown={(e) => { if (e.key === "Enter") onNameContinue(); }} />
-      </div>
-
-      <div class="flex flex-col gap-3 mt-8">
-        <button type="button" class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          disabled={!name.trim()}
-          onclick={onNameContinue}>
-          Continue
-        </button>
-        <button type="button" class="w-full py-2 text-sm text-muted-foreground"
-          onclick={() => onboarding.setStep(2)}>
-          Skip for now
-        </button>
+      <div class="mt-4 grid grid-cols-2 gap-2">
+        <button type="button" class="min-h-11 rounded-[10px] bg-muted text-sm font-medium" onclick={() => goto("/onboarding/coaching")}>I coach people</button>
+        <button type="button" class="min-h-11 rounded-[10px] bg-muted text-sm font-medium" onclick={() => goto("/onboarding/coach")}>I have a coach</button>
       </div>
     </div>
 
-  <!-- Step 2: Split selection -->
   {:else if step === 2}
-    <div class="flex flex-col flex-1 px-6 pt-10 pb-8 max-w-sm mx-auto w-full">
-      <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground mb-6 self-start" onclick={() => onboarding.setStep(1)}>
-        <ArrowLeft class="h-4 w-4" /> Back
-      </button>
-      <div class="mb-6">
-        <h2 class="text-xl font-bold">Pick a plan, or don't</h2>
-        <p class="text-sm text-muted-foreground mt-1">A starting point — you can change it any time.</p>
-      </div>
-
-      <div class="flex flex-col gap-4 flex-1 overflow-y-auto">
-        <div>
-          <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-            Guided program — day-by-day, no setup
-          </p>
-          <ul class="flex flex-col gap-2">
-            {#each BUILTIN_PROGRAMS as program (program.id)}
-              <li>
-                <button type="button"
-                  class="w-full text-left px-4 py-3 rounded-md border transition-colors {selectedProgramId === program.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
-                  onclick={() => pickProgram(program.id)}>
-                  <p class="text-sm font-medium">{program.name}</p>
-                  <p class="text-xs text-muted-foreground mt-0.5">{program.description}</p>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        </div>
-
-        <div>
-          <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-            Or build your own split
-          </p>
-          <ul class="flex flex-col gap-2">
-            {#each PRESETS as preset (preset.id)}
-              <li>
-                <button type="button"
-                  class="w-full text-left px-4 py-3 rounded-md border transition-colors {selectedPreset === preset.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}"
-                  onclick={() => pickPreset(preset.id)}>
-                  <p class="text-sm font-medium">{preset.name}</p>
-                  <p class="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-3 mt-8">
-        <button type="button"
-          class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          disabled={(!selectedPreset && !selectedProgramId) || saving}
-          onclick={() => void onSplitContinue()}>
-          {saving ? "Setting up…" : "Continue"}
-        </button>
-        <button type="button" class="w-full py-2 text-sm text-muted-foreground"
-          onclick={() => void finishOnboarding()}>
-          Skip for now
-        </button>
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      {@render header(1, 2)}
+      <p class="text-[13px] font-semibold text-muted-foreground mb-1.5">{echo}</p>
+      <h2 class="text-2xl font-bold leading-tight mb-6">How long have you been lifting?</h2>
+      <div class="flex flex-col gap-2.5">
+        {#each EXPERIENCE as e (e.id)}
+          <button type="button"
+            class="flex flex-col gap-0.5 min-h-16 rounded-xl px-4 py-3.5 text-left {answers.experience === e.id ? 'border-2 border-primary bg-muted/50' : 'border border-border'}"
+            onclick={() => pickExperience(e.id)}>
+            <span class="text-base font-semibold">{e.title}</span>
+            <span class="text-sm text-muted-foreground">{e.blurb}</span>
+          </button>
+        {/each}
       </div>
     </div>
 
-  {/if}
+  {:else if step === 3}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      {@render header(2, 3)}
+      <p class="text-[13px] font-semibold text-muted-foreground mb-1.5">{echo}</p>
+      <h2 class="text-2xl font-bold leading-tight mb-6">How many days a week can you train?</h2>
+      <div class="flex flex-col gap-2.5">
+        {#each DAYS as d (d.days)}
+          <button type="button"
+            class="flex items-center justify-between min-h-14 rounded-xl px-4 text-left {answers.days === d.days ? 'border-2 border-primary bg-muted/50' : 'border border-border'}"
+            onclick={() => pickDays(d.days)}>
+            <span class="text-base font-semibold">{d.label}</span>
+            <span class="text-[13px] text-muted-foreground">{d.blurb}</span>
+          </button>
+        {/each}
+      </div>
+      <button type="button" class="mt-2 min-h-11 text-sm text-muted-foreground" onclick={() => pickDays(3)}>
+        Not sure? Start with 3, change it any time
+      </button>
+    </div>
 
-  <!-- Step indicator (steps 1–2) -->
-  {#if step > 0}
-    <div class="flex justify-center gap-1.5 pb-10">
-      {#each [1, 2] as s (s)}
-        <div class="h-1 w-6 rounded-full {step === s ? 'bg-primary' : step > s ? 'bg-primary/40' : 'bg-muted'}"></div>
-      {/each}
+  {:else if plan && firstDay}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      {@render header(3, 4)}
+      <p class="text-[13px] font-semibold text-muted-foreground mb-1.5">Your plan</p>
+      <h2 class="text-2xl font-bold leading-tight mb-3">{echo} in {plan.daysPerWeek} days a week</h2>
+      <div class="flex flex-wrap gap-2 mb-3.5">
+        <label class="relative">
+          <span class="sr-only">Equipment</span>
+          <select class="h-9 appearance-none rounded-full border border-border bg-background pl-3 pr-8 text-[13px] font-medium"
+            value={answers.equipment} onchange={(e) => save({ equipment: (e.currentTarget as HTMLSelectElement).value as PlanEquipment })}>
+            {#each Object.entries(EQUIPMENT_LABELS) as [id, label] (id)}<option value={id}>{label}</option>{/each}
+          </select>
+          <ChevronDown class="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        </label>
+        <label class="relative">
+          <span class="sr-only">Workout length</span>
+          <select class="h-9 appearance-none rounded-full border border-border bg-background pl-3 pr-8 text-[13px] font-medium"
+            value={String(answers.minutes)} onchange={(e) => save({ minutes: Number((e.currentTarget as HTMLSelectElement).value) as PlanLength })}>
+            {#each Object.entries(LENGTH_LABELS) as [id, label] (id)}<option value={id}>{label}</option>{/each}
+          </select>
+          <ChevronDown class="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        </label>
+      </div>
+
+      <div class="flex flex-col gap-3 rounded-xl border border-border p-4">
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-base font-semibold">{plan.name}</span>
+          <button type="button" class="min-h-11 -my-3 text-[13px] text-muted-foreground underline" onclick={() => (showOtherPlans = !showOtherPlans)}>
+            {showOtherPlans ? "Hide" : "Other plans"}
+          </button>
+        </div>
+        <div class="grid grid-cols-7 gap-1 text-center" aria-label="Training days">
+          {#each WEEK as wd, i (wd)}
+            {@const day = plan.days.find((d) => d.weekday === wd)}
+            <span class="flex flex-col gap-1 text-[11px] text-muted-foreground">
+              {WEEK_LETTERS[wd]}
+              <span class="h-7 rounded-md flex items-center justify-center text-[11px] font-semibold {day ? (i % 2 ? 'bg-primary/80 text-primary-foreground' : 'bg-primary text-primary-foreground') : 'bg-muted'}"
+                aria-label={day ? day.name : "Rest"}>
+                {#if day && !building}{day.short}{/if}
+              </span>
+            </span>
+          {/each}
+        </div>
+        {#if showOtherPlans}
+          <ul class="flex flex-col border-t border-border pt-2">
+            {#each otherPlanKinds(plan.kind) as other (other.kind)}
+              <li>
+                <button type="button" class="flex w-full min-h-11 items-center justify-between text-left text-sm"
+                  onclick={() => { save({ kind: other.kind }); showOtherPlans = false; }}>
+                  <span class="font-medium">{other.name}</span>
+                  <span class="text-muted-foreground">{other.daysPerWeek} days</span>
+                </button>
+              </li>
+            {/each}
+            <li>
+              <button type="button" class="flex w-full min-h-11 items-center text-left text-sm font-medium" disabled={busy !== null} onclick={() => void buildMyOwn()}>
+                Build my own
+              </button>
+            </li>
+          </ul>
+        {/if}
+      </div>
+
+      <div class="mt-4 flex flex-col gap-2 rounded-xl bg-muted p-4">
+        <p class="text-sm font-semibold">First up: {firstDay.name} · about {firstDay.minutes} min</p>
+        <ul class="flex flex-col gap-1.5 text-sm">
+          {#each firstDay.exercises as ex, i (ex.name)}
+            {#if building}
+              <li class="h-5 rounded bg-background/70 animate-pulse" style="animation-delay: {i * 120}ms"></li>
+            {:else}
+              <li class="flex justify-between gap-3" in:fade={{ duration: 120, delay: i * 60 }}>
+                <span>{ex.name}</span><span class="text-muted-foreground tabular-nums">{setsLabel(ex)}</span>
+              </li>
+            {/if}
+          {/each}
+        </ul>
+      </div>
+
+      <div class="flex-1 min-h-6"></div>
+      {#if error}<p class="mb-2 text-sm text-destructive" role="alert">{error}</p>{/if}
+      <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+        disabled={busy !== null || building} onclick={() => void startNow()}>
+        {#if busy === "start"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        Start {firstDay.name} now
+      </button>
+      <button type="button" class="min-h-11 text-sm text-muted-foreground" disabled={busy !== null} onclick={() => void startLater()}>
+        I'll start later
+      </button>
     </div>
   {/if}
 </div>

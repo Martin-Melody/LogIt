@@ -1,7 +1,9 @@
 import { apiClient, type AuthUser } from "@logit/core/api/client";
 import { getServerMode } from "@logit/core/api/serverConfig";
 import { isNativePlatform } from "$lib/platform/isNative";
-import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId } from "$lib/data/activeOwner";
+import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId, onActiveOwnerChange } from "$lib/data/activeOwner";
+import { getSessionScope, setSessionScope } from "@logit/core/api/sessionScope";
+import { getSelfHostUrl, setServerMode } from "@logit/core/api/serverConfig";
 import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
@@ -17,6 +19,10 @@ async function switchActiveOwner(isOnlineAccount: boolean): Promise<void> {
   needsAccountAuth.set(false);
   if (!isOnlineAccount) navConfig.reconcileForOffline();
 }
+
+// On the phone every account keeps its own sign-in (tokens, server, cached user): the API client
+// uses the active account's. The web has one account per browser and no scope.
+onActiveOwnerChange(() => setSessionScope(isNativePlatform() ? getActiveOwnerId() : null));
 
 function createAuthStore() {
   let user = $state<AuthUser | null>(null);
@@ -34,8 +40,48 @@ function createAuthStore() {
 
   // ── Online login / register ──────────────────────────────────────────────
 
-  async function login(usernameOrEmail: string, password: string) {
-    const serverUser = await apiClient.login(usernameOrEmail, password);
+  /**
+   * Signing in from the space without an account while it holds training: the sign-in screen
+   * asks whether it's the person's own ("add" links it to the account) or someone else's
+   * ("keep-separate" leaves it and gives the account its own space). Null when there's nothing
+   * to ask: no training there, an account in use, or the web.
+   */
+  async function offlineTrainingToAsk(): Promise<{ workouts: number; splits: number; name: string } | null> {
+    if (!isNativePlatform()) return null;
+    const ownerId = getActiveOwnerId();
+    if (!ownerId) return null;
+    const { getLocalAccount } = await import("$lib/data/localAccountRepo");
+    const account = await getLocalAccount(ownerId);
+    if (!account || account.serverUserId) return null;
+    const { getWorkoutRepo, getSplitRepo } = await import("$lib/data/repoProvider");
+    const workouts = (await getWorkoutRepo().listAllSessions()).length;
+    const splits = (await getSplitRepo().getListSplits({ includeArchived: true })).length;
+    if (workouts + splits === 0) return null;
+    return { workouts, splits, name: account.displayName };
+  }
+
+  async function login(
+    usernameOrEmail: string,
+    password: string,
+    opts: { offlineTraining?: "add" | "keep-separate" } = {},
+  ) {
+    // "Someone else's": sign in from no account, so the offline training isn't linked, taking
+    // the server picked on the sign-in screen along. A failed sign-in goes back to it.
+    let returnTo: string | null = null;
+    if (opts.offlineTraining === "keep-separate" && isNativePlatform() && getActiveOwnerId()) {
+      returnTo = getActiveOwnerId();
+      const picked = { mode: getServerMode(), url: getSelfHostUrl() };
+      setServerMode("offline");
+      await beginAddingAccount();
+      setServerMode(picked.mode, picked.url);
+    }
+    let serverUser: AuthUser;
+    try {
+      serverUser = await apiClient.login(usernameOrEmail, password);
+    } catch (e) {
+      if (returnTo) await loginOfflineAccount(returnTo);
+      throw e;
+    }
     user = serverUser;
     log.info("auth", "Signed in", { tier: serverUser.tier, selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
@@ -72,6 +118,9 @@ function createAuthStore() {
       orphanClaimTarget,
     } = await import("$lib/data/localAccountRepo");
 
+    // Where the sign-in was made: the account in use (re-signing in, or linking an offline
+    // profile) or no account at all (adding one). It's moved to the account it belongs to below.
+    const signedInFrom = getSessionScope();
     let account = await getLocalAccountByServerUserId(serverUser.id);
 
     if (account) {
@@ -84,6 +133,7 @@ function createAuthStore() {
       // another device still arrives through the synced profile.
       setActiveOwnerId(account.id);
       await updateLocalAccount(account.id, {
+        username: serverUser.username,
         displayName: account.displayName.trim() || serverUser.displayName || account.displayName,
         serverUserId: serverUser.id,
         onboardingCompleted: account.onboardingCompleted || serverUser.onboardingCompleted,
@@ -100,7 +150,10 @@ function createAuthStore() {
           // (someone who onboarded offline and then makes an account used to be sent through
           // it a second time, because a new account says false).
           const onboardingCompleted = current.onboardingCompleted || serverUser.onboardingCompleted;
+          // The account's username replaces the space's placeholder ("local"), which the
+          // account switcher showed as "@local".
           await updateLocalAccount(currentId, {
+            username: serverUser.username,
             serverUserId: serverUser.id,
             // Prefer the name the user already set locally; fall back to server if blank
             displayName: current.displayName.trim() || serverUser.displayName || current.displayName,
@@ -110,7 +163,7 @@ function createAuthStore() {
             apiClient.updateOnboardingCompleted(true)
               .catch((e) => log.warn("auth", "Could not save onboarding status to the server", e));
           }
-          account = { ...current, serverUserId: serverUser.id, onboardingCompleted };
+          account = { ...current, username: serverUser.username, serverUserId: serverUser.id, onboardingCompleted };
         }
       }
 
@@ -131,7 +184,20 @@ function createAuthStore() {
       }
     }
 
+    await apiClient.moveSessionFrom(signedInFrom);
     await switchActiveOwner(true);
+  }
+
+  /**
+   * Account menu › Add account: leave the account in use signed in and sign in from no account,
+   * so the new sign-in can't land on top of the current one. linkOrCreateLocalAccount() then
+   * gives it its own space.
+   */
+  async function beginAddingAccount(): Promise<void> {
+    stopBackgroundSync();
+    user = null;
+    setActiveOwnerId(null);
+    await apiClient.reloadSession();
   }
 
   // ── Offline login / create ───────────────────────────────────────────────
@@ -140,48 +206,62 @@ function createAuthStore() {
    * Activate an existing local account by ID.
    * Password is optional — only verified when the account has one set.
    */
-  async function loginOfflineAccount(accountId: string, password = ""): Promise<void> {
+  async function loginOfflineAccount(accountId: string): Promise<void> {
     if (!isNativePlatform()) return; // offline accounts only exist on native
 
-    const { getLocalAccount, verifyLocalPassword } = await import("$lib/data/localAccountRepo");
+    // Local profile passwords are retired (accounts plan, step 5d): accounts each keep their own
+    // sign-in, and the phone's own lock protects the phone. A stored hash is simply ignored.
+    const { getLocalAccount } = await import("$lib/data/localAccountRepo");
     const account = await getLocalAccount(accountId);
     if (!account) throw new Error("Account not found.");
 
-    const ok = await verifyLocalPassword(account, password);
-    if (!ok) throw new Error("Incorrect password.");
-
-    // Always clear online auth when entering local account mode. The local accounts tab
-    // means offline use — even if the account was previously linked, online auth must be
-    // re-established explicitly via the /auth screen.
-    user = null;
+    // Switching restores that account's own sign-in when it has one (each account keeps its
+    // session: sessionScope.ts); the account left behind stays signed in. A profile that was
+    // never signed in, or whose sign-in has ended, opens offline.
     stopBackgroundSync();
-    await apiClient.clearLocal();
-
     setActiveOwnerId(account.id);
-    await switchActiveOwner(false);
+    await apiClient.reloadSession();
+    user = apiClient.getUser();
+    await switchActiveOwner(user !== null);
+    if (user) {
+      void syncAll();
+      startBackgroundSync();
+      // Check the restored sign-in is still good (and pick up a plan change) in the background.
+      void refreshUser();
+    }
   }
 
   /**
    * Create a new local-only account (or finalise the auto-created first-launch account).
    * Password is optional — only required if the user wants to protect the account.
    */
-  async function createOfflineAccount(displayName: string, password: string): Promise<void> {
+  /**
+   * The space without an account: open it, or make it when the phone has none. A phone has at
+   * most one (the owner's training before they sign up); anyone else on the phone signs into
+   * their own account (beginAddingAccount). "opened" when one already existed.
+   */
+  async function createOfflineAccount(displayName: string, password: string): Promise<"created" | "opened"> {
     if (!isNativePlatform()) {
       // Web: just update the profile store — no local account infra on web
       const { profile } = await import("$lib/stores/profile.store");
       if (displayName.trim()) profile.save({ name: displayName.trim() });
-      return;
+      return "created";
     }
 
-    // Creating a new local account means going offline — clear any stale online auth.
+    const { listLocalAccounts: listAll } = await import("$lib/data/localAccountRepo");
+    const existing = (await listAll()).find((a) => !a.serverUserId);
+    if (existing) {
+      if (existing.id !== getActiveOwnerId()) await loginOfflineAccount(existing.id);
+      return "opened";
+    }
+
+    // The new profile starts with no sign-in; the account in use stays signed in.
     user = null;
     stopBackgroundSync();
-    await apiClient.clearLocal();
 
     const { createLocalAccount, listLocalAccounts, claimOrphanedData, orphanClaimTarget } =
       await import("$lib/data/localAccountRepo");
 
-    const effectivePassword = password.trim() || undefined;
 
     const activeOwnerIdBeforeCreate = getActiveOwnerId();
     const all = await listLocalAccounts();
@@ -195,7 +275,6 @@ function createAuthStore() {
       // something like "local_1789636452490"; a user who didn't clear it before typing their
       // real name ended up with the two concatenated.
       displayName: displayName.trim(),
-      password: effectivePassword,
     });
     setActiveOwnerId(account.id);
     // See orphanClaimTarget(): true first-launch adopts orphaned (owner_id IS NULL) rows
@@ -204,7 +283,9 @@ function createAuthStore() {
     // profile silently inherited the first profile's un-migrated splits/workouts.
     const claimTarget = orphanClaimTarget(all.length, activeOwnerIdBeforeCreate, account.id);
     if (claimTarget) await claimOrphanedData(claimTarget);
+    await apiClient.reloadSession();
     await switchActiveOwner(false);
+    return "created";
   }
 
   // ── Logout / delete ──────────────────────────────────────────────────────
@@ -231,6 +312,84 @@ function createAuthStore() {
     }
   }
 
+  /** Takes an account and everything it made off the phone (its server copy is untouched). */
+  async function removeFromPhone(ownerId: string): Promise<void> {
+    const { clearOwnerData, getDb } = await import("$lib/data/db/sqlite");
+    await clearOwnerData(ownerId);
+    await getDb().run(`DELETE FROM local_accounts WHERE id = ?`, [ownerId]);
+    const { forgetAccountStorage } = await import("$lib/data/accountStorage");
+    forgetAccountStorage(ownerId);
+  }
+
+  /**
+   * After an account leaves the phone: open the next one, or the welcome screen when none is
+   * left. A full reload, so nothing of the account that left stays in memory.
+   */
+  async function openNextAccount(): Promise<void> {
+    const { listLocalAccounts } = await import("$lib/data/localAccountRepo");
+    const next = (await listLocalAccounts())[0];
+    if (next) {
+      try {
+        await loginOfflineAccount(next.id);
+        window.location.href = "/";
+        return;
+      } catch {
+        // Couldn't open it: let the user pick.
+        setActiveOwnerId(null);
+        window.location.href = "/accounts";
+        return;
+      }
+    }
+    setActiveOwnerId(null);
+    // Nobody left: start like a new phone (the welcome screen), not at a sign-in wall.
+    localStorage.removeItem("logit:had_account");
+    window.location.href = "/";
+  }
+
+  /**
+   * Settings › Sign out of @name (design canvas 7). Signs this account out on the phone; the
+   * other accounts aren't touched.
+   * - default: its training leaves the phone. Only offer this plainly when everything is backed
+   *   up (everythingBackedUp); otherwise the screen saves a copy first.
+   * - keepHere: the training stays as the phone's space without an account (Pro → offline).
+   *   Only when the phone has no such space already.
+   */
+  /** Whether "Keep using it here without the account" can be offered: the phone has no other space without an account. */
+  async function canKeepHere(): Promise<boolean> {
+    if (!isNativePlatform()) return false;
+    const ownerId = getActiveOwnerId();
+    const { listLocalAccounts } = await import("$lib/data/localAccountRepo");
+    return !(await listLocalAccounts()).some((a) => !a.serverUserId && a.id !== ownerId);
+  }
+
+  async function signOutOfAccount(opts: { keepHere?: boolean } = {}): Promise<void> {
+    if (!isNativePlatform()) return logout();
+    if (opts.keepHere && !(await canKeepHere())) {
+      throw new Error("This phone already has training without an account.");
+    }
+    const ownerId = getActiveOwnerId();
+    if (user) {
+      try { await apiClient.logout(); } catch (e) { log.warn("auth", "Server sign-out failed (signed out locally anyway)", e); }
+    }
+    log.info("auth", opts.keepHere ? "Signed out, kept on the phone" : "Signed out and removed from the phone");
+    user = null;
+    stopBackgroundSync();
+    if (!ownerId) {
+      window.location.href = "/auth";
+      return;
+    }
+    if (opts.keepHere) {
+      const { updateLocalAccount } = await import("$lib/data/localAccountRepo");
+      await updateLocalAccount(ownerId, { serverUserId: null });
+      setServerMode("offline");
+      apiClient.resetBaseUrl();
+      window.location.href = "/";
+      return;
+    }
+    await removeFromPhone(ownerId);
+    await openNextAccount();
+  }
+
   async function deleteAccount(password = "") {
     // 1. Delete from server if online. This now requires the account password — let a
     // failure (wrong password, offline) propagate so we DON'T wipe local data while the
@@ -242,16 +401,11 @@ function createAuthStore() {
     stopBackgroundSync();
 
     if (isNativePlatform()) {
-      const { clearOwnerData, getDb } = await import("$lib/data/db/sqlite");
+      // Everything of this account leaves the phone too; the next account opens, or the
+      // welcome screen when nobody is left (as after signing out).
       const ownerId = getActiveOwnerId();
-      if (ownerId) {
-        // Wipe all data belonging to this owner, then remove the account row itself
-        await clearOwnerData(ownerId);
-        const db = getDb();
-        await db.run(`DELETE FROM local_accounts WHERE id = ?`, [ownerId]);
-      }
-      setActiveOwnerId(null);
-      window.location.href = "/auth";
+      if (ownerId) await removeFromPhone(ownerId);
+      await openNextAccount();
     } else {
       const { clearAllData } = await import("$lib/usecases/clearAllData");
       await clearAllData();
@@ -278,9 +432,15 @@ function createAuthStore() {
     register,
     loginOfflineAccount,
     createOfflineAccount,
+    beginAddingAccount,
+    offlineTrainingToAsk,
+    signOutOfAccount,
+    canKeepHere,
     logout,
     deleteAccount,
     refreshUser,
+    /** Picks up a sign-in the API client changed underneath (moving server). */
+    reloadUser() { user = apiClient.getUser(); },
   };
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "./dateIso";
-import { clampWeeklyTarget, computeWeeklyStreak, targetForWeek, withWeeklyTarget } from "./weeklyStreak";
+import { clampWeeklyTarget, computeWeeklyStreak, targetForWeek, withTargetThisWeekOnly, withWeeklyTarget } from "./weeklyStreak";
 
 // 2026-11-02 is a Monday.
 const MON = "2026-11-02";
@@ -108,6 +108,16 @@ describe("target changes", () => {
     expect(targetForWeek(week(2), h, 3)).toBe(4);
     expect(targetForWeek(week(3), h, 3)).toBe(6);
     expect(targetForWeek(week(3), [], 3)).toBe(3);
+  });
+});
+
+describe("a target for this week only", () => {
+  it("lowers this week and goes back next week", () => {
+    const next = withTargetThisWeekOnly({ weeklyTarget: 4 }, 3, "2026-11-18");
+    expect(next.weeklyTarget).toBe(4);
+    expect(targetForWeek("2026-11-09", next.targetHistory, 4)).toBe(4);
+    expect(targetForWeek("2026-11-16", next.targetHistory, 4)).toBe(3);
+    expect(targetForWeek("2026-11-23", next.targetHistory, 4)).toBe(4);
   });
 });
 

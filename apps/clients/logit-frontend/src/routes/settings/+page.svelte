@@ -12,9 +12,6 @@
   import {
     RotateCcw,
     Sparkles,
-    Cloud,
-    Server,
-    WifiOff,
     Loader2,
     Trash2,
     ChevronRight,
@@ -117,69 +114,61 @@
 
   // --- Account ---
   let serverMode = $state<ServerMode>(getServerMode());
+  // The server the account in use lives on, as people know it.
+  const serverHost = $derived.by(() => {
+    if (serverMode !== "selfhosted") return "getlogit.app";
+    try { return new URL(apiClient.getBaseUrl()).host; } catch { return "Your own server"; }
+  });
+  // What the account card says about backup (design canvas 6). Free accounts on getlogit.app
+  // don't sync yet; self-hosted servers include everything.
+  // Free accounts back up one phone (the one they last signed in on).
+  const backupLine = $derived(
+    authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()
+      ? "Your free backup is on another phone. Sign in again here to move it, or get Pro to sync both"
+      : $lastSyncedAt
+        ? `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`
+        : "Not backed up yet",
+  );
+  // Sign out of one account on the phone (design canvas 7). Plain "Sign out" takes its training
+  // off the phone, so it's only offered as-is when everything is backed up; otherwise a copy is
+  // saved first. "Keep using it here" keeps the training as the phone's space without an account.
+  let signOutSheet = $state<{ backedUp: boolean; canKeepHere: boolean } | null>(null);
+  let signingOut = $state(false);
+  let signOutError = $state<string | null>(null);
+
+  async function openSignOut() {
+    if (!isNativePlatform()) {
+      void authStore.logout();
+      return;
+    }
+    const { everythingBackedUp } = await import("$lib/sync/syncService");
+    signOutError = null;
+    signOutSheet = { backedUp: everythingBackedUp(), canKeepHere: await authStore.canKeepHere() };
+  }
+
+  async function confirmSignOut(choice: "remove" | "keep-here") {
+    if (!signOutSheet) return;
+    signingOut = true;
+    signOutError = null;
+    try {
+      if (choice === "remove" && !signOutSheet.backedUp) {
+        const { exportData, downloadExport } = await import("$lib/usecases/exportData");
+        await downloadExport(await exportData());
+      }
+      await authStore.signOutOfAccount({ keepHere: choice === "keep-here" });
+    } catch (e) {
+      signOutError = e instanceof Error ? e.message : "Couldn't sign out. Try again.";
+      signingOut = false;
+    }
+  }
+
+  function initialsOf(name: string): string {
+    return (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  }
   let pendingDeleteAccount = $state(false);
   let deletingAccount = $state(false);
   let deleteAccountPassword = $state("");
   let deleteAccountError = $state<string | null>(null);
-
-  // --- Local account password ---
-  let localAccountHasPassword = $state(false);
-  let showPasswordForm = $state(false);
-  let passwordForm = $state({ current: "", next: "", confirm: "" });
-  let passwordError = $state<string | null>(null);
-  let savingPassword = $state(false);
-
-  $effect(() => {
-    const ownerId = getActiveOwnerId();
-    if (!ownerId || !isNativePlatform()) return;
-    void (async () => {
-      try {
-        const { getLocalAccount } = await import("$lib/data/localAccountRepo");
-        const acct = await getLocalAccount(ownerId);
-        localAccountHasPassword = !!acct?.passwordHash;
-      } catch {}
-    })();
-  });
-
-  async function saveLocalAccountPassword(remove = false) {
-    passwordError = null;
-    if (!remove && passwordForm.next !== passwordForm.confirm) {
-      passwordError = "Passwords don't match.";
-      return;
-    }
-    if (localAccountHasPassword && !passwordForm.current.trim()) {
-      passwordError = "Enter your current password to continue.";
-      return;
-    }
-    savingPassword = true;
-    try {
-      const { getLocalAccount, verifyLocalPassword, updateLocalAccount } =
-        await import("$lib/data/localAccountRepo");
-      const ownerId = getActiveOwnerId();
-      if (!ownerId) throw new Error("No active account.");
-      const acct = await getLocalAccount(ownerId);
-      if (!acct) throw new Error("Account not found.");
-      if (localAccountHasPassword) {
-        const ok = await verifyLocalPassword(acct, passwordForm.current);
-        if (!ok) {
-          passwordError = "Current password is incorrect.";
-          return;
-        }
-      }
-      const newPassword = remove
-        ? undefined
-        : passwordForm.next.trim() || undefined;
-      await updateLocalAccount(ownerId, { password: newPassword });
-      localAccountHasPassword = !remove && !!passwordForm.next.trim();
-      showPasswordForm = false;
-      passwordForm = { current: "", next: "", confirm: "" };
-    } catch (e) {
-      passwordError =
-        e instanceof Error ? e.message : "Failed to update password.";
-    } finally {
-      savingPassword = false;
-    }
-  }
 
   // --- Online account password ---
   let showOnlinePasswordForm = $state(false);
@@ -488,6 +477,38 @@
     await clearAllData();
   }
 
+  // Delete (design canvas 8): what goes, a copy first if wanted, then the password.
+  let localWorkoutCount = $state<number | null>(null);
+  let savingCopy = $state(false);
+  let copySaved = $state(false);
+
+  async function openDelete() {
+    pendingDeleteAccount = true;
+    copySaved = false;
+    void billing.refreshStatus();
+    try {
+      const { getWorkoutRepo } = await import("$lib/data/repoProvider");
+      localWorkoutCount = (await getWorkoutRepo().listAllSessions()).length;
+    } catch {
+      localWorkoutCount = null;
+    }
+    document.getElementById("sec-danger")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function saveCopyBeforeDelete() {
+    savingCopy = true;
+    deleteAccountError = null;
+    try {
+      const { exportData, downloadExport } = await import("$lib/usecases/exportData");
+      await downloadExport(await exportData());
+      copySaved = true;
+    } catch (e) {
+      deleteAccountError = e instanceof Error ? e.message : "Couldn't save a copy.";
+    } finally {
+      savingCopy = false;
+    }
+  }
+
   async function confirmDeleteAccount() {
     if (authStore.isAuthenticated && !deleteAccountPassword) {
       deleteAccountError = "Enter your password to delete your account.";
@@ -588,21 +609,23 @@
     </Card.Header>
     <Card.Content class="flex flex-col gap-0">
       {#if authStore.isAuthenticated && authStore.user}
-        <!-- Identity row -->
-        <div class="flex items-center gap-3 pb-3">
-          {#if serverMode === "cloud"}
-            <div class="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Cloud class="h-4 w-4 text-primary" />
+        <!-- Who's signed in (design canvas 6) -->
+        <div class="mb-3 flex flex-col gap-3 rounded-xl border border-border p-3.5">
+          <div class="flex items-center gap-3">
+            <div class="h-11 w-11 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden text-sm font-semibold">
+              {#if $profile.avatarDataUrl}
+                <img src={$profile.avatarDataUrl} alt="" class="h-full w-full object-cover" />
+              {:else}
+                {initialsOf($profile.name || authStore.user.username)}
+              {/if}
             </div>
-          {:else}
-            <div class="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-              <Server class="h-4 w-4 text-muted-foreground" />
+            <div class="flex-1 min-w-0">
+              <p class="truncate text-[15px] font-medium">{$profile.name || authStore.user.username} <span class="font-normal text-muted-foreground">@{authStore.user.username}</span></p>
+              <p class="truncate text-xs text-muted-foreground">{serverHost}</p>
             </div>
-          {/if}
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium">@{authStore.user.username}</p>
-            <p class="text-xs text-muted-foreground">{serverMode === "cloud" ? "getlogit.app" : "Self-hosted"}</p>
+            <span class="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">{apiClient.isSelfHosted() ? "Own server" : authStore.user.tier}</span>
           </div>
+          <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><ConnectionDot /> {backupLine}</p>
         </div>
 
         <PlanCard />
@@ -665,85 +688,64 @@
             </div>
           </div>
         {/if}
+        {#if isNativePlatform()}
+          <button type="button"
+            class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onclick={() => goto("/accounts")}>
+            Switch or add account
+            <ChevronRight class="h-4 w-4 shrink-0" />
+          </button>
+          <button type="button"
+            class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onclick={() => goto("/settings/move-server")}>
+            Move to another server
+            <ChevronRight class="h-4 w-4 shrink-0" />
+          </button>
+        {/if}
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => void authStore.logout()}>
-          Sign out
+          onclick={() => void openSignOut()}>
+          Sign out of @{authStore.user.username}
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border pt-3 pb-1 mt-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
+          onclick={() => void openDelete()}>
+          Delete account
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
 
       {:else if getActiveOwnerId()}
-        <!-- Identity row -->
+        <!-- No account yet (design canvas 5) -->
         <div class="flex items-center gap-3 pb-3">
-          <div class="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-            <WifiOff class="h-4 w-4 text-muted-foreground" />
+          <div class="h-11 w-11 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden text-sm font-semibold">
+            {#if $profile.avatarDataUrl}
+              <img src={$profile.avatarDataUrl} alt="" class="h-full w-full object-cover" />
+            {:else}
+              {initialsOf($profile.name)}
+            {/if}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium">{$profile.name || "Local account"}</p>
-            <p class="text-xs text-muted-foreground">Offline · data stored on this device</p>
+            <p class="truncate text-[15px] font-medium">{$profile.name || "No name yet"}</p>
+            <p class="text-xs text-muted-foreground">On this phone only · not backed up</p>
           </div>
         </div>
-        <!-- Action rows -->
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 text-sm hover:text-primary transition-colors"
-          onclick={() => goto("/auth?mode=register")}>
-          Create an account
-          <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
-        </button>
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => goto("/auth?mode=login")}>
-          Log in
-          <ChevronRight class="h-4 w-4 shrink-0" />
-        </button>
+        <div class="mb-3 flex flex-col gap-3 rounded-xl bg-muted p-4">
+          <p class="text-[15px] font-semibold">Make an account</p>
+          <div class="flex flex-col gap-2 text-sm">
+            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Free</span><span class="text-muted-foreground">Back up this phone, train with friends, get coached</span></p>
+            <p class="flex gap-2.5"><span class="min-w-11 font-semibold">Pro</span><span class="text-muted-foreground">Sync every phone, the web dashboard</span></p>
+          </div>
+          <p class="text-xs text-muted-foreground">Everything already on this phone comes with you.</p>
+          <div class="flex gap-2">
+            <Button class="flex-1" onclick={() => goto("/auth?mode=register")}>Create account</Button>
+            <Button class="flex-1" variant="outline" onclick={() => goto("/auth?mode=login")}>Sign in</Button>
+          </div>
+        </div>
         <button type="button"
           class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
           onclick={() => goto("/accounts")}>
-          Switch profile
-          <ChevronRight class="h-4 w-4 shrink-0" />
-        </button>
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => { showPasswordForm = !showPasswordForm; passwordError = null; passwordForm = { current: "", next: "", confirm: "" }; }}>
-          <span class="flex items-center gap-2">
-            <Lock class="h-3.5 w-3.5" />
-            {localAccountHasPassword ? "Change password" : "Set a password"}
-          </span>
-          <ChevronRight class="h-4 w-4 shrink-0 transition-transform {showPasswordForm ? 'rotate-90' : ''}" />
-        </button>
-        {#if showPasswordForm}
-          <div class="flex flex-col gap-2 pb-2 pt-1" transition:reveal>
-            {#if localAccountHasPassword}
-              <input type="password" placeholder="Current password" autocomplete="current-password"
-                class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                bind:value={passwordForm.current} />
-            {/if}
-            <input type="password" placeholder={localAccountHasPassword ? "New password" : "Password"} autocomplete="new-password"
-              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              bind:value={passwordForm.next} />
-            <input type="password" placeholder="Confirm password" autocomplete="new-password"
-              class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              bind:value={passwordForm.confirm} />
-            {#if passwordError}
-              <p class="text-xs text-destructive">{passwordError}</p>
-            {/if}
-            <div class="flex gap-2 pt-1">
-              <Button size="sm" disabled={savingPassword} onclick={() => void saveLocalAccountPassword()}>
-                {savingPassword ? "Saving…" : "Save"}
-              </Button>
-              {#if localAccountHasPassword}
-                <Button variant="outline" size="sm" disabled={savingPassword} onclick={() => void saveLocalAccountPassword(true)}>
-                  Remove
-                </Button>
-              {/if}
-              <Button variant="ghost" size="sm" onclick={() => { showPasswordForm = false; passwordError = null; }}>Cancel</Button>
-            </div>
-          </div>
-        {/if}
-        <button type="button"
-          class="w-full flex items-center justify-between border-t border-border py-3 pb-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onclick={() => void authStore.logout()}>
-          Sign out
+          Switch or add account
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
 
@@ -755,7 +757,7 @@
             <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=login")}>Log in</Button>
             <Button variant="outline" size="sm" onclick={() => goto("/auth?mode=register")}>Create account</Button>
             {#if isNativePlatform()}
-              <Button variant="outline" size="sm" onclick={() => goto("/accounts")}>Switch profile</Button>
+              <Button variant="outline" size="sm" onclick={() => goto("/accounts")}>Switch or add account</Button>
             {/if}
           </div>
         </div>
@@ -1297,6 +1299,17 @@
         </span>
         <ChevronRight class="h-4 w-4 shrink-0" />
       </button>
+      <button
+        type="button"
+        class="flex min-h-11 items-center justify-between border-t border-border pt-1 -mb-1 text-left text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onclick={() => goto("/settings/sounds")}
+      >
+        <span>
+          <span class="block">Sounds</span>
+          <span class="block text-xs">Rest over, countdowns and PRs, so you can follow a workout without looking.</span>
+        </span>
+        <ChevronRight class="h-4 w-4 shrink-0" />
+      </button>
     </Card.Content>
   </Card.Root>
 
@@ -1370,13 +1383,25 @@
               </div>
             </div>
           {/if}
-          <p class="text-sm text-destructive">
-            {authStore.isAuthenticated
-              ? "This will permanently delete your account from the server and erase all local data. This cannot be undone."
-              : getActiveOwnerId()
-                ? "This will erase all local data and remove this account from the device. This cannot be undone."
-                : "This will erase all local data on this device. This cannot be undone."}
-          </p>
+          <div>
+            <p class="text-lg font-bold">
+              {authStore.isAuthenticated && authStore.user ? `Delete @${authStore.user.username}?` : "Delete everything on this phone?"}
+            </p>
+            <p class="text-sm text-muted-foreground">This can't be undone.</p>
+          </div>
+          <div class="flex flex-col gap-1.5 rounded-[10px] bg-destructive/10 p-3 text-sm text-destructive">
+            <p class="font-semibold">What goes</p>
+            {#if authStore.isAuthenticated}
+              <p>• Your account and everything on {serverHost}{localWorkoutCount !== null ? `: ${localWorkoutCount} workout${localWorkoutCount === 1 ? "" : "s"}` : ""}, posts, followers, coaching</p>
+              <p>• Everything of yours on this phone</p>
+            {:else}
+              <p>• Everything on this phone{localWorkoutCount !== null ? `: ${localWorkoutCount} workout${localWorkoutCount === 1 ? "" : "s"}` : ""}, splits, food, habits, settings</p>
+            {/if}
+          </div>
+          <Button variant="outline" size="sm" class="self-start" disabled={savingCopy || deletingAccount} onclick={() => void saveCopyBeforeDelete()}>
+            {#if savingCopy}<Loader2 class="h-3.5 w-3.5 mr-1.5 animate-spin" />{/if}
+            {copySaved ? "Copy saved" : "Save a copy first"}
+          </Button>
           {#if authStore.isAuthenticated}
             <input
               type="password"
@@ -1400,7 +1425,7 @@
               {#if deletingAccount}
                 <Loader2 class="h-3.5 w-3.5 mr-1.5 animate-spin" />
               {/if}
-              Yes, delete everything
+              {authStore.isAuthenticated ? "Delete account" : "Delete everything on this phone"}
             </Button>
             <Button
               variant="outline"
@@ -1421,10 +1446,10 @@
           variant="outline"
           size="sm"
           class="border-destructive/50 text-destructive hover:bg-destructive/10"
-          onclick={() => { pendingDeleteAccount = true; void billing.refreshStatus(); }}
+          onclick={() => void openDelete()}
         >
           <Trash2 class="h-3.5 w-3.5 mr-1.5" />
-          Delete account and all data
+          {authStore.isAuthenticated ? "Delete account" : "Delete everything on this phone"}
         </Button>
       {/if}
     </Card.Content>
@@ -1554,4 +1579,37 @@
     }}
     onadded={() => void loadProgression()}
   />
+{/if}
+
+{#if signOutSheet && authStore.user}
+  {@const who = authStore.user.username}
+  <div class="fixed inset-0 z-50 flex flex-col justify-end bg-black/50" role="presentation">
+    <div class="rounded-t-2xl bg-background px-6 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby="signout-title">
+      <div class="h-1 w-10 rounded-full bg-muted-foreground/30 self-center"></div>
+      <div>
+        <h2 id="signout-title" class="text-lg font-bold">Sign out of @{who} on this phone?</h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          {#if signOutSheet.backedUp}
+            Everything is backed up on {serverHost}. @{who}'s training leaves this phone, and you can sign back in any time. Other accounts here aren't touched.
+          {:else}
+            @{who}'s training is only on this phone. Save a copy before it leaves, or keep using it here.
+          {/if}
+        </p>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <Button class="h-12" disabled={signingOut} onclick={() => void confirmSignOut("remove")}>
+          {#if signingOut}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+          {signOutSheet.backedUp ? "Sign out" : "Save a copy, then sign out"}
+        </Button>
+        {#if signOutSheet.canKeepHere}
+          <button type="button" class="flex flex-col items-start gap-0.5 rounded-lg border border-border px-3.5 py-3 text-left" disabled={signingOut} onclick={() => void confirmSignOut("keep-here")}>
+            <span class="text-[15px] font-medium">Keep using it here without the account</span>
+            <span class="text-sm text-muted-foreground">Your training stays on this phone, offline</span>
+          </button>
+        {/if}
+        <button type="button" class="h-11 text-sm font-medium text-muted-foreground" disabled={signingOut} onclick={() => (signOutSheet = null)}>Cancel</button>
+        {#if signOutError}<p class="text-sm text-destructive">{signOutError}</p>{/if}
+      </div>
+    </div>
+  </div>
 {/if}

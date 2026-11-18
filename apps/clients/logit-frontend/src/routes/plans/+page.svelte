@@ -23,7 +23,7 @@
       id: "Pro",
       blurb: "For training across devices",
       items: [
-        "Backup and sync between your devices",
+        "Sync between all your phones",
         "The web dashboard at app.getlogit.app",
         "Deeper charts: e1RM, volume, nutrition against performance",
       ],

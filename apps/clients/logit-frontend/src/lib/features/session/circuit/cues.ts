@@ -1,3 +1,4 @@
+import { playSound } from "$lib/features/sound/sounds";
 // Beeps and buzzes for the circuit countdown, so it can be followed without
 // looking at the phone (it's usually on the floor during mobility work).
 
@@ -38,24 +39,25 @@ async function buzz(heavy: boolean): Promise<void> {
   } catch {}
 }
 
+// Logit's own sounds (Chalk), with their vibrations; see lib/features/sound/sounds.ts.
+
 /** 3, 2, 1 — and the last seconds of a hold. */
 export function cueTick(): void {
-  beep(660, 90);
-  void buzz(false);
+  playSound("count");
 }
 
 /** The hold (or rep goal) starts. */
 export function cueGo(): void {
-  beep(990, 280);
-  void buzz(true);
+  playSound("count", { go: true });
 }
 
 /** A hold or a rest is over. */
 export function cueEnd(): void {
-  beep(880, 140);
-  beep(880, 140, 200);
-  void buzz(true);
+  playSound("timed");
 }
+
+void beep;
+void buzz;
 
 // ── Keep the screen on while a circuit runs ───────────────────────────────────
 

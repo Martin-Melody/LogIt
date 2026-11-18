@@ -1,4 +1,5 @@
 import { get } from "svelte/store";
+import { getAccountItem } from "$lib/data/accountStorage";
 import type { Exercise } from "@logit/core/domain/exercise";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
@@ -114,11 +115,15 @@ async function collectHabits(): Promise<HabitsExport> {
   return { habits, entries };
 }
 
+/** Downloaded plugin code and packs are shared by everyone on the phone (a cache of the same
+ * files); which plugins are installed, their settings and sources belong to the account. */
+export const DEVICE_PLUGIN_KEYS: ReadonlySet<string> = new Set(["logit:plugins:bundles:v1", "logit:plugins:packs:v1"]);
+
 function collectPlugins(): PluginsExport {
   const out: PluginsExport = {};
   if (!browser) return out;
   for (const key of PLUGIN_KEYS) {
-    const raw = localStorage.getItem(key);
+    const raw = DEVICE_PLUGIN_KEYS.has(key) ? localStorage.getItem(key) : getAccountItem(key);
     if (raw != null) out[key] = raw;
   }
   return out;

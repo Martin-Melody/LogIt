@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
 import { createLocalAlgorithmRegistry } from "@logit/core/progression/localAlgorithmRegistry";
 import { createLocalMobilityAlgorithmRegistry } from "@logit/core/progression/localMobilityAlgorithmRegistry";
@@ -32,7 +33,7 @@ function loadInstalled(): InstalledPlugin[] {
   if (!browser) return [];
 
   try {
-    const raw = localStorage.getItem(INSTALLED_STORAGE_KEY);
+    const raw = getAccountItem(INSTALLED_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as InstalledPlugin[];
     return Array.isArray(parsed) ? parsed : [];
@@ -43,7 +44,7 @@ function loadInstalled(): InstalledPlugin[] {
 
 function saveInstalled(installed: InstalledPlugin[]): void {
   if (!browser) return;
-  localStorage.setItem(INSTALLED_STORAGE_KEY, JSON.stringify(installed));
+  setAccountItem(INSTALLED_STORAGE_KEY, JSON.stringify(installed));
 }
 
 function validateInstallableManifest(manifest: PluginManifest): void {
@@ -70,7 +71,7 @@ function syncHomeWidgets(manifest: PluginManifest, action: "add" | "remove"): vo
   if (!capability || capability.family !== "widget") return;
 
   try {
-    const raw = localStorage.getItem(HOME_STORAGE_KEY);
+    const raw = getAccountItem(HOME_STORAGE_KEY);
     if (!raw) return;
 
     const parsed = JSON.parse(raw) as { slots?: Array<{ id: string; enabled: boolean; orderIndex: number }> };
@@ -78,7 +79,7 @@ function syncHomeWidgets(manifest: PluginManifest, action: "add" | "remove"): vo
 
     if (action === "remove") {
       const next = parsed.slots.filter((slot) => slot.id !== capability.widgetId);
-      localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify({ slots: next }));
+      setAccountItem(HOME_STORAGE_KEY, JSON.stringify({ slots: next }));
       return;
     }
 
@@ -97,7 +98,7 @@ function syncHomeWidgets(manifest: PluginManifest, action: "add" | "remove"): vo
       enabled: true,
       orderIndex: nextOrder,
     });
-    localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify(parsed));
+    setAccountItem(HOME_STORAGE_KEY, JSON.stringify(parsed));
   } catch {
     // Ignore malformed home config; the home store will repair it on load.
   }

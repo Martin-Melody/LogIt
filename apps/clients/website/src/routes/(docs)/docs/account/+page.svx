@@ -9,8 +9,8 @@ title: Your account
 
 <FeatureFacts id="account" />
 
-You can use LogIt without an account: everything stays on your phone. An account lets you sync,
-use the web dashboard, follow people and have a coach.
+You can use LogIt without an account: everything stays on your phone. A free account backs up your phone,
+lets you follow people and have a coach; Pro adds sync between phones and the web dashboard.
 
 ## Sign in or create an account
 
@@ -21,6 +21,15 @@ On the phone, open Settings and choose Log in. On the web, go to app.getlogit.ap
 In the Android app, open Settings and use the plan card under Account. Pick Pro or Studio, monthly or
 yearly; Google Play takes the payment. The web dashboard's Upgrade page explains the plans but can't take
 payment. See [What each plan can do](/docs/plans).
+
+## Move to another server
+
+On the phone, **Settings › Move to another server** copies your workouts, splits, nutrition, habits
+and settings to another server: from getlogit.app to your own, or back. Make a new account there or
+sign in to one you have; if the server is invite-only you'll be asked for the code. The phone only
+switches once everything has been copied, so if the copy stops nothing changes and you can try
+again. Your old account is kept until you delete it, and social posts and followers stay on the old
+server. If you had Pro and move to your own server, cancel Pro in Google Play.
 
 ## Delete your account
 

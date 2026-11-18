@@ -20,7 +20,7 @@
   <h2>The service</h2>
   <p>
     LogIt is a workout, nutrition and habit tracker. The app works offline with no account. An
-    optional account adds a social feed; the paid Pro and Studio plans add cloud sync, the web
+    optional account backs up one phone and adds a social feed; the paid Pro and Studio plans add sync between devices, the web
     dashboard and coaching features.
   </p>
 
