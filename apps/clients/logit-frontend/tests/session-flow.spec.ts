@@ -293,7 +293,7 @@ test.describe("progression targets", () => {
     await goToSession(page);
 
     await expect(page.getByTestId("progress-meter")).toHaveCount(0);
-    await expect(page.getByText("+ Add first set")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add first set" })).toBeVisible();
   });
 });
 
@@ -396,7 +396,7 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.getByText("+ Add first set").click();
+    await page.getByRole("button", { name: "Add first set" }).click();
 
     // A set row should now be visible, with "Add a set" under it
     await expect(page.getByRole("button", { name: "Add a set" })).toBeVisible();
@@ -414,7 +414,7 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.getByText("+ Add first set").click();
+    await page.getByRole("button", { name: "Add first set" }).click();
 
     await expect(page.getByTestId("set-last").first()).toHaveText("6 × 90");
   });
@@ -427,7 +427,7 @@ test.describe("managing sets", () => {
     await goToSession(page);
 
     // The plan creates the sets itself, weight filled in from the suggestion.
-    await expect(page.getByText("+ Add first set")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add first set" })).toHaveCount(0);
     await expect.poll(() => rowText(page, 0)).toContain("× 80");
 
     // A set added beyond the plan carries the same weight.
@@ -445,14 +445,14 @@ test.describe("managing sets", () => {
     await goToSession(page);
 
     await expect(page.locator('[data-testid="set-number"]')).toHaveCount(1);
-    await page.getByText("+ Warm-up ramp").click();
+    await page.getByRole("button", { name: "Warm-up ramp" }).click();
 
     // bar 20 + 40/60/80% of 100 → 4 warm-ups, then the working set = 5 rows.
     await expect(page.locator('[data-testid="set-number"]')).toHaveCount(5);
     // First row is a warm-up (W badge).
     await expect(page.locator("main").getByText("W", { exact: true }).first()).toBeVisible();
     // Offer is gone once warm-ups exist.
-    await expect(page.getByText("+ Warm-up ramp")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Warm-up ramp" })).toHaveCount(0);
   });
 
   test("marking a set complete toggles its visual state", async ({ page }) => {
@@ -1173,7 +1173,7 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
 
-    await page.getByRole("button", { name: "+ Session note" }).click();
+    await page.getByRole("button", { name: "Session note" }).click();
     const note = page.locator('textarea[placeholder^="Session note"]');
     await note.fill("felt strong today");
     await note.blur();

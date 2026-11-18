@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { addButton } from "$lib/components/ui/choice";
   import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import { get } from "svelte/store";
@@ -672,14 +673,11 @@
       {/each}
     </div>
   {:else}
-    <button
-      type="button"
-      class="w-full px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
-      disabled={saving}
-      onclick={addSet}
-    >
-      + Add first set
-    </button>
+    <div class="px-3 py-2.5">
+      <button type="button" class="{addButton} w-full" disabled={saving} onclick={addSet}>
+        <Plus class="h-4 w-4" /> Add first set
+      </button>
+    </div>
   {/if}
 {/if}
 

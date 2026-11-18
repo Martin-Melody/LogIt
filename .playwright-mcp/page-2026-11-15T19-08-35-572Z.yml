@@ -1,0 +1,54 @@
+- generic [ref=f11e2]:
+  - generic [ref=f11e6]:
+    - banner [ref=f11e7]:
+      - button "Back" [ref=f11e8]
+      - heading "Check-ins" [level=1] [ref=f11e10]
+      - link "Notifications" [ref=f11e11] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f11e13]:
+      - generic [ref=f11e14]:
+        - heading "This week" [level=2] [ref=f11e15]
+        - list [ref=f11e16]:
+          - listitem [ref=f11e17]:
+            - button "Weekly check-in Late, was due Mon, Nov 9 Late ›" [ref=f11e18]:
+              - generic [ref=f11e19]:
+                - text: Weekly check-in
+                - paragraph [ref=f11e20]: Late, was due Mon, Nov 9
+              - generic [ref=f11e21]: Late
+              - generic [ref=f11e22]: ›
+          - listitem [ref=f11e23]:
+            - button "Weekly check-in Due Mon, Nov 16 · 5 questions Due ›" [ref=f11e24]:
+              - generic [ref=f11e25]:
+                - text: Weekly check-in
+                - paragraph [ref=f11e26]: Due Mon, Nov 16 · 5 questions
+              - generic [ref=f11e27]: Due
+              - generic [ref=f11e28]: ›
+        - heading "Earlier" [level=2] [ref=f11e29]
+        - list [ref=f11e30]:
+          - listitem [ref=f11e31]:
+            - button "Week of Oct 26 Sent Tue, Nov 3 · 1 day late Sent ›" [ref=f11e32]:
+              - generic [ref=f11e33]:
+                - text: Week of Oct 26
+                - paragraph [ref=f11e34]: Sent Tue, Nov 3 · 1 day late
+              - generic [ref=f11e35]: Sent
+              - generic [ref=f11e36]: ›
+          - listitem [ref=f11e37]:
+            - button "Week of Oct 19 Sent Sun, Oct 25 Reviewed ›" [ref=f11e38]:
+              - generic [ref=f11e39]:
+                - text: Week of Oct 19
+                - paragraph [ref=f11e40]: Sent Sun, Oct 25
+              - generic [ref=f11e41]: Reviewed
+              - generic [ref=f11e42]: ›
+    - contentinfo [ref=f11e43]:
+      - navigation "Main navigation" [ref=f11e44]:
+        - link "Home" [ref=f11e45] [cursor=pointer]:
+          - /url: /
+        - link "Library" [ref=f11e48] [cursor=pointer]:
+          - /url: /exercises
+        - link "Resume session" [ref=f11e51] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f11e57]: Resume
+        - link "Profile" [ref=f11e58] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f11e61]
+  - region "Notifications alt+T"

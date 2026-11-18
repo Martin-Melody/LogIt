@@ -1,0 +1,209 @@
+- generic [ref=f35e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f35e3]:
+    - generic [ref=f35e6]:
+      - generic [ref=f35e7]:
+        - link "LogIt" [ref=f35e8] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f35e13]:
+          - tab "Me" [selected] [ref=f35e14]
+          - tab "Coaching" [ref=f35e15]
+      - generic [ref=f35e16]:
+        - list [ref=f35e19]:
+          - listitem [ref=f35e20]:
+            - link "Overview" [ref=f35e21] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f35e24]:
+          - generic [ref=f35e25]: Training
+          - list [ref=f35e27]:
+            - listitem [ref=f35e28]:
+              - link "Sessions" [ref=f35e29] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f35e32]:
+              - link "Progress" [ref=f35e33] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f35e36]:
+              - link "Plan" [ref=f35e37] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f35e40]:
+              - link "Library" [ref=f35e41] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f35e44]:
+          - generic [ref=f35e45]: Body
+          - list [ref=f35e47]:
+            - listitem [ref=f35e48]:
+              - link "Nutrition" [ref=f35e49] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f35e52]:
+              - link "Habits & goals" [ref=f35e53] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f35e56]:
+          - generic [ref=f35e57]: People
+          - list [ref=f35e59]:
+            - listitem [ref=f35e60]:
+              - link "Social 3" [ref=f35e61] [cursor=pointer]:
+                - /url: /social
+                - generic [ref=f35e63]: Social
+                - generic [ref=f35e64]: "3"
+        - generic [ref=f35e65]:
+          - generic [ref=f35e66]: Coach
+          - list [ref=f35e68]:
+            - listitem [ref=f35e69]:
+              - link "My coach" [ref=f35e70] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f35e74]:
+        - listitem [ref=f35e75]:
+          - button "A Alex Studio · Account" [ref=f35e76]:
+            - generic [ref=f35e77]: A
+            - generic [ref=f35e78]:
+              - generic [ref=f35e79]: Alex
+              - generic [ref=f35e80]: Studio · Account
+      - button "Toggle Sidebar" [ref=f35e82]
+    - main [ref=f35e83]:
+      - main [ref=f35e84]:
+        - generic [ref=f35e86]:
+          - generic [ref=f35e87]:
+            - generic [ref=f35e88]:
+              - heading "Plan" [level=1] [ref=f35e89]
+              - navigation "Plan sections" [ref=f35e90]:
+                - link "Splits" [ref=f35e91] [cursor=pointer]:
+                  - /url: /plan
+                - link "Programs" [ref=f35e92] [cursor=pointer]:
+                  - /url: /plan/programs
+            - button "+ New split" [ref=f35e93]
+          - generic [ref=f35e94]:
+            - navigation "Your splits" [ref=f35e95]:
+              - paragraph [ref=f35e96]: Your splits
+              - button "Upper / Lower, 3 days 3 workouts · on weekdays" [ref=f35e97]:
+                - generic [ref=f35e98]: Upper / Lower, 3 days
+                - generic [ref=f35e100]: 3 workouts · on weekdays
+              - button "Upper / Lower 2 workouts · on weekdays" [ref=f35e101]:
+                - generic [ref=f35e102]: Upper / Lower
+                - generic [ref=f35e104]: 2 workouts · on weekdays
+              - paragraph [ref=f35e105]:
+                - text: Want a ready-made one?
+                - link "Programs ›" [ref=f35e106] [cursor=pointer]:
+                  - /url: /plan/programs
+            - generic [ref=f35e107]:
+              - generic [ref=f35e108]:
+                - button "Make active" [ref=f35e109]
+                - button "Duplicate" [ref=f35e110]
+                - button "Archive" [ref=f35e111]
+              - generic [ref=f35e112]:
+                - generic [ref=f35e114]:
+                  - generic [ref=f35e115]: Split name
+                  - textbox "Split name" [ref=f35e116]: Upper / Lower, 3 days
+                - generic [ref=f35e117]:
+                  - generic [ref=f35e118]: Schedule
+                  - radiogroup "Schedule" [ref=f35e119]:
+                    - radio "On weekdays" [checked] [ref=f35e120]
+                    - radio "In a rotation" [ref=f35e121]
+                  - generic [ref=f35e122]: Each workout sits on a weekday. Empty days are rest days.
+                - generic [ref=f35e123]:
+                  - generic [ref=f35e124]:
+                    - group "Mon" [ref=f35e125]:
+                      - button "Upper A 2 exercises · 7 sets" [ref=f35e127]:
+                        - generic [ref=f35e128]: Upper A
+                        - generic [ref=f35e129]: 2 exercises · 7 sets
+                      - button "+ second workout" [ref=f35e130]
+                    - group "Tue" [ref=f35e131]:
+                      - button "Rest · + add" [ref=f35e133]
+                    - group "Wed" [ref=f35e134]:
+                      - button "Lower 2 exercises · 6 sets" [ref=f35e136]:
+                        - generic [ref=f35e137]: Lower
+                        - generic [ref=f35e138]: 2 exercises · 6 sets
+                      - button "+ second workout" [ref=f35e139]
+                    - group "Thu" [ref=f35e140]:
+                      - button "Rest · + add" [ref=f35e142]
+                    - group "Fri" [ref=f35e143]:
+                      - button "Upper B 1 exercise · 0 sets" [ref=f35e145]:
+                        - generic [ref=f35e146]: Upper B
+                        - generic [ref=f35e147]: 1 exercise · 0 sets
+                      - button "+ second workout" [ref=f35e148]
+                    - group "Sat" [ref=f35e149]:
+                      - button "Rest · + add" [ref=f35e151]
+                    - group "Sun" [ref=f35e152]:
+                      - button "Rest · + add" [ref=f35e154]
+                  - paragraph [ref=f35e155]: Drag a workout to another day to move it. Hold Alt while dropping to copy it.
+                - generic [ref=f35e156]:
+                  - generic "Each working set counts once for the exercise's main muscles." [ref=f35e157]: Hard sets a week
+                  - generic [ref=f35e158]: Chest 4 · low
+                  - generic [ref=f35e159]: Back 0 · low
+                  - generic [ref=f35e160]: Shoulders 0 · low
+                  - generic [ref=f35e161]: Quads 0 · low
+                  - generic [ref=f35e162]: Hamstrings 0 · low
+                  - generic [ref=f35e163]: Glutes 0 · low
+                  - generic [ref=f35e164]: Biceps 0 · low
+                  - generic [ref=f35e165]: Triceps 0 · low
+                  - generic [ref=f35e166]: Core 3 · low
+                  - generic [ref=f35e167]: · 4 sets not counted (exercise not in the list)
+                - generic [ref=f35e169]:
+                  - generic [ref=f35e170]:
+                    - generic [ref=f35e171]:
+                      - generic [ref=f35e172]:
+                        - generic [ref=f35e173]: Workout name
+                        - textbox "Workout name" [ref=f35e174]:
+                          - /placeholder: Upper A
+                          - text: Upper A
+                      - generic [ref=f35e175]:
+                        - generic [ref=f35e176]: Day
+                        - combobox "Day" [ref=f35e177]:
+                          - option "Monday" [selected]
+                          - option "Tuesday"
+                          - option "Wednesday"
+                          - option "Thursday"
+                          - option "Friday"
+                          - option "Saturday"
+                          - option "Sunday"
+                      - generic [ref=f35e178]: 2 exercises · 7 sets
+                    - generic [ref=f35e179]:
+                      - button "Duplicate day" [ref=f35e180]
+                      - button "Delete day" [ref=f35e181]
+                  - table [ref=f35e183]:
+                    - rowgroup [ref=f35e184]:
+                      - row [ref=f35e185]:
+                        - columnheader "Order" [ref=f35e186]
+                        - columnheader "Exercise" [ref=f35e188]
+                        - columnheader "Sets" [ref=f35e189]
+                        - columnheader "Reps" [ref=f35e190]
+                        - columnheader "Weight" [ref=f35e191]
+                        - columnheader "Last time" [ref=f35e192]
+                        - columnheader "Remove" [ref=f35e193]
+                    - rowgroup [ref=f35e195]:
+                      - row [ref=f35e196]:
+                        - cell [ref=f35e197]:
+                          - button "Move Bench press (arrow keys)" [ref=f35e198]
+                        - cell "Bench press" [ref=f35e200]
+                        - cell [ref=f35e201]:
+                          - textbox "Bench press sets" [ref=f35e202]: "4"
+                        - cell [ref=f35e203]:
+                          - textbox "Bench press reps" [ref=f35e204]: "8"
+                        - cell "kg" [ref=f35e205]:
+                          - textbox "Bench press weight in kg" [ref=f35e206]
+                          - text: kg
+                        - cell "80 × 6, 82.5 × 6 · Fri" [ref=f35e207]
+                        - cell [ref=f35e208]:
+                          - button "Remove Bench press" [ref=f35e209]
+                      - row [ref=f35e211]:
+                        - cell [ref=f35e212]:
+                          - button "Move Cable pallof press (arrow keys)" [ref=f35e213]
+                        - cell "Cable pallof press" [ref=f35e215]
+                        - cell [ref=f35e216]:
+                          - textbox "Cable pallof press sets" [ref=f35e217]: "3"
+                        - cell [ref=f35e218]:
+                          - textbox "Cable pallof press reps" [ref=f35e219]: "12"
+                        - cell "kg" [ref=f35e220]:
+                          - textbox "Cable pallof press weight in kg" [ref=f35e221]
+                          - text: kg
+                        - cell [ref=f35e222]
+                        - cell [ref=f35e223]:
+                          - button "Remove Cable pallof press" [ref=f35e224]
+                  - generic [ref=f35e226]:
+                    - generic [ref=f35e228]:
+                      - generic [ref=f35e229]: Add an exercise
+                      - combobox "Add an exercise" [ref=f35e230]
+                    - button "+ Superset or circuit" [ref=f35e231]
+                    - button "+ Mobility" [ref=f35e232]
+                    - button "+ Cardio" [ref=f35e233]
+                  - paragraph [ref=f35e234]: New exercises are filled in from the last time you did them. Drag the handle (or focus it and use the arrow keys) to reorder.
+  - generic [ref=f35e235]: LogIt

@@ -1,0 +1,131 @@
+- generic:
+  - generic:
+    - region "Notifications alt+T"
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - link "LogIt":
+                - /url: /
+              - tablist "Workspace":
+                - tab "Me"
+                - tab "Coaching" [selected]
+            - generic:
+              - generic:
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Today":
+                        - /url: /coaching
+                    - listitem:
+                      - link "Clients":
+                        - /url: /clients
+                    - listitem:
+                      - link "Programs":
+                        - /url: /coaching/programs
+                    - listitem:
+                      - link "Library":
+                        - /url: /coaching/library
+                    - listitem:
+                      - link "Check-ins":
+                        - /url: /coaching/checkins
+                    - listitem:
+                      - link "Messages":
+                        - /url: /messages
+              - generic:
+                - generic: Studio
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Invite links":
+                        - /url: /coaching/links
+                    - listitem:
+                      - link "Payments":
+                        - /url: /coaching/payments
+            - generic:
+              - list:
+                - listitem:
+                  - button "Guide 0 of 18":
+                    - generic: Guide
+                    - generic: 0 of 18
+                - listitem:
+                  - link "Help and docs":
+                    - /url: https://getlogit.app/docs
+                - listitem:
+                  - button "A Alex Studio · Account":
+                    - generic: A
+                    - generic:
+                      - generic: Alex
+                      - generic: Studio · Account
+            - button "Toggle Sidebar"
+      - main:
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - paragraph: Monday, November 16
+                - heading "Today" [level=1]
+              - region "Welcome to Studio, Alex":
+                - generic:
+                  - heading "Welcome to Studio, Alex" [level=2]
+                  - paragraph: "The walkthrough has you do each part of coaching for real: an invite link, a program, a check-in, messages. Sample clients can play your clients. 10 chapters, about 22 minutes in all. Stop whenever you like; Guide remembers where you were."
+                - generic:
+                  - button "Start the walkthrough"
+                  - button "Hide this"
+              - generic:
+                - link "Active clients 0":
+                  - /url: /clients
+                  - generic: Active clients
+                  - generic: "0"
+                - generic:
+                  - generic: Sessions, last 7 days
+                  - generic: "0"
+                - link "Check-ins to review 0":
+                  - /url: /coaching/checkins
+                  - generic: Check-ins to review
+                  - generic: "0"
+                - link "Unread messages 0":
+                  - /url: /messages
+                  - generic: Unread messages
+                  - generic: "0"
+              - generic:
+                - generic:
+                  - generic:
+                    - heading "Needs you" [level=2]
+                    - generic: Newest first
+                  - paragraph: No clients yet. Invite someone from Clients, or share an invite link.
+                - generic:
+                  - generic:
+                    - heading "This week" [level=2]
+                    - generic: Last 7 days
+                  - paragraph: Your clients show up here.
+  - dialog "Practise on sample clients first?" [ref=f1e118]:
+    - generic [ref=f1e119]:
+      - paragraph [ref=f1e120]: Studio walkthrough
+      - heading "Practise on sample clients first?" [level=2] [ref=f1e121]
+      - generic [ref=f1e122]: "The walkthrough has you do everything for real: make an invite link, build a program, set a check-in, reply to messages. Three sample clients give you someone to do it with. They answer on their own, a few seconds after you act."
+    - list [ref=f1e123]:
+      - listitem [ref=f1e124]:
+        - generic [ref=f1e125]: "N"
+        - generic [ref=f1e126]:
+          - generic [ref=f1e127]: Niamh Sample
+          - paragraph [ref=f1e128]: New. Asks to join through the first invite link you make, then starts the program you give her and logs a workout.
+      - listitem [ref=f1e129]:
+        - generic [ref=f1e130]: C
+        - generic [ref=f1e131]:
+          - generic [ref=f1e132]: Conor Sample
+          - paragraph [ref=f1e133]: Already your client, with 4 weeks of workouts, food and weight. Fills in your check-ins and answers your messages. His knee is bothering him.
+      - listitem [ref=f1e134]:
+        - generic [ref=f1e135]: D
+        - generic [ref=f1e136]:
+          - generic [ref=f1e137]: Dara Sample
+          - paragraph [ref=f1e138]: Shares training only, so you see what a client's privacy switches look like from your side.
+    - list [ref=f1e139]:
+      - listitem [ref=f1e140]: Marked Sample everywhere. They can't sign in, and never show up in social, search, payments or your client count.
+      - listitem [ref=f1e141]: They stay until you remove them (Clients › Sandbox), and you can add them back any time.
+    - generic [ref=f1e142]:
+      - button "Add sample clients and start" [active] [ref=f1e143]
+      - button "I'll use my real clients" [ref=f1e144]
+      - button "Not now" [ref=f1e145]
+    - button "Close" [ref=f1e146]

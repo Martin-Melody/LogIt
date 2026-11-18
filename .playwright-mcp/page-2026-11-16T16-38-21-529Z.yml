@@ -1,0 +1,149 @@
+- generic [ref=f11e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f11e59]:
+    - generic [ref=f11e62]:
+      - generic [ref=f11e63]:
+        - link "LogIt" [ref=f11e64] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f11e69]:
+          - tab "Me" [ref=f11e70]
+          - tab "Coaching" [selected] [ref=f11e71]
+      - generic [ref=f11e72]:
+        - list [ref=f11e75]:
+          - listitem [ref=f11e76]:
+            - link "Today 3" [ref=f11e77] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f11e79]: Today
+              - generic [ref=f11e80]: "3"
+          - listitem [ref=f11e81]:
+            - link "Clients" [ref=f11e82] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f11e85]:
+            - link "Programs" [ref=f11e86] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f11e89]:
+            - link "Library" [ref=f11e90] [cursor=pointer]:
+              - /url: /coaching/library
+          - listitem [ref=f11e93]:
+            - link "Check-ins 1" [ref=f11e94] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f11e96]: Check-ins
+              - generic [ref=f11e97]: "1"
+          - listitem [ref=f11e98]:
+            - link "Messages 1" [ref=f11e99] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f11e101]: Messages
+              - generic [ref=f11e102]: "1"
+        - generic [ref=f11e103]:
+          - generic [ref=f11e104]: Studio
+          - list [ref=f11e106]:
+            - listitem [ref=f11e107]:
+              - link "Invite links" [ref=f11e108] [cursor=pointer]:
+                - /url: /coaching/links
+            - listitem [ref=f11e111]:
+              - link "Payments" [ref=f11e112] [cursor=pointer]:
+                - /url: /coaching/payments
+      - list [ref=f11e116]:
+        - listitem [ref=f11e117]:
+          - button "Guide 1 of 18" [ref=f11e118]:
+            - generic [ref=f11e120]: Guide
+            - generic [ref=f11e121]: 1 of 18
+        - listitem [ref=f11e122]:
+          - link "Help and docs" [ref=f11e123] [cursor=pointer]:
+            - /url: http://192.168.30.100:5210/docs
+        - listitem [ref=f11e126]:
+          - button "A Alex Studio · Account" [ref=f11e127]:
+            - generic [ref=f11e128]: A
+            - generic [ref=f11e129]:
+              - generic [ref=f11e130]: Alex
+              - generic [ref=f11e131]: Studio · Account
+      - button "Toggle Sidebar" [ref=f11e133]
+    - main [ref=f11e134]:
+      - generic [ref=f11e135]:
+        - generic [ref=f11e136]: You have 3 sample clients to practise on.
+        - link "Manage them" [ref=f11e137] [cursor=pointer]:
+          - /url: /clients#sandbox
+      - main [ref=f11e138]:
+        - generic [ref=f11e140]:
+          - generic [ref=f11e141]:
+            - paragraph [ref=f11e142]: Monday, November 16
+            - heading "Today" [level=1] [ref=f11e143]
+          - generic [ref=f11e144]:
+            - link "Active clients 3" [ref=f11e145] [cursor=pointer]:
+              - /url: /clients
+              - generic [ref=f11e146]: Active clients
+              - generic [ref=f11e147]: "3"
+            - generic [ref=f11e148]:
+              - generic [ref=f11e149]: Sessions, last 7 days
+              - generic [ref=f11e150]: 4 of 1 planned
+            - link "Check-ins to review 1" [ref=f11e151] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f11e152]: Check-ins to review
+              - generic [ref=f11e153]: "1"
+            - link "Unread messages 1" [ref=f11e154] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f11e155]: Unread messages
+              - generic [ref=f11e156]: "1"
+          - generic [ref=f11e157]:
+            - generic [ref=f11e158]:
+              - generic [ref=f11e159]:
+                - heading "Needs you" [level=2] [ref=f11e160]
+                - generic [ref=f11e161]: Newest first
+              - generic [ref=f11e162]:
+                - generic [aria-hidden] [ref=f11e163]: C
+                - generic [ref=f11e164]:
+                  - generic [ref=f11e165]: Conor messaged you
+                  - generic [ref=f11e166]: 1 unread
+                - link "Reply" [ref=f11e167] [cursor=pointer]:
+                  - /url: /messages?c=4f62fd99-4e4e-47f1-ace4-f386813f0419
+              - generic [ref=f11e168]:
+                - generic [aria-hidden] [ref=f11e169]: C
+                - generic [ref=f11e170]:
+                  - generic [ref=f11e171]: Conor sent a check-in
+                  - generic [ref=f11e172]: Check-in · 38 min ago
+                - link "Review" [ref=f11e173] [cursor=pointer]:
+                  - /url: /coaching/checkins?id=cksub_hyHUGb6ykLbuQm46qbbif&client=89e9859e-b645-4f88-9f3f-c4d4486437a4
+              - generic [ref=f11e174]:
+                - generic [aria-hidden] [ref=f11e175]: "N"
+                - generic [ref=f11e176]:
+                  - generic [ref=f11e177]: Niamh's program ends on Mon, Nov 23
+                  - generic [ref=f11e178]: Beginner full body, week 1 of 1
+                - link "Plan next block" [ref=f11e179] [cursor=pointer]:
+                  - /url: /clients/0e4b3c2f-bb73-4a79-8661-cc558171a92d?tab=programs
+            - generic [ref=f11e180]:
+              - generic [ref=f11e181]:
+                - heading "This week" [level=2] [ref=f11e182]
+                - generic [ref=f11e183]: Last 7 days
+              - link "Conor Last trained Wed 1" [ref=f11e184] [cursor=pointer]:
+                - /url: /clients/89e9859e-b645-4f88-9f3f-c4d4486437a4?tab=training
+                - generic [aria-hidden] [ref=f11e185]: C
+                - generic [ref=f11e186]:
+                  - generic [ref=f11e187]: Conor
+                  - generic [ref=f11e188]: Last trained Wed
+                - generic [ref=f11e189]: "1"
+              - link "Dara Last trained Thu 2" [ref=f11e190] [cursor=pointer]:
+                - /url: /clients/6b25857e-cfbe-4294-ab91-d6ec120d2ac6?tab=training
+                - generic [aria-hidden] [ref=f11e191]: D
+                - generic [ref=f11e192]:
+                  - generic [ref=f11e193]: Dara
+                  - generic [ref=f11e194]: Last trained Thu
+                - generic [ref=f11e195]: "2"
+              - link "Niamh Trained today 1 / 1" [ref=f11e196] [cursor=pointer]:
+                - /url: /clients/0e4b3c2f-bb73-4a79-8661-cc558171a92d?tab=training
+                - generic [aria-hidden] [ref=f11e197]: "N"
+                - generic [ref=f11e198]:
+                  - generic [ref=f11e199]: Niamh
+                  - generic [ref=f11e200]: Trained today
+                - generic [ref=f11e201]: 1 / 1
+  - dialog "What needs you" [ref=f11e202]:
+    - paragraph [ref=f11e203]: Your Today page · 1 of 2
+    - heading "What needs you" [level=3] [ref=f11e204]
+    - paragraph [ref=f11e205]: Coaching › Today lists new check-ins, unread messages, missed check-ins and programs about to end, newest first. Start your day here.
+    - generic [ref=f11e206]:
+      - button "Next" [ref=f11e207]
+      - link "In the docs" [ref=f11e208] [cursor=pointer]:
+        - /url: http://192.168.30.100:5210/docs/coaching
+  - generic [ref=f11e209]:
+    - generic [ref=f11e210]: Your Today page · step 1 of 2
+    - button "Pause guide" [ref=f11e211]
+  - generic [ref=f11e27]: LogIt

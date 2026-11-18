@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: "500"
+    - heading "Internal Error" [level=1] [ref=e5]
+  - generic [ref=e8]:
+    - generic [ref=e9]: "rune_outside_svelte The `$state` rune is only available inside `.svelte` and `.svelte.js/ts` files https://svelte.dev/e/rune_outside_svelte"
+    - generic [ref=e10]: "Svelte error: rune_outside_svelte The `$state` rune is only available inside `.svelte` and `.svelte.js/ts` files https://svelte.dev/e/rune_outside_svelte at Module.rune_outside_svelte (/home/martin/Projects/logit/node_modules/svelte/src/internal/client/errors.js:403:17) at get (/home/martin/Projects/logit/node_modules/svelte/src/index-client.js:29:8) at /home/martin/Projects/logit/apps/clients/logit-web/src/lib/features/social/socialData.ts:48:16 at async ESModulesEvaluator.runInlinedModule (file:///home/martin/Projects/logit/node_modules/vite/dist/node/module-runner.js:913:3) at async SSRCompatModuleRunner.directRequest (file:///home/martin/Projects/logit/node_modules/vite/dist/node/module-runner.js:1146:59) at async SSRCompatModuleRunner.directRequest (file:///home/martin/Projects/logit/node_modules/vite/dist/node/chunks/config.js:15111:22) at async SSRCompatModuleRunner.cachedRequest (file:///home/martin/Projects/logit/node_modules/vite/dist/node/module-runner.js:1053:73) at async eval (/home/martin/Projects/logit/apps/clients/logit-web/src/lib/components/app-sidebar.svelte:35:32) at async ESModulesEvaluator.runInlinedModule (file:///home/martin/Projects/logit/node_modules/vite/dist/node/module-runner.js:913:3) at async SSRCompatModuleRunner.directRequest (file:///home/martin/Projects/logit/node_modules/vite/dist/node/module-runner.js:1146:59)"
+    - generic [ref=e11]:
+      - text: Click outside, press Esc key, or fix the code to dismiss.You can also disable this overlay by setting
+      - code [ref=e12]: server.hmr.overlay
+      - text: to
+      - code [ref=e13]: "false"
+      - text: in
+      - code [ref=e14]: vite.config.ts
+      - text: .

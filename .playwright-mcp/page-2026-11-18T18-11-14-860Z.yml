@@ -1,0 +1,52 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e6]:
+    - banner [ref=f2e7]:
+      - heading "Workout" [level=1] [ref=f2e8]
+      - generic "Elapsed workout time" [ref=f2e9]: 10:52
+      - button "Finish workout" [ref=f2e10]: Finish
+      - button "Workout options" [ref=f2e11]
+    - main [ref=f2e13]:
+      - generic [ref=f2e14]:
+        - generic [ref=f2e15]:
+          - generic [ref=f2e17]:
+            - generic [ref=f2e18]:
+              - generic [ref=f2e19]:
+                - button "Drag to reorder" [ref=f2e20]
+                - button "Collapse exercise" [ref=f2e22]
+                - button "Lat Pulldown — open details" [ref=f2e24]:
+                  - generic [ref=f2e25]: Lat Pulldown
+                  - generic [ref=f2e26]: Last time 60 kg × 10, 10, 9
+                - generic [ref=f2e27]: 0 sets
+                - button "More actions for Lat Pulldown" [ref=f2e28]
+              - 'button "Machine: Lat pulldown at Northside. Change" [ref=f2e31]':
+                - generic [ref=f2e32]:
+                  - strong [ref=f2e33]: Lat pulldown
+                  - text: · Northside · stack 5–100 kg
+                - generic [aria-hidden] [ref=f2e34]: ▾
+            - button "+ Add first set" [ref=f2e36]
+          - generic [ref=f2e38]:
+            - generic [ref=f2e39]:
+              - generic [ref=f2e40]:
+                - button "Drag to reorder" [ref=f2e41]
+                - button "Collapse exercise" [ref=f2e43]
+                - button "Seated Cable Row — open details" [ref=f2e45]:
+                  - generic [ref=f2e46]: Seated Cable Row
+                - generic [ref=f2e47]: 0 sets
+                - button "More actions for Seated Cable Row" [ref=f2e48]
+              - button "Which machine at Northside? Add it" [ref=f2e51]
+            - button "+ Add first set" [ref=f2e53]
+        - button "+ Session note" [ref=f2e55]
+        - button "Add block" [ref=f2e57]
+    - contentinfo [ref=f2e58]:
+      - navigation "Main navigation" [ref=f2e59]:
+        - link "Home" [ref=f2e60] [cursor=pointer]:
+          - /url: /
+        - link "Sessions" [ref=f2e63] [cursor=pointer]:
+          - /url: /sessions
+        - link "Resume session" [ref=f2e66] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f2e72]: Workout
+        - link "Profile" [ref=f2e73] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f2e76]
+  - region "Notifications alt+T"

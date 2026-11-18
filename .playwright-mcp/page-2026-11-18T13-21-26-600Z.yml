@@ -1,0 +1,22 @@
+- generic [ref=f5e2]:
+  - generic [ref=f5e79]:
+    - button "Back" [ref=f5e81]
+    - img "Step 3 of 4" [ref=f5e83]
+    - paragraph [ref=f5e88]: Stronger and bigger
+    - heading "How many days a week can you train?" [level=2] [ref=f5e89]
+    - generic [ref=f5e90]:
+      - button "2 days Busy weeks" [ref=f5e91]:
+        - generic [ref=f5e92]: 2 days
+        - generic [ref=f5e93]: Busy weeks
+      - button "3 days Steady progress" [ref=f5e94]:
+        - generic [ref=f5e95]: 3 days
+        - generic [ref=f5e96]: Steady progress
+      - button "4 days The sweet spot" [ref=f5e97]:
+        - generic [ref=f5e98]: 4 days
+        - generic [ref=f5e99]: The sweet spot
+      - button "5–6 days All in" [ref=f5e100]:
+        - generic [ref=f5e101]: 5–6 days
+        - generic [ref=f5e102]: All in
+    - button "Not sure? Start with 3, change it any time" [ref=f5e103]
+  - region "Notifications alt+T"
+  - generic [ref=f5e24]: LogIt

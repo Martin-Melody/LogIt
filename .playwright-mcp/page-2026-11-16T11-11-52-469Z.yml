@@ -1,0 +1,99 @@
+- generic [ref=f4e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f4e6]:
+    - generic [ref=f4e9]:
+      - link "LogIt" [ref=f4e11] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f4e16]:
+        - list [ref=f4e19]:
+          - listitem [ref=f4e20]:
+            - link "Overview" [ref=f4e21] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f4e24]:
+          - generic [ref=f4e25]: Training
+          - list [ref=f4e27]:
+            - listitem [ref=f4e28]:
+              - link "Sessions" [ref=f4e29] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f4e32]:
+              - link "Progress" [ref=f4e33] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f4e36]:
+              - link "Plan" [ref=f4e37] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f4e40]:
+              - link "Library" [ref=f4e41] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f4e44]:
+          - generic [ref=f4e45]: Body
+          - list [ref=f4e47]:
+            - listitem [ref=f4e48]:
+              - link "Nutrition" [ref=f4e49] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f4e52]:
+              - link "Habits & goals" [ref=f4e53] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f4e56]:
+          - generic [ref=f4e57]: People
+          - list [ref=f4e59]:
+            - listitem [ref=f4e60]:
+              - link "Social" [ref=f4e61] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=f4e64]:
+          - generic [ref=f4e65]: Extras
+          - list [ref=f4e67]:
+            - listitem [ref=f4e68]:
+              - link "Plugins" [ref=f4e69] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=f4e72]:
+          - generic [ref=f4e73]: Coach
+          - list [ref=f4e75]:
+            - listitem [ref=f4e76]:
+              - link "My coach" [ref=f4e77] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f4e81]:
+        - listitem [ref=f4e82]:
+          - button "A Alex Pro · Account" [ref=f4e83]:
+            - generic [ref=f4e84]: A
+            - generic [ref=f4e85]:
+              - generic [ref=f4e86]: Alex
+              - generic [ref=f4e87]: Pro · Account
+      - button "Toggle Sidebar" [ref=f4e89]
+    - main [ref=f4e90]:
+      - main [ref=f4e91]:
+        - generic [ref=f4e93]:
+          - generic [ref=f4e94]:
+            - generic [ref=f4e95]:
+              - heading "Plugins" [level=1] [ref=f4e96]
+              - paragraph [ref=f4e97]: Install here or on your phone and it's on both. Plugins run in a sandbox and only get the data they ask for.
+            - link "Build a plugin" [ref=f4e98] [cursor=pointer]:
+              - /url: /plugins/build/new
+          - tablist "Plugins" [ref=f4e99]:
+            - tab "Browse" [selected] [ref=f4e100]
+            - tab "Installed · 1" [ref=f4e101]
+            - tab "My plugins · 1" [ref=f4e102]
+          - generic [ref=f4e103]:
+            - generic [ref=f4e104]: Community plugins are on for your account.
+            - button "Turn off" [ref=f4e105]
+          - generic [ref=f4e106]:
+            - generic [ref=f4e107]: Search plugins
+            - textbox "Search plugins" [ref=f4e108]
+            - button "All" [pressed] [ref=f4e109]
+            - button "Widgets" [ref=f4e110]
+            - button "Progression" [ref=f4e111]
+            - button "Mobility progression" [ref=f4e112]
+            - button "Analytics" [ref=f4e113]
+            - button "Nutrition" [ref=f4e114]
+            - button "Exercise packs" [ref=f4e115]
+            - button "Mobility packs" [ref=f4e116]
+          - article [ref=f4e118]:
+            - generic [ref=f4e119]:
+              - link "Week recap" [ref=f4e120] [cursor=pointer]:
+                - /url: /plugins/com.alex.week-recap
+              - text: Widget · @alex · 1.0.0
+            - paragraph [ref=f4e121]: Week recap
+            - generic [ref=f4e122]: "Gets: recent workouts"
+            - generic [ref=f4e123]:
+              - generic [ref=f4e124]: Reviewed
+              - button "Update" [ref=f4e125]
+          - paragraph [ref=f4e126]: Every plugin here was checked by LogIt before it was listed. You see what it gets before you install it.

@@ -1,0 +1,149 @@
+- generic [ref=f10e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f10e6]:
+    - generic [ref=f10e9]:
+      - generic [ref=f10e10]:
+        - link "LogIt" [ref=f10e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f10e16]:
+          - tab "Me" [selected] [ref=f10e17]
+          - tab "Coaching" [ref=f10e18]
+      - generic [ref=f10e19]:
+        - list [ref=f10e22]:
+          - listitem [ref=f10e23]:
+            - link "Overview" [ref=f10e24] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f10e27]:
+          - generic [ref=f10e28]: Training
+          - list [ref=f10e30]:
+            - listitem [ref=f10e31]:
+              - link "Sessions" [ref=f10e32] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f10e35]:
+              - link "Progress" [ref=f10e36] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f10e39]:
+              - link "Plan" [ref=f10e40] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f10e43]:
+              - link "Library" [ref=f10e44] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f10e47]:
+          - generic [ref=f10e48]: Body
+          - list [ref=f10e50]:
+            - listitem [ref=f10e51]:
+              - link "Nutrition" [ref=f10e52] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f10e55]:
+              - link "Habits & goals" [ref=f10e56] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f10e59]:
+          - generic [ref=f10e60]: People
+          - list [ref=f10e62]:
+            - listitem [ref=f10e63]:
+              - link "Social" [ref=f10e64] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=f10e67]:
+          - generic [ref=f10e68]: Extras
+          - list [ref=f10e70]:
+            - listitem [ref=f10e71]:
+              - link "Insights" [ref=f10e72] [cursor=pointer]:
+                - /url: /insights
+            - listitem [ref=f10e75]:
+              - link "Plugins" [ref=f10e76] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=f10e79]:
+          - generic [ref=f10e80]: Coach
+          - list [ref=f10e82]:
+            - listitem [ref=f10e83]:
+              - link "My coach" [ref=f10e84] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f10e88]:
+        - listitem [ref=f10e89]:
+          - button "A Alex Studio · Account" [ref=f10e90]:
+            - generic [ref=f10e91]: A
+            - generic [ref=f10e92]:
+              - generic [ref=f10e93]: Alex
+              - generic [ref=f10e94]: Studio · Account
+      - button "Toggle Sidebar" [ref=f10e96]
+    - main [ref=f10e97]:
+      - main [ref=f10e98]:
+        - generic [ref=f10e100]:
+          - link "‹ Dara" [ref=f10e101] [cursor=pointer]:
+            - /url: /clients/b6534f1e-491d-4541-ab74-bc2b9869755b?tab=insights
+          - generic [ref=f10e103]:
+            - generic [ref=f10e104]: Chart for Dara
+            - textbox "Chart for Dara" [ref=f10e105]:
+              - /placeholder: Estimated 1RM
+          - generic [ref=f10e106]:
+            - region "What to chart" [ref=f10e107]:
+              - generic [ref=f10e108]:
+                - generic [ref=f10e109]: Show
+                - combobox "Show" [ref=f10e110]:
+                  - option "Estimated 1RM" [selected]
+                  - option "Top set weight"
+                  - option "Volume (weight × reps)"
+                  - option "Working sets"
+                  - option "Most reps in a set"
+                  - option "Working sets per muscle"
+                  - option "Body weight"
+                  - option "Calories"
+                  - option "Protein"
+                  - option "Days a habit was done"
+                  - option "Workouts"
+                  - option "Time training"
+              - generic [ref=f10e111]:
+                - generic [ref=f10e112]: For
+                - generic [ref=f10e113]:
+                  - textbox "Add a lift" [active] [ref=f10e114]: Bench
+                  - list [ref=f10e115]:
+                    - listitem [ref=f10e116]:
+                      - button "Bench Press logged" [ref=f10e117]:
+                        - generic [ref=f10e118]: Bench Press
+                        - generic [ref=f10e119]: logged
+                    - listitem [ref=f10e120]:
+                      - button "Bench Dip" [ref=f10e121]
+                    - listitem [ref=f10e123]:
+                      - button "Close-Grip Bench Press" [ref=f10e124]
+                    - listitem [ref=f10e126]:
+                      - button "Decline Bench Press" [ref=f10e127]
+                    - listitem [ref=f10e129]:
+                      - button "Dumbbell Bench Press" [ref=f10e130]
+                    - listitem [ref=f10e132]:
+                      - button "Incline Bench Press" [ref=f10e133]
+                - generic [ref=f10e135]: Up to 4 lines.
+              - generic [ref=f10e136]:
+                - generic [ref=f10e137]: Compare with
+                - combobox "Compare with" [ref=f10e138]:
+                  - option "Nothing" [selected]
+                  - option "Body weight"
+                  - option "Calories"
+                  - option "Protein"
+                  - option "Workouts"
+                - generic [ref=f10e139]: Gets its own scale on the right.
+              - generic [ref=f10e140]:
+                - generic [ref=f10e141]: Each point is
+                - group "Each point is" [ref=f10e142]:
+                  - button "A session" [ref=f10e143]
+                  - button "A week" [pressed] [ref=f10e144]
+                  - button "A month" [ref=f10e145]
+              - generic [ref=f10e146]:
+                - generic [ref=f10e147]: Range
+                - group "Range" [ref=f10e148]:
+                  - button "4 weeks" [ref=f10e149]
+                  - button "12 weeks" [pressed] [ref=f10e150]
+                  - button "6 months" [ref=f10e151]
+                  - button "1 year" [ref=f10e152]
+            - generic [ref=f10e153]:
+              - generic [ref=f10e154]:
+                - heading "Preview with Dara's data" [level=2] [ref=f10e156]
+                - paragraph [ref=f10e157]: Pick at least one lift.
+              - generic [ref=f10e158]:
+                - heading "Show it on" [level=2] [ref=f10e159]
+                - generic [ref=f10e160]:
+                  - checkbox "Dara's phone home screen It always shows in their Insights as \"From you\". They can hide it." [checked] [ref=f10e161]
+                  - generic [ref=f10e162]: Dara's phone home screenIt always shows in their Insights as "From you". They can hide it.
+              - generic [ref=f10e164]:
+                - link "Cancel" [ref=f10e165] [cursor=pointer]:
+                  - /url: /clients/b6534f1e-491d-4541-ab74-bc2b9869755b?tab=insights
+                - button "Send to Dara" [disabled] [ref=f10e166]

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { addButton } from "$lib/components/ui/choice";
   import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight, MoreHorizontal, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -431,13 +432,10 @@
       {/each}
     </div>
   {:else}
-    <button
-      type="button"
-      class="w-full min-h-11 px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
-      disabled={saving}
-      onclick={addInterval}
-    >
-      + Add first interval
-    </button>
+    <div class="px-3 py-2.5">
+      <button type="button" class="{addButton} w-full" disabled={saving} onclick={addInterval}>
+        <Plus class="h-4 w-4" /> Add first interval
+      </button>
+    </div>
   {/if}
 {/if}

@@ -1,0 +1,130 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - generic [ref=e28]:
+    - generic [ref=e31]:
+      - link "LogIt" [ref=e33] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e38]:
+        - list [ref=e41]:
+          - listitem [ref=e42]:
+            - link "Overview" [ref=e43] [cursor=pointer]:
+              - /url: /
+        - generic [ref=e46]:
+          - generic [ref=e47]: Training
+          - list [ref=e49]:
+            - listitem [ref=e50]:
+              - link "Sessions" [ref=e51] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=e54]:
+              - link "Progress" [ref=e55] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=e58]:
+              - link "Plan" [ref=e59] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=e62]:
+              - link "Library" [ref=e63] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=e66]:
+          - generic [ref=e67]: Body
+          - list [ref=e69]:
+            - listitem [ref=e70]:
+              - link "Nutrition" [ref=e71] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=e74]:
+              - link "Habits & goals" [ref=e75] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=e78]:
+          - generic [ref=e79]: People
+          - list [ref=e81]:
+            - listitem [ref=e82]:
+              - link "Social" [ref=e83] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=e86]:
+          - generic [ref=e87]: Extras
+          - list [ref=e89]:
+            - listitem [ref=e90]:
+              - link "Plugins" [ref=e91] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=e94]:
+          - generic [ref=e95]: Coach
+          - list [ref=e97]:
+            - listitem [ref=e98]:
+              - link "My coach" [ref=e99] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=e103]:
+        - listitem [ref=e104]:
+          - button "A Alex Pro · Account" [ref=e105]:
+            - generic [ref=e106]: A
+            - generic [ref=e107]:
+              - generic [ref=e108]: Alex
+              - generic [ref=e109]: Pro · Account
+      - button "Toggle Sidebar" [ref=e111]
+    - main [ref=e112]:
+      - main [ref=e113]:
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - generic [ref=e117]:
+              - paragraph [ref=e118]: Monday, November 16
+              - heading "This week" [level=1] [ref=e119]
+            - button "Edit layout" [ref=e120]
+          - list [ref=e122]:
+            - listitem "Streak" [ref=e123]:
+              - heading "Streak" [level=2] [ref=e125]
+              - generic [ref=e126]:
+                - generic [ref=e127]: 0 weeks
+                - generic [ref=e128]: "Best: 0 weeks"
+            - listitem "Sessions this week" [ref=e129]:
+              - heading "Sessions this week" [level=2] [ref=e131]
+              - generic [ref=e132]: 0 of 3
+            - listitem "Volume this week" [ref=e135]:
+              - heading "Volume this week" [level=2] [ref=e137]
+              - generic [ref=e138]:
+                - generic [ref=e139]: 0 t
+                - generic [ref=e140]: Nothing last week to compare
+            - listitem "Body weight" [ref=e141]:
+              - heading "Body weight" [level=2] [ref=e143]
+              - paragraph [ref=e144]: Log your weight in the app to see the trend.
+            - listitem "This week" [ref=e145]:
+              - heading "This week" [level=2] [ref=e147]
+              - generic [ref=e148]:
+                - generic [ref=e149]:
+                  - generic [ref=e150]: Today
+                  - generic [ref=e152]: Tue
+                  - generic [ref=e154]: Wed
+                  - generic [ref=e156]: Thu
+                  - generic [ref=e158]: Fri
+                  - generic [ref=e160]: Sat
+                  - generic [ref=e162]: Sun
+                - paragraph [ref=e164]: Pick an active split in the app to see what's planned.
+            - listitem "Goals" [ref=e165]:
+              - heading "Goals" [level=2] [ref=e167]
+              - paragraph [ref=e168]: No goals yet. Set them in the app under Progress › Goals.
+            - listitem "Weekly volume" [ref=e169]:
+              - heading "Weekly volume" [level=2] [ref=e171]
+              - generic [ref=e172]:
+                - img "Weekly volume for the last 12 weeks, this week 0 t" [ref=e173]:
+                  - 'generic "Aug 31: 0 t"'
+                  - 'generic "Sep 7: 0 t"'
+                  - 'generic "Sep 14: 0 t"'
+                  - 'generic "Sep 21: 0 t"'
+                  - 'generic "Sep 28: 0 t"'
+                  - 'generic "Oct 5: 0 t"'
+                  - 'generic "Oct 12: 0 t"'
+                  - 'generic "Oct 19: 0 t"'
+                  - 'generic "Oct 26: 0 t"'
+                  - 'generic "Nov 2: 0 t"'
+                  - 'generic "Nov 9: 0 t"'
+                  - 'generic "Nov 16: 0 t"'
+                - generic [ref=e174]:
+                  - generic [ref=e175]: Aug 31
+                  - generic [ref=e176]: This week (so far)
+            - listitem "Recent records" [ref=e177]:
+              - heading "Recent records" [level=2] [ref=e179]
+              - paragraph [ref=e180]: No records yet. Beat a previous best and it shows up here.
+            - listitem "Recent sessions" [ref=e181]:
+              - heading "Recent sessions" [level=2] [ref=e183]
+              - paragraph [ref=e184]: No workouts synced yet.
+            - listitem "Habits this week" [ref=e185]:
+              - heading "Habits this week" [level=2] [ref=e187]
+              - paragraph [ref=e188]: No habits yet. Add them in the app.
+  - generic [ref=e27]: LogIt

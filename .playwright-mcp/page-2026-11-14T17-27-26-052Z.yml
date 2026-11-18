@@ -1,0 +1,153 @@
+- generic:
+  - generic:
+    - region "Notifications alt+T"
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - link "LogIt":
+                - /url: /
+              - tablist "Workspace":
+                - tab "Me"
+                - tab "Coaching" [selected]
+            - generic:
+              - generic:
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Today 4":
+                        - /url: /coaching
+                        - generic: Today
+                        - generic: "4"
+                    - listitem:
+                      - link "Clients":
+                        - /url: /clients
+                    - listitem:
+                      - link "Programs":
+                        - /url: /coaching/programs
+                    - listitem:
+                      - link "Check-ins 1":
+                        - /url: /coaching/checkins
+                        - generic: Check-ins
+                        - generic: "1"
+                    - listitem:
+                      - link "Messages 2":
+                        - /url: /messages
+                        - generic: Messages
+                        - generic: "2"
+              - generic:
+                - generic: Studio
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Invite links 1":
+                        - /url: /coaching/links
+                        - generic: Invite links
+                        - generic: "1"
+              - generic:
+                - generic: A client's training
+                - generic:
+                  - generic: Open a client's training
+                  - combobox "Open a client's training":
+                    - option "Choose a client…" [selected]
+                    - option "Conor"
+                    - option "Dara"
+                    - option "Niamh"
+                    - option "Sarah"
+            - generic:
+              - list:
+                - listitem:
+                  - button "A Alex Studio · Account":
+                    - generic: A
+                    - generic:
+                      - generic: Alex
+                      - generic: Studio · Account
+            - button "Toggle Sidebar"
+      - main:
+        - main:
+          - generic:
+            - generic:
+              - link "‹ Clients":
+                - /url: /clients
+              - generic:
+                - generic:
+                  - generic [aria-hidden]: "N"
+                  - generic:
+                    - heading "Niamh" [level=1]
+                    - paragraph: "@niamh · client since November · Strength block, week 3 of 6"
+                - generic:
+                  - button "Message"
+                  - button "Assign program"
+              - tablist "Client":
+                - tab "Overview"
+                - tab "Training"
+                - tab "Nutrition"
+                - tab "Habits"
+                - tab "Check-ins"
+                - tab "Programs" [selected]
+                - tab "Messages"
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading "Strength block · their copy" [level=2]
+                        - paragraph: Started Mon, Oct 26 · week 3 of 6 · ends Dec 6
+                      - generic:
+                        - link "Edit their copy":
+                          - /url: /clients/442023ea-876e-4403-b25e-e5d56e15cf66/programs/cprog_ev70jvi?u=niamh
+                        - button "End program"
+                    - 'img "Sessions done per week: week 1 4 of 4, week 2 4 of 4, week 3 3 of 4, week 4 0 of 4, week 5 0 of 4, week 6 0 of 4"':
+                      - generic: W1 · 4/4
+                      - generic: W2 · 4/4
+                      - generic: W3 · 3/4
+                      - generic: W4
+                      - generic: W5
+                      - generic: W6
+                    - paragraph:
+                      - text: Copied from your library's "Strength block".
+                      - link "Open the library version":
+                        - /url: /coaching/programs?id=cprog_2t76oy
+                - generic:
+                  - heading "Finished or ended" [level=2]
+                  - paragraph: None yet.
+  - dialog "Assign a program to Niamh" [ref=f5e125]:
+    - generic [ref=f5e126]:
+      - heading "Assign a program to Niamh" [level=2] [ref=f5e127]
+      - generic [ref=f5e128]: They get their own copy, which you can change for them without touching your library.
+    - group "From your library" [ref=f5e129]:
+      - generic [ref=f5e131] [cursor=pointer]:
+        - radio "Deload week 1 week · 1 days" [checked] [active] [ref=f5e132]
+        - generic [ref=f5e133]:
+          - generic [ref=f5e134]: Deload week
+          - text: 1 week · 1 days
+      - generic [ref=f5e135] [cursor=pointer]:
+        - radio "Hypertrophy 8 weeks · 4 days" [ref=f5e136]
+        - generic [ref=f5e137]:
+          - generic [ref=f5e138]: Hypertrophy
+          - text: 8 weeks · 4 days
+      - generic [ref=f5e139] [cursor=pointer]:
+        - radio "Strength block 6 weeks · 4 days · Niamh has had this before" [ref=f5e140]
+        - generic [ref=f5e141]:
+          - generic [ref=f5e142]: Strength block
+          - text: 6 weeks · 4 days · Niamh has had this before
+      - generic [ref=f5e143] [cursor=pointer]:
+        - radio "Start from scratch A new program just for Niamh" [ref=f5e144]
+        - generic [ref=f5e145]:
+          - generic [ref=f5e146]: Start from scratch
+          - text: A new program just for Niamh
+    - group "Starts" [ref=f5e147]:
+      - generic [ref=f5e149]:
+        - radio "On a date 2026-12-07" [checked] [ref=f5e150]
+        - generic [ref=f5e151]: On a date
+        - textbox "Start date" [ref=f5e152]: 2026-12-07
+      - generic [ref=f5e153]:
+        - radio "When they tap Start on their phone" [ref=f5e154]
+        - generic [ref=f5e155]: When they tap Start on their phone
+    - paragraph [ref=f5e156]: Their current program ends Sun, Dec 6. Starting on Mon, Dec 7 follows straight on.
+    - paragraph [ref=f5e157]: Percent loads turn into kilos from Niamh's own lifts.
+    - generic [ref=f5e158]:
+      - button "Cancel" [ref=f5e159]
+      - button "Assign" [ref=f5e160]
+    - button "Close" [ref=f5e161]

@@ -1,0 +1,61 @@
+- generic [ref=f15e2]:
+  - generic [ref=f15e3]:
+    - main [ref=f15e4]:
+      - generic [ref=f15e5]:
+        - button "Settings" [ref=f15e6]
+        - heading "Your places" [level=1] [ref=f15e8]
+        - paragraph [ref=f15e9]: Where you train and what's there. Logit uses it to plan weights you can actually pick up. Optional.
+        - list [ref=f15e10]:
+          - listitem [ref=f15e11]:
+            - link "My gym 1 machine, barbell, dumbbells" [ref=f15e12] [cursor=pointer]:
+              - /url: /settings/places/place_9iDBx2Z4Qzf3dHym20X4T
+              - generic [ref=f15e14]:
+                - generic [ref=f15e15]: My gym
+                - generic [ref=f15e16]: 1 machine, barbell, dumbbells
+        - generic [ref=f15e42]:
+          - group "Kind of place" [ref=f15e43]:
+            - button "A gym" [ref=f15e44]
+            - button "Home" [pressed] [ref=f15e45]
+            - button "Other" [ref=f15e46]
+          - generic [ref=f15e47]: Name
+          - textbox "Name" [ref=f15e48]:
+            - /placeholder: Home
+            - text: Home
+          - group "Start from" [ref=f15e49]:
+            - generic [ref=f15e51]:
+              - radio "A full gym Barbells, dumbbells to 60 kg, racks, cables" [ref=f15e52]
+              - generic [ref=f15e53]:
+                - generic [ref=f15e54]: A full gym
+                - generic [ref=f15e55]: Barbells, dumbbells to 60 kg, racks, cables
+            - generic [ref=f15e56]:
+              - radio "Home rack Bar and plates, a rack, a bench, dumbbells" [checked] [ref=f15e57]
+              - generic [ref=f15e58]:
+                - generic [ref=f15e59]: Home rack
+                - generic [ref=f15e60]: Bar and plates, a rack, a bench, dumbbells
+            - generic [ref=f15e61]:
+              - radio "Dumbbells Adjustable dumbbells and a bench" [ref=f15e62]
+              - generic [ref=f15e63]:
+                - generic [ref=f15e64]: Dumbbells
+                - generic [ref=f15e65]: Adjustable dumbbells and a bench
+            - generic [ref=f15e66]:
+              - radio "Bodyweight A pull-up bar, nothing else" [ref=f15e67]
+              - generic [ref=f15e68]:
+                - generic [ref=f15e69]: Bodyweight
+                - generic [ref=f15e70]: A pull-up bar, nothing else
+          - paragraph [ref=f15e71]: You can change everything after. A home place is never shared and has no location.
+          - generic [ref=f15e72]:
+            - button "Make it" [ref=f15e73]
+            - button "Cancel" [ref=f15e74]
+    - contentinfo [ref=f15e20]:
+      - navigation "Main navigation" [ref=f15e21]:
+        - link "Home" [ref=f15e22] [cursor=pointer]:
+          - /url: /
+        - link "Sessions" [ref=f15e25] [cursor=pointer]:
+          - /url: /sessions
+        - link "Resume session" [ref=f15e28] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f15e34]: Resume
+        - link "Profile" [ref=f15e35] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f15e38]
+  - region "Notifications alt+T"

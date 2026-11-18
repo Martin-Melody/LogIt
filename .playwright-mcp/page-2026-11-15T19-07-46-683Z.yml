@@ -1,0 +1,57 @@
+- generic [ref=f10e1]:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:11
+      - main:
+        - generic:
+          - generic:
+            - generic [ref=f10e114]:
+              - button "Drag to reorder" [ref=f10e115]
+              - button "Expand exercise" [ref=f10e117]
+              - button "Squat — open details" [ref=f10e119]:
+                - generic [ref=f10e120]: Squat
+              - generic [ref=f10e121]: 0 of 3
+              - button "More actions for Squat" [ref=f10e122]
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Romanian Deadlift — open details":
+                      - generic: Romanian Deadlift
+                    - generic: 0 of 3
+                    - button "More actions for Romanian Deadlift"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+          - generic:
+            - generic:
+              - button "Finish workout"
+              - button "Discard workout"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Library":
+            - /url: /exercises
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Exercise Card" [ref=f10e145]:
+    - button "Close" [active] [ref=f10e146] [cursor=pointer]: ×
+    - banner [ref=f10e148]: Exercise Card
+    - generic [ref=f10e149]: Tap the name for details and history. Use + to add a set, and ⋯ to swap, superset or remove the exercise. Swipe a set left to edit or delete it.
+    - contentinfo [ref=f10e150]:
+      - generic [ref=f10e151]: 1 / 4
+      - generic [ref=f10e152]:
+        - button "← Back" [disabled]
+        - button "Next →" [ref=f10e153] [cursor=pointer]

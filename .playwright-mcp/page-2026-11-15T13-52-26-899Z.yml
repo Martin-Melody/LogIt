@@ -1,0 +1,72 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:21
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button "Drag to reorder"
+                  - button "Expand"
+                  - button "Sled push intervals — rename":
+                    - generic: Sled push intervals
+                  - button "More actions for Sled push intervals"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+          - generic:
+            - generic:
+              - button "Finish workout"
+              - button "Discard workout"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Add mobility drill" [ref=f5e183]:
+    - generic [ref=f5e184]:
+      - heading "Add mobility drill" [level=2] [ref=f5e185]
+      - generic [ref=f5e186]: A stretch or mobility drill — held for time, or done for reps.
+    - generic [ref=f5e187]:
+      - textbox "Search drills, or type a new one…" [ref=f5e189]: Hip airplane
+      - generic [ref=f5e248]:
+        - paragraph [ref=f5e249]: “Hip airplane” is new, so it's saved to your library.
+        - generic [ref=f5e250]: Body area
+        - combobox "Body area" [ref=f5e251]:
+          - 'option "Area: neck"'
+          - 'option "Area: shoulders"'
+          - 'option "Area: t-spine"'
+          - 'option "Area: lower back"'
+          - 'option "Area: wrists"'
+          - 'option "Area: hips" [selected]'
+          - 'option "Area: hip flexors"'
+          - 'option "Area: glutes"'
+          - 'option "Area: hamstrings"'
+          - 'option "Area: quads"'
+          - 'option "Area: adductors"'
+          - 'option "Area: calves"'
+          - 'option "Area: ankles"'
+          - 'option "Area: full body"'
+      - generic [ref=f5e234]:
+        - button "Hold (time)" [ref=f5e235]
+        - button "Reps" [ref=f5e237]
+      - button "Track each side Log left and right separately, e.g. rehab work." [active] [ref=f5e239]:
+        - generic [ref=f5e240]:
+          - generic [ref=f5e241]: Track each side
+          - generic [ref=f5e242]: Log left and right separately, e.g. rehab work.
+    - generic [ref=f5e244]:
+      - button "Cancel" [ref=f5e245]
+      - button "Add" [ref=f5e253]
+    - button "Close" [ref=f5e246]

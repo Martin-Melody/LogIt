@@ -1,0 +1,120 @@
+- generic [ref=f7e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f7e28]:
+    - generic [ref=f7e31]:
+      - link "LogIt" [ref=f7e33] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f7e38]:
+        - list [ref=f7e41]:
+          - listitem [ref=f7e42]:
+            - link "Overview" [ref=f7e43] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f7e46]:
+          - generic [ref=f7e47]: Training
+          - list [ref=f7e49]:
+            - listitem [ref=f7e50]:
+              - link "Sessions" [ref=f7e51] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f7e54]:
+              - link "Progress" [ref=f7e55] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f7e58]:
+              - link "Plan" [ref=f7e59] [cursor=pointer]:
+                - /url: /plan
+        - generic [ref=f7e62]:
+          - generic [ref=f7e63]: Body
+          - list [ref=f7e65]:
+            - listitem [ref=f7e66]:
+              - link "Nutrition" [ref=f7e67] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f7e70]:
+              - link "Habits & goals" [ref=f7e71] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f7e74]:
+          - generic [ref=f7e75]: Coach
+          - list [ref=f7e77]:
+            - listitem [ref=f7e78]:
+              - link "My coach" [ref=f7e79] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f7e83]:
+        - listitem [ref=f7e84]:
+          - button "S Sarah Pro · Account" [ref=f7e85]:
+            - generic [ref=f7e86]: S
+            - generic [ref=f7e87]:
+              - generic [ref=f7e88]: Sarah
+              - generic [ref=f7e89]: Pro · Account
+      - button "Toggle Sidebar" [ref=f7e91]
+    - main [ref=f7e92]:
+      - main [ref=f7e93]:
+        - generic [ref=f7e95]:
+          - generic [ref=f7e96]:
+            - generic [ref=f7e97]:
+              - generic [aria-hidden] [ref=f7e98]: A
+              - generic [ref=f7e99]:
+                - heading "Alex, your coach" [level=1] [ref=f7e100]
+                - paragraph [ref=f7e101]: "@alex · coaching you since November"
+            - link "Fill in weekly check-in" [ref=f7e102] [cursor=pointer]:
+              - /url: /my-coach/checkin/ckin_tkk38n4
+          - generic [ref=f7e103]:
+            - generic [ref=f7e104]:
+              - generic [ref=f7e105]:
+                - generic [ref=f7e106]:
+                  - heading "Hypertrophy" [level=2] [ref=f7e107]
+                  - generic [ref=f7e108]: Week 2 of 8
+                - generic [ref=f7e109]:
+                  - generic [ref=f7e110]:
+                    - generic [ref=f7e111]: Mon · Upper
+                    - generic [ref=f7e112]: 2 exercises
+                  - generic [ref=f7e113]:
+                    - generic [ref=f7e114]: Tue · Lower
+                    - generic [ref=f7e115]: 2 exercises
+                  - generic [ref=f7e116]:
+                    - generic [ref=f7e117]: Thu · Upper
+                    - generic [ref=f7e118]: 2 exercises
+                  - generic [ref=f7e119]:
+                    - generic [ref=f7e120]: Sat · Lower
+                    - generic [ref=f7e121]: 2 exercises
+                - paragraph [ref=f7e122]: "Alex's note: Upper / lower, 4 days. Add a rep each week."
+                - link "See every week ›" [ref=f7e123] [cursor=pointer]:
+                  - /url: /plan/programs
+              - generic [ref=f7e124]:
+                - heading "Messages" [level=2] [ref=f7e125]
+                - generic [ref=f7e126]:
+                  - paragraph [ref=f7e128]: No messages yet. Say hello to Alex.
+                  - generic [ref=f7e129]:
+                    - generic [ref=f7e130]:
+                      - generic [ref=f7e131]: Message Alex
+                      - textbox "Message Alex" [ref=f7e132]
+                      - button "Send" [disabled] [ref=f7e133]
+                    - generic [ref=f7e134]: Enter sends · Shift+Enter for a new line · it reaches their phone on its next sync
+            - generic [ref=f7e135]:
+              - generic [ref=f7e136]:
+                - heading "Check-ins" [level=2] [ref=f7e137]
+                - link "Weekly check-in Late, was due Mon, Nov 9" [ref=f7e138] [cursor=pointer]:
+                  - /url: /my-coach/checkin/ckin_tkk38n4
+                  - generic [ref=f7e139]: Weekly check-in
+                  - generic [ref=f7e140]: Late, was due Mon, Nov 9
+              - generic [ref=f7e141]:
+                - heading "What Alex can see" [level=2] [ref=f7e142]
+                - paragraph [ref=f7e143]: Switching one off hides it from Alex straight away, past entries too. Switch it back on and they see it all again.
+                - generic [ref=f7e144]:
+                  - generic [ref=f7e145]:
+                    - generic [ref=f7e146]: Workouts
+                    - switch "Workouts" [checked] [ref=f7e147]
+                  - generic [ref=f7e149]:
+                    - generic [ref=f7e150]: Nutrition diary
+                    - switch "Nutrition diary" [checked] [ref=f7e151]
+                  - generic [ref=f7e153]:
+                    - generic [ref=f7e154]: Body weight
+                    - switch "Body weight" [checked] [ref=f7e155]
+                  - generic [ref=f7e157]:
+                    - generic [ref=f7e158]: Habits
+                    - switch "Habits" [checked] [ref=f7e159]
+                  - generic [ref=f7e161]:
+                    - generic [ref=f7e162]: Check-ins
+                    - switch "Check-ins" [checked] [ref=f7e163]
+                  - generic [ref=f7e165]:
+                    - generic [ref=f7e166]: Social posts and other messages
+                    - generic [ref=f7e167]: Never
+                - button "Stop coaching with Alex" [ref=f7e168]
+  - generic [ref=f7e27]: LogIt

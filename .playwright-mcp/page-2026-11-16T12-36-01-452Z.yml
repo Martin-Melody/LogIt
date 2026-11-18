@@ -1,0 +1,246 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - generic [ref=e28]:
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - link "LogIt" [ref=e33] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=e38]:
+          - tab "Me" [selected] [ref=e39]
+          - tab "Coaching" [ref=e40]
+      - generic [ref=e41]:
+        - list [ref=e44]:
+          - listitem [ref=e45]:
+            - link "Overview" [ref=e46] [cursor=pointer]:
+              - /url: /
+        - generic [ref=e49]:
+          - generic [ref=e50]: Training
+          - list [ref=e52]:
+            - listitem [ref=e53]:
+              - link "Sessions" [ref=e54] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=e57]:
+              - link "Progress" [ref=e58] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=e61]:
+              - link "Plan" [ref=e62] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=e65]:
+              - link "Library" [ref=e66] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=e69]:
+          - generic [ref=e70]: Body
+          - list [ref=e72]:
+            - listitem [ref=e73]:
+              - link "Nutrition" [ref=e74] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=e77]:
+              - link "Habits & goals" [ref=e78] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=e81]:
+          - generic [ref=e82]: People
+          - list [ref=e84]:
+            - listitem [ref=e85]:
+              - link "Social" [ref=e86] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=e89]:
+          - generic [ref=e90]: Extras
+          - list [ref=e92]:
+            - listitem [ref=e93]:
+              - link "Insights" [ref=e94] [cursor=pointer]:
+                - /url: /insights
+            - listitem [ref=e97]:
+              - link "Plugins" [ref=e98] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=e101]:
+          - generic [ref=e102]: Coach
+          - list [ref=e104]:
+            - listitem [ref=e105]:
+              - link "My coach" [ref=e106] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=e110]:
+        - listitem [ref=e111]:
+          - button "A Alex Studio · Account" [ref=e112]:
+            - generic [ref=e113]: A
+            - generic [ref=e114]:
+              - generic [ref=e115]: Alex
+              - generic [ref=e116]: Studio · Account
+      - button "Toggle Sidebar" [ref=e118]
+    - main [ref=e119]:
+      - main [ref=e120]:
+        - generic [ref=e122]:
+          - generic [ref=e123]:
+            - generic [ref=e124]:
+              - paragraph [ref=e125]: Monday, November 16
+              - heading "This week" [level=1] [ref=e126]
+            - button "Edit layout" [ref=e127]
+          - list [ref=e129]:
+            - listitem "Streak" [ref=e130]:
+              - heading "Streak" [level=2] [ref=e132]
+              - generic [ref=e133]:
+                - generic [ref=e134]: 2 weeks
+                - generic [ref=e135]: "Best: 4 weeks"
+            - listitem "Sessions this week" [ref=e136]:
+              - heading "Sessions this week" [level=2] [ref=e138]
+              - generic [ref=e139]: 1 of 4
+            - listitem "Volume this week" [ref=e143]:
+              - heading "Volume this week" [level=2] [ref=e145]
+              - generic [ref=e146]:
+                - generic [ref=e147]: 8.59 t
+                - generic [ref=e148]: "-79% on last week"
+            - listitem "Body weight" [ref=e149]:
+              - heading "Body weight" [level=2] [ref=e151]
+              - generic [ref=e152]:
+                - generic [ref=e153]: 84.1 kg
+                - generic [ref=e154]: +0.1 kg a week
+            - listitem "This week" [ref=e155]:
+              - heading "This week" [level=2] [ref=e157]
+              - generic [ref=e158]:
+                - generic [ref=e159]:
+                  - generic [ref=e160]:
+                    - generic [ref=e161]: Today
+                    - generic [ref=e162]: Upper
+                    - generic [ref=e163]: Done · 62 min
+                  - generic [ref=e164]: Tue
+                  - generic [ref=e166]: Wed
+                  - generic [ref=e168]: Thu
+                  - generic [ref=e170]: Fri
+                  - generic [ref=e172]: Sat
+                  - generic [ref=e174]: Sun
+                - paragraph [ref=e176]: Pick an active split in the app to see what's planned.
+            - listitem "Goals" [ref=e177]:
+              - heading "Goals" [level=2] [ref=e179]
+              - generic [ref=e180]:
+                - generic [ref=e181]:
+                  - generic [ref=e182]:
+                    - generic [ref=e183]: Bench Press 120 kg
+                    - generic [ref=e184]: 117.9 kg
+                  - generic [ref=e187]: On pace for December
+                - generic [ref=e188]:
+                  - generic [ref=e189]:
+                    - generic [ref=e190]: Squat 170 kg
+                    - generic [ref=e191]: 183.3 kg
+                  - generic [ref=e194]: "Ready: your estimate is there, now do the set"
+            - listitem "Weekly volume" [ref=e195]:
+              - heading "Weekly volume" [level=2] [ref=e197]
+              - generic [ref=e198]:
+                - img "Weekly volume for the last 12 weeks, this week 8.59 t" [ref=e199]:
+                  - 'generic "Aug 31: 26.5 t" [ref=e200]'
+                  - 'generic "Sep 7: 37.2 t" [ref=e201]'
+                  - 'generic "Sep 14: 38 t" [ref=e202]'
+                  - 'generic "Sep 21: 38 t" [ref=e203]'
+                  - 'generic "Sep 28: 38.8 t" [ref=e204]'
+                  - 'generic "Oct 5: 19.4 t" [ref=e205]'
+                  - 'generic "Oct 12: 39.6 t" [ref=e206]'
+                  - 'generic "Oct 19: 39.4 t" [ref=e207]'
+                  - 'generic "Oct 26: 28.6 t" [ref=e208]'
+                  - 'generic "Nov 2: 39.9 t" [ref=e209]'
+                  - 'generic "Nov 9: 40.5 t" [ref=e210]'
+                  - 'generic "Nov 16: 8.59 t" [ref=e211]'
+                - generic [ref=e212]:
+                  - generic [ref=e213]: Aug 31
+                  - generic [ref=e214]: This week (so far)
+            - listitem "Recent records" [ref=e215]:
+              - heading "Recent records" [level=2] [ref=e217]
+              - list [ref=e218]:
+                - listitem [ref=e219]:
+                  - generic [ref=e220]: Barbell Row 95 kg × 8
+                  - generic [ref=e221]: Today
+                - listitem [ref=e222]:
+                  - generic [ref=e223]: Overhead Press 64 kg × 6
+                  - generic [ref=e224]: Today
+                - listitem [ref=e225]:
+                  - generic [ref=e226]: Lat Pulldown 80 kg × 10
+                  - generic [ref=e227]: Today
+                - listitem [ref=e228]:
+                  - generic [ref=e229]: Squat 155 kg × 5
+                  - generic [ref=e230]: Tue
+                - listitem [ref=e231]:
+                  - generic [ref=e232]: Hip Thrust 148 kg × 10
+                  - generic [ref=e233]: Tue
+                - listitem [ref=e234]:
+                  - generic [ref=e235]: Barbell Row 94 kg × 8
+                  - generic [ref=e236]: Nov 9
+            - listitem "Recent sessions" [ref=e237]:
+              - heading "Recent sessions" [level=2] [ref=e239]
+              - list [ref=e240]:
+                - listitem [ref=e241]:
+                  - link "Upper · Today 62 min" [ref=e242] [cursor=pointer]:
+                    - /url: /sessions?id=ses_zyr724w
+                    - generic [ref=e243]: Upper · Today
+                    - generic [ref=e244]: 62 min
+                - listitem [ref=e245]:
+                  - link "Lower · Sat 62 min" [ref=e246] [cursor=pointer]:
+                    - /url: /sessions?id=ses_zc3esdn
+                    - generic [ref=e247]: Lower · Sat
+                    - generic [ref=e248]: 62 min
+                - listitem [ref=e249]:
+                  - link "Upper · Thu 62 min" [ref=e250] [cursor=pointer]:
+                    - /url: /sessions?id=ses_ylsgwyb
+                    - generic [ref=e251]: Upper · Thu
+                    - generic [ref=e252]: 62 min
+                - listitem [ref=e253]:
+                  - link "Lower · Tue 62 min" [ref=e254] [cursor=pointer]:
+                    - /url: /sessions?id=ses_xz86xhy
+                    - generic [ref=e255]: Lower · Tue
+                    - generic [ref=e256]: 62 min
+                - listitem [ref=e257]:
+                  - link "Upper · Nov 9 62 min" [ref=e258] [cursor=pointer]:
+                    - /url: /sessions?id=ses_xcahymp
+                    - generic [ref=e259]: Upper · Nov 9
+                    - generic [ref=e260]: 62 min
+            - listitem "Habits this week" [ref=e261]:
+              - heading "Habits this week" [level=2] [ref=e263]
+              - generic [ref=e264]:
+                - generic [ref=e265]: M
+                - generic [ref=e266]: T
+                - generic [ref=e267]: W
+                - generic [ref=e268]: T
+                - generic [ref=e269]: F
+                - generic [ref=e270]: S
+                - generic [ref=e271]: S
+                - generic [ref=e272]: Sleep 8 hours
+                - generic "done" [ref=e273]
+                - generic "not due" [ref=e274]
+                - generic "not due" [ref=e275]
+                - generic "not due" [ref=e276]
+                - generic "not due" [ref=e277]
+                - generic "not due" [ref=e278]
+                - generic "not due" [ref=e279]
+            - listitem "Bench vs body weight" [ref=e280]:
+              - heading "Bench vs body weight" [level=2] [ref=e282]
+              - img "Bench Press from 109.4 kg to 116.7 kg; Body weight from 82.8 kg to 84.1 kg" [ref=e284]:
+                - generic [ref=e285]: "108"
+                - generic [ref=e286]: "110"
+                - generic [ref=e287]: "112"
+                - generic [ref=e288]: "114"
+                - generic [ref=e289]: "116"
+                - generic [ref=e290]: "118"
+                - generic [ref=e291]: "82.5"
+                - generic [ref=e292]: "83"
+                - generic [ref=e293]: "83.5"
+                - generic [ref=e294]: "84"
+                - generic [ref=e295]: "84.5"
+                - generic [ref=e296]: Sep 1
+                - generic [ref=e297]: Oct 1
+                - generic [ref=e298]: Nov 1
+              - generic [ref=e314]:
+                - generic [ref=e315]: Bench Press
+                - generic [ref=e317]: Body weight (right scale)
+              - link "Open in Insights ›" [ref=e319] [cursor=pointer]:
+                - /url: /insights/charts/chart_bench_bw
+            - listitem "Squat top sets" [ref=e320]:
+              - heading "Squat top sets" [level=2] [ref=e322]
+              - img "Squat from 127.5 kg to 155 kg" [ref=e324]:
+                - generic [ref=e325]: "120"
+                - generic [ref=e326]: "130"
+                - generic [ref=e327]: "140"
+                - generic [ref=e328]: "150"
+                - generic [ref=e329]: "160"
+                - generic [ref=e330]: Sep 1
+                - generic [ref=e331]: Oct 1
+                - generic [ref=e332]: Nov 1
+              - generic [ref=e355]: Squat
+              - link "Open in Insights ›" [ref=e358] [cursor=pointer]:
+                - /url: /insights/charts/chart_squat_top
+  - generic [ref=e27]: LogIt

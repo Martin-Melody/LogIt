@@ -1,0 +1,65 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e6]:
+    - banner [ref=f1e7]:
+      - button "Back" [ref=f1e323]
+      - generic [ref=f1e325]: Banded hip opener (green)
+      - link "Notifications" [ref=f1e13] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f1e15]:
+      - generic [ref=f1e359]:
+        - generic [ref=f1e360]:
+          - generic [ref=f1e361]: Name
+          - textbox "Name" [ref=f1e362]: Banded hip opener (green)
+        - generic [ref=f1e363]:
+          - generic [ref=f1e364]: Body area
+          - combobox "Body area" [ref=f1e365]:
+            - option "neck"
+            - option "shoulders"
+            - option "t-spine"
+            - option "lower back"
+            - option "wrists"
+            - option "hips" [selected]
+            - option "hip flexors"
+            - option "glutes"
+            - option "hamstrings"
+            - option "quads"
+            - option "adductors"
+            - option "calves"
+            - option "ankles"
+            - option "full body"
+        - generic [ref=f1e366]:
+          - generic [ref=f1e367]: Measured by
+          - generic [ref=f1e368]:
+            - button "Hold" [pressed] [ref=f1e369]
+            - button "Reps" [ref=f1e370]
+        - generic [ref=f1e371]:
+          - checkbox "Each side separately" [checked] [ref=f1e372]
+          - text: Each side separately
+        - generic [ref=f1e373]:
+          - generic [ref=f1e374]: Cues
+          - generic [ref=f1e375]:
+            - generic [ref=f1e376]:
+              - textbox "Cue 1" [ref=f1e377]:
+                - /placeholder: e.g. Elbows under the bar
+                - text: Band low on the hip
+              - button "Remove cue 1" [ref=f1e378]
+            - button "Add cue" [ref=f1e380]
+        - generic [ref=f1e382]:
+          - generic [ref=f1e383]: Notes
+          - textbox "Notes" [ref=f1e384]: Before squats. Green band.
+        - generic [ref=f1e385]:
+          - button "Delete" [ref=f1e386]
+          - button "Saved" [ref=f1e388]
+        - paragraph [ref=f1e389]: Deleting it keeps it in past workouts.
+    - contentinfo [ref=f1e306]:
+      - navigation "Main navigation" [ref=f1e307]:
+        - link "Home" [ref=f1e308] [cursor=pointer]:
+          - /url: /
+        - link "Start session" [ref=f1e311] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f1e315]: Start
+        - link "Profile" [ref=f1e316] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f1e319]
+  - region "Notifications alt+T"
+  - generic [ref=f1e322]: LogIt

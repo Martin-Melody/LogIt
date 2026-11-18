@@ -30,3 +30,11 @@ export function chip(selected: boolean, className?: string): string {
     className,
   );
 }
+
+/**
+ * "Add a set", "Warm-up ramp", "Session note": adding something to a list. A real button with
+ * a dashed outline (Martin, 2026-11-18: no text pretending to be a button), quieter than the
+ * page's main action. Pair with a Plus icon.
+ */
+export const addButton =
+  "flex h-11 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground active:bg-muted/50 disabled:opacity-50";

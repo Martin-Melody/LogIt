@@ -1,0 +1,125 @@
+- generic [ref=f23e2]:
+  - generic [ref=f23e6]:
+    - banner [ref=f23e7]:
+      - button "Back" [ref=f23e8]
+      - heading "Nutrition" [level=1] [ref=f23e10]
+      - link "Insights" [ref=f23e11] [cursor=pointer]:
+        - /url: /insights/eating
+      - link "My foods and recipes" [ref=f23e13] [cursor=pointer]:
+        - /url: /nutrition/foods
+      - link "Notifications" [ref=f23e15] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f23e17]:
+      - generic [ref=f23e18]:
+        - generic [ref=f23e19]:
+          - button "Earlier week" [ref=f23e20]
+          - generic [ref=f23e22]:
+            - button "2026-11-10, 1155 kcal" [ref=f23e23]:
+              - generic [ref=f23e24]: Tue
+              - generic [ref=f23e25]: "10"
+            - button "2026-11-11, 1155 kcal" [ref=f23e28]:
+              - generic [ref=f23e29]: Wed
+              - generic [ref=f23e30]: "11"
+            - button "2026-11-12, 1155 kcal" [ref=f23e33]:
+              - generic [ref=f23e34]: Thu
+              - generic [ref=f23e35]: "12"
+            - button "2026-11-13, 1155 kcal" [ref=f23e38]:
+              - generic [ref=f23e39]: Fri
+              - generic [ref=f23e40]: "13"
+            - button "2026-11-14, 1155 kcal" [ref=f23e43]:
+              - generic [ref=f23e44]: Sat
+              - generic [ref=f23e45]: "14"
+            - button "2026-11-15, 1155 kcal" [ref=f23e48]:
+              - generic [ref=f23e49]: Sun
+              - generic [ref=f23e50]: "15"
+            - button "2026-11-16, 550 kcal" [ref=f23e53]:
+              - generic [ref=f23e54]: Today
+              - generic [ref=f23e55]: "16"
+          - button "Later week" [disabled] [ref=f23e58]
+        - generic [ref=f23e60]:
+          - 'link "Set a goal to get calorie and macro targets Eaten so far: 550 kcal · P 55 · C 63 · F 9" [ref=f23e61] [cursor=pointer]':
+            - /url: /nutrition/goal
+            - generic [ref=f23e62]: Set a goal to get calorie and macro targets
+            - generic [ref=f23e64]: "Eaten so far: 550 kcal · P 55 · C 63 · F 9"
+          - generic [ref=f23e65]:
+            - generic [ref=f23e66]:
+              - generic [ref=f23e67]:
+                - heading "Breakfast" [level=2] [ref=f23e68]
+                - paragraph [ref=f23e69]: Nothing yet
+              - button "Breakfast options" [ref=f23e70]
+            - generic [ref=f23e72]:
+              - link "Add food" [ref=f23e73] [cursor=pointer]:
+                - /url: /nutrition/log?meal=breakfast&date=2026-11-16
+              - button "Same as yesterday 430" [ref=f23e75]:
+                - text: Same as yesterday
+                - generic [ref=f23e77]: "430"
+          - generic [ref=f23e78]:
+            - generic [ref=f23e79]:
+              - generic [ref=f23e80]:
+                - heading "Lunch" [level=2] [ref=f23e81]
+                - paragraph [ref=f23e82]: Nothing yet
+              - button "Lunch options" [ref=f23e83]
+            - generic [ref=f23e85]:
+              - link "Add food" [ref=f23e86] [cursor=pointer]:
+                - /url: /nutrition/log?meal=lunch&date=2026-11-16
+              - button "Same as yesterday 275" [ref=f23e88]:
+                - text: Same as yesterday
+                - generic [ref=f23e90]: "275"
+          - generic [ref=f23e91]:
+            - generic [ref=f23e92]:
+              - generic [ref=f23e93]:
+                - heading "Dinner" [level=2] [ref=f23e94]
+                - paragraph [ref=f23e95]: Nothing yet
+              - button "Dinner options" [ref=f23e96]
+            - generic [ref=f23e98]:
+              - link "Add food" [ref=f23e99] [cursor=pointer]:
+                - /url: /nutrition/log?meal=dinner&date=2026-11-16
+              - button "Same as yesterday 330" [ref=f23e101]:
+                - text: Same as yesterday
+                - generic [ref=f23e103]: "330"
+          - generic [ref=f23e104]:
+            - generic [ref=f23e105]:
+              - generic [ref=f23e106]:
+                - heading "Snacks" [level=2] [ref=f23e107]
+                - paragraph [ref=f23e108]: 550 kcal · P 55 · C 63 · F 9
+              - button "Snacks options" [ref=f23e109]
+            - list [ref=f23e111]:
+              - listitem [ref=f23e112]:
+                - button "Arla Protein yoghurt 200 g 130" [ref=f23e113]:
+                  - generic [ref=f23e114]:
+                    - generic [ref=f23e115]: Arla Protein yoghurt
+                    - generic [ref=f23e116]: 200 g
+                  - generic [ref=f23e117]: "130"
+              - listitem [ref=f23e118]:
+                - button "Rolled oats 80 g 300" [ref=f23e119]:
+                  - generic [ref=f23e120]:
+                    - generic [ref=f23e121]: Rolled oats
+                    - generic [ref=f23e122]: 80 g
+                  - generic [ref=f23e123]: "300"
+              - listitem [ref=f23e124]:
+                - button "Whey protein, vanilla 1 scoop (30 g) 120" [ref=f23e125]:
+                  - generic [ref=f23e126]:
+                    - generic [ref=f23e127]: Whey protein, vanilla
+                    - generic [ref=f23e128]: 1 scoop (30 g)
+                  - generic [ref=f23e129]: "120"
+            - link "Add food" [ref=f23e130] [cursor=pointer]:
+              - /url: /nutrition/log?meal=snack&date=2026-11-16
+          - link "Weight trend — Log" [ref=f23e132] [cursor=pointer]:
+            - /url: /nutrition/weight
+            - generic [ref=f23e133]:
+              - generic [ref=f23e134]: Weight trend
+              - generic [ref=f23e135]: —
+            - generic [ref=f23e137]: Log
+      - link "Log food" [ref=f23e138] [cursor=pointer]:
+        - /url: /nutrition/log?meal=dinner&date=2026-11-16
+    - contentinfo [ref=f23e140]:
+      - navigation "Main navigation" [ref=f23e141]:
+        - link "Home" [ref=f23e142] [cursor=pointer]:
+          - /url: /
+        - link "Start session" [ref=f23e145] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f23e149]: Start
+        - link "Profile" [ref=f23e150] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f23e153]
+  - region "Notifications alt+T"

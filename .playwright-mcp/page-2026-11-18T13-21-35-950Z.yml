@@ -1,0 +1,143 @@
+- generic [ref=f5e1]:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:05
+        - button "Finish workout": Finish
+        - button "Workout options"
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic [ref=f5e170]:
+                  - button "Drag to reorder" [ref=f5e171]
+                  - button "Collapse exercise" [ref=f5e173]
+                  - button "Bench Press — open details" [ref=f5e175]:
+                    - generic [ref=f5e176]: Bench Press
+                  - generic [ref=f5e177]: 0 of 3
+                  - button "Add set" [ref=f5e178]
+                  - button "More actions for Bench Press" [ref=f5e181]
+                - generic:
+                  - generic:
+                    - paragraph: First time? Pick a weight you could lift about 8 times.
+                    - paragraph: Logit plans every set after this one from it. No need to know your max.
+                  - generic:
+                    - generic: "#"
+                    - generic: Last
+                    - generic: kg
+                    - generic: Reps
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - row "Drag to reorder set Set 1 details Mark complete":
+                          - generic:
+                            - button "Drag to reorder set":
+                              - generic: "1"
+                            - button "Set 1 details": –
+                            - generic:
+                              - spinbutton "Set 1 weight (kg)"
+                            - spinbutton "Set 1 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - row "Drag to reorder set Set 2 details Mark complete":
+                          - generic:
+                            - button "Drag to reorder set":
+                              - generic: "2"
+                            - button "Set 2 details": –
+                            - generic:
+                              - spinbutton "Set 2 weight (kg)"
+                            - spinbutton "Set 2 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - row "Drag to reorder set Set 3 details Mark complete":
+                          - generic:
+                            - button "Drag to reorder set":
+                              - generic: "3"
+                            - button "Set 3 details": –
+                            - generic:
+                              - spinbutton "Set 3 weight (kg)"
+                            - spinbutton "Set 3 reps"
+                            - button "Mark complete"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Barbell Row — open details":
+                      - generic: Barbell Row
+                    - generic: 0 of 3
+                    - button "More actions for Barbell Row"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Incline Dumbbell Press — open details":
+                      - generic: Incline Dumbbell Press
+                    - generic: 0 of 3
+                    - button "More actions for Incline Dumbbell Press"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Lat Pulldown — open details":
+                      - generic: Lat Pulldown
+                    - generic: 0 of 3
+                    - button "More actions for Lat Pulldown"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Bicep Curl — open details":
+                      - generic: Bicep Curl
+                    - generic: 0 of 2
+                    - button "More actions for Bicep Curl"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Sessions":
+            - /url: /sessions
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Exercise card" [ref=f5e183]:
+    - button "Close" [active] [ref=f5e184] [cursor=pointer]: ×
+    - banner [ref=f5e186]: Exercise card
+    - generic [ref=f5e187]: Tap the name for details and history. Use + to add a set, and ⋯ to swap, superset or remove the exercise. Swipe a set left to edit or delete it.
+    - contentinfo [ref=f5e188]:
+      - generic [ref=f5e189]: 1 / 4
+      - generic [ref=f5e190]:
+        - button "← Back" [disabled]
+        - button "Next →" [ref=f5e191] [cursor=pointer]

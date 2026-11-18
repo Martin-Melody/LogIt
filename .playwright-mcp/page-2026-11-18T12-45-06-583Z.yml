@@ -1,0 +1,38 @@
+- generic [ref=f4e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f4e6]:
+    - generic [ref=f4e7]:
+      - generic [ref=f4e8]: LogIt
+      - heading "Your training, on a bigger screen." [level=1] [ref=f4e13]
+      - generic [ref=f4e14]:
+        - paragraph [ref=f4e15]: Plan weeks and see every lift's trend at a glance.
+        - paragraph [ref=f4e16]: "Coach clients: programs, check-ins and messages in one place."
+    - generic [ref=f4e18]:
+      - heading "Sign in" [level=2] [ref=f4e19]
+      - generic [ref=f4e20]:
+        - img "QR code to scan with the Logit app on your phone" [ref=f4e22]
+        - generic [ref=f4e26]:
+          - generic [ref=f4e27]: Already on your phone?
+          - generic [ref=f4e28]:
+            - text: Open Logit, tap your account, then
+            - strong [ref=f4e29]: Sign in on a computer
+            - text: ", and scan this. No password."
+      - generic [ref=f4e30]: or
+      - generic [ref=f4e33]:
+        - generic [ref=f4e34]:
+          - generic [ref=f4e35]: daracoach
+          - button "Change" [ref=f4e36]
+        - textbox [aria-hidden] [ref=f4e37]: daracoach
+        - generic [ref=f4e38]:
+          - generic [ref=f4e39]: Password
+          - textbox "Password" [active] [ref=f4e40]
+        - button "Sign in" [disabled]
+      - paragraph [ref=f4e41]:
+        - text: New here?
+        - button "Create an account" [ref=f4e42]
+      - generic [ref=f4e43]:
+        - link "Forgot password?" [ref=f4e44] [cursor=pointer]:
+          - /url: /forgot-password
+        - link "Compare plans" [ref=f4e45] [cursor=pointer]:
+          - /url: https://getlogit.app/pricing
+      - 'button "Advanced: use your own server" [ref=f4e47]'

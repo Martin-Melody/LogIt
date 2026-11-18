@@ -1,0 +1,147 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e28]:
+    - generic [ref=f2e31]:
+      - link "LogIt" [ref=f2e33] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f2e38]:
+        - list [ref=f2e41]:
+          - listitem [ref=f2e42]:
+            - link "Overview" [ref=f2e43] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f2e46]:
+          - generic [ref=f2e47]: Training
+          - list [ref=f2e49]:
+            - listitem [ref=f2e50]:
+              - link "Sessions" [ref=f2e51] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f2e54]:
+              - link "Progress" [ref=f2e55] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f2e58]:
+              - link "Plan" [ref=f2e59] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f2e62]:
+              - link "Library" [ref=f2e63] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f2e66]:
+          - generic [ref=f2e67]: Body
+          - list [ref=f2e69]:
+            - listitem [ref=f2e70]:
+              - link "Nutrition" [ref=f2e71] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f2e74]:
+              - link "Habits & goals" [ref=f2e75] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f2e78]:
+          - generic [ref=f2e79]: Coach
+          - list [ref=f2e81]:
+            - listitem [ref=f2e82]:
+              - link "My coach" [ref=f2e83] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f2e87]:
+        - listitem [ref=f2e88]:
+          - button "C Conor Pro · Account" [ref=f2e89]:
+            - generic [ref=f2e90]: C
+            - generic [ref=f2e91]:
+              - generic [ref=f2e92]: Conor
+              - generic [ref=f2e93]: Pro · Account
+      - button "Toggle Sidebar" [ref=f2e95]
+    - main [ref=f2e96]:
+      - main [ref=f2e97]:
+        - generic [ref=f2e99]:
+          - generic [ref=f2e100]:
+            - generic [ref=f2e101]:
+              - paragraph [ref=f2e102]: Sunday, November 15
+              - heading "This week" [level=1] [ref=f2e103]
+            - button "Edit layout" [ref=f2e104]
+          - generic [ref=f2e106]:
+            - region "Streak" [ref=f2e107]:
+              - heading "Streak" [level=2] [ref=f2e109]
+              - generic [ref=f2e110]:
+                - generic [ref=f2e111]: 0 weeks
+                - generic [ref=f2e112]: "Best: 0 weeks"
+            - region "Sessions this week" [ref=f2e113]:
+              - heading "Sessions this week" [level=2] [ref=f2e115]
+              - generic [ref=f2e116]: 2 of 3
+            - region "Volume this week" [ref=f2e120]:
+              - heading "Volume this week" [level=2] [ref=f2e122]
+              - generic [ref=f2e123]:
+                - generic [ref=f2e124]: 9.33 t
+                - generic [ref=f2e125]: +30% on last week
+            - region "Body weight" [ref=f2e126]:
+              - heading "Body weight" [level=2] [ref=f2e128]
+              - paragraph [ref=f2e129]: Log your weight in the app to see the trend.
+            - region "This week" [ref=f2e130]:
+              - heading "This week" [level=2] [ref=f2e132]
+              - generic [ref=f2e133]:
+                - generic [ref=f2e134]:
+                  - generic [ref=f2e135]:
+                    - generic [ref=f2e136]: Mon
+                    - generic [ref=f2e137]: Upper
+                    - generic [ref=f2e138]: Done · 55 min
+                  - generic [ref=f2e139]: Tue
+                  - generic [ref=f2e141]: Wed
+                  - generic [ref=f2e143]:
+                    - generic [ref=f2e144]: Thu
+                    - generic [ref=f2e145]: Lower
+                    - generic [ref=f2e146]: Done · 55 min
+                  - generic [ref=f2e147]: Fri
+                  - generic [ref=f2e149]: Sat
+                  - generic [ref=f2e151]: Today
+                - paragraph [ref=f2e153]: Pick an active split in the app to see what's planned.
+            - region "Goals" [ref=f2e154]:
+              - heading "Goals" [level=2] [ref=f2e156]
+              - paragraph [ref=f2e157]: No goals yet. Set them in the app under Progress › Goals.
+            - region "Weekly volume" [ref=f2e158]:
+              - heading "Weekly volume" [level=2] [ref=f2e160]
+              - generic [ref=f2e161]:
+                - img "Weekly volume for the last 12 weeks, this week 9.33 t" [ref=f2e162]:
+                  - 'generic "Aug 24: 0 t"'
+                  - 'generic "Aug 31: 0 t"'
+                  - 'generic "Sep 7: 0 t"'
+                  - 'generic "Sep 14: 0 t"'
+                  - 'generic "Sep 21: 0 t"'
+                  - 'generic "Sep 28: 0 t"'
+                  - 'generic "Oct 5: 0 t"'
+                  - 'generic "Oct 12: 0 t"'
+                  - 'generic "Oct 19: 0 t"'
+                  - 'generic "Oct 26: 0 t"'
+                  - 'generic "Nov 2: 7.18 t" [ref=f2e163]'
+                  - 'generic "Nov 9: 9.33 t" [ref=f2e164]'
+                - generic [ref=f2e165]:
+                  - generic [ref=f2e166]: Aug 24
+                  - generic [ref=f2e167]: This week (so far)
+            - region "Recent records" [ref=f2e168]:
+              - heading "Recent records" [level=2] [ref=f2e170]
+              - list [ref=f2e171]:
+                - listitem [ref=f2e172]:
+                  - generic [ref=f2e173]: Lat Pulldown 60 kg × 10
+                  - generic [ref=f2e174]: Mon
+            - region "Recent sessions" [ref=f2e175]:
+              - heading "Recent sessions" [level=2] [ref=f2e177]
+              - list [ref=f2e178]:
+                - listitem [ref=f2e179]:
+                  - link "Lower · Thu 55 min" [ref=f2e180] [cursor=pointer]:
+                    - /url: /sessions?id=ses_4jf8geu
+                    - generic [ref=f2e181]: Lower · Thu
+                    - generic [ref=f2e182]: 55 min
+                - listitem [ref=f2e183]:
+                  - link "Upper · Mon 55 min" [ref=f2e184] [cursor=pointer]:
+                    - /url: /sessions?id=ses_4s7yy2o
+                    - generic [ref=f2e185]: Upper · Mon
+                    - generic [ref=f2e186]: 55 min
+                - listitem [ref=f2e187]:
+                  - link "Lower · Nov 5 55 min" [ref=f2e188] [cursor=pointer]:
+                    - /url: /sessions?id=ses_51ote9u
+                    - generic [ref=f2e189]: Lower · Nov 5
+                    - generic [ref=f2e190]: 55 min
+                - listitem [ref=f2e191]:
+                  - link "Upper · Nov 2 55 min" [ref=f2e192] [cursor=pointer]:
+                    - /url: /sessions?id=ses_5aym8nz
+                    - generic [ref=f2e193]: Upper · Nov 2
+                    - generic [ref=f2e194]: 55 min
+            - region "Habits this week" [ref=f2e195]:
+              - heading "Habits this week" [level=2] [ref=f2e197]
+              - paragraph [ref=f2e198]: No habits yet. Add them in the app.
+  - generic [ref=f2e27]: LogIt

@@ -1,0 +1,175 @@
+- generic [ref=f7e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f7e6]:
+    - generic [ref=f7e9]:
+      - generic [ref=f7e10]:
+        - link "LogIt" [ref=f7e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f7e16]:
+          - tab "Me" [selected] [ref=f7e17]
+          - tab "Coaching" [ref=f7e18]
+      - generic [ref=f7e19]:
+        - list [ref=f7e22]:
+          - listitem [ref=f7e23]:
+            - link "Overview" [ref=f7e24] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f7e27]:
+          - generic [ref=f7e28]: Training
+          - list [ref=f7e30]:
+            - listitem [ref=f7e31]:
+              - link "Sessions" [ref=f7e32] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f7e35]:
+              - link "Progress" [ref=f7e36] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f7e39]:
+              - link "Plan" [ref=f7e40] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f7e43]:
+              - link "Library" [ref=f7e44] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f7e47]:
+          - generic [ref=f7e48]: Body
+          - list [ref=f7e50]:
+            - listitem [ref=f7e51]:
+              - link "Nutrition" [ref=f7e52] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f7e55]:
+              - link "Habits & goals" [ref=f7e56] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f7e59]:
+          - generic [ref=f7e60]: People
+          - list [ref=f7e62]:
+            - listitem [ref=f7e63]:
+              - link "Social" [ref=f7e64] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=f7e67]:
+          - generic [ref=f7e68]: Extras
+          - list [ref=f7e70]:
+            - listitem [ref=f7e71]:
+              - link "Insights" [ref=f7e72] [cursor=pointer]:
+                - /url: /insights
+            - listitem [ref=f7e75]:
+              - link "Plugins" [ref=f7e76] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=f7e79]:
+          - generic [ref=f7e80]: Coach
+          - list [ref=f7e82]:
+            - listitem [ref=f7e83]:
+              - link "My coach" [ref=f7e84] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f7e88]:
+        - listitem [ref=f7e89]:
+          - button "A Alex Studio · Account" [ref=f7e90]:
+            - generic [ref=f7e91]: A
+            - generic [ref=f7e92]:
+              - generic [ref=f7e93]: Alex
+              - generic [ref=f7e94]: Studio · Account
+      - button "Toggle Sidebar" [ref=f7e96]
+    - main [ref=f7e97]:
+      - main [ref=f7e98]:
+        - generic [ref=f7e212]:
+          - generic [ref=f7e213]:
+            - generic [ref=f7e214]:
+              - heading "Insights" [level=1] [ref=f7e215]
+              - paragraph [ref=f7e216]: Worked out from your own training, food and habits.
+            - group "Range" [ref=f7e217]:
+              - button "4 weeks" [ref=f7e218]
+              - button "12 weeks" [pressed] [ref=f7e219]
+              - button "6 months" [ref=f7e220]
+              - button "1 year" [ref=f7e221]
+          - region "Questions" [ref=f7e222]:
+            - 'link "Which lifts are moving? 5 moving, 3 stuck, 1 slipping Barbell Row Overhead Press Lat Pulldown Squat Hip Thrust Bench Press Romanian Deadlift: ≈ -1.4% / session. Bench Press: no new best in 13 sessions. Open ›" [ref=f7e223] [cursor=pointer]':
+              - /url: /insights/lifts?range=12w
+              - generic [ref=f7e224]: Which lifts are moving?
+              - generic [ref=f7e225]: 5 moving, 3 stuck, 1 slipping
+              - generic [ref=f7e227]:
+                - generic [ref=f7e228]: Barbell Row
+                - generic [ref=f7e229]: Overhead Press
+                - generic [ref=f7e230]: Lat Pulldown
+                - generic [ref=f7e231]: Squat
+                - generic [ref=f7e232]: Hip Thrust
+                - generic [ref=f7e233]: Bench Press
+              - generic [ref=f7e234]: "Romanian Deadlift: ≈ -1.4% / session. Bench Press: no new best in 13 sessions."
+              - generic [ref=f7e235]: Open ›
+            - 'link "Is my training balanced? Several muscles get far less than the rest Working sets a week: Glutes 18, Back 16, Hamstrings 15, Shoulders 14, Chest 8, Quads 7, Biceps 6 Chest 8, quads 7 and biceps 6 working sets a week. Everything else is 14 to 18. Open ›" [ref=f7e236] [cursor=pointer]':
+              - /url: /insights/balance?range=12w
+              - generic [ref=f7e237]: Is my training balanced?
+              - generic [ref=f7e238]: Several muscles get far less than the rest
+              - 'img "Working sets a week: Glutes 18, Back 16, Hamstrings 15, Shoulders 14, Chest 8, Quads 7, Biceps 6" [ref=f7e240]':
+                - 'generic "Glutes: 18" [ref=f7e241]'
+                - 'generic "Back: 16" [ref=f7e242]'
+                - 'generic "Hamstrings: 15" [ref=f7e243]'
+                - 'generic "Shoulders: 14" [ref=f7e244]'
+                - 'generic "Chest: 8" [ref=f7e245]'
+                - 'generic "Quads: 7" [ref=f7e246]'
+                - 'generic "Biceps: 6" [ref=f7e247]'
+              - generic [ref=f7e248]: Chest 8, quads 7 and biceps 6 working sets a week. Everything else is 14 to 18.
+              - generic [ref=f7e249]: Open ›
+            - 'link "Am I showing up? 3.7 training days a week, target 4 Weeks, oldest first: on target, missed, on target, on target, on target, on target, missed, on target, on target, missed, on target, on target, this week 9 of 12 weeks on target. 2 in a row now. Open ›" [ref=f7e250] [cursor=pointer]':
+              - /url: /insights/showing-up?range=12w
+              - generic [ref=f7e251]: Am I showing up?
+              - generic [ref=f7e252]: 3.7 training days a week, target 4
+              - 'img "Weeks, oldest first: on target, missed, on target, on target, on target, on target, missed, on target, on target, missed, on target, on target, this week" [ref=f7e254]'
+              - generic [ref=f7e268]: 9 of 12 weeks on target. 2 in a row now.
+              - generic [ref=f7e269]: Open ›
+            - link "Is my eating on track? Gaining 0.12 kg a week Body weight trend from 82.68 to 84.14 kg Goal is gaining (0.25 kg a week). 2,640 kcal on average, 92% on target, 169 g protein, over 64 logged days. Open ›" [ref=f7e270] [cursor=pointer]:
+              - /url: /insights/eating?range=12w
+              - generic [ref=f7e271]: Is my eating on track?
+              - generic [ref=f7e272]: Gaining 0.12 kg a week
+              - img "Body weight trend from 82.68 to 84.14 kg" [ref=f7e274]
+              - generic [ref=f7e276]: Goal is gaining (0.25 kg a week). 2,640 kcal on average, 92% on target, 169 g protein, over 64 logged days.
+              - generic [ref=f7e277]: Open ›
+            - link "Does food affect my lifts? No clear difference so far Hypothesis Across 33 training days with food logged, workouts went about as well on higher-protein days as on lower ones. Open ›" [ref=f7e278] [cursor=pointer]:
+              - /url: /insights/food-vs-lifts?range=12w
+              - generic [ref=f7e279]: Does food affect my lifts?
+              - generic [ref=f7e280]:
+                - generic [ref=f7e281]: No clear difference so far
+                - generic [ref=f7e282]: Hypothesis
+              - generic [ref=f7e283]: Across 33 training days with food logged, workouts went about as well on higher-protein days as on lower ones.
+              - generic [ref=f7e284]: Open ›
+            - link "When will I hit my goals? Bench Press 120 kg around 18 Dec Squat 170 kg ready, do the set Bodyweight around February From your pace lately. Open ›" [ref=f7e285] [cursor=pointer]:
+              - /url: /insights/goals?range=12w
+              - generic [ref=f7e286]: When will I hit my goals?
+              - generic [ref=f7e287]: Bench Press 120 kg around 18 Dec
+              - generic [ref=f7e289]:
+                - generic [ref=f7e290]:
+                  - generic [ref=f7e291]: Squat 170 kg
+                  - generic [ref=f7e292]: ready, do the set
+                - generic [ref=f7e293]:
+                  - generic [ref=f7e294]: Bodyweight
+                  - generic [ref=f7e295]: around February
+              - generic [ref=f7e296]: From your pace lately.
+              - generic [ref=f7e297]: Open ›
+          - generic [ref=f7e298]:
+            - generic [ref=f7e299]:
+              - generic [ref=f7e300]:
+                - heading "Your charts" [level=2] [ref=f7e301]
+                - paragraph [ref=f7e302]: Saved on your account. Each one draws from your latest data wherever it shows.
+              - link "New chart" [ref=f7e303] [cursor=pointer]:
+                - /url: /insights/charts/new
+            - generic [ref=f7e304]:
+              - link "Bench vs body weight Each week Bench Press from 109.4 kg to 116.7 kg; Body weight from 82.8 kg to 84.1 kg Overview Phone home" [ref=f7e305] [cursor=pointer]:
+                - /url: /insights/charts/chart_bench_bw
+                - generic [ref=f7e306]:
+                  - generic [ref=f7e307]: Bench vs body weight
+                  - generic [ref=f7e308]: Each week
+                - img "Bench Press from 109.4 kg to 116.7 kg; Body weight from 82.8 kg to 84.1 kg" [ref=f7e311]
+                - generic [ref=f7e314]:
+                  - generic [ref=f7e315]: Overview
+                  - generic [ref=f7e316]: Phone home
+              - link "Squat top sets Each session Squat from 127.5 kg to 155 kg Overview" [ref=f7e317] [cursor=pointer]:
+                - /url: /insights/charts/chart_squat_top
+                - generic [ref=f7e318]:
+                  - generic [ref=f7e319]: Squat top sets
+                  - generic [ref=f7e320]: Each session
+                - img "Squat from 127.5 kg to 155 kg" [ref=f7e323]
+                - generic [ref=f7e325]: Overview
+              - link "Squat est. 1RM vs calories Each week Squat from 148.8 kg to 180.8 kg; Calories from 2,677 kcal to 2,500 kcal Overview" [ref=f7e327] [cursor=pointer]:
+                - /url: /insights/charts/chart_6zHdvWT0ogHfjbfohTJ0x
+                - generic [ref=f7e328]:
+                  - generic [ref=f7e329]: Squat est. 1RM vs calories
+                  - generic [ref=f7e330]: Each week
+                - img "Squat from 148.8 kg to 180.8 kg; Calories from 2,677 kcal to 2,500 kcal" [ref=f7e333]
+                - generic [ref=f7e336]: Overview
+  - generic [ref=f7e179]: LogIt

@@ -1,0 +1,115 @@
+- generic [ref=f10e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f10e28]:
+    - generic [ref=f10e31]:
+      - generic [ref=f10e32]:
+        - link "LogIt" [ref=f10e33] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f10e38]:
+          - tab "Me" [ref=f10e39]
+          - tab "Coaching" [selected] [ref=f10e40]
+      - generic [ref=f10e41]:
+        - list [ref=f10e44]:
+          - listitem [ref=f10e45]:
+            - link "Today 3" [ref=f10e46] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f10e48]: Today
+              - generic [ref=f10e49]: "3"
+          - listitem [ref=f10e50]:
+            - link "Clients" [ref=f10e51] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f10e54]:
+            - link "Programs" [ref=f10e55] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f10e58]:
+            - link "Check-ins 3" [ref=f10e59] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f10e61]: Check-ins
+              - generic [ref=f10e62]: "3"
+          - listitem [ref=f10e63]:
+            - link "Messages" [ref=f10e64] [cursor=pointer]:
+              - /url: /messages
+        - generic [ref=f10e67]:
+          - generic [ref=f10e68]: Studio
+          - list [ref=f10e70]:
+            - listitem [ref=f10e71]:
+              - link "Invite links" [ref=f10e72] [cursor=pointer]:
+                - /url: /coaching/links
+      - list [ref=f10e76]:
+        - listitem [ref=f10e77]:
+          - button "A Alex Studio · Account" [ref=f10e78]:
+            - generic [ref=f10e79]: A
+            - generic [ref=f10e80]:
+              - generic [ref=f10e81]: Alex
+              - generic [ref=f10e82]: Studio · Account
+      - button "Toggle Sidebar" [ref=f10e84]
+    - main [ref=f10e85]:
+      - main [ref=f10e86]:
+        - generic [ref=f10e88]:
+          - heading "Messages" [level=1] [ref=f10e89]
+          - generic [ref=f10e90]:
+            - region "Conversations" [ref=f10e91]:
+              - generic [ref=f10e92]: Find a client
+              - textbox "Find a client" [ref=f10e93]
+              - 'button "Dara today You: third (coach)" [ref=f10e94]':
+                - generic [aria-hidden] [ref=f10e95]: D
+                - generic [ref=f10e96]:
+                  - generic [ref=f10e97]:
+                    - generic [ref=f10e98]: Dara
+                    - generic [ref=f10e99]: today
+                  - generic [ref=f10e100]: "You: third (coach)"
+              - button "Conor today Knee felt off on squats today. Could I swap for leg press this week?" [ref=f10e101]:
+                - generic [aria-hidden] [ref=f10e102]: C
+                - generic [ref=f10e103]:
+                  - generic [ref=f10e104]:
+                    - generic [ref=f10e105]: Conor
+                    - generic [ref=f10e106]: today
+                  - generic [ref=f10e107]: Knee felt off on squats today. Could I swap for leg press this week?
+              - button "Niamh Sun Thanks! Felt strong." [ref=f10e108]:
+                - generic [aria-hidden] [ref=f10e109]: "N"
+                - generic [ref=f10e110]:
+                  - generic [ref=f10e111]:
+                    - generic [ref=f10e112]: Niamh
+                    - generic [ref=f10e113]: Sun
+                  - generic [ref=f10e114]: Thanks! Felt strong.
+              - button "Emma No messages yet" [ref=f10e115]:
+                - generic [aria-hidden] [ref=f10e116]: E
+                - generic [ref=f10e117]:
+                  - generic [ref=f10e118]: Emma
+                  - generic [ref=f10e120]: No messages yet
+              - button "Laura No messages yet" [ref=f10e121]:
+                - generic [aria-hidden] [ref=f10e122]: L
+                - generic [ref=f10e123]:
+                  - generic [ref=f10e124]: Laura
+                  - generic [ref=f10e126]: No messages yet
+              - button "Sarah No messages yet" [ref=f10e127]:
+                - generic [aria-hidden] [ref=f10e128]: S
+                - generic [ref=f10e129]:
+                  - generic [ref=f10e130]: Sarah
+                  - generic [ref=f10e132]: No messages yet
+            - region "Conversation with Dara" [ref=f10e133]:
+              - generic [ref=f10e134]:
+                - generic [ref=f10e135]:
+                  - generic [aria-hidden] [ref=f10e136]: D
+                  - generic [ref=f10e137]: Dara
+                - link "Open client ›" [ref=f10e138] [cursor=pointer]:
+                  - /url: /clients/c0bed3fe-717d-4755-b628-6516ab685865
+              - generic [ref=f10e140]:
+                - generic [ref=f10e141]:
+                  - generic [ref=f10e142]: Today
+                  - generic [ref=f10e143]:
+                    - text: first (coach)
+                    - generic [ref=f10e144]: 06:35 PM
+                  - generic [ref=f10e145]:
+                    - text: second (client)
+                    - generic [ref=f10e146]: 06:35 PM
+                  - generic [ref=f10e147]:
+                    - text: third (coach)
+                    - generic [ref=f10e148]: 06:35 PM
+                - generic [ref=f10e149]:
+                  - generic [ref=f10e150]:
+                    - generic [ref=f10e151]: Message Dara
+                    - textbox "Message Dara" [ref=f10e152]
+                    - button "Send" [disabled] [ref=f10e153]
+                  - generic [ref=f10e154]: Enter sends · Shift+Enter for a new line · it reaches their phone on its next sync
+  - generic [ref=f10e27]: LogIt

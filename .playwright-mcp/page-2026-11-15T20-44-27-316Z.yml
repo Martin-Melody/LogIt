@@ -1,0 +1,151 @@
+- generic [ref=f22e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f22e6]:
+    - generic [ref=f22e9]:
+      - link "LogIt" [ref=f22e11] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f22e16]:
+        - list [ref=f22e19]:
+          - listitem [ref=f22e20]:
+            - link "Overview" [ref=f22e21] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f22e24]:
+          - generic [ref=f22e25]: Training
+          - list [ref=f22e27]:
+            - listitem [ref=f22e28]:
+              - link "Sessions" [ref=f22e29] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f22e32]:
+              - link "Progress" [ref=f22e33] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f22e36]:
+              - link "Plan" [ref=f22e37] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f22e40]:
+              - link "Library" [ref=f22e41] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f22e44]:
+          - generic [ref=f22e45]: Body
+          - list [ref=f22e47]:
+            - listitem [ref=f22e48]:
+              - link "Nutrition" [ref=f22e49] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f22e52]:
+              - link "Habits & goals" [ref=f22e53] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f22e56]:
+          - generic [ref=f22e57]: People
+          - list [ref=f22e59]:
+            - listitem [ref=f22e60]:
+              - link "Social 1" [ref=f22e61] [cursor=pointer]:
+                - /url: /social
+                - generic [ref=f22e63]: Social
+                - generic [ref=f22e64]: "1"
+        - generic [ref=f22e65]:
+          - generic [ref=f22e66]: Coach
+          - list [ref=f22e68]:
+            - listitem [ref=f22e69]:
+              - link "My coach" [ref=f22e70] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f22e74]:
+        - listitem [ref=f22e75]:
+          - button "M Mark Pro · Account" [ref=f22e76]:
+            - generic [ref=f22e77]: M
+            - generic [ref=f22e78]:
+              - generic [ref=f22e79]: Mark
+              - generic [ref=f22e80]: Pro · Account
+      - button "Toggle Sidebar" [ref=f22e82]
+    - main [ref=f22e83]:
+      - main [ref=f22e84]:
+        - generic [ref=f22e86]:
+          - link "‹ Social" [ref=f22e87] [cursor=pointer]:
+            - /url: /social
+          - generic [ref=f22e88]:
+            - article [ref=f22e90]:
+              - generic [ref=f22e91]:
+                - link [ref=f22e92] [cursor=pointer]:
+                  - /url: /social/emma
+                  - generic [aria-hidden] [ref=f22e93]: E
+                - generic [ref=f22e94]:
+                  - link "Emma" [ref=f22e95] [cursor=pointer]:
+                    - /url: /social/emma
+                  - generic [ref=f22e96]:
+                    - text: "@emma ·"
+                    - link "20 min" [ref=f22e97] [cursor=pointer]:
+                      - /url: /social/post/18df6bba-1e61-4df4-b216-be3a5fa388f7
+                - button "More" [ref=f22e98]
+              - paragraph [ref=f22e100]: My 3-day upper/lower for anyone short on time.
+              - generic [ref=f22e101]:
+                - generic [ref=f22e102]:
+                  - generic [ref=f22e103]:
+                    - text: Split
+                    - generic [ref=f22e104]: Upper / Lower, 3 days
+                    - text: Mon, Wed, Fri · 5 exercises · 1 is Emma's own (Cable pallof press)
+                  - button "Copy to my splits" [ref=f22e105]
+                - generic [ref=f22e106]:
+                  - generic [ref=f22e107]:
+                    - generic [ref=f22e108]: Upper A · Mon
+                    - generic [ref=f22e109]:
+                      - generic [ref=f22e110]: Bench press
+                      - generic [ref=f22e111]: 4 × 8
+                    - generic [ref=f22e112]:
+                      - generic [ref=f22e113]: Cable pallof press
+                      - generic [ref=f22e114]: 3 × 12
+                  - generic [ref=f22e115]:
+                    - generic [ref=f22e116]: Lower · Wed
+                    - generic [ref=f22e117]:
+                      - generic [ref=f22e118]: Back squat
+                      - generic [ref=f22e119]: 4 × 5
+                    - generic [ref=f22e120]:
+                      - generic [ref=f22e121]: Couch stretch
+                      - generic [ref=f22e122]: 2 × 45 s
+                  - generic [ref=f22e123]:
+                    - generic [ref=f22e124]: Upper B · Fri
+                    - generic [ref=f22e125]:
+                      - generic [ref=f22e126]: Row
+                      - generic [ref=f22e127]: Cardio
+              - generic [ref=f22e128]:
+                - button "Like" [ref=f22e129]
+                - link "Comment · 2" [ref=f22e130] [cursor=pointer]:
+                  - /url: /social/post/18df6bba-1e61-4df4-b216-be3a5fa388f7
+                - button "Repost" [ref=f22e131]
+            - complementary [ref=f22e132]:
+              - generic [ref=f22e133]:
+                - heading "Comments · 2" [level=2] [ref=f22e134]
+                - generic [ref=f22e135]:
+                  - link [ref=f22e136] [cursor=pointer]:
+                    - /url: /social/emma
+                    - generic [aria-hidden] [ref=f22e137]: E
+                  - generic [ref=f22e138]:
+                    - generic [ref=f22e139]:
+                      - link "Emma" [ref=f22e140] [cursor=pointer]:
+                        - /url: /social/emma
+                      - text: · 20 min · author
+                    - paragraph [ref=f22e141]: Swap anything you don't have kit for.
+                    - generic [ref=f22e142]:
+                      - button "Like" [ref=f22e143]
+                      - button "Reply" [ref=f22e144]
+                      - button "Report" [ref=f22e145]
+                - generic [ref=f22e146]:
+                  - link [ref=f22e147] [cursor=pointer]:
+                    - /url: /social/conor
+                    - generic [aria-hidden] [ref=f22e148]: C
+                  - generic [ref=f22e149]:
+                    - generic [ref=f22e150]:
+                      - link "Conor" [ref=f22e151] [cursor=pointer]:
+                        - /url: /social/conor
+                      - text: · 20 min
+                    - paragraph [ref=f22e152]:
+                      - link "@emma" [ref=f22e153] [cursor=pointer]:
+                        - /url: /social/emma
+                      - text: what would you swap the lunges for?
+                    - generic [ref=f22e154]:
+                      - button "Like" [ref=f22e155]
+                      - button "Reply" [ref=f22e156]
+                      - button "Report" [ref=f22e157]
+                - generic [ref=f22e158]:
+                  - generic [ref=f22e159]: Add a comment
+                  - textbox "Add a comment" [active] [ref=f22e160]:
+                    - /placeholder: Add a comment, @ to mention
+                    - text: Testing comments from the web
+                  - button "Send" [ref=f22e161]

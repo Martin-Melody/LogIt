@@ -1,0 +1,172 @@
+- generic [ref=f1e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f1e28]:
+    - generic [ref=f1e31]:
+      - generic [ref=f1e32]:
+        - link "LogIt" [ref=f1e33] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f1e38]:
+          - tab "Me" [selected] [ref=f1e39]
+          - tab "Coaching" [ref=f1e40]
+      - generic [ref=f1e41]:
+        - list [ref=f1e44]:
+          - listitem [ref=f1e45]:
+            - link "Overview" [ref=f1e46] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f1e49]:
+          - generic [ref=f1e50]: Training
+          - list [ref=f1e52]:
+            - listitem [ref=f1e53]:
+              - link "Sessions" [ref=f1e54] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f1e57]:
+              - link "Progress" [ref=f1e58] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f1e61]:
+              - link "Plan" [ref=f1e62] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f1e65]:
+              - link "Library" [ref=f1e66] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f1e69]:
+          - generic [ref=f1e70]: Body
+          - list [ref=f1e72]:
+            - listitem [ref=f1e73]:
+              - link "Nutrition" [ref=f1e74] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f1e77]:
+              - link "Habits & goals" [ref=f1e78] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f1e81]:
+          - generic [ref=f1e82]: People
+          - list [ref=f1e84]:
+            - listitem [ref=f1e85]:
+              - link "Social 2" [ref=f1e86] [cursor=pointer]:
+                - /url: /social
+                - generic [ref=f1e88]: Social
+                - generic [ref=f1e89]: "2"
+        - generic [ref=f1e90]:
+          - generic [ref=f1e91]: Coach
+          - list [ref=f1e93]:
+            - listitem [ref=f1e94]:
+              - link "My coach" [ref=f1e95] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f1e99]:
+        - listitem [ref=f1e100]:
+          - button "A Alex Studio · Account" [ref=f1e101]:
+            - generic [ref=f1e102]: A
+            - generic [ref=f1e103]:
+              - generic [ref=f1e104]: Alex
+              - generic [ref=f1e105]: Studio · Account
+      - button "Toggle Sidebar" [ref=f1e107]
+    - main [ref=f1e108]:
+      - main [ref=f1e109]:
+        - generic [ref=f1e111]:
+          - generic [ref=f1e112]:
+            - generic [ref=f1e113]:
+              - paragraph [ref=f1e114]: Sunday, November 15
+              - heading "This week" [level=1] [ref=f1e115]
+            - button "Edit layout" [ref=f1e116]
+          - generic [ref=f1e118]:
+            - region "Streak" [ref=f1e119]:
+              - heading "Streak" [level=2] [ref=f1e121]
+              - generic [ref=f1e122]:
+                - generic [ref=f1e123]: 1 week
+                - generic [ref=f1e124]: Target met this week
+            - region "Sessions this week" [ref=f1e125]:
+              - heading "Sessions this week" [level=2] [ref=f1e127]
+              - generic [ref=f1e128]: 3 of 3
+            - region "Volume this week" [ref=f1e132]:
+              - heading "Volume this week" [level=2] [ref=f1e134]
+              - generic [ref=f1e135]:
+                - generic [ref=f1e136]: 6.99 t
+                - generic [ref=f1e137]: Nothing last week to compare
+            - region "Body weight" [ref=f1e138]:
+              - heading "Body weight" [level=2] [ref=f1e140]
+              - paragraph [ref=f1e141]: Log your weight in the app to see the trend.
+            - region "This week" [ref=f1e142]:
+              - heading "This week" [level=2] [ref=f1e144]
+              - generic [ref=f1e145]:
+                - generic [ref=f1e146]:
+                  - generic [ref=f1e147]: Mon
+                  - generic [ref=f1e149]: Tue
+                  - generic [ref=f1e151]:
+                    - generic [ref=f1e152]: Wed
+                    - generic [ref=f1e153]: Lower B
+                    - generic [ref=f1e154]: Done · 52 min
+                  - generic [ref=f1e155]: Thu
+                  - generic [ref=f1e157]:
+                    - generic [ref=f1e158]: Fri
+                    - generic [ref=f1e159]: Upper A
+                    - generic [ref=f1e160]: Done · 52 min
+                  - generic [ref=f1e161]: Sat
+                  - generic [ref=f1e163]:
+                    - generic [ref=f1e164]: Today
+                    - generic [ref=f1e165]: Lower A
+                    - generic [ref=f1e166]: Done · 52 min
+                - paragraph [ref=f1e167]: Pick an active split in the app to see what's planned.
+            - region "Goals" [ref=f1e168]:
+              - heading "Goals" [level=2] [ref=f1e170]
+              - paragraph [ref=f1e171]: No goals yet. Set them in the app under Progress › Goals.
+            - region "Weekly volume" [ref=f1e172]:
+              - heading "Weekly volume" [level=2] [ref=f1e174]
+              - generic [ref=f1e175]:
+                - img "Weekly volume for the last 12 weeks, this week 6.99 t" [ref=f1e176]:
+                  - 'generic "Aug 24: 0 t"'
+                  - 'generic "Aug 31: 0 t"'
+                  - 'generic "Sep 7: 0 t"'
+                  - 'generic "Sep 14: 0 t"'
+                  - 'generic "Sep 21: 0 t"'
+                  - 'generic "Sep 28: 0 t"'
+                  - 'generic "Oct 5: 0 t"'
+                  - 'generic "Oct 12: 0 t"'
+                  - 'generic "Oct 19: 0 t"'
+                  - 'generic "Oct 26: 0 t"'
+                  - 'generic "Nov 2: 0 t"'
+                  - 'generic "Nov 9: 6.99 t" [ref=f1e177]'
+                - generic [ref=f1e178]:
+                  - generic [ref=f1e179]: Aug 24
+                  - generic [ref=f1e180]: This week (so far)
+            - region "Recent records" [ref=f1e181]:
+              - heading "Recent records" [level=2] [ref=f1e183]
+              - list [ref=f1e184]:
+                - listitem [ref=f1e185]:
+                  - generic [ref=f1e186]: Back squat 105 kg × 5
+                  - generic [ref=f1e187]: Today
+            - region "Recent sessions" [ref=f1e188]:
+              - heading "Recent sessions" [level=2] [ref=f1e190]
+              - list [ref=f1e191]:
+                - listitem [ref=f1e192]:
+                  - link "Lower A · Today 52 min" [ref=f1e193] [cursor=pointer]:
+                    - /url: /sessions?id=sess_1_4nsrhc
+                    - generic [ref=f1e194]: Lower A · Today
+                    - generic [ref=f1e195]: 52 min
+                - listitem [ref=f1e196]:
+                  - link "Upper A · Fri 52 min" [ref=f1e197] [cursor=pointer]:
+                    - /url: /sessions?id=sess_11_9n1td7
+                    - generic [ref=f1e198]: Upper A · Fri
+                    - generic [ref=f1e199]: 52 min
+                - listitem [ref=f1e200]:
+                  - link "Lower B · Wed 52 min" [ref=f1e201] [cursor=pointer]:
+                    - /url: /sessions?id=sess_17_qslfy8
+                    - generic [ref=f1e202]: Lower B · Wed
+                    - generic [ref=f1e203]: 52 min
+            - region "Habits this week" [ref=f1e204]:
+              - heading "Habits this week" [level=2] [ref=f1e206]
+              - generic [ref=f1e207]:
+                - generic [ref=f1e208]: M
+                - generic [ref=f1e209]: T
+                - generic [ref=f1e210]: W
+                - generic [ref=f1e211]: T
+                - generic [ref=f1e212]: F
+                - generic [ref=f1e213]: S
+                - generic [ref=f1e214]: S
+                - generic [ref=f1e215]: 10k steps
+                - generic "not done" [ref=f1e216]
+                - generic "not done" [ref=f1e217]
+                - generic "not done" [ref=f1e218]
+                - generic "not done" [ref=f1e219]
+                - generic "not done" [ref=f1e220]
+                - generic "not done" [ref=f1e221]
+                - generic "not done" [ref=f1e222]
+  - generic [ref=f1e27]: LogIt

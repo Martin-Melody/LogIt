@@ -1,0 +1,57 @@
+- generic [ref=f5e2]:
+  - generic [ref=f5e104]:
+    - button "Back" [ref=f5e106]
+    - img "Step 4 of 4" [ref=f5e108]
+    - paragraph [ref=f5e113]: Your plan
+    - heading "Stronger and bigger in 4 days a week" [level=2] [ref=f5e114]
+    - generic [ref=f5e115]:
+      - generic [ref=f5e116]:
+        - generic [ref=f5e117]: Equipment
+        - combobox "Equipment" [ref=f5e118]:
+          - option "Full gym" [selected]
+          - option "Home gym"
+          - option "Dumbbells only"
+      - generic [ref=f5e119]:
+        - generic [ref=f5e120]: Workout length
+        - combobox "Workout length" [ref=f5e121]:
+          - option "About 30 min"
+          - option "About 45 min" [selected]
+          - option "60 min or more"
+    - generic [ref=f5e122]:
+      - generic [ref=f5e123]:
+        - generic [ref=f5e124]: Upper / Lower
+        - button "Other plans" [ref=f5e125]
+      - generic "Training days" [ref=f5e126]:
+        - generic [ref=f5e127]:
+          - text: M
+          - generic "Upper A" [ref=f5e128]
+        - generic [ref=f5e129]:
+          - text: T
+          - generic "Lower A" [ref=f5e130]
+        - generic [ref=f5e131]:
+          - text: W
+          - generic "Rest" [ref=f5e132]
+        - generic [ref=f5e133]:
+          - text: T
+          - generic "Upper B" [ref=f5e134]
+        - generic [ref=f5e135]:
+          - text: F
+          - generic "Lower B" [ref=f5e136]
+        - generic [ref=f5e137]:
+          - text: S
+          - generic "Rest" [ref=f5e138]
+        - generic [ref=f5e139]:
+          - text: S
+          - generic "Rest" [ref=f5e140]
+    - generic [ref=f5e141]:
+      - paragraph [ref=f5e142]: "First up: Upper A · about 45 min"
+      - list [ref=f5e143]:
+        - listitem [ref=f5e144]
+        - listitem [ref=f5e145]
+        - listitem [ref=f5e146]
+        - listitem [ref=f5e147]
+        - listitem [ref=f5e148]
+    - button "Start Upper A now" [disabled] [ref=f5e150]
+    - button "I'll start later" [ref=f5e151]
+  - region "Notifications alt+T"
+  - generic [ref=f5e24]: LogIt

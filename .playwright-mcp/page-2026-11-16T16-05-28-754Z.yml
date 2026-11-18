@@ -1,0 +1,260 @@
+- generic [ref=f3e2]:
+  - link "Skip to content" [ref=f3e3] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f3e4]:
+    - banner [ref=f3e5]:
+      - navigation "Main" [ref=f3e6]:
+        - link "LogIt" [ref=f3e7] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f3e11]:
+          - link "Features" [ref=f3e12] [cursor=pointer]:
+            - /url: /#features
+          - link "Pricing" [ref=f3e13] [cursor=pointer]:
+            - /url: /pricing
+          - link "Open source" [ref=f3e14] [cursor=pointer]:
+            - /url: /open-source
+          - link "Docs" [ref=f3e15] [cursor=pointer]:
+            - /url: /docs
+        - generic [ref=f3e16]:
+          - link "Sign in" [ref=f3e17] [cursor=pointer]:
+            - /url: https://app.getlogit.app
+          - link "Get the app" [ref=f3e18] [cursor=pointer]:
+            - /url: https://play.google.com/store/apps/details?id=ie.logit.app
+    - main [ref=f3e19]:
+      - generic [ref=f3e20]:
+        - complementary [ref=f3e21]:
+          - navigation "Docs" [ref=f3e22]:
+            - generic [ref=f3e23]:
+              - paragraph [ref=f3e24]: Start here
+              - list [ref=f3e25]:
+                - listitem [ref=f3e26]:
+                  - link "Using LogIt" [ref=f3e27] [cursor=pointer]:
+                    - /url: /docs
+                - listitem [ref=f3e28]:
+                  - link "What each plan can do" [ref=f3e29] [cursor=pointer]:
+                    - /url: /docs/plans
+                - listitem [ref=f3e30]:
+                  - link "Your account" [ref=f3e31] [cursor=pointer]:
+                    - /url: /docs/account
+                - listitem [ref=f3e32]:
+                  - link "Settings and your home screen" [ref=f3e33] [cursor=pointer]:
+                    - /url: /docs/settings
+            - generic [ref=f3e34]:
+              - paragraph [ref=f3e35]: Training
+              - list [ref=f3e36]:
+                - listitem [ref=f3e37]:
+                  - link "Logging a workout" [ref=f3e38] [cursor=pointer]:
+                    - /url: /docs/workouts
+                - listitem [ref=f3e39]:
+                  - link "Splits and schedules" [ref=f3e40] [cursor=pointer]:
+                    - /url: /docs/splits
+                - listitem [ref=f3e41]:
+                  - link "Programs" [ref=f3e42] [cursor=pointer]:
+                    - /url: /docs/programs
+                - listitem [ref=f3e43]:
+                  - link "Exercises and your library" [ref=f3e44] [cursor=pointer]:
+                    - /url: /docs/exercises
+                - listitem [ref=f3e45]:
+                  - link "Progress and progression" [ref=f3e46] [cursor=pointer]:
+                    - /url: /docs/progress
+            - generic [ref=f3e47]:
+              - paragraph [ref=f3e48]: Body
+              - list [ref=f3e49]:
+                - listitem [ref=f3e50]:
+                  - link "Nutrition" [ref=f3e51] [cursor=pointer]:
+                    - /url: /docs/nutrition
+                - listitem [ref=f3e52]:
+                  - link "Bodyweight" [ref=f3e53] [cursor=pointer]:
+                    - /url: /docs/bodyweight
+                - listitem [ref=f3e54]:
+                  - link "Habits and goals" [ref=f3e55] [cursor=pointer]:
+                    - /url: /docs/habits-and-goals
+            - generic [ref=f3e56]:
+              - paragraph [ref=f3e57]: More
+              - list [ref=f3e58]:
+                - listitem [ref=f3e59]:
+                  - link "Insights" [ref=f3e60] [cursor=pointer]:
+                    - /url: /docs/insights
+                - listitem [ref=f3e61]:
+                  - link "Social" [ref=f3e62] [cursor=pointer]:
+                    - /url: /docs/social
+                - listitem [ref=f3e63]:
+                  - link "Plugins" [ref=f3e64] [cursor=pointer]:
+                    - /url: /docs/add-plugins
+            - generic [ref=f3e65]:
+              - paragraph [ref=f3e66]: Pro
+              - list [ref=f3e67]:
+                - listitem [ref=f3e68]:
+                  - link "Sync and devices" [ref=f3e69] [cursor=pointer]:
+                    - /url: /docs/sync
+                - listitem [ref=f3e70]:
+                  - link "The web dashboard" [ref=f3e71] [cursor=pointer]:
+                    - /url: /docs/web-dashboard
+            - generic [ref=f3e72]:
+              - paragraph [ref=f3e73]: Having a coach
+              - list [ref=f3e74]:
+                - listitem [ref=f3e75]:
+                  - link "Having a coach" [ref=f3e76] [cursor=pointer]:
+                    - /url: /docs/having-a-coach
+            - generic [ref=f3e77]:
+              - paragraph [ref=f3e78]: Coaching (Studio)
+              - list [ref=f3e79]:
+                - listitem [ref=f3e80]:
+                  - link "Start coaching" [ref=f3e81] [cursor=pointer]:
+                    - /url: /docs/coaching
+                - listitem [ref=f3e82]:
+                  - link "Invite links" [ref=f3e83] [cursor=pointer]:
+                    - /url: /docs/coaching/invite-links
+                - listitem [ref=f3e84]:
+                  - link "Clients and sharing" [ref=f3e85] [cursor=pointer]:
+                    - /url: /docs/coaching/clients
+                - listitem [ref=f3e86]:
+                  - link "Programs for clients" [ref=f3e87] [cursor=pointer]:
+                    - /url: /docs/coaching/programs
+                - listitem [ref=f3e88]:
+                  - link "Your exercise library" [ref=f3e89] [cursor=pointer]:
+                    - /url: /docs/coaching/library
+                - listitem [ref=f3e90]:
+                  - link "Check-ins" [ref=f3e91] [cursor=pointer]:
+                    - /url: /docs/coaching/checkins
+                - listitem [ref=f3e92]:
+                  - link "Messages" [ref=f3e93] [cursor=pointer]:
+                    - /url: /docs/coaching/messages
+                - listitem [ref=f3e94]:
+                  - link "Habits and macro targets" [ref=f3e95] [cursor=pointer]:
+                    - /url: /docs/coaching/habits-and-nutrition
+                - listitem [ref=f3e96]:
+                  - link "Exercise swaps" [ref=f3e97] [cursor=pointer]:
+                    - /url: /docs/coaching/swaps
+                - listitem [ref=f3e98]:
+                  - link "Getting paid" [ref=f3e99] [cursor=pointer]:
+                    - /url: /docs/coaching/payments
+            - generic [ref=f3e100]:
+              - paragraph [ref=f3e101]: Developers
+              - list [ref=f3e102]:
+                - listitem [ref=f3e103]:
+                  - link "Self-hosting" [ref=f3e104] [cursor=pointer]:
+                    - /url: /self-hosting
+                - listitem [ref=f3e105]:
+                  - link "Building plugins" [ref=f3e106] [cursor=pointer]:
+                    - /url: /docs/plugins
+                - listitem [ref=f3e107]:
+                  - link "Trust & the sandbox" [ref=f3e108] [cursor=pointer]:
+                    - /url: /docs/plugins/trust
+                - listitem [ref=f3e109]:
+                  - link "Exercise packs" [ref=f3e110] [cursor=pointer]:
+                    - /url: /docs/plugins/exercise-packs
+                - listitem [ref=f3e111]:
+                  - link "Mobility packs" [ref=f3e112] [cursor=pointer]:
+                    - /url: /docs/plugins/mobility-packs
+                - listitem [ref=f3e113]:
+                  - link "Progression algorithms" [ref=f3e114] [cursor=pointer]:
+                    - /url: /docs/plugins/progression
+                - listitem [ref=f3e115]:
+                  - link "Mobility progression" [ref=f3e116] [cursor=pointer]:
+                    - /url: /docs/plugins/mobility-progression
+                - listitem [ref=f3e117]:
+                  - link "Analytics" [ref=f3e118] [cursor=pointer]:
+                    - /url: /docs/plugins/analytics
+                - listitem [ref=f3e119]:
+                  - link "Nutrition algorithms" [ref=f3e120] [cursor=pointer]:
+                    - /url: /docs/plugins/nutrition
+                - listitem [ref=f3e121]:
+                  - link "Widgets" [ref=f3e122] [cursor=pointer]:
+                    - /url: /docs/plugins/widgets
+                - listitem [ref=f3e123]:
+                  - link "Widget primitives" [ref=f3e124] [cursor=pointer]:
+                    - /url: /docs/plugins/primitives
+                - listitem [ref=f3e125]:
+                  - link "Publishing" [ref=f3e126] [cursor=pointer]:
+                    - /url: /docs/plugins/publishing
+                - listitem [ref=f3e127]:
+                  - link "API reference" [ref=f3e128] [cursor=pointer]:
+                    - /url: /docs/plugins/reference
+        - generic [ref=f3e129]:
+          - article [ref=f3e130]:
+            - heading "Check-ins" [level=1] [ref=f3e131]
+            - generic [ref=f3e132]:
+              - generic [ref=f3e133]:
+                - generic [ref=f3e134]: Studio
+                - generic [ref=f3e135]: "Web: Coaching › Check-ins"
+                - generic [ref=f3e136]: "Phone: Settings › Coaching › a client"
+              - paragraph [ref=f3e137]: Forms clients fill in on a schedule, read next to their week.
+              - generic [ref=f3e138]:
+                - link "Show me in the app" [ref=f3e139] [cursor=pointer]:
+                  - /url: https://app.getlogit.app/?guide=studio.checkins
+                - generic [ref=f3e140]: Opens the "Check-ins" chapter of the Studio walkthrough on the web dashboard
+            - list [ref=f3e141]:
+              - listitem [ref=f3e142]:
+                - strong [ref=f3e143]: All check-ins in one place.
+                - text: "Open Coaching › Check-ins: answers waiting for you, missed check-ins, ones you've reviewed, and every client's forms."
+              - listitem [ref=f3e144]:
+                - strong [ref=f3e145]: Forms belong to each client.
+                - text: Open a client from Coaching › Clients. With the sample clients, open Conor.
+              - listitem [ref=f3e146]:
+                - strong [ref=f3e147]: Their check-ins.
+                - text: Choose the Check-ins tab.
+              - listitem [ref=f3e148]:
+                - strong [ref=f3e149]: Add a form.
+                - text: Choose Add form. It starts as a weekly form with three questions.
+              - listitem [ref=f3e150]:
+                - strong [ref=f3e151]: Your questions.
+                - text: Change the questions (text, a number, a scale, bodyweight, yes or no, a photo), how often it's due, or archive it. Changes save as you go.
+              - listitem [ref=f3e152]:
+                - strong [ref=f3e153]: Read and reply.
+                - text: "Open the check-in. Their answers sit next to their week's sessions, bodyweight and food. Write a reply and choose Send and mark reviewed: the reply goes to your messages with them, and they see it with the check-in."
+            - heading "What your client sees" [level=2] [ref=f3e154]
+            - paragraph [ref=f3e155]: The form shows as Due under Check-ins on their phone, or My coach on the web. After you review it, they see it as Reviewed, with your reply, and can look back at every check-in they’ve sent.
+            - generic [ref=f3e156]:
+              - generic [ref=f3e157]:
+                - heading "You can" [level=3] [ref=f3e158]
+                - list [ref=f3e159]:
+                  - listitem [ref=f3e160]: Mark a check-in reviewed, with or without a reply
+                  - listitem [ref=f3e161]: See missed check-ins
+              - generic [ref=f3e162]:
+                - heading "You can't" [level=3] [ref=f3e163]
+                - list [ref=f3e164]:
+                  - listitem [ref=f3e165]: Read check-ins from a client who turned off sharing for check-ins
+                  - listitem [ref=f3e166]: Change a client's answers
+          - navigation "Previous and next" [ref=f3e167]:
+            - link "Previous Your exercise library" [ref=f3e168] [cursor=pointer]:
+              - /url: /docs/coaching/library
+              - generic [ref=f3e169]: Previous
+              - text: Your exercise library
+            - link "Next Messages" [ref=f3e170] [cursor=pointer]:
+              - /url: /docs/coaching/messages
+              - generic [ref=f3e171]: Next
+              - text: Messages
+    - contentinfo [ref=f3e172]:
+      - generic [ref=f3e173]:
+        - generic [ref=f3e174]:
+          - generic [ref=f3e175]: LogIt
+          - link "hello@getlogit.app" [ref=f3e179] [cursor=pointer]:
+            - /url: mailto:hello@getlogit.app
+        - generic [ref=f3e180]:
+          - generic [ref=f3e181]:
+            - generic [ref=f3e182]: Product
+            - link "Features" [ref=f3e183] [cursor=pointer]:
+              - /url: /#features
+            - link "Pricing" [ref=f3e184] [cursor=pointer]:
+              - /url: /pricing
+            - link "Web dashboard" [ref=f3e185] [cursor=pointer]:
+              - /url: https://app.getlogit.app
+          - generic [ref=f3e186]:
+            - generic [ref=f3e187]: Open source
+            - link "Overview" [ref=f3e188] [cursor=pointer]:
+              - /url: /open-source
+            - link "Self-hosting" [ref=f3e189] [cursor=pointer]:
+              - /url: /self-hosting
+            - link "Plugin docs" [ref=f3e190] [cursor=pointer]:
+              - /url: /docs/plugins
+            - link "GitHub" [ref=f3e191] [cursor=pointer]:
+              - /url: https://github.com/Martin-Melody/LogIt
+          - generic [ref=f3e192]:
+            - generic [ref=f3e193]: Legal
+            - link "Privacy" [ref=f3e194] [cursor=pointer]:
+              - /url: /privacy
+            - link "Terms" [ref=f3e195] [cursor=pointer]:
+              - /url: /terms
+            - link "Delete your account" [ref=f3e196] [cursor=pointer]:
+              - /url: /delete-account

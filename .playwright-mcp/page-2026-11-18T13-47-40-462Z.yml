@@ -1,0 +1,96 @@
+- generic [ref=f15e2]:
+  - generic [ref=f15e3]:
+    - main [ref=f15e4]:
+      - generic [ref=f15e75]:
+        - button "Your places" [ref=f15e76]
+        - generic [ref=f15e78]:
+          - generic [ref=f15e79]: Name
+          - textbox "Name" [ref=f15e80]: My gym
+          - paragraph [ref=f15e81]: Private to you for now.
+        - region "Usually here on" [ref=f15e82]:
+          - heading "Usually here on" [level=2] [ref=f15e83]
+          - generic [ref=f15e84]:
+            - button "Monday" [ref=f15e85]: M
+            - button "Tuesday" [ref=f15e86]: T
+            - button "Wednesday" [ref=f15e87]: W
+            - button "Thursday" [ref=f15e88]: T
+            - button "Friday" [ref=f15e89]: F
+            - button "Saturday" [ref=f15e90]: S
+            - button "Sunday" [ref=f15e91]: S
+          - paragraph [ref=f15e92]: Picks this place when a workout starts on those days. Optional.
+        - region "Machines · 1" [ref=f15e93]:
+          - heading "Machines · 1" [level=2] [ref=f15e95]
+          - link "Selectorised pulldown 1 exercise" [ref=f15e96] [cursor=pointer]:
+            - /url: /settings/places/place_9iDBx2Z4Qzf3dHym20X4T/machine/mach_waR_lfu6TnxCchgm_bX5I
+            - generic [ref=f15e97]:
+              - generic [ref=f15e98]: Selectorised pulldown
+              - generic [ref=f15e99]: 1 exercise
+          - link "Add a machine" [ref=f15e101] [cursor=pointer]:
+            - /url: /settings/places/place_9iDBx2Z4Qzf3dHym20X4T/machine/new
+        - region "Barbell and plates" [ref=f15e103]:
+          - generic [ref=f15e104]:
+            - heading "Barbell and plates" [level=2] [ref=f15e105]
+            - generic [ref=f15e106]:
+              - text: There's a barbell
+              - checkbox "There's a barbell" [checked] [ref=f15e107]
+          - generic [ref=f15e108]:
+            - text: Bar weight (kg)
+            - spinbutton "Bar weight (kg)" [ref=f15e109]: "20"
+          - group "Plates here (kg)" [ref=f15e110]:
+            - button "25" [pressed] [ref=f15e111]
+            - button "20" [pressed] [ref=f15e112]
+            - button "15" [pressed] [ref=f15e113]
+            - button "10" [pressed] [ref=f15e114]
+            - button "5" [pressed] [ref=f15e115]
+            - button "2.5" [pressed] [ref=f15e116]
+            - button "1.25" [pressed] [ref=f15e117]
+            - button "0.5" [ref=f15e118]
+          - paragraph [ref=f15e119]: Plates you have, in kg. Weights are planned so they can be loaded.
+        - region "Dumbbells" [ref=f15e120]:
+          - heading "Dumbbells" [level=2] [ref=f15e121]
+          - group "Dumbbells here" [ref=f15e122]:
+            - button "None" [ref=f15e123]
+            - button "Fixed pairs" [pressed] [ref=f15e124]
+            - button "Adjustable" [ref=f15e125]
+          - generic [ref=f15e126]:
+            - text: Weights you have (kg, separated by commas)
+            - textbox "Weights you have (kg, separated by commas)" [ref=f15e127]: 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5, 40, 42.5, 45, 47.5, 50, 52.5, 55, 57.5, 60
+          - paragraph [ref=f15e128]: 24 weights, 2.5 to 60 kg.
+        - region "Kettlebells" [ref=f15e129]:
+          - heading "Kettlebells" [level=2] [ref=f15e130]
+          - generic [ref=f15e131]:
+            - text: Weights you have (kg, separated by commas; empty if none)
+            - textbox "Weights you have (kg, separated by commas; empty if none)" [ref=f15e132]
+        - region "Also here" [ref=f15e133]:
+          - heading "Also here" [level=2] [ref=f15e134]
+          - generic [ref=f15e135]:
+            - button "Squat rack" [pressed] [ref=f15e136]
+            - button "Flat bench" [pressed] [ref=f15e137]
+            - button "Incline bench" [pressed] [ref=f15e138]
+            - button "Pull-up bar" [pressed] [ref=f15e139]
+            - button "Dip bars" [pressed] [ref=f15e140]
+            - button "Bands" [ref=f15e141]
+            - button "Cable pulley" [pressed] [ref=f15e142]
+            - button "Trap bar" [ref=f15e143]
+            - button "EZ bar" [ref=f15e144]
+            - button "Rings" [ref=f15e145]
+            - button "Box" [ref=f15e146]
+        - generic [ref=f15e147]:
+          - button "Stopped going here? Archive it Your history stays; it's just no longer offered." [ref=f15e148]:
+            - text: Stopped going here? Archive it
+            - generic [ref=f15e149]: Your history stays; it's just no longer offered.
+          - button "Delete this place" [ref=f15e150]
+    - contentinfo [ref=f15e20]:
+      - navigation "Main navigation" [ref=f15e21]:
+        - link "Home" [ref=f15e22] [cursor=pointer]:
+          - /url: /
+        - link "Sessions" [ref=f15e25] [cursor=pointer]:
+          - /url: /sessions
+        - link "Resume session" [ref=f15e28] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f15e34]: Resume
+        - link "Profile" [ref=f15e35] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f15e38]
+  - region "Notifications alt+T"
+  - generic [ref=f15e41]: LogIt

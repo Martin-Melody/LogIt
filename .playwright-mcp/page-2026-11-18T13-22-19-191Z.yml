@@ -1,0 +1,131 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e6]:
+    - banner [ref=f6e7]:
+      - button "Back" [ref=f6e8]
+      - generic [ref=f6e10]: Lat Pulldown
+      - link "Notifications" [ref=f6e12] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f6e14]:
+      - generic [ref=f6e15]:
+        - generic [ref=f6e16]:
+          - generic [ref=f6e17]:
+            - generic [ref=f6e18]: Name
+            - textbox "Name" [disabled] [ref=f6e19]: Lat Pulldown
+            - paragraph [ref=f6e20]: Built-in exercises cannot be renamed.
+          - generic [ref=f6e21]:
+            - generic [ref=f6e22]: Notes (optional)
+            - textbox "Notes (optional)" [ref=f6e23]
+          - generic [ref=f6e24]:
+            - generic [ref=f6e25]: Type
+            - generic [ref=f6e26]:
+              - button "Normal" [pressed] [ref=f6e27]
+              - button "Assisted" [ref=f6e28]
+              - button "Bodyweight" [ref=f6e29]
+          - generic [ref=f6e30]:
+            - paragraph [ref=f6e31]: "Primary: Back · cable"
+            - paragraph [ref=f6e32]: "Secondary: Biceps, Shoulders"
+          - generic [ref=f6e33]:
+            - generic [ref=f6e34]: Cues
+            - list [ref=f6e35]:
+              - listitem [ref=f6e36]: Thighs locked under the pad
+              - listitem [ref=f6e37]: Pull the bar to the top of the chest
+              - listitem [ref=f6e38]: Lead with the elbows, don't lean way back
+        - generic [ref=f6e40]:
+          - generic [ref=f6e41]:
+            - paragraph [ref=f6e42]: —
+            - paragraph [ref=f6e43]: Best set
+          - generic [ref=f6e44]:
+            - paragraph [ref=f6e45]: —
+            - paragraph [ref=f6e46]: Est. 1RM
+          - generic [ref=f6e47]:
+            - paragraph [ref=f6e48]: "0"
+            - paragraph [ref=f6e49]: Sessions
+          - generic [ref=f6e50]:
+            - paragraph [ref=f6e51]: Never
+            - paragraph [ref=f6e52]: Last performed
+        - paragraph [ref=f6e147]: No history yet — log a set to see progression.
+        - region "How it progresses" [ref=f6e57]:
+          - generic [ref=f6e58]:
+            - heading "How it progresses" [level=2] [ref=f6e59]
+            - paragraph [ref=f6e60]: Just for Lat Pulldown. Anything left on default follows your general setting.
+          - generic [ref=f6e61]:
+            - generic [ref=f6e62]: Rep range
+            - radiogroup "Rep range" [ref=f6e63]:
+              - radio "Default" [ref=f6e64]
+              - radio "3–6" [ref=f6e65]
+              - radio "5–8" [ref=f6e66]
+              - radio "8–12" [checked] [ref=f6e67]
+              - radio "12–20" [ref=f6e68]
+              - radio "Custom" [ref=f6e69]
+            - paragraph [ref=f6e70]: A split day that sets its own reps still wins on that day.
+          - generic [ref=f6e71]:
+            - generic [ref=f6e72]: Algorithm
+            - radiogroup "Algorithm for Lat Pulldown" [ref=f6e73]:
+              - radio "Same as everything else No suggestions" [checked] [ref=f6e74]:
+                - generic [ref=f6e76]:
+                  - generic [ref=f6e77]: Same as everything else
+                  - generic [ref=f6e78]: No suggestions
+              - radio "LogIt Adaptive" [ref=f6e79]
+              - radio "Linear Progression" [ref=f6e82]
+              - radio "No suggestions No planned sets; you add them yourself" [ref=f6e85]:
+                - generic [ref=f6e87]:
+                  - generic [ref=f6e88]: No suggestions
+                  - generic [ref=f6e89]: No planned sets; you add them yourself
+          - generic [ref=f6e90]:
+            - generic [ref=f6e91]: Goal
+            - link "Set a lift goal for Lat Pulldown" [ref=f6e92] [cursor=pointer]:
+              - /url: /progress/goals/new
+          - link "Sets this week for each muscle" [ref=f6e93] [cursor=pointer]:
+            - /url: /progress/weekly-sets
+        - generic [ref=f6e94]:
+          - generic [ref=f6e95]:
+            - text: Machines
+            - paragraph [ref=f6e96]: Set each machine's real weight settings so suggestions land on numbers you can actually select.
+          - generic [ref=f6e126]:
+            - generic [ref=f6e127]:
+              - textbox [ref=f6e128]: Selectorised pulldown
+              - button "Make default machine" [ref=f6e129]
+              - button "Delete machine" [ref=f6e131]
+            - generic [ref=f6e133]:
+              - generic [ref=f6e134]: Unit
+              - generic [ref=f6e135]:
+                - button "kg" [pressed] [ref=f6e136]
+                - button "lbs" [ref=f6e137]
+            - generic [ref=f6e138]:
+              - generic [ref=f6e139]: Weights
+              - generic [ref=f6e140]:
+                - button "Simple" [ref=f6e141]
+                - button "Stack" [active] [pressed] [ref=f6e142]
+                - button "List" [ref=f6e143]
+            - generic [ref=f6e148]:
+              - generic [ref=f6e149]:
+                - text: Min (kg)
+                - spinbutton "Min (kg)" [ref=f6e150]: "5"
+              - generic [ref=f6e151]:
+                - text: Step (kg)
+                - spinbutton "Step (kg)" [ref=f6e152]: "5"
+              - generic [ref=f6e153]:
+                - text: Max (kg)
+                - spinbutton "Max (kg)" [ref=f6e154]: "100"
+            - generic [ref=f6e155]:
+              - text: Add-on plates (kg, optional) — e.g. 2.5
+              - textbox "Add-on plates (kg, optional) — e.g. 2.5" [ref=f6e156]:
+                - /placeholder: "2.5"
+            - paragraph [ref=f6e157]: 20 settings · 5, 10, 15, 20, 25, 30, 35, 40 …
+          - generic [ref=f6e97]:
+            - textbox "Add a machine…" [ref=f6e98]
+            - button "Add" [disabled] [ref=f6e99]
+        - button "Reset progression" [ref=f6e101]
+    - contentinfo [ref=f6e102]:
+      - navigation "Main navigation" [ref=f6e103]:
+        - link "Home" [ref=f6e104] [cursor=pointer]:
+          - /url: /
+        - link "Sessions" [ref=f6e107] [cursor=pointer]:
+          - /url: /sessions
+        - link "Resume session" [ref=f6e110] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f6e116]: Resume
+        - link "Profile" [ref=f6e117] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f6e120]
+  - region "Notifications alt+T"

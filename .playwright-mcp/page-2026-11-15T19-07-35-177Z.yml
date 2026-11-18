@@ -1,0 +1,72 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e6]:
+    - banner [ref=f10e7]:
+      - button "Back" [ref=f10e8]
+      - generic [ref=f10e10]:
+        - paragraph [ref=f10e11]: Hypertrophy
+        - paragraph [ref=f10e12]: From your coach · read-only
+      - link "Notifications" [ref=f10e13] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f10e15]:
+      - generic [ref=f10e16]:
+        - paragraph [ref=f10e17]: Upper / lower, 4 days. Add a rep each week.
+        - paragraph [ref=f10e19]: Week 5 of 8
+        - button "Week 1 ▸" [ref=f10e21]:
+          - generic [ref=f10e22]: Week 1
+          - generic [ref=f10e23]: ▸
+        - button "Week 2 ▸" [ref=f10e26]:
+          - generic [ref=f10e27]: Week 2
+          - generic [ref=f10e28]: ▸
+        - button "Week 3 ▸" [ref=f10e31]:
+          - generic [ref=f10e32]: Week 3
+          - generic [ref=f10e33]: ▸
+        - button "Week 4 ▸" [ref=f10e36]:
+          - generic [ref=f10e37]: Week 4
+          - generic [ref=f10e38]: ▸
+        - generic [ref=f10e40]:
+          - button "Week 5 This week ▾" [ref=f10e41]:
+            - generic [ref=f10e42]: Week 5
+            - generic [ref=f10e43]:
+              - generic [ref=f10e44]: This week
+              - generic [ref=f10e45]: ▾
+          - list [ref=f10e46]:
+            - listitem [ref=f10e47]:
+              - generic [ref=f10e48]:
+                - paragraph [ref=f10e49]: Day 1 — Upper
+                - generic [ref=f10e50]:
+                  - paragraph [ref=f10e51]:
+                    - generic [ref=f10e53]: Bench Press · 3 × 8
+                  - paragraph [ref=f10e54]:
+                    - generic [ref=f10e56]: Lat Pulldown · 3 × 10
+              - button "Start" [disabled]
+            - listitem [ref=f10e58]:
+              - generic [ref=f10e59]:
+                - paragraph [ref=f10e60]: Day 2 — Lower
+                - generic [ref=f10e61]:
+                  - paragraph [ref=f10e62]:
+                    - generic [ref=f10e64]: Squat · 3 × 8
+                  - paragraph [ref=f10e65]:
+                    - generic [ref=f10e67]: Romanian Deadlift · 3 × 8
+              - button "Start" [disabled]
+        - button "Week 6 ▸" [ref=f10e70]:
+          - generic [ref=f10e71]: Week 6
+          - generic [ref=f10e72]: ▸
+        - button "Week 7 ▸" [ref=f10e75]:
+          - generic [ref=f10e76]: Week 7
+          - generic [ref=f10e77]: ▸
+        - button "Week 8 ▸" [ref=f10e80]:
+          - generic [ref=f10e81]: Week 8
+          - generic [ref=f10e82]: ▸
+    - contentinfo [ref=f10e84]:
+      - navigation "Main navigation" [ref=f10e85]:
+        - link "Home" [ref=f10e86] [cursor=pointer]:
+          - /url: /
+        - link "Library" [ref=f10e89] [cursor=pointer]:
+          - /url: /exercises
+        - link "Resume session" [ref=f10e104] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f10e96]: Resume
+        - link "Profile" [ref=f10e97] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f10e100]
+  - region "Notifications alt+T"

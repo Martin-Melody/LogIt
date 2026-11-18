@@ -1,0 +1,112 @@
+- generic [ref=f10e1]:
+  - generic [ref=f10e2]:
+    - generic [ref=f10e6]:
+      - banner [ref=f10e7]:
+        - button "Back" [ref=f10e8]
+        - generic [ref=f10e10]: Browse plugins
+        - button "2 sources" [ref=f10e11]
+        - link "Notifications" [ref=f10e12] [cursor=pointer]:
+          - /url: /inbox
+      - main [ref=f10e14]:
+        - generic [ref=f10e16]:
+          - generic [ref=f10e17]:
+            - searchbox "Search plugins…" [ref=f10e20]
+            - generic [ref=f10e21]:
+              - button "All" [pressed] [ref=f10e22]
+              - button "Widgets" [ref=f10e23]
+              - button "Progression" [ref=f10e24]
+              - button "Analytics" [ref=f10e25]
+              - button "Packs" [ref=f10e26]
+          - generic [ref=f10e27]:
+            - generic [ref=f10e28]: Featured
+            - list [ref=f10e31]:
+              - listitem [ref=f10e32]:
+                - generic [ref=f10e33]:
+                  - generic [ref=f10e34]:
+                    - paragraph [ref=f10e36]: Calisthenics Starter
+                    - paragraph [ref=f10e37]: 12 common bodyweight movements — push-ups, chin-ups, pistol squats, Nordic curls and core holds — added straight to your exercise catalogue.
+                    - paragraph [ref=f10e38]: Exercise pack · Logit Samples · Bundled examples
+                    - paragraph [ref=f10e39]: "Gets: Data only, runs no code"
+                  - button "Install" [ref=f10e41]
+              - listitem [ref=f10e42]:
+                - generic [ref=f10e43]:
+                  - generic [ref=f10e44]:
+                    - paragraph [ref=f10e46]: Hip Rehab Pack
+                    - paragraph [ref=f10e47]: Eight hip prehab / rehab drills for the Mobility block — banded hip flexion, clamshells, 90/90 lift-offs and more.
+                    - paragraph [ref=f10e48]: Mobility pack · Logit Samples · Bundled examples
+                    - paragraph [ref=f10e49]: "Gets: Data only, runs no code"
+                  - button "Install" [ref=f10e51]
+          - generic [ref=f10e52]:
+            - generic [ref=f10e53]: All plugins
+            - list [ref=f10e56]:
+              - listitem [ref=f10e57]:
+                - generic [ref=f10e58]:
+                  - generic [ref=f10e59]:
+                    - generic [ref=f10e60]:
+                      - paragraph [ref=f10e61]: Week recap
+                      - generic [ref=f10e62]: Installed
+                    - paragraph [ref=f10e63]: Week recap
+                    - paragraph [ref=f10e64]: Home widget · @alex · LogIt
+                    - paragraph [ref=f10e65]: "Gets: recent workouts"
+                  - button "Open" [ref=f10e67]
+              - listitem [ref=f10e68]:
+                - generic [ref=f10e69]:
+                  - generic [ref=f10e70]:
+                    - paragraph [ref=f10e72]: Linear Plus
+                    - paragraph [ref=f10e73]: A community double-progression algorithm — fill the rep range, then add weight.
+                    - paragraph [ref=f10e74]: Progression algorithm · Logit Samples · Bundled examples
+                  - button "Install" [ref=f10e76]
+              - listitem [ref=f10e77]:
+                - generic [ref=f10e78]:
+                  - generic [ref=f10e79]:
+                    - paragraph [ref=f10e81]: Pure Trend
+                    - paragraph [ref=f10e82]: A sample nutrition algorithm that sets your calorie target purely from intake vs. weight trend.
+                    - paragraph [ref=f10e83]: Nutrition algorithm · Logit Samples · Bundled examples
+                  - button "Install" [ref=f10e85]
+              - listitem [ref=f10e86]:
+                - generic [ref=f10e87]:
+                  - generic [ref=f10e88]:
+                    - paragraph [ref=f10e90]: Week Recap
+                    - paragraph [ref=f10e91]: Sets, tonnage and sessions logged in the last 7 days.
+                    - paragraph [ref=f10e92]: Home widget · Logit Samples · Bundled examples
+                  - button "Install" [ref=f10e94]
+              - listitem [ref=f10e95]:
+                - generic [ref=f10e96]:
+                  - generic [ref=f10e97]:
+                    - paragraph [ref=f10e99]: Mobility Plus
+                    - paragraph [ref=f10e100]: A community mobility progression scheme — add hold time or reps each session, per side.
+                    - paragraph [ref=f10e101]: Mobility progression · Logit Samples · Bundled examples
+                  - button "Install" [ref=f10e103]
+          - paragraph [ref=f10e104]:
+            - text: 7 plugins · Have one to share? Paste a manifest URL on the
+            - button "import page" [ref=f10e105]
+            - text: .
+      - contentinfo [ref=f10e106]:
+        - navigation "Main navigation" [ref=f10e107]:
+          - link "Home" [ref=f10e108] [cursor=pointer]:
+            - /url: /
+          - link "Social" [ref=f10e111] [cursor=pointer]:
+            - /url: /social
+          - link "Start session" [ref=f10e114] [cursor=pointer]:
+            - /url: /session/current
+            - generic [ref=f10e118]: Start
+          - link "Profile" [ref=f10e119] [cursor=pointer]:
+            - /url: /profile
+          - button "More" [ref=f10e122]
+    - region "Notifications alt+T"
+  - dialog "Install Week Recap?" [ref=f10e127]:
+    - generic [ref=f10e129]:
+      - generic [ref=f10e130]:
+        - heading "Install Week Recap?" [level=2] [ref=f10e131]
+        - generic [ref=f10e132]: Widget · by Logit Samples
+      - paragraph [ref=f10e133]: Sets, tonnage and sessions logged in the last 7 days.
+      - generic [ref=f10e134]:
+        - paragraph [ref=f10e135]: It gets
+        - generic [ref=f10e136]: Nothing
+        - paragraph [ref=f10e139]: No internet, no storage, nothing else.
+      - generic [ref=f10e140]:
+        - paragraph [ref=f10e141]: It can
+        - paragraph [ref=f10e142]: Show a card on your home screen and Overview
+        - paragraph [ref=f10e143]: Open a LogIt page, start a workout or tick a habit when you tap it
+      - button "Install" [ref=f10e144]
+      - paragraph [ref=f10e145]: Also appears on the web dashboard after the next sync

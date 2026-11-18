@@ -1,0 +1,91 @@
+- generic [ref=f6e1]:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Home" [level=1]
+        - generic:
+          - button "Customise home"
+        - link "Notifications":
+          - /url: /inbox
+      - main:
+        - generic:
+          - generic [ref=f6e4]:
+            - generic [ref=f6e5]: Quick start
+            - button "Start workout" [ref=f6e14]
+          - generic:
+            - generic:
+              - generic:
+                - generic: Today's plan
+                - generic:
+                  - generic:
+                    - button "No exercises planned for this day."
+          - generic:
+            - generic:
+              - generic:
+                - generic: Recent Sessions
+                - generic:
+                  - generic:
+                    - button "No sessions yet — log your first workout."
+          - generic:
+            - generic:
+              - generic:
+                - generic: Progression
+                - generic:
+                  - generic:
+                    - button "Finish a session and pick an algorithm in Settings to see targets here."
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Activity
+                        - paragraph: November 2026
+                - generic:
+                  - generic:
+                    - button "No workouts logged this month yet."
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Muscle Focus
+                        - paragraph: Sets logged this week
+                - generic:
+                  - generic:
+                    - button "No sets logged this week yet."
+          - generic:
+            - link "Goals 0-week streak This week 0/3 Set a goal and see when you'll get there.":
+              - /url: /progress?tab=goals
+              - generic:
+                - generic: Goals
+                - generic:
+                  - generic:
+                    - generic: 0-week streak
+                    - generic: This week 0/3
+                  - paragraph: Set a goal and see when you'll get there.
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Library":
+            - /url: /exercises
+          - link "Start session":
+            - /url: /session/current
+            - generic: Start
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+  - dialog "Quick Start" [ref=f6e15]:
+    - button "Close" [active] [ref=f6e16] [cursor=pointer]: ×
+    - banner [ref=f6e18]: Quick Start
+    - generic [ref=f6e19]: Start today's workout from here. If you have a split set up it loads your planned session automatically; otherwise it starts a blank session.
+    - contentinfo [ref=f6e20]:
+      - generic [ref=f6e21]: 1 / 6
+      - generic [ref=f6e22]:
+        - button "← Back" [disabled]
+        - button "Next →" [ref=f6e23] [cursor=pointer]

@@ -1,0 +1,395 @@
+- generic [ref=f4e2]:
+  - link "Skip to content" [ref=f4e3] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f4e4]:
+    - banner [ref=f4e5]:
+      - navigation "Main" [ref=f4e6]:
+        - link "LogIt" [ref=f4e7] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f4e11]:
+          - link "Features" [ref=f4e12] [cursor=pointer]:
+            - /url: /#features
+          - link "Pricing" [ref=f4e13] [cursor=pointer]:
+            - /url: /pricing
+          - link "Open source" [ref=f4e14] [cursor=pointer]:
+            - /url: /open-source
+          - link "Docs" [ref=f4e15] [cursor=pointer]:
+            - /url: /docs
+        - generic [ref=f4e16]:
+          - link "Sign in" [ref=f4e17] [cursor=pointer]:
+            - /url: https://app.getlogit.app
+          - link "Get the app" [ref=f4e18] [cursor=pointer]:
+            - /url: https://play.google.com/store/apps/details?id=ie.logit.app
+    - main [ref=f4e19]:
+      - generic [ref=f4e20]:
+        - complementary [ref=f4e21]:
+          - navigation "Docs" [ref=f4e22]:
+            - generic [ref=f4e23]:
+              - paragraph [ref=f4e24]: Start here
+              - list [ref=f4e25]:
+                - listitem [ref=f4e26]:
+                  - link "Using LogIt" [ref=f4e27] [cursor=pointer]:
+                    - /url: /docs
+                - listitem [ref=f4e28]:
+                  - link "What each plan can do" [ref=f4e29] [cursor=pointer]:
+                    - /url: /docs/plans
+                - listitem [ref=f4e30]:
+                  - link "Your account" [ref=f4e31] [cursor=pointer]:
+                    - /url: /docs/account
+                - listitem [ref=f4e32]:
+                  - link "Settings and your home screen" [ref=f4e33] [cursor=pointer]:
+                    - /url: /docs/settings
+            - generic [ref=f4e34]:
+              - paragraph [ref=f4e35]: Training
+              - list [ref=f4e36]:
+                - listitem [ref=f4e37]:
+                  - link "Logging a workout" [ref=f4e38] [cursor=pointer]:
+                    - /url: /docs/workouts
+                - listitem [ref=f4e39]:
+                  - link "Splits and schedules" [ref=f4e40] [cursor=pointer]:
+                    - /url: /docs/splits
+                - listitem [ref=f4e41]:
+                  - link "Programs" [ref=f4e42] [cursor=pointer]:
+                    - /url: /docs/programs
+                - listitem [ref=f4e43]:
+                  - link "Exercises and your library" [ref=f4e44] [cursor=pointer]:
+                    - /url: /docs/exercises
+                - listitem [ref=f4e45]:
+                  - link "Progress and progression" [ref=f4e46] [cursor=pointer]:
+                    - /url: /docs/progress
+            - generic [ref=f4e47]:
+              - paragraph [ref=f4e48]: Body
+              - list [ref=f4e49]:
+                - listitem [ref=f4e50]:
+                  - link "Nutrition" [ref=f4e51] [cursor=pointer]:
+                    - /url: /docs/nutrition
+                - listitem [ref=f4e52]:
+                  - link "Bodyweight" [ref=f4e53] [cursor=pointer]:
+                    - /url: /docs/bodyweight
+                - listitem [ref=f4e54]:
+                  - link "Habits and goals" [ref=f4e55] [cursor=pointer]:
+                    - /url: /docs/habits-and-goals
+            - generic [ref=f4e56]:
+              - paragraph [ref=f4e57]: More
+              - list [ref=f4e58]:
+                - listitem [ref=f4e59]:
+                  - link "Insights" [ref=f4e60] [cursor=pointer]:
+                    - /url: /docs/insights
+                - listitem [ref=f4e61]:
+                  - link "Social" [ref=f4e62] [cursor=pointer]:
+                    - /url: /docs/social
+                - listitem [ref=f4e63]:
+                  - link "Plugins" [ref=f4e64] [cursor=pointer]:
+                    - /url: /docs/add-plugins
+            - generic [ref=f4e65]:
+              - paragraph [ref=f4e66]: Pro
+              - list [ref=f4e67]:
+                - listitem [ref=f4e68]:
+                  - link "Sync and devices" [ref=f4e69] [cursor=pointer]:
+                    - /url: /docs/sync
+                - listitem [ref=f4e70]:
+                  - link "The web dashboard" [ref=f4e71] [cursor=pointer]:
+                    - /url: /docs/web-dashboard
+            - generic [ref=f4e72]:
+              - paragraph [ref=f4e73]: Having a coach
+              - list [ref=f4e74]:
+                - listitem [ref=f4e75]:
+                  - link "Having a coach" [ref=f4e76] [cursor=pointer]:
+                    - /url: /docs/having-a-coach
+            - generic [ref=f4e77]:
+              - paragraph [ref=f4e78]: Coaching (Studio)
+              - list [ref=f4e79]:
+                - listitem [ref=f4e80]:
+                  - link "Start coaching" [ref=f4e81] [cursor=pointer]:
+                    - /url: /docs/coaching
+                - listitem [ref=f4e82]:
+                  - link "Invite links" [ref=f4e83] [cursor=pointer]:
+                    - /url: /docs/coaching/invite-links
+                - listitem [ref=f4e84]:
+                  - link "Clients and sharing" [ref=f4e85] [cursor=pointer]:
+                    - /url: /docs/coaching/clients
+                - listitem [ref=f4e86]:
+                  - link "Programs for clients" [ref=f4e87] [cursor=pointer]:
+                    - /url: /docs/coaching/programs
+                - listitem [ref=f4e88]:
+                  - link "Your exercise library" [ref=f4e89] [cursor=pointer]:
+                    - /url: /docs/coaching/library
+                - listitem [ref=f4e90]:
+                  - link "Check-ins" [ref=f4e91] [cursor=pointer]:
+                    - /url: /docs/coaching/checkins
+                - listitem [ref=f4e92]:
+                  - link "Messages" [ref=f4e93] [cursor=pointer]:
+                    - /url: /docs/coaching/messages
+                - listitem [ref=f4e94]:
+                  - link "Habits and macro targets" [ref=f4e95] [cursor=pointer]:
+                    - /url: /docs/coaching/habits-and-nutrition
+                - listitem [ref=f4e96]:
+                  - link "Exercise swaps" [ref=f4e97] [cursor=pointer]:
+                    - /url: /docs/coaching/swaps
+                - listitem [ref=f4e98]:
+                  - link "Getting paid" [ref=f4e99] [cursor=pointer]:
+                    - /url: /docs/coaching/payments
+            - generic [ref=f4e100]:
+              - paragraph [ref=f4e101]: Developers
+              - list [ref=f4e102]:
+                - listitem [ref=f4e103]:
+                  - link "Self-hosting" [ref=f4e104] [cursor=pointer]:
+                    - /url: /self-hosting
+                - listitem [ref=f4e105]:
+                  - link "Building plugins" [ref=f4e106] [cursor=pointer]:
+                    - /url: /docs/plugins
+                - listitem [ref=f4e107]:
+                  - link "Trust & the sandbox" [ref=f4e108] [cursor=pointer]:
+                    - /url: /docs/plugins/trust
+                - listitem [ref=f4e109]:
+                  - link "Exercise packs" [ref=f4e110] [cursor=pointer]:
+                    - /url: /docs/plugins/exercise-packs
+                - listitem [ref=f4e111]:
+                  - link "Mobility packs" [ref=f4e112] [cursor=pointer]:
+                    - /url: /docs/plugins/mobility-packs
+                - listitem [ref=f4e113]:
+                  - link "Progression algorithms" [ref=f4e114] [cursor=pointer]:
+                    - /url: /docs/plugins/progression
+                - listitem [ref=f4e115]:
+                  - link "Mobility progression" [ref=f4e116] [cursor=pointer]:
+                    - /url: /docs/plugins/mobility-progression
+                - listitem [ref=f4e117]:
+                  - link "Analytics" [ref=f4e118] [cursor=pointer]:
+                    - /url: /docs/plugins/analytics
+                - listitem [ref=f4e119]:
+                  - link "Nutrition algorithms" [ref=f4e120] [cursor=pointer]:
+                    - /url: /docs/plugins/nutrition
+                - listitem [ref=f4e121]:
+                  - link "Widgets" [ref=f4e122] [cursor=pointer]:
+                    - /url: /docs/plugins/widgets
+                - listitem [ref=f4e123]:
+                  - link "Widget primitives" [ref=f4e124] [cursor=pointer]:
+                    - /url: /docs/plugins/primitives
+                - listitem [ref=f4e125]:
+                  - link "Publishing" [ref=f4e126] [cursor=pointer]:
+                    - /url: /docs/plugins/publishing
+                - listitem [ref=f4e127]:
+                  - link "API reference" [ref=f4e128] [cursor=pointer]:
+                    - /url: /docs/plugins/reference
+        - generic [ref=f4e129]:
+          - article [ref=f4e130]:
+            - heading "Using LogIt" [level=1] [ref=f4e131]
+            - paragraph [ref=f4e132]: How to do things in the LogIt app and on the web dashboard, what each plan includes, and what you can't do (yet).
+            - generic [ref=f4e134]:
+              - generic [ref=f4e135]: Search the docs
+              - searchbox "Search the docs" [ref=f4e136]
+            - heading "Where to start" [level=2] [ref=f4e137]
+            - list [ref=f4e138]:
+              - listitem [ref=f4e139]:
+                - strong [ref=f4e140]:
+                  - link "New to LogIt" [ref=f4e141] [cursor=pointer]:
+                    - /url: /docs/workouts
+                - text: ": log your first workout, set up a"
+                - link "split" [ref=f4e142] [cursor=pointer]:
+                  - /url: /docs/splits
+                - text: ", track"
+                - link "food" [ref=f4e143] [cursor=pointer]:
+                  - /url: /docs/nutrition
+                - text: and
+                - link "habits" [ref=f4e144] [cursor=pointer]:
+                  - /url: /docs/habits-and-goals
+                - text: .
+              - listitem [ref=f4e145]:
+                - strong [ref=f4e146]:
+                  - link "Got Pro" [ref=f4e147] [cursor=pointer]:
+                    - /url: /docs/web-dashboard
+                - text: ":"
+                - link "sync" [ref=f4e148] [cursor=pointer]:
+                  - /url: /docs/sync
+                - text: ", the web dashboard,"
+                - link "your own charts" [ref=f4e149] [cursor=pointer]:
+                  - /url: /docs/insights#your-charts
+                - text: ","
+                - link "building plugins" [ref=f4e150] [cursor=pointer]:
+                  - /url: /docs/add-plugins#build-your-own
+                - text: .
+              - listitem [ref=f4e151]:
+                - strong [ref=f4e152]:
+                  - link "Coaching" [ref=f4e153] [cursor=pointer]:
+                    - /url: /docs/coaching
+                - text: "(Studio):"
+                - link "invite clients" [ref=f4e154] [cursor=pointer]:
+                  - /url: /docs/coaching/invite-links
+                - text: ","
+                - link "programs" [ref=f4e155] [cursor=pointer]:
+                  - /url: /docs/coaching/programs
+                - text: ","
+                - link "check-ins" [ref=f4e156] [cursor=pointer]:
+                  - /url: /docs/coaching/checkins
+                - text: ","
+                - link "messages" [ref=f4e157] [cursor=pointer]:
+                  - /url: /docs/coaching/messages
+                - text: ","
+                - link "getting paid" [ref=f4e158] [cursor=pointer]:
+                  - /url: /docs/coaching/payments
+                - text: .
+              - listitem [ref=f4e159]:
+                - strong [ref=f4e160]:
+                  - link "Have a coach" [ref=f4e161] [cursor=pointer]:
+                    - /url: /docs/having-a-coach
+                - text: ": join with their link, choose what they see, send check-ins."
+            - heading "What each plan can do" [level=2] [ref=f4e162]
+            - table [ref=f4e164]:
+              - rowgroup [ref=f4e165]:
+                - row [ref=f4e166]:
+                  - columnheader "Feature" [ref=f4e167]
+                  - columnheader "Free" [ref=f4e169]
+                  - columnheader "Pro" [ref=f4e170]
+                  - columnheader "Studio" [ref=f4e171]
+              - rowgroup [ref=f4e172]:
+                - row [ref=f4e173]:
+                  - rowheader "Workouts, splits and progression" [ref=f4e174]:
+                    - link "Workouts, splits and progression" [ref=f4e175] [cursor=pointer]:
+                      - /url: /docs/workouts
+                  - cell "On the phone" [ref=f4e176]
+                  - cell [ref=f4e177]:
+                    - img "Included" [ref=f4e178]
+                  - cell [ref=f4e180]:
+                    - img "Included" [ref=f4e181]
+                - row [ref=f4e183]:
+                  - rowheader "Nutrition, habits and goals" [ref=f4e184]:
+                    - link "Nutrition, habits and goals" [ref=f4e185] [cursor=pointer]:
+                      - /url: /docs/nutrition
+                  - cell "On the phone" [ref=f4e186]
+                  - cell [ref=f4e187]:
+                    - img "Included" [ref=f4e188]
+                  - cell [ref=f4e190]:
+                    - img "Included" [ref=f4e191]
+                - row [ref=f4e193]:
+                  - rowheader "Insights questions" [ref=f4e194]:
+                    - link "Insights questions" [ref=f4e195] [cursor=pointer]:
+                      - /url: /docs/insights
+                  - cell "On the phone" [ref=f4e196]
+                  - cell [ref=f4e197]:
+                    - img "Included" [ref=f4e198]
+                  - cell [ref=f4e200]:
+                    - img "Included" [ref=f4e201]
+                - row [ref=f4e203]:
+                  - rowheader "Saved Insights charts" [ref=f4e204]:
+                    - link "Saved Insights charts" [ref=f4e205] [cursor=pointer]:
+                      - /url: /docs/insights#your-charts
+                  - cell [ref=f4e206]:
+                    - img "Not included" [ref=f4e207]
+                  - cell [ref=f4e208]:
+                    - img "Included" [ref=f4e209]
+                  - cell [ref=f4e211]:
+                    - img "Included" [ref=f4e212]
+                - row [ref=f4e214]:
+                  - rowheader "Social" [ref=f4e215]:
+                    - link "Social" [ref=f4e216] [cursor=pointer]:
+                      - /url: /docs/social
+                  - cell "On the phone" [ref=f4e217]
+                  - cell [ref=f4e218]:
+                    - img "Included" [ref=f4e219]
+                  - cell [ref=f4e221]:
+                    - img "Included" [ref=f4e222]
+                - row [ref=f4e224]:
+                  - rowheader "Install plugins" [ref=f4e225]:
+                    - link "Install plugins" [ref=f4e226] [cursor=pointer]:
+                      - /url: /docs/add-plugins
+                  - cell "On the phone" [ref=f4e227]
+                  - cell [ref=f4e228]:
+                    - img "Included" [ref=f4e229]
+                  - cell [ref=f4e231]:
+                    - img "Included" [ref=f4e232]
+                - row [ref=f4e234]:
+                  - rowheader "Build and share plugins" [ref=f4e235]:
+                    - link "Build and share plugins" [ref=f4e236] [cursor=pointer]:
+                      - /url: /docs/add-plugins#build-your-own
+                  - cell [ref=f4e237]:
+                    - img "Not included" [ref=f4e238]
+                  - cell [ref=f4e239]:
+                    - img "Included" [ref=f4e240]
+                  - cell [ref=f4e242]:
+                    - img "Included" [ref=f4e243]
+                - row [ref=f4e245]:
+                  - rowheader "Sync and the web dashboard" [ref=f4e246]:
+                    - link "Sync and the web dashboard" [ref=f4e247] [cursor=pointer]:
+                      - /url: /docs/sync
+                  - cell [ref=f4e248]:
+                    - img "Not included" [ref=f4e249]
+                  - cell [ref=f4e250]:
+                    - img "Included" [ref=f4e251]
+                  - cell [ref=f4e253]:
+                    - img "Included" [ref=f4e254]
+                - row [ref=f4e256]:
+                  - rowheader "Have a coach" [ref=f4e257]:
+                    - link "Have a coach" [ref=f4e258] [cursor=pointer]:
+                      - /url: /docs/having-a-coach
+                  - cell "On the phone" [ref=f4e259]
+                  - cell [ref=f4e260]:
+                    - img "Included" [ref=f4e261]
+                  - cell [ref=f4e263]:
+                    - img "Included" [ref=f4e264]
+                - row [ref=f4e266]:
+                  - rowheader "Coach clients" [ref=f4e267]:
+                    - link "Coach clients" [ref=f4e268] [cursor=pointer]:
+                      - /url: /docs/coaching
+                  - cell [ref=f4e269]:
+                    - img "Not included" [ref=f4e270]
+                  - cell [ref=f4e271]:
+                    - img "Not included" [ref=f4e272]
+                  - cell [ref=f4e273]:
+                    - img "Included" [ref=f4e274]
+                - row [ref=f4e276]:
+                  - rowheader "Take payments from clients" [ref=f4e277]:
+                    - link "Take payments from clients" [ref=f4e278] [cursor=pointer]:
+                      - /url: /docs/coaching/payments
+                  - cell [ref=f4e279]:
+                    - img "Not included" [ref=f4e280]
+                  - cell [ref=f4e281]:
+                    - img "Not included" [ref=f4e282]
+                  - cell [ref=f4e283]:
+                    - img "Included" [ref=f4e284]
+            - heading "Developers" [level=2] [ref=f4e286]
+            - paragraph [ref=f4e287]:
+              - text: Run your own server with
+              - link "Self-hosting" [ref=f4e288] [cursor=pointer]:
+                - /url: /self-hosting
+              - text: ", or make plugins with"
+              - link "Building plugins" [ref=f4e289] [cursor=pointer]:
+                - /url: /docs/plugins
+              - text: .
+          - navigation "Previous and next" [ref=f4e290]:
+            - link "Next What each plan can do" [ref=f4e291] [cursor=pointer]:
+              - /url: /docs/plans
+              - generic [ref=f4e292]: Next
+              - text: What each plan can do
+    - contentinfo [ref=f4e293]:
+      - generic [ref=f4e294]:
+        - generic [ref=f4e295]:
+          - generic [ref=f4e296]: LogIt
+          - link "hello@getlogit.app" [ref=f4e300] [cursor=pointer]:
+            - /url: mailto:hello@getlogit.app
+        - generic [ref=f4e301]:
+          - generic [ref=f4e302]:
+            - generic [ref=f4e303]: Product
+            - link "Features" [ref=f4e304] [cursor=pointer]:
+              - /url: /#features
+            - link "Pricing" [ref=f4e305] [cursor=pointer]:
+              - /url: /pricing
+            - link "Web dashboard" [ref=f4e306] [cursor=pointer]:
+              - /url: https://app.getlogit.app
+          - generic [ref=f4e307]:
+            - generic [ref=f4e308]: Open source
+            - link "Overview" [ref=f4e309] [cursor=pointer]:
+              - /url: /open-source
+            - link "Self-hosting" [ref=f4e310] [cursor=pointer]:
+              - /url: /self-hosting
+            - link "Plugin docs" [ref=f4e311] [cursor=pointer]:
+              - /url: /docs/plugins
+            - link "GitHub" [ref=f4e312] [cursor=pointer]:
+              - /url: https://github.com/Martin-Melody/LogIt
+          - generic [ref=f4e313]:
+            - generic [ref=f4e314]: Legal
+            - link "Privacy" [ref=f4e315] [cursor=pointer]:
+              - /url: /privacy
+            - link "Terms" [ref=f4e316] [cursor=pointer]:
+              - /url: /terms
+            - link "Delete your account" [ref=f4e317] [cursor=pointer]:
+              - /url: /delete-account

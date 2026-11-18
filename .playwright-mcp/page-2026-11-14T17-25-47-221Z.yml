@@ -1,0 +1,80 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - generic [ref=e28]:
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - link "LogIt" [ref=e33] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=e38]:
+          - tab "Me" [selected] [ref=e39]
+          - tab "Coaching" [ref=e40]
+      - generic [ref=e41]:
+        - list [ref=e44]:
+          - listitem [ref=e45]:
+            - link "Overview" [ref=e46] [cursor=pointer]:
+              - /url: /
+        - generic [ref=e49]:
+          - generic [ref=e50]: Training
+          - list [ref=e52]:
+            - listitem [ref=e53]:
+              - link "Sessions" [ref=e54] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=e57]:
+              - link "Progress" [ref=e58] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=e61]:
+              - link "Plan" [ref=e62] [cursor=pointer]:
+                - /url: /plan
+        - generic [ref=e65]:
+          - generic [ref=e66]: Body
+          - list [ref=e68]:
+            - listitem [ref=e69]:
+              - link "Nutrition" [ref=e70] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=e73]:
+              - link "Habits & goals" [ref=e74] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=e77]:
+          - generic [ref=e78]: Coach
+          - list [ref=e80]:
+            - listitem [ref=e81]:
+              - link "My coach" [ref=e82] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=e86]:
+        - listitem [ref=e87]:
+          - button "A Alex Studio · Account" [ref=e88]:
+            - generic [ref=e89]: A
+            - generic [ref=e90]:
+              - generic [ref=e91]: Alex
+              - generic [ref=e92]: Studio · Account
+      - button "Toggle Sidebar" [ref=e94]
+    - main [ref=e95]:
+      - main [ref=e96]:
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - paragraph [ref=e101]: Saturday, November 14
+              - heading "This week" [level=1] [ref=e102]
+            - button "Edit layout" [ref=e103]
+          - generic [ref=e105]:
+            - region "Streak" [ref=e106]:
+              - heading "Streak" [level=2] [ref=e108]
+            - region "Sessions this week" [ref=e110]:
+              - heading "Sessions this week" [level=2] [ref=e112]
+            - region "Volume this week" [ref=e114]:
+              - heading "Volume this week" [level=2] [ref=e116]
+            - region "Body weight" [ref=e118]:
+              - heading "Body weight" [level=2] [ref=e120]
+            - region "This week" [ref=e122]:
+              - heading "This week" [level=2] [ref=e124]
+            - region "Goals" [ref=e126]:
+              - heading "Goals" [level=2] [ref=e128]
+            - region "Weekly volume" [ref=e130]:
+              - heading "Weekly volume" [level=2] [ref=e132]
+            - region "Recent records" [ref=e134]:
+              - heading "Recent records" [level=2] [ref=e136]
+            - region "Recent sessions" [ref=e138]:
+              - heading "Recent sessions" [level=2] [ref=e140]
+            - region "Habits this week" [ref=e142]:
+              - heading "Habits this week" [level=2] [ref=e144]
+  - generic [ref=e27]: LogIt

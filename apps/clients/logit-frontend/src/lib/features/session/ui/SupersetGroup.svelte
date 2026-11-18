@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { addButton } from "$lib/components/ui/choice";
   import { Check, ChevronDown, ChevronRight, GripVertical, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -314,14 +315,12 @@
         </div>
       {/if}
 
-      <button
-        type="button"
-        class="w-full h-11 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-        onclick={() => onMutate((s: WorkoutSession) => addSupersetRound(s, supersetId))}
-        disabled={saving}
-      >
-        <Plus class="inline h-3.5 w-3.5 -mt-0.5" /> Add round
-      </button>
+      <div class="px-3 py-2.5">
+        <button type="button" class="{addButton} w-full" disabled={saving}
+          onclick={() => onMutate((s: WorkoutSession) => addSupersetRound(s, supersetId))}>
+          <Plus class="h-4 w-4" /> Add round
+        </button>
+      </div>
     </div>
   {/if}
 </div>

@@ -1,0 +1,124 @@
+- generic [ref=f7e2]:
+  - generic [ref=f7e6]:
+    - banner [ref=f7e7]:
+      - button "Back" [ref=f7e8]
+      - heading "Nutrition" [level=1] [ref=f7e10]
+      - link "Insights" [ref=f7e11] [cursor=pointer]:
+        - /url: /insights/eating
+      - link "My foods and recipes" [ref=f7e13] [cursor=pointer]:
+        - /url: /nutrition/foods
+      - link "Notifications" [ref=f7e15] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f7e17]:
+      - generic [ref=f7e18]:
+        - generic [ref=f7e19]:
+          - button "Earlier week" [ref=f7e20]
+          - generic [ref=f7e22]:
+            - button "2026-11-10, 1155 kcal" [ref=f7e23]:
+              - generic [ref=f7e24]: Tue
+              - generic [ref=f7e25]: "10"
+            - button "2026-11-11, 1155 kcal" [ref=f7e28]:
+              - generic [ref=f7e29]: Wed
+              - generic [ref=f7e30]: "11"
+            - button "2026-11-12, 1155 kcal" [ref=f7e33]:
+              - generic [ref=f7e34]: Thu
+              - generic [ref=f7e35]: "12"
+            - button "2026-11-13, 1155 kcal" [ref=f7e38]:
+              - generic [ref=f7e39]: Fri
+              - generic [ref=f7e40]: "13"
+            - button "2026-11-14, 1155 kcal" [ref=f7e43]:
+              - generic [ref=f7e44]: Sat
+              - generic [ref=f7e45]: "14"
+            - button "2026-11-15, 1155 kcal" [ref=f7e48]:
+              - generic [ref=f7e49]: Sun
+              - generic [ref=f7e50]: "15"
+            - button "2026-11-16, 550 kcal" [ref=f7e53]:
+              - generic [ref=f7e54]: Today
+              - generic [ref=f7e55]: "16"
+          - button "Later week" [disabled] [ref=f7e58]
+        - generic [ref=f7e60]:
+          - 'link "Set a goal to get calorie and macro targets Eaten so far: 550 kcal · P 55 · C 63 · F 9" [ref=f7e61] [cursor=pointer]':
+            - /url: /nutrition/goal
+            - generic [ref=f7e62]: Set a goal to get calorie and macro targets
+            - generic [ref=f7e64]: "Eaten so far: 550 kcal · P 55 · C 63 · F 9"
+          - generic [ref=f7e65]:
+            - generic [ref=f7e66]:
+              - generic [ref=f7e67]:
+                - heading "Breakfast" [level=2] [ref=f7e68]
+                - paragraph [ref=f7e69]: 430 kcal · P 31 · C 60 · F 7
+              - button "Breakfast options" [ref=f7e70]
+            - list [ref=f7e72]:
+              - listitem [ref=f7e73]:
+                - button "Arla Protein yoghurt 200 g 130" [ref=f7e74]:
+                  - generic [ref=f7e75]:
+                    - generic [ref=f7e76]: Arla Protein yoghurt
+                    - generic [ref=f7e77]: 200 g
+                  - generic [ref=f7e78]: "130"
+              - listitem [ref=f7e79]:
+                - button "Rolled oats 80 g 300" [ref=f7e80]:
+                  - generic [ref=f7e81]:
+                    - generic [ref=f7e82]: Rolled oats
+                    - generic [ref=f7e83]: 80 g
+                  - generic [ref=f7e84]: "300"
+            - link "Add food" [ref=f7e85] [cursor=pointer]:
+              - /url: /nutrition/log?meal=breakfast&date=2026-11-16
+          - generic [ref=f7e87]:
+            - generic [ref=f7e88]:
+              - generic [ref=f7e89]:
+                - heading "Lunch" [level=2] [ref=f7e90]
+                - paragraph [ref=f7e91]: Nothing yet
+              - button "Lunch options" [ref=f7e92]
+            - generic [ref=f7e94]:
+              - link "Add food" [ref=f7e95] [cursor=pointer]:
+                - /url: /nutrition/log?meal=lunch&date=2026-11-16
+              - button "Same as yesterday 275" [ref=f7e97]:
+                - text: Same as yesterday
+                - generic [ref=f7e99]: "275"
+          - generic [ref=f7e100]:
+            - generic [ref=f7e101]:
+              - generic [ref=f7e102]:
+                - heading "Dinner" [level=2] [ref=f7e103]
+                - paragraph [ref=f7e104]: Nothing yet
+              - button "Dinner options" [ref=f7e105]
+            - generic [ref=f7e107]:
+              - link "Add food" [ref=f7e108] [cursor=pointer]:
+                - /url: /nutrition/log?meal=dinner&date=2026-11-16
+              - button "Same as yesterday 330" [ref=f7e110]:
+                - text: Same as yesterday
+                - generic [ref=f7e112]: "330"
+          - generic [ref=f7e113]:
+            - generic [ref=f7e114]:
+              - generic [ref=f7e115]:
+                - heading "Snacks" [level=2] [ref=f7e116]
+                - paragraph [ref=f7e117]: 120 kcal · P 24 · C 3 · F 2
+              - button "Snacks options" [ref=f7e118]
+            - list [ref=f7e120]:
+              - listitem [ref=f7e121]:
+                - button "Whey protein, vanilla 1 scoop (30 g) 120" [ref=f7e122]:
+                  - generic [ref=f7e123]:
+                    - generic [ref=f7e124]: Whey protein, vanilla
+                    - generic [ref=f7e125]: 1 scoop (30 g)
+                  - generic [ref=f7e126]: "120"
+            - link "Add food" [ref=f7e127] [cursor=pointer]:
+              - /url: /nutrition/log?meal=snack&date=2026-11-16
+          - link "Weight trend — Log" [ref=f7e129] [cursor=pointer]:
+            - /url: /nutrition/weight
+            - generic [ref=f7e130]:
+              - generic [ref=f7e131]: Weight trend
+              - generic [ref=f7e132]: —
+            - generic [ref=f7e134]: Log
+      - link "Log food" [ref=f7e135] [cursor=pointer]:
+        - /url: /nutrition/log?meal=dinner&date=2026-11-16
+    - contentinfo [ref=f7e137]:
+      - navigation "Main navigation" [ref=f7e138]:
+        - link "Home" [ref=f7e139] [cursor=pointer]:
+          - /url: /
+        - link "Library" [ref=f7e142] [cursor=pointer]:
+          - /url: /exercises
+        - link "Start session" [ref=f7e145] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f7e149]: Start
+        - link "Profile" [ref=f7e150] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f7e153]
+  - region "Notifications alt+T"

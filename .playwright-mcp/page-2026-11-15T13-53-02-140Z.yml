@@ -1,0 +1,92 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e6]:
+    - banner [ref=f6e7]:
+      - button "Back" [ref=f6e843]
+      - generic [ref=f6e845]: Meadows row
+      - link "Notifications" [ref=f6e11] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f6e13]:
+      - generic [ref=f6e847]:
+        - generic [ref=f6e848]:
+          - generic [ref=f6e849]:
+            - generic [ref=f6e850]: Name
+            - textbox "Name" [ref=f6e851]: Meadows row
+          - generic [ref=f6e852]:
+            - generic [ref=f6e853]: Notes (optional)
+            - textbox "Notes (optional)" [ref=f6e854]
+          - generic [ref=f6e855]:
+            - generic [ref=f6e856]: Type
+            - generic [ref=f6e857]:
+              - button "Normal" [pressed] [ref=f6e858]
+              - button "Assisted" [ref=f6e859]
+              - button "Bodyweight" [ref=f6e860]
+          - generic [ref=f6e861]:
+            - generic [ref=f6e862]: Muscles
+            - generic [ref=f6e863]:
+              - generic [ref=f6e864]:
+                - 'button "chest: not used" [ref=f6e865]': chest
+                - 'button "back: main muscle" [ref=f6e866]': back
+                - 'button "shoulders: not used" [ref=f6e867]': shoulders
+                - 'button "biceps: not used" [ref=f6e868]': biceps
+                - 'button "triceps: not used" [ref=f6e869]': triceps
+                - 'button "quads: not used" [ref=f6e870]': quads
+                - 'button "hamstrings: not used" [ref=f6e871]': hamstrings
+                - 'button "glutes: not used" [ref=f6e872]': glutes
+                - 'button "calves: not used" [ref=f6e873]': calves
+                - 'button "core: not used" [ref=f6e874]': core
+                - 'button "forearms: not used" [ref=f6e875]': forearms
+              - paragraph [ref=f6e876]: Tap once for a main muscle, twice for one it also works.
+          - generic [ref=f6e877]:
+            - generic [ref=f6e878]: Equipment
+            - combobox "Equipment" [ref=f6e879]:
+              - option "Not set" [selected]
+              - option "Barbell"
+              - option "Dumbbell"
+              - option "Kettlebell"
+              - option "Cable"
+              - option "Machine"
+              - option "Smith machine"
+              - option "Bodyweight"
+              - option "Band"
+              - option "Other"
+          - generic [ref=f6e880]:
+            - generic [ref=f6e881]: Cues
+            - button "Add cue" [ref=f6e883]
+        - generic [ref=f6e886]:
+          - generic [ref=f6e887]:
+            - paragraph [ref=f6e888]: —
+            - paragraph [ref=f6e889]: Best set
+          - generic [ref=f6e890]:
+            - paragraph [ref=f6e891]: —
+            - paragraph [ref=f6e892]: Est. 1RM
+          - generic [ref=f6e893]:
+            - paragraph [ref=f6e894]: "0"
+            - paragraph [ref=f6e895]: Sessions
+          - generic [ref=f6e896]:
+            - paragraph [ref=f6e897]: Never
+            - paragraph [ref=f6e898]: Last performed
+        - paragraph [ref=f6e901]: No history yet — log a set to see progression.
+        - generic [ref=f6e902]:
+          - generic [ref=f6e903]:
+            - text: Machines
+            - paragraph [ref=f6e904]: Set each machine's real weight settings so suggestions land on numbers you can actually select.
+          - generic [ref=f6e905]:
+            - textbox "Add a machine…" [ref=f6e906]
+            - button "Add" [disabled] [ref=f6e907]
+        - button "Export as pack" [ref=f6e909]
+        - button "Reset progression" [ref=f6e911]
+        - button "Delete exercise" [ref=f6e913]
+    - contentinfo [ref=f6e731]:
+      - navigation "Main navigation" [ref=f6e732]:
+        - link "Home" [ref=f6e733] [cursor=pointer]:
+          - /url: /
+        - link "Library" [ref=f6e736] [cursor=pointer]:
+          - /url: /exercises
+        - link "Resume session" [ref=f6e739] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f6e745]: Resume
+        - link "Profile" [ref=f6e746] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f6e749]
+  - region "Notifications alt+T"
+  - generic [ref=f6e752]: LogIt

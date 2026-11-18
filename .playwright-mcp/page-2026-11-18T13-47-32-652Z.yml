@@ -1,0 +1,28 @@
+- generic [ref=f15e2]:
+  - generic [ref=f15e3]:
+    - main [ref=f15e4]:
+      - generic [ref=f15e5]:
+        - button "Settings" [ref=f15e6]
+        - heading "Your places" [level=1] [ref=f15e8]
+        - paragraph [ref=f15e9]: Where you train and what's there. Logit uses it to plan weights you can actually pick up. Optional.
+        - list [ref=f15e10]:
+          - listitem [ref=f15e11]:
+            - link "My gym 1 machine, barbell, dumbbells" [ref=f15e12] [cursor=pointer]:
+              - /url: /settings/places/place_9iDBx2Z4Qzf3dHym20X4T
+              - generic [ref=f15e14]:
+                - generic [ref=f15e15]: My gym
+                - generic [ref=f15e16]: 1 machine, barbell, dumbbells
+        - button "Add a place" [ref=f15e18]
+    - contentinfo [ref=f15e20]:
+      - navigation "Main navigation" [ref=f15e21]:
+        - link "Home" [ref=f15e22] [cursor=pointer]:
+          - /url: /
+        - link "Sessions" [ref=f15e25] [cursor=pointer]:
+          - /url: /sessions
+        - link "Resume session" [ref=f15e28] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f15e34]: Resume
+        - link "Profile" [ref=f15e35] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f15e38]
+  - region "Notifications alt+T"

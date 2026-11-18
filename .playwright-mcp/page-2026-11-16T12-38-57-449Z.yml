@@ -1,0 +1,151 @@
+- generic [ref=f10e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f10e6]:
+    - generic [ref=f10e9]:
+      - generic [ref=f10e10]:
+        - link "LogIt" [ref=f10e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f10e16]:
+          - tab "Me" [ref=f10e17]
+          - tab "Coaching" [selected] [ref=f10e18]
+      - generic [ref=f10e19]:
+        - list [ref=f10e22]:
+          - listitem [ref=f10e200]:
+            - link "Today" [ref=f10e201] [cursor=pointer]:
+              - /url: /coaching
+          - listitem [ref=f10e204]:
+            - link "Clients" [ref=f10e205] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f10e208]:
+            - link "Programs" [ref=f10e209] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f10e212]:
+            - link "Library" [ref=f10e213] [cursor=pointer]:
+              - /url: /coaching/library
+          - listitem [ref=f10e216]:
+            - link "Check-ins" [ref=f10e217] [cursor=pointer]:
+              - /url: /coaching/checkins
+          - listitem [ref=f10e220]:
+            - link "Messages" [ref=f10e221] [cursor=pointer]:
+              - /url: /messages
+        - generic [ref=f10e27]:
+          - generic [ref=f10e28]: Studio
+          - list [ref=f10e30]:
+            - listitem [ref=f10e224]:
+              - link "Invite links" [ref=f10e225] [cursor=pointer]:
+                - /url: /coaching/links
+        - generic [ref=f10e228]:
+          - generic [ref=f10e229]: A client's training
+          - generic [ref=f10e230]:
+            - generic [ref=f10e231]: Open a client's training
+            - combobox "Open a client's training" [ref=f10e232]:
+              - option "Choose a client…" [selected]
+              - option "Dara"
+      - list [ref=f10e88]:
+        - listitem [ref=f10e89]:
+          - button "A Alex Studio · Account" [ref=f10e90]:
+            - generic [ref=f10e91]: A
+            - generic [ref=f10e92]:
+              - generic [ref=f10e93]: Alex
+              - generic [ref=f10e94]: Studio · Account
+      - button "Toggle Sidebar" [ref=f10e96]
+    - main [ref=f10e97]:
+      - main [ref=f10e98]:
+        - generic [ref=f10e233]:
+          - link "‹ Clients" [ref=f10e234] [cursor=pointer]:
+            - /url: /clients
+          - generic [ref=f10e235]:
+            - generic [ref=f10e236]:
+              - generic [aria-hidden] [ref=f10e237]: D
+              - generic [ref=f10e238]:
+                - heading "Dara" [level=1] [ref=f10e239]
+                - paragraph [ref=f10e240]: "@dara · client since November · trains on their own plan"
+            - generic [ref=f10e241]:
+              - button "Message" [ref=f10e242]
+              - button "Assign program" [ref=f10e243]
+          - tablist "Client" [ref=f10e244]:
+            - tab "Overview" [ref=f10e245]
+            - tab "Training" [ref=f10e246]
+            - tab "Insights" [selected] [ref=f10e247]
+            - tab [ref=f10e248]:
+              - img "not shared" [ref=f10e249]
+              - text: Nutrition
+            - tab "Habits" [ref=f10e250]
+            - tab "Check-ins" [ref=f10e251]
+            - tab "Programs" [ref=f10e252]
+            - tab "Messages" [ref=f10e253]
+          - generic [ref=f10e254]:
+            - generic [ref=f10e255]:
+              - paragraph [ref=f10e256]: The same questions Dara sees, from what they share with you.
+              - group "Range" [ref=f10e257]:
+                - button "4 weeks" [ref=f10e258]
+                - button "12 weeks" [pressed] [ref=f10e259]
+                - button "6 months" [ref=f10e260]
+                - button "1 year" [ref=f10e261]
+            - region "Questions about Dara" [ref=f10e262]:
+              - 'button "Which lifts are moving? 2 moving, 6 stuck Deadlift Squat Bench Press Overhead Press Tricep Pushdown Barbell Row Bench Press: no new best in 6 sessions. Overhead Press: no new best in 13 sessions." [ref=f10e263]':
+                - generic [ref=f10e264]:
+                  - generic [ref=f10e265]: Which lifts are moving?
+                  - generic [ref=f10e266]: 2 moving, 6 stuck
+                  - generic [ref=f10e268]:
+                    - generic [ref=f10e269]: Deadlift
+                    - generic [ref=f10e270]: Squat
+                    - generic [ref=f10e271]: Bench Press
+                    - generic [ref=f10e272]: Overhead Press
+                    - generic [ref=f10e273]: Tricep Pushdown
+                    - generic [ref=f10e274]: Barbell Row
+                  - generic [ref=f10e275]: "Bench Press: no new best in 6 sessions. Overhead Press: no new best in 13 sessions."
+              - 'button "Is my training balanced? No muscle is far behind Working sets a week: Glutes 11, Quads 9, Triceps 7, Shoulders 7, Back 7, Chest 5, Forearms 5, Biceps 5 Between 5 and 11 working sets a week per muscle." [ref=f10e276]':
+                - generic [ref=f10e277]:
+                  - generic [ref=f10e278]: Is my training balanced?
+                  - generic [ref=f10e279]: No muscle is far behind
+                  - 'img "Working sets a week: Glutes 11, Quads 9, Triceps 7, Shoulders 7, Back 7, Chest 5, Forearms 5, Biceps 5" [ref=f10e281]':
+                    - 'generic "Glutes: 11" [ref=f10e282]'
+                    - 'generic "Quads: 9" [ref=f10e283]'
+                    - 'generic "Triceps: 7" [ref=f10e284]'
+                    - 'generic "Shoulders: 7" [ref=f10e285]'
+                    - 'generic "Back: 7" [ref=f10e286]'
+                    - 'generic "Chest: 5" [ref=f10e287]'
+                    - 'generic "Forearms: 5" [ref=f10e288]'
+                    - 'generic "Biceps: 5" [ref=f10e289]'
+                  - generic [ref=f10e290]: Between 5 and 11 working sets a week per muscle.
+              - 'button "Am I showing up? 3.3 training days a week, target 3 Weeks, oldest first: missed, on target, on target, on target, on target, on target, on target, on target, on target, on target, on target, on target, this week 11 of 12 weeks on target. 11 in a row now." [ref=f10e291]':
+                - generic [ref=f10e292]:
+                  - generic [ref=f10e293]: Am I showing up?
+                  - generic [ref=f10e294]: 3.3 training days a week, target 3
+                  - 'img "Weeks, oldest first: missed, on target, on target, on target, on target, on target, on target, on target, on target, on target, on target, on target, this week" [ref=f10e296]'
+                  - generic [ref=f10e310]: 11 of 12 weeks on target. 11 in a row now.
+              - generic [ref=f10e311]:
+                - generic [ref=f10e312]: Is my eating on track?
+                - generic [ref=f10e314]: Needs the nutrition diary and body weight. Dara doesn't share these with you.
+              - generic [ref=f10e315]:
+                - generic [ref=f10e316]: Does food affect my lifts?
+                - generic [ref=f10e318]: Needs the nutrition diary. Dara doesn't share this with you.
+              - button "When will I hit my goals? No goals set Add one under Habits & goals and this works out when you'll get there." [ref=f10e319]:
+                - generic [ref=f10e320]:
+                  - generic [ref=f10e321]: When will I hit my goals?
+                  - generic [ref=f10e322]: No goals set
+                  - generic [ref=f10e324]: Add one under Habits & goals and this works out when you'll get there.
+            - generic [ref=f10e325]:
+              - generic [ref=f10e326]:
+                - generic [ref=f10e327]:
+                  - heading "Charts Dara shows you" [level=2] [ref=f10e328]
+                  - generic [ref=f10e329]: They tick "My coach" on these
+                - generic [ref=f10e331]:
+                  - generic [ref=f10e332]:
+                    - generic [ref=f10e333]: Leg sets a week
+                    - generic [ref=f10e334]: Each week
+                  - img "Quads, Hamstrings, Glutes from 0 sets to 0 sets" [ref=f10e337]
+              - generic [ref=f10e339]:
+                - generic [ref=f10e340]:
+                  - heading "Charts you made for Dara" [level=2] [ref=f10e341]
+                  - link "New chart for Dara" [ref=f10e342] [cursor=pointer]:
+                    - /url: /insights/charts/new?client=b6534f1e-491d-4541-ab74-bc2b9869755b
+                - link "Bench Press est. 1RM Each week Bench Press from 102 kg to 105 kg From Alex" [ref=f10e344] [cursor=pointer]:
+                  - /url: /insights/charts/chart_MZYyd94yfjXWEaGI0A3Vo?client=b6534f1e-491d-4541-ab74-bc2b9869755b
+                  - generic [ref=f10e345]:
+                    - generic [ref=f10e346]: Bench Press est. 1RM
+                    - generic [ref=f10e347]: Each week
+                  - img "Bench Press from 102 kg to 105 kg" [ref=f10e350]
+                  - generic [ref=f10e352]: From Alex
+  - generic [ref=f10e167]: LogIt

@@ -1,0 +1,42 @@
+- generic [ref=f3e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f3e6]:
+    - link "← Back" [ref=f3e8] [cursor=pointer]:
+      - /url: /upgrade
+    - generic [ref=f3e9]:
+      - heading "Account" [level=1] [ref=f3e10]
+      - generic [ref=f3e11]:
+        - generic [ref=f3e12]:
+          - generic [ref=f3e13]: Profile
+          - paragraph [ref=f3e14]: "@samcoach"
+        - generic [ref=f3e15]:
+          - generic [ref=f3e16]:
+            - generic [ref=f3e17]: Display name
+            - textbox "Display name" [ref=f3e18]: Sam Coach
+          - button "Save" [ref=f3e19]
+      - generic [ref=f3e20]:
+        - generic [ref=f3e21]: Plan
+        - generic [ref=f3e23]:
+          - generic [ref=f3e24]: Free
+          - paragraph [ref=f3e26]: The app itself is free, and a free account backs up one phone. Pro adds sync between phones and the web dashboard. Plans are bought in the LogIt Android app.
+          - link "Compare plans" [ref=f3e27] [cursor=pointer]:
+            - /url: https://getlogit.app/pricing
+      - generic [ref=f3e28]:
+        - generic [ref=f3e29]: Change password
+        - generic [ref=f3e32]:
+          - textbox "Current password" [ref=f3e33]
+          - textbox "New password" [ref=f3e34]
+          - textbox "Confirm new password" [ref=f3e35]
+          - button "Update password" [disabled]
+      - generic [ref=f3e36]:
+        - generic [ref=f3e37]:
+          - generic [ref=f3e38]: Where you're signed in
+          - paragraph [ref=f3e39]: Phones and browsers with your account. Sign out any you don't recognise, then change your password.
+        - list [ref=f3e41]:
+          - listitem [ref=f3e42]:
+            - generic [ref=f3e43]:
+              - generic [ref=f3e44]: Chrome on LinuxThis browser
+              - generic [ref=f3e45]: Signed in today · last active today
+      - generic [ref=f3e46]:
+        - generic [ref=f3e47]: Danger zone
+        - button "Delete account" [ref=f3e50]

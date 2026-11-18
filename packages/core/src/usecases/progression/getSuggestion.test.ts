@@ -330,3 +330,38 @@ describe("getSuggestion — liveInput passthrough (§7 autoregulation accommodat
     expect(output?.label).toBe("live:8:6");
   });
 });
+
+describe("getSuggestion — a machine's own start is still a weight you can load", () => {
+  it("rounds a rebased plan on a plate-loaded machine (no stack) to its increment", async () => {
+    const { createSession, addExercise, addSet, finishSession } = await import("../../domain/workout");
+    const now = Date.now();
+    const DAY = 86_400_000;
+    const at = (d: number) => now - d * DAY;
+    // Last time on the other machine at 82.5; on this one, 77.5 the time before.
+    const session = (d: number, kg: number, machineId: string) => {
+      let s = createSession(at(d));
+      s = addExercise(s, { exerciseName: "Leg Press" });
+      s = addSet(s, s.blocks[0]!.id, { weight: kg, reps: 8, setType: "normal", machineId });
+      return finishSession(s, at(d) + 3_600_000);
+    };
+    const sessions = [session(14, 77.5, "plates"), session(7, 82.5, "other")];
+    const d = {
+      workoutRepo: { listRecentSessions: async () => sessions, listAllSessions: async () => sessions },
+      exerciseRepo: { getById: async () => null, getByName: async () => null },
+      progressionRepo: {
+        getConfig: async () => ({ algorithmId: "test-algorithm" }),
+        getExerciseState: async () => null,
+        getAlgorithmPreferences: async () => null,
+      },
+      algorithmRegistry: {
+        get: async () => ({ ...testAlgorithm, suggest: () => ({ sets: [{ reps: 8, weight: 80 }], nextState: null }) }),
+      },
+    } as unknown as ProgressionDeps;
+
+    const output = await getSuggestion({ name: "Leg Press" }, d, undefined, undefined, undefined, undefined, {
+      machine: { id: "plates", name: "Plate leg press", incrementKg: 2.5 },
+    });
+    // 80 × 77.5 / 82.5 = 75.15…: rounded to the machine's 2.5 kg steps, not left at 75.15.
+    expect(output?.sets[0]?.weight).toBe(75);
+  });
+});
