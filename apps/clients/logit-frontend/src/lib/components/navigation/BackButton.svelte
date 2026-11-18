@@ -16,7 +16,7 @@
   // Bottom-bar pages are top level: no back button there (e.g. Exercises or Settings
   // when they're in the bar). Reached from More they keep it.
   const onTab = $derived(
-    tabHrefs($navConfig, NAV_ITEM_DEFS, authStore.isAuthenticated).includes(page.url.pathname),
+    tabHrefs($navConfig, NAV_ITEM_DEFS, authStore.ready ? authStore.isAuthenticated : null).includes(page.url.pathname),
   );
 </script>
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { canCoach } from "$lib/workspace";
+  import { canCoach, coachTrial } from "$lib/workspace";
   import "./layout.css";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -20,6 +20,7 @@
   import StudioModeDialog from "$lib/features/guide/StudioModeDialog.svelte";
   import StudioFinishDialog from "$lib/features/guide/StudioFinishDialog.svelte";
   import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
+  import StudioNeeded from "$lib/features/onboarding/StudioNeeded.svelte";
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
   import { sandbox } from "$lib/features/guide/sandbox.svelte";
 
@@ -86,6 +87,19 @@
     void page.url.pathname;
     return !apiClient.isSelfHosted() && apiClient.getUser()?.tier === "Free";
   });
+  // A Free account trying coaching with sample clients gets the Coaching workspace (W3);
+  // its own training dashboard still needs Pro, so "Me" lands on /upgrade.
+  const isTrialCoaching = $derived.by(() => {
+    void page.url.pathname;
+    return isBlockedFreeTier && coachTrial() && isCoachingPath(page.url.pathname, page.url.searchParams);
+  });
+  // Trying coaching below Studio on any plan (Pro too): invite links and payments say Studio.
+  const isTrialCoachingAnyTier = $derived.by(() => {
+    void page.url.pathname;
+    return coachTrial();
+  });
+  // "What brings you here?" right after signing up on the web (W2).
+  const isWelcome = $derived(page.url.pathname.startsWith("/welcome"));
 
   async function guardRoute() {
     if (!apiClient.isAuthenticated()) {
@@ -96,7 +110,7 @@
       return;
     }
     if (isBlockedFreeTier) {
-      if (!isUpgrade && !isFreeAccount && !isInviteLink) await goto("/upgrade");
+      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isWelcome && !isTrialCoaching) await goto("/upgrade");
       return;
     }
     if (isUpgrade) await goto("/");
@@ -109,9 +123,13 @@
     // after a Stripe checkout, and can even belong to a different account after a
     // cross-tab login on this origin — reconciling first makes the UI and the token agree.
     await apiClient.reconcileSession();
+    // A Free or Pro account may be trying coaching with sample clients: know that before the guard.
+    if (apiClient.isAuthenticated() && apiClient.getUser()?.tier !== "Studio" && !apiClient.isSelfHosted()) {
+      await sandbox.refresh();
+    }
     ready = true;
     await guardRoute();
-    if (apiClient.isAuthenticated() && !isBlockedFreeTier) {
+    if (apiClient.isAuthenticated() && (!isBlockedFreeTier || coachTrial())) {
       try {
         viewingClient.setClients(await coachApi.listClients());
       } catch {
@@ -126,7 +144,7 @@
     // app) is what actually triggers this guard to re-check after those transitions.
     void page.url.pathname;
     if (ready) void guardRoute();
-    if (ready && apiClient.isAuthenticated() && !isBlockedFreeTier) {
+    if (ready && apiClient.isAuthenticated() && (!isBlockedFreeTier || isTrialCoaching)) {
       void coachBadges.refresh(isStudio);
       // Once per signed-in account (load() ignores repeat calls for the same account).
       if (page.url.searchParams.has("guide")) void guide.startFromLink(page.url);
@@ -155,7 +173,7 @@
   </div>
 {:else if isLogin}
   {@render children?.()}
-{:else if isUpgrade && apiClient.isAuthenticated()}
+{:else if (isUpgrade || isWelcome) && apiClient.isAuthenticated()}
   {@render children?.()}
 {:else if isInviteLink && isBlockedFreeTier && apiClient.isAuthenticated()}
   <div class="p-4">{@render children?.()}</div>
@@ -166,7 +184,7 @@
     </div>
     {@render children?.()}
   </div>
-{:else if apiClient.isAuthenticated() && !isBlockedFreeTier}
+{:else if apiClient.isAuthenticated() && (!isBlockedFreeTier || isTrialCoaching)}
   <Sidebar.Provider>
     <AppSidebar
       {isStudio}
@@ -188,7 +206,13 @@
       {/if}
       <main class="flex-1 px-4 py-6 sm:px-8 sm:py-7">
         <div class="mx-auto w-full max-w-[1120px]">
-          {@render children?.()}
+          {#if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/links")}
+            <StudioNeeded what="links" />
+          {:else if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/payments")}
+            <StudioNeeded what="payments" />
+          {:else}
+            {@render children?.()}
+          {/if}
         </div>
       </main>
     </Sidebar.Inset>

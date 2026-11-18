@@ -53,7 +53,17 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import { getNutritionDeps } from "$lib/features/nutrition/deps";
   import { onForeground } from "$lib/lifecycle";
   import { getNutritionTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
-  import { pushMealTemplate, lastSyncedAt } from "$lib/sync/syncService";
+  import {
+    pushMealTemplate,
+    lastSyncedAt,
+    firstDownloadAt,
+    syncRunning,
+    lastSyncFailed,
+    planIncludesSync,
+  } from "$lib/sync/syncService";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { firstDownloadState } from "$lib/sync/firstDownload";
+  import FirstDownloadNotice from "$lib/sync/FirstDownloadNotice.svelte";
   import { profile } from "$lib/stores/profile.store";
   import { fmtWeight, totalsFor, type NutritionState, type WeightUnit } from "$lib/features/nutrition/nutrition";
   import { basisForItem } from "$lib/features/nutrition/resolveFood";
@@ -342,10 +352,23 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
     return nut.targets.sourceLabel;
   });
 
-  // Login starts a background sync; reload once it lands so targets aren't stale.
+  // Right after signing in the diary is still downloading: say so, and show placeholders
+  // instead of "Nothing yet". Logging food works meanwhile.
+  const firstDownload = $derived(
+    firstDownloadState({
+      signedIn: authStore.isAuthenticated,
+      syncs: authStore.isAuthenticated && planIncludesSync(),
+      downloadedAt: $firstDownloadAt,
+      running: $syncRunning,
+      failed: $lastSyncFailed,
+    }),
+  );
+
+  // Login starts a background sync; reload once it lands so targets aren't stale. The first
+  // download counts too: it lands even when an unrelated part of the sync failed.
   let lastSyncSeen = $state<number | null>(null);
   $effect(() => {
-    const t = $lastSyncedAt;
+    const t = $lastSyncedAt + $firstDownloadAt;
     if (lastSyncSeen === null) {
       lastSyncSeen = t;
       return;
@@ -413,6 +436,16 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 
   {#if ui.error}<p class="px-4 py-2 text-sm text-destructive">{ui.error}</p>{/if}
 
+  {#if firstDownload}
+    <div class="px-3 pb-3">
+      <FirstDownloadNotice
+        status={firstDownload}
+        subject="diary"
+        detail="Meals, goal and weigh-ins. You can still log food now."
+      />
+    </div>
+  {/if}
+
   {#if ui.loading}
     <p class="px-4 py-6 text-sm text-muted-foreground">Loading…</p>
   {:else}
@@ -420,7 +453,14 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
       <!-- Summary: opens the goal -->
       <div class="rounded-2xl border border-border bg-card dark:border-transparent">
       <a href="/nutrition/goal" class="block rounded-2xl p-4 text-inherit" data-testid="day-summary">
-        {#if !nut?.goal && !nut?.coachPlan}
+        {#if firstDownload && !nut?.goal && !nut?.coachPlan}
+          {#if firstDownload === "loading"}
+            <span class="block h-4 w-3/4 animate-pulse rounded-md bg-muted"></span>
+            <span class="mt-2.5 block h-3 w-1/2 animate-pulse rounded-md bg-muted"></span>
+          {:else}
+            <span class="block text-sm text-muted-foreground">Your goal hasn't downloaded yet.</span>
+          {/if}
+        {:else if !nut?.goal && !nut?.coachPlan}
           <span class="flex items-center gap-2 text-sm font-medium"><Target class="size-4" /> Set a goal to get calorie and macro targets</span>
           <span class="mt-1 block text-xs text-muted-foreground tabular-nums">Eaten so far: {fmtNum(eaten.kcal)} kcal · {macroLine(eaten)}</span>
         {:else}
@@ -508,7 +548,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
               <span class="min-w-0 flex-1">
                 <span class="block text-[15px] font-semibold">{MEAL_LABELS[m]}</span>
                 <span class="block truncate text-xs text-muted-foreground tabular-nums">
-                  {#if all.length && mt}{fmtNum(mt.kcal)} kcal · {macroLine(mt)}{#if !open}{` · ${all.length} item${all.length === 1 ? "" : "s"}`}{/if}{:else}Nothing yet{/if}
+                  {#if all.length && mt}{fmtNum(mt.kcal)} kcal · {macroLine(mt)}{#if !open}{` · ${all.length} item${all.length === 1 ? "" : "s"}`}{/if}{:else if firstDownload === "loading"}<span class="mt-1 block h-3 w-1/2 animate-pulse rounded-md bg-muted" aria-label="Loading"></span>{:else if firstDownload}Not downloaded yet{:else}Nothing yet{/if}
                 </span>
               </span>
             </button>
@@ -574,7 +614,11 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
         <span class="min-w-0 flex-1">
           <span class="block text-xs font-medium text-muted-foreground">Weight trend</span>
           <span class="flex items-baseline gap-2">
-            <span class="text-[22px] font-bold tabular-nums">{fmtWeight(nut?.trend.currentKg ?? null, unit)}</span>
+            {#if firstDownload === "loading" && nut?.trend.currentKg == null}
+              <span class="my-2 block h-4 w-20 animate-pulse rounded-md bg-muted" aria-label="Loading"></span>
+            {:else}
+              <span class="text-[22px] font-bold tabular-nums">{fmtWeight(nut?.trend.currentKg ?? null, unit)}</span>
+            {/if}
             {#if nut && Math.abs(nut.trend.weeklyRateKg) >= 0.05}
               <span class="text-xs text-muted-foreground tabular-nums">
                 {nut.trend.weeklyRateKg > 0 ? "+" : ""}{(unit === "lbs" ? nut.trend.weeklyRateKg * 2.2046 : nut.trend.weeklyRateKg).toFixed(2)} / wk

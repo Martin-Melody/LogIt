@@ -25,7 +25,7 @@
   $effect(() => bottomNavHeight.set(footerHeight));
 
   // Bottom-nav pages in bar order (Start in the middle), for swiping and slide direction.
-  const tabs = $derived(tabHrefs($navConfig, NAV_ITEM_DEFS, authStore.isAuthenticated));
+  const tabs = $derived(tabHrefs($navConfig, NAV_ITEM_DEFS, authStore.ready ? authStore.isAuthenticated : null));
   const swipeOn = $derived($navConfig.swipe !== false);
 
   const swipeParams = $derived({

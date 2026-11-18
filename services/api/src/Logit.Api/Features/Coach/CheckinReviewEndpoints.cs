@@ -16,8 +16,8 @@ public static class CheckinReviewEndpoints
 
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/checkins/inbox", GetInbox).RequireTier(UserTier.Studio);
-        group.MapPost("/checkins/reviews", SetReviewed).RequireTier(UserTier.Studio);
+        group.MapGet("/checkins/inbox", GetInbox).RequireCoaching();
+        group.MapPost("/checkins/reviews", SetReviewed).RequireCoaching();
         group.MapGet("/checkins/reviews/mine", GetMyReviews);
     }
 

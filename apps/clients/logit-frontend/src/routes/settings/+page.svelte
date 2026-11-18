@@ -73,7 +73,7 @@
     DEFAULT_MUSCLE_GROUP_INSIGHT_ALGORITHM_ID,
   } from "@logit/core/usecases/progression/getMuscleGroupInsightConfig";
   import type { MuscleGroupInsightConfigView } from "@logit/core/usecases/progression/getMuscleGroupInsightConfig";
-  import { Settings2, TriangleAlert } from "lucide-svelte";
+  import { Monitor, Settings2, TriangleAlert } from "lucide-svelte";
   import {
     getAnalyticsConfig,
     setAnalyticsPlugin,
@@ -653,6 +653,18 @@
             <span class="text-left">
               <span class="block">Coaching</span>
               <span class="block text-xs text-muted-foreground">View invites, or manage clients on a Studio plan</span>
+            </span>
+          </span>
+          <ChevronRight class="h-4 w-4 shrink-0" />
+        </button>
+        <button type="button"
+          class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => goto("/settings/computer")}>
+          <span class="flex items-center gap-2">
+            <Monitor class="h-3.5 w-3.5 shrink-0" />
+            <span class="text-left">
+              <span class="block">Sign in on a computer</span>
+              <span class="block text-xs text-muted-foreground">Scan the code on app.getlogit.app, and see where you're signed in</span>
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />

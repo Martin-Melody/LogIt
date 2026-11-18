@@ -8,6 +8,7 @@
   import SharingSwitches from "$lib/features/coaching/SharingSwitches.svelte";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { formatMoney } from "@logit/core/domain/coachPayments";
+  import GetTheApp from "$lib/features/onboarding/GetTheApp.svelte";
 
   const PLAY_URL = "https://play.google.com/store/apps/details?id=ie.logit.app";
 
@@ -165,12 +166,26 @@
           </button>
           <p class="text-center text-xs leading-relaxed text-muted-foreground">Card, Google Pay or Apple Pay on Stripe's secure page. You pay {coachName} directly; coaching starts as soon as it goes through.</p>
         {/if}
-      {:else if done === "active" || info.relationship === "active"}
-        <p class="text-[13px]">{coachName} is your coach. Your program, check-ins and messages are in {isFree ? "the LogIt app" : "My coach"}.</p>
-        {#if !isFree}<a href="/my-coach" class="h-10 rounded-[9px] bg-primary text-center text-[13px] font-semibold leading-10 text-primary-foreground">Open My coach</a>{/if}
-      {:else if done === "requested" || info.relationship === "requested"}
-        <p class="text-[13px]">Request sent. {coachName} will see it and say yes or no. You'll find them in {isFree ? "the LogIt app" : "My coach"} once they accept.</p>
-        {#if !isFree}<a href="/my-coach" class="text-[13px] text-primary hover:underline">Change what you share or cancel the request in My coach ›</a>{/if}
+      {:else if done === "active" || info.relationship === "active" || done === "requested" || info.relationship === "requested"}
+        {@const connected = done === "active" || info.relationship === "active"}
+        <!-- W6: what happens next, with the app as the next step. -->
+        <ol aria-label="What happens next" class="flex flex-col gap-3">
+          <li class="flex items-center gap-3 text-sm">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-primary-foreground">✓</span>
+            {connected ? `Account made and connected to ${coachName}` : `Request sent: ${coachName} will say yes or no`}
+          </li>
+          <li class="flex items-center gap-3 text-sm font-semibold">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-primary text-[13px] font-bold">2</span>
+            Get the app: {connected ? "your program will be waiting in it" : "you'll see them there once they accept"}
+          </li>
+          <li class="flex items-center gap-3 text-sm text-muted-foreground">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-border text-[13px] font-bold">3</span>
+            Pick your training days and start week 1
+          </li>
+        </ol>
+        {#if !isFree}
+          <a href="/my-coach" class="text-[13px] text-primary hover:underline">{connected ? "Open My coach on the web ›" : "Change what you share or cancel the request in My coach ›"}</a>
+        {/if}
       {:else if info.state !== "active" && info.relationship !== "invited"}
         <p class="text-[13px] text-muted-foreground">This link {closedText[info.state]}. Ask {coachName} for a new one.</p>
       {:else}
@@ -185,6 +200,11 @@
         </button>
       {/if}
     </section>
+    {#if !info.isSelf && (done === "active" || done === "requested" || info.relationship === "active" || info.relationship === "requested")}
+      <GetTheApp title="Get Logit on your phone">
+        <span class="text-[13px] text-slate-400">{coachName}'s program, check-ins and messages all live in the app.</span>
+      </GetTheApp>
+    {/if}
     {#if isFree}<p class="text-center text-xs text-muted-foreground">Coaching works on the free plan. Everything happens in the LogIt app.</p>{/if}
   {/if}
 </div>

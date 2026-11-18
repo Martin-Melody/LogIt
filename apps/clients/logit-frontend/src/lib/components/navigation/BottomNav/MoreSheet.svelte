@@ -3,16 +3,24 @@
   import { page } from "$app/state";
   import { authStore } from "$lib/api/authStore.svelte";
   import { navConfig, NAV_ITEM_DEFS } from "$lib/stores/navConfig.store";
+  import { barSlots } from "$lib/features/navigation/tabSwipe";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
 
   const { open, onclose }: { open: boolean; onclose: () => void } = $props();
 
+  // Leaves out whatever is standing in on the bar (signed out), so it isn't listed twice.
+  const onBar = $derived(
+    new Set(
+      barSlots($navConfig, NAV_ITEM_DEFS, authStore.ready ? authStore.isAuthenticated : null)
+        .map((d) => d?.id),
+    ),
+  );
   const items = $derived(
     $navConfig.more
       .map((id) => NAV_ITEM_DEFS.find((d) => d.id === id))
       .filter((d): d is NonNullable<typeof d> =>
-        !!d && (!d.authRequired || authStore.isAuthenticated)
+        !!d && (!d.authRequired || authStore.isAuthenticated) && !onBar.has(d.id)
       )
   );
 

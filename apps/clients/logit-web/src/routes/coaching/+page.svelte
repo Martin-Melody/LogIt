@@ -2,6 +2,8 @@
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { apiClient } from "@logit/core/api/client";
   import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
+  import CoachStart from "$lib/features/onboarding/CoachStart.svelte";
+  import { coachTrial } from "$lib/workspace";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -95,7 +97,9 @@
     <h1 class="text-[26px] font-bold tracking-tight">Today</h1>
   </header>
 
-  <WelcomeCard walkthrough="studio" name={(apiClient.getUser()?.displayName || apiClient.getUser()?.username || "").split(" ")[0]} />
+  {#if !coachTrial()}<WelcomeCard walkthrough="studio" name={(apiClient.getUser()?.displayName || apiClient.getUser()?.username || "").split(" ")[0]} />{/if}
+
+  {#if overview}<CoachStart {overview} />{/if}
 
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
