@@ -662,7 +662,7 @@ test.describe("bodyweight loads", () => {
     await expect(page.getByRole("button", { name: /Warm-up ramp/ })).toHaveCount(0);
   });
 
-  test("the set number opens its options in the row; a tick asks how hard it was", async ({ page }) => {
+  test("a set's details open under it from the swipe's edit; a tick asks how hard it was", async ({ page }) => {
     await seed(page, {
       draft: makeDraftSession(makeStrengthBlock("b1", "Dips", [])),
       history: [
@@ -672,13 +672,17 @@ test.describe("bodyweight loads", () => {
     await goToSession(page);
     await expect.poll(() => getTargetText(page)).toBe("7×-25kg|7×-25kg|7×-25kg");
 
-    // The set number opens that set's options under it (design canvas S-C); every tap saves.
-    await page.getByRole("button", { name: "Set 2 options" }).click();
+    // Swipe left shows edit and delete; edit opens the set's details under it (design canvas
+    // S-C). Tapping the set number does nothing but drag. Every tap in the details saves.
+    await page.getByTestId("set-number").nth(1).click();
+    await expect(page.getByTestId("set-options")).toHaveCount(0);
+    await page.getByRole("button", { name: "Edit set" }).nth(1).dispatchEvent("click");
     const options = page.getByTestId("set-options");
     await expect(options).toBeVisible();
+    await expect(options.getByRole("button", { name: /Delete/ })).toHaveCount(0);
     await options.getByRole("button", { name: "2 left (RPE 8)" }).click();
-    await expect(page.getByRole("button", { name: "Set 2 options" })).toContainText("2 left");
-    await page.getByRole("button", { name: "Set 2 options" }).click();
+    await expect(page.getByTestId("set-number").nth(1)).toContainText("2 left");
+    await page.getByRole("button", { name: "Edit set" }).nth(1).dispatchEvent("click");
     await expect(options).toHaveCount(0);
 
     // Ticking set 1 asks how many more were in it (S-D); one tap answers.
@@ -687,7 +691,7 @@ test.describe("bodyweight loads", () => {
     await expect(ask).toBeVisible();
     await ask.getByRole("button", { name: "1 left" }).click();
     await expect(ask).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Set 1 options" })).toContainText("1 left");
+    await expect(page.getByTestId("set-number").first()).toContainText("1 left");
     await expect(page.getByTestId("set-reps").first()).toHaveValue("7");
   });
 });

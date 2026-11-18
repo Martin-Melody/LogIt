@@ -57,7 +57,7 @@
   import { get } from "svelte/store";
   import { untrack } from "svelte";
   import { profile } from "$lib/stores/profile.store";
-  import { reveal } from "$lib/transitions";
+  import { reveal, popIn } from "$lib/transitions";
   import ExerciseCard from "$lib/features/session/ui/ExerciseCard.svelte";
   import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
@@ -386,10 +386,12 @@
   }
 
   async function handleDeleteSet(setId: string) {
+    if (optionsSetId === setId) optionsSetId = null;
+    if (effortSetId === setId) effortSetId = null;
     await onMutate((s: WorkoutSession) => removeSet(s, blockId, setId));
   }
 
-  /** The set number opens that set's options in its row; again closes them (S-C). */
+  /** The swipe's edit button opens the set's details under its row; again closes them (S-C). */
   function openEditSet(setId: string, _setNumber: number | null = null) {
     optionsSetId = optionsSetId === setId ? null : setId;
     if (effortSetId === setId) effortSetId = null;
@@ -806,7 +808,7 @@
 >
   {#snippet chip()}
     {#if place && chosen}
-      <button type="button" onclick={() => (machinePickerOpen = true)}
+      <button type="button" onclick={() => (machinePickerOpen = true)} in:popIn
         class="flex min-h-9 max-w-full items-center gap-1.5 rounded-full bg-muted px-3 text-left text-[13px]"
         aria-label="Machine: {chosen.name} at {place.name}. Change">
         <span class="truncate"><strong class="font-semibold">{chosen.name}</strong> · {place.name}{machineDetail(chosen) ? ` · ${machineDetail(chosen)}` : ""}</span>
@@ -827,12 +829,12 @@
       {/if}
     {/if}
     {#if myGymNote}
-      <div role="status" class="mt-2 flex flex-col gap-1 rounded-lg bg-success/10 px-3 py-2.5 text-success">
+      <div role="status" transition:reveal class="mt-2 flex flex-col gap-1 rounded-lg bg-success/10 px-3 py-2.5 text-success">
         <span class="text-sm font-semibold">Saved to {myGymNote.name}</span>
         <span class="text-[13px] leading-snug text-foreground/80">Your machines now live in a place, so the next exercise that uses this one finds it too. Train somewhere else as well? Add it whenever you like.</span>
-        <span class="flex gap-4">
-          <button type="button" class="min-h-9 text-[13px] font-semibold" onclick={() => { const id = myGymNote?.id; myGymNote = null; if (id) void goto(`/settings/places/${id}`); }}>Rename {myGymNote.name}</button>
-          <button type="button" class="min-h-9 text-[13px]" onclick={() => (myGymNote = null)}>Got it</button>
+        <span class="mt-1 flex gap-2">
+          <button type="button" class="min-h-9 rounded-lg border border-success/40 bg-background px-3 text-[13px] font-semibold" onclick={() => { const id = myGymNote?.id; myGymNote = null; if (id) void goto(`/settings/places/${id}`); }}>Rename {myGymNote.name}</button>
+          <button type="button" class="min-h-9 rounded-lg px-3 text-[13px] text-foreground/80" onclick={() => (myGymNote = null)}>Got it</button>
         </span>
       </div>
     {/if}
@@ -864,7 +866,6 @@
           rpe={roundSet.rpe ?? null}
           prev={roundNum ? (prevLeadSets[roundNum - 1] ?? null) : null}
           target={roundSet.target ?? null}
-          onOpenDetails={() => openEditSet(roundSet.id, roundNum || null)}
           optionsOpen={optionsSetId === roundSet.id}
           focusReps={focusSetId === roundSet.id}
           onPickWeight={weightSource ? () => openWeightPicker(roundSet, roundNum) : undefined}
@@ -930,7 +931,6 @@
               rpe={lead.rpe ?? null}
               prev={prevLeadSets[group.leadNum - 1] ?? null}
               target={lead.target ?? null}
-              onOpenDetails={() => openEditSet(lead.id, group.leadNum)}
               optionsOpen={optionsSetId === lead.id}
               focusReps={focusSetId === lead.id}
               onPickWeight={weightSource ? () => openWeightPicker(lead, group.leadNum) : undefined}
@@ -972,7 +972,6 @@
                   {bodyweight}
                   rpe={drop.rpe ?? null}
                   target={drop.target ?? null}
-                  onOpenDetails={() => openEditSet(drop.id)}
                   optionsOpen={optionsSetId === drop.id}
                   focusReps={focusSetId === drop.id}
                   onPickWeight={weightSource ? () => openWeightPicker(drop, 0) : undefined}
@@ -1061,7 +1060,6 @@
         restMs={restFor(set)}
         disabled={saving}
         onChange={(patch) => patchSet(set.id, patch)}
-        onDelete={() => { optionsSetId = null; return handleDeleteSet(set.id); }}
       />
     </div>
   {:else if effortSetId === set.id}

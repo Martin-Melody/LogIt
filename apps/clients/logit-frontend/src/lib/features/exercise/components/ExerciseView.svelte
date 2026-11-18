@@ -23,7 +23,7 @@
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import { exportExercisesAsPack, isUserExercise } from "$lib/plugins";
   import { profile } from "$lib/stores/profile.store";
-  import { reveal } from "$lib/transitions";
+  import { reveal, popIn } from "$lib/transitions";
   import { EQUIPMENT, usesBodyweightLoad, type Equipment, type Exercise, type ExercisePatch, type ExerciseType, type MuscleGroup } from "@logit/core/domain/exercise";
   import { EQUIPMENT_LABEL, cleanCues, copyLibraryItem, type CoachRef } from "@logit/core/domain/library";
   import { chosenMachine, machinesFor, type Place, type PlaceMachine } from "@logit/core/domain/place";
@@ -252,7 +252,8 @@
     {/each}
   </div>
 
-  <div class="flex flex-col gap-5 px-4 py-4" role="tabpanel">
+  {#key shown}
+  <div class="flex flex-col gap-5 px-4 py-4" role="tabpanel" in:popIn={{ duration: 180, y: 6 }}>
     {#if shown === "progress"}
       {@render today?.()}
       <ExerciseProgressionPanel exercise={{ id: ex.id, name: ex.name }} showMetrics={false} />
@@ -366,15 +367,16 @@
         {:else}
           <p class="rounded-lg bg-muted/60 px-3 py-2.5 text-[13px] leading-snug">
             {fromCoach ? `From ${fromCoach.coachName}, who keeps it up to date.` : "Built into LogIt, so the name, muscles and how-to stay as they are."}
-            <button type="button" class="inline-flex items-center gap-1 font-semibold underline" onclick={() => void makeOwnCopy()}><Copy class="h-3.5 w-3.5" />Make my own copy</button> to change them.
+            Make your own copy to change them.
           </p>
+          <Button variant="outline" class="h-11 self-start" onclick={() => void makeOwnCopy()}><Copy class="h-4 w-4" /> Make my own copy</Button>
         {/if}
       </section>
 
-      <section class="flex flex-col">
+      <section class="flex flex-col gap-2">
         {#if isUserExercise(ex)}
           {#if exportOpen}
-            <div class="flex flex-col gap-2 border-t border-border/60 py-3" transition:reveal>
+            <div class="flex flex-col gap-2 rounded-lg border border-border p-3" transition:reveal>
               <p class="text-xs text-muted-foreground">Saves it as a <code>.logit-pack.json</code> file. Anyone can install it from Plugins › Add › File.</p>
               <input bind:value={exportName} placeholder="Pack name" aria-label="Pack name" class="h-10 rounded-md border bg-background px-3 text-sm" />
               {#if exportError}<p class="text-xs text-destructive">{exportError}</p>{/if}
@@ -384,9 +386,9 @@
               </div>
             </div>
           {:else}
-            <button type="button" class="flex min-h-12 items-center gap-2 border-t border-border/60 text-left text-[15px]" onclick={() => { exportName = `${ex.name} pack`; exportOpen = true; }}>
-              <Package class="h-4 w-4 text-muted-foreground" /> Share as a pack
-            </button>
+            <Button variant="outline" class="h-11 w-full justify-start" onclick={() => { exportName = `${ex.name} pack`; exportOpen = true; }}>
+              <Package class="h-4 w-4" /> Share as a pack
+            </Button>
           {/if}
         {/if}
         <ConfirmDialog
@@ -397,10 +399,10 @@
           onConfirm={doReset}
         >
           {#snippet child({ props })}
-            <button {...props} type="button" class="flex min-h-14 flex-col items-start justify-center border-t border-border/60 text-left">
-              <span class="flex items-center gap-2 text-[15px]"><RotateCcw class="h-4 w-4 text-muted-foreground" /> Start progression over</span>
-              <span class="pl-6 text-xs text-muted-foreground">{resetDone ? "Done. The next workout plans it afresh." : "Your history stays. Asks first."}</span>
-            </button>
+            <Button {...props} variant="outline" class="h-auto min-h-12 w-full flex-col items-start gap-0.5 py-2 text-left">
+              <span class="flex items-center gap-2"><RotateCcw class="h-4 w-4" /> Start progression over</span>
+              <span class="pl-6 text-xs font-normal text-muted-foreground">{resetDone ? "Done. The next workout plans it afresh." : "Your history stays. Asks first."}</span>
+            </Button>
           {/snippet}
         </ConfirmDialog>
         {#if editable}
@@ -412,13 +414,14 @@
             onConfirm={doDelete}
           >
             {#snippet child({ props })}
-              <button {...props} type="button" aria-label="Delete exercise" class="flex min-h-12 items-center gap-2 border-t border-border/60 text-left text-[15px] text-destructive">
+              <Button {...props} variant="outline" aria-label="Delete exercise" class="h-11 w-full justify-start border-destructive/50 text-destructive">
                 <Trash2 class="h-4 w-4" /> Delete exercise
-              </button>
+              </Button>
             {/snippet}
           </ConfirmDialog>
         {/if}
       </section>
     {/if}
   </div>
+  {/key}
 {/if}

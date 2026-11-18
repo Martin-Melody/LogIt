@@ -5,6 +5,8 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
   import SetOptionsTray from "$lib/features/session/ui/SetOptionsTray.svelte";
+  import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
+  import { reveal } from "$lib/transitions";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
   import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
@@ -349,6 +351,7 @@
         </div>
         <div class="pb-1.5">
           {#each sets as s, i (s.id)}
+            <SwipeRevealRow disabled={saving} actionsWidth={48} onEdit={() => (openSetId = openSetId === s.id ? null : s.id)}>
             <SetRow
               setNumber={workingNumber(sets, s.id)}
               setType={s.setType}
@@ -363,12 +366,12 @@
               gripAction={noGrip}
               onWeightChange={(w) => apply((x) => updateSet(x, b.id, s.id, { weight: w }))}
               onRepsChange={(r) => apply((x) => updateSet(x, b.id, s.id, { reps: r, completed: r > 0 }))}
-              onOpenDetails={() => (openSetId = openSetId === s.id ? null : s.id)}
               optionsOpen={openSetId === s.id}
               onRemove={() => apply((x) => removeSet(x, b.id, s.id))}
             />
+            </SwipeRevealRow>
             {#if openSetId === s.id}
-              <SetOptionsTray
+              <div transition:reveal><SetOptionsTray
                 setNumber={workingNumber(sets, s.id)}
                 setType={s.setType}
                 rpe={s.rpe}
@@ -377,8 +380,7 @@
                 showRest={false}
                 disabled={saving}
                 onChange={(patch) => apply((x) => updateSet(x, b.id, s.id, patch))}
-                onDelete={() => { openSetId = null; apply((x) => removeSet(x, b.id, s.id)); }}
-              />
+              /></div>
             {/if}
           {:else}
             <p class="px-3.5 py-2 text-xs text-muted-foreground">No sets. Add one with +.</p>

@@ -5,6 +5,7 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Pencil, Plus } from "lucide-svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
   import type { Place, PlaceMachine } from "@logit/core/domain/place";
   import { placesStore } from "./places.svelte";
 
@@ -86,9 +87,9 @@
     </div>
     <p class="text-[13px] text-muted-foreground">The sets you haven't done yet move to the one you pick. Next time at {place.name} it starts there.</p>
     {#if onChangePlace}
-      <button type="button" class="min-h-10 self-start text-sm text-muted-foreground underline" onclick={() => { onOpenChange(false); onChangePlace?.(); }}>
+      <Button variant="outline" class="h-11" onclick={() => { onOpenChange(false); onChangePlace?.(); }}>
         Not at {place.name} today?
-      </button>
+      </Button>
     {/if}
   </Dialog.Content>
 </Dialog.Root>

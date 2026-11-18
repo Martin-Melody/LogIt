@@ -76,9 +76,9 @@
         ? `${changing ? "Use" : "Start at"} ${places.find((p) => p.id === chosen)?.name ?? "this place"}`
         : changing ? "Somewhere else" : "Start somewhere else"}
     </Button>
-    {#if !changing}<div class="flex items-center justify-between">
-      <button type="button" class="min-h-11 text-sm text-muted-foreground" onclick={() => done(session.placeId ?? null)}>Skip, just start</button>
-      <button type="button" class="min-h-11 text-sm text-muted-foreground underline" onclick={() => { placesStore.setAsk(false); done(session.placeId ?? null); }}>Don't ask me this</button>
+    {#if !changing}<div class="grid grid-cols-2 gap-2">
+      <Button variant="outline" class="h-11" onclick={() => done(session.placeId ?? null)}>Skip, just start</Button>
+      <Button variant="ghost" class="h-11 text-muted-foreground" onclick={() => { placesStore.setAsk(false); done(session.placeId ?? null); }}>Don't ask me this</Button>
     </div>{/if}
   </Dialog.Content>
 </Dialog.Root>

@@ -7,7 +7,10 @@
   // Used by Settings › Your places and, as a sheet, from a workout (M1/M2): there the place and
   // the exercise are filled in, and with no place yet the first machine makes "My gym" (M3).
   import { onMount, untrack } from "svelte";
-  import { ArrowLeft, Search, X } from "lucide-svelte";
+  import { ArrowLeft, Plus, Search, X } from "lucide-svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { fade } from "svelte/transition";
+  import { reveal, popIn } from "$lib/transitions";
   import { placesStore } from "$lib/features/places/places.svelte";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { createId } from "@logit/core/domain/ids";
@@ -150,13 +153,15 @@
 
 <div class="flex flex-col gap-4">
   <div class="flex min-h-11 items-center justify-between">
-    <button type="button" class="flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground"
+    <Button variant="outline" size="sm" class="h-10"
       onclick={() => (step === 2 && !existing ? (step = 1) : onBack())}>
       <ArrowLeft class="h-4 w-4" /> {step === 2 && !existing ? "Back" : backLabel}
-    </button>
+    </Button>
     {#if !existing}<span class="text-xs text-muted-foreground">{step} of 2</span>{/if}
   </div>
 
+  {#key step}
+  <div class="flex flex-col gap-4" in:popIn={{ duration: 180, y: 8 }}>
   {#if step === 1}
     <div class="flex flex-col gap-1">
       <span class="text-xs font-semibold text-muted-foreground">New machine at {place?.name ?? "My gym"}{forExercise ? ` · for ${forExercise.name}` : ""}</span>
@@ -199,7 +204,7 @@
       </div>
 
       {#if exact === null}
-        <div class="flex flex-col gap-2 rounded-xl border border-border p-2.5">
+        <div class="flex flex-col gap-2 rounded-xl border border-border p-2.5" in:reveal>
           <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">From the top</span>
           <div class="grid grid-cols-3 gap-1.5">
             <label class="flex flex-col gap-0.5 text-xs font-medium">Starts at<input type="number" inputmode="decimal" min="0" bind:value={start} class="h-10 rounded-md border bg-background px-2 text-base font-semibold" /></label>
@@ -208,26 +213,26 @@
           </div>
           {#each runs.slice(1) as r, j (j)}
             {@const i = j + 1}
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between" transition:reveal>
               <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Then</span>
               <button type="button" aria-label="Remove this run" class="flex h-8 w-8 items-center justify-center text-muted-foreground" onclick={() => (runs = runs.filter((_, k) => k !== i))}><X class="h-4 w-4" /></button>
             </div>
-            <div class="grid grid-cols-2 gap-1.5">
+            <div class="grid grid-cols-2 gap-1.5" transition:reveal>
               <label class="flex flex-col gap-0.5 text-xs font-medium">Goes up by<input type="number" inputmode="decimal" min="0" value={r.step} oninput={(e) => setRun(i, { step: Number(e.currentTarget.value) })} class="h-10 rounded-md border bg-background px-2 text-base font-semibold" /></label>
               <label class="flex flex-col gap-0.5 text-xs font-medium">Up to<input type="number" inputmode="decimal" min="0" value={r.to} oninput={(e) => setRun(i, { to: Number(e.currentTarget.value) })} class="h-10 rounded-md border bg-background px-2 text-base font-semibold" /></label>
             </div>
           {/each}
-          <button type="button" class="min-h-10 self-start text-sm font-semibold"
+          <Button variant="outline" size="sm" class="self-start"
             onclick={() => { const last = runs.at(-1)!; runs = [...runs, { step: last.step * 2, to: last.to + last.step * 2 * 5 }]; }}>
-            + The jumps change partway
-          </button>
+            <Plus class="h-4 w-4" /> The jumps change partway
+          </Button>
         </div>
-        <button type="button" class="min-h-10 self-start text-sm font-medium underline" onclick={() => (exact = values.join(", "))}>Odd numbers on some plates? Type them as they are</button>
+        <Button variant="outline" size="sm" class="h-auto min-h-10 self-start whitespace-normal py-2 text-left" onclick={() => (exact = values.join(", "))}>Odd numbers on some plates? Type them as printed</Button>
       {:else}
-        <label class="flex flex-col gap-1 text-sm font-medium">Every setting, as printed (separated by commas)
+        <label class="flex flex-col gap-1 text-sm font-medium" in:reveal>Every setting, as printed (separated by commas)
           <textarea bind:value={exact} rows="3" class="rounded-md border bg-background px-3 py-2 text-sm"></textarea>
         </label>
-        <button type="button" class="min-h-10 self-start text-sm font-medium underline" onclick={() => (exact = null)}>Use runs instead</button>
+        <Button variant="outline" size="sm" class="self-start" onclick={() => (exact = null)}>Use runs instead</Button>
       {/if}
 
       <p class="rounded-lg bg-muted px-3 py-2.5 text-[13px]" aria-live="polite">
@@ -269,7 +274,7 @@
           {e.name}
         </label>
       {/each}
-      {#if exerciseIds.length}<p class="text-xs text-muted-foreground">{exerciseIds.length} picked.</p>{/if}
+      {#if exerciseIds.length}<p class="text-xs text-muted-foreground" transition:fade={{ duration: 120 }}>{exerciseIds.length} picked.</p>{/if}
     </fieldset>
 
     <button type="button" class="mt-2 h-12 rounded-lg bg-primary text-[15px] font-medium text-primary-foreground disabled:opacity-50"
@@ -277,4 +282,6 @@
       {existing ? "Save" : "Save machine"}
     </button>
   {/if}
+  </div>
+  {/key}
 </div>

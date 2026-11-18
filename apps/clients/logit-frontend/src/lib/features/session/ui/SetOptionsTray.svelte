@@ -1,8 +1,10 @@
-<!-- A set's options, opened in the row by tapping its number (design canvas S-C): kind of set,
-     how many more you could have done, rest after it, a note, delete. No sheet and no Save:
-     every tap saves, and the other sets stay in view. -->
+<!-- A set's details, opened under the row by swiping it left and tapping edit (design canvas
+     S-C, Martin 2026-11-18): kind of set, how many more you could have done, rest after it, a
+     note. Delete stays in the swipe. No sheet and no Save: every tap saves, and the other sets
+     stay in view. A light panel shows where it ends and the next set begins. -->
 <script lang="ts">
-  import { Trash2 } from "lucide-svelte";
+  import { ChevronDown } from "lucide-svelte";
+  import { reveal } from "$lib/transitions";
   import { SET_TYPE_META, type SetEntry, type SetType } from "@logit/core/domain/workout";
   import { EFFORT, effortFor } from "./effort";
 
@@ -17,7 +19,6 @@
     showRest = true,
     disabled = false,
     onChange,
-    onDelete,
   }: {
     setNumber?: number | null;
     setType: SetType;
@@ -29,7 +30,6 @@
     showRest?: boolean;
     disabled?: boolean;
     onChange: (patch: Patch) => void | Promise<void>;
-    onDelete: () => void | Promise<void>;
   } = $props();
 
   const MAIN: SetType[] = ["warmup", "normal", "dropset", "failure"];
@@ -47,10 +47,10 @@
   const stepRest = (d: number) => onChange({ restDurationMs: Math.max(15_000, Math.min(600_000, (restMs ?? 75_000) + d)) });
 
   const chip = (on: boolean) =>
-    `min-h-10 rounded-lg border px-1 text-[12px] ${on ? "border-2 border-foreground font-semibold" : "border-border"}`;
+    `min-h-10 rounded-lg border bg-background px-1 text-[12px] ${on ? "border-2 border-foreground font-semibold" : "border-border"}`;
 </script>
 
-<div class="flex flex-col gap-3 border-t border-border/60 px-3 pb-3 pt-2.5" data-testid="set-options" aria-label="Set {setNumber ?? ''} options">
+<div class="mx-2 mb-2 mt-1 flex flex-col gap-3 rounded-xl bg-muted/60 px-3 pb-3 pt-3" data-testid="set-options" aria-label="Set {setNumber ?? ''} options">
   <div role="group" aria-label="Kind of set" class="flex flex-col gap-1.5">
     <div class="grid grid-cols-4 gap-1">
       {#each MAIN as t (t)}
@@ -58,13 +58,15 @@
       {/each}
     </div>
     {#if showOthers}
-      <div class="grid grid-cols-4 gap-1">
+      <div class="grid grid-cols-4 gap-1" transition:reveal>
         {#each others as t (t)}
           <button type="button" aria-pressed={setType === t} class={chip(setType === t)} {disabled} onclick={() => onChange({ setType: t })}>{label(t)}</button>
         {/each}
       </div>
     {:else}
-      <button type="button" class="min-h-8 self-start text-xs text-muted-foreground" onclick={() => (moreKinds = true)}>More kinds: AMRAP, rest-pause, myo-reps</button>
+      <button type="button" class="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-background text-[12px] text-muted-foreground" onclick={() => (moreKinds = true)}>
+        More kinds: AMRAP, rest-pause, myo-reps <ChevronDown class="h-3.5 w-3.5" />
+      </button>
     {/if}
   </div>
 
@@ -81,9 +83,9 @@
 
   {#if showRest}<div class="flex items-center gap-2">
     <span class="w-16 shrink-0 text-[13px] text-muted-foreground">Rest</span>
-    <button type="button" aria-label="15 seconds less rest" class="h-10 w-11 rounded-lg border border-border text-base" {disabled} onclick={() => stepRest(-15_000)}>−</button>
+    <button type="button" aria-label="15 seconds less rest" class="h-10 w-11 rounded-lg border border-border bg-background text-base" {disabled} onclick={() => stepRest(-15_000)}>−</button>
     <span class="flex-1 text-center text-[15px] font-semibold tabular-nums">{rest(restMs)}</span>
-    <button type="button" aria-label="15 seconds more rest" class="h-10 w-11 rounded-lg border border-border text-base" {disabled} onclick={() => stepRest(15_000)}>+</button>
+    <button type="button" aria-label="15 seconds more rest" class="h-10 w-11 rounded-lg border border-border bg-background text-base" {disabled} onclick={() => stepRest(15_000)}>+</button>
   </div>{/if}
 
   <div class="flex items-center gap-2">
@@ -91,8 +93,5 @@
     <input id="set-note-{setNumber}" type="text" placeholder="Optional" value={note ?? ""} {disabled}
       onchange={(e) => onChange({ note: (e.currentTarget as HTMLInputElement).value.trim() || null })}
       class="h-10 min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 text-sm" />
-    <button type="button" aria-label="Delete set {setNumber ?? ''}" class="flex h-10 w-11 items-center justify-center text-destructive" {disabled} onclick={() => void onDelete()}>
-      <Trash2 class="h-4 w-4" />
-    </button>
   </div>
 </div>
