@@ -5,13 +5,15 @@
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight, trimWeight, formatLoad } from "@logit/core/domain/units";
   import { setTypeMeta, type SetTarget } from "@logit/core/domain/workout";
   import { formatTargetReps } from "$lib/features/session/planFormat";
+  import { effortLabel } from "./effort";
 
   // One set: "# | Last | weight | reps | tick". The plan sits in the boxes as blue
   // placeholder text until the set is done or something else is typed; ticking an
-  // untouched planned set logs the plan. The rest (type, RPE, note, rest, machine)
-  // lives in the set card, opened by tapping the set number (design canvas X4) or by
+  // untouched planned set logs the plan. The rest (kind, effort, rest, note, delete)
+  // opens in the row under it when the set number is tapped (design canvas S-C), or by
   // swiping. When Logit knows the real weights (a machine's settings, the plates or
-  // dumbbells at your place), tapping the weight opens a picker instead (X2/X3).
+  // dumbbells at your place), tapping the weight opens a picker (X2/X3); otherwise the
+  // weight is typed right here.
   const {
     setNumber = 1,
     setType = "normal",
@@ -31,6 +33,8 @@
     onOpenDetails = () => {},
     onPickWeight,
     onRemove,
+    optionsOpen = false,
+    focusReps = false,
   } = $props<{
     setNumber?: number;
     setType?: string;
@@ -53,6 +57,10 @@
     onPickWeight?: () => void;
     /** Editing a past session: the last cell takes the set out instead of ticking it. */
     onRemove?: () => void | Promise<void>;
+    /** The set's options are open under the row (S-C). */
+    optionsOpen?: boolean;
+    /** Put the cursor in reps (a set ticked with nothing entered, or one just added). */
+    focusReps?: boolean;
   }>();
 
   const meta = $derived(setTypeMeta(setType));
@@ -87,6 +95,13 @@
 
   let repsEl = $state<HTMLInputElement | null>(null);
 
+  $effect(() => {
+    if (focusReps && repsEl) {
+      repsEl.focus();
+      repsEl.select();
+    }
+  });
+
   function num(value: string) {
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
@@ -118,18 +133,19 @@
 </script>
 
 <div
-  class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-0.5 transition-colors {completed
+  class="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-0.5 transition-colors {completed
     ? 'bg-muted/40'
     : ''}"
 >
   <!-- Set number: tap for the set's options (X4); hold and drag to reorder -->
   <button
     type="button"
-    class="flex h-11 flex-col items-center justify-center rounded-md text-muted-foreground hover:bg-muted active:cursor-grabbing"
+    class="flex h-11 flex-col items-center justify-center gap-0.5 rounded-md active:cursor-grabbing {optionsOpen ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}"
     style="touch-action: none"
     use:gripAction
     onclick={onOpenDetails}
     aria-label="Set {setNumber || ''} options"
+    aria-expanded={optionsOpen}
     data-testid="set-number"
     {disabled}
   >
@@ -144,7 +160,7 @@
       <span class="text-xs tabular-nums">{setNumber}</span>
     {/if}
     {#if rpe != null}
-      <span class="text-[9px] leading-none tabular-nums text-muted-foreground" title="RPE {rpe}">@{rpe}</span>
+      <span class="whitespace-nowrap text-[9px] leading-none tabular-nums {optionsOpen ? '' : 'text-muted-foreground'}" title="RPE {rpe}">{effortLabel(rpe)}</span>
     {/if}
   </button>
 

@@ -3,6 +3,10 @@ import { browser } from "$app/environment";
 import { get, writable } from "svelte/store";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { pushProfile, setProfileUpdatedAtMs, buildRemoteProfile } from "$lib/sync/syncService";
+import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
+
+/** On the phone the profile lives in the local account row; this device setting rides beside it. */
+const ASK_EFFORT_KEY = "logit:ask-effort:v1";
 
 export type UserProfile = {
   name: string;
@@ -17,6 +21,8 @@ export type UserProfile = {
   restDefaults: Record<string, number | undefined>;
   /** Which side leads for unilateral mobility drills. */
   mobilityLeadSide: "left" | "right";
+  /** After a set is ticked, ask "how many more could you have done?" (design canvas S-D). */
+  askEffortAfterSet: boolean;
 };
 
 const STORAGE_KEY = "logit:profile:v1";
@@ -59,6 +65,7 @@ export const defaultProfile: UserProfile = {
   blocksCollapsedByDefault: true,
   restDefaults: defaultRestDefaults,
   mobilityLeadSide: "left",
+  askEffortAfterSet: true,
 };
 
 function loadFromStorage(): UserProfile {
@@ -120,6 +127,7 @@ function createProfileStore() {
         blocksCollapsedByDefault: account.blocksCollapsedByDefault,
         restDefaults,
         mobilityLeadSide: account.mobilityLeadSide ?? "left",
+        askEffortAfterSet: getAccountItem(ASK_EFFORT_KEY) !== "false",
       });
     },
 
@@ -178,6 +186,7 @@ function createProfileStore() {
             if (patch.blocksCollapsedByDefault !== undefined) accountPatch.blocksCollapsedByDefault = patch.blocksCollapsedByDefault;
             if (patch.restDefaults !== undefined)            accountPatch.restDefaultsJson = JSON.stringify(patch.restDefaults);
             if (patch.mobilityLeadSide !== undefined)        accountPatch.mobilityLeadSide = patch.mobilityLeadSide;
+            if (patch.askEffortAfterSet !== undefined)       setAccountItem(ASK_EFFORT_KEY, String(patch.askEffortAfterSet));
 
             _nativeRepo.updateLocalAccount(ownerId, accountPatch as Parameters<typeof _nativeRepo.updateLocalAccount>[1]).catch((e) => log.error("profile", "Could not update the local account", e));
           }
