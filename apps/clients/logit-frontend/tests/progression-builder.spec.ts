@@ -73,7 +73,7 @@ test("build an algorithm, preview it, and use it on one exercise", async ({ page
   await page.getByLabel("Name").fill("Top and back-offs");
   await page.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/\/settings/);
-  await expect(page.getByText("Top and back-offs")).toBeVisible();
+  await expect(page.getByText("Top and back-offs", { exact: true })).toBeVisible(); // not the "Saved …" toast
 
   await page.goto("/exercises/core_bench_press");
   const section = page.getByRole("region", { name: "How it progresses" });
