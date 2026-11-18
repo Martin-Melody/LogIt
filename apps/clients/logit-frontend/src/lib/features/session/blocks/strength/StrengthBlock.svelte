@@ -1,3 +1,9 @@
+<script lang="ts" module>
+  // Blocks re-planned onto the place's machine this run (see replanForMachine), so going back to
+  // the workout screen doesn't re-plan over weights typed since.
+  const replanned = new Set<string>();
+</script>
+
 <script lang="ts">
   import { toast } from "$lib/components/ui/sonner/index";
 
@@ -32,9 +38,16 @@
   import type { ProgressionOutput } from "@logit/core/domain/progression";
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
   import { getExerciseRepo } from "$lib/data/repoProvider";
-  import type { ExerciseType, Machine } from "@logit/core/domain/exercise";
-  import { effectiveMachine } from "@logit/core/domain/place";
+  import type { Exercise, ExerciseType, Machine } from "@logit/core/domain/exercise";
+  import { chosenMachine, dumbbellWeightsKg, effectiveMachine, machinesFor, type ExtraLoad, type Place, type PlaceMachine } from "@logit/core/domain/place";
   import { placesStore } from "$lib/features/places/places.svelte";
+  import { goto } from "$app/navigation";
+  import { formatLoad } from "@logit/core/domain/units";
+  import MachinePickerSheet from "$lib/features/places/MachinePickerSheet.svelte";
+  import WeightPickerSheet from "$lib/features/places/WeightPickerSheet.svelte";
+  import AtTheTopCard from "$lib/features/places/AtTheTopCard.svelte";
+  import type { WeightSource } from "$lib/features/places/weightSource";
+  import ExerciseInfoSheet from "$lib/features/session/ui/ExerciseInfoSheet.svelte";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { getLoadMode, effectiveLoadKg } from "@logit/core/domain/bodyweight";
   import { repsAtLoad } from "@logit/core/domain/oneRepMax";
@@ -75,6 +88,14 @@
   // none yet, and after a swap (replacing only the planned, not-yet-done sets).
   let planPending = $state(untrack(() => data.sets.length === 0));
   let exerciseData = $state<{ id: string; machines: Machine[]; defaultMachineId?: string; exerciseType?: ExerciseType } | null>(null);
+  let exercise = $state<Exercise | null>(null);
+  // The workout's place (My gym): set when it started or by "Where are you today?". Sessions
+  // from before places have none set, so they use today's usual place.
+  const placeId = $derived($currentSession?.placeId);
+  const place = $derived(placeId === undefined ? placesStore.defaultFor() : placesStore.byId(placeId));
+  const placeMachines = $derived(place && exercise ? machinesFor(place, exercise.id) : []);
+  const chosen = $derived(place && exercise ? chosenMachine(place, exercise.id) : null);
+  let machinePickerOpen = $state(false);
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
   // An exercise never done before (design canvas O4): its first set is the starting point
@@ -129,8 +150,14 @@
     swapOpen = true;
   }
   let detailExerciseId = $state<string | null>(null);
+  /** The name opens the read-first info sheet (X5); editing is a link inside it. */
+  let infoOpen = $state(false);
 
   function openDetail() {
+    infoOpen = true;
+  }
+
+  function openEditor() {
     if (data.exerciseId) detailExerciseId = data.exerciseId;
   }
 
@@ -162,8 +189,16 @@
   $effect(() => {
     const exId = data.exerciseId;
     const name = data.exerciseName;
-    void loadExerciseData(exId, name);
     void loadPrevSets(name, exId);
+  });
+
+  // Again when the workout's place, or the machine picked there, changes.
+  $effect(() => {
+    const exId = data.exerciseId;
+    const name = data.exerciseName;
+    const at = place;
+    void at?.updatedAtMs;
+    untrack(() => void loadExerciseData(exId, name, at));
   });
 
   async function loadPrevSets(name: string, exerciseId?: string) {
@@ -189,30 +224,45 @@
     }
   }
 
-  async function loadExerciseData(exerciseId?: string, name?: string) {
+  async function loadExerciseData(exerciseId?: string, name?: string, at: Place | null = place) {
     try {
       const ex = exerciseId
         ? await getExerciseRepo().getById(exerciseId)
         : name ? await getExerciseRepo().getByName(name) : null;
-      // Machines come from your place when you have one (Settings › Your places): today's
-      // usual place, else the last one used. Without places, the exercise's own machines.
-      const place = placesStore.defaultFor();
-      const here = ex && place ? placesStore.machinesFor(place.id, ex.id) : [];
-      const atPlace = here.map(effectiveMachine);
+      exercise = ex;
+      // Machines come from the workout's place when there is one (My gym): the one picked for
+      // this exercise there, else the first that's in. Without places, the exercise's own machines.
+      const here = ex && at ? machinesFor(at, ex.id) : [];
+      const chosen = ex && at ? chosenMachine(at, ex.id) : null;
       exerciseData = ex
-        ? atPlace.length
-          ? { id: ex.id, machines: atPlace, defaultMachineId: (here.find((m) => m.status === "in") ?? here[0]!).id, exerciseType: ex.exerciseType }
+        ? here.length
+          ? { id: ex.id, machines: here.map(effectiveMachine), defaultMachineId: chosen?.id, exerciseType: ex.exerciseType }
           : { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId, exerciseType: ex.exerciseType }
         : null;
+      await replanForMachine(at, chosen);
     } catch {
       exerciseData = null;
     }
   }
 
+  // Plans made before the place was known (a planned split day, a changed machine) move onto
+  // the machine picked here: rounded to its settings, starting from the last time on it. Once
+  // per workout, block and machine, and only while nothing has been logged.
+  async function replanForMachine(at: Place | null, chosen: PlaceMachine | null) {
+    if (!at || !chosen) return;
+    const s = get(currentSession);
+    const key = `${s?.id}|${blockId}|${at.id}|${chosen.id}`;
+    if (!s || replanned.has(key) || data.sets.some((x) => x.completed)) return;
+    replanned.add(key);
+    await loadSuggestion(data.exerciseName, data.exerciseId);
+    if (suggestion && suggestion.sets.length > 0) await applyPlan(suggestion);
+  }
+
   async function loadSuggestion(name: string, exerciseId?: string) {
     try {
       const session = get(currentSession) ?? undefined;
-      suggestion = await getSuggestion({ id: exerciseId, name }, getProgressionDeps(), undefined, session);
+      const machine = place ? exerciseData?.machines.find((m) => m.id === exerciseData?.defaultMachineId) : undefined;
+      suggestion = await getSuggestion({ id: exerciseId, name }, getProgressionDeps(), undefined, session, undefined, undefined, { machine });
     } catch {
       suggestion = null;
     }
@@ -556,6 +606,79 @@
     });
   }
 
+  // ── Weights from what's real (X2/X3) ──────────────────────────────────────────────
+  // A machine's own settings, the plates on this place's bar, or its dumbbells. Without a
+  // place (or for other kit), the weight is typed as before.
+  const weightSource = $derived.by((): WeightSource | null => {
+    if (bodyweight) return null;
+    const machine = exerciseData?.machines.find((m) => m.id === exerciseData?.defaultMachineId);
+    if (machine && machineWeightsKg(machine)?.length) return { kind: "machine", machine, placeName: place?.name };
+    if (!place || !exercise) return null;
+    if (exercise.equipment === "barbell" && place.barbell) return { kind: "bar", barbell: place.barbell, placeName: place.name };
+    if (exercise.equipment === "dumbbell" && place.dumbbells) return { kind: "dumbbells", weightsKg: dumbbellWeightsKg(place.dumbbells), placeName: place.name };
+    return null;
+  });
+
+  let weightPick = $state<{ setId: string; number: number; weight: number; planned: number | null; last: number | null } | null>(null);
+
+  function openWeightPicker(set: SetEntry, number: number) {
+    weightPick = {
+      setId: set.id,
+      number,
+      weight: set.reps > 0 || set.completed ? set.weight : 0,
+      planned: set.target?.weight ?? null,
+      last: number ? (prevLeadSets[number - 1]?.weight ?? null) : null,
+    };
+  }
+
+  // ── At the heaviest weight here ──────────────────────────────────────────────────
+  const topRung = $derived.by(() => {
+    if (!weightSource || weightSource.kind === "bar") return null;
+    const rungs = weightSource.kind === "machine" ? (machineWeightsKg(weightSource.machine) ?? []) : weightSource.weightsKg;
+    return rungs.length ? rungs[rungs.length - 1]! : null;
+  });
+  const plannedTop = $derived(
+    Math.max(0, ...data.sets.filter((x) => !x.completed && x.setType !== "warmup").map((x) => x.target?.weight ?? x.weight)),
+  );
+  const atTheTop = $derived(topRung !== null && plannedTop > 0 && plannedTop >= topRung - 0.01);
+  const extraLoadAnswer = $derived.by((): ExtraLoad[] | undefined => {
+    if (!place || !weightSource) return undefined;
+    if (weightSource.kind === "machine") return chosen?.extraLoad;
+    return place.extraLoad?.dumbbells;
+  });
+  const topLabel = $derived(
+    topRung === null || !weightSource ? "" :
+      `${formatLoad(topRung, $profile.weightUnit, false)} is the heaviest ${weightSource.kind === "machine" ? `on ${weightSource.machine.name}` : "dumbbell"}${place ? ` at ${place.name}` : ""}`,
+  );
+
+  function answerExtraLoad(extra: ExtraLoad[]) {
+    const p = place ? placesStore.byId(place.id) : null;
+    if (!p || !weightSource) return;
+    if (weightSource.kind === "machine" && chosen) {
+      placesStore.save({ ...p, machines: p.machines.map((m) => (m.id === chosen.id ? { ...m, extraLoad: extra } : m)) });
+    } else {
+      placesStore.save({ ...p, extraLoad: { ...(p.extraLoad ?? {}), dumbbells: extra } });
+    }
+  }
+
+  // "Last time 59 × 10, 10, 9" under the name (X1).
+  const lastTime = $derived.by(() => {
+    const done = (prevSets ?? []).filter((x) => x.setType !== "warmup" && x.reps > 0 && x.completed !== false);
+    if (!done.length) return "";
+    const w = $profile.weightUnit;
+    const same = done.every((x) => Math.abs(x.weight - done[0]!.weight) < 0.01);
+    return same
+      ? `Last time ${formatLoad(done[0]!.weight, w, bodyweight, { withUnit: !bodyweight })} × ${done.map((x) => x.reps).join(", ")}`
+      : `Last time ${done.map((x) => `${formatLoad(x.weight, w, bodyweight, { withUnit: false })} × ${x.reps}`).join(" · ")}`;
+  });
+
+  function machineDetail(m: PlaceMachine): string {
+    const u = m.unit === "lbs" ? "lb" : "kg";
+    if (m.weights?.kind === "stack" && m.weights.values.length) return `stack ${m.weights.values[0]}–${m.weights.values.at(-1)} ${u}`;
+    if (m.weights?.kind === "linear") return `stack ${m.weights.min}–${m.weights.max ?? "?"} ${u}`;
+    return m.loading === "plates" ? "plates" : m.loading === "assisted" ? "assisted" : "";
+  }
+
   function setGripAction(node: HTMLElement, setId: string) {
     let currentId = setId;
 
@@ -581,19 +704,26 @@
       if (newIdx !== setDragToIdx) setDragToIdx = newIdx;
     }
 
+    // The set number is also a button (the set's options): a touch that didn't move is a tap.
+    let touchStartY = 0;
+    let touchMoved = false;
     function onTouchStart(e: TouchEvent) {
       if (e.touches.length !== 1) return;
       e.preventDefault();
-      startDrag(e.touches[0]!.clientY);
+      touchStartY = e.touches[0]!.clientY;
+      touchMoved = false;
+      startDrag(touchStartY);
     }
     function onTouchMove(e: TouchEvent) {
       if (setDragId !== currentId) return;
       e.preventDefault();
+      if (Math.abs(e.touches[0]!.clientY - touchStartY) > 8) touchMoved = true;
       moveDrag(e.touches[0]!.clientY);
     }
     function onTouchEnd() {
       if (setDragId !== currentId) return;
       void commitSetDrag();
+      if (!touchMoved) node.click();
     }
     function onMouseDown(e: MouseEvent) {
       if (e.button !== 0) return;
@@ -654,7 +784,29 @@
   {onDelete}
   onDismissNudge={handleDismissNudge}
   onAcceptNudge={handleAcceptNudge}
+  {lastTime}
 >
+  {#snippet chip()}
+    {#if place && chosen}
+      <button type="button" onclick={() => (machinePickerOpen = true)}
+        class="flex min-h-9 max-w-full items-center gap-1.5 rounded-full bg-muted px-3 text-left text-[13px]"
+        aria-label="Machine: {chosen.name} at {place.name}. Change">
+        <span class="truncate"><strong class="font-semibold">{chosen.name}</strong> · {place.name}{machineDetail(chosen) ? ` · ${machineDetail(chosen)}` : ""}</span>
+        {#if chosen.status === "out"}<span class="shrink-0 rounded bg-warning/15 px-1 text-[11px] text-warning">Out of order</span>{/if}
+        <span aria-hidden="true" class="shrink-0 text-muted-foreground">▾</span>
+      </button>
+    {:else if place && exercise && (exercise.equipment === "machine" || exercise.equipment === "cable" || exercise.equipment === "smith")}
+      <button type="button" onclick={() => goto(`/settings/places/${place.id}/machine/new`)}
+        class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
+        Which machine at {place.name}? Add it
+      </button>
+    {/if}
+  {/snippet}
+  {#snippet notice()}
+    {#if atTheTop && topLabel}
+      <AtTheTopCard heaviestLabel={topLabel} kind={weightSource?.kind === "machine" ? "machine" : "dumbbells"} answer={extraLoadAnswer} onAnswer={answerExtraLoad} />
+    {/if}
+  {/snippet}
   {#if round !== undefined}
     <!-- One round of a group: only this exercise's set for that round. -->
     {@const roundSet = [...data.sets].sort(sortByOrderIndex)[round]}
@@ -678,6 +830,7 @@
           prev={roundNum ? (prevLeadSets[roundNum - 1] ?? null) : null}
           target={roundSet.target ?? null}
           onOpenDetails={() => openEditSet(roundSet.id, roundNum || null)}
+          onPickWeight={weightSource ? () => openWeightPicker(roundSet, roundNum) : undefined}
           completed={roundSet.completed ?? false}
           disabled={saving}
           gripAction={noopGripAction}
@@ -740,6 +893,7 @@
               prev={prevLeadSets[group.leadNum - 1] ?? null}
               target={lead.target ?? null}
               onOpenDetails={() => openEditSet(lead.id, group.leadNum)}
+              onPickWeight={weightSource ? () => openWeightPicker(lead, group.leadNum) : undefined}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
               gripAction={(node) => setGripAction(node, lead.id)}
@@ -778,6 +932,7 @@
                   rpe={drop.rpe ?? null}
                   target={drop.target ?? null}
                   onOpenDetails={() => openEditSet(drop.id)}
+                  onPickWeight={weightSource ? () => openWeightPicker(drop, 0) : undefined}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
                   gripAction={noopGripAction}
@@ -878,3 +1033,42 @@
     void loadSuggestion(data.exerciseName, data.exerciseId);
   }}
 />
+
+<ExerciseInfoSheet
+  open={infoOpen}
+  {exercise}
+  name={data.exerciseName}
+  lastSets={prevSets}
+  weightUnit={$profile.weightUnit}
+  {bodyweight}
+  onOpenChange={(v) => (infoOpen = v)}
+  onEdit={openEditor}
+  onSwap={openSwap}
+/>
+
+{#if place && exercise && placeMachines.length}
+  <MachinePickerSheet
+    open={machinePickerOpen}
+    {place}
+    exerciseId={exercise.id}
+    exerciseName={data.exerciseName}
+    machines={placeMachines}
+    currentId={chosen?.id ?? null}
+    onOpenChange={(v) => (machinePickerOpen = v)}
+    onPick={() => {}}
+  />
+{/if}
+
+{#if weightSource && weightPick}
+  <WeightPickerSheet
+    open={!!weightPick}
+    source={weightSource}
+    title="Set {weightPick.number || ''} · {data.exerciseName}"
+    weightKg={weightPick.weight}
+    plannedKg={weightPick.planned}
+    lastKg={weightPick.last}
+    unit={$profile.weightUnit}
+    onOpenChange={(v) => { if (!v) weightPick = null; }}
+    onPick={(kg) => { const id = weightPick?.setId; if (id) void handleWeightChange(id, kg); }}
+  />
+{/if}

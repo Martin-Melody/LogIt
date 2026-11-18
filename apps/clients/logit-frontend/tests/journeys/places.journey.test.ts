@@ -73,4 +73,29 @@ describe("your places", () => {
     store.setAsk(false);
     expect(store.shouldAsk).toBe(false);
   });
+
+  it("a workout starts at the usual place for the day, asks only with two places, and keeps it across a restart", async () => {
+    const phone = await new Device().launch();
+    await phone.finishOnboarding({ name: "Sam" });
+    const { newPlace } = await place();
+    const store = await places();
+    const weekday = ((new Date().getDay() + 6) % 7) + 1;
+    const home = store.save({ ...newPlace("Home", "home", "dumbbells"), usualDays: [weekday] });
+
+    const { startSession } = await import("$lib/usecases/startSession");
+    const one = await startSession();
+    expect(one.placeId).toBe(home.id);
+    expect(one.placeAsked).toBe(true); // one place: nothing to ask
+
+    store.save(newPlace("Gym", "gym", "gym"));
+    const two = await startSession();
+    expect(two.placeId).toBe(home.id);
+    expect(two.placeAsked).toBe(false); // "Where are you today?" is shown
+
+    await phone.launch();
+    const { getWorkoutRepo } = await import("$lib/data/repoProvider");
+    const saved = await getWorkoutRepo().getSession(two.id);
+    expect(saved?.placeId).toBe(home.id);
+    expect(saved?.placeAsked).toBeFalsy();
+  });
 });

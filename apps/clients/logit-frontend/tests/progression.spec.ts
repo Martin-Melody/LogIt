@@ -672,7 +672,8 @@ test.describe("bodyweight loads", () => {
     await goToSession(page);
     await expect.poll(() => getTargetText(page)).toBe("7×-25kg|7×-25kg|7×-25kg");
 
-    await page.getByTestId("set-last").first().click();
+    // The set number opens the set card (design canvas X4).
+    await page.getByRole("button", { name: "Set 1 options" }).click();
     await expect(page.getByTestId("set-card-plan")).toHaveText("Planned 7 × BW−25 · last 6 × BW−25");
     await page.getByRole("button", { name: "One more rep" }).click();
     await page.getByTestId("set-card-log").click();

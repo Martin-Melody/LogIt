@@ -172,7 +172,7 @@ test.describe("session loads", () => {
 
     await expect(page.getByText("Bench Press")).toBeVisible();
     // Two sets carried over, none marked complete.
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(2);
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(2);
     await expect(page.locator('[aria-label="Mark incomplete"]')).toHaveCount(0);
   });
 
@@ -211,7 +211,7 @@ test.describe("session loads", () => {
     await goToSession(page);
 
     // 3 sets = 3 drag handles, one per set row
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(3);
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(3);
   });
 });
 
@@ -398,8 +398,8 @@ test.describe("managing sets", () => {
 
     await page.getByText("+ Add first set").click();
 
-    // A set row should now be visible (weight input)
-    await expect(page.locator('[aria-label="Add set"]')).toBeVisible();
+    // A set row should now be visible, with "Add a set" under it
+    await expect(page.getByRole("button", { name: "Add a set" })).toBeVisible();
   });
 
   test("set rows show the previous session's reps/weight under Last time", async ({ page }) => {
@@ -431,7 +431,7 @@ test.describe("managing sets", () => {
     await expect.poll(() => rowText(page, 0)).toContain("× 80");
 
     // A set added beyond the plan carries the same weight.
-    await page.getByRole("button", { name: "Add set" }).click();
+    await page.getByRole("button", { name: "Add a set" }).click();
     await expect(page.getByTestId("set-reps")).toHaveCount(4);
     await expect.poll(() => rowText(page, 3)).toContain("× 80");
   });
@@ -444,11 +444,11 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(1);
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(1);
     await page.getByText("+ Warm-up ramp").click();
 
     // bar 20 + 40/60/80% of 100 → 4 warm-ups, then the working set = 5 rows.
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(5);
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(5);
     // First row is a warm-up (W badge).
     await expect(page.locator("main").getByText("W", { exact: true }).first()).toBeVisible();
     // Offer is gone once warm-ups exist.
@@ -506,7 +506,7 @@ test.describe("managing sets", () => {
     await expect(page.getByText("Incline Bench Press")).toBeVisible();
     await expect(page.getByText("Bench Press", { exact: true })).not.toBeVisible();
     // Both sets still there.
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(2);
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(2);
   });
 
   test("swap search stays usable on an exercise added mid-session", async ({ page }) => {
@@ -573,7 +573,7 @@ test.describe("supersets", () => {
 
     // By exercise (the default), each exercise now has 2 set rows.
     await expect(page.getByRole("button", { name: "By exercise" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(4);
 
     // By round, each round is its own row.
     await page.getByRole("button", { name: "By round" }).click();
@@ -687,7 +687,7 @@ test.describe("supersets", () => {
     await page.getByRole("button", { name: "Add round" }).click();
     await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
     // One new set for the hamstring, one L/R pair for the pigeon.
-    await expect(page.locator('[aria-label="Drag to reorder set"]')).toHaveCount(4);
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(4);
     // Round 1 is all done, so the open hold rows are the new ones, each with the 30 s target.
     const holdRows = page.getByRole("row", { name: /Start hold timer/ });
     await expect(holdRows).toHaveCount(3);
@@ -1077,7 +1077,7 @@ test.describe("set reorder", () => {
     });
     await goToSession(page);
 
-    const grips = page.locator('[aria-label="Drag to reorder set"]');
+    const grips = page.locator('[data-testid="set-number"]');
     await expect(grips).toHaveCount(3);
 
     const firstGrip = grips.first();

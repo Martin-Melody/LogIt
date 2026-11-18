@@ -31,6 +31,8 @@
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
   import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
   import CircuitOverlay from "$lib/features/session/circuit/CircuitOverlay.svelte";
+  import WhereTodaySheet from "$lib/features/places/WhereTodaySheet.svelte";
+  import { placesStore } from "$lib/features/places/places.svelte";
   import { circuitRunner } from "$lib/features/session/circuit/circuitRunner";
   import GroupPickerSheet from "$lib/features/session/ui/GroupPickerSheet.svelte";
   import {
@@ -556,6 +558,11 @@
   const circuitBarShown = $derived(!!$circuitRunner.run && !$circuitRunner.expanded);
 
   const sessionExercises = $derived($currentSession ? getExercises($currentSession) : []);
+  // "Where are you today?" (G9): once per workout, with two or more places, before any set is logged.
+  const askWhere = $derived(
+    !!$currentSession && !$currentSession.placeAsked && placesStore.shouldAsk
+      && !getExercises($currentSession).some((e) => e.sets.some((x) => x.completed)),
+  );
   const loggedSetCount = $derived(
     sessionExercises.reduce((n, ex) => n + ex.sets.length, 0),
   );
@@ -820,3 +827,7 @@
     </div>
   {/if}
 </div>
+
+{#if askWhere && $currentSession}
+  <WhereTodaySheet session={$currentSession} onPick={(placeId) => void onMutate((s) => ({ ...s, placeId, placeAsked: true }))} />
+{/if}
