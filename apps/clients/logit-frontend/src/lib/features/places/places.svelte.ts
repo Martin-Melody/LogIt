@@ -2,8 +2,10 @@
 // the server when they change and pulled on every sync, newest wins (server /sync/places,
 // same rules as habits). A change made offline is remembered and pushed on the next sync.
 //
-// The first time this loads for an account with no places, the machines kept on exercises
-// move into one place called "My gym" (core placeFromExerciseMachines), so nothing is lost.
+// Machines live only in places (Martin, 2026-11-18). Once per account, machines still kept on
+// exercises move into the first place, or into a new "My gym" (core mergeExerciseMachines), so
+// nothing is lost. When signed in, that waits for the first pull, so a phone that hasn't synced
+// yet doesn't make a second My gym.
 import { browser } from "$app/environment";
 import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 import { onActiveOwnerChange } from "$lib/data/activeOwner";
@@ -12,14 +14,14 @@ import { apiClient } from "@logit/core/api/client";
 import { syncApi, type RemotePlace } from "@logit/core/api/syncApi";
 import { log } from "@logit/core/platform/log";
 import {
-  activePlaces, defaultPlaceFor, machinesFor, placeFromExerciseMachines, type Place, type PlaceMachine,
+  activePlaces, defaultPlaceFor, machinesFor, mergeExerciseMachines, newPlace, type Place, type PlaceMachine,
 } from "@logit/core/domain/place";
 
 const KEY = "logit:places:v1";
 /** Place ids changed here and not yet accepted by the server. */
 const DIRTY_KEY = "logit:places-dirty:v1";
 const PULLED_KEY = "logit:places-pulled-at:v1";
-const MIGRATED_KEY = "logit:places-migrated:v1";
+const MIGRATED_KEY = "logit:places-migrated:v2";
 /** The place the last workout was at (no location is ever used). */
 const LAST_USED_KEY = "logit:places-last-used:v1";
 /** "Don't ask me this" on "Where are you today?" (G9). */
@@ -139,14 +141,14 @@ function createPlacesStore() {
       write(ASK_KEY, on);
     },
 
-    /** Moves machines kept on exercises into "My gym", once per account. */
+    /** Moves machines kept on exercises into a place, once per account. */
     async migrateExerciseMachines(): Promise<Place | null> {
       if (read<boolean>(MIGRATED_KEY, false)) return null;
+      if (apiClient.isAuthenticated() && !read<number>(PULLED_KEY, 0)) return null;
       write(MIGRATED_KEY, true);
-      if (places.length > 0) return null;
       try {
-        const exercises = await getExerciseRepo().list();
-        const place = placeFromExerciseMachines(exercises);
+        const exercises = await getExerciseRepo().list({ filter: "all", limit: 5000 });
+        const place = mergeExerciseMachines(places, exercises);
         return place ? this.save(place) : null;
       } catch (e) {
         log.warn("places", "moving exercise machines into a place failed", { error: e });
@@ -154,9 +156,19 @@ function createPlacesStore() {
       }
     },
 
+    /** Where a new machine goes when the workout has no place (M3): the usual one, else a new My gym. */
+    placeForNewMachine(): { place: Place; created: boolean } {
+      const usual = this.defaultFor();
+      if (usual) return { place: usual, created: false };
+      return { place: this.save(newPlace("My gym", "gym", "gym")), created: true };
+    },
+
     /** Called by sync: push what's waiting, then pull and keep the newest of each place. */
     async sync(): Promise<boolean> {
-      if (!apiClient.isAuthenticated()) return true;
+      if (!apiClient.isAuthenticated()) {
+        await this.migrateExerciseMachines();
+        return true;
+      }
       const dirty = new Set(read<string[]>(DIRTY_KEY, []));
       const waiting = places.filter((p) => dirty.has(p.id)).map((p) => toRow(p));
       if (waiting.length) await push(waiting);
@@ -177,6 +189,7 @@ function createPlacesStore() {
         }
         if (changed) persist();
         write(PULLED_KEY, Date.now());
+        await this.migrateExerciseMachines();
         return true;
       } catch (e) {
         log.warn("places", "pull failed", { error: e });

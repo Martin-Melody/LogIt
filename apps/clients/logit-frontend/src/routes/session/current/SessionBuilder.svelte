@@ -60,6 +60,8 @@
 
   onMount(() => {
     setTimeout(() => autoTour("app.session"), 600);
+    // Machines kept on exercises move into a place (once per account).
+    void placesStore.migrateExerciseMachines();
     void getWorkoutRepo()
       .listRecentSessions({ limit: 1 })
       .then((s) => (hasPreviousSession = s.length > 0))

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -117,7 +118,7 @@
 
 <div class="flex flex-col pb-24">
   <PageHeader>
-    <BackButton onclick={() => void goto("/profile")} />
+    <BackButton onclick={() => back("/profile")} />
     <span class="text-base font-semibold">Plugins</span>
     <div class="ml-auto flex items-center gap-1">
       <Button variant="ghost" size="icon" title="Browse" onclick={() => void goto("/plugins/browse")}>

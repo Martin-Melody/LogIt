@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   effectiveMachine, activePlaces, atTheTop, defaultPlaceFor, dumbbellWeightsKg, machinesFor, newPlace,
-  placeFromExerciseMachines, runsFromStack, stackFromRuns, stackWeights, type Place,
+  barbellFor, mergeExerciseMachines, placeFromExerciseMachines, specialtyBarFor, usesMachine, runsFromStack, stackFromRuns, stackWeights, type Place,
 } from "./place";
 
 describe("weight stacks in runs (X7)", () => {
@@ -69,6 +69,35 @@ describe("moving today's machines into a place", () => {
   it("nobody with machines gets no place", () => {
     expect(placeFromExerciseMachines([{ id: "squat" }], 1)).toBeNull();
   });
+
+  it("with places already, new exercise machines join the first one, keeping their ids and the usual pick", () => {
+    const gym: Place = { ...newPlace("Northside", "gym", "gym", 1), machines: [
+      { id: "m1", name: "Cable station", incrementKg: 2.5, loading: "stack", status: "in", exerciseIds: ["fly"] },
+    ] };
+    const merged = mergeExerciseMachines([gym], [
+      { id: "fly", machines: [{ id: "m1", name: "Cable station", incrementKg: 2.5 }] },
+      { id: "row", machines: [{ id: "m7", name: "Seated row", incrementKg: 5 }, { id: "m8", name: "Low cable", incrementKg: 2.5 }], defaultMachineId: "m8" },
+    ], 9)!;
+    expect(merged.id).toBe(gym.id);
+    expect(merged.machines.map((m) => m.id)).toEqual(["m1", "m7", "m8"]);
+    expect(merged.choices).toEqual({ row: "m8" });
+    expect(merged.updatedAtMs).toBe(9);
+    expect(gym.machines).toHaveLength(1);
+  });
+
+  it("nothing new to move: no change", () => {
+    const gym: Place = { ...newPlace("Northside", "gym", "gym", 1), machines: [
+      { id: "m1", name: "Cable station", incrementKg: 2.5, loading: "stack", status: "in", exerciseIds: ["fly"] },
+    ] };
+    expect(mergeExerciseMachines([gym], [{ id: "fly", machines: [{ id: "m1", name: "Cable station", incrementKg: 2.5 }] }])).toBeNull();
+  });
+
+  it("only archived places: a new My gym", () => {
+    const old: Place = { ...newPlace("Old gym", "gym", "gym", 0), archivedAtMs: 5 };
+    const merged = mergeExerciseMachines([old], [{ id: "press", machines: [{ id: "m3", name: "Chest press", incrementKg: 5 }] }], 9)!;
+    expect(merged.name).toBe("My gym");
+    expect(merged.id).not.toBe(old.id);
+  });
 });
 
 describe("which place a workout starts at", () => {
@@ -117,5 +146,26 @@ describe("add-ons", () => {
       weights: { kind: "stack" as const, values: [10, 20, 30] }, addOns: [2.5] };
     expect((effectiveMachine(m).weights as { values: number[] }).values).toEqual([10, 12.5, 20, 22.5, 30, 32.5]);
     expect(m.weights.values).toEqual([10, 20, 30]);
+  });
+});
+
+describe("machines are what decide the number", () => {
+  it("machine, cable and Smith exercises use machines; free weights never do", () => {
+    expect(["machine", "cable", "smith", "other", undefined].map((e) => usesMachine(e as never))).toEqual([true, true, true, true, true]);
+    expect(["barbell", "dumbbell", "kettlebell", "bodyweight", "band"].map((e) => usesMachine(e as never))).toEqual([false, false, false, false, false]);
+  });
+
+  it("a specialty bar's own weight, when the place has one", () => {
+    expect(specialtyBarFor("EZ-Bar Curl")).toBe("ez-bar");
+    expect(specialtyBarFor("Trap Bar Deadlift")).toBe("trap-bar");
+    expect(specialtyBarFor("Hex bar deadlift")).toBe("trap-bar");
+    expect(specialtyBarFor("Bench Press")).toBeNull();
+    const gym: Place = { ...newPlace("Northside", "gym", "gym", 1) };
+    expect(barbellFor(gym, "EZ-Bar Curl")?.barKg).toBe(20);
+    const withEz: Place = { ...gym, kit: [...gym.kit, "ez-bar"], barWeightsKg: { "ez-bar": 7.5 } };
+    expect(barbellFor(withEz, "EZ-Bar Curl")?.barKg).toBe(7.5);
+    expect(barbellFor(withEz, "Bench Press")?.barKg).toBe(20);
+    expect(barbellFor({ ...gym, kit: [...gym.kit, "trap-bar"] }, "Trap Bar Deadlift")?.barKg).toBe(25);
+    expect(barbellFor({ ...gym, barbell: undefined }, "Bench Press")).toBeUndefined();
   });
 });

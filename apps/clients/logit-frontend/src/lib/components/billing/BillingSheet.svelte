@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
 
   // A bottom sheet for the plan screens' messages (account needed, purchase problems,
@@ -35,6 +36,7 @@
     aria-modal="true"
     aria-labelledby="billing-sheet-title"
     class="fixed inset-x-0 bottom-0 z-50 flex flex-col gap-3 rounded-t-2xl border-t border-border bg-card px-5 pt-2.5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+    use:sheetDrag={{ onDismiss: onclose }} use:backDismiss={onclose}
     transition:sheetUp
   >
     <div class="mb-2 h-1 w-9 self-center rounded-full bg-foreground/20" aria-hidden="true"></div>
