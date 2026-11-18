@@ -16,9 +16,9 @@ public static class InsightChartEndpoints
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/clients/{clientId:guid}/charts", GetClientCharts).RequireTier(UserTier.Studio);
-        group.MapPut("/clients/{clientId:guid}/charts/{chartId}", PutClientChart).RequireTier(UserTier.Studio);
-        group.MapDelete("/clients/{clientId:guid}/charts/{chartId}", DeleteClientChart).RequireTier(UserTier.Studio);
+        group.MapGet("/clients/{clientId:guid}/charts", GetClientCharts).RequireCoaching();
+        group.MapPut("/clients/{clientId:guid}/charts/{chartId}", PutClientChart).RequireCoaching();
+        group.MapDelete("/clients/{clientId:guid}/charts/{chartId}", DeleteClientChart).RequireCoaching();
     }
 
     /// True when the chart's JSON has showOn.coach = true.

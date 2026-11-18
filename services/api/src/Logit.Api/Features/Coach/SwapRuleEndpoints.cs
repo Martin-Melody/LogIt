@@ -32,9 +32,9 @@ public static class SwapRuleEndpoints
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/settings", GetSettings).RequireTier(UserTier.Studio);
-        group.MapPut("/settings", PutSettings).RequireTier(UserTier.Studio);
-        group.MapPut("/clients/{relationshipId:guid}/swap-rule", PutClientRule).RequireTier(UserTier.Studio);
+        group.MapGet("/settings", GetSettings).RequireCoaching();
+        group.MapPut("/settings", PutSettings).RequireCoaching();
+        group.MapPut("/clients/{relationshipId:guid}/swap-rule", PutClientRule).RequireCoaching();
     }
 
     private static async Task<IResult> GetSettings(ClaimsPrincipal caller, AppDbContext db)

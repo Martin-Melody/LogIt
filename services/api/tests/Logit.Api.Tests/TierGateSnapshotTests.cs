@@ -16,7 +16,7 @@ public class TierGateSnapshotTests : IClassFixture<ApiFactory>
     private readonly ApiFactory _api;
     public TierGateSnapshotTests(ApiFactory api) => _api = api;
 
-    public record Gate(string Method, string Route, string Plan, bool OrActivelyCoached);
+    public record Gate(string Method, string Route, string Plan, bool OrActivelyCoached, bool OrSampleCoach);
 
     public static string RepoFile(params string[] parts)
     {
@@ -35,7 +35,7 @@ public class TierGateSnapshotTests : IClassFixture<ApiFactory>
             .Select(e => (e, tier: e.Metadata.GetMetadata<TierRequirement>()))
             .Where(x => x.tier is not null)
             .SelectMany(x => (x.e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["ANY"])
-                .Select(m => new Gate(m, "/" + x.e.RoutePattern.RawText!.TrimStart('/'), x.tier!.MinimumTier.ToString(), x.tier.OrActivelyCoached)))
+                .Select(m => new Gate(m, "/" + x.e.RoutePattern.RawText!.TrimStart('/'), x.tier!.MinimumTier.ToString(), x.tier.OrActivelyCoached, x.tier.OrSampleCoach)))
             .OrderBy(g => g.Route, StringComparer.Ordinal).ThenBy(g => g.Method, StringComparer.Ordinal)
             .ToList();
     }

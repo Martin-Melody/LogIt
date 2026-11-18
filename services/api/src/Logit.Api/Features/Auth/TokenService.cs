@@ -17,7 +17,11 @@ public class TokenService(IConfiguration config)
 
     /// `sample`: a token for a sandbox sample client, handed to its coach's app. It carries the
     /// "sample" claim, which SampleTokenGuard checks to keep it to the client-side coaching routes.
-    public string CreateAccessToken(User user, bool sample = false)
+    /// The access token's claim naming the signed-in session (RefreshToken.SessionKey), so
+    /// Account › Where you're signed in can say which row is "this browser".
+    public const string SessionClaim = "sid";
+
+    public string CreateAccessToken(User user, bool sample = false, Guid? sessionId = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -31,6 +35,7 @@ public class TokenService(IConfiguration config)
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
         if (sample) claims.Add(new Claim(Sandbox.SandboxEndpoints.SampleClaim, "1"));
+        if (sessionId is { } sid) claims.Add(new Claim(SessionClaim, sid.ToString()));
 
         var token = new JwtSecurityToken(
             issuer: _issuer,
@@ -42,13 +47,23 @@ public class TokenService(IConfiguration config)
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public RefreshToken CreateRefreshToken(Guid userId)
+    /// A new session (`label` says which device), or the next token of an existing one
+    /// (`previous`, on refresh), which keeps that session's id, label and start time.
+    public RefreshToken CreateRefreshToken(Guid userId, string? label = null, RefreshToken? previous = null)
     {
+        var now = DateTime.UtcNow;
         return new RefreshToken
         {
             UserId = userId,
             Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-            ExpiresAt = DateTime.UtcNow.AddDays(_refreshTokenDays),
+            CreatedAt = now,
+            ExpiresAt = now.AddDays(_refreshTokenDays),
+            SessionId = previous?.SessionKey ?? Guid.NewGuid(),
+            Label = Truncate(previous?.Label ?? label),
+            SessionStartedAt = previous is null ? now : previous.SessionStartedAt ?? previous.CreatedAt,
         };
     }
+
+    private static string? Truncate(string? s) =>
+        s is null ? null : s.Length <= RefreshTokenLimits.MaxLabelChars ? s : s[..RefreshTokenLimits.MaxLabelChars];
 }

@@ -163,7 +163,7 @@ describe("words the docs and walkthroughs use", () => {
 });
 
 describe("plan locks on the server (docs/generated/tier-gates.json)", () => {
-  type Gate = { method: string; route: string; plan: string; orActivelyCoached: boolean };
+  type Gate = { method: string; route: string; plan: string; orActivelyCoached: boolean; orSampleCoach: boolean };
   const gates = JSON.parse(readFileSync(GATES, "utf8")) as Gate[];
   const norm = (r: string) => r.replace(/:[a-z]+(?=})/gi, "").replace(/\/$/, "");
 
@@ -179,6 +179,8 @@ describe("plan locks on the server (docs/generated/tier-gates.json)", () => {
       if (f.plan !== g.plan) problems.push(`${g.method} ${g.route}: server locks it to ${g.plan}, features.ts says ${f.id} is ${f.plan}`);
       if (!!f.freeWhenCoached !== g.orActivelyCoached)
         problems.push(`${g.method} ${g.route}: server ${g.orActivelyCoached ? "lets" : "doesn't let"} coached Free clients in; ${f.id}.freeWhenCoached disagrees`);
+      if (!!f.freeWithSamples !== !!g.orSampleCoach)
+        problems.push(`${g.method} ${g.route}: server ${g.orSampleCoach ? "lets" : "doesn't let"} Free accounts try it with sample clients; ${f.id}.freeWithSamples disagrees`);
     }
     expect(problems).toEqual([]);
   });

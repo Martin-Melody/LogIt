@@ -25,6 +25,8 @@ export type Feature = {
   plan: Plan;
   /** True when a Free account gets it while coached by a Studio coach (the server's orActivelyCoached locks). */
   freeWhenCoached?: boolean;
+  /** True when a Free account can try it with sample clients before paying (the server's orSampleCoach locks). */
+  freeWithSamples?: boolean;
   /** One sentence, shown on docs pages and in the plan table's tooltip. */
   summary: string;
   /** SvelteKit route ids (folder paths under src/routes) where it lives. */
