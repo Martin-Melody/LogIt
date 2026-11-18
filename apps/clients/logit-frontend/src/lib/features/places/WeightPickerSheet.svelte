@@ -5,6 +5,7 @@
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Minus, Plus } from "lucide-svelte";
+  import { reveal } from "$lib/transitions";
   import type { WeightSource } from "./weightSource";
   import { machineUnit, machineWeightsKg } from "@logit/core/domain/machine";
   import { platesPerSide } from "@logit/core/domain/plates";
@@ -95,7 +96,7 @@
     </div>
 
     {#if typing}
-      <form class="flex gap-2" onsubmit={(e) => { e.preventDefault(); useTyped(); }}>
+      <form class="flex gap-2" in:reveal onsubmit={(e) => { e.preventDefault(); useTyped(); }}>
         <label for="wp-typed" class="sr-only">Weight ({unit})</label>
         <!-- svelte-ignore a11y_autofocus -->
         <input id="wp-typed" type="number" inputmode="decimal" bind:value={typed} autofocus class="h-12 min-w-0 flex-1 rounded-lg border bg-background px-3 text-lg font-semibold" />
@@ -147,7 +148,7 @@
 
     <Button class="h-12 text-[15px]" onclick={done}>Use {show(source.kind === "bar" ? (loaded?.achievableKg ?? picked) : rungs.length ? snapToRung(picked) : picked)} {unit === "lbs" ? "lb" : "kg"}</Button>
     {#if !typing}
-      <button type="button" class="min-h-10 text-sm text-muted-foreground underline" onclick={() => { typing = true; typed = show(picked); }}>Type a weight</button>
+      <Button variant="outline" class="h-11" onclick={() => { typing = true; typed = show(picked); }}>Type a weight</Button>
     {/if}
   </Dialog.Content>
 </Dialog.Root>

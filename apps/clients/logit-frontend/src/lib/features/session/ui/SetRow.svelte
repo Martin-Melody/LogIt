@@ -6,12 +6,13 @@
   import { setTypeMeta, type SetTarget } from "@logit/core/domain/workout";
   import { formatTargetReps } from "$lib/features/session/planFormat";
   import { effortLabel } from "./effort";
+  import { popIn } from "$lib/transitions";
 
   // One set: "# | Last | weight | reps | tick". The plan sits in the boxes as blue
   // placeholder text until the set is done or something else is typed; ticking an
-  // untouched planned set logs the plan. The rest (kind, effort, rest, note, delete)
-  // opens in the row under it when the set number is tapped (design canvas S-C), or by
-  // swiping. When Logit knows the real weights (a machine's settings, the plates or
+  // untouched planned set logs the plan. Swipe the row left for edit and delete; edit
+  // opens the set's details under it (kind, effort, rest, note). The number is the drag
+  // handle for reordering. When Logit knows the real weights (a machine's settings, the plates or
   // dumbbells at your place), tapping the weight opens a picker (X2/X3); otherwise the
   // weight is typed right here.
   const {
@@ -30,7 +31,6 @@
     onRepsChange = () => {},
     onWeightChange = () => {},
     onComplete = () => {},
-    onOpenDetails = () => {},
     onPickWeight,
     onRemove,
     optionsOpen = false,
@@ -52,7 +52,6 @@
     onRepsChange?: (reps: number) => void | Promise<void>;
     onWeightChange?: (weight: number) => void | Promise<void>;
     onComplete?: () => void | Promise<void>;
-    onOpenDetails?: () => void;
     /** Pick the weight from real settings instead of typing (X2/X3). */
     onPickWeight?: () => void;
     /** Editing a past session: the last cell takes the set out instead of ticking it. */
@@ -137,15 +136,14 @@
     ? 'bg-muted/40'
     : ''}"
 >
-  <!-- Set number: tap for the set's options (X4); hold and drag to reorder -->
+  <!-- Set number: hold and drag to reorder. Details open from the swipe's edit button. -->
   <button
     type="button"
-    class="flex h-11 flex-col items-center justify-center gap-0.5 rounded-md active:cursor-grabbing {optionsOpen ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}"
+    class="flex h-11 flex-col items-center justify-center gap-0.5 rounded-md cursor-grab active:cursor-grabbing transition-colors duration-150 {optionsOpen ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}"
     style="touch-action: none"
     use:gripAction
-    onclick={onOpenDetails}
-    aria-label="Set {setNumber || ''} options"
-    aria-expanded={optionsOpen}
+    aria-label="Set {setNumber || ''}, drag to reorder"
+    tabindex="-1"
     data-testid="set-number"
     {disabled}
   >
@@ -160,7 +158,7 @@
       <span class="text-xs tabular-nums">{setNumber}</span>
     {/if}
     {#if rpe != null}
-      <span class="whitespace-nowrap text-[9px] leading-none tabular-nums {optionsOpen ? '' : 'text-muted-foreground'}" title="RPE {rpe}">{effortLabel(rpe)}</span>
+      <span class="whitespace-nowrap text-[9px] leading-none tabular-nums {optionsOpen ? '' : 'text-muted-foreground'}" title="RPE {rpe}" in:popIn>{effortLabel(rpe)}</span>
     {/if}
   </button>
 
