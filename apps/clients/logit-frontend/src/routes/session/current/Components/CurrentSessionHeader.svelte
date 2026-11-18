@@ -95,7 +95,7 @@
 
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        class="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+        class="-mr-2 -my-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
         aria-label="Workout options"
       >
         <MoreVertical class="h-5 w-5" />
