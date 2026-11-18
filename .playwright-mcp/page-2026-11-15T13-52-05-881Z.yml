@@ -1,0 +1,26 @@
+- generic [ref=f5e2]:
+  - generic [ref=f5e6]:
+    - banner [ref=f5e7]:
+      - heading "Workout" [level=1] [ref=f5e8]
+      - generic "Elapsed workout time" [ref=f5e9]: 0:00
+    - main [ref=f5e10]:
+      - generic [ref=f5e11]:
+        - generic [ref=f5e12]:
+          - paragraph [ref=f5e13]: Nothing logged yet.
+          - button "Add exercise" [ref=f5e15]
+        - button "Add block" [ref=f5e17]
+        - generic [ref=f5e19]:
+          - button "Finish workout" [disabled]
+          - button "Discard workout" [ref=f5e20]
+    - contentinfo [ref=f5e21]:
+      - navigation "Main navigation" [ref=f5e22]:
+        - link "Home" [ref=f5e23] [cursor=pointer]:
+          - /url: /
+        - link "Resume session" [ref=f5e26] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f5e32]: Workout
+        - link "Profile" [ref=f5e33] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f5e36]
+  - region "Notifications alt+T"
+  - generic [ref=f5e39]: LogIt

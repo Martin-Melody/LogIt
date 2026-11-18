@@ -1,0 +1,20 @@
+- generic [ref=f5e2]:
+  - generic [ref=f5e152]:
+    - generic [ref=f5e156]:
+      - heading "Logit" [level=1] [ref=f5e157]
+      - paragraph [ref=f5e158]: Get stronger every week,without guessing the weights.
+    - generic [ref=f5e159]:
+      - paragraph [ref=f5e160]:
+        - generic [ref=f5e161]: ✓
+        - text: Know what to lift, every set
+      - paragraph [ref=f5e162]:
+        - generic [ref=f5e163]: ✓
+        - text: See yourself getting stronger, week by week
+      - paragraph [ref=f5e164]:
+        - generic [ref=f5e165]: ✓
+        - text: Start in under a minute, no account needed
+    - generic [ref=f5e166]:
+      - button "Get started" [ref=f5e167]
+      - button "I already have an account" [ref=f5e168]
+  - region "Notifications alt+T"
+  - generic [ref=f5e24]: LogIt

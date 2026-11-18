@@ -1,0 +1,95 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e6]:
+    - banner [ref=f10e7]:
+      - button "Back" [ref=f10e146]
+      - generic [ref=f10e148]: Browse plugins
+      - button "2 sources" [ref=f10e149]
+      - link "Notifications" [ref=f10e12] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f10e14]:
+      - generic [ref=f10e151]:
+        - generic [ref=f10e152]:
+          - searchbox "Search plugins…" [ref=f10e155]
+          - generic [ref=f10e156]:
+            - button "All" [pressed] [ref=f10e157]
+            - button "Widgets" [ref=f10e158]
+            - button "Progression" [ref=f10e159]
+            - button "Analytics" [ref=f10e160]
+            - button "Packs" [ref=f10e161]
+        - generic [ref=f10e162]:
+          - generic [ref=f10e163]: Featured
+          - list [ref=f10e166]:
+            - listitem [ref=f10e167]:
+              - generic [ref=f10e168]:
+                - generic [ref=f10e169]:
+                  - paragraph [ref=f10e171]: Calisthenics Starter
+                  - paragraph [ref=f10e172]: 12 common bodyweight movements — push-ups, chin-ups, pistol squats, Nordic curls and core holds — added straight to your exercise catalogue.
+                  - paragraph [ref=f10e173]: Exercise pack · Logit Samples · Bundled examples
+                  - paragraph [ref=f10e174]: "Gets: Data only, runs no code"
+                - button "Install" [ref=f10e176]
+            - listitem [ref=f10e177]:
+              - generic [ref=f10e178]:
+                - generic [ref=f10e179]:
+                  - paragraph [ref=f10e181]: Hip Rehab Pack
+                  - paragraph [ref=f10e182]: Eight hip prehab / rehab drills for the Mobility block — banded hip flexion, clamshells, 90/90 lift-offs and more.
+                  - paragraph [ref=f10e183]: Mobility pack · Logit Samples · Bundled examples
+                  - paragraph [ref=f10e184]: "Gets: Data only, runs no code"
+                - button "Install" [ref=f10e186]
+        - generic [ref=f10e187]:
+          - generic [ref=f10e188]: All plugins
+          - list [ref=f10e191]:
+            - listitem [ref=f10e192]:
+              - generic [ref=f10e193]:
+                - generic [ref=f10e194]:
+                  - paragraph [ref=f10e196]: Linear Plus
+                  - paragraph [ref=f10e197]: A community double-progression algorithm — fill the rep range, then add weight.
+                  - paragraph [ref=f10e198]: Progression algorithm · Logit Samples · Bundled examples
+                - button "Install" [ref=f10e200]
+            - listitem [ref=f10e201]:
+              - generic [ref=f10e202]:
+                - generic [ref=f10e203]:
+                  - paragraph [ref=f10e205]: Pure Trend
+                  - paragraph [ref=f10e206]: A sample nutrition algorithm that sets your calorie target purely from intake vs. weight trend.
+                  - paragraph [ref=f10e207]: Nutrition algorithm · Logit Samples · Bundled examples
+                - button "Install" [ref=f10e209]
+            - listitem [ref=f10e210]:
+              - generic [ref=f10e211]:
+                - generic [ref=f10e212]:
+                  - paragraph [ref=f10e214]: Week Recap
+                  - paragraph [ref=f10e215]: Sets, tonnage and sessions logged in the last 7 days.
+                  - paragraph [ref=f10e216]: Home widget · Logit Samples · Bundled examples
+                - button "Install" [ref=f10e218]
+            - listitem [ref=f10e219]:
+              - generic [ref=f10e220]:
+                - generic [ref=f10e221]:
+                  - paragraph [ref=f10e223]: Mobility Plus
+                  - paragraph [ref=f10e224]: A community mobility progression scheme — add hold time or reps each session, per side.
+                  - paragraph [ref=f10e225]: Mobility progression · Logit Samples · Bundled examples
+                - button "Install" [ref=f10e227]
+            - listitem [ref=f10e228]:
+              - generic [ref=f10e229]:
+                - generic [ref=f10e230]:
+                  - generic [ref=f10e231]:
+                    - paragraph [ref=f10e232]: Week recap
+                    - generic [ref=f10e233]: Installed
+                  - paragraph [ref=f10e234]: Week recap
+                  - paragraph [ref=f10e235]: Home widget · @alex · LogIt
+                  - paragraph [ref=f10e236]: "Gets: recent workouts"
+                - button "Open" [ref=f10e238]
+        - paragraph [ref=f10e239]:
+          - text: 7 plugins · Have one to share? Paste a manifest URL on the
+          - button "import page" [ref=f10e240]
+          - text: .
+    - contentinfo [ref=f10e106]:
+      - navigation "Main navigation" [ref=f10e107]:
+        - link "Home" [ref=f10e108] [cursor=pointer]:
+          - /url: /
+        - link "Social" [ref=f10e111] [cursor=pointer]:
+          - /url: /social
+        - link "Start session" [ref=f10e114] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f10e118]: Start
+        - link "Profile" [ref=f10e119] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f10e122]
+  - region "Notifications alt+T"

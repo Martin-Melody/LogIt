@@ -1,0 +1,94 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:16
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button "Drag to reorder"
+                  - button "Expand"
+                  - button "Sled push intervals — rename":
+                    - generic: Sled push intervals
+                  - button "More actions for Sled push intervals"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+          - generic:
+            - generic:
+              - button "Finish workout"
+              - button "Discard workout"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Add mobility drill" [ref=f5e183]:
+    - generic [ref=f5e184]:
+      - heading "Add mobility drill" [level=2] [ref=f5e185]
+      - generic [ref=f5e186]: A stretch or mobility drill — held for time, or done for reps.
+    - generic [ref=f5e187]:
+      - generic [ref=f5e188]:
+        - textbox "Search drills, or type a new one…" [active] [ref=f5e189]
+        - list [ref=f5e190]:
+          - listitem [ref=f5e191]:
+            - button "90/90 hip switch Both sit bones stay down" [ref=f5e192]:
+              - generic [ref=f5e193]: 90/90 hip switch
+              - generic [ref=f5e195]: Both sit bones stay down
+          - listitem [ref=f5e196]:
+            - button "90/90 hip switches From Alex Sit tall" [ref=f5e197]:
+              - generic [ref=f5e198]:
+                - generic [ref=f5e199]: 90/90 hip switches
+                - generic [ref=f5e200]: From Alex
+              - generic [ref=f5e201]: Sit tall
+          - listitem [ref=f5e202]:
+            - button "90/90 hip switches (2) Mine Sit tall" [ref=f5e203]:
+              - generic [ref=f5e204]:
+                - generic [ref=f5e205]: 90/90 hip switches (2)
+                - generic [ref=f5e206]: Mine
+              - generic [ref=f5e207]: Sit tall
+          - listitem [ref=f5e208]:
+            - button "Band pass-throughs Wide grip on a band or stick" [ref=f5e209]:
+              - generic [ref=f5e210]: Band pass-throughs
+              - generic [ref=f5e212]: Wide grip on a band or stick
+          - listitem [ref=f5e213]:
+            - button "Banded hip opener (green) Mine Band low on the hip" [ref=f5e214]:
+              - generic [ref=f5e215]:
+                - generic [ref=f5e216]: Banded hip opener (green)
+                - generic [ref=f5e217]: Mine
+              - generic [ref=f5e218]: Band low on the hip
+          - listitem [ref=f5e219]:
+            - button "Bretzel stretch Side-lying, hold the bottom foot behind you" [ref=f5e220]:
+              - generic [ref=f5e221]: Bretzel stretch
+              - generic [ref=f5e223]: Side-lying, hold the bottom foot behind you
+          - listitem [ref=f5e224]:
+            - button "Butterfly stretch Soles of the feet together" [ref=f5e225]:
+              - generic [ref=f5e226]: Butterfly stretch
+              - generic [ref=f5e228]: Soles of the feet together
+          - listitem [ref=f5e229]:
+            - button "Cat-cow Segment the spine" [ref=f5e230]:
+              - generic [ref=f5e231]: Cat-cow
+              - generic [ref=f5e233]: Segment the spine
+      - generic [ref=f5e234]:
+        - button "Hold (time)" [ref=f5e235]
+        - button "Reps" [ref=f5e237]
+      - button "Track each side Log left and right separately, e.g. rehab work." [ref=f5e239]:
+        - generic [ref=f5e240]:
+          - generic [ref=f5e241]: Track each side
+          - generic [ref=f5e242]: Log left and right separately, e.g. rehab work.
+    - generic [ref=f5e244]:
+      - button "Cancel" [ref=f5e245]
+      - button "Add" [disabled]
+    - button "Close" [ref=f5e246]

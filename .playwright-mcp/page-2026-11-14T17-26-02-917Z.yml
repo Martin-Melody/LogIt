@@ -1,0 +1,171 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e6]:
+    - generic [ref=f2e9]:
+      - generic [ref=f2e10]:
+        - link "LogIt" [ref=f2e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f2e16]:
+          - tab "Me" [ref=f2e17]
+          - tab "Coaching" [selected] [ref=f2e18]
+      - generic [ref=f2e19]:
+        - list [ref=f2e22]:
+          - listitem [ref=f2e23]:
+            - link "Today 5" [ref=f2e24] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f2e26]: Today
+              - generic [ref=f2e27]: "5"
+          - listitem [ref=f2e28]:
+            - link "Clients" [ref=f2e29] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f2e32]:
+            - link "Programs" [ref=f2e33] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f2e36]:
+            - link "Check-ins 2" [ref=f2e37] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f2e39]: Check-ins
+              - generic [ref=f2e40]: "2"
+          - listitem [ref=f2e41]:
+            - link "Messages 2" [ref=f2e42] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f2e44]: Messages
+              - generic [ref=f2e45]: "2"
+        - generic [ref=f2e46]:
+          - generic [ref=f2e47]: Studio
+          - list [ref=f2e49]:
+            - listitem [ref=f2e50]:
+              - link "Invite links 1" [ref=f2e51] [cursor=pointer]:
+                - /url: /coaching/links
+                - generic [ref=f2e53]: Invite links
+                - generic [ref=f2e54]: "1"
+        - generic [ref=f2e55]:
+          - generic [ref=f2e56]: A client's training
+          - generic [ref=f2e57]:
+            - generic [ref=f2e58]: Open a client's training
+            - combobox "Open a client's training" [ref=f2e59]:
+              - option "Choose a client…" [selected]
+              - option "Conor"
+              - option "Dara"
+              - option "Niamh"
+              - option "Sarah"
+      - list [ref=f2e61]:
+        - listitem [ref=f2e62]:
+          - button "A Alex Studio · Account" [ref=f2e63]:
+            - generic [ref=f2e64]: A
+            - generic [ref=f2e65]:
+              - generic [ref=f2e66]: Alex
+              - generic [ref=f2e67]: Studio · Account
+      - button "Toggle Sidebar" [ref=f2e69]
+    - main [ref=f2e70]:
+      - main [ref=f2e71]:
+        - generic [ref=f2e73]:
+          - generic [ref=f2e74]:
+            - generic [ref=f2e75]:
+              - heading "Clients" [level=1] [ref=f2e76]
+              - paragraph [ref=f2e77]: 4 active · 1 invite waiting · 3 need you
+            - generic [ref=f2e79]:
+              - generic [ref=f2e80]: Client's username
+              - textbox "Client's username" [ref=f2e81]
+              - button "Invite" [disabled] [ref=f2e82]
+          - generic [ref=f2e83]:
+            - heading "Needs you" [level=2] [ref=f2e84]
+            - generic [ref=f2e85]:
+              - link "Conor messaged you 2 unread" [ref=f2e86] [cursor=pointer]:
+                - /url: /messages?c=8668e82e-c762-423e-962b-6828f0f8dcc3
+                - generic [aria-hidden] [ref=f2e87]: C
+                - generic [ref=f2e88]:
+                  - generic [ref=f2e89]: Conor messaged you
+                  - generic [ref=f2e90]: 2 unread
+              - link "Niamh sent a check-in 2 h ago" [ref=f2e91] [cursor=pointer]:
+                - /url: /coaching/checkins?id=cksub_ts05y2s&client=442023ea-876e-4403-b25e-e5d56e15cf66
+                - generic [aria-hidden] [ref=f2e92]: "N"
+                - generic [ref=f2e93]:
+                  - generic [ref=f2e94]: Niamh sent a check-in
+                  - generic [ref=f2e95]: 2 h ago
+              - link "Conor sent a check-in yesterday" [ref=f2e96] [cursor=pointer]:
+                - /url: /coaching/checkins?id=cksub_ttsqnaq&client=5c117f83-6144-4e0e-99b6-a70651677e8c
+                - generic [aria-hidden] [ref=f2e97]: C
+                - generic [ref=f2e98]:
+                  - generic [ref=f2e99]: Conor sent a check-in
+                  - generic [ref=f2e100]: yesterday
+          - table [ref=f2e103]:
+            - rowgroup [ref=f2e104]:
+              - row [ref=f2e105]:
+                - columnheader "Client" [ref=f2e106]
+                - columnheader "Last 7 days" [ref=f2e107]
+                - columnheader "Last workout" [ref=f2e108]
+                - columnheader "Check-in" [ref=f2e109]
+                - columnheader "Program" [ref=f2e110]
+                - columnheader "Messages" [ref=f2e111]
+            - rowgroup [ref=f2e112]:
+              - row [ref=f2e113]:
+                - cell [ref=f2e114]:
+                  - link "Conor @conor" [ref=f2e115] [cursor=pointer]:
+                    - /url: /clients/5c117f83-6144-4e0e-99b6-a70651677e8c
+                    - generic [aria-hidden] [ref=f2e116]: C
+                    - generic [ref=f2e117]:
+                      - generic [ref=f2e118]: Conor
+                      - text: "@conor"
+                - cell "2 of 4" [ref=f2e119]
+                - cell "Thu" [ref=f2e120]
+                - cell "New" [ref=f2e121]
+                - cell "Hypertrophy · week 5 of 8" [ref=f2e122]
+                - cell [ref=f2e123]:
+                  - link "2 new" [ref=f2e124] [cursor=pointer]:
+                    - /url: /messages?c=8668e82e-c762-423e-962b-6828f0f8dcc3
+              - row [ref=f2e125]:
+                - cell [ref=f2e126]:
+                  - link "Dara @dara" [ref=f2e127] [cursor=pointer]:
+                    - /url: /clients/2501b144-8061-4d4a-a592-4280bc5c1524
+                    - generic [aria-hidden] [ref=f2e128]: D
+                    - generic [ref=f2e129]:
+                      - generic [ref=f2e130]: Dara
+                      - text: "@dara"
+                - cell "3" [ref=f2e131]
+                - cell "yesterday" [ref=f2e132]
+                - cell "No form" [ref=f2e133]
+                - cell "Own plan" [ref=f2e134]
+                - cell [ref=f2e135]:
+                  - link "Open" [ref=f2e136] [cursor=pointer]:
+                    - /url: /messages?c=8307d4d7-c431-451c-8fad-13d28d81146b
+              - row [ref=f2e137]:
+                - cell [ref=f2e138]:
+                  - link "Niamh @niamh" [ref=f2e139] [cursor=pointer]:
+                    - /url: /clients/442023ea-876e-4403-b25e-e5d56e15cf66
+                    - generic [aria-hidden] [ref=f2e140]: "N"
+                    - generic [ref=f2e141]:
+                      - generic [ref=f2e142]: Niamh
+                      - text: "@niamh"
+                - cell "3 of 4" [ref=f2e143]
+                - cell "Thu" [ref=f2e144]
+                - cell "New" [ref=f2e145]
+                - cell "Strength block · week 3 of 6" [ref=f2e146]
+                - cell [ref=f2e147]:
+                  - link "Open" [ref=f2e148] [cursor=pointer]:
+                    - /url: /messages?c=50dca495-5f00-48ce-b3bc-9bcaa209e31a
+              - row [ref=f2e149]:
+                - cell [ref=f2e150]:
+                  - link "Sarah @sarah" [ref=f2e151] [cursor=pointer]:
+                    - /url: /clients/8615e0dd-f830-49f4-bd9f-df1cab1b71b4
+                    - generic [aria-hidden] [ref=f2e152]: S
+                    - generic [ref=f2e153]:
+                      - generic [ref=f2e154]: Sarah
+                      - text: "@sarah"
+                - cell "1 of 4" [ref=f2e155]
+                - cell "Mon" [ref=f2e156]
+                - cell "Late 5 days" [ref=f2e157]
+                - cell "Hypertrophy · week 2 of 8" [ref=f2e158]
+                - cell [ref=f2e159]:
+                  - link "Open" [ref=f2e160] [cursor=pointer]:
+                    - /url: /messages?c=59247e53-6af4-4fe1-b519-2fe5c4bbd910
+              - row [ref=f2e161]:
+                - cell "@laura Invite sent 1 min ago" [ref=f2e162]:
+                  - generic [ref=f2e163]:
+                    - generic [aria-hidden] [ref=f2e164]: L
+                    - generic [ref=f2e165]:
+                      - generic [ref=f2e166]: "@laura"
+                      - text: Invite sent 1 min ago
+                - cell "Nothing is shared until they accept." [ref=f2e167]
+                - cell [ref=f2e168]:
+                  - button "Cancel invite" [ref=f2e169]

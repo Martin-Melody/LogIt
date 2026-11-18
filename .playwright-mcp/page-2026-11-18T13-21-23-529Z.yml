@@ -1,0 +1,21 @@
+- generic [ref=f5e2]:
+  - generic [ref=f5e55]:
+    - button "Back" [ref=f5e57]
+    - img "Step 2 of 4" [ref=f5e59]
+    - paragraph [ref=f5e64]: Stronger and bigger
+    - heading "How long have you been lifting?" [level=2] [ref=f5e65]
+    - generic [ref=f5e66]:
+      - button "Just starting A simple plan; we'll show you the ropes" [ref=f5e67]:
+        - generic [ref=f5e68]: Just starting
+        - generic [ref=f5e69]: A simple plan; we'll show you the ropes
+      - button "Under 2 years Steady progress that keeps coming" [ref=f5e70]:
+        - generic [ref=f5e71]: Under 2 years
+        - generic [ref=f5e72]: Steady progress that keeps coming
+      - button "2+ years A plan that keeps up with you" [ref=f5e73]:
+        - generic [ref=f5e74]: 2+ years
+        - generic [ref=f5e75]: A plan that keeps up with you
+      - 'button "I compete Powerlifting: the big three come first" [ref=f5e76]':
+        - generic [ref=f5e77]: I compete
+        - generic [ref=f5e78]: "Powerlifting: the big three come first"
+  - region "Notifications alt+T"
+  - generic [ref=f5e24]: LogIt

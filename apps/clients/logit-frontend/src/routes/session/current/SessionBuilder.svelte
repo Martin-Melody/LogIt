@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { get } from "svelte/store";
   import { Plus } from "lucide-svelte";
+  import { addButton } from "$lib/components/ui/choice";
   import { toast } from "$lib/components/ui/sonner/index";
   import { onMount } from "svelte";
 
@@ -701,12 +702,8 @@
             onblur={(e) => void saveNote((e.currentTarget as HTMLTextAreaElement).value)}
           ></textarea>
         {:else}
-          <button
-            type="button"
-            class="-mx-2 h-11 px-2 text-xs text-muted-foreground hover:text-foreground"
-            onclick={() => (noteOpen = true)}
-          >
-            + Session note
+          <button type="button" class="{addButton} h-10 self-start" onclick={() => (noteOpen = true)}>
+            <Plus class="h-4 w-4" /> Session note
           </button>
         {/if}
       </div>

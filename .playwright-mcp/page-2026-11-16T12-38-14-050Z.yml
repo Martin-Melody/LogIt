@@ -1,0 +1,159 @@
+- generic [ref=f7e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f7e6]:
+    - generic [ref=f7e9]:
+      - generic [ref=f7e10]:
+        - link "LogIt" [ref=f7e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f7e16]:
+          - tab "Me" [selected] [ref=f7e17]
+          - tab "Coaching" [ref=f7e18]
+      - generic [ref=f7e19]:
+        - list [ref=f7e22]:
+          - listitem [ref=f7e23]:
+            - link "Overview" [ref=f7e24] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f7e27]:
+          - generic [ref=f7e28]: Training
+          - list [ref=f7e30]:
+            - listitem [ref=f7e31]:
+              - link "Sessions" [ref=f7e32] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f7e35]:
+              - link "Progress" [ref=f7e36] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f7e39]:
+              - link "Plan" [ref=f7e40] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f7e43]:
+              - link "Library" [ref=f7e44] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f7e47]:
+          - generic [ref=f7e48]: Body
+          - list [ref=f7e50]:
+            - listitem [ref=f7e51]:
+              - link "Nutrition" [ref=f7e52] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f7e55]:
+              - link "Habits & goals" [ref=f7e56] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f7e59]:
+          - generic [ref=f7e60]: People
+          - list [ref=f7e62]:
+            - listitem [ref=f7e63]:
+              - link "Social" [ref=f7e64] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=f7e67]:
+          - generic [ref=f7e68]: Extras
+          - list [ref=f7e70]:
+            - listitem [ref=f7e71]:
+              - link "Insights" [ref=f7e72] [cursor=pointer]:
+                - /url: /insights
+            - listitem [ref=f7e75]:
+              - link "Plugins" [ref=f7e76] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=f7e79]:
+          - generic [ref=f7e80]: Coach
+          - list [ref=f7e82]:
+            - listitem [ref=f7e83]:
+              - link "My coach" [ref=f7e84] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f7e88]:
+        - listitem [ref=f7e89]:
+          - button "A Alex Studio · Account" [ref=f7e90]:
+            - generic [ref=f7e91]: A
+            - generic [ref=f7e92]:
+              - generic [ref=f7e93]: Alex
+              - generic [ref=f7e94]: Studio · Account
+      - button "Toggle Sidebar" [ref=f7e96]
+    - main [ref=f7e97]:
+      - main [ref=f7e98]:
+        - generic [ref=f7e100]:
+          - link "‹ Insights" [ref=f7e101] [cursor=pointer]:
+            - /url: /insights
+          - generic [ref=f7e103]:
+            - generic [ref=f7e104]: Chart name
+            - textbox "Chart name" [ref=f7e105]:
+              - /placeholder: Estimated 1RM
+          - generic [ref=f7e106]:
+            - region "What to chart" [ref=f7e107]:
+              - generic [ref=f7e108]:
+                - generic [ref=f7e109]: Show
+                - combobox "Show" [ref=f7e110]:
+                  - option "Estimated 1RM" [selected]
+                  - option "Top set weight"
+                  - option "Volume (weight × reps)"
+                  - option "Working sets"
+                  - option "Most reps in a set"
+                  - option "Working sets per muscle"
+                  - option "Body weight"
+                  - option "Calories"
+                  - option "Protein"
+                  - option "Days a habit was done"
+                  - option "Workouts"
+                  - option "Time training"
+              - generic [ref=f7e111]:
+                - generic [ref=f7e112]: For
+                - generic [ref=f7e113]:
+                  - textbox "Add a lift" [active] [ref=f7e114]: Squ
+                  - list [ref=f7e115]:
+                    - listitem [ref=f7e116]:
+                      - button "Squat logged" [ref=f7e117]:
+                        - generic [ref=f7e118]: Squat
+                        - generic [ref=f7e119]: logged
+                    - listitem [ref=f7e120]:
+                      - button "Belt Squat" [ref=f7e121]
+                    - listitem [ref=f7e123]:
+                      - button "Bulgarian Split Squat" [ref=f7e124]
+                    - listitem [ref=f7e126]:
+                      - button "Front Squat" [ref=f7e127]
+                    - listitem [ref=f7e129]:
+                      - button "Goblet Squat" [ref=f7e130]
+                    - listitem [ref=f7e132]:
+                      - button "Hack Squat" [ref=f7e133]
+                    - listitem [ref=f7e135]:
+                      - button "Pendulum Squat" [ref=f7e136]
+                    - listitem [ref=f7e138]:
+                      - button "Smith Machine Squat" [ref=f7e139]
+                - generic [ref=f7e141]: Up to 4 lines.
+              - generic [ref=f7e142]:
+                - generic [ref=f7e143]: Compare with
+                - combobox "Compare with" [ref=f7e144]:
+                  - option "Nothing" [selected]
+                  - option "Body weight"
+                  - option "Calories"
+                  - option "Protein"
+                  - option "Workouts"
+                - generic [ref=f7e145]: Gets its own scale on the right.
+              - generic [ref=f7e146]:
+                - generic [ref=f7e147]: Each point is
+                - group "Each point is" [ref=f7e148]:
+                  - button "A session" [ref=f7e149]
+                  - button "A week" [pressed] [ref=f7e150]
+                  - button "A month" [ref=f7e151]
+              - generic [ref=f7e152]:
+                - generic [ref=f7e153]: Range
+                - group "Range" [ref=f7e154]:
+                  - button "4 weeks" [ref=f7e155]
+                  - button "12 weeks" [pressed] [ref=f7e156]
+                  - button "6 months" [ref=f7e157]
+                  - button "1 year" [ref=f7e158]
+            - generic [ref=f7e159]:
+              - generic [ref=f7e160]:
+                - heading "Preview with your data" [level=2] [ref=f7e162]
+                - paragraph [ref=f7e163]: Pick at least one lift.
+              - generic [ref=f7e164]:
+                - heading "Show it on" [level=2] [ref=f7e165]
+                - generic [ref=f7e166]:
+                  - checkbox "Overview here Added at the bottom; move it with Edit on the Overview." [checked] [ref=f7e167]
+                  - generic [ref=f7e168]: Overview hereAdded at the bottom; move it with Edit on the Overview.
+                - generic [ref=f7e169]:
+                  - checkbox "My phone's home screen Shows after the phone's next sync. The phone draws it from its own data." [ref=f7e170]
+                  - generic [ref=f7e171]: My phone's home screenShows after the phone's next sync. The phone draws it from its own data.
+                - generic [ref=f7e172]:
+                  - checkbox "My coach's view of me Only works for things you share with them in My coach." [ref=f7e173]
+                  - generic [ref=f7e174]: My coach's view of meOnly works for things you share with them in My coach.
+              - generic [ref=f7e176]:
+                - link "Cancel" [ref=f7e177] [cursor=pointer]:
+                  - /url: /insights
+                - button "Save chart" [disabled] [ref=f7e178]

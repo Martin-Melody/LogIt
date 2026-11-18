@@ -1,0 +1,231 @@
+- generic [ref=f5e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f5e6]:
+    - generic [ref=f5e9]:
+      - link "LogIt" [ref=f5e11] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f5e16]:
+        - list [ref=f5e19]:
+          - listitem [ref=f5e20]:
+            - link "Overview" [ref=f5e21] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f5e24]:
+          - generic [ref=f5e25]: Training
+          - list [ref=f5e27]:
+            - listitem [ref=f5e28]:
+              - link "Sessions" [ref=f5e29] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f5e32]:
+              - link "Progress" [ref=f5e33] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f5e36]:
+              - link "Plan" [ref=f5e37] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f5e40]:
+              - link "Library" [ref=f5e41] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f5e44]:
+          - generic [ref=f5e45]: Body
+          - list [ref=f5e47]:
+            - listitem [ref=f5e48]:
+              - link "Nutrition" [ref=f5e49] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f5e52]:
+              - link "Habits & goals" [ref=f5e53] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f5e56]:
+          - generic [ref=f5e57]: People
+          - list [ref=f5e59]:
+            - listitem [ref=f5e60]:
+              - link "Social" [ref=f5e61] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=f5e64]:
+          - generic [ref=f5e65]: Extras
+          - list [ref=f5e67]:
+            - listitem [ref=f5e68]:
+              - link "Plugins" [ref=f5e69] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=f5e72]:
+          - generic [ref=f5e73]: Coach
+          - list [ref=f5e75]:
+            - listitem [ref=f5e76]:
+              - link "My coach" [ref=f5e77] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f5e81]:
+        - listitem [ref=f5e82]:
+          - button "A Alex Pro · Account" [ref=f5e83]:
+            - generic [ref=f5e84]: A
+            - generic [ref=f5e85]:
+              - generic [ref=f5e86]: Alex
+              - generic [ref=f5e87]: Pro · Account
+      - button "Toggle Sidebar" [ref=f5e89]
+    - main [ref=f5e90]:
+      - main [ref=f5e91]:
+        - generic [ref=f5e93]:
+          - generic [ref=f5e168]:
+            - generic [ref=f5e169]: "Editing your Overview: drag or use the arrows to move, pick a size, or add widgets"
+            - generic [ref=f5e170]:
+              - button "Reset" [ref=f5e171]
+              - button "Done" [ref=f5e172]
+          - generic [ref=f5e95]:
+            - paragraph [ref=f5e96]: Monday, November 16
+            - heading "This week" [level=1] [ref=f5e97]
+          - region "Add a widget" [ref=f5e173]:
+            - heading "Add a widget" [level=2] [ref=f5e174]
+            - paragraph [ref=f5e281]: Every widget is on your Overview. Widget plugins you install show up here too.
+          - list [ref=f5e100]:
+            - listitem "Streak" [ref=f5e101]:
+              - generic [ref=f5e102]:
+                - heading "Streak" [level=2] [ref=f5e103]
+                - generic [ref=f5e177]:
+                  - generic [ref=f5e178]:
+                    - button "Size S" [pressed] [ref=f5e179]: S
+                    - button "Size M" [ref=f5e180]: M
+                  - button "Move earlier" [disabled] [ref=f5e181]
+                  - button "Move later" [ref=f5e183]
+                  - button "Remove Streak" [ref=f5e185]
+              - generic [ref=f5e104]:
+                - generic [ref=f5e105]: 0 weeks
+                - generic [ref=f5e106]: "Best: 0 weeks"
+            - listitem "Sessions this week" [ref=f5e107]:
+              - generic [ref=f5e108]:
+                - heading "Sessions this week" [level=2] [ref=f5e109]
+                - generic [ref=f5e187]:
+                  - generic [ref=f5e188]:
+                    - button "Size S" [pressed] [ref=f5e189]: S
+                    - button "Size M" [ref=f5e190]: M
+                  - button "Move earlier" [ref=f5e191]
+                  - button "Move later" [ref=f5e193]
+                  - button "Remove Sessions this week" [ref=f5e195]
+              - generic [ref=f5e110]: 0 of 3
+            - listitem "Volume this week" [ref=f5e113]:
+              - generic [ref=f5e114]:
+                - heading "Volume this week" [level=2] [ref=f5e115]
+                - generic [ref=f5e197]:
+                  - generic [ref=f5e198]:
+                    - button "Size S" [pressed] [ref=f5e199]: S
+                    - button "Size M" [ref=f5e200]: M
+                  - button "Move earlier" [ref=f5e201]
+                  - button "Move later" [ref=f5e203]
+                  - button "Remove Volume this week" [ref=f5e205]
+              - generic [ref=f5e116]:
+                - generic [ref=f5e117]: 0 t
+                - generic [ref=f5e118]: Nothing last week to compare
+            - listitem "Body weight" [ref=f5e119]:
+              - generic [ref=f5e120]:
+                - heading "Body weight" [level=2] [ref=f5e121]
+                - generic [ref=f5e207]:
+                  - generic [ref=f5e208]:
+                    - button "Size S" [pressed] [ref=f5e209]: S
+                    - button "Size M" [ref=f5e210]: M
+                  - button "Move earlier" [ref=f5e211]
+                  - button "Move later" [ref=f5e213]
+                  - button "Remove Body weight" [ref=f5e215]
+              - paragraph [ref=f5e122]: Log your weight in the app to see the trend.
+            - listitem "This week" [ref=f5e123]:
+              - generic [ref=f5e124]:
+                - heading "This week" [level=2] [ref=f5e125]
+                - generic [ref=f5e217]:
+                  - generic [ref=f5e218]:
+                    - button "Size M" [ref=f5e219]: M
+                    - button "Size L" [pressed] [ref=f5e220]: L
+                    - button "Size Full" [ref=f5e221]: Full
+                  - button "Move earlier" [ref=f5e222]
+                  - button "Move later" [ref=f5e224]
+                  - button "Remove This week" [ref=f5e226]
+              - generic [ref=f5e126]:
+                - generic [ref=f5e127]:
+                  - generic [ref=f5e128]: Today
+                  - generic [ref=f5e130]: Tue
+                  - generic [ref=f5e132]: Wed
+                  - generic [ref=f5e134]: Thu
+                  - generic [ref=f5e136]: Fri
+                  - generic [ref=f5e138]: Sat
+                  - generic [ref=f5e140]: Sun
+                - paragraph [ref=f5e142]: Pick an active split in the app to see what's planned.
+            - listitem "Goals" [ref=f5e143]:
+              - generic [ref=f5e144]:
+                - heading "Goals" [level=2] [ref=f5e145]
+                - generic [ref=f5e228]:
+                  - generic [ref=f5e229]:
+                    - button "Size S" [pressed] [ref=f5e230]: S
+                    - button "Size M" [ref=f5e231]: M
+                    - button "Size L" [ref=f5e232]: L
+                  - button "Move earlier" [ref=f5e233]
+                  - button "Move later" [ref=f5e235]
+                  - button "Remove Goals" [ref=f5e237]
+              - paragraph [ref=f5e146]: No goals yet. Set them in the app under Progress › Goals.
+            - listitem "Weekly volume" [ref=f5e147]:
+              - generic [ref=f5e148]:
+                - heading "Weekly volume" [level=2] [ref=f5e149]
+                - generic [ref=f5e239]:
+                  - generic [ref=f5e240]:
+                    - button "Size M" [ref=f5e241]: M
+                    - button "Size L" [pressed] [ref=f5e242]: L
+                    - button "Size Full" [ref=f5e243]: Full
+                  - button "Move earlier" [ref=f5e244]
+                  - button "Move later" [ref=f5e246]
+                  - button "Remove Weekly volume" [ref=f5e248]
+              - generic [ref=f5e150]:
+                - img "Weekly volume for the last 12 weeks, this week 0 t" [ref=f5e151]:
+                  - 'generic "Aug 31: 0 t"'
+                  - 'generic "Sep 7: 0 t"'
+                  - 'generic "Sep 14: 0 t"'
+                  - 'generic "Sep 21: 0 t"'
+                  - 'generic "Sep 28: 0 t"'
+                  - 'generic "Oct 5: 0 t"'
+                  - 'generic "Oct 12: 0 t"'
+                  - 'generic "Oct 19: 0 t"'
+                  - 'generic "Oct 26: 0 t"'
+                  - 'generic "Nov 2: 0 t"'
+                  - 'generic "Nov 9: 0 t"'
+                  - 'generic "Nov 16: 0 t"'
+                - generic [ref=f5e152]:
+                  - generic [ref=f5e153]: Aug 31
+                  - generic [ref=f5e154]: This week (so far)
+            - listitem "Recent records" [ref=f5e155]:
+              - generic [ref=f5e156]:
+                - heading "Recent records" [level=2] [ref=f5e157]
+                - generic [ref=f5e250]:
+                  - generic [ref=f5e251]:
+                    - button "Size S" [pressed] [ref=f5e252]: S
+                    - button "Size M" [ref=f5e253]: M
+                  - button "Move earlier" [ref=f5e254]
+                  - button "Move later" [ref=f5e256]
+                  - button "Remove Recent records" [ref=f5e258]
+              - paragraph [ref=f5e158]: No records yet. Beat a previous best and it shows up here.
+            - listitem "Recent sessions" [ref=f5e159]:
+              - generic [ref=f5e160]:
+                - heading "Recent sessions" [level=2] [ref=f5e161]
+                - generic [ref=f5e260]:
+                  - generic [ref=f5e261]:
+                    - button "Size M" [ref=f5e262]: M
+                    - button "Size L" [pressed] [ref=f5e263]: L
+                    - button "Size Full" [ref=f5e264]: Full
+                  - button "Move earlier" [ref=f5e265]
+                  - button "Move later" [ref=f5e267]
+                  - button "Remove Recent sessions" [ref=f5e269]
+              - paragraph [ref=f5e162]: No workouts synced yet.
+            - listitem "Habits this week" [ref=f5e163]:
+              - generic [ref=f5e164]:
+                - heading "Habits this week" [level=2] [ref=f5e165]
+                - generic [ref=f5e271]:
+                  - generic [ref=f5e272]:
+                    - button "Size S" [pressed] [ref=f5e273]: S
+                    - button "Size M" [ref=f5e274]: M
+                  - button "Move earlier" [ref=f5e275]
+                  - button "Move later" [ref=f5e277]
+                  - button "Remove Habits this week" [ref=f5e279]
+              - paragraph [ref=f5e166]: No habits yet. Add them in the app.
+            - listitem "Week recap" [ref=f5e282]:
+              - generic [ref=f5e283]:
+                - heading "Week recap" [level=2] [ref=f5e284]
+                - generic [ref=f5e285]:
+                  - generic [ref=f5e286]:
+                    - button "Size S" [ref=f5e287]: S
+                    - button "Size M" [pressed] [ref=f5e288]: M
+                    - button "Size L" [ref=f5e289]: L
+                  - button "Move earlier" [ref=f5e290]
+                  - button "Move later" [disabled] [ref=f5e292]
+                  - button "Remove Week recap" [ref=f5e294]
+              - button "Nothing logged in the last 7 days." [ref=f5e298]

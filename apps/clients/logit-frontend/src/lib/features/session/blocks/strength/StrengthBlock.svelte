@@ -6,6 +6,7 @@
 
 <script lang="ts">
   import { ChevronDown, MapPin, Plus, Rows3 } from "lucide-svelte";
+  import { addButton } from "$lib/components/ui/choice";
   import { toast } from "$lib/components/ui/sonner/index";
 
   import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
@@ -907,15 +908,11 @@
     {/if}
   {:else if data.sets.length > 0}
     {#if canWarmup}
-      <button
-        type="button"
-        class="w-full h-10 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40 border-b border-border/50"
-        disabled={saving}
-        onclick={handleAddWarmup}
-        transition:reveal
-      >
-        + Warm-up ramp
-      </button>
+      <div class="px-3 pb-2 pt-1" transition:reveal>
+        <button type="button" class="{addButton} h-10 w-full" disabled={saving} onclick={handleAddWarmup}>
+          <Plus class="h-4 w-4" /> Warm-up ramp
+        </button>
+      </div>
     {/if}
     {#if showFirstSetHint}
       <div class="mx-3 my-2 flex flex-col gap-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
@@ -1013,39 +1010,28 @@
                 </div>
               {/if}
             {/each}
-            <button
-              type="button"
-              class="w-full pl-3 py-1.5 text-xs text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-              disabled={saving}
-              onclick={() => handleAddDrop(group.drops[group.drops.length - 1]!.id)}
-            >
-              + Add drop
-            </button>
+            <div class="px-3 py-1.5">
+              <button type="button" class="{addButton} h-9 w-full text-xs" disabled={saving}
+                onclick={() => handleAddDrop(group.drops[group.drops.length - 1]!.id)}>
+                <Plus class="h-3.5 w-3.5" /> Add drop
+              </button>
+            </div>
           </div>
         {/if}
         </div>
       {/each}
     </div>
   {:else}
-    <button
-      type="button"
-      class="w-full px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
-      disabled={saving}
-      onclick={handleAddSet}
-    >
-      + Add first set
-    </button>
-    {#if canWarmup}
-      <button
-        type="button"
-        class="w-full h-10 px-3 -mt-1 mb-1 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-        disabled={saving}
-        onclick={handleAddWarmup}
-        transition:reveal
-      >
-        + Warm-up ramp
+    <div class="flex gap-2 px-3 py-2.5">
+      <button type="button" class="{addButton} flex-1" disabled={saving} onclick={handleAddSet}>
+        <Plus class="h-4 w-4" /> Add first set
       </button>
-    {/if}
+      {#if canWarmup}
+        <button type="button" class="{addButton} flex-1" disabled={saving} onclick={handleAddWarmup} transition:reveal>
+          <Plus class="h-4 w-4" /> Warm-up ramp
+        </button>
+      {/if}
+    </div>
   {/if}
 </ExerciseCard>
 

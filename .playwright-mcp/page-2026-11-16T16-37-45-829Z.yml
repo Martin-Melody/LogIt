@@ -1,0 +1,24 @@
+- generic [ref=f11e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f11e7]:
+    - generic [ref=f11e8]:
+      - heading "LogIt" [level=1] [ref=f11e9]
+      - paragraph [ref=f11e10]: Sign in to view your training analytics.
+    - tablist [ref=f11e12]:
+      - tab "Log in" [selected] [ref=f11e13]
+      - tab "Sign up" [ref=f11e14]
+    - generic [ref=f11e15]:
+      - generic [ref=f11e16]:
+        - generic [ref=f11e17]: Username or email
+        - textbox "Username or email" [ref=f11e18]
+      - generic [ref=f11e19]:
+        - generic [ref=f11e20]: Password
+        - textbox "Password" [ref=f11e21]
+      - button "Sign in" [disabled]
+    - generic [ref=f11e22]:
+      - link "Forgot password?" [ref=f11e23] [cursor=pointer]:
+        - /url: /forgot-password
+      - link "Compare plans" [ref=f11e24] [cursor=pointer]:
+        - /url: http://192.168.30.100:5210/pricing
+    - button "Self-hosted? Set your server URL" [ref=f11e26]
+  - generic [ref=f11e27]: LogIt

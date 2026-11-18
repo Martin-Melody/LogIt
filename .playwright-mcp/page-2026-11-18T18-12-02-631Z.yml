@@ -1,0 +1,249 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 11:40
+        - button "Finish workout": Finish
+        - button "Workout options"
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Collapse exercise"
+                    - button "Lat Pulldown — open details":
+                      - generic: Lat Pulldown
+                      - generic: Last time 60 kg × 10, 10, 9
+                    - generic: 1 of 3
+                    - button "More actions for Lat Pulldown"
+                  - generic:
+                    - 'button "Machine: Lat pulldown at Northside. Change"':
+                      - generic:
+                        - strong: Lat pulldown
+                        - text: · Northside · stack 5–100 kg
+                      - generic [aria-hidden]: ▾
+                  - generic:
+                    - generic:
+                      - generic: +2.5kg
+                      - paragraph:
+                        - text: 8 on every set →
+                        - strong: 65 kg
+                      - button "Why?"
+                    - 'generic "Set 1: 5 reps, the 5 aimed for"':
+                      - generic: "1"
+                      - generic: 5/5
+                    - 'generic "Set 2: aiming for 5 reps; the weight goes up at 8"':
+                      - generic: "2"
+                      - generic: aim 5
+                    - 'generic "Set 3: aiming for 5 reps; the weight goes up at 8"':
+                      - generic: "3"
+                      - generic: aim 5
+                    - paragraph: You hit 8 on every set last time.
+                - generic:
+                  - button "+ Warm-up ramp"
+                  - generic:
+                    - generic: "#"
+                    - generic: Last
+                    - generic: kg
+                    - generic: Reps
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 1 options Set 1, last time 10 × 60 Set 1 weight: 60 kg. Change Mark incomplete"':
+                          - generic:
+                            - button "Set 1 options":
+                              - generic: "1"
+                            - generic "Set 1, last time 10 × 60": 10 × 60
+                            - 'button "Set 1 weight: 60 kg. Change"': "60"
+                            - spinbutton "Set 1 reps": "5"
+                            - button "Mark incomplete"
+                      - generic:
+                        - generic:
+                          - generic: How many more could you have done?
+                          - group "How many more could you have done?":
+                            - button "3+ left": 3+
+                            - button "2 left": "2"
+                            - button "1 left": "1"
+                            - button "Nothing left": "0"
+                      - generic:
+                        - generic:
+                          - generic: 55s
+                          - button "Dismiss rest timer"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 2 options Set 2, last time 10 × 60 Set 2 weight: 60 kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 2 options" [expanded]:
+                              - generic: "2"
+                            - generic "Set 2, last time 10 × 60": 10 × 60
+                            - 'button "Set 2 weight: 60 kg. Change"': "60"
+                            - spinbutton "Set 2 reps"
+                            - button "Mark complete"
+                      - generic:
+                        - generic "Set 2 options":
+                          - group "Kind of set":
+                            - generic:
+                              - button "Warm-up"
+                              - button "Working" [pressed]
+                              - button "Drop set"
+                              - button "To failure"
+                            - 'button "More kinds: AMRAP, rest-pause, myo-reps"'
+                          - generic:
+                            - generic: Left in it
+                            - group "Left in it":
+                              - button "3+ left (RPE 7)": 3+
+                              - button "2 left (RPE 8)": "2"
+                              - button "1 left (RPE 9)": "1"
+                              - button "Nothing left (RPE 10)": "0"
+                          - generic:
+                            - generic: Rest
+                            - button "15 seconds less rest": −
+                            - generic: 1:30
+                            - button "15 seconds more rest": +
+                          - generic:
+                            - generic: Note
+                            - textbox "Note":
+                              - /placeholder: Optional
+                            - button "Delete set 2"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 3 options Set 3, last time 9 × 60 Set 3 weight: 60 kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 3 options":
+                              - generic: "3"
+                            - generic "Set 3, last time 9 × 60": 9 × 60
+                            - 'button "Set 3 weight: 60 kg. Change"': "60"
+                            - spinbutton "Set 3 reps"
+                            - button "Mark complete"
+                  - button "Add a set"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Collapse exercise"
+                    - button "Seated Cable Row — open details":
+                      - generic: Seated Cable Row
+                    - generic: 0 of 3
+                    - button "More actions for Seated Cable Row"
+                  - generic:
+                    - button "Which machine at Northside? Add it"
+                  - generic:
+                    - button "Why?"
+                - generic:
+                  - generic:
+                    - paragraph: First time? Pick a weight you could lift about 8 times.
+                    - paragraph: Logit plans every set after this one from it. No need to know your max.
+                  - generic:
+                    - generic: "#"
+                    - generic: Last
+                    - generic: kg
+                    - generic: Reps
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - row "Set 1 options Set 1, nothing last time Mark complete":
+                          - generic:
+                            - button "Set 1 options":
+                              - generic: "1"
+                            - generic "Set 1, nothing last time"
+                            - generic:
+                              - spinbutton "Set 1 weight (kg)"
+                            - spinbutton "Set 1 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - row "Set 2 options Set 2, nothing last time Mark complete":
+                          - generic:
+                            - button "Set 2 options":
+                              - generic: "2"
+                            - generic "Set 2, nothing last time"
+                            - generic:
+                              - spinbutton "Set 2 weight (kg)"
+                            - spinbutton "Set 2 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - row "Set 3 options Set 3, nothing last time Mark complete":
+                          - generic:
+                            - button "Set 3 options":
+                              - generic: "3"
+                            - generic "Set 3, nothing last time"
+                            - generic:
+                              - spinbutton "Set 3 weight (kg)"
+                            - spinbutton "Set 3 reps"
+                            - button "Mark complete"
+                  - button "Add a set"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Sessions":
+            - /url: /sessions
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+  - dialog "Add a machine" [ref=f3e519]:
+    - heading "Add a machine" [level=2] [ref=f3e520]
+    - generic [ref=f3e521]: At Northside
+    - generic [ref=f3e522]:
+      - generic [ref=f3e523]:
+        - button "Back to the workout" [active] [ref=f3e524]
+        - generic [ref=f3e526]: 1 of 2
+      - generic [ref=f3e527]:
+        - generic [ref=f3e528]: New machine at Northside · for Lat Pulldown
+        - generic [ref=f3e529]: What is it?
+      - textbox "What is it?" [ref=f3e530]:
+        - /placeholder: Lat pulldown
+        - text: Lat Pulldown
+      - heading "How does the weight go on?" [level=2] [ref=f3e531]
+      - generic [ref=f3e532]:
+        - button "A pin in a weight stack Pulldowns, cables, leg extensions" [ref=f3e533]:
+          - generic [ref=f3e534]: A pin in a weight stack
+          - generic [ref=f3e535]: Pulldowns, cables, leg extensions
+        - button "Plates you load Leg press, hack squat, plate-loaded rows" [ref=f3e536]:
+          - generic [ref=f3e537]: Plates you load
+          - generic [ref=f3e538]: Leg press, hack squat, plate-loaded rows
+        - 'button "It helps you up Assisted pull-up or dip: more weight is easier" [ref=f3e539]':
+          - generic [ref=f3e540]: It helps you up
+          - generic [ref=f3e541]: "Assisted pull-up or dip: more weight is easier"
+        - button "No weight to set Back extension bench, dip station, rings" [ref=f3e542]:
+          - generic [ref=f3e543]: No weight to set
+          - generic [ref=f3e544]: Back extension bench, dip station, rings
+    - button "Close" [ref=f3e545]

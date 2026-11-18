@@ -1,0 +1,84 @@
+- generic [ref=f8e2]:
+  - generic [ref=f8e6]:
+    - banner [ref=f8e7]:
+      - button "Back" [ref=f8e8]
+      - generic [ref=f8e10]: Recipe · saved
+      - button "Delete recipe" [ref=f8e11]
+      - link "Notifications" [ref=f8e13] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f8e15]:
+      - generic [ref=f8e16]:
+        - textbox "Recipe name" [ref=f8e17]: Chilli Con Carne
+        - generic [ref=f8e18]:
+          - paragraph [ref=f8e19]: How you portion it
+          - radiogroup "How you portion it" [ref=f8e20]:
+            - radio "Into servings" [ref=f8e21]
+            - radio "By cooked weight" [checked] [ref=f8e22]
+          - generic [ref=f8e23]:
+            - generic [ref=f8e24]:
+              - generic [ref=f8e25]: Usually split into
+              - generic [ref=f8e26]: Boxes or plates, for a quick pick when logging
+            - textbox "Servings" [ref=f8e27]: "1"
+          - generic [ref=f8e28]:
+            - generic [ref=f8e30]:
+              - generic [ref=f8e31]: Food in the pot
+              - generic [ref=f8e32]: Weigh after cooking, minus the pot
+            - textbox "Cooked weight in grams" [active] [ref=f8e33]: "2900"
+            - generic [ref=f8e34]: g
+          - paragraph [ref=f8e185]:
+            - generic [ref=f8e186]: "99"
+            - generic [ref=f8e187]: kcal per 100 g cooked
+          - paragraph [ref=f8e188]:
+            - generic [ref=f8e189]: P 12.8
+            - generic [ref=f8e190]: C 4.7
+            - generic [ref=f8e191]: F 3.3
+          - paragraph [ref=f8e192]: Whole pot 2,872 kcal · P 372 g. A 420 g box is 416 kcal, P 54.
+        - generic [ref=f8e37]:
+          - generic [ref=f8e38]: Ingredients · 5
+          - button "Paste a list" [ref=f8e39]
+        - generic [ref=f8e41]:
+          - list [ref=f8e141]:
+            - listitem [ref=f8e142]:
+              - button "1.5 kg Beef mince, 5% fat 1,875" [ref=f8e143]:
+                - generic [ref=f8e144]: 1.5 kg
+                - generic [ref=f8e145]: Beef mince, 5% fat
+                - generic [ref=f8e146]: 1,875
+            - listitem [ref=f8e147]:
+              - button "2 × medium Brown onion 120" [ref=f8e148]:
+                - generic [ref=f8e149]: 2 × medium
+                - generic [ref=f8e150]: Brown onion
+                - generic [ref=f8e151]: "120"
+            - listitem [ref=f8e152]:
+              - button "3 tins Chopped tomatoes 264" [ref=f8e153]:
+                - generic [ref=f8e154]: 3 tins
+                - generic [ref=f8e155]: Chopped tomatoes
+                - generic [ref=f8e156]: "264"
+            - listitem [ref=f8e157]:
+              - button "480 g Kidney beans, drained 480" [ref=f8e158]:
+                - generic [ref=f8e159]: 480 g
+                - generic [ref=f8e160]: Kidney beans, drained
+                - generic [ref=f8e161]: "480"
+            - listitem [ref=f8e162]:
+              - button "1 tbsp Olive oil 133" [ref=f8e163]:
+                - generic [ref=f8e164]: 1 tbsp
+                - generic [ref=f8e165]: Olive oil
+                - generic [ref=f8e166]: "133"
+          - button "Add ingredient" [ref=f8e42]
+        - generic [ref=f8e45]:
+          - generic [ref=f8e46]: Notes
+          - textbox "Notes" [ref=f8e47]:
+            - /placeholder: Method, links, what to change next time
+        - link "Log a portion" [ref=f8e167] [cursor=pointer]:
+          - /url: /nutrition/log?pick=rcp_L7sBtJpii_iAlH_Biurft
+    - contentinfo [ref=f8e48]:
+      - navigation "Main navigation" [ref=f8e168]:
+        - link "Home" [ref=f8e169] [cursor=pointer]:
+          - /url: /
+        - link "Start session" [ref=f8e172] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f8e176]: Start
+        - link "Profile" [ref=f8e177] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f8e180]
+  - region "Notifications alt+T"
+  - generic [ref=f8e64]: LogIt

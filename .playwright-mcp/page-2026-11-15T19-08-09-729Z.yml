@@ -1,0 +1,71 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:35
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Squat — open details":
+                      - generic: Squat
+                    - generic: 0 of 3
+                    - button "More actions for Squat"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Romanian Deadlift — open details":
+                      - generic: Romanian Deadlift
+                    - generic: 0 of 3
+                    - button "More actions for Romanian Deadlift"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+          - generic:
+            - generic:
+              - button "Finish workout"
+              - button "Discard workout"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Library":
+            - /url: /exercises
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Swap Squat" [ref=f10e158]:
+    - generic [ref=f10e159]:
+      - heading "Swap Squat" [level=2] [ref=f10e160]
+      - generic [ref=f10e161]: Your logged sets stay. Alex only allows the swaps on their list.
+    - generic [ref=f10e162]:
+      - generic [ref=f10e163]: Search exercises
+      - textbox "Search exercises" [active] [ref=f10e164]
+    - generic [ref=f10e165]:
+      - generic [ref=f10e166]: From Alex
+      - button "Front Squat Alex's pick" [ref=f10e167]:
+        - generic [ref=f10e168]: Front Squat
+        - generic [ref=f10e169]: Alex's pick
+      - button "Hack Squat Alex's pick" [ref=f10e170]:
+        - generic [ref=f10e171]: Hack Squat
+        - generic [ref=f10e172]: Alex's pick
+      - button "Leg Press Alex's pick" [ref=f10e173]:
+        - generic [ref=f10e174]: Leg Press
+        - generic [ref=f10e175]: Alex's pick
+    - button "Ask Alex for something else" [ref=f10e177]
+    - button "Close" [ref=f10e178]

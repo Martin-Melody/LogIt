@@ -1,0 +1,48 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:06
+      - main:
+        - generic:
+          - generic:
+            - paragraph: Nothing logged yet.
+            - generic:
+              - button "Add exercise"
+          - generic:
+            - button "Add block"
+          - generic:
+            - generic:
+              - button "Finish workout" [disabled]
+              - button "Discard workout"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Add block" [ref=f5e41]:
+    - generic [ref=f5e42]:
+      - heading "Add block" [level=2] [ref=f5e43]
+      - generic [ref=f5e44]: Choose what to track.
+    - generic [ref=f5e45]:
+      - button [active] [ref=f5e46]:
+        - generic [ref=f5e48]:
+          - paragraph [ref=f5e49]: Strength exercise
+          - paragraph [ref=f5e50]: Track sets with reps and weight.
+      - button [ref=f5e51]:
+        - generic [ref=f5e53]:
+          - paragraph [ref=f5e54]: Cardio / Endurance
+          - paragraph [ref=f5e55]: Track intervals with duration and distance.
+      - button [ref=f5e56]:
+        - generic [ref=f5e58]:
+          - paragraph [ref=f5e59]: Mobility / Stretching
+          - paragraph [ref=f5e60]: Progressively overload holds or reps, per side.
+    - button "Close" [ref=f5e61]

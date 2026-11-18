@@ -1,0 +1,21 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e33]:
+    - generic [ref=f6e37]:
+      - heading "Logit" [level=1] [ref=f6e38]
+      - paragraph [ref=f6e39]: Track your training. Own your data.
+    - generic [ref=f6e40]:
+      - paragraph [ref=f6e41]:
+        - generic [ref=f6e42]: ✓
+        - text: Track every set, rep, and PR
+      - paragraph [ref=f6e43]:
+        - generic [ref=f6e44]: ✓
+        - text: Works fully offline — no account needed
+      - paragraph [ref=f6e45]:
+        - generic [ref=f6e46]: ✓
+        - text: Open source — your data stays yours
+    - generic [ref=f6e47]:
+      - button "Get started" [ref=f6e48]
+      - link "Already have an account? Log in" [ref=f6e50] [cursor=pointer]:
+        - /url: /auth?mode=login
+  - region "Notifications alt+T"
+  - generic [ref=f6e31]: LogIt

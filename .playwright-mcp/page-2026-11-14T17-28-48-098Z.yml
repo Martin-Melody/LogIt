@@ -1,0 +1,126 @@
+- generic [ref=f7e2]:
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f7e221]:
+        - generic [ref=f7e224]: Sent to Alex
+  - generic [ref=f7e28]:
+    - generic [ref=f7e31]:
+      - link "LogIt" [ref=f7e33] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f7e38]:
+        - list [ref=f7e41]:
+          - listitem [ref=f7e42]:
+            - link "Overview" [ref=f7e43] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f7e46]:
+          - generic [ref=f7e47]: Training
+          - list [ref=f7e49]:
+            - listitem [ref=f7e50]:
+              - link "Sessions" [ref=f7e51] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f7e54]:
+              - link "Progress" [ref=f7e55] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f7e58]:
+              - link "Plan" [ref=f7e59] [cursor=pointer]:
+                - /url: /plan
+        - generic [ref=f7e62]:
+          - generic [ref=f7e63]: Body
+          - list [ref=f7e65]:
+            - listitem [ref=f7e66]:
+              - link "Nutrition" [ref=f7e67] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f7e70]:
+              - link "Habits & goals" [ref=f7e71] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f7e74]:
+          - generic [ref=f7e75]: Coach
+          - list [ref=f7e77]:
+            - listitem [ref=f7e78]:
+              - link "My coach" [ref=f7e79] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f7e83]:
+        - listitem [ref=f7e84]:
+          - button "S Sarah Pro · Account" [ref=f7e85]:
+            - generic [ref=f7e86]: S
+            - generic [ref=f7e87]:
+              - generic [ref=f7e88]: Sarah
+              - generic [ref=f7e89]: Pro · Account
+      - button "Toggle Sidebar" [ref=f7e91]
+    - main [ref=f7e92]:
+      - main [ref=f7e93]:
+        - generic [ref=f7e226]:
+          - generic [ref=f7e227]:
+            - generic [ref=f7e228]:
+              - generic [aria-hidden] [ref=f7e229]: A
+              - generic [ref=f7e230]:
+                - heading "Alex, your coach" [level=1] [ref=f7e231]
+                - paragraph [ref=f7e232]: "@alex · coaching you since November"
+            - link "Fill in weekly check-in" [ref=f7e233] [cursor=pointer]:
+              - /url: /my-coach/checkin/ckin_tkk38n4
+          - generic [ref=f7e234]:
+            - generic [ref=f7e235]:
+              - generic [ref=f7e236]:
+                - generic [ref=f7e237]:
+                  - heading "Hypertrophy" [level=2] [ref=f7e238]
+                  - generic [ref=f7e239]: Week 2 of 8
+                - generic [ref=f7e240]:
+                  - generic [ref=f7e241]:
+                    - generic [ref=f7e242]: Mon · Upper
+                    - generic [ref=f7e243]: 2 exercises
+                  - generic [ref=f7e244]:
+                    - generic [ref=f7e245]: Tue · Lower
+                    - generic [ref=f7e246]: 2 exercises
+                  - generic [ref=f7e247]:
+                    - generic [ref=f7e248]: Thu · Upper
+                    - generic [ref=f7e249]: 2 exercises
+                  - generic [ref=f7e250]:
+                    - generic [ref=f7e251]: Sat · Lower
+                    - generic [ref=f7e252]: 2 exercises
+                - paragraph [ref=f7e253]: "Alex's note: Upper / lower, 4 days. Add a rep each week."
+                - link "See every week ›" [ref=f7e254] [cursor=pointer]:
+                  - /url: /plan/programs
+              - generic [ref=f7e255]:
+                - heading "Messages" [level=2] [ref=f7e256]
+                - generic [ref=f7e257]:
+                  - paragraph [ref=f7e259]: No messages yet. Say hello to Alex.
+                  - generic [ref=f7e260]:
+                    - generic [ref=f7e261]:
+                      - generic [ref=f7e262]: Message Alex
+                      - textbox "Message Alex" [ref=f7e263]
+                      - button "Send" [disabled] [ref=f7e264]
+                    - generic [ref=f7e265]: Enter sends · Shift+Enter for a new line · it reaches their phone on its next sync
+            - generic [ref=f7e266]:
+              - generic [ref=f7e267]:
+                - heading "Check-ins" [level=2] [ref=f7e268]
+                - link "Weekly check-in Due Mon, Nov 16" [ref=f7e269] [cursor=pointer]:
+                  - /url: /my-coach/checkin/ckin_tkk38n4
+                  - generic [ref=f7e270]: Weekly check-in
+                  - generic [ref=f7e271]: Due Mon, Nov 16
+                - generic [ref=f7e272]:
+                  - generic [ref=f7e273]: Weekly check-in · week of Nov 2
+                  - generic [ref=f7e274]: Sent
+              - generic [ref=f7e275]:
+                - heading "What Alex can see" [level=2] [ref=f7e276]
+                - paragraph [ref=f7e277]: Switching one off hides it from Alex straight away, past entries too. Switch it back on and they see it all again.
+                - generic [ref=f7e278]:
+                  - generic [ref=f7e279]:
+                    - generic [ref=f7e280]: Workouts
+                    - switch "Workouts" [checked] [ref=f7e281]
+                  - generic [ref=f7e283]:
+                    - generic [ref=f7e284]: Nutrition diary
+                    - switch "Nutrition diary" [checked] [ref=f7e285]
+                  - generic [ref=f7e287]:
+                    - generic [ref=f7e288]: Body weight
+                    - switch "Body weight" [checked] [ref=f7e289]
+                  - generic [ref=f7e291]:
+                    - generic [ref=f7e292]: Habits
+                    - switch "Habits" [checked] [ref=f7e293]
+                  - generic [ref=f7e295]:
+                    - generic [ref=f7e296]: Check-ins
+                    - switch "Check-ins" [checked] [ref=f7e297]
+                  - generic [ref=f7e299]:
+                    - generic [ref=f7e300]: Social posts and other messages
+                    - generic [ref=f7e301]: Never
+                - button "Stop coaching with Alex" [ref=f7e302]
+  - generic [ref=f7e27]: LogIt

@@ -1,0 +1,38 @@
+- generic [ref=f3e2]:
+  - generic [ref=f3e6]:
+    - banner [ref=f3e7]:
+      - button "Close" [ref=f3e8]
+      - generic [ref=f3e10]: Add to
+      - button "Meal" [ref=f3e11]: Lunch
+      - generic [ref=f3e12]: Today
+      - link "Notifications" [ref=f3e13] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f3e15]:
+      - generic [ref=f3e17]:
+        - generic [ref=f3e19]:
+          - searchbox "Search foods" [active] [ref=f3e21]: chiken brest
+          - button "Clear search" [ref=f3e22]
+          - button "Scan barcode" [ref=f3e24]
+        - group "Show" [ref=f3e26]:
+          - button "All" [pressed] [ref=f3e27]
+          - button "Mine" [ref=f3e28]
+          - button "Whole foods" [ref=f3e29]
+          - button "Packaged" [ref=f3e30]
+        - generic [ref=f3e31]:
+          - paragraph [ref=f3e32]: Nothing matches "chiken brest".
+          - button "Search online again" [ref=f3e34]
+          - generic [ref=f3e35]:
+            - generic [ref=f3e36]: Not here?
+            - button "Create food" [ref=f3e37]
+            - button "Quick add" [ref=f3e38]
+    - contentinfo [ref=f3e39]:
+      - navigation "Main navigation" [ref=f3e40]:
+        - link "Home" [ref=f3e41] [cursor=pointer]:
+          - /url: /
+        - link "Start session" [ref=f3e44] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f3e48]: Start
+        - link "Profile" [ref=f3e49] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f3e52]
+  - region "Notifications alt+T"

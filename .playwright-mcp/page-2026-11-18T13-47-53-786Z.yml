@@ -1,0 +1,80 @@
+- generic [ref=f16e2]:
+  - generic [ref=f16e6]:
+    - main [ref=f16e7]:
+      - generic [ref=f16e8]:
+        - button "My gym" [ref=f16e10]
+        - generic [ref=f16e12]: Name
+        - textbox "Name" [ref=f16e13]: Selectorised pulldown
+        - group "Status" [ref=f16e14]:
+          - button "In" [pressed] [ref=f16e15]
+          - button "Out of order" [ref=f16e16]
+          - button "Coming" [ref=f16e17]
+          - button "Removed" [ref=f16e18]
+        - paragraph [ref=f16e19]: Look at the numbers printed on the plates.
+        - group "Units on the stack" [ref=f16e20]:
+          - button "kg" [pressed] [ref=f16e21]
+          - button "lb" [ref=f16e22]
+        - generic [ref=f16e23]:
+          - generic [ref=f16e24]: From the top
+          - generic [ref=f16e25]:
+            - generic [ref=f16e26]:
+              - text: Starts at
+              - spinbutton "Starts at" [ref=f16e27]: "5"
+            - generic [ref=f16e28]:
+              - text: Goes up by
+              - spinbutton "Goes up by" [ref=f16e29]: "5"
+            - generic [ref=f16e30]:
+              - text: Up to
+              - spinbutton "Up to" [ref=f16e31]: "100"
+          - button "+ The jumps change partway" [ref=f16e32]
+        - button "Odd numbers on some plates? Type them as they are" [ref=f16e33]
+        - paragraph [ref=f16e34]: 5 · 10 · 15 · 20 · 25 · 30 · … · 95 · 100 kg (20 settings)
+        - group "Can you add a little?" [ref=f16e35]:
+          - generic [ref=f16e37]:
+            - button "1.25 kg add-on" [ref=f16e38]
+            - button "2.5 kg add-on" [ref=f16e39]
+            - button "Pin with plates" [ref=f16e40]
+            - button "No" [ref=f16e41]
+        - group "Exercises you do on it" [ref=f16e42]:
+          - generic [ref=f16e44]:
+            - generic [ref=f16e46]: Find an exercise
+            - textbox "Find an exercise" [ref=f16e47]
+          - generic [ref=f16e48]:
+            - checkbox "Lat Pulldown" [checked] [ref=f16e49]
+            - text: Lat Pulldown
+          - generic [ref=f16e50]:
+            - checkbox "Close-Grip Lat Pulldown" [ref=f16e51]
+            - text: Close-Grip Lat Pulldown
+          - generic [ref=f16e52]:
+            - checkbox "Straight-Arm Pulldown" [ref=f16e53]
+            - text: Straight-Arm Pulldown
+          - generic [ref=f16e54]:
+            - checkbox "Arnold Press" [ref=f16e55]
+            - text: Arnold Press
+          - generic [ref=f16e56]:
+            - checkbox "Assisted Pull-Up" [ref=f16e57]
+            - text: Assisted Pull-Up
+          - generic [ref=f16e58]:
+            - checkbox "Barbell Curl" [ref=f16e59]
+            - text: Barbell Curl
+          - generic [ref=f16e60]:
+            - checkbox "Barbell Row" [ref=f16e61]
+            - text: Barbell Row
+          - generic [ref=f16e62]:
+            - checkbox "Bayesian Cable Curl" [ref=f16e63]
+            - text: Bayesian Cable Curl
+          - paragraph [ref=f16e64]: 1 picked.
+        - button "Save" [ref=f16e65]
+    - contentinfo [ref=f16e66]:
+      - navigation "Main navigation" [ref=f16e67]:
+        - link "Home" [ref=f16e68] [cursor=pointer]:
+          - /url: /
+        - link "Sessions" [ref=f16e71] [cursor=pointer]:
+          - /url: /sessions
+        - link "Resume session" [ref=f16e74] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f16e80]: Resume
+        - link "Profile" [ref=f16e81] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f16e84]
+  - region "Notifications alt+T"

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { addButton } from "$lib/components/ui/choice";
+  import { Plus } from "lucide-svelte";
   import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import { Button, buttonVariants } from "$lib/components/ui/button/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
@@ -309,8 +311,8 @@
               />
             </div>
           {:else}
-            <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => (noteExpanded = true)}>
-              + Add note
+            <button type="button" class="{addButton} h-9 text-xs" onclick={() => (noteExpanded = true)}>
+              <Plus class="h-3.5 w-3.5" /> Add note
             </button>
           {/if}
         </div>

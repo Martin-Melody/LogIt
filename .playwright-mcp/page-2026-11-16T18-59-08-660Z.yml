@@ -1,0 +1,69 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e6]:
+    - banner [ref=f1e7]:
+      - button "Close" [ref=f1e8]
+      - generic [ref=f1e10]: Add to
+      - button "Meal" [ref=f1e11]: Lunch
+      - generic [ref=f1e12]: Today
+      - link "Notifications" [ref=f1e13] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f1e15]:
+      - generic [ref=f1e17]:
+        - generic [ref=f1e19]:
+          - searchbox "Search foods" [ref=f1e21]
+          - button "Scan barcode" [ref=f1e22]
+        - generic [ref=f1e24]:
+          - button "Barcode" [ref=f1e25]
+          - button "Quick add" [ref=f1e27]
+        - tablist [ref=f1e29]:
+          - tab "Recent" [selected] [ref=f1e30]
+          - tab "Favourites" [ref=f1e31]
+          - tab "My foods" [ref=f1e32]
+          - tab "Meals" [ref=f1e33]
+        - generic [ref=f1e34]:
+          - paragraph [ref=f1e35]: Usually at lunch
+          - list [ref=f1e36]:
+            - listitem [ref=f1e37]:
+              - button "Basmati rice, cooked 250 g · 275 kcal · P 6" [ref=f1e38]:
+                - generic [ref=f1e39]: Basmati rice, cooked
+                - generic [ref=f1e40]: 250 g · 275 kcal · P 6
+              - button "Add Basmati rice, cooked" [ref=f1e41]
+          - paragraph [ref=f1e44]: Other recents
+          - list [ref=f1e45]:
+            - listitem [ref=f1e46]:
+              - button "Arla Protein yoghurt 200 g · 130 kcal · P 20" [ref=f1e47]:
+                - generic [ref=f1e48]: Arla Protein yoghurt
+                - generic [ref=f1e49]: 200 g · 130 kcal · P 20
+              - button "Add Arla Protein yoghurt" [ref=f1e50]
+            - listitem [ref=f1e53]:
+              - button "Rolled oats 80 g · 300 kcal · P 11" [ref=f1e54]:
+                - generic [ref=f1e55]: Rolled oats
+                - generic [ref=f1e56]: 80 g · 300 kcal · P 11
+              - button "Add Rolled oats" [ref=f1e57]
+            - listitem [ref=f1e60]:
+              - button "Whey protein, vanilla 1 scoop (30 g) · 120 kcal · P 24" [active] [ref=f1e61]:
+                - generic [ref=f1e62]: Whey protein, vanilla
+                - generic [ref=f1e63]: 1 scoop (30 g) · 120 kcal · P 24
+              - button "Added Whey protein, vanilla" [ref=f1e64]
+            - listitem [ref=f1e67]:
+              - button "Chicken breast, cooked 200 g · 330 kcal · P 62" [ref=f1e68]:
+                - generic [ref=f1e69]: Chicken breast, cooked
+                - generic [ref=f1e70]: 200 g · 330 kcal · P 62
+              - button "Add Chicken breast, cooked" [ref=f1e71]
+      - status [ref=f1e74]:
+        - generic [ref=f1e75]:
+          - generic [ref=f1e76]: 1 added to Lunch
+          - generic [ref=f1e77]: 120 kcal · P 24
+        - button "Undo" [ref=f1e78]
+        - button "Done" [ref=f1e79]
+    - contentinfo [ref=f1e80]:
+      - navigation "Main navigation" [ref=f1e81]:
+        - link "Home" [ref=f1e82] [cursor=pointer]:
+          - /url: /
+        - link "Start session" [ref=f1e85] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f1e89]: Start
+        - link "Profile" [ref=f1e90] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f1e93]
+  - region "Notifications alt+T"

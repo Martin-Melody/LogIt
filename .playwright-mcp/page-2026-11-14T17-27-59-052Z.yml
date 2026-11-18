@@ -1,0 +1,119 @@
+- generic [ref=f5e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f5e6]:
+    - generic [ref=f5e9]:
+      - generic [ref=f5e10]:
+        - link "LogIt" [ref=f5e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f5e16]:
+          - tab "Me" [ref=f5e17]
+          - tab "Coaching" [selected] [ref=f5e18]
+      - generic [ref=f5e19]:
+        - list [ref=f5e22]:
+          - listitem [ref=f5e23]:
+            - link "Today 4" [ref=f5e24] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f5e26]: Today
+              - generic [ref=f5e27]: "4"
+          - listitem [ref=f5e28]:
+            - link "Clients" [ref=f5e29] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f5e32]:
+            - link "Programs" [ref=f5e33] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f5e36]:
+            - link "Check-ins 1" [ref=f5e37] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f5e39]: Check-ins
+              - generic [ref=f5e40]: "1"
+          - listitem [ref=f5e41]:
+            - link "Messages 2" [ref=f5e42] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f5e44]: Messages
+              - generic [ref=f5e45]: "2"
+        - generic [ref=f5e46]:
+          - generic [ref=f5e47]: Studio
+          - list [ref=f5e49]:
+            - listitem [ref=f5e50]:
+              - link "Invite links 1" [ref=f5e51] [cursor=pointer]:
+                - /url: /coaching/links
+                - generic [ref=f5e53]: Invite links
+                - generic [ref=f5e54]: "1"
+        - generic [ref=f5e55]:
+          - generic [ref=f5e56]: A client's training
+          - generic [ref=f5e57]:
+            - generic [ref=f5e58]: Open a client's training
+            - combobox "Open a client's training" [ref=f5e59]:
+              - option "Choose a client…" [selected]
+              - option "Conor"
+              - option "Dara"
+              - option "Niamh"
+              - option "Sarah"
+      - list [ref=f5e61]:
+        - listitem [ref=f5e62]:
+          - button "A Alex Studio · Account" [ref=f5e63]:
+            - generic [ref=f5e64]: A
+            - generic [ref=f5e65]:
+              - generic [ref=f5e66]: Alex
+              - generic [ref=f5e67]: Studio · Account
+      - button "Toggle Sidebar" [ref=f5e69]
+    - main [ref=f5e70]:
+      - main [ref=f5e71]:
+        - generic [ref=f5e398]:
+          - heading "Messages" [level=1] [ref=f5e399]
+          - generic [ref=f5e400]:
+            - region "Conversations" [ref=f5e401]:
+              - generic [ref=f5e402]: Find a client
+              - textbox "Find a client" [ref=f5e403]
+              - 'button "Niamh today You: Nice week. I''ll add face pulls to both upper days from Monday." [ref=f5e404]':
+                - generic [aria-hidden] [ref=f5e405]: "N"
+                - generic [ref=f5e406]:
+                  - generic [ref=f5e407]:
+                    - generic [ref=f5e408]: Niamh
+                    - generic [ref=f5e409]: today
+                  - generic [ref=f5e410]: "You: Nice week. I'll add face pulls to both upper days from Monday."
+              - button "Conor today Knee felt off on squats today. Could I swap for leg press this week? 2 unread" [ref=f5e411]:
+                - generic [aria-hidden] [ref=f5e412]: C
+                - generic [ref=f5e413]:
+                  - generic [ref=f5e414]:
+                    - generic [ref=f5e415]: Conor
+                    - generic [ref=f5e416]: today
+                  - generic [ref=f5e417]: Knee felt off on squats today. Could I swap for leg press this week?
+                - generic "2 unread" [ref=f5e418]
+              - button "Dara No messages yet" [ref=f5e419]:
+                - generic [aria-hidden] [ref=f5e420]: D
+                - generic [ref=f5e421]:
+                  - generic [ref=f5e422]: Dara
+                  - generic [ref=f5e424]: No messages yet
+              - button "Sarah No messages yet" [ref=f5e425]:
+                - generic [aria-hidden] [ref=f5e426]: S
+                - generic [ref=f5e427]:
+                  - generic [ref=f5e428]: Sarah
+                  - generic [ref=f5e430]: No messages yet
+            - region "Conversation with Niamh" [ref=f5e431]:
+              - generic [ref=f5e432]:
+                - generic [ref=f5e433]:
+                  - generic [aria-hidden] [ref=f5e434]: "N"
+                  - generic [ref=f5e435]: Niamh
+                - link "Open client ›" [ref=f5e436] [cursor=pointer]:
+                  - /url: /clients/442023ea-876e-4403-b25e-e5d56e15cf66
+              - generic [ref=f5e438]:
+                - generic [ref=f5e439]:
+                  - generic [ref=f5e440]: Sunday, Nov 8
+                  - generic [ref=f5e441]:
+                    - text: Nice work on the deadlifts this week!
+                    - generic [ref=f5e442]: 05:24 PM
+                  - generic [ref=f5e443]:
+                    - text: Thanks! Felt strong.
+                    - generic [ref=f5e444]: 07:24 PM
+                  - generic [ref=f5e445]: Today
+                  - generic [ref=f5e446]:
+                    - text: Nice week. I'll add face pulls to both upper days from Monday.
+                    - generic [ref=f5e447]: 05:26 PM
+                - generic [ref=f5e448]:
+                  - generic [ref=f5e449]:
+                    - generic [ref=f5e450]: Message Niamh
+                    - textbox "Message Niamh" [ref=f5e451]
+                    - button "Send" [disabled] [ref=f5e452]
+                  - generic [ref=f5e453]: Enter sends · Shift+Enter for a new line · it reaches their phone on its next sync
+  - generic [ref=f5e123]: LogIt

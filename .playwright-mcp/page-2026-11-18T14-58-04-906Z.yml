@@ -1,0 +1,206 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 1:36:35
+        - button "Finish workout": Finish
+        - button "Workout options"
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Collapse exercise"
+                    - button "Bench Press — open details":
+                      - generic: Bench Press
+                    - generic: 0 of 3
+                    - button "More actions for Bench Press"
+                - generic:
+                  - generic:
+                    - paragraph: First time? Pick a weight you could lift about 8 times.
+                    - paragraph: Logit plans every set after this one from it. No need to know your max.
+                  - generic:
+                    - generic: "#"
+                    - generic: Last
+                    - generic: kg
+                    - generic: Reps
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 1 options Set 1, nothing last time Set 1 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 1 options":
+                              - generic: "1"
+                            - generic "Set 1, nothing last time"
+                            - 'button "Set 1 weight: not set kg. Change"': –
+                            - spinbutton "Set 1 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 2 options Set 2, nothing last time Set 2 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 2 options":
+                              - generic: "2"
+                            - generic "Set 2, nothing last time"
+                            - 'button "Set 2 weight: not set kg. Change"': –
+                            - spinbutton "Set 2 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 3 options Set 3, nothing last time Set 3 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 3 options":
+                              - generic: "3"
+                            - generic "Set 3, nothing last time"
+                            - 'button "Set 3 weight: not set kg. Change"': –
+                            - spinbutton "Set 3 reps"
+                            - button "Mark complete"
+                  - button "Add a set"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Barbell Row — open details":
+                      - generic: Barbell Row
+                    - generic: 0 of 3
+                    - button "More actions for Barbell Row"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Incline Dumbbell Press — open details":
+                      - generic: Incline Dumbbell Press
+                    - generic: 0 of 3
+                    - button "More actions for Incline Dumbbell Press"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Collapse exercise"
+                    - button "Lat Pulldown — open details":
+                      - generic: Lat Pulldown
+                    - generic: 0 of 3
+                    - button "More actions for Lat Pulldown"
+                  - generic:
+                    - 'button "Machine: Selectorised pulldown at My gym. Change"':
+                      - generic:
+                        - strong: Selectorised pulldown
+                        - text: · My gym
+                      - generic [aria-hidden]: ▾
+                - generic:
+                  - generic:
+                    - paragraph: First time? Pick a weight you could lift about 12 times.
+                    - paragraph: Logit plans every set after this one from it. No need to know your max.
+                  - generic:
+                    - generic: "#"
+                    - generic: Last
+                    - generic: kg
+                    - generic: Reps
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 1 options Set 1, nothing last time Set 1 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 1 options":
+                              - generic: "1"
+                            - generic "Set 1, nothing last time"
+                            - 'button "Set 1 weight: not set kg. Change"': –
+                            - spinbutton "Set 1 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 2 options Set 2, nothing last time Set 2 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 2 options":
+                              - generic: "2"
+                            - generic "Set 2, nothing last time"
+                            - 'button "Set 2 weight: not set kg. Change"': –
+                            - spinbutton "Set 2 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 3 options Set 3, nothing last time Set 3 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 3 options":
+                              - generic: "3"
+                            - generic "Set 3, nothing last time"
+                            - 'button "Set 3 weight: not set kg. Change"': –
+                            - spinbutton "Set 3 reps"
+                            - button "Mark complete"
+                  - button "Add a set"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Bicep Curl — open details":
+                      - generic: Bicep Curl
+                    - generic: 0 of 2
+                    - button "More actions for Bicep Curl"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Sessions":
+            - /url: /sessions
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+  - dialog "Set 1 · Bench Press, My gym" [ref=e254]:
+    - generic [ref=e255]:
+      - heading "Set 1 · Bench Press, My gym" [level=2] [ref=e256]
+      - generic [ref=e257]: Pick the weight for this set
+    - generic [ref=e258]:
+      - generic [ref=e259]: "20"
+      - generic [ref=e260]: kg
+    - generic [ref=e261]:
+      - button "Lighter by 2.5" [active] [ref=e262]
+      - paragraph [ref=e264]: "Moves by the smallest pair you have: 2.5 kg"
+      - button "Heavier by 2.5" [ref=e265]
+    - 'img "On each side: nothing kg on a 20 kg bar" [ref=e267]'
+    - paragraph [ref=e269]: Just the 20 kg bar
+    - button "Use 20 kg" [ref=e270]
+    - button "Type a weight" [ref=e271]
+    - button "Close" [ref=e272]

@@ -1,0 +1,38 @@
+- generic [ref=f5e2]:
+  - generic [ref=f5e6]:
+    - banner [ref=f5e7]:
+      - heading "Workout" [level=1] [ref=f5e8]
+      - generic "Elapsed workout time" [ref=f5e254]: 0:22
+    - main [ref=f5e10]:
+      - generic [ref=f5e11]:
+        - generic [ref=f5e144]:
+          - generic [ref=f5e147]:
+            - button "Drag to reorder" [ref=f5e148]
+            - button "Expand" [ref=f5e150]
+            - button "Sled push intervals — rename" [ref=f5e152]:
+              - generic [ref=f5e153]: Sled push intervals
+            - button "More actions for Sled push intervals" [ref=f5e154]
+          - generic [ref=f5e257]:
+            - button "Drag to reorder" [ref=f5e258]
+            - button "Expand" [ref=f5e260]
+            - button "Hip airplane — open details" [ref=f5e262]:
+              - generic [ref=f5e263]: Hip airplane
+            - generic "Timed hold" [ref=f5e264]
+            - button "More actions for Hip airplane" [ref=f5e266]
+        - button "+ Session note" [ref=f5e157]
+        - button "Add block" [ref=f5e17]
+        - generic [ref=f5e19]:
+          - button "Finish workout" [ref=f5e158]
+          - button "Discard workout" [ref=f5e20]
+    - contentinfo [ref=f5e21]:
+      - navigation "Main navigation" [ref=f5e22]:
+        - link "Home" [ref=f5e23] [cursor=pointer]:
+          - /url: /
+        - link "Resume session" [ref=f5e26] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f5e32]: Workout
+        - link "Profile" [ref=f5e33] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f5e36]
+  - region "Notifications alt+T"
+  - generic [ref=f5e39]: LogIt

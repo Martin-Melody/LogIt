@@ -1,0 +1,50 @@
+- generic [ref=f8e2]:
+  - generic [ref=f8e6]:
+    - banner [ref=f8e7]:
+      - button "Back" [ref=f8e8]
+      - generic [ref=f8e10]: Recipe · saved
+      - button "Delete recipe" [ref=f8e11]
+      - link "Notifications" [ref=f8e13] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f8e15]:
+      - generic [ref=f8e16]:
+        - textbox "Recipe name" [ref=f8e17]: Chilli Con Carne
+        - generic [ref=f8e18]:
+          - paragraph [ref=f8e19]: How you portion it
+          - radiogroup "How you portion it" [ref=f8e20]:
+            - radio "Into servings" [checked] [ref=f8e21]
+            - radio "By cooked weight" [ref=f8e22]
+          - generic [ref=f8e23]:
+            - generic [ref=f8e24]:
+              - generic [ref=f8e25]: Makes
+              - generic [ref=f8e26]: Equal servings
+            - textbox "Servings" [ref=f8e27]: "1"
+          - generic [ref=f8e28]:
+            - generic [ref=f8e30]:
+              - generic [ref=f8e31]: Food in the pot (optional)
+              - generic [ref=f8e32]: Weigh after cooking, minus the pot
+            - textbox "Cooked weight in grams" [ref=f8e33]
+            - generic [ref=f8e34]: g
+          - paragraph [ref=f8e36]: Add ingredients and the numbers show up here.
+        - generic [ref=f8e37]:
+          - generic [ref=f8e38]: Ingredients · 0
+          - button "Paste a list" [active] [ref=f8e39]
+        - generic [ref=f8e41]:
+          - list
+          - button "Add ingredient" [ref=f8e42]
+        - generic [ref=f8e45]:
+          - generic [ref=f8e46]: Notes
+          - textbox "Notes" [ref=f8e47]:
+            - /placeholder: Method, links, what to change next time
+      - dialog "Paste ingredients" [ref=f8e65]:
+        - generic [ref=f8e66]:
+          - button "Close" [ref=f8e67]
+          - heading "Paste ingredients" [level=1] [ref=f8e69]
+        - generic [ref=f8e70]:
+          - paragraph [ref=f8e71]: One ingredient per line, amount first. "500 g chicken breast", "2 tins chopped tomatoes", "1 tbsp olive oil", "3 eggs".
+          - textbox "Ingredient list" [ref=f8e72]:
+            - /placeholder: "1.5 kg beef mince\n2 onions\n3 tins chopped tomatoes\n2 tins kidney beans\n1 tbsp olive oil"
+          - button "Find these foods" [disabled] [ref=f8e73]
+    - contentinfo
+  - region "Notifications alt+T"
+  - generic [ref=f8e64]: LogIt
