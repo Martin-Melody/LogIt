@@ -70,6 +70,8 @@ export type Place = {
   machines: PlaceMachine[];
   /** Weekdays (1 = Monday … 7 = Sunday) usually trained here; picks the default place. */
   usualDays?: number[];
+  /** Which machine each exercise is done on here, when it has several (exerciseId → machineId). */
+  choices?: Record<string, string>;
   /** Per piece of free equipment ("dumbbells", "kettlebells", "barbell"): how load can be added. */
   extraLoad?: Partial<Record<"dumbbells" | "kettlebells" | "barbell" | "bodyweight", ExtraLoad[]>>;
   archivedAtMs?: number;
@@ -215,6 +217,14 @@ export function defaultPlaceFor(places: Place[], weekday: number, lastUsedId: st
   const usual = live.find((p) => p.usualDays?.includes(weekday));
   if (usual) return usual;
   return live.find((p) => p.id === lastUsedId) ?? live[0]!;
+}
+
+/** The machine an exercise is done on here: the one picked last time, else the first that's in. */
+export function chosenMachine(place: Place | null | undefined, exerciseId: string): PlaceMachine | null {
+  const options = machinesFor(place, exerciseId);
+  if (options.length === 0) return null;
+  const picked = place?.choices?.[exerciseId];
+  return options.find((m) => m.id === picked && m.status === "in") ?? options.find((m) => m.status === "in") ?? options[0]!;
 }
 
 /** Machines at this place that an exercise can be done on (in, or out only for today). */

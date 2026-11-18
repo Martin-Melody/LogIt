@@ -1,3 +1,4 @@
+import { withStartingPlace } from "$lib/features/places/sessionPlace";
 import { getWorkoutRepo } from "$lib/data/repoProvider";
 import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
 import type { MobilitySide, WorkoutSession } from "@logit/core/domain/workout";
@@ -30,7 +31,7 @@ export async function planSplitDay(day: SplitDay, opts: { leadSide?: MobilitySid
 
 /** Save a planned session as the in-progress workout, timed from now. */
 export async function startPlannedSession(session: WorkoutSession): Promise<WorkoutSession> {
-  const started = { ...session, startedAtMs: Date.now() };
+  const started = withStartingPlace({ ...session, startedAtMs: Date.now() });
   await getWorkoutRepo().saveDraftSession(started);
   return started;
 }

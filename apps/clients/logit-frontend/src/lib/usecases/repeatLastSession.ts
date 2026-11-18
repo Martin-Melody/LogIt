@@ -1,3 +1,4 @@
+import { withStartingPlace } from "$lib/features/places/sessionPlace";
 import { getWorkoutRepo } from "$lib/data/repoProvider";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 import { repeatSession } from "@logit/core/domain/repeatSession";
@@ -13,7 +14,9 @@ export async function repeatLastSession(): Promise<WorkoutSession | null> {
 
 /** Start a copy of a past session as the in-progress workout. */
 export async function repeatPastSession(past: WorkoutSession): Promise<WorkoutSession> {
-  const session = repeatSession(past);
+  // A repeat starts wherever you are today, not where the old one was.
+  const { placeId: _old, placeAsked: _asked, ...rest } = repeatSession(past);
+  const session = withStartingPlace(rest);
   await getWorkoutRepo().saveDraftSession(session);
   return session;
 }

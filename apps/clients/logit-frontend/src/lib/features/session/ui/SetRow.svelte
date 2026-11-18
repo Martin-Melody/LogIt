@@ -9,7 +9,9 @@
   // One set: "# | Last | weight | reps | tick". The plan sits in the boxes as blue
   // placeholder text until the set is done or something else is typed; ticking an
   // untouched planned set logs the plan. The rest (type, RPE, note, rest, machine)
-  // lives in the set card, opened from the "Last" cell or by swiping.
+  // lives in the set card, opened by tapping the set number (design canvas X4) or by
+  // swiping. When Logit knows the real weights (a machine's settings, the plates or
+  // dumbbells at your place), tapping the weight opens a picker instead (X2/X3).
   const {
     setNumber = 1,
     setType = "normal",
@@ -27,6 +29,7 @@
     onWeightChange = () => {},
     onComplete = () => {},
     onOpenDetails = () => {},
+    onPickWeight,
     onRemove,
   } = $props<{
     setNumber?: number;
@@ -46,6 +49,8 @@
     onWeightChange?: (weight: number) => void | Promise<void>;
     onComplete?: () => void | Promise<void>;
     onOpenDetails?: () => void;
+    /** Pick the weight from real settings instead of typing (X2/X3). */
+    onPickWeight?: () => void;
     /** Editing a past session: the last cell takes the set out instead of ticking it. */
     onRemove?: () => void | Promise<void>;
   }>();
@@ -71,8 +76,8 @@
   );
   const weightPlaceholder = $derived(
     weightIsPlan
-      ? displayWeight === 0 ? (bodyweight ? "" : "0") : trimWeight(displayWeight)
-      : bodyweight ? "" : prev && prev.weight !== 0 ? trimWeight(shown(prev.weight)) : "0",
+      ? displayWeight === 0 ? "" : trimWeight(displayWeight)
+      : bodyweight ? "" : prev && prev.weight !== 0 ? trimWeight(shown(prev.weight)) : "",
   );
 
   const repsValue = $derived(reps > 0 || completed ? String(reps) : "");
@@ -117,14 +122,15 @@
     ? 'bg-muted/40'
     : ''}"
 >
-  <!-- Set number; also the drag handle (no grip icon: it cost every row width) -->
+  <!-- Set number: tap for the set's options (X4); hold and drag to reorder -->
   <button
     type="button"
-    class="flex h-10 flex-col items-center justify-center text-muted-foreground cursor-grab active:cursor-grabbing"
+    class="flex h-11 flex-col items-center justify-center rounded-md text-muted-foreground hover:bg-muted active:cursor-grabbing"
     style="touch-action: none"
     use:gripAction
-    aria-label="Drag to reorder set"
-    tabindex="-1"
+    onclick={onOpenDetails}
+    aria-label="Set {setNumber || ''} options"
+    data-testid="set-number"
     {disabled}
   >
     {#if meta.short}
@@ -142,19 +148,28 @@
     {/if}
   </button>
 
-  <!-- Last time; also the way into the set card -->
-  <button
-    type="button"
-    class="h-10 min-w-0 truncate text-left text-[13px] tabular-nums text-muted-foreground"
-    onclick={onOpenDetails}
-    {disabled}
-    aria-label="Set {setNumber} details{lastText ? `, last time ${lastText}` : ''}"
+  <!-- Last time, for this set -->
+  <span
+    class="h-10 min-w-0 truncate text-left text-[13px] leading-10 tabular-nums text-muted-foreground"
+    aria-label={lastText ? `Set ${setNumber}, last time ${lastText}` : `Set ${setNumber}, nothing last time`}
     data-testid="set-last"
   >
-    {lastText || "–"}
-  </button>
+    {lastText}
+  </span>
 
   <!-- Weight -->
+  {#if onPickWeight}
+    <button
+      type="button"
+      class="{box} {weightValue === '' ? (weightIsPlan ? 'font-medium text-info' : 'font-normal text-muted-foreground') : ''}"
+      onclick={onPickWeight}
+      {disabled}
+      aria-label="Set {setNumber} weight: {weightValue || weightPlaceholder || 'not set'} {weightUnit}. Change"
+      data-testid="set-weight"
+    >
+      {weightValue || weightPlaceholder || "–"}
+    </button>
+  {:else}
   <div class="relative">
     {#if bodyweight}
       <span
@@ -180,6 +195,7 @@
       data-testid="set-weight"
     />
   </div>
+  {/if}
 
   <!-- Reps -->
   <input
