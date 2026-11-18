@@ -62,7 +62,8 @@
   import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
   import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
-  import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
+  import SetOptionsTray from "$lib/features/session/ui/SetOptionsTray.svelte";
+  import EffortPrompt from "$lib/features/session/ui/EffortPrompt.svelte";
   import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
   import CoachSwapSheet from "$lib/features/session/ui/CoachSwapSheet.svelte";
@@ -133,12 +134,12 @@
     prevSets ? prevSets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)) : [],
   );
 
-  const editSet = $state({
-    open: false,
-    setId: null as string | null,
-    // Working-set number for the card's title and "last time"; none for drop sets.
-    setNumber: null as number | null,
-  });
+  // The set whose options are open in its row (S-C), the one just ticked that asks how hard
+  // it was (S-D), and one waiting for its reps to be typed.
+  let optionsSetId = $state<string | null>(null);
+  let effortSetId = $state<string | null>(null);
+  let effortTimer: ReturnType<typeof setTimeout> | null = null;
+  let focusSetId = $state<string | null>(null);
 
   // Weights relative to bodyweight (0 = BW, −25 = assisted): shown as BW / BW−25.
   const bodyweight = $derived(
@@ -341,11 +342,11 @@
       }),
     );
     if (collapsed) collapsed = false;
-    // A set beyond the plan has nothing to show yet — open its card for entry.
+    // A set beyond the plan has nothing to show yet: straight into its reps.
     if (!planned) {
       const block = get(currentSession)?.blocks.find((b) => b.id === blockId);
       const added = (block?.data as StrengthBlockData | undefined)?.sets.find((x) => !before.has(x.id));
-      if (added) openEditSet(added.id, working.length + 1);
+      if (added) focusSetId = added.id;
     }
   }
 
@@ -388,64 +389,36 @@
     await onMutate((s: WorkoutSession) => removeSet(s, blockId, setId));
   }
 
-  function openEditSet(setId: string, setNumber: number | null = null) {
-    editSet.setId = setId;
-    editSet.setNumber = setNumber;
-    editSet.open = true;
+  /** The set number opens that set's options in its row; again closes them (S-C). */
+  function openEditSet(setId: string, _setNumber: number | null = null) {
+    optionsSetId = optionsSetId === setId ? null : setId;
+    if (effortSetId === setId) effortSetId = null;
   }
-
-  const editedSet = $derived(editSet.setId ? (data.sets.find((s) => s.id === editSet.setId) ?? null) : null);
 
   /** The group's rest when it sets one (a positive number), else undefined. */
   function groupRest(): number | undefined {
     return groupRestMs && groupRestMs > 0 ? groupRestMs : undefined;
   }
 
-  /** The set card's "Log": save what's in the card and tick the set off, in one change. */
-  async function logFromCard(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
-  ) {
-    const set = editedSet;
-    if (!set) return;
-    const setId = set.id;
-    const setType = patch.setType ?? set.setType;
-    const effectiveRest = patch.restDurationMs ?? groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[setType];
-    const startsRest = groupRestMs !== 0 && effectiveRest !== undefined;
-    await onMutate((s: WorkoutSession) => {
-      const next = updateSet(s, blockId, setId, {
-        ...patch,
-        ...(startsRest && groupRest() !== undefined && patch.restDurationMs === undefined ? { restDurationMs: groupRest() } : {}),
-        completed: true,
-        restStartedAtMs: startsRest ? Date.now() : null,
-      });
-      const planned = withFirstSetPlan(next, setId);
-      return startsRest ? clearOtherRests(planned, setId) : planned;
-    });
-    void triggerHaptic();
+  /** The rest that runs after this set: the group's, else its own, else its kind's default. */
+  function restFor(set: SetEntry): number | undefined {
+    return groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[set.setType];
   }
 
-  function getEditableSet() {
-    const set = data.sets.find((s) => s.id === editSet.setId);
-    if (!set) return null;
-    return {
-      reps: set.reps,
-      weight: set.weight,
-      setType: set.setType,
-      note: set.note ?? null,
-      // Resolve effective rest so the dialog shows what will actually fire,
-      // not just the raw per-set override (which is undefined until explicitly edited).
-      restDurationMs: set.restDurationMs ?? get(profile).restDefaults[set.setType],
-      machineId: set.machineId ?? undefined,
-      rpe: set.rpe ?? null,
-    };
-  }
-
-  async function saveSetPatch(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
+  async function patchSet(
+    setId: string,
+    patch: Partial<Pick<SetEntry, "setType" | "note" | "restDurationMs" | "rpe">>,
   ) {
-    if (!editSet.setId) return;
-    const setId = editSet.setId;
     await onMutate((s: WorkoutSession) => updateSet(s, blockId, setId, patch));
+  }
+
+  /** "How many more could you have done?" after a tick (S-D), until answered, the next set, or the rest ends. */
+  function askEffort(set: SetEntry) {
+    if (effortTimer) clearTimeout(effortTimer);
+    effortSetId = null;
+    if (!get(profile).askEffortAfterSet || set.setType === "warmup" || set.rpe != null) return;
+    effortSetId = set.id;
+    effortTimer = setTimeout(() => { if (effortSetId === set.id) effortSetId = null; }, restFor(set) ?? 90_000);
   }
 
   async function triggerHaptic() {
@@ -467,8 +440,8 @@
       if (set.target) {
         fill = { reps: set.target.reps, ...(set.weight === 0 ? { weight: set.target.weight } : {}) };
       } else if (!setTypeMeta(set.setType).repsPlaceholder) {
-        const lead = workingSets.findIndex((w) => w.id === set.id);
-        openEditSet(set.id, lead === -1 ? null : lead + 1);
+        focusSetId = null;
+        queueMicrotask(() => (focusSetId = set.id));
         return;
       }
     }
@@ -492,7 +465,13 @@
 
     // The rest service (restTimerService.ts) sees restStartedAtMs change and schedules or
     // cancels the alert itself.
-    if (!wasCompleted) void triggerHaptic();
+    if (!wasCompleted) {
+      void triggerHaptic();
+      if (optionsSetId === setId) optionsSetId = null;
+      askEffort(set);
+    } else if (effortSetId === setId) {
+      effortSetId = null;
+    }
   }
 
   async function handleDismissRest(setId: string) {
@@ -886,6 +865,8 @@
           prev={roundNum ? (prevLeadSets[roundNum - 1] ?? null) : null}
           target={roundSet.target ?? null}
           onOpenDetails={() => openEditSet(roundSet.id, roundNum || null)}
+          optionsOpen={optionsSetId === roundSet.id}
+          focusReps={focusSetId === roundSet.id}
           onPickWeight={weightSource ? () => openWeightPicker(roundSet, roundNum) : undefined}
           completed={roundSet.completed ?? false}
           disabled={saving}
@@ -895,6 +876,7 @@
           onComplete={() => handleComplete(roundSet.id)}
         />
       </SwipeRevealRow>
+      {@render setExtras(roundSet, roundNum || null)}
       {#if typeof roundSet.restStartedAtMs === "number"}
         <div transition:reveal>
           <RestProgressBar
@@ -949,6 +931,8 @@
               prev={prevLeadSets[group.leadNum - 1] ?? null}
               target={lead.target ?? null}
               onOpenDetails={() => openEditSet(lead.id, group.leadNum)}
+              optionsOpen={optionsSetId === lead.id}
+              focusReps={focusSetId === lead.id}
               onPickWeight={weightSource ? () => openWeightPicker(lead, group.leadNum) : undefined}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
@@ -958,6 +942,7 @@
               onComplete={() => handleComplete(lead.id)}
             />
           </SwipeRevealRow>
+          {@render setExtras(lead, group.leadNum)}
           {#if typeof lead.restStartedAtMs === "number"}
             <div transition:reveal>
               <RestProgressBar
@@ -988,6 +973,8 @@
                   rpe={drop.rpe ?? null}
                   target={drop.target ?? null}
                   onOpenDetails={() => openEditSet(drop.id)}
+                  optionsOpen={optionsSetId === drop.id}
+                  focusReps={focusSetId === drop.id}
                   onPickWeight={weightSource ? () => openWeightPicker(drop, 0) : undefined}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
@@ -997,6 +984,7 @@
                   onComplete={() => handleComplete(drop.id)}
                 />
               </SwipeRevealRow>
+              {@render setExtras(drop, null)}
               {#if typeof drop.restStartedAtMs === "number"}
                 <div transition:reveal>
                   <RestProgressBar
@@ -1062,23 +1050,26 @@
   />
 {/if}
 
-<EditSetDialog
-  open={editSet.open}
-  disabled={saving}
-  initial={getEditableSet()}
-  machines={exerciseData?.machines ?? []}
-  defaultMachineId={exerciseData?.defaultMachineId}
-  exerciseId={exerciseData?.id}
-  weightUnit={$profile.weightUnit}
-  setNumber={editSet.setNumber}
-  target={editedSet?.target ?? null}
-  completed={editedSet?.completed ?? false}
-  prev={editSet.setNumber ? (prevLeadSets[editSet.setNumber - 1] ?? null) : null}
-  {bodyweight}
-  onOpenChange={(v) => (editSet.open = v)}
-  onSave={saveSetPatch}
-  onLog={logFromCard}
-/>
+{#snippet setExtras(set: SetEntry, num: number | null)}
+  {#if optionsSetId === set.id}
+    <div transition:reveal>
+      <SetOptionsTray
+        setNumber={num}
+        setType={set.setType}
+        rpe={set.rpe}
+        note={set.note}
+        restMs={restFor(set)}
+        disabled={saving}
+        onChange={(patch) => patchSet(set.id, patch)}
+        onDelete={() => { optionsSetId = null; return handleDeleteSet(set.id); }}
+      />
+    </div>
+  {:else if effortSetId === set.id}
+    <div transition:reveal>
+      <EffortPrompt setNumber={num} onAnswer={(rpe) => { effortSetId = null; void patchSet(set.id, { rpe }); }} />
+    </div>
+  {/if}
+{/snippet}
 
 <ExerciseDetailSheet
   exerciseId={detailExerciseId}

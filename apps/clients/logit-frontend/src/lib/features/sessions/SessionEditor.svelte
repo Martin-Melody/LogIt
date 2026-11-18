@@ -4,9 +4,7 @@
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
-  import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
-  import { placesStore } from "$lib/features/places/places.svelte";
-  import { chosenMachine, effectiveMachine, machinesFor } from "@logit/core/domain/place";
+  import SetOptionsTray from "$lib/features/session/ui/SetOptionsTray.svelte";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
   import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
@@ -14,7 +12,7 @@
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { trimWeight } from "@logit/core/domain/units";
-  import { usesBodyweightLoad, type Machine } from "@logit/core/domain/exercise";
+  import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import {
     addCardioBlock,
     addExercise,
@@ -171,35 +169,9 @@
 
   const noGrip = () => ({ destroy() {} });
 
-  // The set card (type, RPE, note, machine), opened from the "Last" cell like when logging.
-  const setCard = $state({ open: false, blockId: null as string | null, setId: null as string | null });
-  let machines = $state<Machine[]>([]);
-  let defaultMachineId = $state<string | undefined>(undefined);
-  let cardExerciseId = $state<string | undefined>(undefined);
+  // A set's options open in its row, as when logging (design canvas S-C).
+  let openSetId = $state<string | null>(null);
 
-  async function openSetCard(blockId: string, setId: string) {
-    setCard.blockId = blockId;
-    setCard.setId = setId;
-    setCard.open = true;
-    const d = draft.blocks.find((x) => x.id === blockId)?.data as StrengthBlockData | undefined;
-    let ex = null;
-    try {
-      if (d) ex = d.exerciseId ? await getExerciseRepo().getById(d.exerciseId) : await getExerciseRepo().getByName(d.exerciseName);
-    } catch {
-      ex = null;
-    }
-    // Machines live in places: the ones at the place this workout was at.
-    const at = placesStore.byId(draft.placeId);
-    machines = ex && at ? machinesFor(at, ex.id).map(effectiveMachine) : [];
-    defaultMachineId = ex && at ? chosenMachine(at, ex.id)?.id : undefined;
-    cardExerciseId = ex?.id;
-  }
-
-  const cardSet = $derived.by(() => {
-    if (!setCard.blockId || !setCard.setId) return null;
-    const b = draft.blocks.find((x) => x.id === setCard.blockId);
-    return (b?.data as StrengthBlockData | undefined)?.sets.find((s) => s.id === setCard.setId) ?? null;
-  });
 
   // ── Mobility ────────────────────────────────────────────────────────────
   function mobValue(s: MobilitySet | undefined, metric: MobilityMetric): string {
@@ -372,7 +344,7 @@
           </button>
           {@render blockMenu(b, true)}
         </div>
-        <div class="grid grid-cols-[1.5rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] gap-1.5 px-3 pb-1 pt-2 text-xs text-muted-foreground">
+        <div class="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] gap-1.5 px-3 pb-1 pt-2 text-xs text-muted-foreground">
           <span class="text-center">#</span><span>Last</span><span class="text-center">{unit}</span><span class="text-center">Reps</span><span></span>
         </div>
         <div class="pb-1.5">
@@ -391,9 +363,23 @@
               gripAction={noGrip}
               onWeightChange={(w) => apply((x) => updateSet(x, b.id, s.id, { weight: w }))}
               onRepsChange={(r) => apply((x) => updateSet(x, b.id, s.id, { reps: r, completed: r > 0 }))}
-              onOpenDetails={() => void openSetCard(b.id, s.id)}
+              onOpenDetails={() => (openSetId = openSetId === s.id ? null : s.id)}
+              optionsOpen={openSetId === s.id}
               onRemove={() => apply((x) => removeSet(x, b.id, s.id))}
             />
+            {#if openSetId === s.id}
+              <SetOptionsTray
+                setNumber={workingNumber(sets, s.id)}
+                setType={s.setType}
+                rpe={s.rpe}
+                note={s.note}
+                restMs={undefined}
+                showRest={false}
+                disabled={saving}
+                onChange={(patch) => apply((x) => updateSet(x, b.id, s.id, patch))}
+                onDelete={() => { openSetId = null; apply((x) => removeSet(x, b.id, s.id)); }}
+              />
+            {/if}
           {:else}
             <p class="px-3.5 py-2 text-xs text-muted-foreground">No sets. Add one with +.</p>
           {/each}
@@ -518,22 +504,6 @@
   onConfirm={onDelete}
 />
 
-<EditSetDialog
-  open={setCard.open}
-  disabled={saving}
-  initial={cardSet}
-  {machines}
-  {defaultMachineId}
-  exerciseId={cardExerciseId}
-  weightUnit={unit}
-  onOpenChange={(v) => (setCard.open = v)}
-  onSave={(patch) => {
-    if (!setCard.blockId || !setCard.setId) return;
-    const blockId = setCard.blockId;
-    const setId = setCard.setId;
-    apply((x) => updateSet(x, blockId, setId, patch as Parameters<typeof updateSet>[3]));
-  }}
-/>
 
 <BlockPickerSheet
   open={adding.picker}
