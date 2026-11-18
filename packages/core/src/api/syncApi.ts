@@ -73,6 +73,9 @@ export type RemoteProfile = {
   /** Plugin settings: { community: { enabled, acknowledgedRisk, updatedAtMs } } (see
    * plugins/pluginInstalls.ts). Merged per key (newest wins) like goalsJson. */
   pluginSettingsJson?: string | null;
+  /** The goal picked in onboarding (domain/starterPlan.ts TrainingGoal). The dashboard
+   * arranges Overview by it until someone changes the layout. Kept by the server when left out. */
+  trainingGoal?: string | null;
 };
 
 // ── Nutrition ────────────────────────────────────────────────────────────────

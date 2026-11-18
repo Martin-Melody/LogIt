@@ -41,6 +41,25 @@ export type Slot = { id: WidgetId; size: WidgetSize };
 
 const DEFAULT_LAYOUT: Slot[] = WIDGETS.map((w) => ({ id: w.id, size: w.defaultSize }));
 
+/**
+ * The first Overview for each onboarding goal (web onboarding W4): what that person checks
+ * first goes first. Only used until the layout is changed by hand; widgets not listed keep
+ * their default order after these.
+ */
+const GOAL_ORDER: Record<string, BuiltinWidgetId[]> = {
+  strength: ["this-week", "records", "weekly-volume", "streak", "sessions-week"],
+  muscle: ["this-week", "weekly-volume", "volume-week", "sessions-week", "records"],
+  both: ["this-week", "records", "weekly-volume", "volume-week", "streak"],
+  leaner: ["body-weight", "sessions-week", "streak", "habits", "this-week"],
+  fit: ["streak", "sessions-week", "habits", "this-week", "goals"],
+};
+
+export function layoutForGoal(goal: string | null | undefined): Slot[] {
+  const first = (goal && GOAL_ORDER[goal]) || [];
+  const byId = new Map(DEFAULT_LAYOUT.map((s) => [s.id, s]));
+  return [...first.map((id) => byId.get(id)!), ...DEFAULT_LAYOUT.filter((s) => !first.includes(s.id as BuiltinWidgetId))];
+}
+
 function key(userId: string): string {
   return `logit-web:overview-layout:v1:${userId}`;
 }
@@ -75,16 +94,31 @@ function read(userId: string): Slot[] {
   }
 }
 
+function hasSaved(userId: string): boolean {
+  try {
+    return localStorage.getItem(key(userId)) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function createLayout(userId: string) {
   let slots = $state<Slot[]>(read(userId));
+  /** Changed by hand on this browser: the goal no longer decides the order. */
+  let custom = hasSaved(userId);
   /** Widget plugins installed and switched on, which can go on the Overview. */
   let extra = $state<WidgetDef[]>([]);
 
   function save() {
+    custom = true;
     try { localStorage.setItem(key(userId), JSON.stringify(slots)); } catch {}
   }
 
   return {
+    /** Arrange by the onboarding goal (from the synced profile), unless changed by hand. */
+    useGoal(goal: string | null | undefined) {
+      if (!custom && goal) slots = layoutForGoal(goal);
+    },
     get slots() { return slots; },
     get hidden() { return [...WIDGETS, ...extra].filter((w) => !slots.some((s) => s.id === w.id)); },
     get extra() { return extra; },
@@ -122,6 +156,11 @@ export function createLayout(userId: string) {
     },
     reset() {
       slots = DEFAULT_LAYOUT;
+      save();
+    },
+    /** Back to the order for this goal (Reset when the profile has one). */
+    resetTo(goal: string | null | undefined) {
+      slots = layoutForGoal(goal);
       save();
     },
   };

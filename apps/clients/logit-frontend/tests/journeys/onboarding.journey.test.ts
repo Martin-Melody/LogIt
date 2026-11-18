@@ -176,5 +176,7 @@ describe("the plan onboarding builds (design canvas O1–O3)", () => {
     expect(server.splitNames).toEqual(["Upper / Lower"]);
     expect(server.repRanges?.["Bench Press"]).toEqual([3, 6]);
     expect(server.repRanges?.["Bicep Curl"]).toEqual([6, 10]);
+    // The web dashboard arranges Overview by it (W4).
+    expect(server.profile?.trainingGoal).toBe("strength");
   });
 });

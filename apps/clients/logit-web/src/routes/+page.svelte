@@ -110,6 +110,8 @@
     error = null;
     try {
       data = await loadOverview(clientId ?? undefined);
+      // Your own Overview opens arranged for your goal, until you rearrange it (W4).
+      if (!clientId) layout.useGoal(data.trainingGoal);
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load your training.";
     }
@@ -131,7 +133,7 @@
     <div class="-mx-4 -mt-6 mb-1 flex flex-wrap items-center justify-between gap-3 bg-primary px-4 py-3 text-primary-foreground sm:-mx-8 sm:-mt-7 sm:px-8">
       <span class="text-sm font-semibold">Editing your Overview: drag or use the arrows to move, pick a size, or add widgets</span>
       <div class="flex gap-2">
-        <button type="button" class="h-8 rounded-[9px] border border-primary-foreground/30 px-3 text-sm" onclick={() => layout.reset()}>Reset</button>
+        <button type="button" class="h-8 rounded-[9px] border border-primary-foreground/30 px-3 text-sm" onclick={() => (data?.trainingGoal ? layout.resetTo(data.trainingGoal) : layout.reset())}>Reset</button>
         <button type="button" class="h-8 rounded-[9px] bg-primary-foreground px-3.5 text-sm font-semibold text-primary" onclick={() => (editing = false)}>Done</button>
       </div>
     </div>

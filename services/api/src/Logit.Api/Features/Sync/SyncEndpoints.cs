@@ -369,7 +369,11 @@ public static class SyncEndpoints
         // that isn't newer than its own.
         if (dto.UpdatedAtMs > user.ProfileUpdatedAtMs || user.ProfileJson is null)
         {
-            user.ProfileJson = JsonSerializer.Serialize(dto with { SplitRotationJson = rotations, GoalsJson = goals, PluginSettingsJson = pluginSettings });
+            user.ProfileJson = JsonSerializer.Serialize(dto with
+            {
+                SplitRotationJson = rotations, GoalsJson = goals, PluginSettingsJson = pluginSettings,
+                TrainingGoal = dto.TrainingGoal ?? stored?.TrainingGoal,
+            });
             user.ProfileUpdatedAtMs = dto.UpdatedAtMs;
             await db.SaveChangesAsync();
         }
@@ -832,7 +836,11 @@ public record ProfileDto(
     string? ProfileConfigJson = null,
     // Plugin settings: { community: { enabled, acknowledgedRisk, updatedAtMs } }. Merged per key
     // on push like GoalsJson, so the community plugins switch is the same on every device.
-    string? PluginSettingsJson = null
+    string? PluginSettingsJson = null,
+    // The goal picked in the app's onboarding: strength, muscle, both, fit, leaner. The
+    // dashboard arranges Overview by it until the layout is changed by hand. Kept when a
+    // push leaves it out (an app from before this field).
+    string? TrainingGoal = null
 );
 
 /// One client-owned sync row — nutrition row, habit or habit entry (see ISyncedClientRow).
