@@ -52,7 +52,6 @@
   import type { ExerciseType } from "@logit/core/domain/exercise";
 
   import CurrentSessionHeader from "./Components/CurrentSessionHeader.svelte";
-  import FinishWorkoutCard from "./Components/FinishWorkoutCard.svelte";
   import MusicBar from "$lib/features/music/MusicBar.svelte";
   import { onWorkoutFinished } from "$lib/features/music/sessionMusic";
 
@@ -99,25 +98,28 @@
   async function saveNote(value: string) {
     await onMutate((s) => setSessionNote(s, value));
   }
-  let finishBarEl = $state<HTMLDivElement | null>(null);
+  let musicBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
-  let finishBarHeight = $state(0);
-  // The music bar sits in the finish bar; the list leaves room for it when it's there.
+  let musicBarHeight = $state(0);
+  // Finish and Discard are in the header, so the only bar at the bottom is the music bar
+  // (sitting on the bottom nav), and only while it has something to show.
   let musicBarVisible = $state(false);
-  // The finish bar sits on top of the bottom nav, and the add button just above the bar.
-  const addButtonBottom = $derived(finishBarHeight > 0 ? $bottomNavHeight + finishBarHeight + 12 : 0);
+  // The add button (and the shrunk circuit timer) sit just above the music bar, or just
+  // above the nav when there's no music bar.
+  const addButtonBottom = $derived(
+    $bottomNavHeight + (musicBarVisible ? musicBarHeight : 0) + 12,
+  );
 
-  // The add button (and the shrunk circuit timer) sit just above the finish bar. The bar is
-  // taken out and put back (e.g. while the keyboard is open), so follow whichever bar is on
-  // screen, and keep the last good offset while there is none: measuring a missing bar used
-  // to drop the button to the very bottom, where it stayed.
+  // The bar is taken out and put back (e.g. while the keyboard is open), so keep the last
+  // good height while it's gone: measuring a missing bar used to drop the add button to
+  // the very bottom, where it stayed.
   function updateAddButtonOffset() {
-    const h = finishBarEl?.offsetHeight ?? 0;
-    if (h > 0) finishBarHeight = h;
+    const h = musicBarEl?.offsetHeight ?? 0;
+    if (h > 0) musicBarHeight = h;
   }
 
   $effect(() => {
-    const el = finishBarEl;
+    const el = musicBarEl;
     if (!el) return;
     updateAddButtonOffset();
     const observer = new ResizeObserver(() => updateAddButtonOffset());
@@ -604,8 +606,8 @@
 
 <div
   class="flex flex-col {circuitBarShown
-    ? musicBarVisible ? 'pb-[360px]' : 'pb-72'
-    : musicBarVisible ? 'pb-[264px]' : 'pb-48'}"
+    ? musicBarVisible ? 'pb-64' : 'pb-44'
+    : musicBarVisible ? 'pb-40' : 'pb-20'}"
   onpointerdown={(e) => {
     if (!(e.target as HTMLElement).closest("input, textarea")) {
       const active = document.activeElement as HTMLElement | null;
@@ -619,6 +621,12 @@
     saving={ui.saving || ui.finishing}
     error={ui.error}
     startedAtMs={$currentSession?.startedAtMs ?? null}
+    showActions={!ui.finishing}
+    canFinish={!!$currentSession && !$currentSession.endedAtMs && hasLoggableWork}
+    exerciseCount={sessionExercises.length + nonStrengthBlockCount}
+    {loggedSetCount}
+    onFinish={showRecap}
+    onDiscard={discardSession}
   />
 
   {#if !ui.finishing}
@@ -798,21 +806,13 @@
       </Button>
     </div>
 
+    <!-- Stays mounted when empty so the music bar can work out whether it has anything to show. -->
     <div
-      bind:this={finishBarEl}
-      data-guide="session-finish"
-      class="fixed left-0 right-0 z-10 border-t border-border bg-background px-3 py-3"
+      bind:this={musicBarEl}
+      class="fixed left-0 right-0 z-10 bg-background {musicBarVisible ? 'border-t border-border px-3 py-2' : ''}"
       style="bottom: {$bottomNavHeight}px"
     >
       <MusicBar bind:visible={musicBarVisible} />
-      <FinishWorkoutCard
-        canFinish={!!$currentSession && !$currentSession.endedAtMs && hasLoggableWork}
-        saving={ui.saving || ui.finishing}
-        exerciseCount={sessionExercises.length + nonStrengthBlockCount}
-        {loggedSetCount}
-        onFinish={showRecap}
-        onDiscard={discardSession}
-      />
     </div>
   {/if}
 </div>

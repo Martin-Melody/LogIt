@@ -39,7 +39,7 @@
 {#if mode === "setup"}
   <button
     type="button"
-    class="mb-3 flex h-[52px] w-full items-center gap-2.5 rounded-xl border border-dashed border-border px-3 text-left"
+    class="flex h-[52px] w-full items-center gap-2.5 rounded-xl border border-dashed border-border px-3 text-left"
     onclick={() => (setupOpen = true)}
   >
     <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -51,7 +51,7 @@
 {:else if mode === "idle"}
   <button
     type="button"
-    class="mb-3 flex h-[52px] w-full items-center gap-2.5 rounded-xl border border-border bg-muted/60 px-3 text-left"
+    class="flex h-[52px] w-full items-center gap-2.5 rounded-xl border border-border bg-muted/60 px-3 text-left"
     onclick={() => (sheetOpen = true)}
   >
     <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background">
@@ -61,7 +61,7 @@
     <span class="text-xs text-muted-foreground">Your playlists</span>
   </button>
 {:else if mode === "playing"}
-  <div class="relative mb-3 flex h-[60px] items-center gap-1 overflow-hidden rounded-[14px] border border-border bg-muted/60 pl-2 pr-1.5">
+  <div class="relative flex h-[60px] items-center gap-1 overflow-hidden rounded-[14px] border border-border bg-muted/60 pl-2 pr-1.5">
     <button
       type="button"
       class="flex min-w-0 flex-1 items-center gap-2.5 self-stretch text-left"

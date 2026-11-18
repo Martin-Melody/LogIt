@@ -60,6 +60,6 @@ test.describe("exercise detail", () => {
     // Close returns to the session.
     await page.getByRole("button", { name: "Close details" }).click();
     await expect(page.getByRole("button", { name: "Reset progression" })).toHaveCount(0);
-    await expect(page.getByText("Finish workout")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finish workout" })).toBeVisible();
   });
 });

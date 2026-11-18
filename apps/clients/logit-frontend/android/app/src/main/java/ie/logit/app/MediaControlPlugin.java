@@ -384,12 +384,14 @@ public class MediaControlPlugin extends Plugin {
 
     @PluginMethod
     public void seekTo(PluginCall call) {
-        Long pos = call.getLong("positionMs");
-        if (pos == null) {
+        // Not call.getLong(): it only accepts a value stored as a Long, and a song position
+        // (e.g. 22000) arrives from the page as an Integer, so every seek was rejected.
+        Object pos = call.getData().opt("positionMs");
+        if (!(pos instanceof Number)) {
             call.reject("positionMs is required");
             return;
         }
-        long p = Math.max(0, pos);
+        long p = Math.max(0, ((Number) pos).longValue());
         control(call, t -> t.seekTo(p));
     }
 
