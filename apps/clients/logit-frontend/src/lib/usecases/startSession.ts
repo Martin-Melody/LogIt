@@ -1,3 +1,4 @@
+import { withStartingPlace } from "$lib/features/places/sessionPlace";
 import { getWorkoutRepo } from "$lib/data/repoProvider";
 import { createSession } from "@logit/core/domain/workout";
 
@@ -6,7 +7,7 @@ export async function startSession(): Promise<
 > {
   const repo = getWorkoutRepo();
 
-  const session = createSession();
+  const session = withStartingPlace(createSession());
 
   await repo.saveDraftSession(session);
 

@@ -1,0 +1,77 @@
+<!-- "Where are you today?" (design canvas G9). Shown once per workout, only with two or more
+     places and only until a set is logged. The usual place for the day is picked; Skip starts
+     with no place (exercises as they are); "Don't ask me this" turns it off (back on in
+     Settings › Your places). Martin: it only helps, it never blocks a workout. -->
+<script lang="ts">
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { untrack } from "svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { getExercises, type WorkoutSession } from "@logit/core/domain/workout";
+  import { machinesFor, type Place } from "@logit/core/domain/place";
+  import { placesStore } from "./places.svelte";
+
+  let { session, onPick }: { session: WorkoutSession; onPick: (placeId: string | null) => void } = $props();
+
+  const places = $derived(placesStore.active);
+  let chosen = $state<string | null>(untrack(() => session.placeId ?? placesStore.defaultFor()?.id ?? null));
+  let open = $state(true);
+
+  const exerciseIds = $derived(getExercises(session).flatMap((e) => (e.exerciseId ? [e.exerciseId] : [])));
+  const usual = $derived(placesStore.defaultFor());
+
+  function line(p: Place): string {
+    const withMachine = exerciseIds.filter((id) => machinesFor(p, id).length > 0).length;
+    const bits: string[] = [];
+    const weekday = ((new Date().getDay() + 6) % 7) + 1;
+    if (p.usualDays?.includes(weekday)) bits.push("Your usual place today");
+    else if (usual?.id === p.id) bits.push("Last time");
+    if (exerciseIds.length) bits.push(withMachine ? `machines for ${withMachine} of ${exerciseIds.length} exercises` : "no machines set up for these exercises");
+    return bits.join(" · ") || p.kind;
+  }
+
+  function done(placeId: string | null) {
+    open = false;
+    onPick(placeId);
+  }
+</script>
+
+<Dialog.Root {open} onOpenChange={(v) => { if (!v) done(session.placeId ?? null); }}>
+  <Dialog.Content class="flex max-h-[88svh] flex-col gap-3 p-4 sm:max-w-[420px]">
+    <Dialog.Header>
+      <Dialog.Title>Where are you today?</Dialog.Title>
+      <Dialog.Description>Machines and weights come from there.</Dialog.Description>
+    </Dialog.Header>
+
+    <fieldset class="flex flex-col gap-2">
+      <legend class="sr-only">Place</legend>
+      {#each places as p (p.id)}
+        <label class="flex min-h-14 items-center gap-3 rounded-xl border px-3.5 py-2.5 {chosen === p.id ? 'border-2 border-foreground' : 'border-border'}">
+          <input type="radio" name="where-today" value={p.id} bind:group={chosen} class="h-5 w-5 accent-foreground" />
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold">{p.name}</span>
+            <span class="block text-[13px] text-muted-foreground">{line(p)}</span>
+          </span>
+        </label>
+      {/each}
+      <label class="flex min-h-14 items-center gap-3 rounded-xl border px-3.5 py-2.5 {chosen === null ? 'border-2 border-foreground' : 'border-border'}">
+        <input type="radio" name="where-today" value={null} bind:group={chosen} class="h-5 w-5 accent-foreground" />
+        <span>
+          <span class="block text-sm font-semibold">Somewhere else</span>
+          <span class="block text-[13px] text-muted-foreground">Hotel, a friend's gym: pick or swap as you go</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <p class="rounded-lg bg-muted px-3 py-2.5 text-[13px] leading-snug">
+      Squats and bench are the same lift anywhere, so your numbers carry over. Machines start from the last time on that machine.
+    </p>
+
+    <Button class="h-12 text-[15px]" onclick={() => { if (chosen) placesStore.rememberUsed(chosen); done(chosen); }}>
+      {chosen ? `Start at ${places.find((p) => p.id === chosen)?.name ?? "this place"}` : "Start somewhere else"}
+    </Button>
+    <div class="flex items-center justify-between">
+      <button type="button" class="min-h-11 text-sm text-muted-foreground" onclick={() => done(session.placeId ?? null)}>Skip, just start</button>
+      <button type="button" class="min-h-11 text-sm text-muted-foreground underline" onclick={() => { placesStore.setAsk(false); done(session.placeId ?? null); }}>Don't ask me this</button>
+    </div>
+  </Dialog.Content>
+</Dialog.Root>

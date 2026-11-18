@@ -33,6 +33,9 @@
     onToggleCollapse = () => {},
     onDismissNudge = () => {},
     onAcceptNudge = () => {},
+    lastTime = "",
+    chip,
+    notice,
     children,
   } = $props<{
     exerciseName?: string;
@@ -63,6 +66,12 @@
     onToggleCollapse?: () => void;
     onDismissNudge?: (nudgeId: string) => void | Promise<void>;
     onAcceptNudge?: (nudgeId: string) => void | Promise<void>;
+    /** "Last time 59 × 10, 10, 9" under the name (design canvas X1). */
+    lastTime?: string;
+    /** The machine chip (X1): which machine at which place. */
+    chip?: import("svelte").Snippet;
+    /** A card under the plan, e.g. "Can you add load?" at a place's heaviest weight. */
+    notice?: import("svelte").Snippet;
     children?: import("svelte").Snippet;
   }>();
 
@@ -123,12 +132,13 @@
 
     <button
       type="button"
-      class="flex-1 min-w-0 h-11 pl-1 pr-2 text-left"
+      class="flex-1 min-w-0 min-h-11 py-1 pl-1 pr-2 text-left"
       onclick={onOpenDetail}
       disabled={saving}
       aria-label="{exerciseName} — open details"
     >
-      <span class="text-sm font-semibold truncate block">{exerciseName}</span>
+      <span class="text-[15px] font-semibold truncate block">{exerciseName}</span>
+      {#if lastTime && !roundView}<span class="block truncate text-xs font-normal text-muted-foreground">{lastTime}</span>{/if}
     </button>
 
     <span class="text-xs text-muted-foreground shrink-0 tabular-nums">
@@ -141,19 +151,6 @@
       </span>
     {/if}
 
-    {#if !collapsed && !roundView}
-      <button
-        type="button"
-        class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
-        onclick={() => void onAddSet()}
-        disabled={saving}
-        aria-label="Add set"
-      >
-        <span class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Plus class="h-4 w-4" />
-        </span>
-      </button>
-    {/if}
 
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
@@ -188,6 +185,10 @@
       onOpenChange={(v: boolean) => (confirmRemove = v)}
     />
   </div>
+
+  {#if !collapsed && !roundView && chip}
+    <div class="px-3 pb-2">{@render chip()}</div>
+  {/if}
 
   {#if !collapsed && !roundView && suggestion && suggestion.sets.length > 0}
     {#if showMeter && goal}
@@ -292,7 +293,18 @@
 <!-- Sets -->
 {#if !collapsed}
   <div transition:reveal>
+    {#if !roundView && notice}{@render notice()}{/if}
     {@render children?.()}
+    {#if !roundView && setCount > 0}
+      <button
+        type="button"
+        class="flex min-h-11 w-full items-center gap-1.5 px-3 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+        onclick={() => void onAddSet()}
+        disabled={saving}
+      >
+        <Plus class="h-4 w-4" /> Add a set
+      </button>
+    {/if}
   </div>
 {/if}
 </div>

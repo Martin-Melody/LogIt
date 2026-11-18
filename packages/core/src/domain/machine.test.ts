@@ -52,3 +52,23 @@ describe("machine weights", () => {
     expect(stepMachineWeight(m, 25, 1)).toBe(25); // clamps at top
   });
 });
+
+import { rebaseForMachine } from "./machine";
+
+describe("rebaseForMachine: one history, per-machine start", () => {
+  const set = (weight: number, machineId?: string) => ({ weight, machineId, completed: true, setType: "normal" });
+  it("starts from the last time on this machine when the latest session was on another", () => {
+    const history = [
+      { sets: [set(80, "gym-press"), set(80, "gym-press")] },
+      { sets: [set(60, "home-press")] },
+    ];
+    expect(rebaseForMachine(history, "home-press")).toEqual({ factor: 0.75, firstTime: false });
+  });
+  it("unchanged when the latest was on this machine, or nothing was tagged", () => {
+    expect(rebaseForMachine([{ sets: [set(80, "a")] }, { sets: [set(60, "b")] }], "a").factor).toBe(1);
+    expect(rebaseForMachine([{ sets: [set(80)] }], "a")).toEqual({ factor: 1, firstTime: false });
+  });
+  it("first time on a machine when others were used before", () => {
+    expect(rebaseForMachine([{ sets: [set(80, "a")] }], "b")).toEqual({ factor: 1, firstTime: true });
+  });
+});
