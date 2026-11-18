@@ -326,10 +326,8 @@
       {/if}
 
     {:else}
-      <section class="flex flex-col gap-1">
-        <h3 class="text-[13px] font-semibold text-muted-foreground">How it goes up</h3>
-        {#key ex.id}<ExerciseProgressionSettingsPanel exercise={ex} />{/key}
-      </section>
+      <!-- How it goes up: the panel carries its own heading. -->
+      {#key ex.id}<ExerciseProgressionSettingsPanel exercise={ex} />{/key}
 
       <section class="flex flex-col gap-2">
         <h3 class="text-[13px] font-semibold text-muted-foreground">The weight you log is</h3>

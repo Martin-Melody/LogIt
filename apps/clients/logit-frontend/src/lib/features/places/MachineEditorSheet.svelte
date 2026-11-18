@@ -25,7 +25,7 @@
 <Dialog.Root {open} {onOpenChange}>
   <Dialog.Content
     class="grid-cols-[minmax(0,1fr)] top-auto bottom-0 left-0 max-w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-2xl h-[92dvh] overflow-y-auto
-      px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]
+      px-5 pt-11 pb-[calc(1.25rem+env(safe-area-inset-bottom))]
       data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100
       data-[state=open]:slide-in-from-bottom-10 data-[state=closed]:slide-out-to-bottom-10
       sm:left-[50%] sm:max-w-[420px] sm:translate-x-[-50%]"
