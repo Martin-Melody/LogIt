@@ -33,6 +33,8 @@
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import type { ExerciseType, Machine } from "@logit/core/domain/exercise";
+  import { effectiveMachine } from "@logit/core/domain/place";
+  import { placesStore } from "$lib/features/places/places.svelte";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { getLoadMode, effectiveLoadKg } from "@logit/core/domain/bodyweight";
   import { repsAtLoad } from "@logit/core/domain/oneRepMax";
@@ -192,8 +194,15 @@
       const ex = exerciseId
         ? await getExerciseRepo().getById(exerciseId)
         : name ? await getExerciseRepo().getByName(name) : null;
+      // Machines come from your place when you have one (Settings › Your places): today's
+      // usual place, else the last one used. Without places, the exercise's own machines.
+      const place = placesStore.defaultFor();
+      const here = ex && place ? placesStore.machinesFor(place.id, ex.id) : [];
+      const atPlace = here.map(effectiveMachine);
       exerciseData = ex
-        ? { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId, exerciseType: ex.exerciseType }
+        ? atPlace.length
+          ? { id: ex.id, machines: atPlace, defaultMachineId: (here.find((m) => m.status === "in") ?? here[0]!).id, exerciseType: ex.exerciseType }
+          : { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId, exerciseType: ex.exerciseType }
         : null;
     } catch {
       exerciseData = null;

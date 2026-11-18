@@ -82,6 +82,15 @@ export type RemoteProfile = {
 // All client-owned, last-write-wins by updatedAtMs, tombstoned via deletedAtMs — the same
 // shape as RemoteCheckinSubmission. The goal is a singleton blob like RemoteProfile.
 
+/** A place you train (domain/place.ts), one client-owned row like a habit. */
+export type RemotePlace = {
+  id: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  dataJson: string | null;
+  deletedAtMs?: number | null;
+};
+
 export type RemoteNutritionDay = {
   id: string;
   createdAtMs: number;
@@ -339,6 +348,16 @@ export function syncApiFor(api: ApiFetcher) {
     pullNutritionGoal(clientId?: string): Promise<{ goal: RemoteNutritionGoal | null }> {
       const suffix = clientId ? `?clientId=${clientId}` : "";
       return api.fetch(`/sync/nutrition/goal${suffix}`);
+    },
+
+    // ── Places (My gym) ────────────────────────────────────────────────────────
+
+    pushPlaces(places: RemotePlace[]): Promise<void> {
+      return api.fetch("/sync/places", { method: "POST", body: JSON.stringify({ places }) });
+    },
+
+    pullPlaces(since: number): Promise<{ places: RemotePlace[] }> {
+      return api.fetch(`/sync/places?since=${since}`);
     },
 
     // ── Habits ─────────────────────────────────────────────────────────────────
