@@ -15,7 +15,11 @@
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import TrainingBlockTagDialog from "./TrainingBlockTagDialog.svelte";
 
-  const { exercise }: { exercise: { id?: string; name: string } } = $props();
+  const { exercise, showMetrics = true }: {
+    exercise: { id?: string; name: string };
+    /** Off where the host shows its own best set / estimated max (the exercise's Progress tab). */
+    showMetrics?: boolean;
+  } = $props();
 
   const chartConfig = {
     value: { label: "Value", color: "var(--chart-1)" },
@@ -158,7 +162,7 @@
     {/if}
 
     <!-- Metrics grid — rendered from whatever the algorithm returns -->
-    <div class="grid gap-2" style="grid-template-columns: repeat({Math.min(analytics.metrics.length, 4)}, 1fr)">
+    {#if showMetrics}<div class="grid gap-2" style="grid-template-columns: repeat({Math.min(analytics.metrics.length, 4)}, 1fr)">
       {#each analytics.metrics as metric (metric.id)}
         {@const def = metricDefs.find((d) => d.id === metric.id)}
         <div class="text-center">
@@ -166,7 +170,7 @@
           <p class="text-xs text-muted-foreground mt-0.5">{def?.label ?? metric.id}</p>
         </div>
       {/each}
-    </div>
+    </div>{/if}
 
     <!-- Series switcher — only shown when more than one series available -->
     {#if analytics.series.length > 1}
