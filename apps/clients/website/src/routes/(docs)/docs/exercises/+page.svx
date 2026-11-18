@@ -16,3 +16,11 @@ coach's items have Make my own copy if you want to change them.
 ## The tour on the phone
 
 <HowTo id="app.exercises" />
+
+## Your places and their machines
+
+On the phone, **Settings › Your places** holds where you train: a gym, home, a work gym. Each place lists what's there: the bar and plates, dumbbells (fixed pairs or an adjustable set), kettlebells, other kit like a rack or a pull-up bar, and its machines. It's optional: with no places, everything works as before.
+
+A machine belongs to its place and serves every exercise you do on it, so a cable station is set up once. To add one, say how the weight goes on (a pin in a stack, plates you load, an assisted machine, or no weight), then read the numbers off the stack. Many stacks go up 5 kg at a time for the first plates and 10 kg after that: add a run for each change, or type every number exactly as printed. Tell Logit if you can add a little more (clip-on add-ons, or a pin with plates), so the weights it plans are ones you can actually set.
+
+You can mark a machine out of order, coming soon or removed, and pick the days you usually train at each place. The first time you open Your places, any machines you'd already set up on exercises move into a place called My gym.
