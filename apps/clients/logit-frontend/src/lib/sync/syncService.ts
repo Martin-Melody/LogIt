@@ -108,7 +108,36 @@ export const lastSyncedAt = writable(getLastSyncedAtMs());
 /** Re-read the active profile's last-synced time (call after the active profile changes). */
 export function reloadLastSyncedAt(): void {
   lastSyncedAt.set(getLastSyncedAtMs());
+  firstDownloadAt.set(getFirstDownloadAtMs());
+  lastSyncFailed.set(false);
 }
+
+// ── First download, and whether a sync is running ────────────────────────────
+// Lets Home and Nutrition say "getting your training…" instead of showing empty states on a
+// phone that has just signed in and hasn't got the account's data yet (firstDownload.ts).
+
+const FIRST_DOWNLOAD_KEY = "logit:sync:firstDownloadAt";
+/** The pulls that fill Home and Nutrition. The first download is done once all of them have
+ * answered; an unrelated pull failing (say, the coach library) doesn't hold it up. */
+const FIRST_DOWNLOAD_PULLS = ["sessions", "splits", "profile", "nutrition"];
+
+function getFirstDownloadAtMs(): number {
+  // A complete sync from before this was tracked counts too.
+  return getTimestamp(FIRST_DOWNLOAD_KEY) || getLastSyncedAtMs();
+}
+
+function markFirstDownload(): void {
+  const now = Date.now();
+  setTimestamp(FIRST_DOWNLOAD_KEY, now);
+  firstDownloadAt.set(now);
+}
+
+/** When this profile first got its data from the server on this phone; 0 = not yet. */
+export const firstDownloadAt = writable(getFirstDownloadAtMs());
+/** A sync is running (sign-in, the 5-minute timer, coming back to the app, Settings). */
+export const syncRunning = writable(false);
+/** The last sync couldn't get the data Home and Nutrition show (offline, server down). */
+export const lastSyncFailed = writable(false);
 
 // ── Sessions ─────────────────────────────────────────────────────────────────
 
@@ -1291,7 +1320,16 @@ function setFullUpload(state: "signedIn" | "retry" | null): void {
  * foreground and the Settings button all call this, and two overlapping runs used to flush
  * the outbox twice and pull the same data twice. A call during a run joins it and asks for
  * one more pass afterwards; the result is the last pass's. */
-export const syncAll: () => Promise<boolean> = singleFlight(() => syncOnce());
+const syncOnceAtATime = singleFlight(() => syncOnce());
+export const syncAll = (): Promise<boolean> => {
+  syncRunning.set(true);
+  return syncOnceAtATime()
+    .catch((e: unknown) => {
+      lastSyncFailed.set(true);
+      throw e;
+    })
+    .finally(() => syncRunning.set(false));
+};
 
 /** Runs every pull in parallel and only reports (and timestamps) success when all of them
  * actually completed — a Free-tier account whose pulls all 403 must not see a clean "synced"
@@ -1303,6 +1341,12 @@ async function syncOnce(): Promise<boolean> {
   // latest local state before we merge its response back.
   await flushOutbox();
   await pushPendingMessages();
+  // Training already on this phone (from before signing in, or an older app version) means
+  // there's nothing to wait for: Home and Nutrition show it as they are.
+  if (!getTimestamp(FIRST_DOWNLOAD_KEY)) {
+    const local = await getWorkoutRepo().listRecentSessions({ limit: 1 }).catch(() => []);
+    if (local.length > 0) markFirstDownload();
+  }
   // Read once: a sign-in during this run marks it again for the next run.
   const due = fullUploadState();
   const fullUpload = due === "signedIn" || (due === "retry" && planIncludesSync());
@@ -1333,6 +1377,9 @@ async function syncOnce(): Promise<boolean> {
   ];
   const results = await Promise.all(pulls.map(([, p]) => p));
   const ok = results.every(Boolean);
+  const gotData = pulls.every(([name], i) => !FIRST_DOWNLOAD_PULLS.includes(name) || results[i]);
+  lastSyncFailed.set(!gotData);
+  if (gotData && !getTimestamp(FIRST_DOWNLOAD_KEY)) markFirstDownload();
   // The workout, split and profile pulls answering means the server accepted this account's
   // sync, so the uploads that went first got through too (pushAllLocalData() doesn't report
   // failures). Only those: an unrelated pull failing (say, the coach library) mustn't make
