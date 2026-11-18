@@ -11,7 +11,7 @@
 // added another way (add-ons, a pin with plates, a vest or belt, bands or chains), else suggest
 // a harder variation.
 
-import type { Exercise, Machine, MachineWeights } from "./exercise";
+import type { Equipment, Exercise, Machine, MachineWeights } from "./exercise";
 import type { BarbellConfig } from "./plates";
 import { DEFAULT_BARBELL } from "./plates";
 import { createId } from "./ids";
@@ -54,7 +54,7 @@ export type Dumbbells =
 
 /** Free equipment that isn't a machine, by a stable key (labels live in the apps). */
 export const KIT = [
-  "squat-rack", "flat-bench", "incline-bench", "pull-up-bar", "dip-bars", "bands", "cable-pulley",
+  "squat-rack", "flat-bench", "incline-bench", "adjustable-bench", "pull-up-bar", "dip-bars", "bands", "cable-pulley",
   "trap-bar", "ez-bar", "rings", "box",
 ] as const;
 export type Kit = (typeof KIT)[number];
@@ -68,6 +68,8 @@ export type Place = {
   dumbbells?: Dumbbells;
   kettlebellsKg?: number[];
   kit: Kit[];
+  /** What the specialty bars here weigh, kg, when they're in `kit`. */
+  barWeightsKg?: Partial<Record<SpecialtyBar, number>>;
   machines: PlaceMachine[];
   /** Weekdays (1 = Monday … 7 = Sunday) usually trained here; picks the default place. */
   usualDays?: number[];
@@ -79,6 +81,42 @@ export type Place = {
   createdAtMs: number;
   updatedAtMs: number;
 };
+
+// ── What counts as a machine ─────────────────────────────────────────────────
+
+/**
+ * A machine is anything that decides the number you log (Martin, 2026-11-18): a weight stack,
+ * a plate-loaded machine with its own leverage, a Smith machine's own bar. Benches, racks,
+ * combo stations and dip bars don't change the number (80 kg on any bench is the bar and its
+ * plates), so they're kit, not machines. Barbell, dumbbell, kettlebell, bodyweight and band
+ * exercises never use a machine; exercises with no equipment set, or "other", might.
+ */
+export const MACHINE_EQUIPMENT: readonly Equipment[] = ["machine", "cable", "smith"];
+
+export function usesMachine(equipment: Equipment | null | undefined): boolean {
+  return !equipment || equipment === "other" || MACHINE_EQUIPMENT.includes(equipment);
+}
+
+// ── Specialty bars ───────────────────────────────────────────────────────────
+
+/** Bars that weigh something else than the main barbell, kept as kit with their weight. */
+export type SpecialtyBar = "ez-bar" | "trap-bar";
+export const SPECIALTY_BAR_KG: Record<SpecialtyBar, number> = { "ez-bar": 10, "trap-bar": 25 };
+
+/** The specialty bar an exercise is done with, read from its name ("EZ-Bar Curl", "Trap Bar Deadlift"). */
+export function specialtyBarFor(exerciseName: string): SpecialtyBar | null {
+  if (/\b(ez[- ]?bar|curl bar)\b/i.test(exerciseName)) return "ez-bar";
+  if (/\b(trap|hex)[- ]?bar\b/i.test(exerciseName)) return "trap-bar";
+  return null;
+}
+
+/** The bar and plates for a barbell exercise here: the specialty bar's weight when it's done with one. */
+export function barbellFor(place: Place, exerciseName: string): BarbellConfig | undefined {
+  if (!place.barbell) return undefined;
+  const bar = specialtyBarFor(exerciseName);
+  if (!bar || !place.kit.includes(bar)) return place.barbell;
+  return { ...place.barbell, barKg: place.barWeightsKg?.[bar] ?? SPECIALTY_BAR_KG[bar] };
+}
 
 // ── Weight stacks in runs ────────────────────────────────────────────────────
 

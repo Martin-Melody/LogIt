@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   effectiveMachine, activePlaces, atTheTop, defaultPlaceFor, dumbbellWeightsKg, machinesFor, newPlace,
-  mergeExerciseMachines, placeFromExerciseMachines, runsFromStack, stackFromRuns, stackWeights, type Place,
+  barbellFor, mergeExerciseMachines, placeFromExerciseMachines, specialtyBarFor, usesMachine, runsFromStack, stackFromRuns, stackWeights, type Place,
 } from "./place";
 
 describe("weight stacks in runs (X7)", () => {
@@ -146,5 +146,26 @@ describe("add-ons", () => {
       weights: { kind: "stack" as const, values: [10, 20, 30] }, addOns: [2.5] };
     expect((effectiveMachine(m).weights as { values: number[] }).values).toEqual([10, 12.5, 20, 22.5, 30, 32.5]);
     expect(m.weights.values).toEqual([10, 20, 30]);
+  });
+});
+
+describe("machines are what decide the number", () => {
+  it("machine, cable and Smith exercises use machines; free weights never do", () => {
+    expect(["machine", "cable", "smith", "other", undefined].map((e) => usesMachine(e as never))).toEqual([true, true, true, true, true]);
+    expect(["barbell", "dumbbell", "kettlebell", "bodyweight", "band"].map((e) => usesMachine(e as never))).toEqual([false, false, false, false, false]);
+  });
+
+  it("a specialty bar's own weight, when the place has one", () => {
+    expect(specialtyBarFor("EZ-Bar Curl")).toBe("ez-bar");
+    expect(specialtyBarFor("Trap Bar Deadlift")).toBe("trap-bar");
+    expect(specialtyBarFor("Hex bar deadlift")).toBe("trap-bar");
+    expect(specialtyBarFor("Bench Press")).toBeNull();
+    const gym: Place = { ...newPlace("Northside", "gym", "gym", 1) };
+    expect(barbellFor(gym, "EZ-Bar Curl")?.barKg).toBe(20);
+    const withEz: Place = { ...gym, kit: [...gym.kit, "ez-bar"], barWeightsKg: { "ez-bar": 7.5 } };
+    expect(barbellFor(withEz, "EZ-Bar Curl")?.barKg).toBe(7.5);
+    expect(barbellFor(withEz, "Bench Press")?.barKg).toBe(20);
+    expect(barbellFor({ ...gym, kit: [...gym.kit, "trap-bar"] }, "Trap Bar Deadlift")?.barKg).toBe(25);
+    expect(barbellFor({ ...gym, barbell: undefined }, "Bench Press")).toBeUndefined();
   });
 });

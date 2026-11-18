@@ -6,13 +6,15 @@
   import { page } from "$app/state";
   import { ArrowLeft, ChevronRight, Plus } from "lucide-svelte";
   import { placesStore } from "$lib/features/places/places.svelte";
-  import { KIT, dumbbellWeightsKg, type Kit, type Place, type MachineStatus } from "@logit/core/domain/place";
+  import { KIT, SPECIALTY_BAR_KG, dumbbellWeightsKg, type Kit, type Place, type MachineStatus, type SpecialtyBar } from "@logit/core/domain/place";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { reveal } from "$lib/transitions";
 
   const id = $derived(page.params.id ?? "");
   const place = $derived(placesStore.byId(id));
 
   const KIT_LABELS: Record<Kit, string> = {
-    "squat-rack": "Squat rack", "flat-bench": "Flat bench", "incline-bench": "Incline bench", "pull-up-bar": "Pull-up bar",
+    "squat-rack": "Rack or combo station", "flat-bench": "Flat bench", "incline-bench": "Incline bench", "adjustable-bench": "Adjustable bench", "pull-up-bar": "Pull-up bar",
     "dip-bars": "Dip bars", bands: "Bands", "cable-pulley": "Cable pulley", "trap-bar": "Trap bar", "ez-bar": "EZ bar",
     rings: "Rings", box: "Box",
   };
@@ -168,20 +170,29 @@
             class="min-h-10 rounded-full border px-3 text-sm {place.kit.includes(k) ? 'border-foreground bg-primary font-medium text-primary-foreground' : 'border-border'}">{KIT_LABELS[k]}</button>
         {/each}
       </div>
+      <p class="text-xs text-muted-foreground">Benches and racks don't change the weight you lift, so they're listed here rather than as machines.</p>
+      {#each (["ez-bar", "trap-bar"] as SpecialtyBar[]).filter((b) => place.kit.includes(b)) as b (b)}
+        <label class="flex items-center justify-between gap-3 text-sm" transition:reveal>{KIT_LABELS[b]} weighs (kg)
+          <input type="number" inputmode="decimal" min="0" step="0.5" value={place.barWeightsKg?.[b] ?? SPECIALTY_BAR_KG[b]}
+            onchange={(e) => save({ barWeightsKg: { ...(place.barWeightsKg ?? {}), [b]: Number(e.currentTarget.value) || SPECIALTY_BAR_KG[b] } })}
+            class="h-11 w-24 rounded-md border bg-background px-3 text-right text-sm" />
+        </label>
+      {/each}
     </section>
 
     <section class="flex flex-col gap-2 border-t border-border pt-4">
-      <button type="button" class="min-h-11 text-left text-sm" onclick={() => { placesStore.archive(place.id); void goto("/settings/places"); }}>
-        Stopped going here? <span class="font-medium underline">Archive it</span> <span class="block text-xs text-muted-foreground">Your history stays; it's just no longer offered.</span>
-      </button>
+      <Button variant="outline" class="h-auto min-h-12 w-full flex-col items-start gap-0.5 py-2 text-left" onclick={() => { placesStore.archive(place.id); void goto("/settings/places"); }}>
+        <span>Stopped going here? Archive it</span>
+        <span class="text-xs font-normal text-muted-foreground">Your history stays; it's just no longer offered.</span>
+      </Button>
       {#if confirmRemove}
-        <div class="flex items-center gap-3 text-sm">
+        <div class="flex items-center gap-2 text-sm" transition:reveal>
           <span class="flex-1">Delete {place.name} for good?</span>
-          <button type="button" class="min-h-11 font-medium text-destructive" onclick={() => { placesStore.remove(place.id); void goto("/settings/places"); }}>Delete</button>
-          <button type="button" class="min-h-11" onclick={() => (confirmRemove = false)}>Keep</button>
+          <Button variant="outline" class="h-11 border-destructive/50 text-destructive" onclick={() => { placesStore.remove(place.id); void goto("/settings/places"); }}>Delete</Button>
+          <Button variant="outline" class="h-11" onclick={() => (confirmRemove = false)}>Keep</Button>
         </div>
       {:else}
-        <button type="button" class="min-h-11 self-start text-sm text-destructive" onclick={() => (confirmRemove = true)}>Delete this place</button>
+        <Button variant="outline" class="h-11 w-full justify-start border-destructive/50 text-destructive" onclick={() => (confirmRemove = true)}>Delete this place</Button>
       {/if}
     </section>
   {/if}
