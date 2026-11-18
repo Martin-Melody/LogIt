@@ -33,8 +33,8 @@ public static partial class SandboxEndpoints
         // Reading and removing work on any plan, so a coach who left Studio can still clear it out.
         group.MapGet("", Get);
         group.MapDelete("", Remove);
-        group.MapPost("", Create).RequireTier(UserTier.Studio);
-        group.MapPost("/clients/{userId:guid}/token", Token).RequireTier(UserTier.Studio);
+        group.MapPost("", Create).RequireCoaching();
+        group.MapPost("/clients/{userId:guid}/token", Token).RequireCoaching();
     }
 
     [GeneratedRegex("^[a-z][a-z0-9-]{0,19}$")]

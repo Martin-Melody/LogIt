@@ -24,6 +24,8 @@ public static class AuthEndpoints
         group.MapPost("/change-password", ChangePassword).RequireAuthorization();
         group.MapPost("/forgot-password", ForgotPassword);
         group.MapPost("/reset-password", ResetPassword);
+        PairingEndpoints.Map(group);
+        SessionEndpoints.Map(group);
     }
 
     private static async Task<IResult> Register(
@@ -70,7 +72,7 @@ public static class AuthEndpoints
 
         // The phone signing in holds a Free account's backup from now on (FreeBackup).
         Sync.FreeBackup.MoveTo(user, httpRequest.Headers[Sync.FreeBackup.DeviceHeader]);
-        var refresh = tokens.CreateRefreshToken(user.Id);
+        var refresh = tokens.CreateRefreshToken(user.Id, DeviceLabel.From(httpRequest));
         user.RefreshTokens.Add(refresh);
 
         db.Users.Add(user);
@@ -85,7 +87,7 @@ public static class AuthEndpoints
             throw;
         }
 
-        return Results.Ok(BuildAuthResponse(user, refresh.Token, tokens, config));
+        return Results.Ok(BuildAuthResponse(user, refresh, tokens, config));
     }
 
     private static IResult GetRegistrationInfo(IConfiguration config) =>
@@ -131,11 +133,11 @@ public static class AuthEndpoints
         // first one out. Every token is revoked only on a password reset (ResetPassword).
         // The phone signing in holds a Free account's backup from now on (FreeBackup).
         Sync.FreeBackup.MoveTo(user, httpRequest.Headers[Sync.FreeBackup.DeviceHeader]);
-        var refresh = tokens.CreateRefreshToken(user.Id);
+        var refresh = tokens.CreateRefreshToken(user.Id, DeviceLabel.From(httpRequest));
         db.RefreshTokens.Add(refresh);
         await db.SaveChangesAsync();
 
-        return Results.Ok(BuildAuthResponse(user, refresh.Token, tokens, config));
+        return Results.Ok(BuildAuthResponse(user, refresh, tokens, config));
     }
 
     private static async Task<IResult> Refresh(
@@ -166,11 +168,11 @@ public static class AuthEndpoints
 
         // Rotate: revoke old, issue new
         stored.RevokedAt = DateTime.UtcNow;
-        var next = tokens.CreateRefreshToken(stored.UserId);
+        var next = tokens.CreateRefreshToken(stored.UserId, previous: stored);
         db.RefreshTokens.Add(next);
         await db.SaveChangesAsync();
 
-        return Results.Ok(BuildAuthResponse(stored.User, next.Token, tokens, config));
+        return Results.Ok(BuildAuthResponse(stored.User, next, tokens, config));
     }
 
     private static async Task<IResult> Revoke(
@@ -217,10 +219,10 @@ public static class AuthEndpoints
         return Results.NoContent();
     }
 
-    private static AuthResponse BuildAuthResponse(User user, string refreshToken, TokenService tokens, IConfiguration config) =>
+    internal static AuthResponse BuildAuthResponse(User user, RefreshToken refresh, TokenService tokens, IConfiguration config) =>
         new(
-            tokens.CreateAccessToken(user),
-            refreshToken,
+            tokens.CreateAccessToken(user, sessionId: refresh.SessionKey),
+            refresh.Token,
             new UserDto(user.Id, user.Username, user.DisplayName, user.AvatarUrl, user.Tier.ToString(), user.OnboardingCompleted),
             config.GetValue<bool>("Deployment:SelfHosted")
         );

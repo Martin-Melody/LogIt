@@ -18,7 +18,7 @@ public static class CoachEndpoints
         group.MapGet("/clients", GetClients);
         group.MapGet("/coaches", GetCoaches);
         // Roster adherence summary for the coach dashboard — one request, aggregated server-side.
-        group.MapGet("/roster", GetRoster).RequireTier(UserTier.Studio);
+        group.MapGet("/roster", GetRoster).RequireCoaching();
         group.MapGet("/invites/received", GetReceivedInvites);
         group.MapGet("/invites/sent", GetSentInvites);
         group.MapPost("/invites/{relationshipId:guid}/accept", AcceptInvite);
@@ -27,26 +27,26 @@ public static class CoachEndpoints
 
         // Coach-authored programs. Writes are Studio-only; the assigned-pull is open to any
         // tier (a Free client can be coached). See CoachProgram entity for the isolation note.
-        group.MapPost("/programs", UpsertProgram).RequireTier(UserTier.Studio);
-        group.MapGet("/programs", GetMyPrograms).RequireTier(UserTier.Studio);
+        group.MapPost("/programs", UpsertProgram).RequireCoaching();
+        group.MapGet("/programs", GetMyPrograms).RequireCoaching();
         group.MapGet("/programs/assigned", GetAssignedPrograms);
         group.MapPost("/programs/assigned/{programId}/start", StartAssignedProgram);
 
         // Coach-assigned nutrition targets — same shape/rules as programs.
-        group.MapPost("/nutrition-plans", UpsertNutritionPlan).RequireTier(UserTier.Studio);
-        group.MapGet("/nutrition-plans", GetMyNutritionPlans).RequireTier(UserTier.Studio);
+        group.MapPost("/nutrition-plans", UpsertNutritionPlan).RequireCoaching();
+        group.MapGet("/nutrition-plans", GetMyNutritionPlans).RequireCoaching();
         group.MapGet("/nutrition-plans/assigned", GetAssignedNutritionPlans);
 
         // Coach check-in schedules — same shape/rules as programs. Client answers come back
         // as SyncedCheckinSubmission rows via /sync/checkins (see SyncEndpoints).
-        group.MapPost("/checkins", UpsertCheckinSchedule).RequireTier(UserTier.Studio);
-        group.MapGet("/checkins", GetMyCheckinSchedules).RequireTier(UserTier.Studio);
+        group.MapPost("/checkins", UpsertCheckinSchedule).RequireCoaching();
+        group.MapGet("/checkins", GetMyCheckinSchedules).RequireCoaching();
         group.MapGet("/checkins/assigned", GetAssignedCheckinSchedules);
 
         // Coach-assigned habits — same shape/rules. The client checks them off as ordinary
         // HabitEntry rows (coach-readable via ?clientId= on /sync/habit-entries).
-        group.MapPost("/habits", UpsertCoachHabit).RequireTier(UserTier.Studio);
-        group.MapGet("/habits", GetMyCoachHabits).RequireTier(UserTier.Studio);
+        group.MapPost("/habits", UpsertCoachHabit).RequireCoaching();
+        group.MapGet("/habits", GetMyCoachHabits).RequireCoaching();
         group.MapGet("/habits/assigned", GetAssignedCoachHabits);
 
         // Coach↔client messaging — bidirectional within an Active relationship, open to any

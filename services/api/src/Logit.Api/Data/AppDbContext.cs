@@ -8,6 +8,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<PairingRequest> PairingRequests => Set<PairingRequest>();
     public DbSet<Follow> Follows => Set<Follow>();
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Like> Likes => Set<Like>();
@@ -69,10 +70,21 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         model.Entity<RefreshToken>(e =>
         {
             e.HasIndex(t => t.Token).IsUnique();
+            e.HasIndex(t => new { t.UserId, t.SessionId });
+            e.Property(t => t.Label).HasMaxLength(RefreshTokenLimits.MaxLabelChars);
             e.HasOne(t => t.User)
              .WithMany(u => u.RefreshTokens)
              .HasForeignKey(t => t.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<PairingRequest>(e =>
+        {
+            e.HasIndex(p => p.CodeHash).IsUnique();
+            e.HasIndex(p => p.ExpiresAt);
+            e.Property(p => p.CodeHash).HasMaxLength(64);
+            e.Property(p => p.PollSecretHash).HasMaxLength(64);
+            e.Property(p => p.Device).HasMaxLength(RefreshTokenLimits.MaxLabelChars);
         });
 
         model.Entity<PasswordResetToken>(e =>
