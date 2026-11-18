@@ -11,9 +11,9 @@ export const FEATURES: Feature[] = [
     title: "Your account",
     section: "Start here",
     plan: "Free",
-    summary: "Sign in, change your plan, and delete your account.",
+    summary: "Sign in, change your plan, see where you're signed in, and delete your account.",
     web: ["/account", "/upgrade"],
-    phone: ["/accounts", "/plans", "/settings/move-server"],
+    phone: ["/accounts", "/plans", "/settings/move-server", "/settings/computer"],
     whereWeb: "The account card at the bottom of the sidebar",
     wherePhone: "Settings › Account",
     docs: "/docs/account",
@@ -22,6 +22,8 @@ export const FEATURES: Feature[] = [
       "Upgrade to Pro or Studio in the Android app, monthly or yearly",
       "Delete your account and everything stored on the server",
       "Move your account to another server, training included",
+      "Sign in on a computer by scanning a code with your phone, no password",
+      "See every phone and browser you're signed in on, and sign any of them out",
     ],
     cant: [
       "Pay on the website yet: plans are bought through Google Play",
@@ -490,7 +492,7 @@ export const FEATURES: Feature[] = [
 
 /** Pages that need no docs page of their own. */
 export const NO_DOCS = {
-  web: ["/login", "/forgot-password", "/reset-password"],
+  web: ["/login", "/forgot-password", "/reset-password", "/welcome"],
   phone: ["/auth"],
 };
 

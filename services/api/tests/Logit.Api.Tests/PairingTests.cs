@@ -44,6 +44,8 @@ public class PairingTests : IClassFixture<ApiFactory>
 
         var look = await Json(await phone.PostAsJsonAsync("/auth/pair/look", new { code = qr }));
         Assert.Equal("Chrome on Windows", look.GetProperty("device").GetString());
+        Assert.InRange(look.GetProperty("secondsLeft").GetInt32(), 100, 120);
+        Assert.EndsWith("Z", look.GetProperty("expiresAt").GetString());
 
         await Json(await phone.PostAsJsonAsync("/auth/pair/answer", new { code = qr, approve = true }));
 

@@ -3,7 +3,7 @@
 // in with a short-lived token and uses the normal client calls. What they do is decided by
 // planSampleActions() in sandbox.ts.
 
-import { withToken } from "../api/client";
+import { apiClient, withToken } from "../api/client";
 import { coachApi, coachApiFor } from "../api/coachApi";
 import { checkinApiFor } from "../api/checkinApi";
 import { coachProgramApiFor } from "../api/coachProgramApi";
@@ -77,8 +77,10 @@ async function runOnce(now: number): Promise<number> {
   const clients = await sandboxApi.list();
   if (clients.length === 0) return 0;
   const needLinks = clients.some((c) => c.status === "None");
-  const activeLinkCodes = needLinks
-    ? (await coachApi.listLinks()).filter((l) => l.state === "active").map((l) => l.code)
+  // Below Studio there are no invite links (403), so a waiting sample just keeps waiting.
+  const canLink = apiClient.getUser()?.tier === "Studio" || apiClient.isSelfHosted();
+  const activeLinkCodes = needLinks && canLink
+    ? (await coachApi.listLinks().catch(() => [])).filter((l) => l.state === "active").map((l) => l.code)
     : [];
 
   let acted = 0;

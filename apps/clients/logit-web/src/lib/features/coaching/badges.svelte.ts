@@ -1,3 +1,4 @@
+import { coachTrial } from "$lib/workspace";
 import { coachApi } from "@logit/core/api/coachApi";
 import { messagesApi } from "@logit/core/api/messagesApi";
 import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
@@ -41,7 +42,8 @@ export const coachBadges = {
         messagesApi.unreadCounts().catch(() => []),
         coachApi.listCoaches().catch(() => []),
         coachApi.listReceivedInvites().catch(() => []),
-        studio ? coachPaymentsApi.overview().catch(() => null) : Promise.resolve(null),
+        // Payments are Studio-only: an account trying coaching with samples doesn't ask.
+        studio && !coachTrial() ? coachPaymentsApi.overview().catch(() => null) : Promise.resolve(null),
       ]);
       if (overview) this.fromOverview(overview);
       if (payments) counts.payments = payments.summary.problems;
