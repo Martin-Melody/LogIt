@@ -62,6 +62,7 @@ test("a rep range set on bench changes its plan and shows in Settings", async ({
   // (The default plan, 7/6/5 × 95 kg, is covered in adaptive-progression.spec.ts. Opening the
   // workout here first would write that plan into the draft before the setting changes.)
   await page.goto("/exercises/core_bench_press");
+  await page.getByRole("tab", { name: "Settings" }).click();
   const section = page.getByRole("region", { name: "How it progresses" });
   await expect(section.getByRole("radio", { name: "Default 5–8" })).toHaveAttribute("aria-checked", "true");
   await section.getByRole("radio", { name: "3–6" }).click();
@@ -76,6 +77,7 @@ test("a rep range set on bench changes its plan and shows in Settings", async ({
 
   // Back to default removes it again.
   await page.goto("/exercises/core_bench_press");
+  await page.getByRole("tab", { name: "Settings" }).click();
   await page.getByRole("region", { name: "How it progresses" }).getByRole("radio", { name: /^Default/ }).click();
   await page.goto("/settings");
   await expect(page.getByTestId("exercise-overrides")).toContainText("None yet");
@@ -84,6 +86,7 @@ test("a rep range set on bench changes its plan and shows in Settings", async ({
 test("no suggestions for one exercise only", async ({ page }) => {
   await seed(page);
   await page.goto("/exercises/core_bench_press");
+  await page.getByRole("tab", { name: "Settings" }).click();
   const section = page.getByRole("region", { name: "How it progresses" });
   await section.getByRole("radio", { name: /No suggestions/ }).click();
   await expect(section.getByRole("radio", { name: /No suggestions/ })).toHaveAttribute("aria-checked", "true");

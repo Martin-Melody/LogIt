@@ -991,7 +991,7 @@
               {#each exerciseOverrides as o (o.key)}
                 <li>
                   <a
-                    href={o.exerciseId ? `/exercises/${o.exerciseId}` : undefined}
+                    href={o.exerciseId ? `/exercises/${o.exerciseId}?tab=settings` : undefined}
                     class="flex min-h-12 flex-col justify-center px-3 py-2 text-inherit no-underline"
                   >
                     <span class="text-sm font-medium">{o.exerciseName}</span>
