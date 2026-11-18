@@ -4,6 +4,7 @@
   import { fade } from "svelte/transition";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { sheetUp, reveal } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import type { MobilityMetric, MobilitySide } from "@logit/core/domain/workout";
@@ -97,6 +98,7 @@
 
   <div
     class="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-w-[500px] flex-col rounded-t-xl border-t border-border bg-background max-h-[88dvh]"
+    use:sheetDrag={{ onDismiss: onClose }} use:backDismiss={onClose}
     transition:sheetUp
   >
     <div class="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border shrink-0">

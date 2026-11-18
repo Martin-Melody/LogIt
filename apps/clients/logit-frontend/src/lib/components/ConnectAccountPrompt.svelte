@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { goto } from "$app/navigation";
   import { X } from "lucide-svelte";
 
@@ -36,6 +37,7 @@
   <!-- Sheet -->
   <div
     class="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border rounded-t-2xl px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+    use:sheetDrag={{ onDismiss: onclose }} use:backDismiss={onclose}
     transition:sheetUp
   >
     <div class="flex items-start justify-between mb-4">

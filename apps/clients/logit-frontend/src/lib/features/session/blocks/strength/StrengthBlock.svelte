@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+  import { ChevronDown, MapPin, Plus, Rows3 } from "lucide-svelte";
   import { toast } from "$lib/components/ui/sonner/index";
 
   import type { StrengthBlockData, SetEntry, SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
@@ -39,15 +40,16 @@
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import type { Exercise, ExerciseType, Machine } from "@logit/core/domain/exercise";
-  import { chosenMachine, dumbbellWeightsKg, effectiveMachine, machinesFor, type ExtraLoad, type Place, type PlaceMachine } from "@logit/core/domain/place";
+  import { barbellFor, chosenMachine, dumbbellWeightsKg, effectiveMachine, machinesFor, usesMachine, type ExtraLoad, type Place, type PlaceMachine } from "@logit/core/domain/place";
   import { placesStore } from "$lib/features/places/places.svelte";
   import { goto } from "$app/navigation";
   import { formatLoad } from "@logit/core/domain/units";
   import MachinePickerSheet from "$lib/features/places/MachinePickerSheet.svelte";
+  import MachineEditorSheet from "$lib/features/places/MachineEditorSheet.svelte";
+  import WhereTodaySheet from "$lib/features/places/WhereTodaySheet.svelte";
   import WeightPickerSheet from "$lib/features/places/WeightPickerSheet.svelte";
   import AtTheTopCard from "$lib/features/places/AtTheTopCard.svelte";
   import type { WeightSource } from "$lib/features/places/weightSource";
-  import ExerciseInfoSheet from "$lib/features/session/ui/ExerciseInfoSheet.svelte";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { getLoadMode, effectiveLoadKg } from "@logit/core/domain/bodyweight";
   import { repsAtLoad } from "@logit/core/domain/oneRepMax";
@@ -56,12 +58,13 @@
   import { get } from "svelte/store";
   import { untrack } from "svelte";
   import { profile } from "$lib/stores/profile.store";
-  import { reveal } from "$lib/transitions";
+  import { reveal, popIn } from "$lib/transitions";
   import ExerciseCard from "$lib/features/session/ui/ExerciseCard.svelte";
   import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
   import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
-  import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
+  import SetOptionsTray from "$lib/features/session/ui/SetOptionsTray.svelte";
+  import EffortPrompt from "$lib/features/session/ui/EffortPrompt.svelte";
   import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
   import CoachSwapSheet from "$lib/features/session/ui/CoachSwapSheet.svelte";
@@ -93,9 +96,27 @@
   // from before places have none set, so they use today's usual place.
   const placeId = $derived($currentSession?.placeId);
   const place = $derived(placeId === undefined ? placesStore.defaultFor() : placesStore.byId(placeId));
-  const placeMachines = $derived(place && exercise ? machinesFor(place, exercise.id) : []);
-  const chosen = $derived(place && exercise ? chosenMachine(place, exercise.id) : null);
+  // Only exercises whose number comes from a machine use one (bench press is the bar and its
+  // plates on any bench; Martin 2026-11-18).
+  const onMachine = $derived(!!exercise && usesMachine(exercise.equipment));
+  const placeMachines = $derived(place && exercise && onMachine ? machinesFor(place, exercise.id) : []);
+  const chosen = $derived(place && exercise && onMachine ? chosenMachine(place, exercise.id) : null);
   let machinePickerOpen = $state(false);
+  // The machine editor over the workout (M2): a new machine (machineId null) or fixing one.
+  let machineEditor = $state<{ open: boolean; machineId: string | null }>({ open: false, machineId: null });
+  // Where the editor was opened from, so closing it steps back there (Martin: back goes to
+  // the previous screen): "Which machine?", the exercise's "Where you do it", or the card.
+  let editorFrom = $state<"picker" | "exercise" | "card">("card");
+  let detailTab = $state<"auto" | "howto">("auto");
+  // "Where are you today?" asked again from the card (M1's "Not at … today?", or no place yet).
+  let whereOpen = $state(false);
+  // The first machine made "My gym" (M3): said once, on this card.
+  let myGymNote = $state<Place | null>(null);
+  // A machine picked by hand moves the sets not done yet onto it, even after some are logged.
+  let forceReplan = false;
+  // The last time on each machine, "59 × 10", for "Which machine?".
+  let lastOnMachine = $state<Map<string, string>>(new Map());
+  const machineKinds = ["machine", "cable", "smith"];
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
   // An exercise never done before (design canvas O4): its first set is the starting point
@@ -121,12 +142,12 @@
     prevSets ? prevSets.filter((s) => s.setType !== "warmup" && !isContinuationSet(s.setType)) : [],
   );
 
-  const editSet = $state({
-    open: false,
-    setId: null as string | null,
-    // Working-set number for the card's title and "last time"; none for drop sets.
-    setNumber: null as number | null,
-  });
+  // The set whose options are open in its row (S-C), the one just ticked that asks how hard
+  // it was (S-D), and one waiting for its reps to be typed.
+  let optionsSetId = $state<string | null>(null);
+  let effortSetId = $state<string | null>(null);
+  let effortTimer: ReturnType<typeof setTimeout> | null = null;
+  let focusSetId = $state<string | null>(null);
 
   // Weights relative to bodyweight (0 = BW, −25 = assisted): shown as BW / BW−25.
   const bodyweight = $derived(
@@ -149,16 +170,28 @@
     coachSwap = target && coach ? { target, coach } : null;
     swapOpen = true;
   }
+  // The name opens the exercise over the workout (E1–E3): How to the first time, else Progress.
   let detailExerciseId = $state<string | null>(null);
-  /** The name opens the read-first info sheet (X5); editing is a link inside it. */
-  let infoOpen = $state(false);
+  // A machine opened from the exercise's "Where you do it" (any place, not only today's).
+  let editorPlace = $state<Place | null | undefined>(undefined);
 
   function openDetail() {
-    infoOpen = true;
+    const id = data.exerciseId ?? exercise?.id;
+    if (id) {
+      detailTab = "auto";
+      detailExerciseId = id;
+    }
   }
 
-  function openEditor() {
-    if (data.exerciseId) detailExerciseId = data.exerciseId;
+  /** A machine added or fixed from the card (M2): it's at the workout's place from now on. */
+  let editorSaved = false;
+  async function machineSaved(r: { machine: PlaceMachine; place: Place; createdPlace: boolean }) {
+    editorSaved = true;
+    if (r.createdPlace) myGymNote = r.place;
+    if (!machineEditor.machineId) forceReplan = true;
+    if (editorPlace === undefined && get(currentSession)?.placeId !== r.place.id) {
+      await onMutate((s: WorkoutSession) => ({ ...s, placeId: r.place.id, placeAsked: true }));
+    }
   }
 
   async function handleSwap(selection: { name: string; exerciseId?: string }) {
@@ -207,6 +240,14 @@
         excludeSessionId: get(currentSession)?.id,
       });
       const last = history.at(-1);
+      const onMachine = new Map<string, string>();
+      for (let i = history.length - 1; i >= 0; i--) {
+        for (const x of history[i]!.sets) {
+          if (!x.machineId || onMachine.has(x.machineId) || x.setType === "warmup" || !(x.reps > 0) || x.completed === false) continue;
+          onMachine.set(x.machineId, `${formatLoad(x.weight, get(profile).weightUnit, false, { withUnit: false })} × ${x.reps}`);
+        }
+      }
+      lastOnMachine = onMachine;
       prevSets = last
         ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
         : null;
@@ -230,14 +271,13 @@
         ? await getExerciseRepo().getById(exerciseId)
         : name ? await getExerciseRepo().getByName(name) : null;
       exercise = ex;
-      // Machines come from the workout's place when there is one (My gym): the one picked for
-      // this exercise there, else the first that's in. Without places, the exercise's own machines.
-      const here = ex && at ? machinesFor(at, ex.id) : [];
-      const chosen = ex && at ? chosenMachine(at, ex.id) : null;
+      // Machines come only from the workout's place (Martin, 2026-11-18): the one picked for
+      // this exercise there, else the first that's in. No place, no machines: weights are typed.
+      const machineWork = !!ex && usesMachine(ex.equipment);
+      const here = ex && at && machineWork ? machinesFor(at, ex.id) : [];
+      const chosen = ex && at && machineWork ? chosenMachine(at, ex.id) : null;
       exerciseData = ex
-        ? here.length
-          ? { id: ex.id, machines: here.map(effectiveMachine), defaultMachineId: chosen?.id, exerciseType: ex.exerciseType }
-          : { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId, exerciseType: ex.exerciseType }
+        ? { id: ex.id, machines: here.map(effectiveMachine), defaultMachineId: chosen?.id, exerciseType: ex.exerciseType }
         : null;
       await replanForMachine(at, chosen);
     } catch {
@@ -252,7 +292,10 @@
     if (!at || !chosen) return;
     const s = get(currentSession);
     const key = `${s?.id}|${blockId}|${at.id}|${chosen.id}`;
-    if (!s || replanned.has(key) || data.sets.some((x) => x.completed)) return;
+    const forced = forceReplan;
+    forceReplan = false;
+    if (forced) replanned.delete(key);
+    if (!s || replanned.has(key) || (!forced && data.sets.some((x) => x.completed))) return;
     replanned.add(key);
     await loadSuggestion(data.exerciseName, data.exerciseId);
     if (suggestion && suggestion.sets.length > 0) await applyPlan(suggestion);
@@ -313,11 +356,11 @@
       }),
     );
     if (collapsed) collapsed = false;
-    // A set beyond the plan has nothing to show yet — open its card for entry.
+    // A set beyond the plan has nothing to show yet: straight into its reps.
     if (!planned) {
       const block = get(currentSession)?.blocks.find((b) => b.id === blockId);
       const added = (block?.data as StrengthBlockData | undefined)?.sets.find((x) => !before.has(x.id));
-      if (added) openEditSet(added.id, working.length + 1);
+      if (added) focusSetId = added.id;
     }
   }
 
@@ -357,67 +400,41 @@
   }
 
   async function handleDeleteSet(setId: string) {
+    if (optionsSetId === setId) optionsSetId = null;
+    if (effortSetId === setId) effortSetId = null;
     await onMutate((s: WorkoutSession) => removeSet(s, blockId, setId));
   }
 
-  function openEditSet(setId: string, setNumber: number | null = null) {
-    editSet.setId = setId;
-    editSet.setNumber = setNumber;
-    editSet.open = true;
+  /** The swipe's edit button opens the set's details under its row; again closes them (S-C). */
+  function openEditSet(setId: string, _setNumber: number | null = null) {
+    optionsSetId = optionsSetId === setId ? null : setId;
+    if (effortSetId === setId) effortSetId = null;
   }
-
-  const editedSet = $derived(editSet.setId ? (data.sets.find((s) => s.id === editSet.setId) ?? null) : null);
 
   /** The group's rest when it sets one (a positive number), else undefined. */
   function groupRest(): number | undefined {
     return groupRestMs && groupRestMs > 0 ? groupRestMs : undefined;
   }
 
-  /** The set card's "Log": save what's in the card and tick the set off, in one change. */
-  async function logFromCard(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
-  ) {
-    const set = editedSet;
-    if (!set) return;
-    const setId = set.id;
-    const setType = patch.setType ?? set.setType;
-    const effectiveRest = patch.restDurationMs ?? groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[setType];
-    const startsRest = groupRestMs !== 0 && effectiveRest !== undefined;
-    await onMutate((s: WorkoutSession) => {
-      const next = updateSet(s, blockId, setId, {
-        ...patch,
-        ...(startsRest && groupRest() !== undefined && patch.restDurationMs === undefined ? { restDurationMs: groupRest() } : {}),
-        completed: true,
-        restStartedAtMs: startsRest ? Date.now() : null,
-      });
-      const planned = withFirstSetPlan(next, setId);
-      return startsRest ? clearOtherRests(planned, setId) : planned;
-    });
-    void triggerHaptic();
+  /** The rest that runs after this set: the group's, else its own, else its kind's default. */
+  function restFor(set: SetEntry): number | undefined {
+    return groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[set.setType];
   }
 
-  function getEditableSet() {
-    const set = data.sets.find((s) => s.id === editSet.setId);
-    if (!set) return null;
-    return {
-      reps: set.reps,
-      weight: set.weight,
-      setType: set.setType,
-      note: set.note ?? null,
-      // Resolve effective rest so the dialog shows what will actually fire,
-      // not just the raw per-set override (which is undefined until explicitly edited).
-      restDurationMs: set.restDurationMs ?? get(profile).restDefaults[set.setType],
-      machineId: set.machineId ?? undefined,
-      rpe: set.rpe ?? null,
-    };
-  }
-
-  async function saveSetPatch(
-    patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "restDurationMs" | "machineId" | "rpe">>,
+  async function patchSet(
+    setId: string,
+    patch: Partial<Pick<SetEntry, "setType" | "note" | "restDurationMs" | "rpe">>,
   ) {
-    if (!editSet.setId) return;
-    const setId = editSet.setId;
     await onMutate((s: WorkoutSession) => updateSet(s, blockId, setId, patch));
+  }
+
+  /** "How many more could you have done?" after a tick (S-D), until answered, the next set, or the rest ends. */
+  function askEffort(set: SetEntry) {
+    if (effortTimer) clearTimeout(effortTimer);
+    effortSetId = null;
+    if (!get(profile).askEffortAfterSet || set.setType === "warmup" || set.rpe != null) return;
+    effortSetId = set.id;
+    effortTimer = setTimeout(() => { if (effortSetId === set.id) effortSetId = null; }, restFor(set) ?? 90_000);
   }
 
   async function triggerHaptic() {
@@ -439,8 +456,8 @@
       if (set.target) {
         fill = { reps: set.target.reps, ...(set.weight === 0 ? { weight: set.target.weight } : {}) };
       } else if (!setTypeMeta(set.setType).repsPlaceholder) {
-        const lead = workingSets.findIndex((w) => w.id === set.id);
-        openEditSet(set.id, lead === -1 ? null : lead + 1);
+        focusSetId = null;
+        queueMicrotask(() => (focusSetId = set.id));
         return;
       }
     }
@@ -464,7 +481,13 @@
 
     // The rest service (restTimerService.ts) sees restStartedAtMs change and schedules or
     // cancels the alert itself.
-    if (!wasCompleted) void triggerHaptic();
+    if (!wasCompleted) {
+      void triggerHaptic();
+      if (optionsSetId === setId) optionsSetId = null;
+      askEffort(set);
+    } else if (effortSetId === setId) {
+      effortSetId = null;
+    }
   }
 
   async function handleDismissRest(setId: string) {
@@ -614,7 +637,8 @@
     const machine = exerciseData?.machines.find((m) => m.id === exerciseData?.defaultMachineId);
     if (machine && machineWeightsKg(machine)?.length) return { kind: "machine", machine, placeName: place?.name };
     if (!place || !exercise) return null;
-    if (exercise.equipment === "barbell" && place.barbell) return { kind: "bar", barbell: place.barbell, placeName: place.name };
+    const barbell = exercise.equipment === "barbell" ? barbellFor(place, exercise.name) : undefined;
+    if (barbell) return { kind: "bar", barbell, placeName: place.name };
     if (exercise.equipment === "dumbbell" && place.dumbbells) return { kind: "dumbbells", weightsKg: dumbbellWeightsKg(place.dumbbells), placeName: place.name };
     return null;
   });
@@ -799,18 +823,36 @@
 >
   {#snippet chip()}
     {#if place && chosen}
-      <button type="button" onclick={() => (machinePickerOpen = true)}
-        class="flex min-h-9 max-w-full items-center gap-1.5 rounded-full bg-muted px-3 text-left text-[13px]"
+      <button type="button" onclick={() => (machinePickerOpen = true)} in:popIn
+        class="flex h-9 max-w-full items-center gap-2 rounded-full bg-muted pl-2.5 pr-2 text-left text-[13px] transition-colors active:bg-muted/70"
         aria-label="Machine: {chosen.name} at {place.name}. Change">
-        <span class="truncate"><strong class="font-semibold">{chosen.name}</strong> · {place.name}{machineDetail(chosen) ? ` · ${machineDetail(chosen)}` : ""}</span>
-        {#if chosen.status === "out"}<span class="shrink-0 rounded bg-warning/15 px-1 text-[11px] text-warning">Out of order</span>{/if}
-        <span aria-hidden="true" class="shrink-0 text-muted-foreground">▾</span>
+        <Rows3 class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span class="min-w-0 truncate"><span class="font-semibold">{chosen.name}</span><span class="text-muted-foreground">{` at ${place.name}`}</span></span>
+        {#if chosen.status === "out"}<span class="shrink-0 rounded-md bg-warning/15 px-1.5 py-0.5 text-[11px] font-medium text-warning">Out of order</span>{/if}
+        <ChevronDown class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </button>
-    {:else if place && exercise && (exercise.equipment === "machine" || exercise.equipment === "cable" || exercise.equipment === "smith")}
-      <button type="button" onclick={() => goto(`/settings/places/${place.id}/machine/new`)}
-        class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
-        Which machine at {place.name}? Add it
-      </button>
+    {:else if exercise && machineKinds.includes(exercise.equipment ?? "")}
+      {#if !place && placesStore.active.length > 0}
+        <button type="button" onclick={() => (whereOpen = true)} in:popIn
+          class="flex h-9 max-w-full items-center gap-2 rounded-full border border-dashed border-border pl-2.5 pr-3 text-[13px] text-muted-foreground">
+          <MapPin class="h-4 w-4 shrink-0" aria-hidden="true" /><span class="truncate">Which gym are you at?</span>
+        </button>
+      {:else}
+        <button type="button" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: null }; }} in:popIn
+          class="flex h-9 max-w-full items-center gap-2 rounded-full border border-dashed border-border pl-2.5 pr-3 text-[13px] text-muted-foreground">
+          <Plus class="h-4 w-4 shrink-0" aria-hidden="true" /><span class="truncate">{place ? `Add the machine you use at ${place.name}` : "Add the machine you use"}</span>
+        </button>
+      {/if}
+    {/if}
+    {#if myGymNote}
+      <div role="status" transition:reveal class="mt-2 flex flex-col gap-1 rounded-lg bg-success/10 px-3 py-2.5 text-success">
+        <span class="text-sm font-semibold">Saved to {myGymNote.name}</span>
+        <span class="text-[13px] leading-snug text-foreground/80">Your machines now live in a place, so the next exercise that uses this one finds it too. Train somewhere else as well? Add it whenever you like.</span>
+        <span class="mt-1 flex gap-2">
+          <button type="button" class="min-h-9 rounded-lg border border-success/40 bg-background px-3 text-[13px] font-semibold" onclick={() => { const id = myGymNote?.id; myGymNote = null; if (id) void goto(`/settings/places/${id}`); }}>Rename {myGymNote.name}</button>
+          <button type="button" class="min-h-9 rounded-lg px-3 text-[13px] text-foreground/80" onclick={() => (myGymNote = null)}>Got it</button>
+        </span>
+      </div>
     {/if}
   {/snippet}
   {#snippet notice()}
@@ -828,6 +870,7 @@
         disabled={saving}
         actionsWidth={80}
         onDelete={() => handleDeleteSet(roundSet.id)}
+        onSwipeRight={() => { if (optionsSetId === roundSet.id) optionsSetId = null; }}
         onEdit={() => openEditSet(roundSet.id, roundNum || null)}
       >
         <SetRow
@@ -840,7 +883,8 @@
           rpe={roundSet.rpe ?? null}
           prev={roundNum ? (prevLeadSets[roundNum - 1] ?? null) : null}
           target={roundSet.target ?? null}
-          onOpenDetails={() => openEditSet(roundSet.id, roundNum || null)}
+          optionsOpen={optionsSetId === roundSet.id}
+          focusReps={focusSetId === roundSet.id}
           onPickWeight={weightSource ? () => openWeightPicker(roundSet, roundNum) : undefined}
           completed={roundSet.completed ?? false}
           disabled={saving}
@@ -850,6 +894,7 @@
           onComplete={() => handleComplete(roundSet.id)}
         />
       </SwipeRevealRow>
+      {@render setExtras(roundSet, roundNum || null)}
       {#if typeof roundSet.restStartedAtMs === "number"}
         <div transition:reveal>
           <RestProgressBar
@@ -891,6 +936,7 @@
             disabled={saving}
             actionsWidth={80}
             onDelete={() => handleDeleteSet(lead.id)}
+        onSwipeRight={() => { if (optionsSetId === lead.id) optionsSetId = null; }}
             onEdit={() => openEditSet(lead.id, group.leadNum)}
           >
             <SetRow
@@ -903,7 +949,8 @@
               rpe={lead.rpe ?? null}
               prev={prevLeadSets[group.leadNum - 1] ?? null}
               target={lead.target ?? null}
-              onOpenDetails={() => openEditSet(lead.id, group.leadNum)}
+              optionsOpen={optionsSetId === lead.id}
+              focusReps={focusSetId === lead.id}
               onPickWeight={weightSource ? () => openWeightPicker(lead, group.leadNum) : undefined}
               completed={lead.completed ?? false}
               disabled={saving || setDragId !== null}
@@ -913,6 +960,7 @@
               onComplete={() => handleComplete(lead.id)}
             />
           </SwipeRevealRow>
+          {@render setExtras(lead, group.leadNum)}
           {#if typeof lead.restStartedAtMs === "number"}
             <div transition:reveal>
               <RestProgressBar
@@ -931,6 +979,7 @@
                 disabled={saving}
                 actionsWidth={80}
                 onDelete={() => handleDeleteSet(drop.id)}
+        onSwipeRight={() => { if (optionsSetId === drop.id) optionsSetId = null; }}
                 onEdit={() => openEditSet(drop.id)}
               >
                 <SetRow
@@ -942,7 +991,8 @@
                   {bodyweight}
                   rpe={drop.rpe ?? null}
                   target={drop.target ?? null}
-                  onOpenDetails={() => openEditSet(drop.id)}
+                  optionsOpen={optionsSetId === drop.id}
+                  focusReps={focusSetId === drop.id}
                   onPickWeight={weightSource ? () => openWeightPicker(drop, 0) : undefined}
                   completed={drop.completed ?? false}
                   disabled={saving || setDragId !== null}
@@ -952,6 +1002,7 @@
                   onComplete={() => handleComplete(drop.id)}
                 />
               </SwipeRevealRow>
+              {@render setExtras(drop, null)}
               {#if typeof drop.restStartedAtMs === "number"}
                 <div transition:reveal>
                   <RestProgressBar
@@ -1017,45 +1068,53 @@
   />
 {/if}
 
-<EditSetDialog
-  open={editSet.open}
-  disabled={saving}
-  initial={getEditableSet()}
-  machines={exerciseData?.machines ?? []}
-  defaultMachineId={exerciseData?.defaultMachineId}
-  exerciseId={exerciseData?.id}
-  weightUnit={$profile.weightUnit}
-  setNumber={editSet.setNumber}
-  target={editedSet?.target ?? null}
-  completed={editedSet?.completed ?? false}
-  prev={editSet.setNumber ? (prevLeadSets[editSet.setNumber - 1] ?? null) : null}
-  {bodyweight}
-  onOpenChange={(v) => (editSet.open = v)}
-  onSave={saveSetPatch}
-  onLog={logFromCard}
-/>
+{#snippet setExtras(set: SetEntry, num: number | null)}
+  {#if optionsSetId === set.id}
+    <div transition:reveal>
+      <SetOptionsTray
+        setNumber={num}
+        setType={set.setType}
+        rpe={set.rpe}
+        note={set.note}
+        restMs={restFor(set)}
+        disabled={saving}
+        onChange={(patch) => patchSet(set.id, patch)}
+        onDone={() => (optionsSetId = null)}
+      />
+    </div>
+  {:else if effortSetId === set.id}
+    <div transition:reveal>
+      <EffortPrompt setNumber={num} onAnswer={(rpe) => { effortSetId = null; void patchSet(set.id, { rpe }); }} />
+    </div>
+  {/if}
+{/snippet}
 
 <ExerciseDetailSheet
   exerciseId={detailExerciseId}
+  excludeSessionId={$currentSession?.id}
   onClose={() => {
     detailExerciseId = null;
-    // Pick up any edits (machines, name) made in the sheet.
+    // Pick up any edits (name, how it progresses) made in the sheet.
     void loadExerciseData(data.exerciseId, data.exerciseName);
     void loadSuggestion(data.exerciseName, data.exerciseId);
   }}
-/>
-
-<ExerciseInfoSheet
-  open={infoOpen}
-  {exercise}
-  name={data.exerciseName}
-  lastSets={prevSets}
-  weightUnit={$profile.weightUnit}
-  {bodyweight}
-  onOpenChange={(v) => (infoOpen = v)}
-  onEdit={openEditor}
-  onSwap={openSwap}
-/>
+  tab={detailTab}
+  onMachine={(p, machineId) => {
+    detailExerciseId = null;
+    editorPlace = p;
+    editorFrom = "exercise";
+    machineEditor = { open: true, machineId };
+  }}
+>
+  {#snippet today()}
+    {#if cardSuggestion && cardSuggestion.sets.length}
+      <div class="flex flex-col gap-1 rounded-xl bg-info/10 px-3.5 py-3 text-sm text-info">
+        <span>Today: {cardSuggestion.label ?? `${cardSuggestion.sets.length} sets`}</span>
+        {#if cardSuggestion.change?.detail}<span class="text-[13px]">{cardSuggestion.change.detail}</span>{/if}
+      </div>
+    {/if}
+  {/snippet}
+</ExerciseDetailSheet>
 
 {#if place && exercise && placeMachines.length}
   <MachinePickerSheet
@@ -1065,9 +1124,41 @@
     exerciseName={data.exerciseName}
     machines={placeMachines}
     currentId={chosen?.id ?? null}
+    lastTimeOn={(id) => lastOnMachine.get(id) ?? null}
     onOpenChange={(v) => (machinePickerOpen = v)}
-    onPick={() => {}}
+    onPick={() => (forceReplan = true)}
+    onEdit={(m) => { machinePickerOpen = false; editorFrom = "picker"; machineEditor = { open: true, machineId: m.id }; }}
+    onAdd={() => { machinePickerOpen = false; editorFrom = "picker"; machineEditor = { open: true, machineId: null }; }}
+    onChangePlace={placesStore.active.length > 1 ? () => (whereOpen = true) : undefined}
   />
+{/if}
+
+{#if exercise}
+  <MachineEditorSheet
+    open={machineEditor.open}
+    place={editorPlace === undefined ? place : editorPlace}
+    machineId={machineEditor.machineId}
+    forExercise={machineEditor.machineId ? null : { id: exercise.id, name: data.exerciseName }}
+    backLabel={editorFrom === "picker" ? "Which machine?" : editorFrom === "exercise" ? data.exerciseName : "Back to the workout"}
+    onOpenChange={(v) => {
+      machineEditor = { ...machineEditor, open: v };
+      if (v) return;
+      editorPlace = undefined;
+      // Closed without saving: back to where it was opened from.
+      if (!editorSaved) {
+        if (editorFrom === "picker") machinePickerOpen = true;
+        else if (editorFrom === "exercise" && exercise) { detailTab = "howto"; detailExerciseId = exercise.id; }
+      }
+      editorSaved = false;
+      editorFrom = "card";
+    }}
+    onSaved={(r) => void machineSaved(r)}
+  />
+{/if}
+
+{#if whereOpen && $currentSession}
+  <WhereTodaySheet session={$currentSession} changing
+    onPick={(placeId) => { whereOpen = false; void onMutate((s: WorkoutSession) => ({ ...s, placeId, placeAsked: true })); }} />
 {/if}
 
 {#if weightSource && weightPick}

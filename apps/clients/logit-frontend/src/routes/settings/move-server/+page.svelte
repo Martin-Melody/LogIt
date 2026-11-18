@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   // Move to another server (design canvas 9 and 10). The training comes along: it's uploaded to
   // the new server and the phone only switches once that has landed (lib/accounts/moveServer.ts).
   import { goto } from "$app/navigation";
@@ -154,7 +155,7 @@
       {/if}
     </div>
   {:else}
-    <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground self-start min-h-11" onclick={() => goto("/settings")}>
+    <button type="button" class="flex items-center gap-1 text-sm text-muted-foreground self-start min-h-11" onclick={() => back("/settings")}>
       <ArrowLeft class="h-4 w-4" /> Settings
     </button>
     <h1 class="mt-3 mb-1.5 text-[22px] font-bold">Move to another server</h1>

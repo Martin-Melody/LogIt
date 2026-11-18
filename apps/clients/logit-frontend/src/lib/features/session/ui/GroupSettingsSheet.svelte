@@ -6,6 +6,7 @@
   import { fade } from "svelte/transition";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
@@ -115,6 +116,7 @@
     role="dialog"
     aria-modal="true"
     aria-label="Edit {kindWord}"
+    use:sheetDrag={{ onDismiss: onClose }} use:backDismiss={onClose}
     transition:sheetUp
   >
     <div class="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border shrink-0">

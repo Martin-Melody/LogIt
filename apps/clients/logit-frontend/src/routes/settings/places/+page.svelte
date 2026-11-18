@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   // Settings › Your places (My gym, design canvas G1/G10). Optional: with no places everything
   // works as before. Making one starts from a template; "Where are you today?" only shows with
   // two or more and can be turned off here (Martin: it must only help, never block a workout).
@@ -47,7 +48,7 @@
 </script>
 
 <div class="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-background px-6 pb-8 pt-10 text-foreground">
-  <button type="button" class="mb-4 flex min-h-11 items-center gap-1.5 self-start text-sm text-muted-foreground" onclick={() => goto("/settings")}>
+  <button type="button" class="mb-4 flex min-h-11 items-center gap-1.5 self-start text-sm text-muted-foreground" onclick={() => back("/settings")}>
     <ArrowLeft class="h-4 w-4" /> Settings
   </button>
   <h1 class="mb-1.5 text-[22px] font-bold">Your places</h1>

@@ -991,7 +991,7 @@
               {#each exerciseOverrides as o (o.key)}
                 <li>
                   <a
-                    href={o.exerciseId ? `/exercises/${o.exerciseId}` : undefined}
+                    href={o.exerciseId ? `/exercises/${o.exerciseId}?tab=settings` : undefined}
                     class="flex min-h-12 flex-col justify-center px-3 py-2 text-inherit no-underline"
                   >
                     <span class="text-sm font-medium">{o.exerciseName}</span>
@@ -1222,6 +1222,17 @@
             profile.save({
               blocksCollapsedByDefault: !$profile.blocksCollapsedByDefault,
             })} />
+      </label>
+
+      <label class="flex items-center justify-between gap-3 cursor-pointer">
+        <div>
+          <p class="text-sm font-medium">Ask how hard each set was</p>
+          <p class="text-xs text-muted-foreground">
+            After you tick a set, one tap says how many more reps you had in you. Saved as RPE.
+          </p>
+        </div>
+        <Switch checked={$profile.askEffortAfterSet} label="Ask how hard each set was" onchange={() =>
+            profile.save({ askEffortAfterSet: !$profile.askEffortAfterSet })} />
       </label>
 
       <div class="flex flex-col gap-2">

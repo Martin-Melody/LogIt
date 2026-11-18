@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import {
     X, Dumbbell, Trophy, MessageSquare, CalendarDays,
     Activity, Cpu, LayoutDashboard, Paperclip, Flame,
@@ -372,6 +373,7 @@
   <!-- Sheet -->
   <div
     class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl max-h-[85dvh] pb-[env(safe-area-inset-bottom)]"
+    use:sheetDrag={{ onDismiss: onclose }} use:backDismiss={onclose}
     transition:sheetUp
   >
 

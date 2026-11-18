@@ -5,6 +5,7 @@
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import CommentList from "./social/CommentList.svelte";
   import ReplyingTo from "./social/ReplyingTo.svelte";
   import { replyDraft } from "@logit/core/domain/commentThreads";
@@ -90,6 +91,7 @@
   <!-- Sheet -->
   <div
     class="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-xl border-t border-border max-h-[80dvh]"
+    use:sheetDrag={{ onDismiss: onclose }} use:backDismiss={onclose}
     transition:sheetUp
   >
     <div class="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border shrink-0">

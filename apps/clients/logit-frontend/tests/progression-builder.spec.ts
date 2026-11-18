@@ -76,6 +76,8 @@ test("build an algorithm, preview it, and use it on one exercise", async ({ page
   await expect(page.getByText("Top and back-offs", { exact: true })).toBeVisible(); // not the "Saved …" toast
 
   await page.goto("/exercises/core_bench_press");
+
+  await page.getByRole("tab", { name: "Settings" }).click();
   const section = page.getByRole("region", { name: "How it progresses" });
   await section.getByRole("radio", { name: "Top and back-offs" }).click();
   await expect(section.getByRole("radio", { name: "Top and back-offs" })).toHaveAttribute("aria-checked", "true");
