@@ -682,7 +682,7 @@ test.describe("bodyweight loads", () => {
     await expect(options.getByRole("button", { name: /Delete/ })).toHaveCount(0);
     await options.getByRole("button", { name: "2 left (RPE 8)" }).click();
     await expect(page.getByTestId("set-number").nth(1)).toContainText("2 left");
-    await page.getByRole("button", { name: "Edit set" }).nth(1).dispatchEvent("click");
+    await options.getByRole("button", { name: "Done" }).click();
     await expect(options).toHaveCount(0);
 
     // Ticking set 1 asks how many more were in it (S-D); one tap answers.

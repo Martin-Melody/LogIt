@@ -6,7 +6,7 @@
   let { setNumber = null, onAnswer }: { setNumber?: number | null; onAnswer: (rpe: number) => void } = $props();
 </script>
 
-<div class="flex flex-col gap-1.5 px-3 pb-2.5 pt-1" data-testid="effort-prompt">
+<div class="flex flex-col gap-1.5 px-3 pb-2.5 pt-1" data-testid="effort-prompt" data-no-tab-swipe>
   <span class="text-[13px] text-success" id="effort-q-{setNumber}">How many more could you have done?</span>
   <div role="group" aria-labelledby="effort-q-{setNumber}" class="grid grid-cols-4 gap-1.5">
     {#each EFFORT as e (e.rpe)}

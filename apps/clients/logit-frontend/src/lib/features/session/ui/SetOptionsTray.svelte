@@ -3,7 +3,7 @@
      note. Delete stays in the swipe. No sheet and no Save: every tap saves, and the other sets
      stay in view. A light panel shows where it ends and the next set begins. -->
 <script lang="ts">
-  import { ChevronDown } from "lucide-svelte";
+  import { ChevronDown, ChevronUp } from "lucide-svelte";
   import { reveal } from "$lib/transitions";
   import { SET_TYPE_META, type SetEntry, type SetType } from "@logit/core/domain/workout";
   import { EFFORT, effortFor } from "./effort";
@@ -19,6 +19,7 @@
     showRest = true,
     disabled = false,
     onChange,
+    onDone,
   }: {
     setNumber?: number | null;
     setType: SetType;
@@ -30,6 +31,8 @@
     showRest?: boolean;
     disabled?: boolean;
     onChange: (patch: Patch) => void | Promise<void>;
+    /** Close the details (also: swipe the row right, or tick the set). */
+    onDone: () => void;
   } = $props();
 
   const MAIN: SetType[] = ["warmup", "normal", "dropset", "failure"];
@@ -50,7 +53,7 @@
     `min-h-10 rounded-lg border bg-background px-1 text-[12px] ${on ? "border-2 border-foreground font-semibold" : "border-border"}`;
 </script>
 
-<div class="mx-2 mb-2 mt-1 flex flex-col gap-3 rounded-xl bg-muted/60 px-3 pb-3 pt-3" data-testid="set-options" aria-label="Set {setNumber ?? ''} options">
+<div class="mx-2 mb-2 mt-1 flex flex-col gap-3 rounded-xl bg-muted/60 px-3 pb-3 pt-3" data-testid="set-options" data-no-tab-swipe aria-label="Set {setNumber ?? ''} options">
   <div role="group" aria-label="Kind of set" class="flex flex-col gap-1.5">
     <div class="grid grid-cols-4 gap-1">
       {#each MAIN as t (t)}
@@ -94,4 +97,8 @@
       onchange={(e) => onChange({ note: (e.currentTarget as HTMLInputElement).value.trim() || null })}
       class="h-10 min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 text-sm" />
   </div>
+  <button type="button" onclick={onDone}
+    class="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background text-sm font-medium">
+    <ChevronUp class="h-4 w-4" /> Done
+  </button>
 </div>
