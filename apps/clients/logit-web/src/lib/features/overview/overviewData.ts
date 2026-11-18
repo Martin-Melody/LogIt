@@ -66,6 +66,8 @@ export type OverviewData = {
   goals: GoalSummary[];
   records: RecordView[];
   habits: HabitWeekView[];
+  /** The goal picked in the app's onboarding (synced profile); arranges a new Overview. */
+  trainingGoal: string | null;
 };
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -273,5 +275,6 @@ export async function loadOverview(clientId?: string): Promise<OverviewData> {
     goals: goalViews,
     records: records.slice(0, 6),
     habits,
+    trainingGoal: profile?.trainingGoal ?? null,
   };
 }
