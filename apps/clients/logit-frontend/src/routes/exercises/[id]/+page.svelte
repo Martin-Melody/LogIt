@@ -1,8 +1,10 @@
 <script lang="ts">
+  // An exercise as a page (from the Exercises list, history, goals): the same three tabs as the
+  // sheet a workout opens (design canvas E1–E3).
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { back } from "$lib/navigation";
-  import ExerciseDetailBody from "$lib/features/exercise/components/ExerciseDetailBody.svelte";
+  import ExerciseView from "$lib/features/exercise/components/ExerciseView.svelte";
   import type { Exercise } from "@logit/core/domain/exercise";
 
   const props = $props<{ params: { id: string } }>();
@@ -12,17 +14,19 @@
 </script>
 
 <div class="flex flex-col pb-24">
-  <!-- Header -->
   <PageHeader>
     <BackButton onclick={() => back("/exercises")} />
-    <div class="flex-1 min-w-0">
-      <span class="text-base font-semibold truncate block">{exerciseName}</span>
+    <div class="min-w-0 flex-1">
+      <h1 class="block truncate text-base font-semibold">{exerciseName}</h1>
     </div>
   </PageHeader>
 
-  <ExerciseDetailBody
-    exerciseId={id}
-    onExercise={(ex: Exercise | null) => (exerciseName = ex?.name ?? "Exercise")}
-    onDeleted={() => back("/exercises")}
-  />
+  {#key id}
+    <ExerciseView
+      exerciseId={id}
+      tab="progress"
+      onExercise={(ex: Exercise | null) => (exerciseName = ex?.name ?? "Exercise")}
+      onDeleted={() => back("/exercises")}
+    />
+  {/key}
 </div>

@@ -49,7 +49,6 @@
   import WeightPickerSheet from "$lib/features/places/WeightPickerSheet.svelte";
   import AtTheTopCard from "$lib/features/places/AtTheTopCard.svelte";
   import type { WeightSource } from "$lib/features/places/weightSource";
-  import ExerciseInfoSheet from "$lib/features/session/ui/ExerciseInfoSheet.svelte";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { getLoadMode, effectiveLoadKg } from "@logit/core/domain/bodyweight";
   import { repsAtLoad } from "@logit/core/domain/oneRepMax";
@@ -162,23 +161,21 @@
     coachSwap = target && coach ? { target, coach } : null;
     swapOpen = true;
   }
+  // The name opens the exercise over the workout (E1–E3): How to the first time, else Progress.
   let detailExerciseId = $state<string | null>(null);
-  /** The name opens the read-first info sheet (X5); editing is a link inside it. */
-  let infoOpen = $state(false);
+  // A machine opened from the exercise's "Where you do it" (any place, not only today's).
+  let editorPlace = $state<Place | null | undefined>(undefined);
 
   function openDetail() {
-    infoOpen = true;
-  }
-
-  function openEditor() {
-    if (data.exerciseId) detailExerciseId = data.exerciseId;
+    const id = data.exerciseId ?? exercise?.id;
+    if (id) detailExerciseId = id;
   }
 
   /** A machine added or fixed from the card (M2): it's at the workout's place from now on. */
   async function machineSaved(r: { machine: PlaceMachine; place: Place; createdPlace: boolean }) {
     if (r.createdPlace) myGymNote = r.place;
     if (!machineEditor.machineId) forceReplan = true;
-    if (get(currentSession)?.placeId !== r.place.id) {
+    if (editorPlace === undefined && get(currentSession)?.placeId !== r.place.id) {
       await onMutate((s: WorkoutSession) => ({ ...s, placeId: r.place.id, placeAsked: true }));
     }
   }
@@ -1085,25 +1082,28 @@
 
 <ExerciseDetailSheet
   exerciseId={detailExerciseId}
+  excludeSessionId={$currentSession?.id}
   onClose={() => {
     detailExerciseId = null;
-    // Pick up any edits (machines, name) made in the sheet.
+    // Pick up any edits (name, how it progresses) made in the sheet.
     void loadExerciseData(data.exerciseId, data.exerciseName);
     void loadSuggestion(data.exerciseName, data.exerciseId);
   }}
-/>
-
-<ExerciseInfoSheet
-  open={infoOpen}
-  {exercise}
-  name={data.exerciseName}
-  lastSets={prevSets}
-  weightUnit={$profile.weightUnit}
-  {bodyweight}
-  onOpenChange={(v) => (infoOpen = v)}
-  onEdit={openEditor}
-  onSwap={openSwap}
-/>
+  onMachine={(p, machineId) => {
+    detailExerciseId = null;
+    editorPlace = p;
+    machineEditor = { open: true, machineId };
+  }}
+>
+  {#snippet today()}
+    {#if cardSuggestion && cardSuggestion.sets.length}
+      <div class="flex flex-col gap-1 rounded-xl bg-info/10 px-3.5 py-3 text-sm text-info">
+        <span>Today: {cardSuggestion.label ?? `${cardSuggestion.sets.length} sets`}</span>
+        {#if cardSuggestion.change?.detail}<span class="text-[13px]">{cardSuggestion.change.detail}</span>{/if}
+      </div>
+    {/if}
+  {/snippet}
+</ExerciseDetailSheet>
 
 {#if place && exercise && placeMachines.length}
   <MachinePickerSheet
@@ -1125,10 +1125,10 @@
 {#if exercise}
   <MachineEditorSheet
     open={machineEditor.open}
-    {place}
+    place={editorPlace === undefined ? place : editorPlace}
     machineId={machineEditor.machineId}
     forExercise={machineEditor.machineId ? null : { id: exercise.id, name: data.exerciseName }}
-    onOpenChange={(v) => (machineEditor = { ...machineEditor, open: v })}
+    onOpenChange={(v) => { machineEditor = { ...machineEditor, open: v }; if (!v) editorPlace = undefined; }}
     onSaved={(r) => void machineSaved(r)}
   />
 {/if}
