@@ -15,6 +15,25 @@
   import { popIn } from "$lib/transitions";
   import { getNutritionRepo, getHabitRepo } from "$lib/data/repoProvider";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
+  import FirstDownloadNotice from "$lib/sync/FirstDownloadNotice.svelte";
+  import PendingCard from "$lib/sync/PendingCard.svelte";
+  import { firstDownloadState } from "$lib/sync/firstDownload";
+  import { firstDownloadAt, lastSyncFailed, planIncludesSync, syncRunning } from "$lib/sync/syncService";
+
+  // Right after signing in the account's training is still downloading: say so, and keep
+  // the cards that need it on placeholders instead of their empty states. Quick start works
+  // throughout; the two that show nothing without data stay hidden.
+  const firstDownload = $derived(
+    firstDownloadState({
+      signedIn: authStore.isAuthenticated,
+      syncs: authStore.isAuthenticated && planIncludesSync(),
+      downloadedAt: $firstDownloadAt,
+      running: $syncRunning,
+      failed: $lastSyncFailed,
+    }),
+  );
+  const LIVE_WHILE_DOWNLOADING = new Set(["quick-start"]);
+  const HIDDEN_WHILE_DOWNLOADING = new Set(["this-week", "next-step"]);
 
   let baseWidgets = $state<RuntimeWidgetDefinition[]>(
     localWidgetRegistry.list().map((widget) => ({
@@ -82,10 +101,24 @@
     </div>
   </PageHeader>
 
+  {#if firstDownload}
+    <FirstDownloadNotice
+      status={firstDownload}
+      subject="training"
+      detail="Sessions, splits and progress. You can start a workout meanwhile."
+    />
+  {/if}
+
   {#each activeWidgets as widget, i (widget.id)}
     {@const WidgetComponent = widget.component}
-    <div in:popIn={{ duration: 220, delay: Math.min(i * 40, 320) }} data-guide={widget.guideMark}>
-      <WidgetComponent {...(widget.props ?? {})} />
-    </div>
+    {#if firstDownload && HIDDEN_WHILE_DOWNLOADING.has(widget.id)}
+      <!-- Shows nothing until there's data. -->
+    {:else if firstDownload && !LIVE_WHILE_DOWNLOADING.has(widget.id)}
+      <PendingCard title={widget.label} status={firstDownload} />
+    {:else}
+      <div in:popIn={{ duration: 220, delay: Math.min(i * 40, 320) }} data-guide={widget.guideMark}>
+        <WidgetComponent {...(widget.props ?? {})} />
+      </div>
+    {/if}
   {/each}
 </div>

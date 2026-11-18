@@ -70,6 +70,10 @@
   // ── Server (default: managed cloud) ──────────────────────────────────────
   let serverMode = $state(getServerMode() === "selfhosted" ? "selfhosted" : "cloud");
   let showServerSetup = $state(false);
+  // Which option is ticked in "Which server?". getlogit.app applies straight away; your own
+  // server is ticked first and applies with "Use this server", once there's an address.
+  let picked = $state<"cloud" | "selfhosted">("cloud");
+  let addressEl = $state<HTMLInputElement | null>(null);
   let selfHostUrl = $state(getSelfHostUrl() || "https://");
   let urlTestResult = $state<ConnectionResult>("idle");
 
@@ -404,7 +408,7 @@
     <div class="mt-6">
       {#if !showServerSetup}
         <button type="button" class="w-full min-h-11 flex items-center justify-between gap-3 rounded-lg border border-border px-3.5 py-2.5 text-left"
-          onclick={() => { showServerSetup = true; urlTestResult = "idle"; }}>
+          onclick={() => { showServerSetup = true; picked = serverMode === "selfhosted" ? "selfhosted" : "cloud"; urlTestResult = "idle"; }}>
           <span class="flex min-w-0 flex-col">
             <span class="text-xs text-muted-foreground">Server</span>
             <span class="flex items-center gap-2 truncate text-sm font-medium">
@@ -422,20 +426,23 @@
             <p class="text-base font-bold">Which server?</p>
             <p class="text-sm text-muted-foreground">Most people use getlogit.app. If you run Logit on your own server, enter its address.</p>
           </div>
-          <button type="button" class="flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left {serverMode === 'cloud' ? 'border-2 border-primary' : 'border-border'}"
-            aria-pressed={serverMode === "cloud"} onclick={useCloud}>
-            <span class="h-5 w-5 shrink-0 rounded-full {serverMode === 'cloud' ? 'border-[6px] border-primary' : 'border-2 border-muted-foreground/50'}"></span>
+          <button type="button" class="flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left {picked === 'cloud' ? 'border-2 border-primary' : 'border-border'}"
+            aria-pressed={picked === "cloud"} onclick={() => { picked = "cloud"; useCloud(); }}>
+            <span class="h-5 w-5 shrink-0 rounded-full {picked === 'cloud' ? 'border-[6px] border-primary' : 'border-2 border-muted-foreground/50'}"></span>
             <span class="flex flex-col"><span class="text-[15px] font-medium">getlogit.app</span><span class="text-xs text-muted-foreground">Free, with Pro and Studio plans</span></span>
           </button>
-          <div class="flex flex-col gap-3 rounded-lg border px-3.5 py-3 {serverMode === 'selfhosted' ? 'border-2 border-primary' : 'border-border'}">
-            <span class="flex items-center gap-3">
-              <span class="h-5 w-5 shrink-0 rounded-full {serverMode === 'selfhosted' ? 'border-[6px] border-primary' : 'border-2 border-muted-foreground/50'}"></span>
+          <div class="flex flex-col gap-3 rounded-lg border px-3.5 py-3 {picked === 'selfhosted' ? 'border-2 border-primary' : 'border-border'}">
+            <button type="button" class="-mx-3.5 -my-3 flex min-h-11 items-center gap-3 px-3.5 py-3 text-left"
+              aria-pressed={picked === "selfhosted"} onclick={() => { picked = "selfhosted"; addressEl?.focus(); }}>
+              <span class="h-5 w-5 shrink-0 rounded-full {picked === 'selfhosted' ? 'border-[6px] border-primary' : 'border-2 border-muted-foreground/50'}"></span>
               <span class="flex flex-col"><span class="text-[15px] font-medium">My own server</span><span class="text-xs text-muted-foreground">Everything included, on your hardware</span></span>
-            </span>
+            </button>
             <label class="text-sm font-medium" for="server-address">Server address</label>
             <input id="server-address" type="url" inputmode="url" placeholder="https://logit.yourdomain.com"
               class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               oninput={checkAsTyped}
+              onfocus={() => (picked = "selfhosted")}
+              bind:this={addressEl}
               bind:value={selfHostUrl} />
             {#if selfHostUrl.startsWith("http://") && !selfHostUrl.startsWith("https://")}
               <p class="text-xs text-warning">HTTP is unencrypted. Use HTTPS if you can.</p>

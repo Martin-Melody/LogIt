@@ -8,13 +8,43 @@ import type { NavConfig, NavItemDef } from "$lib/stores/navConfig.store";
 
 export const START_HREF = "/session/current";
 
-/** Tab page paths in bar order. Items needing an account are skipped while signed out. */
-export function tabHrefs(config: Pick<NavConfig, "bar">, defs: NavItemDef[], signedIn: boolean): string[] {
-  const href = (i: number) => {
-    const d = defs.find((def) => def.id === config.bar[i]);
-    return d && (!d.authRequired || signedIn) ? d.href : null;
-  };
-  return [href(0), href(1), START_HREF, href(2)].filter((h): h is string => h !== null);
+/** Number of customisable slots in the bottom bar (Start and More are fixed). */
+const SLOTS = 3;
+
+/**
+ * What each bar slot shows. An item that needs an account (Social, Messages) can't be used
+ * while signed out, so its slot borrows the first usable item from More that isn't already
+ * in the bar — no gap, and the saved order isn't touched, so the item comes back on sign-in.
+ * `signedIn` is null until sign-in has been checked: the slot stays empty meanwhile rather
+ * than showing a stand-in that flips away a moment later. A slot the bar was customised
+ * to leave empty stays empty.
+ */
+export function barSlots(
+  config: Pick<NavConfig, "bar" | "more">,
+  defs: NavItemDef[],
+  signedIn: boolean | null,
+): (NavItemDef | null)[] {
+  const byId = (id: string | undefined) => defs.find((d) => d.id === id);
+  const usable = (d: NavItemDef) => !d.authRequired || signedIn === true;
+  const spare = config.more
+    .map(byId)
+    .filter((d): d is NavItemDef => !!d && usable(d) && !config.bar.includes(d.id));
+  return Array.from({ length: SLOTS }, (_, i) => {
+    const d = byId(config.bar[i]);
+    if (!d) return null;
+    if (usable(d)) return d;
+    return signedIn === false ? (spare.shift() ?? null) : null;
+  });
+}
+
+/** Tab page paths in bar order (as barSlots shows them), with Start between slots 2 and 3. */
+export function tabHrefs(
+  config: Pick<NavConfig, "bar" | "more">,
+  defs: NavItemDef[],
+  signedIn: boolean | null,
+): string[] {
+  const [a, b, c] = barSlots(config, defs, signedIn).map((d) => d?.href ?? null);
+  return [a, b, START_HREF, c].filter((h): h is string => h !== null);
 }
 
 /** The tab next to `pathname` in direction `step` (+1 right, -1 left), or null at an end or off the tabs. */

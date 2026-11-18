@@ -7,7 +7,6 @@ import { currentSession } from "$lib/stores/currentSession.store";
 import { recentSessions } from "$lib/stores/recentSessions.store";
 import { splits } from "$lib/stores/splits.store";
 import { exercisesStore } from "$lib/stores/exercises.store";
-import { navConfig } from "$lib/stores/navConfig.store";
 import { setupKeyboard } from "./keyboard";
 import { setupNativeShell } from "./nativeShell";
 import { syncAll, reloadLastSyncedAt } from "$lib/sync/syncService";
@@ -91,10 +90,8 @@ export async function appInit(): Promise<void> {
     // Auth check runs in background — never blocks startup; sync follows if authenticated
     authStore.init()
       .then(() => {
-        if (!authStore.isAuthenticated) {
-          navConfig.reconcileForOffline();
-          return;
-        }
+        // Signed out, the bottom bar stands in for Social itself (tabSwipe.ts barSlots).
+        if (!authStore.isAuthenticated) return;
         void syncAll();
         startBackgroundSync();
         // Reports Play purchases the server hasn't seen (restores, purchases finished while the

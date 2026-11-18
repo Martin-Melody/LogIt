@@ -6,6 +6,7 @@
   import { authStore } from "$lib/api/authStore.svelte";
   import { Dumbbell, MoreHorizontal } from "lucide-svelte";
   import { navConfig, NAV_ITEM_DEFS } from "$lib/stores/navConfig.store";
+  import { barSlots } from "$lib/features/navigation/tabSwipe";
   import { unreadNotifications } from "$lib/stores/notifications.store";
   import MoreSheet from "./MoreSheet.svelte";
 
@@ -16,13 +17,10 @@
   const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/plan"));
   const onWorkout = $derived(page.url.pathname.startsWith("/session/current"));
 
-  // One entry per bar slot; null where the item needs an account and there isn't
-  // one (yet). Positional, so nothing shifts sideways when sign-in resolves.
+  // One entry per bar slot (positional, so nothing shifts sideways). Signed out, an item
+  // that needs an account is stood in for by one from More; see barSlots.
   const visibleBar = $derived(
-    [0, 1, 2].map((i) => {
-      const d = NAV_ITEM_DEFS.find((def) => def.id === $navConfig.bar[i]);
-      return d && (!d.authRequired || authStore.isAuthenticated) ? d : null;
-    }),
+    barSlots($navConfig, NAV_ITEM_DEFS, authStore.ready ? authStore.isAuthenticated : null),
   );
 
   function isActive(href: string) {

@@ -56,19 +56,23 @@ export const activeSplit = createActiveSplitStore();
 // down from the server for the first time on a fresh install), these two stayed stuck on
 // "no split" even after WidgetCard.svelte's lastSyncedAt-triggered reload re-ran, since that
 // reload gathered fresh input for everything except this cached value.
+// The first download after signing in counts too: it lands even when an unrelated part of
+// that sync failed, so lastSyncedAt doesn't move.
 if (browser) {
-  let seenLastSyncedAt: number | null = null;
-  void import("$lib/sync/syncService").then(({ lastSyncedAt }) => {
-    lastSyncedAt.subscribe((t) => {
-      if (seenLastSyncedAt === null) {
-        seenLastSyncedAt = t;
-        return;
-      }
-      if (t !== seenLastSyncedAt) {
-        seenLastSyncedAt = t;
-        void activeSplit.load();
-      }
-    });
+  void import("$lib/sync/syncService").then(({ lastSyncedAt, firstDownloadAt }) => {
+    for (const store of [lastSyncedAt, firstDownloadAt]) {
+      let seen: number | null = null;
+      store.subscribe((t) => {
+        if (seen === null) {
+          seen = t;
+          return;
+        }
+        if (t !== seen) {
+          seen = t;
+          void activeSplit.load();
+        }
+      });
+    }
   });
 }
 

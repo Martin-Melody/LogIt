@@ -135,6 +135,26 @@ test.describe("self-hosted server setup", () => {
     expect(mode).toBe("selfhosted");
   });
 
+  test("tapping 'My own server' ticks it, and it only applies with 'Use this server'", async ({ page }) => {
+    await resetState(page);
+    await goToAuth(page);
+
+    await page.getByRole("button", { name: /Advanced/ }).click();
+    const cloud = page.getByRole("button", { name: /^getlogit\.app/ });
+    const own = page.getByRole("button", { name: /^My own server/ });
+    await expect(cloud).toHaveAttribute("aria-pressed", "true");
+
+    await own.click();
+    await expect(own).toHaveAttribute("aria-pressed", "true");
+    await expect(cloud).toHaveAttribute("aria-pressed", "false");
+    await expect(page.locator('input[type="url"]')).toBeFocused();
+    expect(await page.evaluate(() => localStorage.getItem("logit:server:mode"))).not.toBe("selfhosted");
+
+    await page.locator('input[type="url"]').fill("https://logit.example.com");
+    await page.getByRole("button", { name: "Use this server" }).click();
+    expect(await page.evaluate(() => localStorage.getItem("logit:server:mode"))).toBe("selfhosted");
+  });
+
   test("picking getlogit.app reverts a self-hosted selection", async ({ page }) => {
     await setServerMode(page, "selfhosted", "https://logit.example.com");
     await goToAuth(page);
