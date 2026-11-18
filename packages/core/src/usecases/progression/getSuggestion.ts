@@ -4,9 +4,9 @@ import { getExerciseProgressionSettings, getMuscleSetTargets, resolveAlgorithmId
 import { strengthEstimate } from "../../progression/algorithms/adaptiveProgression";
 import { setTargetFor, SECONDARY_SET_WEIGHT } from "../../domain/weeklySets";
 import { weekBucket } from "../../domain/time";
-import type { MuscleGroup } from "../../domain/exercise";
+import type { Machine, MuscleGroup } from "../../domain/exercise";
 import { exerciseKey, resolveExerciseIncrement, resolveExerciseMachine } from "../../domain/progression";
-import { snapToMachine } from "../../domain/machine";
+import { rebaseForMachine, snapToMachine } from "../../domain/machine";
 import { getExercises, isUnloggedPlannedSet } from "../../domain/workout";
 import type { WorkoutSession } from "../../domain/workout";
 import { nowMs } from "../../domain/time";
@@ -29,6 +29,9 @@ export async function getSuggestion(
   liveInput?: { rpe?: number; readiness?: number },
   /** Run this algorithm instead of the one set for the exercise (the builder's preview). */
   algorithmOverride?: ProgressionAlgorithm,
+  /** The machine this is done on today (from the place you're at), when known. Weights are
+   * rounded to its settings and start from the last time on it (rebaseForMachine). */
+  options?: { machine?: Machine },
 ): Promise<ProgressionOutput | null> {
   const { progressionRepo, workoutRepo, exerciseRepo, algorithmRegistry: registry } = deps;
 
@@ -227,7 +230,15 @@ export async function getSuggestion(
 
   // If the exercise is done on a machine with a known set of achievable weights,
   // round the suggested weights to what the machine can actually be set to.
-  const machine = resolveExerciseMachine(exerciseData ?? {}, history);
+  const machine = options?.machine ?? resolveExerciseMachine(exerciseData ?? {}, history);
+  if (options?.machine && output.sets.length > 0) {
+    const { factor, firstTime } = rebaseForMachine(history, options.machine.id);
+    if (factor !== 1) output = { ...output, sets: output.sets.map((s) => ({ ...s, weight: s.weight * factor })) };
+    if (firstTime) {
+      const note = `First time on ${options.machine.name}: machines differ, so check the first set feels right.`;
+      output = { ...output, notes: output.notes ? `${output.notes} ${note}` : note };
+    }
+  }
   if (machine?.weights && output.sets.length > 0) {
     return {
       ...output,

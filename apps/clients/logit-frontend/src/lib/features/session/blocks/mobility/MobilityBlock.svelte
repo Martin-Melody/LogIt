@@ -571,6 +571,7 @@
               style="touch-action: none"
               use:groupGripAction={groupKey(group)}
               aria-label="Drag to reorder set"
+              data-testid="set-number"
               tabindex="-1"
               disabled={saving}
             >

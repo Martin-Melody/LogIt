@@ -1,3 +1,4 @@
+import { withStartingPlace } from "$lib/features/places/sessionPlace";
 import { getWorkoutRepo } from "$lib/data/repoProvider";
 import type { ProgramDay } from "@logit/core/domain/CoachProgram";
 import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -15,7 +16,7 @@ export async function startSessionFromProgramDay(
   const repo = getWorkoutRepo();
   const built = programDaySession(day);
   // A coach's program also keeps which coach (whose swap rule applies) and their alternatives.
-  const session = program ? { ...built, source: sourceFromProgramDay(program, day, built) } : built;
+  const session = withStartingPlace(program ? { ...built, source: sourceFromProgramDay(program, day, built) } : built);
   await repo.saveDraftSession(session);
   return session;
 }

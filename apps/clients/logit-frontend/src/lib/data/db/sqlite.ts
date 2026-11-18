@@ -656,6 +656,7 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
   await migrateSessionFlags(db);
   await migrateSessionNote(db);
   await migrateSessionNameSource(db);
+  await migrateSessionPlace(db);
   await migrateCoachMessageContext(db);
   await migrateProgressPhoto(db);
   await migrateMobilityLeadSide(db);
@@ -782,6 +783,16 @@ async function migrateSessionNameSource(db: SQLiteDBConnection): Promise<void> {
   for (const sql of [
     `ALTER TABLE sessions ADD COLUMN name TEXT NULL`,
     `ALTER TABLE sessions ADD COLUMN source_json TEXT NULL`,
+  ]) {
+    try { await db.run(sql, []); } catch { /* column already exists */ }
+  }
+}
+
+// Where a workout was done (My gym) and whether "Where are you today?" was answered.
+async function migrateSessionPlace(db: SQLiteDBConnection): Promise<void> {
+  for (const sql of [
+    `ALTER TABLE sessions ADD COLUMN place_id TEXT NULL`,
+    `ALTER TABLE sessions ADD COLUMN place_asked INTEGER NOT NULL DEFAULT 0`,
   ]) {
     try { await db.run(sql, []); } catch { /* column already exists */ }
   }

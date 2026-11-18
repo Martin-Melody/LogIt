@@ -28,7 +28,7 @@ describe("weight stacks in runs (X7)", () => {
   });
 
   it("add-ons fill in between the plates", () => {
-    expect(stackWeights(10, [{ step: 10, to: 30 }], [2.5]).values).toEqual([10, 12.5, 20, 22.5, 30, 32.5]);
+    expect((stackWeights(10, [{ step: 10, to: 30 }], [2.5]) as { values: number[] }).values).toEqual([10, 12.5, 20, 22.5, 30, 32.5]);
   });
 });
 

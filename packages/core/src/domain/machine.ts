@@ -81,3 +81,44 @@ export function stepMachineWeight(m: Machine, currentKg: number, dir: 1 | -1): n
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+// ── One history, per-machine starting weight (My gym, decided 2026-11-18) ─────────────
+// An exercise keeps one history wherever it's done, but machines differ (cable ratios, leg
+// press angles), so the next weight on a machine comes from the last time on that machine.
+
+type HistoryLike = { sets: { machineId?: string | null; weight: number; completed?: boolean; setType?: string }[] };
+
+function topWorkingKg(entry: HistoryLike, machineId?: string): number | null {
+  const ws = entry.sets
+    .filter((s) => s.completed !== false && s.setType !== "warmup" && (!machineId || s.machineId === machineId))
+    .map((s) => s.weight);
+  return ws.length ? Math.max(...ws) : null;
+}
+
+export type MachineRebase = {
+  /** Multiply the plan's weights by this (1 = unchanged). */
+  factor: number;
+  /** No set was ever logged on this machine, though others were: start carefully. */
+  firstTime: boolean;
+};
+
+/**
+ * How to move a plan made from the whole history onto `machineId`. When the latest session was
+ * on a different machine but an older one was on this machine, the weights scale by the ratio
+ * of the two (60 kg here last time vs 80 kg on the other machine). Nothing changes when the
+ * latest session was on this machine, or when sets were never tagged with a machine.
+ */
+export function rebaseForMachine(historyNewestFirst: HistoryLike[], machineId: string | undefined): MachineRebase {
+  const same: MachineRebase = { factor: 1, firstTime: false };
+  if (!machineId || historyNewestFirst.length === 0) return same;
+  const latest = historyNewestFirst[0]!;
+  if (latest.sets.some((s) => s.machineId === machineId)) return same;
+  const anyTagged = historyNewestFirst.some((h) => h.sets.some((s) => s.machineId));
+  if (!anyTagged) return same;
+  const onThis = historyNewestFirst.find((h) => h.sets.some((s) => s.machineId === machineId));
+  if (!onThis) return { factor: 1, firstTime: true };
+  const here = topWorkingKg(onThis, machineId);
+  const there = topWorkingKg(latest);
+  if (!here || !there) return same;
+  return { factor: here / there, firstTime: false };
+}

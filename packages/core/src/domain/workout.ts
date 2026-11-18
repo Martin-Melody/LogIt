@@ -281,6 +281,10 @@ export type WorkoutSession = {
   name?: string | null;
   /** The split or program day it was started from, as that day was at the time. */
   source?: SessionSource | null;
+  /** Where it was done (domain/place.ts): machines and weights come from there. Null: no place. */
+  placeId?: string | null;
+  /** "Where are you today?" was answered or skipped for this workout (asked once). */
+  placeAsked?: boolean;
 };
 
 /**
