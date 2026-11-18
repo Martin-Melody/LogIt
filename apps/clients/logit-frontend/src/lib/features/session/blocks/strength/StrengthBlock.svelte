@@ -40,7 +40,7 @@
   import type { BlockBaseProps, GripAction } from "$lib/features/session/blocks/types";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import type { Exercise, ExerciseType, Machine } from "@logit/core/domain/exercise";
-  import { chosenMachine, dumbbellWeightsKg, effectiveMachine, machinesFor, type ExtraLoad, type Place, type PlaceMachine } from "@logit/core/domain/place";
+  import { barbellFor, chosenMachine, dumbbellWeightsKg, effectiveMachine, machinesFor, usesMachine, type ExtraLoad, type Place, type PlaceMachine } from "@logit/core/domain/place";
   import { placesStore } from "$lib/features/places/places.svelte";
   import { goto } from "$app/navigation";
   import { formatLoad } from "@logit/core/domain/units";
@@ -96,8 +96,11 @@
   // from before places have none set, so they use today's usual place.
   const placeId = $derived($currentSession?.placeId);
   const place = $derived(placeId === undefined ? placesStore.defaultFor() : placesStore.byId(placeId));
-  const placeMachines = $derived(place && exercise ? machinesFor(place, exercise.id) : []);
-  const chosen = $derived(place && exercise ? chosenMachine(place, exercise.id) : null);
+  // Only exercises whose number comes from a machine use one (bench press is the bar and its
+  // plates on any bench; Martin 2026-11-18).
+  const onMachine = $derived(!!exercise && usesMachine(exercise.equipment));
+  const placeMachines = $derived(place && exercise && onMachine ? machinesFor(place, exercise.id) : []);
+  const chosen = $derived(place && exercise && onMachine ? chosenMachine(place, exercise.id) : null);
   let machinePickerOpen = $state(false);
   // The machine editor over the workout (M2): a new machine (machineId null) or fixing one.
   let machineEditor = $state<{ open: boolean; machineId: string | null }>({ open: false, machineId: null });
@@ -270,8 +273,9 @@
       exercise = ex;
       // Machines come only from the workout's place (Martin, 2026-11-18): the one picked for
       // this exercise there, else the first that's in. No place, no machines: weights are typed.
-      const here = ex && at ? machinesFor(at, ex.id) : [];
-      const chosen = ex && at ? chosenMachine(at, ex.id) : null;
+      const machineWork = !!ex && usesMachine(ex.equipment);
+      const here = ex && at && machineWork ? machinesFor(at, ex.id) : [];
+      const chosen = ex && at && machineWork ? chosenMachine(at, ex.id) : null;
       exerciseData = ex
         ? { id: ex.id, machines: here.map(effectiveMachine), defaultMachineId: chosen?.id, exerciseType: ex.exerciseType }
         : null;
@@ -633,7 +637,8 @@
     const machine = exerciseData?.machines.find((m) => m.id === exerciseData?.defaultMachineId);
     if (machine && machineWeightsKg(machine)?.length) return { kind: "machine", machine, placeName: place?.name };
     if (!place || !exercise) return null;
-    if (exercise.equipment === "barbell" && place.barbell) return { kind: "bar", barbell: place.barbell, placeName: place.name };
+    const barbell = exercise.equipment === "barbell" ? barbellFor(place, exercise.name) : undefined;
+    if (barbell) return { kind: "bar", barbell, placeName: place.name };
     if (exercise.equipment === "dumbbell" && place.dumbbells) return { kind: "dumbbells", weightsKg: dumbbellWeightsKg(place.dumbbells), placeName: place.name };
     return null;
   });

@@ -18,7 +18,7 @@
   import { fromDisplayWeight } from "@logit/core/domain/units";
   import type { Exercise } from "@logit/core/domain/exercise";
   import {
-    runsFromStack, stackFromRuns,
+    runsFromStack, stackFromRuns, usesMachine,
     type ExtraLoad, type MachineLoading, type MachineStatus, type Place, type PlaceMachine, type StackRun,
   } from "@logit/core/domain/place";
 
@@ -62,7 +62,11 @@
 
   onMount(async () => {
     try {
-      const all = (await getExerciseRepo().list({ filter: "all", limit: 5000 })).filter((e) => !e.exerciseType || e.exerciseType === "normal" || e.exerciseType === "assisted");
+      // Only exercises a machine can decide the number for: machine, cable and Smith work (and
+      // ones with no equipment set). Bench press, dumbbell and bodyweight work never use one.
+      const all = (await getExerciseRepo().list({ filter: "all", limit: 5000 }))
+        .filter((e) => !e.exerciseType || e.exerciseType === "normal" || e.exerciseType === "assisted")
+        .filter((e) => usesMachine(e.equipment) || e.exerciseType === "assisted" || untrack(() => exerciseIds).includes(e.id));
       // One row per exercise even if the repo lists one twice.
       exercises = [...new Map(all.map((e) => [e.id, e])).values()];
     } catch {
@@ -150,10 +154,11 @@
 
   const KINDS: { id: MachineLoading; title: string; hint: string }[] = [
     { id: "stack", title: "A pin in a weight stack", hint: "Pulldowns, cables, leg extensions" },
-    { id: "plates", title: "Plates you load", hint: "Leg press, hack squat, plate-loaded rows" },
+    { id: "plates", title: "Plates you load", hint: "Leg press, hack squat, plate-loaded rows, Smith machine" },
     { id: "assisted", title: "It helps you up", hint: "Assisted pull-up or dip: more weight is easier" },
-    { id: "none", title: "No weight to set", hint: "Back extension bench, dip station, rings" },
   ];
+  // Benches, racks and dip stations don't decide the number, so they're kit, not machines.
+  // A machine saved as "no weight to set" before this still opens and saves as it was.
 </script>
 
 
@@ -178,7 +183,7 @@
       class="h-12 rounded-md border bg-background px-3 text-base font-medium focus:outline-none focus:ring-1 focus:ring-ring" />
     <h2 class="text-base font-semibold">How does the weight go on?</h2>
     <div class="flex flex-col gap-2">
-      {#each KINDS as k (k.id)}
+      {#each existing?.loading === "none" ? [...KINDS, { id: "none" as MachineLoading, title: "No weight to set", hint: "" }] : KINDS as k (k.id)}
         <button type="button" class="flex min-h-[64px] flex-col items-start justify-center rounded-xl border px-3.5 py-2.5 text-left {loading === k.id ? 'border-2 border-foreground' : 'border-border'}"
           onclick={() => { loading = k.id; step = 2; }}>
           <span class="text-[15px] font-semibold">{k.title}</span>
@@ -186,6 +191,10 @@
         </button>
       {/each}
     </div>
+    <p class="rounded-lg bg-muted/60 px-3 py-2.5 text-[13px] leading-snug text-muted-foreground">
+      Benches, racks and dip stations aren't machines: bench press is the bar and its plates on any
+      bench. Tick them under "Also here" in {place?.name ?? "your place"}'s settings.
+    </p>
   {:else}
     {#if existing}
       <label for="m-name2" class="sr-only">Name</label>

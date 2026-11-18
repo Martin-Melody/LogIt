@@ -26,7 +26,7 @@
   import { reveal, popIn } from "$lib/transitions";
   import { EQUIPMENT, usesBodyweightLoad, type Equipment, type Exercise, type ExercisePatch, type ExerciseType, type MuscleGroup } from "@logit/core/domain/exercise";
   import { EQUIPMENT_LABEL, cleanCues, copyLibraryItem, type CoachRef } from "@logit/core/domain/library";
-  import { chosenMachine, machinesFor, type Place, type PlaceMachine } from "@logit/core/domain/place";
+  import { barbellFor, chosenMachine, dumbbellWeightsKg, machinesFor, usesMachine, type Place, type PlaceMachine } from "@logit/core/domain/place";
   import { formatLoad } from "@logit/core/domain/units";
   import type { ExerciseHistoryEntry } from "@logit/core/domain/progression";
   import { getExerciseHistory } from "@logit/core/usecases/progression/getExerciseHistory";
@@ -222,6 +222,26 @@
     return m.loading === "plates" ? `${m.name} · plates` : m.name;
   }
 
+  /** For free weights: what the weight comes from at that place (no machine to pick). */
+  function freeWeightLine(p: Place, e: Exercise): string | null {
+    const range = (xs: number[]) => (xs.length ? `${xs[0]}–${xs.at(-1)} kg` : "");
+    switch (e.equipment) {
+      case "barbell": {
+        const bar = barbellFor(p, e.name);
+        return bar ? `${bar.barKg} kg bar and plates` : "No barbell here";
+      }
+      case "dumbbell": {
+        const d = dumbbellWeightsKg(p.dumbbells);
+        return d.length ? `Dumbbells ${range(d)}` : "No dumbbells here";
+      }
+      case "kettlebell":
+        return p.kettlebellsKg?.length ? `Kettlebells ${range([...p.kettlebellsKg].sort((a, b) => a - b))}` : "No kettlebells here";
+      default:
+        return null;
+    }
+  }
+  const showWhere = $derived(!!exercise && (usesMachine(exercise.equipment) || ["barbell", "dumbbell", "kettlebell"].includes(exercise.equipment ?? "")));
+
   function openMachine(p: Place, machineId: string | null) {
     if (onMachine) onMachine(p, machineId);
     else void goto(`/settings/places/${p.id}/machine/${machineId ?? "new"}`);
@@ -308,20 +328,36 @@
           class="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
       </section>
 
-      {#if places.length}
+      {#if places.length && showWhere}
         <section class="flex flex-col" aria-label="Where you do it">
           <h3 class="pb-1 text-[15px] font-semibold">Where you do it</h3>
           {#each places as p (p.id)}
-            {@const here = machinesFor(p, ex.id)}
-            {@const m = chosenMachine(p, ex.id) ?? here[0] ?? null}
-            <button type="button" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2 text-left"
-              onclick={() => openMachine(p, m?.id ?? null)}>
-              <span class="flex min-w-0 flex-col gap-0.5">
+            {#if usesMachine(ex.equipment)}
+              {@const here = machinesFor(p, ex.id)}
+              {@const m = chosenMachine(p, ex.id) ?? here[0] ?? null}
+              <button type="button" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2 text-left"
+                onclick={() => openMachine(p, m?.id ?? null)}>
+                <span class="flex min-w-0 flex-col gap-0.5">
+                  <span class="text-[15px] font-medium">{p.name}</span>
+                  <span class="text-[13px] text-muted-foreground">{m ? machineLine(m) : "No machine for this yet. Add one"}</span>
+                </span>
+                <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            {:else if onMachine}
+              <!-- In a workout: shown, not opened (the place's settings are a page). -->
+              <div class="flex min-h-14 flex-col justify-center gap-0.5 border-t border-border/60 py-2">
                 <span class="text-[15px] font-medium">{p.name}</span>
-                <span class="text-[13px] text-muted-foreground">{m ? machineLine(m) : "No machine for this yet. Add one"}</span>
-              </span>
-              <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
-            </button>
+                <span class="text-[13px] text-muted-foreground">{freeWeightLine(p, ex)}</span>
+              </div>
+            {:else}
+              <a href="/settings/places/{p.id}" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2">
+                <span class="flex min-w-0 flex-col gap-0.5">
+                  <span class="text-[15px] font-medium">{p.name}</span>
+                  <span class="text-[13px] text-muted-foreground">{freeWeightLine(p, ex)}</span>
+                </span>
+                <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+              </a>
+            {/if}
           {/each}
         </section>
       {/if}
