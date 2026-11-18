@@ -122,7 +122,7 @@
   /** Saves the plan as the active split, its rep ranges and the weekly target; ends onboarding. */
   async function savePlan() {
     if (!plan) throw new Error("No plan yet");
-    const split = await saveStarterPlan(plan);
+    const split = await saveStarterPlan(plan, answers.goal ?? undefined);
     resetTours();
     onboarding.complete();
     return split;

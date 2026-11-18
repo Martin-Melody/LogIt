@@ -13,8 +13,13 @@ import { markFirstWorkoutPending } from "./afterWorkout";
 import { markPlanStarted } from "./firstWeek";
 import { setMovesMissed } from "./weekSessions";
 import { localDateIso } from "@logit/core/domain/nutrition";
+import type { TrainingGoal } from "@logit/core/domain/starterPlan";
+import { setTrainingGoal } from "./trainingGoal";
 
-export async function saveStarterPlan(plan: StarterPlan): Promise<WorkoutSplit> {
+/** `goal` is kept and synced in the profile (the web dashboard arranges Overview by it). */
+export async function saveStarterPlan(plan: StarterPlan, goal?: TrainingGoal): Promise<WorkoutSplit> {
+  // First, so the profile push that the weekly target makes carries it.
+  if (goal) setTrainingGoal(goal);
   const split = starterPlanToSplit(plan);
   await saveSplit(split);
   await splits.setActive(split.id);

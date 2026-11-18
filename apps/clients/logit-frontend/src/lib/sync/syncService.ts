@@ -1,4 +1,5 @@
 import { writable } from "svelte/store";
+import { getTrainingGoal, isTrainingGoal, setTrainingGoal } from "$lib/features/onboarding/trainingGoal";
 import { apiClient } from "@logit/core/api/client";
 import { refreshCoaches } from "$lib/features/coaching/coachCache";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
@@ -1180,6 +1181,7 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     goalsJson: getGoalsJson(),
     profileConfigJson: getProfileConfigJson(),
     pluginSettingsJson: community ? writeCommunitySetting(community) : null,
+    trainingGoal: getTrainingGoal(),
     updatedAtMs: Date.now(),
   };
 }
@@ -1488,6 +1490,8 @@ export async function pullAndApplyProfile(): Promise<boolean> {
     // Which split is "active" was previously a local-only meta-table entry with no sync
     // path at all — every fresh install/re-login lost it even though the split data itself
     // (days/blocks) synced fine, forcing the user to re-pick it by hand every time.
+    if (isTrainingGoal(remote.trainingGoal)) setTrainingGoal(remote.trainingGoal);
+
     if (remote.activeSplitId !== undefined) {
       await getSplitRepo().setActiveSplitId(remote.activeSplitId).catch((e) => syncWarn("pullAndApplyProfile", e));
     }

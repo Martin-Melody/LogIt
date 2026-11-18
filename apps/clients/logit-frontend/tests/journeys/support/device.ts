@@ -207,7 +207,7 @@ export class Device {
     const { buildStarterPlan } = await import("@logit/core/domain/starterPlan");
     const { saveStarterPlan } = await import("$lib/features/onboarding/saveStarterPlan");
     const plan = buildStarterPlan(answers);
-    const split = await saveStarterPlan(plan);
+    const split = await saveStarterPlan(plan, answers.goal);
     this.app.onboardingStore.onboarding.complete();
     this.routes.push("/");
     await this.settle();
