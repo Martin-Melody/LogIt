@@ -1,8 +1,8 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   // Settings › Sounds (design canvas S2): Timers and Celebrations on, Taps off by default;
   // each group has a play button to hear it. Vibration comes with every sound, and on its own
   // when sounds are off.
-  import { goto } from "$app/navigation";
   import { ArrowLeft, Play } from "lucide-svelte";
   import { getSoundSettings, playSound, setSoundSettings, type SoundId, type SoundSettings } from "$lib/features/sound/sounds";
 
@@ -21,7 +21,7 @@
 </script>
 
 <div class="flex flex-col min-h-screen bg-background text-foreground px-5 pt-10 pb-6 max-w-md mx-auto w-full gap-4">
-  <button type="button" class="flex items-center gap-1 self-start min-h-11 text-sm text-muted-foreground" onclick={() => goto("/settings")}>
+  <button type="button" class="flex items-center gap-1 self-start min-h-11 text-sm text-muted-foreground" onclick={() => back("/settings")}>
     <ArrowLeft class="h-4 w-4" /> Settings
   </button>
   <div>

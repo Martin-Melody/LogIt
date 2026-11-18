@@ -57,7 +57,10 @@ async function syncStatusBar(): Promise<void> {
 async function wireBackButton(): Promise<void> {
   try {
     const { App } = await import("@capacitor/app");
+    const { handleBack } = await import("$lib/components/sheet/sheet");
     await App.addListener("backButton", ({ canGoBack }) => {
+      // An open sheet or dialog closes first, newest first; then the previous screen.
+      if (handleBack()) return;
       if (canGoBack) {
         window.history.back();
       } else {

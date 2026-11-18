@@ -59,7 +59,7 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content class="flex max-h-[88svh] flex-col gap-3 overflow-y-auto p-4 sm:max-w-[420px]">
+  <Dialog.Content sheet class="flex flex-col gap-3">
     <Dialog.Header>
       <Dialog.Title>Which machine?</Dialog.Title>
       <Dialog.Description>{exerciseName} at {place.name}</Dialog.Description>

@@ -35,7 +35,7 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content
+  <Dialog.Content sheet
     class="top-auto bottom-0 left-0 max-w-full translate-x-0 translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom gap-0 rounded-t-2xl rounded-b-none border-x-0 border-b-0 p-0 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:max-w-full max-h-[90dvh] overflow-y-auto"
   >
     <div class="mx-auto mt-2.5 h-1 w-10 rounded-full bg-border" aria-hidden="true"></div>

@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss } from "$lib/components/sheet/sheet";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
 
   // A bottom sheet: dimmed backdrop (tap to close), grab bar, scrollable body, footer pinned
@@ -156,6 +157,7 @@
 <div
   bind:this={sheet}
   use:touchGesture
+  use:backDismiss={onclose}
   role="dialog"
   aria-modal="true"
   aria-label={label}

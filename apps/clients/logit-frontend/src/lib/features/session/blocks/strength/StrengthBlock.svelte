@@ -100,6 +100,10 @@
   let machinePickerOpen = $state(false);
   // The machine editor over the workout (M2): a new machine (machineId null) or fixing one.
   let machineEditor = $state<{ open: boolean; machineId: string | null }>({ open: false, machineId: null });
+  // Where the editor was opened from, so closing it steps back there (Martin: back goes to
+  // the previous screen): "Which machine?", the exercise's "Where you do it", or the card.
+  let editorFrom = $state<"picker" | "exercise" | "card">("card");
+  let detailTab = $state<"auto" | "howto">("auto");
   // "Where are you today?" asked again from the card (M1's "Not at … today?", or no place yet).
   let whereOpen = $state(false);
   // The first machine made "My gym" (M3): said once, on this card.
@@ -169,11 +173,16 @@
 
   function openDetail() {
     const id = data.exerciseId ?? exercise?.id;
-    if (id) detailExerciseId = id;
+    if (id) {
+      detailTab = "auto";
+      detailExerciseId = id;
+    }
   }
 
   /** A machine added or fixed from the card (M2): it's at the workout's place from now on. */
+  let editorSaved = false;
   async function machineSaved(r: { machine: PlaceMachine; place: Place; createdPlace: boolean }) {
+    editorSaved = true;
     if (r.createdPlace) myGymNote = r.place;
     if (!machineEditor.machineId) forceReplan = true;
     if (editorPlace === undefined && get(currentSession)?.placeId !== r.place.id) {
@@ -822,7 +831,7 @@
           Which gym are you at? Pick one for real weights
         </button>
       {:else}
-        <button type="button" onclick={() => (machineEditor = { open: true, machineId: null })}
+        <button type="button" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: null }; }}
           class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
           {place ? `Which machine at ${place.name}? Add it` : "Which machine? Add it for real weights"}
         </button>
@@ -1078,9 +1087,11 @@
     void loadExerciseData(data.exerciseId, data.exerciseName);
     void loadSuggestion(data.exerciseName, data.exerciseId);
   }}
+  tab={detailTab}
   onMachine={(p, machineId) => {
     detailExerciseId = null;
     editorPlace = p;
+    editorFrom = "exercise";
     machineEditor = { open: true, machineId };
   }}
 >
@@ -1105,8 +1116,8 @@
     lastTimeOn={(id) => lastOnMachine.get(id) ?? null}
     onOpenChange={(v) => (machinePickerOpen = v)}
     onPick={() => (forceReplan = true)}
-    onEdit={(m) => { machinePickerOpen = false; machineEditor = { open: true, machineId: m.id }; }}
-    onAdd={() => { machinePickerOpen = false; machineEditor = { open: true, machineId: null }; }}
+    onEdit={(m) => { machinePickerOpen = false; editorFrom = "picker"; machineEditor = { open: true, machineId: m.id }; }}
+    onAdd={() => { machinePickerOpen = false; editorFrom = "picker"; machineEditor = { open: true, machineId: null }; }}
     onChangePlace={placesStore.active.length > 1 ? () => (whereOpen = true) : undefined}
   />
 {/if}
@@ -1117,7 +1128,19 @@
     place={editorPlace === undefined ? place : editorPlace}
     machineId={machineEditor.machineId}
     forExercise={machineEditor.machineId ? null : { id: exercise.id, name: data.exerciseName }}
-    onOpenChange={(v) => { machineEditor = { ...machineEditor, open: v }; if (!v) editorPlace = undefined; }}
+    backLabel={editorFrom === "picker" ? "Which machine?" : editorFrom === "exercise" ? data.exerciseName : "Back to the workout"}
+    onOpenChange={(v) => {
+      machineEditor = { ...machineEditor, open: v };
+      if (v) return;
+      editorPlace = undefined;
+      // Closed without saving: back to where it was opened from.
+      if (!editorSaved) {
+        if (editorFrom === "picker") machinePickerOpen = true;
+        else if (editorFrom === "exercise" && exercise) { detailTab = "howto"; detailExerciseId = exercise.id; }
+      }
+      editorSaved = false;
+      editorFrom = "card";
+    }}
     onSaved={(r) => void machineSaved(r)}
   />
 {/if}

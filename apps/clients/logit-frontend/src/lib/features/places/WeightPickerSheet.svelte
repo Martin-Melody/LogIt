@@ -81,7 +81,7 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content class="flex max-h-[88svh] flex-col gap-3 p-4 sm:max-w-[420px]">
+  <Dialog.Content sheet class="flex flex-col gap-3">
     <Dialog.Header>
       <Dialog.Title class="text-sm font-semibold text-muted-foreground">{title}{source.placeName ? `, ${source.placeName}` : ""}</Dialog.Title>
       <Dialog.Description class="sr-only">Pick the weight for this set</Dialog.Description>
