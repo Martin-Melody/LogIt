@@ -10,6 +10,7 @@
     place,
     machineId = null,
     forExercise = null,
+    backLabel = "Back to the workout",
     onOpenChange,
     onSaved,
   }: {
@@ -17,15 +18,16 @@
     place: Place | null;
     machineId?: string | null;
     forExercise?: { id: string; name: string } | null;
+    backLabel?: string;
     onOpenChange: (v: boolean) => void;
     onSaved: (result: { machine: PlaceMachine; place: Place; createdPlace: boolean }) => void;
   } = $props();
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content
+  <Dialog.Content sheet
     class="grid-cols-[minmax(0,1fr)] top-auto bottom-0 left-0 max-w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-2xl h-[92dvh] overflow-y-auto
-      px-5 pt-11 pb-[calc(1.25rem+env(safe-area-inset-bottom))]
+      px-5 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]
       data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100
       data-[state=open]:slide-in-from-bottom-10 data-[state=closed]:slide-out-to-bottom-10
       sm:left-[50%] sm:max-w-[420px] sm:translate-x-[-50%]"
@@ -38,7 +40,7 @@
           {place}
           {machineId}
           {forExercise}
-          backLabel="Back to the workout"
+          {backLabel}
           onBack={() => onOpenChange(false)}
           onDone={(r) => { onSaved(r); onOpenChange(false); }}
         />

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
@@ -127,7 +128,7 @@
 
 <div class="flex flex-col pb-24">
   <PageHeader>
-    <BackButton onclick={() => void goto("/plugins")} />
+    <BackButton onclick={() => back("/plugins")} />
     <h1 class="page-title">{manifest?.name ?? "Plugin"}</h1>
   </PageHeader>
 

@@ -2,6 +2,7 @@
   import { toast } from "svelte-sonner";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { goto } from "$app/navigation";
   import { X, Search, UserPlus, UserCheck, Loader2 } from "lucide-svelte";
   import { socialApi, type UserSearchResult } from "@logit/core/api/socialApi";
@@ -114,11 +115,12 @@
   <!-- Sheet -->
   <div
     class="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-background border-t border-border rounded-t-xl max-h-[90dvh]"
+    use:sheetDrag={{ onDismiss: onclose }} use:backDismiss={onclose}
     transition:sheetUp
   >
     <!-- Handle -->
     <div class="flex justify-center pt-2.5 pb-1 shrink-0">
-      <div class="h-1 w-10 rounded-full bg-muted-foreground/20"></div>
+      <div data-sheet-bar class="h-1 w-10 rounded-full bg-muted-foreground/20"></div>
     </div>
 
     <!-- Search bar -->

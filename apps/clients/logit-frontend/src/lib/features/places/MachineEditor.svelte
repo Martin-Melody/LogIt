@@ -11,6 +11,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { fade } from "svelte/transition";
   import { reveal, popIn } from "$lib/transitions";
+  import { onBack as onBackKey } from "$lib/components/sheet/sheet";
   import { placesStore } from "$lib/features/places/places.svelte";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { createId } from "@logit/core/domain/ids";
@@ -89,6 +90,11 @@
     const r = runsFromStack(values);
     if (r && r.runs.length <= 4) { start = r.start; runs = r.runs; }
     else if (values.length) exact = values.join(", ");
+  });
+
+  // Back on step 2 of a new machine goes to step 1, not out of the editor.
+  $effect(() => {
+    if (step === 2 && !existing) return onBackKey(() => (step = 1));
   });
 
   const exactValues = $derived(exact === null ? null : [...new Set(exact.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n) && n >= 0))].sort((a, b) => a - b));

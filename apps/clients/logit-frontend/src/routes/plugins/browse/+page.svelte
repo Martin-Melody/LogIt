@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -156,7 +157,7 @@
 
 <div class="flex flex-col pb-24">
   <PageHeader>
-    <BackButton onclick={() => void goto("/plugins")} />
+    <BackButton onclick={() => back("/plugins")} />
     <span class="text-base font-semibold">Browse plugins</span>
     <Button
       variant="ghost"

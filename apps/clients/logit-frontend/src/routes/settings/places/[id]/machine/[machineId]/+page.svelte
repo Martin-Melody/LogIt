@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   // Settings › Your places › a machine: the machine editor as a page (MachineEditor).
-  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import MachineEditor from "$lib/features/places/MachineEditor.svelte";
   import { placesStore } from "$lib/features/places/places.svelte";
@@ -16,7 +16,7 @@
   {:else}
     {#key `${placeId}/${machineId}`}
       <MachineEditor {place} machineId={machineId === "new" ? null : machineId} backLabel={place.name}
-        onDone={() => goto(`/settings/places/${placeId}`)} onBack={() => goto(`/settings/places/${placeId}`)} />
+        onDone={() => back(`/settings/places/${placeId}`)} onBack={() => back(`/settings/places/${placeId}`)} />
     {/key}
   {/if}
 </div>

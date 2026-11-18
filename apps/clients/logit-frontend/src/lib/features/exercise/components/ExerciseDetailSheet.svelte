@@ -6,6 +6,7 @@
   import { fade } from "svelte/transition";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { sheetUp } from "$lib/transitions";
+  import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { EQUIPMENT_LABEL } from "@logit/core/domain/library";
   import type { Exercise } from "@logit/core/domain/exercise";
   import type { Place } from "@logit/core/domain/place";
@@ -56,8 +57,9 @@
 
   <div role="dialog" aria-modal="true" aria-labelledby="exercise-sheet-title"
     class="fixed bottom-0 left-0 right-0 z-50 mx-auto flex h-[92dvh] max-w-[500px] flex-col rounded-t-2xl border-t border-border bg-background"
+    use:sheetDrag={{ onDismiss: onClose }} use:backDismiss={onClose}
     transition:sheetUp>
-    <span class="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" aria-hidden="true"></span>
+    <span data-sheet-bar class="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" aria-hidden="true"></span>
     <div class="flex shrink-0 items-start gap-2 px-4 pt-2">
       <div class="flex min-w-0 flex-1 flex-col gap-0.5">
         <h2 id="exercise-sheet-title" class="truncate text-[22px] font-bold tracking-tight">{ex?.name ?? "Exercise"}</h2>

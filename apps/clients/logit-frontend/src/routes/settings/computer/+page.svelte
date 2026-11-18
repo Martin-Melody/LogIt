@@ -1,9 +1,9 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   // Sign in on a computer (web onboarding W1, the phone side). The web sign-in page shows a QR;
   // this scans it, says which browser is asking, and only signs it in when the person says yes
   // (server Features/Auth/PairingEndpoints.cs). The question warns about the one thing the server
   // can't stop: approving a code someone else put in front of you.
-  import { goto } from "$app/navigation";
   import { onDestroy, onMount } from "svelte";
   import { ArrowLeft, Check, Loader2, Monitor, ScanLine, XCircle } from "lucide-svelte";
   import { apiClient, ApiError, PAIRING_QR_PREFIX, type SignedInSession } from "@logit/core/api/client";
@@ -100,7 +100,7 @@
 </script>
 
 <div class="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-background px-6 pb-8 pt-10 text-foreground">
-  <button type="button" class="mb-4 flex min-h-11 items-center gap-1.5 self-start text-sm text-muted-foreground" onclick={() => goto("/settings")}>
+  <button type="button" class="mb-4 flex min-h-11 items-center gap-1.5 self-start text-sm text-muted-foreground" onclick={() => back("/settings")}>
     <ArrowLeft class="h-4 w-4" /> Settings
   </button>
 

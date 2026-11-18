@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back } from "$lib/navigation";
   // One place (design canvas G1 for a gym, G10 for home): what's there. Every change saves
   // straight away. Machines open their own screen (X6/X7).
   import { goto } from "$app/navigation";
@@ -54,7 +55,7 @@
 </script>
 
 <div class="mx-auto flex min-h-screen w-full max-w-sm flex-col gap-5 bg-background px-6 pb-10 pt-10 text-foreground">
-  <button type="button" class="flex min-h-11 items-center gap-1.5 self-start text-sm text-muted-foreground" onclick={() => goto("/settings/places")}>
+  <button type="button" class="flex min-h-11 items-center gap-1.5 self-start text-sm text-muted-foreground" onclick={() => back("/settings/places")}>
     <ArrowLeft class="h-4 w-4" /> Your places
   </button>
 
