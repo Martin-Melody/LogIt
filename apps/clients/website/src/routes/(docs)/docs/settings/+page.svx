@@ -18,7 +18,7 @@ under More.
 
 ## Music during a workout
 
-In the Android app, a music bar above Finish workout shows what's playing in Spotify, YouTube Music or
+In the Android app, a music bar at the bottom of the workout screen shows what's playing in Spotify, YouTube Music or
 any other music app, with play, pause and skip. Tap it for the full controls and your workout playlists.
 The first time, LogIt asks you to switch it on in Android's Notification access. LogIt only uses that
 access to see and control what's playing; it doesn't read your notifications, and no Spotify or Google
