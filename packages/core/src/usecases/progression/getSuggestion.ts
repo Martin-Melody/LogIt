@@ -231,15 +231,21 @@ export async function getSuggestion(
   // If the exercise is done on a machine with a known set of achievable weights,
   // round the suggested weights to what the machine can actually be set to.
   const machine = options?.machine ?? resolveExerciseMachine(exerciseData ?? {}, history);
+  // Scaled for this machine (rebaseForMachine), a weight is rarely one you can load: it's
+  // rounded below even on a machine with no stack list (a plate-loaded one), to its increment.
+  let rebased = false;
   if (options?.machine && output.sets.length > 0) {
     const { factor, firstTime } = rebaseForMachine(history, options.machine.id);
-    if (factor !== 1) output = { ...output, sets: output.sets.map((s) => ({ ...s, weight: s.weight * factor })) };
+    if (factor !== 1) {
+      output = { ...output, sets: output.sets.map((s) => ({ ...s, weight: s.weight * factor })) };
+      rebased = true;
+    }
     if (firstTime) {
       const note = `First time on ${options.machine.name}: machines differ, so check the first set feels right.`;
       output = { ...output, notes: output.notes ? `${output.notes} ${note}` : note };
     }
   }
-  if (machine?.weights && output.sets.length > 0) {
+  if (machine && (machine.weights || rebased) && output.sets.length > 0) {
     return {
       ...output,
       sets: output.sets.map((s) => ({ ...s, weight: snapToMachine(machine, s.weight).kg })),

@@ -1,0 +1,272 @@
+- generic [ref=f38e1]:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Home" [level=1]
+        - generic:
+          - generic "Connected"
+          - button "Customise home"
+        - link "Notifications, 11 unread":
+          - /url: /inbox
+          - generic: 9+
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: Quick start
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button "Start workout"
+          - generic:
+            - generic:
+              - generic:
+                - generic: Today's plan
+                - generic:
+                  - generic:
+                    - button "No exercises planned for this day."
+          - generic:
+            - generic:
+              - generic:
+                - generic: Recent Sessions
+                - generic:
+                  - generic:
+                    - generic:
+                      - button "Recent Sessions"
+                      - generic:
+                        - list:
+                          - listitem:
+                            - 'button "Sun, Nov 15 Top: Leg press 10×160 52m"':
+                              - generic:
+                                - paragraph: Sun, Nov 15
+                                - paragraph: "Top: Leg press 10×160"
+                              - generic: 52m
+                          - listitem:
+                            - 'button "Fri, Nov 13 Top: Bench press 6×82.5 52m"':
+                              - generic:
+                                - paragraph: Fri, Nov 13
+                                - paragraph: "Top: Bench press 6×82.5"
+                              - generic: 52m
+                          - listitem:
+                            - 'button "Wed, Nov 11 Top: Back squat 6×95 52m"':
+                              - generic:
+                                - paragraph: Wed, Nov 11
+                                - paragraph: "Top: Back squat 6×95"
+                              - generic: 52m
+          - generic:
+            - generic:
+              - generic:
+                - generic: Progression
+                - generic:
+                  - generic:
+                    - button "Finish a session and pick an algorithm in Settings to see targets here."
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Activity
+                        - paragraph: November 2026
+                - generic:
+                  - generic:
+                    - generic:
+                      - button "Activity"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: M
+                            - generic: T
+                            - generic: W
+                            - generic: T
+                            - generic: F
+                            - generic: S
+                            - generic: S
+                          - generic:
+                            - button "1" [disabled]
+                          - generic:
+                            - button "2" [disabled]
+                            - button "3" [disabled]
+                            - button "4" [disabled]
+                            - button "5" [disabled]
+                            - button "6" [disabled]
+                            - button "7" [disabled]
+                            - button "8" [disabled]
+                          - generic:
+                            - button "9" [disabled]
+                            - button "10" [disabled]
+                            - button "11 — worked out": "11"
+                            - button "12" [disabled]
+                            - button "13 — worked out": "13"
+                            - button "14" [disabled]
+                            - button "15 — worked out": "15"
+                          - generic:
+                            - button "16" [disabled]
+                            - button "17" [disabled]
+                            - button "18" [disabled]
+                            - button "19" [disabled]
+                            - button "20" [disabled]
+                            - button "21" [disabled]
+                            - button "22" [disabled]
+                          - generic:
+                            - button "23" [disabled]
+                            - button "24" [disabled]
+                            - button "25" [disabled]
+                            - button "26" [disabled]
+                            - button "27" [disabled]
+                            - button "28" [disabled]
+                            - button "29" [disabled]
+                          - generic:
+                            - button "30" [disabled]
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Muscle Focus
+                        - paragraph: Sets logged this week
+                - generic:
+                  - generic:
+                    - generic:
+                      - button "Muscle Focus"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: Front
+                              - img "Front body muscle map":
+                                - generic "Head"
+                                - generic "Face"
+                                - generic "Right Neck"
+                                - generic "Left Neck"
+                                - 'generic "Shoulders: 2 sets"'
+                                - 'generic "Shoulders: 2 sets"'
+                                - 'generic "Shoulders: 2 sets"'
+                                - 'generic "Shoulders: 2 sets"'
+                                - 'generic "Biceps: 1 set"'
+                                - 'generic "Forearms: 0 sets"'
+                                - 'generic "Biceps: 1 set"'
+                                - 'generic "Forearms: 0 sets"'
+                                - 'generic "Chest: 2 sets"'
+                                - 'generic "Chest: 2 sets"'
+                                - 'generic "Chest: 2 sets"'
+                                - 'generic "Chest: 2 sets"'
+                                - 'generic "Core: 2 sets"'
+                                - 'generic "Chest: 2 sets"'
+                                - 'generic "Core: 2 sets"'
+                                - 'generic "Core: 2 sets"'
+                                - 'generic "Core: 2 sets"'
+                                - 'generic "Core: 2 sets"'
+                                - 'generic "Chest: 2 sets"'
+                                - 'generic "Core: 2 sets"'
+                                - generic "Right Groin / Hip Flexors"
+                                - generic "Left Groin / Hip Flexors"
+                                - 'generic "Quads: 1 set"'
+                                - generic "Left Adductors"
+                                - generic "Left Foot"
+                                - generic "Left Tibialis Anterior"
+                                - generic "Left Knee"
+                                - 'generic "Quads: 1 set"'
+                                - generic "Right Adductors"
+                                - generic "Right Foot"
+                                - generic "Right Tibialis Anterior"
+                                - generic "Right Knee"
+                                - generic "Right Elbow"
+                                - generic "Right Hand"
+                                - generic "Left Elbow"
+                                - generic "Left Hand"
+                            - generic:
+                              - generic: Back
+                              - img "Back body muscle map":
+                                - generic "Head (Posterior)"
+                                - generic "Nape"
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Shoulders: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Shoulders: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Triceps: 1 set"'
+                                - 'generic "Triceps: 1 set"'
+                                - generic "Left Hand (Back)"
+                                - 'generic "Forearms: 0 sets"'
+                                - 'generic "Forearms: 0 sets"'
+                                - 'generic "Triceps: 1 set"'
+                                - 'generic "Triceps: 1 set"'
+                                - generic "Right Hand (Back)"
+                                - 'generic "Forearms: 0 sets"'
+                                - 'generic "Forearms: 0 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Back: 2 sets"'
+                                - 'generic "Glutes: 3 sets"'
+                                - 'generic "Glutes: 3 sets"'
+                                - 'generic "Glutes: 3 sets"'
+                                - 'generic "Glutes: 3 sets"'
+                                - generic "Left Back Knee"
+                                - generic "Right Back Knee"
+                                - 'generic "Calves: 0 sets"'
+                                - 'generic "Calves: 0 sets"'
+                                - 'generic "Calves: 0 sets"'
+                                - 'generic "Calves: 0 sets"'
+                                - 'generic "Calves: 0 sets"'
+                                - 'generic "Calves: 0 sets"'
+                                - generic "Left Foot (Back)"
+                                - 'generic "Hamstrings: 4 sets"'
+                                - 'generic "Hamstrings: 4 sets"'
+                                - generic "Right Foot (Back)"
+                                - 'generic "Hamstrings: 4 sets"'
+                                - 'generic "Hamstrings: 4 sets"'
+                          - generic:
+                            - generic: None
+                            - generic: Light
+                            - generic: Moderate
+                            - generic: Heavy
+          - generic:
+            - link "Goals 1-week streak This week 3/3 Set a goal and see when you'll get there.":
+              - /url: /progress?tab=goals
+              - generic:
+                - generic: Goals
+                - generic:
+                  - generic:
+                    - generic: 1-week streak
+                    - generic: This week 3/3
+                  - paragraph: Set a goal and see when you'll get there.
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Library":
+            - /url: /exercises
+          - link "Start session":
+            - /url: /session/current
+            - generic: Start
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Quick Start" [ref=f38e29]:
+    - button "Close" [active] [ref=f38e30] [cursor=pointer]: ×
+    - banner [ref=f38e31]: Quick Start
+    - generic [ref=f38e32]: Start today's workout from here. If you have a split set up it loads your planned session automatically — otherwise it starts a blank session.
+    - contentinfo [ref=f38e33]:
+      - generic [ref=f38e34]: 1 / 6
+      - generic [ref=f38e35]:
+        - button "← Back" [disabled]
+        - button "Next →" [ref=f38e36] [cursor=pointer]

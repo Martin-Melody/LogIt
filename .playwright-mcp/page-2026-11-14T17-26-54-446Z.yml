@@ -1,0 +1,221 @@
+- generic [ref=f4e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f4e3]:
+    - generic [ref=f4e6]:
+      - generic [ref=f4e7]:
+        - link "LogIt" [ref=f4e8] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f4e13]:
+          - tab "Me" [ref=f4e14]
+          - tab "Coaching" [selected] [ref=f4e15]
+      - generic [ref=f4e16]:
+        - list [ref=f4e19]:
+          - listitem [ref=f4e20]:
+            - link "Today 4" [ref=f4e21] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f4e23]: Today
+              - generic [ref=f4e24]: "4"
+          - listitem [ref=f4e25]:
+            - link "Clients" [ref=f4e26] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f4e29]:
+            - link "Programs" [ref=f4e30] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f4e33]:
+            - link "Check-ins 1" [ref=f4e34] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f4e36]: Check-ins
+              - generic [ref=f4e37]: "1"
+          - listitem [ref=f4e38]:
+            - link "Messages 2" [ref=f4e39] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f4e41]: Messages
+              - generic [ref=f4e42]: "2"
+        - generic [ref=f4e43]:
+          - generic [ref=f4e44]: Studio
+          - list [ref=f4e46]:
+            - listitem [ref=f4e47]:
+              - link "Invite links 1" [ref=f4e48] [cursor=pointer]:
+                - /url: /coaching/links
+                - generic [ref=f4e50]: Invite links
+                - generic [ref=f4e51]: "1"
+        - generic [ref=f4e52]:
+          - generic [ref=f4e53]: A client's training
+          - generic [ref=f4e54]:
+            - generic [ref=f4e55]: Open a client's training
+            - combobox "Open a client's training" [ref=f4e56]:
+              - option "Choose a client…" [selected]
+              - option "Conor"
+              - option "Dara"
+              - option "Niamh"
+              - option "Sarah"
+      - list [ref=f4e58]:
+        - listitem [ref=f4e59]:
+          - button "A Alex Studio · Account" [ref=f4e60]:
+            - generic [ref=f4e61]: A
+            - generic [ref=f4e62]:
+              - generic [ref=f4e63]: Alex
+              - generic [ref=f4e64]: Studio · Account
+      - button "Toggle Sidebar" [ref=f4e66]
+    - main [ref=f4e67]:
+      - main [ref=f4e68]:
+        - generic [ref=f4e70]:
+          - link "‹ Clients" [ref=f4e71] [cursor=pointer]:
+            - /url: /clients
+          - generic [ref=f4e72]:
+            - generic [ref=f4e73]:
+              - generic [aria-hidden] [ref=f4e74]: D
+              - generic [ref=f4e75]:
+                - heading "Dara" [level=1] [ref=f4e76]
+                - paragraph [ref=f4e77]: "@dara · client since November · trains on their own plan"
+            - generic [ref=f4e78]:
+              - button "Message" [ref=f4e79]
+              - button "Assign program" [ref=f4e80]
+          - tablist "Client" [ref=f4e81]:
+            - tab "Overview" [ref=f4e82]
+            - tab "Training" [selected] [ref=f4e83]
+            - tab [ref=f4e84]:
+              - img "not shared" [ref=f4e85]
+              - text: Nutrition
+            - tab "Habits" [ref=f4e86]
+            - tab "Check-ins" [ref=f4e87]
+            - tab "Programs" [ref=f4e88]
+            - tab "Messages" [ref=f4e89]
+          - generic [ref=f4e90]:
+            - generic [ref=f4e91]:
+              - generic [ref=f4e92]:
+                - heading "Sessions" [level=2] [ref=f4e93]
+                - generic [ref=f4e94]: Last 4 weeks · 14
+              - table [ref=f4e96]:
+                - rowgroup [ref=f4e97]:
+                  - row [ref=f4e98]:
+                    - columnheader "Date" [ref=f4e99]
+                    - columnheader "Workout" [ref=f4e100]
+                    - columnheader "Time" [ref=f4e101]
+                    - columnheader "Volume" [ref=f4e102]
+                    - columnheader [ref=f4e103]
+                - rowgroup [ref=f4e104]:
+                  - row [ref=f4e105]:
+                    - cell "Fri, Nov 13" [ref=f4e106]
+                    - cell "Push Bench press 87.5 × 6, 87.5 × 6, 87.5 × 6, 87.5 × 6 Overhead press 55 × 8, 55 × 8, 55 × 8" [ref=f4e107]:
+                      - button "Push" [expanded] [ref=f4e108]
+                      - generic [ref=f4e109]:
+                        - generic [ref=f4e110]: Bench press 87.5 × 6, 87.5 × 6, 87.5 × 6, 87.5 × 6
+                        - generic [ref=f4e111]: Overhead press 55 × 8, 55 × 8, 55 × 8
+                    - cell "55 min" [ref=f4e112]
+                    - cell "3.4 t" [ref=f4e113]
+                    - cell [ref=f4e114]
+                  - row [ref=f4e115]:
+                    - cell "Wed, Nov 11" [ref=f4e116]
+                    - cell [ref=f4e117]:
+                      - button "Pull" [ref=f4e118]
+                    - cell "55 min" [ref=f4e119]
+                    - cell "4.1 t" [ref=f4e120]
+                    - cell "PR" [ref=f4e121]
+                  - row [ref=f4e122]:
+                    - cell "Mon, Nov 9" [ref=f4e123]
+                    - cell [ref=f4e124]:
+                      - button "Legs" [ref=f4e125]
+                    - cell "55 min" [ref=f4e126]
+                    - cell "8.4 t" [ref=f4e127]
+                    - cell "PR" [ref=f4e128]
+                  - row [ref=f4e129]:
+                    - cell "Sat, Nov 7" [ref=f4e130]
+                    - cell [ref=f4e131]:
+                      - button "Push" [ref=f4e132]
+                    - cell "55 min" [ref=f4e133]
+                    - cell "3.4 t" [ref=f4e134]
+                    - cell [ref=f4e135]
+                  - row [ref=f4e136]:
+                    - cell "Thu, Nov 5" [ref=f4e137]
+                    - cell [ref=f4e138]:
+                      - button "Pull" [ref=f4e139]
+                    - cell "55 min" [ref=f4e140]
+                    - cell "4.1 t" [ref=f4e141]
+                    - cell "PR" [ref=f4e142]
+                  - row [ref=f4e143]:
+                    - cell "Tue, Nov 3" [ref=f4e144]
+                    - cell [ref=f4e145]:
+                      - button "Legs" [ref=f4e146]
+                    - cell "55 min" [ref=f4e147]
+                    - cell "8.4 t" [ref=f4e148]
+                    - cell "PR" [ref=f4e149]
+                  - row [ref=f4e150]:
+                    - cell "Sun, Nov 1" [ref=f4e151]
+                    - cell [ref=f4e152]:
+                      - button "Push" [ref=f4e153]
+                    - cell "55 min" [ref=f4e154]
+                    - cell "3.4 t" [ref=f4e155]
+                    - cell [ref=f4e156]
+                  - row [ref=f4e157]:
+                    - cell "Fri, Oct 30" [ref=f4e158]
+                    - cell [ref=f4e159]:
+                      - button "Pull" [ref=f4e160]
+                    - cell "55 min" [ref=f4e161]
+                    - cell "4.1 t" [ref=f4e162]
+                    - cell "PR" [ref=f4e163]
+                  - row [ref=f4e164]:
+                    - cell "Wed, Oct 28" [ref=f4e165]
+                    - cell [ref=f4e166]:
+                      - button "Legs" [ref=f4e167]
+                    - cell "55 min" [ref=f4e168]
+                    - cell "8.4 t" [ref=f4e169]
+                    - cell "PR" [ref=f4e170]
+                  - row [ref=f4e171]:
+                    - cell "Mon, Oct 26" [ref=f4e172]
+                    - cell [ref=f4e173]:
+                      - button "Push" [ref=f4e174]
+                    - cell "55 min" [ref=f4e175]
+                    - cell "3.4 t" [ref=f4e176]
+                    - cell [ref=f4e177]
+                  - row [ref=f4e178]:
+                    - cell "Sat, Oct 24" [ref=f4e179]
+                    - cell [ref=f4e180]:
+                      - button "Pull" [ref=f4e181]
+                    - cell "55 min" [ref=f4e182]
+                    - cell "4.1 t" [ref=f4e183]
+                    - cell "PR" [ref=f4e184]
+                  - row [ref=f4e185]:
+                    - cell "Thu, Oct 22" [ref=f4e186]
+                    - cell [ref=f4e187]:
+                      - button "Legs" [ref=f4e188]
+                    - cell "55 min" [ref=f4e189]
+                    - cell "8.4 t" [ref=f4e190]
+                    - cell "PR" [ref=f4e191]
+                  - row [ref=f4e192]:
+                    - cell "Tue, Oct 20" [ref=f4e193]
+                    - cell [ref=f4e194]:
+                      - button "Push" [ref=f4e195]
+                    - cell "55 min" [ref=f4e196]
+                    - cell "3.4 t" [ref=f4e197]
+                    - cell [ref=f4e198]
+                  - row [ref=f4e199]:
+                    - cell "Sun, Oct 18" [ref=f4e200]
+                    - cell [ref=f4e201]:
+                      - button "Pull" [ref=f4e202]
+                    - cell "55 min" [ref=f4e203]
+                    - cell "4.1 t" [ref=f4e204]
+                    - cell "PR" [ref=f4e205]
+            - generic [ref=f4e206]:
+              - generic [ref=f4e207]:
+                - generic [ref=f4e208]:
+                  - heading "Main lifts" [level=2] [ref=f4e209]
+                  - generic [ref=f4e210]: Estimated 1RM · 12 weeks
+                - generic [ref=f4e211]:
+                  - generic [ref=f4e212]: Bench press
+                  - img "Bench press trend" [ref=f4e213]
+                  - generic [ref=f4e215]: 105 kg +3
+                - generic [ref=f4e216]:
+                  - generic [ref=f4e217]: Overhead press
+                  - img "Overhead press trend" [ref=f4e218]
+                  - generic [ref=f4e219]: 70 kg ±0
+                - generic [ref=f4e220]:
+                  - generic [ref=f4e221]: Deadlift
+                  - img "Deadlift trend" [ref=f4e222]
+                  - generic [ref=f4e224]: 172 kg +8
+              - generic [ref=f4e225]:
+                - heading "See more" [level=2] [ref=f4e226]
+                - paragraph [ref=f4e227]: Open Dara's pages the way they see them. A bar at the top takes you back.
+                - generic [ref=f4e228]:
+                  - button "All sessions" [ref=f4e229]
+                  - button "Progress" [ref=f4e230]

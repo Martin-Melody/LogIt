@@ -1,0 +1,268 @@
+- generic:
+  - generic:
+    - region "Notifications alt+T"
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - link "LogIt":
+                - /url: /
+              - tablist "Workspace":
+                - tab "Me"
+                - tab "Coaching" [selected]
+            - generic:
+              - generic:
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Today":
+                        - /url: /coaching
+                    - listitem:
+                      - link "Clients":
+                        - /url: /clients
+                    - listitem:
+                      - link "Programs":
+                        - /url: /coaching/programs
+                    - listitem:
+                      - link "Library":
+                        - /url: /coaching/library
+                    - listitem:
+                      - link "Check-ins":
+                        - /url: /coaching/checkins
+                    - listitem:
+                      - link "Messages":
+                        - /url: /messages
+              - generic:
+                - generic: Studio
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Invite links":
+                        - /url: /coaching/links
+                    - listitem:
+                      - link "Payments":
+                        - /url: /coaching/payments
+            - generic:
+              - list:
+                - listitem:
+                  - button "Guide 1 of 18":
+                    - generic: Guide
+                    - generic: 1 of 18
+                - listitem:
+                  - link "Help and docs":
+                    - /url: https://getlogit.app/docs
+                - listitem:
+                  - button "A Alex Studio · Account":
+                    - generic: A
+                    - generic:
+                      - generic: Alex
+                      - generic: Studio · Account
+            - button "Toggle Sidebar"
+      - main:
+        - generic:
+          - generic: You have 3 sample clients to practise on.
+          - link "Manage them":
+            - /url: /clients#sandbox
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - heading "Invite links" [level=1]
+                - paragraph: Share a link in your bio, a group chat or on a poster. On a free link people ask you to coach them and nothing is shared until you accept. On a link with a package they pay first, then coaching starts.
+              - generic:
+                - generic:
+                  - generic:
+                    - heading "New link" [level=2]
+                    - generic:
+                      - generic:
+                        - text: Name (only you see it)
+                        - textbox "Name (only you see it)":
+                          - /placeholder: Instagram bio
+                      - generic:
+                        - text: Stops working
+                        - combobox "Stops working":
+                          - option "Never" [selected]
+                          - option "In 7 days"
+                          - option "In 30 days"
+                          - option "In 90 days"
+                      - generic:
+                        - text: Max people
+                        - textbox "Max people":
+                          - /placeholder: No limit
+                      - button "Create link" [disabled]
+                    - paragraph:
+                      - text: Want people to pay through a link?
+                      - link "Connect Stripe in Payments":
+                        - /url: /coaching/payments?tab=setup
+                      - text: .
+                  - generic:
+                    - generic:
+                      - table:
+                        - rowgroup:
+                          - row "Name Link People They pay for Stops":
+                            - columnheader "Name"
+                            - columnheader "Link"
+                            - columnheader "People"
+                            - columnheader "They pay for"
+                            - columnheader "Stops"
+                            - columnheader
+                        - rowgroup:
+                          - row "Instagram bio localhost:5200/c/S8B0-2XEH Copy 1 joined Free Never Turn off":
+                            - cell "Instagram bio"
+                            - cell "localhost:5200/c/S8B0-2XEH Copy":
+                              - text: localhost:5200/c/S8B0-2XEH
+                              - button "Copy"
+                            - cell "1 joined"
+                            - cell "Free"
+                            - cell "Never"
+                            - cell "Turn off":
+                              - button "Turn off"
+                - region "What people see when they open a link":
+                  - generic: What they see when they open a link
+                  - generic [aria-hidden]:
+                    - generic:
+                      - generic [aria-hidden]: A
+                      - generic:
+                        - generic: Alex wants to coach you
+                        - generic: "@alex on LogIt"
+                    - paragraph: They pick what you can see, then send you a request. They can change it any time in My coach.
+                    - generic:
+                      - generic: Workouts
+                      - generic: Nutrition diary
+                      - generic: Body weight
+                      - generic: Habits
+                      - generic: Check-ins
+                    - generic: Send request
+    - generic: LogIt
+  - dialog "Guide" [ref=f1e273]:
+    - generic [ref=f1e274]:
+      - heading "Guide" [level=2] [ref=f1e275]
+      - generic [ref=f1e276]: Short chapters on your own account. Anything you make in one is yours to keep.
+    - generic [ref=f1e277]:
+      - region "Pro walkthrough" [ref=f1e278]:
+        - generic [ref=f1e279]:
+          - heading "Pro walkthrough" [level=3] [ref=f1e280]
+          - generic [ref=f1e281]: 0 of 8 done
+        - progressbar "Pro walkthrough progress" [ref=f1e282]
+        - list [ref=f1e283]:
+          - listitem [ref=f1e284]:
+            - img "Next" [ref=f1e285]
+            - generic [ref=f1e286]:
+              - generic [ref=f1e287]: Your dashboard
+              - generic [ref=f1e288]: Widgets, arranging them, and finding this guide again · 2 min
+            - button "Start" [active] [ref=f1e289]
+          - listitem [ref=f1e290]:
+            - img "Not started" [ref=f1e291]
+            - generic [ref=f1e292]:
+              - generic [ref=f1e293]: Sessions and progress
+              - generic [ref=f1e294]: Find a workout, read a lift's chart · 2 min
+            - button "Start" [ref=f1e295]
+          - listitem [ref=f1e296]:
+            - img "Not started" [ref=f1e297]
+            - generic [ref=f1e298]:
+              - generic [ref=f1e299]: Edit your plan on the web
+              - generic [ref=f1e300]: Change a split and see it reach your phone · 3 min
+            - button "Start" [ref=f1e301]
+          - listitem [ref=f1e302]:
+            - img "Not started" [ref=f1e303]
+            - generic [ref=f1e304]:
+              - generic [ref=f1e305]: Habits and goals
+              - generic [ref=f1e306]: Set a goal and see when you'll reach it · 2 min
+            - button "Start" [ref=f1e307]
+          - listitem [ref=f1e308]:
+            - img "Not started" [ref=f1e309]
+            - generic [ref=f1e310]:
+              - generic [ref=f1e311]: Insights
+              - generic [ref=f1e312]: Ask a question, make a chart, put it on your phone · 3 min
+            - button "Start" [ref=f1e313]
+          - listitem [ref=f1e314]:
+            - img "Not started" [ref=f1e315]
+            - generic [ref=f1e316]:
+              - generic [ref=f1e317]: Social
+              - generic [ref=f1e318]: Feed, Discover, and who sees your posts · 2 min
+            - button "Start" [ref=f1e319]
+          - listitem [ref=f1e320]:
+            - img "Not started" [ref=f1e321]
+            - generic [ref=f1e322]:
+              - generic [ref=f1e323]: Plugins
+              - generic [ref=f1e324]: Install one, and what the builder is for · 2 min
+            - button "Start" [ref=f1e325]
+          - listitem [ref=f1e326]:
+            - img "Not started" [ref=f1e327]
+            - generic [ref=f1e328]:
+              - generic [ref=f1e329]: Having a coach
+              - generic [ref=f1e330]: Joining with a link, and what you share · 1 min
+            - button "Start" [ref=f1e331]
+      - region "Studio walkthrough" [ref=f1e332]:
+        - generic [ref=f1e333]:
+          - heading "Studio walkthrough" [level=3] [ref=f1e334]
+          - generic [ref=f1e335]: 1 of 10 done
+        - progressbar "Studio walkthrough progress" [ref=f1e336]
+        - paragraph [ref=f1e338]: Practising on sample clients (Niamh, Conor, Dara).
+        - list [ref=f1e339]:
+          - listitem [ref=f1e340]:
+            - img "Done" [ref=f1e341]
+            - generic [ref=f1e342]:
+              - generic [ref=f1e343]: Invite a client
+              - generic [ref=f1e344]: Make an invite link and accept a request · 3 min
+            - button "Replay" [ref=f1e345]
+          - listitem [ref=f1e346]:
+            - img "Next" [ref=f1e347]
+            - generic [ref=f1e348]:
+              - generic [ref=f1e349]: Your clients and sharing
+              - generic [ref=f1e350]: Every client at a glance, and what they share · 2 min
+            - button "Start" [ref=f1e351]
+          - listitem [ref=f1e352]:
+            - img "Not started" [ref=f1e353]
+            - generic [ref=f1e354]:
+              - generic [ref=f1e355]: Build a program
+              - generic [ref=f1e356]: Weeks, days, sets, loads and supersets · 4 min
+            - button "Start" [ref=f1e357]
+          - listitem [ref=f1e358]:
+            - img "Not started" [ref=f1e359]
+            - generic [ref=f1e360]:
+              - generic [ref=f1e361]: Give it to a client
+              - generic [ref=f1e362]: Assign a program and watch it start · 2 min
+            - button "Start" [ref=f1e363]
+          - listitem [ref=f1e364]:
+            - img "Not started" [ref=f1e365]
+            - generic [ref=f1e366]:
+              - generic [ref=f1e367]: Check-ins
+              - generic [ref=f1e368]: Make a form, read the answers, reply · 4 min
+            - button "Start" [ref=f1e369]
+          - listitem [ref=f1e370]:
+            - img "Not started" [ref=f1e371]
+            - generic [ref=f1e372]:
+              - generic [ref=f1e373]: Messages
+              - generic [ref=f1e374]: Talk to clients, and see replies arrive · 2 min
+            - button "Start" [ref=f1e375]
+          - listitem [ref=f1e376]:
+            - img "Not started" [ref=f1e377]
+            - generic [ref=f1e378]:
+              - generic [ref=f1e379]: Habits and macro targets
+              - generic [ref=f1e380]: Daily habits and nutrition targets for a client · 2 min
+            - button "Start" [ref=f1e381]
+          - listitem [ref=f1e382]:
+            - img "Not started" [ref=f1e383]
+            - generic [ref=f1e384]:
+              - generic [ref=f1e385]: Exercise swaps
+              - generic [ref=f1e386]: Which swaps clients may make · 1 min
+            - button "Start" [ref=f1e387]
+          - listitem [ref=f1e388]:
+            - img "Not started" [ref=f1e389]
+            - generic [ref=f1e390]:
+              - generic [ref=f1e391]: Your Today page
+              - generic [ref=f1e392]: Everything that needs you, in one list · 1 min
+            - button "Start" [ref=f1e393]
+          - listitem [ref=f1e394]:
+            - img "Not started" [ref=f1e395]
+            - generic [ref=f1e396]:
+              - generic [ref=f1e397]: Getting paid
+              - generic [ref=f1e398]: A look at taking payments through Stripe · 1 min
+            - button "Start" [ref=f1e399]
+      - generic [ref=f1e400]:
+        - generic [ref=f1e401]: Search the docs
+        - searchbox "Search the docs" [ref=f1e402]
+        - paragraph [ref=f1e403]: "On your phone: Settings › Walkthroughs has the short versions. Ticks are shared."
+    - button "Close" [ref=f1e404]

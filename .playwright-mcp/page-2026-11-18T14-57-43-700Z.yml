@@ -1,0 +1,152 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 1:36:14
+        - button "Finish workout": Finish
+        - button "Workout options"
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Collapse exercise"
+                    - button "Bench Press — open details":
+                      - generic: Bench Press
+                    - generic: 0 of 3
+                    - button "More actions for Bench Press"
+                - generic:
+                  - generic:
+                    - paragraph: First time? Pick a weight you could lift about 8 times.
+                    - paragraph: Logit plans every set after this one from it. No need to know your max.
+                  - generic:
+                    - generic: "#"
+                    - generic: Last
+                    - generic: kg
+                    - generic: Reps
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 1 options Set 1, nothing last time Set 1 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 1 options":
+                              - generic: "1"
+                            - generic "Set 1, nothing last time"
+                            - 'button "Set 1 weight: not set kg. Change"': –
+                            - spinbutton "Set 1 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 2 options Set 2, nothing last time Set 2 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 2 options":
+                              - generic: "2"
+                            - generic "Set 2, nothing last time"
+                            - 'button "Set 2 weight: not set kg. Change"': –
+                            - spinbutton "Set 2 reps"
+                            - button "Mark complete"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - button "Edit set"
+                            - button "Delete set"
+                        - 'row "Set 3 options Set 3, nothing last time Set 3 weight: not set kg. Change Mark complete"':
+                          - generic:
+                            - button "Set 3 options":
+                              - generic: "3"
+                            - generic "Set 3, nothing last time"
+                            - 'button "Set 3 weight: not set kg. Change"': –
+                            - spinbutton "Set 3 reps"
+                            - button "Mark complete"
+                  - button "Add a set"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Barbell Row — open details":
+                      - generic: Barbell Row
+                    - generic: 0 of 3
+                    - button "More actions for Barbell Row"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Incline Dumbbell Press — open details":
+                      - generic: Incline Dumbbell Press
+                    - generic: 0 of 3
+                    - button "More actions for Incline Dumbbell Press"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Lat Pulldown — open details":
+                      - generic: Lat Pulldown
+                    - generic: 0 of 3
+                    - button "More actions for Lat Pulldown"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - button "Drag to reorder"
+                    - button "Expand exercise"
+                    - button "Bicep Curl — open details":
+                      - generic: Bicep Curl
+                    - generic: 0 of 2
+                    - button "More actions for Bicep Curl"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Sessions":
+            - /url: /sessions
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+  - dialog "Lat Pulldown" [ref=e167]:
+    - generic [ref=e168]:
+      - heading "Lat Pulldown" [level=2] [ref=e169]
+      - generic [ref=e170]: back · biceps, shoulders
+    - region "Last time" [ref=e171]:
+      - generic [ref=e173]: First time. Pick a weight you could lift about 8 times.
+    - region "How to do it" [ref=e174]:
+      - list [ref=e176]:
+        - listitem [ref=e177]: Thighs locked under the pad
+        - listitem [ref=e178]: Pull the bar to the top of the chest
+        - listitem [ref=e179]: Lead with the elbows, don't lean way back
+    - navigation "More for this exercise" [ref=e180]:
+      - link "History and how it progresses ›" [active] [ref=e181] [cursor=pointer]:
+        - /url: /exercises/core_lat_pulldown
+        - text: History and how it progresses
+        - generic [ref=e182]: ›
+      - button "Swap for today ›" [ref=e183]:
+        - text: Swap for today
+        - generic [ref=e184]: ›
+    - button "Edit exercise (name, notes, muscles)" [ref=e185]
+    - button "Close" [ref=e186]

@@ -1,0 +1,127 @@
+- generic [ref=f7e2]:
+  - generic [ref=f7e6]:
+    - banner [ref=f7e7]:
+      - button "Back" [ref=f7e157]
+      - heading "Nutrition" [level=1] [ref=f7e159]
+      - link "Insights" [ref=f7e160] [cursor=pointer]:
+        - /url: /insights/eating
+      - link "My foods and recipes" [ref=f7e162] [cursor=pointer]:
+        - /url: /nutrition/foods
+      - link "Notifications" [ref=f7e15] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f7e17]:
+      - generic [ref=f7e164]:
+        - generic [ref=f7e165]:
+          - button "Earlier week" [ref=f7e166]
+          - generic [ref=f7e168]:
+            - button "2026-11-10, 1155 kcal" [ref=f7e169]:
+              - generic [ref=f7e170]: Tue
+              - generic [ref=f7e171]: "10"
+            - button "2026-11-11, 1155 kcal" [ref=f7e174]:
+              - generic [ref=f7e175]: Wed
+              - generic [ref=f7e176]: "11"
+            - button "2026-11-12, 1155 kcal" [ref=f7e179]:
+              - generic [ref=f7e180]: Thu
+              - generic [ref=f7e181]: "12"
+            - button "2026-11-13, 1155 kcal" [ref=f7e184]:
+              - generic [ref=f7e185]: Fri
+              - generic [ref=f7e186]: "13"
+            - button "2026-11-14, 1155 kcal" [ref=f7e189]:
+              - generic [ref=f7e190]: Sat
+              - generic [ref=f7e191]: "14"
+            - button "2026-11-15, 1155 kcal" [ref=f7e194]:
+              - generic [ref=f7e195]: Sun
+              - generic [ref=f7e196]: "15"
+            - button "2026-11-16, 550 kcal" [ref=f7e199]:
+              - generic [ref=f7e200]: Today
+              - generic [ref=f7e201]: "16"
+          - button "Later week" [disabled] [ref=f7e204]
+        - generic [ref=f7e206]:
+          - 'link "Set a goal to get calorie and macro targets Eaten so far: 550 kcal · P 55 · C 63 · F 9" [ref=f7e207] [cursor=pointer]':
+            - /url: /nutrition/goal
+            - generic [ref=f7e208]: Set a goal to get calorie and macro targets
+            - generic [ref=f7e210]: "Eaten so far: 550 kcal · P 55 · C 63 · F 9"
+          - generic [ref=f7e211]:
+            - generic [ref=f7e212]:
+              - generic [ref=f7e213]:
+                - heading "Breakfast" [level=2] [ref=f7e214]
+                - paragraph [ref=f7e215]: 430 kcal · P 31 · C 60 · F 7
+              - button "Breakfast options" [ref=f7e216]
+            - list [ref=f7e218]:
+              - listitem [ref=f7e219]:
+                - button "Arla Protein yoghurt 200 g 130" [ref=f7e220]:
+                  - generic [ref=f7e221]:
+                    - generic [ref=f7e222]: Arla Protein yoghurt
+                    - generic [ref=f7e223]: 200 g
+                  - generic [ref=f7e224]: "130"
+              - listitem [ref=f7e225]:
+                - button "Rolled oats 80 g 300" [ref=f7e226]:
+                  - generic [ref=f7e227]:
+                    - generic [ref=f7e228]: Rolled oats
+                    - generic [ref=f7e229]: 80 g
+                  - generic [ref=f7e230]: "300"
+            - link "Add food" [ref=f7e231] [cursor=pointer]:
+              - /url: /nutrition/log?meal=breakfast&date=2026-11-16
+          - generic [ref=f7e233]:
+            - generic [ref=f7e234]:
+              - generic [ref=f7e235]:
+                - heading "Lunch" [level=2] [ref=f7e236]
+                - paragraph [ref=f7e237]: Nothing yet
+              - button "Lunch options" [active] [ref=f7e238]
+            - generic [ref=f7e240]:
+              - link "Add food" [ref=f7e241] [cursor=pointer]:
+                - /url: /nutrition/log?meal=lunch&date=2026-11-16
+              - button "Same as yesterday 275" [ref=f7e243]:
+                - text: Same as yesterday
+                - generic [ref=f7e245]: "275"
+          - generic [ref=f7e246]:
+            - generic [ref=f7e247]:
+              - generic [ref=f7e248]:
+                - heading "Dinner" [level=2] [ref=f7e249]
+                - paragraph [ref=f7e250]: Nothing yet
+              - button "Dinner options" [ref=f7e251]
+            - generic [ref=f7e253]:
+              - link "Add food" [ref=f7e254] [cursor=pointer]:
+                - /url: /nutrition/log?meal=dinner&date=2026-11-16
+              - button "Same as yesterday 330" [ref=f7e256]:
+                - text: Same as yesterday
+                - generic [ref=f7e258]: "330"
+          - generic [ref=f7e259]:
+            - generic [ref=f7e260]:
+              - generic [ref=f7e261]:
+                - heading "Snacks" [level=2] [ref=f7e262]
+                - paragraph [ref=f7e263]: 120 kcal · P 24 · C 3 · F 2
+              - button "Snacks options" [ref=f7e264]
+            - list [ref=f7e266]:
+              - listitem [ref=f7e267]:
+                - button "Whey protein, vanilla 1 scoop (30 g) 120" [ref=f7e268]:
+                  - generic [ref=f7e269]:
+                    - generic [ref=f7e270]: Whey protein, vanilla
+                    - generic [ref=f7e271]: 1 scoop (30 g)
+                  - generic [ref=f7e272]: "120"
+            - link "Add food" [ref=f7e273] [cursor=pointer]:
+              - /url: /nutrition/log?meal=snack&date=2026-11-16
+          - link "Weight trend — Log" [ref=f7e275] [cursor=pointer]:
+            - /url: /nutrition/weight
+            - generic [ref=f7e276]:
+              - generic [ref=f7e277]: Weight trend
+              - generic [ref=f7e278]: —
+            - generic [ref=f7e280]: Log
+      - link "Log food" [ref=f7e281] [cursor=pointer]:
+        - /url: /nutrition/log?meal=dinner&date=2026-11-16
+      - button "Close" [ref=f7e301]
+      - dialog "Lunch options" [ref=f7e302]:
+        - generic [ref=f7e304]:
+          - generic [ref=f7e305]:
+            - heading "Lunch" [level=2] [ref=f7e306]
+            - paragraph [ref=f7e307]: Nothing logged
+          - generic [ref=f7e308]:
+            - button "Add food" [ref=f7e309]
+            - button "Quick add calories" [ref=f7e311]
+            - button "Copy yesterday's lunch Basmati rice, cooked · 275 kcal" [ref=f7e314]:
+              - generic [ref=f7e316]:
+                - generic [ref=f7e317]: Copy yesterday's lunch
+                - generic [ref=f7e318]: Basmati rice, cooked · 275 kcal
+            - button "Copy from another day…" [ref=f7e319]
+    - contentinfo
+  - region "Notifications alt+T"

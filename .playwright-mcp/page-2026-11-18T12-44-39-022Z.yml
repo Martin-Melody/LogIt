@@ -1,0 +1,18 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e44]:
+    - generic [ref=f2e45]:
+      - paragraph [ref=f2e46]: Account created · @samcoach
+      - heading "What brings you to Logit on the web?" [level=1] [ref=f2e47]
+      - paragraph [ref=f2e48]: We'll set things up for that. You can do the rest later.
+    - generic [ref=f2e49]:
+      - button "I coach people Programs, check-ins, messages and payments for your clients, all in one place. Try it with sample clients first." [ref=f2e50]:
+        - generic [ref=f2e52]: I coach people
+        - generic [ref=f2e53]: Programs, check-ins, messages and payments for your clients, all in one place. Try it with sample clients first.
+      - button "I train See every lift's trend and plan your weeks on a big screen." [ref=f2e54]:
+        - generic [ref=f2e56]: I train
+        - generic [ref=f2e57]: See every lift's trend and plan your weeks on a big screen.
+      - button "A coach invited me Connect with your coach and get your program on your phone." [ref=f2e58]:
+        - generic [ref=f2e60]: A coach invited me
+        - generic [ref=f2e61]: Connect with your coach and get your program on your phone.
+  - generic [ref=f2e43]: Welcome · LogIt

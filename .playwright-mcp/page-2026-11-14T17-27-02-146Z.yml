@@ -1,0 +1,111 @@
+- generic [ref=f4e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f4e3]:
+    - generic [ref=f4e6]:
+      - generic [ref=f4e7]:
+        - link "LogIt" [ref=f4e8] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f4e13]:
+          - tab "Me" [ref=f4e14]
+          - tab "Coaching" [selected] [ref=f4e15]
+      - generic [ref=f4e16]:
+        - list [ref=f4e19]:
+          - listitem [ref=f4e20]:
+            - link "Today 4" [ref=f4e21] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f4e23]: Today
+              - generic [ref=f4e24]: "4"
+          - listitem [ref=f4e25]:
+            - link "Clients" [ref=f4e26] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f4e29]:
+            - link "Programs" [ref=f4e30] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f4e33]:
+            - link "Check-ins 1" [ref=f4e34] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f4e36]: Check-ins
+              - generic [ref=f4e37]: "1"
+          - listitem [ref=f4e38]:
+            - link "Messages 2" [ref=f4e39] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f4e41]: Messages
+              - generic [ref=f4e42]: "2"
+        - generic [ref=f4e43]:
+          - generic [ref=f4e44]: Studio
+          - list [ref=f4e46]:
+            - listitem [ref=f4e47]:
+              - link "Invite links 1" [ref=f4e48] [cursor=pointer]:
+                - /url: /coaching/links
+                - generic [ref=f4e50]: Invite links
+                - generic [ref=f4e51]: "1"
+        - generic [ref=f4e52]:
+          - generic [ref=f4e53]: A client's training
+          - generic [ref=f4e54]:
+            - generic [ref=f4e55]: Open a client's training
+            - combobox "Open a client's training" [ref=f4e56]:
+              - option "Choose a client…" [selected]
+              - option "Conor"
+              - option "Dara"
+              - option "Niamh"
+              - option "Sarah"
+      - list [ref=f4e58]:
+        - listitem [ref=f4e59]:
+          - button "A Alex Studio · Account" [ref=f4e60]:
+            - generic [ref=f4e61]: A
+            - generic [ref=f4e62]:
+              - generic [ref=f4e63]: Alex
+              - generic [ref=f4e64]: Studio · Account
+      - button "Toggle Sidebar" [ref=f4e66]
+    - main [ref=f4e67]:
+      - main [ref=f4e68]:
+        - generic [ref=f4e70]:
+          - link "‹ Clients" [ref=f4e71] [cursor=pointer]:
+            - /url: /clients
+          - generic [ref=f4e72]:
+            - generic [ref=f4e73]:
+              - generic [aria-hidden] [ref=f4e74]: D
+              - generic [ref=f4e75]:
+                - heading "Dara" [level=1] [ref=f4e76]
+                - paragraph [ref=f4e77]: "@dara · client since November · trains on their own plan"
+            - generic [ref=f4e78]:
+              - button "Message" [ref=f4e79]
+              - button "Assign program" [ref=f4e80]
+          - tablist "Client" [ref=f4e81]:
+            - tab "Overview" [ref=f4e82]
+            - tab "Training" [ref=f4e83]
+            - tab [active] [selected] [ref=f4e84]:
+              - img "not shared" [ref=f4e85]
+              - text: Nutrition
+            - tab "Habits" [ref=f4e86]
+            - tab "Check-ins" [ref=f4e87]
+            - tab "Programs" [ref=f4e88]
+            - tab "Messages" [ref=f4e89]
+          - generic [ref=f4e232]:
+            - generic [ref=f4e233]:
+              - generic [ref=f4e234]:
+                - heading "Nutrition targets" [level=2] [ref=f4e235]
+                - paragraph [ref=f4e236]: Shown in Dara's app as "From your coach", in place of their own goal.
+              - generic [ref=f4e237]:
+                - generic [ref=f4e238]:
+                  - generic [ref=f4e239]: Calories
+                  - spinbutton "Calories" [ref=f4e240]
+                - generic [ref=f4e241]:
+                  - generic [ref=f4e242]: Protein (g)
+                  - spinbutton "Protein (g)" [ref=f4e243]
+                - generic [ref=f4e244]:
+                  - generic [ref=f4e245]: Carbs (g)
+                  - spinbutton "Carbs (g)" [ref=f4e246]
+                - generic [ref=f4e247]:
+                  - generic [ref=f4e248]: Fat (g)
+                  - spinbutton "Fat (g)" [ref=f4e249]
+              - generic [ref=f4e250]:
+                - generic [ref=f4e251]: Note to Dara (optional)
+                - textbox "Note to Dara (optional)" [ref=f4e252]
+              - generic [ref=f4e253]:
+                - button "Set targets" [disabled]
+                - generic [ref=f4e254]: Enter a calorie target to start.
+            - generic [ref=f4e257]:
+              - heading "Not shared with you" [level=2] [ref=f4e258]
+              - paragraph [ref=f4e259]: Dara keeps their nutrition diary private. They can switch it on in My coach. You can still set targets for them above.
+  - generic [ref=f4e231]: LogIt

@@ -1,0 +1,97 @@
+- generic [ref=f16e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f16e6]:
+    - generic [ref=f16e9]:
+      - link "LogIt" [ref=f16e11] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f16e16]:
+        - list [ref=f16e19]:
+          - listitem [ref=f16e20]:
+            - link "Overview" [ref=f16e21] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f16e24]:
+          - generic [ref=f16e25]: Training
+          - list [ref=f16e27]:
+            - listitem [ref=f16e28]:
+              - link "Sessions" [ref=f16e29] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f16e32]:
+              - link "Progress" [ref=f16e33] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f16e36]:
+              - link "Plan" [ref=f16e37] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f16e40]:
+              - link "Library" [ref=f16e41] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f16e44]:
+          - generic [ref=f16e45]: Body
+          - list [ref=f16e47]:
+            - listitem [ref=f16e48]:
+              - link "Nutrition" [ref=f16e49] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f16e52]:
+              - link "Habits & goals" [ref=f16e53] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f16e56]:
+          - generic [ref=f16e57]: People
+          - list [ref=f16e59]:
+            - listitem [ref=f16e60]:
+              - link "Social" [ref=f16e61] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=f16e64]:
+          - generic [ref=f16e65]: Extras
+          - list [ref=f16e67]:
+            - listitem [ref=f16e68]:
+              - link "Plugins" [ref=f16e69] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=f16e72]:
+          - generic [ref=f16e73]: Coach
+          - list [ref=f16e75]:
+            - listitem [ref=f16e76]:
+              - link "My coach" [ref=f16e77] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f16e81]:
+        - listitem [ref=f16e82]:
+          - button "A Alex Pro · Account" [ref=f16e83]:
+            - generic [ref=f16e84]: A
+            - generic [ref=f16e85]:
+              - generic [ref=f16e86]: Alex
+              - generic [ref=f16e87]: Pro · Account
+      - button "Toggle Sidebar" [ref=f16e89]
+    - main [ref=f16e90]:
+      - main [ref=f16e91]:
+        - generic [ref=f16e93]:
+          - generic [ref=f16e94]:
+            - generic [ref=f16e95]:
+              - heading "Plugins" [level=1] [ref=f16e96]
+              - paragraph [ref=f16e97]: Install here or on your phone and it's on both. Plugins run in a sandbox and only get the data they ask for.
+            - link "Build a plugin" [ref=f16e98] [cursor=pointer]:
+              - /url: /plugins/builder/new
+          - tablist "Plugins" [ref=f16e99]:
+            - tab "Browse" [ref=f16e100]
+            - tab "Installed · 1" [selected] [ref=f16e101]
+            - tab "My plugins · 1" [ref=f16e102]
+          - generic [ref=f16e103]:
+            - generic [ref=f16e104]: Community plugins are on for your account.
+            - button "Turn off" [ref=f16e105]
+          - table [ref=f16e107]:
+            - rowgroup [ref=f16e108]:
+              - row [ref=f16e109]:
+                - columnheader "Plugin" [ref=f16e110]
+                - columnheader "Type" [ref=f16e111]
+                - columnheader "Version" [ref=f16e112]
+                - columnheader "Gets" [ref=f16e113]
+                - columnheader "On" [ref=f16e114]
+                - columnheader "Actions" [ref=f16e115]
+            - rowgroup [ref=f16e117]:
+              - row [ref=f16e118]:
+                - cell "Week recap @alex" [ref=f16e119]
+                - cell "Widget" [ref=f16e120]
+                - cell "1.0.0" [ref=f16e121]
+                - cell "recent workouts" [ref=f16e122]
+                - cell [ref=f16e123]:
+                  - switch "Week recap on" [ref=f16e124]
+                - cell [ref=f16e126]:
+                  - button "Remove" [ref=f16e127]
+          - paragraph [ref=f16e128]: "What you install, switch off or remove here changes on your phone at its next sync, and the other way round. Updates are never automatic: \"Review update\" shows what it gets before it installs."

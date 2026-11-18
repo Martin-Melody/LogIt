@@ -1,0 +1,109 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:09
+      - main:
+        - generic:
+          - generic:
+            - paragraph: Nothing logged yet.
+            - generic:
+              - button "Add exercise"
+          - generic:
+            - button "Add block"
+          - generic:
+            - generic:
+              - button "Finish workout" [disabled]
+              - button "Discard workout"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Add cardio" [ref=f5e64]:
+    - generic [ref=f5e65]:
+      - heading "Add cardio" [level=2] [ref=f5e66]
+      - generic [ref=f5e67]: Pick one, or type a new one. New ones are saved to your library.
+    - textbox "Search cardio" [active] [ref=f5e68]
+    - generic [ref=f5e69]:
+      - button "Assault bike time · distance" [ref=f5e70]:
+        - generic [ref=f5e71]: Assault bike
+        - generic [ref=f5e72]: time · distance
+      - button "Battle ropes time" [ref=f5e73]:
+        - generic [ref=f5e74]: Battle ropes
+        - generic [ref=f5e75]: time
+      - button "Boxing / bag work time" [ref=f5e76]:
+        - generic [ref=f5e77]: Boxing / bag work
+        - generic [ref=f5e78]: time
+      - button "Cycling time · distance" [ref=f5e79]:
+        - generic [ref=f5e80]: Cycling
+        - generic [ref=f5e81]: time · distance
+      - button "Elliptical time · distance" [ref=f5e82]:
+        - generic [ref=f5e83]: Elliptical
+        - generic [ref=f5e84]: time · distance
+      - button "Grappling (BJJ, wrestling) time" [ref=f5e85]:
+        - generic [ref=f5e86]: Grappling (BJJ, wrestling)
+        - generic [ref=f5e87]: time
+      - button "HIIT circuit time" [ref=f5e88]:
+        - generic [ref=f5e89]: HIIT circuit
+        - generic [ref=f5e90]: time
+      - button "Hiking time · distance" [ref=f5e91]:
+        - generic [ref=f5e92]: Hiking
+        - generic [ref=f5e93]: time · distance
+      - button "Incline walk time · distance" [ref=f5e94]:
+        - generic [ref=f5e95]: Incline walk
+        - generic [ref=f5e96]: time · distance
+      - button "Jump rope time" [ref=f5e97]:
+        - generic [ref=f5e98]: Jump rope
+        - generic [ref=f5e99]: time
+      - button "Rowing machine time · distance" [ref=f5e100]:
+        - generic [ref=f5e101]: Rowing machine
+        - generic [ref=f5e102]: time · distance
+      - button "Rucking time · distance" [ref=f5e103]:
+        - generic [ref=f5e104]: Rucking
+        - generic [ref=f5e105]: time · distance
+      - button "Running time · distance" [ref=f5e106]:
+        - generic [ref=f5e107]: Running
+        - generic [ref=f5e108]: time · distance
+      - button "Ski erg time · distance" [ref=f5e109]:
+        - generic [ref=f5e110]: Ski erg
+        - generic [ref=f5e111]: time · distance
+      - button "Sled push time · distance" [ref=f5e112]:
+        - generic [ref=f5e113]: Sled push
+        - generic [ref=f5e114]: time · distance
+      - button "Sled push intervals From Alex · time · distance" [ref=f5e115]:
+        - generic [ref=f5e116]: Sled push intervals
+        - generic [ref=f5e117]: From Alex · time · distance
+      - button "Spin class time" [ref=f5e118]:
+        - generic [ref=f5e119]: Spin class
+        - generic [ref=f5e120]: time
+      - button "Stair climber time" [ref=f5e121]:
+        - generic [ref=f5e122]: Stair climber
+        - generic [ref=f5e123]: time
+      - button "Stationary bike time · distance" [ref=f5e124]:
+        - generic [ref=f5e125]: Stationary bike
+        - generic [ref=f5e126]: time · distance
+      - button "Swimming time · distance" [ref=f5e127]:
+        - generic [ref=f5e128]: Swimming
+        - generic [ref=f5e129]: time · distance
+      - button "Team sport time" [ref=f5e130]:
+        - generic [ref=f5e131]: Team sport
+        - generic [ref=f5e132]: time
+      - button "Treadmill run time · distance" [ref=f5e133]:
+        - generic [ref=f5e134]: Treadmill run
+        - generic [ref=f5e135]: time · distance
+      - button "Walking time · distance" [ref=f5e136]:
+        - generic [ref=f5e137]: Walking
+        - generic [ref=f5e138]: time · distance
+    - generic [ref=f5e139]:
+      - button "Cancel" [ref=f5e140]
+      - button "Add" [disabled]
+    - button "Close" [ref=f5e141]

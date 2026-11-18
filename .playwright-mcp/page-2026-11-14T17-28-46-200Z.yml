@@ -1,0 +1,101 @@
+- generic [ref=f7e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f7e28]:
+    - generic [ref=f7e31]:
+      - link "LogIt" [ref=f7e33] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f7e38]:
+        - list [ref=f7e41]:
+          - listitem [ref=f7e42]:
+            - link "Overview" [ref=f7e43] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f7e46]:
+          - generic [ref=f7e47]: Training
+          - list [ref=f7e49]:
+            - listitem [ref=f7e50]:
+              - link "Sessions" [ref=f7e51] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f7e54]:
+              - link "Progress" [ref=f7e55] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f7e58]:
+              - link "Plan" [ref=f7e59] [cursor=pointer]:
+                - /url: /plan
+        - generic [ref=f7e62]:
+          - generic [ref=f7e63]: Body
+          - list [ref=f7e65]:
+            - listitem [ref=f7e66]:
+              - link "Nutrition" [ref=f7e67] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f7e70]:
+              - link "Habits & goals" [ref=f7e71] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f7e74]:
+          - generic [ref=f7e75]: Coach
+          - list [ref=f7e77]:
+            - listitem [ref=f7e78]:
+              - link "My coach" [ref=f7e79] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f7e83]:
+        - listitem [ref=f7e84]:
+          - button "S Sarah Pro · Account" [ref=f7e85]:
+            - generic [ref=f7e86]: S
+            - generic [ref=f7e87]:
+              - generic [ref=f7e88]: Sarah
+              - generic [ref=f7e89]: Pro · Account
+      - button "Toggle Sidebar" [ref=f7e91]
+    - main [ref=f7e92]:
+      - main [ref=f7e93]:
+        - generic [ref=f7e169]:
+          - link "‹ My coach" [ref=f7e170] [cursor=pointer]:
+            - /url: /my-coach
+          - generic [ref=f7e171]:
+            - heading "Weekly check-in for Alex" [level=1] [ref=f7e172]
+            - paragraph [ref=f7e173]: Week of Nov 2 · was due Mon, Nov 9
+          - generic [ref=f7e174]:
+            - generic [ref=f7e175]:
+              - generic [ref=f7e176]: How did training go this week?Required
+              - textbox "How did training go this week?Required" [ref=f7e177]: Rough week, only got one session in. Back on track Monday.
+            - generic [ref=f7e178]:
+              - generic [ref=f7e179]: Bodyweight
+              - generic [ref=f7e180]:
+                - spinbutton "Bodyweight" [ref=f7e181]: "58.4"
+                - generic [ref=f7e182]: kg
+            - generic [ref=f7e183]:
+              - generic [ref=f7e184]: Sleep (1–10)
+              - radiogroup "Sleep (1–10)" [ref=f7e185]:
+                - radio "1" [ref=f7e186]
+                - radio "2" [ref=f7e187]
+                - radio "3" [ref=f7e188]
+                - radio "4" [ref=f7e189]
+                - radio "5" [ref=f7e190]
+                - radio "6" [checked] [active] [ref=f7e191]
+                - radio "7" [ref=f7e192]
+                - radio "8" [ref=f7e193]
+                - radio "9" [ref=f7e194]
+                - radio "10" [ref=f7e195]
+            - generic [ref=f7e196]:
+              - generic [ref=f7e197]: Energy (1–10)
+              - radiogroup "Energy (1–10)" [ref=f7e198]:
+                - radio "1" [ref=f7e199]
+                - radio "2" [ref=f7e200]
+                - radio "3" [ref=f7e201]
+                - radio "4" [ref=f7e202]
+                - radio "5" [ref=f7e203]
+                - radio "6" [ref=f7e204]
+                - radio "7" [ref=f7e205]
+                - radio "8" [ref=f7e206]
+                - radio "9" [ref=f7e207]
+                - radio "10" [ref=f7e208]
+            - generic [ref=f7e209]:
+              - generic [ref=f7e210]: Hit your step goal?
+              - radiogroup "Hit your step goal?" [ref=f7e211]:
+                - radio "Yes" [ref=f7e212]
+                - radio "No" [ref=f7e213]
+            - generic [ref=f7e214]:
+              - generic [ref=f7e215]: Anything you want changed?
+              - textbox "Anything you want changed?" [ref=f7e216]
+            - generic [ref=f7e217]:
+              - button "Save draft" [ref=f7e218]
+              - button "Send to Alex" [ref=f7e219]
+  - generic [ref=f7e27]: LogIt

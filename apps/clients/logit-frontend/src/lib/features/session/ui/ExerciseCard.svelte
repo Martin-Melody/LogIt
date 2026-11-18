@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { addButton } from "$lib/components/ui/choice";
   import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2, MoreHorizontal } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -297,14 +298,11 @@
     {#if !roundView && notice}{@render notice()}{/if}
     {@render children?.()}
     {#if !roundView && setCount > 0}
-      <button
-        type="button"
-        class="flex min-h-11 w-full items-center gap-1.5 px-3 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-        onclick={() => void onAddSet()}
-        disabled={saving}
-      >
-        <Plus class="h-4 w-4" /> Add a set
-      </button>
+      <div class="px-3 pb-3 pt-1.5">
+        <button type="button" class="{addButton} w-full" onclick={() => void onAddSet()} disabled={saving}>
+          <Plus class="h-4 w-4" /> Add a set
+        </button>
+      </div>
     {/if}
   </div>
 {/if}

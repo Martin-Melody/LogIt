@@ -1,0 +1,131 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f2e240]:
+        - generic [ref=f2e243]: Reply sent, marked as reviewed
+  - generic [ref=f2e6]:
+    - generic [ref=f2e9]:
+      - generic [ref=f2e10]:
+        - link "LogIt" [ref=f2e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f2e16]:
+          - tab "Me" [ref=f2e17]
+          - tab "Coaching" [selected] [ref=f2e18]
+      - generic [ref=f2e19]:
+        - list [ref=f2e22]:
+          - listitem [ref=f2e23]:
+            - link "Today 4" [ref=f2e245] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f2e26]: Today
+              - generic [ref=f2e27]: "4"
+          - listitem [ref=f2e28]:
+            - link "Clients" [ref=f2e29] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f2e32]:
+            - link "Programs" [ref=f2e33] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f2e36]:
+            - link "Check-ins 1" [ref=f2e246] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f2e39]: Check-ins
+              - generic [ref=f2e40]: "1"
+          - listitem [ref=f2e41]:
+            - link "Messages 2" [ref=f2e42] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f2e44]: Messages
+              - generic [ref=f2e45]: "2"
+        - generic [ref=f2e46]:
+          - generic [ref=f2e47]: Studio
+          - list [ref=f2e49]:
+            - listitem [ref=f2e50]:
+              - link "Invite links 1" [ref=f2e51] [cursor=pointer]:
+                - /url: /coaching/links
+                - generic [ref=f2e53]: Invite links
+                - generic [ref=f2e54]: "1"
+        - generic [ref=f2e55]:
+          - generic [ref=f2e56]: A client's training
+          - generic [ref=f2e57]:
+            - generic [ref=f2e58]: Open a client's training
+            - combobox "Open a client's training" [ref=f2e59]:
+              - option "Choose a client…" [selected]
+              - option "Conor"
+              - option "Dara"
+              - option "Niamh"
+              - option "Sarah"
+      - list [ref=f2e61]:
+        - listitem [ref=f2e62]:
+          - button "A Alex Studio · Account" [ref=f2e63]:
+            - generic [ref=f2e64]: A
+            - generic [ref=f2e65]:
+              - generic [ref=f2e66]: Alex
+              - generic [ref=f2e67]: Studio · Account
+      - button "Toggle Sidebar" [ref=f2e69]
+    - main [ref=f2e70]:
+      - main [ref=f2e71]:
+        - generic [ref=f2e171]:
+          - generic [ref=f2e172]:
+            - generic [ref=f2e173]:
+              - heading "Check-ins" [level=1] [ref=f2e174]
+              - paragraph [ref=f2e175]: Your clients' answers in one place. Reviewed ones move out of the way on every device.
+            - tablist "Show" [ref=f2e176]:
+              - tab "To review · 1" [selected] [ref=f2e247]
+              - tab "Missed · 1" [ref=f2e178]
+              - tab "Reviewed" [ref=f2e179]
+              - tab "Forms" [ref=f2e180]
+          - generic [ref=f2e181]:
+            - region "Check-ins" [ref=f2e182]:
+              - button "Conor Weekly check-in · yesterday New" [ref=f2e189]:
+                - generic [aria-hidden] [ref=f2e190]: C
+                - generic [ref=f2e191]:
+                  - generic [ref=f2e192]: Conor
+                  - generic [ref=f2e193]: Weekly check-in · yesterday
+                - generic [ref=f2e194]: New
+            - generic [ref=f2e195]:
+              - generic [ref=f2e196]:
+                - generic [ref=f2e197]:
+                  - generic [aria-hidden] [ref=f2e198]: C
+                  - generic [ref=f2e199]:
+                    - heading "Conor · Weekly check-in" [level=2] [ref=f2e248]
+                    - paragraph [ref=f2e201]:
+                      - text: Week of Nov 2 · sent yesterday ·
+                      - link "open client" [ref=f2e202] [cursor=pointer]:
+                        - /url: /clients/5c117f83-6144-4e0e-99b6-a70651677e8c
+                - generic [ref=f2e203]: To review
+              - generic [ref=f2e204]:
+                - generic [ref=f2e205]:
+                  - generic [ref=f2e206]: Sessions, last 7 days
+                  - generic [ref=f2e207]: 2 of 4
+                - generic [ref=f2e208]:
+                  - generic [ref=f2e209]: Program
+                  - generic [ref=f2e210]: Week 5 of 8
+                - generic [ref=f2e211]:
+                  - generic [ref=f2e212]: Previous check-in
+                  - generic [ref=f2e213]: First one
+              - generic [ref=f2e214]:
+                - generic [ref=f2e215]:
+                  - generic [ref=f2e249]:
+                    - generic [ref=f2e250]: Bodyweight
+                    - generic [ref=f2e251]: 82 kg
+                  - generic [ref=f2e252]:
+                    - generic [ref=f2e253]: Sleep (1–10)
+                    - generic [ref=f2e254]: 6 / 10
+                  - generic [ref=f2e255]:
+                    - generic [ref=f2e256]: Energy (1–10)
+                    - generic [ref=f2e257]: 6 / 10
+                  - generic [ref=f2e258]:
+                    - generic [ref=f2e259]: Hit your step goal?
+                    - generic [ref=f2e260]: "No"
+                - generic [ref=f2e261]:
+                  - generic [ref=f2e262]: How did training go this week?
+                  - generic [ref=f2e263]: Knee was a bit sore after squats, otherwise fine.
+                - generic [ref=f2e264]:
+                  - generic [ref=f2e265]: Anything you want changed?
+                  - generic [ref=f2e266]: Could we swap squats for leg press for a week?
+              - generic [ref=f2e234]:
+                - generic [ref=f2e235]: Reply to Conor
+                - textbox "Reply to Conor" [ref=f2e267]:
+                  - /placeholder: Goes to your messages with them.
+                - generic [ref=f2e237]:
+                  - button "Send and mark reviewed" [disabled] [ref=f2e238]
+                  - button "Mark reviewed" [ref=f2e239]
+  - generic [ref=f2e170]: LogIt

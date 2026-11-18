@@ -1,0 +1,254 @@
+- generic [ref=f7e2]:
+  - link "Skip to content" [ref=f7e3] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f7e4]:
+    - banner [ref=f7e5]:
+      - navigation "Main" [ref=f7e6]:
+        - link "LogIt" [ref=f7e7] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f7e11]:
+          - link "Features" [ref=f7e12] [cursor=pointer]:
+            - /url: /#features
+          - link "Pricing" [ref=f7e13] [cursor=pointer]:
+            - /url: /pricing
+          - link "Open source" [ref=f7e14] [cursor=pointer]:
+            - /url: /open-source
+          - link "Docs" [ref=f7e15] [cursor=pointer]:
+            - /url: /docs
+        - generic [ref=f7e16]:
+          - link "Sign in" [ref=f7e17] [cursor=pointer]:
+            - /url: https://app.getlogit.app
+          - link "Get the app" [ref=f7e18] [cursor=pointer]:
+            - /url: https://play.google.com/store/apps/details?id=ie.logit.app
+    - main [ref=f7e19]:
+      - generic [ref=f7e20]:
+        - complementary [ref=f7e21]:
+          - navigation "Docs" [ref=f7e22]:
+            - generic [ref=f7e23]:
+              - paragraph [ref=f7e24]: Start here
+              - list [ref=f7e25]:
+                - listitem [ref=f7e26]:
+                  - link "Using LogIt" [ref=f7e27] [cursor=pointer]:
+                    - /url: /docs
+                - listitem [ref=f7e28]:
+                  - link "What each plan can do" [ref=f7e29] [cursor=pointer]:
+                    - /url: /docs/plans
+                - listitem [ref=f7e30]:
+                  - link "Your account" [ref=f7e31] [cursor=pointer]:
+                    - /url: /docs/account
+                - listitem [ref=f7e32]:
+                  - link "Settings and your home screen" [ref=f7e33] [cursor=pointer]:
+                    - /url: /docs/settings
+            - generic [ref=f7e34]:
+              - paragraph [ref=f7e35]: Training
+              - list [ref=f7e36]:
+                - listitem [ref=f7e37]:
+                  - link "Logging a workout" [ref=f7e38] [cursor=pointer]:
+                    - /url: /docs/workouts
+                - listitem [ref=f7e39]:
+                  - link "Splits and schedules" [ref=f7e40] [cursor=pointer]:
+                    - /url: /docs/splits
+                - listitem [ref=f7e41]:
+                  - link "Programs" [ref=f7e42] [cursor=pointer]:
+                    - /url: /docs/programs
+                - listitem [ref=f7e43]:
+                  - link "Exercises and your library" [ref=f7e44] [cursor=pointer]:
+                    - /url: /docs/exercises
+                - listitem [ref=f7e45]:
+                  - link "Progress and progression" [ref=f7e46] [cursor=pointer]:
+                    - /url: /docs/progress
+            - generic [ref=f7e47]:
+              - paragraph [ref=f7e48]: Body
+              - list [ref=f7e49]:
+                - listitem [ref=f7e50]:
+                  - link "Nutrition" [ref=f7e51] [cursor=pointer]:
+                    - /url: /docs/nutrition
+                - listitem [ref=f7e52]:
+                  - link "Bodyweight" [ref=f7e53] [cursor=pointer]:
+                    - /url: /docs/bodyweight
+                - listitem [ref=f7e54]:
+                  - link "Habits and goals" [ref=f7e55] [cursor=pointer]:
+                    - /url: /docs/habits-and-goals
+            - generic [ref=f7e56]:
+              - paragraph [ref=f7e57]: More
+              - list [ref=f7e58]:
+                - listitem [ref=f7e59]:
+                  - link "Insights" [ref=f7e60] [cursor=pointer]:
+                    - /url: /docs/insights
+                - listitem [ref=f7e61]:
+                  - link "Social" [ref=f7e62] [cursor=pointer]:
+                    - /url: /docs/social
+                - listitem [ref=f7e63]:
+                  - link "Plugins" [ref=f7e64] [cursor=pointer]:
+                    - /url: /docs/add-plugins
+            - generic [ref=f7e65]:
+              - paragraph [ref=f7e66]: Pro
+              - list [ref=f7e67]:
+                - listitem [ref=f7e68]:
+                  - link "Sync and devices" [ref=f7e69] [cursor=pointer]:
+                    - /url: /docs/sync
+                - listitem [ref=f7e70]:
+                  - link "The web dashboard" [ref=f7e71] [cursor=pointer]:
+                    - /url: /docs/web-dashboard
+            - generic [ref=f7e72]:
+              - paragraph [ref=f7e73]: Having a coach
+              - list [ref=f7e74]:
+                - listitem [ref=f7e75]:
+                  - link "Having a coach" [ref=f7e76] [cursor=pointer]:
+                    - /url: /docs/having-a-coach
+            - generic [ref=f7e77]:
+              - paragraph [ref=f7e78]: Coaching (Studio)
+              - list [ref=f7e79]:
+                - listitem [ref=f7e80]:
+                  - link "Start coaching" [ref=f7e81] [cursor=pointer]:
+                    - /url: /docs/coaching
+                - listitem [ref=f7e82]:
+                  - link "Invite links" [ref=f7e83] [cursor=pointer]:
+                    - /url: /docs/coaching/invite-links
+                - listitem [ref=f7e84]:
+                  - link "Clients and sharing" [ref=f7e85] [cursor=pointer]:
+                    - /url: /docs/coaching/clients
+                - listitem [ref=f7e86]:
+                  - link "Programs for clients" [ref=f7e87] [cursor=pointer]:
+                    - /url: /docs/coaching/programs
+                - listitem [ref=f7e88]:
+                  - link "Your exercise library" [ref=f7e89] [cursor=pointer]:
+                    - /url: /docs/coaching/library
+                - listitem [ref=f7e90]:
+                  - link "Check-ins" [ref=f7e91] [cursor=pointer]:
+                    - /url: /docs/coaching/checkins
+                - listitem [ref=f7e92]:
+                  - link "Messages" [ref=f7e93] [cursor=pointer]:
+                    - /url: /docs/coaching/messages
+                - listitem [ref=f7e94]:
+                  - link "Habits and macro targets" [ref=f7e95] [cursor=pointer]:
+                    - /url: /docs/coaching/habits-and-nutrition
+                - listitem [ref=f7e96]:
+                  - link "Exercise swaps" [ref=f7e97] [cursor=pointer]:
+                    - /url: /docs/coaching/swaps
+                - listitem [ref=f7e98]:
+                  - link "Getting paid" [ref=f7e99] [cursor=pointer]:
+                    - /url: /docs/coaching/payments
+            - generic [ref=f7e100]:
+              - paragraph [ref=f7e101]: Developers
+              - list [ref=f7e102]:
+                - listitem [ref=f7e103]:
+                  - link "Self-hosting" [ref=f7e104] [cursor=pointer]:
+                    - /url: /self-hosting
+                - listitem [ref=f7e105]:
+                  - link "Building plugins" [ref=f7e106] [cursor=pointer]:
+                    - /url: /docs/plugins
+                - listitem [ref=f7e107]:
+                  - link "Trust & the sandbox" [ref=f7e108] [cursor=pointer]:
+                    - /url: /docs/plugins/trust
+                - listitem [ref=f7e109]:
+                  - link "Exercise packs" [ref=f7e110] [cursor=pointer]:
+                    - /url: /docs/plugins/exercise-packs
+                - listitem [ref=f7e111]:
+                  - link "Mobility packs" [ref=f7e112] [cursor=pointer]:
+                    - /url: /docs/plugins/mobility-packs
+                - listitem [ref=f7e113]:
+                  - link "Progression algorithms" [ref=f7e114] [cursor=pointer]:
+                    - /url: /docs/plugins/progression
+                - listitem [ref=f7e115]:
+                  - link "Mobility progression" [ref=f7e116] [cursor=pointer]:
+                    - /url: /docs/plugins/mobility-progression
+                - listitem [ref=f7e117]:
+                  - link "Analytics" [ref=f7e118] [cursor=pointer]:
+                    - /url: /docs/plugins/analytics
+                - listitem [ref=f7e119]:
+                  - link "Nutrition algorithms" [ref=f7e120] [cursor=pointer]:
+                    - /url: /docs/plugins/nutrition
+                - listitem [ref=f7e121]:
+                  - link "Widgets" [ref=f7e122] [cursor=pointer]:
+                    - /url: /docs/plugins/widgets
+                - listitem [ref=f7e123]:
+                  - link "Widget primitives" [ref=f7e124] [cursor=pointer]:
+                    - /url: /docs/plugins/primitives
+                - listitem [ref=f7e125]:
+                  - link "Publishing" [ref=f7e126] [cursor=pointer]:
+                    - /url: /docs/plugins/publishing
+                - listitem [ref=f7e127]:
+                  - link "API reference" [ref=f7e128] [cursor=pointer]:
+                    - /url: /docs/plugins/reference
+        - generic [ref=f7e129]:
+          - article [ref=f7e130]:
+            - heading "Invite links" [level=1] [ref=f7e131]
+            - generic [ref=f7e132]:
+              - generic [ref=f7e133]:
+                - generic [ref=f7e134]: Studio
+                - generic [ref=f7e135]: "Web: Coaching › Invite links"
+              - paragraph [ref=f7e136]: Share a link; people who open it ask to join and you accept.
+              - generic [ref=f7e137]:
+                - link "Show me in the app" [ref=f7e138] [cursor=pointer]:
+                  - /url: https://app.getlogit.app/?guide=studio.invite
+                - generic [ref=f7e139]: Opens the "Invite a client" chapter of the Studio walkthrough on the web dashboard
+            - list [ref=f7e140]:
+              - listitem [ref=f7e141]:
+                - strong [ref=f7e142]: Make an invite link.
+                - text: Open Coaching › Invite links. Give the link a name only you see, like "Instagram bio", choose when it stops working and how many people can use it, then Create link. It's copied, ready to paste anywhere.
+                - 'img "The dashboard at this step: Make an invite link" [ref=f7e143]'
+              - listitem [ref=f7e144]:
+                - strong [ref=f7e145]: Someone asks to join.
+                - text: People who open your link and ask wait here. You see nothing of theirs until you accept, and the line under their name says what they chose to share. Accept them.
+                - 'img "The dashboard at this step: Someone asks to join" [ref=f7e146]'
+              - listitem [ref=f7e147]:
+                - strong [ref=f7e148]: Your links.
+                - text: "Each link shows how many people joined through it. Copy it again, or turn it off: people who already joined stay your clients."
+                - 'img "The dashboard at this step: Your links" [ref=f7e149]'
+            - paragraph [ref=f7e150]:
+              - text: You can also invite someone by username from Clients. A link with a package attached takes payment first; see
+              - link "Getting paid" [ref=f7e151] [cursor=pointer]:
+                - /url: /docs/coaching/payments
+              - text: .
+            - generic [ref=f7e152]:
+              - generic [ref=f7e153]:
+                - heading "You can" [level=3] [ref=f7e154]
+                - list [ref=f7e155]:
+                  - listitem [ref=f7e156]: Limit a link by date or number of people, or turn it off
+              - generic [ref=f7e157]:
+                - heading "You can't" [level=3] [ref=f7e158]
+                - list [ref=f7e159]:
+                  - listitem [ref=f7e160]: See anything of someone's until you accept them
+          - navigation "Previous and next" [ref=f7e161]:
+            - link "Previous Start coaching" [ref=f7e162] [cursor=pointer]:
+              - /url: /docs/coaching
+              - generic [ref=f7e163]: Previous
+              - text: Start coaching
+            - link "Next Clients and sharing" [ref=f7e164] [cursor=pointer]:
+              - /url: /docs/coaching/clients
+              - generic [ref=f7e165]: Next
+              - text: Clients and sharing
+    - contentinfo [ref=f7e166]:
+      - generic [ref=f7e167]:
+        - generic [ref=f7e168]:
+          - generic [ref=f7e169]: LogIt
+          - link "hello@getlogit.app" [ref=f7e173] [cursor=pointer]:
+            - /url: mailto:hello@getlogit.app
+        - generic [ref=f7e174]:
+          - generic [ref=f7e175]:
+            - generic [ref=f7e176]: Product
+            - link "Features" [ref=f7e177] [cursor=pointer]:
+              - /url: /#features
+            - link "Pricing" [ref=f7e178] [cursor=pointer]:
+              - /url: /pricing
+            - link "Web dashboard" [ref=f7e179] [cursor=pointer]:
+              - /url: https://app.getlogit.app
+          - generic [ref=f7e180]:
+            - generic [ref=f7e181]: Open source
+            - link "Overview" [ref=f7e182] [cursor=pointer]:
+              - /url: /open-source
+            - link "Self-hosting" [ref=f7e183] [cursor=pointer]:
+              - /url: /self-hosting
+            - link "Plugin docs" [ref=f7e184] [cursor=pointer]:
+              - /url: /docs/plugins
+            - link "GitHub" [ref=f7e185] [cursor=pointer]:
+              - /url: https://github.com/Martin-Melody/LogIt
+          - generic [ref=f7e186]:
+            - generic [ref=f7e187]: Legal
+            - link "Privacy" [ref=f7e188] [cursor=pointer]:
+              - /url: /privacy
+            - link "Terms" [ref=f7e189] [cursor=pointer]:
+              - /url: /terms
+            - link "Delete your account" [ref=f7e190] [cursor=pointer]:
+              - /url: /delete-account

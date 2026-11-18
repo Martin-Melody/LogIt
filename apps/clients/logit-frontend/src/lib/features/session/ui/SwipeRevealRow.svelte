@@ -31,6 +31,24 @@
     dx = 0;
   }
 
+  /** A swipe that started at the screen edge and was read by Android as back (edgeSwipe.ts). */
+  function onEdgeSwipe(e: Event) {
+    if (disabled) return;
+    const fromRight = (e as CustomEvent<{ fromRight: boolean }>).detail?.fromRight;
+    if (fromRight) {
+      if (!open && (onEdit || onDelete)) toggleOpen();
+    } else if (open) {
+      close();
+    } else {
+      onSwipeRight?.();
+    }
+  }
+
+  function edgeSwipeTarget(node: HTMLElement) {
+    node.addEventListener("edgeswipe", onEdgeSwipe);
+    return { destroy: () => node.removeEventListener("edgeswipe", onEdgeSwipe) };
+  }
+
   function toggleOpen() {
     open = !open;
     dx = open ? -actionsWidth : 0;
@@ -102,7 +120,7 @@
   }
 </script>
 
-<div class="relative overflow-hidden">
+<div class="relative overflow-hidden" data-edge-swipe use:edgeSwipeTarget>
   <div class="absolute inset-0 flex justify-end items-center">
     <div class="flex h-full items-center">
       {#if onEdit}

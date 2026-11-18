@@ -1,0 +1,362 @@
+- generic [ref=f5e2]:
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=f5e393]:
+        - generic [ref=f5e396]: Saved, and updated 1 client copy
+  - generic [ref=f5e6]:
+    - generic [ref=f5e9]:
+      - generic [ref=f5e10]:
+        - link "LogIt" [ref=f5e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f5e16]:
+          - tab "Me" [ref=f5e17]
+          - tab "Coaching" [selected] [ref=f5e18]
+      - generic [ref=f5e19]:
+        - list [ref=f5e22]:
+          - listitem [ref=f5e23]:
+            - link "Today 4" [ref=f5e24] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f5e26]: Today
+              - generic [ref=f5e27]: "4"
+          - listitem [ref=f5e28]:
+            - link "Clients" [ref=f5e29] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f5e32]:
+            - link "Programs" [ref=f5e33] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f5e36]:
+            - link "Check-ins 1" [ref=f5e37] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f5e39]: Check-ins
+              - generic [ref=f5e40]: "1"
+          - listitem [ref=f5e41]:
+            - link "Messages 2" [ref=f5e42] [cursor=pointer]:
+              - /url: /messages
+              - generic [ref=f5e44]: Messages
+              - generic [ref=f5e45]: "2"
+        - generic [ref=f5e46]:
+          - generic [ref=f5e47]: Studio
+          - list [ref=f5e49]:
+            - listitem [ref=f5e50]:
+              - link "Invite links 1" [ref=f5e51] [cursor=pointer]:
+                - /url: /coaching/links
+                - generic [ref=f5e53]: Invite links
+                - generic [ref=f5e54]: "1"
+        - generic [ref=f5e55]:
+          - generic [ref=f5e56]: A client's training
+          - generic [ref=f5e57]:
+            - generic [ref=f5e58]: Open a client's training
+            - combobox "Open a client's training" [ref=f5e59]:
+              - option "Choose a client…" [selected]
+              - option "Conor"
+              - option "Dara"
+              - option "Niamh"
+              - option "Sarah"
+      - list [ref=f5e61]:
+        - listitem [ref=f5e62]:
+          - button "A Alex Studio · Account" [ref=f5e63]:
+            - generic [ref=f5e64]: A
+            - generic [ref=f5e65]:
+              - generic [ref=f5e66]: Alex
+              - generic [ref=f5e67]: Studio · Account
+      - button "Toggle Sidebar" [ref=f5e69]
+    - main [ref=f5e70]:
+      - main [ref=f5e71]:
+        - generic [ref=f5e163]:
+          - generic [ref=f5e164]:
+            - generic [ref=f5e165]:
+              - heading "Programs" [level=1] [ref=f5e166]
+              - paragraph [ref=f5e167]: Your library. Assigning a program gives the client their own copy.
+            - button "New program" [ref=f5e168]
+          - generic [ref=f5e169]:
+            - navigation "Library" [ref=f5e170]:
+              - button "Deload week 1 week · 1 days · not assigned" [ref=f5e171]:
+                - generic [ref=f5e172]: Deload week
+                - generic [ref=f5e173]: 1 week · 1 days · not assigned
+              - button "Hypertrophy 8 weeks · 4 days · Conor, Sarah" [ref=f5e174]:
+                - generic [ref=f5e175]: Hypertrophy
+                - generic [ref=f5e176]: 8 weeks · 4 days · Conor, Sarah
+              - button "Strength block 6 weeks · 4 days · Niamh" [ref=f5e177]:
+                - generic [ref=f5e178]: Strength block
+                - generic [ref=f5e179]: 6 weeks · 4 days · Niamh
+            - generic [ref=f5e180]:
+              - generic [ref=f5e181]:
+                - paragraph [ref=f5e182]: Used by Niamh
+                - generic [ref=f5e183]:
+                  - button "Duplicate" [ref=f5e184]
+                  - button "Archive" [ref=f5e185]
+                  - button "Assign to client" [ref=f5e186]
+              - generic [ref=f5e187]:
+                - generic [ref=f5e188]:
+                  - generic [ref=f5e189]:
+                    - text: Name
+                    - textbox "Name" [ref=f5e190]: Strength block
+                  - generic [ref=f5e191]:
+                    - text: Weeks
+                    - generic [ref=f5e192]:
+                      - text: "6"
+                      - button "+ Week" [ref=f5e193]
+                - generic [ref=f5e194]:
+                  - text: Description (clients see this)
+                  - textbox "Description (clients see this)" [ref=f5e195]:
+                    - /placeholder: Upper / lower, 4 days. Add a rep each week.
+                    - text: Upper / lower, 4 days. Loads go up 2% a week, deload in week 6.
+                - generic [ref=f5e196]:
+                  - tablist "Week" [ref=f5e197]:
+                    - tab "Week 1" [selected] [ref=f5e198]
+                    - tab "2" [ref=f5e199]
+                    - tab "3" [ref=f5e200]
+                    - tab "4" [ref=f5e201]
+                    - tab "5" [ref=f5e202]
+                    - tab "6 · deload" [ref=f5e203]
+                  - generic [ref=f5e204]:
+                    - generic [ref=f5e205]: Copy this week to
+                    - combobox "Copy this week to" [ref=f5e206]:
+                      - option "Copy week 1 to…" [selected]
+                      - option "Week 2 (replaces it)"
+                      - option "Week 3 (replaces it)"
+                      - option "Week 4 (replaces it)"
+                      - option "Week 5 (replaces it)"
+                      - option "Week 6 (replaces it)"
+                      - option "A new week at the end"
+                    - button "+ Day" [ref=f5e207]
+                    - button "Remove week" [ref=f5e208]
+                - generic [ref=f5e209]:
+                  - text: Week 1 label
+                  - textbox "Week 1 label" [ref=f5e210]:
+                    - /placeholder: e.g. deload
+                - generic [ref=f5e211]:
+                  - generic [ref=f5e212]:
+                    - generic [ref=f5e213]:
+                      - generic [ref=f5e214]: Day name
+                      - textbox "Day name" [ref=f5e215]: Lower
+                      - generic [ref=f5e216]: Weekday
+                      - combobox "Weekday" [ref=f5e217]:
+                        - option "Any day"
+                        - option "Sun"
+                        - option "Mon" [selected]
+                        - option "Tue"
+                        - option "Wed"
+                        - option "Thu"
+                        - option "Fri"
+                        - option "Sat"
+                    - generic [ref=f5e218]:
+                      - button "Remove day" [ref=f5e219]
+                      - button "Close" [ref=f5e220]
+                  - table [ref=f5e222]:
+                    - rowgroup [ref=f5e223]:
+                      - row [ref=f5e224]:
+                        - columnheader "Exercise / set" [ref=f5e225]
+                        - columnheader "Reps" [ref=f5e226]
+                        - columnheader "Load" [ref=f5e227]
+                        - columnheader "RPE" [ref=f5e228]
+                        - columnheader "Rest" [ref=f5e229]
+                        - columnheader "Tempo" [ref=f5e230]
+                        - columnheader "Type" [ref=f5e231]
+                        - columnheader [ref=f5e232]
+                    - rowgroup [ref=f5e233]:
+                      - row [ref=f5e234]:
+                        - cell "Squat Move down Remove Note for Squat" [ref=f5e235]:
+                          - generic [ref=f5e236]:
+                            - generic [ref=f5e237]: Squat
+                            - generic [ref=f5e238]:
+                              - button "Move down" [ref=f5e239]: ↓
+                              - button "Remove" [ref=f5e240]
+                          - generic [ref=f5e241]: Note for Squat
+                          - textbox "Note for Squat" [ref=f5e242]:
+                            - /placeholder: Note for the client (optional)
+                      - row [ref=f5e381]:
+                        - cell "Set 1" [ref=f5e244]
+                        - cell [ref=f5e245]:
+                          - textbox "Reps, set 1" [ref=f5e246]: "5"
+                        - cell [ref=f5e382]:
+                          - textbox "Load, set 1" [ref=f5e248]:
+                            - /placeholder: –
+                            - text: 77.5%
+                        - cell [ref=f5e249]:
+                          - textbox "RPE, set 1" [ref=f5e250]
+                        - cell [ref=f5e251]:
+                          - textbox "Rest, set 1" [ref=f5e252]: 2:30
+                        - cell [ref=f5e253]:
+                          - textbox "Tempo, set 1" [ref=f5e254]
+                        - cell "Normal" [ref=f5e255]:
+                          - combobox "Set type, set 1" [ref=f5e256]:
+                            - option "Normal" [selected]
+                            - option "Warm-up"
+                            - option "To failure"
+                            - option "Drop set"
+                            - option "Rest-pause"
+                            - option "Myo-reps"
+                        - cell [ref=f5e257]:
+                          - button "Remove set 1" [ref=f5e258]: ✕
+                      - row [ref=f5e259]:
+                        - cell "Set 2" [ref=f5e260]
+                        - cell [ref=f5e261]:
+                          - textbox "Reps, set 2" [ref=f5e262]: "5"
+                        - cell [ref=f5e263]:
+                          - textbox "Load, set 2" [ref=f5e264]:
+                            - /placeholder: –
+                            - text: 75%
+                        - cell [ref=f5e265]:
+                          - textbox "RPE, set 2" [ref=f5e266]
+                        - cell [ref=f5e267]:
+                          - textbox "Rest, set 2" [ref=f5e268]: 2:30
+                        - cell [ref=f5e269]:
+                          - textbox "Tempo, set 2" [ref=f5e270]
+                        - cell "Normal" [ref=f5e271]:
+                          - combobox "Set type, set 2" [ref=f5e272]:
+                            - option "Normal" [selected]
+                            - option "Warm-up"
+                            - option "To failure"
+                            - option "Drop set"
+                            - option "Rest-pause"
+                            - option "Myo-reps"
+                        - cell [ref=f5e273]:
+                          - button "Remove set 2" [ref=f5e274]: ✕
+                      - row [ref=f5e275]:
+                        - cell "Set 3" [ref=f5e276]
+                        - cell [ref=f5e277]:
+                          - textbox "Reps, set 3" [ref=f5e278]: "5"
+                        - cell [ref=f5e279]:
+                          - textbox "Load, set 3" [ref=f5e280]:
+                            - /placeholder: –
+                            - text: 75%
+                        - cell [ref=f5e281]:
+                          - textbox "RPE, set 3" [ref=f5e282]
+                        - cell [ref=f5e283]:
+                          - textbox "Rest, set 3" [ref=f5e284]: 2:30
+                        - cell [ref=f5e285]:
+                          - textbox "Tempo, set 3" [ref=f5e286]
+                        - cell "Normal" [ref=f5e287]:
+                          - combobox "Set type, set 3" [ref=f5e288]:
+                            - option "Normal" [selected]
+                            - option "Warm-up"
+                            - option "To failure"
+                            - option "Drop set"
+                            - option "Rest-pause"
+                            - option "Myo-reps"
+                        - cell [ref=f5e289]:
+                          - button "Remove set 3" [ref=f5e290]: ✕
+                      - row [ref=f5e291]:
+                        - cell "Set 4" [ref=f5e292]
+                        - cell [ref=f5e293]:
+                          - textbox "Reps, set 4" [ref=f5e294]: "5"
+                        - cell [ref=f5e295]:
+                          - textbox "Load, set 4" [ref=f5e296]:
+                            - /placeholder: –
+                            - text: 75%
+                        - cell [ref=f5e297]:
+                          - textbox "RPE, set 4" [ref=f5e298]
+                        - cell [ref=f5e299]:
+                          - textbox "Rest, set 4" [ref=f5e300]: 2:30
+                        - cell [ref=f5e301]:
+                          - textbox "Tempo, set 4" [ref=f5e302]
+                        - cell "Normal" [ref=f5e303]:
+                          - combobox "Set type, set 4" [ref=f5e304]:
+                            - option "Normal" [selected]
+                            - option "Warm-up"
+                            - option "To failure"
+                            - option "Drop set"
+                            - option "Rest-pause"
+                            - option "Myo-reps"
+                        - cell [ref=f5e305]:
+                          - button "Remove set 4" [ref=f5e306]: ✕
+                      - row [ref=f5e307]:
+                        - cell [ref=f5e308]:
+                          - button "+ Set" [ref=f5e309]
+                      - row [ref=f5e310]:
+                        - cell "Romanian deadlift Move up Superset with above Remove Note for Romanian deadlift" [ref=f5e311]:
+                          - generic [ref=f5e312]:
+                            - generic [ref=f5e313]: Romanian deadlift
+                            - generic [ref=f5e314]:
+                              - button "Move up" [ref=f5e315]: ↑
+                              - button "Superset with above" [ref=f5e316]
+                              - button "Remove" [ref=f5e317]
+                          - generic [ref=f5e318]: Note for Romanian deadlift
+                          - textbox "Note for Romanian deadlift" [ref=f5e319]:
+                            - /placeholder: Note for the client (optional)
+                      - row [ref=f5e320]:
+                        - cell "Set 1" [ref=f5e321]
+                        - cell [ref=f5e322]:
+                          - textbox "Reps, set 1" [ref=f5e323]: "8"
+                        - cell [ref=f5e324]:
+                          - textbox "Load, set 1" [ref=f5e325]:
+                            - /placeholder: –
+                        - cell [ref=f5e326]:
+                          - textbox "RPE, set 1" [ref=f5e327]: "7"
+                        - cell [ref=f5e328]:
+                          - textbox "Rest, set 1" [ref=f5e329]: 2:30
+                        - cell [ref=f5e330]:
+                          - textbox "Tempo, set 1" [ref=f5e331]
+                        - cell "Normal" [ref=f5e332]:
+                          - combobox "Set type, set 1" [ref=f5e333]:
+                            - option "Normal" [selected]
+                            - option "Warm-up"
+                            - option "To failure"
+                            - option "Drop set"
+                            - option "Rest-pause"
+                            - option "Myo-reps"
+                        - cell [ref=f5e334]:
+                          - button "Remove set 1" [ref=f5e335]: ✕
+                      - row [ref=f5e336]:
+                        - cell "Set 2" [ref=f5e337]
+                        - cell [ref=f5e338]:
+                          - textbox "Reps, set 2" [ref=f5e339]: "8"
+                        - cell [ref=f5e340]:
+                          - textbox "Load, set 2" [ref=f5e341]:
+                            - /placeholder: –
+                        - cell [ref=f5e342]:
+                          - textbox "RPE, set 2" [ref=f5e343]: "7"
+                        - cell [ref=f5e344]:
+                          - textbox "Rest, set 2" [ref=f5e345]: 2:30
+                        - cell [ref=f5e346]:
+                          - textbox "Tempo, set 2" [ref=f5e347]
+                        - cell "Normal" [ref=f5e348]:
+                          - combobox "Set type, set 2" [ref=f5e349]:
+                            - option "Normal" [selected]
+                            - option "Warm-up"
+                            - option "To failure"
+                            - option "Drop set"
+                            - option "Rest-pause"
+                            - option "Myo-reps"
+                        - cell [ref=f5e350]:
+                          - button "Remove set 2" [ref=f5e351]: ✕
+                      - row [ref=f5e352]:
+                        - cell "Set 3" [ref=f5e353]
+                        - cell [ref=f5e354]:
+                          - textbox "Reps, set 3" [ref=f5e355]: "8"
+                        - cell [ref=f5e356]:
+                          - textbox "Load, set 3" [ref=f5e357]:
+                            - /placeholder: –
+                        - cell [ref=f5e358]:
+                          - textbox "RPE, set 3" [ref=f5e359]: "7"
+                        - cell [ref=f5e360]:
+                          - textbox "Rest, set 3" [ref=f5e361]: 2:30
+                        - cell [ref=f5e362]:
+                          - textbox "Tempo, set 3" [ref=f5e363]
+                        - cell "Normal" [ref=f5e364]:
+                          - combobox "Set type, set 3" [ref=f5e365]:
+                            - option "Normal" [selected]
+                            - option "Warm-up"
+                            - option "To failure"
+                            - option "Drop set"
+                            - option "Rest-pause"
+                            - option "Myo-reps"
+                        - cell [ref=f5e366]:
+                          - button "Remove set 3" [ref=f5e367]: ✕
+                      - row [ref=f5e368]:
+                        - cell [ref=f5e369]:
+                          - button "+ Set" [ref=f5e370]
+                  - button "+ Exercise" [ref=f5e372]
+                - generic [ref=f5e373]:
+                  - button "Upper 3 exercises · Wed" [ref=f5e374]:
+                    - generic [ref=f5e375]: Upper
+                    - text: 3 exercises · Wed
+                  - button "Lower 2 exercises · Thu" [ref=f5e376]:
+                    - generic [ref=f5e377]: Lower
+                    - text: 2 exercises · Thu
+                  - button "Upper 2 exercises · Sat" [ref=f5e378]:
+                    - generic [ref=f5e379]: Upper
+                    - text: 2 exercises · Sat
+                - paragraph [ref=f5e380]: "Reps: 8, 8-10 or AMRAP. Load: kilos (60), a percent of their best (72%), or blank and use RPE. Rest: 2:30 or 90."
+  - generic [ref=f5e123]: LogIt

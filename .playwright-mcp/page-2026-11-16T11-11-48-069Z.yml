@@ -1,0 +1,242 @@
+- generic:
+  - generic:
+    - region "Notifications alt+T":
+      - list:
+        - listitem:
+          - generic: It's on your phone after its next sync, for your account only. Saving here updates it.
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - link "LogIt":
+                - /url: /
+            - generic:
+              - generic:
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Overview":
+                        - /url: /
+              - generic:
+                - generic: Training
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Sessions":
+                        - /url: /sessions
+                    - listitem:
+                      - link "Progress":
+                        - /url: /progress
+                    - listitem:
+                      - link "Plan":
+                        - /url: /plan
+                    - listitem:
+                      - link "Library":
+                        - /url: /library
+              - generic:
+                - generic: Body
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Nutrition":
+                        - /url: /nutrition
+                    - listitem:
+                      - link "Habits & goals":
+                        - /url: /habits
+              - generic:
+                - generic: People
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Social":
+                        - /url: /social
+              - generic:
+                - generic: Extras
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Plugins":
+                        - /url: /plugins
+              - generic:
+                - generic: Coach
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "My coach":
+                        - /url: /my-coach
+            - generic:
+              - list:
+                - listitem:
+                  - button "A Alex Pro · Account":
+                    - generic: A
+                    - generic:
+                      - generic: Alex
+                      - generic: Pro · Account
+            - button "Toggle Sidebar"
+      - main:
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - link "‹ My plugins":
+                    - /url: /plugins?tab=mine
+                  - heading "Week recap" [level=1]
+                  - generic: Draft · saved
+                  - generic: On your phone to try
+                - generic:
+                  - button "Download files"
+                  - button "Stop trying on phone"
+                  - button "Publish…"
+              - generic:
+                - complementary:
+                  - heading "About this plugin" [level=2]
+                  - generic:
+                    - generic: Name
+                    - textbox "Name": Week recap
+                  - generic:
+                    - generic: Type
+                    - generic: Widget
+                  - generic:
+                    - generic: Description
+                    - textbox "Description"
+                  - group "What it gets":
+                    - generic "Sessions from about the last 200 days, with sets":
+                      - checkbox "Recent workouts" [checked]
+                      - text: Recent workouts
+                    - generic "Your exercises and the muscles they work":
+                      - checkbox "Exercise list"
+                      - text: Exercise list
+                    - generic "Whether a workout is running, and today's planned day":
+                      - checkbox "The session you're in"
+                      - text: The session you're in
+                    - generic "The split day planned for today and its exercises":
+                      - checkbox "Today's plan"
+                      - text: Today's plan
+                    - generic "The next target for each exercise you track":
+                      - checkbox "Progression targets"
+                      - text: Progression targets
+                    - generic "Today's calories and macros against your targets":
+                      - checkbox "Nutrition"
+                      - text: Nutrition
+                    - generic "Your current weight, trend and goal":
+                      - checkbox "Body weight"
+                      - text: Body weight
+                    - generic "Your habits, whether they're done today, and streaks":
+                      - checkbox "Habits"
+                      - text: Habits
+                    - generic "Drills you've logged, with best holds and reps":
+                      - checkbox "Mobility"
+                      - text: Mobility
+                  - paragraph: This is the needs list in the code; ticking here changes it. People see it before they install.
+                  - paragraph: com.alex.week-recap
+                  - button "Delete plugin"
+                - generic:
+                  - generic:
+                    - tablist "File":
+                      - tab "bundle.js" [selected]
+                      - tab "manifest.json"
+                    - generic:
+                      - generic: Upload files…
+                      - button "Upload files…"
+                      - link "Docs":
+                        - /url: https://getlogit.app/docs/plugins/widgets
+                  - generic: Code
+                  - textbox "Code": "export const pluginBundle = { formatVersion: 1, pluginId: \"com.alex.week-recap\", family: \"widget\", entryExport: \"widget\", }; // A card for the home screen and the dashboard's Overview. compute() gets only what // \"needs\" asks for and returns what to show; LogIt draws it. export const widget = { id: \"com.alex.week-recap\", name: \"Week recap\", description: \"Sessions and sets in the last 7 days.\", needs: [\"workouts\"], compute(input) { const since = input.now - 7 * 24 * 60 * 60 * 1000; let sessions = 0; let sets = 0; for (const w of input.workouts ?? []) { if (!w.endedAtMs || w.endedAtMs < since) continue; sessions++; for (const ex of w.exercises) sets += ex.sets.length; } if (sessions === 0) { return { title: \"Week recap\", body: [], empty: { text: \"Nothing logged in the last 7 days.\", action: { startEmptyWorkout: true } }, }; } return { title: \"Week recap\", subtitle: \"Last 7 days\", body: [{ kind: \"stat-grid\", stats: [ { label: \"Sessions\", value: String(sessions) }, { label: \"Sets\", value: String(sets) }, ], }], action: { navigate: \"/sessions\" }, }; }, };"
+                - complementary:
+                  - generic:
+                    - generic:
+                      - heading "Preview" [level=2]
+                      - group "Preview data":
+                        - button "My data" [pressed]
+                        - button "Sample"
+                        - button "Empty"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - heading "Week recap" [level=3]
+                        - generic:
+                          - button "Nothing logged in the last 7 days."
+                    - paragraph: Drawn by the same parts as the Overview and the phone.
+                  - generic:
+                    - heading "Checks" [level=2]
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: One file, no imports
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: Loads in the sandbox
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: Its id matches the plugin
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: Asks only for data LogIt has
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: Has compute() and it runs
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: Uses only card parts LogIt knows
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: Finishes in 3 ms (limit 300 ms)
+                    - generic:
+                      - generic [aria-hidden]: ✓
+                      - generic:
+                        - generic: "Passed:"
+                        - text: Works with nothing logged
+                    - paragraph: The same ground the registry checks cover, so publishing has no surprises.
+    - generic: LogIt
+  - dialog "Publish Week recap" [ref=f3e229]:
+    - generic [ref=f3e230]:
+      - heading "Publish Week recap" [level=2] [ref=f3e231]
+      - generic [ref=f3e232]: All checks pass. Choose who can get it.
+    - group "Who can get it" [ref=f3e233]:
+      - generic [ref=f3e235] [cursor=pointer]:
+        - radio "Everyone, in Browse LogIt looks at it first, usually within a few days. You get an email when it's listed, or a note on what to change." [checked] [active] [ref=f3e236]
+        - generic [ref=f3e237]:
+          - generic [ref=f3e238]: Everyone, in Browse
+          - generic [ref=f3e239]: LogIt looks at it first, usually within a few days. You get an email when it's listed, or a note on what to change.
+      - generic [ref=f3e240] [cursor=pointer]:
+        - radio "People with the link Not in Browse and not reviewed. Good for friends or your clients. They see an \"unreviewed\" warning before installing." [ref=f3e241]
+        - generic [ref=f3e242]:
+          - generic [ref=f3e243]: People with the link
+          - generic [ref=f3e244]: Not in Browse and not reviewed. Good for friends or your clients. They see an "unreviewed" warning before installing.
+      - generic [ref=f3e245] [cursor=pointer]:
+        - radio "Just download the files manifest.json and the code with the hash filled in, for your own registry or a pull request to the community one." [ref=f3e246]
+        - generic [ref=f3e247]:
+          - generic [ref=f3e248]: Just download the files
+          - generic [ref=f3e249]: manifest.json and the code with the hash filled in, for your own registry or a pull request to the community one.
+    - generic [ref=f3e250]:
+      - generic [ref=f3e251]:
+        - generic [ref=f3e252]: Version
+        - textbox "Version" [ref=f3e253]: 1.0.0
+      - generic [ref=f3e254]:
+        - generic [ref=f3e255]: What's new
+        - textbox "What's new" [ref=f3e256]: First version.
+    - generic [ref=f3e257]:
+      - generic [ref=f3e258]: People will see
+      - generic [ref=f3e259]: "Widget · by @alex · Gets: recent workouts · Can: show a card on your home screen and overview"
+    - generic [ref=f3e260]:
+      - generic [ref=f3e261]: Published versions can't be changed, only replaced by a newer one.
+      - button "Cancel" [ref=f3e262]
+      - button "Send for review" [ref=f3e263]
+    - button "Close" [ref=f3e264]

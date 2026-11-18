@@ -58,7 +58,11 @@ async function wireBackButton(): Promise<void> {
   try {
     const { App } = await import("@capacitor/app");
     const { handleBack } = await import("$lib/components/sheet/sheet");
+    const { takeEdgeSwipe, watchEdgeSwipes } = await import("$lib/platform/edgeSwipe");
+    watchEdgeSwipes();
     await App.addListener("backButton", ({ canGoBack }) => {
+      // A swipe on a set row that started at the screen edge, which Android read as back.
+      if (takeEdgeSwipe()) return;
       // An open sheet or dialog closes first, newest first; then the previous screen.
       if (handleBack()) return;
       if (canGoBack) {

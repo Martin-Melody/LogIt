@@ -1,0 +1,57 @@
+- generic [ref=f15e2]:
+  - generic [ref=f15e3]:
+    - main [ref=f15e4]:
+      - generic [ref=f15e151]:
+        - button "My gym" [ref=f15e153]
+        - generic [ref=f15e155]: Name
+        - textbox "Name" [ref=f15e156]: Selectorised pulldown
+        - group "Status" [ref=f15e157]:
+          - button "In" [pressed] [ref=f15e158]
+          - button "Out of order" [ref=f15e159]
+          - button "Coming" [ref=f15e160]
+          - button "Removed" [ref=f15e161]
+        - paragraph [ref=f15e162]: Look at the numbers printed on the plates.
+        - group "Units on the stack" [ref=f15e163]:
+          - button "kg" [pressed] [ref=f15e164]
+          - button "lb" [ref=f15e165]
+        - generic [ref=f15e166]:
+          - generic [ref=f15e167]: From the top
+          - generic [ref=f15e168]:
+            - generic [ref=f15e169]:
+              - text: Starts at
+              - spinbutton "Starts at" [ref=f15e170]: "5"
+            - generic [ref=f15e171]:
+              - text: Goes up by
+              - spinbutton "Goes up by" [ref=f15e172]: "5"
+            - generic [ref=f15e173]:
+              - text: Up to
+              - spinbutton "Up to" [ref=f15e174]: "100"
+          - button "+ The jumps change partway" [active] [ref=f15e175]
+        - button "Odd numbers on some plates? Type them as they are" [ref=f15e176]
+        - paragraph [ref=f15e177]: 5 · 10 · 15 · 20 · 25 · 30 · … · 95 · 100 kg (20 settings)
+        - group "Can you add a little?" [ref=f15e178]:
+          - generic [ref=f15e180]:
+            - button "1.25 kg add-on" [ref=f15e181]
+            - button "2.5 kg add-on" [ref=f15e182]
+            - button "Pin with plates" [ref=f15e183]
+            - button "No" [ref=f15e184]
+        - group "Exercises you do on it" [ref=f15e185]:
+          - generic [ref=f15e187]:
+            - generic [ref=f15e189]: Find an exercise
+            - textbox "Find an exercise" [ref=f15e190]
+          - paragraph [ref=f15e191]: 1 picked.
+        - button "Save" [ref=f15e192]
+    - contentinfo [ref=f15e20]:
+      - navigation "Main navigation" [ref=f15e21]:
+        - link "Home" [ref=f15e22] [cursor=pointer]:
+          - /url: /
+        - link "Sessions" [ref=f15e25] [cursor=pointer]:
+          - /url: /sessions
+        - link "Resume session" [ref=f15e28] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f15e34]: Resume
+        - link "Profile" [ref=f15e35] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f15e38]
+  - region "Notifications alt+T"
+  - generic [ref=f15e41]: LogIt

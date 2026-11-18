@@ -1,0 +1,78 @@
+- generic [ref=f6e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f6e28]:
+    - generic [ref=f6e31]:
+      - link "LogIt" [ref=f6e33] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f6e38]:
+        - list [ref=f6e41]:
+          - listitem [ref=f6e42]:
+            - link "Overview" [ref=f6e43] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f6e46]:
+          - generic [ref=f6e47]: Training
+          - list [ref=f6e49]:
+            - listitem [ref=f6e50]:
+              - link "Sessions" [ref=f6e51] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f6e54]:
+              - link "Progress" [ref=f6e55] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f6e58]:
+              - link "Plan" [ref=f6e59] [cursor=pointer]:
+                - /url: /plan
+        - generic [ref=f6e62]:
+          - generic [ref=f6e63]: Body
+          - list [ref=f6e65]:
+            - listitem [ref=f6e66]:
+              - link "Nutrition" [ref=f6e67] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f6e70]:
+              - link "Habits & goals" [ref=f6e71] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f6e74]:
+          - generic [ref=f6e75]: Coach
+          - list [ref=f6e77]:
+            - listitem [ref=f6e78]:
+              - link "My coach 1" [ref=f6e79] [cursor=pointer]:
+                - /url: /my-coach
+                - generic [ref=f6e81]: My coach
+                - generic [ref=f6e82]: "1"
+      - list [ref=f6e84]:
+        - listitem [ref=f6e85]:
+          - button "L Laura Pro · Account" [ref=f6e86]:
+            - generic [ref=f6e87]: L
+            - generic [ref=f6e88]:
+              - generic [ref=f6e89]: Laura
+              - generic [ref=f6e90]: Pro · Account
+      - button "Toggle Sidebar" [ref=f6e92]
+    - main [ref=f6e93]:
+      - main [ref=f6e94]:
+        - generic [ref=f6e97]:
+          - generic [ref=f6e98]:
+            - generic [aria-hidden] [ref=f6e99]: A
+            - generic [ref=f6e100]:
+              - heading "Alex wants to coach you" [level=1] [ref=f6e101]
+              - paragraph [ref=f6e102]: "@alex on LogIt"
+          - paragraph [ref=f6e103]: Alex already invited you. Pick what Alex can see. You can change this any time in My coach.
+          - generic [ref=f6e104]:
+            - generic [ref=f6e105]:
+              - generic [ref=f6e106]: Workouts
+              - switch "Workouts" [checked] [ref=f6e107]
+            - generic [ref=f6e109]:
+              - generic [ref=f6e110]: Nutrition diary
+              - switch "Nutrition diary" [checked] [ref=f6e111]
+            - generic [ref=f6e113]:
+              - generic [ref=f6e114]: Body weight
+              - switch "Body weight" [checked] [ref=f6e115]
+            - generic [ref=f6e117]:
+              - generic [ref=f6e118]: Habits
+              - switch "Habits" [checked] [ref=f6e119]
+            - generic [ref=f6e121]:
+              - generic [ref=f6e122]: Check-ins
+              - switch "Check-ins" [checked] [ref=f6e123]
+            - generic [ref=f6e125]:
+              - generic [ref=f6e126]: Social posts and other messages
+              - generic [ref=f6e127]: Never
+          - button "Accept Alex as my coach" [ref=f6e128]
+  - generic [ref=f6e27]: LogIt

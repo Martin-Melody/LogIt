@@ -1,0 +1,25 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e6]:
+    - button "Back" [ref=f6e7]
+    - heading "Welcome back" [level=1] [ref=f6e9]
+    - paragraph [ref=f6e10]: Log in to sync across devices and use the social feed.
+    - generic [ref=f6e11]:
+      - button "Log in" [pressed] [ref=f6e12]
+      - button "Sign up" [ref=f6e13]
+    - generic [ref=f6e14]:
+      - generic [ref=f6e15]:
+        - generic [ref=f6e16]: Username or email
+        - textbox "Username or email" [ref=f6e17]:
+          - /placeholder: username or email
+      - generic [ref=f6e18]:
+        - generic [ref=f6e19]: Password
+        - generic [ref=f6e20]:
+          - textbox "Password" [ref=f6e21]:
+            - /placeholder: ••••••••
+          - button [ref=f6e22]
+        - button "Forgot password?" [ref=f6e24]
+      - button "Log in" [disabled] [ref=f6e25]
+    - generic [ref=f6e27]:
+      - generic [ref=f6e29]: getlogit.app
+      - button "Connect to a different server" [ref=f6e30]
+  - region "Notifications alt+T"

@@ -1,0 +1,146 @@
+- generic [ref=f1e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f1e6]:
+    - generic [ref=f1e9]:
+      - generic [ref=f1e10]:
+        - link "LogIt" [ref=f1e11] [cursor=pointer]:
+          - /url: /
+        - tablist "Workspace" [ref=f1e16]:
+          - tab "Me" [ref=f1e17]
+          - tab "Coaching" [selected] [ref=f1e18]
+      - generic [ref=f1e19]:
+        - list [ref=f1e22]:
+          - listitem [ref=f1e23]:
+            - link "Today 2" [ref=f1e24] [cursor=pointer]:
+              - /url: /coaching
+              - generic [ref=f1e26]: Today
+              - generic [ref=f1e27]: "2"
+          - listitem [ref=f1e28]:
+            - link "Clients" [ref=f1e29] [cursor=pointer]:
+              - /url: /clients
+          - listitem [ref=f1e32]:
+            - link "Programs" [ref=f1e33] [cursor=pointer]:
+              - /url: /coaching/programs
+          - listitem [ref=f1e36]:
+            - link "Library" [ref=f1e37] [cursor=pointer]:
+              - /url: /coaching/library
+          - listitem [ref=f1e40]:
+            - link "Check-ins 1" [ref=f1e41] [cursor=pointer]:
+              - /url: /coaching/checkins
+              - generic [ref=f1e43]: Check-ins
+              - generic [ref=f1e44]: "1"
+          - listitem [ref=f1e45]:
+            - link "Messages" [ref=f1e46] [cursor=pointer]:
+              - /url: /messages
+        - generic [ref=f1e49]:
+          - generic [ref=f1e50]: Studio
+          - list [ref=f1e52]:
+            - listitem [ref=f1e53]:
+              - link "Invite links" [ref=f1e54] [cursor=pointer]:
+                - /url: /coaching/links
+        - generic [ref=f1e57]:
+          - generic [ref=f1e58]: A client's training
+          - generic [ref=f1e59]:
+            - generic [ref=f1e60]: Open a client's training
+            - combobox "Open a client's training" [ref=f1e61]:
+              - option "Choose a client…" [selected]
+              - option "Conor"
+              - option "Sarah"
+      - list [ref=f1e63]:
+        - listitem [ref=f1e64]:
+          - button "A Alex Studio · Account" [ref=f1e65]:
+            - generic [ref=f1e66]: A
+            - generic [ref=f1e67]:
+              - generic [ref=f1e68]: Alex
+              - generic [ref=f1e69]: Studio · Account
+      - button "Toggle Sidebar" [ref=f1e71]
+    - main [ref=f1e72]:
+      - main [ref=f1e73]:
+        - generic [ref=f1e461]:
+          - link "‹ Clients" [ref=f1e462] [cursor=pointer]:
+            - /url: /clients
+          - generic [ref=f1e463]:
+            - generic [ref=f1e464]:
+              - generic [aria-hidden] [ref=f1e465]: C
+              - generic [ref=f1e466]:
+                - heading "Conor" [level=1] [ref=f1e467]
+                - paragraph [ref=f1e468]: "@conor · client since November · Hypertrophy, week 5 of 8"
+            - generic [ref=f1e469]:
+              - button "Message" [ref=f1e470]
+              - button "Assign program" [ref=f1e471]
+          - tablist "Client" [ref=f1e472]:
+            - tab "Overview" [ref=f1e473]
+            - tab "Training" [ref=f1e474]
+            - tab "Nutrition" [ref=f1e475]
+            - tab "Habits" [ref=f1e476]
+            - tab "Check-ins 1" [ref=f1e477]:
+              - text: Check-ins
+              - generic [ref=f1e478]: "1"
+            - tab "Programs" [selected] [ref=f1e479]
+            - tab "Messages" [ref=f1e480]
+          - generic [ref=f1e481]:
+            - generic [ref=f1e482]:
+              - generic [ref=f1e483]:
+                - generic [ref=f1e484]:
+                  - generic [ref=f1e485]:
+                    - heading "Hypertrophy · their copy" [level=2] [ref=f1e486]
+                    - paragraph [ref=f1e487]: Started Mon, Oct 12 (they tapped Start) · week 5 of 8 · ends Dec 6
+                  - generic [ref=f1e488]:
+                    - link "Edit their copy" [ref=f1e489] [cursor=pointer]:
+                      - /url: /clients/94a08d74-03a4-4365-be5b-3757b934b863/programs/cprog_4al8667?u=conor
+                    - button "End program" [ref=f1e490]
+                - 'img "Sessions done per week: week 1 0 of 2, week 2 0 of 2, week 3 0 of 2, week 4 2 of 2, week 5 2 of 2, week 6 0 of 2, week 7 0 of 2, week 8 0 of 2" [ref=f1e491]':
+                  - generic [ref=f1e492]: W1 · 0/2
+                  - generic [ref=f1e494]: W2 · 0/2
+                  - generic [ref=f1e496]: W3 · 0/2
+                  - generic [ref=f1e498]: W4 · 2/2
+                  - generic [ref=f1e501]: W5 · 2/2
+                  - generic [ref=f1e504]: W6
+                  - generic [ref=f1e506]: W7
+                  - generic [ref=f1e508]: W8
+                - paragraph [ref=f1e510]:
+                  - text: Copied from your library's "Hypertrophy".
+                  - link "Open the library version" [ref=f1e511] [cursor=pointer]:
+                    - /url: /coaching/programs?id=cprog_1oelc6
+              - generic [ref=f1e512]:
+                - generic [ref=f1e513]:
+                  - heading "Swaps in their workouts" [level=2] [ref=f1e514]
+                  - generic [ref=f1e515]: Last 4 weeks · 3
+                - table [ref=f1e517]:
+                  - rowgroup [ref=f1e518]:
+                    - row [ref=f1e519]:
+                      - columnheader "Date" [ref=f1e520]
+                      - columnheader "Planned" [ref=f1e521]
+                      - columnheader "Did instead" [ref=f1e522]
+                      - columnheader "Why it was allowed" [ref=f1e523]
+                  - rowgroup [ref=f1e524]:
+                    - row [ref=f1e525]:
+                      - cell "Thu, Nov 12" [ref=f1e526]
+                      - cell "Squat" [ref=f1e527]
+                      - cell "Leg Press" [ref=f1e528]
+                      - cell "On your list" [ref=f1e529]
+                    - row [ref=f1e530]:
+                      - cell "Mon, Nov 9" [ref=f1e531]
+                      - cell "Bench Press" [ref=f1e532]
+                      - cell "Dumbbell Bench Press" [ref=f1e533]
+                      - cell "Same muscles" [ref=f1e534]
+                    - row [ref=f1e535]:
+                      - cell "Thu, Nov 5" [ref=f1e536]
+                      - cell "Romanian Deadlift" [ref=f1e537]
+                      - cell "Seated Leg Curl" [ref=f1e538]
+                      - cell "Same muscles" [ref=f1e539]
+            - generic [ref=f1e540]:
+              - generic [ref=f1e541]:
+                - heading "Exercise swaps for Conor" [level=2] [ref=f1e542]
+                - generic [ref=f1e543]: During workouts from your programs
+                - combobox "During workouts from your programs" [ref=f1e544]:
+                  - 'option "Your default: Same muscles only"'
+                  - option "Any exercise"
+                  - option "Same muscles only"
+                  - option "Only my list" [selected]
+                - paragraph [ref=f1e545]: Set differently from your default. Exercises without alternatives can't be swapped; they'll see "Ask to swap".
+                - button "Back to your default" [ref=f1e546]
+              - generic [ref=f1e547]:
+                - heading "Finished or ended" [level=2] [ref=f1e548]
+                - paragraph [ref=f1e549]: None yet.
+  - generic [ref=f1e299]: LogIt

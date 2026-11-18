@@ -1,0 +1,33 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e69]:
+    - generic [ref=f2e70]:
+      - generic [ref=f2e71]:
+        - generic [aria-hidden] [ref=f2e72]: D
+        - generic [ref=f2e73]:
+          - heading "Dara Byrne wants to coach you" [level=1] [ref=f2e74]
+          - paragraph [ref=f2e75]: "@daracoach on LogIt"
+      - list "What happens next" [ref=f2e103]:
+        - listitem [ref=f2e104]:
+          - generic [ref=f2e105]: ✓
+          - text: "Request sent: Dara Byrne will say yes or no"
+        - listitem [ref=f2e106]:
+          - generic [ref=f2e107]: "2"
+          - text: "Get the app: you'll see them there once they accept"
+        - listitem [ref=f2e108]:
+          - generic [ref=f2e109]: "3"
+          - text: Pick your training days and start week 1
+    - generic [ref=f2e110]:
+      - heading "Get Logit on your phone" [level=2] [ref=f2e111]
+      - generic [ref=f2e112]:
+        - img "QR code that opens Logit on Google Play" [ref=f2e114]
+        - generic [ref=f2e118]:
+          - generic [ref=f2e119]:
+            - text: Scan with your phone's camera to install Logit, then sign in as
+            - strong [ref=f2e120]: "@samcoach"
+            - text: .
+          - link "Or open Google Play" [ref=f2e121] [cursor=pointer]:
+            - /url: https://play.google.com/store/apps/details?id=ie.logit.app
+      - generic [ref=f2e122]: Dara Byrne's program, check-ins and messages all live in the app.
+    - paragraph [ref=f2e102]: Coaching works on the free plan. Everything happens in the LogIt app.
+  - generic [ref=f2e43]: Welcome · LogIt

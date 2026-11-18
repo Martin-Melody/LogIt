@@ -1,0 +1,195 @@
+- generic [ref=f1e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f1e6]:
+    - generic [ref=f1e9]:
+      - link "LogIt" [ref=f1e11] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f1e16]:
+        - list [ref=f1e19]:
+          - listitem [ref=f1e20]:
+            - link "Overview" [ref=f1e21] [cursor=pointer]:
+              - /url: /
+        - generic [ref=f1e24]:
+          - generic [ref=f1e25]: Training
+          - list [ref=f1e27]:
+            - listitem [ref=f1e28]:
+              - link "Sessions" [ref=f1e29] [cursor=pointer]:
+                - /url: /sessions
+            - listitem [ref=f1e32]:
+              - link "Progress" [ref=f1e33] [cursor=pointer]:
+                - /url: /progress
+            - listitem [ref=f1e36]:
+              - link "Plan" [ref=f1e37] [cursor=pointer]:
+                - /url: /plan
+            - listitem [ref=f1e40]:
+              - link "Library" [ref=f1e41] [cursor=pointer]:
+                - /url: /library
+        - generic [ref=f1e44]:
+          - generic [ref=f1e45]: Body
+          - list [ref=f1e47]:
+            - listitem [ref=f1e48]:
+              - link "Nutrition" [ref=f1e49] [cursor=pointer]:
+                - /url: /nutrition
+            - listitem [ref=f1e52]:
+              - link "Habits & goals" [ref=f1e53] [cursor=pointer]:
+                - /url: /habits
+        - generic [ref=f1e56]:
+          - generic [ref=f1e57]: People
+          - list [ref=f1e59]:
+            - listitem [ref=f1e60]:
+              - link "Social" [ref=f1e61] [cursor=pointer]:
+                - /url: /social
+        - generic [ref=f1e64]:
+          - generic [ref=f1e65]: Extras
+          - list [ref=f1e67]:
+            - listitem [ref=f1e68]:
+              - link "Plugins" [ref=f1e69] [cursor=pointer]:
+                - /url: /plugins
+        - generic [ref=f1e72]:
+          - generic [ref=f1e73]: Coach
+          - list [ref=f1e75]:
+            - listitem [ref=f1e76]:
+              - link "My coach" [ref=f1e77] [cursor=pointer]:
+                - /url: /my-coach
+      - list [ref=f1e81]:
+        - listitem [ref=f1e82]:
+          - button "A Alex Pro · Account" [ref=f1e83]:
+            - generic [ref=f1e84]: A
+            - generic [ref=f1e85]:
+              - generic [ref=f1e86]: Alex
+              - generic [ref=f1e87]: Pro · Account
+      - button "Toggle Sidebar" [ref=f1e89]
+    - main [ref=f1e90]:
+      - main [ref=f1e91]:
+        - generic [ref=f1e113]:
+          - generic [ref=f1e114]:
+            - generic [ref=f1e115]:
+              - link "‹ My plugins" [ref=f1e116] [cursor=pointer]:
+                - /url: /plugins?tab=mine
+              - heading "Week recap" [level=1] [ref=f1e117]
+              - generic [ref=f1e118]: Draft · saved
+            - generic [ref=f1e119]:
+              - button "Download files" [ref=f1e120]
+              - button "Try on my phone" [ref=f1e121]
+              - button "Publish…" [ref=f1e122]
+          - generic [ref=f1e123]:
+            - complementary [ref=f1e124]:
+              - heading "About this plugin" [level=2] [ref=f1e125]
+              - generic [ref=f1e126]:
+                - generic [ref=f1e127]: Name
+                - textbox "Name" [ref=f1e128]: Week recap
+              - generic [ref=f1e129]:
+                - generic [ref=f1e130]: Type
+                - generic [ref=f1e131]: Widget
+              - generic [ref=f1e132]:
+                - generic [ref=f1e133]: Description
+                - textbox "Description" [ref=f1e134]
+              - group "What it gets" [ref=f1e135]:
+                - generic "Sessions from about the last 200 days, with sets" [ref=f1e137]:
+                  - checkbox "Recent workouts" [checked] [ref=f1e138]
+                  - text: Recent workouts
+                - generic "Your exercises and the muscles they work" [ref=f1e139]:
+                  - checkbox "Exercise list" [ref=f1e140]
+                  - text: Exercise list
+                - generic "Whether a workout is running, and today's planned day" [ref=f1e141]:
+                  - checkbox "The session you're in" [ref=f1e142]
+                  - text: The session you're in
+                - generic "The split day planned for today and its exercises" [ref=f1e143]:
+                  - checkbox "Today's plan" [ref=f1e144]
+                  - text: Today's plan
+                - generic "The next target for each exercise you track" [ref=f1e145]:
+                  - checkbox "Progression targets" [ref=f1e146]
+                  - text: Progression targets
+                - generic "Today's calories and macros against your targets" [ref=f1e147]:
+                  - checkbox "Nutrition" [ref=f1e148]
+                  - text: Nutrition
+                - generic "Your current weight, trend and goal" [ref=f1e149]:
+                  - checkbox "Body weight" [ref=f1e150]
+                  - text: Body weight
+                - generic "Your habits, whether they're done today, and streaks" [ref=f1e151]:
+                  - checkbox "Habits" [ref=f1e152]
+                  - text: Habits
+                - generic "Drills you've logged, with best holds and reps" [ref=f1e153]:
+                  - checkbox "Mobility" [ref=f1e154]
+                  - text: Mobility
+              - paragraph [ref=f1e155]: This is the needs list in the code; ticking here changes it. People see it before they install.
+              - paragraph [ref=f1e156]: com.alex.week-recap
+              - button "Delete plugin" [ref=f1e157]
+            - generic [ref=f1e158]:
+              - generic [ref=f1e159]:
+                - tablist "File" [ref=f1e160]:
+                  - tab "bundle.js" [selected] [ref=f1e161]
+                  - tab "manifest.json" [ref=f1e162]
+                - generic [ref=f1e163]:
+                  - generic [ref=f1e164] [cursor=pointer]: Upload files…
+                  - button "Upload files…" [ref=f1e165]
+                  - link "Docs" [ref=f1e166] [cursor=pointer]:
+                    - /url: https://getlogit.app/docs/plugins/widgets
+              - generic [ref=f1e167]: Code
+              - textbox "Code" [ref=f1e168]: "export const pluginBundle = { formatVersion: 1, pluginId: \"com.alex.week-recap\", family: \"widget\", entryExport: \"widget\", }; // A card for the home screen and the dashboard's Overview. compute() gets only what // \"needs\" asks for and returns what to show; LogIt draws it. export const widget = { id: \"com.alex.week-recap\", name: \"Week recap\", description: \"Sessions and sets in the last 7 days.\", needs: [\"workouts\"], compute(input) { const since = input.now - 7 * 24 * 60 * 60 * 1000; let sessions = 0; let sets = 0; for (const w of input.workouts ?? []) { if (!w.endedAtMs || w.endedAtMs < since) continue; sessions++; for (const ex of w.exercises) sets += ex.sets.length; } if (sessions === 0) { return { title: \"Week recap\", body: [], empty: { text: \"Nothing logged in the last 7 days.\", action: { startEmptyWorkout: true } }, }; } return { title: \"Week recap\", subtitle: \"Last 7 days\", body: [{ kind: \"stat-grid\", stats: [ { label: \"Sessions\", value: String(sessions) }, { label: \"Sets\", value: String(sets) }, ], }], action: { navigate: \"/sessions\" }, }; }, };"
+            - complementary [ref=f1e169]:
+              - generic [ref=f1e170]:
+                - generic [ref=f1e171]:
+                  - heading "Preview" [level=2] [ref=f1e172]
+                  - group "Preview data" [ref=f1e173]:
+                    - button "My data" [ref=f1e174]
+                    - button "Sample" [active] [pressed] [ref=f1e175]
+                    - button "Empty" [ref=f1e176]
+                - generic [ref=f1e178]:
+                  - generic [ref=f1e181]:
+                    - heading "Week recap" [level=3] [ref=f1e182]
+                    - paragraph [ref=f1e221]: Last 7 days
+                  - generic [ref=f1e222]:
+                    - button "Week recap" [ref=f1e223] [cursor=pointer]
+                    - generic [ref=f1e225]:
+                      - generic [ref=f1e226]:
+                        - paragraph [ref=f1e227]: "3"
+                        - paragraph [ref=f1e228]: Sessions
+                      - generic [ref=f1e229]:
+                        - paragraph [ref=f1e230]: "13"
+                        - paragraph [ref=f1e231]: Sets
+                - paragraph [ref=f1e185]: Drawn by the same parts as the Overview and the phone.
+              - generic [ref=f1e186]:
+                - heading "Checks" [level=2] [ref=f1e187]
+                - generic [ref=f1e188]:
+                  - generic [aria-hidden] [ref=f1e189]: ✓
+                  - generic [ref=f1e190]:
+                    - generic [ref=f1e191]: "Passed:"
+                    - text: One file, no imports
+                - generic [ref=f1e192]:
+                  - generic [aria-hidden] [ref=f1e193]: ✓
+                  - generic [ref=f1e194]:
+                    - generic [ref=f1e195]: "Passed:"
+                    - text: Loads in the sandbox
+                - generic [ref=f1e196]:
+                  - generic [aria-hidden] [ref=f1e197]: ✓
+                  - generic [ref=f1e198]:
+                    - generic [ref=f1e199]: "Passed:"
+                    - text: Its id matches the plugin
+                - generic [ref=f1e200]:
+                  - generic [aria-hidden] [ref=f1e201]: ✓
+                  - generic [ref=f1e202]:
+                    - generic [ref=f1e203]: "Passed:"
+                    - text: Asks only for data LogIt has
+                - generic [ref=f1e204]:
+                  - generic [aria-hidden] [ref=f1e205]: ✓
+                  - generic [ref=f1e206]:
+                    - generic [ref=f1e207]: "Passed:"
+                    - text: Has compute() and it runs
+                - generic [ref=f1e208]:
+                  - generic [aria-hidden] [ref=f1e209]: ✓
+                  - generic [ref=f1e210]:
+                    - generic [ref=f1e211]: "Passed:"
+                    - text: Uses only card parts LogIt knows
+                - generic [ref=f1e212]:
+                  - generic [aria-hidden] [ref=f1e213]: ✓
+                  - generic [ref=f1e214]:
+                    - generic [ref=f1e215]: "Passed:"
+                    - text: Finishes in 6 ms (limit 300 ms)
+                - generic [ref=f1e216]:
+                  - generic [aria-hidden] [ref=f1e217]: ✓
+                  - generic [ref=f1e218]:
+                    - generic [ref=f1e219]: "Passed:"
+                    - text: Works with nothing logged
+                - paragraph [ref=f1e220]: The same ground the registry checks cover, so publishing has no surprises.
+  - generic [ref=f1e112]: LogIt

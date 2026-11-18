@@ -1,0 +1,197 @@
+- generic [active] [ref=f14e1]:
+  - generic [ref=f14e2]:
+    - region "Notifications alt+T"
+    - generic [ref=f14e6]:
+      - generic [ref=f14e9]:
+        - link "LogIt" [ref=f14e11] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f14e16]:
+          - list [ref=f14e19]:
+            - listitem [ref=f14e20]:
+              - link "Overview" [ref=f14e21] [cursor=pointer]:
+                - /url: /
+          - generic [ref=f14e24]:
+            - generic [ref=f14e25]: Training
+            - list [ref=f14e27]:
+              - listitem [ref=f14e28]:
+                - link "Sessions" [ref=f14e29] [cursor=pointer]:
+                  - /url: /sessions
+              - listitem [ref=f14e32]:
+                - link "Progress" [ref=f14e33] [cursor=pointer]:
+                  - /url: /progress
+              - listitem [ref=f14e36]:
+                - link "Plan" [ref=f14e37] [cursor=pointer]:
+                  - /url: /plan
+              - listitem [ref=f14e40]:
+                - link "Library" [ref=f14e41] [cursor=pointer]:
+                  - /url: /library
+          - generic [ref=f14e44]:
+            - generic [ref=f14e45]: Body
+            - list [ref=f14e47]:
+              - listitem [ref=f14e48]:
+                - link "Nutrition" [ref=f14e49] [cursor=pointer]:
+                  - /url: /nutrition
+              - listitem [ref=f14e52]:
+                - link "Habits & goals" [ref=f14e53] [cursor=pointer]:
+                  - /url: /habits
+          - generic [ref=f14e56]:
+            - generic [ref=f14e57]: People
+            - list [ref=f14e59]:
+              - listitem [ref=f14e60]:
+                - link "Social" [ref=f14e61] [cursor=pointer]:
+                  - /url: /social
+          - generic [ref=f14e64]:
+            - generic [ref=f14e65]: Extras
+            - list [ref=f14e67]:
+              - listitem [ref=f14e68]:
+                - link "Plugins" [ref=f14e69] [cursor=pointer]:
+                  - /url: /plugins
+          - generic [ref=f14e72]:
+            - generic [ref=f14e73]: Coach
+            - list [ref=f14e75]:
+              - listitem [ref=f14e76]:
+                - link "My coach" [ref=f14e77] [cursor=pointer]:
+                  - /url: /my-coach
+        - list [ref=f14e81]:
+          - listitem [ref=f14e82]:
+            - button "A Alex Pro · Account" [ref=f14e83]:
+              - generic [ref=f14e84]: A
+              - generic [ref=f14e85]:
+                - generic [ref=f14e86]: Alex
+                - generic [ref=f14e87]: Pro · Account
+        - button "Toggle Sidebar" [ref=f14e89]
+      - main [ref=f14e90]:
+        - main [ref=f14e91]:
+          - generic [ref=f14e93]:
+            - generic [ref=f14e94]:
+              - generic [ref=f14e95]:
+                - link "‹ My plugins" [ref=f14e96] [cursor=pointer]:
+                  - /url: /plugins?tab=mine
+                - heading "Week recap" [level=1] [ref=f14e97]
+                - generic [ref=f14e98]: Draft · saved
+                - generic [ref=f14e99]: Listed 1.0.0
+              - generic [ref=f14e100]:
+                - button "Download files" [ref=f14e101]
+                - button "Try on my phone" [ref=f14e102]
+                - button "Publish…" [ref=f14e103]
+            - generic [ref=f14e104]:
+              - complementary [ref=f14e105]:
+                - heading "About this plugin" [level=2] [ref=f14e106]
+                - generic [ref=f14e107]:
+                  - generic [ref=f14e108]: Name
+                  - textbox "Name" [ref=f14e109]: Week recap
+                - generic [ref=f14e110]:
+                  - generic [ref=f14e111]: Type
+                  - generic [ref=f14e112]: Widget
+                - generic [ref=f14e113]:
+                  - generic [ref=f14e114]: Description
+                  - textbox "Description" [ref=f14e115]
+                - group "What it gets" [ref=f14e116]:
+                  - generic "Sessions from about the last 200 days, with sets" [ref=f14e118]:
+                    - checkbox "Recent workouts" [checked] [ref=f14e119]
+                    - text: Recent workouts
+                  - generic "Your exercises and the muscles they work" [ref=f14e120]:
+                    - checkbox "Exercise list" [ref=f14e121]
+                    - text: Exercise list
+                  - generic "Whether a workout is running, and today's planned day" [ref=f14e122]:
+                    - checkbox "The session you're in" [ref=f14e123]
+                    - text: The session you're in
+                  - generic "The split day planned for today and its exercises" [ref=f14e124]:
+                    - checkbox "Today's plan" [ref=f14e125]
+                    - text: Today's plan
+                  - generic "The next target for each exercise you track" [ref=f14e126]:
+                    - checkbox "Progression targets" [ref=f14e127]
+                    - text: Progression targets
+                  - generic "Today's calories and macros against your targets" [ref=f14e128]:
+                    - checkbox "Nutrition" [ref=f14e129]
+                    - text: Nutrition
+                  - generic "Your current weight, trend and goal" [ref=f14e130]:
+                    - checkbox "Body weight" [ref=f14e131]
+                    - text: Body weight
+                  - generic "Your habits, whether they're done today, and streaks" [ref=f14e132]:
+                    - checkbox "Habits" [ref=f14e133]
+                    - text: Habits
+                  - generic "Drills you've logged, with best holds and reps" [ref=f14e134]:
+                    - checkbox "Mobility" [ref=f14e135]
+                    - text: Mobility
+                - paragraph [ref=f14e136]: This is the needs list in the code; ticking here changes it. People see it before they install.
+                - paragraph [ref=f14e137]: com.alex.week-recap
+                - button "Delete plugin" [ref=f14e138]
+              - generic [ref=f14e139]:
+                - generic [ref=f14e140]:
+                  - tablist "File" [ref=f14e141]:
+                    - tab "bundle.js" [selected] [ref=f14e142]
+                    - tab "manifest.json" [ref=f14e143]
+                  - generic [ref=f14e144]:
+                    - generic [ref=f14e145] [cursor=pointer]: Upload files…
+                    - button "Upload files…" [ref=f14e146]
+                    - link "Docs" [ref=f14e147] [cursor=pointer]:
+                      - /url: https://getlogit.app/docs/plugins/widgets
+                - generic [ref=f14e148]: Code
+                - textbox "Code" [ref=f14e149]: "export const pluginBundle = { formatVersion: 1, pluginId: \"com.alex.week-recap\", family: \"widget\", entryExport: \"widget\", }; // A card for the home screen and the dashboard's Overview. compute() gets only what // \"needs\" asks for and returns what to show; LogIt draws it. export const widget = { id: \"com.alex.week-recap\", name: \"Week recap\", description: \"Sessions and sets in the last 7 days.\", needs: [\"workouts\"], compute(input) { const since = input.now - 7 * 24 * 60 * 60 * 1000; let sessions = 0; let sets = 0; for (const w of input.workouts ?? []) { if (!w.endedAtMs || w.endedAtMs < since) continue; sessions++; for (const ex of w.exercises) sets += ex.sets.length; } if (sessions === 0) { return { title: \"Week recap\", body: [], empty: { text: \"Nothing logged in the last 7 days.\", action: { startEmptyWorkout: true } }, }; } return { title: \"Week recap\", subtitle: \"Last 7 days\", body: [{ kind: \"stat-grid\", stats: [ { label: \"Sessions\", value: String(sessions) }, { label: \"Sets\", value: String(sets) }, ], }], action: { navigate: \"/sessions\" }, }; }, };"
+              - complementary [ref=f14e150]:
+                - generic [ref=f14e151]:
+                  - generic [ref=f14e152]:
+                    - heading "Preview" [level=2] [ref=f14e153]
+                    - group "Preview data" [ref=f14e154]:
+                      - button "My data" [pressed] [ref=f14e155]
+                      - button "Sample" [ref=f14e156]
+                      - button "Empty" [ref=f14e157]
+                  - generic [ref=f14e159]:
+                    - heading "Week recap" [level=3] [ref=f14e163]
+                    - button "Nothing logged in the last 7 days." [ref=f14e165]
+                  - paragraph [ref=f14e166]: Drawn by the same parts as the Overview and the phone.
+                - generic [ref=f14e167]:
+                  - heading "Checks" [level=2] [ref=f14e168]
+                  - generic [ref=f14e169]:
+                    - generic [aria-hidden] [ref=f14e170]: ✓
+                    - generic [ref=f14e171]:
+                      - generic [ref=f14e172]: "Passed:"
+                      - text: One file, no imports
+                  - generic [ref=f14e173]:
+                    - generic [aria-hidden] [ref=f14e174]: ✓
+                    - generic [ref=f14e175]:
+                      - generic [ref=f14e176]: "Passed:"
+                      - text: Loads in the sandbox
+                  - generic [ref=f14e177]:
+                    - generic [aria-hidden] [ref=f14e178]: ✓
+                    - generic [ref=f14e179]:
+                      - generic [ref=f14e180]: "Passed:"
+                      - text: Its id matches the plugin
+                  - generic [ref=f14e181]:
+                    - generic [aria-hidden] [ref=f14e182]: ✓
+                    - generic [ref=f14e183]:
+                      - generic [ref=f14e184]: "Passed:"
+                      - text: Asks only for data LogIt has
+                  - generic [ref=f14e185]:
+                    - generic [aria-hidden] [ref=f14e186]: ✓
+                    - generic [ref=f14e187]:
+                      - generic [ref=f14e188]: "Passed:"
+                      - text: Has compute() and it runs
+                  - generic [ref=f14e189]:
+                    - generic [aria-hidden] [ref=f14e190]: ✓
+                    - generic [ref=f14e191]:
+                      - generic [ref=f14e192]: "Passed:"
+                      - text: Uses only card parts LogIt knows
+                  - generic [ref=f14e193]:
+                    - generic [aria-hidden] [ref=f14e194]: ✓
+                    - generic [ref=f14e195]:
+                      - generic [ref=f14e196]: "Passed:"
+                      - text: Finishes in 3 ms (limit 300 ms)
+                  - generic [ref=f14e197]:
+                    - generic [aria-hidden] [ref=f14e198]: ✓
+                    - generic [ref=f14e199]:
+                      - generic [ref=f14e200]: "Passed:"
+                      - text: Works with nothing logged
+                  - paragraph [ref=f14e201]: The same ground the registry checks cover, so publishing has no surprises.
+  - generic [ref=f14e205]:
+    - generic [ref=f14e206]: "Failed to load url /home/martin/Projects/logit/apps/clients/logit-web/src/routes/plugins/build/[id]/+page.svelte (resolved id: /home/martin/Projects/logit/apps/clients/logit-web/src/routes/plugins/build/[id]/+page.svelte) in /home/martin/Projects/logit/apps/clients/logit-web/.svelte-kit/generated/client/nodes/34.js. Does the file exist?"
+    - generic [ref=f14e207]: at loadAndTransform (file:///home/martin/Projects/logit/node_modules/vite/dist/node/chunks/config.js:22663:33) at async transformRequest (file:///home/martin/Projects/logit/node_modules/@sveltejs/vite-plugin-svelte/src/plugins/hot-update.js:106:8) at async MinimalPluginContext.handler (file:///home/martin/Projects/logit/node_modules/@sveltejs/vite-plugin-svelte/src/plugins/hot-update.js:112:6) at async handleHMRUpdate (file:///home/martin/Projects/logit/node_modules/vite/dist/node/chunks/config.js:26012:28) at async onHMRUpdate (file:///home/martin/Projects/logit/node_modules/vite/dist/node/chunks/config.js:25556:35) at async onFileAddUnlink (file:///home/martin/Projects/logit/node_modules/vite/dist/node/chunks/config.js:25574:3)
+    - generic [ref=f14e208]:
+      - text: Click outside, press Esc key, or fix the code to dismiss.You can also disable this overlay by setting
+      - code [ref=f14e209]: server.hmr.overlay
+      - text: to
+      - code [ref=f14e210]: "false"
+      - text: in
+      - code [ref=f14e211]: vite.config.ts
+      - text: .

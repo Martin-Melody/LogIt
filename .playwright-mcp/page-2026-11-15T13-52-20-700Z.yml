@@ -1,0 +1,55 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - heading "Workout" [level=1]
+        - generic "Elapsed workout time": 0:15
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button "Drag to reorder"
+                  - button "Expand"
+                  - button "Sled push intervals — rename":
+                    - generic: Sled push intervals
+                  - button "More actions for Sled push intervals"
+          - generic:
+            - button "+ Session note"
+          - generic:
+            - button "Add block"
+          - generic:
+            - generic:
+              - button "Finish workout"
+              - button "Discard workout"
+      - contentinfo:
+        - navigation "Main navigation":
+          - link "Home":
+            - /url: /
+          - link "Resume session":
+            - /url: /session/current
+            - generic: Workout
+          - link "Profile":
+            - /url: /profile
+          - button "More"
+    - region "Notifications alt+T"
+    - generic: LogIt
+  - dialog "Add block" [ref=f5e160]:
+    - generic [ref=f5e161]:
+      - heading "Add block" [level=2] [ref=f5e162]
+      - generic [ref=f5e163]: Choose what to track.
+    - generic [ref=f5e164]:
+      - button [active] [ref=f5e165]:
+        - generic [ref=f5e167]:
+          - paragraph [ref=f5e168]: Strength exercise
+          - paragraph [ref=f5e169]: Track sets with reps and weight.
+      - button [ref=f5e170]:
+        - generic [ref=f5e172]:
+          - paragraph [ref=f5e173]: Cardio / Endurance
+          - paragraph [ref=f5e174]: Track intervals with duration and distance.
+      - button [ref=f5e175]:
+        - generic [ref=f5e177]:
+          - paragraph [ref=f5e178]: Mobility / Stretching
+          - paragraph [ref=f5e179]: Progressively overload holds or reps, per side.
+    - button "Close" [ref=f5e180]

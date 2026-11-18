@@ -1,0 +1,203 @@
+- generic:
+  - generic:
+    - region "Notifications alt+T"
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - link "LogIt":
+                - /url: /
+              - tablist "Workspace":
+                - tab "Me" [selected]
+                - tab "Coaching · 3"
+            - generic:
+              - generic:
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Overview":
+                        - /url: /
+              - generic:
+                - generic: Training
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Sessions":
+                        - /url: /sessions
+                    - listitem:
+                      - link "Progress":
+                        - /url: /progress
+                    - listitem:
+                      - link "Plan":
+                        - /url: /plan
+                    - listitem:
+                      - link "Library":
+                        - /url: /library
+              - generic:
+                - generic: Body
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Nutrition":
+                        - /url: /nutrition
+                    - listitem:
+                      - link "Habits & goals":
+                        - /url: /habits
+              - generic:
+                - generic: People
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Social":
+                        - /url: /social
+              - generic:
+                - generic: Extras
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "Insights":
+                        - /url: /insights
+                    - listitem:
+                      - link "Plugins":
+                        - /url: /plugins
+              - generic:
+                - generic: Coach
+                - generic:
+                  - list:
+                    - listitem:
+                      - link "My coach":
+                        - /url: /my-coach
+            - generic:
+              - list:
+                - listitem:
+                  - button "Guide 1 of 18":
+                    - generic: Guide
+                    - generic: 1 of 18
+                - listitem:
+                  - link "Help and docs":
+                    - /url: http://192.168.30.100:5210/docs
+                - listitem:
+                  - button "A Alex Studio · Account":
+                    - generic: A
+                    - generic:
+                      - generic: Alex
+                      - generic: Studio · Account
+            - button "Toggle Sidebar"
+      - main:
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - paragraph: Monday, November 16
+                  - heading "This week" [level=1]
+                - button "Edit layout"
+              - region "Welcome to Pro, Alex":
+                - generic:
+                  - heading "Welcome to Pro, Alex" [level=2]
+                  - paragraph: Workouts from your phone sync here. The walkthrough shows each part of the dashboard on your own data, one chapter at a time. 8 chapters, about 17 minutes in all. Stop whenever you like; Guide remembers where you were.
+                - generic:
+                  - button "Start the walkthrough"
+                  - button "Hide this"
+              - generic:
+                - list:
+                  - listitem "Streak":
+                    - generic:
+                      - heading "Streak" [level=2]
+                    - generic:
+                      - generic: 0 weeks
+                      - generic: "Best: 0 weeks"
+                  - listitem "Sessions this week":
+                    - generic:
+                      - heading "Sessions this week" [level=2]
+                    - generic: 0 of 3
+                  - listitem "Volume this week":
+                    - generic:
+                      - heading "Volume this week" [level=2]
+                    - generic:
+                      - generic: 0 t
+                      - generic: Nothing last week to compare
+                  - listitem "Body weight":
+                    - generic:
+                      - heading "Body weight" [level=2]
+                    - paragraph: Log your weight in the app to see the trend.
+                  - listitem "This week":
+                    - generic:
+                      - heading "This week" [level=2]
+                    - generic:
+                      - generic:
+                        - generic: Today
+                        - generic: Tue
+                        - generic: Wed
+                        - generic: Thu
+                        - generic: Fri
+                        - generic: Sat
+                        - generic: Sun
+                      - paragraph: Pick an active split in the app to see what's planned.
+                  - listitem "Goals":
+                    - generic:
+                      - heading "Goals" [level=2]
+                    - paragraph: No goals yet. Set them in the app under Progress › Goals.
+                  - listitem "Weekly volume":
+                    - generic:
+                      - heading "Weekly volume" [level=2]
+                    - generic:
+                      - img "Weekly volume for the last 12 weeks, this week 0 t":
+                        - 'generic "Aug 31: 0 t"'
+                        - 'generic "Sep 7: 0 t"'
+                        - 'generic "Sep 14: 0 t"'
+                        - 'generic "Sep 21: 0 t"'
+                        - 'generic "Sep 28: 0 t"'
+                        - 'generic "Oct 5: 0 t"'
+                        - 'generic "Oct 12: 0 t"'
+                        - 'generic "Oct 19: 0 t"'
+                        - 'generic "Oct 26: 0 t"'
+                        - 'generic "Nov 2: 0 t"'
+                        - 'generic "Nov 9: 0 t"'
+                        - 'generic "Nov 16: 0 t"'
+                      - generic:
+                        - generic: Aug 31
+                        - generic: This week (so far)
+                  - listitem "Recent records":
+                    - generic:
+                      - heading "Recent records" [level=2]
+                    - paragraph: No records yet. Beat a previous best and it shows up here.
+                  - listitem "Recent sessions":
+                    - generic:
+                      - heading "Recent sessions" [level=2]
+                    - paragraph: No workouts synced yet.
+                  - listitem "Habits this week":
+                    - generic:
+                      - heading "Habits this week" [level=2]
+                    - paragraph: No habits yet. Add them in the app.
+    - generic: LogIt
+  - dialog "Practise on sample clients first?" [ref=f11e29]:
+    - generic [ref=f11e30]:
+      - paragraph [ref=f11e31]: Studio walkthrough
+      - heading "Practise on sample clients first?" [level=2] [ref=f11e32]
+      - generic [ref=f11e33]: "The walkthrough has you do everything for real: make an invite link, build a program, set a check-in, reply to messages. Three sample clients give you someone to do it with. They answer on their own, a few seconds after you act."
+    - list [ref=f11e34]:
+      - listitem [ref=f11e35]:
+        - generic [ref=f11e36]: "N"
+        - generic [ref=f11e37]:
+          - generic [ref=f11e38]: Niamh Sample
+          - paragraph [ref=f11e39]: New. Asks to join through the first invite link you make, then starts the program you give her and logs a workout.
+      - listitem [ref=f11e40]:
+        - generic [ref=f11e41]: C
+        - generic [ref=f11e42]:
+          - generic [ref=f11e43]: Conor Sample
+          - paragraph [ref=f11e44]: Already your client, with 4 weeks of workouts, food and weight. Fills in your check-ins and answers your messages. His knee is bothering him.
+      - listitem [ref=f11e45]:
+        - generic [ref=f11e46]: D
+        - generic [ref=f11e47]:
+          - generic [ref=f11e48]: Dara Sample
+          - paragraph [ref=f11e49]: Shares training only, so you see what a client's privacy switches look like from your side.
+    - list [ref=f11e50]:
+      - listitem [ref=f11e51]: Marked Sample everywhere. They can't sign in, and never show up in social, search, payments or your client count.
+      - listitem [ref=f11e52]: They stay until you remove them (Clients › Sandbox), and you can add them back any time.
+    - generic [ref=f11e53]:
+      - button "Use the sample clients" [active] [ref=f11e54]
+      - button "I'll use my real clients" [ref=f11e55]
+      - button "Not now" [ref=f11e56]
+    - button "Close" [ref=f11e57]

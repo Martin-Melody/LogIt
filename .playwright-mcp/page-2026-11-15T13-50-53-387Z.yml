@@ -1,0 +1,67 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e6]:
+    - banner [ref=f2e7]:
+      - button "Back" [ref=f2e8]
+      - generic [ref=f2e10]: 90/90 hip switches (2)
+      - link "Notifications" [ref=f2e12] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f2e14]:
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]:
+          - generic [ref=f2e18]: Name
+          - textbox "Name" [ref=f2e19]: 90/90 hip switches (2)
+        - generic [ref=f2e20]:
+          - generic [ref=f2e21]: Body area
+          - combobox "Body area" [ref=f2e22]:
+            - option "neck"
+            - option "shoulders"
+            - option "t-spine"
+            - option "lower back"
+            - option "wrists"
+            - option "hips" [selected]
+            - option "hip flexors"
+            - option "glutes"
+            - option "hamstrings"
+            - option "quads"
+            - option "adductors"
+            - option "calves"
+            - option "ankles"
+            - option "full body"
+        - generic [ref=f2e23]:
+          - generic [ref=f2e24]: Measured by
+          - generic [ref=f2e25]:
+            - button "Hold" [ref=f2e26]
+            - button "Reps" [pressed] [ref=f2e27]
+        - generic [ref=f2e28]:
+          - checkbox "Each side separately" [ref=f2e29]
+          - text: Each side separately
+        - generic [ref=f2e30]:
+          - generic [ref=f2e31]: Cues
+          - generic [ref=f2e32]:
+            - generic [ref=f2e33]:
+              - textbox "Cue 1" [ref=f2e34]:
+                - /placeholder: e.g. Elbows under the bar
+                - text: Sit tall
+              - button "Remove cue 1" [ref=f2e35]
+            - button "Add cue" [ref=f2e37]
+        - generic [ref=f2e39]:
+          - generic [ref=f2e40]: Notes
+          - textbox "Notes" [ref=f2e41]
+        - generic [ref=f2e42]:
+          - button "Delete" [ref=f2e43]
+          - button "Save" [ref=f2e45]
+        - paragraph [ref=f2e46]: Deleting it keeps it in past workouts.
+    - contentinfo [ref=f2e47]:
+      - navigation "Main navigation" [ref=f2e48]:
+        - link "Home" [ref=f2e49] [cursor=pointer]:
+          - /url: /
+        - link "Library" [ref=f2e52] [cursor=pointer]:
+          - /url: /exercises
+        - link "Start session" [ref=f2e55] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f2e59]: Start
+        - link "Profile" [ref=f2e60] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f2e63]
+  - region "Notifications alt+T"
+  - generic [ref=f2e66]: LogIt

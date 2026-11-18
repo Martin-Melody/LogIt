@@ -1,0 +1,32 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e69]:
+    - generic [ref=f2e70]:
+      - generic [ref=f2e71]:
+        - generic [aria-hidden] [ref=f2e72]: D
+        - generic [ref=f2e73]:
+          - heading "Dara Byrne wants to coach you" [level=1] [ref=f2e74]
+          - paragraph [ref=f2e75]: "@daracoach on LogIt"
+      - paragraph [ref=f2e76]: Pick what Dara Byrne can see. You can change this any time in My coach.
+      - generic [ref=f2e77]:
+        - generic [ref=f2e78]:
+          - generic [ref=f2e79]: Workouts
+          - switch "Workouts" [checked] [ref=f2e80]
+        - generic [ref=f2e82]:
+          - generic [ref=f2e83]: Nutrition diary
+          - switch "Nutrition diary" [checked] [ref=f2e84]
+        - generic [ref=f2e86]:
+          - generic [ref=f2e87]: Body weight
+          - switch "Body weight" [checked] [ref=f2e88]
+        - generic [ref=f2e90]:
+          - generic [ref=f2e91]: Habits
+          - switch "Habits" [checked] [ref=f2e92]
+        - generic [ref=f2e94]:
+          - generic [ref=f2e95]: Check-ins
+          - switch "Check-ins" [checked] [ref=f2e96]
+        - generic [ref=f2e98]:
+          - generic [ref=f2e99]: Social posts and other messages
+          - generic [ref=f2e100]: Never
+      - button "Send request to Dara Byrne" [ref=f2e101]
+    - paragraph [ref=f2e102]: Coaching works on the free plan. Everything happens in the LogIt app.
+  - generic [ref=f2e43]: Welcome · LogIt

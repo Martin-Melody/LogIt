@@ -1,0 +1,23 @@
+- generic [ref=f10e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f10e7]:
+    - generic [ref=f10e8]:
+      - heading "LogIt" [level=1] [ref=f10e9]
+      - paragraph [ref=f10e10]: Sign in to view your training analytics.
+    - tablist [ref=f10e12]:
+      - tab "Log in" [selected] [ref=f10e13]
+      - tab "Sign up" [ref=f10e14]
+    - generic [ref=f10e15]:
+      - generic [ref=f10e16]:
+        - generic [ref=f10e17]: Username or email
+        - textbox "Username or email" [ref=f10e18]
+      - generic [ref=f10e19]:
+        - generic [ref=f10e20]: Password
+        - textbox "Password" [ref=f10e21]
+      - button "Sign in" [disabled]
+    - generic [ref=f10e22]:
+      - link "Forgot password?" [ref=f10e23] [cursor=pointer]:
+        - /url: /forgot-password
+      - link "Compare plans" [ref=f10e24] [cursor=pointer]:
+        - /url: https://getlogit.app/pricing
+    - button "Self-hosted? Set your server URL" [ref=f10e26]

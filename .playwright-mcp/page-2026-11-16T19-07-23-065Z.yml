@@ -1,0 +1,49 @@
+- generic [ref=f8e2]:
+  - generic [ref=f8e6]:
+    - banner [ref=f8e7]:
+      - button "Back" [ref=f8e8]
+      - generic [ref=f8e10]: Recipe · saved
+      - button "Delete recipe" [ref=f8e11]
+      - link "Notifications" [ref=f8e13] [cursor=pointer]:
+        - /url: /inbox
+    - main [ref=f8e15]:
+      - generic [ref=f8e16]:
+        - textbox "Recipe name" [active] [ref=f8e17]: Chilli Con Carne
+        - generic [ref=f8e18]:
+          - paragraph [ref=f8e19]: How you portion it
+          - radiogroup "How you portion it" [ref=f8e20]:
+            - radio "Into servings" [checked] [ref=f8e21]
+            - radio "By cooked weight" [ref=f8e22]
+          - generic [ref=f8e23]:
+            - generic [ref=f8e24]:
+              - generic [ref=f8e25]: Makes
+              - generic [ref=f8e26]: Equal servings
+            - textbox "Servings" [ref=f8e27]: "1"
+          - generic [ref=f8e28]:
+            - generic [ref=f8e30]:
+              - generic [ref=f8e31]: Food in the pot (optional)
+              - generic [ref=f8e32]: Weigh after cooking, minus the pot
+            - textbox "Cooked weight in grams" [ref=f8e33]
+            - generic [ref=f8e34]: g
+          - paragraph [ref=f8e36]: Add ingredients and the numbers show up here.
+        - generic [ref=f8e37]:
+          - generic [ref=f8e38]: Ingredients · 0
+          - button "Paste a list" [ref=f8e39]
+        - generic [ref=f8e41]:
+          - list
+          - button "Add ingredient" [ref=f8e42]
+        - generic [ref=f8e45]:
+          - generic [ref=f8e46]: Notes
+          - textbox "Notes" [ref=f8e47]:
+            - /placeholder: Method, links, what to change next time
+    - contentinfo [ref=f8e48]:
+      - navigation "Main navigation" [ref=f8e49]:
+        - link "Home" [ref=f8e50] [cursor=pointer]:
+          - /url: /
+        - link "Start session" [ref=f8e53] [cursor=pointer]:
+          - /url: /session/current
+          - generic [ref=f8e57]: Start
+        - link "Profile" [ref=f8e58] [cursor=pointer]:
+          - /url: /profile
+        - button "More" [ref=f8e61]
+  - region "Notifications alt+T"
