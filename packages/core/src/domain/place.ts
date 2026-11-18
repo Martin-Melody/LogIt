@@ -1,8 +1,9 @@
 // Places you train (My gym, design canvas G1–G10, X6–X7): a commercial gym, home, a work gym.
 // A place holds what's there: the bar and plates, dumbbells, kettlebells, other kit, and its
 // machines. A machine belongs to a place and serves every exercise done on it (a cable station
-// is set up once, not once per exercise). Places are optional: with none, everything works as
-// before, with machines kept on the exercise.
+// is set up once, not once per exercise). Places are optional: with none, a workout simply
+// has no machines and weights are typed. Machines are kept nowhere else (Martin, 2026-11-18):
+// the first machine someone adds makes "My gym".
 //
 // Decisions (Martin, 2026-11-18): one history per exercise across places, the next machine
 // weight taken from the last time on that same machine; a usual place per training day plus a
@@ -176,21 +177,45 @@ export function newPlace(name: string, kind: PlaceKind, template: PlaceTemplate,
  * "My gym", each serving its exercise, nothing lost. Machines with the same name and the same
  * settings on different exercises become one machine serving both.
  */
-export function placeFromExerciseMachines(exercises: Pick<Exercise, "id" | "machines">[], now = Date.now()): Place | null {
-  const machines: PlaceMachine[] = [];
+export function placeFromExerciseMachines(
+  exercises: Pick<Exercise, "id" | "machines" | "defaultMachineId">[],
+  now = Date.now(),
+): Place | null {
+  return mergeExerciseMachines([], exercises, now);
+}
+
+/**
+ * Machines live only in places (Martin, 2026-11-18). Machines still kept on exercises that no
+ * place has yet move into the first place in use, or into a new "My gym" when there is none.
+ * Ids are kept, so each machine's history still lines up, and an exercise's usual machine
+ * becomes its pick at that place. Returns the place to save, or null when nothing moved.
+ */
+export function mergeExerciseMachines(
+  places: Place[],
+  exercises: Pick<Exercise, "id" | "machines" | "defaultMachineId">[],
+  now = Date.now(),
+): Place | null {
+  const known = new Set(places.flatMap((p) => p.machines.map((m) => m.id)));
+  const target = activePlaces(places)[0] ?? newPlace("My gym", "gym", "gym", now);
+  const machines = target.machines.map((m) => ({ ...m, exerciseIds: [...m.exerciseIds] }));
+  const choices = { ...(target.choices ?? {}) };
+  const movedTo = new Map<string, string>();
   for (const ex of exercises) {
     for (const m of ex.machines ?? []) {
-      const same = machines.find((p) => sameMachine(p, m));
-      if (same) {
-        if (!same.exerciseIds.includes(ex.id)) same.exerciseIds.push(ex.id);
-        continue;
+      if (known.has(m.id)) continue;
+      let into = machines.find((p) => p.id === m.id) ?? machines.find((p) => sameMachine(p, m));
+      if (!into) {
+        into = { ...m, loading: "stack", status: "in", exerciseIds: [] };
+        machines.push(into);
       }
-      machines.push({ ...m, loading: "stack", status: "in", exerciseIds: [ex.id] });
+      if (!into.exerciseIds.includes(ex.id)) into.exerciseIds.push(ex.id);
+      movedTo.set(m.id, into.id);
     }
+    const usual = ex.defaultMachineId ? movedTo.get(ex.defaultMachineId) : undefined;
+    if (usual && !choices[ex.id]) choices[ex.id] = usual;
   }
-  if (machines.length === 0) return null;
-  const place = newPlace("My gym", "gym", "gym", now);
-  return { ...place, machines };
+  if (movedTo.size === 0) return null;
+  return { ...target, machines, choices, updatedAtMs: now };
 }
 
 function sameMachine(a: Machine, b: Machine): boolean {

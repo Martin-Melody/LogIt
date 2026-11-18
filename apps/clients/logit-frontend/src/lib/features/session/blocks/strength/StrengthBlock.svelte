@@ -44,6 +44,8 @@
   import { goto } from "$app/navigation";
   import { formatLoad } from "@logit/core/domain/units";
   import MachinePickerSheet from "$lib/features/places/MachinePickerSheet.svelte";
+  import MachineEditorSheet from "$lib/features/places/MachineEditorSheet.svelte";
+  import WhereTodaySheet from "$lib/features/places/WhereTodaySheet.svelte";
   import WeightPickerSheet from "$lib/features/places/WeightPickerSheet.svelte";
   import AtTheTopCard from "$lib/features/places/AtTheTopCard.svelte";
   import type { WeightSource } from "$lib/features/places/weightSource";
@@ -96,6 +98,17 @@
   const placeMachines = $derived(place && exercise ? machinesFor(place, exercise.id) : []);
   const chosen = $derived(place && exercise ? chosenMachine(place, exercise.id) : null);
   let machinePickerOpen = $state(false);
+  // The machine editor over the workout (M2): a new machine (machineId null) or fixing one.
+  let machineEditor = $state<{ open: boolean; machineId: string | null }>({ open: false, machineId: null });
+  // "Where are you today?" asked again from the card (M1's "Not at … today?", or no place yet).
+  let whereOpen = $state(false);
+  // The first machine made "My gym" (M3): said once, on this card.
+  let myGymNote = $state<Place | null>(null);
+  // A machine picked by hand moves the sets not done yet onto it, even after some are logged.
+  let forceReplan = false;
+  // The last time on each machine, "59 × 10", for "Which machine?".
+  let lastOnMachine = $state<Map<string, string>>(new Map());
+  const machineKinds = ["machine", "cable", "smith"];
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
   // An exercise never done before (design canvas O4): its first set is the starting point
@@ -161,6 +174,15 @@
     if (data.exerciseId) detailExerciseId = data.exerciseId;
   }
 
+  /** A machine added or fixed from the card (M2): it's at the workout's place from now on. */
+  async function machineSaved(r: { machine: PlaceMachine; place: Place; createdPlace: boolean }) {
+    if (r.createdPlace) myGymNote = r.place;
+    if (!machineEditor.machineId) forceReplan = true;
+    if (get(currentSession)?.placeId !== r.place.id) {
+      await onMutate((s: WorkoutSession) => ({ ...s, placeId: r.place.id, placeAsked: true }));
+    }
+  }
+
   async function handleSwap(selection: { name: string; exerciseId?: string }) {
     const trimmed = selection.name.trim();
     if (!trimmed) return;
@@ -207,6 +229,14 @@
         excludeSessionId: get(currentSession)?.id,
       });
       const last = history.at(-1);
+      const onMachine = new Map<string, string>();
+      for (let i = history.length - 1; i >= 0; i--) {
+        for (const x of history[i]!.sets) {
+          if (!x.machineId || onMachine.has(x.machineId) || x.setType === "warmup" || !(x.reps > 0) || x.completed === false) continue;
+          onMachine.set(x.machineId, `${formatLoad(x.weight, get(profile).weightUnit, false, { withUnit: false })} × ${x.reps}`);
+        }
+      }
+      lastOnMachine = onMachine;
       prevSets = last
         ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
         : null;
@@ -230,14 +260,12 @@
         ? await getExerciseRepo().getById(exerciseId)
         : name ? await getExerciseRepo().getByName(name) : null;
       exercise = ex;
-      // Machines come from the workout's place when there is one (My gym): the one picked for
-      // this exercise there, else the first that's in. Without places, the exercise's own machines.
+      // Machines come only from the workout's place (Martin, 2026-11-18): the one picked for
+      // this exercise there, else the first that's in. No place, no machines: weights are typed.
       const here = ex && at ? machinesFor(at, ex.id) : [];
       const chosen = ex && at ? chosenMachine(at, ex.id) : null;
       exerciseData = ex
-        ? here.length
-          ? { id: ex.id, machines: here.map(effectiveMachine), defaultMachineId: chosen?.id, exerciseType: ex.exerciseType }
-          : { id: ex.id, machines: ex.machines ?? [], defaultMachineId: ex.defaultMachineId, exerciseType: ex.exerciseType }
+        ? { id: ex.id, machines: here.map(effectiveMachine), defaultMachineId: chosen?.id, exerciseType: ex.exerciseType }
         : null;
       await replanForMachine(at, chosen);
     } catch {
@@ -252,7 +280,10 @@
     if (!at || !chosen) return;
     const s = get(currentSession);
     const key = `${s?.id}|${blockId}|${at.id}|${chosen.id}`;
-    if (!s || replanned.has(key) || data.sets.some((x) => x.completed)) return;
+    const forced = forceReplan;
+    forceReplan = false;
+    if (forced) replanned.delete(key);
+    if (!s || replanned.has(key) || (!forced && data.sets.some((x) => x.completed))) return;
     replanned.add(key);
     await loadSuggestion(data.exerciseName, data.exerciseId);
     if (suggestion && suggestion.sets.length > 0) await applyPlan(suggestion);
@@ -806,11 +837,28 @@
         {#if chosen.status === "out"}<span class="shrink-0 rounded bg-warning/15 px-1 text-[11px] text-warning">Out of order</span>{/if}
         <span aria-hidden="true" class="shrink-0 text-muted-foreground">▾</span>
       </button>
-    {:else if place && exercise && (exercise.equipment === "machine" || exercise.equipment === "cable" || exercise.equipment === "smith")}
-      <button type="button" onclick={() => goto(`/settings/places/${place.id}/machine/new`)}
-        class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
-        Which machine at {place.name}? Add it
-      </button>
+    {:else if exercise && machineKinds.includes(exercise.equipment ?? "")}
+      {#if !place && placesStore.active.length > 0}
+        <button type="button" onclick={() => (whereOpen = true)}
+          class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
+          Which gym are you at? Pick one for real weights
+        </button>
+      {:else}
+        <button type="button" onclick={() => (machineEditor = { open: true, machineId: null })}
+          class="flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-border px-3 text-[13px] text-muted-foreground">
+          {place ? `Which machine at ${place.name}? Add it` : "Which machine? Add it for real weights"}
+        </button>
+      {/if}
+    {/if}
+    {#if myGymNote}
+      <div role="status" class="mt-2 flex flex-col gap-1 rounded-lg bg-success/10 px-3 py-2.5 text-success">
+        <span class="text-sm font-semibold">Saved to {myGymNote.name}</span>
+        <span class="text-[13px] leading-snug text-foreground/80">Your machines now live in a place, so the next exercise that uses this one finds it too. Train somewhere else as well? Add it whenever you like.</span>
+        <span class="flex gap-4">
+          <button type="button" class="min-h-9 text-[13px] font-semibold" onclick={() => { const id = myGymNote?.id; myGymNote = null; if (id) void goto(`/settings/places/${id}`); }}>Rename {myGymNote.name}</button>
+          <button type="button" class="min-h-9 text-[13px]" onclick={() => (myGymNote = null)}>Got it</button>
+        </span>
+      </div>
     {/if}
   {/snippet}
   {#snippet notice()}
@@ -1065,9 +1113,29 @@
     exerciseName={data.exerciseName}
     machines={placeMachines}
     currentId={chosen?.id ?? null}
+    lastTimeOn={(id) => lastOnMachine.get(id) ?? null}
     onOpenChange={(v) => (machinePickerOpen = v)}
-    onPick={() => {}}
+    onPick={() => (forceReplan = true)}
+    onEdit={(m) => { machinePickerOpen = false; machineEditor = { open: true, machineId: m.id }; }}
+    onAdd={() => { machinePickerOpen = false; machineEditor = { open: true, machineId: null }; }}
+    onChangePlace={placesStore.active.length > 1 ? () => (whereOpen = true) : undefined}
   />
+{/if}
+
+{#if exercise}
+  <MachineEditorSheet
+    open={machineEditor.open}
+    {place}
+    machineId={machineEditor.machineId}
+    forExercise={machineEditor.machineId ? null : { id: exercise.id, name: data.exerciseName }}
+    onOpenChange={(v) => (machineEditor = { ...machineEditor, open: v })}
+    onSaved={(r) => void machineSaved(r)}
+  />
+{/if}
+
+{#if whereOpen && $currentSession}
+  <WhereTodaySheet session={$currentSession} changing
+    onPick={(placeId) => { whereOpen = false; void onMutate((s: WorkoutSession) => ({ ...s, placeId, placeAsked: true })); }} />
 {/if}
 
 {#if weightSource && weightPick}

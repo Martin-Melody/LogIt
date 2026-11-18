@@ -10,7 +10,12 @@
   import { machinesFor, type Place } from "@logit/core/domain/place";
   import { placesStore } from "./places.svelte";
 
-  let { session, onPick }: { session: WorkoutSession; onPick: (placeId: string | null) => void } = $props();
+  let { session, changing = false, onPick }: {
+    session: WorkoutSession;
+    /** Asked again mid-workout from an exercise card: no Skip or "Don't ask me this". */
+    changing?: boolean;
+    onPick: (placeId: string | null) => void;
+  } = $props();
 
   const places = $derived(placesStore.active);
   let chosen = $state<string | null>(untrack(() => session.placeId ?? placesStore.defaultFor()?.id ?? null));
@@ -38,7 +43,7 @@
 <Dialog.Root {open} onOpenChange={(v) => { if (!v) done(session.placeId ?? null); }}>
   <Dialog.Content class="flex max-h-[88svh] flex-col gap-3 p-4 sm:max-w-[420px]">
     <Dialog.Header>
-      <Dialog.Title>Where are you today?</Dialog.Title>
+      <Dialog.Title>{changing ? "Where are you?" : "Where are you today?"}</Dialog.Title>
       <Dialog.Description>Machines and weights come from there.</Dialog.Description>
     </Dialog.Header>
 
@@ -67,11 +72,13 @@
     </p>
 
     <Button class="h-12 text-[15px]" onclick={() => { if (chosen) placesStore.rememberUsed(chosen); done(chosen); }}>
-      {chosen ? `Start at ${places.find((p) => p.id === chosen)?.name ?? "this place"}` : "Start somewhere else"}
+      {chosen
+        ? `${changing ? "Use" : "Start at"} ${places.find((p) => p.id === chosen)?.name ?? "this place"}`
+        : changing ? "Somewhere else" : "Start somewhere else"}
     </Button>
-    <div class="flex items-center justify-between">
+    {#if !changing}<div class="flex items-center justify-between">
       <button type="button" class="min-h-11 text-sm text-muted-foreground" onclick={() => done(session.placeId ?? null)}>Skip, just start</button>
       <button type="button" class="min-h-11 text-sm text-muted-foreground underline" onclick={() => { placesStore.setAsk(false); done(session.placeId ?? null); }}>Don't ask me this</button>
-    </div>
+    </div>{/if}
   </Dialog.Content>
 </Dialog.Root>

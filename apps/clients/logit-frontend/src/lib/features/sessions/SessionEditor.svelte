@@ -5,6 +5,8 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
   import EditSetDialog from "$lib/features/session/ui/EditSetDialog.svelte";
+  import { placesStore } from "$lib/features/places/places.svelte";
+  import { chosenMachine, effectiveMachine, machinesFor } from "@logit/core/domain/place";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
   import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
@@ -186,8 +188,10 @@
     } catch {
       ex = null;
     }
-    machines = ex?.machines ?? [];
-    defaultMachineId = ex?.defaultMachineId;
+    // Machines live in places: the ones at the place this workout was at.
+    const at = placesStore.byId(draft.placeId);
+    machines = ex && at ? machinesFor(at, ex.id).map(effectiveMachine) : [];
+    defaultMachineId = ex && at ? chosenMachine(at, ex.id)?.id : undefined;
     cardExerciseId = ex?.id;
   }
 
