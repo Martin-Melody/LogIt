@@ -1,8 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
 // Bottom-nav pages: the Start tab doesn't start a workout by itself, and swiping moves
-// between the bar pages in bar order. Signed out, the default bar is Home, Exercises (in
-// place of Social), Profile, so the order is Home ↔ Exercises ↔ Start ↔ Profile.
+// between the bar pages in bar order. Signed out, the default bar is Home, Sessions (standing
+// in for Social: the first item in More that works without an account), Profile, so the
+// order is Home ↔ Sessions ↔ Start ↔ Profile.
 
 async function seed(page: Page, opts: { swipe?: boolean } = {}) {
   await page.addInitScript(({ swipe }) => {
@@ -77,7 +78,7 @@ test("swiping moves between the bar pages in bar order", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
 
   await swipe(page, "left");
-  await expect(page).toHaveURL(/\/exercises$/);
+  await expect(page).toHaveURL(/\/sessions$/);
 
   await swipe(page, "left");
   await expect(page).toHaveURL(/\/session\/current$/);
@@ -88,6 +89,29 @@ test("swiping moves between the bar pages in bar order", async ({ page }) => {
 
   await swipe(page, "right");
   await expect(page).toHaveURL(/\/session\/current$/);
+});
+
+test("signed out, Social's slot shows a stand-in on every launch, and the saved bar is left alone", async ({ page }) => {
+  await seed(page);
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  // Reopening the app used to swap Social and Exercises back and forth, leaving a gap
+  // every second launch.
+  for (let launch = 0; launch < 3; launch++) {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await expect(nav.getByRole("link", { name: "Sessions" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Social" })).toHaveCount(0);
+  }
+  const saved = await page.evaluate(() => {
+    const raw = Object.entries(localStorage).find(([k]) => k.includes("nav-config"))?.[1];
+    return raw ? JSON.parse(raw).bar : null;
+  });
+  expect(saved === null || saved[1] === "social").toBe(true);
+
+  // Not listed twice: the stand-in leaves the More sheet.
+  await nav.getByRole("button", { name: "More" }).click();
+  await expect(page.getByRole("button", { name: "Sessions", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Splits", exact: true })).toBeVisible();
 });
 
 test("swiping does nothing when turned off", async ({ page }) => {

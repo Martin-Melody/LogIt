@@ -48,6 +48,27 @@ export interface AuthResponse {
   isSelfHosted: boolean;
 }
 
+export interface PairingStart {
+  id: string;
+  /** The QR's text: "logit-pair:<code>". */
+  qr: string;
+  secret: string;
+  expiresAt: string;
+}
+
+export type PairingState = "waiting" | "approved" | "denied" | "expired" | "used";
+
+export interface SignedInSession {
+  id: string;
+  label: string;
+  startedAt: string;
+  lastActiveAt: string;
+  current: boolean;
+}
+
+/** The QR text a web sign-in page shows; the phone's scanner recognises it by this prefix. */
+export const PAIRING_QR_PREFIX = "logit-pair:";
+
 export const WRONG_CREDENTIALS_MESSAGE = "That username or password isn't right.";
 
 /** What to show for an error response that carries no message of its own. */
@@ -383,6 +404,48 @@ class ApiClient {
     this.saveUser(data.user, data.isSelfHosted);
     this.backupElsewhere = false; // signing in on this phone moves a Free backup here
     return data.user;
+  }
+
+  // Scan-to-sign-in (server Features/Auth/PairingEndpoints.cs).
+
+  /** The web sign-in page asks for a code to show as a QR. Keep `secret` on this page only. */
+  async startPairing(): Promise<PairingStart> {
+    return this.fetch<PairingStart>("/auth/pair", { method: "POST" });
+  }
+
+  /**
+   * The web page asks whether the phone answered. On "approved" this browser is signed in with
+   * its own session (no password typed), exactly as after login().
+   */
+  async pollPairing(id: string, secret: string): Promise<PairingState> {
+    const res = await this.fetch<{ state: PairingState; auth?: AuthResponse }>(`/auth/pair/${id}/poll`, {
+      method: "POST",
+      body: JSON.stringify({ secret }),
+    });
+    if (res.state === "approved" && res.auth) {
+      this.tokens = { accessToken: res.auth.accessToken, refreshToken: res.auth.refreshToken };
+      await tokenStorage.set(this.tokens);
+      this.saveUser(res.auth.user, res.auth.isSelfHosted);
+    }
+    return res.state;
+  }
+
+  /** The phone, signed in, reads a scanned code: which browser is asking. 410 = run out. */
+  async lookUpPairing(code: string): Promise<{ device: string; expiresAt: string; secondsLeft: number }> {
+    return this.fetch("/auth/pair/look", { method: "POST", body: JSON.stringify({ code }) });
+  }
+
+  async answerPairing(code: string, approve: boolean): Promise<void> {
+    await this.fetch("/auth/pair/answer", { method: "POST", body: JSON.stringify({ code, approve }) });
+  }
+
+  /** Account › Where you're signed in. */
+  async listSessions(): Promise<SignedInSession[]> {
+    return (await this.fetch<{ sessions: SignedInSession[] }>("/auth/sessions")).sessions;
+  }
+
+  async signOutSession(id: string): Promise<void> {
+    await this.fetch(`/auth/sessions/${id}`, { method: "DELETE" });
   }
 
   async deleteAccount(password: string): Promise<void> {

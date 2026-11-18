@@ -16,7 +16,7 @@ public static class CoachLibraryEndpoints
 
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPut("/library/sharing", SetSharing).RequireTier(UserTier.Studio);
+        group.MapPut("/library/sharing", SetSharing).RequireCoaching();
         // Any tier: a Free client can be coached.
         group.MapGet("/library/shared", GetShared);
     }

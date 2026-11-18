@@ -7,17 +7,15 @@ import { getSelfHostUrl, setServerMode } from "@logit/core/api/serverConfig";
 import { resetRepos, initRepos } from "$lib/data/repoProvider";
 import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/platform/appInit";
 import { needsAccountAuth } from "$lib/stores/appReady.store";
-import { navConfig } from "$lib/stores/navConfig.store";
 import { syncAll, markFullUploadDue, planIncludesSync } from "$lib/sync/syncService";
 import { log } from "@logit/core/platform/log";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
-async function switchActiveOwner(isOnlineAccount: boolean): Promise<void> {
+async function switchActiveOwner(): Promise<void> {
   resetRepos();
   await initRepos();
   await rehydrateStores();
   needsAccountAuth.set(false);
-  if (!isOnlineAccount) navConfig.reconcileForOffline();
 }
 
 // On the phone every account keeps its own sign-in (tokens, server, cached user): the API client
@@ -185,7 +183,7 @@ function createAuthStore() {
     }
 
     await apiClient.moveSessionFrom(signedInFrom);
-    await switchActiveOwner(true);
+    await switchActiveOwner();
   }
 
   /**
@@ -222,7 +220,7 @@ function createAuthStore() {
     setActiveOwnerId(account.id);
     await apiClient.reloadSession();
     user = apiClient.getUser();
-    await switchActiveOwner(user !== null);
+    await switchActiveOwner();
     if (user) {
       void syncAll();
       startBackgroundSync();
@@ -284,7 +282,7 @@ function createAuthStore() {
     const claimTarget = orphanClaimTarget(all.length, activeOwnerIdBeforeCreate, account.id);
     if (claimTarget) await claimOrphanedData(claimTarget);
     await apiClient.reloadSession();
-    await switchActiveOwner(false);
+    await switchActiveOwner();
     return "created";
   }
 

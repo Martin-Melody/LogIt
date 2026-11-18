@@ -160,6 +160,29 @@ builder.Services.AddRateLimiter(o =>
                 Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0,
             }));
+    // Scan-to-sign-in: starting a request, and the phone looking one up or answering it.
+    // 20 per address per 10 minutes. Polling (every 2 s for up to 2 min) has its own, looser
+    // limit. Pairing:StartsPer10Minutes / Pairing:PollsPerMinute override them.
+    var pairStartLimit = Math.Max(1, builder.Configuration.GetValue("Pairing:StartsPer10Minutes", 20));
+    o.AddPolicy(Logit.Api.Features.Auth.PairingEndpoints.StartRateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = pairStartLimit,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+            }));
+    var pairPollLimit = Math.Max(1, builder.Configuration.GetValue("Pairing:PollsPerMinute", 90));
+    o.AddPolicy(Logit.Api.Features.Auth.PairingEndpoints.PollRateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = pairPollLimit,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
     // Food search from the browser app: someone typing fires a search every few keystrokes,
     // so 60 a minute per address. FoodSearch:PerMinute overrides it.
     var foodSearchLimit = Math.Max(1, builder.Configuration.GetValue("FoodSearch:PerMinute", 60));

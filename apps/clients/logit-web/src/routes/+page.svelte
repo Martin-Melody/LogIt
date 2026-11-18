@@ -1,5 +1,6 @@
 <script lang="ts">
   import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
+  import BigScreenCard from "$lib/features/onboarding/BigScreenCard.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { apiClient } from "@logit/core/api/client";
   import * as Alert from "$lib/components/ui/alert";
@@ -147,6 +148,7 @@
   </header>
 
   {#if !editing}<WelcomeCard walkthrough="pro" name={firstName} />{/if}
+  {#if !editing && !viewingClient.current}<BigScreenCard sessions={data ? data.sessions.length : null} />{/if}
 
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>

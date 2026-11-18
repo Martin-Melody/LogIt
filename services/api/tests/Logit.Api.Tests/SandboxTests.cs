@@ -45,9 +45,7 @@ public class SandboxTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Studio_coach_adds_sample_clients_and_drives_them_through_the_real_routes()
     {
-        var (pro, _, _) = await _api.SignUpAsync("sbx_pro", UserTier.Pro);
-        Assert.Equal(HttpStatusCode.Forbidden, (await pro.PostAsJsonAsync("/coach/sandbox", ThreeSamples)).StatusCode);
-
+        // Below Studio, sample clients are allowed too (SampleCoachTests covers who isn't).
         var (coach, coachId, _) = await _api.SignUpAsync("sbx_coach", UserTier.Studio);
         var list = await Json(await coach.PostAsJsonAsync("/coach/sandbox", ThreeSamples));
         Assert.Equal(3, list.GetProperty("clients").GetArrayLength());

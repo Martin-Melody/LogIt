@@ -10,6 +10,7 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
   import { planCardModel, type PlanAction } from "@logit/core/api/planCard";
+  import SignedInSessions from "$lib/features/auth/SignedInSessions.svelte";
 
   const user = $derived(apiClient.getUser());
   const isSelfHosted = apiClient.isSelfHosted();
@@ -205,6 +206,8 @@
       </form>
     </Card.Content>
   </Card.Root>
+
+  <SignedInSessions />
 
   <Card.Root>
     <Card.Header class="pb-2">
