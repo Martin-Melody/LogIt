@@ -53,6 +53,10 @@ test.describe("exercise detail", () => {
 
     await page.getByRole("button", { name: "Bench Press — open details" }).click();
 
+    // The name opens the read-first sheet (design canvas X5); editing is a link in it.
+    await expect(page.getByRole("dialog", { name: "Bench Press" })).toBeVisible();
+    await page.getByRole("button", { name: /Edit exercise/ }).click();
+
     // Sheet content (shared ExerciseDetailBody).
     await expect(page.getByRole("button", { name: "Reset progression" })).toBeVisible();
     await expect(page.getByText("Machines")).toBeVisible();

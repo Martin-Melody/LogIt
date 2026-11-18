@@ -707,32 +707,43 @@
     // The set number is also a button (the set's options): a touch that didn't move is a tap.
     let touchStartY = 0;
     let touchMoved = false;
+    // Dragging starts only once the finger or pointer has moved, so a plain tap stays a tap.
     function onTouchStart(e: TouchEvent) {
       if (e.touches.length !== 1) return;
       e.preventDefault();
       touchStartY = e.touches[0]!.clientY;
       touchMoved = false;
-      startDrag(touchStartY);
     }
     function onTouchMove(e: TouchEvent) {
-      if (setDragId !== currentId) return;
       e.preventDefault();
-      if (Math.abs(e.touches[0]!.clientY - touchStartY) > 8) touchMoved = true;
-      moveDrag(e.touches[0]!.clientY);
+      const y = e.touches[0]!.clientY;
+      if (!touchMoved && Math.abs(y - touchStartY) > 8) {
+        touchMoved = true;
+        startDrag(touchStartY);
+      }
+      if (setDragId === currentId) moveDrag(y);
     }
     function onTouchEnd() {
-      if (setDragId !== currentId) return;
-      void commitSetDrag();
-      if (!touchMoved) node.click();
+      if (!touchMoved) { node.click(); return; }
+      if (setDragId === currentId) void commitSetDrag();
     }
+    let mouseStartY = 0;
+    let mouseDragging = false;
     function onMouseDown(e: MouseEvent) {
       if (e.button !== 0) return;
       e.preventDefault();
-      if (!startDrag(e.clientY)) return;
+      mouseStartY = e.clientY;
+      mouseDragging = false;
       window.addEventListener("mousemove", onMouseMove);
       window.addEventListener("mouseup", onMouseUp);
     }
-    function onMouseMove(e: MouseEvent) { moveDrag(e.clientY); }
+    function onMouseMove(e: MouseEvent) {
+      if (!mouseDragging) {
+        if (Math.abs(e.clientY - mouseStartY) <= 6) return;
+        mouseDragging = startDrag(mouseStartY);
+      }
+      moveDrag(e.clientY);
+    }
     function onMouseUp() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
