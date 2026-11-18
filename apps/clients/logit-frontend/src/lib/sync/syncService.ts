@@ -1256,6 +1256,7 @@ export async function pushAllLocalData(): Promise<void> {
     pushPendingMessages(),
     pushAllNutrition(),
     pushAllHabits(),
+    import("$lib/features/places/places.svelte").then((m) => m.placesStore.pushAll()),
     import("$lib/plugins/pluginSync").then((m) => m.pushAllPluginInstalls()),
   ]);
 }
@@ -1372,6 +1373,7 @@ async function syncOnce(): Promise<boolean> {
     ["nutrition", pullAndMergeNutrition()],
     ["habits", pullAndMergeHabits()],
     ["assigned habits", pullAndMergeAssignedHabits()],
+    ["places", import("$lib/features/places/places.svelte").then((m) => m.placesStore.sync())],
     // Loaded lazily (it pulls in the plugin runtime); loading it also starts pushing local
     // installs, so the first sync after the app opens switches that on.
     ["plugins", import("$lib/plugins/pluginSync").then((m) => m.pullAndMergePluginInstalls())],
