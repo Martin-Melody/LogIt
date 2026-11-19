@@ -530,6 +530,21 @@ class ApiClient {
     localStorage.removeItem(sessionKey(BASE_URL_KEY));
   }
 
+  /**
+   * The web dashboard only talks to its own server. Forget a server picked at sign-in in the
+   * past (the web no longer offers it); if it was another server, its session goes too.
+   * Returns true when that signed someone out.
+   */
+  async forgetPickedServer(): Promise<boolean> {
+    const picked = localStorage.getItem(sessionKey(BASE_URL_KEY));
+    if (picked === null) return false;
+    this.resetBaseUrl();
+    localStorage.removeItem(sessionKey(SERVER_MODE_KEY));
+    if (picked === (runtimeApiUrl() ?? DEFAULT_BASE_URL)) return false;
+    await this.clearLocal();
+    return true;
+  }
+
   async updateDisplayName(displayName: string): Promise<void> {
     await this.fetch("/users/me", {
       method: "PATCH",

@@ -49,6 +49,8 @@ In the LogIt app, open the sign-in screen (Settings › Account), tap **Connect 
 
 Go to `http://<your-server>:3000` and sign in with the same account for the bigger charts: activity, personal records and a deep dive into each exercise.
 
+Use your server's own dashboard, not app.getlogit.app: that one only signs in to getlogit.app accounts. Yours always matches your server's version and stays on your network.
+
 ## The admin page
 
 Open `http://<your-server>:8080/admin` and enter your `ADMIN_KEY` to make invites, see your server's

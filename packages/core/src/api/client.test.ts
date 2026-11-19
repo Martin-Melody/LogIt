@@ -55,3 +55,29 @@ describe("api errors", () => {
     }
   });
 });
+
+describe("forgetPickedServer", () => {
+  it("does nothing when no server was picked", async () => {
+    localStorage.setItem("logit:auth:access", "a");
+    expect(await apiClient.forgetPickedServer()).toBe(false);
+    expect(localStorage.getItem("logit:auth:access")).toBe("a");
+  });
+
+  it("forgets another server and its session", async () => {
+    localStorage.setItem("logit:api:baseUrl", "https://logit-api.example.org");
+    localStorage.setItem("logit:server:mode", "selfhosted");
+    localStorage.setItem("logit:auth:access", "a");
+    localStorage.setItem("logit:auth:refresh", "r");
+    expect(await apiClient.forgetPickedServer()).toBe(true);
+    expect(apiClient.getBaseUrl()).not.toBe("https://logit-api.example.org");
+    expect(localStorage.getItem("logit:server:mode")).toBeNull();
+    expect(localStorage.getItem("logit:auth:access")).toBeNull();
+  });
+
+  it("keeps the session when the picked server is this dashboard's own", async () => {
+    localStorage.setItem("logit:api:baseUrl", apiClient.getBaseUrl());
+    localStorage.setItem("logit:auth:access", "a");
+    expect(await apiClient.forgetPickedServer()).toBe(false);
+    expect(localStorage.getItem("logit:auth:access")).toBe("a");
+  });
+});
