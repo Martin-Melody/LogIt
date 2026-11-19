@@ -37,6 +37,7 @@ public static class AdminEndpoints
             .ExcludeFromDescription();
 
         api.MapGet("/stats", GetStats);
+        api.MapGet("/overview", GetOverview);
         api.MapGet("/actions", async (AppDbContext db, int? take) =>
             Results.Ok(await db.AdminActions.OrderByDescending(a => a.CreatedAt).Take(Math.Clamp(take ?? 100, 1, 500)).ToListAsync()));
         api.MapGet("/users", GetUsers);
@@ -57,6 +58,7 @@ public static class AdminEndpoints
             Results.Ok(await Logit.Api.Features.Discover.DiscoverStats.ComputeAsync(db, DateTime.UtcNow.AddDays(-(days ?? 30)))));
         api.MapPost("/invites", CreateInvite);
         api.MapDelete("/invites/{id:guid}", RevokeInvite);
+        api.MapPost("/invites/{id:guid}/extend", ExtendInvite);
 
         api.MapGet("/reports", GetReports);
         api.MapPost("/reports/{id:guid}/resolve", ResolveReport);
@@ -137,8 +139,10 @@ public static class AdminEndpoints
             return await next(ctx);
         };
 
-    /// Null when the key is right; otherwise the 429 (locked out) or 401 to send back.
-    private static IResult? CheckKey(AdminKeyGuard guard, string? key, HttpContext http, ILogger logger)
+    /// Null when the key is right; otherwise the 429 (locked out) or `wrongStatus` to send back.
+    /// Claiming answers 403, not 401: the caller is signed in, and a 401 would make the app
+    /// refresh its session and send the key again.
+    private static IResult? CheckKey(AdminKeyGuard guard, string? key, HttpContext http, ILogger logger, int wrongStatus = 401)
     {
         var client = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var now = DateTime.UtcNow;
@@ -159,7 +163,7 @@ public static class AdminEndpoints
                 client, AdminKeyGuard.Window.TotalMinutes, AdminKeyGuard.MaxFailures);
         else
             logger.LogInformation("Admin: wrong key from {Client}", client);
-        return Results.Json(new { error = "That isn't this server's admin key." }, statusCode: 401);
+        return Results.Json(new { error = "That isn't this server's admin key." }, statusCode: wrongStatus);
     }
 
     // ── The signed-in account's admin status, and claiming admin with the key ──
@@ -181,7 +185,7 @@ public static class AdminEndpoints
     {
         if (guard is null)
             return Results.NotFound(new { error = "This server has no admin key set, so admin can't be claimed. Ask an existing admin." });
-        if (CheckKey(guard, req.Key, http, logger) is { } refused) return refused;
+        if (CheckKey(guard, req.Key, http, logger, StatusCodes.Status403Forbidden) is { } refused) return refused;
 
         var user = await db.Users.FindAsync(http.User.GetUserId());
         if (user is null || user.IsSample) return Results.Forbid();
@@ -266,6 +270,81 @@ public static class AdminEndpoints
         return Results.NoContent();
     }
 
+    private record ExtendInviteRequest(int Days);
+
+    /// Pushes the end date on from whichever is later, now or the current end. A revoked invite stays revoked.
+    private static async Task<IResult> ExtendInvite(Guid id, ExtendInviteRequest req, AppDbContext db, HttpContext http)
+    {
+        if (req.Days < 1 || req.Days > InviteLimits.MaxDays)
+            return Results.BadRequest(new { error = $"Extend by 1 to {InviteLimits.MaxDays} days." });
+        var invite = await db.Invites.FirstOrDefaultAsync(i => i.Id == id && i.RevokedAt == null);
+        if (invite is null) return Results.NotFound(new { error = "Invite not found or cancelled." });
+        var now = DateTime.UtcNow;
+        var from = invite.ExpiresAt is { } end && end > now ? end : now;
+        invite.ExpiresAt = from.AddDays(req.Days);
+        AdminLog.Add(db, http, "invite.extend", detail: $"{Registration.Format(invite.Code)} to {invite.ExpiresAt:yyyy-MM-dd}");
+        await db.SaveChangesAsync();
+        return Results.Ok(new { invite.ExpiresAt });
+    }
+
+    /// Everything the console's Overview shows, in one request. Days are UTC dates.
+    private static async Task<IResult> GetOverview(AppDbContext db, IConfiguration cfg, IEmailSender email)
+    {
+        var now = DateTime.UtcNow;
+        var firstDay = now.Date.AddDays(-13);
+        var firstDayMs = new DateTimeOffset(firstDay, TimeSpan.Zero).ToUnixTimeMilliseconds();
+        var weekAgoMs = new DateTimeOffset(now.AddDays(-7)).ToUnixTimeMilliseconds();
+        var monthAgoMs = new DateTimeOffset(now.AddDays(-30)).ToUnixTimeMilliseconds();
+
+        var people = db.Users.Where(u => !u.IsSample);
+        var workouts = db.SyncedWorkoutSessions.Where(w => w.DeletedAtMs == null && !w.User.IsSample);
+
+        var signUpDates = await people.Where(u => u.CreatedAt >= firstDay).Select(u => u.CreatedAt).ToListAsync();
+        var workoutStarts = await workouts.Where(w => w.StartedAtMs >= firstDayMs).Select(w => w.StartedAtMs).ToListAsync();
+        var days = Enumerable.Range(0, 14).Select(i =>
+        {
+            var day = firstDay.AddDays(i);
+            return new
+            {
+                Date = day.ToString("yyyy-MM-dd"),
+                SignUps = signUpDates.Count(d => d.Date == day),
+                Workouts = workoutStarts.Count(ms => DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime.Date == day),
+            };
+        }).ToList();
+
+        var soon = now.AddDays(2);
+        var invitesEndingSoon = await db.Invites
+            .Where(i => i.RevokedAt == null && i.ExpiresAt != null && i.ExpiresAt > now && i.ExpiresAt <= soon && i.UseCount < i.MaxUses)
+            .OrderBy(i => i.ExpiresAt)
+            .Select(i => new { i.Id, i.Code, i.Note, i.UseCount, i.MaxUses, i.ExpiresAt })
+            .ToListAsync();
+
+        var newestReport = await db.Reports
+            .Where(r => r.Status == ReportStatus.Open)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.Id, TargetType = r.TargetType.ToString(), r.TargetId, Reason = r.Reason.ToString(), r.CreatedAt, Reporter = r.Reporter.Username })
+            .FirstOrDefaultAsync();
+
+        return Results.Ok(new
+        {
+            Server = new
+            {
+                RegistrationMode = Registration.ModeName(Registration.GetMode(cfg)),
+                SelfHosted = cfg.GetValue<bool>("Deployment:SelfHosted"),
+                EmailConfigured = email.IsConfigured,
+            },
+            People = await people.CountAsync(),
+            TrainedThisWeek = await workouts.Where(w => w.StartedAtMs >= weekAgoMs).Select(w => w.UserId).Distinct().CountAsync(),
+            Workouts30Days = await workouts.CountAsync(w => w.StartedAtMs >= monthAgoMs),
+            Days = days,
+            OpenReports = await db.Reports.CountAsync(r => r.Status == ReportStatus.Open),
+            NewestReport = newestReport,
+            PluginsWaiting = await db.PluginReleases.CountAsync(r => r.Status == PluginReleaseStatus.Pending),
+            InvitesEndingSoon = invitesEndingSoon.Select(i => new { i.Id, Code = Registration.Format(i.Code), i.Note, i.UseCount, i.MaxUses, i.ExpiresAt }),
+            RecentActions = await db.AdminActions.OrderByDescending(a => a.CreatedAt).Take(5).ToListAsync(),
+        });
+    }
+
     private static async Task<IResult> GetStats(AppDbContext db)
     {
         var userCount = await db.Users.CountAsync(u => !u.IsSample);
@@ -334,6 +413,7 @@ public static class AdminEndpoints
                 FollowingCount = u.Following.Count,
                 ActiveTokens = u.RefreshTokens.Count(t => t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow),
                 SessionCount = db.SyncedWorkoutSessions.Count(w => w.UserId == id && w.DeletedAtMs == null),
+                InviteNote = u.Invite != null ? u.Invite.Note : null,
                 SplitCount = db.SyncedSplits.Count(sp => sp.UserId == id && sp.DeletedAtMs == null),
                 ExerciseCount = db.SyncedExercises.Count(e => e.UserId == id && e.DeletedAtMs == null),
                 LastActive = db.SyncedWorkoutSessions
@@ -378,7 +458,7 @@ public static class AdminEndpoints
             .Take(50)
             .ToListAsync();
 
-        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.ManualTier, user.IsAdmin, AdminActions = adminActions, Subscriptions = subscriptions, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
+        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.ManualTier, user.IsAdmin, user.InviteNote, AdminActions = adminActions, Subscriptions = subscriptions, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
     }
 
     private record UpdateUserRequest(string? DisplayName, string? Email, string? Bio, string? Tier, bool? IsAdmin);
@@ -487,6 +567,7 @@ public static class AdminEndpoints
                 r.Note,
                 Status = r.Status.ToString(),
                 r.CreatedAt,
+                r.ReviewedAt,
                 Reporter = new { r.Reporter.Id, r.Reporter.Username, r.Reporter.DisplayName },
             })
             .ToListAsync();
@@ -558,8 +639,14 @@ public static class AdminEndpoints
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
 
+        if (string.IsNullOrWhiteSpace(req.NewPassword) || req.NewPassword.Length < 8)
+            return Results.BadRequest(new { error = "Use at least 8 characters." });
+        var now = DateTime.UtcNow;
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = now;
+        // Like a reset by email: whoever knew the old password is signed out everywhere.
+        await db.RefreshTokens.Where(t => t.UserId == id && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now));
         AdminLog.Add(db, http, "user.reset-password", user);
         await db.SaveChangesAsync();
         return Results.NoContent();

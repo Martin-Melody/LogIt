@@ -26,6 +26,11 @@
   import MonitorIcon from "@lucide/svelte/icons/monitor";
   import CompassIcon from "@lucide/svelte/icons/compass";
   import BookOpenIcon from "@lucide/svelte/icons/book-open";
+  import ShieldIcon from "@lucide/svelte/icons/shield";
+  import TicketIcon from "@lucide/svelte/icons/ticket";
+  import FlagIcon from "@lucide/svelte/icons/flag";
+  import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
+  import { adminState } from "$lib/features/admin/adminState.svelte";
   import { guide, walkthroughsFor, chaptersOf } from "$lib/features/guide/guide.svelte";
   import { docsUrl } from "$lib/features/guide/docs";
   import { apiClient } from "@logit/core/api/client";
@@ -119,8 +124,32 @@
     items: [{ label: "My coach", href: "/my-coach", icon: UserRoundIcon, badge: () => coachBadges.myCoach }],
   };
 
-  const coaching = $derived(isStudio && isCoachingPath(page.url.pathname, page.url.searchParams));
-  const groups = $derived(coaching ? coachGroups : [...meGroups, clientGroup]);
+  // "Admin": the server's admin console, its own space like Coaching (admins only; the
+  // pages themselves check with the server).
+  const adminGroups: NavGroup[] = [
+    { label: null, items: [{ label: "Overview", href: "/admin", icon: LayoutDashboardIcon }] },
+    {
+      label: "People",
+      items: [
+        { label: "People", href: "/admin/people", icon: UsersRoundIcon },
+        { label: "Invites", href: "/admin/invites", icon: TicketIcon },
+      ],
+    },
+    {
+      label: "Community",
+      items: [
+        { label: "Reports", href: "/admin/reports", icon: FlagIcon, badge: () => adminState.openReports },
+        { label: "Plugin reviews", href: "/admin/plugins", icon: PuzzleIcon, badge: () => adminState.pluginsWaiting },
+      ],
+    },
+  ];
+
+  const admin = $derived(page.url.pathname === "/admin" || page.url.pathname.startsWith("/admin/"));
+  const coaching = $derived(!admin && isStudio && isCoachingPath(page.url.pathname, page.url.searchParams));
+  const groups = $derived(admin ? adminGroups : coaching ? coachGroups : [...meGroups, clientGroup]);
+  const serverHost = $derived.by(() => {
+    try { return new URL(apiClient.getBaseUrl()).host; } catch { return ""; }
+  });
 
   // The longest matching href wins, so /coaching/programs doesn't also light up Today.
   const allHrefs = $derived(groups.flatMap((g) => g.items.map((i) => i.href)));
@@ -161,7 +190,12 @@
       <Logo size={24} />
       <span class="text-base font-bold tracking-tight group-data-[collapsible=icon]:hidden">LogIt</span>
     </a>
-    {#if isStudio}
+    {#if admin}
+      <div class="flex flex-col gap-1 px-2 group-data-[collapsible=icon]:hidden">
+        <span class="flex items-center gap-1.5 text-sm font-semibold"><ShieldIcon class="size-4" />Admin</span>
+        <span class="truncate text-xs text-muted-foreground">{serverHost}</span>
+      </div>
+    {:else if isStudio}
       <div role="tablist" aria-label="Workspace"
         class="grid grid-cols-2 gap-[3px] rounded-[9px] bg-sidebar-accent p-[3px] group-data-[collapsible=icon]:hidden">
         <button type="button" role="tab" aria-selected={!coaching}
@@ -218,6 +252,18 @@
 
   <Sidebar.Footer>
     <Sidebar.Menu>
+      {#if admin}
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton tooltipContent="Back to my training">
+            {#snippet child({ props })}
+              <a href="/" onclick={onNavClick} {...props}>
+                <ArrowLeftIcon />
+                <span>Back to my training</span>
+              </a>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+      {/if}
       <Sidebar.MenuItem>
         <Sidebar.MenuButton tooltipContent="Guide" onclick={() => { guide.panelOpen = true; onNavClick(); }}>
           {#snippet child({ props })}
@@ -276,6 +322,16 @@
                 </a>
               {/snippet}
             </DropdownMenu.Item>
+            {#if adminState.isAdmin && !admin}
+              <DropdownMenu.Item>
+                {#snippet child({ props })}
+                  <a href="/admin" onclick={onNavClick} {...props}>
+                    <ShieldIcon class="size-4" />
+                    Admin
+                  </a>
+                {/snippet}
+              </DropdownMenu.Item>
+            {/if}
             <DropdownMenu.Sub>
               <DropdownMenu.SubTrigger>
                 <SunIcon class="size-4 dark:hidden" />

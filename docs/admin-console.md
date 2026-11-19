@@ -32,7 +32,8 @@ on the planning page.
 
 ## Steps
 
-Each step with visible screens gets mockups approved before it is built.
+Each step with visible screens gets mockups approved before it is built. Steps 1 and 2 are built
+(branch feat/admin-accounts); step 2's approved mockups:
 
 1. **Admin accounts (server).** `User.IsAdmin`; `AdminActions` log; `/admin/api` accepts a signed-in
    admin as well as the key (the old page and the end-to-end tests keep using the key);
@@ -41,7 +42,9 @@ Each step with visible screens gets mockups approved before it is built.
    as long as an admin account exists.
 2. **The console in logit-web.** Claim prompt, Overview with "Needs you", People with a full
    person page (reset password, sign out everywhere, delete, make admin, the action log), Invites,
-   Reports, Plugin reviews.
+   Reports, Plugin reviews. Server additions: `GET /admin/api/overview`, extending an invite, an
+   admin password reset signs the person out everywhere, and claiming with a wrong key answers 403
+   (a 401 made the app refresh its session and send the key twice).
 3. **Server pages.** Sign-ups mode, email with a test send, version and update check, storage, the
    daily counters behind the 14-day grid (5xx per day is new).
 4. **getlogit.app pages.** Plan and billing on the person page, Subscriptions, Growth (the

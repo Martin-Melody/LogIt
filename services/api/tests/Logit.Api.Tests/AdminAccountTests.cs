@@ -28,7 +28,8 @@ public class AdminAccountTests
         Assert.False(me.GetProperty("isAdmin").GetBoolean());
         Assert.True(me.GetProperty("claimOffered").GetBoolean());
 
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Claim(alex, "wrong-key")).StatusCode);
+        // 403, not 401: a 401 would make the app refresh its session and send the key again.
+        Assert.Equal(HttpStatusCode.Forbidden, (await Claim(alex, "wrong-key")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Claim(alex, Key)).StatusCode);
 
         me = await Json(await alex.GetAsync("/admin/me"));
