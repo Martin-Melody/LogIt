@@ -1,0 +1,98 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import * as Alert from "$lib/components/ui/alert";
+  import { Skeleton } from "$lib/components/ui/skeleton";
+  import { shortDate } from "$lib/features/coaching/format";
+  import { adminApi, at, type Subscriptions } from "$lib/features/admin/adminApi";
+
+  let data = $state<Subscriptions | null>(null);
+  let error = $state<string | null>(null);
+  let show = $state<"paying" | "problems" | "stopping" | "ended" | "test">("paying");
+
+  onMount(async () => {
+    try {
+      data = await adminApi.subscriptions();
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Couldn't load subscriptions";
+    }
+  });
+
+  type Row = Subscriptions["subscriptions"][number];
+  const live = (s: Row) => !s.expiresAt || at(s.expiresAt) > Date.now();
+  const groups: Record<typeof show, (s: Row) => boolean> = {
+    paying: (s) => !s.isTest && ["Active", "Canceled", "GracePeriod"].includes(s.state) && live(s),
+    problems: (s) => !s.isTest && ["GracePeriod", "OnHold"].includes(s.state),
+    stopping: (s) => !s.isTest && s.state === "Canceled" && live(s),
+    ended: (s) => !s.isTest && (["Expired", "Revoked"].includes(s.state) || (s.state === "Canceled" && !live(s))),
+    test: (s) => s.isTest,
+  };
+  const labels: Record<typeof show, string> = { paying: "Paying", problems: "Payment problems", stopping: "Stopping", ended: "Ended", test: "Test purchases" };
+  const rows = $derived(data ? data.subscriptions.filter(groups[show]) : []);
+  const count = (k: typeof show) => (data ? data.subscriptions.filter(groups[k]).length : 0);
+
+  const store = { Google: "Google Play", Apple: "App Store", Stripe: "Stripe" } as const;
+  const stateText: Record<string, string> = { Active: "Active", Canceled: "Stopping", GracePeriod: "Payment failing", OnHold: "On hold", Paused: "Paused", Expired: "Ended", Revoked: "Refunded", Pending: "Pending" };
+  const tone = (state: string) =>
+    state === "Active" ? "bg-success/15 text-success" : state === "GracePeriod" || state === "OnHold" ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground";
+  function when(s: Row): string {
+    if (!s.expiresAt) return "—";
+    const d = shortDate(at(s.expiresAt));
+    if (s.state === "Active" && s.autoRenewing) return `Renews ${d}`;
+    if (s.state === "GracePeriod") return `Access until ${d}`;
+    return live(s) ? `Ends ${d}` : `Ended ${d}`;
+  }
+</script>
+
+<div class="flex max-w-[1100px] flex-col gap-[18px]">
+  <header>
+    <h1 class="text-[26px] font-bold tracking-tight">Subscriptions</h1>
+    <p class="mt-0.5 text-sm text-muted-foreground">Everyone paying for Pro or Studio, wherever they bought it. Test purchases are counted apart.</p>
+  </header>
+
+  {#if error}
+    <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
+  {:else if !data}
+    <Skeleton class="h-24" /><Skeleton class="h-72" />
+  {:else}
+    {@const c = data.counts}
+    <div class="flex flex-wrap gap-3">
+      {#each [["Paying now", `${c.payingPro + c.payingStudio}`, `${c.payingPro} Pro · ${c.payingStudio} Studio`, false], ["New, last 30 days", `${c.newLast30Days}`, "", false], ["Stopping", `${c.stopping}`, "cancelled, paid until their date", false], ["Payment problems", `${c.paymentProblems}`, "the store is retrying the card", c.paymentProblems > 0], ["Plans given by hand", `${c.givenByHand}`, "friends and testers", false]] as [label, value, note, warn] (label)}
+        <div class="flex-[1_1_170px] rounded-xl border bg-card px-4 py-3.5 {warn ? 'border-warning/40' : 'border-border'}">
+          <span class="block text-[13px] text-muted-foreground">{label}</span>
+          <strong class="text-2xl font-semibold tabular-nums {warn ? 'text-warning' : ''}">{value}</strong>
+          {#if note}<span class="block text-xs text-muted-foreground">{note}</span>{/if}
+        </div>
+      {/each}
+    </div>
+
+    <section class="flex flex-col gap-3 rounded-[14px] border border-border bg-card px-5 py-4">
+      <div role="tablist" aria-label="Show" class="flex flex-wrap gap-2">
+        {#each Object.keys(labels) as k (k)}
+          {@const key = k as typeof show}
+          <button type="button" role="tab" aria-selected={show === key} onclick={() => (show = key)}
+            class="h-8 rounded-full px-3 text-[13px] transition-colors {show === key ? 'bg-primary font-semibold text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}">{labels[key]} {count(key)}</button>
+        {/each}
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[720px] text-[13px]">
+          <thead><tr class="text-left text-xs text-muted-foreground"><th class="pb-2 font-medium">Person</th><th class="pb-2 font-medium">Plan</th><th class="pb-2 font-medium">Store</th><th class="pb-2 font-medium">State</th><th class="pb-2 font-medium">Renews or ends</th><th class="pb-2 font-medium">Since</th></tr></thead>
+          <tbody>
+            {#each rows as s (s.id)}
+              <tr class="border-t border-border">
+                <td class="py-2.5"><a href="/admin/people?id={s.user.id}" class="text-primary hover:underline">{s.user.username}</a></td>
+                <td class="py-2.5">{s.plan}</td>
+                <td class="py-2.5">{store[s.source]}</td>
+                <td class="py-2.5"><span class="rounded-full px-2 py-px text-xs font-semibold {tone(s.state)}">{stateText[s.state] ?? s.state}</span></td>
+                <td class="py-2.5">{when(s)}</td>
+                <td class="py-2.5 text-muted-foreground">{shortDate(at(s.createdAt))}</td>
+              </tr>
+            {:else}
+              <tr><td colspan="6" class="py-6 text-center text-muted-foreground">None.</td></tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-[13px] text-muted-foreground">Prices and income live in Google Play Console. Logit only knows who has which plan, and until when.</p>
+    </section>
+  {/if}
+</div>

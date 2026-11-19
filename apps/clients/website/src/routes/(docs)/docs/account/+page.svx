@@ -31,6 +31,22 @@ switches once everything has been copied, so if the copy stops nothing changes a
 again. Your old account is kept until you delete it, and social posts and followers stay on the old
 server. If you had Pro and move to your own server, cancel Pro in Google Play.
 
+## What a server's admins can see
+
+Whoever runs a LogIt server has an admin console: LogIt does for getlogit.app, and on a server you
+host yourself, you and anyone you make an admin do. In it, admins can see your name, username and
+email, when you joined, which devices you're signed in on and when you were last around, your plan,
+how many posts you have, and posts or comments someone reported. On getlogit.app they also see
+where you bought your plan, and any diagnostics log you chose to send from the app.
+
+The console doesn't show your workouts, plans, nutrition, body weight, habits or messages, and
+admins can't sign in as you. They can reset your password, sign you out, change your email or plan,
+or delete your account. Each change is recorded with who made it, and you get an email about it
+when the server has email set up.
+
+Whoever runs a server can still read its database directly. If that matters to you, run your own:
+see [Move to another server](#move-to-another-server).
+
 ## Delete your account
 
 On the web, open Account (the card at the bottom of the sidebar) and choose Delete account. You'll be

@@ -22,6 +22,48 @@ namespace Logit.Api.Migrations.Postgres
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.AdminAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ActorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("TargetName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.ToTable("AdminActions");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1292,6 +1334,42 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("Reports");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.ServerErrorCount", b =>
+                {
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Date", "Route");
+
+                    b.ToTable("ServerErrorCounts");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.ServerSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("ServerSettings");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1993,6 +2071,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<Guid?>("InviteId")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsAdmin")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("boolean");

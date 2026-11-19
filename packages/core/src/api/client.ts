@@ -97,15 +97,26 @@ export interface RegistrationInfo {
   /** "invite": signing up needs an invite code from the server's admin. */
   mode: "open" | "invite";
   selfHosted: boolean;
+  /** Nobody is the admin yet: signing up with the server's ADMIN_KEY sets it up (no invite needed). */
+  setup?: boolean;
 }
 
 const BASE_URL_KEY = "logit:api:baseUrl";
-// The hosted server. VITE_API_URL at build time overrides it (e.g. a local API in development);
-// users pick a self-hosted server at sign-in, which is stored under BASE_URL_KEY.
+// The hosted server. VITE_API_URL at build time overrides it (e.g. a local API in development),
+// and a self-hosted dashboard is told its own API at run time (logit-web's hooks.server.ts);
+// users can also pick a server at sign-in, which is stored under BASE_URL_KEY.
 const DEFAULT_BASE_URL: string = import.meta.env.VITE_API_URL || "https://api.getlogit.app";
 
+/** The API a self-hosted dashboard's server said to use, or null. ":8080" = this page's host on 8080. */
+export function runtimeApiUrl(injected = (globalThis as { __LOGIT_API_URL__?: unknown }).__LOGIT_API_URL__,
+  where: { protocol: string; hostname: string } | undefined = globalThis.location): string | null {
+  if (typeof injected !== "string" || !injected) return null;
+  if (injected.startsWith(":")) return where ? `${where.protocol}//${where.hostname}${injected}` : null;
+  return injected.replace(/\/+$/, "");
+}
+
 function getBaseUrl(): string {
-  return localStorage.getItem(sessionKey(BASE_URL_KEY)) ?? DEFAULT_BASE_URL;
+  return localStorage.getItem(sessionKey(BASE_URL_KEY)) ?? runtimeApiUrl() ?? DEFAULT_BASE_URL;
 }
 
 /** The server this app talks to: the hosted one, or the self-hosted one picked at sign-in. */
@@ -299,7 +310,8 @@ class ApiClient {
         ...(init.headers as Record<string, string>),
       };
       if (token && !ownToken) headers["Authorization"] = `Bearer ${token}`;
-      return fetch(`${getBaseUrl()}${path}`, { ...init, headers });
+      // A full URL (the hosted admin console's same-origin /admin-api) is used as it is.
+      return fetch(/^https?:\/\//.test(path) ? path : `${getBaseUrl()}${path}`, { ...init, headers });
     };
 
     let res: Response;
@@ -348,6 +360,8 @@ class ApiClient {
     else log.debug("api", `${method} ${route} ${res.status}`, { requestId, ms });
 
     if (res.status === 204) return undefined as T;
+    // A file (e.g. the admin's database backup) comes back as a Blob; everything else is JSON.
+    if (!(res.headers.get("Content-Type") ?? "application/json").includes("json")) return (await res.blob()) as T;
     return res.json();
   }
 
@@ -359,10 +373,11 @@ class ApiClient {
     password: string,
     displayName: string,
     inviteCode?: string,
+    adminKey?: string,
   ): Promise<AuthUser> {
     const data: AuthResponse = await this.fetch("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ username, email, password, displayName, inviteCode: inviteCode?.trim() || undefined }),
+      body: JSON.stringify({ username, email, password, displayName, inviteCode: inviteCode?.trim() || undefined, adminKey: adminKey?.trim() || undefined }),
     });
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
@@ -378,7 +393,7 @@ class ApiClient {
   async getRegistrationInfo(): Promise<RegistrationInfo | null> {
     try {
       const info = await this.fetch<RegistrationInfo>("/auth/registration");
-      return { mode: info.mode === "invite" ? "invite" : "open", selfHosted: !!info.selfHosted };
+      return { mode: info.mode === "invite" ? "invite" : "open", selfHosted: !!info.selfHosted, setup: !!info.setup };
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return { mode: "open", selfHosted: false };
       return null;

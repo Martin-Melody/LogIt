@@ -492,7 +492,9 @@ export const FEATURES: Feature[] = [
 
 /** Pages that need no docs page of their own. */
 export const NO_DOCS = {
-  web: ["/login", "/forgot-password", "/reset-password", "/welcome"],
+  // The admin console is for whoever runs the server; the self-hosting guide covers it
+  // (docs/admin-console.md, step 5), not the user docs.
+  web: ["/login", "/forgot-password", "/reset-password", "/welcome", "/admin", "/admin/people", "/admin/invites", "/admin/reports", "/admin/plugins", "/admin/server", "/admin/subscriptions", "/admin/growth", "/admin/diagnostics", "/admin/discover"],
   phone: ["/auth"],
 };
 

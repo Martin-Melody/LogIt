@@ -26,11 +26,16 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Logit__Commit: ${LOGIT_TAG:-}
+      # Cloudflare Access in front of the admin console; both empty = off (see README.md).
+      Admin__Access__TeamDomain: ${ADMIN_ACCESS_TEAM_DOMAIN:-}
+      Admin__Access__Audience: ${ADMIN_ACCESS_AUD:-}
       ConnectionStrings__Default: "Host=db;Database=logit;Username=logit;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
       Jwt__Secret: ${JWT_SECRET:?Set JWT_SECRET in .env}
       Jwt__Issuer: logit-api
       Jwt__Audience: logit-app
-      Admin__Key: ${ADMIN_KEY:?Set ADMIN_KEY in .env}
+      # Optional: claims the first admin account, then remove it (docs/admin-console.md).
+      Admin__Key: ${ADMIN_KEY:-}
       Deployment__SelfHosted: "false"
       Registration__Mode: open
       Web__Origin: https://app.getlogit.app
@@ -59,6 +64,8 @@ services:
     environment:
       PORT: "3000"
       ORIGIN: https://app.getlogit.app
+      # The admin console calls its API through Caddy on this domain (behind Cloudflare Access).
+      PUBLIC_ADMIN_API: /admin-api
 
   db:
     image: postgres:17-alpine

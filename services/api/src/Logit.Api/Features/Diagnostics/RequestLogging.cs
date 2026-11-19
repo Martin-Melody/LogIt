@@ -37,6 +37,7 @@ public static class RequestLogging
     public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder app)
     {
         var logger = app.ApplicationServices.GetRequiredService<ILoggerFactory>().CreateLogger(Category);
+        var scopes = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>();
 
         return app.Use(async (ctx, next) =>
         {
@@ -73,6 +74,7 @@ public static class RequestLogging
                 var userId = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "-";
                 logger.Log(LevelFor(status), "{Method} {Path} {Status} {ElapsedMs}ms user={UserId}",
                     ctx.Request.Method, path, status, sw.ElapsedMilliseconds, userId);
+                if (status >= 500) ServerErrors.RecordInBackground(scopes, logger, ServerErrors.RouteOf(ctx));
             }
         });
     }

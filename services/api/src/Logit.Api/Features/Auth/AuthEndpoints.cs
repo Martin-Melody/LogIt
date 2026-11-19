@@ -17,7 +17,7 @@ public static class AuthEndpoints
 
         group.MapPost("/register", Register).RequireRateLimiting(Registration.RateLimitPolicy);
         group.MapGet("/registration", GetRegistrationInfo);
-        group.MapPost("/login", Login);
+        group.MapPost("/login", Login).RequireRateLimiting(Registration.LoginRateLimitPolicy);
         group.MapPost("/refresh", Refresh);
         group.MapPost("/revoke", Revoke).RequireAuthorization();
         group.MapDelete("/account", DeleteAccount).RequireAuthorization();
@@ -33,8 +33,22 @@ public static class AuthEndpoints
         AppDbContext db,
         TokenService tokens,
         IConfiguration config,
-        HttpRequest httpRequest)
+        HttpRequest httpRequest,
+        Admin.AdminKeys keys,
+        ILoggerFactory loggers)
     {
+        // Setting a server up: the server's ADMIN_KEY instead of an invite makes this account the
+        // admin. Checked first (with the key's lockout), so a wrong key creates nothing.
+        var withKey = !string.IsNullOrWhiteSpace(req.AdminKey);
+        if (withKey)
+        {
+            if (keys.Guard is null)
+                return Results.Json(new { error = "This server has no admin key set." }, statusCode: StatusCodes.Status403Forbidden);
+            if (Admin.AdminEndpoints.CheckKey(keys.Guard, req.AdminKey!.Trim(), httpRequest.HttpContext,
+                    loggers.CreateLogger("Logit.Admin"), StatusCodes.Status403Forbidden) is { } refused)
+                return refused;
+        }
+
         var normalizedUsername = req.Username.Trim().ToLowerInvariant();
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
 
@@ -45,7 +59,7 @@ public static class AuthEndpoints
             return Results.Conflict(new { error = "Email already registered." });
 
         Guid? inviteId = null;
-        if (Registration.GetMode(config) == RegistrationMode.Invite)
+        if (!withKey && await Registration.GetModeAsync(db, config) == RegistrationMode.Invite)
         {
             if (string.IsNullOrWhiteSpace(req.InviteCode))
                 return Results.Json(
@@ -65,6 +79,7 @@ public static class AuthEndpoints
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
             DisplayName = req.DisplayName.Trim(),
             InviteId = inviteId,
+            IsAdmin = withKey,
             // New accounts start in Discover (they can turn it off in Social settings); older
             // accounts are asked once, see User.ShowInDiscover.
             ShowInDiscover = true,
@@ -76,6 +91,7 @@ public static class AuthEndpoints
         user.RefreshTokens.Add(refresh);
 
         db.Users.Add(user);
+        if (withKey) Admin.AdminLog.Add(db, new Admin.AdminActor(user.Id, user.Username), "admin.claim", user, "set the server up");
         try
         {
             await db.SaveChangesAsync();
@@ -90,10 +106,11 @@ public static class AuthEndpoints
         return Results.Ok(BuildAuthResponse(user, refresh, tokens, config));
     }
 
-    private static IResult GetRegistrationInfo(IConfiguration config) =>
+    private static async Task<IResult> GetRegistrationInfo(IConfiguration config, AppDbContext db, Admin.AdminKeys keys) =>
         Results.Ok(new RegistrationInfo(
-            Registration.ModeName(Registration.GetMode(config)),
-            config.GetValue<bool>("Deployment:SelfHosted")));
+            Registration.ModeName(await Registration.GetModeAsync(db, config)),
+            config.GetValue<bool>("Deployment:SelfHosted"),
+            Setup: keys.Guard is not null && !await db.Users.AnyAsync(u => u.IsAdmin)));
 
     /// The same answer for an unknown account and a wrong password, so sign-in can't be used to
     /// find out which usernames or emails exist. It carries a message: over HTTP/2 a bare 401 has
@@ -109,9 +126,21 @@ public static class AuthEndpoints
         TokenService tokens,
         IConfiguration config,
         ILoggerFactory loggerFactory,
-        HttpRequest httpRequest)
+        HttpRequest httpRequest,
+        LoginLockout lockout)
     {
         var identifier = req.UsernameOrEmail.Trim().ToLowerInvariant();
+        var now = DateTime.UtcNow;
+        var pair = $"{identifier}|{httpRequest.HttpContext.Connection.RemoteIpAddress}";
+        if (lockout.LockedUntil(pair, now) is { } until)
+        {
+            var minutes = Math.Max(1, (int)Math.Ceiling((until - now).TotalMinutes));
+            httpRequest.HttpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling((until - now).TotalSeconds)).ToString();
+            return Results.Json(
+                new { error = $"Too many wrong passwords. Try again in {minutes} min, or reset your password.", code = "too_many_attempts" },
+                statusCode: StatusCodes.Status429TooManyRequests);
+        }
+
         var user = await db.Users.FirstOrDefaultAsync(u =>
             u.Username == identifier || u.Email == identifier);
 
@@ -120,14 +149,18 @@ public static class AuthEndpoints
         // Sandbox sample clients have no password anyone knows; nobody signs in as one.
         if (user is null || user.IsSample)
         {
+            lockout.RecordFailure(pair, now);
             loggerFactory.CreateLogger("Logit.Auth").LogInformation("Login failed: no such account");
             return WrongCredentials();
         }
         if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
         {
+            if (lockout.RecordFailure(pair, now))
+                loggerFactory.CreateLogger("Logit.Auth").LogWarning("Login: user {UserId} locked out from one address after {Count} wrong passwords", user.Id, LoginLockout.MaxWrongPasswords);
             loggerFactory.CreateLogger("Logit.Auth").LogInformation("Login failed: wrong password for user {UserId}", user.Id);
             return WrongCredentials();
         }
+        lockout.Clear(pair);
 
         // Other devices keep their tokens: signing in on a second phone must not sign the
         // first one out. Every token is revoked only on a password reset (ResetPassword).
@@ -212,6 +245,7 @@ public static class AuthEndpoints
         if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
             return Results.BadRequest(new { error = "Password is incorrect." });
 
+        await Admin.AdminLog.ForgetAsync(db, user.Id);
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         db.Users.Remove(user);
         await db.SaveChangesAsync();

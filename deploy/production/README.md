@@ -68,7 +68,29 @@ migration that drops or renames something needs a fix forward instead.
 ## Changing a secret
 
 Edit `/opt/logit/.env`, then `docker compose up -d`. Changing `JWT_SECRET` signs everyone out.
-`ADMIN_KEY` is the key for the admin page (`https://api.getlogit.app/admin`).
+`ADMIN_KEY` claims admin for your own account (the dashboard home offers "Make this account the
+admin" while nobody is one). Once your account is an admin, remove `ADMIN_KEY` from `.env` so the
+key can't be tried at all; add it back only to recover if no admin can sign in.
+
+## Admin console behind Cloudflare Access
+
+The admin console (app.getlogit.app/admin) and its API calls (app.getlogit.app/admin-api, which
+Caddy passes to the API's /admin/api) sit behind Cloudflare Access. Until the two settings below
+are in `.env`, the API doesn't check for it, so set Access up first, then the settings.
+
+1. Cloudflare dashboard > Zero Trust > Access > Applications > Add an application > Self-hosted.
+   Name it "Logit admin". Public hostname: `app.getlogit.app` with path `admin*` (that covers
+   both /admin and /admin-api). Session duration: 24 hours.
+2. Add a policy "Admins": Action Allow, Include: Emails, your address. Identity: one-time PIN
+   (and Google if it's set up in Zero Trust > Settings > Authentication).
+3. Copy the application's "Application Audience (AUD) Tag" (application > Overview) and your team
+   domain (Zero Trust > Settings > Custom pages, e.g. `yourteam.cloudflareaccess.com`).
+4. In `/opt/logit/.env` set `ADMIN_ACCESS_TEAM_DOMAIN=yourteam.cloudflareaccess.com` and
+   `ADMIN_ACCESS_AUD=<the tag>`, then `docker compose up -d api`.
+5. Check: opening https://app.getlogit.app/admin asks for the Cloudflare sign-in first, and
+   `curl https://api.getlogit.app/admin/api/stats` with an admin's token answers 403.
+
+After this, claim admin on your own account from the dashboard, then remove `ADMIN_KEY` (above).
 
 ## Backups
 

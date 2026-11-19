@@ -17,6 +17,48 @@ namespace Logit.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.34");
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.AdminAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetName")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.ToTable("AdminActions");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1287,6 +1329,42 @@ namespace Logit.Api.Migrations
                     b.ToTable("Reports");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.ServerErrorCount", b =>
+                {
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Date", "Route");
+
+                    b.ToTable("ServerErrorCounts");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.ServerSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("ServerSettings");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1988,6 +2066,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<Guid?>("InviteId")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAdmin")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("INTEGER");

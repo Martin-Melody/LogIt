@@ -30,7 +30,18 @@ api.getlogit.app {
 app.getlogit.app {
 	tls /certs/origin.pem /certs/origin.key
 	encode zstd gzip
-	reverse_proxy web:3000 {
-		import proxy_headers
+	# The admin console's API calls, on the dashboard's own domain so Cloudflare Access (which
+	# guards app.getlogit.app/admin*) covers them; Cloudflare's signed header passes through and
+	# the API checks it (docs/admin-console.md).
+	handle_path /admin-api/* {
+		rewrite * /admin/api{path}
+		reverse_proxy api:8080 {
+			import proxy_headers
+		}
+	}
+	handle {
+		reverse_proxy web:3000 {
+			import proxy_headers
+		}
 	}
 }

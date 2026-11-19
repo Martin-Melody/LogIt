@@ -64,6 +64,7 @@ jobs:
           ConnectionStrings__Default: "Data Source=docs-shots.db"
           Jwt__Secret: "docs-shots-secret-at-least-32-characters-long"
           Registration__SignupsPer10Minutes: "1000"
+          Auth__LoginsPer10Minutes: "1000"
           Admin__Key: "docs-shots-admin-key-that-is-long-enough-123"
         run: |
           nohup dotnet run --no-launch-profile > "$RUNNER_TEMP/api.log" 2>&1 &

@@ -23,6 +23,7 @@
   import StudioNeeded from "$lib/features/onboarding/StudioNeeded.svelte";
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
   import { sandbox } from "$lib/features/guide/sandbox.svelte";
+  import { adminState } from "$lib/features/admin/adminState.svelte";
 
   let { children } = $props();
 
@@ -47,6 +48,16 @@
     "/my-coach": "My coach",
     "/account": "Account",
     "/exercises": "Exercise",
+    "/admin": "Admin",
+    "/admin/people": "People",
+    "/admin/invites": "Invites",
+    "/admin/reports": "Reports",
+    "/admin/plugins": "Plugin reviews",
+    "/admin/server": "Server",
+    "/admin/subscriptions": "Subscriptions",
+    "/admin/growth": "Growth",
+    "/admin/diagnostics": "Diagnostics",
+    "/admin/discover": "Discover tests",
   };
   const pageTitle = $derived.by(() => {
     const p = page.url.pathname;
@@ -98,6 +109,9 @@
     void page.url.pathname;
     return coachTrial();
   });
+  // The admin console: open to any signed-in account whatever its plan; the server decides
+  // who is an admin, and the page says "not found" to everyone else.
+  const isAdminPath = $derived(page.url.pathname === "/admin" || page.url.pathname.startsWith("/admin/"));
   // "What brings you here?" right after signing up on the web (W2).
   const isWelcome = $derived(page.url.pathname.startsWith("/welcome"));
 
@@ -110,7 +124,7 @@
       return;
     }
     if (isBlockedFreeTier) {
-      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isWelcome && !isTrialCoaching) await goto("/upgrade");
+      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isWelcome && !isTrialCoaching && !isAdminPath) await goto("/upgrade");
       return;
     }
     if (isUpgrade) await goto("/");
@@ -152,7 +166,15 @@
       if ((isStudio || apiClient.isSelfHosted()) && !sandbox.loaded) void sandbox.refresh();
       void socialBadge.refresh();
     }
+    // Once per signed-in account: is it an admin, or may it claim admin?
+    const userId = apiClient.isAuthenticated() ? apiClient.getUser()?.id ?? null : null;
+    if (ready && userId !== adminCheckedFor) {
+      adminCheckedFor = userId;
+      if (userId) void adminState.refresh();
+      else adminState.reset();
+    }
   });
+  let adminCheckedFor: string | null = null;
 
   const walkthroughs = $derived.by(() => {
     void page.url.pathname;
@@ -184,7 +206,7 @@
     </div>
     {@render children?.()}
   </div>
-{:else if apiClient.isAuthenticated() && (!isBlockedFreeTier || isTrialCoaching)}
+{:else if apiClient.isAuthenticated() && (!isBlockedFreeTier || isTrialCoaching || isAdminPath)}
   <Sidebar.Provider>
     <AppSidebar
       {isStudio}
@@ -205,7 +227,7 @@
         </div>
       {/if}
       <main class="flex-1 px-4 py-6 sm:px-8 sm:py-7">
-        <div class="mx-auto w-full max-w-[1120px]">
+        <div class="mx-auto w-full {isAdminPath ? 'max-w-[1280px]' : 'max-w-[1120px]'}">
           {#if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/links")}
             <StudioNeeded what="links" />
           {:else if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/payments")}

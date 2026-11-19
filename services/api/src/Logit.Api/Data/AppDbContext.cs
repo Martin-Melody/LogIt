@@ -43,6 +43,9 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<CoachHabit> CoachHabits => Set<CoachHabit>();
     public DbSet<DiagnosticReport> DiagnosticReports => Set<DiagnosticReport>();
     public DbSet<Invite> Invites => Set<Invite>();
+    public DbSet<AdminAction> AdminActions => Set<AdminAction>();
+    public DbSet<ServerSetting> ServerSettings => Set<ServerSetting>();
+    public DbSet<ServerErrorCount> ServerErrorCounts => Set<ServerErrorCount>();
     public DbSet<BillingSubscription> BillingSubscriptions => Set<BillingSubscription>();
     public DbSet<CoachInviteLink> CoachInviteLinks => Set<CoachInviteLink>();
     public DbSet<CheckinReview> CheckinReviews => Set<CheckinReview>();
@@ -220,6 +223,30 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .WithMany()
              .HasForeignKey(r => r.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<ServerSetting>(e =>
+        {
+            e.HasKey(x => x.Key);
+            e.Property(x => x.Key).HasMaxLength(100);
+            e.Property(x => x.Value).HasMaxLength(2000);
+        });
+
+        model.Entity<ServerErrorCount>(e =>
+        {
+            e.HasKey(x => new { x.Date, x.Route });
+            e.Property(x => x.Route).HasMaxLength(200);
+        });
+
+        // No foreign keys on purpose: the log outlives the accounts it mentions.
+        model.Entity<AdminAction>(e =>
+        {
+            e.HasIndex(a => a.CreatedAt);
+            e.HasIndex(a => a.TargetUserId);
+            e.Property(a => a.Action).HasMaxLength(50);
+            e.Property(a => a.ActorName).HasMaxLength(100);
+            e.Property(a => a.TargetName).HasMaxLength(100);
+            e.Property(a => a.Detail).HasMaxLength(500);
         });
 
         model.Entity<Report>(e =>

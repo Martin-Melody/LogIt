@@ -92,7 +92,11 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [x] **Admin page for self-hosters** (2026-11-13): plan editor and diagnostics counter hidden when
       `Deployment:SelfHosted` is on.
 - [x] **Document the admin page** in the self-hosting guide and `.env.example` (2026-11-13).
-- [ ] **Admin page styling** on the shared theme (cosmetic; it's HTML inside `AdminHtml.cs`).
+- [x] **Admin console** (2026-11-19, branch `feat/admin-accounts`, docs/admin-console.md): replaces the
+      `AdminHtml.cs` page with an admin space in the web dashboard; admin accounts, action log, Server
+      page, getlogit.app pages behind Cloudflare Access (app "Logit admin" created 2026-11-19).
+- [x] **Login rate limit** (2026-11-19): 30 sign-ins per address per 10 minutes, and 10 wrong
+      passwords lock that account out from that address for 15 minutes.
 - [x] **Server billing** (2026-11-14, branch `feat/play-billing`): `BillingSubscriptions` table (source
       google/apple/stripe, plan, state, end date); `User.Tier` worked out from those plus an admin-given plan
       (`ManualTier`; today's plans carried over as that). `POST /billing/google/verify` checks a purchase with

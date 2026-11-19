@@ -1,6 +1,7 @@
 <script lang="ts">
   import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
   import BigScreenCard from "$lib/features/onboarding/BigScreenCard.svelte";
+  import ClaimAdminCard from "$lib/features/admin/ClaimAdminCard.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { apiClient } from "@logit/core/api/client";
   import * as Alert from "$lib/components/ui/alert";
@@ -149,6 +150,7 @@
     {/if}
   </header>
 
+  {#if !editing && !viewingClient.current}<ClaimAdminCard />{/if}
   {#if !editing}<WelcomeCard walkthrough="pro" name={firstName} />{/if}
   {#if !editing && !viewingClient.current}<BigScreenCard sessions={data ? data.sessions.length : null} />{/if}
 

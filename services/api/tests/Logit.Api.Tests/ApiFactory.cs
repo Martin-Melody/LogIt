@@ -17,6 +17,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"logit-test-{Guid.NewGuid():N}.db");
 
+    /// Sets Admin:Key (ADMIN_KEY) for this server; null leaves it unset.
+    public string? AdminKey { get; init; }
+
+    /// Any other settings, e.g. Deployment:SelfHosted.
+    public Dictionary<string, string> Settings { get; init; } = [];
+
+    /// Swaps services, e.g. a fake email sender.
+    public Action<IServiceCollection>? ConfigureTestServices { get; init; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -24,6 +33,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Secret", "test-secret-that-is-at-least-32-characters-long");
         builder.UseSetting("Registration:Mode", "Open");
         builder.UseSetting("Registration:SignupsPer10Minutes", "10000");
+        builder.UseSetting("Auth:LoginsPer10Minutes", "10000");
+        if (AdminKey is not null) builder.UseSetting("Admin:Key", AdminKey);
+        foreach (var (k, v) in Settings) builder.UseSetting(k, v);
+        if (ConfigureTestServices is not null) builder.ConfigureServices(ConfigureTestServices);
         builder.ConfigureServices(s => s.AddTransient<IStartupFilter, StreamBodyFilter>());
     }
 

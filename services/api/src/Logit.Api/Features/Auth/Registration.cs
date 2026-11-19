@@ -9,7 +9,7 @@ public enum RegistrationMode
 {
     /// Anyone who can reach the server can create an account (the hosted service).
     Open,
-    /// Creating an account needs an invite code from the /admin page (self-hosted default).
+    /// Creating an account needs an invite code from the admin console (self-hosted default).
     Invite,
 }
 
@@ -24,11 +24,23 @@ public static class Registration
 
     /// Sign-up attempts per address: plenty for a family, too few to guess invite codes.
     public const string RateLimitPolicy = "auth-register";
+    public const string LoginRateLimitPolicy = "auth-login";
 
-    public static RegistrationMode GetMode(IConfiguration config) =>
-        string.Equals(config["Registration:Mode"]?.Trim(), "invite", StringComparison.OrdinalIgnoreCase)
-            ? RegistrationMode.Invite
-            : RegistrationMode.Open;
+    /// The mode from .env (REGISTRATION_MODE). The admin console can override it: use GetModeAsync.
+    public static RegistrationMode GetMode(IConfiguration config) => Parse(config["Registration:Mode"]);
+
+    /// The ServerSettings key the admin console saves the mode under.
+    public const string ModeSettingKey = "registration.mode";
+
+    /// The mode in force: the admin console's choice if it made one, else .env's.
+    public static async Task<RegistrationMode> GetModeAsync(AppDbContext db, IConfiguration config)
+    {
+        var saved = await db.ServerSettings.Where(s => s.Key == ModeSettingKey).Select(s => s.Value).FirstOrDefaultAsync();
+        return saved is null ? GetMode(config) : Parse(saved);
+    }
+
+    public static RegistrationMode Parse(string? value) =>
+        string.Equals(value?.Trim(), "invite", StringComparison.OrdinalIgnoreCase) ? RegistrationMode.Invite : RegistrationMode.Open;
 
     public static string ModeName(RegistrationMode mode) => mode == RegistrationMode.Invite ? "invite" : "open";
 
@@ -79,10 +91,19 @@ public static class Registration
         db.Invites.Where(i => i.Id == inviteId && i.UseCount > 0)
             .ExecuteUpdateAsync(s => s.SetProperty(i => i.UseCount, i => i.UseCount - 1));
 
-    /// The invite's state as the admin page shows it.
+    /// The invite's state as the admin console shows it.
     public static string Status(Invite i, DateTime now) =>
         i.RevokedAt is not null ? "revoked"
         : i.ExpiresAt is { } e && e <= now ? "expired"
         : i.UseCount >= i.MaxUses ? "used"
         : "active";
+}
+
+/// Wrong passwords for one account from one address: 10 within 15 minutes lock that pair out for
+/// 15 minutes. Keyed by account and address, not account alone, so nobody can lock someone else
+/// out of their account from another address; the per-address limit (auth-login) caps guessing
+/// across accounts.
+public sealed class LoginLockout() : Logit.Api.Features.Admin.FailureLockout(MaxWrongPasswords)
+{
+    public const int MaxWrongPasswords = 10;
 }
