@@ -14,12 +14,19 @@ title: Getting paid
 
 ## Set up
 
-Payments › Packages and settings › Connect Stripe opens Stripe's own sign-up. You're the seller: your
-own VAT, receipts and refunds, all in Stripe. Stripe's card fees are yours; LogIt takes nothing.
+Payments › Packages and settings walks you through three steps: connect Stripe (Stripe's own sign-up,
+about 10 minutes), make a package, and put it on an invite link. You're the seller: your own VAT and
+refunds, all in Stripe. Stripe's card fees are yours; LogIt takes nothing.
+
+People who open a paid link see your package and price first. If they're new to LogIt they make an
+account right on that page, then pay on Stripe's page, where they can also type a discount code you
+made under Coupons in your Stripe dashboard. You get an email when someone pays.
 
 ## When a payment fails
 
-Stripe retries the card and emails the client a link to update it. You choose what happens to coaching
-meanwhile, for everyone or per client.
+LogIt emails the client a link to update their card, and Stripe tries the card again over a few days.
+Clients can also press Update card in My coach on the web; Stripe takes the overdue payment as soon as the
+new card is in. You choose what happens to coaching meanwhile, for everyone or per client, and you get an
+email too (turn these off in Packages and settings).
 
 <CanCant ids={["coach-payments"]} />

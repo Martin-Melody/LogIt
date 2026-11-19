@@ -9055,11 +9055,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/martin/Projects/logit-web-onboarding/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
+      "projectUniqueName": "/home/martin/Projects/logit/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
       "projectName": "Logit.Api.Tests",
-      "projectPath": "/home/martin/Projects/logit-web-onboarding/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
+      "projectPath": "/home/martin/Projects/logit/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
       "packagesPath": "/home/martin/.nuget/packages/",
-      "outputPath": "/home/martin/Projects/logit-web-onboarding/services/api/tests/Logit.Api.Tests/obj/",
+      "outputPath": "/home/martin/Projects/logit/services/api/tests/Logit.Api.Tests/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/martin/.nuget/NuGet/NuGet.Config"
@@ -9075,8 +9075,8 @@
           "framework": "net8.0",
           "targetAlias": "net8.0",
           "projectReferences": {
-            "/home/martin/Projects/logit-web-onboarding/services/api/src/Logit.Api/Logit.Api.csproj": {
-              "projectPath": "/home/martin/Projects/logit-web-onboarding/services/api/src/Logit.Api/Logit.Api.csproj"
+            "/home/martin/Projects/logit/services/api/src/Logit.Api/Logit.Api.csproj": {
+              "projectPath": "/home/martin/Projects/logit/services/api/src/Logit.Api/Logit.Api.csproj"
             }
           }
         }

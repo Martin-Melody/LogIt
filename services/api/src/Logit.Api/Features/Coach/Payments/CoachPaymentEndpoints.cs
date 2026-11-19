@@ -31,6 +31,9 @@ public static class CoachPaymentEndpoints
         group.MapPost("/links/code/{code}/checkout", StartCheckout);
         group.MapPost("/payments/checkout/confirm", ConfirmCheckout);
         group.MapPost("/payments/mine/{relationshipId:guid}/stop", ClientStop);
+        group.MapPost("/payments/mine/{relationshipId:guid}/billing", ClientBilling);
+        // The link in a failed-payment email: no sign-in, the signed token is the permission.
+        group.MapPost("/payments/fix", FixLink).AllowAnonymous();
     }
 
     /// Stripe sends events from coaches' accounts here (a Connect webhook endpoint).
@@ -435,6 +438,47 @@ public static class CoachPaymentEndpoints
         return await Stop(payments, rel, req.Stop, clock, ct);
     }
 
+    /// Stripe's billing page for the client's plan with this coach (change the card, receipts).
+    private static async Task<IResult> ClientBilling(
+        Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, ICoachStripe stripe, IConfiguration config, CancellationToken ct)
+    {
+        var me = caller.GetUserId();
+        var payment = await db.CoachClientPayments.AsNoTracking().Include(p => p.Relationship)
+            .FirstOrDefaultAsync(p => p.RelationshipId == relationshipId && p.Relationship.ClientId == me, ct);
+        return await BillingPage(payment, db, stripe, config, ct);
+    }
+
+    private static async Task<IResult> FixLink(
+        [FromBody] FixLinkRequest req, AppDbContext db, ICoachStripe stripe, IConfiguration config, TimeProvider clock, CancellationToken ct)
+    {
+        var id = PaymentFixLinks.Read(req.Token, config["Jwt:Secret"] ?? "", clock.GetUtcNow().UtcDateTime);
+        if (id is null) return Error(410, "link_expired", "This link has expired. Open My coach in LogIt to update your card.");
+        var payment = await db.CoachClientPayments.AsNoTracking().Include(p => p.Relationship)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+        return await BillingPage(payment, db, stripe, config, ct);
+    }
+
+    private static async Task<IResult> BillingPage(
+        CoachClientPayment? payment, AppDbContext db, ICoachStripe stripe, IConfiguration config, CancellationToken ct)
+    {
+        if (payment is not { Mode: PaymentModes.Stripe, StripeCustomerId: { } customer })
+            return Error(404, "no_plan", "There's no card payment with this coach to manage.");
+        var account = await db.CoachPaymentAccounts.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.CoachId == payment.Relationship.CoachId, ct);
+        if (!stripe.Configured || account?.StripeAccountId is null)
+            return Error(409, "payments_not_ready", "Payments aren't available right now. Try again later.");
+        // Back to My coach afterwards; never a URL from the request.
+        var back = $"{(config["Web:Origin"] ?? "").TrimEnd('/')}/my-coach";
+        try
+        {
+            return Results.Ok(new { url = await stripe.CreateBillingPortalAsync(account.StripeAccountId, customer, back, ct) });
+        }
+        catch (StripeException ex)
+        {
+            return Error(502, "stripe_error", "Stripe didn't open the page: " + ex.Message);
+        }
+    }
+
     private static async Task<IResult> Stop(CoachPaymentService payments, CoachClientRelationship rel, bool stop, TimeProvider clock, CancellationToken ct)
     {
         try
@@ -581,7 +625,7 @@ public static class CoachPaymentEndpoints
                 break;
             case "invoice.payment_failed":
                 if (ev.Data.Object is Invoice failed && SubscriptionOf(failed) is { } failedSub)
-                    await payments.InvoiceFailedAsync(ev.Account, failedSub, now, ct);
+                    await payments.InvoiceFailedAsync(ev.Account, failedSub, now, ct, failed.AttemptCount);
                 break;
             case "customer.subscription.updated" or "customer.subscription.deleted":
                 if (ev.Data.Object is Subscription sub)
@@ -594,6 +638,7 @@ public static class CoachPaymentEndpoints
     private static string? SubscriptionOf(Invoice i) => i.Parent?.SubscriptionDetails?.SubscriptionId;
 }
 
+public record FixLinkRequest(string? Token);
 public record ConnectRequest(string? Country, string ReturnUrl, string RefreshUrl);
 public record PaymentSettingsRequest(string? FailRule, int FailDays, bool EmailOnFail, bool ShowClientNote);
 public record PackageRequest(string? Name, string? Description, long AmountCents, string? Interval, int? Weeks, bool Hidden);

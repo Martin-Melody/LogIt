@@ -13,6 +13,7 @@ namespace Logit.Api.Tests;
 public class CoachPaymentTests : IAsyncLifetime
 {
     private const string Acct = "acct_coach";
+    private const string Secret = "test-secret-0123456789abcdef0123456789abcdef";
     private static readonly DateTime T0 = new(2026, 11, 1, 12, 0, 0, DateTimeKind.Utc);
 
     private SqliteConnection _conn = null!;
@@ -37,7 +38,12 @@ public class CoachPaymentTests : IAsyncLifetime
         _block = new CoachPackage { CoachId = _coach.Id, Name = "12-week block", AmountCents = 30000, Interval = PaymentIntervals.Once, Weeks = 12 };
         _db.CoachPackages.AddRange(_monthly, _block);
         await _db.SaveChangesAsync();
-        _svc = new CoachPaymentService(_db, _stripe, _email, NullLogger<CoachPaymentService>.Instance);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Jwt:Secret"] = Secret,
+            ["Web:Origin"] = "https://app.example.test",
+        }).Build();
+        _svc = new CoachPaymentService(_db, _stripe, _email, config, NullLogger<CoachPaymentService>.Instance);
     }
 
     public async Task DisposeAsync()
@@ -100,9 +106,14 @@ public class CoachPaymentTests : IAsyncLifetime
         await _svc.FulfillCheckoutAsync(Acct, Checkout(_monthly), T0, default);
         await _svc.InvoiceFailedAsync(Acct, "sub_1", T0.AddDays(30), default);
         Assert.Equal(PaymentStates.Failed, (await Rel()).Payment!.State);
-        Assert.Single(_email.Sent); // the coach hears about it once
-        await _svc.InvoiceFailedAsync(Acct, "sub_1", T0.AddDays(33), default); // Stripe's retry fails too
-        Assert.Single(_email.Sent);
+        // The coach heard about the new client, then the failure; the client got a link to fix it.
+        Assert.Equal(["coach@example.com", "coach@example.com", "sarah@example.com"], _email.Sent.Select(e => e.To));
+        var toClient = _email.Sent[2];
+        Assert.Equal("Your payment to Alex didn't go through", toClient.Subject);
+        var token = toClient.Body.Split("/pay/fix/")[1].Split('\n')[0];
+        Assert.Equal((await Rel()).Payment!.Id, PaymentFixLinks.Read(token, Secret, T0.AddDays(31)));
+        await _svc.InvoiceFailedAsync(Acct, "sub_1", T0.AddDays(33), default, attempt: 2); // Stripe's retry fails too
+        Assert.Equal(3, _email.Sent.Count); // nobody is emailed again
 
         await _svc.SweepAsync(T0.AddDays(36), default); // 6 days unpaid: default rule is 7
         Assert.Equal(CoachClientStatus.Active, (await Rel()).Status);
@@ -162,7 +173,7 @@ public class CoachPaymentTests : IAsyncLifetime
         Assert.Equal(PaymentStates.Ended, rel.Payment!.State);
         Assert.Equal(T0.AddDays(84), rel.Payment.UnpaidSince);
         Assert.Equal(CoachClientStatus.Active, rel.Status);
-        Assert.Single(_email.Sent);
+        Assert.Equal(["Sarah paid for 12-week block", "Sarah's 12-week block has ended"], _email.Sent.Select(e => e.Subject));
 
         await _svc.SweepAsync(T0.AddDays(91.5), default);
         Assert.Equal(CoachClientStatus.Paused, (await Rel()).Status);
@@ -235,6 +246,18 @@ public class CoachPaymentTests : IAsyncLifetime
         Assert.Equal(expected, await CoachPaymentEndpoints.LinkStateFor(_db, link, config, CancellationToken.None));
     }
 
+    [Fact]
+    public void Fix_links_open_only_their_payment_until_they_expire()
+    {
+        var id = Guid.NewGuid();
+        var token = PaymentFixLinks.Create(id, T0.AddDays(30), Secret);
+        Assert.Equal(id, PaymentFixLinks.Read(token, Secret, T0.AddDays(29)));
+        Assert.Null(PaymentFixLinks.Read(token, Secret, T0.AddDays(31)));             // expired
+        Assert.Null(PaymentFixLinks.Read(token, "another-secret", T0));               // signed elsewhere
+        Assert.Null(PaymentFixLinks.Read(token[..^2] + (token[^2] == 'A' ? "BA" : "AA"), Secret, T0)); // tampered
+        Assert.Null(PaymentFixLinks.Read("not a token", Secret, T0));
+    }
+
     private class FakeStripe : ICoachStripe
     {
         public DateTime? PeriodEnd { get; set; }
@@ -253,6 +276,8 @@ public class CoachPaymentTests : IAsyncLifetime
             StopAtEnd.Add((subscriptionId, cancel));
             return Task.CompletedTask;
         }
+        public Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct) =>
+            Task.FromResult("https://billing.stripe.test/" + customerId);
         public Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct)
         {
             Cancelled.Add(subscriptionId);
@@ -262,11 +287,11 @@ public class CoachPaymentTests : IAsyncLifetime
 
     private class FakeEmail : IEmailSender
     {
-        public List<(string To, string Subject)> Sent { get; } = [];
+        public List<(string To, string Subject, string Body)> Sent { get; } = [];
         public bool IsConfigured => true;
         public Task SendAsync(string toAddress, string subject, string textBody)
         {
-            Sent.Add((toAddress, subject));
+            Sent.Add((toAddress, subject, textBody));
             return Task.CompletedTask;
         }
     }

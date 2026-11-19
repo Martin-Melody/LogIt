@@ -18,8 +18,8 @@ public static class CoachLinkEndpoints
         group.MapGet("/links", GetLinks).RequireTier(UserTier.Studio);
         group.MapDelete("/links/{linkId:guid}", TurnOffLink).RequireTier(UserTier.Studio);
 
-        // Anyone signed in, any tier: a Free account can be coached.
-        group.MapGet("/links/code/{code}", GetLinkByCode);
+        // Anyone, signed in or not: the link page shows the coach and the package before sign-up.
+        group.MapGet("/links/code/{code}", GetLinkByCode).AllowAnonymous();
         group.MapPost("/links/code/{code}/request", RequestCoaching);
 
         group.MapGet("/requests", GetRequests).RequireTier(UserTier.Studio);
@@ -139,9 +139,9 @@ public static class CoachLinkEndpoints
         var link = await FindLink(db, code);
         if (link is null) return Results.NotFound(new { error = "That link doesn't exist." });
 
-        var me = caller.GetUserId();
+        Guid? me = caller.Identity?.IsAuthenticated == true ? caller.GetUserId() : null;
         var use = (await LinkUse(db, [link.Id]))[link.Id];
-        var existing = await db.CoachClientRelationships.AsNoTracking()
+        var existing = me is null ? null : await db.CoachClientRelationships.AsNoTracking()
             .Include(r => r.Payment)
             .FirstOrDefaultAsync(r => r.CoachId == link.CoachId && r.ClientId == me);
         var package = link.Package is { Hidden: false } p ? p : null;

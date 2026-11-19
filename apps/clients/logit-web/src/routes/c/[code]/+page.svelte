@@ -9,6 +9,9 @@
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { formatMoney } from "@logit/core/domain/coachPayments";
   import GetTheApp from "$lib/features/onboarding/GetTheApp.svelte";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import Logo from "@logit/ui/Logo.svelte";
 
   const PLAY_URL = "https://play.google.com/store/apps/details?id=ie.logit.app";
 
@@ -25,8 +28,39 @@
   let done = $state<"requested" | "active" | "paid" | null>(null);
   let confirming = $state(false);
 
-  // Free accounts land here without the sidebar; they keep using the app for everything else.
-  const isFree = !apiClient.isSelfHosted() && apiClient.getUser()?.tier === "Free";
+  // Its own page (no dashboard around it), signed in or not: people open these from a
+  // coach's bio on their phone, often before they have an account.
+  let signedIn = $state(apiClient.isAuthenticated());
+  const myName = $derived(signedIn ? apiClient.getUser()?.displayName || apiClient.getUser()?.username || "" : "");
+  // Free accounts keep using the app for everything else.
+  const isFree = $derived(signedIn && !apiClient.isSelfHosted() && apiClient.getUser()?.tier === "Free");
+  const signInHref = $derived(`/login?next=${encodeURIComponent(`/c/${code}`)}`);
+
+  // Sign-up right here: name, email, password (the server makes a username from the name).
+  let name = $state("");
+  let email = $state("");
+  let password = $state("");
+  let signingUp = $state(false);
+  let signUpError = $state<string | null>(null);
+  let inviteOnly = $state(false);
+
+  async function signUp(e: SubmitEvent) {
+    e.preventDefault();
+    if (signingUp) return;
+    signingUp = true;
+    signUpError = null;
+    try {
+      await apiClient.register("", email.trim(), password, name.trim());
+      signedIn = true;
+      info = await coachApi.openLink(code);
+    } catch (err) {
+      if (err instanceof ApiError && (err.code === "invite_required" || err.code === "invite_invalid")) inviteOnly = true;
+      else if (err instanceof ApiError && err.status === 409) signUpError = "That email already has an account. Sign in instead.";
+      else signUpError = err instanceof Error ? err.message : "Couldn't create your account. Try again.";
+    } finally {
+      signingUp = false;
+    }
+  }
 
   onMount(async () => {
     const sessionId = page.url.searchParams.get("session_id");
@@ -98,7 +132,44 @@
   } as const;
 </script>
 
-<div class="mx-auto flex w-full max-w-md flex-col gap-4 py-6">
+{#snippet packageCard(p: NonNullable<InviteLinkInfo["package"]>)}
+  <div class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-background px-4 py-3.5">
+    <div class="flex items-baseline justify-between gap-2.5">
+      <h2 class="text-[15px] font-semibold">{p.name}</h2>
+      <span class="whitespace-nowrap text-[15px] font-bold">{formatMoney(p.amountCents, p.currency)}<span class="text-xs font-medium text-muted-foreground">{p.interval === "month" ? " / month" : p.weeks ? ` · ${p.weeks} weeks` : " once"}</span></span>
+    </div>
+    {#if included.length > 1}
+      <ul class="flex flex-col gap-1 text-[13px] leading-snug">{#each included as line, i (i)}<li class="flex gap-2"><span aria-hidden="true" class="text-muted-foreground">•</span>{line}</li>{/each}</ul>
+    {:else if included.length}
+      <p class="text-[13px] leading-relaxed">{included[0]}</p>
+    {/if}
+    <p class="text-xs leading-relaxed text-muted-foreground">
+      {p.interval === "month" ? "Charged every month until you stop it. Stop any time in My coach, or ask " + coachName + "." : `Paid once. Coaching runs for ${p.weeks} weeks.`}
+    </p>
+  </div>
+{/snippet}
+
+{#snippet steps(at: 1 | 2 | 3)}
+  <ol aria-label="Steps" class="flex gap-3.5 text-xs text-muted-foreground">
+    {#each ["Account", "Pay", "Get the app"] as label, i (label)}
+      <li class="flex items-center gap-1.5 {i + 1 === at ? 'font-semibold text-foreground' : ''}">
+        {#if i + 1 < at}<span class="flex size-5 items-center justify-center rounded-full bg-success/15 text-[11px] font-bold text-success">✓</span>
+        {:else}<span class="flex size-5 items-center justify-center rounded-full text-[11px] font-bold {i + 1 === at ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{i + 1}</span>{/if}
+        {label}
+      </li>
+    {/each}
+  </ol>
+{/snippet}
+
+<header class="flex h-[52px] items-center justify-between border-b border-border px-4">
+  <span class="flex items-center gap-2 text-[15px] font-bold"><Logo size={22} />LogIt</span>
+  {#if signedIn}
+    <span class="truncate text-xs text-muted-foreground">Signed in as {myName}</span>
+  {:else}
+    <a href={signInHref} class="inline-flex h-8 items-center rounded-lg border border-border px-3 text-[13px] font-medium hover:bg-muted">Sign in</a>
+  {/if}
+</header>
+<div class="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6">
   {#if error && !info}
     <section class="rounded-[10px] border border-border bg-card p-5">
       <h1 class="text-lg font-bold">Invite link</h1>
@@ -118,15 +189,37 @@
 
       {#if info.isSelf}
         <p class="text-[13px] text-muted-foreground">Share it with people you'd like to coach. {pkg ? "They pay on this page, then coaching starts." : "Their requests show up in"} <a href="/coaching/links" class="text-primary hover:underline">Invite links</a>.</p>
+      {:else if !signedIn}
+        {#if info.state !== "active"}
+          <p class="text-[13px] text-muted-foreground">This link {closedText[info.state as keyof typeof closedText]}. Ask {coachName} for a new one.</p>
+        {:else if pkg && !info.paymentsReady}
+          <p class="text-[13px] text-muted-foreground">{coachName} can't take payments right now. Let them know, or ask for another link.</p>
+        {:else}
+          {#if pkg}{@render packageCard(pkg)}{/if}
+          {#if pkg}{@render steps(1)}{/if}
+          {#if inviteOnly}
+            <p class="text-[13px] leading-relaxed">This LogIt server needs an invite code to sign up.</p>
+            <a href={signInHref} class="h-11 rounded-[10px] bg-primary text-center text-sm font-bold leading-[44px] text-primary-foreground">Sign up with an invite code</a>
+          {:else}
+            <form onsubmit={signUp} class="flex flex-col gap-3">
+              <h2 class="text-[15px] font-semibold">{pkg ? "Make your free LogIt account" : `Make a free LogIt account to ask ${coachName} to coach you`}</h2>
+              <div class="flex flex-col gap-1.5"><Label for="su-name">Name</Label><Input id="su-name" bind:value={name} autocomplete="name" required /></div>
+              <div class="flex flex-col gap-1.5"><Label for="su-email">Email</Label><Input id="su-email" type="email" bind:value={email} autocomplete="email" required /></div>
+              <div class="flex flex-col gap-1.5"><Label for="su-password">Password</Label><Input id="su-password" type="password" bind:value={password} autocomplete="new-password" required /></div>
+              {#if signUpError}<p class="text-xs text-destructive">{signUpError}</p>{/if}
+              <button type="submit" disabled={signingUp || !name.trim() || !email.trim() || !password}
+                class="h-12 rounded-[10px] bg-primary text-[15px] font-bold text-primary-foreground disabled:opacity-50">
+                {signingUp ? "Creating your account…" : "Create account and continue"}
+              </button>
+            </form>
+            <p class="text-center text-[13px] text-muted-foreground">Already on LogIt? <a href={signInHref} class="font-semibold text-foreground underline underline-offset-4">Sign in</a></p>
+          {/if}
+          {#if pkg}<p class="text-center text-xs leading-relaxed text-muted-foreground">Next you pay {coachName} directly on Stripe's secure page. LogIt never sees your card.</p>{/if}
+        {/if}
       {:else if done === "paid"}
-        <ol aria-label="Steps" class="flex gap-3.5 text-xs text-muted-foreground">
-          <li class="flex items-center gap-1.5"><span class="flex size-5 items-center justify-center rounded-full bg-success/15 text-[11px] font-bold text-success">✓</span>Account</li>
-          <li class="flex items-center gap-1.5"><span class="flex size-5 items-center justify-center rounded-full bg-success/15 text-[11px] font-bold text-success">✓</span>Pay</li>
-          <li class="flex items-center gap-1.5 font-semibold text-foreground"><span class="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">3</span>Get the app</li>
-        </ol>
-        <p class="text-[13px] leading-relaxed">Paid, and {coachName} is now your coach. Get LogIt on your phone and log in with this account: your program, check-ins and messages are in My coach.</p>
+        {@render steps(3)}
+        <p class="text-[13px] leading-relaxed">Paid, and {coachName} is now your coach. Get LogIt on your phone and sign in with {email.trim() || "this account"}: your program, check-ins and messages are in My coach.</p>
         <a href={PLAY_URL} target="_blank" rel="noopener" class="h-11 rounded-[10px] bg-primary text-center text-sm font-bold leading-[44px] text-primary-foreground">Get LogIt on Google Play</a>
-        <p class="text-xs text-muted-foreground">Stripe has emailed you a receipt.</p>
       {:else if confirming}
         <p class="text-[13px] text-muted-foreground">Checking your payment…</p>
       {:else if pkg && info.paying}
@@ -137,26 +230,9 @@
         {:else if !info.paymentsReady}
           <p class="text-[13px] text-muted-foreground">{coachName} can't take payments right now. Let them know, or ask for another link.</p>
         {:else}
-          <ol aria-label="Steps" class="flex gap-3.5 text-xs text-muted-foreground">
-            <li class="flex items-center gap-1.5"><span class="flex size-5 items-center justify-center rounded-full bg-success/15 text-[11px] font-bold text-success">✓</span>Account</li>
-            <li class="flex items-center gap-1.5 font-semibold text-foreground"><span class="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">2</span>Pay</li>
-            <li class="flex items-center gap-1.5"><span class="flex size-5 items-center justify-center rounded-full bg-muted text-[11px] font-bold">3</span>Get the app</li>
-          </ol>
+          {@render steps(2)}
           {#if info.relationship === "paused"}<p class="text-[13px]">Coaching with {coachName} is paused until it's paid. Paying restarts it straight away.</p>{/if}
-          <div class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-background px-4 py-3.5">
-            <div class="flex items-baseline justify-between gap-2.5">
-              <h2 class="text-[15px] font-semibold">{pkg.name}</h2>
-              <span class="whitespace-nowrap text-[15px] font-bold">{formatMoney(pkg.amountCents, pkg.currency)}<span class="text-xs font-medium text-muted-foreground">{pkg.interval === "month" ? " / month" : pkg.weeks ? ` · ${pkg.weeks} weeks` : " once"}</span></span>
-            </div>
-            {#if included.length > 1}
-              <ul class="flex flex-col gap-1 text-[13px] leading-snug">{#each included as line, i (i)}<li class="flex gap-2"><span aria-hidden="true" class="text-muted-foreground">•</span>{line}</li>{/each}</ul>
-            {:else if included.length}
-              <p class="text-[13px] leading-relaxed">{included[0]}</p>
-            {/if}
-            <p class="text-xs leading-relaxed text-muted-foreground">
-              {pkg.interval === "month" ? "Charged every month until you stop it. Stop any time in My coach, or ask " + coachName + "." : `Paid once. Coaching runs for ${pkg.weeks} weeks.`}
-            </p>
-          </div>
+          {@render packageCard(pkg)}
           <p class="text-[13px] font-semibold">What {coachName} can see <span class="font-normal text-muted-foreground">· change any time</span></p>
           <SharingSwitches {sharing} disabled={sending} onchange={(s) => (sharing = s)} />
           {#if error}<p class="text-xs text-destructive">{error}</p>{/if}
@@ -164,7 +240,7 @@
             class="h-12 rounded-[10px] bg-primary text-[15px] font-bold text-primary-foreground disabled:opacity-50">
             {sending ? "Opening Stripe…" : `Pay ${formatMoney(pkg.amountCents, pkg.currency)} and start`}
           </button>
-          <p class="text-center text-xs leading-relaxed text-muted-foreground">Card, Google Pay or Apple Pay on Stripe's secure page. You pay {coachName} directly; coaching starts as soon as it goes through.</p>
+          <p class="text-center text-xs leading-relaxed text-muted-foreground">Card, Google Pay or Apple Pay on Stripe's secure page. You pay {coachName} directly. Got a discount code from {coachName}? Enter it there.</p>
         {/if}
       {:else if done === "active" || info.relationship === "active" || done === "requested" || info.relationship === "requested"}
         {@const connected = done === "active" || info.relationship === "active"}
@@ -200,7 +276,7 @@
         </button>
       {/if}
     </section>
-    {#if !info.isSelf && (done === "active" || done === "requested" || info.relationship === "active" || info.relationship === "requested")}
+    {#if signedIn && !info.isSelf && done !== "paid" && (done === "active" || done === "requested" || info.relationship === "active" || info.relationship === "requested")}
       <GetTheApp title="Get Logit on your phone">
         <span class="text-[13px] text-slate-400">{coachName}'s program, check-ins and messages all live in the app.</span>
       </GetTheApp>

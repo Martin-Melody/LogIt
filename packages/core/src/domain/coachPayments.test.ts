@@ -70,12 +70,14 @@ describe("money", () => {
 describe("what the client sees", () => {
   it("never mentions a price", () => {
     const note = clientPaymentNote(pay(), "active", "Alex", NOW)!;
-    expect(note.body).toBe("Paid to Alex. Renews 16 Dec. Receipts come by email from Stripe.");
+    expect(note.body).toBe("Paid to Alex. Renews 16 Dec.");
     expect(note.body + note.title).not.toMatch(/€|\d+\.\d\d/);
   });
   it("warns about a failed payment with the coach's date", () => {
     const note = clientPaymentNote(pay({ state: "failed", unpaidSince: "2026-11-12T00:00:00Z", actionAt: "2026-11-19T00:00:00Z" }), "active", "Alex", NOW)!;
     expect(note.tone).toBe("bad");
+    expect(note.title).toBe("Your card was declined on 12 Nov");
+    expect(note.body).toContain("We've emailed you a link to update your card.");
     expect(note.body).toContain("If it isn't sorted by 19 Nov, coaching pauses until it is.");
   });
   it("stays quiet when the coach turned the note off", () => {
@@ -111,6 +113,6 @@ describe("what the coach sees", () => {
   });
   it("tells the coach what their rule will do", () => {
     const text = coachProblemText(client({ state: "failed", unpaidSince: "2026-11-12T00:00:00Z", actionAt: "2026-11-19T00:00:00Z" }), NOW);
-    expect(text).toBe("Sarah's payment didn't go through on 12 Nov. Stripe tries the card again and emails them a link to update it. Your rule: coaching pauses on 19 Nov if it's still unpaid.");
+    expect(text).toBe("Sarah's payment didn't go through on 12 Nov. LogIt has emailed them a link to update their card, and Stripe tries it again. Your rule: coaching pauses on 19 Nov if it's still unpaid.");
   });
 });

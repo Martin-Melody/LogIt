@@ -128,6 +128,41 @@
 
 <div class="flex flex-wrap items-start gap-4">
   <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+  {#if !account.connected && data.configured}
+    <!-- First run: Stripe first; packages and settings only make sense after it. -->
+    <section aria-labelledby="get-paid" class="rounded-[10px] border border-border bg-card px-6 pb-2 pt-5">
+      <h2 id="get-paid" class="text-[19px] font-bold tracking-tight">Get paid by your clients</h2>
+      <p class="mb-3.5 mt-1.5 text-[13px] leading-relaxed text-muted-foreground">Three steps. After that, people who open your invite link pay you and start straight away.</p>
+      <ol>
+        <li class="flex gap-3.5 border-t border-border py-[18px]">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-primary-foreground">1</span>
+          <div class="flex flex-1 flex-col gap-2.5">
+            <span class="flex flex-col gap-0.5"><span class="text-[15px] font-semibold">Connect Stripe</span><span class="text-[13px] leading-relaxed text-muted-foreground">The money goes straight to your bank. Stripe asks for your ID and bank details, about 10 minutes. Stripe charges its normal card fees; LogIt charges nothing.</span></span>
+            <div class="flex flex-wrap items-end gap-2.5">
+              <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Where your business is
+                <select bind:value={country} class="h-[38px] min-w-[200px] rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
+                  {#each PAYMENT_COUNTRIES as c (c.code)}<option value={c.code}>{c.name}</option>{/each}
+                </select>
+              </label>
+              <button type="button" disabled={connecting} onclick={connect} class="h-[38px] rounded-[9px] bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{connecting ? "Opening Stripe…" : "Connect Stripe ↗"}</button>
+            </div>
+          </div>
+        </li>
+        <li class="flex gap-3.5 border-t border-border py-[18px] opacity-55">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[13px] font-bold text-muted-foreground">2</span>
+          <span class="flex flex-col gap-0.5"><span class="text-[15px] font-semibold">Make a package</span><span class="text-[13px] leading-relaxed text-muted-foreground">What clients pay for: monthly coaching, or a one-off block of weeks.</span></span>
+        </li>
+        <li class="flex gap-3.5 border-t border-border py-[18px] opacity-55">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[13px] font-bold text-muted-foreground">3</span>
+          <span class="flex flex-col gap-0.5"><span class="text-[15px] font-semibold">Put it on an invite link</span><span class="text-[13px] leading-relaxed text-muted-foreground">Share the link in your bio or a chat. People see your package, pay, and coaching starts.</span></span>
+        </li>
+      </ol>
+      <div class="flex flex-wrap items-center justify-between gap-2.5 border-t border-border pb-3 pt-3.5">
+        <span class="text-[13px] text-muted-foreground">Clients already pay you another way?</span>
+        <button type="button" onclick={onclients} class="h-9 rounded-[9px] border border-border px-3.5 text-[13px] font-medium hover:bg-muted">Mark them as paid elsewhere</button>
+      </div>
+    </section>
+  {:else}
     {#if account.connected}
       <section class="flex flex-wrap items-center gap-3 rounded-[10px] border bg-card px-[18px] py-4 {account.ready ? 'border-border' : 'border-warning/30'}">
         <span class="flex flex-[1_1_300px] flex-col gap-1">
@@ -223,7 +258,7 @@
     <form class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4" onsubmit={saveSettings}>
       <div>
         <h2 class="text-sm font-semibold">When a payment fails</h2>
-        <p class="mt-1 text-[13px] leading-relaxed text-muted-foreground">Stripe tries the card again over a few days and emails your client a link to update it. Choose what happens to coaching meanwhile. The same applies when a one-off package runs out or a monthly plan is stopped. This is your default; you can change it for one client on the Clients tab.</p>
+        <p class="mt-1 text-[13px] leading-relaxed text-muted-foreground">LogIt emails your client a link to update their card, and Stripe tries it again over a few days. Choose what happens to coaching meanwhile. The same applies when a one-off package runs out or a monthly plan is stopped. This is your default; you can change it for one client on the Clients tab.</p>
       </div>
       <fieldset class="flex flex-col gap-2">
         <legend class="sr-only">If a payment fails</legend>
@@ -243,32 +278,20 @@
           </label>
         {/each}
       </fieldset>
-      <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={settings.emailOnFail} class="size-4 accent-primary" /> Email me when a payment fails</label>
+      <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={settings.emailOnFail} class="size-4 accent-primary" /> Email me about payments (new clients and failed cards)</label>
       <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={settings.showClientNote} class="size-4 accent-primary" /> Show the client a note in the app (no price, no pay button)</label>
       <div class="flex justify-end"><button type="submit" disabled={savingSettings} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Save</button></div>
     </form>
+  {/if}
   </div>
 
   <aside class="flex flex-[1_1_300px] flex-col gap-4">
-    {#if !account.connected && data.configured}
-      <section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card p-5">
-        <h2 class="text-[17px] font-bold">Get paid by your clients</h2>
-        <p class="text-[13px] leading-relaxed text-muted-foreground">Connect a Stripe account and clients pay you when they use your invite link. The money goes straight to you. LogIt takes nothing; Stripe charges its normal card fees.</p>
-        <p class="text-[13px] leading-relaxed text-muted-foreground">Stripe asks for your ID and bank details. It takes about 10 minutes.</p>
-        <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Where your business is
-          <select bind:value={country} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-            {#each PAYMENT_COUNTRIES as c (c.code)}<option value={c.code}>{c.name}</option>{/each}
-          </select>
-        </label>
-        <button type="button" disabled={connecting} onclick={connect} class="h-10 rounded-[9px] bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{connecting ? "Opening Stripe…" : "Connect Stripe"}</button>
-        <button type="button" onclick={onclients} class="h-10 rounded-[9px] border border-border text-[13px] font-medium hover:bg-muted">I already have clients who pay me elsewhere</button>
-      </section>
-    {/if}
 
     <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-1.5 pt-3.5">
       <h2 class="pb-1.5 text-sm font-semibold">Good to know</h2>
       <div class="flex flex-col gap-0.5 border-t border-border py-2.5 text-[13px]"><span class="font-medium">Put a package on an invite link</span><span class="text-xs leading-relaxed text-muted-foreground">In Invite links. People pay on the link's page, then get the app. Paid links start coaching straight away, with no Accept step.</span></div>
-      <div class="flex flex-col gap-0.5 border-t border-border py-2.5 text-[13px]"><span class="font-medium">Refunds and receipts</span><span class="text-xs leading-relaxed text-muted-foreground">Stripe emails receipts. Refunds are done in your Stripe dashboard.</span></div>
+      <div class="flex flex-col gap-0.5 border-t border-border py-2.5 text-[13px]"><span class="font-medium">Refunds and receipts</span><span class="text-xs leading-relaxed text-muted-foreground">Refunds are done in your Stripe dashboard. Clients find their receipts under Manage payment in My coach on the web.</span></div>
+      <div class="flex flex-col gap-0.5 border-t border-border py-2.5 text-[13px]"><span class="font-medium">Discount codes</span><span class="text-xs leading-relaxed text-muted-foreground">Make them under Coupons in your Stripe dashboard. Clients type them on Stripe's payment page.</span></div>
       <div class="flex flex-col gap-0.5 border-t border-border py-2.5 text-[13px]"><span class="font-medium">Stopping</span><span class="text-xs leading-relaxed text-muted-foreground">Clients stop their plan in My coach, or you stop it from Manage. Coaching runs to the end of the month they paid for. If either of you ends coaching, the plan is cancelled at once.</span></div>
       <div class="flex flex-col gap-0.5 border-t border-border py-2.5 text-[13px]"><span class="font-medium">Tax</span><span class="text-xs leading-relaxed text-muted-foreground">You're the seller, so VAT or income tax on these payments is yours to handle.</span></div>
     </section>
