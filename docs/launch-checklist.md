@@ -23,9 +23,11 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [ ] **Payments profile** in Play Console (needed to create subscriptions). EU rules show a seller's
       name, address, email and phone on the store listing: use a business/virtual address if you don't
       want your home address public.
-- [ ] **Prices in euro** for Pro and Studio, monthly and maybe yearly. Google keeps 15% of subscriptions.
-      Then put them in `apps/clients/website/src/lib/site.ts` (`PRICES`, shown as "€ TBC" until then).
-- [ ] **Decide**: free trial on Pro? How many days to act on an emailed deletion request, and how long
+- [x] **Prices in euro** (decided 2026-11-19, in `apps/clients/website/src/lib/site.ts` `PRICES`): Pro €2.99/month or
+      €24.99/year with a 7-day free trial; Studio €14.99/month or €149/year with a 14-day free trial, no client limit.
+      In Play Console: one base plan per period, the trial as a free-trial offer on each, and check the
+      converted GBP/USD prices come out round.
+- [ ] **Decide**: how many days to act on an emailed deletion request, and how long
       server backups are kept (the delete-account page says 30 and 30 for now).
 - [ ] **Shared-algorithm links open the app directly** (optional; they work without it through the
       "Open in LogIt" button on getlogit.app/a). Once Play App Signing is set up, copy the **app signing
