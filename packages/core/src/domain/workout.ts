@@ -2,6 +2,7 @@ import { createId } from "./ids";
 import { nowMs } from "./time";
 import { effectiveLoadKg, getLoadMode, type LoadMode } from "./bodyweight";
 import type { ExerciseType } from "./exercise";
+import { estimated1RM, repsAtLoad } from "./oneRepMax";
 
 export const DEFAULT_REST_MS = 90_000;
 
@@ -124,7 +125,14 @@ export type SetEntry = {
   target?: SetTarget | null;
 };
 
-export type SetTarget = { reps: number; repsMax?: number; weight: number };
+export type SetTarget = {
+  reps: number;
+  repsMax?: number;
+  weight: number;
+  /** What the set was planned as before a short set re-planned it mid-exercise
+   * (replanAfterShortSet). Kept from the first re-plan, for comparing plan with actual. */
+  planned?: { reps: number; repsMax?: number; weight: number };
+};
 
 /** A planned set nobody has done yet: still at 0 reps and not ticked. */
 export function isUnloggedPlannedSet(s: SetEntry): boolean {
@@ -541,6 +549,55 @@ export function planRestFromFirstSet(
     if (planned.size === 0) return data;
     // Like applySetPlan: the weight goes on the set too (that's what its weight box shows).
     return { ...data, sets: data.sets.map((x) => (planned.has(x.id) ? { ...x, weight: first.weight, target: planned.get(x.id)! } : x)) };
+  });
+}
+
+/** How many reps under its aim a set must fall before the sets after it are re-planned. */
+export const SHORT_SET_REPS = 2;
+
+/**
+ * A working set that fell `SHORT_SET_REPS` or more short of its aim re-plans the planned
+ * sets after it that nobody has touched: each keeps its reps and is scaled by how far
+ * short today's set was (Epley), so 7 of 10 at 17.5 kg turns 17.5 × 8 into 15 × 8. When
+ * the lighter weight rounds back to the same one, the reps come down instead, by up to 2;
+ * past that it's one loadable step lighter at the same reps, like the planner keeps sets in
+ * the rep range. The first re-plan keeps the original in `target.planned`.
+ */
+export function replanAfterShortSet(
+  session: WorkoutSession,
+  exerciseEntryId: string,
+  setId: string,
+  /** The nearest loadable weight, and the next loadable one below a weight. */
+  loads: { round: (kg: number) => number; down: (kg: number) => number },
+): WorkoutSession {
+  return updateStrengthBlock(session, exerciseEntryId, (data) => {
+    const sorted = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
+    const done = sorted.find((x) => x.id === setId);
+    const t = done?.target;
+    if (!done?.completed || !t || !(t.weight > 0) || done.setType === "warmup" || isContinuationSet(done.setType)) return data;
+    // The set's reps as reps at the planned weight, so a set done heavier or lighter is judged fairly.
+    const atPlan = repsAtLoad(done.reps, done.weight, t.weight);
+    if (atPlan === null || atPlan > t.reps - SHORT_SET_REPS + 0.01) return data;
+    const ratio = estimated1RM(done.weight, done.reps) / estimated1RM(t.weight, t.reps);
+    const next = new Map<string, SetEntry>();
+    for (const set of sorted) {
+      if (set.orderIndex <= done.orderIndex || set.completed || !set.target) continue;
+      if (set.setType === "warmup" || isContinuationSet(set.setType)) continue;
+      // Untouched: nothing typed, and the weight box still shows the plan.
+      if (set.reps !== 0 || set.weight !== set.target.weight || !(set.target.weight > 0)) continue;
+      const { planned, ...current } = set.target;
+      let weight = loads.round(current.weight * ratio);
+      let reps = current.reps;
+      if (weight >= current.weight) {
+        weight = current.weight;
+        reps = Math.max(1, Math.round(repsAtLoad(current.reps, current.weight * ratio, current.weight) ?? current.reps));
+        if (reps < current.reps - SHORT_SET_REPS) [weight, reps] = [loads.down(current.weight), current.reps];
+      }
+      if (weight === current.weight && reps === current.reps) continue;
+      next.set(set.id, { ...set, weight, target: { ...current, reps, weight, planned: planned ?? current } });
+    }
+    if (next.size === 0) return data;
+    return { ...data, sets: data.sets.map((x) => next.get(x.id) ?? x) };
   });
 }
 
