@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2, MoreHorizontal } from "lucide-svelte";
+  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2, MoreHorizontal, ArrowDownUp, Undo2 } from "lucide-svelte";
+  import { fade } from "svelte/transition";
+  import { Button } from "$lib/components/ui/button";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
@@ -8,7 +10,7 @@
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { formatLoad } from "@logit/core/domain/units";
-  import { reveal } from "$lib/transitions";
+  import { reveal, motionOK } from "$lib/transitions";
 
   const {
     exerciseName = "",
@@ -36,6 +38,8 @@
     lastTime = "",
     chip,
     notice,
+    replan = null,
+    onToggleReplan = () => {},
     children,
   } = $props<{
     exerciseName?: string;
@@ -72,6 +76,10 @@
     chip?: import("svelte").Snippet;
     /** A card under the plan, e.g. "Can you add load?" at a place's heaviest weight. */
     notice?: import("svelte").Snippet;
+    /** Sets re-planned mid-workout (a short set, the exercise moved): why, and the button that
+     * swaps between the re-plan and the original plan. */
+    replan?: { text: string; kept: boolean; action: string } | null;
+    onToggleReplan?: () => void | Promise<void>;
     children?: import("svelte").Snippet;
   }>();
 
@@ -288,6 +296,21 @@
         </div>
       </div>
     {/if}
+  {/if}
+  {#if !collapsed && !roundView && replan}
+    <div class="mx-3 mb-2.5 flex items-center gap-2" transition:reveal data-testid="replan-line">
+      {#if replan.kept}
+        <Undo2 class="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      {:else}
+        <ArrowDownUp class="h-3.5 w-3.5 shrink-0 text-info" aria-hidden="true" />
+      {/if}
+      {#key replan.text}
+        <p class="flex-1 text-xs text-foreground/80" in:fade={{ duration: motionOK() ? 180 : 0 }} aria-live="polite">{replan.text}</p>
+      {/key}
+      <Button variant="outline" size="sm" class="h-8 shrink-0 px-2.5 text-xs" disabled={saving} onclick={() => void onToggleReplan()}>
+        {replan.action}
+      </Button>
+    </div>
   {/if}
 </div>
 

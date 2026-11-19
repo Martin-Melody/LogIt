@@ -75,6 +75,16 @@
   const weightIsPlan = $derived(planned && Math.abs(weight - (target?.weight ?? 0)) < 0.001);
 
   const displayWeight = $derived(shown(weight));
+  // Re-planned mid-workout and still to do: the old plan shows struck through under the new
+  // numbers until the set is started ("Keep the plan" swaps back).
+  const was = $derived.by(() => {
+    const p = target?.planned;
+    if (!weightIsPlan || !p || !target?.replanned) return null;
+    return {
+      weight: p.weight !== target.weight ? trimWeight(shown(p.weight)) : null,
+      reps: p.reps !== target.reps ? String(p.reps) : null,
+    };
+  });
   // Bodyweight loads show "BW" in the box with the offset typed after it.
   const bwPrefix = $derived(bodyweight ? (displayWeight > 0 ? "BW+" : "BW") : "");
 
@@ -129,6 +139,8 @@
     "h-10 w-full rounded-md border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
   const planPh = "placeholder:font-medium placeholder:text-info";
   const plainPh = "placeholder:font-normal placeholder:text-muted-foreground";
+  // Room under the number for the struck-through old plan, and a blue edge while re-planned.
+  const wasBox = "pb-2 border-info/50 transition-colors";
 </script>
 
 <div
@@ -173,9 +185,10 @@
 
   <!-- Weight -->
   {#if onPickWeight}
+  <div class="relative">
     <button
       type="button"
-      class="{box} {weightValue === '' ? (weightIsPlan ? 'font-medium text-info' : 'font-normal text-muted-foreground') : ''}"
+      class="{box} {was?.weight ? wasBox : ''} {weightValue === '' ? (weightIsPlan ? 'font-medium text-info' : 'font-normal text-muted-foreground') : ''}"
       onclick={onPickWeight}
       {disabled}
       aria-label="Set {setNumber} weight: {weightValue || weightPlaceholder || 'not set'} {weightUnit}. Change"
@@ -183,6 +196,10 @@
     >
       {weightValue || weightPlaceholder || "–"}
     </button>
+    {#if was?.weight}
+      <span class="pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] leading-none text-muted-foreground line-through tabular-nums" transition:popIn aria-hidden="true">{was.weight}</span>
+    {/if}
+  </div>
   {:else}
   <div class="relative">
     {#if bodyweight}
@@ -196,7 +213,7 @@
       </span>
     {/if}
     <input
-      class="{box} {weightIsPlan ? planPh : plainPh} {bodyweight ? (bwPrefix === 'BW+' ? 'pl-[2.6rem] pr-1 text-left' : 'pl-[2.05rem] pr-1 text-left') : ''}"
+      class="{box} {was?.weight ? wasBox : ''} {weightIsPlan ? planPh : plainPh} {bodyweight ? (bwPrefix === 'BW+' ? 'pl-[2.6rem] pr-1 text-left' : 'pl-[2.05rem] pr-1 text-left') : ''}"
       type="number"
       step={weightUnit === "lbs" ? "1" : "0.5"}
       aria-label="Set {setNumber} weight ({bodyweight ? `${weightUnit} on top of bodyweight` : weightUnit})"
@@ -208,13 +225,17 @@
       onchange={(e) => void onWeightChange(fromDisplayWeight(num((e.currentTarget as HTMLInputElement).value), weightUnit))}
       data-testid="set-weight"
     />
+    {#if was?.weight}
+      <span class="pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] leading-none text-muted-foreground line-through tabular-nums" transition:popIn aria-hidden="true">{was.weight}</span>
+    {/if}
   </div>
   {/if}
 
   <!-- Reps -->
+  <div class="relative">
   <input
     bind:this={repsEl}
-    class="{box} {planned ? planPh : plainPh}"
+    class="{box} {was?.reps ? wasBox : ''} {planned ? planPh : plainPh}"
     type="number"
     min="0"
     inputmode="numeric"
@@ -227,6 +248,10 @@
     onchange={(e) => void onRepsChange(Math.max(0, num((e.currentTarget as HTMLInputElement).value)))}
     data-testid="set-reps"
   />
+  {#if was?.reps}
+    <span class="pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] leading-none text-muted-foreground line-through tabular-nums" transition:popIn aria-hidden="true">{was.reps}</span>
+  {/if}
+  </div>
 
   {#if onRemove}
   <button

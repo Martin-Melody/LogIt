@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSession, replanAfterShortSet, type SetTarget, type WorkoutSession } from "./workout";
+import { createSession, replanAfterShortSet, replanForOrder, useReplan, type SetTarget, type WorkoutSession } from "./workout";
 
 type S = { reps: number; weight: number; completed?: boolean; setType?: string; target?: SetTarget };
 function session(sets: S[]): WorkoutSession {
@@ -65,5 +65,33 @@ describe("a short set re-plans the sets after it", () => {
     const twice = sets(replanAfterShortSet(session(third), "b", "s3", loads));
     expect(twice[3]).toMatchObject({ weight: 7.5, target: { weight: 7.5, planned: { reps: 8, weight: 12.5 } } });
     expect(twice[2]!.target!.planned).toEqual({ reps: 8, weight: 17.5 });
+  });
+
+  it("Keep the plan and Use lighter swap back and forth", () => {
+    const re = replanAfterShortSet(s, "b", "s2", loads);
+    expect(sets(re)[2]!.target!.replanned).toEqual({ reps: 8, weight: 15, why: "short" });
+    const kept = useReplan(re, "b", "plan");
+    expect(sets(kept).slice(2).map((x) => [x.weight, x.target!.weight])).toEqual([[17.5, 17.5], [12.5, 12.5]]);
+    const back = useReplan(kept, "b", "replan");
+    expect(sets(back).slice(2).map((x) => [x.weight, x.target!.weight])).toEqual([[15, 15], [10, 10]]);
+    // A set started in between keeps what it has.
+    const started = session(sets(kept).map((x, i) => (i === 2 ? { ...x, reps: 8 } : x)));
+    expect(sets(useReplan(started, "b", "replan"))[2]!.weight).toBe(17.5);
+  });
+});
+
+describe("moving an exercise re-plans its untouched sets", () => {
+  it("set by set, keeping the first plan; nothing when the plan is the same", () => {
+    const s = session([plan(10, 20), plan(9, 20), plan(8, 20)]);
+    const moved = sets(replanForOrder(s, "b", [{ reps: 10, weight: 17.5 }, { reps: 9, weight: 17.5 }, { reps: 8, weight: 20 }]));
+    expect(moved[0]).toMatchObject({ weight: 17.5, target: { weight: 17.5, planned: { reps: 10, weight: 20 }, replanned: { why: "order" } } });
+    expect(moved[2]!.target!.replanned).toBeUndefined();
+    expect(replanForOrder(s, "b", [{ reps: 10, weight: 20 }])).toEqual(s);
+  });
+
+  it("leaves logged and typed-into sets", () => {
+    const s = session([{ reps: 10, weight: 20, completed: true, target: { reps: 10, weight: 20 } }, { reps: 0, weight: 22.5, target: { reps: 9, weight: 20 } }, plan(8, 20)]);
+    const out = sets(replanForOrder(s, "b", [{ reps: 8, weight: 15 }]));
+    expect(out.map((x) => x.weight)).toEqual([20, 22.5, 15]);
   });
 });

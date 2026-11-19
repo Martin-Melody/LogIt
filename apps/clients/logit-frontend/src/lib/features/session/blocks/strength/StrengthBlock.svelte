@@ -21,6 +21,11 @@
     strengthRestMs,
     clearOtherRests,
     planRestFromFirstSet,
+    replanAfterShortSet,
+    replanForOrder,
+    useReplan,
+    shortBy,
+    isUntouchedPlannedSet,
   } from "@logit/core/domain/workout";
   import { suggestionToPlan } from "@logit/core/domain/progression";
   import { warmupSets } from "@logit/core/domain/warmup";
@@ -49,7 +54,7 @@
   import WhereTodaySheet from "$lib/features/places/WhereTodaySheet.svelte";
   import WeightPickerSheet from "$lib/features/places/WeightPickerSheet.svelte";
   import AtTheTopCard from "$lib/features/places/AtTheTopCard.svelte";
-  import type { WeightSource } from "$lib/features/places/weightSource";
+  import { loadsFor, type WeightSource } from "$lib/features/places/weightSource";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { getLoadMode, effectiveLoadKg } from "@logit/core/domain/bodyweight";
   import { repsAtLoad } from "@logit/core/domain/oneRepMax";
@@ -136,6 +141,74 @@
   function withFirstSetPlan(s: WorkoutSession, setId: string): WorkoutSession {
     if (!firstEver || data.sets.some((x) => x.completed && x.id !== setId)) return s;
     return planRestFromFirstSet(s, blockId, setId, firstTimeMin);
+  }
+
+  /** A set 2+ reps short of its aim re-plans the untouched sets after it (lighter). Weights
+   * on top of bodyweight aren't a load the 1RM maths can scale, so those are left. */
+  function withShortSetPlan(s: WorkoutSession, setId: string): WorkoutSession {
+    return bodyweight ? s : replanAfterShortSet(s, blockId, setId, loadsFor(weightSource, get(profile).weightUnit));
+  }
+
+  // The exercises before this one: when they change (dragged, one removed), an exercise not
+  // started yet re-plans for its new place, since how tired the muscles are has changed.
+  const exercisesBefore = $derived.by(() => {
+    const sorted = [...($currentSession?.blocks ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+    const i = sorted.findIndex((b) => b.id === blockId);
+    return i < 0 ? null : sorted.slice(0, i).map((b) => b.id).join(",");
+  });
+  let seenBefore: string | null = null;
+  $effect(() => {
+    const key = exercisesBefore;
+    untrack(() => {
+      const prev = seenBefore;
+      if (key !== null) seenBefore = key;
+      if (prev !== null && key !== null && prev !== key) void replanForNewPlace();
+    });
+  });
+
+  async function replanForNewPlace() {
+    const working = data.sets.filter((x) => x.setType !== "warmup" && !isContinuationSet(x.setType));
+    if (bodyweight || working.length === 0 || !working.every(isUntouchedPlannedSet)) return;
+    await loadSuggestion(data.exerciseName, data.exerciseId);
+    if (!suggestion || suggestion.sets.length === 0) return;
+    const plan = suggestionToPlan(suggestion, exerciseData?.defaultMachineId);
+    await onMutate((s: WorkoutSession) => replanForOrder(s, blockId, plan));
+  }
+
+  // The line under the plan while re-planned sets are still to do: why, and a button that
+  // swaps between the re-plan and the original plan as often as wanted.
+  const replanLine = $derived.by(() => {
+    const working = [...data.sets]
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .filter((x) => x.setType !== "warmup" && !isContinuationSet(x.setType));
+    const affected = working.filter((x) => isUntouchedPlannedSet(x) && x.target?.planned && x.target.replanned);
+    if (affected.length === 0) return null;
+    const pairs = affected.map((x) => ({ was: x.target!.planned!, now: x.target!.replanned! }));
+    const kept = affected.every((x) => x.target!.weight === x.target!.planned!.weight && x.target!.reps === x.target!.planned!.reps);
+    const lighter = pairs.every((p) => p.now.weight < p.was.weight || (p.now.weight === p.was.weight && p.now.reps < p.was.reps));
+    const heavier = pairs.every((p) => p.now.weight > p.was.weight || (p.now.weight === p.was.weight && p.now.reps > p.was.reps));
+    const dir = lighter ? "lighter" : heavier ? "heavier" : null;
+    const nums = affected.map((x) => working.indexOf(x) + 1);
+    const sets = nums.length === 1 ? `set ${nums[0]}` : `sets ${nums.slice(0, -1).join(", ")} and ${nums.at(-1)}`;
+    const why = affected[0]!.target!.replanned!.why;
+    let text: string;
+    if (kept) {
+      text = `Kept your plan for ${sets}.`;
+    } else if (why === "short") {
+      const first = working.indexOf(affected[0]!);
+      const shortIdx = working.slice(0, first).findLastIndex((x) => x.completed && (shortBy(x) ?? 0) >= 1.99);
+      const by = shortIdx >= 0 ? Math.round(shortBy(working[shortIdx]!)!) : null;
+      const verb = `${nums.length === 1 ? "is" : "are"} ${dir ?? "re-planned"}`;
+      text = by ? `Set ${shortIdx + 1} was ${by} reps short, so ${sets} ${verb}.` : `${sets[0]!.toUpperCase()}${sets.slice(1)} ${verb}.`;
+    } else {
+      text = `Re-planned ${dir ? `${dir} ` : ""}for its new place in the workout.`;
+    }
+    return { text, kept, action: kept ? (dir ? `Use ${dir}` : "Use the re-plan") : "Keep the plan" };
+  });
+
+  async function toggleReplan() {
+    const kept = replanLine?.kept;
+    await onMutate((s: WorkoutSession) => useReplan(s, blockId, kept ? "replan" : "plan"));
   }
 
   const prevLeadSets = $derived(
@@ -474,7 +547,7 @@
         completed: !wasCompleted,
         restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
       });
-      const planned = wasCompleted ? next : withFirstSetPlan(next, setId);
+      const planned = wasCompleted ? next : withShortSetPlan(withFirstSetPlan(next, setId), setId);
       // One rest at a time: a new rest replaces the previous set's.
       return !wasCompleted && startsRest ? clearOtherRests(planned, setId) : planned;
     });
@@ -820,6 +893,8 @@
   onDismissNudge={handleDismissNudge}
   onAcceptNudge={handleAcceptNudge}
   {lastTime}
+  replan={replanLine}
+  onToggleReplan={toggleReplan}
 >
   {#snippet chip()}
     {#if place && chosen}
