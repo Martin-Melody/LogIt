@@ -47,9 +47,10 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
          "Coach payments"), then on the VPS put `STRIPE_SECRET_KEY` and `STRIPE_CONNECT_WEBHOOK_SECRET`
          in `.env` and redeploy. Connect a test coach, make a package, pay with a test card.
       3. Then the same with live keys.
-      4. Privacy policy/terms: say coach payments go to the coach through Stripe and LogIt isn't the seller.
+      4. ~~Privacy policy/terms: say coach payments go to the coach through Stripe~~ (done 2026-11-19).
 - [ ] **Have someone check the privacy policy and terms** (updated 2026-11-13 for Google Play billing,
-      EU hosting, plugins and diagnostics; the hosting provider's name is still a TODO in the policy).
+      EU hosting, plugins and diagnostics; 2026-11-19: names Hetzner, Cloudflare, Resend and Stripe, and
+      covers paying a coach).
 - [x] **VPS**: Hetzner CX23 `logit-prod` (Germany), bought 2026-11-13 with Hetzner backups on. Claude set
       it up: `deploy` user, key-only SSH, auto security updates, Docker, swap. Hetzner firewall: 22 open, 80/443 only from
       Cloudflare's ranges (2026-11-13; update it and the Caddyfile if Cloudflare adds ranges).

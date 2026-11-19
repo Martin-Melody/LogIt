@@ -2,7 +2,7 @@
   import TextPage from "$lib/site/TextPage.svelte";
   import { CONTACT_EMAIL, PLAY_CANCEL_PATH } from "$lib/site";
 
-  const UPDATED = "13 November 2026";
+  const UPDATED = "19 November 2026";
 </script>
 
 <svelte:head>
@@ -70,6 +70,20 @@
     stays active until the end of the period you paid for. Payments and refunds are handled by
     Google Play under its terms. Except where the law requires otherwise, payments are not
     refundable. We will tell you before a price change applies to your next renewal.
+  </p>
+
+  <h2>Paying a coach</h2>
+  <p>
+    Coaches on LogIt Studio can sell coaching through LogIt. When you pay a coach you buy from the
+    coach, through the coach's own Stripe account. LogIt is not the seller, is not part of that
+    agreement and takes no fee. What the coaching includes, its price and any refund are between you
+    and the coach. You can stop a monthly plan any time in My coach; it runs to the end of the month
+    you paid for.
+  </p>
+  <p>
+    If you take payments as a coach, you are the seller: you are responsible for your prices, the
+    service you promise, refunds and any tax on what you earn, and Stripe's terms for your account
+    apply.
   </p>
 
   <h2>Availability and changes</h2>
