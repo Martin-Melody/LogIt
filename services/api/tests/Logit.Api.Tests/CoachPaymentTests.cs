@@ -5,6 +5,7 @@ using Logit.Api.Features.Coach.Payments;
 using Logit.Api.Features.Email;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Logit.Api.Tests;
@@ -217,6 +218,21 @@ public class CoachPaymentTests : IAsyncLifetime
         await _svc.CoachingEndedAsync(rel, T0.AddDays(3), default);
         Assert.Contains("sub_1", _stripe.Cancelled);
         Assert.Equal(PaymentStates.Ended, (await Rel()).Payment!.State);
+    }
+
+    [Theory]
+    [InlineData(UserTier.Studio, false, "active")]
+    [InlineData(UserTier.Free, false, "off")]
+    [InlineData(UserTier.Free, true, "active")] // self-hosted servers need no plan to coach
+    public async Task Paid_links_follow_who_can_coach(UserTier tier, bool selfHosted, string expected)
+    {
+        _coach.Tier = tier;
+        var link = new CoachInviteLink { Coach = _coach, Code = "ABCD1234", Name = "Bio", PackageId = _monthly.Id };
+        _db.CoachInviteLinks.Add(link);
+        await _db.SaveChangesAsync();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Deployment:SelfHosted"] = selfHosted.ToString() }).Build();
+        Assert.Equal(expected, await CoachPaymentEndpoints.LinkStateFor(_db, link, config, CancellationToken.None));
     }
 
     private class FakeStripe : ICoachStripe
