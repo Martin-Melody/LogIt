@@ -38,7 +38,11 @@ if [[ -n "$token" ]]; then
 fi
 
 previous=$(sed -n 's/^LOGIT_TAG=//p' .env)
-install -m 644 "$tmp/compose.yml" "$tmp/Caddyfile" /opt/logit/
+install -m 644 "$tmp/compose.yml" /opt/logit/
+# Written into the existing file, not replaced: Caddy mounts this one file, and a bind-mounted file
+# that is swapped for a new one stays the old one inside the container (2026-11-19: the reload
+# below kept loading the previous Caddyfile, so /admin-api never reached Caddy).
+cat "$tmp/Caddyfile" > /opt/logit/Caddyfile
 sed -i "s/^LOGIT_TAG=.*/LOGIT_TAG=$sha/" .env
 [[ -n "$previous" && "$previous" != "$sha" ]] && echo "$previous" > .previous-tag
 
