@@ -17,9 +17,10 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 
 ## Martin: things only you can do
 
-- [ ] **Google Play Console account** ($25). Personal accounts need a **closed test with 12+ testers opted
-      in for 14 days in a row** before production. Start lining up ~15 people now. (An organisation
-      account skips this but needs a D-U-N-S number.)
+- [ ] **Google Play Console account** ($25). Made 2026-11-19 (developer name "LogIt"); **identity
+      verification pending**: nothing app-side can be created until Google finishes it. Personal accounts
+      need a **closed test with 12+ testers opted in for 14 days in a row** before production. Start lining
+      up ~15 people now. (An organisation account skips this but needs a D-U-N-S number.)
 - [ ] **Payments profile** in Play Console (needed to create subscriptions). EU rules show a seller's
       name, address, email and phone on the store listing: use a business/virtual address if you don't
       want your home address public.
@@ -39,6 +40,8 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [ ] **Stripe for coach payments** (built 2026-11-16, off until this is done; not needed for launch):
       1. Stripe account for LogIt (Ireland), turn on **Connect** and fill in the platform profile (coaches
          run their own businesses; LogIt doesn't take a fee).
+      Done 2026-11-19: Stripe account made, test mode rehearsed end to end on the lab (Stripe CLI
+      forwarding, test key in `~/.keystores/stripe-test.key`); fixes from it are live. Left: steps 2–4 on production.
       2. Try it in a **sandbox** first: a restricted key there + a Connect webhook endpoint to
          `https://api.getlogit.app/coach/payments/webhook` (events listed in `docs/deployment.md`,
          "Coach payments"), then on the VPS put `STRIPE_SECRET_KEY` and `STRIPE_CONNECT_WEBHOOK_SECRET`
@@ -61,11 +64,17 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [x] **hello@getlogit.app and privacy@getlogit.app** (2026-11-13): getlogit.app added to the existing Zoho Mail
       org (EU), both are aliases on Martin's mailbox. MX/SPF/DKIM (`zmail`) verified, DMARC `p=none` with reports
       to hello@. Server alerts go to hello@. Tighten DMARC to `p=quarantine` after a few clean weeks.
-- [ ] **Upload keystore**: none on the lab. Find the September one (Windows PC?) or let Claude generate a
-      new one. Store the `.jks` and its password in a password manager plus an offline copy.
+- [x] **Upload keystore**: made 2026-11-19 (`~/.keystores/logit-upload.jks` on the lab, password beside it,
+      `android/keystore.properties` points at it; signed release AAB builds). **Still to do: back the `.jks`
+      and its password up** to a password manager plus an offline copy (Play App Signing can reset a lost
+      upload key, but it takes days).
 - [ ] **Accountant**: registering as a sole trader / company, income tax on Google payouts. (Google
       collects VAT on Play sales to EU customers; confirm.)
-- [ ] **Google Cloud project + service account** linked to Play Console: the API needs it to check
+- [x] **Google Cloud project + service account** (done 2026-11-19: project `logit-play`, service account
+      `logit-billing`, key in production `.env`, Pub/Sub topic `play-billing` pushing to the API, test
+      message received). **Still to do after Play verification:** invite the service account in Play
+      Console › Users and permissions ("View financial data", "Manage orders and subscriptions") and set
+      Monetization setup's topic to `projects/logit-play/topics/play-billing`. Originally: linked to Play Console: the API needs it to check
       purchases, and Pub/Sub for renewal/cancel notices. Steps in docs/deployment.md "Billing → Google Play";
       the results go in the server's `.env` as `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` and
       `GOOGLE_PLAY_NOTIFICATION_TOKEN`. Subscription ids in Play Console: `logit_pro` and `logit_studio`
@@ -140,7 +149,7 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [x] Point the app build at `https://api.getlogit.app` (done 2026-11-13; was: the default in `packages/core/src/api/client.ts`
       is an old AWS App Runner host that no longer exists).
 - [ ] Create the subscriptions in Play Console; test buying with Play license testers.
-- [ ] Merge `feat/sessions-overhaul` first: the website's Sessions screenshots show those pages.
+- [x] Merge `feat/sessions-overhaul` first (merged 2026-11-13).
 - [ ] Play listing screenshots: reuse the website's (`apps/clients/website/scripts/screenshots`);
       update listing copy (goals, streak, circuits, sessions, plugins) and the Data safety / content
       rating answers (purchases now in the app; report/block exists; diagnostics can be sent on request).
