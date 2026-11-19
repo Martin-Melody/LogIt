@@ -453,7 +453,7 @@ public static class CoachPaymentEndpoints
 
     private static async Task<IResult> StartCheckout(
         string code, [FromBody] StartCheckoutRequest req, ClaimsPrincipal caller, AppDbContext db,
-        ICoachStripe stripe, ILoggerFactory lf, CancellationToken ct)
+        ICoachStripe stripe, IConfiguration config, ILoggerFactory lf, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(req.SuccessUrl) || string.IsNullOrWhiteSpace(req.CancelUrl))
             return Results.BadRequest(new { error = "successUrl and cancelUrl are required." });
@@ -468,7 +468,7 @@ public static class CoachPaymentEndpoints
         if (link.Package is not { Hidden: false } package)
             return Results.BadRequest(new { error = "This link is free: send a request instead.", code = "no_package" });
 
-        var state = await LinkStateFor(db, link, ct);
+        var state = await LinkStateFor(db, link, config, ct);
         if (state != "active")
             return Error(StatusCodes.Status410Gone, state, "This link can't be used any more. Ask your coach for a new one.");
 
@@ -507,9 +507,9 @@ public static class CoachPaymentEndpoints
         }
     }
 
-    public static async Task<string> LinkStateFor(AppDbContext db, CoachInviteLink link, CancellationToken ct)
+    public static async Task<string> LinkStateFor(AppDbContext db, CoachInviteLink link, IConfiguration config, CancellationToken ct)
     {
-        if (link.Coach.Tier != UserTier.Studio) return "off";
+        if (!CoachingAccess.CanCoach(link.Coach, config)) return "off";
         var used = await db.CoachClientRelationships.CountAsync(r => r.InviteLinkId == link.Id
             && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Pending), ct);
         return CoachLinkEndpoints.LinkState(link, used, DateTime.UtcNow);
