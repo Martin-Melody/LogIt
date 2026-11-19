@@ -1,50 +1,56 @@
-# Play Console — Data safety form answers
+# Play Console: Data safety form answers
 
-App Content → Data safety. Answers reflect the shipped mobile binary + the
-managed (getlogit.app) sync backend. Self-hosted servers are the operator's
-responsibility.
+App content › Data safety. Rewritten 2026-11-19 against the current app and the getlogit.app
+server (accounts, free phone backup, social, coaching and messages, subscriptions, diagnostics).
+Self-hosted servers are their operator's responsibility and aren't covered.
 
-## Does your app collect or share any of the required user data types?
-YES — but only when the user creates an optional account. With no account,
-nothing is collected.
+Play's terms: "collected" = leaves the phone to us; "shared" = given to a third party for its own
+use. Service providers that process data for us (Hetzner hosting, Cloudflare, Resend email, Google
+Play billing) are not "sharing" under Play's definition.
 
-## Is all of the user data collected by your app encrypted in transit?
-YES (HTTPS).
+## Overview questions
+- Does your app collect or share any of the required user data types? **Yes**
+- Is all of the user data collected by your app encrypted in transit? **Yes** (HTTPS only)
+- Do you provide a way for users to request that their data is deleted? **Yes**
+  - Delete account URL: https://getlogit.app/delete-account
+  - In the app: Settings › Account › Delete account (deletes the server account and the phone's data)
 
-## Do you provide a way for users to request that their data be deleted?
-YES — in-app: Settings → Account → Delete account. Also by email.
-Deletion URL (for the form): https://getlogit.app/delete-account
-  (in the app, on the web dashboard for Pro/Studio, or by email; lists what is deleted
-  and what is kept)
+## Data types
 
----
+Every type below is collected **only with an account** (the app works fully without one), so mark
+each as **optional** ("users can choose whether this data is collected") unless noted.
 
-## Data types — collected / shared / purpose
-
-| Data type | Collected | Shared | Ephemeral? | Purpose | Optional? |
+| Section › type | Collected | Shared | Processed ephemerally | Required or optional | Purposes |
 |---|---|---|---|---|---|
-| Email address | Yes | No | No | Account management | Yes (only with account) |
-| Name (display name / username) | Yes | No | No | Account management, App functionality (shown on social posts) | Yes |
-| User IDs | Yes | No | No | Account management, App functionality | Yes |
-| Health & fitness (workouts, body weight) | Yes | No | No | App functionality (sync) | Yes |
-| Health & fitness (food diary, meal photos) | Yes | No | No | App functionality (sync) | Yes |
-| Photos (meal photos only) | Yes | No | No | App functionality (sync) | Yes |
-| App activity (in-app social posts, comments, likes) | Yes | No | No | App functionality | Yes |
-| App info & performance (crash logs) | No | — | — | — | — |
-| Device or other IDs | No | — | — | — | — |
-| Location | No | — | — | — | — |
-| Approximate/precise diagnostics, analytics | No | — | — | — | — |
+| Personal info › Name (display name, username) | Yes | No | No | Optional | App functionality, Account management |
+| Personal info › Email address | Yes | No | No | Optional | App functionality, Account management, Developer communications (password resets, payment notices) |
+| Personal info › User IDs | Yes | No | No | Optional | App functionality, Account management |
+| Financial info › Purchase history (Pro/Studio subscription status from Google Play) | Yes | No | No | Optional | App functionality, Account management |
+| Health and fitness › Fitness info (workouts, bodyweight, habits, goals) | Yes | No | No | Optional | App functionality |
+| Health and fitness › Health info (food diary, calories, macros) | Yes | No | No | Optional | App functionality |
+| Messages › Other in-app messages (coach and client messages, comments) | Yes | No | No | Optional | App functionality |
+| Photos and videos › Photos (profile photo, meal photos, photos in posts) | Yes | No | No | Optional | App functionality |
+| App activity › Other user-generated content (posts, likes, follows, check-in answers) | Yes | No | No | Optional | App functionality |
+| App info and performance › Diagnostics (the log sent from Settings › Diagnostics) | Yes | No | No | Optional (only when the user taps Send) | **App functionality** (fixing the problem they reported). If the form's help text files bug-fixing under Analytics, tick Analytics instead; nothing else |
+| Device or other IDs (a random ID the app makes, so a free account knows which phone holds its backup) | Yes | No | No | Optional | App functionality |
 
-Notes for the reviewer / form free-text:
-- No third-party analytics, advertising, or attribution SDKs are present.
-- Server request logs (incl. IP) are kept transiently for security/abuse
-  prevention and are not used to track users across apps or services — this is
-  "ephemeral processing", not collection, under Play's definition.
-- Food lookups with no local match are sent to the Open Food Facts public API
-  with no account data attached.
-- "Shared" = No everywhere: data is not transferred to third parties. Stripe
-  (payments) is only used on the website, not in the app.
+Not collected: location, contacts, calendar, audio, files and docs, web browsing, installed apps,
+advertising ID, crash reports (no crash SDK), app interactions/analytics, payment card details
+(Google Play and Stripe handle cards; LogIt never sees them).
 
-## Account creation
-The app supports account creation. Provide test credentials in
-"App access" (create a throwaway account on the managed server).
+## Notes for the free-text boxes
+- No advertising, analytics or attribution SDKs.
+- The camera is used for barcode and nutrition-label scanning; that runs on the phone and the image
+  isn't uploaded (a meal photo is uploaded only if the user attaches one and has an account).
+- Food searches with few local matches are sent to Open Food Facts' public API without any account
+  information (search words or barcode only).
+- Music controls use Android notification access only to show and control what's playing; nothing
+  from it leaves the phone.
+- Server logs with IP addresses are used briefly for security (sign-in rate limits) and not kept
+  as user data.
+
+## App access (Play asks how to reach features behind a sign-in)
+"Some functionality is restricted": provide a reviewer account on getlogit.app with Pro (or Studio)
+given by hand in the admin console, so the reviewer sees sync, the web dashboard and coaching.
+Create it yourself (e.g. `playreview`), give it Studio in Admin › People, and type the username and
+password only into Play Console, never into the repo.

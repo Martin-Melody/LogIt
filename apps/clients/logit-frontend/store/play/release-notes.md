@@ -1,11 +1,13 @@
 # Release notes
 
-## 1.0 (versionCode 1) — en-GB
-First release.
+Play Console › the release › Release notes (max 500 characters per language).
 
-• Offline-first workout logging: splits, fast set entry, rest timer, history and
-  progress charts, adaptive progression.
-• Nutrition: offline food database, on-device barcode + label scanning, adaptive
-  calorie/macro targets, body-weight trend.
-• Habit tracking with streaks.
-• Optional account for cross-device sync and coaching. Self-hostable.
+## 1.0.0 (versionCode 1), en-GB
+<en-GB>
+First release of LogIt.
+• A week of workouts planned around your goal, with the next weight and reps worked out from your last session
+• Fast set logging, rest timer, supersets and circuits, cardio and mobility
+• Progress charts, goals and a weekly streak
+• Food diary with barcode scanning and adaptive targets, bodyweight and habits
+• Works offline; a free account backs up your phone
+</en-GB>

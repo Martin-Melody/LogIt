@@ -2,6 +2,12 @@
 
 > **2026-11-13:** the current launch plan and to-do list is `docs/launch-checklist.md`. This
 > runbook is older; report/block (blocker 1) has since been built.
+>
+> **2026-11-19:** the Play listing material is current in `apps/clients/logit-frontend/store/play/`:
+> `listing-en-GB.md` (copy), `data-safety.md`, `content-rating.md` (also target audience, ads, health,
+> financial and permission declarations), `release-notes.md`, `feature-graphic.png` and
+> `phone-screenshots/` (remake with `make-screenshots.mjs`). The keystore section below is outdated:
+> the upload key was regenerated on 2026-11-19 with a strong password.
 
 Status as of 2026-09-03: Android release build is **green and signed**; iOS
 platform is **scaffolded but not buildable here** (needs a Mac / cloud macOS).
