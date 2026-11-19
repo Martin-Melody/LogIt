@@ -11,8 +11,11 @@ import { playSound } from "$lib/features/sound/sounds";
 // when a set is ticked and clear it on dismiss or untick; everything else follows from it:
 //
 // - This service watches the in-progress session. For each running rest it keeps one in-app
-//   timeout and one phone notification for the moment the rest ends, and cancels both when
-//   the rest goes away. When a rest ends it shows the toast (once) and clears the rest.
+//   timeout for the moment the rest ends, and cancels it when the rest goes away. When a rest
+//   ends in the app it chimes and shows the toast (once) and clears the rest.
+// - The phone notification is only booked while the app is in the background, and taken back
+//   when it returns. Booked all along, it fired alongside the in-app chime: cancelling it at
+//   the end of the rest lost the race to Android (Martin, 2026-11-19).
 // - The progress bars only display.
 //
 // It used to be tracked in four places (the set, a map of timers here with a "fired" flag,
@@ -30,6 +33,8 @@ const WARN_MS = 10_000;
 const scheduled = new Map<string, Scheduled>();
 let started = false;
 
+const inBackground = () => typeof document !== "undefined" && document.visibilityState === "hidden";
+
 /** Start following the in-progress session's rests. Safe to call more than once. */
 export function startRestTimers(): void {
   if (started) return;
@@ -37,6 +42,20 @@ export function startRestTimers(): void {
   currentSession.subscribe((session) => reconcile(session));
   // A rest's length can follow the profile's defaults.
   profile.subscribe(() => reconcile(get(currentSession)));
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisibility);
+}
+
+/** Leaving the app books a phone notification for each running rest; coming back takes them
+ * back, so in the app it's only the chime and the toast. */
+function onVisibility(): void {
+  const now = Date.now();
+  for (const [setId, entry] of scheduled) {
+    if (inBackground()) {
+      if (entry.endsAtMs > now) void scheduleOsNotification(setId, entry.endsAtMs);
+    } else {
+      void cancelOsNotification(setId);
+    }
+  }
 }
 
 function reconcile(session: WorkoutSession | null): void {
@@ -71,8 +90,7 @@ function reconcile(session: WorkoutSession | null): void {
 
     const timeoutId = setTimeout(() => {
       const late = Date.now() - rest.endsAtMs > LATE_MS;
-      const hidden = typeof document !== "undefined" && document.visibilityState === "hidden";
-      void finish(rest, { alert: !late && !hidden });
+      void finish(rest, { alert: !late && !inBackground() });
     }, rest.endsAtMs - now);
     const warnAt = rest.endsAtMs - WARN_MS;
     const warnId = rest.endsAtMs - rest.startedAtMs > 2 * WARN_MS && warnAt > now
@@ -81,15 +99,15 @@ function reconcile(session: WorkoutSession | null): void {
         }, warnAt - now)
       : undefined;
     scheduled.set(rest.setId, { endsAtMs: rest.endsAtMs, timeoutId, warnId });
-    void scheduleOsNotification(rest.setId, rest.endsAtMs);
+    // A rest started or moved while the app is in the background (e.g. from a widget).
+    if (inBackground()) void scheduleOsNotification(rest.setId, rest.endsAtMs);
+    else void cancelOsNotification(rest.setId);
   }
 }
 
 async function finish(rest: RunningRest, { alert }: { alert: boolean }): Promise<void> {
   scheduled.delete(rest.setId);
   if (alert) {
-    // In the foreground the toast takes over from the phone notification.
-    void cancelOsNotification(rest.setId);
     playSound("rest");
     const onSessionPage = typeof location !== "undefined" && location.pathname.startsWith("/session/current");
     toast("Rest complete — time for your next set!", onSessionPage

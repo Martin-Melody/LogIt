@@ -8,6 +8,12 @@ import type { WorkoutSession } from "@logit/core/domain/workout";
 const toast = vi.fn();
 vi.mock("$lib/components/ui/sonner/index", () => ({ toast }));
 vi.mock("$app/navigation", () => ({ goto: vi.fn() }));
+const schedule = vi.fn(async () => {});
+const cancel = vi.fn(async () => {});
+vi.mock("@capacitor/local-notifications", () => ({
+  LocalNotifications: { requestPermissions: async () => ({ display: "granted" }), schedule, cancel },
+}));
+vi.mock("$lib/features/sound/sounds", () => ({ playSound: vi.fn() }));
 
 const profileStore = writable({ restDefaults: { normal: 60_000 } as Record<string, number | undefined> });
 vi.mock("$lib/stores/profile.store", () => ({ profile: profileStore }));
@@ -47,6 +53,13 @@ const restOf = () =>
   ((get(sessionStore)!.blocks[0]!.data as { sets: { restStartedAtMs?: number | null }[] }).sets[0]!.restStartedAtMs);
 
 let visibility: "visible" | "hidden" = "visible";
+// The service listens once (startRestTimers runs once per module), so the handler is kept here.
+let onVisibility: (() => void) | null = null;
+async function setVisibility(v: "visible" | "hidden") {
+  visibility = v;
+  onVisibility?.();
+  await vi.advanceTimersByTimeAsync(0);
+}
 
 beforeEach(async () => {
   vi.useFakeTimers();
@@ -54,7 +67,12 @@ beforeEach(async () => {
   toast.mockReset();
   mutate.mockClear();
   visibility = "visible";
-  vi.stubGlobal("document", { get visibilityState() { return visibility; } });
+  schedule.mockClear();
+  cancel.mockClear();
+  vi.stubGlobal("document", {
+    get visibilityState() { return visibility; },
+    addEventListener: (type: string, fn: () => void) => { if (type === "visibilitychange") onVisibility = fn; },
+  });
   sessionStore.set(null);
   const { startRestTimers } = await import("$lib/services/restTimerService");
   startRestTimers();
@@ -103,6 +121,20 @@ describe("rest timer", () => {
     sessionStore.set(workout(null)); // dismissed / unticked
     await advance(120_000);
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("in the app it's only the chime and toast: the phone notification is booked on leaving and taken back on return", async () => {
+    sessionStore.set(workout(Date.now()));
+    await advance(10_000);
+    expect(schedule).not.toHaveBeenCalled();
+    await setVisibility("hidden");
+    expect(schedule).toHaveBeenCalledTimes(1);
+    expect((schedule.mock.calls[0] as unknown as [{ notifications: { schedule: { at: Date } }[] }])[0].notifications[0]!.schedule.at.getTime()).toBe(1_000_000 + 60_000);
+    await setVisibility("visible");
+    expect(cancel).toHaveBeenCalled();
+    await advance(50_000);
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(schedule).toHaveBeenCalledTimes(1);
   });
 
   it("no toast when the rest ended while the app was in the background", async () => {
