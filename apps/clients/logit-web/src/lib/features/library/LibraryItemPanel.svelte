@@ -154,9 +154,10 @@
             {#each EQUIPMENT as e (e)}<option value={e}>{capitalise(EQUIPMENT_LABEL[e])}</option>{/each}
           </select>
         </div>
-        <div>
+        <!-- Its own row: three words don't fit a third of the panel ("Bodyweight" spilled out). -->
+        <div class="col-span-full">
           <span class={label}>Type</span>
-          <div class="inline-grid grid-cols-3 gap-[3px] rounded-[9px] bg-muted p-[3px]">
+          <div class="inline-flex gap-[3px] rounded-[9px] bg-muted p-[3px]">
             {#each ([["normal", "Normal"], ["assisted", "Assisted"], ["bodyweight", "Bodyweight"]] as const) as [t, l] (t)}
               <button type="button" class={segBtn(exerciseType === t)} aria-pressed={exerciseType === t} onclick={() => (exerciseType = t)}>{l}</button>
             {/each}

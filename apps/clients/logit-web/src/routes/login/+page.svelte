@@ -7,7 +7,6 @@
   import { page } from "$app/state";
   import { onMount, tick } from "svelte";
   import { apiClient, ApiError, type RegistrationInfo } from "@logit/core/api/client";
-  import { getServerMode, setServerMode, getSelfHostUrl } from "@logit/core/api/serverConfig";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
   import { Input } from "$lib/components/ui/input";
@@ -48,10 +47,6 @@
     registration = await apiClient.getRegistrationInfo();
   }
   onMount(() => void loadRegistration());
-
-  let showServerSetup = $state(false);
-  let serverMode = $state(getServerMode());
-  let selfHostUrl = $state(getSelfHostUrl() || "");
 
   const passwordMismatch = $derived(
     mode === "register" && confirmPassword.length > 0 && password !== confirmPassword,
@@ -129,23 +124,6 @@
     }
   }
 
-  function saveServerUrl() {
-    const url = selfHostUrl.trim().replace(/\/$/, "");
-    if (!url) return;
-    setServerMode("selfhosted", url);
-    serverMode = "selfhosted";
-    showServerSetup = false;
-    inviteError = null;
-    void loadRegistration();
-  }
-
-  function useCloud() {
-    setServerMode("cloud");
-    serverMode = "cloud";
-    showServerSetup = false;
-    inviteError = null;
-    void loadRegistration();
-  }
 </script>
 
 
@@ -284,23 +262,10 @@
         <a href={PRICING_URL} class="text-muted-foreground hover:text-foreground">Compare plans</a>
       </div>
 
-      <div>
-        <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => (showServerSetup = !showServerSetup)}>
-          {serverMode === "selfhosted" ? `Your own server: ${selfHostUrl}` : "Advanced: use your own server"}
-        </button>
-      </div>
-
-      {#if showServerSetup}
-        <div class="flex flex-col gap-2 rounded border border-border p-3">
-          <Label for="server-url">Server address</Label>
-          <div class="flex gap-2">
-            <Input id="server-url" type="text" placeholder="https://your-server.example.com" class="min-w-0 flex-1" bind:value={selfHostUrl} />
-            <Button type="button" size="sm" disabled={!selfHostUrl.trim()} onclick={saveServerUrl}>Save</Button>
-          </div>
-          <button type="button" class="self-start text-xs text-muted-foreground hover:text-foreground" onclick={useCloud}>
-            Use getlogit.app instead
-          </button>
-        </div>
+      <!-- This dashboard only talks to its own server: a self-hosted server comes with its own
+           dashboard, always on the server's version and on the server's network. -->
+      {#if registration && !registration.selfHosted}
+        <p class="text-xs text-muted-foreground">Running your own Logit server? Sign in on the dashboard that came with it.</p>
       {/if}
     </div>
   </section>

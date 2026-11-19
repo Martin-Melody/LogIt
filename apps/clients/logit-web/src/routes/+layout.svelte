@@ -131,6 +131,7 @@
   }
 
   onMount(async () => {
+    await apiClient.forgetPickedServer();
     await apiClient.init();
     // Reconcile the cached identity (who you are, tier, onboarding) against the server
     // before the guard below runs. The cache only updates on login, so it's stale right
