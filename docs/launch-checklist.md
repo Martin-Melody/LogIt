@@ -88,9 +88,11 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       now uses Inter and the app's radius).
 - [x] **Free users can reach the dashboard's Account page** (2026-11-14), so "delete your account on the web"
       works for everyone, not just Pro/Studio.
-- [ ] **Launch plugins**: the registry only has samples. Write 5–8 useful ones (e.g. 5/3/1, GZCL,
-      RPE-based progression, an RPE calculator card, a deload reminder, kettlebell/machine packs) so the
-      marketplace the website sells isn't four demos.
+- [x] **Launch plugins** (2026-11-19, live in the community registry, Martin-Melody/logit-plugin-registry):
+      5/3/1 Waves, GZCLP, RIR Auto (progression), Estimated Maxes and Deload Reminder (home widgets),
+      Kettlebell Pack (14) and Dumbbell & Home Gym Pack (15). Linted with logit-plugin-lint (sandbox runs)
+      and simulated session by session. Not yet installed on a phone: try one from Plugins › Browse.
+      (Machines pack skipped: the core library already has nearly every machine.)
 - [x] **App bugs seen while taking screenshots** (2026-11-14): one rest at a time (ticking the next set ends the
       previous rest); exercise chart labels fit; PR cards say "200 kg × 1 rep"; the "Why?" sheet leads with plain
       sentences (numbers behind "Show the numbers", app and dashboard); habit icons given as Lucide names draw the icon.
@@ -151,8 +153,14 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       is an old AWS App Runner host that no longer exists).
 - [ ] Create the subscriptions in Play Console; test buying with Play license testers.
 - [x] Merge `feat/sessions-overhaul` first (merged 2026-11-13).
-- [ ] Play listing screenshots: reuse the website's (`apps/clients/website/scripts/screenshots`);
-      update listing copy (goals, streak, circuits, sessions, plugins) and the Data safety / content
-      rating answers (purchases now in the app; report/block exists; diagnostics can be sent on request).
-- [ ] Release build smoke test on a real phone, upload to the closed test.
+- [x] Play listing material (2026-11-19, `apps/clients/logit-frontend/store/play/`): copy, 6 captioned
+      screenshots, new feature graphic, Data safety, content rating and the other App content answers.
+      Still yours: a reviewer account for "App access" (see data-safety.md).
+- [ ] Release build smoke test on a real phone, upload to the closed test. 2026-11-19: passed on the
+      emulator (onboarding, workout, rest notification, sign-up and account deletion against production);
+      Martin's phone still has an old release build signed with another key, so it needs uninstalling
+      (and its data exporting) first. Findings to look at: the welcome screen still shows the old
+      dumbbell and "Logit"; without exact-alarm permission the app tries to open the Alarms & reminders
+      page when it goes to the background; the first-week chips read "Fu B" for both Full Body B and C;
+      after deleting an account, back on the welcome screen doesn't exit.
 - [ ] Production once the 14 days are up.
