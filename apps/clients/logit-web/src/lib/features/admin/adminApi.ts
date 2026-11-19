@@ -45,6 +45,8 @@ export interface SubscriptionRow {
   expiresAt: string | null;
   autoRenewing: boolean;
   isTest: boolean;
+  /** In its free trial: gives the plan, nothing paid yet. */
+  isTrial?: boolean;
   productId: string;
   createdAt: string;
   checkedAt: string | null;
@@ -64,7 +66,7 @@ export interface Person extends PersonRow {
 }
 
 export interface Subscriptions {
-  counts: { payingPro: number; payingStudio: number; newLast30Days: number; stopping: number; paymentProblems: number; givenByHand: number; test: number };
+  counts: { payingPro: number; payingStudio: number; newLast30Days: number; stopping: number; paymentProblems: number; givenByHand: number; test: number; onTrial: number };
   subscriptions: (Omit<SubscriptionRow, "checkedAt"> & { id: string; user: { id: string; username: string } })[];
 }
 

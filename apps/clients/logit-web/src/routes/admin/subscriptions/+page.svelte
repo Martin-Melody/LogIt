@@ -7,7 +7,7 @@
 
   let data = $state<Subscriptions | null>(null);
   let error = $state<string | null>(null);
-  let show = $state<"paying" | "problems" | "stopping" | "ended" | "test">("paying");
+  let show = $state<"paying" | "trial" | "problems" | "stopping" | "ended" | "test">("paying");
 
   onMount(async () => {
     try {
@@ -20,13 +20,14 @@
   type Row = Subscriptions["subscriptions"][number];
   const live = (s: Row) => !s.expiresAt || at(s.expiresAt) > Date.now();
   const groups: Record<typeof show, (s: Row) => boolean> = {
-    paying: (s) => !s.isTest && ["Active", "Canceled", "GracePeriod"].includes(s.state) && live(s),
+    paying: (s) => !s.isTest && !s.isTrial && ["Active", "Canceled", "GracePeriod"].includes(s.state) && live(s),
+    trial: (s) => !s.isTest && !!s.isTrial && ["Active", "Canceled"].includes(s.state) && live(s),
     problems: (s) => !s.isTest && ["GracePeriod", "OnHold"].includes(s.state),
-    stopping: (s) => !s.isTest && s.state === "Canceled" && live(s),
+    stopping: (s) => !s.isTest && !s.isTrial && s.state === "Canceled" && live(s),
     ended: (s) => !s.isTest && (["Expired", "Revoked"].includes(s.state) || (s.state === "Canceled" && !live(s))),
     test: (s) => s.isTest,
   };
-  const labels: Record<typeof show, string> = { paying: "Paying", problems: "Payment problems", stopping: "Stopping", ended: "Ended", test: "Test purchases" };
+  const labels: Record<typeof show, string> = { paying: "Paying", trial: "Free trial", problems: "Payment problems", stopping: "Stopping", ended: "Ended", test: "Test purchases" };
   const rows = $derived(data ? data.subscriptions.filter(groups[show]) : []);
   const count = (k: typeof show) => (data ? data.subscriptions.filter(groups[k]).length : 0);
 
@@ -37,6 +38,7 @@
   function when(s: Row): string {
     if (!s.expiresAt) return "—";
     const d = shortDate(at(s.expiresAt));
+    if (s.isTrial && s.state === "Active") return s.autoRenewing ? `Trial ends ${d}, then pays` : `Trial ends ${d}, won't pay`;
     if (s.state === "Active" && s.autoRenewing) return `Renews ${d}`;
     if (s.state === "GracePeriod") return `Access until ${d}`;
     return live(s) ? `Ends ${d}` : `Ended ${d}`;
@@ -46,7 +48,7 @@
 <div class="flex max-w-[1100px] flex-col gap-[18px]">
   <header>
     <h1 class="text-[26px] font-bold tracking-tight">Subscriptions</h1>
-    <p class="mt-0.5 text-sm text-muted-foreground">Everyone paying for Pro or Studio, wherever they bought it. Test purchases are counted apart.</p>
+    <p class="mt-0.5 text-sm text-muted-foreground">Everyone paying for Pro or Studio, wherever they bought it. Free trials and test purchases are counted apart.</p>
   </header>
 
   {#if error}
@@ -56,7 +58,7 @@
   {:else}
     {@const c = data.counts}
     <div class="flex flex-wrap gap-3">
-      {#each [["Paying now", `${c.payingPro + c.payingStudio}`, `${c.payingPro} Pro · ${c.payingStudio} Studio`, false], ["New, last 30 days", `${c.newLast30Days}`, "", false], ["Stopping", `${c.stopping}`, "cancelled, paid until their date", false], ["Payment problems", `${c.paymentProblems}`, "the store is retrying the card", c.paymentProblems > 0], ["Plans given by hand", `${c.givenByHand}`, "friends and testers", false]] as [label, value, note, warn] (label)}
+      {#each [["Paying now", `${c.payingPro + c.payingStudio}`, `${c.payingPro} Pro · ${c.payingStudio} Studio${c.onTrial ? ` · ${c.onTrial} more on a free trial` : ""}`, false], ["New, last 30 days", `${c.newLast30Days}`, "", false], ["Stopping", `${c.stopping}`, "cancelled, paid until their date", false], ["Payment problems", `${c.paymentProblems}`, "the store is retrying the card", c.paymentProblems > 0], ["Plans given by hand", `${c.givenByHand}`, "friends and testers", false]] as [label, value, note, warn] (label)}
         <div class="flex-[1_1_170px] rounded-xl border bg-card px-4 py-3.5 {warn ? 'border-warning/40' : 'border-border'}">
           <span class="block text-[13px] text-muted-foreground">{label}</span>
           <strong class="text-2xl font-semibold tabular-nums {warn ? 'text-warning' : ''}">{value}</strong>

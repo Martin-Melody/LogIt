@@ -27,6 +27,7 @@ public static class AdminHosted
                 s.ExpiresAt,
                 s.AutoRenewing,
                 s.IsTest,
+                s.IsTrial,
                 s.ProductId,
                 s.CreatedAt,
                 User = new { s.User.Id, s.User.Username },
@@ -35,7 +36,9 @@ public static class AdminHosted
 
         bool Paying(SubscriptionState st) => st is SubscriptionState.Active or SubscriptionState.Canceled or SubscriptionState.GracePeriod;
         var real = subs.Where(s => !s.IsTest).ToList();
-        var paying = real.Where(s => Paying(s.State) && (s.ExpiresAt is null || s.ExpiresAt > now)).ToList();
+        var live = real.Where(s => Paying(s.State) && (s.ExpiresAt is null || s.ExpiresAt > now)).ToList();
+        // A free trial gives the plan but hasn't paid: counted apart.
+        var paying = live.Where(s => !s.IsTrial).ToList();
 
         return Results.Ok(new
         {
@@ -44,6 +47,7 @@ public static class AdminHosted
                 PayingPro = paying.Count(s => s.Plan == UserTier.Pro),
                 PayingStudio = paying.Count(s => s.Plan == UserTier.Studio),
                 NewLast30Days = real.Count(s => s.CreatedAt >= now.AddDays(-30)),
+                OnTrial = live.Count(s => s.IsTrial),
                 Stopping = paying.Count(s => s.State == SubscriptionState.Canceled),
                 PaymentProblems = real.Count(s => s.State is SubscriptionState.GracePeriod or SubscriptionState.OnHold),
                 GivenByHand = await db.Users.CountAsync(u => u.ManualTier != null && !u.IsSample),
@@ -58,6 +62,7 @@ public static class AdminHosted
                 s.ExpiresAt,
                 s.AutoRenewing,
                 s.IsTest,
+                s.IsTrial,
                 s.ProductId,
                 s.CreatedAt,
                 s.User,
@@ -83,7 +88,7 @@ public static class AdminHosted
                 .ToListAsync())
             .ToLookup(w => w.UserId, w => DateTimeOffset.FromUnixTimeMilliseconds(w.StartedAtMs).UtcDateTime);
         var payingIds = (await db.BillingSubscriptions
-                .Where(s => ids.Contains(s.UserId) && !s.IsTest)
+                .Where(s => ids.Contains(s.UserId) && !s.IsTest && !s.IsTrial)
                 .ToListAsync())
             .Where(s => Entitlements.GrantsAccess(s, now))
             .Select(s => s.UserId)

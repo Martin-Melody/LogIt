@@ -63,7 +63,8 @@ public class AdminHostedTests
                 new BillingSubscription { UserId = sarah, ExternalId = "a", Plan = UserTier.Pro, State = SubscriptionState.Active, ExpiresAt = now.AddDays(20) },
                 new BillingSubscription { UserId = dara, ExternalId = "b", Plan = UserTier.Studio, State = SubscriptionState.GracePeriod, ExpiresAt = now.AddDays(3) },
                 new BillingSubscription { UserId = dara, ExternalId = "c", Plan = UserTier.Pro, State = SubscriptionState.Active, ExpiresAt = now.AddDays(20), IsTest = true },
-                new BillingSubscription { UserId = sarah, ExternalId = "d", Plan = UserTier.Pro, State = SubscriptionState.Replaced });
+                new BillingSubscription { UserId = sarah, ExternalId = "d", Plan = UserTier.Pro, State = SubscriptionState.Replaced },
+                new BillingSubscription { UserId = dara, ExternalId = "e", Plan = UserTier.Pro, State = SubscriptionState.Active, ExpiresAt = now.AddDays(7), IsTrial = true });
             await db.SaveChangesAsync();
         });
 
@@ -73,7 +74,8 @@ public class AdminHostedTests
         Assert.Equal(1, counts.GetProperty("payingStudio").GetInt32());
         Assert.Equal(1, counts.GetProperty("paymentProblems").GetInt32());
         Assert.Equal(1, counts.GetProperty("test").GetInt32());
-        Assert.Equal(3, body.GetProperty("subscriptions").GetArrayLength()); // the replaced one is left out
+        Assert.Equal(1, counts.GetProperty("onTrial").GetInt32()); // a free trial isn't paying yet
+        Assert.Equal(4, body.GetProperty("subscriptions").GetArrayLength()); // the replaced one is left out
     }
 
     [Fact]
