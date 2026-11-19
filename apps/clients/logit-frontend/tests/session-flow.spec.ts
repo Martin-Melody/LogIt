@@ -503,8 +503,9 @@ test.describe("managing sets", () => {
     await input.fill("Incline Bench Press");
     await page.keyboard.press("Enter");
 
-    await expect(page.getByText("Incline Bench Press")).toBeVisible();
-    await expect(page.getByText("Bench Press", { exact: true })).not.toBeVisible();
+    // The card's name, not the Undo toast ("Swapped to …") that also names it.
+    await expect(page.getByRole("button", { name: "Incline Bench Press — open details" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Bench Press — open details", exact: true })).toHaveCount(0);
     // Both sets still there.
     await expect(page.locator('[data-testid="set-number"]')).toHaveCount(2);
   });
@@ -532,7 +533,7 @@ test.describe("managing sets", () => {
     await swapInput.fill("Incline Bench Press");
     await expect(swapInput).toHaveValue("Incline Bench Press");
     await page.keyboard.press("Enter");
-    await expect(page.getByText("Incline Bench Press")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Incline Bench Press — open details" })).toBeVisible();
   });
 
   test("deleting an exercise removes it from the session", async ({ page }) => {
@@ -546,7 +547,8 @@ test.describe("managing sets", () => {
     // Confirm dialog appears
     await page.getByRole("button", { name: "Remove" }).click();
 
-    await expect(page.getByText("Bench Press")).not.toBeVisible();
+    // The card goes; the Undo toast ("Bench Press removed.") still names it.
+    await expect(page.getByRole("button", { name: "Bench Press — open details" })).toHaveCount(0);
     await expect(page.getByText("Nothing logged yet.")).toBeVisible();
   });
 });

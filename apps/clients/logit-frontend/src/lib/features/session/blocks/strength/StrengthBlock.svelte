@@ -172,7 +172,8 @@
     await loadSuggestion(data.exerciseName, data.exerciseId);
     if (!suggestion || suggestion.sets.length === 0) return;
     const plan = suggestionToPlan(suggestion, exerciseData?.defaultMachineId);
-    await onMutate((s: WorkoutSession) => replanForOrder(s, blockId, plan));
+    // Follows the move, which was the step: undoing the move puts the old plan back too.
+    await onMutate((s: WorkoutSession) => replanForOrder(s, blockId, plan), { auto: true });
   }
 
   // The line under the plan while re-planned sets are still to do: why, and a button that
