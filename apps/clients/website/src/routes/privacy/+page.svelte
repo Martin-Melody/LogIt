@@ -2,7 +2,7 @@
   import TextPage from "$lib/site/TextPage.svelte";
   import { PRIVACY_EMAIL } from "$lib/site";
 
-  const UPDATED = "17 November 2026";
+  const UPDATED = "19 November 2026";
 </script>
 
 <svelte:head>
@@ -87,6 +87,14 @@
     Nothing is shared with a coach until you accept their invite, and you can end the connection at
     any time from Settings.
   </p>
+  <p>
+    Some coaches take payment through LogIt. You pay on Stripe's secure page, straight into the
+    coach's own Stripe account: the coach is the seller, not LogIt. Stripe handles your card details
+    and LogIt never sees them. LogIt keeps what it needs to run the plan (the package, amount, whether
+    it's paid, the dates, and Stripe's reference numbers for you and the plan), shows the coach whether
+    you're paid up, and emails you if a payment fails. The payment itself is covered by
+    <a href="https://stripe.com/privacy">Stripe's privacy policy</a> and the coach's own terms.
+  </p>
 
   <h2>Plugins</h2>
   <p>
@@ -112,7 +120,14 @@
       look up the playlist's name and cover. Only the link is sent, with no account information.
       Opening a playlist hands the link to the Spotify or YouTube Music app on your phone.
     </li>
-    <li><strong>Hosting:</strong> the managed service runs on servers in the European Union. <!-- TODO(launch): name the VPS provider once chosen. --></li>
+    <li><strong>Hetzner:</strong> the managed server and its database run on Hetzner Online GmbH's servers in Germany.</li>
+    <li>
+      <strong>Cloudflare:</strong> getlogit.app, the web dashboard and the API are reached through
+      Cloudflare's network, which protects them from attacks. The nightly database backups are stored
+      in Cloudflare R2 (Western Europe) and deleted after 30 days.
+    </li>
+    <li><strong>Resend:</strong> sends LogIt's emails (password resets, invites, payment notices), so it handles your email address and the message.</li>
+    <li><strong>Stripe:</strong> payments to coaches (see Coaching above), on the website only.</li>
     <li><strong>Google Play:</strong> app distribution and subscription payments.</li>
   </ul>
   <p>We do not use advertising or analytics providers.</p>
