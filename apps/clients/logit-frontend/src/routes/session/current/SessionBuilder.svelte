@@ -3,7 +3,7 @@
   import { get } from "svelte/store";
   import { Plus } from "lucide-svelte";
   import { toast } from "$lib/components/ui/sonner/index";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
 
   import { getWorkoutRepo, getExerciseRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
@@ -140,14 +140,71 @@
     return get(currentSession);
   }
 
+  // ── Undo / redo (design canvas 3c) ─────────────────────────────────────────────
+  // Every tap is a step (currentSession.mutate); the ⋯ menu always has Undo and Redo. The
+  // changes you'd regret (removing, swapping, reordering) also get a toast whose Undo flips to
+  // Redo. The first few toasts point at ⋯ so the menu is found.
+  const history = currentSession.history;
+  const UNDO_TOAST = "workout-undo";
+  const HINT_KEY = "logit:undoHint:v1";
+  const HINT_TIMES = 3;
+  let seenSteps = get(history).steps;
+
+  function takeHint(): boolean {
+    try {
+      const n = Number(localStorage.getItem(HINT_KEY) ?? 0);
+      if (n >= HINT_TIMES) return false;
+      localStorage.setItem(HINT_KEY, String(n + 1));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function undoToast(text: string, offer: "undo" | "redo") {
+    const hint = offer === "undo" && takeHint();
+    toast(text, {
+      id: UNDO_TOAST,
+      duration: 6000,
+      ...(hint ? { description: "Undo and redo are also in the ⋯ menu." } : {}),
+      action: offer === "undo"
+        ? { label: "Undo", onClick: () => void undo() }
+        : { label: "Redo", onClick: () => void redo() },
+    });
+  }
+
+  // A new step: the toast for it if it's worth one; any other change closes an open one, so
+  // its Undo can't undo something else.
+  $effect(() => {
+    const h = $history;
+    untrack(() => {
+      if (h.steps === seenSteps) return;
+      seenSteps = h.steps;
+      if (h.undo?.toast) undoToast(h.undo.toast.done, "undo");
+      else toast.dismiss(UNDO_TOAST);
+    });
+  });
+
+  async function undo() {
+    const change = await currentSession.undo();
+    if (change?.toast) undoToast(change.toast.undone, "redo");
+    else toast.dismiss(UNDO_TOAST);
+  }
+
+  async function redo() {
+    const change = await currentSession.redo();
+    if (change?.toast) undoToast(change.toast.done, "undo");
+    else toast.dismiss(UNDO_TOAST);
+  }
+
   /** Every change to the workout goes through the store's queue (currentSession.mutate),
    * which applies it to the latest session; the rest timer writes through it too. */
-  async function onMutate(updater: (s: WorkoutSession) => WorkoutSession) {
+  async function onMutate(updater: (s: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) {
     if (ui.finishing) return;
     ui.saving = true;
     ui.error = null;
     try {
-      await currentSession.mutate(updater);
+      await currentSession.mutate(updater, opts);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to save draft session";
     } finally {
@@ -640,6 +697,9 @@
     {loggedSetCount}
     onFinish={showRecap}
     onDiscard={discardSession}
+    history={$history}
+    onUndo={undo}
+    onRedo={redo}
   />
 
   {#if !ui.finishing}

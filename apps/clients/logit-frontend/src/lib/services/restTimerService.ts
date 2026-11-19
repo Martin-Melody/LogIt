@@ -115,7 +115,7 @@ async function finish(rest: RunningRest, { alert }: { alert: boolean }): Promise
       : { action: { label: "Go to session", onClick: () => void goto("/session/current") } });
   }
   // Only this rest: if the set was re-ticked meanwhile, its new rest keeps running.
-  await currentSession.mutate((s) => clearRest(s, rest.setId, rest.startedAtMs)).catch(() => {});
+  await currentSession.mutate((s) => clearRest(s, rest.setId, rest.startedAtMs), { auto: true }).catch(() => {});
 }
 
 

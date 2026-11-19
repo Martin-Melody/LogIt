@@ -53,7 +53,7 @@
     memberGripAction?: (blockId: string) => GripAction;
     /** Opens "Superset / circuit with…" for a member (adds to this group). */
     onGroupBlock?: (blockId: string) => void;
-    onMutate: (updater: (s: WorkoutSession) => WorkoutSession) => Promise<void>;
+    onMutate: (updater: (s: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) => Promise<void>;
     onDeleteBlock: (blockId: string) => void | Promise<void>;
   }>();
 

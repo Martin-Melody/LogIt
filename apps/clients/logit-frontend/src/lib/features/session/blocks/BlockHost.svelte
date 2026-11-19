@@ -26,7 +26,7 @@
     gripAction: GripAction;
     onGroup?: () => void;
     onDelete: () => void | Promise<void>;
-    onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
+    onMutate: (updater: (session: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) => Promise<void>;
   }>();
 
   const def = $derived(getBlockDef(type));

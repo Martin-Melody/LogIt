@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { MoreVertical, Music, Trash2 } from "lucide-svelte";
+  import { MoreVertical, Music, Trash2, Undo2, Redo2 } from "lucide-svelte";
+  import type { WorkoutHistory } from "$lib/stores/currentSession.store";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { back } from "$lib/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -19,6 +20,9 @@
     loggedSetCount = 0,
     onFinish = () => {},
     onDiscard,
+    history = null,
+    onUndo = () => {},
+    onRedo = () => {},
   }: {
     saving?: boolean;
     error?: string | null;
@@ -30,6 +34,10 @@
     loggedSetCount?: number;
     onFinish?: () => void | Promise<void>;
     onDiscard?: () => void | Promise<void>;
+    /** What Undo / Redo would do: the first two items in ⋯, each naming its step. */
+    history?: WorkoutHistory | null;
+    onUndo?: () => void | Promise<void>;
+    onRedo?: () => void | Promise<void>;
   } = $props();
 
   let now = $state(Date.now());
@@ -100,7 +108,22 @@
       >
         <MoreVertical class="h-5 w-5" />
       </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" class="w-56">
+      <DropdownMenu.Content align="end" class="w-60">
+        <DropdownMenu.Item disabled={!history?.undo || saving} onSelect={() => void onUndo()} class="min-h-12" data-testid="workout-undo">
+          <Undo2 />
+          <span class="flex min-w-0 flex-col leading-tight">
+            Undo
+            {#if history?.undo}<span class="truncate text-xs text-muted-foreground">{history.undo.label}</span>{/if}
+          </span>
+        </DropdownMenu.Item>
+        <DropdownMenu.Item disabled={!history?.redo || saving} onSelect={() => void onRedo()} class="min-h-12" data-testid="workout-redo">
+          <Redo2 />
+          <span class="flex min-w-0 flex-col leading-tight">
+            Redo
+            {#if history?.redo}<span class="truncate text-xs text-muted-foreground">{history.redo.label}</span>{/if}
+          </span>
+        </DropdownMenu.Item>
+        <div class="my-1 h-px bg-border" role="separator"></div>
         {#if music.supported}
           <DropdownMenu.Item onSelect={() => void goto("/settings/music")}>
             <Music /> Music settings
