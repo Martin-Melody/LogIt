@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Za82ErT6I5I=",
+  "dgSpecHash": "KMjChxS4xaU=",
   "success": true,
-  "projectFilePath": "/home/martin/Projects/logit-web-onboarding/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
+  "projectFilePath": "/home/martin/Projects/logit/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
   "expectedPackageFiles": [
     "/home/martin/.nuget/packages/bcrypt.net-next/4.2.1/bcrypt.net-next.4.2.1.nupkg.sha512",
     "/home/martin/.nuget/packages/coverlet.collector/6.0.0/coverlet.collector.6.0.0.nupkg.sha512",

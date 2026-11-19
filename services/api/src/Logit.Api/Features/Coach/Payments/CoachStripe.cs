@@ -16,6 +16,9 @@ public interface ICoachStripe
     Task<CheckoutStart> CreateCheckoutAsync(CheckoutStartRequest req, CancellationToken ct);
     Task<CheckoutInfo> GetCheckoutAsync(string accountId, string sessionId, CancellationToken ct);
     Task<StripeSubscriptionInfo> GetSubscriptionAsync(string accountId, string subscriptionId, CancellationToken ct);
+    /// Stripe's billing page for one of the coach's customers: change the card (paying what's
+    /// overdue), see receipts, stop the plan. Returns its short-lived URL.
+    Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct);
     Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct);
     Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct);
 }
@@ -153,6 +156,8 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
             Metadata = req.Metadata,
             SuccessUrl = req.SuccessUrl,
             CancelUrl = req.CancelUrl,
+            // Codes the coach makes in their own Stripe dashboard.
+            AllowPromotionCodes = true,
         };
         if (req.Monthly)
             options.SubscriptionData = new SessionSubscriptionDataOptions { Metadata = req.Metadata };
@@ -164,6 +169,13 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
         }
         var session = await Client.V1.Checkout.Sessions.CreateAsync(options, On(req.AccountId), ct);
         return new CheckoutStart(session.Id, session.Url);
+    }
+
+    public async Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct)
+    {
+        var session = await Client.V1.BillingPortal.Sessions.CreateAsync(
+            new Stripe.BillingPortal.SessionCreateOptions { Customer = customerId, ReturnUrl = returnUrl }, On(accountId), ct);
+        return session.Url;
     }
 
     public async Task<CheckoutInfo> GetCheckoutAsync(string accountId, string sessionId, CancellationToken ct)

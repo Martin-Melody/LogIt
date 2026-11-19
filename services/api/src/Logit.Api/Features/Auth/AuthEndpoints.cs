@@ -49,7 +49,9 @@ public static class AuthEndpoints
                 return refused;
         }
 
-        var normalizedUsername = req.Username.Trim().ToLowerInvariant();
+        var normalizedUsername = string.IsNullOrWhiteSpace(req.Username)
+            ? await Usernames.PickFreeAsync(db, req.DisplayName, req.Email)
+            : req.Username.Trim().ToLowerInvariant();
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
 
         if (await db.Users.AnyAsync(u => u.Username == normalizedUsername))

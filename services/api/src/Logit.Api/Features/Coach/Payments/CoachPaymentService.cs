@@ -35,7 +35,7 @@ public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? Pack
 /// The rules for coach payments: starting coaching when a client pays, following Stripe's
 /// events, and pausing or ending coaching when a client isn't paid up (the coach's rule).
 public class CoachPaymentService(
-    AppDbContext db, ICoachStripe stripe, IEmailSender email, ILogger<CoachPaymentService> log)
+    AppDbContext db, ICoachStripe stripe, IEmailSender email, IConfiguration config, ILogger<CoachPaymentService> log)
 {
     // ── Rules ────────────────────────────────────────────────────────────────
 
@@ -143,6 +143,7 @@ public class CoachPaymentService(
 
         await db.SaveChangesAsync(ct);
         log.LogInformation("Coach {CoachId} got a paid client {ClientId} ({Interval})", meta.CoachId, meta.ClientId, payment.Interval);
+        await EmailCoachPaid(account, rel, payment, meta.LinkId, ct);
         return rel;
     }
 
@@ -169,7 +170,8 @@ public class CoachPaymentService(
     }
 
     /// A monthly payment failed. Stripe retries the card; the coach's rule counts from now.
-    public async Task InvoiceFailedAsync(string accountId, string subscriptionId, DateTime now, CancellationToken ct)
+    /// `attempt` is Stripe's try number for this invoice: the client is emailed on the first.
+    public async Task InvoiceFailedAsync(string accountId, string subscriptionId, DateTime now, CancellationToken ct, long attempt = 1)
     {
         var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.StripeAccountId == accountId, ct);
         if (account is null) return;
@@ -180,6 +182,7 @@ public class CoachPaymentService(
         payment.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
         await EmailCoachOnce(account, payment, now, ct);
+        if (attempt <= 1) await EmailClientFailed(account, payment, now, ct);
     }
 
     /// Any change to a monthly plan (stopped, restarted, given up on by Stripe, renewed).
@@ -370,6 +373,41 @@ public class CoachPaymentService(
         });
     }
 
+    /// The client's own copy of a failed payment, with a link that opens Stripe's billing page
+    /// to change the card. Always sent: the client can't fix what they don't know about.
+    private async Task EmailClientFailed(CoachPaymentAccount account, CoachClientPayment p, DateTime now, CancellationToken ct)
+    {
+        var secret = config["Jwt:Secret"];
+        var origin = config["Web:Origin"];
+        if (!email.IsConfigured || string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(origin)) return;
+        var rel = p.Relationship ?? await db.CoachClientRelationships.FirstAsync(r => r.Id == p.RelationshipId, ct);
+        var coach = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == rel.CoachId, ct);
+        var client = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == rel.ClientId, ct);
+        if (coach is null || client is null || string.IsNullOrWhiteSpace(client.Email)) return;
+        var link = PaymentFixLinks.Url(origin, PaymentFixLinks.Create(p.Id, now + PaymentFixLinks.Lifetime, secret));
+        var (subject, body) = PaymentEmails.ForClientFailed(NameOf(coach), NameOf(client), p, account, now, link);
+        try { await email.SendAsync(client.Email, subject, body); }
+        catch (Exception ex) { log.LogWarning("Couldn't email client {ClientId} about a failed payment: {Reason}", client.Id, ex.Message); }
+    }
+
+    /// Tell the coach someone paid (the same setting as the failed-payment emails).
+    private async Task EmailCoachPaid(CoachPaymentAccount account, CoachClientRelationship rel, CoachClientPayment p, Guid? linkId, CancellationToken ct)
+    {
+        if (!account.EmailOnFail || !email.IsConfigured) return;
+        var coach = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == rel.CoachId, ct);
+        var client = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == rel.ClientId, ct);
+        if (coach is null || client is null) return;
+        var linkName = linkId is { } id
+            ? await db.CoachInviteLinks.AsNoTracking().Where(l => l.Id == id).Select(l => l.Name).FirstOrDefaultAsync(ct)
+            : null;
+        var clientUrl = config["Web:Origin"] is { Length: > 0 } origin ? $"{origin.TrimEnd('/')}/clients/{client.Id}?tab=programs" : null;
+        var (subject, body) = PaymentEmails.ForCoachPaid(NameOf(client), client.Username, p, linkName, clientUrl);
+        try { await email.SendAsync(coach.Email, subject, body); }
+        catch (Exception ex) { log.LogWarning("Couldn't email coach {CoachId} about a new payment: {Reason}", coach.Id, ex.Message); }
+    }
+
+    private static string NameOf(User u) => string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName;
+
     private async Task EmailCoachOnce(CoachPaymentAccount? account, CoachClientPayment p, DateTime now, CancellationToken ct)
     {
         if (p.CoachEmailedAt is not null) return;
@@ -390,6 +428,45 @@ public class CoachPaymentService(
 
 public static class PaymentEmails
 {
+    public static (string Subject, string Body) ForClientFailed(
+        string coach, string client, CoachClientPayment p, CoachPaymentAccount? a, DateTime now, string fixUrl)
+    {
+        var then = CoachPaymentService.ActionAt(p, a);
+        var (rule, _) = CoachPaymentService.EffectiveRule(p, a);
+        var what = then is { } t
+            ? $"If it isn't sorted by {t:d MMM}, coaching with {coach} {(rule == PaymentRules.End ? "ends" : "pauses until it is")}. "
+            : "";
+        return ($"Your payment to {coach} didn't go through",
+            $"Hi {client},\n\n" +
+            $"Your card was declined when we tried to take {Money(p.AmountCents, p.Currency)} for {p.PackageName} with {coach} ({now:d MMM}).\n\n" +
+            $"Update your card here. It opens Stripe's secure page and takes the payment straight away:\n{fixUrl}\n\n" +
+            $"{what}Your own workouts and data in LogIt aren't affected either way.\n\n" +
+            "Stripe will also try the card again over the next few days, so if you've already sorted it with your bank there's nothing to do.\n\n" +
+            $"Questions about the plan? Message {coach} in the LogIt app.\n\n" +
+            $"LogIt · You get this because you pay {coach} through LogIt. Stop paying any time in My coach.");
+    }
+
+    public static (string Subject, string Body) ForCoachPaid(
+        string client, string username, CoachClientPayment p, string? linkName, string? clientUrl)
+    {
+        var via = string.IsNullOrWhiteSpace(linkName) ? "" : $" through your {linkName} link";
+        var renews = p.Interval == PaymentIntervals.Month
+            ? $" It renews monthly; the next payment is on {p.PaidUntil:d MMM}."
+            : $" Their package runs until {p.PaidUntil:d MMM}.";
+        return ($"{client} paid for {p.PackageName}",
+            $"{client} (@{username}) paid {Money(p.AmountCents, p.Currency)} for {p.PackageName}{via}.{renews}\n\n" +
+            "They're on your client list now." + (clientUrl is null ? "" : $" Give them a program:\n{clientUrl}") + "\n\n" +
+            "The money goes to your Stripe account as usual. Stripe sends its own receipt.\n\n" +
+            "LogIt · Turn these off in Coaching › Payments › Packages and settings.");
+    }
+
+    private static string Money(long cents, string currency)
+    {
+        var symbol = currency.ToLowerInvariant() switch { "eur" => "€", "gbp" => "£", "usd" => "$", _ => "" };
+        var amount = cents % 100 == 0 ? (cents / 100).ToString() : (cents / 100m).ToString("0.00");
+        return symbol.Length > 0 ? symbol + amount : $"{amount} {currency.ToUpperInvariant()}";
+    }
+
     public static (string Subject, string Body) ForCoach(string client, CoachClientPayment p, CoachPaymentAccount? a, DateTime now)
     {
         var then = CoachPaymentService.ActionAt(p, a);
