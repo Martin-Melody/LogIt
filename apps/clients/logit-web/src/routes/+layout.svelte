@@ -53,6 +53,7 @@
     "/admin/invites": "Invites",
     "/admin/reports": "Reports",
     "/admin/plugins": "Plugin reviews",
+    "/admin/server": "Server",
   };
   const pageTitle = $derived.by(() => {
     const p = page.url.pathname;

@@ -45,7 +45,7 @@ public static class AuthEndpoints
             return Results.Conflict(new { error = "Email already registered." });
 
         Guid? inviteId = null;
-        if (Registration.GetMode(config) == RegistrationMode.Invite)
+        if (await Registration.GetModeAsync(db, config) == RegistrationMode.Invite)
         {
             if (string.IsNullOrWhiteSpace(req.InviteCode))
                 return Results.Json(
@@ -90,9 +90,9 @@ public static class AuthEndpoints
         return Results.Ok(BuildAuthResponse(user, refresh, tokens, config));
     }
 
-    private static IResult GetRegistrationInfo(IConfiguration config) =>
+    private static async Task<IResult> GetRegistrationInfo(IConfiguration config, AppDbContext db) =>
         Results.Ok(new RegistrationInfo(
-            Registration.ModeName(Registration.GetMode(config)),
+            Registration.ModeName(await Registration.GetModeAsync(db, config)),
             config.GetValue<bool>("Deployment:SelfHosted")));
 
     /// The same answer for an unknown account and a wrong password, so sign-in can't be used to

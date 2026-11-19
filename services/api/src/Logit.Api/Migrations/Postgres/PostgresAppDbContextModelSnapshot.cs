@@ -1334,6 +1334,42 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("Reports");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.ServerErrorCount", b =>
+                {
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Date", "Route");
+
+                    b.ToTable("ServerErrorCounts");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.ServerSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("ServerSettings");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
                 {
                     b.Property<Guid>("Id")

@@ -25,10 +25,21 @@ public static class Registration
     /// Sign-up attempts per address: plenty for a family, too few to guess invite codes.
     public const string RateLimitPolicy = "auth-register";
 
-    public static RegistrationMode GetMode(IConfiguration config) =>
-        string.Equals(config["Registration:Mode"]?.Trim(), "invite", StringComparison.OrdinalIgnoreCase)
-            ? RegistrationMode.Invite
-            : RegistrationMode.Open;
+    /// The mode from .env (REGISTRATION_MODE). The admin console can override it: use GetModeAsync.
+    public static RegistrationMode GetMode(IConfiguration config) => Parse(config["Registration:Mode"]);
+
+    /// The ServerSettings key the admin console saves the mode under.
+    public const string ModeSettingKey = "registration.mode";
+
+    /// The mode in force: the admin console's choice if it made one, else .env's.
+    public static async Task<RegistrationMode> GetModeAsync(AppDbContext db, IConfiguration config)
+    {
+        var saved = await db.ServerSettings.Where(s => s.Key == ModeSettingKey).Select(s => s.Value).FirstOrDefaultAsync();
+        return saved is null ? GetMode(config) : Parse(saved);
+    }
+
+    public static RegistrationMode Parse(string? value) =>
+        string.Equals(value?.Trim(), "invite", StringComparison.OrdinalIgnoreCase) ? RegistrationMode.Invite : RegistrationMode.Open;
 
     public static string ModeName(RegistrationMode mode) => mode == RegistrationMode.Invite ? "invite" : "open";
 

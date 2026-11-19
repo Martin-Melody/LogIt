@@ -26,6 +26,7 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Logit__Commit: ${LOGIT_TAG:-}
       ConnectionStrings__Default: "Host=db;Database=logit;Username=logit;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
       Jwt__Secret: ${JWT_SECRET:?Set JWT_SECRET in .env}
       Jwt__Issuer: logit-api

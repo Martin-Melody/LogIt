@@ -47,11 +47,10 @@ public static class AdminEndpoints
         api.MapDelete("/users/{id:guid}/tokens", RevokeTokens);
         api.MapPost("/users/{id:guid}/reset-password", ResetPassword);
 
-        api.MapGet("/server", (IConfiguration cfg) => Results.Ok(new
-        {
-            registrationMode = Registration.ModeName(Registration.GetMode(cfg)),
-            selfHosted = cfg.GetValue<bool>("Deployment:SelfHosted"),
-        }));
+        api.MapGet("/server", AdminServer.GetServer);
+        api.MapPut("/server/registration", AdminServer.SetRegistration);
+        api.MapPost("/server/test-email", AdminServer.SendTestEmail);
+        api.MapGet("/server/backup", AdminServer.DownloadBackup);
         api.MapGet("/invites", GetInvites);
         // Discover experiments: per arm and recipe, what was shown and what people did next.
         api.MapGet("/discover", async (AppDbContext db, int? days) =>
@@ -301,6 +300,8 @@ public static class AdminEndpoints
 
         var signUpDates = await people.Where(u => u.CreatedAt >= firstDay).Select(u => u.CreatedAt).ToListAsync();
         var workoutStarts = await workouts.Where(w => w.StartedAtMs >= firstDayMs).Select(w => w.StartedAtMs).ToListAsync();
+        var firstDate = DateOnly.FromDateTime(firstDay);
+        var errorCounts = await db.ServerErrorCounts.Where(c => c.Date >= firstDate).Select(c => new { c.Date, c.Count }).ToListAsync();
         var days = Enumerable.Range(0, 14).Select(i =>
         {
             var day = firstDay.AddDays(i);
@@ -309,6 +310,7 @@ public static class AdminEndpoints
                 Date = day.ToString("yyyy-MM-dd"),
                 SignUps = signUpDates.Count(d => d.Date == day),
                 Workouts = workoutStarts.Count(ms => DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime.Date == day),
+                Errors = errorCounts.Where(c => c.Date == DateOnly.FromDateTime(day)).Sum(c => c.Count),
             };
         }).ToList();
 
@@ -329,9 +331,10 @@ public static class AdminEndpoints
         {
             Server = new
             {
-                RegistrationMode = Registration.ModeName(Registration.GetMode(cfg)),
+                RegistrationMode = Registration.ModeName(await Registration.GetModeAsync(db, cfg)),
                 SelfHosted = cfg.GetValue<bool>("Deployment:SelfHosted"),
                 EmailConfigured = email.IsConfigured,
+                WebOrigin = cfg["Web:Origin"],
             },
             People = await people.CountAsync(),
             TrainedThisWeek = await workouts.Where(w => w.StartedAtMs >= weekAgoMs).Select(w => w.UserId).Distinct().CountAsync(),

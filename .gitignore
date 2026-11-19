@@ -56,3 +56,6 @@ apps/clients/*/screenshots/
 
 # Walkthrough screenshots for the docs, taken fresh on every docs deploy
 apps/clients/website/static/docs/shots/
+
+# Local compose overrides (e.g. the homelab: Postgres, port 3010). Never part of the self-host setup.
+docker-compose.override.yml

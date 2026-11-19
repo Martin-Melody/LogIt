@@ -494,7 +494,7 @@ export const FEATURES: Feature[] = [
 export const NO_DOCS = {
   // The admin console is for whoever runs the server; the self-hosting guide covers it
   // (docs/admin-console.md, step 5), not the user docs.
-  web: ["/login", "/forgot-password", "/reset-password", "/welcome", "/admin", "/admin/people", "/admin/invites", "/admin/reports", "/admin/plugins"],
+  web: ["/login", "/forgot-password", "/reset-password", "/welcome", "/admin", "/admin/people", "/admin/invites", "/admin/reports", "/admin/plugins", "/admin/server"],
   phone: ["/auth"],
 };
 

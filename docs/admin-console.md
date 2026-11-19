@@ -32,7 +32,7 @@ on the planning page.
 
 ## Steps
 
-Each step with visible screens gets mockups approved before it is built. Steps 1 and 2 are built
+Each step with visible screens gets mockups approved before it is built. Steps 1 to 3 are built
 (branch feat/admin-accounts); step 2's approved mockups:
 
 1. **Admin accounts (server).** `User.IsAdmin`; `AdminActions` log; `/admin/api` accepts a signed-in
@@ -45,14 +45,19 @@ Each step with visible screens gets mockups approved before it is built. Steps 1
    Reports, Plugin reviews. Server additions: `GET /admin/api/overview`, extending an invite, an
    admin password reset signs the person out everywhere, and claiming with a wrong key answers 403
    (a 401 made the app refresh its session and send the key twice).
-3. **Server pages.** Sign-ups mode, email with a test send, version and update check, storage, the
-   daily counters behind the 14-day grid (5xx per day is new).
+3. **Server page.** Who can sign up (saved on the server, wins over `REGISTRATION_MODE`), the
+   addresses (with a warning when `WEB_ORIGIN` isn't where the dashboard is used), email with a test
+   send, server errors per day and route (`ServerErrorCounts`, also a row on the Overview grid),
+   version (`LOGIT_COMMIT`, build date), database size, backups. A self-hosted dashboard now finds
+   its own API (`API_URL` in .env, default ":8080" = same host). No update check yet: there are no
+   releases to compare with.
 4. **getlogit.app pages.** Plan and billing on the person page, Subscriptions, Growth (the
    privacy-first anonymous counts from onboarding), Diagnostics, Discover tests. Cloudflare Access.
 5. **Remove the old page.** Delete `AdminHtml.cs`; update the self-hosting guide, `.env.example`
    and the website docs.
 
-## Open
+## Backups (decided 2026-11-19)
 
-- Self-hosted servers have no backups (SQLite in a Docker volume, nothing copies it). Separate
-  decision; the console's Backups row and "Needs you" item depend on it.
+Logit doesn't back self-hosted servers up. The Server page says so plainly and offers "Download a
+backup" (SQLite: a consistent copy via `VACUUM INTO`; Postgres: a `pg_dump` command), plus a cron
+line that fetches the backup with the admin key, so people keep copies somewhere else themselves.

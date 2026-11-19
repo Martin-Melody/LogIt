@@ -10,20 +10,21 @@
   const full = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
   const rows = $derived([
-    { label: "Sign-ups", values: days.map((d) => d.signUps) },
-    { label: "Workouts", values: days.map((d) => d.workouts) },
+    { label: "Sign-ups", values: days.map((d) => d.signUps), color: "var(--chart-1)" },
+    { label: "Workouts", values: days.map((d) => d.workouts), color: "var(--chart-1)" },
+    { label: "Server errors", values: days.map((d) => d.errors), color: "var(--destructive)" },
   ]);
 
-  function fill(n: number, max: number): string {
+  function fill(n: number, max: number, color: string): string {
     if (n === 0) return "var(--muted)";
     const step = max <= 1 ? 3 : Math.min(3, Math.ceil((n / max) * 3));
-    return `color-mix(in oklch, var(--chart-1) ${[0, 35, 60, 90][step]}%, transparent)`;
+    return `color-mix(in oklch, ${color} ${[0, 35, 60, 90][step]}%, transparent)`;
   }
 </script>
 
 <div class="relative overflow-x-auto">
   <table class="w-full min-w-[520px] table-fixed border-separate border-spacing-[5px] text-[13px]">
-    <caption class="sr-only">Sign-ups and workouts per day, last 14 days</caption>
+    <caption class="sr-only">Sign-ups, workouts and server errors per day, last 14 days</caption>
     <thead>
       <tr>
         <th class="w-[130px]"><span class="sr-only">What</span></th>
@@ -41,7 +42,7 @@
           <th scope="row" class="text-left font-normal text-muted-foreground">{row.label}</th>
           {#each row.values as n, i (i)}
             <td class="p-0" title="{full(days[i].date)}: {n}">
-              <span class="block h-[26px] rounded-[5px] {i === days.length - 1 ? 'outline-2 outline-offset-1 outline-foreground' : ''}" style="background: {fill(n, max)}">
+              <span class="block h-[26px] rounded-[5px] {i === days.length - 1 ? 'outline-2 outline-offset-1 outline-foreground' : ''}" style="background: {fill(n, max, row.color)}">
                 <span class="sr-only">{n}</span>
               </span>
             </td>

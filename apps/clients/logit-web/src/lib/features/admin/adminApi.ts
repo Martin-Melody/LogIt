@@ -14,11 +14,11 @@ export interface AdminAction {
 }
 
 export interface Overview {
-  server: { registrationMode: "open" | "invite"; selfHosted: boolean; emailConfigured: boolean };
+  server: { registrationMode: "open" | "invite"; selfHosted: boolean; emailConfigured: boolean; webOrigin: string | null };
   people: number;
   trainedThisWeek: number;
   workouts30Days: number;
-  days: { date: string; signUps: number; workouts: number }[];
+  days: { date: string; signUps: number; workouts: number; errors: number }[];
   openReports: number;
   newestReport: { id: string; targetType: string; reason: string; createdAt: string; reporter: string } | null;
   pluginsWaiting: number;
@@ -107,6 +107,21 @@ export interface PluginRelease {
   previous: { version: string; source: string } | null;
 }
 
+export interface ServerInfo {
+  registrationMode: "open" | "invite";
+  registrationModeSource: "env" | "console";
+  selfHosted: boolean;
+  emailConfigured: boolean;
+  emailFrom: string | null;
+  webOrigin: string | null;
+  version: { commit: string | null; builtAt: string };
+  startedAt: string;
+  database: { provider: "SQLite" | "Postgres"; sizeBytes: number | null };
+  holds: { people: number; workouts: number; posts: number };
+  errors: { date: string; count: number; topRoute: string | null }[];
+  canDownloadBackup: boolean;
+}
+
 const f = <T>(path: string, init?: RequestInit) => apiClient.fetch<T>(path, init);
 const send = <T>(path: string, method: string, body?: unknown) =>
   f<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -135,6 +150,11 @@ export const adminApi = {
   reports: () => f<{ reports: Report[]; previews: Record<string, ReportPreview> }>("/admin/api/reports?status=all"),
   resolveReport: (id: string, action: "dismiss" | "delete-target") => send<void>(`/admin/api/reports/${id}/resolve`, "POST", { action }),
 
+  server: () => f<ServerInfo>("/admin/api/server"),
+  setRegistration: (mode: "open" | "invite") => send<void>("/admin/api/server/registration", "PUT", { mode }),
+  sendTestEmail: () => send<{ sentTo: string }>("/admin/api/server/test-email", "POST"),
+  backup: () => f<Blob>("/admin/api/server/backup"),
+
   pluginReleases: () => f<{ releases: PluginReleaseRow[] }>("/admin/api/plugins?status=all"),
   pluginRelease: (id: string) => f<PluginRelease>(`/admin/api/plugins/releases/${id}`),
   reviewPlugin: (id: string, approve: boolean, note: string) =>
@@ -161,6 +181,9 @@ export function describeAction(a: AdminAction): string {
     case "report.delete-target": return `${who} deleted a reported ${a.detail?.split(" ")[0]?.toLowerCase() ?? "post"}`;
     case "plugin.approve": return `${who} approved ${a.detail ?? "a plugin"}`;
     case "plugin.changes": return `${who} asked for changes to ${a.detail ?? "a plugin"}`;
+    case "server.registration": return `${who} set sign-ups to ${a.detail ?? "a new mode"}`;
+    case "server.test-email": return `${who} sent a test email`;
+    case "server.backup": return `${who} downloaded a backup`;
     case "diagnostics.delete": return `${who} deleted a diagnostics report from ${them}`;
     default: return `${who}: ${a.action}${detail}`;
   }
@@ -179,6 +202,12 @@ export function temporaryPassword(): string {
   crypto.getRandomValues(r);
   const words = Array.from(r.slice(0, 4), (n) => WORDS[n % WORDS.length]);
   return `${words.join("-")}-${String(r[4] % 10000).padStart(4, "0")}`;
+}
+
+/** Where emails link to (WEB_ORIGIN) doesn't match where the dashboard is open, e.g. localhost. */
+export function webOriginMismatch(webOrigin: string | null): boolean {
+  if (!webOrigin || typeof location === "undefined") return false;
+  try { return new URL(webOrigin).origin !== location.origin; } catch { return true; }
 }
 
 /** A server time in ms. SQLite servers send UTC times without a "Z", which Date.parse would

@@ -46,6 +46,9 @@
       const more = data.openReports > 1 ? ` · ${data.openReports - 1} more open` : "";
       list.push({ id: `report:${r.id}`, tone: "bad", title: `A ${r.targetType.toLowerCase()} was reported as ${r.reason.toLowerCase()}`, text: `By @${r.reporter}, ${ago(at(r.createdAt))}${more}` });
     }
+    const recentErrors = data.days.slice(-2).reduce((n, d) => n + d.errors, 0);
+    if (recentErrors > 0)
+      list.push({ id: "errors", tone: "bad", title: `${recentErrors} server error${recentErrors === 1 ? "" : "s"} since yesterday`, text: "Something failed on the server. The Server page shows where." });
     if (data.pluginsWaiting > 0)
       list.push({ id: "plugins", tone: "warn", title: `${data.pluginsWaiting} plugin version${data.pluginsWaiting === 1 ? "" : "s"} waiting for review`, text: "Nobody else can install a version until it's approved." });
     if (!data.server.emailConfigured && data.people > 1)
@@ -164,6 +167,8 @@
               {@const id = n.id.slice(7)}
               <button type="button" class={btnSecondary} disabled={busy === id} onclick={() => dismissReport(id)}>Dismiss</button>
               <a href="/admin/reports?id={id}" class={btnPrimary}>Review</a>
+            {:else if n.id === "errors"}
+              <a href="/admin/server" class={btnPrimary}>See where</a>
             {:else if n.id === "plugins"}
               <a href="/admin/plugins" class={btnPrimary}>Review</a>
             {:else if n.id === "email"}

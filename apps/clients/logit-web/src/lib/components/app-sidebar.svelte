@@ -27,6 +27,7 @@
   import CompassIcon from "@lucide/svelte/icons/compass";
   import BookOpenIcon from "@lucide/svelte/icons/book-open";
   import ShieldIcon from "@lucide/svelte/icons/shield";
+  import ServerIcon from "@lucide/svelte/icons/server";
   import TicketIcon from "@lucide/svelte/icons/ticket";
   import FlagIcon from "@lucide/svelte/icons/flag";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
@@ -141,6 +142,10 @@
         { label: "Reports", href: "/admin/reports", icon: FlagIcon, badge: () => adminState.openReports },
         { label: "Plugin reviews", href: "/admin/plugins", icon: PuzzleIcon, badge: () => adminState.pluginsWaiting },
       ],
+    },
+    {
+      label: "Server",
+      items: [{ label: "Server", href: "/admin/server", icon: ServerIcon, badge: () => adminState.serverWarnings }],
     },
   ];
 
