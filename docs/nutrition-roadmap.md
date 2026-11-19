@@ -86,7 +86,7 @@ The first shippable milestone. Mobile (`logit-frontend`) only. **Implemented on
       it's on-device OCR of the printed table.)
 - [x] Portion picker — g / ml / oz units + exact gram amounts, replacing the
       serving × quantity multiplier that only did multiples of 100 g.
-- [x] `chore(api): pull in orActivelyCoached` (c82c6ee) — kept. `main` has no
+- [x] `chore(api): pull in orActivelyCoached` (40f8e48) — kept. `main` has no
       `orActivelyCoached`, the nutrition sync endpoints need it, so this branch is now its
       canonical source. If `wip/logit-web-shadcn-redesign` later lands, drop its copy there.
 
