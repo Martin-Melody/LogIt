@@ -1,8 +1,7 @@
 # Admin console
 
 The plan for replacing the admin page (`AdminHtml.cs`, unlocked with `ADMIN_KEY`) with an admin
-console inside the web dashboard. Decided with Martin on 2026-11-19; sketches and the reasoning are
-on the planning page.
+console inside the web dashboard. Decided with Martin on 2026-11-19.
 
 ## Decisions
 
@@ -33,7 +32,7 @@ on the planning page.
 ## Steps
 
 Each step with visible screens gets mockups approved before it is built. All five steps are built
-(branch feat/admin-accounts); step 2's approved mockups:
+(branch feat/admin-accounts).
 
 1. **Admin accounts (server).** `User.IsAdmin`; `AdminActions` log; `/admin/api` accepts a signed-in
    admin as well as the key (the old page and the end-to-end tests keep using the key);

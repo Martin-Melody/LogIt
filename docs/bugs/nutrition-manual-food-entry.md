@@ -1,6 +1,6 @@
 # Bug: can't add a food manually after a barcode miss
 
-**Reported:** 2026-09-03 (Martin, on-device — Galaxy S23, release build `29acef8`)
+**Reported:** 2026-09-03 (Martin, on-device — Galaxy S23, release build `c513d22`)
 **Area:** Nutrition → log → barcode scan → "not found" → label / manual entry
 **Severity:** High — dead end in a core flow. Not a crash; the user can back out, but
 there is no working way to add and portion a food that isn't in the DB.

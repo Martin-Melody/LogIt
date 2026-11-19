@@ -3,7 +3,7 @@
 **Reported:** 2026-09-04 (Martin, on-device smoke test, S23)
 **Area:** `src/routes/accounts/+page.svelte` (profile switcher), `authStore.svelte.ts`,
 local SQLite data isolation (`owner_id`)
-**Status:** Both items fixed 2026-09-04 in commit [`968eb0e`](https://github.com/Martin-Melody/LogIt/commit/968eb0e), with unit
+**Status:** Both items fixed 2026-09-04 in commit [`2a2e91d`](https://github.com/Martin-Melody/LogIt/commit/2a2e91d), with unit
 coverage in `tests/unit/accountSwitchGuards.test.ts` and `tests/unit/ownerIdIsolation.test.ts`.
 Item 1 went with fix option (b), an honest UI (see below); per-profile credentials were not built.
 
@@ -11,7 +11,7 @@ Item 1 went with fix option (b), an honest UI (see below); per-profile credentia
 
 ## 1. Switching to a previously-online profile doesn't restore its server session — FIXED 2026-09-04
 
-**Fixed in [`968eb0e`](https://github.com/Martin-Melody/LogIt/commit/968eb0e) with option (b):** `/accounts` now warns on any profile with a
+**Fixed in [`2a2e91d`](https://github.com/Martin-Melody/LogIt/commit/2a2e91d) with option (b):** `/accounts` now warns on any profile with a
 `serverUserId` that switching won't restore its session, and after the switch sends the user to
 `/auth?resume=<username>` instead of `/`. The routing is `localAccountRepo.postSwitchDestination()`,
 unit-tested in `tests/unit/accountSwitchGuards.test.ts`. The description below is kept for history.
@@ -53,7 +53,7 @@ implying `switchTo()` fully activates the profile.
 **Severity:** High — this is the one that actually leaked data: after switching profiles,
 splits/workouts still showed the previous (Pro) account's data instead of the new profile's own.
 
-**Fixed in [`968eb0e`](https://github.com/Martin-Melody/LogIt/commit/968eb0e):** `authStore.svelte.ts`'s `createOfflineAccount()` (and the online-login
+**Fixed in [`2a2e91d`](https://github.com/Martin-Melody/LogIt/commit/2a2e91d):** `authStore.svelte.ts`'s `createOfflineAccount()` (and the online-login
 create path) now compute the claim target via a pure, unit-tested `orphanClaimTarget()`
 (`localAccountRepo.ts:217-223`) — true first-launch (`accountsBeforeCreate === 0`) still claims
 orphaned rows for the new account, but every later "Add another profile" now hands them to
