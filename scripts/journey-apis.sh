@@ -29,6 +29,7 @@ start() {
     ConnectionStrings__Default="Data Source=$OUT/$name.db" \
     Jwt__Secret="journey-tests-secret-at-least-32-characters" \
     Registration__SignupsPer10Minutes=100000 \
+    Auth__LoginsPer10Minutes=100000 \
     nohup dotnet run --no-build --no-launch-profile > "$OUT/$name.log" 2>&1 &
     echo $! > "$OUT/$name.pid"
   )
