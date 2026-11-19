@@ -85,6 +85,9 @@ namespace Logit.Api.Migrations
                     b.Property<bool>("IsTest")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsTrial")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Plan")
                         .HasColumnType("INTEGER");
 

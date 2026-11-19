@@ -17,13 +17,15 @@ public record GoogleSubscription(
     bool NeedsAcknowledge,
     string? AccountId,
     bool IsTest,
-    string? LatestOrderId)
+    string? LatestOrderId,
+    bool IsTrial = false)
 {
     public static GoogleSubscription Parse(JsonElement root)
     {
         var productIds = new List<string>();
         DateTime? expires = null;
         var autoRenewing = false;
+        var trial = false;
         if (root.TryGetProperty("lineItems", out var items) && items.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in items.EnumerateArray())
@@ -33,6 +35,10 @@ public record GoogleSubscription(
                 if (item.TryGetProperty("autoRenewingPlan", out var plan)
                     && plan.TryGetProperty("autoRenewEnabled", out var on) && on.ValueKind == JsonValueKind.True)
                     autoRenewing = true;
+                // In its free trial: Google sets offerPhase.freeTrial (an empty object) then.
+                if (item.TryGetProperty("offerPhase", out var phase) && phase.ValueKind == JsonValueKind.Object
+                    && phase.TryGetProperty("freeTrial", out _))
+                    trial = true;
             }
         }
 
@@ -49,7 +55,8 @@ public record GoogleSubscription(
             NeedsAcknowledge: Str(root, "acknowledgementState") == "ACKNOWLEDGEMENT_STATE_PENDING",
             AccountId: accountId,
             IsTest: root.TryGetProperty("testPurchase", out _),
-            LatestOrderId: Str(root, "latestOrderId"));
+            LatestOrderId: Str(root, "latestOrderId"),
+            IsTrial: trial);
     }
 
     private static string? Str(JsonElement e, string name) =>

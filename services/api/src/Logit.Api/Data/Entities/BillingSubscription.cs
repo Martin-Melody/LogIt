@@ -39,6 +39,10 @@ public class BillingSubscription
     /// page so test purchases aren't mistaken for income.
     public bool IsTest { get; set; }
 
+    /// In its free trial right now: it gives the plan, but nobody has paid yet. The admin page
+    /// counts these apart from paying subscriptions.
+    public bool IsTrial { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

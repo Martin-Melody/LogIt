@@ -401,7 +401,8 @@ public class GooglePlayParsingTests
             "productId": "logit_pro",
             "expiryTime": "2026-12-14T10:00:00.123456789Z",
             "autoRenewingPlan": { "autoRenewEnabled": true },
-            "offerDetails": { "basePlanId": "monthly" }
+            "offerDetails": { "basePlanId": "monthly", "offerId": "free-trial" },
+            "offerPhase": { "freeTrial": {} }
           }]
         }
         """;
@@ -416,6 +417,7 @@ public class GooglePlayParsingTests
         Assert.True(sub.NeedsAcknowledge);
         Assert.Equal("3f2b1c4e-0000-4000-8000-000000000001", sub.AccountId);
         Assert.True(sub.IsTest);
+        Assert.True(sub.IsTrial);
     }
 
     [Fact]
@@ -433,6 +435,7 @@ public class GooglePlayParsingTests
         Assert.False(sub.AutoRenewing);
         Assert.False(sub.NeedsAcknowledge);
         Assert.False(sub.IsTest);
+        Assert.False(sub.IsTrial);
         Assert.Null(sub.AccountId);
         Assert.Null(sub.LinkedPurchaseToken);
         Assert.Equal(new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc), sub.ExpiresAt);

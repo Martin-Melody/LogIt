@@ -156,6 +156,7 @@ public class GooglePlayBilling(
         row.AutoRenewing = sub.AutoRenewing;
         row.ReplacesExternalId = sub.LinkedPurchaseToken;
         row.IsTest = sub.IsTest;
+        row.IsTrial = sub.IsTrial;
         row.CheckedAt = now;
         row.UpdatedAt = now;
         if (before != row.State)

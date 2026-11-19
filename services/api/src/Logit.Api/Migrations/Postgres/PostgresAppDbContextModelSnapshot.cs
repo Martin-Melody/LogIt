@@ -90,6 +90,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool>("IsTest")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsTrial")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Plan")
                         .HasColumnType("integer");
 

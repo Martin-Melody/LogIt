@@ -356,6 +356,7 @@ public static class BillingEndpoints
         if (StateFor(sub) is { } state) row.State = state;
         row.ProductId = sub.Items?.Data?.FirstOrDefault()?.Price?.Id ?? row.ProductId;
         row.AutoRenewing = sub.Status is "active" or "trialing" && !sub.CancelAtPeriodEnd;
+        row.IsTrial = sub.Status == "trialing";
         row.CheckedAt = now;
         row.UpdatedAt = now;
 
