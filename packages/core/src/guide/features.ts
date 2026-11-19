@@ -476,7 +476,7 @@ export const FEATURES: Feature[] = [
     section: "Coaching",
     plan: "Studio",
     summary: "Take payments through your own Stripe account. LogIt takes no cut.",
-    web: ["/coaching/payments"],
+    web: ["/coaching/payments", "/pay/fix/[token]"],
     whereWeb: "Coaching › Payments",
     docs: "/docs/coaching/payments",
     server: [

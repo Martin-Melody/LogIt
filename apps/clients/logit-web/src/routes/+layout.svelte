@@ -75,9 +75,11 @@
     page.url.pathname.startsWith("/reset-password"),
   );
   const isUpgrade = $derived(page.url.pathname.startsWith("/upgrade"));
-  // An invite link from a coach: any account can open it (a Free account can be coached),
-  // and someone logged out is sent to log in first and brought back.
+  // An invite link from a coach: anyone can open it, signed in or not (it has its own sign-up),
+  // and any account can use it (a Free account can be coached). The "update your card" link
+  // from a failed-payment email opens signed out too. Both are pages of their own, no sidebar.
   const isInviteLink = $derived(page.url.pathname.startsWith("/c/"));
+  const isPayFix = $derived(page.url.pathname.startsWith("/pay/fix/"));
   // A Free account on the hosted server can still reach these: the "plans are in the app"
   // page, and Account (password, deleting the account, which the store listing promises can
   // be done on the web).
@@ -117,6 +119,7 @@
 
   async function guardRoute() {
     if (!apiClient.isAuthenticated()) {
+      if (isInviteLink || isPayFix) return;
       // Come back to where you were going after signing in: an invite link, or a docs page's
       // "Show me in the app" (/?guide=<chapter>), or any other page.
       const here = page.url.pathname + page.url.search;
@@ -124,7 +127,7 @@
       return;
     }
     if (isBlockedFreeTier) {
-      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isWelcome && !isTrialCoaching && !isAdminPath) await goto("/upgrade");
+      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isPayFix && !isWelcome && !isTrialCoaching && !isAdminPath) await goto("/upgrade");
       return;
     }
     if (isUpgrade) await goto("/");
@@ -198,8 +201,8 @@
   {@render children?.()}
 {:else if (isUpgrade || isWelcome) && apiClient.isAuthenticated()}
   {@render children?.()}
-{:else if isInviteLink && isBlockedFreeTier && apiClient.isAuthenticated()}
-  <div class="p-4">{@render children?.()}</div>
+{:else if isInviteLink || isPayFix}
+  <div class="min-h-svh bg-background">{@render children?.()}</div>
 {:else if isFreeAccount && isBlockedFreeTier && apiClient.isAuthenticated()}
   <div class="p-4">
     <div class="mx-auto mb-3 max-w-xl">

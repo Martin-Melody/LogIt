@@ -164,6 +164,18 @@
 
   const coachName = (c: { coach: { displayName: string; username: string } }) => c.coach.displayName || c.coach.username;
 
+  // Stripe's billing page for this plan: change a card that failed (Stripe takes the overdue
+  // payment straight away), see receipts. Only on the web; the app never links to paying.
+  async function openBilling(c: CoachRelationship) {
+    busy = c.relationshipId;
+    try {
+      location.href = (await coachPaymentsApi.myBillingPage(c.relationshipId)).url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't open Stripe");
+      busy = null;
+    }
+  }
+
   // Stop (or keep) paying a coach monthly. Coaching runs to the end of the month paid for.
   let stoppingPlan = $state<CoachRelationship | null>(null);
   async function setPlanStop(c: CoachRelationship, stop: boolean) {
@@ -250,9 +262,15 @@
       </header>
 
       {#if note && note.tone !== "ok"}
-        <section role="status" class="flex flex-col gap-1.5 rounded-[10px] border px-[18px] py-4 {note.tone === 'bad' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}">
+        <section role="status" class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[10px] border px-[18px] py-4 {note.tone === 'bad' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}">
+          <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-1.5">
           <h2 class="text-sm font-semibold">{note.title}</h2>
           <p class="text-[13px] leading-relaxed">{note.body}</p>
+          </div>
+          {#if c.payment?.mode === "stripe" && c.payment.state === "failed"}
+            <button type="button" disabled={busy === c.relationshipId} onclick={() => openBilling(c)}
+              class="h-10 rounded-[9px] bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Update card ↗</button>
+          {/if}
         </section>
       {/if}
 
@@ -321,6 +339,8 @@
               <p class="text-xs leading-relaxed text-muted-foreground">
                 {note?.tone === "ok" ? note.body : c.payment.state === "ended" ? "Ended." : "Payment problem, see above."}
               </p>
+              <button type="button" disabled={busy === c.relationshipId} onclick={() => openBilling(c)} class="mt-2 h-[34px] w-fit rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted disabled:opacity-50">Manage payment ↗</button>
+              <p class="text-xs leading-relaxed text-muted-foreground">Your card, receipts and invoices, on Stripe's secure page.</p>
               {#if c.payment.canStop}
                 {#if c.payment.stopsAtPeriodEnd}
                   <button type="button" disabled={busy === c.relationshipId} onclick={() => setPlanStop(c, false)} class="mt-2 h-[34px] w-fit rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted disabled:opacity-50">Keep my plan going</button>

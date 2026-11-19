@@ -200,7 +200,7 @@ export function coachProblemText(c: PaymentClient, now: Date = new Date()): stri
   if (c.status === "paused") return `${name}'s coaching is paused until they pay. Paying restarts it straight away.`;
   if (c.mode === "elsewhere") return `${name} was marked paid outside LogIt up to ${shortDate(c.paidUntil, now)}. Mark them paid again when they pay.`;
   if (c.state === "failed")
-    return `${name}'s payment didn't go through on ${shortDate(c.unpaidSince, now)}. Stripe tries the card again and emails them a link to update it.${action}`;
+    return `${name}'s payment didn't go through on ${shortDate(c.unpaidSince, now)}. LogIt has emailed them a link to update their card, and Stripe tries it again.${action}`;
   if (c.interval === "once") return `${name}'s ${c.packageName} ended on ${shortDate(c.unpaidSince, now)}. Send them a new link or mark them paid elsewhere.${action}`;
   return `${name}'s plan stopped on ${shortDate(c.unpaidSince, now)}.${action}`;
 }
@@ -238,8 +238,9 @@ export function clientPaymentNote(
     if (!payment.showNote) return null;
     return {
       tone: "bad",
-      title: `Your last payment to ${coachName} didn't go through`,
-      body: `Stripe has emailed you a link to update your card.${then} Your own workouts and data aren't affected.`,
+      title: payment.unpaidSince ? `Your card was declined on ${shortDate(payment.unpaidSince, now)}` : `Your last payment to ${coachName} didn't go through`,
+      // No link here: the app may not point to a way to pay (store rules). The web adds a button.
+      body: `We've emailed you a link to update your card.${then} Your own workouts and data aren't affected.`,
     };
   }
   if (payment.state === "ended") {
@@ -254,6 +255,6 @@ export function clientPaymentNote(
   return {
     tone: "ok",
     title: payment.packageName,
-    body: `Paid to ${coachName}. Renews ${shortDate(payment.paidUntil, now)}. Receipts come by email from Stripe.`,
+    body: `Paid to ${coachName}. Renews ${shortDate(payment.paidUntil, now)}.`,
   };
 }

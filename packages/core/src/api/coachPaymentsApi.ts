@@ -89,4 +89,14 @@ export const coachPaymentsApi = {
   async stopMyPlan(relationshipId: string, stop: boolean): Promise<{ stopsAtPeriodEnd: boolean; paidUntil: string | null }> {
     return apiClient.fetch(`/coach/payments/mine/${relationshipId}/stop`, { method: "POST", body: JSON.stringify({ stop }) });
   },
+
+  /** Client: Stripe's billing page for my plan with a coach (change the card, receipts). */
+  async myBillingPage(relationshipId: string): Promise<{ url: string }> {
+    return apiClient.fetch(`/coach/payments/mine/${relationshipId}/billing`, { method: "POST" });
+  },
+
+  /** The "update your card" link from a failed-payment email; works signed out. */
+  async billingPageFromEmail(token: string): Promise<{ url: string }> {
+    return apiClient.fetch("/coach/payments/fix", { method: "POST", body: JSON.stringify({ token }) });
+  },
 };
