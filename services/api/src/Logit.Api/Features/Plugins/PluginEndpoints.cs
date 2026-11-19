@@ -405,13 +405,15 @@ public static class PluginEndpoints
     }
 
     private static async Task<IResult> Review(
-        Guid id, [FromBody] ReviewRequest body, AppDbContext db, IEmailSender email, ILoggerFactory loggerFactory)
+        Guid id, [FromBody] ReviewRequest body, AppDbContext db, IEmailSender email, ILoggerFactory loggerFactory, HttpContext http)
     {
         var r = await db.PluginReleases.Include(x => x.Plugin).ThenInclude(p => p.Owner).FirstOrDefaultAsync(x => x.Id == id);
         if (r is null) return Results.NotFound(new { error = "No such version." });
 
         var error = PluginPublishing.Review(r, body.Approve, body.Note, DateTime.UtcNow);
         if (error is not null) return Results.BadRequest(new { error });
+        Logit.Api.Features.Admin.AdminLog.Add(db, http, body.Approve ? "plugin.approve" : "plugin.changes",
+            r.Plugin.Owner, $"{r.Plugin.Name} {r.Version}");
         await db.SaveChangesAsync();
 
         // Tell the owner. A failed email doesn't undo the review: they also see it on My plugins.

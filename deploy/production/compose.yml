@@ -30,7 +30,8 @@ services:
       Jwt__Secret: ${JWT_SECRET:?Set JWT_SECRET in .env}
       Jwt__Issuer: logit-api
       Jwt__Audience: logit-app
-      Admin__Key: ${ADMIN_KEY:?Set ADMIN_KEY in .env}
+      # Optional: claims the first admin account, then remove it (docs/admin-console.md).
+      Admin__Key: ${ADMIN_KEY:-}
       Deployment__SelfHosted: "false"
       Registration__Mode: open
       Web__Origin: https://app.getlogit.app

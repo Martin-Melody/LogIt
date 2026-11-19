@@ -2,6 +2,8 @@ using Logit.Api.Data;
 using Logit.Api.Data.Entities;
 using Logit.Api.Features.Billing;
 using Logit.Api.Features.Auth;
+using System.Security.Claims;
+using Logit.Api.Features.Email;
 using Microsoft.EntityFrameworkCore;
 
 namespace Logit.Api.Features.Admin;
@@ -10,21 +12,33 @@ public static class AdminEndpoints
 {
     public static void MapAdminEndpoints(this IEndpointRouteBuilder app, IConfiguration config, ILogger logger)
     {
+        // Admins sign in with their own account (User.IsAdmin). ADMIN_KEY claims the first admin,
+        // recovers when no admin can sign in, and still unlocks the old /admin page. With no key
+        // set, admin works only for accounts that are already admins.
         var adminKey = config["Admin:Key"];
-        if (string.IsNullOrWhiteSpace(adminKey)) return; // admin disabled when no key is configured
-        if (adminKey.Length < AdminKeyGuard.RecommendedMinKeyLength)
-            logger.LogWarning(
-                "ADMIN_KEY is only {Length} characters. Use a long random key (e.g. openssl rand -base64 32): it unlocks every account on this server.",
-                adminKey.Length);
-        var guard = new AdminKeyGuard(adminKey);
+        AdminKeyGuard? guard = null;
+        if (!string.IsNullOrWhiteSpace(adminKey))
+        {
+            if (adminKey.Length < AdminKeyGuard.RecommendedMinKeyLength)
+                logger.LogWarning(
+                    "ADMIN_KEY is only {Length} characters. Use a long random key (e.g. openssl rand -base64 32): it unlocks every account on this server.",
+                    adminKey.Length);
+            guard = new AdminKeyGuard(adminKey);
+            app.MapGet("/admin", () => Results.Content(AdminHtml.Page, "text/html")).ExcludeFromDescription();
+        }
 
-        app.MapGet("/admin", () => Results.Content(AdminHtml.Page, "text/html")).ExcludeFromDescription();
+        var account = app.MapGroup("/admin").RequireAuthorization().ExcludeFromDescription();
+        account.MapGet("/me", (ClaimsPrincipal caller, AppDbContext db) => GetMe(caller, db, guard));
+        account.MapPost("/claim", (ClaimRequest req, HttpContext http, AppDbContext db, IEmailSender email) =>
+            Claim(req, http, db, email, guard, logger));
 
         var api = app.MapGroup("/admin/api")
-            .AddEndpointFilter(AdminKeyFilter(guard, logger))
+            .AddEndpointFilter(AdminFilter(guard, logger))
             .ExcludeFromDescription();
 
         api.MapGet("/stats", GetStats);
+        api.MapGet("/actions", async (AppDbContext db, int? take) =>
+            Results.Ok(await db.AdminActions.OrderByDescending(a => a.CreatedAt).Take(Math.Clamp(take ?? 100, 1, 500)).ToListAsync()));
         api.MapGet("/users", GetUsers);
         api.MapGet("/users/{id:guid}", GetUser);
         api.MapPatch("/users/{id:guid}", UpdateUser);
@@ -84,40 +98,105 @@ public static class AdminEndpoints
         return r is null ? Results.NotFound(new { error = "Report not found." }) : Results.Ok(r);
     }
 
-    private static async Task<IResult> DeleteDiagnosticReport(Guid id, AppDbContext db)
+    private static async Task<IResult> DeleteDiagnosticReport(Guid id, AppDbContext db, HttpContext http)
     {
-        var deleted = await db.DiagnosticReports.Where(r => r.Id == id).ExecuteDeleteAsync();
-        return deleted == 0 ? Results.NotFound(new { error = "Report not found." }) : Results.NoContent();
+        var report = await db.DiagnosticReports.Include(r => r.User).FirstOrDefaultAsync(r => r.Id == id);
+        if (report is null) return Results.NotFound(new { error = "Report not found." });
+        db.DiagnosticReports.Remove(report);
+        AdminLog.Add(db, http, "diagnostics.delete", report.User);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
     }
 
-    private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminKeyFilter(
-        AdminKeyGuard guard, ILogger logger) =>
+    // ── Who may use /admin/api ───────────────────────────────────────────────
+
+    /// A request with X-Admin-Key is judged on the key alone (with the lockout); otherwise the
+    /// caller must be signed in to an admin account, read fresh from the DB so removing someone
+    /// takes effect at once.
+    private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminFilter(
+        AdminKeyGuard? guard, ILogger logger) =>
         async (ctx, next) =>
         {
             var http = ctx.HttpContext;
-            var client = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var now = DateTime.UtcNow;
-
-            if (guard.LockedUntil(client, now) is { } until)
+            var key = http.Request.Headers["X-Admin-Key"].FirstOrDefault();
+            if (key is not null)
             {
-                var wait = (int)Math.Ceiling((until - now).TotalSeconds);
-                http.Response.Headers.RetryAfter = wait.ToString();
-                return Results.Json(
-                    new { error = $"Too many wrong admin keys. Try again in {Math.Max(1, (wait + 59) / 60)} min." },
-                    statusCode: StatusCodes.Status429TooManyRequests);
+                if (guard is null) return Results.Json(new { error = "Unauthorized" }, statusCode: 401);
+                if (CheckKey(guard, key, http, logger) is { } refused) return refused;
+                AdminLog.SetActor(http, AdminActor.Key);
+                return await next(ctx);
             }
 
-            if (!guard.KeyMatches(http.Request.Headers["X-Admin-Key"].FirstOrDefault()))
-            {
-                if (guard.RecordFailure(client, now))
-                    logger.LogWarning("Admin: {Client} locked out for {Minutes} min after {Count} wrong keys",
-                        client, AdminKeyGuard.Window.TotalMinutes, AdminKeyGuard.MaxFailures);
-                else
-                    logger.LogInformation("Admin: wrong key from {Client}", client);
+            if (http.User.GetUserIdOrNull() is not { } userId)
                 return Results.Json(new { error = "Unauthorized" }, statusCode: 401);
-            }
+            var db = http.RequestServices.GetRequiredService<AppDbContext>();
+            var admin = await db.Users.Where(u => u.Id == userId && u.IsAdmin && !u.IsSample)
+                .Select(u => new { u.Id, u.Username }).FirstOrDefaultAsync();
+            if (admin is null) return Results.Json(new { error = "This account isn't an admin." }, statusCode: 403);
+            AdminLog.SetActor(http, new AdminActor(admin.Id, admin.Username));
             return await next(ctx);
         };
+
+    /// Null when the key is right; otherwise the 429 (locked out) or 401 to send back.
+    private static IResult? CheckKey(AdminKeyGuard guard, string? key, HttpContext http, ILogger logger)
+    {
+        var client = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var now = DateTime.UtcNow;
+
+        if (guard.LockedUntil(client, now) is { } until)
+        {
+            var wait = (int)Math.Ceiling((until - now).TotalSeconds);
+            http.Response.Headers.RetryAfter = wait.ToString();
+            return Results.Json(
+                new { error = $"Too many wrong admin keys. Try again in {Math.Max(1, (wait + 59) / 60)} min." },
+                statusCode: StatusCodes.Status429TooManyRequests);
+        }
+
+        if (guard.KeyMatches(key)) return null;
+
+        if (guard.RecordFailure(client, now))
+            logger.LogWarning("Admin: {Client} locked out for {Minutes} min after {Count} wrong keys",
+                client, AdminKeyGuard.Window.TotalMinutes, AdminKeyGuard.MaxFailures);
+        else
+            logger.LogInformation("Admin: wrong key from {Client}", client);
+        return Results.Json(new { error = "That isn't this server's admin key." }, statusCode: 401);
+    }
+
+    // ── The signed-in account's admin status, and claiming admin with the key ──
+
+    /// claimOffered: the dashboard offers "Make this account the admin" (a key is set and nobody
+    /// is an admin yet). Claiming still works later with the key, for recovery.
+    private static async Task<IResult> GetMe(ClaimsPrincipal caller, AppDbContext db, AdminKeyGuard? guard)
+    {
+        var userId = caller.GetUserId();
+        var isAdmin = await db.Users.AnyAsync(u => u.Id == userId && u.IsAdmin);
+        var claimOffered = !isAdmin && guard is not null && !await db.Users.AnyAsync(u => u.IsAdmin);
+        return Results.Ok(new { isAdmin, claimOffered });
+    }
+
+    private record ClaimRequest(string Key);
+
+    private static async Task<IResult> Claim(
+        ClaimRequest req, HttpContext http, AppDbContext db, IEmailSender email, AdminKeyGuard? guard, ILogger logger)
+    {
+        if (guard is null)
+            return Results.NotFound(new { error = "This server has no admin key set, so admin can't be claimed. Ask an existing admin." });
+        if (CheckKey(guard, req.Key, http, logger) is { } refused) return refused;
+
+        var user = await db.Users.FindAsync(http.User.GetUserId());
+        if (user is null || user.IsSample) return Results.Forbid();
+        if (user.IsAdmin) return Results.NoContent();
+
+        user.IsAdmin = true;
+        user.UpdatedAt = DateTime.UtcNow;
+        AdminLog.Add(db, new AdminActor(user.Id, user.Username), "admin.claim", user);
+        await db.SaveChangesAsync();
+        logger.LogWarning("Admin: {Username} claimed admin with the admin key", user.Username);
+        await AdminLog.NotifyAdminsAsync(db, email, logger,
+            $"{user.Username} is now an admin of {http.Request.Host}",
+            $"{user.Username} ({user.Email}) became an admin of {http.Request.Host} using the server's admin key.\n\nIf this wasn't you or someone you trust, remove them on the admin console and change ADMIN_KEY.\n");
+        return Results.NoContent();
+    }
 
     // ── Invites ─────────────────────────────────────────────────────────────
 
@@ -149,7 +228,7 @@ public static class AdminEndpoints
 
     private record CreateInviteRequest(string? Note, int? MaxUses, int? ExpiresInDays);
 
-    private static async Task<IResult> CreateInvite(CreateInviteRequest req, AppDbContext db)
+    private static async Task<IResult> CreateInvite(CreateInviteRequest req, AppDbContext db, HttpContext http)
     {
         var maxUses = req.MaxUses ?? 1;
         if (maxUses < 1 || maxUses > InviteLimits.MaxUses)
@@ -172,15 +251,19 @@ public static class AdminEndpoints
             ExpiresAt = req.ExpiresInDays is { } days ? DateTime.UtcNow.AddDays(days) : null,
         };
         db.Invites.Add(invite);
+        AdminLog.Add(db, http, "invite.create", detail: note is null ? Registration.Format(code) : $"{Registration.Format(code)} ({note})");
         await db.SaveChangesAsync();
         return Results.Ok(new { invite.Id, Code = Registration.Format(invite.Code), invite.ExpiresAt, invite.MaxUses });
     }
 
-    private static async Task<IResult> RevokeInvite(Guid id, AppDbContext db)
+    private static async Task<IResult> RevokeInvite(Guid id, AppDbContext db, HttpContext http)
     {
-        var updated = await db.Invites.Where(i => i.Id == id && i.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(i => i.RevokedAt, DateTime.UtcNow));
-        return updated == 0 ? Results.NotFound(new { error = "Invite not found or already revoked." }) : Results.NoContent();
+        var invite = await db.Invites.FirstOrDefaultAsync(i => i.Id == id && i.RevokedAt == null);
+        if (invite is null) return Results.NotFound(new { error = "Invite not found or already revoked." });
+        invite.RevokedAt = DateTime.UtcNow;
+        AdminLog.Add(db, http, "invite.revoke", detail: invite.Note is null ? Registration.Format(invite.Code) : $"{Registration.Format(invite.Code)} ({invite.Note})");
+        await db.SaveChangesAsync();
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetStats(AppDbContext db)
@@ -214,6 +297,7 @@ public static class AdminEndpoints
                 u.Email,
                 u.DisplayName,
                 Tier = u.Tier.ToString(),
+                u.IsAdmin,
                 u.CreatedAt,
                 PostCount = u.Posts.Count(p => p.DeletedAt == null),
                 FollowerCount = u.Followers.Count,
@@ -242,6 +326,7 @@ public static class AdminEndpoints
                 u.AvatarUrl,
                 Tier = u.Tier.ToString(),
                 ManualTier = u.ManualTier.HasValue ? u.ManualTier.Value.ToString() : null,
+                u.IsAdmin,
                 u.CreatedAt,
                 u.UpdatedAt,
                 PostCount = u.Posts.Count(p => p.DeletedAt == null),
@@ -287,55 +372,99 @@ public static class AdminEndpoints
             .Select(s => new { Source = s.Source.ToString(), Plan = s.Plan.ToString(), State = s.State.ToString(), s.ExpiresAt, s.AutoRenewing, s.IsTest, s.ProductId })
             .ToListAsync();
 
-        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.ManualTier, Subscriptions = subscriptions, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
+        var adminActions = await db.AdminActions
+            .Where(a => a.TargetUserId == id || a.ActorUserId == id)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(50)
+            .ToListAsync();
+
+        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.ManualTier, user.IsAdmin, AdminActions = adminActions, Subscriptions = subscriptions, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
     }
 
-    private record UpdateUserRequest(string? DisplayName, string? Email, string? Bio, string? Tier);
+    private record UpdateUserRequest(string? DisplayName, string? Email, string? Bio, string? Tier, bool? IsAdmin);
 
-    private static async Task<IResult> UpdateUser(Guid id, UpdateUserRequest req, AppDbContext db)
+    private static async Task<IResult> UpdateUser(
+        Guid id, UpdateUserRequest req, AppDbContext db, HttpContext http, IEmailSender email, ILoggerFactory loggerFactory)
     {
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
+        var changed = new List<string>();
+        bool? adminChange = null;
+        if (req.IsAdmin is { } makeAdmin && makeAdmin != user.IsAdmin)
+        {
+            if (user.IsSample) return Results.BadRequest(new { error = "Sample clients can't be admins." });
+            if (!makeAdmin && await IsLastAdminAsync(db, user))
+                return Results.Conflict(new { error = "This is the only admin. Make someone else an admin first." });
+            user.IsAdmin = makeAdmin;
+            adminChange = makeAdmin;
+            AdminLog.Add(db, http, makeAdmin ? "admin.grant" : "admin.remove", user);
+        }
 
-        if (req.DisplayName is not null) user.DisplayName = req.DisplayName.Trim();
-        if (req.Bio is not null) user.Bio = req.Bio.Trim();
+        if (req.DisplayName is not null && req.DisplayName.Trim() != user.DisplayName) { user.DisplayName = req.DisplayName.Trim(); changed.Add("display name"); }
+        if (req.Bio is not null && req.Bio.Trim() != (user.Bio ?? "")) { user.Bio = req.Bio.Trim(); changed.Add("bio"); }
         if (req.Email is not null)
         {
-            var email = req.Email.Trim().ToLowerInvariant();
-            if (await db.Users.AnyAsync(u => u.Email == email && u.Id != id))
+            var newEmail = req.Email.Trim().ToLowerInvariant();
+            if (await db.Users.AnyAsync(u => u.Email == newEmail && u.Id != id))
                 return Results.Conflict(new { error = "Email already in use." });
-            user.Email = email;
+            if (newEmail != user.Email) changed.Add("email");
+            user.Email = newEmail;
         }
         // The admin page grants a plan by hand (ManualTier). A paid subscription still counts on
         // top of it, so setting Free here never takes away a plan someone is paying for.
         if (req.Tier is not null && Enum.TryParse<UserTier>(req.Tier, out var tier))
         {
-            user.ManualTier = tier == UserTier.Free ? null : tier;
+            var manual = tier == UserTier.Free ? (UserTier?)null : tier;
+            if (manual != user.ManualTier) changed.Add($"plan given to {tier}");
+            user.ManualTier = manual;
             await Entitlements.RecomputeAsync(db, user, DateTime.UtcNow);
         }
 
+        if (changed.Count > 0) AdminLog.Add(db, http, "user.update", user, string.Join(", ", changed));
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+
+        if (adminChange is { } nowAdmin)
+        {
+            var by = AdminLog.Actor(http).Name;
+            await AdminLog.NotifyAdminsAsync(db, email, loggerFactory.CreateLogger("Logit.Admin"),
+                nowAdmin ? $"{user.Username} is now an admin of {http.Request.Host}" : $"{user.Username} is no longer an admin of {http.Request.Host}",
+                nowAdmin
+                    ? $"{by} made {user.Username} ({user.Email}) an admin of {http.Request.Host}.\n"
+                    : $"{by} removed {user.Username} ({user.Email}) as an admin of {http.Request.Host}.\n",
+                alsoTo: user);
+        }
         return Results.NoContent();
     }
 
-    private static async Task<IResult> DeleteUser(Guid id, AppDbContext db)
+    /// Never leave a server with no admin account. (ADMIN_KEY can still claim one, but on
+    /// getlogit.app the key is meant to be removed once an admin exists.)
+    private static async Task<bool> IsLastAdminAsync(AppDbContext db, User user) =>
+        user.IsAdmin && !await db.Users.AnyAsync(u => u.IsAdmin && u.Id != user.Id);
+
+    private static async Task<IResult> DeleteUser(Guid id, AppDbContext db, HttpContext http)
     {
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
+        if (await IsLastAdminAsync(db, user))
+            return Results.Conflict(new { error = "This is the only admin. Make someone else an admin first." });
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         db.Users.Remove(user);
+        AdminLog.Add(db, http, "user.delete", user, user.Email);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
 
-    private static async Task<IResult> RevokeTokens(Guid id, AppDbContext db)
+    private static async Task<IResult> RevokeTokens(Guid id, AppDbContext db, HttpContext http)
     {
+        var user = await db.Users.FindAsync(id);
+        if (user is null) return Results.NotFound();
         var tokens = await db.RefreshTokens
             .Where(t => t.UserId == id && t.RevokedAt == null)
             .ToListAsync();
         var now = DateTime.UtcNow;
         foreach (var t in tokens) t.RevokedAt = now;
+        AdminLog.Add(db, http, "user.sign-out", user, $"{tokens.Count} sessions");
         await db.SaveChangesAsync();
         return Results.Ok(new { revokedCount = tokens.Count });
     }
@@ -379,7 +508,7 @@ public static class AdminEndpoints
 
     private record ResolveReportRequest(string Action); // dismiss | delete-target
 
-    private static async Task<IResult> ResolveReport(Guid id, ResolveReportRequest req, AppDbContext db)
+    private static async Task<IResult> ResolveReport(Guid id, ResolveReportRequest req, AppDbContext db, HttpContext http)
     {
         var report = await db.Reports.FindAsync(id);
         if (report is null) return Results.NotFound();
@@ -414,6 +543,8 @@ public static class AdminEndpoints
             .ToListAsync();
         foreach (var sib in siblings) { sib.Status = report.Status; sib.ReviewedAt = now; }
 
+        AdminLog.Add(db, http, report.Status == ReportStatus.Actioned ? "report.delete-target" : "report.dismiss",
+            detail: $"{report.TargetType} {report.TargetId}, reported as {report.Reason}");
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
@@ -422,13 +553,14 @@ public static class AdminEndpoints
 
     /// <summary>Self-host fallback for password resets when SMTP isn't configured — lets an
     /// admin set a user's password directly via the admin panel/API.</summary>
-    private static async Task<IResult> ResetPassword(Guid id, AdminResetPasswordRequest req, AppDbContext db)
+    private static async Task<IResult> ResetPassword(Guid id, AdminResetPasswordRequest req, AppDbContext db, HttpContext http)
     {
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
+        AdminLog.Add(db, http, "user.reset-password", user);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
