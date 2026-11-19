@@ -1,6 +1,6 @@
 namespace Logit.Api.Data.Entities;
 
-/// An invite code made on the /admin page. When a server's sign-ups are invite-only
+/// An invite code made in the admin console (Invites). When a server's sign-ups are invite-only
 /// (Registration:Mode = "invite"), creating an account needs one of these.
 public class Invite
 {

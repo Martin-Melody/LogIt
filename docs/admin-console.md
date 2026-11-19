@@ -32,7 +32,7 @@ on the planning page.
 
 ## Steps
 
-Each step with visible screens gets mockups approved before it is built. Steps 1 to 4 are built
+Each step with visible screens gets mockups approved before it is built. All five steps are built
 (branch feat/admin-accounts); step 2's approved mockups:
 
 1. **Admin accounts (server).** `User.IsAdmin`; `AdminActions` log; `/admin/api` accepts a signed-in
@@ -57,8 +57,10 @@ Each step with visible screens gets mockups approved before it is built. Steps 1
    self-hosted servers. Cloudflare Access: the console calls `app.getlogit.app/admin-api` (Caddy
    passes it to /admin/api) and the API checks Cloudflare's signed header when
    `ADMIN_ACCESS_TEAM_DOMAIN` and `ADMIN_ACCESS_AUD` are set (setup: deploy/production/README.md).
-5. **Remove the old page.** Delete `AdminHtml.cs`; update the self-hosting guide, `.env.example`
-   and the website docs.
+5. **Remove the old page.** `AdminHtml.cs` is gone. A new invite-only server is set up by signing
+   up on the web dashboard with `ADMIN_KEY` instead of an invite (`/auth/registration` says
+   `setup: true` while nobody is admin); that account becomes the admin. `.env.example`, the
+   deployment docs and the website's self-hosting steps say so.
 
 ## Privacy (decided 2026-11-19)
 

@@ -1,8 +1,10 @@
 namespace Logit.Api.Features.Auth;
 
-public record RegisterRequest(string Username, string Email, string Password, string DisplayName, string? InviteCode = null);
+public record RegisterRequest(string Username, string Email, string Password, string DisplayName, string? InviteCode = null, string? AdminKey = null);
 /// GET /auth/registration: what the sign-up form needs to know before it's filled in.
-public record RegistrationInfo(string Mode, bool SelfHosted);
+/// Setup: nobody is an admin yet and the server has an ADMIN_KEY, so sign-up offers to set the
+/// server up (the account made with the key becomes its admin, no invite needed).
+public record RegistrationInfo(string Mode, bool SelfHosted, bool Setup = false);
 public record LoginRequest(string UsernameOrEmail, string Password);
 public record RefreshRequest(string RefreshToken);
 public record RevokeRequest(string RefreshToken);

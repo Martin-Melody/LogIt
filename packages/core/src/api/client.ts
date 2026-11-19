@@ -97,6 +97,8 @@ export interface RegistrationInfo {
   /** "invite": signing up needs an invite code from the server's admin. */
   mode: "open" | "invite";
   selfHosted: boolean;
+  /** Nobody is the admin yet: signing up with the server's ADMIN_KEY sets it up (no invite needed). */
+  setup?: boolean;
 }
 
 const BASE_URL_KEY = "logit:api:baseUrl";
@@ -371,10 +373,11 @@ class ApiClient {
     password: string,
     displayName: string,
     inviteCode?: string,
+    adminKey?: string,
   ): Promise<AuthUser> {
     const data: AuthResponse = await this.fetch("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ username, email, password, displayName, inviteCode: inviteCode?.trim() || undefined }),
+      body: JSON.stringify({ username, email, password, displayName, inviteCode: inviteCode?.trim() || undefined, adminKey: adminKey?.trim() || undefined }),
     });
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
@@ -390,7 +393,7 @@ class ApiClient {
   async getRegistrationInfo(): Promise<RegistrationInfo | null> {
     try {
       const info = await this.fetch<RegistrationInfo>("/auth/registration");
-      return { mode: info.mode === "invite" ? "invite" : "open", selfHosted: !!info.selfHosted };
+      return { mode: info.mode === "invite" ? "invite" : "open", selfHosted: !!info.selfHosted, setup: !!info.setup };
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return { mode: "open", selfHosted: false };
       return null;

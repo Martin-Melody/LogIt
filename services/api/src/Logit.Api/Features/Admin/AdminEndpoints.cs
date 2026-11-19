@@ -12,20 +12,16 @@ public static class AdminEndpoints
 {
     public static void MapAdminEndpoints(this IEndpointRouteBuilder app, IConfiguration config, ILogger logger)
     {
-        // Admins sign in with their own account (User.IsAdmin). ADMIN_KEY claims the first admin,
-        // recovers when no admin can sign in, and still unlocks the old /admin page. With no key
-        // set, admin works only for accounts that are already admins.
+        // Admins sign in with their own account (User.IsAdmin) and use the console in the web
+        // dashboard (/admin there). ADMIN_KEY claims the first admin, recovers when no admin can
+        // sign in, and works as X-Admin-Key for scripts (backups). With no key set, admin works
+        // only for accounts that are already admins.
         var adminKey = config["Admin:Key"];
-        AdminKeyGuard? guard = null;
-        if (!string.IsNullOrWhiteSpace(adminKey))
-        {
-            if (adminKey.Length < AdminKeyGuard.RecommendedMinKeyLength)
-                logger.LogWarning(
-                    "ADMIN_KEY is only {Length} characters. Use a long random key (e.g. openssl rand -base64 32): it unlocks every account on this server.",
-                    adminKey.Length);
-            guard = new AdminKeyGuard(adminKey);
-            app.MapGet("/admin", () => Results.Content(AdminHtml.Page, "text/html")).ExcludeFromDescription();
-        }
+        var guard = app.ServiceProvider.GetRequiredService<AdminKeys>().Guard;
+        if (guard is not null && adminKey!.Length < AdminKeyGuard.RecommendedMinKeyLength)
+            logger.LogWarning(
+                "ADMIN_KEY is only {Length} characters. Use a long random key (e.g. openssl rand -base64 32): it unlocks every account on this server.",
+                adminKey.Length);
 
         var account = app.MapGroup("/admin").RequireAuthorization().ExcludeFromDescription();
         account.MapGet("/me", (ClaimsPrincipal caller, AppDbContext db) => GetMe(caller, db, guard));
@@ -168,7 +164,7 @@ public static class AdminEndpoints
     /// Null when the key is right; otherwise the 429 (locked out) or `wrongStatus` to send back.
     /// Claiming answers 403, not 401: the caller is signed in, and a 401 would make the app
     /// refresh its session and send the key again.
-    private static IResult? CheckKey(AdminKeyGuard guard, string? key, HttpContext http, ILogger logger, int wrongStatus = 401)
+    internal static IResult? CheckKey(AdminKeyGuard guard, string? key, HttpContext http, ILogger logger, int wrongStatus = 401)
     {
         var client = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var now = DateTime.UtcNow;
@@ -533,7 +529,7 @@ public static class AdminEndpoints
             if (newEmail != user.Email) { changed.Add("email"); oldEmail = user.Email; }
             user.Email = newEmail;
         }
-        // The admin page grants a plan by hand (ManualTier). A paid subscription still counts on
+        // The admin console gives a plan by hand (ManualTier). A paid subscription still counts on
         // top of it, so setting Free here never takes away a plan someone is paying for.
         if (req.Tier is not null && Enum.TryParse<UserTier>(req.Tier, out var tier))
         {

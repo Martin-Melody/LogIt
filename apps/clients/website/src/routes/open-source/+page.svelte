@@ -6,8 +6,8 @@
     { title: "Get the files", text: "Clone the repo or download a release." },
     { title: "Set two secrets", text: "JWT_SECRET and ADMIN_KEY in .env." },
     { title: "Start it", text: "docker compose up -d. Your data lives in a Docker volume." },
-    { title: "Invite yourself", text: "Make an invite code on the admin page, then sign up in the app with it." },
-    { title: "Open the dashboard", text: "The web dashboard runs next to the API." },
+    { title: "Set it up", text: "Open the web dashboard (port 3000) and create your account with ADMIN_KEY. You're the admin." },
+    { title: "Invite people", text: "Admin › Invites makes codes with a message to send. Admin › Server shows backups and email." },
   ];
 
   const docs = [

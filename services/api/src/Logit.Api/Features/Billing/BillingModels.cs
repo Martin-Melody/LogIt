@@ -9,7 +9,7 @@ public record GoogleVerifyRequest(string PurchaseToken);
 /// What the app and dashboard show on their plan screens.
 /// - Tier: the plan in force now (what the feature checks use).
 /// - SubscriptionActive: a paid subscription is giving access now (kept for older clients).
-/// - ManualTier: a plan granted in the admin page, if any.
+/// - ManualTier: a plan given by hand in the admin console, if any.
 /// - Subscription: the subscription to show (the one giving access, else the latest), or null.
 /// - WebCheckout: whether the website can sell plans (off at launch: plans are sold in the app).
 public record BillingStatusResponse(

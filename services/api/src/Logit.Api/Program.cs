@@ -81,6 +81,8 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 // Billing. Subscriptions come from Google Play (and later the App Store); Stripe web checkout
 // is off unless Billing:WebCheckout is set. GooglePlayApi is a singleton so its access token is cached.
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<Logit.Api.Features.Admin.AdminKeys>();
+builder.Services.AddSingleton<Logit.Api.Features.Auth.LoginLockout>();
 builder.Services.AddSingleton<Logit.Api.Features.Discover.DiscoverExperiment>();
 builder.Services.AddScoped<Logit.Api.Features.Discover.DiscoverService>();
 builder.Services.AddHttpClient("google-play", c => c.Timeout = TimeSpan.FromSeconds(20));
@@ -157,6 +159,19 @@ builder.Services.AddRateLimiter(o =>
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = signupLimit,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+            }));
+    // Sign-ins: 30 per address per 10 minutes, right or wrong. Caps password guessing from one
+    // address across accounts (LoginLockout covers one account). Auth:LoginsPer10Minutes
+    // overrides it (CI raises it: the E2E suite signs in many times from one address).
+    var loginLimit = Math.Max(1, builder.Configuration.GetValue("Auth:LoginsPer10Minutes", 30));
+    o.AddPolicy(Registration.LoginRateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = loginLimit,
                 Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0,
             }));

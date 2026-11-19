@@ -27,7 +27,6 @@ public static class AdminServer
 
         return Results.Ok(new
         {
-            // registrationMode and selfHosted are also read by the old /admin page.
             RegistrationMode = Registration.ModeName(saved is null ? Registration.GetMode(cfg) : Registration.Parse(saved.Value)),
             RegistrationModeSource = saved is null ? "env" : "console",
             SelfHosted = cfg.GetValue<bool>("Deployment:SelfHosted"),

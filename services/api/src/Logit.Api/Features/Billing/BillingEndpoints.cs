@@ -281,7 +281,7 @@ public static class BillingEndpoints
         user ??= await db.Users.FirstOrDefaultAsync(u => u.StripeCustomerId == session.CustomerId);
         if (user is null)
         {
-            // Someone paid and no account was upgraded: needs fixing by hand in the admin page.
+            // Someone paid and no account was upgraded: needs fixing by hand in the admin console.
             log.LogError("Checkout {SessionId} completed but no user matches (client ref {ClientRef}, customer {CustomerId})",
                 session.Id, session.ClientReferenceId, session.CustomerId);
             return;

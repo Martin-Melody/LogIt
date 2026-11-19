@@ -68,10 +68,9 @@ migration that drops or renames something needs a fix forward instead.
 ## Changing a secret
 
 Edit `/opt/logit/.env`, then `docker compose up -d`. Changing `JWT_SECRET` signs everyone out.
-`ADMIN_KEY` claims admin for your own account (`POST /admin/claim`, the dashboard will offer it) and
-unlocks the old admin page (`https://api.getlogit.app/admin`). Once your account is an admin and the
-new console replaces the old page, remove `ADMIN_KEY` from `.env` so the key can't be tried at all;
-add it back only to recover if no admin can sign in.
+`ADMIN_KEY` claims admin for your own account (the dashboard home offers "Make this account the
+admin" while nobody is one). Once your account is an admin, remove `ADMIN_KEY` from `.env` so the
+key can't be tried at all; add it back only to recover if no admin can sign in.
 
 ## Admin console behind Cloudflare Access
 

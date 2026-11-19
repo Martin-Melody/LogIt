@@ -36,8 +36,8 @@ under `Logging:LogLevel` as usual (`Logging__LogLevel__Default=Debug` for more d
 **App.** Settings → Diagnostics shows the app's own log (newest 1,000 entries, kept on the
 device): failed and slow requests, sync steps that failed, crashes. Users can copy it or save it
 as a file. "Detailed logging" also records every request and sync step. On the hosted service a
-signed-in user can also **Send to Logit**: the report is stored in `DiagnosticReports`, shown on
-`/admin` under "Diagnostics", deleted after 30 days and with the account. Self-hosted servers
+signed-in user can also **Send to Logit**: the report is stored in `DiagnosticReports`, shown in the
+admin console under "Diagnostics" (app.getlogit.app/admin), deleted after 30 days and with the account. Self-hosted servers
 refuse reports (404) and the app doesn't offer the button, so self-hosted and offline logs never
 leave the device.
 
@@ -109,7 +109,7 @@ gets everything.
 
 **Where plans come from.** Every paid subscription is a row in `BillingSubscriptions` with a
 source (`google`, `apple` or `stripe`), a plan, a state and an end date. `User.Tier` is worked
-out from those rows plus `User.ManualTier` (a plan given by hand in the admin page), in
+out from those rows plus `User.ManualTier` (a plan given by hand on the person's page in the admin console), in
 `Features/Billing/Entitlements.cs`: the higher of the two counts. Active, cancelled-but-paid-up
 and grace-period subscriptions give access; on hold, paused, expired, refunded and replaced ones
 don't. Nothing should set `User.Tier` directly; call `Entitlements.RecomputeAsync`.

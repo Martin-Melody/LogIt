@@ -1,7 +1,7 @@
 namespace Logit.Api.Data.Entities;
 
 /// A diagnostics log a user chose to send from the app (Settings → Diagnostics) on the hosted
-/// service. Read on the /admin page; deleted after DiagnosticsEndpoints.RetentionDays, and with
+/// service. Read in the admin console (Diagnostics); deleted after DiagnosticsEndpoints.RetentionDays, and with
 /// the account. Self-hosted servers don't accept these.
 public class DiagnosticReport
 {

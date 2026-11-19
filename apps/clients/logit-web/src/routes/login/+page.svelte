@@ -33,11 +33,15 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
 
-  // Invite-only servers: signing up needs an invite code from the server's admin page.
+  // Invite-only servers: signing up needs an invite code from the server's admin.
   let registration = $state<RegistrationInfo | null>(null);
   let inviteCode = $state("");
   let inviteError = $state<string | null>(null);
-  const inviteRequired = $derived(mode === "register" && registration?.mode === "invite");
+  // A new invite-only server with nobody in charge yet: the first account signs up with the
+  // server's ADMIN_KEY instead of an invite and becomes its admin.
+  const settingUp = $derived(mode === "register" && registration?.mode === "invite" && !!registration?.setup);
+  const inviteRequired = $derived(mode === "register" && registration?.mode === "invite" && !settingUp);
+  let adminKey = $state("");
 
   async function loadRegistration() {
     registration = null;
@@ -58,7 +62,7 @@
     (mode === "login"
       ? step === "who" ? !!usernameOrEmail.trim() : !!password
       : !!password && !!username.trim() && !!email.trim() && !!displayName.trim() && !!confirmPassword && !passwordMismatch &&
-        (!inviteRequired || !!inviteCode.trim())),
+        (!inviteRequired || !!inviteCode.trim()) && (!settingUp || !!adminKey.trim())),
   );
 
   async function switchMode(m: Mode) {
@@ -100,6 +104,7 @@
         await apiClient.register(
           username.trim(), email.trim(), password, displayName.trim(),
           inviteRequired ? inviteCode : undefined,
+          settingUp ? adminKey : undefined,
         );
         await goto(nextPath("/welcome"));
       }
@@ -192,6 +197,15 @@
             </div>
           {/if}
         {:else}
+          {#if settingUp}
+            <div class="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
+              <p class="text-sm font-semibold">Set up this server</p>
+              <p class="text-xs text-muted-foreground">Nobody runs it yet. Sign up with its admin key and this account becomes the admin, who invites everyone else.</p>
+              <Label for="admin-key">Admin key</Label>
+              <Input id="admin-key" type="password" bind:value={adminKey} autocomplete="off" spellcheck="false" aria-describedby="admin-key-help" />
+              <p id="admin-key-help" class="text-xs text-muted-foreground">It's <code class="rounded bg-muted px-1">ADMIN_KEY</code> in the .env file next to docker-compose.yml.</p>
+            </div>
+          {/if}
           {#if inviteRequired}
             <div class="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
               <p class="text-sm font-semibold">This server is invite-only</p>
