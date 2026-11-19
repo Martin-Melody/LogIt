@@ -13,12 +13,12 @@ export const GITHUB_URL = "https://github.com/Martin-Melody/LogIt";
 export const REGISTRY_URL = "https://github.com/Martin-Melody/logit-plugin-registry";
 
 /**
- * Plan prices as shown on the site. They must match the subscriptions set up in Play Console.
- * TODO(launch): fill in once the prices are decided (docs/launch-checklist.md).
+ * Plan prices as shown on the site. They must match the subscriptions set up in Play Console
+ * (base plans and free-trial offers).
  */
 export const PRICES = {
-  pro: { monthly: "€ TBC", yearly: "€ TBC" },
-  studio: { monthly: "€ TBC", yearly: "€ TBC" },
+  pro: { monthly: "€2.99", yearly: "€24.99", trialDays: 7 },
+  studio: { monthly: "€14.99", yearly: "€149", trialDays: 14 },
 } as const;
 
 /** Where the Play Store cancel option lives, worded the same everywhere. */

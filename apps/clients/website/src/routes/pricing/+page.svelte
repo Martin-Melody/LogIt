@@ -20,7 +20,7 @@
       blurb: "For training across devices.",
       price: PRICES.pro.monthly,
       per: "/ month",
-      yearly: `or ${PRICES.pro.yearly} a year`,
+      yearly: `or ${PRICES.pro.yearly} a year · first ${PRICES.pro.trialDays} days free`,
       items: ["Everything in Free", "Sync between all your phones", "The web dashboard at app.getlogit.app", "Deeper charts: e1RM, volume, nutrition against performance"],
       cta: "app",
       featured: true,
@@ -30,7 +30,7 @@
       blurb: "For personal trainers and coaches.",
       price: PRICES.studio.monthly,
       per: "/ month",
-      yearly: `or ${PRICES.studio.yearly} a year`,
+      yearly: `or ${PRICES.studio.yearly} a year · first ${PRICES.studio.trialDays} days free`,
       items: ["Everything in Pro", "Invite clients. You see nothing until they accept", "Their training, nutrition and habits in one place", "Assign programs, macro targets and check-ins; message clients"],
       cta: "app",
     },
@@ -39,7 +39,7 @@
 
   const steps = [
     { title: "Install LogIt", text: "Get it from Google Play and create an account in Settings › Account." },
-    { title: "Tap Upgrade", text: "Pick Pro or Studio, monthly or yearly. Google Play takes the payment." },
+    { title: "Tap Upgrade", text: "Pick Pro or Studio, monthly or yearly. The first days are free; Google Play takes the payment after that." },
     { title: "Cancel whenever", text: "In the Play Store under Payments and subscriptions. You keep your plan until the period ends." },
   ];
 
