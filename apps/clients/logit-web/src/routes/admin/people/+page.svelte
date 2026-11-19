@@ -12,6 +12,9 @@
   import { ago, shortDate, when } from "$lib/features/coaching/format";
   import { adminApi, at, describeAction, temporaryPassword, type Person, type PersonRow } from "$lib/features/admin/adminApi";
   import { adminState } from "$lib/features/admin/adminState.svelte";
+  import PlanBilling from "$lib/features/admin/PlanBilling.svelte";
+
+  const hosted = !apiClient.isSelfHosted();
 
   let people = $state<PersonRow[]>([]);
   let listError = $state<string | null>(null);
@@ -75,8 +78,9 @@
   });
 
   function lastSeen(p: PersonRow): string {
-    if (!p.lastActive) return `Joined ${shortDate(at(p.createdAt))} · no workouts yet`;
-    return `Trained ${when(at(p.lastActive))}`;
+    // When they were last around (the app signed in or refreshed), never what they trained.
+    if (!p.lastActive) return `Joined ${shortDate(at(p.createdAt))}`;
+    return `Last seen ${when(at(p.lastActive))}`;
   }
 
   async function run(work: () => Promise<void>, failed: string) {
@@ -196,10 +200,12 @@
         </header>
 
         <div class="flex flex-wrap gap-2.5">
-          {#each [["Workouts", `${p.sessionCount}`], ["Last workout", p.lastActive ? when(at(p.lastActive)) : "None yet"], ["Signed in on", `${p.activeTokens} device${p.activeTokens === 1 ? "" : "s"}`], ["Posts", `${p.postCount}`]] as [label, value] (label)}
+          {#each [["Last seen", p.lastActive ? when(at(p.lastActive)) : "Not yet"], ["Signed in on", `${p.activeTokens} device${p.activeTokens === 1 ? "" : "s"}`], ["Posts", `${p.postCount}`]] as [label, value] (label)}
             <div class="flex-[1_1_130px] rounded-xl border border-border bg-card px-3.5 py-3"><span class="block text-xs text-muted-foreground">{label}</span><strong class="text-[17px] font-semibold">{value}</strong></div>
           {/each}
         </div>
+
+        {#if hosted}<PlanBilling person={p} onChanged={() => loadPerson(p.id)} />{/if}
 
         <section aria-labelledby="help" class="rounded-[14px] border border-border bg-card px-5 py-4">
           <h3 id="help" class="mb-1 text-[15px] font-semibold">Help {name}</h3>
@@ -245,6 +251,22 @@
               <button type="button" class={btnSecondary} onclick={() => (confirming = null)}>Cancel</button>
               <button type="button" class={btnPrimary} disabled={busy} onclick={() => toggleAdmin(p)}>{p.isAdmin ? "Remove admin" : "Make admin"}</button>
             </div>
+          {/if}
+        </section>
+
+        <section aria-labelledby="devices" class="rounded-[14px] border border-border bg-card px-5 py-4">
+          <h3 id="devices" class="mb-1 text-[15px] font-semibold">Signed in on</h3>
+          {#if p.devices.length}
+            <ul class="text-sm">
+              {#each p.devices as d, i (i)}
+                <li class="flex flex-wrap justify-between gap-x-4 border-t border-border py-2 first:border-t-0"><span>{d.label ?? "A device"}</span><span class="text-muted-foreground">last seen {ago(at(d.lastSeen))}</span></li>
+              {/each}
+            </ul>
+          {:else}
+            <p class="text-[13px] text-muted-foreground">Not signed in anywhere.</p>
+          {/if}
+          {#if hosted && p.diagnostics.length}
+            <a href="/admin/diagnostics?id={p.diagnostics[0].id}" class="mt-2 inline-flex h-[34px] items-center rounded-[9px] bg-muted px-3 text-[13px] font-medium hover:bg-accent">Open their diagnostics report ({ago(at(p.diagnostics[0].createdAt))})</a>
           {/if}
         </section>
 

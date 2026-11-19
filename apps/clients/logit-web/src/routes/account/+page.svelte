@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { DOCS_BASE } from "$lib/features/guide/docs";
   import { goto } from "$app/navigation";
   import { apiClient, ApiError, type BillingStatus } from "@logit/core/api/client";
   import * as Card from "$lib/components/ui/card";
@@ -14,6 +15,7 @@
 
   const user = $derived(apiClient.getUser());
   const isSelfHosted = apiClient.isSelfHosted();
+  const serverHost = (() => { try { return new URL(apiClient.getBaseUrl()).host; } catch { return "this server"; } })();
 
   // Falls back to the live Cloudflare Pages URL so this works out of the box; set
   // VITE_MARKETING_URL at build time once getlogit.app is live.
@@ -158,6 +160,11 @@
       </Button>
     </Card.Content>
   </Card.Root>
+
+  <p class="px-1 text-[13px] text-muted-foreground">
+    {isSelfHosted ? `Whoever runs ${serverHost}` : "The LogIt team"} can see your name, email, devices and plan in their admin console, not your workouts. You get an email if they change your account.
+    <a href="{DOCS_BASE}/docs/account#what-a-servers-admins-can-see" target="_blank" rel="noopener" class="underline underline-offset-4 hover:text-foreground">What admins can see</a>
+  </p>
 
   <Card.Root>
     <Card.Header class="pb-2">

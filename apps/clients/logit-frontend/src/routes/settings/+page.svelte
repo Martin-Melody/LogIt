@@ -726,6 +726,9 @@
           Delete account
           <ChevronRight class="h-4 w-4 shrink-0" />
         </button>
+        <p class="pt-3 text-xs leading-relaxed text-muted-foreground">
+          {apiClient.isSelfHosted() ? `Whoever runs ${serverHost}` : "The LogIt team"} can see your name, email, devices and plan, not your workouts. You get an email if they change your account.
+        </p>
 
       {:else if getActiveOwnerId()}
         <!-- No account yet (design canvas 5) -->

@@ -32,7 +32,7 @@ on the planning page.
 
 ## Steps
 
-Each step with visible screens gets mockups approved before it is built. Steps 1 to 3 are built
+Each step with visible screens gets mockups approved before it is built. Steps 1 to 4 are built
 (branch feat/admin-accounts); step 2's approved mockups:
 
 1. **Admin accounts (server).** `User.IsAdmin`; `AdminActions` log; `/admin/api` accepts a signed-in
@@ -51,10 +51,27 @@ Each step with visible screens gets mockups approved before it is built. Steps 1
    version (`LOGIT_COMMIT`, build date), database size, backups. A self-hosted dashboard now finds
    its own API (`API_URL` in .env, default ":8080" = same host). No update check yet: there are no
    releases to compare with.
-4. **getlogit.app pages.** Plan and billing on the person page, Subscriptions, Growth (the
-   privacy-first anonymous counts from onboarding), Diagnostics, Discover tests. Cloudflare Access.
+4. **getlogit.app pages.** Plan and billing on the person page, Subscriptions (counts, no money),
+   Growth (weekly sign-up cohorts from data the server already has; the pre-account funnel waits
+   for the anonymous counts from onboarding), Diagnostics, Discover tests. The API refuses these on
+   self-hosted servers. Cloudflare Access: the console calls `app.getlogit.app/admin-api` (Caddy
+   passes it to /admin/api) and the API checks Cloudflare's signed header when
+   `ADMIN_ACCESS_TEAM_DOMAIN` and `ADMIN_ACCESS_AUD` are set (setup: deploy/production/README.md).
 5. **Remove the old page.** Delete `AdminHtml.cs`; update the self-hosting guide, `.env.example`
    and the website docs.
+
+## Privacy (decided 2026-11-19)
+
+Logit isn't end-to-end encrypted like Bitwarden, so the console's own rules carry the privacy:
+- Per person it shows account and sync facts (last seen, devices, plan, posts), never training:
+  no workouts, nutrition, body weight, habits or messages, and no "sign in as". Server-wide
+  totals ("trained this week") are fine.
+- The person gets an email when an admin resets their password, changes their email (both
+  addresses), signs them out, gives or removes a plan, or deletes the account.
+- Reading someone's diagnostics log is logged like a change. The admin log is kept 12 months, and
+  when an account is deleted older entries stop naming it.
+- Users are told: a line in the app's Settings and the web Account page, and "What a server's
+  admins can see" in the account docs.
 
 ## Backups (decided 2026-11-19)
 

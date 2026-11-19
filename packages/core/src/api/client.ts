@@ -308,7 +308,8 @@ class ApiClient {
         ...(init.headers as Record<string, string>),
       };
       if (token && !ownToken) headers["Authorization"] = `Bearer ${token}`;
-      return fetch(`${getBaseUrl()}${path}`, { ...init, headers });
+      // A full URL (the hosted admin console's same-origin /admin-api) is used as it is.
+      return fetch(/^https?:\/\//.test(path) ? path : `${getBaseUrl()}${path}`, { ...init, headers });
     };
 
     let res: Response;

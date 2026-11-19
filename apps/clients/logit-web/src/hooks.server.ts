@@ -6,11 +6,16 @@ import { env } from "$env/dynamic/public";
 // starting with ":" means "this page's host on that port" (the default, ":8080"). Unset (the
 // hosted dashboard) leaves the built-in address.
 const apiUrl = env.PUBLIC_API_URL?.trim();
-const script = apiUrl
-  ? `<script>window.__LOGIT_API_URL__=${JSON.stringify(apiUrl).replace(/</g, "\\u003c")}</script>`
-  : "";
+// getlogit.app: the admin console calls its API through this path on the dashboard's own domain,
+// behind Cloudflare Access (deploy/production/Caddyfile).
+const adminApi = env.PUBLIC_ADMIN_API?.trim();
+const json = (v: string) => JSON.stringify(v).replace(/</g, "\\u003c");
+const script = [
+  apiUrl && `window.__LOGIT_API_URL__=${json(apiUrl)}`,
+  adminApi && `window.__LOGIT_ADMIN_API__=${json(adminApi)}`,
+].filter(Boolean).join(";");
 
 export const handle: Handle = ({ event, resolve }) =>
   script
-    ? resolve(event, { transformPageChunk: ({ html }) => html.replace("</head>", `${script}</head>`) })
+    ? resolve(event, { transformPageChunk: ({ html }) => html.replace("</head>", `<script>${script}</script></head>`) })
     : resolve(event);

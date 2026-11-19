@@ -212,6 +212,7 @@ public static class AuthEndpoints
         if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
             return Results.BadRequest(new { error = "Password is incorrect." });
 
+        await Admin.AdminLog.ForgetAsync(db, user.Id);
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         db.Users.Remove(user);
         await db.SaveChangesAsync();

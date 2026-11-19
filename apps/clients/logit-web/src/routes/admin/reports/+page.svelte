@@ -127,7 +127,7 @@
         </article>
         {#if author}
           <div class="flex flex-wrap gap-2.5">
-            {#each [[`@${author.username}'s workouts`, `${author.sessionCount}`], ["Joined", shortDate(at(author.createdAt))], ["Last workout", author.lastActive ? when(at(author.lastActive)) : "None yet"]] as [label, value] (label)}
+            {#each [[`@${author.username}'s posts`, `${author.postCount}`], ["Joined", shortDate(at(author.createdAt))], ["Last seen", author.lastActive ? when(at(author.lastActive)) : "Not yet"]] as [label, value] (label)}
               <div class="flex-[1_1_130px] rounded-xl border border-border bg-card px-3.5 py-3"><span class="block text-xs text-muted-foreground">{label}</span><strong class="text-[17px] font-semibold">{value}</strong></div>
             {/each}
           </div>

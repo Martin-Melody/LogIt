@@ -32,8 +32,10 @@ public static class AdminEndpoints
         account.MapPost("/claim", (ClaimRequest req, HttpContext http, AppDbContext db, IEmailSender email) =>
             Claim(req, http, db, email, guard, logger));
 
+        var access = CloudflareAccess.FromConfig(config);
+        if (access is not null) logger.LogInformation("Admin API requires Cloudflare Access ({Header})", CloudflareAccess.Header);
         var api = app.MapGroup("/admin/api")
-            .AddEndpointFilter(AdminFilter(guard, logger))
+            .AddEndpointFilter(AdminFilter(guard, access, logger))
             .ExcludeFromDescription();
 
         api.MapGet("/stats", GetStats);
@@ -52,9 +54,6 @@ public static class AdminEndpoints
         api.MapPost("/server/test-email", AdminServer.SendTestEmail);
         api.MapGet("/server/backup", AdminServer.DownloadBackup);
         api.MapGet("/invites", GetInvites);
-        // Discover experiments: per arm and recipe, what was shown and what people did next.
-        api.MapGet("/discover", async (AppDbContext db, int? days) =>
-            Results.Ok(await Logit.Api.Features.Discover.DiscoverStats.ComputeAsync(db, DateTime.UtcNow.AddDays(-(days ?? 30)))));
         api.MapPost("/invites", CreateInvite);
         api.MapDelete("/invites/{id:guid}", RevokeInvite);
         api.MapPost("/invites/{id:guid}/extend", ExtendInvite);
@@ -62,9 +61,20 @@ public static class AdminEndpoints
         api.MapGet("/reports", GetReports);
         api.MapPost("/reports/{id:guid}/resolve", ResolveReport);
 
-        api.MapGet("/diagnostics", GetDiagnosticReports);
-        api.MapGet("/diagnostics/{id:guid}", GetDiagnosticReport);
-        api.MapDelete("/diagnostics/{id:guid}", DeleteDiagnosticReport);
+        // getlogit.app only: self-hosted servers have no billing, never receive diagnostics, and
+        // their pages aren't shown, so the API refuses these there too.
+        var hosted = api.MapGroup("").AddEndpointFilter(async (ctx, next) =>
+            ctx.HttpContext.RequestServices.GetRequiredService<IConfiguration>().GetValue<bool>("Deployment:SelfHosted")
+                ? Results.NotFound(new { error = "Only on getlogit.app." })
+                : await next(ctx));
+        hosted.MapGet("/diagnostics", GetDiagnosticReports);
+        hosted.MapGet("/diagnostics/{id:guid}", GetDiagnosticReport);
+        hosted.MapDelete("/diagnostics/{id:guid}", DeleteDiagnosticReport);
+        hosted.MapGet("/subscriptions", AdminHosted.GetSubscriptions);
+        hosted.MapGet("/growth", AdminHosted.GetGrowth);
+        // Discover experiments: per arm and recipe, what was shown and what people did next.
+        hosted.MapGet("/discover", async (AppDbContext db, int? days) =>
+            Results.Ok(await Logit.Api.Features.Discover.DiscoverStats.ComputeAsync(db, DateTime.UtcNow.AddDays(-(days ?? 30)))));
 
         Logit.Api.Features.Plugins.PluginEndpoints.MapPluginAdmin(api);
     }
@@ -90,13 +100,18 @@ public static class AdminEndpoints
         return Results.Ok(new { reports });
     }
 
-    private static async Task<IResult> GetDiagnosticReport(Guid id, AppDbContext db)
+    private static async Task<IResult> GetDiagnosticReport(Guid id, AppDbContext db, HttpContext http)
     {
         var r = await db.DiagnosticReports
             .Where(x => x.Id == id)
             .Select(x => new { x.Id, x.CreatedAt, x.AppVersion, x.Platform, x.Note, x.Log, User = new { x.User.Id, x.User.Username } })
             .FirstOrDefaultAsync();
-        return r is null ? Results.NotFound(new { error = "Report not found." }) : Results.Ok(r);
+        if (r is null) return Results.NotFound(new { error = "Report not found." });
+        // Reading someone's log is recorded, like changing their account.
+        var owner = await db.Users.FindAsync(r.User.Id);
+        AdminLog.Add(db, http, "diagnostics.view", owner);
+        await db.SaveChangesAsync();
+        return Results.Ok(r);
     }
 
     private static async Task<IResult> DeleteDiagnosticReport(Guid id, AppDbContext db, HttpContext http)
@@ -115,10 +130,22 @@ public static class AdminEndpoints
     /// caller must be signed in to an admin account, read fresh from the DB so removing someone
     /// takes effect at once.
     private static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> AdminFilter(
-        AdminKeyGuard? guard, ILogger logger) =>
+        AdminKeyGuard? guard, CloudflareAccess? access, ILogger logger) =>
         async (ctx, next) =>
         {
             var http = ctx.HttpContext;
+            if (access is not null)
+            {
+                bool passed;
+                try { passed = await access.IsValidAsync(http.Request.Headers[CloudflareAccess.Header].FirstOrDefault()); }
+                catch (Exception ex)
+                {
+                    logger.LogWarning("Admin: couldn't check Cloudflare Access: {Reason}", ex.Message);
+                    return Results.Json(new { error = "Couldn't check the Cloudflare sign-in. Try again in a minute." }, statusCode: 503);
+                }
+                if (!passed)
+                    return Results.Json(new { error = "Open the admin console through the dashboard's /admin page and sign in with Cloudflare." }, statusCode: 403);
+            }
             var key = http.Request.Headers["X-Admin-Key"].FirstOrDefault();
             if (key is not null)
             {
@@ -290,6 +317,7 @@ public static class AdminEndpoints
     private static async Task<IResult> GetOverview(AppDbContext db, IConfiguration cfg, IEmailSender email)
     {
         var now = DateTime.UtcNow;
+        await AdminLog.PruneAsync(db, now);
         var firstDay = now.Date.AddDays(-13);
         var firstDayMs = new DateTimeOffset(firstDay, TimeSpan.Zero).ToUnixTimeMilliseconds();
         var weekAgoMs = new DateTimeOffset(now.AddDays(-7)).ToUnixTimeMilliseconds();
@@ -385,9 +413,8 @@ public static class AdminEndpoints
                 FollowerCount = u.Followers.Count,
                 FollowingCount = u.Following.Count,
                 SessionCount = db.SyncedWorkoutSessions.Count(w => w.UserId == u.Id && w.DeletedAtMs == null),
-                LastActive = db.SyncedWorkoutSessions
-                    .Where(w => w.UserId == u.Id && w.DeletedAtMs == null)
-                    .Max(w => (DateTime?)w.SyncedAt),
+                // When the app last signed in or refreshed its login: when they were last around, not when they trained.
+                LastActive = u.RefreshTokens.Max(t => (DateTime?)t.CreatedAt),
             })
             .ToListAsync();
 
@@ -419,9 +446,8 @@ public static class AdminEndpoints
                 InviteNote = u.Invite != null ? u.Invite.Note : null,
                 SplitCount = db.SyncedSplits.Count(sp => sp.UserId == id && sp.DeletedAtMs == null),
                 ExerciseCount = db.SyncedExercises.Count(e => e.UserId == id && e.DeletedAtMs == null),
-                LastActive = db.SyncedWorkoutSessions
-                    .Where(w => w.UserId == id && w.DeletedAtMs == null)
-                    .Max(w => (DateTime?)w.SyncedAt),
+                // When the app last signed in or refreshed its login: when they were last around, not when they trained.
+                LastActive = u.RefreshTokens.Max(t => (DateTime?)t.CreatedAt),
             })
             .FirstOrDefaultAsync();
 
@@ -452,8 +478,20 @@ public static class AdminEndpoints
         var subscriptions = await db.BillingSubscriptions
             .Where(s => s.UserId == id)
             .OrderByDescending(s => s.UpdatedAt)
-            .Select(s => new { Source = s.Source.ToString(), Plan = s.Plan.ToString(), State = s.State.ToString(), s.ExpiresAt, s.AutoRenewing, s.IsTest, s.ProductId })
+            .Select(s => new { Source = s.Source.ToString(), Plan = s.Plan.ToString(), State = s.State.ToString(), s.ExpiresAt, s.AutoRenewing, s.IsTest, s.ProductId, s.CreatedAt, s.CheckedAt })
             .ToListAsync();
+
+        // Signed-in devices (one row per session), for "signed out everywhere" and support.
+        var devices = (await db.RefreshTokens
+                .Where(t => t.UserId == id && t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow)
+                .Select(t => new { t.SessionId, t.Id, t.Label, t.CreatedAt })
+                .ToListAsync())
+            .GroupBy(t => t.SessionId == Guid.Empty ? t.Id : t.SessionId)
+            .Select(g => new { Label = g.OrderByDescending(t => t.CreatedAt).First().Label, LastSeen = g.Max(t => t.CreatedAt) })
+            .OrderByDescending(d => d.LastSeen)
+            .ToList();
+        var diagnostics = await db.DiagnosticReports.Where(r => r.UserId == id).OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.Id, r.CreatedAt }).ToListAsync();
 
         var adminActions = await db.AdminActions
             .Where(a => a.TargetUserId == id || a.ActorUserId == id)
@@ -461,7 +499,7 @@ public static class AdminEndpoints
             .Take(50)
             .ToListAsync();
 
-        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.ManualTier, user.IsAdmin, user.InviteNote, AdminActions = adminActions, Subscriptions = subscriptions, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
+        return Results.Ok(new { user.Id, user.Username, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Tier, user.ManualTier, user.IsAdmin, user.InviteNote, Devices = devices, Diagnostics = diagnostics, AdminActions = adminActions, Subscriptions = subscriptions, user.CreatedAt, user.UpdatedAt, user.PostCount, user.FollowerCount, user.FollowingCount, user.ActiveTokens, user.SessionCount, user.SplitCount, user.ExerciseCount, user.LastActive, RecentPosts = recentPosts, CoachingClients = coachingClients, Coaches = coaches });
     }
 
     private record UpdateUserRequest(string? DisplayName, string? Email, string? Bio, string? Tier, bool? IsAdmin);
@@ -473,6 +511,7 @@ public static class AdminEndpoints
         if (user is null) return Results.NotFound();
         var changed = new List<string>();
         bool? adminChange = null;
+        UserTier? planGiven = null;
         if (req.IsAdmin is { } makeAdmin && makeAdmin != user.IsAdmin)
         {
             if (user.IsSample) return Results.BadRequest(new { error = "Sample clients can't be admins." });
@@ -485,12 +524,13 @@ public static class AdminEndpoints
 
         if (req.DisplayName is not null && req.DisplayName.Trim() != user.DisplayName) { user.DisplayName = req.DisplayName.Trim(); changed.Add("display name"); }
         if (req.Bio is not null && req.Bio.Trim() != (user.Bio ?? "")) { user.Bio = req.Bio.Trim(); changed.Add("bio"); }
+        string? oldEmail = null;
         if (req.Email is not null)
         {
             var newEmail = req.Email.Trim().ToLowerInvariant();
             if (await db.Users.AnyAsync(u => u.Email == newEmail && u.Id != id))
                 return Results.Conflict(new { error = "Email already in use." });
-            if (newEmail != user.Email) changed.Add("email");
+            if (newEmail != user.Email) { changed.Add("email"); oldEmail = user.Email; }
             user.Email = newEmail;
         }
         // The admin page grants a plan by hand (ManualTier). A paid subscription still counts on
@@ -498,7 +538,7 @@ public static class AdminEndpoints
         if (req.Tier is not null && Enum.TryParse<UserTier>(req.Tier, out var tier))
         {
             var manual = tier == UserTier.Free ? (UserTier?)null : tier;
-            if (manual != user.ManualTier) changed.Add($"plan given to {tier}");
+            if (manual != user.ManualTier) { changed.Add($"plan given to {tier}"); planGiven = tier; }
             user.ManualTier = manual;
             await Entitlements.RecomputeAsync(db, user, DateTime.UtcNow);
         }
@@ -506,6 +546,21 @@ public static class AdminEndpoints
         if (changed.Count > 0) AdminLog.Add(db, http, "user.update", user, string.Join(", ", changed));
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+
+        var log = loggerFactory.CreateLogger("Logit.Admin");
+        if (oldEmail is not null)
+        {
+            const string subject = "The email on your Logit account was changed";
+            var text = $"The email address on your Logit account ({user.Username}) was changed from {oldEmail} to {user.Email}.";
+            await AdminLog.TellPersonAsync(email, log, oldEmail, http, subject, text);
+            await AdminLog.TellPersonAsync(email, log, user.Email, http, subject, text);
+        }
+        if (planGiven is { } plan)
+            await AdminLog.TellPersonAsync(email, log, user.Email, http,
+                plan == UserTier.Free ? "A plan given to you on Logit was removed" : $"You've been given Logit {plan}",
+                plan == UserTier.Free
+                    ? "The plan an admin gave your Logit account has been removed. Anything you pay for yourself is unchanged."
+                    : $"Your Logit account ({user.Username}) now has {plan}. You don't pay anything for it.");
 
         if (adminChange is { } nowAdmin)
         {
@@ -525,20 +580,24 @@ public static class AdminEndpoints
     private static async Task<bool> IsLastAdminAsync(AppDbContext db, User user) =>
         user.IsAdmin && !await db.Users.AnyAsync(u => u.IsAdmin && u.Id != user.Id);
 
-    private static async Task<IResult> DeleteUser(Guid id, AppDbContext db, HttpContext http)
+    private static async Task<IResult> DeleteUser(Guid id, AppDbContext db, HttpContext http, IEmailSender email, ILoggerFactory loggers)
     {
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
         if (await IsLastAdminAsync(db, user))
             return Results.Conflict(new { error = "This is the only admin. Make someone else an admin first." });
+        var (to, username) = (user.Email, user.Username);
+        await AdminLog.ForgetAsync(db, user.Id);
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         db.Users.Remove(user);
-        AdminLog.Add(db, http, "user.delete", user, user.Email);
+        AdminLog.Add(db, http, "user.delete", user);
         await db.SaveChangesAsync();
+        await AdminLog.TellPersonAsync(email, loggers.CreateLogger("Logit.Admin"), to, http, "Your Logit account was deleted",
+            $"Your Logit account ({username}) and everything stored with it on this server have been deleted. Workouts still on your phone stay there.");
         return Results.NoContent();
     }
 
-    private static async Task<IResult> RevokeTokens(Guid id, AppDbContext db, HttpContext http)
+    private static async Task<IResult> RevokeTokens(Guid id, AppDbContext db, HttpContext http, IEmailSender email, ILoggerFactory loggers)
     {
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
@@ -549,6 +608,9 @@ public static class AdminEndpoints
         foreach (var t in tokens) t.RevokedAt = now;
         AdminLog.Add(db, http, "user.sign-out", user, $"{tokens.Count} sessions");
         await db.SaveChangesAsync();
+        if (tokens.Count > 0)
+            await AdminLog.TellPersonAsync(email, loggers.CreateLogger("Logit.Admin"), user.Email, http, "You were signed out of Logit",
+                $"Your Logit account ({user.Username}) was signed out on every device. Sign in again with your password; your data is unchanged.");
         return Results.Ok(new { revokedCount = tokens.Count });
     }
 
@@ -637,7 +699,7 @@ public static class AdminEndpoints
 
     /// <summary>Self-host fallback for password resets when SMTP isn't configured — lets an
     /// admin set a user's password directly via the admin panel/API.</summary>
-    private static async Task<IResult> ResetPassword(Guid id, AdminResetPasswordRequest req, AppDbContext db, HttpContext http)
+    private static async Task<IResult> ResetPassword(Guid id, AdminResetPasswordRequest req, AppDbContext db, HttpContext http, IEmailSender email, ILoggerFactory loggers)
     {
         var user = await db.Users.FindAsync(id);
         if (user is null) return Results.NotFound();
@@ -652,6 +714,8 @@ public static class AdminEndpoints
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now));
         AdminLog.Add(db, http, "user.reset-password", user);
         await db.SaveChangesAsync();
+        await AdminLog.TellPersonAsync(email, loggers.CreateLogger("Logit.Admin"), user.Email, http, "Your Logit password was reset",
+            $"The password for your Logit account ({user.Username}) was reset and you were signed out everywhere. The admin will give you a temporary password; change it in Settings › Account once you're signed in.");
         return Results.NoContent();
     }
 }

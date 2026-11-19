@@ -54,6 +54,10 @@
     "/admin/reports": "Reports",
     "/admin/plugins": "Plugin reviews",
     "/admin/server": "Server",
+    "/admin/subscriptions": "Subscriptions",
+    "/admin/growth": "Growth",
+    "/admin/diagnostics": "Diagnostics",
+    "/admin/discover": "Discover tests",
   };
   const pageTitle = $derived.by(() => {
     const p = page.url.pathname;

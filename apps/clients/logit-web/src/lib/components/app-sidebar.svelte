@@ -28,6 +28,7 @@
   import BookOpenIcon from "@lucide/svelte/icons/book-open";
   import ShieldIcon from "@lucide/svelte/icons/shield";
   import ServerIcon from "@lucide/svelte/icons/server";
+  import StethoscopeIcon from "@lucide/svelte/icons/stethoscope";
   import TicketIcon from "@lucide/svelte/icons/ticket";
   import FlagIcon from "@lucide/svelte/icons/flag";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
@@ -127,7 +128,7 @@
 
   // "Admin": the server's admin console, its own space like Coaching (admins only; the
   // pages themselves check with the server).
-  const adminGroups: NavGroup[] = [
+  const adminGroups: NavGroup[] = $derived([
     { label: null, items: [{ label: "Overview", href: "/admin", icon: LayoutDashboardIcon }] },
     {
       label: "People",
@@ -143,11 +144,21 @@
         { label: "Plugin reviews", href: "/admin/plugins", icon: PuzzleIcon, badge: () => adminState.pluginsWaiting },
       ],
     },
+    // getlogit.app only (the server refuses these on self-hosted servers too).
+    ...(apiClient.isSelfHosted() ? [] : [{
+      label: "getlogit.app",
+      items: [
+        { label: "Subscriptions", href: "/admin/subscriptions", icon: WalletIcon },
+        { label: "Growth", href: "/admin/growth", icon: TrendingUpIcon },
+        { label: "Diagnostics", href: "/admin/diagnostics", icon: StethoscopeIcon },
+        { label: "Discover tests", href: "/admin/discover", icon: CompassIcon },
+      ],
+    }]),
     {
       label: "Server",
       items: [{ label: "Server", href: "/admin/server", icon: ServerIcon, badge: () => adminState.serverWarnings }],
     },
-  ];
+  ]);
 
   const admin = $derived(page.url.pathname === "/admin" || page.url.pathname.startsWith("/admin/"));
   const coaching = $derived(!admin && isStudio && isCoachingPath(page.url.pathname, page.url.searchParams));
@@ -330,7 +341,8 @@
             {#if adminState.isAdmin && !admin}
               <DropdownMenu.Item>
                 {#snippet child({ props })}
-                  <a href="/admin" onclick={onNavClick} {...props}>
+                  <!-- A full page load: on getlogit.app Cloudflare asks for its sign-in first. -->
+                  <a href="/admin" data-sveltekit-reload onclick={onNavClick} {...props}>
                     <ShieldIcon class="size-4" />
                     Admin
                   </a>

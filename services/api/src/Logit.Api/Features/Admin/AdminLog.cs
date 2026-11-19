@@ -37,6 +37,40 @@ public static class AdminLog
             Detail = detail is { Length: > 500 } ? detail[..500] : detail,
         });
 
+    /// How long the admin log is kept.
+    public const int KeepDays = 365;
+
+    public static Task<int> PruneAsync(AppDbContext db, DateTime now)
+    {
+        var cutoff = now.AddDays(-KeepDays);
+        return db.AdminActions.Where(a => a.CreatedAt < cutoff).ExecuteDeleteAsync();
+    }
+
+    /// When an account is deleted, older entries stop naming it (the entry recording the
+    /// deletion itself keeps the username, until the log is pruned).
+    public static async Task ForgetAsync(AppDbContext db, Guid userId)
+    {
+        const string gone = "a deleted account";
+        await db.AdminActions.Where(a => a.TargetUserId == userId).ExecuteUpdateAsync(s => s.SetProperty(a => a.TargetName, gone));
+        await db.AdminActions.Where(a => a.ActorUserId == userId).ExecuteUpdateAsync(s => s.SetProperty(a => a.ActorName, gone));
+    }
+
+    /// Tells a person an admin changed their account, so nothing happens to it silently
+    /// (a changed email, for one, would otherwise be a quiet way to take it over).
+    public static async Task TellPersonAsync(IEmailSender email, ILogger logger, string? to, HttpContext http, string subject, string text)
+    {
+        if (!email.IsConfigured || string.IsNullOrWhiteSpace(to)) return;
+        try
+        {
+            await email.SendAsync(to, subject,
+                text + $"\n\nThis was done by an admin of {http.Request.Host}. If you didn't expect this, contact whoever runs that server.\n");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Admin change email failed: {Reason}", ex.Message);
+        }
+    }
+
     /// Emails every admin (plus `alsoTo`, e.g. someone who just stopped being one) when the list of
     /// admins changes, so a takeover can't happen quietly. A failed email never undoes the change.
     public static async Task NotifyAdminsAsync(

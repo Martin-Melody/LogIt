@@ -33,17 +33,69 @@ export interface PersonRow {
   displayName: string;
   isAdmin: boolean;
   createdAt: string;
-  sessionCount: number;
+  postCount: number;
+  /** When the app last signed in or refreshed its login (not when they trained). */
   lastActive: string | null;
+}
+
+export interface SubscriptionRow {
+  source: "Google" | "Apple" | "Stripe";
+  plan: "Pro" | "Studio";
+  state: string;
+  expiresAt: string | null;
+  autoRenewing: boolean;
+  isTest: boolean;
+  productId: string;
+  createdAt: string;
+  checkedAt: string | null;
 }
 
 export interface Person extends PersonRow {
   bio: string | null;
   avatarUrl: string | null;
-  postCount: number;
   activeTokens: number;
   inviteNote: string | null;
+  tier: "Free" | "Pro" | "Studio";
+  manualTier: "Pro" | "Studio" | null;
+  subscriptions: SubscriptionRow[];
+  devices: { label: string | null; lastSeen: string }[];
+  diagnostics: { id: string; createdAt: string }[];
   adminActions: AdminAction[];
+}
+
+export interface Subscriptions {
+  counts: { payingPro: number; payingStudio: number; newLast30Days: number; stopping: number; paymentProblems: number; givenByHand: number; test: number };
+  subscriptions: (Omit<SubscriptionRow, "checkedAt"> & { id: string; user: { id: string; username: string } })[];
+}
+
+export interface GrowthWeek {
+  weekOf: string;
+  signedUp: number;
+  loggedWorkout: number;
+  threeInWeekOne: number;
+  backInWeekTwo: number | null;
+  payingNow: number;
+}
+
+export interface DiagnosticsRow {
+  id: string;
+  createdAt: string;
+  appVersion: string;
+  platform: string;
+  note: string | null;
+  chars: number;
+  user: { id: string; username: string };
+}
+
+export interface DiscoverRow {
+  arm: string;
+  recipe: string;
+  kind: "post" | "person";
+  shown: number;
+  liked: number;
+  commented: number;
+  followed: number;
+  followRate: number;
 }
 
 export interface Invite {
@@ -122,7 +174,17 @@ export interface ServerInfo {
   canDownloadBackup: boolean;
 }
 
-const f = <T>(path: string, init?: RequestInit) => apiClient.fetch<T>(path, init);
+/** On getlogit.app the admin API is reached through the dashboard's own domain (/admin-api,
+ * behind Cloudflare Access) rather than api.getlogit.app; elsewhere directly. */
+function adminPath(path: string): string {
+  const via = (globalThis as { __LOGIT_ADMIN_API__?: unknown }).__LOGIT_ADMIN_API__;
+  return typeof via === "string" && via && path.startsWith("/admin/api/") ? `${location.origin}${via}${path.slice(10)}` : path;
+}
+
+/** On getlogit.app, the Cloudflare sign-in has to happen in a full page load before admin calls work. */
+export const behindCloudflare = () => typeof (globalThis as { __LOGIT_ADMIN_API__?: unknown }).__LOGIT_ADMIN_API__ === "string";
+
+const f = <T>(path: string, init?: RequestInit) => apiClient.fetch<T>(adminPath(path), init);
 const send = <T>(path: string, method: string, body?: unknown) =>
   f<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
 
@@ -131,11 +193,12 @@ export const adminApi = {
   claim: (key: string) => send<void>("/admin/claim", "POST", { key }),
 
   overview: () => f<Overview>("/admin/api/overview"),
+  ping: () => f<unknown>("/admin/api/stats"),
 
   people: (search = "") =>
     f<{ total: number; users: PersonRow[] }>(`/admin/api/users?pageSize=500${search ? `&search=${encodeURIComponent(search)}` : ""}`),
   person: (id: string) => f<Person>(`/admin/api/users/${id}`),
-  updatePerson: (id: string, changes: { displayName?: string; email?: string; isAdmin?: boolean }) =>
+  updatePerson: (id: string, changes: { displayName?: string; email?: string; isAdmin?: boolean; tier?: "Free" | "Pro" | "Studio" }) =>
     send<void>(`/admin/api/users/${id}`, "PATCH", changes),
   resetPassword: (id: string, newPassword: string) => send<void>(`/admin/api/users/${id}/reset-password`, "POST", { newPassword }),
   signOutEverywhere: (id: string) => send<{ revokedCount: number }>(`/admin/api/users/${id}/tokens`, "DELETE"),
@@ -154,6 +217,13 @@ export const adminApi = {
   setRegistration: (mode: "open" | "invite") => send<void>("/admin/api/server/registration", "PUT", { mode }),
   sendTestEmail: () => send<{ sentTo: string }>("/admin/api/server/test-email", "POST"),
   backup: () => f<Blob>("/admin/api/server/backup"),
+
+  subscriptions: () => f<Subscriptions>("/admin/api/subscriptions"),
+  growth: () => f<{ weeks: GrowthWeek[] }>("/admin/api/growth"),
+  diagnostics: () => f<{ reports: DiagnosticsRow[] }>("/admin/api/diagnostics"),
+  diagnosticsReport: (id: string) => f<DiagnosticsRow & { log: string }>(`/admin/api/diagnostics/${id}`),
+  deleteDiagnostics: (id: string) => send<void>(`/admin/api/diagnostics/${id}`, "DELETE"),
+  discover: (days: number) => f<DiscoverRow[]>(`/admin/api/discover?days=${days}`),
 
   pluginReleases: () => f<{ releases: PluginReleaseRow[] }>("/admin/api/plugins?status=all"),
   pluginRelease: (id: string) => f<PluginRelease>(`/admin/api/plugins/releases/${id}`),
@@ -184,6 +254,7 @@ export function describeAction(a: AdminAction): string {
     case "server.registration": return `${who} set sign-ups to ${a.detail ?? "a new mode"}`;
     case "server.test-email": return `${who} sent a test email`;
     case "server.backup": return `${who} downloaded a backup`;
+    case "diagnostics.view": return `${who} read ${them}'s diagnostics log`;
     case "diagnostics.delete": return `${who} deleted a diagnostics report from ${them}`;
     default: return `${who}: ${a.action}${detail}`;
   }
