@@ -4,6 +4,7 @@
   import { ApiError } from "@logit/core/api/client";
   import { adminApi, behindCloudflare } from "$lib/features/admin/adminApi";
   import { adminState } from "$lib/features/admin/adminState.svelte";
+  import ClaimAdminCard from "$lib/features/admin/ClaimAdminCard.svelte";
 
   let { children } = $props();
   let needsCloudflare = $state(false);
@@ -28,6 +29,10 @@
 
 {#if !adminState.loaded || !checked}
   <div class="flex flex-col gap-4"><Skeleton class="h-10 w-48" /><Skeleton class="h-40" /></div>
+{:else if !adminState.isAdmin && adminState.claimOffered}
+  <!-- Nobody runs this server yet. Offered here too, not only on the dashboard home: a Free
+       account on getlogit.app never sees the home page. -->
+  <div class="mx-auto max-w-xl py-10"><ClaimAdminCard always /></div>
 {:else if !adminState.isAdmin}
   <div class="mx-auto flex max-w-md flex-col items-center gap-2 py-16 text-center">
     <h1 class="text-xl font-semibold">Page not found</h1>

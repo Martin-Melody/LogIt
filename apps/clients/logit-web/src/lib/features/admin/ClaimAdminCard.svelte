@@ -2,6 +2,9 @@
      admin with the server's ADMIN_KEY. "Not now" hides it on this browser. -->
 <script lang="ts">
   import { onMount } from "svelte";
+
+  /** Show it even if "Not now" was chosen on the dashboard (the /admin page). */
+  let { always = false }: { always?: boolean } = $props();
   import { goto } from "$app/navigation";
   import { apiClient } from "@logit/core/api/client";
   import { reveal } from "$lib/transitions";
@@ -51,7 +54,7 @@
     </div>
     <button type="button" onclick={() => goto("/admin")} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground">Open admin</button>
   </section>
-{:else if adminState.claimOffered && !hidden}
+{:else if adminState.claimOffered && (always || !hidden)}
   <section transition:reveal aria-labelledby="claim" class="flex flex-col gap-3.5 rounded-[14px] border border-border bg-card p-5">
     <div>
       <h2 id="claim" class="text-[15px] font-semibold">Make this account the admin of {host}</h2>
@@ -67,7 +70,7 @@
       </p>
       <div class="flex flex-wrap gap-2">
         <button type="submit" disabled={busy || !key.trim()} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Make me the admin</button>
-        <button type="button" onclick={notNow} class="h-9 rounded-[9px] bg-muted px-3.5 text-[13px] font-medium hover:bg-accent">Not now</button>
+        {#if !always}<button type="button" onclick={notNow} class="h-9 rounded-[9px] bg-muted px-3.5 text-[13px] font-medium hover:bg-accent">Not now</button>{/if}
       </div>
     </form>
   </section>
