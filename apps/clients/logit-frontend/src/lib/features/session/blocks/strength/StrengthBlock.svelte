@@ -390,7 +390,8 @@
 
   async function applyPlan(output: ProgressionOutput) {
     const plan = suggestionToPlan(output, exerciseData?.defaultMachineId);
-    await onMutate((s: WorkoutSession) => applySetPlan(s, blockId, plan));
+    // The app filling in its plan isn't something to undo.
+    await onMutate((s: WorkoutSession) => applySetPlan(s, blockId, plan), { auto: true });
   }
 
   async function handleDismissNudge(nudgeId: string) {
@@ -564,9 +565,10 @@
   }
 
   async function handleDismissRest(setId: string) {
+    // Rests aren't undo steps (like the timer ending one).
     await onMutate((s: WorkoutSession) =>
       updateSet(s, blockId, setId, { restStartedAtMs: null }),
-    );
+    { auto: true });
   }
 
   // ── Drop set grouping ──────────────────────────────────────────────────────

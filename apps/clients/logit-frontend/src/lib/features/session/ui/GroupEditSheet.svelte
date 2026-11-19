@@ -31,7 +31,7 @@
     blocks: SessionBlock[];
     saving?: boolean;
     onClose: () => void;
-    onMutate: (updater: (s: WorkoutSession) => WorkoutSession) => Promise<void>;
+    onMutate: (updater: (s: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) => Promise<void>;
     onUngroup: () => void;
     /** Asks to remove the group and its exercises (the caller confirms). */
     onRemove: () => void;

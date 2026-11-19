@@ -27,7 +27,7 @@ export interface BlockBaseProps<T = unknown> {
    */
   onGroup?: () => void;
   onDelete: () => void | Promise<void>;
-  onMutate: (updater: (session: WorkoutSession) => WorkoutSession) => Promise<void>;
+  onMutate: (updater: (session: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) => Promise<void>;
 }
 
 export interface SessionBlockDefinition<T = unknown> {

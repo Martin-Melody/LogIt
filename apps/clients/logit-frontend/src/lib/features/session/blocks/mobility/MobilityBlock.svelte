@@ -102,7 +102,7 @@
         }
       }
       return next;
-    });
+    }, { auto: true });
   }
 
   function prevFor(set: MobilitySet): { durationSec?: number; reps?: number; loadKg?: number } | null {
