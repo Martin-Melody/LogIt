@@ -56,6 +56,25 @@ export type MobilityProgressionInput = {
   plannedTargets?: { sets?: number; durationSec?: number; reps?: number; loadKg?: number };
   /** Epoch ms "now", passed in to keep the algorithm pure. */
   now: number;
+  /** This week's stretching time for the drill's area, all its drills together, and the
+   * weekly time past which more doesn't add much (about 10 min; Ingram et al. 2024). */
+  areaWeek?: { area: string; doneSec: number; targetSec: number };
+  /** How the drill moves on past that (domain/mobilityProgressions.ts); missing for drills
+   * the catalog doesn't know (your own, packs without it). */
+  progression?: { takesLoad: boolean; harderCues: string[]; harder: { id: string; name: string }[]; steady: boolean };
+};
+
+/**
+ * What to do once the drill's area has its weekly time, in order: add load; the next harder
+ * cue on the same drill; a harder drill (several may be offered, or `pickHarder` for "choose
+ * one yourself"). The app shows it as a card on the drill.
+ */
+export type MobilityNextStep = {
+  areaWeek: { area: string; doneSec: number; targetSec: number };
+  load?: { kg: number };
+  cue?: { text: string; step: number; of: number };
+  harder?: { id: string; name: string }[];
+  pickHarder?: boolean;
 };
 
 export type SuggestedMobilitySet = {
@@ -73,6 +92,7 @@ export type MobilityProgressionOutput = {
   label?: string;
   /** Freeform coaching note. */
   notes?: string;
+  next?: MobilityNextStep;
 };
 
 export type MobilityProgressionAlgorithm = MobilityProgressionAlgorithmMeta & {

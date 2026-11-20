@@ -2,13 +2,23 @@ import type { AlgorithmPreferencesField } from "../../domain/progression";
 import type {
   MobilityProgressionAlgorithm,
   MobilityProgressionInput,
+  MobilityNextStep,
   MobilityProgressionOutput,
   MobilitySetRecord,
   SuggestedMobilitySet,
 } from "../../domain/mobilityProgression";
 
 /**
- * Linear mobility progression — treat a stretch like a lift.
+ * Progress (id linear-mobility): the default mobility algorithm.
+ *
+ * Builds each body area up to about 10 minutes of stretching a week (all its drills together),
+ * where flexibility gains top out (Ingram et al. 2024, Sports Medicine). Below that, holds get
+ * longer and reps go up as described below. Past it, holds and reps stay as they are and the
+ * drill moves on instead (MobilityNextStep): load if it takes load (loaded full-range work
+ * builds range about as well as stretching, Alizadeh et al. 2023), else the next harder cue on
+ * the same drill, and harder drills, else the person picks one. How intense the stretch felt
+ * didn't change results in that review, so the depth rating no longer gates progress by
+ * default. Martin's review of the drill links: docs/mobility-progressions-draft.md.
  *
  *  - Hold drills: add a few seconds of time-under-tension each session you meet
  *    the target, hold steady when you miss, back off ~10% after two misses,
@@ -20,7 +30,15 @@ import type {
  */
 
 type SideStreak = { hits: number; misses: number };
-type LinearMobilityState = { streak: Record<string, SideStreak> };
+type LinearMobilityState = {
+  streak: Record<string, SideStreak>;
+  /** Harder cues taken on so far (the next one is harderCues[cueStep]). */
+  cueStep?: number;
+  /** "Not yet" this week: no next step until the week after (Monday's date). */
+  declinedWeek?: string;
+  /** Drills the person picked as this one's next step (for drills the catalog has none for). */
+  picked?: { id?: string; name: string }[];
+};
 
 type LinearMobilityPreferences = {
   startHoldSec: number;
@@ -32,6 +50,8 @@ type LinearMobilityPreferences = {
   loadIncrementKg: number;
   minDepthToProgress: number;
   setsPerSide: number;
+  areaWeeklySec: number;
+  startLoadKg: number;
 };
 
 const DEFAULT_PREFERENCES: LinearMobilityPreferences = {
@@ -42,8 +62,10 @@ const DEFAULT_PREFERENCES: LinearMobilityPreferences = {
   repCeiling: 15,
   repIncrement: 1,
   loadIncrementKg: 2.5,
-  minDepthToProgress: 3,
+  minDepthToProgress: 0,
   setsPerSide: 3,
+  areaWeeklySec: 600,
+  startLoadKg: 5,
 };
 
 const PREFERENCES_SCHEMA: AlgorithmPreferencesField[] = [
@@ -54,7 +76,9 @@ const PREFERENCES_SCHEMA: AlgorithmPreferencesField[] = [
   { key: "repCeiling", label: "Rep ceiling", description: "Hit this on every set to trigger a load increase.", type: "number", default: 15, min: 2, max: 50, step: 1, unit: "reps" },
   { key: "repIncrement", label: "Rep increment", description: "Reps to add each session you meet the target.", type: "number", default: 1, min: 1, max: 5, step: 1, unit: "reps" },
   { key: "loadIncrementKg", label: "Load increment", description: "Load to add when you hit the rep ceiling on a loaded drill.", type: "number", default: 2.5, min: 0.25, max: 20, step: 0.25, unit: "kg" },
-  { key: "minDepthToProgress", label: "Minimum depth", description: "Hold time won't advance until your logged depth rating averages at least this. 0 disables the gate.", type: "number", default: 3, min: 0, max: 5, step: 1 },
+  { key: "minDepthToProgress", label: "Minimum depth", description: "Hold time won't advance until your logged depth rating averages at least this. 0 (the default) turns the gate off.", type: "number", default: 0, min: 0, max: 5, step: 1 },
+  { key: "areaWeeklySec", label: "Weekly time per area", description: "Past this much stretching for an area in a week, holds stop growing and the drill moves on (load, a harder cue, a harder drill).", type: "number", default: 600, min: 120, max: 3600, step: 60, unit: "s" },
+  { key: "startLoadKg", label: "First load", description: "Load suggested the first time a drill that takes load moves on.", type: "number", default: 5, min: 0.5, max: 40, step: 0.5, unit: "kg" },
   { key: "setsPerSide", label: "Sets per side", description: "How many sets to prescribe (per side for unilateral drills).", type: "number", default: 3, min: 1, max: 6, step: 1, unit: "sets" },
 ];
 
@@ -78,12 +102,26 @@ function prefs(raw: unknown): LinearMobilityPreferences {
     loadIncrementKg: num(p.loadIncrementKg, DEFAULT_PREFERENCES.loadIncrementKg),
     minDepthToProgress: num(p.minDepthToProgress, DEFAULT_PREFERENCES.minDepthToProgress),
     setsPerSide: Math.max(1, Math.round(num(p.setsPerSide, DEFAULT_PREFERENCES.setsPerSide))),
+    areaWeeklySec: num(p.areaWeeklySec, DEFAULT_PREFERENCES.areaWeeklySec),
+    startLoadKg: num(p.startLoadKg, DEFAULT_PREFERENCES.startLoadKg),
   };
 }
 
 function readState(raw: unknown): LinearMobilityState {
   const s = (raw ?? {}) as Partial<LinearMobilityState>;
-  return { streak: s.streak && typeof s.streak === "object" ? { ...s.streak } : {} };
+  return {
+    streak: s.streak && typeof s.streak === "object" ? { ...s.streak } : {},
+    ...(typeof s.cueStep === "number" ? { cueStep: s.cueStep } : {}),
+    ...(typeof s.declinedWeek === "string" ? { declinedWeek: s.declinedWeek } : {}),
+    ...(Array.isArray(s.picked) ? { picked: s.picked } : {}),
+  };
+}
+
+/** Monday of `ms`'s week, local time, as YYYY-MM-DD. */
+export function mobilityWeekOf(ms: number): string {
+  const d = new Date(ms);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 const SIDE_LABEL: Record<string, string> = { left: " L", right: " R", both: "" };
@@ -120,6 +158,8 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
   const last = input.history[0];
   const sideKeys = input.drill.perSide ? ["left", "right"] : ["both"];
   const isHold = input.drill.metric === "hold";
+  // The area has its weekly time: hold steady and move on (see the top of the file).
+  const areaDone = !!input.areaWeek && input.areaWeek.doneSec >= p.areaWeeklySec;
 
   const sets: SuggestedMobilitySet[] = [];
   const nextStreak: Record<string, SideStreak> = { ...state.streak };
@@ -157,8 +197,12 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
       const depth = avgDepth(lastSets);
       const depthOK = p.minDepthToProgress <= 0 || depth === 0 || depth >= p.minDepthToProgress;
 
+      const lastLoad = bestNumber(lastSets.map((s) => s.loadKg));
       let nextHold: number;
-      if (metTarget && depthOK) {
+      if (areaDone) {
+        nextHold = roundHold(lastBest, p.holdIncrementSec);
+        nextStreak[sideKey] = prevStreak;
+      } else if (metTarget && depthOK) {
         nextHold = roundHold(Math.min(p.maxHoldSec, lastBest + p.holdIncrementSec), p.holdIncrementSec);
         nextStreak[sideKey] = { hits: prevStreak.hits + 1, misses: 0 };
         if (lastBest + p.holdIncrementSec > p.maxHoldSec) {
@@ -175,7 +219,7 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
         nextHold = roundHold(lastBest, p.holdIncrementSec);
         nextStreak[sideKey] = { hits: 0, misses: prevStreak.misses + 1 };
       }
-      target = { durationSec: nextHold };
+      target = lastLoad > 0 ? { durationSec: nextHold, loadKg: lastLoad } : { durationSec: nextHold };
       labelParts.push(`${lastBest}s→${nextHold}s${SIDE_LABEL[sideKey] ?? ""}`);
     } else {
       // Reps metric.
@@ -185,7 +229,10 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
 
       let nextReps: number;
       let nextLoad = workingLoad;
-      if (hitCeiling && workingLoad > 0) {
+      if (areaDone) {
+        nextReps = workingReps;
+        nextStreak[sideKey] = prevStreak;
+      } else if (hitCeiling && workingLoad > 0) {
         nextLoad = workingLoad + p.loadIncrementKg;
         nextReps = p.repFloor;
         nextStreak[sideKey] = { hits: prevStreak.hits + 1, misses: 0 };
@@ -208,19 +255,60 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
     }
   }
 
+  // The harder cue being worked on, as a reminder on the drill.
+  const cues = input.progression?.harderCues ?? [];
+  const cueStep = state.cueStep ?? 0;
+  if (cueStep > 0 && cues[cueStep - 1]) noteParts.unshift(`Cue: ${cues[cueStep - 1]}.`);
+
+  const next = areaDone && input.areaWeek && state.declinedWeek !== mobilityWeekOf(input.now)
+    ? nextStep(input, p, state, sets)
+    : undefined;
+
   return {
     sets,
-    nextState: { streak: nextStreak } satisfies LinearMobilityState,
+    nextState: {
+      streak: nextStreak,
+      ...(state.cueStep ? { cueStep: state.cueStep } : {}),
+      ...(state.declinedWeek ? { declinedWeek: state.declinedWeek } : {}),
+      ...(state.picked ? { picked: state.picked } : {}),
+    } satisfies LinearMobilityState,
     label: labelParts.length ? `Last → next: ${labelParts.join(" · ")}` : undefined,
     notes: noteParts.length ? noteParts.join(" ") : undefined,
+    ...(next ? { next } : {}),
+  };
+}
+
+/** Load, else the next harder cue and harder drills, else "pick one". Neck drills never. */
+function nextStep(
+  input: MobilityProgressionInput,
+  p: LinearMobilityPreferences,
+  state: LinearMobilityState,
+  sets: SuggestedMobilitySet[],
+): MobilityNextStep | undefined {
+  const areaWeek = { area: input.areaWeek!.area, doneSec: input.areaWeek!.doneSec, targetSec: p.areaWeeklySec };
+  const prog = input.progression;
+  if (prog?.steady) return undefined;
+  if (prog?.takesLoad) {
+    const now = bestNumber(sets.map((s) => s.loadKg));
+    return { areaWeek, load: { kg: now > 0 ? now + p.loadIncrementKg : p.startLoadKg } };
+  }
+  const cues = prog?.harderCues ?? [];
+  const step = state.cueStep ?? 0;
+  const seen = new Set<string>();
+  const harder = [...(prog?.harder ?? []), ...(state.picked ?? []).map((d) => ({ id: d.id ?? "", name: d.name }))]
+    .filter((d) => !seen.has(d.name) && seen.add(d.name));
+  return {
+    areaWeek,
+    ...(step < cues.length ? { cue: { text: cues[step]!, step: step + 1, of: cues.length } } : {}),
+    ...(harder.length ? { harder } : { pickHarder: true }),
   };
 }
 
 export const linearMobility: MobilityProgressionAlgorithm = {
   id: "linear-mobility",
-  name: "Linear mobility",
+  name: "Progress",
   description:
-    "Adds time-under-tension or reps/load each session you meet the target, per side, with a depth gate and a soft cap that nudges toward loading.",
+    "Holds get longer and reps go up until an area has about 10 minutes a week, where flexibility gains top out. Then each drill moves on: load, a harder version of the same stretch, or a harder stretch.",
   author: "Logit",
   defaultState: DEFAULT_STATE,
   defaultPreferences: DEFAULT_PREFERENCES,

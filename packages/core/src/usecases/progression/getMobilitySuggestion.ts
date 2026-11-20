@@ -8,6 +8,30 @@ import { nowMs } from "../../domain/time";
 import { DEFAULT_MOBILITY_ALGORITHM_ID } from "./getMobilityProgressionConfig";
 import type { ProgressionDeps } from "./deps";
 import type { ExerciseProgressionSettings } from "../../domain/progression";
+import { drillArea, progressionFor } from "../../domain/mobilityProgressions";
+import { mobilityWeekOf } from "../../progression/algorithms/linearMobility";
+
+/** About 10 minutes a week per area (Ingram et al. 2024); the algorithm may use its own. */
+export const AREA_WEEKLY_TARGET_SEC = 600;
+/** A rep of a rep drill counts for this long toward an area's weekly time. */
+const SEC_PER_REP = 3;
+
+/** This week's stretching time for `area`, from every drill in it (finished sets only). */
+export function areaWeekSec(sessions: WorkoutSession[], area: string, nowMs: number): number {
+  const week = mobilityWeekOf(nowMs);
+  let sec = 0;
+  for (const s of sessions) {
+    if (mobilityWeekOf(s.startedAtMs) !== week) continue;
+    for (const b of mobilityBlocksOf(s)) {
+      if (drillArea({ id: b.drillId, name: b.drillName }) !== area) continue;
+      for (const set of b.sets) {
+        if (!set.completed) continue;
+        sec += set.durationSec ?? (set.reps ? set.reps * SEC_PER_REP : 0);
+      }
+    }
+  }
+  return sec;
+}
 
 const HISTORY_WINDOW = 20;
 
@@ -116,13 +140,20 @@ export async function getMobilitySuggestion(
   const storedPrefs = await progressionRepo.getAlgorithmPreferences(algorithmId);
   const userPreferences = storedPrefs ?? algorithm.defaultPreferences ?? {};
 
+  const now = nowMs();
+  // shortcut: area and progression come from the built-in catalog only; own and pack drills
+  // get none (so no weekly cap) until drills carry an area and links of their own.
+  const area = drillArea(drill);
+  const progression = progressionFor(drill);
   return algorithm.suggest({
-    drill,
+    drill: area ? { ...drill, area } : drill,
     history,
     state,
     userPreferences,
     plannedTargets,
-    now: nowMs(),
+    now,
+    ...(area ? { areaWeek: { area, doneSec: areaWeekSec(recentSessions, area, now), targetSec: AREA_WEEKLY_TARGET_SEC } } : {}),
+    ...(progression ? { progression } : {}),
   });
 }
 
@@ -140,6 +171,29 @@ export async function applySessionMobilityProgression(
     algorithmId,
     state: output.nextState,
     updatedAtMs: nowMs(),
+  });
+}
+
+/**
+ * The person's answer to the drill's next step: took the next harder cue, "Not yet" (asked
+ * again next week), or picked a drill as its next step. Kept in the drill's progression state.
+ */
+export async function answerMobilityNextStep(
+  drill: Pick<MobilityDrillRef, "id" | "name">,
+  answer: { kind: "cue" } | { kind: "notYet" } | { kind: "picked"; drill: { id?: string; name: string } },
+  deps: Pick<ProgressionDeps, "progressionRepo">,
+): Promise<void> {
+  const algorithmId = await resolveMobilityAlgorithmId(drill, deps);
+  const key = mobilityStateKey(drill);
+  const saved = await deps.progressionRepo.getExerciseState(key);
+  const state = { ...((saved?.algorithmId === algorithmId ? saved.state : null) ?? { streak: {} }) } as {
+    cueStep?: number; declinedWeek?: string; picked?: { id?: string; name: string }[];
+  };
+  if (answer.kind === "cue") state.cueStep = (state.cueStep ?? 0) + 1;
+  if (answer.kind === "notYet") state.declinedWeek = mobilityWeekOf(nowMs());
+  if (answer.kind === "picked") state.picked = [...(state.picked ?? []).filter((d) => d.name !== answer.drill.name), answer.drill];
+  await deps.progressionRepo.saveExerciseState({
+    key, exerciseId: drill.id, exerciseName: drill.name, algorithmId, state, updatedAtMs: nowMs(),
   });
 }
 
