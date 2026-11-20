@@ -198,7 +198,10 @@ const n = (v: BlockValue | undefined) => (typeof v === "number" && isFinite(v) ?
 export function renderSummary(data: Pick<PluginBlockData, "entries" | "blockFields" | "entryName">, template?: string): string {
   const done = data.entries.filter((e) => e.done !== false);
   const count = done.length;
-  const tpl = template ?? `{count} ${count === 1 ? data.entryName.one.toLowerCase() : data.entryName.many.toLowerCase()}`;
+  const one = data.entryName.one.toLowerCase();
+  const many = data.entryName.many.toLowerCase();
+  // "{count} rounds" reads "1 round" for one.
+  const tpl = (template ?? `{count} ${many}`).replace(`{count} ${many}`, `{count} ${count === 1 ? one : many}`);
   const values = (key: string) => done.map((e) => n(e.values[key]));
   const round1 = (x: number) => String(Math.round(x * 10) / 10);
   return tpl.replace(/\{(\w+)(?::(\w+))?\}/g, (_m, a: string, b?: string) => {

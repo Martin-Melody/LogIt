@@ -91,7 +91,7 @@
         {#each done as e (e.id)}
           <div class="flex min-h-11 items-center gap-2 border-t border-border/60 px-3.5 text-sm tabular-nums">
             <span class="w-16 shrink-0 text-muted-foreground">{decl.entry.one} {entryNo(e.id)}</span>
-            <span class="min-w-0 flex-1 truncate">{columns.map(([k, t]) => formatBlockValue(t, e.values[k], unit)).filter((v) => v !== "–").join(" · ")}</span>
+            <span class="min-w-0 flex-1 truncate">{columns.map(([k, t, label]) => [formatBlockValue(t, e.values[k], unit), t === "counter" || t === "number" || t === "scale" ? `${label} ` : ""]).filter(([v]) => v !== "–").map(([v, l]) => l + v).join(" · ")}</span>
             <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground" aria-label="Edit {decl.entry.one.toLowerCase()} {entryNo(e.id)}"
               disabled={saving} onclick={() => change(setEntryDone(e.id, false))}><RotateCcw class="h-4 w-4" /></button>
           </div>

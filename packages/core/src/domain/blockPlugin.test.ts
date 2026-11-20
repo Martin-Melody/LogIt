@@ -82,5 +82,6 @@ describe("plugin block data", () => {
 
   it("without a template: count and the entry name", () => {
     expect(renderSummary({ entries: [{ id: "a", values: {} }], blockFields: {}, entryName: { one: "Climb", many: "Climbs" } })).toBe("1 climb");
+    expect(renderSummary({ entries: [{ id: "a", values: { subs: 1 } }], blockFields: {}, entryName: { one: "Round", many: "Rounds" } }, BJJ.summary)).toBe("1 round · 1 subs · 0 tapped");
   });
 });

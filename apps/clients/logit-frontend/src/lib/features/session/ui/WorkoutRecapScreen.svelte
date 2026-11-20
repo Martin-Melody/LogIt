@@ -78,7 +78,7 @@
   }
 
   const mobilityBlocks = session.blocks.filter((b) => b.type === "mobility");
-  const blockCount = exercises.length + cardioBlocks.length + mobilityBlocks.length;
+  const blockCount = exercises.length + cardioBlocks.length + mobilityBlocks.length + session.blocks.filter((b) => b.type.startsWith("plugin:")).length;
   const totalMobilityHoldSec = mobilityBlocks.reduce((sum, b) => {
     const data = b.data as MobilityBlockData;
     return sum + data.sets.reduce((s, set) => s + (set.durationSec ?? 0), 0);
