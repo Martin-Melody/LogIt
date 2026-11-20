@@ -26,7 +26,10 @@
     clearOtherRests,
   } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
-  import { getMobilitySuggestion, resolveMobilityAlgorithmId, setMobilityDrillAlgorithm } from "@logit/core/usecases/progression/getMobilitySuggestion";
+  import { answerMobilityNextStep, getMobilitySuggestion, resolveMobilityAlgorithmId, setMobilityDrillAlgorithm } from "@logit/core/usecases/progression/getMobilitySuggestion";
+  import type { MobilityNextStep } from "@logit/core/domain/mobilityProgression";
+  import { toDisplayWeight } from "@logit/core/domain/units";
+  import MobilityNextCard from "./MobilityNextCard.svelte";
   import { SAME_EVERY_TIME_ID } from "@logit/core/progression/algorithms/sameEveryTime";
   import { DEFAULT_MOBILITY_ALGORITHM_ID } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
   import { pushExerciseSetting } from "$lib/sync/syncService";
@@ -66,6 +69,11 @@
   let suggestionLabel = $state<string | null>(null);
   let suggestionNotes = $state<string | null>(null);
   let suggestedSets = $state<SuggestSet[]>([]);
+  // Past the area's weekly time: the drill's next step (MobilityNextCard), until answered.
+  let next = $state<MobilityNextStep | null>(null);
+  let answered = $state(false);
+  // A harder drill was just swapped in: its own goals replace the old drill's.
+  let replaceTargetsNext = false;
 
   let lastFetchedKey = "";
   $effect(() => {
@@ -85,7 +93,10 @@
         suggestionLabel = out.label ?? null;
         suggestionNotes = out.notes ?? null;
         suggestedSets = out.sets ?? [];
-        void maybePrefillTargets(out.sets ?? []);
+        next = out.next ?? null;
+        answered = false;
+        void maybePrefillTargets(out.sets ?? [], replaceTargetsNext);
+        replaceTargetsNext = false;
       })
       .catch(() => {});
   });
@@ -117,6 +128,43 @@
       switching = false;
     }
   }
+
+  // ── The next step past the area's weekly time ──
+  const drillRef = () => ({ id: data.drillId, name: data.drillName });
+  async function refreshSuggestion() {
+    const out = await getMobilitySuggestion({ ...drillRef(), metric: data.metric, perSide: data.perSide }, getProgressionDeps()).catch(() => null);
+    suggestionLabel = out?.label ?? null;
+    suggestionNotes = out?.notes ?? null;
+  }
+  async function nextAddLoad(kg: number) {
+    answered = true;
+    await onMutate((session) => {
+      let n = session;
+      for (const set of data.sets) if (!set.completed) n = updateMobilitySet(n, blockId, set.id, { loadKg: kg });
+      return n;
+    });
+  }
+  async function nextCue() {
+    answered = true;
+    await answerMobilityNextStep(drillRef(), { kind: "cue" }, getProgressionDeps()).catch(() => {});
+    await refreshSuggestion();
+  }
+  async function nextNotYet() {
+    answered = true;
+    await answerMobilityNextStep(drillRef(), { kind: "notYet" }, getProgressionDeps()).catch(() => {});
+    toast("Asked again next week");
+  }
+  async function nextHarder(d: { id?: string; name: string }) {
+    replaceTargetsNext = true;
+    await handleSwap({ drillName: d.name, drillId: d.id || undefined });
+  }
+  let pickOpen = $state(false);
+  async function nextPicked(sel: { drillName: string; drillId?: string }) {
+    // Remembered on the drill it came from, as its next step from now on.
+    await answerMobilityNextStep(drillRef(), { kind: "picked", drill: { id: sel.drillId, name: sel.drillName } }, getProgressionDeps()).catch(() => {});
+    await nextHarder({ id: sel.drillId, name: sel.drillName });
+  }
+  const nextLoadInUnit = $derived(next?.load ? Math.round(toDisplayWeight(next.load.kg, $profile.weightUnit) * 2) / 2 : null);
 
   // Prefill hold targets on a fresh, untouched block so the timer has a goal.
   /** `replace`: the goals came from a suggestion that's just been swapped (Keep it the same). */
@@ -517,6 +565,11 @@
         disabled={switching} onclick={() => void switchProgress()}>{keepsSame ? "Progress it" : "Keep it the same"}</button>
     </div>
   {/if}
+  {#if !collapsed && round === undefined && next && !answered && !keepsSame}
+    <MobilityNextCard {next} unitLabel={$profile.weightUnit === "lbs" ? "lb" : "kg"} loadInUnit={nextLoadInUnit}
+      onAddLoad={(kg) => void nextAddLoad(kg)} onCue={() => void nextCue()} onNotYet={() => void nextNotYet()}
+      onHarder={(d) => void nextHarder(d)} onPick={() => (pickOpen = true)} />
+  {/if}
   {#if !collapsed && round === undefined && suggestionNotes}
     <p class="px-3 pb-1.5 text-xs text-muted-foreground">{suggestionNotes}</p>
   {/if}
@@ -743,6 +796,17 @@
   submitLabel="Swap"
   onOpenChange={(v) => (swapOpen = v)}
   onSubmit={handleSwap}
+/>
+
+<AddMobilityDialog
+  open={pickOpen}
+  saving={saving}
+  mode="swap"
+  title="What's next after {data.drillName}?"
+  description="Pick what you'd do next. It's remembered as this drill's next step."
+  submitLabel="Use this one"
+  onOpenChange={(v) => (pickOpen = v)}
+  onSubmit={nextPicked}
 />
 
 <MobilityDrillDetailSheet
