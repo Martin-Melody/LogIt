@@ -1,136 +1,156 @@
-# Mobility drill progressions: DRAFT for review
+# Mobility drill progressions
 
-Status: draft by Claude, 2026-11-20, **needs Martin's review** (or a physio's) before it becomes
-data. These are coaching judgements, not facts.
+Status: drafted by Claude 2026-11-20, reviewed by Martin the same day (his answers below). Not built.
+The links and cues are coaching judgements; change them freely as the data is built.
 
-Why: Progress is changing to "build each area up to about 10 minutes a week, then add load, then a
-harder version" (research: gains in flexibility peak around 10 min of stretching a week per muscle
-group and don't grow past it; loaded full-range training improves range of motion about as much as
-stretching). For that the app has to know, per drill, whether it takes load and which drill is the
-harder (and easier) version. Today the catalog has neither.
+## How Progress will work
 
-How to read it: **Easier / Harder** link to drills already in the library. **Load** means the drill
-can sensibly take added weight (a kettlebell, a plate, ankle weights), so "add load" is the first step
-once an area has its 10 minutes. Where the natural harder version isn't in the library, it's named
-under "Not in the library yet" (adding them is a separate job).
+Progress (the default for mobility) becomes:
 
-When a drill has no harder version and takes no load, the app offers "pick a harder drill" from the
-same area, and remembers what you pick.
+1. **Build each area up to about 10 minutes a week**, all its drills together (Martin: per area).
+   Research: flexibility gains peak around 10 min of stretching a week per muscle group and don't
+   grow past it (Ingram et al. 2024, *Sports Medicine*); how intense the stretch is didn't change
+   the result, so the depth rating no longer holds progress back (it's kept as a note).
+2. Then, in this order:
+   - **Add load** if the drill takes it (loaded full-range training improves range of motion about
+     as much as stretching: Alizadeh et al. 2023).
+   - **A harder cue on the same drill**, one step at a time ("knee closer to the wall"). Martin:
+     harder can just be a cue on the same drill.
+   - **A harder drill.** A drill can have several (Martin: it's a tree, not a chain; Lizard pose is
+     the start of many advanced stretches), so the card offers them and remembers the pick.
+   - **Pick one yourself** from the same area when the catalog has nothing (your own drills,
+     community packs, gaps), remembered as your next step.
+3. **Same every time** (built, PR #100) and **Keep it the same** on a drill turn all of this off.
 
-## Hip flexors
+Data per drill: `takesLoad`, `harderCues: string[]` (in order), `harder: string[]` and
+`easier: string[]` (drill ids, any number). Community mobility packs can declare the same.
 
-| Drill | Easier | Harder | Load | Notes |
+## The drills
+
+**Load** = can sensibly take added weight. **Harder cues** are steps on the same drill, in order.
+**Harder / Easier** list drills already in the library; "not in the library yet" names ones to add.
+
+### Hip flexors
+
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Hip flexor lunge stretch | | Lizard pose | no | |
-| Lizard pose | Hip flexor lunge stretch | Couch stretch | no | |
-| Couch stretch | Lizard pose | | no | Harder: knee closer to the wall (same drill, cue) |
-| Standing hip flexor raise | | | yes (ankle weight) | Active end-range strength |
+| Hip flexor lunge stretch | | Lizard pose, Couch stretch | no | Squeeze the back glute; reach the same-side arm up |
+| Lizard pose | Hip flexor lunge stretch | Couch stretch, Pigeon pose, Frog stretch | no | Elbows down to the floor; back knee lifted |
+| Couch stretch | Lizard pose, Standing quad stretch | | no | Knee closer to the wall; torso upright; hands off the floor |
+| Standing hip flexor raise | | | yes (ankle weight) | Pause at the top |
 
-## Adductors
+Not in the library yet: front split (after Lizard and Couch).
 
-| Drill | Easier | Harder | Load | Notes |
+### Adductors
+
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Butterfly stretch | | Frog stretch | no | |
-| Frog stretch | Butterfly stretch | Pancake fold | no | |
-| Pancake fold | Frog stretch | | yes (plate held forward) | |
-| Cossack squat | | | yes (goblet kettlebell) | |
+| Butterfly stretch | | Frog stretch, Pancake fold | no | Feet closer in; fold forward from the hips |
+| Frog stretch | Butterfly stretch, Lizard pose | Pancake fold | no | Knees wider; hips back towards the heels |
+| Pancake fold | Frog stretch, Butterfly stretch | | yes (plate held forward) | Legs wider; chest to the floor |
+| Cossack squat | | | yes (goblet kettlebell) | Lower; heel down; pause at the bottom |
 
-## Hamstrings
+Not in the library yet: middle split.
 
-| Drill | Easier | Harder | Load | Notes |
+### Hamstrings
+
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Elephant walk | | Standing hamstring stretch | no | Dynamic, a warm-up as much as a stretch |
-| Standing hamstring stretch | Elephant walk | Seated pike stretch | no | |
-| Seated pike stretch | Standing hamstring stretch | Jefferson curl | yes (plate held) | |
-| Jefferson curl | Seated pike stretch | | yes (kettlebell, start light) | Loaded spinal flexion: small jumps only |
+| Elephant walk | | Standing hamstring stretch | no | Straighter knees |
+| Standing hamstring stretch | Elephant walk | Seated pike stretch, Jefferson curl | no | Foot higher; toes pulled back |
+| Seated pike stretch | Standing hamstring stretch | Jefferson curl | yes (plate held) | Reach past the toes; flat back |
+| Jefferson curl | Seated pike stretch | | yes (kettlebell, start light) | Stand on a box for more range |
 
-## Glutes
+Loaded spinal flexion: Jefferson curl only goes up in small jumps.
 
-| Drill | Easier | Harder | Load | Notes |
+### Glutes
+
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Seated figure-4 | | Pigeon pose | no | |
-| Pigeon pose | Seated figure-4 | | no | |
+| Seated figure-4 | | Pigeon pose | no | Lean forward |
+| Pigeon pose | Seated figure-4, Lizard pose | | no | Front shin more parallel to the front; fold forward |
 
-## Hips
+### Hips
 
-| Drill | Easier | Harder | Load | Notes |
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Hip CARs | | | yes (ankle weight) | |
-| 90/90 hip switch | | Shin box get-up | no | Harder too: hands off the floor (cue) |
-| Shin box get-up | 90/90 hip switch | | no | |
+| Hip CARs | | | yes (ankle weight) | Slower; bigger circles |
+| 90/90 hip switch | | Shin box get-up | no | Hands off the floor |
+| Shin box get-up | 90/90 hip switch | | no | Without hands |
 
-## Ankles and calves
+### Ankles and calves
 
-| Drill | Easier | Harder | Load | Notes |
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Half-kneeling ankle rock | | Deep squat hold | yes (kettlebell on the knee) | |
-| Deep squat hold | Half-kneeling ankle rock | | yes (goblet counterweight) | |
-| Tibialis raise | | | yes (tib bar or plate) | Strength more than stretch |
-| Straight-leg calf stretch | | Downward dog | no | |
-| Downward dog | Straight-leg calf stretch | | no | |
+| Half-kneeling ankle rock | | Deep squat hold | yes (kettlebell on the knee) | Foot further from the wall |
+| Deep squat hold | Half-kneeling ankle rock | | yes (goblet counterweight) | Heels down, feet narrower |
+| Tibialis raise | | | yes (tib bar or plate) | Feet further from the wall |
+| Straight-leg calf stretch | | Downward dog | no | Back foot further back |
+| Downward dog | Straight-leg calf stretch | | no | Heels down; one leg at a time |
 
-Not in the library yet: a loaded calf stretch off a step (heel drops with weight).
+Not in the library yet: loaded calf stretch off a step.
 
-## Quads
+### Quads
 
-| Drill | Easier | Harder | Load | Notes |
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Standing quad stretch | | Couch stretch | no | Couch stretch also counts for hip flexors |
+| Standing quad stretch | | Couch stretch | no | Tuck the pelvis; knee behind the hip |
 
-## Lower back
+### Lower back
 
-| Drill | Easier | Harder | Load | Notes |
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Cat-cow | | | no | |
-| Child's pose | | | no | |
-| Sphinx / cobra | | | no | |
-| Scorpion stretch | | | no | |
+| Cat-cow | | | no | Slower, one segment at a time |
+| Child's pose | | | no | Walk the hands further; side reach |
+| Sphinx / cobra | | | no | Sphinx, then cobra with straighter arms |
+| Scorpion stretch | | | no | Foot further across |
 
-Question for review: link Child's pose → Jefferson curl (loaded flexion) for people who want to
-progress lower-back flexion? Left out for now; it's a big step and not for everyone.
+Not linked: Child's pose → Jefferson curl (loaded flexion); a big step, not for everyone.
 
-## T-spine
+### T-spine
 
-| Drill | Easier | Harder | Load | Notes |
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Open book | | Thread the needle | no | |
-| Thread the needle | Open book | Bretzel stretch | no | |
-| Bretzel stretch | Thread the needle | | no | |
-| Thoracic rotation | | | no | |
+| Open book | | Thread the needle, Bretzel stretch | no | Knee pinned down; follow the hand with the eyes |
+| Thread the needle | Open book | Bretzel stretch | no | Reach further through; hold the end |
+| Bretzel stretch | Thread the needle, Open book | | no | Pull the top heel in; shoulders flat |
+| Thoracic rotation | | | no | Hips still; slower |
 
-## Shoulders
+### Shoulders
 
-| Drill | Easier | Harder | Load | Notes |
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| Wall slides | | | no | |
-| Shoulder CARs | | | no | |
-| Band pass-throughs | | | no | Harder: narrower grip (cue, not load) |
-| Doorway pec stretch | | | no | |
-| Sleeper stretch | | | no | Gentle: no load |
-| Dead hang | | | yes (weighted belt) | Harder, not in the library yet: one-arm hang |
+| Wall slides | | | no | Low back and wrists stay on the wall |
+| Shoulder CARs | | | no | Slower; bigger circles |
+| Band pass-throughs | | | no | Narrower grip |
+| Doorway pec stretch | | | no | Arm higher; step through further |
+| Sleeper stretch | | | no | Gentle only |
+| Dead hang | | | yes (weighted belt) | Longer; one arm at a time when ready |
 
-## Neck and wrists
+Not in the library yet: one-arm hang.
 
-| Drill | Easier | Harder | Load | Notes |
+### Neck and wrists
+
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
 | Chin tucks | | | no | |
 | Neck CARs | | | no | |
 | Neck side stretch | | | no | |
-| Wrist prep rocks | | | no | |
-| Wrist flexor stretch | | | no | |
+| Wrist prep rocks | | | no | More weight over the hands |
+| Wrist flexor stretch | | | no | Fingers pointing back |
 
-Neck drills never get load or a "harder" suggestion; they keep the same holds once at 10 minutes.
+Neck drills never get load or a harder suggestion; they keep the same holds once at 10 minutes.
 
-## Full body
+### Full body
 
-| Drill | Easier | Harder | Load | Notes |
+| Drill | Easier | Harder | Load | Harder cues |
 |---|---|---|---|---|
-| World's greatest stretch | | | no | |
+| World's greatest stretch | | | no | Elbow to the floor; longer hold at the end |
 
-## For review
+## Martin's review (2026-11-20)
 
-1. Are the chains right (especially Lizard → Couch, Frog → Pancake, Pike → Jefferson curl)?
-2. Is "takes load" right for each? Jefferson curl and Dead hang in particular.
-3. Should "harder" also mean a cue on the same drill (knee closer to the wall, hands off the floor)
-   rather than a different drill? The app could show it as a note.
-4. Does the 10 minutes count per area (as above) or per drill?
+1. The chains look good, but it's a tree: one drill (Lizard pose) can be the start of many advanced
+   stretches, so don't limit a movement to one easier and one harder. → `harder` / `easier` are lists.
+2. "Takes load" is right.
+3. Harder can definitely just be a cue on the same drill. → `harderCues`, offered before a new drill.
+4. Per area is fine.
