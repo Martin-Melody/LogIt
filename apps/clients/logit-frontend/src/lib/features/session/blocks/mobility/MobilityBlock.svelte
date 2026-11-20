@@ -109,6 +109,7 @@
       suggestionLabel = out?.label ?? null;
       suggestionNotes = out?.notes ?? null;
       suggestedSets = out?.sets ?? [];
+      await maybePrefillTargets(out?.sets ?? [], true);
       toast(keepsSame ? `${data.drillName}: the same holds every time` : `${data.drillName} progresses again`, {
         description: "Change it here, or for every drill in Settings › Mobility progression.",
       });
@@ -118,10 +119,11 @@
   }
 
   // Prefill hold targets on a fresh, untouched block so the timer has a goal.
-  async function maybePrefillTargets(sug: SuggestSet[]) {
+  /** `replace`: the goals came from a suggestion that's just been swapped (Keep it the same). */
+  async function maybePrefillTargets(sug: SuggestSet[], replace = false) {
     if (data.metric !== "hold") return;
     const untouched = data.sets.every(
-      (s) => !s.durationSec && !s.reps && !s.completed && (s.targetSec ?? null) === null,
+      (s) => !s.durationSec && !s.reps && !s.completed && (replace || (s.targetSec ?? null) === null),
     );
     if (!untouched || sug.length === 0) return;
     await onMutate((session) => {
