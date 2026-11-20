@@ -10,8 +10,14 @@ vi.mock("$lib/components/ui/sonner/index", () => ({ toast }));
 vi.mock("$app/navigation", () => ({ goto: vi.fn() }));
 const schedule = vi.fn(async () => {});
 const cancel = vi.fn(async () => {});
+const exactAlarm = { state: "granted" };
 vi.mock("@capacitor/local-notifications", () => ({
-  LocalNotifications: { requestPermissions: async () => ({ display: "granted" }), schedule, cancel },
+  LocalNotifications: {
+    requestPermissions: async () => ({ display: "granted" }),
+    checkExactNotificationSetting: async () => ({ exact_alarm: exactAlarm.state }),
+    schedule,
+    cancel,
+  },
 }));
 vi.mock("$lib/features/sound/sounds", () => ({ playSound: vi.fn() }));
 
@@ -135,6 +141,18 @@ describe("rest timer", () => {
     await advance(50_000);
     expect(toast).toHaveBeenCalledTimes(1);
     expect(schedule).toHaveBeenCalledTimes(1);
+  });
+
+  it("without the exact-alarm permission it books an inexact alarm (no trip to Android's settings)", async () => {
+    exactAlarm.state = "denied";
+    try {
+      sessionStore.set(workout(Date.now()));
+      await advance(10_000);
+      await setVisibility("hidden");
+      expect((schedule.mock.calls[0] as unknown as [{ notifications: { isExactNotification: boolean }[] }])[0].notifications[0]!.isExactNotification).toBe(false);
+    } finally {
+      exactAlarm.state = "granted";
+    }
   });
 
   it("no toast when the rest ended while the app was in the background", async () => {

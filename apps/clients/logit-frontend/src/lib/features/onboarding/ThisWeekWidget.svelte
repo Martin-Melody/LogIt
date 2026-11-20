@@ -49,7 +49,7 @@
   function short(name: string | undefined): string {
     if (!name) return "";
     const words = name.split(/\s+/);
-    return words.length > 1 ? `${words[0]!.slice(0, 2)} ${words[1]!.slice(0, 1)}` : name.slice(0, 4);
+    return words.length > 1 ? `${words[0]!.slice(0, 2)} ${words.at(-1)!.slice(0, 1)}` : name.slice(0, 4);
   }
 
   async function startMoved() {
