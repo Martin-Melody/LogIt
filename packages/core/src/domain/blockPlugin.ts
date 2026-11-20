@@ -289,3 +289,11 @@ export function pluginBlockActiveSec(decl: Pick<BlockDeclaration, "countsAs"> | 
   if (!key) return 0;
   return data.entries.filter((e) => e.done !== false).reduce((s, e) => s + n(e.values[key]), 0);
 }
+
+/** Another entry without the plugin (a group's Add round): the last one again, counters at 0. */
+export function repeatLastEntry(d: PluginBlockData): PluginBlockData {
+  const last = d.entries.at(-1)?.values ?? {};
+  const counters = new Set(d.shape.filter(([, t]) => t === "counter").map(([k]) => k));
+  const values = Object.fromEntries(Object.entries(last).map(([k, v]) => [k, counters.has(k) ? 0 : v]));
+  return { ...d, entries: [...d.entries, { id: createId("ent"), values, done: false }] };
+}

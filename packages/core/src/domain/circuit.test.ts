@@ -358,5 +358,10 @@ describe("strength and plugin blocks in a circuit", () => {
     ({ s, run } = step(s, finishRepsCircuit(s, run, 0, at + 1)));
     expect((s.blocks.find((b) => b.id === climb)!.data as PluginBlockData).entries[0]!.done).toBe(true);
     expect(run.phase.kind).toBe("done");
+
+    // Add round: the plugin block gets another entry like the last, counters at 0.
+    s = addSupersetRound(s, group);
+    const next = (s.blocks.find((b) => b.id === bjj)!.data as PluginBlockData).entries[1]!;
+    expect([next.done, next.values.length, next.values.subs]).toEqual([false, 240, 0]);
   });
 });

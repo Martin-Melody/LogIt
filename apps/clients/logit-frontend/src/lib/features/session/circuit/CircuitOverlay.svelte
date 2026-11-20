@@ -82,7 +82,11 @@
     return s.side ? `${s.drillName}, ${sideLabel(s.side)}` : s.drillName;
   }
   function goal(s: CircuitStep): string {
-    return s.metric === "reps" ? `${s.reps} reps${weight(s)}` : s.metric === "hold" ? `${s.goalSec} s` : "";
+    return s.metric === "reps" ? `${s.reps} reps${weight(s)}` : s.metric === "hold" ? secs(s.goalSec) : "";
+  }
+  /** "30 s", or "6:00" from a minute up (a BJJ round). */
+  function secs(n: number): string {
+    return n >= 60 ? `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` : `${n} s`;
   }
   /** " at 24 kg" for a weighted strength set. */
   function weight(s: CircuitStep): string {
@@ -178,7 +182,7 @@
           </div>
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
           <p class="mt-2.5 text-base text-[#9aa1ab]">
-            {step.metric === "reps" ? `${step.reps} reps${weight(step)}` : step.metric === "hold" ? `${step.goalSec} s` : "Tap Done when you're finished"}{step.side ? ` · ${sideLabel(step.side)}` : ""}
+            {step.metric === "reps" ? `${step.reps} reps${weight(step)}` : step.metric === "hold" ? secs(step.goalSec) : "Tap Done when you're finished"}{step.side ? ` · ${sideLabel(step.side)}` : ""}
           </p>
         {:else if phase.kind === "hold" && step}
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
@@ -194,7 +198,7 @@
               {/if}
             </div>
           {/if}
-          {@render ring(`${clock(remainingMs)}`, `of ${Math.round(totalMs / 1000)} s`, "#cfd3da",
+          {@render ring(`${clock(remainingMs)}`, `of ${secs(Math.round(totalMs / 1000))}`, "#cfd3da",
             `${Math.ceil(remainingMs / 1000)} seconds left of ${Math.round(totalMs / 1000)}`)}
         {:else if phase.kind === "rest"}
           <h2 class="m-0 text-3xl font-bold leading-tight">Rest</h2>

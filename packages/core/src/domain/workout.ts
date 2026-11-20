@@ -1,3 +1,4 @@
+import { repeatLastEntry, type PluginBlockData } from "./blockPlugin";
 import { createId } from "./ids";
 import { nowMs } from "./time";
 import { effectiveLoadKg, getLoadMode, type LoadMode } from "./bodyweight";
@@ -1519,6 +1520,8 @@ export function addSupersetRound(session: WorkoutSession, supersetId: string): W
       });
     } else if (member.type === "mobility") {
       next = addMobilityRound(next, member.id);
+    } else if (member.type.startsWith("plugin:")) {
+      next = { ...next, blocks: next.blocks.map((b) => (b.id === member.id ? { ...b, data: repeatLastEntry(b.data as PluginBlockData) } : b)) };
     }
   }
   return next;
