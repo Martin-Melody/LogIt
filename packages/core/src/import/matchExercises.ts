@@ -12,12 +12,19 @@ export type ExerciseMatch =
 const EQUIPMENT_WORDS = ["barbell", "dumbbell", "cable", "machine", "kettlebell", "smith machine", "band", "bodyweight", "assisted", "weighted"];
 const FILLER = new Set(["the", "a", "with", "on", "of", "and", "mine", "my"]);
 
+// Gym shorthand, written out so "Incline DB Press" is "Incline Dumbbell Press".
+const SHORTHAND: Record<string, string> = {
+  db: "dumbbell", bb: "barbell", kb: "kettlebell", ssb: "safety bar", ohp: "overhead press",
+  rdl: "romanian deadlift", sldl: "stiff leg deadlift", ez: "ez bar", bw: "bodyweight",
+};
+
 function tokens(name: string): string[] {
   return name
     .toLowerCase()
     .replace(/[()[\],/]/g, " ")
     .replace(/-/g, " ")
     .split(/\s+/)
+    .flatMap((t) => (SHORTHAND[t] ?? t).split(" "))
     .map((t) => (t.length >= 3 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t)) // pull-ups → pull up
     .filter((t) => t && !FILLER.has(t));
 }

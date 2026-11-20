@@ -83,7 +83,8 @@ export async function runImport(
     sessionIds: fresh.map((s) => s.id),
     added: fresh.length,
   };
-  setAccountItem(IMPORTS_KEY, JSON.stringify([record, ...listImports()]));
+  // Nothing new (the same file again): nothing to undo.
+  if (record.added > 0) setAccountItem(IMPORTS_KEY, JSON.stringify([record, ...listImports()]));
   return record;
 }
 

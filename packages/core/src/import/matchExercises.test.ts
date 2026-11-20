@@ -17,9 +17,14 @@ describe("matchExercises", () => {
     expect(out.map((m) => (m.kind === "matched" ? m.exerciseId : null))).toEqual(["bench", "bench", "db-bench", "pullup", "squat"]);
   });
 
+  it("writes out gym shorthand", () => {
+    expect(matchExercises(["Incline DB Bench Press", "OHP"], [...LIB, { id: "ohp", name: "Overhead Press" }, { id: "incl", name: "Incline Dumbbell Bench Press" }]).map((m) => m.kind === "matched" && m.exerciseId)).toEqual(["incl", "ohp"]);
+  });
+
   it("suggests the closest for the rest, and never auto-matches a guess", () => {
     const [ssb, hammer, belt, odd] = matchExercises(["SSB Squat (Mine)", "Hammer Curl (Cable)", "Belt Squat Machine", "Zercher Carry"], LIB);
-    expect(ssb).toMatchObject({ kind: "unknown", suggestion: { exerciseId: "squat" } });
+    expect(ssb).toMatchObject({ kind: "matched", exerciseId: "safety" }); // SSB = safety bar
+
     expect(hammer).toMatchObject({ kind: "matched", exerciseId: "cable-hammer" });
     expect(belt).toMatchObject({ kind: "unknown", suggestion: { exerciseId: "belt" } });
     expect(odd).toEqual({ name: "Zercher Carry", kind: "unknown" });

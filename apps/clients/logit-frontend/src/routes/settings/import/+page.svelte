@@ -131,7 +131,7 @@
   let pickedNames = $state<Record<string, string>>({});
 </script>
 
-<div class="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-background px-5 pb-7 pt-10 text-foreground">
+<div class="mx-auto flex min-h-full w-full max-w-md flex-col gap-4 bg-background px-5 pb-24 pt-6 text-foreground">
   <button type="button" class="flex min-h-11 items-center gap-1 self-start text-sm text-muted-foreground"
     onclick={() => (step === "match" ? (step = "check") : step === "check" ? (step = "pick") : back("/settings#sec-data"))}>
     <ArrowLeft class="h-4 w-4" /> {step === "pick" || step === "done" ? "Settings" : "Back"}
@@ -221,7 +221,7 @@
           </li>
         {/if}
         {#if summary.setsWithoutWeight}
-          <li class="flex min-h-11 items-center px-3.5 text-muted-foreground">{summary.setsWithoutWeight} sets with reps and no weight, kept as bodyweight</li>
+          <li class="flex min-h-11 items-center px-3.5 text-muted-foreground">{summary.setsWithoutWeight} set{summary.setsWithoutWeight === 1 ? "" : "s"} with reps and no weight, kept as bodyweight</li>
         {/if}
       </ul>
 
@@ -258,7 +258,7 @@
         {@const sets = summary?.exercises.find((e) => e.name === m.name)?.sets ?? 0}
         {@const c = choices[m.name]}
         <div class="flex flex-col gap-2.5 rounded-xl border border-border p-3.5">
-          <div class="flex items-baseline justify-between gap-2"><span class="text-[15px] font-semibold">{m.name}</span><span class="shrink-0 text-xs text-muted-foreground">{sets} sets</span></div>
+          <div class="flex items-baseline justify-between gap-2"><span class="text-[15px] font-semibold">{m.name}</span><span class="shrink-0 text-xs text-muted-foreground">{sets} set{sets === 1 ? "" : "s"}</span></div>
           <div class="grid grid-cols-2 gap-2">
             {#if m.kind === "unknown" && m.suggestion}
               {@const sug = m.suggestion}
@@ -292,15 +292,17 @@
   {:else if step === "done" && result}
     <div class="flex flex-1 flex-col gap-4" in:fade={{ duration: 150 }}>
       <div>
-        <h1 class="mb-1 text-[22px] font-bold">{result.added} workout{result.added === 1 ? "" : "s"} imported</h1>
+        <h1 class="mb-1 text-[22px] font-bold">{result.added ? `${result.added} workout${result.added === 1 ? "" : "s"} imported` : "Nothing new to import"}</h1>
         <p class="text-sm text-muted-foreground">
-          {#if summary && summary.workouts > result.added}{summary.workouts - result.added} were already here, so they weren't added again. {/if}
-          Your history, charts and estimated maxes now include them.
+          {#if summary && summary.workouts > result.added}{summary.workouts - result.added} {summary.workouts - result.added === 1 ? "was" : "were"} already here, so {summary.workouts - result.added === 1 ? "it wasn't" : "they weren't"} added again. {/if}
+          {#if result.added}Your history, charts and estimated maxes now include them.{/if}
         </p>
       </div>
       <div class="flex-1"></div>
       <button type="button" class="h-[52px] rounded-[10px] bg-primary text-base font-semibold text-primary-foreground" onclick={() => void goto("/sessions")}>See your workouts</button>
-      <button type="button" class="h-11 rounded-[10px] border border-border text-sm font-medium" disabled={busy} onclick={() => void undo(result!.id)}>Undo this import</button>
+      {#if result.added}
+        <button type="button" class="h-11 rounded-[10px] border border-border text-sm font-medium" disabled={busy} onclick={() => void undo(result!.id)}>Undo this import</button>
+      {/if}
     </div>
   {/if}
 </div>
