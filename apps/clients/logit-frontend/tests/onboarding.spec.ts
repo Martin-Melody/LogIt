@@ -109,7 +109,10 @@ test.describe("questions", () => {
     await expect(page.getByRole("heading", { name: "How long have you been lifting?" })).toBeVisible();
     await expect(page.getByText("Stronger and bigger")).toBeVisible();
 
+    // Anyone who has been lifting is offered their history or best lifts first.
     await page.getByRole("button", { name: /^Under 2 years/ }).click();
+    await expect(page.getByRole("heading", { name: "Pick up where you left off" })).toBeVisible();
+    await page.getByRole("button", { name: "Start fresh" }).click();
     await expect(page.getByRole("heading", { name: "How many days a week can you train?" })).toBeVisible();
 
     await page.getByRole("button", { name: /^4 days/ }).click();

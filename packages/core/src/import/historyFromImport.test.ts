@@ -52,6 +52,18 @@ describe("detectSplit", () => {
   });
 });
 
+describe("summariseHistory: the big three", () => {
+  it("totals squat, bench and deadlift at each one's best of its last six weeks", () => {
+    const withDeadlift = [...history, session("Pull", MON + 30 * DAY, [["Deadlift", 200, [3]]])];
+    const big = summariseHistory(withDeadlift)!.bigThree!;
+    expect(big).toEqual({ squatKg: 186.7, benchKg: 128.3, deadliftKg: 220, totalKg: 535 }); // 160×5, 110×5, 200×3
+  });
+
+  it("has no total without all three", () => {
+    expect(summariseHistory(history)!.bigThree).toBeNull();
+  });
+});
+
 describe("summariseHistory", () => {
   const sum = summariseHistory(history)!;
 
