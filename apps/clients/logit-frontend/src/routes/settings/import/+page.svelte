@@ -12,6 +12,8 @@
   import { toast } from "$lib/components/ui/sonner";
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
   import { pickText } from "$lib/platform/filePick";
+  import { takeSharedFile } from "$lib/platform/sharedFile";
+  import { page } from "$app/state";
   import { saveTextFile } from "$lib/platform/fileSave";
   import { profile } from "$lib/stores/profile.store";
   import { listImports, matchFileExercises, runImport, undoImport, UNDO_DAYS, type ExerciseChoice, type ImportRecord } from "$lib/features/import/imports";
@@ -47,6 +49,16 @@
 
   onMount(() => (imports = listImports()));
 
+  // Shared from another app (Share › LogIt): straight to the check. Each share has its own
+  // link, so a second one while this screen is open is picked up too.
+  $effect(() => {
+    if (!page.url.searchParams.get("shared")) return;
+    void takeSharedFile().then((f) => {
+      if (f?.error) error = f.error;
+      else if (f?.text != null) void open({ text: f.text, name: f.name });
+    });
+  });
+
   // Android back: the previous step, then out.
   $effect(() => onBack(() => {
     if (step === "match") step = "check";
@@ -57,13 +69,21 @@
   const day = (ms?: number) => (ms ? new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 
   async function choose() {
+    try {
+      await open(await pickText({
+        mimeTypes: ["text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/vnd.ms-excel"],
+        accept: ".csv,text/csv,text/plain",
+      }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Couldn't read that file.";
+      if (msg !== "cancelled") error = msg;
+    }
+  }
+
+  async function open(file: { text: string; name: string }) {
     error = null;
     busy = true;
     try {
-      const file = await pickText({
-        mimeTypes: ["text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/vnd.ms-excel"],
-        accept: ".csv,text/csv,text/plain",
-      });
       const p = readWorkoutCsv(file.text);
       if (p.workouts.length === 0) throw new Error("No workouts found in this file.");
       matches = await matchFileExercises(p);
@@ -74,8 +94,8 @@
       unit = p.unitUnknown ? null : ($profile.weightUnit === "lbs" ? "lb" : "kg");
       step = "check";
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Couldn't read that file.";
-      if (msg !== "cancelled") error = msg;
+      error = e instanceof Error ? e.message : "Couldn't read that file.";
+      step = "pick";
     } finally {
       busy = false;
     }

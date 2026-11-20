@@ -90,6 +90,10 @@ async function wireAppLinks(): Promise<void> {
     };
     open((await App.getLaunchUrl())?.url);
     await App.addListener("appUrlOpen", ({ url }) => open(url));
+    // A CSV shared from another app opens the import screen (before onboarding is done, the
+    // launch redirect keeps the welcome screen and the file waits for it).
+    const { onFileShared } = await import("./sharedFile");
+    onFileShared(() => void goto(`/settings/import?shared=${Date.now()}`));
   } catch {
     // plugin not present
   }
