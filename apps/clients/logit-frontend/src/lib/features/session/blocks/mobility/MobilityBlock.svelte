@@ -513,7 +513,7 @@
   {#if !collapsed && round === undefined && suggestionLabel}
     <div class="flex items-center justify-between gap-2 px-3 pb-1 -mt-1">
       <p class="text-xs text-primary/90">{suggestionLabel}</p>
-      <button type="button" class="min-h-8 shrink-0 rounded-md border border-border px-2.5 text-xs font-medium disabled:opacity-50"
+      <button type="button" class="min-h-10 shrink-0 rounded-md border border-border px-3 text-xs font-medium disabled:opacity-50"
         disabled={switching} onclick={() => void switchProgress()}>{keepsSame ? "Progress it" : "Keep it the same"}</button>
     </div>
   {/if}
