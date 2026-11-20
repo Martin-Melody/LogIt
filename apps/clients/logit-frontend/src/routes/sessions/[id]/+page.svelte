@@ -99,7 +99,9 @@
     if (!entry || !previous || !session?.endedAtMs || !previous.session.endedAtMs) return null;
     const dv = entry.volumeKg - previous.volumeKg;
     const dt = (session.endedAtMs - session.startedAtMs) - (previous.session.endedAtMs - previous.session.startedAtMs);
-    const mins = Math.round(Math.abs(dt) / 60_000);
+    // An imported workout with no duration ends when it starts: no time comparison.
+    const timed = session.endedAtMs > session.startedAtMs && previous.session.endedAtMs > previous.session.startedAtMs;
+    const mins = timed ? Math.round(Math.abs(dt) / 60_000) : 0;
     return {
       volume: Math.abs(dv) >= 1 ? `${dv > 0 ? "+" : "−"}${volumeLabel(Math.abs(dv), unit)}` : null,
       up: dv > 0,
@@ -407,7 +409,7 @@
 
       <div class="grid grid-cols-4 text-center">
         <div class="px-0.5">
-          <p class="text-base font-semibold tabular-nums">{session.endedAtMs ? durationLabel(session.endedAtMs - session.startedAtMs).replace(" min", "m").replace(" h ", "h ") : "–"}</p>
+          <p class="text-base font-semibold tabular-nums">{session.endedAtMs && session.endedAtMs > session.startedAtMs ? durationLabel(session.endedAtMs - session.startedAtMs).replace(" min", "m").replace(" h ", "h ") : "–"}</p>
           <p class="text-[11px] text-muted-foreground">Time</p>
         </div>
         <div class="border-l border-border px-0.5">

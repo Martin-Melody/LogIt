@@ -138,7 +138,7 @@
                 <span class="truncate text-sm font-semibold">{sessionTitle(s)}</span>
                 {#if prCount > 0}<span class="shrink-0 rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">{prCount} PR{prCount === 1 ? "" : "s"}</span>{/if}
               </span>
-              <span class="text-xs text-muted-foreground">{dateLine(s)} · {minutes(s)} min · {tonnes(sessionVolumeKg(s))}</span>
+              <span class="text-xs text-muted-foreground">{dateLine(s)}{minutes(s) ? ` · ${minutes(s)} min` : ""} · {tonnes(sessionVolumeKg(s))}</span>
             </button>
           {/each}
         {/each}
@@ -157,7 +157,7 @@
           </div>
 
           <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <div class="rounded-lg bg-muted p-3"><div class="text-lg font-bold">{minutes(selected)} min</div><div class="text-xs text-muted-foreground">Duration</div></div>
+            <div class="rounded-lg bg-muted p-3"><div class="text-lg font-bold">{minutes(selected) ? `${minutes(selected)} min` : "–"}</div><div class="text-xs text-muted-foreground">Duration</div></div>
             <div class="rounded-lg bg-muted p-3"><div class="text-lg font-bold">{workingSetCount(selected)}</div><div class="text-xs text-muted-foreground">Working sets</div></div>
             <div class="rounded-lg bg-muted p-3"><div class="text-lg font-bold">{tonnes(sessionVolumeKg(selected))}</div><div class="text-xs text-muted-foreground">Volume</div></div>
             <div class="rounded-lg bg-muted p-3"><div class="text-lg font-bold {sessionPrs.length ? 'text-warning' : ''}">{sessionPrs.length}</div><div class="text-xs text-muted-foreground">Records</div></div>

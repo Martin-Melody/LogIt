@@ -286,7 +286,9 @@ export function toSessions(
     return {
       id,
       startedAtMs: w.startedAtMs,
-      ...(w.endedAtMs ? { endedAtMs: w.endedAtMs } : {}),
+      // Finished (only finished workouts count, e.g. in the streak). No duration in the file:
+      // it ends when it starts, and screens show no duration for that.
+      endedAtMs: w.endedAtMs ?? w.startedAtMs,
       blocks,
       ...(w.title ? { name: w.title } : {}),
       ...(w.note ? { note: w.note } : {}),

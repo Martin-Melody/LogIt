@@ -79,6 +79,12 @@ describe("toSessions", () => {
     expect((sessions[2]!.blocks[0]!.data as CardioBlockData).intervals[0]).toMatchObject({ durationMs: 1_800_000, distanceM: 5000 });
   });
 
+  it("marks every workout finished; with no duration in the file it ends when it starts", () => {
+    expect(sessions.every((s) => s.endedAtMs === s.startedAtMs)).toBe(true);
+    const timed = readWorkoutCsv("date,time,exercise,reps,duration_min\n2026-11-20,07:00,Squat,5,65");
+    expect(toSessions(timed, { unit: "kg", exerciseFor: (name) => ({ name }) })[0]!.endedAtMs! - timed.workouts[0]!.startedAtMs).toBe(65 * 60_000);
+  });
+
   it("gives the same ids to the same workouts every time, so nothing is imported twice", () => {
     const again = toSessions(readWorkoutCsv(TEMPLATE), { unit: "kg", exerciseFor: (name) => ({ name }) });
     expect(again.map((s) => s.id)).toEqual(sessions.map((s) => s.id));

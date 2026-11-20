@@ -43,11 +43,16 @@ export async function pickImageFile(): Promise<File> {
 }
 
 export async function pickTextFile(): Promise<string> {
+  return (await pickText({ mimeTypes: ["application/json"], accept: ".json,application/json" })).text;
+}
+
+/** A text file chosen by the person, read as UTF-8 (names with accents, notes with emoji). */
+export async function pickText(opts: { mimeTypes: string[]; accept: string }): Promise<{ text: string; name: string }> {
   if (isNativePlatform()) {
     const { FilePicker } = await import("@capawesome/capacitor-file-picker");
 
     const result = await FilePicker.pickFiles({
-      types: ["application/json"],
+      types: opts.mimeTypes,
       readData: true,
     });
 
@@ -55,19 +60,21 @@ export async function pickTextFile(): Promise<string> {
     if (!file) throw new Error("No file selected.");
     if (!file.data) throw new Error("Could not read file data.");
 
-    return atob(file.data);
+    // atob gives one char per byte; decode the bytes as UTF-8.
+    const bytes = Uint8Array.from(atob(file.data), (c) => c.charCodeAt(0));
+    return { text: new TextDecoder().decode(bytes), name: file.name };
   } else {
     return new Promise((resolve, reject) => {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = ".json,application/json";
+      input.accept = opts.accept;
 
       input.onchange = () => {
         const file = input.files?.[0];
         if (!file) return reject(new Error("No file selected."));
 
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
+        reader.onload = () => resolve({ text: reader.result as string, name: file.name });
         reader.onerror = () => reject(new Error("Could not read file."));
         reader.readAsText(file);
       };
