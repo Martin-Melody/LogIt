@@ -35,6 +35,10 @@
   import { setTrainingGoal } from "$lib/features/onboarding/trainingGoal";
   import { detectSplit, splitFromDetected, summariseHistory, type DetectedSplit, type HistorySummary } from "@logit/core/import/historyFromImport";
   import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+  import { dotsScore, type DotsFormula } from "@logit/core/domain/dots";
+  import { loadBodyweightLookup, saveBodyweight } from "$lib/features/bodyweight/bodyweight";
+  import { getNutritionRepo } from "$lib/data/repoProvider";
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { fromDisplayWeight, toDisplayWeight, trimWeight } from "@logit/core/domain/units";
   import {
     buildStarterPlan, otherPlanKinds, planKindFor,
@@ -93,9 +97,15 @@
   // your history (E2), whose found split can replace days and plan. An old saved step past the
   // end (the name step of the previous onboarding) starts again from the goal.
   const experienced = $derived(answers.experience === "2plus" || answers.experience === "compete");
+  // Under 2 years may have a history to bring too (steps 5, 6, 8, 9); Train your way (7) is for
+  // the experienced, and for anyone who kept the split found in their history (it's where
+  // they start from).
+  const bringsHistory = $derived(experienced || answers.experience === "under2");
+  const choosesStyle = $derived(experienced || !!answers.historySplitId);
   onMount(() => {
     const broken = step > 9 || (step >= 2 && !answers.goal) || (step >= 3 && !answers.experience)
-      || (step === 4 && !answers.days) || (step === 7 && !answers.days && !answers.historySplitId) || (step >= 5 && !experienced);
+      || (step === 4 && !answers.days) || (step === 7 && !answers.days && !answers.historySplitId)
+      || (step >= 5 && !bringsHistory) || (step === 7 && !experienced && !answers.historySplitId);
     if (broken) onboarding.setStep(answers.goal ? 2 : 1);
     else if (step === 9) void loadHistory();
     if (answers.historySplitId) void getSplitRepo().getSplit(answers.historySplitId).then((sp) => (historySplit = sp));
@@ -103,16 +113,17 @@
 
   /** Where Back goes: the path taken, not the step number. */
   function prevStep(s: number): number {
-    if (s === 3) return experienced ? (answers.imported ? 9 : answers.fresh ? 5 : 6) : 2;
+    if (s === 3) return bringsHistory ? (answers.imported ? 9 : answers.fresh ? 5 : 6) : 2;
     if (s === 7) return answers.historySplitId ? 9 : 4;
     return ({ 1: 0, 2: 1, 4: 3, 5: 2, 6: 5, 8: 5, 9: 5 } as Record<number, number>)[s] ?? 0;
   }
   /** [this step, of how many] for the progress bar. */
   const progress = $derived.by((): [number, number] => {
-    if (!experienced) return [step, 4];
+    if (!bringsHistory) return [step, 4];
     const order = answers.imported
-      ? answers.historySplitId ? [1, 2, 5, 8, 9, 7] : [1, 2, 5, 8, 9, 3, 4, 7]
-      : answers.fresh ? [1, 2, 5, 3, 4, 7] : [1, 2, 5, 6, 3, 4, 7];
+      ? answers.historySplitId ? [1, 2, 5, 8, 9, 7] : [1, 2, 5, 8, 9, 3, 4]
+      : answers.fresh ? [1, 2, 5, 3, 4] : [1, 2, 5, 6, 3, 4];
+    if (choosesStyle && !order.includes(7)) order.push(7);
     return [order.indexOf(step) + 1, order.length];
   });
 
@@ -166,7 +177,8 @@
   }
   function pickExperience(experience: TrainingExperience) {
     save({ experience });
-    go(experience === "2plus" || experience === "compete" ? 5 : 3);
+    // Anyone who has been lifting can bring their history or best lifts.
+    go(experience === "new" ? 3 : 5);
   }
 
   // ── Your best lifts ──
@@ -225,6 +237,27 @@
     const sessions = (await getWorkoutRepo().listAllSessions()).filter((x) => x.endedAtMs != null);
     history = summariseHistory(sessions);
     detected = detectSplit(sessions);
+    // DOTS needs bodyweight and which formula: from the weight log and the nutrition goal's
+    // sex when they're there, else asked once below.
+    bodyweightKg = (await loadBodyweightLookup())(Date.now()) ?? null;
+    const sex = (await getNutritionRepo().getGoal().catch(() => null))?.sex;
+    dotsFormula = (getAccountItem(DOTS_KEY) as DotsFormula | null) ?? (sex === "male" ? "men" : sex === "female" ? "women" : null);
+  }
+
+  // ── DOTS on the total ──
+  const DOTS_KEY = "logit:dots-formula";
+  let bodyweightKg = $state<number | null>(null);
+  let dotsFormula = $state<DotsFormula | null>(null);
+  let askingDots = $state(false);
+  let bodyweightInput = $state("");
+  const dots = $derived(history?.bigThree && bodyweightKg && dotsFormula ? Math.round(dotsScore(history.bigThree.totalKg, bodyweightKg, dotsFormula)) : null);
+  async function saveDots() {
+    const value = Number(bodyweightInput.replace(",", "."));
+    if (!(value > 0) || !dotsFormula) return;
+    await saveBodyweight(value, unit);
+    setAccountItem(DOTS_KEY, dotsFormula);
+    bodyweightKg = fromDisplayWeight(value, unit);
+    askingDots = false;
   }
   async function afterImport() {
     save({ imported: true, fresh: false, historySplitId: null });
@@ -285,8 +318,8 @@
     busy = "start";
     error = null;
     try {
-      if (experienced) await applyTrainingStyle(answers.style);
-      if (experienced && answers.style === "own") {
+      if (choosesStyle) await applyTrainingStyle(answers.style);
+      if (choosesStyle && answers.style === "own") {
         await savePlan();
         await goto("/settings/progression/build/new?use=1");
         return;
@@ -307,7 +340,7 @@
     busy = "later";
     error = null;
     try {
-      if (experienced) await applyTrainingStyle(answers.style === "own" ? "adaptive" : answers.style);
+      if (choosesStyle) await applyTrainingStyle(answers.style === "own" ? "adaptive" : answers.style);
       await savePlan();
       await goto("/");
     } catch (e) {
@@ -544,6 +577,35 @@
                 <span class="text-right text-sm tabular-nums"><strong>{Math.round(toDisplay(lift.lastKg))}</strong>{#if gain > 0} <span class="text-xs text-green-700 dark:text-green-400">+{gain}</span>{/if}</span>
               </div>
             {/each}
+            {#if history.bigThree}
+              <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3.5 py-3 text-sm">
+                <span>Total <strong class="tabular-nums">{Math.round(toDisplay(history.bigThree.totalKg))} {unit}</strong></span>
+                {#if dots != null && bodyweightKg}
+                  <span>DOTS <strong class="tabular-nums">{dots}</strong> <span class="text-muted-foreground">at {Math.round(toDisplay(bodyweightKg) * 10) / 10} {unit}</span></span>
+                {:else if !askingDots}
+                  <button type="button" class="min-h-9 rounded-lg border border-border px-3 text-[13px] font-medium" onclick={() => { bodyweightInput = bodyweightKg ? String(Math.round(toDisplay(bodyweightKg) * 10) / 10) : ""; askingDots = true; }}>Add DOTS</button>
+                {/if}
+              </div>
+              {#if askingDots}
+                <div class="flex flex-col gap-2.5 border-t border-border px-3.5 py-3" transition:fade={{ duration: 150 }}>
+                  <p class="text-[13px] text-muted-foreground">DOTS compares totals across bodyweights. It needs yours and which formula to use.</p>
+                  <label class="flex items-center justify-between gap-3 text-sm">
+                    Your bodyweight
+                    <span class="flex items-center gap-1.5">
+                      <input type="text" inputmode="decimal" bind:value={bodyweightInput} placeholder={unit === "lbs" ? "lb" : "kg"}
+                        class="h-10 w-20 rounded-lg border border-input bg-background px-2 text-right text-[15px] font-semibold tabular-nums" />
+                      <span class="text-xs text-muted-foreground">{unit}</span>
+                    </span>
+                  </label>
+                  <div class={segmentTrack} role="group" aria-label="DOTS formula">
+                    <button type="button" aria-pressed={dotsFormula === "men"} class={segment(dotsFormula === "men")} onclick={() => (dotsFormula = "men")}>Men's</button>
+                    <button type="button" aria-pressed={dotsFormula === "women"} class={segment(dotsFormula === "women")} onclick={() => (dotsFormula = "women")}>Women's</button>
+                  </div>
+                  <button type="button" class="h-10 rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                    disabled={!(Number(bodyweightInput.replace(",", ".")) > 0) || !dotsFormula} onclick={() => void saveDots()}>Show DOTS</button>
+                </div>
+              {/if}
+            {/if}
           </div>
         {/if}
         {#if detected}

@@ -1003,7 +1003,7 @@
     {/if}
     {#if exercise && needsSetup(exercise)}
       {#key exercise.id}
-        <FinishSetupCard {exercise} onsaved={(updated) => (exercise = updated)} />
+        <FinishSetupCard {exercise} onsaved={(updated) => (exercise = updated)} onmerged={(into) => (exercise = into)} />
       {/key}
     {/if}
     {#if showFirstSetHint}
