@@ -5,6 +5,8 @@
 </script>
 
 <script lang="ts">
+  import FinishSetupCard from "$lib/features/exercise/FinishSetupCard.svelte";
+  import { needsSetup } from "@logit/core/domain/exerciseGuess";
   import { loadStartingLifts } from "$lib/features/onboarding/startingLifts";
   import { sameExercise } from "@logit/core/domain/goals";
   import { ChevronDown, MapPin, Plus, Rows3 } from "lucide-svelte";
@@ -998,6 +1000,11 @@
       >
         + Warm-up ramp
       </button>
+    {/if}
+    {#if exercise && needsSetup(exercise)}
+      {#key exercise.id}
+        <FinishSetupCard {exercise} onsaved={(updated) => (exercise = updated)} />
+      {/key}
     {/if}
     {#if showFirstSetHint}
       <div class="mx-3 my-2 flex flex-col gap-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">

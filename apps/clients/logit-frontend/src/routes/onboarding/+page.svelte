@@ -25,6 +25,8 @@
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
   import { profile } from "$lib/stores/profile.store";
   import { saveStartingLifts } from "$lib/features/onboarding/startingLifts";
+  import { getExerciseRepo } from "$lib/data/repoProvider";
+  import { pushExercise } from "$lib/sync/syncService";
   import { applyTrainingStyle, TRAINING_STYLES, type TrainingStyle } from "$lib/features/onboarding/trainingStyle";
   import { estimated1RM } from "@logit/core/domain/oneRepMax";
   import { fromDisplayWeight, trimWeight } from "@logit/core/domain/units";
@@ -166,10 +168,18 @@
     const n = liftNumbers(l);
     return n ? `≈ ${trimWeight(Math.round(estimated1RM(n.weight, Math.min(n.reps, 12))))} ${unit} max` : null;
   }
-  function addLift(sel: { name: string; exerciseId?: string }) {
+  async function addLift(sel: { name: string; exerciseId?: string }) {
     addingLift = false;
     if (answers.lifts.some((l) => l.name.toLowerCase() === sel.name.toLowerCase())) return;
-    save({ lifts: [...answers.lifts, { exerciseId: sel.exerciseId, name: sel.name, weight: "", reps: "" }] });
+    let exerciseId = sel.exerciseId;
+    // One LogIt doesn't know becomes your own exercise now; its muscles are asked for the
+    // first time it's in a workout (FinishSetupCard).
+    if (!exerciseId) {
+      const created = await getExerciseRepo().create(sel.name.trim()).catch(() => null);
+      if (created) pushExercise(created);
+      exerciseId = created?.id;
+    }
+    save({ lifts: [...answers.lifts, { exerciseId, name: sel.name.trim(), weight: "", reps: "" }] });
   }
   function commitLifts() {
     const now = Date.now();
@@ -409,7 +419,7 @@
       </ul>
       {#if addingLift}
         <div class="mt-2.5" transition:fade={{ duration: 150 }}>
-          <ExerciseSearchInput placeholder="e.g. Front Squat" onConfirm={addLift} />
+          <ExerciseSearchInput placeholder="e.g. Front Squat" onConfirm={(sel) => void addLift(sel)} />
         </div>
       {:else}
         <button type="button" class="mt-2.5 flex h-12 items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-muted-foreground/50 text-sm font-medium"
