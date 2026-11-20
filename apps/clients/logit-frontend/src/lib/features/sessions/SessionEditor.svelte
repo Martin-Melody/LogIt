@@ -44,6 +44,8 @@
   import type { SessionComparison } from "@logit/core/domain/sessionHistory";
   import { createId } from "@logit/core/domain/ids";
   import { localDateIso } from "@logit/core/domain/nutrition";
+  import type { PluginBlockData } from "@logit/core/domain/blockPlugin";
+  import PluginBlockView from "$lib/features/session/blocks/plugin/PluginBlockView.svelte";
   import type { VolumeContext } from "$lib/features/bodyweight/bodyweight";
 
   // A past workout with the same set rows as logging one: change weights and reps, add or
@@ -474,6 +476,10 @@
             <p class="py-1 text-xs text-muted-foreground">Nothing logged. Add an interval with +.</p>
           {/each}
         </div>
+      {:else if b.type.startsWith("plugin:")}
+        <!-- shortcut: plugin blocks are read-only when editing a past workout; edit them live for now. -->
+        <div class="border-b border-border bg-muted/30 px-3.5 py-2.5 text-sm font-semibold">{(b.data as PluginBlockData).name}</div>
+        <PluginBlockView data={b.data as PluginBlockData} />
       {/if}
     </section>
   {/each}

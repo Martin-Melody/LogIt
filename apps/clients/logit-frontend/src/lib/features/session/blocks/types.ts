@@ -5,6 +5,8 @@ export type GripAction = (node: HTMLElement) => { destroy(): void };
 
 export interface BlockBaseProps<T = unknown> {
   blockId: string;
+  /** The block's type (a plugin block's says which plugin: `plugin:<id>`). */
+  blockType?: string;
   data: T;
   saving: boolean;
   /** True when this block is rendered inside a superset / circuit group. */

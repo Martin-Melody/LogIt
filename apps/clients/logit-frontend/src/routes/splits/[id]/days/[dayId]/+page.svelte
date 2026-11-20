@@ -906,7 +906,7 @@
     info={editGroup}
     memberCount={editMembers.length}
     rounds={editGroup.rounds}
-    hasDrills={editMembers.some((b) => b.type === "mobility")}
+    hasDrills={editMembers.some((b) => b.type !== "cardio")}
     canRemoveRound={editGroup.rounds > 1}
     roundsHint="Every exercise in it gets this many sets"
     estimate={editEstimate}

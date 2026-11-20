@@ -193,7 +193,7 @@
         )}
       </div>
 
-      <!-- Get ready (the countdown only runs drills) -->
+      <!-- Get ready (the countdown runs everything but cardio) -->
       {#if hasDrills}
         <div class="flex flex-col gap-2">
           <p class="text-sm font-medium">Get ready before each exercise</p>

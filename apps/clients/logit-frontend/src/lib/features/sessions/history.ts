@@ -81,7 +81,7 @@ export function buildHistory(
       prs: prs.get(session.id) ?? [],
       volumeKg: sessionVolumeKg(session, volumeCtx),
       setCount: loggedSetCount(session),
-      itemCount: session.blocks.filter((b) => b.type === "strength" || b.type === "cardio" || b.type === "mobility").length,
+      itemCount: session.blocks.filter((b) => b.type === "strength" || b.type === "cardio" || b.type === "mobility" || b.type.startsWith("plugin:")).length,
       dayIso: trainedDayIso(session),
       inProgress: session.endedAtMs == null,
     };

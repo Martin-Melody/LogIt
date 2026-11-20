@@ -1,15 +1,18 @@
 // ── Running a circuit with the countdown ─────────────────────────────────────
-// A circuit (or superset) of mobility drills is run one set at a time, round by
+// A circuit (or superset) is run one set at a time, round by
 // round: A1 B1 C1, A2 B2 C2… (per-side drills do both sides back to back). Each
 // set gets a 3-2-1 lead-in, then a hold that counts down and stops on its own (or,
 // for rep drills, a goal with a Done button). Rests can run between exercises (on by
-// default in a circuit) and between rounds.
+// default in a circuit) and between rounds. Strength sets run as a rep goal with the
+// weight shown; plugin entries as a hold when the plugin has a work timer (a BJJ round),
+// else a plain Done. Cardio is logged by hand.
 //
 // Everything here is pure: the run is a small state value, every action takes the
 // current time, and what has to be written to the workout comes back as `saves`.
 // The app ticks it and applies the saves. Times are absolute (ms since epoch), so a
 // run that was in the background catches up on the next tick.
 
+import { renderSummary, type PluginBlockData } from "./blockPlugin";
 import {
   blockGroup,
   groupKindOf,
@@ -19,6 +22,7 @@ import {
   type MobilitySetPatch,
   type MobilitySide,
   type SessionBlock,
+  type StrengthBlockData,
   type SupersetInfo,
   type WorkoutSession,
 } from "./workout";
@@ -29,6 +33,8 @@ export const DEFAULT_HOLD_SEC = 30;
 export const DEFAULT_REPS = 10;
 /** How long a rep counts for in the time estimate, ms. */
 export const ESTIMATE_MS_PER_REP = 3_000;
+/** A plugin entry with nothing timed, for the estimate. */
+export const ESTIMATE_MS_DONE = 60_000;
 
 /** The app-wide defaults a group falls back to (Settings). */
 export type CircuitDefaults = {
@@ -46,8 +52,12 @@ export type GroupTiming = { leadInMs: number; memberRestMs: number; roundRestMs:
 export type CircuitStep = {
   blockId: string;
   setId: string;
+  /** The member's name (drill, exercise, plugin block). */
   drillName: string;
-  metric: MobilityMetric;
+  /** "done": nothing to count, just a Done button (a plugin entry without a timer). */
+  metric: MobilityMetric | "done";
+  /** A strength set's weight, kg (0 = bodyweight / none). */
+  weightKg?: number;
   side?: MobilitySide;
   /** 0-based round. */
   round: number;
@@ -131,14 +141,52 @@ export function resolveGroupTiming(
  * the leading side first. Only mobility drills take part for now; strength and
  * cardio members are left to be logged by hand.
  */
+type MemberStep = Omit<CircuitStep, "blockId" | "round" | "memberIndex" | "memberCount" | "roundCount">;
+
+const runs = (b: SessionBlock) => b.type === "mobility" || b.type === "strength" || b.type.startsWith("plugin:");
+
+/** A strength or plugin member's steps per round (one each); mobility is below. */
+function otherRounds(block: SessionBlock): MemberStep[][] {
+  if (block.type === "strength") {
+    const data = block.data as StrengthBlockData;
+    return [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex).map((set) => [{
+      setId: set.id,
+      drillName: data.exerciseName,
+      metric: "reps",
+      weightKg: set.weight || set.target?.weight || 0,
+      goalSec: 0,
+      reps: set.reps || set.target?.reps || DEFAULT_REPS,
+      completed: !!set.completed,
+    }]);
+  }
+  const data = block.data as PluginBlockData;
+  return data.entries.map((e) => {
+    const work = data.timer ? e.values[data.timer.work] : null;
+    return [{
+      setId: e.id,
+      drillName: data.name,
+      metric: data.timer ? "hold" : "done",
+      goalSec: typeof work === "number" && work > 0 ? work : DEFAULT_HOLD_SEC,
+      reps: 0,
+      completed: e.done !== false,
+    }];
+  });
+}
+
 export function circuitSteps(session: HasBlocks, supersetId: string): CircuitStep[] {
-  const drills = groupMembers(session, supersetId).filter((b) => b.type === "mobility");
-  const perDrill = drills.map((b) => mobilitySetGroups(b.data as MobilityBlockData));
-  const roundCount = Math.max(0, ...perDrill.map((g) => g.length));
+  const drills = groupMembers(session, supersetId).filter(runs);
+  const perDrill = drills.map((b) => (b.type === "mobility" ? mobilitySetGroups(b.data as MobilityBlockData) : []));
+  const others = drills.map((b) => (b.type === "mobility" ? null : otherRounds(b)));
+  const roundCount = Math.max(0, ...perDrill.map((g, i) => others[i]?.length ?? g.length));
   const steps: CircuitStep[] = [];
 
   for (let round = 0; round < roundCount; round++) {
     drills.forEach((block, memberIndex) => {
+      const other = others[memberIndex];
+      if (other) {
+        for (const st of other[round] ?? []) steps.push({ ...st, blockId: block.id, round, memberIndex, memberCount: drills.length, roundCount });
+        return;
+      }
       const data = block.data as MobilityBlockData;
       const group = perDrill[memberIndex]![round];
       if (!group) return;
@@ -274,9 +322,9 @@ function stepFor(session: WorkoutSession, run: CircuitRun, setId: string): Circu
 }
 
 function beginWork(step: CircuitStep, at: number): CircuitPhase {
-  return step.metric === "reps"
-    ? { kind: "reps", setId: step.setId, startedAtMs: at }
-    : { kind: "hold", setId: step.setId, startedAtMs: at, endsAtMs: at + step.goalSec * 1000 };
+  return step.metric === "hold"
+    ? { kind: "hold", setId: step.setId, startedAtMs: at, endsAtMs: at + step.goalSec * 1000 }
+    : { kind: "reps", setId: step.setId, startedAtMs: at };
 }
 
 function holdSave(step: CircuitStep, heldMs: number, session: WorkoutSession): CircuitSave {
@@ -292,7 +340,8 @@ function holdSave(step: CircuitStep, heldMs: number, session: WorkoutSession): C
 
 function hasTarget(session: WorkoutSession, step: CircuitStep): boolean {
   const block = session.blocks.find((b) => b.id === step.blockId);
-  const set = (block?.data as MobilityBlockData | undefined)?.sets.find((s) => s.id === step.setId);
+  if (block?.type !== "mobility") return true;
+  const set = (block.data as MobilityBlockData).sets.find((s) => s.id === step.setId);
   return typeof set?.targetSec === "number" && set.targetSec > 0;
 }
 
@@ -412,7 +461,32 @@ export function applyCircuitSaves(session: WorkoutSession, saves: CircuitSave[])
     ...session,
     blocks: session.blocks.map((b) => {
       const mine = saves.filter((x) => x.blockId === b.id);
-      if (mine.length === 0 || b.type !== "mobility") return b;
+      if (mine.length === 0) return b;
+      const patchOf = (id: string) => mine.find((x) => x.setId === id)?.patch;
+      if (b.type === "strength") {
+        // shortcut: the block's own re-plans after a short set don't run for sets logged by the countdown.
+        const data = b.data as StrengthBlockData;
+        const sets = data.sets.map((set) => {
+          const p = patchOf(set.id);
+          if (!p) return set;
+          const reps = p.reps ?? (set.reps || set.target?.reps || 0);
+          return { ...set, reps, weight: set.weight || set.target?.weight || 0, completed: true, restStartedAtMs: null };
+        });
+        return { ...b, data: { ...data, sets } };
+      }
+      if (b.type.startsWith("plugin:")) {
+        const data = b.data as PluginBlockData;
+        const entries = data.entries.map((e) => {
+          const p = patchOf(e.id);
+          if (!p) return e;
+          // A timed entry keeps the time actually done (a round stopped early).
+          const values = data.timer && p.durationSec != null ? { ...e.values, [data.timer.work]: p.durationSec } : e.values;
+          return { ...e, done: true, values };
+        });
+        const next = { ...data, entries };
+        return { ...b, data: { ...next, summary: renderSummary(next, data.tpl) } };
+      }
+      if (b.type !== "mobility") return b;
       const data = b.data as MobilityBlockData;
       const sets = data.sets.map((set) => {
         const patch = mine.find((x) => x.setId === set.id)?.patch;
@@ -440,7 +514,7 @@ export function phaseElapsedMs(run: CircuitRun, nowMs: number): number {
 /**
  * Roughly how long the group takes with the countdown, from the start: one round (the
  * first) and the whole thing. Holds count at their goal, reps at 3 s each, plus every
- * get-ready, side switch and rest. Strength and cardio members aren't counted.
+ * get-ready, side switch and rest. Strength sets count 3 s a rep; cardio isn't counted.
  */
 export function estimateCircuitMs(
   session: HasBlocks,
@@ -458,7 +532,7 @@ export function estimateCircuitMs(
       gap === "switch"
         ? SWITCH_SIDES_MS
         : timing.leadInMs + (gap === "round" ? timing.roundRestMs : gap === "between" ? timing.memberRestMs : 0);
-    const work = step.metric === "reps" ? step.reps * ESTIMATE_MS_PER_REP : step.goalSec * 1000;
+    const work = step.metric === "hold" ? step.goalSec * 1000 : step.metric === "reps" ? step.reps * ESTIMATE_MS_PER_REP : ESTIMATE_MS_DONE;
     totalMs += before + work;
     if (step.round === 0) roundMs += before + work;
     prev = step;

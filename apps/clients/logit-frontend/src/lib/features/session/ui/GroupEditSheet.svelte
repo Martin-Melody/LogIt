@@ -38,7 +38,7 @@
   }>();
 
   const info = $derived(blocks[0] ? blockGroup(blocks[0]) : undefined);
-  const hasDrills = $derived(blocks.some((b: SessionBlock) => b.type === "mobility"));
+  const hasDrills = $derived(blocks.some((b: SessionBlock) => b.type !== "cardio"));
   const defaults = $derived(circuitDefaultsFrom($profile.restDefaults));
   const estimate = $derived(hasDrills ? estimateCircuitMs({ blocks }, supersetId, defaults) : null);
 </script>

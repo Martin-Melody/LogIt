@@ -36,6 +36,7 @@
   {@const BlockComponent = def.component}
   <BlockComponent
     {blockId}
+    blockType={type}
     {data}
     {saving}
     {grouped}

@@ -1,7 +1,9 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import { Dumbbell, Timer, PersonStanding } from "lucide-svelte";
+  import { Dumbbell, Timer, PersonStanding, Puzzle } from "lucide-svelte";
   import { listBlockDefs } from "$lib/features/session/blocks";
+  import { listBlockDeclarations } from "$lib/plugins/blockPluginStore";
+  import { pluginBlockType } from "@logit/core/domain/blockPlugin";
 
   const ICONS: Record<string, typeof Dumbbell> = {
     strength: Dumbbell,
@@ -20,7 +22,11 @@
   const onOpenChange = props.onOpenChange ?? ((_v: boolean) => {});
   const onSelect = props.onSelect ?? ((_t: string) => {});
 
-  const defs = $derived(listBlockDefs().filter((d) => !props.types || props.types.includes(d.type)));
+  // The built-in kinds, then a row per installed workout-block plugin (not in the split editor).
+  const defs = $derived([
+    ...listBlockDefs().filter((d) => !d.type.startsWith("plugin:") && (!props.types || props.types.includes(d.type))),
+    ...(props.types ? [] : listBlockDeclarations().map((d) => ({ type: pluginBlockType(d.id), label: d.name, description: d.description }))),
+  ]);
 </script>
 
 <Dialog.Root open={props.open ?? false} {onOpenChange}>
@@ -32,7 +38,7 @@
 
     <div class="flex flex-col gap-2 py-1">
       {#each defs as def (def.type)}
-        {@const Icon = ICONS[def.type]}
+        {@const Icon = ICONS[def.type] ?? Puzzle}
         <button
           type="button"
           class="flex items-center gap-3 rounded-md border border-border px-3 py-3 text-left hover:bg-muted/50"

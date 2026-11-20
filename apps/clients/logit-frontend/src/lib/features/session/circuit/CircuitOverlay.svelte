@@ -2,6 +2,8 @@
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { ChevronDown, ChevronUp, Pause, Play, SkipForward, Check, Minus, Plus } from "lucide-svelte";
   import { currentSession } from "$lib/stores/currentSession.store";
+  import { profile } from "$lib/stores/profile.store";
+  import { formatWeight } from "@logit/core/domain/units";
   import { blockGroup, groupLabel } from "@logit/core/domain/workout";
   import {
     currentStep,
@@ -80,7 +82,15 @@
     return s.side ? `${s.drillName}, ${sideLabel(s.side)}` : s.drillName;
   }
   function goal(s: CircuitStep): string {
-    return s.metric === "reps" ? `${s.reps} reps` : `${s.goalSec} s`;
+    return s.metric === "reps" ? `${s.reps} reps${weight(s)}` : s.metric === "hold" ? secs(s.goalSec) : "";
+  }
+  /** "30 s", or "6:00" from a minute up (a BJJ round). */
+  function secs(n: number): string {
+    return n >= 60 ? `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` : `${n} s`;
+  }
+  /** " at 24 kg" for a weighted strength set. */
+  function weight(s: CircuitStep): string {
+    return s.weightKg ? ` at ${formatWeight(s.weightKg, $profile.weightUnit)}` : "";
   }
 
   const roundLabel = $derived.by(() => {
@@ -172,7 +182,7 @@
           </div>
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
           <p class="mt-2.5 text-base text-[#9aa1ab]">
-            {step.metric === "reps" ? `${step.reps} reps` : `${step.goalSec} s hold`}{step.side ? ` · ${sideLabel(step.side)}` : ""}
+            {step.metric === "reps" ? `${step.reps} reps${weight(step)}` : step.metric === "hold" ? secs(step.goalSec) : "Tap Done when you're finished"}{step.side ? ` · ${sideLabel(step.side)}` : ""}
           </p>
         {:else if phase.kind === "hold" && step}
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
@@ -188,7 +198,7 @@
               {/if}
             </div>
           {/if}
-          {@render ring(`${clock(remainingMs)}`, `of ${Math.round(totalMs / 1000)} s`, "#cfd3da",
+          {@render ring(`${clock(remainingMs)}`, `of ${secs(Math.round(totalMs / 1000))}`, "#cfd3da",
             `${Math.ceil(remainingMs / 1000)} seconds left of ${Math.round(totalMs / 1000)}`)}
         {:else if phase.kind === "rest"}
           <h2 class="m-0 text-3xl font-bold leading-tight">Rest</h2>
@@ -198,6 +208,11 @@
         {:else if phase.kind === "reps" && step}
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
           {#if step.side}<p class="mt-1 text-base text-[#9aa1ab] capitalize">{sideLabel(step.side)}</p>{/if}
+          {#if step.weightKg}<p class="mt-1 text-lg font-semibold text-[#c3c8d0]">{formatWeight(step.weightKg, $profile.weightUnit)}</p>{/if}
+          {#if step.metric === "done"}
+            <p class="mt-6 text-5xl font-extrabold tabular-nums">{clock(elapsedMs)}</p>
+            <p class="mt-3 text-sm text-[#9aa1ab]">Tap Done when you're finished</p>
+          {:else}
           <div class="flex items-center gap-4 mt-6">
             <button
               type="button"
@@ -221,6 +236,7 @@
           </div>
           <div class="text-xl font-semibold text-[#c3c8d0] mt-1">reps</div>
           <p class="mt-5 text-sm text-[#9aa1ab]">{clock(elapsedMs)} so far · no time limit</p>
+          {/if}
         {/if}
       </div>
 

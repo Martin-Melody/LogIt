@@ -1,3 +1,4 @@
+import { repeatLastEntry, type PluginBlockData } from "./blockPlugin";
 import { createId } from "./ids";
 import { nowMs } from "./time";
 import { effectiveLoadKg, getLoadMode, type LoadMode } from "./bodyweight";
@@ -1385,7 +1386,8 @@ export function blockDisplayName(b: SessionBlock): string {
     case "mobility":
       return (b.data as MobilityBlockData).drillName;
     default:
-      return b.type;
+      // Plugin blocks carry their own name (blockPlugin.ts).
+      return (b.data as { name?: string } | null)?.name ?? b.type;
   }
 }
 
@@ -1452,6 +1454,10 @@ function memberRoundSets(block: SessionBlock): { completed?: boolean; restStarte
       g.kind === "single" ? [g.set] : [g.left, g.right].filter((x): x is MobilitySet => !!x),
     );
   }
+  if (block.type.startsWith("plugin:")) {
+    // Plugin blocks (blockPlugin.ts): an entry per round.
+    return ((block.data as { entries?: { done?: boolean }[] }).entries ?? []).map((e) => [{ completed: e.done !== false }]);
+  }
   return [];
 }
 
@@ -1514,6 +1520,8 @@ export function addSupersetRound(session: WorkoutSession, supersetId: string): W
       });
     } else if (member.type === "mobility") {
       next = addMobilityRound(next, member.id);
+    } else if (member.type.startsWith("plugin:")) {
+      next = { ...next, blocks: next.blocks.map((b) => (b.id === member.id ? { ...b, data: repeatLastEntry(b.data as PluginBlockData) } : b)) };
     }
   }
   return next;

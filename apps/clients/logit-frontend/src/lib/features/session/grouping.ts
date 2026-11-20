@@ -55,6 +55,8 @@ function blockDetail(session: WorkoutSession, b: SessionBlock): string {
   } else if (b.type === "cardio") {
     const n = (b.data as CardioBlockData).intervals.length;
     detail = n > 0 ? `Cardio · ${plural(n, "interval")}` : "Cardio";
+  } else if (b.type.startsWith("plugin:")) {
+    detail = (b.data as { name?: string }).name ?? "Plugin block";
   } else {
     detail = KIND_TITLES[b.type] ?? b.type;
   }

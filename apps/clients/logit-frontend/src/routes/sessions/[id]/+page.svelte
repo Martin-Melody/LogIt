@@ -67,6 +67,10 @@
     type WorkoutSession,
   } from "@logit/core/domain/workout";
   import { formatLoad, formatWeight } from "@logit/core/domain/units";
+  import { isPluginBlockType, type PluginBlockData } from "@logit/core/domain/blockPlugin";
+  import { getBlockDeclaration } from "$lib/plugins/blockPluginStore";
+  import PluginBlockView from "$lib/features/session/blocks/plugin/PluginBlockView.svelte";
+  import { Puzzle } from "lucide-svelte";
   import { usesBodyweightLoad } from "@logit/core/domain/exercise";
   import { estimated1RM } from "@logit/core/domain/oneRepMax";
 
@@ -488,6 +492,9 @@
                 {:else if b.type === "cardio"}
                   <span class="block truncate text-[15px] font-semibold">{(b.data as CardioBlockData).activityName}</span>
                   <span class="mt-0.5 block text-[13px]">{cardioSummary(b.data as CardioBlockData)}</span>
+                {:else if isPluginBlockType(b.type)}
+                  <span class="block truncate text-[15px] font-semibold">{(b.data as PluginBlockData).name}</span>
+                  <span class="mt-0.5 block truncate text-[13px]">{(b.data as PluginBlockData).summary}</span>
                 {/if}
               </span>
               {#if change && change.kind !== "new"}
@@ -584,6 +591,15 @@
               <span class="block truncate text-[15px] font-semibold">{d.activityName}</span>
               <span class="mt-0.5 block text-[13px]">{cardioSummary(d)}</span>
             </span>
+          </section>
+        {:else if isPluginBlockType(b.type)}
+          {@const d = b.data as PluginBlockData}
+          <section class="overflow-hidden rounded-xl border bg-card">
+            <div class="flex items-center gap-2.5 px-3.5 pb-1 pt-2.5">
+              <Puzzle class="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
+              <span class="truncate text-[15px] font-semibold">{d.name}</span>
+            </div>
+            <PluginBlockView data={d} missingPlugin={!getBlockDeclaration(b.type.slice(7))} />
           </section>
         {/if}
       {/if}

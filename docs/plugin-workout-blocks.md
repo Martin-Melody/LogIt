@@ -204,8 +204,13 @@ discussed for powerlifting before they're promoted in the catalog.
 ## What the app needs to build, in order
 
 1. The renderer for declared blocks: live workout, history, session detail, web dashboard, and
-   the plain fallback from `shape`.
-2. The `rounds` timer pattern (with the existing notification and sounds).
+   the plain fallback from `shape`. **Built 2026-11-20** (`core/domain/blockPlugin.ts`,
+   `features/session/blocks/plugin/`); declarations are read from `blockPluginStore.ts`, which
+   step 3 fills when a plugin is installed.
+2. The `rounds` timer pattern (with the existing notification and sounds). **Partly there:** a
+   plugin block in a superset/circuit already runs in the circuit countdown (an entry with a
+   work timer is a timed hold, else a Done), and so do strength sets (a rep goal with the weight).
+   A plugin block on its own doesn't have a timer yet.
 3. The `workout-block` family in the sandbox, the linter and the registry; split-day planning.
 4. The first plugin, BJJ rounds, published first-party through this mechanism (not built in), as
    the example to copy.

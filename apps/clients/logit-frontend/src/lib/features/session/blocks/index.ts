@@ -2,6 +2,7 @@ import { registerBlock } from "./registry";
 import StrengthBlock from "./strength/StrengthBlock.svelte";
 import CardioBlock from "./cardio/CardioBlock.svelte";
 import MobilityBlock from "./mobility/MobilityBlock.svelte";
+import PluginBlock from "./plugin/PluginBlock.svelte";
 
 registerBlock({
   type: "strength",
@@ -22,6 +23,13 @@ registerBlock({
   label: "Mobility / Stretching",
   description: "Progressively overload holds or reps, per side.",
   component: MobilityBlock,
+});
+
+// Every plugin block (`plugin:<id>`); the Add block sheet lists installed plugins itself.
+registerBlock({
+  type: "plugin:*",
+  label: "Plugin block",
+  component: PluginBlock,
 });
 
 export { registerBlock, getBlockDef, listBlockDefs } from "./registry";

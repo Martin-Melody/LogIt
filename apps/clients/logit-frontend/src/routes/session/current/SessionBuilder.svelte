@@ -23,6 +23,8 @@
   import { autoTour, destroyActiveTour } from "$lib/tour/index";
 
   import { listBlockDefs } from "$lib/features/session/blocks/index";
+  import { getBlockDeclaration } from "$lib/plugins/blockPluginStore";
+  import { addPluginBlock, isPluginBlockType, pluginBlockType, type PluginBlockData } from "@logit/core/domain/blockPlugin";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
   import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
   import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
@@ -273,7 +275,7 @@
   function openAddBlock() {
     if (ui.finishing) return;
     destroyActiveTour();
-    const defs = listBlockDefs();
+    const defs = listBlockDefs().filter((d) => !isPluginBlockType(d.type));
     if (defs.length === 1) {
       addBlockUi.strengthOpen = true;
     } else {
@@ -285,6 +287,19 @@
     if (type === "strength") addBlockUi.strengthOpen = true;
     else if (type === "cardio") addBlockUi.cardioOpen = true;
     else if (type === "mobility") addBlockUi.mobilityOpen = true;
+    else if (isPluginBlockType(type)) void addPluginBlockOfType(type);
+  }
+
+  /** A plugin block, remembering block fields and `remember` fields from the last one logged. */
+  async function addPluginBlockOfType(type: string) {
+    const decl = getBlockDeclaration(type.slice("plugin:".length));
+    if (!decl) return;
+    const sessions = await getWorkoutRepo().listAllSessions().catch(() => []);
+    const previous = sessions
+      .filter((s) => s.endedAtMs)
+      .sort((a, b) => b.startedAtMs - a.startedAtMs)
+      .flatMap((s) => s.blocks.filter((b) => b.type === pluginBlockType(decl.id)))[0]?.data as PluginBlockData | undefined;
+    await addAndTick((cur) => addPluginBlock(cur, decl, previous));
   }
 
   // ── "Superset / circuit with…" ────────────────────────────────────────────
@@ -629,7 +644,7 @@
   // should still be finishable.
   const nonStrengthBlockCount = $derived(
     $currentSession
-      ? $currentSession.blocks.filter((b) => b.type === "cardio" || b.type === "mobility").length
+      ? $currentSession.blocks.filter((b) => b.type === "cardio" || b.type === "mobility" || isPluginBlockType(b.type)).length
       : 0,
   );
   const hasLoggableWork = $derived(sessionExercises.length > 0 || nonStrengthBlockCount > 0);
