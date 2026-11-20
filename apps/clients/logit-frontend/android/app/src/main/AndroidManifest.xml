@@ -24,6 +24,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- A CSV shared from another app (Strong's or Hevy's export, a spreadsheet) or opened
+                 with LogIt: the import screen opens on it (SharedFilePlugin). -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="text/x-csv" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="text/x-csv" />
+            </intent-filter>
+
             <!-- Shared algorithms: the "Open in LogIt" button on getlogit.app/a opens logit://a?c=<code>. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

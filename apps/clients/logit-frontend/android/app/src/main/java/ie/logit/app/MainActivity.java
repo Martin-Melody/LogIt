@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FileSaverPlugin.class);
         registerPlugin(PlayBillingPlugin.class);
         registerPlugin(MediaControlPlugin.class);
+        registerPlugin(SharedFilePlugin.class);
         super.onCreate(savedInstanceState);
         // The app is served from https://localhost, so without this the WebView's
         // mixed-content policy silently blocks every http:// request to a self-hosted
