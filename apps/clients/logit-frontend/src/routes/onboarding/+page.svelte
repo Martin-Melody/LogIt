@@ -29,7 +29,12 @@
   import { pushExercise } from "$lib/sync/syncService";
   import { applyTrainingStyle, TRAINING_STYLES, type TrainingStyle } from "$lib/features/onboarding/trainingStyle";
   import { estimated1RM } from "@logit/core/domain/oneRepMax";
-  import { fromDisplayWeight, trimWeight } from "@logit/core/domain/units";
+  import ImportFlow from "$lib/features/import/ImportFlow.svelte";
+  import { getSplitRepo, getWorkoutRepo } from "$lib/data/repoProvider";
+  import { setTrainingGoal } from "$lib/features/onboarding/trainingGoal";
+  import { detectSplit, splitFromDetected, summariseHistory, type DetectedSplit, type HistorySummary } from "@logit/core/import/historyFromImport";
+  import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
+  import { fromDisplayWeight, toDisplayWeight, trimWeight } from "@logit/core/domain/units";
   import {
     buildStarterPlan, otherPlanKinds, planKindFor,
     EQUIPMENT_LABELS, GOAL_LABELS, LENGTH_LABELS,
@@ -48,6 +53,10 @@
     kind: PlanKind | null;
     /** Experienced path: skipped the best lifts ("Start fresh"). */
     fresh: boolean;
+    /** Experienced path: brought their history in (steps 8 import, 9 your history). */
+    imported: boolean;
+    /** The split found in that history, kept: no days or plan steps, it's the plan. */
+    historySplitId: string | null;
     /** "Your best lifts" rows as typed, in the display unit. */
     lifts: LiftRow[];
     style: TrainingStyle;
@@ -56,7 +65,7 @@
   const DEFAULT_LIFTS: LiftRow[] = ["Squat", "Bench Press", "Deadlift", "Overhead Press"].map((name) => ({ name, weight: "", reps: "" }));
 
   function loadAnswers(): Answers {
-    const empty: Answers = { goal: null, experience: null, days: null, equipment: "gym", minutes: 45, kind: null, fresh: false, lifts: DEFAULT_LIFTS, style: "adaptive" };
+    const empty: Answers = { goal: null, experience: null, days: null, equipment: "gym", minutes: 45, kind: null, fresh: false, imported: false, historySplitId: null, lifts: DEFAULT_LIFTS, style: "adaptive" };
     try {
       const raw = getAccountItem(ANSWERS_KEY);
       return raw ? { ...empty, ...(JSON.parse(raw) as Partial<Answers>) } : empty;
@@ -79,24 +88,30 @@
 
   // Steps: 0 welcome, 1 goal, 2 experience, 3 days, 4 plan. "2+ years" and "I compete" also
   // get 5 pick up where you left off, 6 your best lifts (before days) and 7 train your way
-  // (after the plan); design canvas row E. An old saved step past the end (the name step of
-  // the previous onboarding) starts again from the goal.
+  // (after the plan); design canvas row E. Importing their history instead: 8 import, then 9
+  // your history (E2), whose found split can replace days and plan. An old saved step past the
+  // end (the name step of the previous onboarding) starts again from the goal.
   const experienced = $derived(answers.experience === "2plus" || answers.experience === "compete");
   onMount(() => {
-    const broken = step > 7 || (step >= 2 && !answers.goal) || ((step >= 3 || step === 5 || step === 6) && !answers.experience)
-      || ((step === 4 || step === 7) && !answers.days) || (step >= 5 && !experienced);
+    const broken = step > 9 || (step >= 2 && !answers.goal) || (step >= 3 && !answers.experience)
+      || (step === 4 && !answers.days) || (step === 7 && !answers.days && !answers.historySplitId) || (step >= 5 && !experienced);
     if (broken) onboarding.setStep(answers.goal ? 2 : 1);
+    else if (step === 9) void loadHistory();
+    if (answers.historySplitId) void getSplitRepo().getSplit(answers.historySplitId).then((sp) => (historySplit = sp));
   });
 
   /** Where Back goes: the path taken, not the step number. */
   function prevStep(s: number): number {
-    if (s === 3) return experienced ? (answers.fresh ? 5 : 6) : 2;
-    return ({ 1: 0, 2: 1, 4: 3, 5: 2, 6: 5, 7: 4 } as Record<number, number>)[s] ?? 0;
+    if (s === 3) return experienced ? (answers.imported ? 9 : answers.fresh ? 5 : 6) : 2;
+    if (s === 7) return answers.historySplitId ? 9 : 4;
+    return ({ 1: 0, 2: 1, 4: 3, 5: 2, 6: 5, 8: 5, 9: 5 } as Record<number, number>)[s] ?? 0;
   }
   /** [this step, of how many] for the progress bar. */
   const progress = $derived.by((): [number, number] => {
     if (!experienced) return [step, 4];
-    const order = answers.fresh ? [1, 2, 5, 3, 4, 7] : [1, 2, 5, 6, 3, 4, 7];
+    const order = answers.imported
+      ? answers.historySplitId ? [1, 2, 5, 8, 9, 7] : [1, 2, 5, 8, 9, 3, 4, 7]
+      : answers.fresh ? [1, 2, 5, 3, 4, 7] : [1, 2, 5, 6, 3, 4, 7];
     return [order.indexOf(step) + 1, order.length];
   });
 
@@ -187,12 +202,12 @@
       const n = liftNumbers(l);
       return n ? [{ exerciseId: l.exerciseId, exerciseName: l.name, weightKg: fromDisplayWeight(n.weight, unit), reps: n.reps, enteredAtMs: now }] : [];
     }));
-    save({ fresh: false });
+    save({ fresh: false, imported: false, historySplitId: null });
     go(3);
   }
   function startFresh() {
     saveStartingLifts([]);
-    save({ fresh: true });
+    save({ fresh: true, imported: false, historySplitId: null });
     go(3);
   }
   function pickDays(days: DaysPerWeek) {
@@ -200,8 +215,56 @@
     go(4);
   }
 
+  // ── Your history (E2) ──
+  let history = $state<HistorySummary | null>(null);
+  let detected = $state<DetectedSplit | null>(null);
+  let historySplit = $state<WorkoutSplit | null>(null);
+
+  async function loadHistory() {
+    const sessions = (await getWorkoutRepo().listAllSessions()).filter((x) => x.endedAtMs != null);
+    history = summariseHistory(sessions);
+    detected = detectSplit(sessions);
+  }
+  async function afterImport() {
+    save({ imported: true, fresh: false, historySplitId: null });
+    await loadHistory();
+    go(9);
+  }
+  async function keepSplit() {
+    if (!detected) return;
+    const names = detected.days.map((d) => d.name);
+    const split = splitFromDetected($state.snapshot(detected) as DetectedSplit, names.length <= 3 ? names.join(" / ") : "My split");
+    await saveSplit(split);
+    await splits.setActive(split.id);
+    goalsStore.setWeeklyTarget(detected.daysPerWeek);
+    historySplit = split;
+    save({ historySplitId: split.id });
+    go(7);
+  }
+  function changeSplit() {
+    historySplit = null;
+    save({ historySplitId: null });
+    go(3);
+  }
+  /** Today's day of the found split, else its first. */
+  const historyDay = $derived(historySplit ? (historySplit.days.find((d) => d.weekday === new Date().getDay()) ?? historySplit.days[0] ?? null) : null);
+  const startName = $derived(historyDay?.name ?? firstDay?.name ?? "");
+  function sparkPoints(kgs: number[]): string {
+    const lo = Math.min(...kgs), hi = Math.max(...kgs);
+    return kgs.map((kg, i) => `${kgs.length === 1 ? 60 : (i / (kgs.length - 1)) * 120},${hi === lo ? 14 : 26 - ((kg - lo) / (hi - lo)) * 24}`).join(" ");
+  }
+  const toDisplay = (kg: number) => toDisplayWeight(kg, unit);
+  const years = $derived(history ? (history.lastAtMs - history.firstAtMs) / (365.25 * 86_400_000) : 0);
+
   /** Saves the plan as the active split, its rep ranges and the weekly target; ends onboarding. */
-  async function savePlan() {
+  async function savePlan(): Promise<WorkoutSplit> {
+    // The split found in their history is already saved and active.
+    if (answers.historySplitId && historySplit) {
+      if (answers.goal) setTrainingGoal(answers.goal);
+      resetTours();
+      onboarding.complete();
+      return historySplit;
+    }
     if (!plan) throw new Error("No plan yet");
     const split = await saveStarterPlan(plan, answers.goal ?? undefined);
     resetTours();
@@ -221,7 +284,7 @@
       }
       const split = await savePlan();
       // Planned like the plan screen does, and kept with where it came from (its name in the history).
-      const day = split.days[0]!;
+      const day = (split.id === historySplit?.id ? historyDay : null) ?? split.days[0]!;
       const { session } = await planSplitDay(day);
       await currentSession.startPlanned({ ...session, source: sourceFromSplitDay(split, day, session) });
       await goto("/session/current");
@@ -370,9 +433,13 @@
       <h2 class="text-2xl font-bold leading-tight mb-1.5">Pick up where you left off</h2>
       <p class="text-sm text-muted-foreground mb-6">LogIt plans from your real numbers, not from zero.</p>
       <div class="flex flex-col gap-2.5">
-        <button type="button" class="flex flex-col gap-0.5 min-h-[72px] rounded-xl bg-primary px-4 py-3.5 text-left text-primary-foreground" onclick={() => go(6)}>
+        <button type="button" class="flex flex-col gap-0.5 min-h-[72px] rounded-xl bg-primary px-4 py-3.5 text-left text-primary-foreground" onclick={() => go(8)}>
+          <span class="text-base font-semibold">Import my history</span>
+          <span class="text-sm opacity-80">Every workout, set and PR, from a spreadsheet</span>
+        </button>
+        <button type="button" class="flex flex-col gap-0.5 min-h-16 rounded-xl border border-border px-4 py-3 text-left" onclick={() => go(6)}>
           <span class="text-base font-semibold">Just enter my best lifts</span>
-          <span class="text-sm opacity-80">A recent heavy set or a max, for the lifts you care about</span>
+          <span class="text-sm text-muted-foreground">A recent heavy set or a max, for the lifts you care about</span>
         </button>
         <button type="button" class="min-h-12 rounded-xl px-4 text-left text-sm text-muted-foreground" onclick={startFresh}>
           Start fresh
@@ -432,7 +499,63 @@
       <button type="button" class="mt-2 h-11 rounded-[10px] border border-border text-sm font-medium" onclick={startFresh}>Skip, I'll pick weights in my first workout</button>
     </div>
 
-  {:else if step === 7 && plan && firstDay}
+  {:else if step === 8}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      <!-- A CSV shared to LogIt before onboarding was done is opened here ("onboarding"). -->
+      <ImportFlow onexit={() => go(5)} ondone={() => void afterImport()} shared="onboarding" />
+    </div>
+
+  {:else if step === 9}
+    <div class="flex flex-col flex-1 gap-3.5 px-5 pt-12 pb-7" in:fade={{ duration: 150 }}>
+      {#if history}
+        <div>
+          <p class="mb-1 text-[13px] font-semibold text-muted-foreground">Your history, imported</p>
+          <h2 class="text-2xl font-bold leading-tight">
+            {years >= 1 ? `${years >= 1.5 ? Math.round(years) : 1} year${years >= 1.5 ? "s" : ""} of training, all here` : `${history.workouts} workouts, all here`}
+          </h2>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          {#each [[history.workouts, "workouts"], [history.prs, "PRs found"], [history.exercises, "exercises"]] as [n, label] (label)}
+            <div class="rounded-[10px] bg-muted p-2.5 text-center"><p class="text-xl font-bold tabular-nums">{n}</p><p class="text-xs text-muted-foreground">{label}</p></div>
+          {/each}
+        </div>
+        {#if history.lifts.length}
+          <div class="flex flex-col rounded-xl border border-border">
+            <div class="flex items-baseline justify-between px-3.5 pt-3 pb-1">
+              <span class="text-sm font-semibold">Estimated max{history.lifts[0]!.months.length > 1 ? `, since ${new Date(history.lifts[0]!.months[0]!.monthMs).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}` : ""}</span>
+              <span class="text-xs text-muted-foreground">{unit}</span>
+            </div>
+            {#each history.lifts as lift (lift.name)}
+              {@const gain = Math.round(toDisplay(lift.lastKg - lift.firstKg))}
+              <div class="grid grid-cols-[92px_minmax(0,1fr)_88px] items-center gap-2 px-3.5 py-2">
+                <span class="truncate text-sm">{lift.name}</span>
+                <svg viewBox="0 0 120 28" class="h-7 w-full" role="img" aria-label="{lift.name} estimated max, {Math.round(toDisplay(lift.firstKg))} to {Math.round(toDisplay(lift.lastKg))} {unit}">
+                  <polyline points={sparkPoints(lift.months.map((m) => m.kg))} fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span class="text-right text-sm tabular-nums"><strong>{Math.round(toDisplay(lift.lastKg))}</strong>{#if gain > 0} <span class="text-xs text-green-700 dark:text-green-400">+{gain}</span>{/if}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+        {#if detected}
+          <div class="flex flex-col gap-2 rounded-xl bg-muted p-3.5">
+            <span class="text-sm font-semibold">We found your split</span>
+            <span class="text-sm text-muted-foreground">{detected.daysPerWeek} day{detected.daysPerWeek === 1 ? "" : "s"} a week: {detected.days.map((d) => d.name).join(", ")}, from your last 6 weeks.</span>
+            <div class="flex gap-2">
+              <button type="button" class="h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onclick={() => void keepSplit()}>Keep it</button>
+              <button type="button" class="h-11 flex-1 rounded-lg border border-border bg-background text-sm font-medium" onclick={changeSplit}>Change it</button>
+            </div>
+          </div>
+        {:else}
+          <div class="flex-1"></div>
+          <button type="button" class="h-[52px] rounded-[10px] bg-primary text-base font-semibold text-primary-foreground" onclick={changeSplit}>Continue</button>
+        {/if}
+      {:else}
+        <Loader2 class="mx-auto mt-24 h-6 w-6 animate-spin text-muted-foreground" />
+      {/if}
+    </div>
+
+  {:else if step === 7 && (historySplit || (plan && firstDay))}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
       {@render header()}
       <h2 class="text-2xl font-bold leading-tight mb-1.5">Train your way</h2>
@@ -455,7 +578,7 @@
       <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
         disabled={busy !== null} onclick={() => void startNow()}>
         {#if busy === "start"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
-        {answers.style === "own" ? "Set up my rules" : `Start ${firstDay.name} now`}
+        {answers.style === "own" ? "Set up my rules" : `Start ${startName} now`}
       </button>
       <button type="button" class="min-h-11 text-sm text-muted-foreground" disabled={busy !== null} onclick={() => void startLater()}>
         I'll start later
