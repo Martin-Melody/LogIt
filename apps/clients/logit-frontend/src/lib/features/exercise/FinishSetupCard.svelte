@@ -114,7 +114,11 @@
         </button>
       {:else}
         <div class="flex flex-col gap-2 rounded-lg border border-border bg-background p-3" transition:reveal>
-          <p class="text-sm">{confirming} logged set{confirming === 1 ? "" : "s"} of {start.name} become {same.name}'s, along with its place in your split and goals, and {start.name} is removed. This can't be undone.</p>
+          <p class="text-sm">
+            {#if confirming > 0}{confirming} logged set{confirming === 1 ? "" : "s"} of {start.name} become {same.name}'s, along with its place in your split and goals, and {start.name} is removed.
+            {:else}{start.name} becomes {same.name} here and in your split and goals, and {start.name} is removed.{/if}
+            This can't be undone.
+          </p>
           <div class="grid grid-cols-2 gap-2">
             <button type="button" class="h-10 rounded-lg border border-border text-sm font-medium" disabled={merging} onclick={() => (confirming = null)}>Cancel</button>
             <button type="button" class="h-10 rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50" disabled={merging} onclick={() => void merge()}>Merge</button>
