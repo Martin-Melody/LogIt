@@ -53,7 +53,7 @@ export const pluginBundle = {
 export const block = {
   id: "app.getlogit.bjj-rounds",
   name: "BJJ rounds",
-  icon: "swords",                       // from the app's icon list
+  icon: "icon.svg",                     // its own (see Icons), or a name from the app's icon list
   entry: { one: "Round", many: "Rounds" },
   blockFields: [
     { key: "gi", type: "choice", label: "Gi or no-gi", options: ["Gi", "No-gi"], remember: true },
@@ -62,6 +62,7 @@ export const block = {
     { key: "length", type: "duration", label: "Length", default: 360, timer: "work", column: true },
     { key: "partner", type: "text", label: "Partner", optional: true, suggestions: "previous", column: true },
     { key: "start", type: "choice", label: "Started", options: ["Standing", "Guard", "Top", "Bottom"], optional: true },
+    { key: "finish", type: "choice", label: "Got the sub with", options: "list:submissions", optional: true },
     { key: "subs", type: "counter", label: "Subs", column: true },
     { key: "taps", type: "counter", label: "Tapped", column: true },
     { key: "effort", type: "scale", label: "How hard", min: 1, max: 5, optional: true },
@@ -140,17 +141,50 @@ the server:
     blockFields: { gi: "No-gi" },
     entries: [{ length: 360, partner: "Conor", subs: 2, taps: 0 }, …],
     shape: [["length", "duration", "Length"], ["subs", "counter", "Subs"], …],
-    summary: "6 rounds · 4 subs · 1 tapped"
+    summary: "6 rounds · 4 subs · 1 tapped",
+    card: { … }                            // only when the plugin has a feed card: its WidgetView
   } }
 ```
 
-`shape` (each field's key, type and label) and the last `summary` travel with the data, a few
-hundred bytes. That's what lets any phone or the web show the block plainly without the plugin:
+`shape` (each field's key, type and label), the last `summary` and the feed `card` (if any) are
+worked out when the workout is finished and travel with the data, a few hundred bytes. That's what lets any phone or the web show the block plainly without the plugin:
 a table of the entries with their labels, in the person's units.
 
 **Versions.** A declaration may add fields, rename labels, and rename keys with `was: "oldKey"`.
 It may never change a key's type or reuse a key for something else; the linter checks this
 against the previous published version. Old data keeps its `v` and shape, so it always reads.
+
+### Icons
+
+A plugin can ship its own icon as an SVG (Martin, 2026-11-20), or name one from the app's list.
+The app keeps it looking like LogIt and safe to draw: the linter accepts a single SVG up to 8 KB,
+24 × 24 viewBox, paths and basic shapes only (no scripts, `<foreignObject>`, embedded images,
+external links or CSS), and the app draws it in the current text colour, so it fits light and dark
+mode and every icon looks like a line icon. One that fails gets the default block icon.
+
+### Lists it ships
+
+A plugin can ship its own lists (Martin, 2026-11-20): submissions, belt colours, climbing grades,
+boxing combos, swim strokes. They come with the plugin as data, like an exercise pack, and a
+`choice` or `tags` field points at one with `options: "list:<id>"`:
+
+```ts
+export const lists = {
+  submissions: { label: "Submissions", items: ["Rear naked choke", "Armbar", "Triangle", "Kimura", …], add: true },
+  grades: { label: "Font grades", items: ["4", "5", "5+", "6A", "6A+", …], ordered: true },
+};
+```
+
+`add: true` lets the person add their own items (kept with their data, not the plugin's);
+`ordered: true` means the order is meaningful, so stats can say "hardest" or "highest". Items are
+stored by their text, so a later version can add items but the old ones keep reading.
+
+### Its card in the feed
+
+The default in the social feed is the summary line. A plugin can also declare a feed card
+(Martin, 2026-11-20): a `feedCard(block)` function returning a `WidgetView` (stat grid, list, bar,
+the widget renderer's parts), shown under the workout's title. Friends without the plugin see the
+same card, since it's drawn from the stored result, not by running the plugin on their phone.
 
 ## Where blocks appear
 
@@ -164,7 +198,7 @@ against the previous published version. Old data keeps its `v` and shape, so it 
 
 The sandbox protects the app; it doesn't make a plugin's advice good. Declarations are checked by
 `logit-plugin-lint` (field types, keys stable across versions, summary template valid, timer
-fields exist). Training plugins (block and progression) should get the "verified" review badge
+fields exist, the icon passes the SVG rules, every `list:` a field points at is shipped). Training plugins (block and progression) should get the "verified" review badge
 discussed for powerlifting before they're promoted in the catalog.
 
 ## What the app needs to build, in order
@@ -178,9 +212,8 @@ discussed for powerlifting before they're promoted in the catalog.
 5. Later: `suggest` and `stats`, `countsAs`, the other timer patterns, and the event and group
    inputs once events and groups exist.
 
-## Open questions
+## Decided (Martin, 2026-11-20)
 
-- Icons: a fixed list from the app (safe, consistent) or uploaded SVGs (more freedom, review load)?
-- Should a block plugin be able to declare its own exercises (a climbing grade list) through a
-  content pack it ships with?
-- Social: is the summary line enough for the feed, or do blocks want a card view?
+- Plugins can upload their own icons (checked SVG, drawn in the app's colour; see Icons).
+- Plugins can ship their own lists (see Lists it ships).
+- Feed: the summary line by default; a plugin may add a card (see Its card in the feed).
