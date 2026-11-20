@@ -128,7 +128,7 @@
         <li class="border-t border-border first:border-t-0">
           <a href="/sessions?id={s.id}" class="flex items-center justify-between gap-3 py-2.5 text-[13px] hover:text-foreground">
             <span class="min-w-0 truncate"><span class="font-medium">{data.titles.get(s.id) ?? "Workout"}</span> <span class="text-muted-foreground">· {shortDay(s.startedAtMs)}</span></span>
-            <span class="shrink-0 text-xs text-muted-foreground">{Math.round(((s.endedAtMs ?? s.startedAtMs) - s.startedAtMs) / 60000)} min</span>
+            {#if (s.endedAtMs ?? s.startedAtMs) > s.startedAtMs}<span class="shrink-0 text-xs text-muted-foreground">{Math.round(((s.endedAtMs ?? s.startedAtMs) - s.startedAtMs) / 60000)} min</span>{/if}
           </a>
         </li>
       {/each}

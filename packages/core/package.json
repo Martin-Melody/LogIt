@@ -19,7 +19,8 @@
     "./usecases/*": "./src/usecases/*.ts",
     "./api/*": "./src/api/*.ts",
     "./platform/*": "./src/platform/*.ts",
-    "./guide/*": "./src/guide/*.ts"
+    "./guide/*": "./src/guide/*.ts",
+    "./import/*": "./src/import/*.ts"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.1",

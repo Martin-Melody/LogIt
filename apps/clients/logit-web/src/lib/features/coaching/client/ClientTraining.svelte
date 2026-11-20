@@ -118,7 +118,7 @@
                     </div>
                   {/if}
                 </td>
-                <td class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{s.endedAtMs ? `${Math.round((s.endedAtMs - s.startedAtMs) / 60_000)} min` : ""}</td>
+                <td class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{s.endedAtMs && s.endedAtMs > s.startedAtMs ? `${Math.round((s.endedAtMs - s.startedAtMs) / 60_000)} min` : ""}</td>
                 <td class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{(sessionVolumeKg(s) / 1000).toFixed(1)} t</td>
                 <td class="px-3 py-2.5">{#if p.length}<span class="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">{p.length === 1 ? "PR" : `${p.length} PRs`}</span>{/if}</td>
               </tr>

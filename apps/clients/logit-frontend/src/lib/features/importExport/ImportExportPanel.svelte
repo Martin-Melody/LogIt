@@ -135,7 +135,7 @@
   };
 </script>
 
-<Card.Root class="w-full">
+<Card.Root id="sec-data" class="w-full scroll-mt-3">
   <Card.Header>
     <Card.Title>Backup & Restore</Card.Title>
     <Card.Description>
@@ -144,6 +144,15 @@
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-4">
+    <!-- Workout history from another app or a spreadsheet (its own screen). -->
+    <div class="flex flex-col gap-2">
+      <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">From another app</p>
+      <Button variant="outline" class="justify-start" href="/settings/import">
+        <Upload class="mr-2 h-3.5 w-3.5" />
+        Import workouts
+      </Button>
+    </div>
+
     <!-- Export -->
     <div class="flex flex-col gap-2">
       <p

@@ -154,6 +154,17 @@ export function pushDeletedSession(id: string): void {
   syncApi.pushSessions([dto]).catch(() => enqueue({ type: "session", dto }));
 }
 
+/** Many at once (an import, an undo), 50 to a request; a failed batch waits in the outbox. */
+export function pushSessions(sessions: WorkoutSession[], deleted = false): void {
+  if (!apiClient.isAuthenticated()) return;
+  const now = Date.now();
+  const dtos = sessions.map((s) => (deleted ? { id: s.id, startedAtMs: 0, dataJson: null, deletedAtMs: now } : sessionDto(s)));
+  for (let i = 0; i < dtos.length; i += 50) {
+    const batch = dtos.slice(i, i + 50);
+    syncApi.pushSessions(batch).catch(() => batch.forEach((dto) => enqueue({ type: "session", dto })));
+  }
+}
+
 export async function pushAllSessions(): Promise<void> {
   if (!apiClient.isAuthenticated()) return;
   try {

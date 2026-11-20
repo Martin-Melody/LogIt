@@ -57,7 +57,8 @@
     }
     if (e.inProgress) return `In progress · started ${timeLabel(s.startedAtMs)}`;
     const parts = [dayLabel(s.startedAtMs), timeLabel(s.startedAtMs)];
-    if (s.endedAtMs) parts.push(durationLabel(s.endedAtMs - s.startedAtMs));
+    // An imported workout with no duration ends when it starts: none shown.
+    if (s.endedAtMs && s.endedAtMs > s.startedAtMs) parts.push(durationLabel(s.endedAtMs - s.startedAtMs));
     if (e.parentName) parts.push(e.parentName);
     return parts.join(" · ");
   }
@@ -65,7 +66,7 @@
   function sameDay(e: HistoryEntry): string {
     const s = e.session;
     const parts = ["Same day", timeLabel(s.startedAtMs)];
-    if (s.endedAtMs) parts.push(durationLabel(s.endedAtMs - s.startedAtMs));
+    if (s.endedAtMs && s.endedAtMs > s.startedAtMs) parts.push(durationLabel(s.endedAtMs - s.startedAtMs));
     parts.push(itemWord(e));
     return parts.join(" · ");
   }
