@@ -5,6 +5,8 @@
 </script>
 
 <script lang="ts">
+  import { loadStartingLifts } from "$lib/features/onboarding/startingLifts";
+  import { sameExercise } from "@logit/core/domain/goals";
   import { ChevronDown, MapPin, Plus, Rows3 } from "lucide-svelte";
   import { toast } from "$lib/components/ui/sonner/index";
 
@@ -130,7 +132,8 @@
   let firstTimeReps = $state(8);
   let firstTimeMin = $state(1);
   // Planned from a best lift typed in at onboarding: not a first time, no "pick a weight".
-  const firstEver = $derived(prevLoaded && prevSets === null && suggestion?.reasoning?.inputs.startingLift === undefined);
+  const fromBestLift = $derived(loadStartingLifts().some((l) => sameExercise(l, { id: data.exerciseId, name: data.exerciseName })));
+  const firstEver = $derived(prevLoaded && prevSets === null && !fromBestLift);
   const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
   // The hint says how heavy to go and the first set plans the rest, so the algorithm's own
   // "First time" line would only repeat it, before and after that set.
