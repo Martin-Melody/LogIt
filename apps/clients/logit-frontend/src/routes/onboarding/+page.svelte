@@ -24,7 +24,7 @@
   import { planSplitDay } from "$lib/usecases/startSessionFromSplitDay";
   import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
   import { profile } from "$lib/stores/profile.store";
-  import { saveStartingLifts } from "$lib/features/onboarding/startingLifts";
+  import { saveStartingLift } from "$lib/features/onboarding/startingLifts";
   import { getExerciseRepo } from "$lib/data/repoProvider";
   import { pushExercise } from "$lib/sync/syncService";
   import { applyTrainingStyle, TRAINING_STYLES, type TrainingStyle } from "$lib/features/onboarding/trainingStyle";
@@ -209,17 +209,17 @@
     }
     save({ lifts: [...answers.lifts, { exerciseId, name: sel.name.trim(), weight: "", reps: "" }] });
   }
-  function commitLifts() {
-    const now = Date.now();
-    saveStartingLifts(answers.lifts.flatMap((l) => {
+  async function commitLifts() {
+    // An emptied row clears a lift saved before (Back, then changed their mind).
+    await Promise.all(answers.lifts.map((l) => {
       const n = liftNumbers(l);
-      return n ? [{ exerciseId: l.exerciseId, exerciseName: l.name, weightKg: fromDisplayWeight(n.weight, unit), reps: n.reps, enteredAtMs: now }] : [];
+      return saveStartingLift({ id: l.exerciseId, name: l.name }, n ? { weightKg: fromDisplayWeight(n.weight, unit), reps: n.reps } : null).catch(() => {});
     }));
     save({ fresh: false, imported: false, historySplitId: null });
     go(3);
   }
   function startFresh() {
-    saveStartingLifts([]);
+    void Promise.all(answers.lifts.map((l) => saveStartingLift({ id: l.exerciseId, name: l.name }, null).catch(() => {})));
     save({ fresh: true, imported: false, historySplitId: null });
     go(3);
   }
@@ -537,7 +537,7 @@
         </button>
       {/if}
       <div class="flex-1 min-h-6"></div>
-      <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold" onclick={commitLifts}>Continue</button>
+      <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold" onclick={() => void commitLifts()}>Continue</button>
       <button type="button" class="mt-2 h-11 rounded-[10px] border border-border text-sm font-medium" onclick={startFresh}>Skip, I'll pick weights in my first workout</button>
     </div>
 

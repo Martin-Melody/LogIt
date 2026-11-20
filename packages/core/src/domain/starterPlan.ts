@@ -100,10 +100,10 @@ const PLANS: Record<PlanKind, PlanTemplate> = {
     { name: "Legs", short: "Lg", weekday: FRI, slots: LEGS },
   ] },
   upperlower4: { kind: "upperlower4", name: "Upper / Lower", days: [
-    { name: "Upper A", short: "Up", weekday: MON, slots: UPPER_A },
-    { name: "Lower A", short: "Lo", weekday: TUE, slots: LOWER_A },
-    { name: "Upper B", short: "Up", weekday: THU, slots: UPPER_B },
-    { name: "Lower B", short: "Lo", weekday: FRI, slots: LOWER_B },
+    { name: "Upper A", short: "Up A", weekday: MON, slots: UPPER_A },
+    { name: "Lower A", short: "Lo A", weekday: TUE, slots: LOWER_A },
+    { name: "Upper B", short: "Up B", weekday: THU, slots: UPPER_B },
+    { name: "Lower B", short: "Lo B", weekday: FRI, slots: LOWER_B },
   ] },
   ulppl5: { kind: "ulppl5", name: "Upper / Lower + Push / Pull / Legs", days: [
     { name: "Upper", short: "Up", weekday: MON, slots: UPPER_A },

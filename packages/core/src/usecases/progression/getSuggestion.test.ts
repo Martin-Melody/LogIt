@@ -350,11 +350,13 @@ describe("getSuggestion — a best lift typed in at onboarding", () => {
         getExerciseState: async () => null,
         getAlgorithmPreferences: async () => null,
         listExerciseStates: async () => [],
-        getExerciseSettings: async () => null,
+        // The best lift lives on the exercise's settings row (synced).
+        getExerciseSettings: async (key: string) => (key === "squat"
+          ? { key, exerciseName: "Squat", createdAtMs: 0, updatedAtMs: 0, startingLift: { weightKg: 150, reps: 5, enteredAtMs: Date.now() } }
+          : null),
         listExerciseSettings: async () => [],
       },
       algorithmRegistry: { get: async (id: string) => algorithms[id] ?? null },
-      loadStartingLifts: async () => [{ exerciseName: "squat", weightKg: 150, reps: 5, enteredAtMs: Date.now() }],
     } as unknown as ProgressionDeps);
   }
 

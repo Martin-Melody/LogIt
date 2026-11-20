@@ -24,7 +24,7 @@ const HISTORY_WINDOW = 20;
 
 export async function getSuggestion(
   exercise: { id?: string; name: string },
-  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight" | "loadGoals" | "loadFood" | "loadStartingLifts">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight" | "loadGoals" | "loadFood">,
   plannedTargets?: PlannedTargets,
   currentSession?: WorkoutSession,
   liveInput?: { rpe?: number; readiness?: number },
@@ -76,8 +76,8 @@ export async function getSuggestion(
   // (12 × BW before 6 × BW+5) can be converted. Plain numbers, like analytics.
   const bodyweightAt = await (deps.loadBodyweight?.().catch(() => null) ?? null);
   // Never logged: a best lift typed in at onboarding stands in for the history.
-  const startingLift: StartingLift | null = fullHistory.length === 0
-    ? ((await deps.loadStartingLifts?.().catch(() => []))?.find((l) => sameExercise(l, exercise)) ?? null)
+  const startingLift: StartingLift | null = fullHistory.length === 0 && exerciseSettings?.startingLift
+    ? { ...exerciseSettings.startingLift, exerciseId: exercise.id, exerciseName: exercise.name }
     : null;
   const history = (startingLift
     ? [startingLiftEntry(startingLift, algorithmId === "linear-progression" ? { workingReps: exerciseSettings?.repRange?.[0] ?? plannedTargets?.reps ?? 5 } : {})]

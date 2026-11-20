@@ -32,7 +32,7 @@ export async function getExerciseProgressionSettings(exercise: Exercise, deps: D
   return row && !row.deletedAtMs ? row : null;
 }
 
-export type ExerciseSettingsPatch = Partial<Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace" | "setTarget">>;
+export type ExerciseSettingsPatch = Partial<Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace" | "setTarget" | "startingLift">>;
 
 /**
  * Change an exercise's settings. A field set to undefined goes back to "same as every
@@ -58,6 +58,7 @@ export async function saveExerciseProgressionSettings(
     repRange: existing && !existing.deletedAtMs ? existing.repRange : undefined,
     behindPace: existing && !existing.deletedAtMs ? existing.behindPace : undefined,
     setTarget: existing && !existing.deletedAtMs ? existing.setTarget : undefined,
+    startingLift: existing && !existing.deletedAtMs ? existing.startingLift : undefined,
     ...patch,
     updatedAtMs: Math.max(now, (existing?.updatedAtMs ?? 0) + 1),
   };

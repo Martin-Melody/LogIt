@@ -244,14 +244,17 @@ export type ExerciseProgressionSettings = {
   behindPace?: "show" | "push";
   /** Rows keyed "muscle:<group>" hold that muscle's weekly hard-set target instead. */
   setTarget?: { lo: number; hi: number };
+  /** A best lift typed in at onboarding: plans the exercise until it's first logged
+   * (domain/startingLift.ts). Synced with the rest of the row. */
+  startingLift?: { weightKg: number; reps: number; enteredAtMs: number };
   createdAtMs: number;
   updatedAtMs: number;
   deletedAtMs?: number;
 };
 
 /** True when the settings change nothing (so the row can be dropped). */
-export function isDefaultExerciseSettings(s: Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace" | "setTarget">): boolean {
-  return !s.algorithmId && !s.repRange && (!s.behindPace || s.behindPace === "show") && !s.setTarget;
+export function isDefaultExerciseSettings(s: Pick<ExerciseProgressionSettings, "algorithmId" | "repRange" | "behindPace" | "setTarget" | "startingLift">): boolean {
+  return !s.algorithmId && !s.repRange && (!s.behindPace || s.behindPace === "show") && !s.setTarget && !s.startingLift;
 }
 
 /** Key prefix for the rows holding a muscle's weekly set target. */
