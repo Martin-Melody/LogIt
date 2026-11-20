@@ -27,6 +27,13 @@
   let equipment = $state<Equipment | undefined>(start.equipment ?? start.guess.equipment);
   let hidden = $state(hiddenIds().includes(start.id));
   let saving = $state(false);
+  // The usual few first; "More…" shows the rest (design canvas I3).
+  let allMuscles = $state(false);
+  let allEquipment = $state(false);
+  const COMMON_MUSCLES: MuscleGroup[] = ["chest", "back", "shoulders", "quads", "hamstrings", "glutes"];
+  const COMMON_EQUIPMENT: Equipment[] = ["barbell", "dumbbell", "machine", "cable", "bodyweight"];
+  const shownMuscles = $derived(allMuscles ? MUSCLES : MUSCLES.filter((m) => COMMON_MUSCLES.includes(m) || muscles.includes(m)));
+  const shownEquipment = $derived(allEquipment ? EQUIPMENT_CHOICES : EQUIPMENT_CHOICES.filter(([e]) => COMMON_EQUIPMENT.includes(e) || equipment === e));
 
   function hiddenIds(): string[] {
     try {
@@ -67,15 +74,17 @@
     </div>
     <p class="text-xs font-semibold text-muted-foreground">Main muscles</p>
     <div class="flex flex-wrap gap-1.5" role="group" aria-label="Main muscles">
-      {#each MUSCLES as m (m)}
+      {#each shownMuscles as m (m)}
         <button type="button" aria-pressed={muscles.includes(m)} class={chip(muscles.includes(m), "h-9 px-3 text-[13px]")} onclick={() => toggle(m)}>{MUSCLE_LABELS[m]}</button>
       {/each}
+      {#if !allMuscles}<button type="button" class={chip(false, "h-9 px-3 text-[13px] border-dashed")} onclick={() => (allMuscles = true)}>More…</button>{/if}
     </div>
     <p class="text-xs font-semibold text-muted-foreground">Done with</p>
     <div class="flex flex-wrap gap-1.5" role="group" aria-label="Equipment">
-      {#each EQUIPMENT_CHOICES as [e, label] (e)}
+      {#each shownEquipment as [e, label] (e)}
         <button type="button" aria-pressed={equipment === e} class={chip(equipment === e, "h-9 px-3 text-[13px]")} onclick={() => (equipment = equipment === e ? undefined : e)}>{label}</button>
       {/each}
+      {#if !allEquipment}<button type="button" class={chip(false, "h-9 px-3 text-[13px] border-dashed")} onclick={() => (allEquipment = true)}>More…</button>{/if}
     </div>
     <button type="button" class="h-11 rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50"
       disabled={saving || muscles.length === 0} onclick={() => void save()}>Save</button>
