@@ -570,6 +570,19 @@
   }
 
   onMount(() => setTimeout(() => replayTour("phone.sync"), 600));
+
+  // Android only: without "Alarms & reminders" the rest alert is an inexact alarm, which can come late.
+  let exactAlarms = $state<boolean | null>(null);
+  async function readExactAlarms(change = false) {
+    try {
+      const { LocalNotifications } = await import("@capacitor/local-notifications");
+      const r = await (change ? LocalNotifications.changeExactNotificationSetting() : LocalNotifications.checkExactNotificationSetting());
+      exactAlarms = r.exact_alarm === "granted";
+    } catch {}
+  }
+  onMount(() => {
+    if (isNativePlatform()) void readExactAlarms();
+  });
   onMount(() => {
     void loadProgression();
     void loadMobilityProgression();
@@ -1268,6 +1281,18 @@
           </div>
         {/each}
       </div>
+
+      {#if exactAlarms !== null}
+        <label class="flex items-center justify-between gap-3 cursor-pointer">
+          <div>
+            <p class="text-sm font-medium">Rest alerts on time</p>
+            <p class="text-xs text-muted-foreground">
+              With the app in the background, Android can send "Rest complete" late unless LogIt may set alarms. Opens Android's Alarms &amp; reminders.
+            </p>
+          </div>
+          <Switch checked={exactAlarms} label="Rest alerts on time" onchange={() => readExactAlarms(true)} />
+        </label>
+      {/if}
 
       <div class="flex flex-col gap-2">
         <p class="text-sm font-medium">Circuits</p>
