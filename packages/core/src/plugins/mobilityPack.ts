@@ -24,6 +24,12 @@ export type MobilityPackDrill = {
   perSide: boolean;
   cues: string[];
   notes: string | null;
+  /** Optional, for Progress past an area's weekly time: takes load; harder cues on the same
+   * drill, in order; harder and easier drills by name (this pack's or LogIt's). */
+  takesLoad?: boolean;
+  harderCues?: string[];
+  harder?: string[];
+  easier?: string[];
 };
 
 export type MobilityPack = {
@@ -109,6 +115,10 @@ export function parseMobilityPack(raw: unknown, expectedPluginId?: string): Mobi
       perSide: entry.perSide === true,
       cues: coerceCues(entry.cues, name),
       notes: isNonEmptyString(entry.notes) ? entry.notes.trim() : null,
+      ...(entry.takesLoad === true ? { takesLoad: true } : {}),
+      ...(entry.harderCues !== undefined ? { harderCues: coerceCues(entry.harderCues, name) } : {}),
+      ...(entry.harder !== undefined ? { harder: coerceCues(entry.harder, name) } : {}),
+      ...(entry.easier !== undefined ? { easier: coerceCues(entry.easier, name) } : {}),
     });
   }
 

@@ -48,7 +48,7 @@ test.describe("mobility progression algorithm preferences", () => {
     await page.goto("/settings/mobility-progression/linear-mobility");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByRole("heading", { name: "Linear mobility Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Progress Settings" })).toBeVisible();
     await expect(page.getByText("Starting hold")).toBeVisible();
   });
 

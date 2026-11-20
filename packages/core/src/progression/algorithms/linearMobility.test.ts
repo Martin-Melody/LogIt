@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { linearMobility } from "./linearMobility";
+import { linearMobility, mobilityWeekOf } from "./linearMobility";
 import type {
   MobilityProgressionInput,
   MobilityProgressionOutput,
@@ -71,9 +71,10 @@ describe("linearMobility", () => {
     expect(out.sets[0].durationSec).toBe(45); // round(50 * 0.9)
   });
 
-  it("does not progress hold when depth is too light", () => {
+  it("does not progress hold when depth is too light, if the depth gate is turned on", () => {
     const out = run({
       history: [session([{ durationSec: 45, targetSec: 45, completed: true, depth: 2 }])],
+      userPreferences: { ...(linearMobility.defaultPreferences as object), minDepthToProgress: 3 },
     });
     expect(out.sets[0].durationSec).toBe(45);
     expect(out.notes).toMatch(/depth/i);
@@ -110,5 +111,56 @@ describe("linearMobility", () => {
     const right = out.sets.find((s) => s.side === "right")!;
     expect(left.durationSec).toBe(30); // missed → steady
     expect(right.durationSec).toBe(50); // met → +5
+  });
+});
+
+describe("Progress: past the area's weekly time", () => {
+  const lizard = { takesLoad: false, harderCues: ["Elbows down to the floor", "Back knee lifted"], harder: [{ id: "core:couch-stretch", name: "Couch stretch" }, { id: "core:pigeon", name: "Pigeon pose" }], steady: false };
+  const done = { area: "hip-flexors", doneSec: 620, targetSec: 600 };
+  const last = [session([{ durationSec: 60, targetSec: 60, completed: true }])];
+
+  it("below the weekly time, still adds time as before", () => {
+    const out = run({ history: last, areaWeek: { ...done, doneSec: 300 }, progression: lizard });
+    expect(out.sets[0].durationSec).toBe(65);
+    expect(out.next).toBeUndefined();
+  });
+
+  it("past it, holds steady and offers the next harder cue and the harder drills", () => {
+    const out = run({ history: last, areaWeek: done, progression: lizard });
+    expect(out.sets[0].durationSec).toBe(60);
+    expect(out.next).toEqual({
+      areaWeek: done,
+      cue: { text: "Elbows down to the floor", step: 1, of: 2 },
+      harder: lizard.harder,
+    });
+  });
+
+  it("a drill that takes load is offered load first, then a step more each time", () => {
+    const loadable = { ...lizard, takesLoad: true };
+    expect(run({ history: last, areaWeek: done, progression: loadable }).next?.load).toEqual({ kg: 5 });
+    const loaded = [session([{ durationSec: 60, targetSec: 60, loadKg: 5, completed: true }])];
+    const out = run({ history: loaded, areaWeek: done, progression: loadable });
+    expect(out.sets[0]).toMatchObject({ durationSec: 60, loadKg: 5 });
+    expect(out.next?.load).toEqual({ kg: 7.5 });
+  });
+
+  it("after the cues, with no harder drill in the catalog, asks the person to pick one", () => {
+    const out = run({ history: last, areaWeek: done, progression: { ...lizard, harder: [] }, state: { streak: {}, cueStep: 2 } });
+    expect(out.next).toEqual({ areaWeek: done, pickHarder: true });
+    expect(out.notes).toMatch(/Cue: Back knee lifted/);
+  });
+
+  it("neck drills never get a harder suggestion; Not yet waits until next week", () => {
+    expect(run({ history: last, areaWeek: done, progression: { ...lizard, steady: true } }).next).toBeUndefined();
+    const now = Date.UTC(2026, 10, 20, 12);
+    expect(run({ history: last, areaWeek: done, progression: lizard, now, state: { streak: {}, declinedWeek: mobilityWeekOf(now) } }).next).toBeUndefined();
+  });
+});
+
+describe("Progress: history logged without sides", () => {
+  it("counts for each side of a per-side drill", () => {
+    const out = run({ drill: { name: "Lizard pose", metric: "hold", perSide: true }, history: [session([{ durationSec: 60, targetSec: 60, completed: true }])] });
+    expect(out.sets.map((x) => [x.side, x.durationSec])).toContainEqual(["left", 65]);
+    expect(out.sets.map((x) => [x.side, x.durationSec])).toContainEqual(["right", 65]);
   });
 });

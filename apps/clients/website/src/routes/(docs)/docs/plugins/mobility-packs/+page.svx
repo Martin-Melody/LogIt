@@ -39,7 +39,17 @@ block's drill catalogue. Like exercise packs it's pure JSON — no code, no sand
 - **`perSide`** (optional, default `false`): whether the drill is logged left /
   right separately.
 - **`cues`** (optional): up to 6 short coaching lines.
+- **`takesLoad`** (optional, default `false`): whether the drill can sensibly take added
+  weight. Progress offers load first once the drill's area has its weekly time.
+- **`harderCues`** (optional): up to 6 ways to make the same drill harder, in order
+  ("knee closer to the wall"). Offered one at a time after load.
+- **`harder`** / **`easier`** (optional): other drills by name, from your pack or LogIt's
+  library, up to 6 each. A drill can lead to several harder ones. Names that don't match a
+  drill are ignored.
 - Max 500 drills. In-pack duplicate names are dropped.
+
+Without `takesLoad`, `harderCues` or `harder`, Progress asks the person to pick a harder
+drill once the area has its weekly time, and remembers what they pick.
 
 ## The manifest
 

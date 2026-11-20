@@ -542,3 +542,29 @@ export function normalizePlannedGroups(day: SplitDay): SplitDay {
   else delete out.groups;
   return out;
 }
+
+/**
+ * A harder drill chosen in a workout (Progress's next step) also replaces the drill on the split
+ * day the workout came from: blocks naming `from` (by id, or by name when the block has none)
+ * get `to`. Null when the day has no such block.
+ */
+export function swapPlannedMobilityDrill(
+  split: WorkoutSplit,
+  dayId: string,
+  from: { drillId?: string; drillName: string },
+  to: { drillId?: string; drillName: string },
+): WorkoutSplit | null {
+  const same = (b: PlannedMobility) => (b.drillId && from.drillId ? b.drillId === from.drillId : b.drillName.trim().toLowerCase() === from.drillName.trim().toLowerCase());
+  let changed = false;
+  const days = split.days.map((d) => d.id !== dayId ? d : {
+    ...d,
+    blocks: d.blocks.map((b) => {
+      if (b.type !== "mobility" || !same(b)) return b;
+      changed = true;
+      const { drillId: _old, ...rest } = b;
+      void _old;
+      return { ...rest, drillName: to.drillName, ...(to.drillId ? { drillId: to.drillId } : {}) };
+    }),
+  });
+  return changed ? { ...split, days } : null;
+}

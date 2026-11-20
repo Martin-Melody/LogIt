@@ -56,8 +56,12 @@ any algorithm set to adjust its sets to weekly targets. **Back to default** hand
 
 ## Stretching and mobility
 
-Mobility drills progress by default: each time you meet a drill's target, the hold gets a little longer,
-then it adds load or suggests a harder version. If you'd rather do the same thing every time, like 30-second
+Mobility drills progress by default (**Progress** in Settings › Mobility progression). Holds get a little
+longer and reps go up until an area (hips, hamstrings, shoulders…) has had about 10 minutes of stretching
+that week, counting all its drills together; research finds flexibility gains top out around there. Past
+that, each drill moves on instead: load if it takes load, otherwise a harder version of the same stretch
+("elbows down to the floor") and harder stretches to switch to, or one you pick, which is remembered.
+**Not yet** asks again the next week. If you'd rather do the same thing every time, like 30-second
 holds, tap **Keep it the same** on the drill in a workout, or pick **Same every time** in Settings ›
 Mobility progression for every drill. Same every time repeats your last session's holds, or starts at 30
 seconds. Drills you've set on their own are listed there too, with a button to put them back.
