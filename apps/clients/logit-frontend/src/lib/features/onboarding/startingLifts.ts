@@ -1,22 +1,29 @@
-// Best lifts typed in during onboarding ("Your best lifts", design canvas E1m). The planner
-// reads one as an exercise's history until that exercise is first logged (core
-// domain/startingLift.ts).
-import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
-import type { StartingLift } from "@logit/core/domain/startingLift";
+// Best lifts typed in during onboarding ("Your best lifts", design canvas E1m). Kept on the
+// exercise's progression settings row, so they sync; the planner reads one as the exercise's
+// history until it's first logged (core domain/startingLift.ts).
+import { getExerciseRepo } from "$lib/data/repoProvider";
+import { getProgressionDeps } from "$lib/usecases/progressionDeps";
+import { pushExerciseSetting } from "$lib/sync/syncService";
+import { getExerciseProgressionSettings, saveExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
 
-const KEY = "logit:starting-lifts";
+type ExerciseRef = { id?: string; name: string };
 
-// shortcut: kept on this phone per account, not synced; each lift only matters until its first
-// logged set, which is normally on this phone. Sync it if people switch phones before training.
-export function loadStartingLifts(): StartingLift[] {
-  try {
-    const raw = getAccountItem(KEY);
-    return raw ? (JSON.parse(raw) as StartingLift[]) : [];
-  } catch {
-    return [];
-  }
+/** The library exercise's id when only a name is known, so the row is the one the plan uses. */
+async function withId(ex: ExerciseRef): Promise<{ id?: string; name: string }> {
+  if (ex.id) return ex;
+  const found = await getExerciseRepo().getByName(ex.name).catch(() => null);
+  return { id: found?.id, name: found?.name ?? ex.name };
 }
 
-export function saveStartingLifts(lifts: StartingLift[]): void {
-  setAccountItem(KEY, JSON.stringify(lifts));
+/** Saves a best lift (in kg), or clears it with null. */
+export async function saveStartingLift(ex: ExerciseRef, lift: { weightKg: number; reps: number } | null): Promise<void> {
+  const exercise = await withId(ex);
+  const deps = getProgressionDeps();
+  if (!lift && !(await getExerciseProgressionSettings(exercise, deps))?.startingLift) return;
+  const row = await saveExerciseProgressionSettings(exercise, { startingLift: lift ? { ...lift, enteredAtMs: Date.now() } : undefined }, deps);
+  if (row) pushExerciseSetting(row);
+}
+
+export async function hasStartingLift(ex: ExerciseRef): Promise<boolean> {
+  return !!(await getExerciseProgressionSettings(await withId(ex), getProgressionDeps()))?.startingLift;
 }

@@ -1,5 +1,5 @@
 // "Same as Belt Squat?" on the setup card (design canvas I3): an exercise made by name turns out
-// to be one in the library. Its workouts, split days, goals, settings and best lift move to the
+// to be one in the library. Its workouts, split days, goals and settings (best lift too) move to the
 // library exercise, then the made one is removed. Synced like the edits they stand for.
 import { get } from "svelte/store";
 import { getExerciseRepo, getSplitRepo, getWorkoutRepo } from "$lib/data/repoProvider";
@@ -10,7 +10,6 @@ import { currentSession } from "$lib/stores/currentSession.store";
 import { goalsStore } from "$lib/features/goals/goalsStore";
 import { bumpProgression } from "$lib/progression/store";
 import { getProgressionDeps } from "$lib/usecases/progressionDeps";
-import { loadStartingLifts, saveStartingLifts } from "$lib/features/onboarding/startingLifts";
 import { mergeExerciseInGoal, mergeExerciseInSession, mergeExerciseInSplit, type ExerciseRef } from "@logit/core/domain/exerciseMerge";
 import { getExerciseProgressionSettings, saveExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
 import type { Exercise } from "@logit/core/domain/exercise";
@@ -63,11 +62,10 @@ export async function mergeOwnExercise(from: Exercise, to: Exercise): Promise<vo
   // Its own settings (rep range, algorithm) carry over unless the library one has some.
   const mine = await getExerciseProgressionSettings(from, deps);
   if (mine && !(await getExerciseProgressionSettings(to, deps))) {
-    const row = await saveExerciseProgressionSettings(to, { repRange: mine.repRange, algorithmId: mine.algorithmId, behindPace: mine.behindPace, setTarget: mine.setTarget }, deps);
+    const row = await saveExerciseProgressionSettings(to, { repRange: mine.repRange, algorithmId: mine.algorithmId, behindPace: mine.behindPace, setTarget: mine.setTarget, startingLift: mine.startingLift }, deps);
     if (row) pushExerciseSetting(row);
   }
 
-  saveStartingLifts(loadStartingLifts().map((l) => (l.exerciseId === a.id ? { ...l, exerciseId: b.id, exerciseName: b.name } : l)));
   const CHOICES_KEY = "logit:import-choices";
   try {
     const choices = JSON.parse(getAccountItem(CHOICES_KEY) ?? "{}") as Record<string, { exerciseId: string } | "own">;

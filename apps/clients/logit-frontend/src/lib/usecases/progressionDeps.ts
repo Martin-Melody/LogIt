@@ -12,7 +12,6 @@ import {
 import { loadBodyweightLookup } from "$lib/features/bodyweight/bodyweight";
 import { get } from "svelte/store";
 import { activeGoals, goalsStore } from "$lib/features/goals/goalsStore";
-import { loadStartingLifts } from "$lib/features/onboarding/startingLifts";
 
 /** The mobile app's repo/registry bundle for the @logit/core progression
  * usecases, which take their dependencies as an explicit parameter instead
@@ -31,6 +30,5 @@ export function getProgressionDeps(): ProgressionDeps {
     loadBodyweight: loadBodyweightLookup,
     loadGoals: async () => activeGoals(get(goalsStore)),
     loadFood: () => import("$lib/features/nutrition/recentEating").then((m) => m.loadRecentEating()),
-    loadStartingLifts: async () => loadStartingLifts(),
   };
 }
