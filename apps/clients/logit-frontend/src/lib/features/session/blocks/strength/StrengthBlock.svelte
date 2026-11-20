@@ -129,7 +129,8 @@
   let prevLoaded = $state(false);
   let firstTimeReps = $state(8);
   let firstTimeMin = $state(1);
-  const firstEver = $derived(prevLoaded && prevSets === null);
+  // Planned from a best lift typed in at onboarding: not a first time, no "pick a weight".
+  const firstEver = $derived(prevLoaded && prevSets === null && suggestion?.reasoning?.inputs.startingLift === undefined);
   const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
   // The hint says how heavy to go and the first set plans the rest, so the algorithm's own
   // "First time" line would only repeat it, before and after that set.

@@ -14,6 +14,7 @@
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { pushExerciseSetting, pushProgressionRecipe } from "$lib/sync/syncService";
   import { bumpProgression } from "$lib/progression/store";
+  import { setProgressionAlgorithm } from "@logit/core/usecases/progression/getProgressionConfig";
   import { getExercises } from "@logit/core/domain/workout";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
   import { createProgressionRecipe, recipeAlgorithmId, type ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
@@ -96,6 +97,14 @@
     saving = true;
     try {
       const row = await persist();
+      // Opened from onboarding's "Build my own": saving makes it the algorithm and goes home.
+      if (page.url.searchParams.has("use")) {
+        await setProgressionAlgorithm(recipeAlgorithmId(row.id), getProgressionDeps());
+        bumpProgression();
+        toast(`Saved ${row.name}. Your workouts use it now.`);
+        await goto("/", { replaceState: true });
+        return;
+      }
       toast(isNew ? `Saved ${row.name}. Pick it in Progression, or on any exercise.` : `Saved ${row.name}`);
       back("/settings#sec-progression");
     } finally {

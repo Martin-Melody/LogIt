@@ -7,7 +7,7 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
-  import { ArrowLeft, ChevronDown, Loader2 } from "lucide-svelte";
+  import { ArrowLeft, ChevronDown, Loader2, Plus, X } from "lucide-svelte";
   import Logo from "@logit/ui/Logo.svelte";
   import { onBack } from "$lib/components/sheet/sheet";
 
@@ -22,6 +22,12 @@
   import { createSplit } from "@logit/core/domain/WorkoutSplit";
   import { sourceFromSplitDay } from "@logit/core/domain/sessionHistory";
   import { planSplitDay } from "$lib/usecases/startSessionFromSplitDay";
+  import ExerciseSearchInput from "$lib/components/ExerciseSearchInput.svelte";
+  import { profile } from "$lib/stores/profile.store";
+  import { saveStartingLifts } from "$lib/features/onboarding/startingLifts";
+  import { applyTrainingStyle, TRAINING_STYLES, type TrainingStyle } from "$lib/features/onboarding/trainingStyle";
+  import { estimated1RM } from "@logit/core/domain/oneRepMax";
+  import { fromDisplayWeight, trimWeight } from "@logit/core/domain/units";
   import {
     buildStarterPlan, otherPlanKinds, planKindFor,
     EQUIPMENT_LABELS, GOAL_LABELS, LENGTH_LABELS,
@@ -38,10 +44,17 @@
     equipment: PlanEquipment;
     minutes: PlanLength;
     kind: PlanKind | null;
+    /** Experienced path: skipped the best lifts ("Start fresh"). */
+    fresh: boolean;
+    /** "Your best lifts" rows as typed, in the display unit. */
+    lifts: LiftRow[];
+    style: TrainingStyle;
   };
+  type LiftRow = { exerciseId?: string; name: string; weight: string; reps: string };
+  const DEFAULT_LIFTS: LiftRow[] = ["Squat", "Bench Press", "Deadlift", "Overhead Press"].map((name) => ({ name, weight: "", reps: "" }));
 
   function loadAnswers(): Answers {
-    const empty: Answers = { goal: null, experience: null, days: null, equipment: "gym", minutes: 45, kind: null };
+    const empty: Answers = { goal: null, experience: null, days: null, equipment: "gym", minutes: 45, kind: null, fresh: false, lifts: DEFAULT_LIFTS, style: "adaptive" };
     try {
       const raw = getAccountItem(ANSWERS_KEY);
       return raw ? { ...empty, ...(JSON.parse(raw) as Partial<Answers>) } : empty;
@@ -62,15 +75,32 @@
     setAccountItem(ANSWERS_KEY, JSON.stringify(answers));
   }
 
-  // Steps: 0 welcome, 1 goal, 2 experience, 3 days, 4 plan. An old saved step past the end
-  // (the name step of the previous onboarding) starts again from the goal.
+  // Steps: 0 welcome, 1 goal, 2 experience, 3 days, 4 plan. "2+ years" and "I compete" also
+  // get 5 pick up where you left off, 6 your best lifts (before days) and 7 train your way
+  // (after the plan); design canvas row E. An old saved step past the end (the name step of
+  // the previous onboarding) starts again from the goal.
+  const experienced = $derived(answers.experience === "2plus" || answers.experience === "compete");
   onMount(() => {
-    if (step > 4 || (step >= 2 && !answers.goal) || (step >= 3 && !answers.experience) || (step === 4 && !answers.days)) onboarding.setStep(answers.goal ? 2 : 1);
+    const broken = step > 7 || (step >= 2 && !answers.goal) || ((step >= 3 || step === 5 || step === 6) && !answers.experience)
+      || ((step === 4 || step === 7) && !answers.days) || (step >= 5 && !experienced);
+    if (broken) onboarding.setStep(answers.goal ? 2 : 1);
+  });
+
+  /** Where Back goes: the path taken, not the step number. */
+  function prevStep(s: number): number {
+    if (s === 3) return experienced ? (answers.fresh ? 5 : 6) : 2;
+    return ({ 1: 0, 2: 1, 4: 3, 5: 2, 6: 5, 7: 4 } as Record<number, number>)[s] ?? 0;
+  }
+  /** [this step, of how many] for the progress bar. */
+  const progress = $derived.by((): [number, number] => {
+    if (!experienced) return [step, 4];
+    const order = answers.fresh ? [1, 2, 5, 3, 4, 7] : [1, 2, 5, 6, 3, 4, 7];
+    return [order.indexOf(step) + 1, order.length];
   });
 
   // Android back: the previous step, and out of the app from the welcome screen even when the
   // WebView still has history (after deleting or signing out of the last account).
-  $effect(() => onBack(() => (step > 0 ? go(step - 1) : void import("@capacitor/app").then(({ App }) => App.exitApp()))));
+  $effect(() => onBack(() => (step > 0 ? go(prevStep(step)) : void import("@capacitor/app").then(({ App }) => App.exitApp()))));
 
   function go(next: number) {
     onboarding.setStep(next);
@@ -118,6 +148,41 @@
   }
   function pickExperience(experience: TrainingExperience) {
     save({ experience });
+    go(experience === "2plus" || experience === "compete" ? 5 : 3);
+  }
+
+  // ── Your best lifts ──
+  const unit = $derived($profile.weightUnit);
+  let addingLift = $state(false);
+  function setLift(i: number, patch: Partial<LiftRow>) {
+    save({ lifts: answers.lifts.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
+  }
+  function liftNumbers(l: LiftRow): { weight: number; reps: number } | null {
+    const weight = Number(l.weight.replace(",", "."));
+    const reps = Math.round(Number(l.reps));
+    return weight > 0 && reps >= 1 && reps <= 30 ? { weight, reps } : null;
+  }
+  function liftMax(l: LiftRow): string | null {
+    const n = liftNumbers(l);
+    return n ? `≈ ${trimWeight(Math.round(estimated1RM(n.weight, Math.min(n.reps, 12))))} ${unit} max` : null;
+  }
+  function addLift(sel: { name: string; exerciseId?: string }) {
+    addingLift = false;
+    if (answers.lifts.some((l) => l.name.toLowerCase() === sel.name.toLowerCase())) return;
+    save({ lifts: [...answers.lifts, { exerciseId: sel.exerciseId, name: sel.name, weight: "", reps: "" }] });
+  }
+  function commitLifts() {
+    const now = Date.now();
+    saveStartingLifts(answers.lifts.flatMap((l) => {
+      const n = liftNumbers(l);
+      return n ? [{ exerciseId: l.exerciseId, exerciseName: l.name, weightKg: fromDisplayWeight(n.weight, unit), reps: n.reps, enteredAtMs: now }] : [];
+    }));
+    save({ fresh: false });
+    go(3);
+  }
+  function startFresh() {
+    saveStartingLifts([]);
+    save({ fresh: true });
     go(3);
   }
   function pickDays(days: DaysPerWeek) {
@@ -138,6 +203,12 @@
     busy = "start";
     error = null;
     try {
+      if (experienced) await applyTrainingStyle(answers.style);
+      if (experienced && answers.style === "own") {
+        await savePlan();
+        await goto("/settings/progression/build/new?use=1");
+        return;
+      }
       const split = await savePlan();
       // Planned like the plan screen does, and kept with where it came from (its name in the history).
       const day = split.days[0]!;
@@ -154,6 +225,7 @@
     busy = "later";
     error = null;
     try {
+      if (experienced) await applyTrainingStyle(answers.style === "own" ? "adaptive" : answers.style);
       await savePlan();
       await goto("/");
     } catch (e) {
@@ -183,15 +255,16 @@
   }
 </script>
 
-{#snippet header(back: number, current: number)}
-  <div class="flex items-center min-h-11">
-    <button type="button" class="flex items-center gap-1 min-h-11 text-sm text-muted-foreground" onclick={() => go(back)}>
+{#snippet header(extra?: import("svelte").Snippet)}
+  <div class="flex items-center justify-between min-h-11">
+    <button type="button" class="flex items-center gap-1 min-h-11 text-sm text-muted-foreground" onclick={() => go(prevStep(step))}>
       <ArrowLeft class="h-4 w-4" /> Back
     </button>
+    {@render extra?.()}
   </div>
-  <div class="grid grid-cols-4 gap-1 mt-2 mb-7" role="img" aria-label="Step {current} of 4">
-    {#each [1, 2, 3, 4] as s (s)}
-      <span class="h-1 rounded-full {s <= current ? 'bg-primary' : 'bg-muted'}"></span>
+  <div class="grid gap-1 mt-2 mb-7" style="grid-template-columns: repeat({progress[1]}, minmax(0, 1fr))" role="img" aria-label="Step {progress[0]} of {progress[1]}">
+    {#each Array.from({ length: progress[1] }, (_, i) => i + 1) as s (s)}
+      <span class="h-1 rounded-full transition-colors {s <= progress[0] ? 'bg-primary' : 'bg-muted'}"></span>
     {/each}
   </div>
 {/snippet}
@@ -225,7 +298,7 @@
 
   {:else if step === 1}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
-      {@render header(0, 1)}
+      {@render header()}
       <h2 class="text-2xl font-bold leading-tight mb-1.5">What do you want from training?</h2>
       <p class="text-sm text-muted-foreground mb-6">Your plan and weights are built around it.</p>
       <div class="flex flex-col gap-2">
@@ -246,7 +319,7 @@
 
   {:else if step === 2}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
-      {@render header(1, 2)}
+      {@render header()}
       <p class="text-[13px] font-semibold text-muted-foreground mb-1.5">{echo}</p>
       <h2 class="text-2xl font-bold leading-tight mb-6">How long have you been lifting?</h2>
       <div class="flex flex-col gap-2.5">
@@ -263,7 +336,7 @@
 
   {:else if step === 3}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
-      {@render header(2, 3)}
+      {@render header()}
       <p class="text-[13px] font-semibold text-muted-foreground mb-1.5">{echo}</p>
       <h2 class="text-2xl font-bold leading-tight mb-6">How many days a week can you train?</h2>
       <div class="flex flex-col gap-2.5">
@@ -281,9 +354,107 @@
       </button>
     </div>
 
+  {:else if step === 5}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      {@render header()}
+      <h2 class="text-2xl font-bold leading-tight mb-1.5">Pick up where you left off</h2>
+      <p class="text-sm text-muted-foreground mb-6">LogIt plans from your real numbers, not from zero.</p>
+      <div class="flex flex-col gap-2.5">
+        <button type="button" class="flex flex-col gap-0.5 min-h-[72px] rounded-xl bg-primary px-4 py-3.5 text-left text-primary-foreground" onclick={() => go(6)}>
+          <span class="text-base font-semibold">Just enter my best lifts</span>
+          <span class="text-sm opacity-80">A recent heavy set or a max, for the lifts you care about</span>
+        </button>
+        <button type="button" class="min-h-12 rounded-xl px-4 text-left text-sm text-muted-foreground" onclick={startFresh}>
+          Start fresh
+        </button>
+      </div>
+    </div>
+
+  {:else if step === 6}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      {#snippet unitToggle()}
+        <div class="grid grid-cols-2 rounded-lg bg-muted p-[3px]" role="group" aria-label="Units">
+          {#each [["kg", "kg"], ["lbs", "lb"]] as [u, label] (u)}
+            <button type="button" aria-pressed={unit === u}
+              class="h-8 min-w-11 rounded-md text-[13px] transition-colors {unit === u ? 'bg-background font-semibold shadow-sm' : 'font-medium text-muted-foreground'}"
+              onclick={() => profile.save({ weightUnit: u as "kg" | "lbs" })}>{label}</button>
+          {/each}
+        </div>
+      {/snippet}
+      {@render header(unitToggle)}
+      <h2 class="text-2xl font-bold leading-tight mb-1.5">Your best lifts</h2>
+      <p class="text-sm text-muted-foreground mb-5">A recent heavy set is enough, a max works too. Your first sets are planned from these.</p>
+      <ul class="flex flex-col rounded-xl border border-border">
+        {#each answers.lifts as lift, i (lift.name)}
+          {@const max = liftMax(lift)}
+          <li class="grid grid-cols-[minmax(0,1fr)_68px_10px_50px_36px] items-center gap-1.5 py-2.5 pl-3.5 pr-1.5 {i > 0 ? 'border-t border-border' : ''}" transition:fade={{ duration: 150 }}>
+            <div class="flex min-w-0 flex-col gap-0.5">
+              <label for="lift-{i}" class="truncate text-[15px] font-semibold">{lift.name}</label>
+              <span class="text-xs {max ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground'}">{max ?? "Leave empty to skip"}</span>
+            </div>
+            <input id="lift-{i}" type="text" inputmode="decimal" placeholder={unit === "lbs" ? "lb" : "kg"} value={lift.weight}
+              aria-label="{lift.name} weight, {unit}"
+              class="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-right text-[15px] font-semibold tabular-nums"
+              oninput={(e) => setLift(i, { weight: (e.currentTarget as HTMLInputElement).value })} />
+            <span class="text-center text-sm text-muted-foreground" aria-hidden="true">×</span>
+            <input type="text" inputmode="numeric" placeholder="reps" value={lift.reps} aria-label="{lift.name} reps"
+              class="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-right text-[15px] font-semibold tabular-nums"
+              oninput={(e) => setLift(i, { reps: (e.currentTarget as HTMLInputElement).value })} />
+            <button type="button" class="flex h-11 w-9 items-center justify-center text-muted-foreground" aria-label="Remove {lift.name}"
+              onclick={() => save({ lifts: answers.lifts.filter((_, j) => j !== i) })}>
+              <X class="h-4 w-4" />
+            </button>
+          </li>
+        {/each}
+      </ul>
+      {#if addingLift}
+        <div class="mt-2.5" transition:fade={{ duration: 150 }}>
+          <ExerciseSearchInput placeholder="e.g. Front Squat" onConfirm={addLift} />
+        </div>
+      {:else}
+        <button type="button" class="mt-2.5 flex h-12 items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-muted-foreground/50 text-sm font-medium"
+          onclick={() => (addingLift = true)}>
+          <Plus class="h-4 w-4" /> Add a lift
+        </button>
+      {/if}
+      <div class="flex-1 min-h-6"></div>
+      <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold" onclick={commitLifts}>Continue</button>
+      <button type="button" class="mt-2 h-11 rounded-[10px] border border-border text-sm font-medium" onclick={startFresh}>Skip, I'll pick weights in my first workout</button>
+    </div>
+
+  {:else if step === 7 && plan && firstDay}
+    <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
+      {@render header()}
+      <h2 class="text-2xl font-bold leading-tight mb-1.5">Train your way</h2>
+      <p class="text-sm text-muted-foreground mb-5">Pick what sets the weights. You can change it for any exercise later.</p>
+      <div class="flex flex-col gap-2">
+        {#each TRAINING_STYLES as t (t.id)}
+          <button type="button" aria-pressed={answers.style === t.id}
+            class="flex flex-col gap-0.5 min-h-[60px] rounded-xl px-3.5 py-3 text-left transition-colors {answers.style === t.id ? 'border-2 border-primary bg-muted/50' : t.id === 'own' ? 'border border-dashed border-muted-foreground/60' : 'border border-border'}"
+            onclick={() => save({ style: t.id })}>
+            <span class="flex w-full items-center justify-between gap-2">
+              <span class="text-[15px] font-semibold">{t.title}</span>
+              {#if t.id === "adaptive"}<span class="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">Recommended</span>{/if}
+            </span>
+            <span class="text-[13px] text-muted-foreground">{t.blurb}</span>
+          </button>
+        {/each}
+      </div>
+      <div class="flex-1 min-h-6"></div>
+      {#if error}<p class="mb-2 text-sm text-destructive" role="alert">{error}</p>{/if}
+      <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+        disabled={busy !== null} onclick={() => void startNow()}>
+        {#if busy === "start"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        {answers.style === "own" ? "Set up my rules" : `Start ${firstDay.name} now`}
+      </button>
+      <button type="button" class="min-h-11 text-sm text-muted-foreground" disabled={busy !== null} onclick={() => void startLater()}>
+        I'll start later
+      </button>
+    </div>
+
   {:else if plan && firstDay}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
-      {@render header(3, 4)}
+      {@render header()}
       <p class="text-[13px] font-semibold text-muted-foreground mb-1.5">Your plan</p>
       <h2 class="text-2xl font-bold leading-tight mb-3">{echo} in {plan.daysPerWeek} days a week</h2>
       <div class="flex flex-wrap gap-2 mb-3.5">
@@ -361,14 +532,19 @@
 
       <div class="flex-1 min-h-6"></div>
       {#if error}<p class="mb-2 text-sm text-destructive" role="alert">{error}</p>{/if}
-      <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-        disabled={busy !== null || building} onclick={() => void startNow()}>
-        {#if busy === "start"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
-        Start {firstDay.name} now
-      </button>
-      <button type="button" class="min-h-11 text-sm text-muted-foreground" disabled={busy !== null} onclick={() => void startLater()}>
-        I'll start later
-      </button>
+      {#if experienced}
+        <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold disabled:opacity-60"
+          disabled={building} onclick={() => go(7)}>Continue</button>
+      {:else}
+        <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+          disabled={busy !== null || building} onclick={() => void startNow()}>
+          {#if busy === "start"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+          Start {firstDay.name} now
+        </button>
+        <button type="button" class="min-h-11 text-sm text-muted-foreground" disabled={busy !== null} onclick={() => void startLater()}>
+          I'll start later
+        </button>
+      {/if}
     </div>
   {/if}
 </div>
