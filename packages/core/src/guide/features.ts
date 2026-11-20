@@ -253,6 +253,18 @@ export const FEATURES: Feature[] = [
   },
 
   {
+    // Workout history from a spreadsheet (Strong and Hevy files once their readers are in).
+    id: "import-workouts",
+    title: "Import your training",
+    section: "Start here",
+    plan: "Free",
+    summary: "Bring workouts from a spreadsheet: check what's in the file, match the exercises, and undo it for 30 days.",
+    phone: ["/settings/import"],
+    wherePhone: "Settings › Backup & Restore › Import workouts",
+    docs: "/docs/settings#import-your-training",
+  },
+
+  {
     // Free accounts back up one phone (decision A, 2026-11-17; the server's FreeBackup). It
     // uses the sync endpoints, which stay listed under "sync": the server lets Free through
     // only from the phone that holds the backup.

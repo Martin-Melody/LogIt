@@ -28,6 +28,22 @@ Settings › Session › Music has the rest: paste a playlist's share link to sa
 day of your split, start that playlist when a workout starts, and pause the music when you finish. The
 music bar isn't on iPhone or the web.
 
+## Import your training
+
+<FeatureFacts id="import-workouts" />
+
+Settings › Backup & Restore › Import workouts brings in your history from a spreadsheet saved as CSV,
+one row per set: the date, the exercise, and the reps (or seconds for a hold, or a distance for cardio).
+Weight, unit, RPE, set type and notes come across too if the file has them. The screen has a template
+to start from.
+
+Before anything is saved, LogIt shows what it found: how many workouts, from when to when, and the last
+one. If the file doesn't say whether weights are in kg or lb, it asks once. Exercises it doesn't know
+you can match to one of LogIt's, or keep as your own; nothing is dropped. Importing the same file again
+adds nothing twice, and each import can be undone for 30 days.
+
+The file is read on your phone. It only leaves it through your normal sync.
+
 ## Walkthroughs
 
 Settings › Walkthroughs has short tours of each part of the app. You can replay any of them. If you have
