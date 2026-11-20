@@ -98,11 +98,30 @@ function reconcile(session: WorkoutSession | null): void {
           if (typeof document === "undefined" || document.visibilityState !== "hidden") playSound("warn");
         }, warnAt - now)
       : undefined;
+    if (!existing) void askForExactAlarmsOnce();
     scheduled.set(rest.setId, { endsAtMs: rest.endsAtMs, timeoutId, warnId });
     // A rest started or moved while the app is in the background (e.g. from a widget).
     if (inBackground()) void scheduleOsNotification(rest.setId, rest.endsAtMs);
     else void cancelOsNotification(rest.setId);
   }
+}
+
+const EXACT_ALARMS_ASKED_KEY = "logit:exact-alarms-asked";
+
+/** Android: at the first rest, if LogIt may not set exact alarms, offer it once (the same as
+ * Settings › Session › Rest alerts on time). Web and iOS don't have the setting. */
+async function askForExactAlarmsOnce(): Promise<void> {
+  try {
+    if (localStorage.getItem(EXACT_ALARMS_ASKED_KEY)) return;
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    if ((await LocalNotifications.checkExactNotificationSetting()).exact_alarm === "granted") return;
+    if (localStorage.getItem(EXACT_ALARMS_ASKED_KEY)) return; // two rests started at once
+    localStorage.setItem(EXACT_ALARMS_ASKED_KEY, "1");
+    toast("With LogIt in the background, rest alerts can come late. Allow alarms so they're on time?", {
+      duration: 12_000,
+      action: { label: "Allow", onClick: () => void LocalNotifications.changeExactNotificationSetting().catch(() => {}) },
+    });
+  } catch {}
 }
 
 async function finish(rest: RunningRest, { alert }: { alert: boolean }): Promise<void> {

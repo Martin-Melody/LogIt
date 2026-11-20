@@ -71,6 +71,7 @@ beforeEach(async () => {
   vi.useFakeTimers();
   vi.setSystemTime(1_000_000);
   toast.mockReset();
+  localStorage.clear();
   mutate.mockClear();
   visibility = "visible";
   schedule.mockClear();
@@ -150,6 +151,22 @@ describe("rest timer", () => {
       await advance(10_000);
       await setVisibility("hidden");
       expect((schedule.mock.calls[0] as unknown as [{ notifications: { isExactNotification: boolean }[] }])[0].notifications[0]!.isExactNotification).toBe(false);
+    } finally {
+      exactAlarm.state = "granted";
+    }
+  });
+
+  it("asks once, at the first rest, for exact alarms when Android hasn't allowed them", async () => {
+    exactAlarm.state = "denied";
+    try {
+      sessionStore.set(workout(Date.now()));
+      await advance(0);
+      expect(toast).toHaveBeenCalledTimes(1);
+      expect((toast.mock.calls[0] as unknown as [string, { action: { label: string } }])[1].action.label).toBe("Allow");
+      sessionStore.set(workout(null));
+      sessionStore.set(workout(Date.now()));
+      await advance(0);
+      expect(toast).toHaveBeenCalledTimes(1);
     } finally {
       exactAlarm.state = "granted";
     }
