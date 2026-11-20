@@ -164,6 +164,9 @@ async function scheduleOsNotification(setId: string, atMs: number) {
     const perm = await LocalNotifications.requestPermissions();
     if (perm.display !== "granted") return;
     await ensureRestChannel();
+    // Without the exact-alarm permission the plugin opens "Alarms & reminders" settings on every
+    // schedule (blocked in the background, then pops over the app). Ask for exact only when granted.
+    const exact = await LocalNotifications.checkExactNotificationSetting().then((r) => r.exact_alarm === "granted", () => true);
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -173,6 +176,7 @@ async function scheduleOsNotification(setId: string, atMs: number) {
           channelId: REST_CHANNEL_ID,
           smallIcon: "ic_stat_logit",
           schedule: { at: new Date(atMs), allowWhileIdle: true },
+          isExactNotification: exact,
         },
       ],
     });

@@ -7,7 +7,9 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
-  import { ArrowLeft, ChevronDown, Dumbbell, Loader2 } from "lucide-svelte";
+  import { ArrowLeft, ChevronDown, Loader2 } from "lucide-svelte";
+  import Logo from "@logit/ui/Logo.svelte";
+  import { onBack } from "$lib/components/sheet/sheet";
 
   import { onboarding } from "$lib/stores/onboarding.store";
   import { resetTours } from "$lib/tour/index";
@@ -65,6 +67,10 @@
   onMount(() => {
     if (step > 4 || (step >= 2 && !answers.goal) || (step >= 3 && !answers.experience) || (step === 4 && !answers.days)) onboarding.setStep(answers.goal ? 2 : 1);
   });
+
+  // Android back: the previous step, and out of the app from the welcome screen even when the
+  // WebView still has history (after deleting or signing out of the last account).
+  $effect(() => onBack(() => (step > 0 ? go(step - 1) : void import("@capacitor/app").then(({ App }) => App.exitApp()))));
 
   function go(next: number) {
     onboarding.setStep(next);
@@ -194,11 +200,11 @@
   {#if step === 0}
     <div class="flex flex-col flex-1 items-center justify-center gap-9 px-8 text-center" in:fade={{ duration: 150 }}>
       <div class="flex flex-col items-center gap-4">
-        <div class="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center">
-          <Dumbbell class="h-8 w-8 text-primary-foreground" />
+        <div class="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground">
+          <Logo size={36} />
         </div>
         <div>
-          <h1 class="text-3xl font-bold tracking-tight">Logit</h1>
+          <h1 class="text-3xl font-bold tracking-tight">LogIt</h1>
           <p class="mt-2 text-[15px] text-muted-foreground">Get stronger every week,<br />without guessing the weights.</p>
         </div>
       </div>
