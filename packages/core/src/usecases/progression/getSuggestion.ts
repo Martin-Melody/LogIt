@@ -13,6 +13,7 @@ import { nowMs } from "../../domain/time";
 import type { PlannedTargets } from "../../domain/WorkoutSplit";
 import { getExerciseHistory } from "./getExerciseHistory";
 import type { ProgressionDeps } from "./deps";
+import { startingLiftEntry, startingLiftLine, type StartingLift } from "../../domain/startingLift";
 
 // How many of *this exercise's own* most recent sessions the algorithm sees —
 // not a global cap across every exercise (that was the bug: fetching "the last
@@ -23,7 +24,7 @@ const HISTORY_WINDOW = 20;
 
 export async function getSuggestion(
   exercise: { id?: string; name: string },
-  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight" | "loadGoals" | "loadFood">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "algorithmRegistry" | "exerciseRepo" | "loadBodyweight" | "loadGoals" | "loadFood" | "loadStartingLifts">,
   plannedTargets?: PlannedTargets,
   currentSession?: WorkoutSession,
   liveInput?: { rpe?: number; readiness?: number },
@@ -74,7 +75,13 @@ export async function getSuggestion(
   // The lifter's bodyweight around each session, so a bodyweight lead-in set
   // (12 × BW before 6 × BW+5) can be converted. Plain numbers, like analytics.
   const bodyweightAt = await (deps.loadBodyweight?.().catch(() => null) ?? null);
-  const history = fullHistory
+  // Never logged: a best lift typed in at onboarding stands in for the history.
+  const startingLift: StartingLift | null = fullHistory.length === 0
+    ? ((await deps.loadStartingLifts?.().catch(() => []))?.find((l) => sameExercise(l, exercise)) ?? null)
+    : null;
+  const history = (startingLift
+    ? [startingLiftEntry(startingLift, algorithmId === "linear-progression" ? { workingReps: exerciseSettings?.repRange?.[0] ?? plannedTargets?.reps ?? 5 } : {})]
+    : fullHistory)
     .slice(-HISTORY_WINDOW)
     .reverse()
     .map((h) => {
@@ -205,6 +212,18 @@ export async function getSuggestion(
     muscleWeek,
     food: food ?? undefined,
   });
+
+  if (startingLift) {
+    // Not "−17.5 kg" or "+1 rep" against a set nobody logged.
+    output = { ...output, change: { kind: "first", text: "From your best lift", detail: startingLiftLine(startingLift) } };
+  }
+  if (startingLift && output.reasoning) {
+    output = { ...output, reasoning: { ...output.reasoning, inputs: { ...output.reasoning.inputs, startingLift: `${startingLift.weightKg} × ${startingLift.reps}` }, summary: [
+      startingLiftLine(startingLift),
+      // "from 150 × 5 today" would read as a logged set: it was typed in.
+      ...(output.reasoning.summary ?? []).map((l) => l.replace(/( × \d+) (today|on [^.,]+)/, "$1")),
+    ] } };
+  }
 
   // Every algorithm's "Why?" says how a goal on this exercise is going.
   if (goal && output.reasoning) {

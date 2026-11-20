@@ -9,6 +9,7 @@ import type { MuscleGroupInsightAlgorithmRegistry } from "../../domain/muscleGro
 import type { BodyweightLookup } from "../../domain/bodyweight";
 import type { Goal } from "../../domain/goals";
 import type { ProgressionInput } from "../../domain/progression";
+import type { StartingLift } from "../../domain/startingLift";
 
 /** Full set of repos/registries the progression usecases can draw from.
  * Each usecase only requires the subset it needs (via Pick) — callers can
@@ -29,4 +30,6 @@ export type ProgressionDeps = {
   loadGoals?: () => Promise<Goal[]>;
   /** Eating over the last week against maintenance, when food is logged. Optional. */
   loadFood?: () => Promise<ProgressionInput["food"] | null>;
+  /** Best lifts typed in at onboarding, for exercises not logged yet. Optional. */
+  loadStartingLifts?: () => Promise<StartingLift[]>;
 };

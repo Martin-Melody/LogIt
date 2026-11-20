@@ -330,3 +330,56 @@ describe("getSuggestion — liveInput passthrough (§7 autoregulation accommodat
     expect(output?.label).toBe("live:8:6");
   });
 });
+
+describe("getSuggestion — a best lift typed in at onboarding", () => {
+  async function plan(algorithmId: string, sessions: unknown[] = []) {
+    const { adaptiveProgression } = await import("../../progression/algorithms/adaptiveProgression");
+    const { linearProgression } = await import("../../progression/algorithms/linearProgression");
+    const { recipeAlgorithm } = await import("../../progression/algorithms/recipe");
+    const { createProgressionRecipe } = await import("../../domain/progressionRecipe");
+    const algorithms: Record<string, ProgressionAlgorithm> = {
+      "logit-adaptive": adaptiveProgression,
+      "linear-progression": linearProgression,
+      wave: recipeAlgorithm({ ...createProgressionRecipe("5/3/1 waves"), weightFrom: "wave" }),
+    };
+    return getSuggestion({ name: "Squat" }, {
+      workoutRepo: { listRecentSessions: async () => sessions, listAllSessions: async () => sessions },
+      exerciseRepo: { getById: async () => null, getByName: async () => null },
+      progressionRepo: {
+        getConfig: async () => ({ algorithmId }),
+        getExerciseState: async () => null,
+        getAlgorithmPreferences: async () => null,
+        listExerciseStates: async () => [],
+        getExerciseSettings: async () => null,
+        listExerciseSettings: async () => [],
+      },
+      algorithmRegistry: { get: async (id: string) => algorithms[id] ?? null },
+      loadStartingLifts: async () => [{ exerciseName: "squat", weightKg: 150, reps: 5, enteredAtMs: Date.now() }],
+    } as unknown as ProgressionDeps);
+  }
+
+  it("plans LogIt Adaptive's sets from it and says so in Why", async () => {
+    const out = await plan("logit-adaptive");
+    const weight = out!.sets[0]!.weight;
+    // Estimated max 175 kg; a working set sits well under it but near the entered 150 × 5.
+    expect(weight).toBeGreaterThan(120);
+    expect(weight).toBeLessThanOrEqual(150);
+    expect(out!.reasoning!.summary![0]).toContain("best lift you entered: 150 kg × 5");
+    expect(out!.reasoning!.summary!.join(" ")).not.toContain("today");
+    expect(out!.change?.text).toBe("From your best lift");
+    expect(out!.reasoning!.inputs.startingLift).toBe("150 × 5");
+  });
+
+  it("starts 5/3/1 waves from it instead of waiting a session for a training max", async () => {
+    const out = await plan("wave");
+    expect(out!.sets.length).toBeGreaterThan(0);
+    expect(out!.sets.every((s) => s.weight > 0 && s.weight < 175)).toBe(true);
+  });
+
+  it("gives Linear a working set, not the max, so its +1 rep isn't too heavy", async () => {
+    const out = await plan("linear-progression");
+    const weight = out!.sets[0]!.weight;
+    expect(weight).toBeGreaterThan(110);
+    expect(weight).toBeLessThan(150);
+  });
+});
