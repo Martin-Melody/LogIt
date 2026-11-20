@@ -1385,7 +1385,8 @@ export function blockDisplayName(b: SessionBlock): string {
     case "mobility":
       return (b.data as MobilityBlockData).drillName;
     default:
-      return b.type;
+      // Plugin blocks carry their own name (blockPlugin.ts).
+      return (b.data as { name?: string } | null)?.name ?? b.type;
   }
 }
 

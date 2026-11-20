@@ -186,7 +186,7 @@
                       {:else}{blockDisplayName(b)}{/if}
                       {#if isPr}<span class="ml-1.5 rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">PR</span>{/if}
                     </td>
-                    <td class="px-2.5 py-2.5 text-muted-foreground">{b.type === "strength" ? setsText(b) : b.type === "cardio" ? "Cardio" : "Mobility"}</td>
+                    <td class="px-2.5 py-2.5 text-muted-foreground">{b.type === "strength" ? setsText(b) : b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : ((b.data as { summary?: string }).summary ?? "")}</td>
                     <td class="px-2.5 py-2.5">{best ? (best.weight > 0 ? `${kg(best.weight)} kg × ${best.reps}` : `${best.reps} reps`) : "—"}</td>
                     <td class="px-2.5 py-2.5">{best && best.weight > 0 ? `${kg(Math.round(estimated1RM(best.weight, best.reps) * 10) / 10)} kg` : "—"}</td>
                     <td class="px-2.5 py-2.5 {change?.tone ?? ''}">{change?.text ?? ""}</td>
