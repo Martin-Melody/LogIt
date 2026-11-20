@@ -26,7 +26,10 @@
     clearOtherRests,
   } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
-  import { getMobilitySuggestion } from "@logit/core/usecases/progression/getMobilitySuggestion";
+  import { getMobilitySuggestion, resolveMobilityAlgorithmId, setMobilityDrillAlgorithm } from "@logit/core/usecases/progression/getMobilitySuggestion";
+  import { SAME_EVERY_TIME_ID } from "@logit/core/progression/algorithms/sameEveryTime";
+  import { DEFAULT_MOBILITY_ALGORITHM_ID } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
+  import { pushExerciseSetting } from "$lib/sync/syncService";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import MobilitySetRow from "$lib/features/session/ui/MobilitySetRow.svelte";
   import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
@@ -75,6 +78,7 @@
       metric: data.metric,
       perSide: data.perSide,
     };
+    void resolveMobilityAlgorithmId(drill, getProgressionDeps()).then((id) => (keepsSame = id === SAME_EVERY_TIME_ID)).catch(() => {});
     void getMobilitySuggestion(drill, getProgressionDeps())
       .then((out) => {
         if (!out) return;
@@ -85,6 +89,33 @@
       })
       .catch(() => {});
   });
+
+  // Progress (the default) or the same holds every time, for this drill (Martin, 2026-11-20:
+  // progressing is the default, and it must be obvious it can be just 30-second holds).
+  let keepsSame = $state(false);
+  let switching = $state(false);
+  async function switchProgress() {
+    switching = true;
+    try {
+      const deps = getProgressionDeps();
+      const general = (await deps.progressionRepo.getMobilityConfig())?.algorithmId ?? DEFAULT_MOBILITY_ALGORITHM_ID;
+      const want = keepsSame ? DEFAULT_MOBILITY_ALGORITHM_ID : SAME_EVERY_TIME_ID;
+      const drill = { id: data.drillId, name: data.drillName };
+      const row = await setMobilityDrillAlgorithm(drill, want === general ? null : want, deps);
+      if (row) pushExerciseSetting(row);
+      keepsSame = !keepsSame;
+      lastFetchedKey = "";
+      const out = await getMobilitySuggestion({ ...drill, metric: data.metric, perSide: data.perSide }, deps);
+      suggestionLabel = out?.label ?? null;
+      suggestionNotes = out?.notes ?? null;
+      suggestedSets = out?.sets ?? [];
+      toast(keepsSame ? `${data.drillName}: the same holds every time` : `${data.drillName} progresses again`, {
+        description: "Change it here, or for every drill in Settings › Mobility progression.",
+      });
+    } finally {
+      switching = false;
+    }
+  }
 
   // Prefill hold targets on a fresh, untouched block so the timer has a goal.
   async function maybePrefillTargets(sug: SuggestSet[]) {
@@ -478,7 +509,11 @@
   </div>
 
   {#if !collapsed && round === undefined && suggestionLabel}
-    <p class="px-3 pb-1 -mt-1 text-xs text-primary/90">{suggestionLabel}</p>
+    <div class="flex items-center justify-between gap-2 px-3 pb-1 -mt-1">
+      <p class="text-xs text-primary/90">{suggestionLabel}</p>
+      <button type="button" class="min-h-8 shrink-0 rounded-md border border-border px-2.5 text-xs font-medium disabled:opacity-50"
+        disabled={switching} onclick={() => void switchProgress()}>{keepsSame ? "Progress it" : "Keep it the same"}</button>
+    </div>
   {/if}
   {#if !collapsed && round === undefined && suggestionNotes}
     <p class="px-3 pb-1.5 text-xs text-muted-foreground">{suggestionNotes}</p>

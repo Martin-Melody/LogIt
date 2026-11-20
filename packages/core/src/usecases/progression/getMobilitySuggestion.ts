@@ -7,6 +7,7 @@ import type {
 import { nowMs } from "../../domain/time";
 import { DEFAULT_MOBILITY_ALGORITHM_ID } from "./getMobilityProgressionConfig";
 import type { ProgressionDeps } from "./deps";
+import type { ExerciseProgressionSettings } from "../../domain/progression";
 
 const HISTORY_WINDOW = 20;
 
@@ -20,6 +21,38 @@ export type MobilityDrillRef = {
 
 export function mobilityStateKey(drill: Pick<MobilityDrillRef, "id" | "name">): string {
   return `mobility::${drill.id || mobilityDrillSlug(drill.name)}`;
+}
+
+/** This drill's own algorithm ("Same every time" on one drill), else the general one. */
+export async function resolveMobilityAlgorithmId(
+  drill: Pick<MobilityDrillRef, "id" | "name">,
+  deps: Pick<ProgressionDeps, "progressionRepo">,
+): Promise<string> {
+  const own = await deps.progressionRepo.getExerciseSettings?.(mobilityStateKey(drill)).catch(() => null);
+  if (own?.algorithmId && !own.deletedAtMs) return own.algorithmId;
+  return (await deps.progressionRepo.getMobilityConfig())?.algorithmId ?? DEFAULT_MOBILITY_ALGORITHM_ID;
+}
+
+/**
+ * Give one drill its own algorithm, or null to follow the general one. Kept on a progression
+ * settings row (keyed like the drill's state), so it syncs. Returns the row, for pushing.
+ */
+export async function setMobilityDrillAlgorithm(
+  drill: Pick<MobilityDrillRef, "id" | "name">,
+  algorithmId: string | null,
+  deps: Pick<ProgressionDeps, "progressionRepo">,
+): Promise<ExerciseProgressionSettings | null> {
+  const repo = deps.progressionRepo;
+  if (!repo.saveExerciseSettings) return null;
+  const key = mobilityStateKey(drill);
+  const existing = await repo.getExerciseSettings?.(key).catch(() => null);
+  const now = nowMs();
+  const updatedAtMs = Math.max(now, (existing?.updatedAtMs ?? 0) + 1);
+  const row: ExerciseProgressionSettings = algorithmId
+    ? { key, exerciseName: drill.name, algorithmId, createdAtMs: existing?.createdAtMs ?? now, updatedAtMs }
+    : { key, exerciseName: drill.name, createdAtMs: existing?.createdAtMs ?? now, updatedAtMs, deletedAtMs: now };
+  await repo.saveExerciseSettings(row);
+  return row;
 }
 
 function mobilityBlocksOf(session: WorkoutSession): MobilityBlockData[] {
@@ -68,8 +101,7 @@ export async function getMobilitySuggestion(
 ): Promise<MobilityProgressionOutput | null> {
   const { progressionRepo, workoutRepo, mobilityAlgorithmRegistry: registry } = deps;
 
-  const config = await progressionRepo.getMobilityConfig();
-  const algorithmId = config?.algorithmId ?? DEFAULT_MOBILITY_ALGORITHM_ID;
+  const algorithmId = await resolveMobilityAlgorithmId(drill, deps);
   const algorithm = await registry.get(algorithmId);
   if (!algorithm) return null;
 
@@ -100,8 +132,7 @@ export async function applySessionMobilityProgression(
   output: MobilityProgressionOutput,
   deps: Pick<ProgressionDeps, "progressionRepo">,
 ): Promise<void> {
-  const config = await deps.progressionRepo.getMobilityConfig();
-  const algorithmId = config?.algorithmId ?? DEFAULT_MOBILITY_ALGORITHM_ID;
+  const algorithmId = await resolveMobilityAlgorithmId(drill, deps);
   await deps.progressionRepo.saveExerciseState({
     key: mobilityStateKey(drill),
     exerciseId: drill.id,

@@ -44,7 +44,7 @@
   import { equipment } from "$lib/stores/equipment.store";
   import { DEFAULT_BARBELL } from "@logit/core/domain/plates";
   import { toDisplayWeight, fromDisplayWeight } from "@logit/core/domain/units";
-  import { syncAll, pushAllLocalData, lastSyncedAt } from "$lib/sync/syncService";
+  import { syncAll, pushAllLocalData, lastSyncedAt, pushExerciseSetting } from "$lib/sync/syncService";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import {
@@ -59,7 +59,8 @@
     setProgressionAlgorithm,
   } from "@logit/core/usecases/progression/getProgressionConfig";
   import type { ProgressionConfigView } from "@logit/core/usecases/progression/getProgressionConfig";
-  import { listExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
+  import { listExerciseProgressionSettings, listMobilityDrillSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
+  import { setMobilityDrillAlgorithm } from "@logit/core/usecases/progression/getMobilitySuggestion";
   import { PROGRESSION_OFF, type ExerciseProgressionSettings } from "@logit/core/domain/progression";
   import {
     getMobilityProgressionConfig,
@@ -274,10 +275,19 @@
     algorithms: [],
   });
 
+  // Drills given their own algorithm from their card ("Keep it the same").
+  let mobilityDrillRows = $state<ExerciseProgressionSettings[]>([]);
+  async function resetMobilityDrill(row: ExerciseProgressionSettings) {
+    const reset = await setMobilityDrillAlgorithm({ name: row.exerciseName, id: row.key.slice("mobility::".length) }, null, getProgressionDeps());
+    if (reset) pushExerciseSetting(reset);
+    mobilityDrillRows = mobilityDrillRows.filter((r) => r.key !== row.key);
+  }
+
   async function loadMobilityProgression() {
     mobilityProgUi.loading = true;
     mobilityProgUi.error = null;
     try {
+      mobilityDrillRows = await listMobilityDrillSettings(getProgressionDeps()).catch(() => []);
       mobilityView = await getMobilityProgressionConfig(getProgressionDeps());
     } catch (e) {
       mobilityProgUi.error = e instanceof Error ? e.message : "Failed to load settings";
@@ -1029,6 +1039,11 @@
       <Card.Description>How the app suggests holds, reps and load for your stretching drills.</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
+      <p class="text-sm text-muted-foreground">
+        Drills progress by default. Would you rather do the same holds every time, like 30 seconds each? Pick
+        <strong class="font-medium text-foreground">Same every time</strong> here for every drill, or tap
+        <strong class="font-medium text-foreground">Keep it the same</strong> on one drill in a workout.
+      </p>
       {#if mobilityProgUi.error}
         <p class="text-sm text-destructive">{mobilityProgUi.error}</p>
       {/if}
@@ -1075,6 +1090,21 @@
             </li>
           {/each}
         </ul>
+      {/if}
+
+      {#if mobilityDrillRows.length}
+        <div class="flex flex-col gap-1.5">
+          <p class="text-sm font-medium">Drills set on their own</p>
+          <ul class="flex flex-col rounded-md border border-border">
+            {#each mobilityDrillRows as row, i (row.key)}
+              {@const algo = mobilityView.algorithms.find((a) => a.id === row.algorithmId)}
+              <li class="flex items-center justify-between gap-3 px-3 py-2 {i ? 'border-t border-border' : ''}">
+                <span class="flex min-w-0 flex-col"><span class="truncate text-sm">{row.exerciseName}</span><span class="text-xs text-muted-foreground">{algo?.name ?? row.algorithmId}</span></span>
+                <Button size="sm" variant="outline" onclick={() => void resetMobilityDrill(row)}>Like the rest</Button>
+              </li>
+            {/each}
+          </ul>
+        </div>
       {/if}
 
       <div class="flex flex-col gap-2 border-t border-border pt-3">

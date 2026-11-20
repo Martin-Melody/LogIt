@@ -53,3 +53,11 @@ a range moves to what has worked for you. Your active split is scored against th
 for anything it leaves short, like "Add 2 sets of Romanian deadlift on Legs". Tap a muscle to set
 your own range instead. It's used everywhere the target is: this week's view, scoring your split, and
 any algorithm set to adjust its sets to weekly targets. **Back to default** hands it back to LogIt.
+
+## Stretching and mobility
+
+Mobility drills progress by default: each time you meet a drill's target, the hold gets a little longer,
+then it adds load or suggests a harder version. If you'd rather do the same thing every time, like 30-second
+holds, tap **Keep it the same** on the drill in a workout, or pick **Same every time** in Settings ›
+Mobility progression for every drill. Same every time repeats your last session's holds, or starts at 30
+seconds. Drills you've set on their own are listed there too, with a button to put them back.

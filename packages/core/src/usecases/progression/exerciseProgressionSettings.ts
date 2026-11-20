@@ -78,10 +78,17 @@ function stripUndefined<T extends object>(o: T): T {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
 }
 
-/** Every exercise set differently from the rest (live rows only; muscle targets left out). */
+/** Every exercise set differently from the rest (live rows only; muscle targets and mobility
+ * drills' own algorithms, keyed "mobility::", left out). */
 export async function listExerciseProgressionSettings(deps: Deps): Promise<ExerciseProgressionSettings[]> {
   const rows = (await deps.progressionRepo.listExerciseSettings?.()) ?? [];
-  return rows.filter((r) => !r.deletedAtMs && !r.key.startsWith(MUSCLE_SETTINGS_PREFIX));
+  return rows.filter((r) => !r.deletedAtMs && !r.key.startsWith(MUSCLE_SETTINGS_PREFIX) && !r.key.startsWith("mobility::"));
+}
+
+/** Mobility drills with their own algorithm ("Same every time" on one drill). */
+export async function listMobilityDrillSettings(deps: Deps): Promise<ExerciseProgressionSettings[]> {
+  const rows = (await deps.progressionRepo.listExerciseSettings?.()) ?? [];
+  return rows.filter((r) => !r.deletedAtMs && r.key.startsWith("mobility::") && r.algorithmId);
 }
 
 // ── A muscle's weekly set target ─────────────────────────────────────────────

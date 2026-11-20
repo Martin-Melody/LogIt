@@ -4,8 +4,9 @@ import type {
   MobilityProgressionAlgorithmRegistry,
 } from "../domain/mobilityProgression";
 import { linearMobility } from "./algorithms/linearMobility";
+import { sameEveryTime } from "./algorithms/sameEveryTime";
 
-const BUNDLED: MobilityProgressionAlgorithm[] = [linearMobility];
+const BUNDLED: MobilityProgressionAlgorithm[] = [linearMobility, sameEveryTime];
 
 export function createLocalMobilityAlgorithmRegistry(): MobilityProgressionAlgorithmRegistry {
   return {
