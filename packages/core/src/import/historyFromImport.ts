@@ -19,7 +19,11 @@ const working = (sets: SetEntry[]) => sets.filter((x) => x.completed !== false &
 const keyOf = (e: { exerciseId?: string; exerciseName: string }) => e.exerciseId ?? e.exerciseName.trim().toLowerCase();
 
 export type LiftTrend = { name: string; exerciseId?: string; months: { monthMs: number; kg: number }[]; firstKg: number; lastKg: number };
-export type HistorySummary = { workouts: number; exercises: number; prs: number; firstAtMs: number; lastAtMs: number; lifts: LiftTrend[] };
+/** Squat, bench and deadlift now: each one's best estimated max in its last six weeks. */
+export type BigThree = { squatKg: number; benchKg: number; deadliftKg: number; totalKg: number };
+export type HistorySummary = { workouts: number; exercises: number; prs: number; firstAtMs: number; lastAtMs: number; lifts: LiftTrend[]; bigThree: BigThree | null };
+
+const BIG_THREE = { squat: ["core_squat", "squat"], bench: ["core_bench_press", "bench press"], deadlift: ["core_deadlift", "deadlift"] } as const;
 
 /** `sessions` in any order. Lifts: the three with the most weighted working sets. */
 export function summariseHistory(sessions: WorkoutSession[]): HistorySummary | null {
@@ -28,6 +32,8 @@ export function summariseHistory(sessions: WorkoutSession[]): HistorySummary | n
   const best = new Map<string, number>();
   const sets = new Map<string, { name: string; exerciseId?: string; count: number; byMonth: Map<number, number> }>();
   let prs = 0;
+  // Per lift: [atMs, e1rm] of every working set, for "now" (last six weeks of that lift).
+  const sets1rm = new Map<string, [number, number][]>();
   for (const s of sorted) {
     const d = new Date(s.startedAtMs);
     const monthMs = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
@@ -40,6 +46,8 @@ export function summariseHistory(sessions: WorkoutSession[]): HistorySummary | n
         entry.count++;
         const e1rm = estimated1RM(x.weight, Math.min(x.reps, MAX_REPS_FOR_ESTIMATE));
         entry.byMonth.set(monthMs, Math.max(entry.byMonth.get(monthMs) ?? 0, e1rm));
+        const nameKey = b.exerciseName.trim().toLowerCase();
+        for (const id of [b.exerciseId, nameKey]) if (id) sets1rm.set(id, [...(sets1rm.get(id) ?? []), [s.startedAtMs, e1rm]]);
         const before = best.get(k);
         if (before != null && e1rm > before + 0.01) prs++;
         if (before == null || e1rm > before) best.set(k, e1rm);
@@ -54,7 +62,16 @@ export function summariseHistory(sessions: WorkoutSession[]): HistorySummary | n
       const months = [...e.byMonth].sort((a, b) => a[0] - b[0]).map(([monthMs, kg]) => ({ monthMs, kg: Math.round(kg * 10) / 10 }));
       return { name: e.name, ...(e.exerciseId ? { exerciseId: e.exerciseId } : {}), months, firstKg: months[0]!.kg, lastKg: months.at(-1)!.kg };
     });
-  return { workouts: sorted.length, exercises: sets.size, prs, firstAtMs: sorted[0]!.startedAtMs, lastAtMs: sorted.at(-1)!.startedAtMs, lifts };
+  const now = (keys: readonly string[]) => {
+    const list = keys.map((k) => sets1rm.get(k)).find((l) => l?.length);
+    if (!list) return null;
+    const last = list.at(-1)![0];
+    return Math.max(...list.filter(([at]) => at > last - SPLIT_WINDOW_MS).map(([, kg]) => kg));
+  };
+  const [sq, be, dl] = [now(BIG_THREE.squat), now(BIG_THREE.bench), now(BIG_THREE.deadlift)];
+  const r1 = (kg: number) => Math.round(kg * 10) / 10;
+  const bigThree = sq && be && dl ? { squatKg: r1(sq), benchKg: r1(be), deadliftKg: r1(dl), totalKg: r1(sq + be + dl) } : null;
+  return { workouts: sorted.length, exercises: sets.size, prs, firstAtMs: sorted[0]!.startedAtMs, lastAtMs: sorted.at(-1)!.startedAtMs, lifts, bigThree };
 }
 
 export type DetectedDay = { name: string; weekday: number; exercises: { name: string; exerciseId?: string; sets: number; repRange: [number, number] }[] };
