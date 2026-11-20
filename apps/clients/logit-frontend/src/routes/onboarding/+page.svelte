@@ -31,6 +31,7 @@
   import { estimated1RM } from "@logit/core/domain/oneRepMax";
   import ImportFlow from "$lib/features/import/ImportFlow.svelte";
   import { getSplitRepo, getWorkoutRepo } from "$lib/data/repoProvider";
+  import { pushDeletedSplit } from "$lib/sync/syncService";
   import { setTrainingGoal } from "$lib/features/onboarding/trainingGoal";
   import { detectSplit, splitFromDetected, summariseHistory, type DetectedSplit, type HistorySummary } from "@logit/core/import/historyFromImport";
   import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
@@ -232,6 +233,8 @@
   }
   async function keepSplit() {
     if (!detected) return;
+    // Back here and Keep it again: it's already saved.
+    if (answers.historySplitId && historySplit) return go(7);
     const names = detected.days.map((d) => d.name);
     const split = splitFromDetected($state.snapshot(detected) as DetectedSplit, names.length <= 3 ? names.join(" / ") : "My split");
     await saveSplit(split);
@@ -241,7 +244,13 @@
     save({ historySplitId: split.id });
     go(7);
   }
-  function changeSplit() {
+  async function changeSplit() {
+    // Kept, then changed their mind: the found split goes; days and plan make the new one.
+    if (answers.historySplitId) {
+      await getSplitRepo().deleteSplit(answers.historySplitId).catch(() => {});
+      pushDeletedSplit(answers.historySplitId);
+      await splits.setActive(null);
+    }
     historySplit = null;
     save({ historySplitId: null });
     go(3);
@@ -543,12 +552,12 @@
             <span class="text-sm text-muted-foreground">{detected.daysPerWeek} day{detected.daysPerWeek === 1 ? "" : "s"} a week: {detected.days.map((d) => d.name).join(", ")}, from your last 6 weeks.</span>
             <div class="flex gap-2">
               <button type="button" class="h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground" onclick={() => void keepSplit()}>Keep it</button>
-              <button type="button" class="h-11 flex-1 rounded-lg border border-border bg-background text-sm font-medium" onclick={changeSplit}>Change it</button>
+              <button type="button" class="h-11 flex-1 rounded-lg border border-border bg-background text-sm font-medium" onclick={() => void changeSplit()}>Change it</button>
             </div>
           </div>
         {:else}
           <div class="flex-1"></div>
-          <button type="button" class="h-[52px] rounded-[10px] bg-primary text-base font-semibold text-primary-foreground" onclick={changeSplit}>Continue</button>
+          <button type="button" class="h-[52px] rounded-[10px] bg-primary text-base font-semibold text-primary-foreground" onclick={() => void changeSplit()}>Continue</button>
         {/if}
       {:else}
         <Loader2 class="mx-auto mt-24 h-6 w-6 animate-spin text-muted-foreground" />
