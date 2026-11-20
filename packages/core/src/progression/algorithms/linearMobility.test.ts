@@ -156,3 +156,11 @@ describe("Progress: past the area's weekly time", () => {
     expect(run({ history: last, areaWeek: done, progression: lizard, now, state: { streak: {}, declinedWeek: mobilityWeekOf(now) } }).next).toBeUndefined();
   });
 });
+
+describe("Progress: history logged without sides", () => {
+  it("counts for each side of a per-side drill", () => {
+    const out = run({ drill: { name: "Lizard pose", metric: "hold", perSide: true }, history: [session([{ durationSec: 60, targetSec: 60, completed: true }])] });
+    expect(out.sets.map((x) => [x.side, x.durationSec])).toContainEqual(["left", 65]);
+    expect(out.sets.map((x) => [x.side, x.durationSec])).toContainEqual(["right", 65]);
+  });
+});

@@ -128,7 +128,10 @@ const SIDE_LABEL: Record<string, string> = { left: " L", right: " R", both: "" }
 
 function setsForSide(entry: { sets: MobilitySetRecord[] } | undefined, sideKey: string): MobilitySetRecord[] {
   if (!entry) return [];
-  return entry.sets.filter((s) => (sideKey === "both" ? !s.side : s.side === sideKey));
+  const mine = entry.sets.filter((s) => (sideKey === "both" ? !s.side : s.side === sideKey));
+  // Logged without sides (imported, or before the drill was per side): those count for each side.
+  if (mine.length === 0 && sideKey !== "both" && entry.sets.every((s) => !s.side)) return entry.sets;
+  return mine;
 }
 
 function bestNumber(vals: (number | undefined)[]): number {
