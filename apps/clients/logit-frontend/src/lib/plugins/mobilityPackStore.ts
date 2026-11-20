@@ -110,6 +110,10 @@ export function packMobilityDrills(enabledIds: ReadonlySet<string>): MobilityDri
         cues: d.cues,
         notes: d.notes,
         isCore: false,
+        ...(d.takesLoad ? { takesLoad: true } : {}),
+        ...(d.harderCues ? { harderCues: d.harderCues } : {}),
+        ...(d.harder ? { harder: d.harder } : {}),
+        ...(d.easier ? { easier: d.easier } : {}),
       });
     }
   }

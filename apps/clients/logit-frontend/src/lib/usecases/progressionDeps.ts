@@ -30,5 +30,6 @@ export function getProgressionDeps(): ProgressionDeps {
     loadBodyweight: loadBodyweightLookup,
     loadGoals: async () => activeGoals(get(goalsStore)),
     loadFood: () => import("$lib/features/nutrition/recentEating").then((m) => m.loadRecentEating()),
+    loadMobilityDrills: () => import("$lib/data/library/library").then((m) => m.mobilityCatalog()),
   };
 }

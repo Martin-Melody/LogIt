@@ -75,24 +75,34 @@ export const DRILL_PROGRESSIONS: Record<string, DrillProgression> = {
   "core:worlds-greatest": P(false, ["Elbow to the floor", "Longer hold at the end"]),
 };
 
-/** A drill in a workout (by id, or by name for blocks that only have one) in the catalog. */
-export function findBuiltinDrill(drill: { id?: string; name: string }): MobilityDrill | null {
+/** A drill in a workout (by id, or by name for blocks that only have one) in the catalog: the
+ * built-ins, plus packs and your own drills when the caller has them. */
+export function findDrill(drill: { id?: string; name: string }, catalog: MobilityDrill[] = BUILTIN_MOBILITY_DRILLS): MobilityDrill | null {
   const slug = mobilityDrillSlug(drill.name);
-  return BUILTIN_MOBILITY_DRILLS.find((d) => d.id === drill.id || mobilityDrillSlug(d.name) === slug) ?? null;
+  return catalog.find((d) => d.id === drill.id) ?? catalog.find((d) => mobilityDrillSlug(d.name) === slug) ?? null;
 }
 
-export function drillArea(drill: { id?: string; name: string; area?: string }): MobilityArea | null {
-  return (drill.area as MobilityArea | undefined) ?? findBuiltinDrill(drill)?.area ?? null;
+export function drillArea(drill: { id?: string; name: string; area?: string }, catalog?: MobilityDrill[]): MobilityArea | null {
+  return (drill.area as MobilityArea | undefined) ?? findDrill(drill, catalog)?.area ?? null;
 }
 
-/** The drill's progression with its harder drills as names, for the algorithm. */
-export function progressionFor(drill: { id?: string; name: string }): { takesLoad: boolean; harderCues: string[]; harder: { id: string; name: string }[]; steady: boolean } | null {
-  const found = findBuiltinDrill(drill);
-  const p = found ? DRILL_PROGRESSIONS[found.id] : undefined;
-  if (!p) return null;
-  const harder = p.harder.flatMap((id) => {
-    const d = BUILTIN_MOBILITY_DRILLS.find((x) => x.id === id);
-    return d ? [{ id: d.id, name: d.name }] : [];
+/**
+ * The drill's progression with its harder drills resolved, for the algorithm: the reviewed
+ * built-in data, else what the drill itself declares (a pack's fields; your own drills declare
+ * nothing, so they get "pick one" and learn their next step from what you pick).
+ */
+export function progressionFor(
+  drill: { id?: string; name: string },
+  catalog: MobilityDrill[] = BUILTIN_MOBILITY_DRILLS,
+): { takesLoad: boolean; harderCues: string[]; harder: { id: string; name: string }[]; steady: boolean } | null {
+  const found = findDrill(drill, catalog);
+  if (!found) return null;
+  const p: DrillProgression = DRILL_PROGRESSIONS[found.id] ?? {
+    takesLoad: !!found.takesLoad, harderCues: found.harderCues ?? [], harder: found.harder ?? [], easier: found.easier ?? [],
+  };
+  const harder = p.harder.flatMap((ref) => {
+    const d = findDrill({ id: ref, name: ref }, catalog);
+    return d && d.id !== found.id ? [{ id: d.id, name: d.name }] : [];
   });
   return { takesLoad: p.takesLoad, harderCues: p.harderCues, harder, steady: !!p.steady };
 }

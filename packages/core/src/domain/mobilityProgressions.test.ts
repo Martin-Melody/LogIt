@@ -25,3 +25,22 @@ describe("mobility drill progressions (data)", () => {
     expect(progressionFor({ name: "My own drill" })).toBeNull();
   });
 });
+
+describe("drills from packs and your own", () => {
+  const own = { id: "own_1", name: "Wall pigeon", area: "glutes", defaultMetric: "hold", perSide: true, cues: [], notes: null, isCore: false } as const;
+  const pack = { id: "pack:x:split-prep", name: "Split prep", area: "hip-flexors", defaultMetric: "hold", perSide: true, cues: [], notes: null, isCore: false,
+    takesLoad: false, harderCues: ["Lower"], harder: ["Couch stretch", "Front split"] } as const;
+  const catalog = [...BUILTIN_MOBILITY_DRILLS, own, pack];
+
+  it("know their area from the catalog", () => {
+    expect(drillArea({ name: "Wall pigeon" }, catalog)).toBe("glutes");
+    expect(drillArea({ name: "Wall pigeon" })).toBeNull(); // built-ins only
+  });
+
+  it("a pack's own links resolve to drills that exist; your own drill declares none", () => {
+    expect(progressionFor({ id: "pack:x:split-prep", name: "Split prep" }, catalog)).toEqual({
+      takesLoad: false, harderCues: ["Lower"], harder: [{ id: "core:couch-stretch", name: "Couch stretch" }], steady: false,
+    });
+    expect(progressionFor({ name: "Wall pigeon" }, catalog)).toEqual({ takesLoad: false, harderCues: [], harder: [], steady: false });
+  });
+});

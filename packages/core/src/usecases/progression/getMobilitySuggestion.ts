@@ -9,6 +9,7 @@ import { DEFAULT_MOBILITY_ALGORITHM_ID } from "./getMobilityProgressionConfig";
 import type { ProgressionDeps } from "./deps";
 import type { ExerciseProgressionSettings } from "../../domain/progression";
 import { drillArea, progressionFor } from "../../domain/mobilityProgressions";
+import type { MobilityDrill } from "../../domain/mobilityDrill";
 import { mobilityWeekOf } from "../../progression/algorithms/linearMobility";
 
 /** About 10 minutes a week per area (Ingram et al. 2024); the algorithm may use its own. */
@@ -17,13 +18,13 @@ export const AREA_WEEKLY_TARGET_SEC = 600;
 const SEC_PER_REP = 3;
 
 /** This week's stretching time for `area`, from every drill in it (finished sets only). */
-export function areaWeekSec(sessions: WorkoutSession[], area: string, nowMs: number): number {
+export function areaWeekSec(sessions: WorkoutSession[], area: string, nowMs: number, catalog?: MobilityDrill[]): number {
   const week = mobilityWeekOf(nowMs);
   let sec = 0;
   for (const s of sessions) {
     if (mobilityWeekOf(s.startedAtMs) !== week) continue;
     for (const b of mobilityBlocksOf(s)) {
-      if (drillArea({ id: b.drillId, name: b.drillName }) !== area) continue;
+      if (drillArea({ id: b.drillId, name: b.drillName }, catalog) !== area) continue;
       for (const set of b.sets) {
         if (!set.completed) continue;
         sec += set.durationSec ?? (set.reps ? set.reps * SEC_PER_REP : 0);
@@ -120,7 +121,7 @@ export function buildMobilityHistory(
 
 export async function getMobilitySuggestion(
   drill: MobilityDrillRef,
-  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "mobilityAlgorithmRegistry">,
+  deps: Pick<ProgressionDeps, "workoutRepo" | "progressionRepo" | "mobilityAlgorithmRegistry" | "loadMobilityDrills">,
   plannedTargets?: { sets?: number; durationSec?: number; reps?: number; loadKg?: number },
 ): Promise<MobilityProgressionOutput | null> {
   const { progressionRepo, workoutRepo, mobilityAlgorithmRegistry: registry } = deps;
@@ -141,10 +142,10 @@ export async function getMobilitySuggestion(
   const userPreferences = storedPrefs ?? algorithm.defaultPreferences ?? {};
 
   const now = nowMs();
-  // shortcut: area and progression come from the built-in catalog only; own and pack drills
-  // get none (so no weekly cap) until drills carry an area and links of their own.
-  const area = drillArea(drill);
-  const progression = progressionFor(drill);
+  // The whole catalog (packs, your own drills) when the app has it, else the built-ins.
+  const catalog = (await deps.loadMobilityDrills?.().catch(() => null)) ?? undefined;
+  const area = drillArea(drill, catalog);
+  const progression = progressionFor(drill, catalog);
   return algorithm.suggest({
     drill: area ? { ...drill, area } : drill,
     history,
@@ -152,7 +153,7 @@ export async function getMobilitySuggestion(
     userPreferences,
     plannedTargets,
     now,
-    ...(area ? { areaWeek: { area, doneSec: areaWeekSec(recentSessions, area, now), targetSec: AREA_WEEKLY_TARGET_SEC } } : {}),
+    ...(area ? { areaWeek: { area, doneSec: areaWeekSec(recentSessions, area, now, catalog), targetSec: AREA_WEEKLY_TARGET_SEC } } : {}),
     ...(progression ? { progression } : {}),
   });
 }

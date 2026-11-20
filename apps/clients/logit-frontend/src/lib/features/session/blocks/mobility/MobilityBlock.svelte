@@ -30,6 +30,10 @@
   import type { MobilityNextStep } from "@logit/core/domain/mobilityProgression";
   import { toDisplayWeight } from "@logit/core/domain/units";
   import MobilityNextCard from "./MobilityNextCard.svelte";
+  import { swapPlannedMobilityDrill } from "@logit/core/domain/WorkoutSplit";
+  import { getSplitRepo } from "$lib/data/repoProvider";
+  import { saveSplit } from "$lib/usecases/Splits/saveSplit";
+  import { currentSession } from "$lib/stores/currentSession.store";
   import { SAME_EVERY_TIME_ID } from "@logit/core/progression/algorithms/sameEveryTime";
   import { DEFAULT_MOBILITY_ALGORITHM_ID } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
   import { pushExerciseSetting } from "$lib/sync/syncService";
@@ -155,8 +159,20 @@
     toast("Asked again next week");
   }
   async function nextHarder(d: { id?: string; name: string }) {
+    const from = { drillId: data.drillId, drillName: data.drillName };
+    const to = { drillId: d.id || undefined, drillName: d.name };
     replaceTargetsNext = true;
-    await handleSwap({ drillName: d.name, drillId: d.id || undefined });
+    await handleSwap(to);
+    // The split day this workout came from gets it too, so next time starts there.
+    const source = get(currentSession)?.source;
+    if (source?.kind !== "split") return;
+    try {
+      const split = await getSplitRepo().getSplit(source.parentId);
+      const swapped = split ? swapPlannedMobilityDrill(split, source.dayId, from, to) : null;
+      if (!swapped) return;
+      await saveSplit(swapped);
+      toast(`${to.drillName} replaces ${from.drillName} on ${source.dayName ?? "this split day"} too`);
+    } catch {}
   }
   let pickOpen = $state(false);
   async function nextPicked(sel: { drillName: string; drillId?: string }) {

@@ -59,6 +59,13 @@ export type MobilityDrill = {
   createdAtMs?: number;
   updatedAtMs?: number;
   media?: LibraryMedia[];
+  /** How it moves on once its area has its weekly time (built-ins: domain/mobilityProgressions.ts;
+   * packs declare these; your own drills learn their next step from what you pick). */
+  takesLoad?: boolean;
+  harderCues?: string[];
+  /** Harder / easier drills, by id or name. */
+  harder?: string[];
+  easier?: string[];
 };
 
 /** `pack:<pluginId>:<slug>` — mirrors `packExerciseId`. */
