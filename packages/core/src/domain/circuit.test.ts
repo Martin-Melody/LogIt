@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  addCardioBlock,
   addExercise,
+  addSet,
+  updateSet,
+  type StrengthBlockData,
   addMobilityBlock,
   addSupersetRound,
   blockGroup,
@@ -12,6 +16,8 @@ import {
   type MobilityBlockData,
   type WorkoutSession,
 } from "./workout";
+import { addPluginBlock, parseBlockDeclaration, type PluginBlockData } from "./blockPlugin";
+import { BJJ } from "./blockPlugin.test";
 import {
   applyCircuitSaves,
   canRunCircuit,
@@ -37,14 +43,14 @@ import {
 const T0 = 1_000_000;
 
 /**
- * Hamstring (hold, 30 s target), Pigeon (per side, 40 s), Push-ups (strength), 2 rounds.
+ * Hamstring (hold, 30 s target), Pigeon (per side, 40 s), a run (cardio, logged by hand), 2 rounds.
  * No rest between exercises, so the timings below are lead-ins and holds only.
  */
 function seed(): { s: WorkoutSession; group: string; ham: string; pigeon: string } {
   let s = createSession(1_000);
   s = addMobilityBlock(s, { drillName: "Hamstring stretch", metric: "hold" });
   s = addMobilityBlock(s, { drillName: "Pigeon stretch", metric: "hold", perSide: true });
-  s = addExercise(s, { exerciseName: "Push-ups" });
+  s = addCardioBlock(s, "Run");
   const [ham, pigeon, push] = [...s.blocks].sort((a, b) => a.orderIndex - b.orderIndex).map((b) => b.id);
   const sets = (id: string) => (s.blocks.find((b) => b.id === id)!.data as MobilityBlockData).sets;
   s = updateMobilitySet(s, ham!, sets(ham!)[0]!.id, { targetSec: 30 });
@@ -62,7 +68,7 @@ function step(s: WorkoutSession, u: { run: CircuitRun; saves: Parameters<typeof 
 }
 
 describe("circuitSteps", () => {
-  it("runs round by round, drills in order, both sides back to back, strength left out", () => {
+  it("runs round by round, drills in order, both sides back to back, cardio left out", () => {
     const { s, group } = seed();
     const steps = circuitSteps(s, group);
     expect(steps.map((x) => `${x.round + 1}:${x.drillName}${x.side ? ` ${x.side}` : ""}`)).toEqual([
@@ -301,5 +307,56 @@ describe("rest between exercises and the get-ready", () => {
     // Round: ham 3+30, rest 10, pigeon L 3+40, switch 5, R 40 = 131 s.
     const round = 3_000 + 30_000 + 10_000 + 3_000 + 40_000 + 5_000 + 40_000;
     expect(estimateCircuitMs(s, group)).toEqual({ roundMs: round, totalMs: round * 2 + 60_000 });
+  });
+});
+
+describe("strength and plugin blocks in a circuit", () => {
+  function mixed() {
+    let s = createSession(1_000);
+    s = addExercise(s, { exerciseName: "Kettlebell swing" });
+    s = addPluginBlock(s, parseBlockDeclaration(BJJ));
+    s = addPluginBlock(s, parseBlockDeclaration({ ...BJJ, id: "climb", name: "Climbing", timer: undefined, summary: undefined }));
+    const [kb, bjj, climb] = s.blocks.map((b) => b.id);
+    s = addSet(s, kb!);
+    const set = (s.blocks[0]!.data as StrengthBlockData).sets[0]!;
+    s = updateSet(s, kb!, set.id, { target: { reps: 15, weight: 24 } });
+    s = groupIntoSuperset(s, [kb!, bjj!, climb!]);
+    const group = blockGroup(s.blocks[0]!)!.id;
+    s = setGroupSettings(s, group, { memberRestMs: 0 });
+    return { s, group, kb: kb!, bjj: bjj!, climb: climb! };
+  }
+
+  it("a strength set is a rep goal with its weight; a timed plugin entry is a hold; an untimed one is Done", () => {
+    const { s, group } = mixed();
+    expect(circuitSteps(s, group).map((x) => [x.drillName, x.metric, x.reps, x.goalSec, x.weightKg])).toEqual([
+      ["Kettlebell swing", "reps", 15, 0, 24],
+      ["BJJ rounds", "hold", 0, 360, undefined],
+      ["Climbing", "done", 0, 30, undefined],
+    ]);
+  });
+
+  it("logs the reps on the strength set, the round time on the plugin entry, and Done on the other", () => {
+    const { s: s0, group, kb, bjj, climb } = mixed();
+    let s = s0;
+    let run = startCircuit(s, group, T0)!;
+    ({ s, run } = step(s, tickCircuit(s, run, T0 + LEAD_IN_MS)));
+    expect(run.phase.kind).toBe("reps");
+    ({ s, run } = step(s, finishRepsCircuit(s, run, 12, T0 + 20_000)));
+    const kbSet = (s.blocks.find((b) => b.id === kb)!.data as StrengthBlockData).sets[0]!;
+    expect([kbSet.reps, kbSet.weight, kbSet.completed]).toEqual([12, 24, true]);
+
+    // The BJJ round runs 6:00, but is stopped at 4:00.
+    ({ s, run } = step(s, tickCircuit(s, run, T0 + 20_000 + LEAD_IN_MS)));
+    expect(run.phase.kind).toBe("hold");
+    ({ s, run } = step(s, skipCircuit(s, run, T0 + 20_000 + LEAD_IN_MS + 240_000)));
+    const round = s.blocks.find((b) => b.id === bjj)!.data as PluginBlockData;
+    expect([round.entries[0]!.done, round.entries[0]!.values.length, round.summary]).toEqual([true, 240, "1 round · 0 subs · 0 tapped"]);
+
+    const at = T0 + 400_000;
+    ({ s, run } = step(s, tickCircuit(s, run, at)));
+    expect(run.phase.kind).toBe("reps");
+    ({ s, run } = step(s, finishRepsCircuit(s, run, 0, at + 1)));
+    expect((s.blocks.find((b) => b.id === climb)!.data as PluginBlockData).entries[0]!.done).toBe(true);
+    expect(run.phase.kind).toBe("done");
   });
 });

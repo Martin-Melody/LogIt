@@ -18,7 +18,7 @@
   import PluginBlockView from "./PluginBlockView.svelte";
   import { formatBlockValue } from "./format";
 
-  let { blockId, blockType, data, saving, grouped = false, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<PluginBlockData> = $props();
+  let { blockId, blockType, data, saving, grouped = false, round, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<PluginBlockData> = $props();
 
   const decl = $derived(blockType ? getBlockDeclaration(blockType.slice(PLUGIN_BLOCK_PREFIX.length)) : null);
   const unit = $derived($profile.weightUnit);
@@ -26,8 +26,10 @@
   let confirmRemove = $state(false);
   let moreOpen = $state<Record<string, boolean>>({});
 
-  const done = $derived(data.entries.filter((e) => e.done !== false));
-  const open = $derived(data.entries.filter((e) => e.done === false));
+  // A group's "by round" view shows only that round's entry.
+  const shown = $derived(round === undefined ? data.entries : data.entries.slice(round, round + 1));
+  const done = $derived(shown.filter((e) => e.done !== false));
+  const open = $derived(shown.filter((e) => e.done === false));
   const columns = $derived(data.shape.filter(([, , , col]) => col));
 
   function change(fn: (d: PluginBlockData) => PluginBlockData) {

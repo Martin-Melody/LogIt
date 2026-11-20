@@ -77,6 +77,10 @@ export type PluginBlockData = {
   shape: BlockShape;
   blockShape: BlockShape;
   summary: string;
+  /** The summary template, so the summary can be redone without the plugin (the countdown). */
+  tpl?: string;
+  /** The plugin's rounds timer: which field is the work time. */
+  timer?: { work: string };
 };
 
 const KEY_RE = /^[a-z][a-zA-Z0-9_]{0,31}$/;
@@ -220,7 +224,7 @@ export function renderSummary(data: Pick<PluginBlockData, "entries" | "blockFiel
 }
 
 function withSummary(decl: BlockDeclaration, data: PluginBlockData): PluginBlockData {
-  return { ...data, summary: renderSummary(data, decl.summary) };
+  return { ...data, summary: renderSummary(data, decl.summary ?? data.tpl) };
 }
 
 /** A new block of this kind, with one empty entry; `previous` is the last block of the kind. */
@@ -235,6 +239,8 @@ export function newPluginBlockData(decl: BlockDeclaration, previous?: PluginBloc
     shape: shapeOf(decl.fields),
     blockShape: shapeOf(decl.blockFields),
     summary: "",
+    ...(decl.summary ? { tpl: decl.summary } : {}),
+    ...(decl.timer?.work ? { timer: { work: decl.timer.work } } : {}),
   });
 }
 

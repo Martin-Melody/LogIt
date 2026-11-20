@@ -115,8 +115,8 @@
   // Strength sets and mobility sets (an L/R pair is one round); cardio doesn't count.
   const roundCount = $derived(supersetRoundCount(blocks));
 
-  // The countdown runs the group's drills (strength and cardio are logged by hand for now).
-  const hasDrills = $derived(blocks.some((b: SessionBlock) => b.type === "mobility"));
+  // The countdown runs every member but cardio (logged by hand).
+  const hasDrills = $derived(blocks.some((b: SessionBlock) => b.type !== "cardio"));
   const canRun = $derived(canRunCircuit({ blocks }, supersetId));
   const running = $derived($circuitRunner.run?.supersetId === supersetId);
   const timing = $derived(groupTiming({ blocks }, supersetId, circuitDefaultsFrom($profile.restDefaults)));

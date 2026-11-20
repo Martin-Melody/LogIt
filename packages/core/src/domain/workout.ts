@@ -1453,6 +1453,10 @@ function memberRoundSets(block: SessionBlock): { completed?: boolean; restStarte
       g.kind === "single" ? [g.set] : [g.left, g.right].filter((x): x is MobilitySet => !!x),
     );
   }
+  if (block.type.startsWith("plugin:")) {
+    // Plugin blocks (blockPlugin.ts): an entry per round.
+    return ((block.data as { entries?: { done?: boolean }[] }).entries ?? []).map((e) => [{ completed: e.done !== false }]);
+  }
   return [];
 }
 
