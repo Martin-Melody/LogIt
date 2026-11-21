@@ -37,6 +37,31 @@ describe("LogIt Adaptive", () => {
     expect(out.change).toMatchObject({ kind: "increase", text: "+5 kg" });
   });
 
+  it("counts the reps you said were left, so doing the plan with reps to spare moves it on", async () => {
+    const easy = entry(2, [[12.5, 7], [12.5, 6], [12.5, 5]]);
+    easy.sets.forEach((x) => (x.rpe = 8)); // "2 left" on every set
+    const est = strengthEstimate([easy], NOW);
+    expect(est?.kg).toBeCloseTo(12.5 * (1 + 9 / 30), 5);
+    expect(est?.from).toMatchObject({ reps: 7, left: 2 });
+    const out = await adaptiveProgression.suggest(input({ history: [easy], userPreferences: { increment: 2.5 } }));
+    const before = await adaptiveProgression.suggest(input({ history: [entry(2, [[12.5, 7], [12.5, 6], [12.5, 5]])], userPreferences: { increment: 2.5 } }));
+    expect(out.sets[0]!.weight * (1 + out.sets[0]!.reps / 30)).toBeGreaterThan(before.sets[0]!.weight * (1 + before.sets[0]!.reps / 30));
+    expect(out.reasoning?.summary?.join(" ")).toMatch(/12\.5 × 7 with 2 left/);
+    const failed = entry(2, [[12.5, 7]]);
+    failed.sets[0]!.rpe = 10; // nothing left: no credit
+    expect(strengthEstimate([failed], NOW)?.kg).toBeCloseTo(12.5 * (1 + 7 / 30), 5);
+  });
+
+  it("with light dumbbells (12.5 → 15 is a 20% jump) the reps keep climbing until the next weight fits", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const stuck = await adaptiveProgression.suggest(input({ history: [top([[12.5, 8], [12.5, 7], [12.5, 6]])] }));
+    expect(stuck.sets[0]).toMatchObject({ weight: 12.5 });
+    expect(stuck.sets[0]!.reps).toBeGreaterThan(8); // a couple over the 5–8 range, not stuck at 8
+    const next = await adaptiveProgression.suggest(input({ history: [top([[12.5, 10], [12.5, 9], [12.5, 8]])] }));
+    expect(next.sets[0]!.weight).toBe(15);
+    expect(next.sets[0]!.reps).toBeGreaterThanOrEqual(5); // never a weight it can't do the range's fewest with
+  });
+
   it("doesn't let one off day drag the estimate down", () => {
     const est = strengthEstimate([entry(1, [[80, 5]]), entry(4, [[95, 7]]), entry(8, [[92.5, 7]])], NOW);
     expect(est?.from).toMatchObject({ weight: 95, reps: 7 });
