@@ -97,7 +97,9 @@ export function planWeek(
 
   // Only a workout missed after the plan started moves things: one laid out late because the
   // plan began mid-week (and whatever it pushes along) isn't "moved".
-  const missed = remaining.some((d) => pos(d.weekday!) < t && (!planStartIso || dates[pos(d.weekday!)]! >= planStartIso));
+  // A device that didn't make the plan has no start saved: the split's own date is the start.
+  const start = planStartIso ?? (split.createdAtMs ? localIso(split.createdAtMs) : undefined);
+  const missed = remaining.some((d) => pos(d.weekday!) < t && (!start || dates[pos(d.weekday!)]! >= start));
   if (!missed) {
     moves.length = 0;
     for (const p of placed.values()) delete p.fromWeekday;

@@ -4,7 +4,7 @@ import { planWeek, weekPlanLine } from "./weekPlan";
 import { dayOfWeek } from "./dateIso";
 
 // Upper / Lower on Mon, Tue, Thu, Fri (canvas O8). 2026-11-16 is a Monday.
-const split = starterPlanToSplit(buildStarterPlan({ goal: "both", experience: "under2", days: 4, equipment: "gym", minutes: 45 }));
+const split = { ...starterPlanToSplit(buildStarterPlan({ goal: "both", experience: "under2", days: 4, equipment: "gym", minutes: 45 })), createdAtMs: 0 };
 const [upA, loA, upB, loB] = split.days;
 const at = (iso: string, hour = 7) => new Date(`${iso}T${String(hour).padStart(2, "0")}:00:00`).getTime();
 const did = (iso: string, dayId?: string) => ({ startedAtMs: at(iso), source: dayId ? { dayId } : null });
@@ -49,6 +49,13 @@ describe("this week of a weekday plan", () => {
     expect(names(p)).toEqual(["-", "-", "Upper A:today", "Lower A:planned", "Upper B:planned", "Lower B:planned", "-"]);
     expect(p.moves).toEqual([]);
     expect(weekPlanLine(p, 3)).toBe("Four to go, five days left.");
+  });
+
+  it("on a device without the saved start, the split's own date stands in (made Saturday, nothing moved)", () => {
+    const madeSat = { ...split, createdAtMs: at("2026-11-21", 19) };
+    const p = planWeek(madeSat, [], "2026-11-21");
+    expect(p.moves).toEqual([]);
+    expect(weekPlanLine(p, 6)).not.toContain("moved");
   });
 
   it("last week's workouts don't count", () => {

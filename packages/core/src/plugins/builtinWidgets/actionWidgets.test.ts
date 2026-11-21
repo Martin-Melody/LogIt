@@ -6,12 +6,12 @@ import { todaysPlanWidget } from "./todaysPlan";
 const base: WidgetInput = { now: 0, prefs: { weightUnit: "kg" } };
 
 describe("quickStartWidget", () => {
-  it("offers resume + start-new while a workout is active", () => {
+  it("offers only resume while a workout is active (start-new just reopened it)", () => {
     const view = quickStartWidget.compute({ ...base, session: { active: true, hasPlan: false } });
     const row = view.body[0];
     expect(row.kind).toBe("button-row");
     if (row.kind === "button-row") {
-      expect(row.buttons.map((b) => b.action)).toEqual([{ resumeWorkout: true }, { startEmptyWorkout: true }]);
+      expect(row.buttons.map((b) => b.action)).toEqual([{ resumeWorkout: true }]);
     }
   });
 

@@ -18,8 +18,10 @@ export const todaysPlanWidget: WidgetPlugin = {
     const notes: WidgetView["body"] = [];
     if (plan?.picked) {
       if (plan.done) notes.push({ kind: "text", text: "Done", tone: "success" });
+      else if (plan.inProgress) notes.push({ kind: "text", text: "In progress", tone: "muted" });
     } else if (plan) {
       if (plan.done) notes.push({ kind: "text", text: "Done", tone: "success" });
+      else if (plan.inProgress) notes.push({ kind: "text", text: "In progress", tone: "muted" });
       else if (plan.doneToday?.length) notes.push({ kind: "text", text: `${joinAnd(plan.doneToday)} done today`, tone: "success" });
       if (plan.restToday && !plan.rest) notes.push({ kind: "text", text: "Rest day today", tone: "muted" });
       else if (plan.restBefore?.length) notes.push({ kind: "text", text: restUntil(plan.restBefore, input.timeZone), tone: "muted" });
