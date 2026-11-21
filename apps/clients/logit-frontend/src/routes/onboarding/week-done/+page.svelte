@@ -3,6 +3,7 @@
   // who they are now ("You're someone who trains 4 days a week"), numbers they earned, and
   // week 2 ready.
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import { getWorkoutRepo } from "$lib/data/repoProvider";
@@ -25,6 +26,13 @@
   onMount(async () => {
     playSound("week");
     const unit = get(profile).weightUnit;
+    // The week's last workout is still being saved when this opens: wait for it briefly, or it
+    // isn't counted ("2 of 2" after three).
+    const finishedId = page.url.searchParams.get("id");
+    for (let i = 0; finishedId && i < 30; i++) {
+      if ((await getWorkoutRepo().getSession(finishedId).catch(() => null))?.endedAtMs != null) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
     const sessions = (await getWorkoutRepo().listAllSessions()).sort((a, b) => a.startedAtMs - b.startedAtMs);
     const streak = await loadWeeklyStreak().catch(() => null);
     done = streak?.thisWeek?.done ?? sessions.length;
