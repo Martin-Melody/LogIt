@@ -262,11 +262,26 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   let topWeight = roundTo(estimate.kg / (1 + (firstReps + rir) / 30), step);
   // Rounded up past what the estimate lifts for the range's fewest reps: a step lighter.
   if (topWeight > step && repsAt(topWeight) < lo) topWeight -= step;
+  // Never lighter than the weight last used when it still fits: it's a dumbbell they have,
+  // even off the step grid (4 kg when steps are 2.5).
+  const lastUsed = lastWorking.length > 0 ? Math.max(...lastWorking.map((s) => s.weight)) : 0;
+  if (lastUsed > topWeight && repsAt(lastUsed) >= lo) topWeight = lastUsed;
   // The reps the estimate supports at the weight there is, so the plan moves before the weight
-  // can (dumbbells in 2.5s). While the next step up is out of reach (12.5 → 15 kg is a 20% jump)
-  // a couple over the top of the range keeps it moving until the jump fits.
-  const cap = repsAt(topWeight + step) >= lo ? hi : hi + 2;
-  const aimReps = Math.max(lo, Math.min(cap, repsAt(topWeight)));
+  // can (dumbbells in 2.5s). While the next step up is out of reach (10 → 12.5 kg is a 25% jump)
+  // the reps go past the range until the estimate carries the next weight for the range's fewest.
+  // The next weight on the step grid (4 kg → 5, not 6.5).
+  const nextUp = (Math.floor(topWeight / step + 1e-9) + 1) * step;
+  const repsForNext = Math.ceil(30 * ((nextUp * (1 + (lo + rir) / 30)) / topWeight - 1) - 1e-9) - rir;
+  const cap = repsAt(nextUp) >= lo ? hi : Math.max(hi, Math.min(repsForNext, 20));
+  let aimReps = Math.max(lo, Math.min(cap, repsAt(topWeight)));
+  // The estimate stops growing once sets reach MAX_REPS_FOR_ESTIMATE (reps left counted), so a
+  // lift that got there at this weight goes up a step at the range's fewest reps, or it would
+  // stay here for good.
+  const from = estimate.from;
+  if (repsAt(nextUp) < lo && from.weight === topWeight && from.reps + (from.left ?? 0) >= MAX_REPS_FOR_ESTIMATE) {
+    topWeight = nextUp;
+    aimReps = lo;
+  }
 
   // Today's session: trim for muscles already worked, but only once there's enough history
   // to know how much this lifter's reps actually drop when tired.
@@ -286,10 +301,12 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
     if (reps >= lo) {
       sets.push({ reps, weight: i === 0 && pushGoal ? startWeight + step : startWeight, setType: "normal" });
     } else {
-      // A set that would fall under the range keeps the bottom rep count and gets lighter:
-      // one weight step for each rep it would have been short.
+      // A set that would fall under the range keeps the bottom rep count and gets lighter: one
+      // weight step for each rep short, but never lighter than the estimate says carries it (a
+      // step is 17% on a 15 kg dumbbell, 2.5% on a 100 kg bar).
       dropped = true;
-      sets.push({ reps: lo, weight: Math.max(0, startWeight - step * (lo - reps)), setType: "normal" });
+      const fits = Math.floor(estimate.kg / (1 + (lo + rir + (aimReps - reps)) / 30) / step + 1e-9) * step;
+      sets.push({ reps: lo, weight: Math.max(0, Math.min(startWeight - step, Math.max(startWeight - step * (lo - reps), fits))), setType: "normal" });
     }
   }
 

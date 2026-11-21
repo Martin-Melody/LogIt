@@ -62,6 +62,35 @@ describe("LogIt Adaptive", () => {
     expect(next.sets[0]!.reps).toBeGreaterThanOrEqual(5); // never a weight it can't do the range's fewest with
   });
 
+  it("with a 25% jump (10 → 12.5 kg) the reps keep going past the range until it fits", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const out = await adaptiveProgression.suggest(input({ history: [top([[10, 10], [10, 9], [10, 8]])] }));
+    expect(out.sets[0]).toMatchObject({ weight: 10 });
+    expect(out.sets[0]!.reps).toBeGreaterThan(10);
+  });
+
+  it("after a step up, a set that would fall under the range is lighter by what the estimate allows, not a step per rep", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const out = await adaptiveProgression.suggest(input({ history: [top([[12.5, 10], [12.5, 9], [12.5, 8]])] }));
+    expect(out.sets[0]!.weight).toBe(15);
+    expect(Math.min(...out.sets.map((x) => x.weight))).toBeGreaterThanOrEqual(12.5); // was 15, 12.5, 10
+  });
+
+  it("keeps a dumbbell off the step grid (4 kg) instead of dropping to 2.5 kg", async () => {
+    const e = entry(2, [[4, 10], [4, 9]]); e.sets.forEach((x) => (x.rpe = 8));
+    const out = await adaptiveProgression.suggest(input({ exercise: CURL, history: [e] }));
+    expect(out.sets[0]!.weight).toBe(4);
+    expect(out.sets[0]!.reps).toBeGreaterThanOrEqual(10);
+     const later = entry(2, [[4, 15], [4, 14]]); later.sets.forEach((x) => (x.rpe = 8));
+    expect((await adaptiveProgression.suggest(input({ exercise: CURL, history: [later] }))).sets[0]!.weight).toBe(5); // not 6.5
+  });
+
+  it("a lift whose reps got past what the estimate counts goes up a step, instead of 12.5 × 15 for good", async () => {
+    const e = entry(2, [[12.5, 15], [12.5, 14], [12.5, 13]]); e.sets.forEach((x) => (x.rpe = 8));
+    const out = await adaptiveProgression.suggest(input({ exercise: CURL, history: [e] }));
+    expect(out.sets[0]).toMatchObject({ weight: 15, reps: 8 });
+  });
+
   it("doesn't let one off day drag the estimate down", () => {
     const est = strengthEstimate([entry(1, [[80, 5]]), entry(4, [[95, 7]]), entry(8, [[92.5, 7]])], NOW);
     expect(est?.from).toMatchObject({ weight: 95, reps: 7 });
