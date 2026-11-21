@@ -71,6 +71,8 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
   await page.addInitScript(
     ({ session, progressionState, history, blocksCollapsedByDefault, bodyweightKg }) => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+      // Suggestions off unless a test sets an algorithm (web seeds the default once otherwise).
+      localStorage.setItem("logit:progression:config-seeded:v1", "1");
       localStorage.setItem(
         "logit:tours:v1",
         JSON.stringify({ home: true, session: true, splits: true }),
