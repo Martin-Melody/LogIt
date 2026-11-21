@@ -35,4 +35,20 @@ describe("an exercise's first ever set plans the rest (canvas O4)", () => {
     const notYet = session([{ reps: 8, weight: 60 }, { reps: 0, weight: 0 }]);
     expect(planRestFromFirstSet(notYet, "b", "s1")).toEqual(notYet);
   });
+
+  it("a corrected first set (825 typed for 82.5) re-plans the sets it planned, not ones you changed", () => {
+    const typo = session([
+      { reps: 8, weight: 825, completed: true },
+      { reps: 0, weight: 0, target: { reps: 5, repsMax: 8, weight: 0 } },
+      { reps: 0, weight: 0, target: { reps: 5, repsMax: 8, weight: 0 } },
+      { reps: 0, weight: 0, target: { reps: 5, repsMax: 8, weight: 0 } },
+    ]);
+    const planned = planRestFromFirstSet(typo, "b", "s1", 5);
+    const sets = (planned.blocks[0]!.data as { sets: { weight: number; reps: number }[] }).sets;
+    sets[0]!.weight = 82.5;
+    sets[3]!.weight = 80; // typed in by hand
+    expect(weights(planRestFromFirstSet(planned, "b", "s1", 5))).toEqual([82.5, 825, 825, 80]);
+    expect(weights(planRestFromFirstSet(planned, "b", "s1", 5, true))).toEqual([82.5, 82.5, 82.5, 80]);
+    expect(targets(planRestFromFirstSet(planned, "b", "s1", 5, true)).slice(1, 3)).toEqual([{ reps: 7, weight: 82.5 }, { reps: 6, weight: 82.5 }]);
+  });
 });

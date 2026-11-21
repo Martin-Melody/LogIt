@@ -638,7 +638,7 @@
       && !getExercises($currentSession).some((e) => e.sets.some((x) => x.completed)),
   );
   const loggedSetCount = $derived(
-    sessionExercises.reduce((n, ex) => n + ex.sets.length, 0),
+    sessionExercises.reduce((n, ex) => n + ex.sets.filter((x) => x.completed).length, 0),
   );
   // Cardio and mobility blocks are loggable work too — a stretching-only session
   // should still be finishable.

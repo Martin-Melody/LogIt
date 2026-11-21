@@ -206,7 +206,7 @@
         <div in:fly={{ y: 12, duration: 380, delay: 220 }}>
           <h1 class="text-2xl font-bold tracking-tight">Workout complete</h1>
           <p class="text-sm text-muted-foreground mt-1">
-            {#if showDuration}{formatDuration(durationMs)} · {/if}{blockCount} exercise{blockCount === 1 ? "" : "s"}
+            {#if showDuration}{`${formatDuration(durationMs)} · `}{/if}{blockCount} exercise{blockCount === 1 ? "" : "s"}
           </p>
         </div>
       </div>
