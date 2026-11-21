@@ -76,6 +76,19 @@ describe("readWorkoutCsv: LogIt's spreadsheet layout", () => {
     expect(new Date(lower!.startedAtMs)).toEqual(new Date(2026, 9, 8, 18, 30));
   });
 
+  it("reads Strong's zero-filled columns as empty: a plank is a 60 s hold, not 0 reps", () => {
+    const strong = readWorkoutCsv(`Date,Workout Name,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,RPE
+2026-09-07 18:00:00,Legs,Plank,1,0,0,0,60,
+2026-09-07 18:00:00,Legs,Squat (Barbell),1,100,5,0,0,8
+`);
+    const [plank, squat] = strong.workouts[0]!.exercises;
+    expect(plank!.sets[0]).toMatchObject({ seconds: 60 });
+    expect(plank!.sets[0]!.reps).toBeUndefined();
+    expect(blockKindOf(plank!)).not.toBe("strength");
+    expect(squat!.sets[0]).toMatchObject({ weight: 100, reps: 5, rpe: 8 });
+    expect(squat!.sets[0]!.seconds).toBeUndefined();
+  });
+
   it("refuses a file that isn't a workout log", () => {
     expect(() => readWorkoutCsv("name,email\nx,y")).toThrow(/date and an exercise column/);
   });

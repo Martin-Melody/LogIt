@@ -155,16 +155,20 @@ export function readWorkoutCsv(text: string): ParsedImport {
     const weight = kg ?? lb ?? plain;
     if (weight != null && weight !== 0 && !unit) unitUnknown = true;
 
-    const km = num(cell(row, "distanceKm"));
-    const m = num(cell(row, "distanceM"));
+    // Strong fills the columns a set doesn't use with 0: a 0 there means nothing was recorded.
+    const pos = (v: number | undefined) => (v != null && v > 0 ? v : undefined);
+    const km = pos(num(cell(row, "distanceKm")));
+    const m = pos(num(cell(row, "distanceM")));
+    const reps = pos(num(cell(row, "reps")));
+    const seconds = pos(num(cell(row, "seconds")));
     const set: ImportedSet = {
       setType: setTypeOf(cell(row, "setType")),
       ...(weight != null ? { weight } : {}),
       ...(unit ? { unit } : {}),
-      ...(num(cell(row, "reps")) != null ? { reps: Math.round(num(cell(row, "reps"))!) } : {}),
-      ...(num(cell(row, "seconds")) != null ? { seconds: num(cell(row, "seconds")) } : {}),
+      ...(reps != null ? { reps: Math.round(reps) } : {}),
+      ...(seconds != null ? { seconds } : {}),
       ...(km != null ? { distanceM: km * 1000 } : m != null ? { distanceM: m } : {}),
-      ...(num(cell(row, "rpe")) != null ? { rpe: num(cell(row, "rpe")) } : {}),
+      ...(pos(num(cell(row, "rpe"))) != null ? { rpe: num(cell(row, "rpe")) } : {}),
       ...(cell(row, "notes") ? { note: cell(row, "notes") } : {}),
     };
     if (set.reps == null && set.seconds == null && set.distanceM == null) {
