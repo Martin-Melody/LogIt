@@ -189,7 +189,8 @@
   }
   function liftNumbers(l: LiftRow): { weight: number; reps: number } | null {
     const weight = Number(l.weight.replace(",", "."));
-    const reps = Math.round(Number(l.reps));
+    // A weight on its own is a max ("a max works too").
+    const reps = l.reps.trim() === "" ? 1 : Math.round(Number(l.reps));
     return weight > 0 && reps >= 1 && reps <= 30 ? { weight, reps } : null;
   }
   function liftMax(l: LiftRow): string | null {
