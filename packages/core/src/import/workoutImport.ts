@@ -58,6 +58,7 @@ const COLUMNS: Record<string, string[]> = {
   distanceKm: ["distance km", "km"],
   distanceM: ["distance m", "metres", "meters"],
   durationMin: ["duration min", "minutes"],
+  end: ["end time", "end"],
   notes: ["notes", "note", "set notes"],
   workoutNotes: ["workout notes", "workout note", "session notes"],
 };
@@ -83,6 +84,8 @@ function setTypeOf(v: string | undefined): SetType {
   return "normal";
 }
 
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
 type DateParts = { y: number; a: number; b: number; slash: boolean; h?: number; min?: number };
 
 function dateParts(date: string, time?: string): DateParts | null {
@@ -94,6 +97,13 @@ function dateParts(date: string, time?: string): DateParts | null {
   if (iso) return { y: Number(iso[1]), a: Number(iso[2]), b: Number(iso[3]), slash: false, ...clock };
   const sl = d.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})/);
   if (sl) return { y: Number(sl[3]), a: Number(sl[1]), b: Number(sl[2]), slash: true, ...clock };
+  // "5 Oct 2026, 07:00" (Hevy) or "Oct 5, 2026"
+  const dm = d.match(/^(\d{1,2}) ([a-z]{3})[a-z]*\.?,? (\d{4})/i) ?? d.match(/^([a-z]{3})[a-z]*\.? (\d{1,2}),? (\d{4})/i);
+  if (dm) {
+    const [dayS, monS] = /^\d/.test(dm[1]!) ? [dm[1]!, dm[2]!] : [dm[2]!, dm[1]!];
+    const month = MONTHS.indexOf(monS.toLowerCase()) + 1;
+    if (month > 0) return { y: Number(dm[3]), a: month, b: Number(dayS), slash: false, ...clock };
+  }
   return null;
 }
 
@@ -103,13 +113,15 @@ export function readWorkoutCsv(text: string): ParsedImport {
   const header = (rows[0] ?? []).map(normaliseHeader);
   const col = (key: string) => header.findIndex((h) => COLUMNS[key]!.includes(h));
   const at = Object.fromEntries(Object.keys(COLUMNS).map((k) => [k, col(k)])) as Record<string, number>;
-  if (at.date! < 0 || at.exercise! < 0) {
+  // No date column (Hevy): the start time carries the date.
+  const dateKey = at.date! >= 0 ? "date" : at.time! >= 0 ? "time" : null;
+  if (!dateKey || at.exercise! < 0) {
     throw new Error("This file doesn't look like a workout log: it needs a date and an exercise column.");
   }
   const cell = (row: string[], key: string) => (at[key]! >= 0 ? row[at[key]!]?.trim() || undefined : undefined);
 
   // Slash dates: day first (Ireland, UK) unless a "day" over 12 shows they're month first.
-  const parsedDates = rows.slice(1).map((r) => dateParts(cell(r, "date") ?? "", cell(r, "time")));
+  const parsedDates = rows.slice(1).map((r) => dateParts(cell(r, dateKey) ?? "", dateKey === "date" ? cell(r, "time") : undefined));
   const monthFirst = parsedDates.some((p) => p?.slash && p.b > 12);
   const anySlash = parsedDates.some((p) => p?.slash);
 
@@ -163,7 +175,10 @@ export function readWorkoutCsv(text: string): ParsedImport {
     let w = byKey.get(key);
     if (!w) {
       const minutes = num(cell(row, "durationMin"));
-      w = { key, startedAtMs, ...(title ? { title } : {}), exercises: [], ...(minutes ? { endedAtMs: startedAtMs + minutes * 60_000 } : {}) };
+      const end = dateParts(cell(row, "end") ?? "");
+      const endMs = end && !end.slash ? new Date(end.y, end.a - 1, end.b, end.h ?? 12, end.min ?? 0).getTime() : undefined;
+      const endedAtMs = minutes ? startedAtMs + minutes * 60_000 : endMs && endMs > startedAtMs ? endMs : undefined;
+      w = { key, startedAtMs, ...(title ? { title } : {}), exercises: [], ...(endedAtMs ? { endedAtMs } : {}) };
       byKey.set(key, w);
     }
     const note = cell(row, "workoutNotes");

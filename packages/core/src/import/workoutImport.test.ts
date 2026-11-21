@@ -59,6 +59,23 @@ describe("readWorkoutCsv: LogIt's spreadsheet layout", () => {
     expect(new Date(monthFirst.workouts[0]!.startedAtMs).getMonth()).toBe(2); // March
   });
 
+  it("reads a Hevy-style export: date inside start_time, month names, pounds, set types", () => {
+    const hevy = readWorkoutCsv(`"title","start_time","end_time","exercise_title","set_index","set_type","weight_lbs","reps","rpe"
+"Upper","5 Oct 2026, 07:00","5 Oct 2026, 08:05","Bench Press (Barbell)","0","warmup","111","10",""
+"Upper","5 Oct 2026, 07:00","5 Oct 2026, 08:05","Bench Press (Barbell)","1","failure","185","8","9"
+"Lower","Oct 8, 2026 18:30","Oct 8, 2026 19:30","Squat (Barbell)","0","normal","225","5",""
+`);
+    expect(hevy.problems).toEqual([]);
+    expect(hevy.unitUnknown).toBe(false);
+    const [upper, lower] = hevy.workouts;
+    expect(new Date(upper!.startedAtMs)).toEqual(new Date(2026, 9, 5, 7, 0));
+    expect(upper!.endedAtMs! - upper!.startedAtMs).toBe(65 * 60_000);
+    expect(upper!.exercises[0]!.sets.map((x) => [x.setType, x.weight, x.unit, x.reps, x.rpe])).toEqual([
+      ["warmup", 111, "lb", 10, undefined], ["failure", 185, "lb", 8, 9],
+    ]);
+    expect(new Date(lower!.startedAtMs)).toEqual(new Date(2026, 9, 8, 18, 30));
+  });
+
   it("refuses a file that isn't a workout log", () => {
     expect(() => readWorkoutCsv("name,email\nx,y")).toThrow(/date and an exercise column/);
   });
