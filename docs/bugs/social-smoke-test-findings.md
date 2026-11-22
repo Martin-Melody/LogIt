@@ -3,7 +3,7 @@
 **Reported:** 2026-09-04 (Martin, on-device smoke test of `feat/social-redesign` +
 `feat/store-readiness` post-merge, S23 release build)
 **Area:** `/social` feed, notifications badge, Settings (Sync/Coaching/connection status)
-**Status:** Not fixed yet. Root cause + file:line + suggested fix per item below.
+**Status:** All five re-checked 2026-11-22 (bug hunt round 5) and fixed: pull to refresh is wired, the badge updates while the app is open, Sync now is hidden where it can't work, the dot is gone, the Coaching label says what it is.
 
 ---
 

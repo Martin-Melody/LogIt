@@ -109,3 +109,28 @@ client "sam_client" (phone: "I have a coach", the coach's link code), side by si
 | 4.22 | Coach drops from Studio with a client (P9) | Decision 2026-11-11 was "relationships stay, read-only"; in fact the server locks every coaching screen: web shows the raw "This feature requires a Studio-tier account or higher.", the phone hides the client and shows the Studio offer | — needs the server's coaching reads opened for a coach with real clients, and editing turned off in the dashboard (sizeable) | open (important) |
 | 4.23 | Client's coach content | Check-ins are only reachable through More › Splits › From your coach (like the program, 4.15) | — | needs a decision |
 | 4.24 | Messages, check-in answers, coach seeing the client's workout, program edits with "Also update" | Worked both ways (messages ~3 s; edits on the next sync) | — | ok |
+
+## Round 5 — P12 social and notifications (2026-11-22, 3d4716f; plan: docs/testing-social.md)
+
+Ava (Pro), Ben, Cara (private) and Dev side by side on phones; hosted-mode API.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 5.1 | Notifications page left open (Martin: "notifications not coming through") | New likes and comments never appeared until you left and came back (the list loaded once) | The page reloads its list when the unread count goes up, and marks them read | fixed (3d4716f) |
+| 5.2 | Unread badge | Took up to a minute to show a like | Checks every 20 s (and still when the app comes back to the front) | fixed (3d4716f) |
+| 5.3 | Follow status (Martin) | Nothing ever said someone follows you: their profile and your suggestions showed a plain "Follow" | "Follows you" and "Follow back" on profiles (phone and web) and in search | fixed (3d4716f) |
+| 5.4 | Followers / following lists | Every person came back as "not followed" by you (the server never looked) | Lists carry your real status and whether they follow you | fixed (3d4716f) |
+| 5.5 | Search for a private account you already asked | Showed "Follow" again | Shows "Requested" | fixed (3d4716f) |
+| 5.6 | Sign-up through the API (and the app's form, which doesn't check) | Accepted "ava ava" (a space) and an empty display name; spaces break @mentions and profile links | Server: usernames 3–30 letters, digits or underscores; an empty display name becomes the username | fixed (3d4716f) |
+| 5.7 | Suggestions | The admin account shows in "People you might know" | — | needs a decision |
+| 5.8 | Push notifications | None: a like is only seen after opening LogIt | — (Martin wants push; FCM) | open |
+| 5.9 | Follow, request, accept, like, comment, mention | Each notified the right person once, opened the right place | — | ok |
+| 5.10 | Comment menu (press and hold) and every sheet or dialog opened from a page | Drawn under the bottom bar: "Delete comment" hidden, "Edit comment" half covered (the page was its own layer all the time, for the page-change animation) | The page is named for the animation only while it runs | fixed (3d4716f) |
+| 5.11 | Blocking | The blocked person could still comment and like; their earlier comments, likes and notifications stayed (blocks only hid profiles and posts) | A block counts both ways wherever "can see" is checked; blocking removes their likes and comments on your posts and the notifications between you (as on Instagram) | fixed (3d4716f) |
+| 5.12 | Your own post | You can only report a comment on it, not remove it | — | needs a decision |
+| 5.13 | Reported post deleted by the admin | Others see "This post isn't available" with a "Try again" button that can't help; the admin's Delete has no confirmation | — | needs a decision |
+| 5.14 | Photo posts | Don't exist (text plus an attached workout, PR, split, …), but the Play data-safety notes say "photos in posts" | — | needs a decision |
+| 5.15 | Session ends while the app is open | Every request is refused (401) every minute and nothing on screen changes until a restart | — | open |
+| 5.16 | Replies, editing, reposts, quotes, report → admin delete, account deletion, Discover | Worked: right notifications, counts after reload, everything of a deleted account gone | — | ok |
+| 5.17 | The 2026-09-04 phone findings | Pull to refresh wired, badge now live (5.1/5.2), Sync now hidden where it can't work, the misleading dot gone, Coaching label clear | — | ok |
+| 5.18 | "People you might know" | Someone who follows you showed a plain "Follow" there too | "Follow back" (requested accounts are left out of suggestions, as they should be) | fixed (3d4716f) |

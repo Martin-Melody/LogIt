@@ -46,7 +46,7 @@ P0 adds the decision before any of this: someone deciding whether to keep the ap
 | P9 | Coach who stops | Studio → Pro · dashboard | doesn't train; downgrades with clients attached (read-only), comes back | |
 | P10 | Client, free invite | Free (coached) · phone + web | "I have a coach", code and link, program on the phone, check-ins, messages, nutrition plan, assigned habits, leaves the coach (what stays?) | |
 | P11 | Client, paid package | Free (coached) · phone + pay page | paid elsewhere; Stripe paid → failed → coach's rule → /pay/fix → stops paying; switches coach; client who had their own split first | |
-| P12 | Social regular | Pro · phone + web | follows, posts, comments, replies, discover, privacy settings, followers lists, reports a post | |
+| P12 | Social regular | Pro · phone + web | follows, posts, comments, replies, discover, privacy settings, followers lists, reports a post | plan: `docs/testing-social.md` (cast, every notification, S1–S9) |
 | P13 | Shared phone / self-hoster | several accounts · own server | two people on one phone, offline profile + account, own server with everything on | covered by account journeys; light pass |
 | P14 | Operator | admin · dashboard | admin console: people, subscriptions, invites, reports, plugins review, diagnostics | |
 
