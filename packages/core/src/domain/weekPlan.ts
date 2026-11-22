@@ -30,6 +30,9 @@ export type WeekPlan = {
   moves: { dayId: string; dayName: string; fromWeekday: number; toWeekday: number }[];
   /** Workouts that no longer fit this week. */
   leftOver: { dayId: string; dayName: string }[];
+  /** Done, plus the ones laid out today or on the plan's own days: what a first week asks for
+   * (a Thursday start on Mon/Wed/Fri isn't asked to train Thu, Fri and Sat). */
+  onSchedule: number;
 };
 
 type DoneSession = { startedAtMs: number; source?: { dayId?: string } | null };
@@ -74,6 +77,8 @@ export function planWeek(
   const doneOn = new Map<number, DoneSession>();
   for (const s of thisWeek) doneOn.set(dates.indexOf(localIso(s.startedAtMs)), s);
 
+  // A device that didn't make the plan has no start saved: the split's own date is the start.
+  const start = planStartIso ?? (split.createdAtMs ? localIso(split.createdAtMs) : undefined);
   // Lay the workouts not done yet onto today and the days after it, in plan order, each on
   // its own day or the first free day after the one before it.
   const remaining = workouts.filter((d) => !doneIds.has(d.id));
@@ -89,7 +94,9 @@ export function planWeek(
       leftOver.push({ dayId: day.id, dayName: dayLabel(split, day) });
       continue;
     }
-    const moved = at !== original;
+    // A workout whose day came before the plan started wasn't missed: never "Wednesday's
+    // workout moved" to someone who joined on Thursday.
+    const moved = at !== original && (!start || dates[original]! >= start);
     placed.set(at, { day, fromWeekday: moved ? day.weekday : undefined });
     if (moved) moves.push({ dayId: day.id, dayName: dayLabel(split, day), fromWeekday: day.weekday!, toWeekday: (at + 1) % 7 });
     pointer = at + 1;
@@ -97,8 +104,6 @@ export function planWeek(
 
   // Only a workout missed after the plan started moves things: one laid out late because the
   // plan began mid-week (and whatever it pushes along) isn't "moved".
-  // A device that didn't make the plan has no start saved: the split's own date is the start.
-  const start = planStartIso ?? (split.createdAtMs ? localIso(split.createdAtMs) : undefined);
   const missed = remaining.some((d) => pos(d.weekday!) < t && (!start || dates[pos(d.weekday!)]! >= start));
   if (!missed) {
     moves.length = 0;
@@ -131,6 +136,7 @@ export function planWeek(
     daysLeft: 7 - t,
     moves,
     leftOver,
+    onSchedule: doneOn.size + [...placed.keys()].filter((i) => i === t || workouts.some((d) => pos(d.weekday!) === i)).length,
   };
 }
 

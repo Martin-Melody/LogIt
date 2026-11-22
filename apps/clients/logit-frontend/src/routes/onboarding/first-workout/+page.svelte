@@ -77,7 +77,7 @@
     doneThisWeek = new Set(all.filter((s) => s.startedAtMs >= weekStart()).map((s) => new Date(s.startedAtMs).toDateString())).size || 1;
     if (split?.schedule === "weekdays") {
       const w = planWeek(split, all, localDateIso(new Date()), planStartIso());
-      fits = w.done + w.remaining - w.leftOver.length;
+      fits = w.onSchedule;
     }
     if (session) {
       const lifts = getExercises(session).filter((ex) => ex.sets.some((s) => s.completed));

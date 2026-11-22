@@ -88,10 +88,12 @@
       case "Follow": return "started following you";
       case "FollowRequest": return "asked to follow you";
       case "FollowAccepted": return "accepted your follow request";
+      case "CoachInvite": return "wants to coach you";
+      case "CoachProgram": return "sent you a program";
       default: return "";
     }
   }
-  const href = (n: ApiNotification) => (n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`);
+  const href = (n: ApiNotification) => (n.type === "CoachInvite" || n.type === "CoachProgram" ? "/my-coach" : n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`);
 </script>
 
 {#snippet row(n: ApiNotification)}

@@ -182,10 +182,14 @@
     if (n.type === "Quote") return "quoted your post";
     if (n.type === "FollowRequest") return "asked to follow you";
     if (n.type === "FollowAccepted") return "accepted your follow request";
+    if (n.type === "CoachInvite") return "wants to coach you";
+    if (n.type === "CoachProgram") return "sent you a program";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
   function socialTarget(n: ApiNotification) {
+    if (n.type === "CoachInvite") return "/clients";
+    if (n.type === "CoachProgram") return "/splits";
     if (n.type === "Follow") return `/social/${n.actor.username}`;
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }

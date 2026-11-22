@@ -51,6 +51,20 @@ describe("this week of a weekday plan", () => {
     expect(weekPlanLine(p, 3)).toBe("Four to go, five days left.");
   });
 
+  it("a Thursday start on Mon/Wed/Fri asks for what fits its days, and never names a day before it (round 10)", () => {
+    const mwf = { ...starterPlanToSplit(buildStarterPlan({ goal: "fit", experience: "new", days: 3, equipment: "gym", minutes: 45 })), createdAtMs: 0 };
+    expect(mwf.days.filter((d) => !d.rest).map((d) => d.weekday)).toEqual([1, 3, 5]);
+    const [a, b] = mwf.days.filter((d) => !d.rest);
+    // Full Body A done on the day they joined: Friday is left on their days, not Thu + Fri + Sat.
+    const thu = planWeek(mwf, [did("2026-11-26", a!.id)], "2026-11-26", "2026-11-26");
+    expect(thu.onSchedule).toBe(2);
+    // Friday skipped: on Saturday B (a Wednesday workout, before they joined) is today, not "moved".
+    const sat = planWeek(mwf, [did("2026-11-26", a!.id)], "2026-11-28", "2026-11-26");
+    expect(sat.slots[5]).toMatchObject({ dayId: b!.id, state: "today" });
+    expect(sat.slots[5]!.movedFromWeekday).toBeUndefined();
+    expect(weekPlanLine(sat, 6)).toBe("Friday's workout moved to Sunday. Two to go, two days left.");
+  });
+
   it("on a device without the saved start, the split's own date stands in (made Saturday, nothing moved)", () => {
     const madeSat = { ...split, createdAtMs: at("2026-11-21", 19) };
     const p = planWeek(madeSat, [], "2026-11-21");

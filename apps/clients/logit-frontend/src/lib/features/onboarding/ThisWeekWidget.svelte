@@ -43,8 +43,8 @@
   // Lowered for this week already ("Make it 3"): don't offer to lower it again.
   const lowered = $derived(target < $goalsStore.streak.weeklyTarget);
   const today = $derived(week?.slots.find((s) => s.dateIso === todayIso) ?? null);
-  // Started late in the week (a Saturday, 3 a week): only what fits before Sunday is asked for.
-  const fits = $derived(week ? week.done + week.remaining - week.leftOver.length : 0);
+  // Started late in the week: only what fits before Sunday on their own days (or today) is asked for.
+  const fits = $derived(week?.onSchedule ?? 0);
   // Only the workout days (and days trained on) in the first week, like the mockup; a whole week after.
   const shown = $derived(week ? (firstWeek ? week.slots.filter((s) => s.state !== "rest") : week.slots) : []);
 

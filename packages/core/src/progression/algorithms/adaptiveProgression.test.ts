@@ -33,6 +33,23 @@ describe("LogIt Adaptive", () => {
     expect(raise.sets.map((s) => s.weight)).toEqual([4, 4]);
   });
 
+  it("moves on for someone who ticks the plan and never says how hard (round 10, T2)", async () => {
+    // Ticked untouched three times: before, 20 × 8 for good while they got stronger.
+    const ticked = (daysAgo: number, w: number, reps: number) => {
+      const e = entry(daysAgo, [[w, reps], [w, reps], [w, reps]]);
+      e.sets.forEach((x) => (x.target = { reps, weight: w }));
+      return e;
+    };
+    const out = await adaptiveProgression.suggest(input({ history: [ticked(2, 20, 8)], plannedTargets: { sets: 3, reps: 8 } }));
+    expect(out.sets[0]!.weight * (1 + out.sets[0]!.reps / 30)).toBeGreaterThan(20 * (1 + 8 / 30));
+    expect(out.reasoning?.summary?.join(" ")).toMatch(/20 × 8 as planned \(counted as 1 more in the tank\)/);
+    // A miss last time is planned from what was done, not from an older session's extra rep.
+    const missed = entry(2, [[22.5, 6], [22.5, 5], [22.5, 5]]);
+    missed.sets.forEach((x) => (x.target = { reps: 8, weight: 22.5 }));
+    const after = await adaptiveProgression.suggest(input({ history: [missed, ticked(4, 22.5, 6)], plannedTargets: { sets: 3, reps: 6 } }));
+    expect(after.sets[0]).toMatchObject({ weight: 22.5, reps: 6 });
+  });
+
   it("plans every set from the strength estimate, not from last session's light sets", async () => {
     // Martin's example: 7 × 95, 9 × 68, 6 × 60.
     const out = await adaptiveProgression.suggest(input({ history: [entry(3, [[95, 7], [68, 9], [60, 6]])] }));

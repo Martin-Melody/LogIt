@@ -138,7 +138,7 @@ function whenLabel(ms: number, now: number): string {
 export type StrengthEstimate = {
   kg: number;
   /** The set it came from. */
-  from: { weight: number; reps: number; performedAtMs: number; left?: number };
+  from: { weight: number; reps: number; performedAtMs: number; left?: number; asPlanned?: boolean };
   sessionsConsidered: number;
   layoff: boolean;
 };
@@ -159,10 +159,14 @@ export function strengthEstimate(history: ExerciseHistoryEntry[], now: number): 
     for (const s of workingSetsOf(h)) {
       // "2 left" after a set means two more were there, so they count (at most 3). Without
       // this, doing exactly the planned reps kept the estimate, and the plan, where it was.
-      const left = s.rpe != null ? Math.min(3, Math.max(0, 10 - s.rpe)) : 0;
+      // A set ticked just as planned last time, with no answer, counts as 1 left: otherwise
+      // someone who never answers repeats the same weight for good. Last time only, so a
+      // missed session isn't planned from older ones' extra rep.
+      const asPlanned = h === newest && s.rpe == null && !!s.target && s.reps === s.target.reps && s.weight >= s.target.weight;
+      const left = s.rpe != null ? Math.min(3, Math.max(0, 10 - s.rpe)) : asPlanned ? 1 : 0;
       const kg = estimated1RM(s.weight, Math.min(s.reps + left, MAX_REPS_FOR_ESTIMATE));
       if (!best || kg > best.kg) {
-        best = { kg, from: { weight: s.weight, reps: s.reps, performedAtMs: h.performedAtMs, ...(left ? { left } : {}) }, sessionsConsidered: recent.length, layoff: false };
+        best = { kg, from: { weight: s.weight, reps: s.reps, performedAtMs: h.performedAtMs, ...(left ? { left } : {}), ...(asPlanned ? { asPlanned } : {}) }, sessionsConsidered: recent.length, layoff: false };
       }
     }
   }
@@ -336,7 +340,7 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   const effortText = rir === 0 ? "close to failure" : `with ${rir} ${rir === 1 ? "rep" : "reps"} left in the tank`;
   const lightSets = lastWorking.filter((s) => s.weight < topWeight * 0.9);
   const summary = [
-    `Your strength estimate is ${fmtKg(Math.round(estimate.kg))}, from ${fmtKg(estimate.from.weight).replace(" kg", "")} × ${estimate.from.reps}${estimate.from.left ? ` with ${estimate.from.left} left` : ""} ${whenLabel(estimate.from.performedAtMs, now)}.`,
+    `Your strength estimate is ${fmtKg(Math.round(estimate.kg))}, from ${fmtKg(estimate.from.weight).replace(" kg", "")} × ${estimate.from.reps}${estimate.from.asPlanned ? " as planned (counted as 1 more in the tank)" : estimate.from.left ? ` with ${estimate.from.left} left` : ""} ${whenLabel(estimate.from.performedAtMs, now)}.`,
     ...(estimate.layoff ? ["It's been over three weeks since you trained this, so the estimate is taken 5% lower."] : []),
     `For ${rangeText} ${effortText}, that's about ${fmtKg(topWeight)}.`,
     drop.learned

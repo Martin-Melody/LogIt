@@ -141,7 +141,10 @@
   });
 
   function resolveRedirect(): string {
-    const { completed } = get(onboarding);
+    const { completed, step } = get(onboarding);
+    // Signed in from the welcome screen: carry on from the first question, not back to
+    // "Get started / I already have an account".
+    if (!completed && step === 0) onboarding.setStep(1);
     // Onboarding's own screens (the coach ones) ask to come back after signing in.
     return completed || redirectTo.startsWith("/onboarding/") ? redirectTo : "/onboarding";
   }

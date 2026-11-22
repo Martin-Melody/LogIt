@@ -264,7 +264,8 @@ test.describe("week one", () => {
     await page.waitForURL(atHome, { timeout: 10_000 });
 
     await expect(page.getByText("Your first week", { exact: true })).toBeVisible();
-    await expect(page.getByText("0 of 4 done. Finish all 4 for your first week on the streak.")).toBeVisible();
+    // Mon/Tue/Thu/Fri from a Tuesday: today, Thursday and Friday, not four days in a row (round 10).
+    await expect(page.getByText("0 of 3 done. Your first full week starts Monday.")).toBeVisible();
     await page.screenshot({ path: "test-results/first-week-home.png" });
   });
 
@@ -356,5 +357,30 @@ test.describe("returning user - requires API", () => {
     await page.locator("form").getByRole("button", { name: "Sign in" }).click();
 
     await page.waitForURL((u) => u.pathname === "/", { timeout: 15_000 });
+  });
+
+  test("an account that never finished setup signs in to the first question, not the welcome screen again", async ({ page }) => {
+    const username = unique("onbnew");
+    const registerRes = await fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email: `${username}@test.example`, password: "TestPass123!", displayName: username }),
+    });
+    expect(registerRes.ok).toBeTruthy();
+    cleanupToken = (await registerRes.json()).accessToken;
+
+    await page.addInitScript(() => {
+      localStorage.clear();
+      localStorage.setItem("logit:server:mode", "selfhosted");
+      localStorage.setItem("logit:api:baseUrl", "http://localhost:5118");
+    });
+    await goToOnboarding(page);
+    await page.getByRole("button", { name: "I already have an account" }).click();
+    await page.waitForURL(/\/auth/);
+    await page.locator('input[id="username"]').fill(username);
+    await page.locator('input[id="password"]').fill("TestPass123!");
+    await page.locator("form").getByRole("button", { name: "Sign in" }).click();
+
+    await expect(page.getByRole("heading", { name: "What do you want from training?" })).toBeVisible({ timeout: 15_000 });
   });
 });
