@@ -191,3 +191,29 @@ off, unplanned workouts, a custom exercise, then a backup file restored on a new
 | 9.7 | Workout summary for bodyweight PR | "Pull-Up · 10 reps @ 0 kg · ≈0 kg 1RM" | — | open |
 | 9.8 | Home after unplanned workouts | "Monday's workout moved to today · Start Full Body A", Quick start "Start Day 3 — Full Body C" and Today "Rest day" at once | — (same family as 1.15) | needs a decision |
 | 9.9 | Offline onboarding and logging, a new exercise, suggestions off (kept through the restore), the backup's contents, T3: suggestions on after unplanned weeks plan from that history (+2.5 kg, "aim 7, 6, 5") | Worked | — | ok |
+
+## Round 10 — T1, T2, T4, T6: users who change over time (2026-11-22)
+
+T2 as a simulation of LogIt Adaptive over 26 weeks (a lifter whose real strength grows fast, then
+slowly, then stops; three kinds of lifter: ticks the plan and never answers "reps left", answers,
+goes to failure). T1 in the app: a P0 shopper (Stay fit, just starting, full gym) signs up on a
+Thursday and trains Mon/Wed/Fri for three weeks without ever answering "reps left". T4: "Lou"
+(Pro) trains on her own plan, is invited by coach "Dana", trains Dana's program, stops coaching.
+T6: "Ray" (Pro) trains, gets Studio, coaches Lou, on the phone and the web dashboard.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 10.1 | T2: someone who ticks every set as planned and never answers "How many more could you have done?" | The same weight for good: squat 20 kg × 8 for 26 weeks while their real 1-rep max went 40 → 57 kg (the plan assumed every set was to failure) | A set ticked just as planned last time, with no answer, counts as 1 rep left (last time only, so a missed session plans from what was done). "Why?" says "20 × 8 as planned (counted as 1 more in the tank)" | fixed |
+| 10.2 | T2: once strength stops growing | The plan keeps asking for about a rep more than they make (it plans from the best of the last 4 sessions), with no deload and nothing saying they've stalled; rep ranges stay the beginner defaults for good | — (deloads / "you've stalled" are a product feature) | needs a decision |
+| 10.3 | T1: sign-up on a Thursday, plan Mon/Wed/Fri | Home: "1 of 3 done. Finish all 3 for your first week on the streak" (Thu, Fri and Sat in a row); first-workout screen "Workout 1 of 3"; on Saturday "Wednesday's workout moved to today", a day before they joined. A Tuesday start on Mon/Tue/Thu/Fri was asked for 4 days in a row | The first week asks only for workouts that land today or on the plan's own days ("1 of 2 done. Your first full week starts Monday"); a workout whose day came before the plan started is never called moved | fixed |
+| 10.4 | T4: an account that never finished setup signs in from the welcome screen | Lands back on the same welcome screen ("Get started / I already have an account") | Signing in from there carries on at "What do you want from training?" | fixed |
+| 10.5 | T4: coach invites someone by username | Nothing tells them: no notification, the invite only shows on Settings › Coaching | Notification "Dana wants to coach you", opening the Coaching page (web: My coach) | fixed |
+| 10.6 | T4: coach assigns a program | Nothing tells the client it came; it's only in More › Splits | Notification "Dana sent you a program", opening Splits (web: My coach); once per assignment, not per edit | fixed |
+| 10.7 | T4: a client who had her own plan | Home keeps her own plan (first-week card, "Start Day 3 — Full Body C"); the coach's program is never offered there (4.15 from a solo lifter's side) | — | needs a decision |
+| 10.8 | T4: right after stopping coaching | The Coaching page shows only "Coach your own clients — Studio is bought in the LogIt Android app"; no way to find or join another coach there | — | open |
+| 10.9 | T1: three weeks after the fix, account prompts, food card, streak, PRs | Plans move (squat 20 × 8 → 20 × 12 → 22.5 × 8, pulldown 25 → 27.5 kg); two gentle "Save to a free account" prompts (after workouts 1 and 2); the food card can be dismissed; streak counts whole weeks only; PR notifications right | — | ok |
+| 10.10 | T4: Dana's program day, stopping, the server | Program workout planned and logged (Squat 4 × 5 @ 50); Lou's own plan follows it (shared lift history); stopping removes the program, keeps her plan active and all three workouts (the program one named "Heavy · Dana's 4-week strength"); Dana gets 404 for her data and an empty roster | — | ok |
+| 10.11 | T6: a lifter given Studio | More gets Clients, Messages, Library; Coaching says "Invite your first client"; web "Welcome to Studio"; his own plan, sessions and progress stay apart from the coaching space; Lou listed with "Own plan" | — | ok |
+
+Not checked this round: how the app performs with months of real history on screen (Progress,
+Insights) — T2 was simulated in the progression engine only.

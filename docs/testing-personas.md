@@ -61,12 +61,12 @@ ones that happen):
 
 | | From → to | What could break |
 |---|---|---|
-| T1 | P0 shopper → P1 sticks with it | first-week promises vs what the app does in week 2 |
-| T2 | P1 beginner → experienced after months | does the plan grow with them (rep ranges, style, deloads) |
+| T1 | P0 shopper → P1 sticks with it | first-week promises vs what the app does in week 2 (round 10: done) |
+| T2 | P1 beginner → experienced after months | does the plan grow with them (rep ranges, style, deloads) (round 10: simulated, 26 weeks) |
 | T3 | P5 tracker → wants guidance | turning suggestions on with months of unplanned history |
-| T4 | solo lifter → client → leaves the coach | whose plan wins, what stays on the phone and the server |
+| T4 | solo lifter → client → leaves the coach | whose plan wins, what stays on the phone and the server (round 10: done) |
 | T5 | Free → Pro → Free | what syncs, what's kept, honest prompts |
-| T6 | lifter → starts coaching (Studio) | own training and clients side by side |
+| T6 | lifter → starts coaching (Studio) | own training and clients side by side (round 10: done) |
 | T7 | coach changes a client's package | free ↔ paid elsewhere ↔ Stripe, mid-cycle |
 
 ## 3. Every screen and who covers it
