@@ -34,11 +34,11 @@ P0 adds the decision before any of this: someone deciding whether to keep the ap
 
 | | Persona | Account · where | Key journey | Status |
 |---|---|---|---|---|
-| P0 | App-store shopper | none · Android, fresh install | beginner comparing a few free apps; judges in the first 5–10 minutes: is it clear what to do, a workout fast, never too much at once, no paywall surprise; most likely to uninstall | |
-| P1 | Newcomer losing fat | none → Free · Android | just starting, home dumbbells, 4 weeks, nutrition prompt after workout 2, habits after week 1, makes an account | week 1 done (round 1) |
+| P0 | App-store shopper | none · Android, fresh install | beginner comparing a few free apps; judges in the first 5–10 minutes: is it clear what to do, a workout fast, never too much at once, no paywall surprise; most likely to uninstall | day 1–2 done (round 3): back-off sets, set counts, first-week count, warm-up tap fixed; wording/tours to mock up |
+| P1 | Newcomer losing fat | none → Free · Android | just starting, home dumbbells, 4 weeks, nutrition prompt after workout 2, habits after week 1, makes an account | 28 days done (round 2) |
 | P2 | Steady lifter | Free → Pro trial · web app + phone | under 2 yrs, best lifts in **lb**, Free account (what does it keep?), trial, sync two devices | best lifts done (round 1) |
-| P3 | Experienced lifter | Pro · Android | 2+ yrs, Strong import, 5/3/1, rotation split, places/machines, warm-ups, supersets, RPE, PRs, insights, weekly sets | |
-| P4 | Competitor | Pro · Android + dashboard | competes, Hevy import, built-my-own algorithm, DOTS, total goal, plan edited on the computer | |
+| P3 | Experienced lifter | Pro · Android | 2+ yrs, Strong import, 5/3/1, rotation split, places/machines, warm-ups, supersets, RPE, PRs, insights, weekly sets | Strong import done (round 2) |
+| P4 | Competitor | Pro · Android + dashboard | competes, Hevy import, built-my-own algorithm, DOTS, total goal, plan edited on the computer | Hevy import done (round 2) |
 | P5 | Just tracks | none · Android, offline | no plan, suggestions off, unplanned workouts, custom exercises, edit history, export / backup / restore | started (round 2) |
 | P6 | Uses everything | Pro · two phones + dashboard | nutrition (search, custom, recipes, plan, weight), habits, goals, social, plugins (install + build), music, mobility, cardio, circuits, home/nav customising, sounds | |
 | P7 | Life happens | Pro → paused · Android | a 3-week break, changes days, switches to a built-in program, travels across time zones, new phone, moves to a self-hosted server, deletes the account | |
