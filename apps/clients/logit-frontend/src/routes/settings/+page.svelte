@@ -1498,6 +1498,7 @@
             <input
               type="password"
               placeholder="Confirm your password"
+              aria-label="Confirm your password"
               autocomplete="current-password"
               class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={deleteAccountPassword}
