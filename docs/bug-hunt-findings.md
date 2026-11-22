@@ -174,3 +174,20 @@ account with a second phone still signed in.
 | 8.3 | Week strip chips | "Fu A", "Fu B", "Fu C" for Full Body A/B/C | — | needs a decision |
 | 8.4 | Move to another server | Only in the Android app; not testable in a browser | — test in the emulator round | open |
 | 8.5 | 3 weeks off; new days (Mon/Wed/Fri → Tue/Thu/Sat); a 23:30 Dublin workout opened in Tokyo; making an account keeps offline training; a new phone gets plan, workouts and progression back; deleting the account removes it and its data from the server and that phone | Worked: no guilt after the break, the estimate 5% lower after 3+ weeks so the plan holds rather than rises, the week strip follows the new days, the Tokyo week counts the workout once ("today, done"), the app shows the server's username rule | — | ok |
+
+## Round 9 — P5 just tracks, offline; backup and restore; T3 (2026-11-22, d454de3)
+
+"Tom", 2+ years, no account and no network (every request off the phone refused), suggestions
+off, unplanned workouts, a custom exercise, then a backup file restored on a new phone.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 9.1 | New phone, no account: onboarding's "Import my history" with a LogIt backup file | "This file doesn't look like a workout log": the only import on the way in refused LogIt's own backup | A LogIt backup chosen there is restored whole (workouts, plan, settings, own exercises) and onboarding ends on Home | fixed (d454de3) |
+| 9.2 | Right after a restore | Home showed no plan and old data until the app restarted; Settings said "You may need to reload the app" (the Android app has no reload) | Both restore paths start the app again on the restored data | fixed (d454de3) |
+| 9.3 | Workout tour | "Tap a set's number for its options" — a set's number only moves it now; options are behind a swipe | "Swipe a set left to edit or delete it, and hold its number to move it." | fixed (d454de3) |
+| 9.4 | Import screen | "Strong and Hevy are next", though both import already | "Export files from Strong and Hevy go straight in, and so does a LogIt backup file." | fixed (d454de3) |
+| 9.5 | Welcome screen | No "restore a backup" for someone without an account (only "Get started" / "I already have an account"); 9.1 covers it for experienced lifters only | — | needs a decision |
+| 9.6 | Exercise card | Header "Last time 20 × 12" (kg × reps), set rows "12 × 20" (reps × kg) | — | open |
+| 9.7 | Workout summary for bodyweight PR | "Pull-Up · 10 reps @ 0 kg · ≈0 kg 1RM" | — | open |
+| 9.8 | Home after unplanned workouts | "Monday's workout moved to today · Start Full Body A", Quick start "Start Day 3 — Full Body C" and Today "Rest day" at once | — (same family as 1.15) | needs a decision |
+| 9.9 | Offline onboarding and logging, a new exercise, suggestions off (kept through the restore), the backup's contents, T3: suggestions on after unplanned weeks plan from that history (+2.5 kg, "aim 7, 6, 5") | Worked | — | ok |
