@@ -2034,6 +2034,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 

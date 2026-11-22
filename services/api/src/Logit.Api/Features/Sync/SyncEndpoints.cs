@@ -111,15 +111,16 @@ public static class SyncEndpoints
                     stored.DataJson = string.Empty;
                     stored.SyncedAt = DateTime.UtcNow;
                 }
-                else if (!dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null)
+                else if (!dto.DeletedAtMs.HasValue && stored.DeletedAtMs == null
+                         && (dto.UpdatedAtMs is null || dto.UpdatedAtMs >= stored.UpdatedAtMs))
                 {
-                    // Sessions carry no updatedAtMs — the pusher is always the owning
-                    // account's own device, so the latest push wins outright. Without this,
-                    // edits made after the first push (e.g. correcting a set after the
-                    // workout finished) never reached the server, so a cloud restore would
-                    // silently resurrect the stale first-synced version.
+                    // The newer copy wins: an edit made after the first push (correcting a set)
+                    // replaces it, but a second device re-sending its older copy (Sync now
+                    // pushes everything) no longer overwrites that edit. A push without a time
+                    // (an older app) still wins, as before.
                     stored.StartedAtMs = dto.StartedAtMs;
                     stored.DataJson = dto.DataJson ?? string.Empty;
+                    stored.UpdatedAtMs = dto.UpdatedAtMs ?? stored.UpdatedAtMs;
                     stored.SyncedAt = DateTime.UtcNow;
                 }
             }
@@ -130,6 +131,7 @@ public static class SyncEndpoints
                     ClientId = dto.Id,
                     UserId = userId,
                     StartedAtMs = dto.StartedAtMs,
+                    UpdatedAtMs = dto.UpdatedAtMs ?? 0,
                     DataJson = dto.DataJson ?? string.Empty,
                     DeletedAtMs = dto.DeletedAtMs,
                 };
@@ -164,7 +166,7 @@ public static class SyncEndpoints
         var sessions = await db.SyncedWorkoutSessions
             .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc)
             .OrderBy(s => s.SyncedAt)
-            .Select(s => new SessionDto(s.ClientId, s.StartedAtMs, s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs))
+            .Select(s => new SessionDto(s.ClientId, s.StartedAtMs, s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs, s.UpdatedAtMs))
             .ToListAsync();
 
         return Results.Ok(new { sessions });
@@ -804,7 +806,8 @@ public static class SyncEndpoints
 }
 
 public record PushSessionsRequest(List<SessionDto> Sessions);
-public record SessionDto(string Id, long StartedAtMs, string? DataJson, long? DeletedAtMs = null);
+/// UpdatedAtMs: when the session last changed on the device (null from app versions before it).
+public record SessionDto(string Id, long StartedAtMs, string? DataJson, long? DeletedAtMs = null, long? UpdatedAtMs = null);
 
 public record PushSplitsRequest(List<SplitDto> Splits);
 public record SplitDto(string Id, long UpdatedAtMs, string? DataJson, long? DeletedAtMs = null);

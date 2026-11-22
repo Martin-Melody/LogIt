@@ -2029,6 +2029,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 

@@ -1,11 +1,11 @@
 // How the apps put records on the wire for /sync. One place, so the phone's sync and the
 // coach sandbox's sample clients send exactly the same shapes.
 import type { CheckinSubmission } from "../domain/Checkin";
-import type { WorkoutSession } from "../domain/workout";
+import { sessionChangedAtMs, type WorkoutSession } from "../domain/workout";
 import type { RemoteCheckinSubmission, RemoteSession } from "./syncApi";
 
 export const sessionDto = (session: WorkoutSession): RemoteSession =>
-  ({ id: session.id, startedAtMs: session.startedAtMs, dataJson: JSON.stringify(session) });
+  ({ id: session.id, startedAtMs: session.startedAtMs, updatedAtMs: sessionChangedAtMs(session), dataJson: JSON.stringify(session) });
 
 export const checkinSubmissionDto = (sub: CheckinSubmission, deletedAtMs?: number): RemoteCheckinSubmission => ({
   id: sub.id,

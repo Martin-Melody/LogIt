@@ -32,7 +32,7 @@ import {
 import type { ExerciseProgressionSettings } from "@logit/core/domain/progression";
 import { normalizeRecipe, type ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
 import { isNativePlatform } from "$lib/platform/isNative";
-import type { WorkoutSession } from "@logit/core/domain/workout";
+import { sessionChangedAtMs, type WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 import type { CoachProgram } from "@logit/core/domain/CoachProgram";
 import type { CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
@@ -188,17 +188,19 @@ export async function pullAndMergeSessions(): Promise<boolean> {
     if (remote.length === 0) return true;
 
     const repo = getWorkoutRepo();
-    const existing = await repo.listAllSessions();
-    const existingIds = new Set(existing.map((s) => s.id));
+    const existing = new Map((await repo.listAllSessions()).map((s) => [s.id, s]));
 
     for (const entry of remote) {
       if (entry.deletedAtMs) {
-        if (existingIds.has(entry.id)) await repo.deleteSession(entry.id).catch((e) => syncWarn("pullAndMergeSessions", e));
+        if (existing.has(entry.id)) await repo.deleteSession(entry.id).catch((e) => syncWarn("pullAndMergeSessions", e));
         continue;
       }
-      if (existingIds.has(entry.id)) continue;
       try {
         const session: WorkoutSession = JSON.parse(entry.dataJson!);
+        // Changed on another device (a corrected set): the newer copy wins. Before, a session
+        // already on this phone was skipped, so edits never moved between devices.
+        const mine = existing.get(entry.id);
+        if (mine && sessionChangedAtMs(session) <= sessionChangedAtMs(mine)) continue;
         await repo.saveSession(session);
       } catch (e) { syncWarn("pullAndMergeSessions", e); }
     }
