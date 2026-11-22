@@ -359,7 +359,7 @@
       <Dialog.Title>Turn on community plugins?</Dialog.Title>
       <Dialog.Description>
         Community widgets, progression algorithms and analytics modules run their
-        own code inside Logit. Only enable this if you trust the plugins you
+        own code inside LogIt. Only enable this if you trust the plugins you
         install. You can turn it back off at any time, and each plugin still has
         its own on/off switch.
       </Dialog.Description>

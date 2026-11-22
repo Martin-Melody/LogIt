@@ -177,7 +177,7 @@
           <Card.Title class="text-base">Registries</Card.Title>
           <Card.Description>
             Registries are plain JSON files. Add community or self-hosted ones —
-            the default Logit registry can't be removed.
+            the default LogIt registry can't be removed.
           </Card.Description>
         </Card.Header>
         <Card.Content class="flex flex-col gap-2">

@@ -304,9 +304,15 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
       // A set that would fall under the range keeps the bottom rep count and gets lighter: one
       // weight step for each rep short, but never lighter than the estimate says carries it (a
       // step is 17% on a 15 kg dumbbell, 2.5% on a 100 kg bar).
-      dropped = true;
       const fits = Math.floor(estimate.kg / (1 + (lo + rir + (aimReps - reps)) / 30) / step + 1e-9) * step;
-      sets.push({ reps: lo, weight: Math.max(0, Math.min(startWeight - step, Math.max(startWeight - step * (lo - reps), fits))), setType: "normal" });
+      const lighter = Math.max(0, Math.min(startWeight - step, Math.max(startWeight - step * (lo - reps), fits)));
+      // Never lighter than this set last time when it made the range's fewest reps there: they've
+      // shown it (3 × 8 × 20 isn't followed by 8 × 20, 8 × 17.5, 8 × 17.5).
+      const done = lastWorking[i];
+      const shown = done && done.reps >= lo && !discount ? Math.min(done.weight, startWeight) : 0;
+      const weight = Math.max(lighter, shown);
+      if (weight < startWeight) dropped = true;
+      sets.push({ reps: lo, weight, setType: "normal" });
     }
   }
 

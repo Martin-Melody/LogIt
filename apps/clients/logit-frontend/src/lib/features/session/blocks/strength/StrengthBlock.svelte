@@ -353,9 +353,10 @@
         const settings = await getExerciseProgressionSettings({ id: exerciseId, name }, getProgressionDeps()).catch(() => null);
         firstTimeReps = settings?.repRange?.[1] ?? 8;
         firstTimeMin = settings?.repRange?.[0] ?? 1;
-        // The workout's first exercise opens so the first-set hint is seen.
-        if (get(currentSession)?.blocks[0]?.id === blockId && !data.sets.some((s) => s.completed)) collapsed = false;
       }
+      // A new workout's first exercise opens (and with it the first-set hint), so there's
+      // somewhere to start rather than a list of closed cards.
+      if (get(currentSession)?.blocks[0]?.id === blockId && !data.sets.some((s) => s.completed)) collapsed = false;
     } catch {
       prevSets = null;
     } finally {
@@ -469,7 +470,9 @@
     return logged ?? suggestion?.sets.find((s) => (s.weight ?? 0) > 0)?.weight ?? 0;
   });
   // No ramp for bodyweight work: "BW+2.5" isn't a bar to build up to.
-  const canWarmup = $derived(!hasWarmup && warmupWorkingKg > 0 && !bodyweight);
+  // Shown before a weight is typed too (greyed): appearing on the first weight pushed the tick
+  // away from under the finger.
+  const canWarmup = $derived(!hasWarmup && !bodyweight);
 
   async function handleAddWarmup() {
     const workingKg = warmupWorkingKg;
@@ -1028,7 +1031,7 @@
       <button
         type="button"
         class="w-full h-10 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40 border-b border-border/50"
-        disabled={saving}
+        disabled={saving || warmupWorkingKg <= 0}
         onclick={handleAddWarmup}
         transition:reveal
       >
@@ -1043,7 +1046,7 @@
     {#if showFirstSetHint}
       <div class="mx-3 my-2 flex flex-col gap-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
         <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
-        <p class="text-xs text-muted-foreground">Logit plans every set after this one from it. No need to know your max.</p>
+        <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it. No need to know your max.</p>
       </div>
     {/if}
     <SetsTableHeader weightUnit={$profile.weightUnit} />
@@ -1162,7 +1165,7 @@
       <button
         type="button"
         class="w-full h-10 px-3 -mt-1 mb-1 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-        disabled={saving}
+        disabled={saving || warmupWorkingKg <= 0}
         onclick={handleAddWarmup}
         transition:reveal
       >

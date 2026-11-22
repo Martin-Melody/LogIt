@@ -200,9 +200,9 @@
       {#if check === "checking"}
         <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 class="h-3.5 w-3.5 animate-spin" /> Checking…</p>
       {:else if reachable}
-        <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Found a Logit server</p>
+        <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Found a LogIt server</p>
       {:else if check}
-        <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach a Logit server there</p>
+        <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach a LogIt server there</p>
       {/if}
 
       <div class="flex gap-1 rounded-lg border border-border p-1">

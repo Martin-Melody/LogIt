@@ -49,7 +49,7 @@
     </button>
   </div>
   <h1 class="mt-4 mb-1.5 text-[26px] font-bold leading-tight">Coach from your pocket</h1>
-  <p class="mb-6 text-[15px] text-muted-foreground">Your clients train with Logit. You see it as it happens.</p>
+  <p class="mb-6 text-[15px] text-muted-foreground">Your clients train with LogIt. You see it as it happens.</p>
 
   <ul class="flex flex-col gap-4">
     {#each POINTS as p (p.title)}

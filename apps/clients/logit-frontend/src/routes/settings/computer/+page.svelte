@@ -46,7 +46,7 @@
   async function lookUp(raw: string) {
     const text = raw.trim();
     if (!text.startsWith(PAIRING_QR_PREFIX)) {
-      error = "That isn't a Logit sign-in code. Scan the QR on the computer's sign-in page.";
+      error = "That isn't a LogIt sign-in code. Scan the QR on the computer's sign-in page.";
       return;
     }
     error = null;
@@ -69,7 +69,7 @@
     } catch (e) {
       error = e instanceof Error && e.message === "scanner-preparing"
         ? "The scanner is getting ready. Try again in a moment."
-        : "Couldn't open the scanner. Check Logit can use the camera.";
+        : "Couldn't open the scanner. Check LogIt can use the camera.";
     }
   }
 

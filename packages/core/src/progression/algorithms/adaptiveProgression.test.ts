@@ -23,6 +23,16 @@ function input(overrides: Partial<ProgressionInput>): ProgressionInput {
 }
 
 describe("LogIt Adaptive", () => {
+  it("doesn't plan later sets lighter than they were done last time (a beginner's 3 × 8 × 20, no reps-left answers)", async () => {
+    // As the split day asks: Full Body A, squat 3 × 8, lateral raise 2 × 10.
+    const squat = await adaptiveProgression.suggest(input({ history: [entry(1, [[20, 8], [20, 8], [20, 8]])], plannedTargets: { sets: 3, reps: 8 } }));
+    expect(squat.sets.map((s) => s.weight)).toEqual([20, 20, 20]);
+    expect(squat.change?.text).toBe("Same weight");
+    // Not 10 × 4 then 10 × 1.5.
+    const raise = await adaptiveProgression.suggest(input({ exercise: CURL, history: [entry(1, [[4, 10], [4, 10]])], plannedTargets: { sets: 2, reps: 10 } }));
+    expect(raise.sets.map((s) => s.weight)).toEqual([4, 4]);
+  });
+
   it("plans every set from the strength estimate, not from last session's light sets", async () => {
     // Martin's example: 7 × 95, 9 × 68, 6 × 60.
     const out = await adaptiveProgression.suggest(input({ history: [entry(3, [[95, 7], [68, 9], [60, 6]])] }));

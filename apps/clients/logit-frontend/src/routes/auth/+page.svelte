@@ -424,7 +424,7 @@
         <div class="flex flex-col gap-3">
           <div>
             <p class="text-base font-bold">Which server?</p>
-            <p class="text-sm text-muted-foreground">Most people use getlogit.app. If you run Logit on your own server, enter its address.</p>
+            <p class="text-sm text-muted-foreground">Most people use getlogit.app. If you run LogIt on your own server, enter its address.</p>
           </div>
           <button type="button" class="flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left {picked === 'cloud' ? 'border-2 border-primary' : 'border-border'}"
             aria-pressed={picked === "cloud"} onclick={() => { picked = "cloud"; useCloud(); }}>
@@ -450,9 +450,9 @@
             {#if urlTestResult === "testing"}
               <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 class="h-3.5 w-3.5 animate-spin" /> Checking…</p>
             {:else if urlTestResult === "ok"}
-              <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Found a Logit server</p>
+              <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Found a LogIt server</p>
             {:else if urlTestResult === "error"}
-              <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach a Logit server there</p>
+              <p class="flex items-center gap-1.5 text-xs text-destructive"><XCircle class="h-3.5 w-3.5" /> Can't reach a LogIt server there</p>
             {/if}
             <button type="button"
               class="h-11 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"

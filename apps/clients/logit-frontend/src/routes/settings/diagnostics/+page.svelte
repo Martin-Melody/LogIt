@@ -284,7 +284,7 @@ Last: {new Date(e.tLast ?? e.t).toLocaleString()}
       <Card.Header>
         <Card.Title>Send to Logit</Card.Title>
         <Card.Description>
-          Something not working? Send this log and the device details above to the Logit team.
+          Something not working? Send this log and the device details above to the LogIt team.
           It's linked to your account so we can look into it, and deleted after 30 days.
         </Card.Description>
       </Card.Header>
@@ -305,7 +305,7 @@ Last: {new Date(e.tLast ?? e.t).toLocaleString()}
   {:else if info}
     <p class="px-1 text-xs text-muted-foreground">
       {#if info.serverMode === "cloud" && !info.signedIn}
-        Sign in to send this log to the Logit team, or save the file and send it yourself.
+        Sign in to send this log to the LogIt team, or save the file and send it yourself.
       {:else if !crashReportsOn}
         Nothing here is sent anywhere. To share it, use Copy or Save file.
       {/if}
