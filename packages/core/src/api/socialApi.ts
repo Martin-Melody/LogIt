@@ -83,6 +83,11 @@ export interface UserSearchResult {
   avatarUrl: string | null;
   followerCount: number;
   isFollowing: boolean;
+  /** A request to this private account is waiting (older servers don't send it). */
+  isRequested?: boolean;
+  /** They follow you. */
+  followsYou?: boolean;
+  isPrivate?: boolean;
 }
 
 export interface ApiProfile {
@@ -103,6 +108,8 @@ export interface ApiProfile {
   /** False: a private account you aren't an accepted follower of. Posts, profile cards and
    * follow lists are withheld (they answer 403 with code "private"). */
   canSeeContent?: boolean;
+  /** They follow you ("Follows you", "Follow back"). */
+  followsYou?: boolean;
 }
 
 export type FollowStatus = "none" | "requested" | "following";

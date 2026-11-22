@@ -98,17 +98,35 @@
     }
   }
 
-  onMount(async () => {
-    localInbox.markAllRead();
-    await loadSocial();
-    if (!authStore.isAuthenticated) return;
-    void socialApi.getFollowRequests().then((r) => (requests = r)).catch(() => {});
+  let opened = $state(false);
+
+  async function markSeen() {
     try {
       await notificationsApi.markRead();
       unreadNotifications.clear();
     } catch {
       // non-fatal
     }
+  }
+
+  onMount(async () => {
+    localInbox.markAllRead();
+    await loadSocial();
+    if (!authStore.isAuthenticated) return;
+    void socialApi.getFollowRequests().then((r) => (requests = r)).catch(() => {});
+    await markSeen();
+    opened = true;
+  });
+
+  // New ones while this page is open (the badge store checks every 20 s, and when the app comes
+  // back to the front): show them here too, instead of only after leaving and coming back.
+  $effect(() => {
+    if (!opened || $unreadNotifications === 0 || loading) return;
+    void (async () => {
+      await loadSocial();
+      void socialApi.getFollowRequests().then((r) => (requests = r)).catch(() => {});
+      await markSeen();
+    })();
   });
 
   $effect(() => {

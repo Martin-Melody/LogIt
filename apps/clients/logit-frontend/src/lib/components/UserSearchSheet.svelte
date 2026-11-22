@@ -59,6 +59,7 @@
       results = res;
       // Seed local follow state from server response
       followingIds = new Set(res.filter((u) => u.isFollowing).map((u) => u.id));
+      requestedIds = new Set(res.filter((u) => u.isRequested).map((u) => u.id));
       searched = true;
     } catch {
       results = [];
@@ -200,7 +201,7 @@
                 {:else if isRequested}
                   Requested
                 {:else}
-                  <UserPlus class="h-3 w-3" /> Follow
+                  <UserPlus class="h-3 w-3" /> {user.followsYou ? "Follow back" : "Follow"}
                 {/if}
               </button>
             </li>

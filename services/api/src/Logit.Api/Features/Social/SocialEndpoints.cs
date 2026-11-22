@@ -106,7 +106,8 @@ public static class SocialEndpoints
             .Include(f => f.Follower)
             .Where(f => f.FollowedId == user.Id)
             .ToListAsync();
-        return Results.Ok(follows.Select(f => f.Follower.ToProfileDto(false)));
+        var dto = await MappingExtensions.ProfilesForCaller(db, caller.GetUserIdOrNull(), follows.Select(f => f.FollowerId).ToList());
+        return Results.Ok(follows.Select(f => dto(f.Follower)));
     }
 
     private static async Task<IResult> GetFollowing(string username, ClaimsPrincipal caller, AppDbContext db)
@@ -119,7 +120,8 @@ public static class SocialEndpoints
             .Include(f => f.Followed)
             .Where(f => f.FollowerId == user.Id)
             .ToListAsync();
-        return Results.Ok(follows.Select(f => f.Followed.ToProfileDto(false)));
+        var dto = await MappingExtensions.ProfilesForCaller(db, caller.GetUserIdOrNull(), follows.Select(f => f.FollowedId).ToList());
+        return Results.Ok(follows.Select(f => dto(f.Followed)));
     }
 
     private static async Task<IResult> GetUserPosts(

@@ -9,6 +9,10 @@ namespace Logit.Api.Features.Auth;
 /// email), made unique with a number. They can change it later in Account.
 public static class Usernames
 {
+    /// 3–30 lowercase letters, digits or underscores (what the sign-up form asks for).
+    public static bool IsValid(string username) =>
+        username.Length is >= 3 and <= 30 && username.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '_');
+
     public static string Base(string? displayName, string? email)
     {
         var fromName = Slug(displayName);

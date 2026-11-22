@@ -70,11 +70,15 @@
     if (dir) document.documentElement.dataset.navDir = dir;
     else delete document.documentElement.dataset.navDir;
 
+    // The page is its own transition layer only while it animates (layout.css): named all the
+    // time, it trapped every sheet and dialog opened from a page under the bottom bar.
+    document.documentElement.dataset.pageTransition = "";
     return new Promise<void>((resolve) => {
-      document.startViewTransition(async () => {
+      const t = document.startViewTransition(async () => {
         resolve();
         await navigation.complete;
       });
+      void t.finished.finally(() => delete document.documentElement.dataset.pageTransition);
     });
   });
 </script>

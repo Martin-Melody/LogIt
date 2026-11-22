@@ -27,7 +27,8 @@ function createUnreadStore() {
   function start() {
     if (timer) return;
     void refresh();
-    timer = setInterval(refresh, 60_000);
+    // Every 20 s (a count, cheap): at 60 s a like took up to a minute to show.
+    timer = setInterval(refresh, 20_000);
     if (typeof document !== "undefined") document.addEventListener("visibilitychange", refreshWhenVisible);
   }
 

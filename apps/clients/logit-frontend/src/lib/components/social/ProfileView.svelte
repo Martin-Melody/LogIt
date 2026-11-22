@@ -230,6 +230,9 @@
         <span class="text-xs text-muted-foreground block">following</span>
       </button>
     </div>
+    {#if !isSelf && profile.followsYou}
+      <p class="-mt-1 text-xs text-muted-foreground">Follows you</p>
+    {/if}
 
     {#if isSelf}
       {#if headerActions}
@@ -250,7 +253,7 @@
         >
           {#if followStatus === "following"}<UserCheck class="h-4 w-4" /> Following
           {:else if followStatus === "requested"}<Clock class="h-4 w-4" /> Requested
-          {:else}<UserPlus class="h-4 w-4" /> {profile.isPrivate ? "Request to follow" : "Follow"}{/if}
+          {:else}<UserPlus class="h-4 w-4" /> {profile.isPrivate ? "Request to follow" : profile.followsYou ? "Follow back" : "Follow"}{/if}
         </button>
         <button type="button" class="p-2 rounded-md border border-border text-muted-foreground" aria-label="More" onclick={() => (menuOpen = true)}>
           <MoreHorizontal class="h-4 w-4" />

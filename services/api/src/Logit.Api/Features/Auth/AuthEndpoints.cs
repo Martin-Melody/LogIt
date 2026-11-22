@@ -54,6 +54,11 @@ public static class AuthEndpoints
             : req.Username.Trim().ToLowerInvariant();
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
 
+        // The sign-up form says letters, numbers and underscores: a space or a dot breaks
+        // @mentions and profile links, so the server holds to it too.
+        if (!Usernames.IsValid(normalizedUsername))
+            return Results.BadRequest(new { error = "Usernames are 3–30 letters, numbers or underscores.", code = "bad_username", field = "username" });
+
         if (await db.Users.AnyAsync(u => u.Username == normalizedUsername))
             return Results.Conflict(new { error = "Username already taken." });
 
@@ -79,7 +84,7 @@ public static class AuthEndpoints
             Username = normalizedUsername,
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-            DisplayName = req.DisplayName.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(req.DisplayName) ? normalizedUsername : req.DisplayName.Trim(),
             InviteId = inviteId,
             IsAdmin = withKey,
             // New accounts start in Discover (they can turn it off in Social settings); older

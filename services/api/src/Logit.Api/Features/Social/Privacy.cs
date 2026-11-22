@@ -12,6 +12,10 @@ public static class Privacy
 {
     public static async Task<bool> CanSeeAsync(this AppDbContext db, Guid? viewerId, User author)
     {
+        // A block either way hides everything, so no commenting, liking or reposting through it.
+        if (viewerId is { } v && v != author.Id && await db.Blocks.AnyAsync(b =>
+                (b.BlockerId == v && b.BlockedId == author.Id) || (b.BlockerId == author.Id && b.BlockedId == v)))
+            return false;
         if (!author.IsPrivate) return true;
         if (viewerId is null) return false;
         if (viewerId == author.Id) return true;

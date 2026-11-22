@@ -40,6 +40,22 @@ public static class ModerationEndpoints
                      || (r.RequesterId == target.Id && r.TargetId == callerId))
             .ToListAsync());
 
+        // As on Instagram: their likes and comments on your posts go (replies to those comments
+        // with them, as when a comment is deleted), and so do the notifications between you.
+        var now = DateTime.UtcNow;
+        var theirComments = await db.Comments
+            .Where(c => c.AuthorId == target.Id && c.Post.AuthorId == callerId && c.DeletedAt == null)
+            .ToListAsync();
+        var gone = theirComments.Select(c => c.Id).ToList();
+        theirComments.AddRange(await db.Comments
+            .Where(c => c.ParentCommentId != null && gone.Contains(c.ParentCommentId.Value) && c.DeletedAt == null)
+            .ToListAsync());
+        foreach (var c in theirComments) c.DeletedAt = now;
+        db.Likes.RemoveRange(await db.Likes.Where(l => l.UserId == target.Id && l.Post.AuthorId == callerId).ToListAsync());
+        db.Notifications.RemoveRange(await db.Notifications
+            .Where(n => (n.UserId == callerId && n.ActorId == target.Id) || (n.UserId == target.Id && n.ActorId == callerId))
+            .ToListAsync());
+
         await db.SaveChangesAsync();
         return Results.NoContent();
     }
