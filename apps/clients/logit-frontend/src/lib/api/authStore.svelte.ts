@@ -9,6 +9,7 @@ import { rehydrateStores, startBackgroundSync, stopBackgroundSync } from "$lib/p
 import { needsAccountAuth } from "$lib/stores/appReady.store";
 import { syncAll, markFullUploadDue, planIncludesSync } from "$lib/sync/syncService";
 import { log } from "@logit/core/platform/log";
+import { onboarding } from "$lib/stores/onboarding.store";
 
 /** Re-initialize repos then flush all data stores for the new active owner. */
 async function switchActiveOwner(): Promise<void> {
@@ -83,6 +84,7 @@ function createAuthStore() {
     user = serverUser;
     log.info("auth", "Signed in", { tier: serverUser.tier, selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
+    else onboarding.syncWithServer(serverUser.onboardingCompleted);
     // Send this device's existing local history too — otherwise only records created after
     // this sign-in ever reach the server, and everything logged offline up to now stays
     // without a cloud copy. syncAll() does it, the profile after its pulls (see
@@ -99,6 +101,7 @@ function createAuthStore() {
     user = serverUser;
     log.info("auth", "Account created and signed in", { selfHosted: apiClient.isSelfHosted() });
     if (isNativePlatform()) await linkOrCreateLocalAccount(serverUser);
+    else onboarding.syncWithServer(serverUser.onboardingCompleted);
     markFullUploadDue();
     void syncAll();
     startBackgroundSync();

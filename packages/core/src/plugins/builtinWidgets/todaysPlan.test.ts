@@ -53,6 +53,12 @@ describe("opening on today", () => {
     expect(texts(v).slice(0, 2)).toEqual(["Done", "Next: Tomorrow · Lower"]);
   });
 
+  it("today's workout started but not finished: In progress, nothing next yet", async () => {
+    const v = await view({ dateIso: "2026-11-13", inProgress: true });
+    expect(texts(v)[0]).toBe("In progress");
+    expect(texts(v).some((t) => t.startsWith("Next:"))).toBe(false);
+  });
+
   it("a rest day today: Rest day, and what's next", async () => {
     const v = await view({ dateIso: "2026-11-13", rest: true, restToday: true, exercises: [], dayLabel: undefined, nextUp: { dateIso: "2026-11-16", label: "Push" } });
     expect(v.title).toBe("Today");

@@ -531,13 +531,15 @@ export function updateSet(
  * An exercise done for the first time ever (design canvas O4): its first working set is the
  * starting point, so the working sets after it that are still empty get planned from it at
  * the same weight, one rep fewer each (60 kg × 8, then × 7, × 6), never under `minReps`.
- * Sets already logged or with something entered are left alone.
+ * Sets already logged or with something entered are left alone. With `replan`, sets it
+ * planned before and nobody has touched are planned again (the first set was corrected).
  */
 export function planRestFromFirstSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   firstSetId: string,
   minReps = 1,
+  replan = false,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => {
     const sorted = [...data.sets].sort((a, b) => a.orderIndex - b.orderIndex);
@@ -548,7 +550,8 @@ export function planRestFromFirstSet(
     for (const set of sorted) {
       if (set.orderIndex <= first.orderIndex || set.completed) continue;
       if (set.setType === "warmup" || isContinuationSet(set.setType)) continue;
-      if (set.reps !== 0 || set.weight > 0 || (set.target?.weight ?? 0) > 0) continue;
+      const empty = set.reps === 0 && set.weight <= 0 && (set.target?.weight ?? 0) <= 0;
+      if (!empty && !(replan && isUntouchedPlannedSet(set))) continue;
       k++;
       planned.set(set.id, { reps: Math.max(minReps, first.reps - k), weight: first.weight });
     }

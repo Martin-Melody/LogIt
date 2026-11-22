@@ -43,6 +43,8 @@
   // Lowered for this week already ("Make it 3"): don't offer to lower it again.
   const lowered = $derived(target < $goalsStore.streak.weeklyTarget);
   const today = $derived(week?.slots.find((s) => s.dateIso === todayIso) ?? null);
+  // Started late in the week (a Saturday, 3 a week): only what fits before Sunday is asked for.
+  const fits = $derived(week ? week.done + week.remaining - week.leftOver.length : 0);
   // Only the workout days (and days trained on) in the first week, like the mockup; a whole week after.
   const shown = $derived(week ? (firstWeek ? week.slots.filter((s) => s.state !== "rest") : week.slots) : []);
 
@@ -88,7 +90,9 @@
         {/each}
       </div>
       <p class="text-[13px] text-muted-foreground">
-        {#if firstWeek && !week.moves.length}
+        {#if firstWeek && !week.moves.length && fits < target}
+          {week.done} of {fits} done. Your first full week starts Monday.
+        {:else if firstWeek && !week.moves.length}
           {week.done} of {target} done. {week.done >= target ? "That's your first week on the streak." : `Finish all ${target === 1 ? "of it" : target === 2 ? "both" : target} for your first week on the streak.`}
         {:else}
           {weekPlanLine(week, dayOfWeek(todayIso), target)}

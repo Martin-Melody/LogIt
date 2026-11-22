@@ -17,7 +17,6 @@ export const quickStartWidget: WidgetPlugin = {
             kind: "button-row",
             buttons: [
               { label: "Continue workout", action: { resumeWorkout: true }, primary: true },
-              { label: "Start new", action: { startEmptyWorkout: true } },
             ],
           },
         ],

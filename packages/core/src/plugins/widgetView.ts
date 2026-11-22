@@ -89,6 +89,8 @@ export type WidgetInput = {
     rest?: boolean;
     /** The shown workout is already done (today). */
     done?: boolean;
+    /** The shown workout has been started and isn't finished yet. */
+    inProgress?: boolean;
     /** The user paged to this one with ‹ › (not the page the card opens on). */
     picked?: boolean;
     /** Today is a planned rest day (the card opens on the next workout). */

@@ -112,7 +112,8 @@
   });
 
   function num(value: string) {
-    const n = Number(value);
+    // "82,5" from a comma keypad is 82.5.
+    const n = Number(value.trim().replace(",", "."));
     return Number.isFinite(n) ? n : 0;
   }
 
@@ -212,9 +213,12 @@
         {bwPrefix}
       </span>
     {/if}
+    <!-- Text + decimal keypad, so "82,5" is 82.5 (a number box dropped the comma: 825). Bodyweight
+         sets keep the number box: their minus (assisted) isn't on every decimal keypad. -->
     <input
       class="{box} {was?.weight ? wasBox : ''} {weightIsPlan ? planPh : plainPh} {bodyweight ? (bwPrefix === 'BW+' ? 'pl-[2.6rem] pr-1 text-left' : 'pl-[2.05rem] pr-1 text-left') : ''}"
-      type="number"
+      type={bodyweight ? "number" : "text"}
+      inputmode={bodyweight ? undefined : "decimal"}
       step={weightUnit === "lbs" ? "1" : "0.5"}
       aria-label="Set {setNumber} weight ({bodyweight ? `${weightUnit} on top of bodyweight` : weightUnit})"
       placeholder={weightPlaceholder}

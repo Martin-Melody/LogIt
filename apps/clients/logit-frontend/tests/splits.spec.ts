@@ -6,6 +6,8 @@ async function seed(page: Page, opts: { withDraft?: boolean } = {}) {
   await page.addInitScript(
     ({ splitId, withDraft }) => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+      // Suggestions off unless a test sets an algorithm (web seeds the default once otherwise).
+      localStorage.setItem("logit:progression:config-seeded:v1", "1");
       localStorage.setItem(
         "logit:tours:v1",
         JSON.stringify({ home: true, session: true, splits: true, splitDetail: true, splitDay: true }),
@@ -83,6 +85,7 @@ test.describe("a split day with a circuit", () => {
   test("starting it brings the circuit, its drills and rounds into the workout", async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+      localStorage.setItem("logit:progression:config-seeded:v1", "1");
       localStorage.setItem(
         "logit:tours:v1",
         JSON.stringify({ home: true, session: true, splits: true, splitDetail: true, splitDay: true }),
@@ -132,6 +135,7 @@ test.describe("Quick Start on home", () => {
   test("Start Day opens the day with the split's sets when no algorithm is picked", async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+      localStorage.setItem("logit:progression:config-seeded:v1", "1");
       localStorage.setItem(
         "logit:tours:v1",
         JSON.stringify({ home: true, session: true, splits: true, splitDetail: true, splitDay: true }),

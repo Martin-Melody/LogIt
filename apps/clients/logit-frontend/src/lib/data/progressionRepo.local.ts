@@ -5,6 +5,7 @@ import type { UserAnalyticsConfig } from "@logit/core/domain/analytics";
 import { normalizeRecipe, type ProgressionRecipe } from "@logit/core/domain/progressionRecipe";
 import type { UserMobilityProgressionConfig } from "@logit/core/domain/mobilityProgression";
 import type { UserMuscleGroupInsightConfig } from "@logit/core/domain/muscleGroupInsight";
+import { DEFAULT_PROGRESSION_ALGORITHM_ID } from "@logit/core/progression/localAlgorithmRegistry";
 
 const STORAGE_KEYS = {
   config: "logit:progression:config:v1",
@@ -37,7 +38,18 @@ function writeJson<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+const SEEDED_KEY = "logit:progression:config-seeded:v1";
+
+/** Like a new SQLite profile (localAccountRepo), web starts on the bundled algorithm. Written
+ * once, so "Disable suggestions" (which removes the config) stays off. */
+function seedDefaultConfig(): void {
+  if (!browser || localStorage.getItem(SEEDED_KEY)) return;
+  if (!localStorage.getItem(STORAGE_KEYS.config)) writeJson(STORAGE_KEYS.config, { algorithmId: DEFAULT_PROGRESSION_ALGORITHM_ID });
+  localStorage.setItem(SEEDED_KEY, "1");
+}
+
 export function createLocalProgressionRepo(): ProgressionRepo {
+  seedDefaultConfig();
   return {
     async getExerciseSettings(key: string): Promise<ExerciseProgressionSettings | null> {
       return readJson<Record<string, ExerciseProgressionSettings>>(STORAGE_KEYS.exerciseSettings, {})[key] ?? null;

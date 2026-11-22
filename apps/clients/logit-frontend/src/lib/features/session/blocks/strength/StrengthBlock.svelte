@@ -29,6 +29,7 @@
     useReplan,
     shortBy,
     isUntouchedPlannedSet,
+    getExercises,
   } from "@logit/core/domain/workout";
   import { suggestionToPlan } from "@logit/core/domain/progression";
   import { warmupSets } from "@logit/core/domain/warmup";
@@ -94,7 +95,14 @@
   }: BlockBaseProps<StrengthBlockData> = $props();
 
   let suggestion = $state<ProgressionOutput | null>(null);
-  let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  // Back in a workout after the app was closed: the exercise you were on is open, not hidden.
+  const resumingHere = untrack(() => {
+    const s = get(currentSession);
+    const exercises = s ? getExercises(s) : [];
+    const current = exercises.find((e) => e.sets.some((x) => !x.completed && x.setType !== "warmup"));
+    return current?.id === blockId && exercises.some((e) => e.sets.some((x) => x.completed));
+  });
+  let collapsed = $state(get(profile).blocksCollapsedByDefault && !resumingHere);
   // Plan this block's sets once the suggestion arrives: on first load if it has
   // none yet, and after a swap (replacing only the planned, not-yet-done sets).
   let planPending = $state(untrack(() => data.sets.length === 0));
@@ -150,6 +158,13 @@
   function withFirstSetPlan(s: WorkoutSession, setId: string): WorkoutSession {
     if (!firstEver || data.sets.some((x) => x.completed && x.id !== setId)) return s;
     return planRestFromFirstSet(s, blockId, setId, firstTimeMin);
+  }
+
+  /** Correcting that first set (825 typed for 82.5) re-plans the sets it planned. */
+  function withFirstSetFix(s: WorkoutSession, setId: string): WorkoutSession {
+    const set = data.sets.find((x) => x.id === setId);
+    if (!firstEver || !set?.completed || data.sets.some((x) => x.completed && x.id !== setId)) return s;
+    return planRestFromFirstSet(s, blockId, setId, firstTimeMin, true);
   }
 
   /** A set 2+ reps short of its aim re-plans the untouched sets after it (lighter). Weights
@@ -473,14 +488,30 @@
 
   async function handleRepsChange(setId: string, reps: number) {
     const safe = Number.isFinite(reps) ? Math.max(0, reps) : 0;
-    await onMutate((s: WorkoutSession) => updateSet(s, blockId, setId, { reps: safe }));
+    await onMutate((s: WorkoutSession) => withFirstSetFix(updateSet(s, blockId, setId, { reps: safe }), setId));
   }
 
   async function handleWeightChange(setId: string, weight: number) {
     // Negative weight is meaningful: net assistance on a bodyweight / assisted-machine
     // movement (e.g. −25 = bodyweight minus 25 kg on the assisted dip machine).
     const safe = Number.isFinite(weight) ? weight : 0;
-    await onMutate((s: WorkoutSession) => updateSet(s, blockId, setId, { weight: safe }));
+    await onMutate((s: WorkoutSession) => withFirstSetFix(updateSet(s, blockId, setId, { weight: safe }), setId));
+    if (!bodyweight) warnIfTypo(setId, safe);
+  }
+
+  /** 3× the plan, the other sets or last time is almost always a typo (825 for 82.5): say so,
+   * with a one-tap fix when dropping a digit lands near it. Nothing is blocked. */
+  function warnIfTypo(setId: string, kg: number) {
+    const set = data.sets.find((x) => x.id === setId);
+    const others = data.sets.filter((x) => x.id !== setId && x.weight > 0).map((x) => x.weight);
+    const ref = set?.target?.weight || Math.max(0, ...others, ...(prevSets ?? []).map((x) => x.weight));
+    if (!(ref > 0) || kg < ref * 3) return;
+    const unit = get(profile).weightUnit;
+    const fixed = kg / 10;
+    const fix = fixed >= ref / 2 && fixed <= ref * 2
+      ? { action: { label: `Make it ${formatLoad(fixed, unit, false)}`, onClick: () => void handleWeightChange(setId, fixed) } }
+      : {};
+    toast.warning(`${formatLoad(kg, unit, false)}? That's ${Math.round(kg / ref)}× ${formatLoad(ref, unit, false)}.`, fix);
   }
 
   async function handleDeleteSet(setId: string) {

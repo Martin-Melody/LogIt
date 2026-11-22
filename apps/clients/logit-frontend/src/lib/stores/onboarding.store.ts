@@ -82,6 +82,18 @@ function createOnboardingStore() {
       }
     },
 
+    /** Signed in on the web (the phone does this per account in authStore): onboarding done on
+     * either side is done on both, so a second browser doesn't start onboarding again. */
+    syncWithServer(serverCompleted: boolean) {
+      if (serverCompleted && !get(store).completed) {
+        const next: OnboardingState = { completed: true, step: 0 };
+        store.set(next);
+        persist(next);
+      } else if (!serverCompleted && get(store).completed) {
+        apiClient.updateOnboardingCompleted(true).catch((e) => log.warn("onboarding", "Could not save onboarding status to the server", e));
+      }
+    },
+
     reset() {
       const next: OnboardingState = { completed: false, step: 0 };
       store.set(next);

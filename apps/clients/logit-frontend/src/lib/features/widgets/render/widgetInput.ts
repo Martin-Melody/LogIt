@@ -38,7 +38,10 @@ function todaysPlanInput(
   const plan = getSplitPlan(split);
   const timeline = getSplitTimeline(split);
   const today = localDateIso();
-  const doneToday = plan.doneToday.length ? { doneToday: plan.doneToday.map((d) => splitDayName(split, d)) } : {};
+  // The rotation records a day when its workout starts; while it's running it isn't done yet.
+  const runningDayId = get(currentSession)?.source?.dayId;
+  const finishedToday = plan.doneToday.filter((d) => d.id !== runningDayId);
+  const doneToday = finishedToday.length ? { doneToday: finishedToday.map((d) => splitDayName(split, d)) } : {};
   const blocksOf = (d: SplitDay | null) =>
     d ? [...d.blocks].sort((a, b) => a.orderIndex - b.orderIndex).map(plannedBlockName) : [];
 
@@ -72,7 +75,7 @@ function todaysPlanInput(
     exercises: blocksOf(entry.day),
     dateIso: entry.dateIso,
     ...(entry.day ? {} : { rest: true }),
-    ...(entry.done ? { done: true } : {}),
+    ...(entry.done ? (entry.day?.id === runningDayId ? { inProgress: true } : { done: true }) : {}),
     ...doneToday,
   };
   if (index !== fallback) return { ...base, picked: true };
@@ -80,14 +83,14 @@ function todaysPlanInput(
   // The page the card opens on: headed by its own day like the rest, with notes on what's
   // done today and the rest days before it.
   let when: PlanInput["when"];
-  if (entry.dateIso === today) when = plan.doneToday.length ? "laterToday" : "today";
+  if (entry.dateIso === today) when = finishedToday.length ? "laterToday" : "today";
   else if (plan.restToday) when = "restToday";
   else when = entry.dateIso === addDays(today, 1) ? "tomorrow" : "upcoming";
   const restBefore = [
     ...new Set(timeline.filter((e) => !e.day && e.dateIso > today && e.dateIso < entry.dateIso).map((e) => e.dateIso)),
   ];
   // Opened on today's done workout or rest day: say what's next.
-  const next = !entry.day || entry.done ? nextWorkoutAfter(timeline, index) : null;
+  const next = !entry.day || (entry.done && entry.day.id !== runningDayId) ? nextWorkoutAfter(timeline, index) : null;
   return {
     ...base,
     scheduled: !!(entry.day && scheduled && entry.day.id === scheduled.id),
