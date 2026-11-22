@@ -18,7 +18,7 @@
   <section class="flex flex-wrap items-center gap-4 rounded-xl border border-primary/30 bg-card p-5" aria-labelledby="welcome-{walkthrough}">
     <div class="min-w-0 flex-[1_1_360px]">
       <h2 id="welcome-{walkthrough}" class="text-[17px] font-bold">
-        {walkthrough === "studio" ? `Welcome to Studio, ${name}` : `Welcome to Pro, ${name}`}
+        {walkthrough === "studio" ? `Welcome to Studio, ${name}` : `Welcome to the dashboard, ${name}`}
       </h2>
       <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">
         {#if walkthrough === "studio"}

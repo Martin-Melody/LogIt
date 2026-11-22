@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+  import { carriedWeight } from "./carryWeight";
   import FinishSetupCard from "$lib/features/exercise/FinishSetupCard.svelte";
   import { needsSetup } from "@logit/core/domain/exerciseGuess";
   import { hasStartingLift } from "$lib/features/onboarding/startingLifts";
@@ -579,6 +580,9 @@
         return;
       }
     }
+    // No weight and none planned: carry the set before it rather than logging 0 kg.
+    const before = !wasCompleted && !fill?.weight ? carriedWeight(data.sets, set) : undefined;
+    if (before !== undefined) fill = { reps: fill?.reps ?? set.reps, weight: before };
     // In a superset / circuit the group's rest wins; else the set's own override,
     // else the per-type default. A group rest of 0 goes straight on.
     const effectiveRest = groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[set.setType];

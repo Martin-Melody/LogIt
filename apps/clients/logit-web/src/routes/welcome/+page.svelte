@@ -1,4 +1,4 @@
-<!-- W2 · "What brings you to Logit on the web?" Asked once, right after signing up here. The
+<!-- W2 · "What brings you to LogIt on the web?" Asked once, right after signing up here. The
      answer only picks the first screen: nothing is locked to it. Someone who signed up from a
      coach's link never sees this (login sends them back to the link instead). -->
 <script lang="ts">
@@ -63,7 +63,7 @@
 <div class="flex min-h-screen flex-col items-center gap-7 bg-background px-6 pb-10 pt-16">
   <div class="flex w-full max-w-[920px] flex-col gap-2">
     <p class="text-sm text-muted-foreground">Account created · @{user?.username}</p>
-    <h1 class="text-[32px] font-bold leading-tight tracking-tight">What brings you to Logit on the web?</h1>
+    <h1 class="text-[32px] font-bold leading-tight tracking-tight">What brings you to LogIt on the web?</h1>
     <p class="text-[15px] text-muted-foreground">We'll set things up for that. You can do the rest later.</p>
   </div>
 

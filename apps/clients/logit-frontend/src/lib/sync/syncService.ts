@@ -457,19 +457,25 @@ export async function pullCoachLibrary(): Promise<boolean> {
 
 // ── Coach programs (read-only mirror) ─────────────────────────────────────────
 
+/**
+ * What a coach assigned is only sent while the coaching is active, and nothing is sent when it
+ * ends (the client stops, or the coach removes them), so a pull of changes can't tell the phone
+ * to drop it. The coach pulls fetch the whole (small) list and drop what isn't in it any more.
+ */
+export async function dropUnassigned(local: { id: string }[], assigned: string[], remove: (id: string) => Promise<void>, where: string): Promise<void> {
+  const keep = new Set(assigned);
+  for (const x of local) if (!keep.has(x.id)) await remove(x.id).catch((e) => syncWarn(where, e));
+}
+
 /** Pull programs a coach has assigned to this account into the local read-only mirror.
  * One-directional: the user never edits these, so there's no push counterpart here. */
 export async function pullAndMergeCoachPrograms(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
-    const since = getTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY);
-    const remote = await coachProgramApi.pullAssigned(since);
-    if (remote.length === 0) {
-      setTimestamp(COACH_PROGRAMS_LAST_PULLED_KEY, Date.now());
-      return true;
-    }
-
+    // The whole list every time: see dropUnassigned.
+    const remote = await coachProgramApi.pullAssigned(0);
     const repo = getCoachProgramRepo();
+    await dropUnassigned(await repo.listAssignedPrograms(), remote.filter((e) => !e.deletedAtMs && e.dataJson).map((e) => e.programId), (id) => repo.removeFromRemote(id), "pullAndMergeCoachPrograms");
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
         await repo.removeFromRemote(entry.programId).catch((e) => syncWarn("pullAndMergeCoachPrograms", e));
@@ -521,13 +527,9 @@ export function pushProgramStart(programId: string, startedAtMs: number): void {
 export async function pullAndMergeCoachNutritionPlan(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
-    const since = getTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY);
-    const remote = await coachNutritionPlanApi.pullAssigned(since);
-    if (remote.length === 0) {
-      setTimestamp(COACH_NUTRITION_PLANS_LAST_PULLED_KEY, Date.now());
-      return true;
-    }
+    const remote = await coachNutritionPlanApi.pullAssigned(0);
     const repo = getCoachNutritionPlanRepo();
+    await dropUnassigned(await repo.listAssignedPlans(), remote.filter((e) => !e.deletedAtMs && e.dataJson).map((e) => e.planId), (id) => repo.removeFromRemote(id), "pullAndMergeCoachNutritionPlan");
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
         await repo.removeFromRemote(entry.planId).catch((e) => syncWarn("pullAndMergeCoachNutritionPlan", e));
@@ -590,9 +592,9 @@ export async function pushAllAuthoredPrograms(): Promise<void> {
 export async function pullAndMergeCheckinSchedules(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
-    const since = getTimestamp(CHECKIN_SCHEDULES_LAST_PULLED_KEY);
-    const remote = await checkinApi.pullAssigned(since);
+    const remote = await checkinApi.pullAssigned(0);
     const repo = getCheckinRepo();
+    await dropUnassigned(await repo.listAssignedSchedules(), remote.filter((e) => !e.deletedAtMs && e.dataJson).map((e) => e.scheduleId), (id) => repo.removeScheduleFromRemote(id), "pullAndMergeCheckinSchedules");
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
         await repo.removeScheduleFromRemote(entry.scheduleId).catch((e) => syncWarn("pullAndMergeCheckinSchedules", e));
@@ -1107,13 +1109,9 @@ export async function pullAndMergeHabits(): Promise<boolean> {
 export async function pullAndMergeAssignedHabits(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
-    const since = getTimestamp(COACH_HABITS_LAST_PULLED_KEY);
-    const remote = await coachHabitApi.pullAssigned(since);
-    if (remote.length === 0) {
-      setTimestamp(COACH_HABITS_LAST_PULLED_KEY, Date.now());
-      return true;
-    }
+    const remote = await coachHabitApi.pullAssigned(0);
     const repo = getAssignedHabitRepo();
+    await dropUnassigned(await repo.listAssignedHabits(), remote.filter((e) => !e.deletedAtMs && e.dataJson).map((e) => e.habitId), (id) => repo.removeFromRemote(id), "pullAndMergeAssignedHabits");
     for (const entry of remote) {
       if (entry.deletedAtMs || !entry.dataJson) {
         await repo.removeFromRemote(entry.habitId).catch((e) => syncWarn("pullAndMergeAssignedHabits", e));

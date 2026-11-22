@@ -16,7 +16,10 @@ import {
   Apple,
   CircleCheckBig,
   Lightbulb,
+  Users,
 } from "lucide-svelte";
+import { authStore } from "$lib/api/authStore.svelte";
+import { apiClient } from "@logit/core/api/client";
 export type NavItemId =
   | "home"
   | "sessions"
@@ -30,7 +33,8 @@ export type NavItemId =
   | "habits"
   | "settings"
   | "plugins"
-  | "insights";
+  | "insights"
+  | "clients";
 
 export type NavItemDef = {
   id: NavItemId;
@@ -39,6 +43,8 @@ export type NavItemDef = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any;
   authRequired: boolean;
+  /** Only for coaches (Studio, or a self-hosted server where everything is included). */
+  coachOnly?: boolean;
   guideMark?: string;
 };
 
@@ -56,6 +62,7 @@ export const NAV_ITEM_DEFS: NavItemDef[] = [
   { id: "settings",  href: "/settings",   label: "Settings",  icon: Settings,          authRequired: false                        },
   { id: "plugins",   href: "/plugins",    label: "Plugins",   icon: Sparkles,          authRequired: false                        },
   { id: "insights",  href: "/insights",   label: "Insights",  icon: Lightbulb,         authRequired: false                        },
+  { id: "clients",   href: "/clients",    label: "Clients",   icon: Users,             authRequired: true, coachOnly: true        },
 ];
 
 /** Number of customisable slots in the bottom bar (excludes the fixed FAB and More button). */
@@ -75,7 +82,7 @@ const ALL_IDS = NAV_ITEM_DEFS.map((d) => d.id);
 function defaultConfig(): NavConfig {
   return {
     bar: ["home", "social", "profile"],
-    more: ["messages", "sessions", "splits", "progress", "exercises", "nutrition", "habits", "settings", "plugins"],
+    more: ["clients", "messages", "sessions", "splits", "progress", "exercises", "nutrition", "habits", "settings", "plugins"],
   };
 }
 
@@ -229,4 +236,9 @@ export function getNavConfigJson(): string {
 function scheduleProfilePush() {
   if (!browser) return;
   void import("$lib/sync/syncService").then(({ pushNavConfig }) => pushNavConfig());
+}
+
+/** Whether coach-only menu items (Clients) show: Studio, or a self-hosted server. */
+export function canCoach(): boolean {
+  return authStore.user?.tier === "Studio" || (authStore.isAuthenticated && apiClient.isSelfHosted());
 }

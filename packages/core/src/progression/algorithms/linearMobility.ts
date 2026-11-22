@@ -312,7 +312,7 @@ export const linearMobility: MobilityProgressionAlgorithm = {
   name: "Progress",
   description:
     "Holds get longer and reps go up until an area has about 10 minutes a week, where flexibility gains top out. Then each drill moves on: load, a harder version of the same stretch, or a harder stretch.",
-  author: "Logit",
+  author: "LogIt",
   defaultState: DEFAULT_STATE,
   defaultPreferences: DEFAULT_PREFERENCES,
   preferencesSchema: PREFERENCES_SCHEMA,

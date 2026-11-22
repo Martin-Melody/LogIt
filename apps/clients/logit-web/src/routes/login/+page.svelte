@@ -265,7 +265,7 @@
       <!-- This dashboard only talks to its own server: a self-hosted server comes with its own
            dashboard, always on the server's version and on the server's network. -->
       {#if registration && !registration.selfHosted}
-        <p class="text-xs text-muted-foreground">Running your own Logit server? Sign in on the dashboard that came with it.</p>
+        <p class="text-xs text-muted-foreground">Running your own LogIt server? Sign in on the dashboard that came with it.</p>
       {/if}
     </div>
   </section>

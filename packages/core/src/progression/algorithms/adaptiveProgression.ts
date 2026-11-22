@@ -396,7 +396,7 @@ export const adaptiveProgression: ProgressionAlgorithm = {
   name: "LogIt Adaptive",
   description:
     "Plans every set from your current strength, so the weight fits your rep range whatever you did last time. Big lifts aim for 5–8 reps and single-muscle lifts 8–12, close to failure. Allows for your reps dropping set to set and, once it knows you, for muscles already worked that session.",
-  author: "logit",
+  author: "LogIt",
   defaultState: {},
   defaultPreferences: DEFAULT_PREFERENCES,
   preferencesSchema: PREFERENCES_SCHEMA,

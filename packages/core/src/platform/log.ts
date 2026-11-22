@@ -293,7 +293,7 @@ export function formatLogEntry(e: LogEntry): string {
 /** The whole log as text, with a header of key: value lines (device, app version, …). Times
  * are UTC. */
 export function formatLog(header: Record<string, string | number | boolean | null | undefined>, list = getLogEntries()): string {
-  const lines = ["Logit diagnostics", `Created: ${iso(Date.now())} UTC`];
+  const lines = ["LogIt diagnostics", `Created: ${iso(Date.now())} UTC`];
   for (const [k, v] of Object.entries(header)) {
     if (v !== undefined && v !== null && v !== "") lines.push(`${k}: ${cleanString(String(v))}`);
   }

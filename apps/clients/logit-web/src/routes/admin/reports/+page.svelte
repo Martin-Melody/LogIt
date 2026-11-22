@@ -139,7 +139,7 @@
             {#if author}<a href="/admin/people?id={author.id}" class="{btn} ml-auto bg-muted hover:bg-accent">Open @{author.username}'s page</a>{/if}
           </div>
           <div class="flex flex-col gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
-            <p><strong class="font-medium text-foreground">Delete</strong> removes it for everyone and closes {sameTarget > 1 ? "every open report on it" : "the report"}. Logit doesn't tell @{preview?.author ?? "the author"}.</p>
+            <p><strong class="font-medium text-foreground">Delete</strong> removes it for everyone and closes {sameTarget > 1 ? "every open report on it" : "the report"}. LogIt doesn't tell @{preview?.author ?? "the author"}.</p>
             <p><strong class="font-medium text-foreground">Dismiss</strong> keeps it and closes {sameTarget > 1 ? "every open report on it" : "the report"}. @{r.reporter.username} can still block @{preview?.author ?? "the author"} themselves.</p>
           </div>
         {:else}

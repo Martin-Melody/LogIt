@@ -113,7 +113,7 @@ describe("log", () => {
   it("formats a readable text export", () => {
     log.warn("api", "POST /sync/sessions 500", { requestId: "abc123", ms: 42 });
     const text = formatLog({ App: "1.2.3", Platform: "android", Empty: "" });
-    expect(text).toContain("Logit diagnostics");
+    expect(text).toContain("LogIt diagnostics");
     expect(text).toContain("App: 1.2.3");
     expect(text).not.toContain("Empty:");
     expect(text).toMatch(/WARN {2}api {6}POST \/sync\/sessions 500 \{"requestId":"abc123","ms":42\}/);

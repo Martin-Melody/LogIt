@@ -1,5 +1,5 @@
 <!-- getlogit.app only: a person's plan, where they bought it, its history, and a plan given by
-     hand. Logit never handles money here: refunds and cancellations happen in the store. -->
+     hand. LogIt never handles money here: refunds and cancellations happen in the store. -->
 <script lang="ts">
   import { toast } from "$lib/components/ui/sonner";
   import { shortDate, when } from "$lib/features/coaching/format";
@@ -51,7 +51,7 @@
       {/each}
     </div>
     {#if current.source === "Google"}
-      <p class="text-[13px] text-muted-foreground">To refund or cancel it, use Google Play Console › Order management and search for {person.email}. Logit picks up the change within a few minutes.</p>
+      <p class="text-[13px] text-muted-foreground">To refund or cancel it, use Google Play Console › Order management and search for {person.email}. LogIt picks up the change within a few minutes.</p>
     {/if}
   {:else}
     <p class="text-[13px] text-muted-foreground">Not paying for a plan.</p>

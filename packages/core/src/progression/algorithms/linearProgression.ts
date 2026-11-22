@@ -850,7 +850,7 @@ export const linearProgression: ProgressionAlgorithm = {
   name: "Linear Progression",
   description:
     "The simple option. Each set aims for one more rep than last time, and the weight goes up 2.5 kg once every set hits the top of your rep range. Two sessions under the range in a row means 10% off.",
-  author: "logit",
+  author: "LogIt",
   defaultState: DEFAULT_STATE,
   defaultPreferences: DEFAULT_PREFERENCES,
   preferencesSchema: PREFERENCES_SCHEMA,

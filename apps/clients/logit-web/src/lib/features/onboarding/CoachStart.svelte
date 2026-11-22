@@ -88,10 +88,12 @@
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div class="flex max-w-[70ch] flex-col gap-1.5">
         <h2 id="coach-start-title" class="text-[22px] font-bold tracking-tight">Your coaching space is ready</h2>
-        <p class="text-sm leading-relaxed text-muted-foreground">
-          Sample clients are already in, so you can see how it works: what an overdue check-in or a new PR looks like.
-          They're marked Sample and go with one click.
-        </p>
+        {#if overview.clients.some((c) => c.isSample)}
+          <p class="text-sm leading-relaxed text-muted-foreground">
+            Sample clients are already in, so you can see how it works: what an overdue check-in or a new PR looks like.
+            They're marked Sample and go with one click.
+          </p>
+        {/if}
       </div>
       <button type="button" class="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onclick={hide}>Hide this</button>
     </div>

@@ -12,6 +12,7 @@
     type ClientRelationship,
     type CoachRelationship,
     type MyCoachingRequest,
+    type CoachingRequest,
     type ReceivedInvite,
     type SentInvite,
     type Sharing,
@@ -32,6 +33,8 @@
   let received = $state<ReceivedInvite[]>([]);
   let coaches = $state<CoachRelationship[]>([]);
   let requests = $state<MyCoachingRequest[]>([]);
+  // People who used the coach's link or code and wait for an answer.
+  let clientRequests = $state<CoachingRequest[]>([]);
   // Accepting an invite first asks what the coach may see.
   let accepting = $state<string | null>(null);
   let acceptSharing = $state<Sharing>({ ...SHARE_ALL });
@@ -45,13 +48,15 @@
     ui.loading = true;
     ui.error = null;
     try {
-      const [r, c, s, mine, reqs] = await Promise.all([
+      const [r, c, s, mine, reqs, asks] = await Promise.all([
         coachApi.listReceivedInvites(),
         isStudio ? coachApi.listClients() : Promise.resolve([]),
         isStudio ? coachApi.listSentInvites() : Promise.resolve([]),
         coachApi.listCoaches().catch(() => []),
         coachApi.listMyRequests().catch(() => []),
+        isStudio ? coachApi.listRequests().catch(() => []) : Promise.resolve([]),
       ]);
+      clientRequests = asks;
       received = r;
       coaches = mine;
       requests = reqs;
@@ -77,7 +82,7 @@
       const url = `${import.meta.env.VITE_WEB_URL || "https://app.getlogit.app"}/c/${link.code}`;
       try {
         const { Share } = await import("@capacitor/share");
-        await Share.share({ title: "Train with me on Logit", text: "Here's my coaching link on Logit:", url });
+        await Share.share({ title: "Train with me on LogIt", text: "Here's my coaching link on LogIt:", url });
       } catch {
         await navigator.clipboard?.writeText(url);
         shareError = "Link copied. Paste it to your client.";
@@ -251,6 +256,8 @@
       </div>
     {/if}
 
+    <!-- A client (coached, asking, or invited) isn't shown the Studio offer for coaching others. -->
+    {#if isStudio || (coaches.length === 0 && requests.length === 0 && received.length === 0)}
     <div class="border-b border-border">
       <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">My clients</p>
       {#if !isStudio}
@@ -262,11 +269,26 @@
           />
         </div>
       {:else}
-        {#if clients.length === 0}
+        {#if clientRequests.length > 0}
+          <ul class="divide-y divide-border border-b border-border">
+            {#each clientRequests as q (q.relationshipId)}
+              <li class="flex items-center justify-between gap-2 px-3 py-2.5 text-sm">
+                <span class="min-w-0"><span class="font-medium">{q.client.displayName || q.client.username}</span><span class="block text-xs text-muted-foreground">Wants you as their coach{q.linkName ? ` · ${q.linkName}` : ""}</span></span>
+                <span class="flex shrink-0 gap-2">
+                  <Button size="sm" variant="outline" disabled={ui.busyId === q.relationshipId}
+                    onclick={() => act(q.relationshipId, () => coachApi.declineRequest(q.relationshipId))}>Decline</Button>
+                  <Button size="sm" disabled={ui.busyId === q.relationshipId}
+                    onclick={() => act(q.relationshipId, () => coachApi.acceptRequest(q.relationshipId))}>Accept</Button>
+                </span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        {#if clients.length === 0 && clientRequests.length === 0}
           <!-- A coach's first day (design canvas C2): invite the first client. -->
           <div class="mx-3 mb-3 flex flex-col gap-2.5 rounded-[14px] bg-primary p-4 text-primary-foreground">
             <span class="text-base font-bold">Invite your first client</span>
-            <span class="text-sm opacity-80">They open your link, choose what you can see, and you're connected.</span>
+            <span class="text-sm opacity-80">They open your link and choose what you can see. You accept them here.</span>
             <button type="button" class="h-11 rounded-lg bg-primary-foreground text-sm font-semibold text-primary disabled:opacity-60"
               disabled={sharingLink} onclick={() => void shareInviteLink()}>{sharingLink ? "Making your link…" : "Share link"}</button>
             {#if shareError}<span class="text-xs">{shareError}</span>{/if}
@@ -307,5 +329,6 @@
         {/if}
       {/if}
     </div>
+    {/if}
   {/if}
 </div>
