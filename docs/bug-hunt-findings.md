@@ -134,3 +134,18 @@ Ava (Pro), Ben, Cara (private) and Dev side by side on phones; hosted-mode API.
 | 5.16 | Replies, editing, reposts, quotes, report → admin delete, account deletion, Discover | Worked: right notifications, counts after reload, everything of a deleted account gone | — | ok |
 | 5.17 | The 2026-09-04 phone findings | Pull to refresh wired, badge now live (5.1/5.2), Sync now hidden where it can't work, the misleading dot gone, Coaching label clear | — | ok |
 | 5.18 | "People you might know" | Someone who follows you showed a plain "Follow" there too | "Follow back" (requested accounts are left out of suggestions, as they should be) | fixed (3d4716f) |
+
+## Round 6 — P11 coach payments with Stripe (test mode), T7 package change (2026-11-22, 9c26b01)
+
+Stripe sandbox ("LogIt sandbox"), the Stripe CLI forwarding Connect events to a local hosted API,
+coach Dana (web dashboard) and client Sam (web pay page + phone). Stripe's own onboarding asks for
+an hCaptcha, which isn't solved by automation: Dana was linked to a sandbox account that finished
+onboarding on 2026-11-16.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 6.1 | Stripe sends invoice.paid and checkout.session.completed within a second, and the client's return to the link page confirms the same checkout | Two of the three requests failed on a unique key (the relationship, the receipt) and answered 500; Stripe retried, so it came right, but it's a crash on the money path | The paying and invoice-paid handlers run once more after a duplicate-key clash and take the "already done" path | fixed (9c26b01) |
+| 6.2 | Coach's Today page | "Needs you: Nothing waiting" while Payments says "Sam's payment didn't go through… Needs you" | — | open |
+| 6.3 | Client after a failed card | Only My coach says so (and the email); Home and notifications say nothing | — | needs a decision |
+| 6.4 | Subscription cancelled before its paid-up date (coach cancels in Stripe) | Coaching pauses 7 days from now although the client paid to 22 Dec | — (should it count from the paid-up date? depends on refunds) | needs a decision |
+| 6.5 | Package, invite link with a price, pay page, Stripe Checkout (4242), webhooks, receipts, declined card (both sides told, rule date shown), the fix link → Stripe's card page, paying again, "Stop paying at the end of the month" (Stripe agrees), the plan ending, switching to paid elsewhere | Worked | — | ok |
