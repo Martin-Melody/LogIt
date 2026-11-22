@@ -160,3 +160,17 @@ between steps.
 | 7.1 | A set corrected on phone B (4 → 6 reps) | Never reached phone A or the web, and was then overwritten on the server: "Sync now" on A re-sends every session and the server kept the latest push, and a pull skipped any session the phone already had. Edits to past workouts were lost between devices | Sessions carry when they last changed (finishing, editing, merging stamp it); the server keeps the newer copy (a push with no time, from an older app, still wins); a pull takes a newer copy of a session it already has | fixed (fc13828) |
 | 7.2 | Session name | Both phones call it "Push" (from the muscles), the web "Bench Press" (from the exercises) | — | open |
 | 7.3 | New workout, habit created and ticked on the other phone, kg → lb, deleting a workout | Reached the other phone and the web | — | ok |
+
+## Round 8 — P7 life happens (2026-11-22, e23faf8)
+
+"Lee" onboards on Monday 2 Nov (fake clock, Dublin), trains Mon and Wed, then: a 3-week break, new
+training days, a late workout in Dublin opened in Tokyo, an account, a new phone, deleting the
+account with a second phone still signed in.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 8.1 | Delete account: the password box | Placeholder only, no label: a screen reader announces an unnamed field | Labelled | fixed (e23faf8) |
+| 8.2 | Second phone still signed in to a deleted account | Says "Backed up · synced just now" after a sync that can't have worked, until a restart; then "Not signed in", local copy kept | — (same gap as 5.15: the app doesn't notice a session ending while open) | open |
+| 8.3 | Week strip chips | "Fu A", "Fu B", "Fu C" for Full Body A/B/C | — | needs a decision |
+| 8.4 | Move to another server | Only in the Android app; not testable in a browser | — test in the emulator round | open |
+| 8.5 | 3 weeks off; new days (Mon/Wed/Fri → Tue/Thu/Sat); a 23:30 Dublin workout opened in Tokyo; making an account keeps offline training; a new phone gets plan, workouts and progression back; deleting the account removes it and its data from the server and that phone | Worked: no guilt after the break, the estimate 5% lower after 3+ weeks so the plan holds rather than rises, the week strip follows the new days, the Tokyo week counts the workout once ("today, done"), the app shows the server's username rule | — | ok |
