@@ -18,10 +18,12 @@
   import { listImports, matchFileExercises, runImport, undoImport, UNDO_DAYS, type ExerciseChoice, type ImportRecord } from "$lib/features/import/imports";
   import { readWorkoutCsv, summariseImport, type ParsedImport, type WeightUnit } from "@logit/core/import/workoutImport";
   import type { ExerciseMatch } from "@logit/core/import/matchExercises";
+  import { availableCategories, importData, parseExportFile } from "$lib/usecases/importData";
 
   let {
     onexit,
     ondone,
+    onrestored,
     exitLabel = "Back",
     shared = null,
   }: {
@@ -29,6 +31,8 @@
     onexit: () => void;
     /** After an import that added workouts; without it, this shows its own "imported" screen. */
     ondone?: (record: ImportRecord) => void;
+    /** After a LogIt backup file was restored (everything in it), just before the app reloads. */
+    onrestored?: () => void;
     exitLabel?: string;
     /** Changes for each file shared to LogIt (Share › LogIt): that file is opened. */
     shared?: string | null;
@@ -85,8 +89,8 @@
   async function choose() {
     try {
       await open(await pickText({
-        mimeTypes: ["text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/vnd.ms-excel"],
-        accept: ".csv,text/csv,text/plain",
+        mimeTypes: ["text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/vnd.ms-excel", "application/json"],
+        accept: ".csv,text/csv,text/plain,.json,application/json",
       }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Couldn't read that file.";
@@ -98,6 +102,16 @@
     error = null;
     busy = true;
     try {
+      // A LogIt backup (Settings › Download backup file) restores everything, here too: someone
+      // moving phones without an account picks "Import my history" first.
+      if (/^\s*\{/.test(file.text)) {
+        const data = parseExportFile(file.text);
+        await importData(data, availableCategories(data));
+        onrestored?.();
+        // Every store read the old data at start: start the app again on the restored data.
+        window.location.replace("/");
+        return;
+      }
       const p = readWorkoutCsv(file.text);
       if (p.workouts.length === 0) throw new Error("No workouts found in this file.");
       matches = await matchFileExercises(p);
@@ -189,7 +203,7 @@
           <Download class="h-4 w-4" /> Get the template
         </button>
       </div>
-      <p class="text-[13px] text-muted-foreground">Strong and Hevy are next: their export files go straight in.</p>
+      <p class="text-[13px] text-muted-foreground">Export files from Strong and Hevy go straight in, and so does a LogIt backup file.</p>
       {#if error}<p class="text-sm text-destructive" role="alert">{error}</p>{/if}
       {#if imports.length}
         <div class="flex flex-col gap-1">

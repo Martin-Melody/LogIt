@@ -510,7 +510,7 @@ export const PHONE_CHAPTERS: Chapter[] = [
   {
     id: "app.session", walkthrough: "app", title: "Workout", blurb: "Logging sets and finishing", minutes: 1, feature: "workouts",
     steps: [
-      ph("card", "/session/current", "session-exercise-header", "Exercise card", "Tap the name for progress, how-to and settings, and the machine under it to pick or add one. Tap a set's number for its options. ⋯ swaps, supersets or removes the exercise."),
+      ph("card", "/session/current", "session-exercise-header", "Exercise card", "Tap the name for progress, how-to and settings, and the machine under it to pick or add one. Swipe a set left to edit or delete it, and hold its number to move it. ⋯ swaps, supersets or removes the exercise."),
       ph("complete", "/session/current", "session-set-complete", "Complete a set", "Tap this circle after finishing a set. It marks the set done and starts your rest timer."),
       ph("add", "/session/current", "session-add-exercise", "Add an exercise", "Tap + to search your library or add a brand-new exercise."),
       ph("finish", "/session/current", "session-finish", "Finish", "Tap Finish when you're done. Your session is saved and your next targets are worked out. To throw a workout away, use the ⋯ menu next to it."),

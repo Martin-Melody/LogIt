@@ -545,7 +545,7 @@
   {:else if step === 8}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
       <!-- A CSV shared to LogIt before onboarding was done is opened here ("onboarding"). -->
-      <ImportFlow onexit={() => go(5)} ondone={() => void afterImport()} shared="onboarding" />
+      <ImportFlow onexit={() => go(5)} ondone={() => void afterImport()} onrestored={() => { resetTours(); onboarding.complete(); }} shared="onboarding" />
     </div>
 
   {:else if step === 9}
