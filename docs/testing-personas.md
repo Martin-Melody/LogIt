@@ -37,18 +37,18 @@ P0 adds the decision before any of this: someone deciding whether to keep the ap
 | P0 | App-store shopper | none · Android, fresh install | beginner comparing a few free apps; judges in the first 5–10 minutes: is it clear what to do, a workout fast, never too much at once, no paywall surprise; most likely to uninstall | day 1–2 done (round 3): back-off sets, set counts, first-week count, warm-up tap fixed; wording/tours to mock up |
 | P1 | Newcomer losing fat | none → Free · Android | just starting, home dumbbells, 4 weeks, nutrition prompt after workout 2, habits after week 1, makes an account | 28 days done (round 2) |
 | P2 | Steady lifter | Free → Pro trial · web app + phone | under 2 yrs, best lifts in **lb**, Free account (what does it keep?), trial, sync two devices | best lifts done (round 1) |
-| P3 | Experienced lifter | Pro · Android | 2+ yrs, Strong import, 5/3/1, rotation split, places/machines, warm-ups, supersets, RPE, PRs, insights, weekly sets | Strong import done (round 2) |
+| P3 | Experienced lifter | Pro · Android | 2+ yrs, Strong import, 5/3/1, rotation split, places/machines, warm-ups, supersets, RPE, PRs, insights, weekly sets | Strong import done (round 2); best lifts, warm-ups, superset, rotation (round 14) |
 | P4 | Competitor | Pro · Android + dashboard | competes, Hevy import, built-my-own algorithm, DOTS, total goal, plan edited on the computer | Hevy import done (round 2) |
 | P5 | Just tracks | none · Android, offline | no plan, suggestions off, unplanned workouts, custom exercises, edit history, export / backup / restore | started (round 2) |
-| P6 | Uses everything | Pro · two phones + dashboard | nutrition (search, custom, recipes, plan, weight), habits, goals, social, plugins (install + build), music, mobility, cardio, circuits, home/nav customising, sounds | |
+| P6 | Uses everything | Pro · two phones + dashboard | nutrition (search, custom, recipes, plan, weight), habits, goals, social, plugins (install + build), music, mobility, cardio, circuits, home/nav customising, sounds | round 13 (self-hosted, one phone + dashboard) |
 | P7 | Life happens | Pro → paused · Android | a 3-week break, changes days, switches to a built-in program, travels across time zones, new phone, moves to a self-hosted server, deletes the account | |
 | P8 | Coach who trains | Studio · phone + dashboard | "I coach people", sample clients, library, programs, check-in templates, habits, nutrition plans, links (free / paid elsewhere / Stripe), payments setup, roster, messages, own training | |
 | P9 | Coach who stops | Studio → Pro · dashboard | doesn't train; downgrades with clients attached (read-only), comes back | |
 | P10 | Client, free invite | Free (coached) · phone + web | "I have a coach", code and link, program on the phone, check-ins, messages, nutrition plan, assigned habits, leaves the coach (what stays?) | |
 | P11 | Client, paid package | Free (coached) · phone + pay page | paid elsewhere; Stripe paid → failed → coach's rule → /pay/fix → stops paying; switches coach; client who had their own split first | |
 | P12 | Social regular | Pro · phone + web | follows, posts, comments, replies, discover, privacy settings, followers lists, reports a post | plan: `docs/testing-social.md` (cast, every notification, S1–S9) |
-| P13 | Shared phone / self-hoster | several accounts · own server | two people on one phone, offline profile + account, own server with everything on | covered by account journeys; light pass |
-| P14 | Operator | admin · dashboard | admin console: people, subscriptions, invites, reports, plugins review, diagnostics | |
+| P13 | Shared phone / self-hoster | several accounts · own server | two people on one phone, offline profile + account, own server with everything on | round 11 (self-hosted setup and invite) and round 17 (two accounts on one phone, move server) |
+| P14 | Operator | admin · dashboard | admin console: people, subscriptions, invites, reports, plugins review, diagnostics | round 11 |
 
 Later, not catered for yet: **P15 group-class PT**, one coach running about 10 clients through the same
 workout for an hour, in person at their studio. Needs something like a class mode (one live workout,
@@ -63,9 +63,9 @@ ones that happen):
 |---|---|---|
 | T1 | P0 shopper → P1 sticks with it | first-week promises vs what the app does in week 2 (round 10: done) |
 | T2 | P1 beginner → experienced after months | does the plan grow with them (rep ranges, style, deloads) (round 10: simulated, 26 weeks) |
-| T3 | P5 tracker → wants guidance | turning suggestions on with months of unplanned history |
+| T3 | P5 tracker → wants guidance | turning suggestions on with months of unplanned history (round 9: done) |
 | T4 | solo lifter → client → leaves the coach | whose plan wins, what stays on the phone and the server (round 10: done) |
-| T5 | Free → Pro → Free | what syncs, what's kept, honest prompts |
+| T5 | Free → Pro → Free | what syncs, what's kept, honest prompts (round 12: done) |
 | T6 | lifter → starts coaching (Studio) | own training and clients side by side (round 10: done) |
 | T7 | coach changes a client's package | free ↔ paid elsewhere ↔ Stripe, mid-cycle |
 

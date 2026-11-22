@@ -217,3 +217,110 @@ T6: "Ray" (Pro) trains, gets Studio, coaches Lou, on the phone and the web dashb
 
 Not checked this round: how the app performs with months of real history on screen (Progress,
 Insights) — T2 was simulated in the progression engine only.
+
+From round 11 on (Martin, 2026-11-22): test first, fix later. Findings are logged with a size —
+**easy** (small, clear fix), **bigger** (real work), **decision** (needs Martin) — and fixed after
+all rounds, once the decisions are made.
+
+## Round 11 — P14 operator, P13 self-hoster (2026-11-22)
+
+Admin "r10admin" (a Free account) on the hosted API with a reported post, a crash and a sent log;
+then a fresh self-hosted, invite-only server: "Sam" sets it up from the dashboard with the admin
+key and invites "Kim", who joins from a fresh phone.
+
+| # | Found | What it did to the user | Size | Status |
+|---|---|---|---|---|
+| 11.1 | Admin with a Free account signs in to the dashboard | Lands on "Your training starts on your phone / What Pro adds"; nothing links to the admin console (only typing /admin) | easy | open |
+| 11.2 | Dashboard sign-up opened while the server is still starting (right after `docker compose up`) | The page asks the server once; when that fails it never asks again: no admin-key field on a fresh server, and after a try it says "invite-only, enter the invite code" — the admin key is refused there. A reload fixes it | easy | open |
+| 11.3 | Dashboard sign-up hint | "Letters, numbers, dots and underscores", but dots are refused ("3–30 letters, numbers or underscores", 5.6); the phone's hint is right | easy | open |
+| 11.4 | Admin's invite message | "Go to Settings › Account, tap 'Connect to a different server'": a fresh install can't reach Settings and no such button exists; the way is "I already have an account" › Server › My own server | easy | open |
+| 11.5 | Self-hosted wording | Dashboard sidebar says "Free · Account" for everyone on a self-hosted server; phone Settings "manage clients on a Studio plan" and "Scan the code on app.getlogit.app" (should be this server's dashboard) | easy | open |
+| 11.6 | Self-hosted dashboard login | "Compare plans" links to getlogit.app pricing, which don't apply there | easy | open |
+| 11.7 | Admin: people, temporary password (old one refused, new one works), sign-out, plan given by hand, reports, diagnostics, subscriptions, growth, server page, invites (made, sent, used, shown as used); self-hosted setup with the admin key, server picker ("Invite-only" shown), invite sign-up, "Own server · Everything included", sync and dashboard without Pro | Worked | — | ok |
+| 11.8 | Two people on one phone (Accounts on this phone) | Android only (the web build sends you to Settings) | — | to the emulator round |
+
+## Round 12 — T5 Free → Pro → Free (2026-11-22)
+
+"Fay" on two phones (browsers sending a phone id like the Android app) and the web dashboard;
+plans given and taken away by the admin.
+
+| # | Found | What it did to the user | Size | Status |
+|---|---|---|---|---|
+| 12.1 | Free, signs in on a second phone | The free backup moves to that phone. The first phone says so in Settings only ("Your free backup is on another phone…"); Home says nothing, and workouts logged there from then on are on that phone only | decision (where to tell them) | open |
+| 12.2 | The phone that lost the free backup | Sends all 18 sync requests on every sync and every one is refused (36 per "Sync now") | easy (stop after "backup on another phone" until sign-in or Pro) | open |
+| 12.3 | Second phone signs in on the day the plan was made (a Sunday) | "Full Body B and Full Body C won't fit this week. Next week starts fresh." about days before she joined (the plan's start date isn't on that phone) | easy (leave out pre-start workouts) | open |
+| 12.4 | Pro → Free with two phones | The phone that signed in last keeps the backup, not the one she trains on | decision | open |
+| 12.5 | Pro given: both phones sync, a workout on A reaches B and the web; Pro taken away: data kept on the server and both phones, web dashboard drops to the upgrade page honestly | Worked | — | ok |
+
+## Round 13 — P6 uses everything (2026-11-22)
+
+"Kim" on the self-hosted server (everything included): every feature screen walked for errors and
+accessibility, then nutrition (goal, search, log, weight), a habit, a lift goal, a plugin pack,
+an unplanned workout with a run and push-ups, all checked again on the web dashboard.
+
+| # | Found | What it did to the user | Size | Status |
+|---|---|---|---|---|
+| 13.1 | Run distance "3" (box says "km / m") | Saved as **3 m**; only "3.0" means km, and "5,2" becomes 5 m | easy | open (important) |
+| 13.2 | Run duration | The box opens the number keypad, which on Android has no ":"; a plain number counts as seconds, so "20" is 20 seconds and "2000" is 33:20 | easy (plain number = minutes, 4 digits = mm:ss) | open (important) |
+| 13.3 | Adding an exercise or a cardio block during a workout | It arrives collapsed ("Push-Up 0 of 3"; "Running" with nothing to fill in): one more tap before anything can be logged, and a cardio block also needs "+ Add first interval" | easy | open |
+| 13.4 | Bodyweight exercise, first time | "First time? Pick a weight you could lift about 8 times" for push-ups | easy | open |
+| 13.5 | Home › Recent sessions | "Top: Push-Up 15×0" (bodyweight shown as 0; same family as 9.7) | easy | open |
+| 13.6 | Nutrition with height saved but no birth date | "Add height & birth date" | easy | open |
+| 13.7 | Fields with no label for screen readers | Nutrition goal (trend window, max adjustment), Settings (rest timer seconds ×3), New goal (exercise), Browse plugins (search), Clients (username), run Duration/Distance (placeholder only) | easy | open |
+| 13.8 | Profile | An icon button (chevron) with no name; "Sign out" 28 px tall | easy | open |
+| 13.9 | Browse plugins | "turn them on" and "import page" are 16 px text inside a sentence, not buttons (against "actions are buttons") | easy | open |
+| 13.10 | Chips and segment buttons on most screens (Insights ranges, Exercises tabs, Settings units/theme, Social tabs, nutrition goal, Home "Edit split" 28 px) | 28–37 px tall, under the 44 px touch size | decision (design system) | open |
+| 13.11 | Sample plugins | "by Logit Samples" (should be LogIt) | easy | open |
+| 13.13 | Mobility drill, first time | "Last → next: 20s L · 20s R" when there is no last time; its two "±kg" boxes have no labels; the drill also arrives collapsed (13.3) | easy | open |
+| 13.12 | Every feature screen (31) loads with no errors; nutrition goal → 2,070 kcal, food search (through the server, nothing sent elsewhere from the phone), 50 g oats logged, weight, habit, lift goal with projection, plugin pack install asks first; food, weight, habit and goal all on the web dashboard | Worked | — | ok |
+
+Supersets: round 14. Not covered: music bar (Android, needs a music app), sounds.
+
+## Round 14 — P3 experienced lifter (2026-11-22)
+
+"Pat", 2+ years, self-hosted server: best lifts, Train your way, warm-up ramp, a superset, a
+rotation split.
+
+| # | Found | What it did to the user | Size | Status |
+|---|---|---|---|---|
+| 14.1 | Warm-up ramp added | Working sets are numbered 5, 6, 7 after four warm-ups (W W W W 5 6 7), while the plan above says sets 1–3 | easy | open |
+| 14.2 | Superset of Bench (with warm-ups) and Barbell Row | Warm-ups count as superset rounds: round 1 pairs the 20 kg × 10 warm-up with the row's first working set; "Round 1 of 7", "0 of 10" | bigger | open |
+| 14.3 | Day one from best lifts (bench 100 × 5) | Plans 100 × 5, 100 × 4, 100 × 3: the best recent 5-rep set as set one, every set to failure in the first workout | decision | open |
+| 14.4 | Home for a rotation split | "Day 1 — Upper A · Scheduled" (nothing is scheduled in a rotation) | easy | open |
+| 14.5 | Home Progression card after best lifts | "Finish a session and pick an algorithm in Settings" (same as 4.11) | decision (with 4.11) | open |
+| 14.6 | Best lifts (live max estimate), Train your way (Adaptive / 5/3/1 / Linear / Build my own), warm-up ramp weights (20 × 10, 40 × 5, 60 × 3, 80 × 2 before 100), superset/circuit sheet, switching a split to "In order" | Worked | — | ok |
+
+## Round 15 — conditions: dark mode, large text, server unreachable (2026-11-22)
+
+| # | Found | What it did to the user | Size | Status |
+|---|---|---|---|---|
+| 15.1 | Server unreachable, a weight just logged | Settings says "Backed up · synced just now" and there's no Sync now; the change reached the server only once it was back (it did) — same gap as 5.15/8.2: the status shows the last good sync, not that changes are waiting | easy (say "1 change waiting" / "Can't reach the server") | open |
+| 15.2 | Dark mode (Home, Nutrition, Sessions, Settings), text at 130 % (Home, Nutrition), food search with the server unreachable (results still come), weight logged offline reaching the server later | Worked: readable, nothing cut off or overflowing | — | ok |
+
+## Round 16 — T2 in the app: two years of history (2026-11-22)
+
+A phone with no account restores a generated backup of 312 workouts (2 years, 5 exercises × 4
+sets) from onboarding's Import my history, offline. Timed on a desktop browser (a phone is slower).
+
+| # | Found | What it did to the user | Size | Status |
+|---|---|---|---|---|
+| 16.1 | Web app storage | Everything lives in localStorage: 312 workouts take 1 MB of the ~5 MB browsers allow, so a web-only lifter fills it after roughly 1,500 workouts (fewer with notes or more sets) and saving would start failing. The Android app uses SQLite and isn't affected | bigger (IndexedDB for the web) / decision (is the web app a real place to train?) | open |
+| 16.2 | Progress screen with 2 years | Longest main-thread block 0.3 s on a desktop CPU (could be ~1 s on a mid phone); other screens 0.05–0.23 s | — (watch on the emulator) | open |
+| 16.3 | Restore (≈6 s), Home, Sessions ("104-week streak"), Progress, Insights ("1 moving, 6 stuck"), weekly sets, an exercise ("Plateaued: no new best in 55 sessions"), Profile: each 1.2–2.2 s to content | Worked | — | ok |
+
+## Round 17 — Android emulator (2026-11-22)
+
+A test build (crash reports on) on the lab emulator (Android 16), against a local hosted server and
+a local self-hosted one; driven over the WebView's DevTools connection and real screen taps.
+
+| # | Found | What it did to the user | Size | Status |
+|---|---|---|---|---|
+| 17.1 | Rest alerts with the app in the background | No "Rest complete" notification after 100 s: notification permission was never asked (Lou signed in instead of going through the reminders step), and the app only asks when it schedules the alert, which happens as it goes to the background, where Android can't show the question. Anyone who didn't allow notifications earlier never gets rest alerts | easy (ask at the first rest, in the foreground, like the exact-alarm question) | open (important) |
+| 17.2 | Accounts on this phone | Every account shows "No name yet @lou_r10", though the server has her name (Lou) | easy | open |
+| 17.3 | After moving to her own server | "Your Pro plan is still running… Cancel it in Google Play" for a Pro plan the admin gave her (nothing to cancel there) | easy | open |
+| 17.4 | Lou's first sign-in on the phone | Home showed only Quick start and Goals (no plan, no workouts, no "Getting your training…" note) until the app was reloaded; Fay's sign-in later showed the loading note and filled in by itself. Seen once | — (watch) | open |
+| 17.5 | Share a Strong CSV into LogIt | "LogIt couldn't read that file", but the test shared it from the shell, which can't grant file access the way a Files app does | — (check on a real phone) | not tested |
+| 17.6 | Signing in pulls plan and workouts into the phone's database; a second account added and switched to (no password, data kept apart); Move to another server (checks the address, sees "Invite only", asks for the code, copies 4 workouts, the split, nutrition, habits, settings; the server has them); crash reports from a test build arrive anonymously within a second with the log before them, and stay off on a self-hosted server | Worked | — | ok |
+
+Not testable here: Play Billing purchases (no Play on the emulator image), push notifications (not
+built), the music bar (needs a music app), sounds.
