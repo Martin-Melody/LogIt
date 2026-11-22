@@ -149,3 +149,14 @@ onboarding on 2026-11-16.
 | 6.3 | Client after a failed card | Only My coach says so (and the email); Home and notifications say nothing | — | needs a decision |
 | 6.4 | Subscription cancelled before its paid-up date (coach cancels in Stripe) | Coaching pauses 7 days from now although the client paid to 22 Dec | — (should it count from the paid-up date? depends on refunds) | needs a decision |
 | 6.5 | Package, invite link with a price, pay page, Stripe Checkout (4242), webhooks, receipts, declined card (both sides told, rule date shown), the fix link → Stripe's card page, paying again, "Stop paying at the end of the month" (Stripe agrees), the plan ending, switching to paid elsewhere | Worked | — | ok |
+
+## Round 7 — P2/P6 one account on two phones and the web (2026-11-22, fc13828)
+
+Pro account "Kai" signed in on phone A, phone B and the web dashboard; hosted-mode API; "Sync now"
+between steps.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 7.1 | A set corrected on phone B (4 → 6 reps) | Never reached phone A or the web, and was then overwritten on the server: "Sync now" on A re-sends every session and the server kept the latest push, and a pull skipped any session the phone already had. Edits to past workouts were lost between devices | Sessions carry when they last changed (finishing, editing, merging stamp it); the server keeps the newer copy (a push with no time, from an older app, still wins); a pull takes a newer copy of a session it already has | fixed (fc13828) |
+| 7.2 | Session name | Both phones call it "Push" (from the muscles), the web "Bench Press" (from the exercises) | — | open |
+| 7.3 | New workout, habit created and ticked on the other phone, kg → lb, deleting a workout | Reached the other phone and the web | — | ok |
