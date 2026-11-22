@@ -77,3 +77,35 @@ lifts, light dumbbells; no "reps left" answers (as a hurried beginner would).
 
 Good for P0: clear welcome with one main action, a workout in under a minute, a gentle "Save to a
 free account / Not now" after workout 1, and no paywall or price anywhere.
+
+## Round 4 — P8 coach, P9 coach who stops, P10 client with a free invite (2026-11-22, ef7a132)
+
+Coach "dana_coach" (phone: "I coach people", "I train too", Studio given by the admin console) and
+client "sam_client" (phone: "I have a coach", the coach's link code), side by side; hosted-mode API.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 4.1 | Coach on the phone never sees requests from her link or code | Client stuck on "Waiting for them to accept", coach's page still "Invite your first client"; nobody could finish connecting without the web dashboard | Phone Coaching page lists "Wants you as their coach" with Accept / Decline | fixed (ef7a132) |
+| 4.2 | No way to Clients from the app's menus | A Studio coach landed on the lifter's Home; Clients only under Settings › Coaching | "Clients" in More for coaches (Studio or self-hosted), first in the list | fixed (ef7a132) |
+| 4.3 | "See the Studio plan" during onboarding | Sent the coach back to "What do you want from training?" | The plans page is let through during onboarding | fixed (ef7a132) |
+| 4.4 | Client's Coaching page | Showed "Coach your own clients — Studio is bought in the LogIt Android app" to someone who just said they have a coach | Hidden for clients (coached, asking, or invited) | fixed (ef7a132) |
+| 4.5 | Invite card wording | "…and you're connected", but the coach has to accept | "They open your link and choose what you can see. You accept them here." | fixed (ef7a132) |
+| 4.6 | Share message, algorithm authors, diagnostics header | "Train with me on Logit", "logit" | LogIt | fixed (ef7a132) |
+| 4.7 | Coach intro | Studio is only mentioned after the account is made ("Coaching clients is the Studio plan") | — | needs a decision |
+| 4.8 | Sign-up screen for a coach | "Back up your training, train with friends, get coached." | — | needs a decision |
+| 4.9 | Free account in a browser | 18 refused sync requests on every sync (web backup is Pro); nothing on screen | — (Android sends the device id, so not on phones) | open |
+| 4.10 | Buying Studio | Only in the Android app through Play; after buying, nothing brings the coach back to coaching setup | — test on the emulator with Play test cards | open |
+| 4.11 | Home Progression card for a new user | "Finish a session and pick an algorithm in Settings to see targets here" though the default algorithm is set | — | needs a decision |
+| 4.12 | Coach's program with no load, client types set 1 and ticks the rest | Sets 2–3 saved as **0 kg** (10×12, 8×0, 8×0); volume and next plans built on it | A set ticked with no weight and none planned carries the set before it (added/assisted weight too) | fixed (ef7a132) |
+| 4.13 | Web dashboard "Me" for a Studio coach | "Welcome to Pro, dana_coach" | "Welcome to the dashboard" | fixed (ef7a132) |
+| 4.14 | Web dashboard text | "Open Logit", "Get Logit on your phone", … | LogIt | fixed (ef7a132) |
+| 4.15 | Coach's program on the client's Home | Even after Start program, Home says "No exercises planned"; Quick start only offers a blank workout; the program lives in More › Splits | — (Home doesn't know coach programs; design) | needs a decision |
+| 4.16 | Splits tour for a coached client | "Tap New to build a training split" next to the coach's program | — | needs a decision |
+| 4.17 | Bodyweight push-ups after 10/8/8 | Next plan "3 × 5 @ 2.5 kg" (big-lift range 5–8, so extra reps become added weight) | — (progression design: reps first, then a harder variation?) | needs a decision |
+| 4.18 | Program day with no name | "Day 1 — Day 1" | — | needs a decision |
+| 4.19 | Coach edits an assigned program | Reaches the client's phone only on its next sync (by design: "It reaches their phone on its next sync") | — | ok |
+| 4.20 | Client stops coaching | "Their program, check-ins and habits leave your app" — but they stayed, even after sync and reload (the phone only pulled changes, and nothing is sent when coaching ends) | Coach program / check-in / habit / nutrition pulls fetch the whole small list and drop what's no longer assigned; also covers the coach removing a client | fixed (ef7a132) |
+| 4.21 | Coach's web Today with no clients | "Sample clients are already in" when there are none | Said only when samples exist | fixed (ef7a132) |
+| 4.22 | Coach drops from Studio with a client (P9) | Decision 2026-11-11 was "relationships stay, read-only"; in fact the server locks every coaching screen: web shows the raw "This feature requires a Studio-tier account or higher.", the phone hides the client and shows the Studio offer | — needs the server's coaching reads opened for a coach with real clients, and editing turned off in the dashboard (sizeable) | open (important) |
+| 4.23 | Client's coach content | Check-ins are only reachable through More › Splits › From your coach (like the program, 4.15) | — | needs a decision |
+| 4.24 | Messages, check-in answers, coach seeing the client's workout, program edits with "Also update" | Worked both ways (messages ~3 s; edits on the next sync) | — | ok |
