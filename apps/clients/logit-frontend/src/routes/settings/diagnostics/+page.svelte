@@ -11,6 +11,7 @@
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
+  import { crashReportsOn } from "$lib/platform/crashReports";
   import {
     clearLog,
     formatLog,
@@ -305,9 +306,15 @@ Last: {new Date(e.tLast ?? e.t).toLocaleString()}
     <p class="px-1 text-xs text-muted-foreground">
       {#if info.serverMode === "cloud" && !info.signedIn}
         Sign in to send this log to the Logit team, or save the file and send it yourself.
-      {:else}
+      {:else if !crashReportsOn}
         Nothing here is sent anywhere. To share it, use Copy or Save file.
       {/if}
+    </p>
+  {/if}
+  {#if crashReportsOn && info?.serverMode !== "selfhosted"}
+    <p class="px-1 text-xs text-muted-foreground">
+      This is a test build: if the app crashes, the error and the log lines before it are sent to the Logit
+      team by themselves. Nothing you logged (workouts, food, notes) is in them.
     </p>
   {/if}
 </div>

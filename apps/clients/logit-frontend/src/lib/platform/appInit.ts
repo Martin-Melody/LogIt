@@ -11,6 +11,7 @@ import { setupKeyboard } from "./keyboard";
 import { setupNativeShell } from "./nativeShell";
 import { syncAll, reloadLastSyncedAt } from "$lib/sync/syncService";
 import { log, captureGlobalErrors } from "@logit/core/platform/log";
+import { startCrashReports } from "./crashReports";
 import { getDeviceInfo } from "./deviceInfo";
 
 let didInit = false;
@@ -73,6 +74,7 @@ export async function appInit(): Promise<void> {
   didInit = true;
 
   captureGlobalErrors();
+  startCrashReports();
   const started = Date.now();
   void getDeviceInfo().then((info) =>
     log.info("app", "App started", {

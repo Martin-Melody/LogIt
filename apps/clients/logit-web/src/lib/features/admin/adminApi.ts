@@ -85,8 +85,13 @@ export interface DiagnosticsRow {
   appVersion: string;
   platform: string;
   note: string | null;
+  /** "crash": sent by a test build by itself; "report": sent by the person. */
+  kind: "report" | "crash";
+  /** The phone's random install id, for grouping crashes from one phone. */
+  deviceId: string | null;
   chars: number;
-  user: { id: string; username: string };
+  /** Null for a crash from a phone with no account signed in. */
+  user: { id: string; username: string } | null;
 }
 
 export interface DiscoverRow {
