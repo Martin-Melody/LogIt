@@ -33,7 +33,7 @@ export function afterWorkoutRoute(sessionId: string, workoutsBefore: number, fir
   }
   if (firstWeekJustDone && !weekDoneShown()) {
     markWeekDoneShown();
-    return "/onboarding/week-done";
+    return `/onboarding/week-done?id=${encodeURIComponent(sessionId)}`;
   }
   if (!apiClient.isAuthenticated() && saveAskedCount() === 1 && workoutsBefore + 1 === 3) {
     return `/onboarding/first-workout?id=${encodeURIComponent(sessionId)}&save=again`;

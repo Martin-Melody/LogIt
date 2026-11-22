@@ -37,6 +37,60 @@ describe("LogIt Adaptive", () => {
     expect(out.change).toMatchObject({ kind: "increase", text: "+5 kg" });
   });
 
+  it("counts the reps you said were left, so doing the plan with reps to spare moves it on", async () => {
+    const easy = entry(2, [[12.5, 7], [12.5, 6], [12.5, 5]]);
+    easy.sets.forEach((x) => (x.rpe = 8)); // "2 left" on every set
+    const est = strengthEstimate([easy], NOW);
+    expect(est?.kg).toBeCloseTo(12.5 * (1 + 9 / 30), 5);
+    expect(est?.from).toMatchObject({ reps: 7, left: 2 });
+    const out = await adaptiveProgression.suggest(input({ history: [easy], userPreferences: { increment: 2.5 } }));
+    const before = await adaptiveProgression.suggest(input({ history: [entry(2, [[12.5, 7], [12.5, 6], [12.5, 5]])], userPreferences: { increment: 2.5 } }));
+    expect(out.sets[0]!.weight * (1 + out.sets[0]!.reps / 30)).toBeGreaterThan(before.sets[0]!.weight * (1 + before.sets[0]!.reps / 30));
+    expect(out.reasoning?.summary?.join(" ")).toMatch(/12\.5 × 7 with 2 left/);
+    const failed = entry(2, [[12.5, 7]]);
+    failed.sets[0]!.rpe = 10; // nothing left: no credit
+    expect(strengthEstimate([failed], NOW)?.kg).toBeCloseTo(12.5 * (1 + 7 / 30), 5);
+  });
+
+  it("with light dumbbells (12.5 → 15 is a 20% jump) the reps keep climbing until the next weight fits", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const stuck = await adaptiveProgression.suggest(input({ history: [top([[12.5, 8], [12.5, 7], [12.5, 6]])] }));
+    expect(stuck.sets[0]).toMatchObject({ weight: 12.5 });
+    expect(stuck.sets[0]!.reps).toBeGreaterThan(8); // a couple over the 5–8 range, not stuck at 8
+    const next = await adaptiveProgression.suggest(input({ history: [top([[12.5, 10], [12.5, 9], [12.5, 8]])] }));
+    expect(next.sets[0]!.weight).toBe(15);
+    expect(next.sets[0]!.reps).toBeGreaterThanOrEqual(5); // never a weight it can't do the range's fewest with
+  });
+
+  it("with a 25% jump (10 → 12.5 kg) the reps keep going past the range until it fits", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const out = await adaptiveProgression.suggest(input({ history: [top([[10, 10], [10, 9], [10, 8]])] }));
+    expect(out.sets[0]).toMatchObject({ weight: 10 });
+    expect(out.sets[0]!.reps).toBeGreaterThan(10);
+  });
+
+  it("after a step up, a set that would fall under the range is lighter by what the estimate allows, not a step per rep", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const out = await adaptiveProgression.suggest(input({ history: [top([[12.5, 10], [12.5, 9], [12.5, 8]])] }));
+    expect(out.sets[0]!.weight).toBe(15);
+    expect(Math.min(...out.sets.map((x) => x.weight))).toBeGreaterThanOrEqual(12.5); // was 15, 12.5, 10
+  });
+
+  it("keeps a dumbbell off the step grid (4 kg) instead of dropping to 2.5 kg", async () => {
+    const e = entry(2, [[4, 10], [4, 9]]); e.sets.forEach((x) => (x.rpe = 8));
+    const out = await adaptiveProgression.suggest(input({ exercise: CURL, history: [e] }));
+    expect(out.sets[0]!.weight).toBe(4);
+    expect(out.sets[0]!.reps).toBeGreaterThanOrEqual(10);
+     const later = entry(2, [[4, 15], [4, 14]]); later.sets.forEach((x) => (x.rpe = 8));
+    expect((await adaptiveProgression.suggest(input({ exercise: CURL, history: [later] }))).sets[0]!.weight).toBe(5); // not 6.5
+  });
+
+  it("a lift whose reps got past what the estimate counts goes up a step, instead of 12.5 × 15 for good", async () => {
+    const e = entry(2, [[12.5, 15], [12.5, 14], [12.5, 13]]); e.sets.forEach((x) => (x.rpe = 8));
+    const out = await adaptiveProgression.suggest(input({ exercise: CURL, history: [e] }));
+    expect(out.sets[0]).toMatchObject({ weight: 15, reps: 8 });
+  });
+
   it("doesn't let one off day drag the estimate down", () => {
     const est = strengthEstimate([entry(1, [[80, 5]]), entry(4, [[95, 7]]), entry(8, [[92.5, 7]])], NOW);
     expect(est?.from).toMatchObject({ weight: 95, reps: 7 });

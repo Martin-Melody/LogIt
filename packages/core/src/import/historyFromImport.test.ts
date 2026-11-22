@@ -59,6 +59,12 @@ describe("summariseHistory: the big three", () => {
     expect(big).toEqual({ squatKg: 186.7, benchKg: 128.3, deadliftKg: 220, totalKg: 535 }); // 160×5, 110×5, 200×3
   });
 
+  it("lists squat, bench and deadlift above the total, not the most-logged lifts", () => {
+    const busy = [...history, session("Pull", MON + 30 * DAY, [["Deadlift", 200, [3]]]),
+      ...[1, 2, 3, 4].map((i) => session("Arms", MON + i * DAY, [["Leg Curl", 40, [12, 12, 12, 12, 12]]]))];
+    expect(summariseHistory(busy)!.lifts.map((l) => l.name).sort()).toEqual(["Bench Press", "Deadlift", "Squat"]);
+  });
+
   it("has no total without all three", () => {
     expect(summariseHistory(history)!.bigThree).toBeNull();
   });

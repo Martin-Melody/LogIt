@@ -138,7 +138,7 @@ function whenLabel(ms: number, now: number): string {
 export type StrengthEstimate = {
   kg: number;
   /** The set it came from. */
-  from: { weight: number; reps: number; performedAtMs: number };
+  from: { weight: number; reps: number; performedAtMs: number; left?: number };
   sessionsConsidered: number;
   layoff: boolean;
 };
@@ -157,9 +157,12 @@ export function strengthEstimate(history: ExerciseHistoryEntry[], now: number): 
   let best: StrengthEstimate | null = null;
   for (const h of recent) {
     for (const s of workingSetsOf(h)) {
-      const kg = estimated1RM(s.weight, Math.min(s.reps, MAX_REPS_FOR_ESTIMATE));
+      // "2 left" after a set means two more were there, so they count (at most 3). Without
+      // this, doing exactly the planned reps kept the estimate, and the plan, where it was.
+      const left = s.rpe != null ? Math.min(3, Math.max(0, 10 - s.rpe)) : 0;
+      const kg = estimated1RM(s.weight, Math.min(s.reps + left, MAX_REPS_FOR_ESTIMATE));
       if (!best || kg > best.kg) {
-        best = { kg, from: { weight: s.weight, reps: s.reps, performedAtMs: h.performedAtMs }, sessionsConsidered: recent.length, layoff: false };
+        best = { kg, from: { weight: s.weight, reps: s.reps, performedAtMs: h.performedAtMs, ...(left ? { left } : {}) }, sessionsConsidered: recent.length, layoff: false };
       }
     }
   }
@@ -254,7 +257,31 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   // The first set aims high enough that, losing `drop` reps a set, the last set still
   // lands in the range.
   const firstReps = Math.min(hi, lo + Math.max(lo === hi ? 0 : 1, Math.round(drop.drop * (setCount - 1))));
-  const topWeight = roundTo(estimate.kg / (1 + (firstReps + rir) / 30), step);
+  // Reps the estimate supports at a weight, at the chosen effort.
+  const repsAt = (w: number) => (w > 0 ? Math.floor(30 * (estimate.kg / w - 1) + 1e-9) - rir : 0);
+  let topWeight = roundTo(estimate.kg / (1 + (firstReps + rir) / 30), step);
+  // Rounded up past what the estimate lifts for the range's fewest reps: a step lighter.
+  if (topWeight > step && repsAt(topWeight) < lo) topWeight -= step;
+  // Never lighter than the weight last used when it still fits: it's a dumbbell they have,
+  // even off the step grid (4 kg when steps are 2.5).
+  const lastUsed = lastWorking.length > 0 ? Math.max(...lastWorking.map((s) => s.weight)) : 0;
+  if (lastUsed > topWeight && repsAt(lastUsed) >= lo) topWeight = lastUsed;
+  // The reps the estimate supports at the weight there is, so the plan moves before the weight
+  // can (dumbbells in 2.5s). While the next step up is out of reach (10 → 12.5 kg is a 25% jump)
+  // the reps go past the range until the estimate carries the next weight for the range's fewest.
+  // The next weight on the step grid (4 kg → 5, not 6.5).
+  const nextUp = (Math.floor(topWeight / step + 1e-9) + 1) * step;
+  const repsForNext = Math.ceil(30 * ((nextUp * (1 + (lo + rir) / 30)) / topWeight - 1) - 1e-9) - rir;
+  const cap = repsAt(nextUp) >= lo ? hi : Math.max(hi, Math.min(repsForNext, 20));
+  let aimReps = Math.max(lo, Math.min(cap, repsAt(topWeight)));
+  // The estimate stops growing once sets reach MAX_REPS_FOR_ESTIMATE (reps left counted), so a
+  // lift that got there at this weight goes up a step at the range's fewest reps, or it would
+  // stay here for good.
+  const from = estimate.from;
+  if (repsAt(nextUp) < lo && from.weight === topWeight && from.reps + (from.left ?? 0) >= MAX_REPS_FOR_ESTIMATE) {
+    topWeight = nextUp;
+    aimReps = lo;
+  }
 
   // Today's session: trim for muscles already worked, but only once there's enough history
   // to know how much this lifter's reps actually drop when tired.
@@ -270,14 +297,16 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   let dropped = false;
   const startWeight = fatigued;
   for (let i = 0; i < setCount; i++) {
-    const reps = Math.round(firstReps - drop.drop * i);
+    const reps = Math.round(aimReps - drop.drop * i);
     if (reps >= lo) {
       sets.push({ reps, weight: i === 0 && pushGoal ? startWeight + step : startWeight, setType: "normal" });
     } else {
-      // A set that would fall under the range keeps the bottom rep count and gets lighter:
-      // one weight step for each rep it would have been short.
+      // A set that would fall under the range keeps the bottom rep count and gets lighter: one
+      // weight step for each rep short, but never lighter than the estimate says carries it (a
+      // step is 17% on a 15 kg dumbbell, 2.5% on a 100 kg bar).
       dropped = true;
-      sets.push({ reps: lo, weight: Math.max(0, startWeight - step * (lo - reps)), setType: "normal" });
+      const fits = Math.floor(estimate.kg / (1 + (lo + rir + (aimReps - reps)) / 30) / step + 1e-9) * step;
+      sets.push({ reps: lo, weight: Math.max(0, Math.min(startWeight - step, Math.max(startWeight - step * (lo - reps), fits))), setType: "normal" });
     }
   }
 
@@ -301,7 +330,7 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   const effortText = rir === 0 ? "close to failure" : `with ${rir} ${rir === 1 ? "rep" : "reps"} left in the tank`;
   const lightSets = lastWorking.filter((s) => s.weight < topWeight * 0.9);
   const summary = [
-    `Your strength estimate is ${fmtKg(Math.round(estimate.kg))}, from ${fmtKg(estimate.from.weight).replace(" kg", "")} × ${estimate.from.reps} ${whenLabel(estimate.from.performedAtMs, now)}.`,
+    `Your strength estimate is ${fmtKg(Math.round(estimate.kg))}, from ${fmtKg(estimate.from.weight).replace(" kg", "")} × ${estimate.from.reps}${estimate.from.left ? ` with ${estimate.from.left} left` : ""} ${whenLabel(estimate.from.performedAtMs, now)}.`,
     ...(estimate.layoff ? ["It's been over three weeks since you trained this, so the estimate is taken 5% lower."] : []),
     `For ${rangeText} ${effortText}, that's about ${fmtKg(topWeight)}.`,
     drop.learned
@@ -335,7 +364,7 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
     },
     computed: {
       strengthEstimateKg: Math.round(estimate.kg * 10) / 10,
-      firstSetReps: firstReps,
+      firstSetReps: aimReps,
       setToSetDrop: drop.drop,
       weightBeforeFatigue: topWeight,
       fatigueDiscountPct: Math.round(discount * 100),
@@ -352,7 +381,7 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
     displayMode: "block",
     change,
     reasoning,
-    progressGoal: { reps: firstReps },
+    progressGoal: { reps: aimReps },
   };
 }
 
