@@ -1312,6 +1312,7 @@
                   type="number"
                   min="5"
                   max="600"
+                  aria-label="Rest after {label}, seconds"
                   class="h-10 w-16 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                   value={seconds}
                   onchange={(e) =>

@@ -1206,7 +1206,7 @@ test.describe("finish session", () => {
 
     // Per-exercise breakdown lists what was done.
     await expect(page.getByText("What you did")).toBeVisible();
-    await expect(page.getByText("5×100").first()).toBeVisible();
+    await expect(page.getByText("100×5").first()).toBeVisible();
   });
 
   test("recap keeps the buttons on screen with a long summary", async ({ page }) => {

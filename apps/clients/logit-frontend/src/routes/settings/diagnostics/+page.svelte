@@ -296,7 +296,7 @@ Last: {new Date(e.tLast ?? e.t).toLocaleString()}
           </p>
           <Button variant="ghost" size="sm" class="w-fit" onclick={() => (sentRef = null)}>Send another</Button>
         {:else}
-          <Textarea bind:value={note} maxlength={2000} rows={3}
+          <Textarea bind:value={note} maxlength={2000} rows={3} aria-label="What happened"
             placeholder="What happened? (optional) e.g. my workout from this morning isn't on my other phone" />
           <Button class="w-fit" disabled={sending} onclick={send}>{sending ? "Sending…" : "Send report"}</Button>
         {/if}

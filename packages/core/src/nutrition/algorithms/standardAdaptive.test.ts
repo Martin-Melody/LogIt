@@ -74,7 +74,9 @@ describe("standardAdaptive", () => {
       now: NOW,
     });
     expect(out.kcal).toBe(0);
-    expect(out.sourceLabel).toMatch(/height/i);
+    // Only what's missing (bug hunt 13.6).
+    expect(out.sourceLabel).toBe("Add birth date");
+    expect(run({ goal: goal({ heightCm: undefined, birthDateIso: undefined }) }).sourceLabel).toBe("Add height & birth date");
   });
 
   it("signals a missing current weight distinctly from a missing profile", () => {
@@ -103,8 +105,7 @@ describe("standardAdaptive", () => {
       now: NOW,
     });
     expect(out.kcal).toBe(0);
-    expect(out.sourceLabel).toMatch(/height/i);
-    expect(out.sourceLabel).toMatch(/weight/i);
+    expect(out.sourceLabel).toBe("Add birth date & a recent weight");
   });
 
   it("uses the adaptive estimate once there's enough weight + intake data", () => {

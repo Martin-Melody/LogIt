@@ -309,6 +309,7 @@
     <button
       type="button"
       class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      aria-label={p.commentCount > 0 ? `Comments, ${p.commentCount}` : "Comment"}
       onclick={(e) => { e.stopPropagation(); onopencomments ? onopencomments(p) : goto(`/social/post/${p.id}`); }}
     >
       <MessageCircle class="h-4 w-4" />

@@ -4,7 +4,7 @@
     "name": "Calisthenics Starter",
     "description": "12 common bodyweight movements \u2014 push-ups, chin-ups, pistol squats, Nordic curls and core holds \u2014 added straight to your exercise catalogue.",
     "family": "exercise-pack",
-    "author": "Logit Samples",
+    "author": "LogIt Samples",
     "manifestUrl": "/sample-plugins/calisthenics-starter/manifest.json",
     "tags": [
       "exercises",
@@ -19,7 +19,7 @@
     "name": "Linear Plus",
     "description": "A community double-progression algorithm \u2014 fill the rep range, then add weight.",
     "family": "progression-algorithm",
-    "author": "Logit Samples",
+    "author": "LogIt Samples",
     "manifestUrl": "/sample-plugins/linear-plus/manifest.json",
     "tags": [
       "progression",
@@ -32,7 +32,7 @@
     "name": "Pure Trend",
     "description": "A sample nutrition algorithm that sets your calorie target purely from intake vs. weight trend.",
     "family": "nutrition-algorithm",
-    "author": "Logit Samples",
+    "author": "LogIt Samples",
     "manifestUrl": "/sample-plugins/pure-trend/manifest.json",
     "tags": [
       "nutrition",
@@ -45,7 +45,7 @@
     "name": "Week Recap",
     "description": "Sets, tonnage and sessions logged in the last 7 days.",
     "family": "widget",
-    "author": "Logit Samples",
+    "author": "LogIt Samples",
     "manifestUrl": "/sample-plugins/week-recap/manifest.json",
     "tags": [
       "widget",
@@ -58,7 +58,7 @@
     "name": "Mobility Plus",
     "description": "A community mobility progression scheme — add hold time or reps each session, per side.",
     "family": "mobility-progression",
-    "author": "Logit Samples",
+    "author": "LogIt Samples",
     "manifestUrl": "/sample-plugins/mobility-plus/manifest.json",
     "tags": [
       "mobility",
@@ -72,7 +72,7 @@
     "name": "Hip Rehab Pack",
     "description": "Eight hip prehab / rehab drills for the Mobility block — banded hip flexion, clamshells, 90/90 lift-offs and more.",
     "family": "mobility-pack",
-    "author": "Logit Samples",
+    "author": "LogIt Samples",
     "manifestUrl": "/sample-plugins/hip-rehab-pack/manifest.json",
     "tags": [
       "mobility",

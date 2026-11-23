@@ -4,7 +4,7 @@
   "name": "Week Recap",
   "description": "Sets, tonnage and sessions logged in the last 7 days.",
   "version": "1.0.0",
-  "author": "Logit Samples",
+  "author": "LogIt Samples",
   "integrity": "sha256-vDvtD1BdSFntN212B3IFlKPd/6cv7By9/EzDHaXXzss=",
   "homepageUrl": "/sample-plugins/week-recap/README.txt",
   "sourceUrl": "/sample-plugins/week-recap/manifest.json",

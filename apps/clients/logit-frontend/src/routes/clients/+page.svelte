@@ -318,7 +318,7 @@
         {/if}
 
         <form class="flex gap-2 px-3 py-3" onsubmit={invite}>
-          <input type="text" placeholder="Client's username" bind:value={inviteUsername}
+          <input type="text" aria-label="Client's username" placeholder="Client's username" bind:value={inviteUsername}
             class="h-10 flex-1 min-w-0 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
           <Button type="submit" size="sm" disabled={ui.inviting || !inviteUsername.trim()}>Invite</Button>
         </form>

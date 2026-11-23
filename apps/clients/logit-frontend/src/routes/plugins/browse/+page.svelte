@@ -236,6 +236,7 @@
         <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
           type="search"
+          aria-label="Search plugins"
           placeholder="Search plugins…"
           class="h-10 w-full rounded-md border bg-background pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           bind:value={query}
@@ -288,11 +289,12 @@
     {#if !$pluginSettings.communityPluginsEnabled}
       <div class="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
         <ShieldAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span>
-          Community plugins are off. Widgets, progression and analytics plugins
-          can't be installed until you
-          <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins")}>turn them on</button>.
-          Exercise and mobility packs still install.
+        <span class="flex flex-col gap-2">
+          <span>
+            Community plugins are off. Widgets, progression and analytics plugins can't be installed
+            until you turn them on. Exercise and mobility packs still install.
+          </span>
+          <Button variant="outline" size="sm" class="h-11 w-fit" onclick={() => void goto("/plugins")}>Turn on community plugins</Button>
         </span>
       </div>
     {/if}
@@ -421,10 +423,10 @@
         </Card.Root>
       {/if}
 
-      <p class="px-1 text-xs text-muted-foreground">
-        {filtered.length} plugin{filtered.length === 1 ? "" : "s"} · Have one to share? Paste a manifest URL on the
-        <button type="button" class="underline underline-offset-2" onclick={() => void goto("/plugins/import")}>import page</button>.
-      </p>
+      <div class="flex flex-col gap-2 px-1 text-xs text-muted-foreground">
+        <p>{filtered.length} plugin{filtered.length === 1 ? "" : "s"} · Have one to share? Paste its manifest URL.</p>
+        <Button variant="outline" size="sm" class="h-11 w-fit" onclick={() => void goto("/plugins/import")}>Import a plugin</Button>
+      </div>
     {/if}
   </div>
 </div>

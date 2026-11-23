@@ -4,7 +4,7 @@
   "name": "Mobility Plus",
   "description": "A sample mobility progression algorithm that adds a fixed amount of hold time or reps each session, per side.",
   "version": "1.0.0",
-  "author": "Logit Samples",
+  "author": "LogIt Samples",
   "integrity": "sha256-ShBNW6BCtUEUGoObPelyAifsHQYWPJsMFIJ1xDzEcuc=",
   "homepageUrl": "/sample-plugins/mobility-plus/README.txt",
   "sourceUrl": "/sample-plugins/mobility-plus/manifest.json",
