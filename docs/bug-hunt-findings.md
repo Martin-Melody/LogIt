@@ -129,7 +129,7 @@ Ava (Pro), Ben, Cara (private) and Dev side by side on phones; hosted-mode API.
 | 5.11 | Blocking | The blocked person could still comment and like; their earlier comments, likes and notifications stayed (blocks only hid profiles and posts) | A block counts both ways wherever "can see" is checked; blocking removes their likes and comments on your posts and the notifications between you (as on Instagram) | fixed (3d4716f) |
 | 5.12 | Your own post | You can only report a comment on it, not remove it | — | fixed (7da5378) |
 | 5.13 | Reported post deleted by the admin | Others see "This post isn't available" with a "Try again" button that can't help; the admin's Delete has no confirmation | — | fixed (7da5378) |
-| 5.14 | Photo posts | Don't exist (text plus an attached workout, PR, split, …), but the Play data-safety notes say "photos in posts" | — | needs a decision |
+| 5.14 | Photo posts | Don't exist (text plus an attached workout, PR, split, …), but the Play data-safety notes say "photos in posts" | — | on hold: photos may come to posts and messages (Martin, 2026-11-23) |
 | 5.15 | Session ends while the app is open | Every request is refused (401) every minute and nothing on screen changes until a restart | — | open |
 | 5.16 | Replies, editing, reposts, quotes, report → admin delete, account deletion, Discover | Worked: right notifications, counts after reload, everything of a deleted account gone | — | ok |
 | 5.17 | The 2026-09-04 phone findings | Pull to refresh wired, badge now live (5.1/5.2), Sync now hidden where it can't work, the misleading dot gone, Coaching label clear | — | ok |
@@ -269,7 +269,7 @@ an unplanned workout with a run and push-ups, all checked again on the web dashb
 | 13.7 | Fields with no label for screen readers | Nutrition goal (trend window, max adjustment), Settings (rest timer seconds ×3), New goal (exercise), Browse plugins (search), Clients (username), run Duration/Distance (placeholder only) | easy | fixed (a579c56) |
 | 13.8 | Profile | An icon button (chevron) with no name; "Sign out" 28 px tall | easy | fixed (a579c56) |
 | 13.9 | Browse plugins | "turn them on" and "import page" are 16 px text inside a sentence, not buttons (against "actions are buttons") | easy | fixed (a579c56) |
-| 13.10 | Chips and segment buttons on most screens (Insights ranges, Exercises tabs, Settings units/theme, Social tabs, nutrition goal, Home "Edit split" 28 px) | 28–37 px tall, under the 44 px touch size | decision (design system) | open |
+| 13.10 | Chips and segment buttons on most screens (Insights ranges, Exercises tabs, Settings units/theme, Social tabs, nutrition goal, Home "Edit split" 28 px) | 28–37 px tall, under the 44 px touch size | decision (design system) | fixed (1f35733) |
 | 13.11 | Sample plugins | "by Logit Samples" (should be LogIt) | easy | fixed (a579c56) |
 | 13.13 | Mobility drill, first time | "Last → next: 20s L · 20s R" when there is no last time; its two "±kg" boxes have no labels; the drill also arrives collapsed (13.3) | easy | fixed (fae2566) |
 | 13.12 | Every feature screen (31) loads with no errors; nutrition goal → 2,070 kcal, food search (through the server, nothing sent elsewhere from the phone), 50 g oats logged, weight, habit, lift goal with projection, plugin pack install asks first; food, weight, habit and goal all on the web dashboard | Worked | — | ok |
