@@ -100,9 +100,19 @@ export function applyRemoteRotations(remote: Record<string, RotationState>): voi
 
 function progressOf(split: WorkoutSplit, todayIso: string): SplitProgress {
   const state = loadState(split.id);
-  const last = state ? { dayId: state.lastDayId, dateIso: localDateIso(new Date(state.recordedAtMs)) } : null;
+  let last = state ? { dayId: state.lastDayId, dateIso: localDateIso(new Date(state.recordedAtMs)) } : null;
   // doneOnDay belongs to the day it was recorded; yesterday's list says nothing about today.
-  const doneTodayIds = last?.dateIso === todayIso ? (state?.doneOnDay ?? []) : [];
+  const doneTodayIds = last?.dateIso === todayIso ? [...(state?.doneOnDay ?? [])] : [];
+  // The finished workouts themselves count too, however they were started (Martin's Push was
+  // done but Home offered the next day as today: the pointer only moves from the plan screen).
+  const fromSplit = weekSessions().filter(
+    (s) => s.source?.kind === "split" && s.source.parentId === split.id && split.days.some((d) => d.id === s.source!.dayId),
+  );
+  const newest = fromSplit[0];
+  if (newest && (!state || newest.startedAtMs > state.recordedAtMs)) {
+    last = { dayId: newest.source!.dayId, dateIso: localDateIso(new Date(newest.startedAtMs)) };
+  }
+  for (const s of fromSplit) if (localDateIso(new Date(s.startedAtMs)) === todayIso) doneTodayIds.push(s.source!.dayId);
   // A plan from onboarding carries a missed workout forward through the week.
   if (split.schedule === "weekdays" && movesMissed(split.id)) {
     return { last, doneTodayIds, week: { sessions: weekSessions(), planStartIso: planStartIso() } };

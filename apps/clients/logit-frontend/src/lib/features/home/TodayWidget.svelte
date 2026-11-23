@@ -65,13 +65,13 @@
     void $recentSessions;
     void $lastSyncedAt;
     card = todayCard(split ? getSplitPlan(split) : null, { inProgress });
-    if (split?.schedule === "weekdays") {
-      void refreshWeekSessions()
-        .then((sessions) => (week = planWeek(split, sessions, todayIso, planStartIso())))
-        .catch(() => (week = null));
-    } else {
-      week = null;
-    }
+    // Again once the finished workouts are in: they say what's already done today.
+    void refreshWeekSessions()
+      .then((sessions) => {
+        card = todayCard(split ? getSplitPlan(split) : null, { inProgress });
+        week = split?.schedule === "weekdays" ? planWeek(split, sessions, todayIso, planStartIso()) : null;
+      })
+      .catch(() => (week = null));
     void loadWeeklyStreak().then((s) => (streakWeeks = s.currentWeeks)).catch(() => {});
     void loadCoached();
   });
