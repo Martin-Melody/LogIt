@@ -161,6 +161,9 @@ public class GooglePlayApi : IGooglePlayApi
     {
         var url = $"{BaseUrl}{Uri.EscapeDataString(PackageName)}/purchases/subscriptions/{Uri.EscapeDataString(productId)}/tokens/{Uri.EscapeDataString(purchaseToken)}:acknowledge";
         using var res = await SendAsync(HttpMethod.Post, url, ct, new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+        // 409: the app's check and Google's notice arrived together and the other one is acknowledging it.
+        // If that one fails, the purchase still needs acknowledging and the next check tries again.
+        if (res.StatusCode == System.Net.HttpStatusCode.Conflict) return;
         await EnsureOk(res, "acknowledge", ct);
     }
 

@@ -216,6 +216,12 @@ describe("LogIt Adaptive", () => {
     expect(out.change).toMatchObject({ kind: "first", detail: "Pick a weight you can do 5–8 reps with." });
   });
 
+  it("a first time with a planned weight says to start there (the empty bar), not to pick one", async () => {
+    const out = await adaptiveProgression.suggest(input({ history: [], plannedTargets: { sets: 3, weight: 20 } }));
+    expect(out.sets[0]!.weight).toBe(20);
+    expect(out.change?.detail).toBe("Start at 20 kg; next time is planned from how the reps go.");
+  });
+
   it("hands bodyweight exercises to Linear Progression", async () => {
     const out = await adaptiveProgression.suggest(
       input({ exercise: { name: "Pull-up", primaryMuscles: ["back"], exerciseType: "bodyweight" }, history: [entry(3, [[0, 8], [0, 7]])] }),

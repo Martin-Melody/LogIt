@@ -54,6 +54,7 @@ A great workout app first. Privacy and making it your own come second: you can s
 3. It's yours: self-hostable, exportable, extensible, nothing leaves the device unless the user sends it.
 4. Habit over activation: design for week two, not day one.
 5. Every action is a real button, everything that changes animates, every sheet swipes down, back goes to the previous screen.
+6. LogIt only taps you on the shoulder when a person did something for you, or when your own plan says it's time. Notifications (push or in the app) are for a message, a coach's program or check-in, a payment problem, a comment, like or follow, a reminder you set, or a rest ending. Never "you haven't trained in 3 days", streak warnings, "come back", offers, or anything sent only to get the app opened. A push says who and what, never the message itself.
 
 ## Accessibility & Inclusion
 

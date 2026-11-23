@@ -62,7 +62,14 @@
   import { justAdded } from "$lib/features/session/blocks/justAdded";
 
   onMount(() => {
-    setTimeout(() => autoTour("app.session"), 600);
+    // The tour waits for the first set row: on a slower phone it isn't drawn at 600 ms, and the
+    // "Tick a set" step was left out. An empty workout starts it without that step.
+    const opened = Date.now();
+    const startTour = () => {
+      if (document.querySelector("[data-guide='session-set-complete']") || Date.now() - opened > 4000) autoTour("app.session");
+      else setTimeout(startTour, 200);
+    };
+    setTimeout(startTour, 600);
     // Machines kept on exercises move into a place (once per account).
     void placesStore.migrateExerciseMachines();
     void getWorkoutRepo()
