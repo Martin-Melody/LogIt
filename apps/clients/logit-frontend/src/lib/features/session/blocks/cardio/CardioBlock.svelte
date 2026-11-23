@@ -7,6 +7,7 @@
   import { profile } from "$lib/stores/profile.store";
   import type { CardioBlockData, CardioInterval, WorkoutSession } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
+  import { distanceInputValue, formatDistance, parseDistance, parseDuration } from "./cardioInput";
 
   const {
     blockId,
@@ -20,6 +21,7 @@
   }: BlockBaseProps<CardioBlockData> = $props();
 
   let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  const unit = get(profile).weightUnit === "lbs" ? "mi" : "km";
 
   function sortByOrder(a: { orderIndex: number }, b: { orderIndex: number }) {
     return a.orderIndex - b.orderIndex;
@@ -35,40 +37,12 @@
     return `${m}:${String(s).padStart(2, "0")}`;
   }
 
-  function formatDistance(m: number | null): string {
-    if (!m) return "—";
-    return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${m} m`;
-  }
-
-  function parseDuration(value: string): number | null {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    // Accept mm:ss or hh:mm:ss or plain seconds
-    const parts = trimmed.split(":").map(Number);
-    if (parts.some(isNaN)) return null;
-    if (parts.length === 1) return parts[0] * 1000;
-    if (parts.length === 2) return ((parts[0] ?? 0) * 60 + (parts[1] ?? 0)) * 1000;
-    return ((parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0)) * 1000;
-  }
-
-  function parseDistance(value: string): number | null {
-    const n = parseFloat(value);
-    if (!isFinite(n) || n <= 0) return null;
-    // If user types a decimal number > 100 assume metres, otherwise km
-    return value.includes(".") && n < 100 ? Math.round(n * 1000) : Math.round(n);
-  }
-
   function durationInputValue(ms: number | null): string {
     if (!ms) return "";
     const totalSecs = Math.round(ms / 1000);
     const m = Math.floor(totalSecs / 60);
     const s = totalSecs % 60;
-    return `${m}:${String(s).padStart(2, "0")}`;
-  }
-
-  function distanceInputValue(m: number | null): string {
-    if (!m) return "";
-    return m >= 1000 ? String((m / 1000).toFixed(2)) : String(m);
+    return s ? `${m}:${String(s).padStart(2, "0")}` : String(m);
   }
 
   function updateCardioBlock(
@@ -350,7 +324,7 @@
   <!-- Totals summary line -->
   {#if !collapsed && (totalDistance > 0 || totalDuration > 0)}
     <p class="px-3 pb-1.5 text-xs text-muted-foreground -mt-1">
-      {#if totalDistance > 0}<span class="inline-flex items-center gap-1"><Ruler class="h-3 w-3" />{formatDistance(totalDistance)}</span>{/if}
+      {#if totalDistance > 0}<span class="inline-flex items-center gap-1"><Ruler class="h-3 w-3" />{formatDistance(totalDistance, unit)}</span>{/if}
       {#if totalDistance > 0 && totalDuration > 0}<span class="mx-1">·</span>{/if}
       {#if totalDuration > 0}<span class="inline-flex items-center gap-1"><Timer class="h-3 w-3" />{formatDuration(totalDuration)}</span>{/if}
     </p>
@@ -364,8 +338,8 @@
     <div class="grid grid-cols-[2.25rem_1.25rem_1fr_1fr_2.75rem] gap-1.5 px-3 py-1 text-xs text-muted-foreground border-b border-border">
       <span></span>
       <span>#</span>
-      <span>Duration</span>
-      <span>Distance</span>
+      <span>Minutes</span>
+      <span>{unit === "mi" ? "Miles" : "Km"}</span>
       <span></span>
     </div>
 
@@ -388,17 +362,20 @@
 
           <span class="text-xs text-muted-foreground tabular-nums">{i + 1}</span>
 
-          <!-- Duration input: mm:ss -->
+          <!-- Duration: plain minutes or a clock without the colon (cardioInput.ts) -->
           <input
             class="h-10 w-full rounded-md border bg-background px-2 text-[15px] font-semibold tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
             type="text"
             inputmode="numeric"
-            placeholder="0:00"
+            placeholder="min"
+            aria-label="Interval {i + 1} minutes"
             value={durationInputValue(iv.durationMs)}
             disabled={saving}
             onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
             onchange={(e) => {
-              const ms = parseDuration((e.currentTarget as HTMLInputElement).value);
+              const input = e.currentTarget as HTMLInputElement;
+              const ms = parseDuration(input.value);
+              input.value = durationInputValue(ms); // "2000" reads back as 20, what was saved
               void updateInterval(iv.id, { durationMs: ms });
             }}
           />
@@ -408,12 +385,15 @@
             class="h-10 w-full rounded-md border bg-background px-2 text-[15px] font-semibold tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
             type="text"
             inputmode="decimal"
-            placeholder="km / m"
-            value={distanceInputValue(iv.distanceM)}
+            placeholder={unit}
+            aria-label="Interval {i + 1} distance"
+            value={distanceInputValue(iv.distanceM, unit)}
             disabled={saving}
             onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
             onchange={(e) => {
-              const m = parseDistance((e.currentTarget as HTMLInputElement).value);
+              const input = e.currentTarget as HTMLInputElement;
+              const m = parseDistance(input.value, unit);
+              input.value = distanceInputValue(m, unit);
               void updateInterval(iv.id, { distanceM: m });
             }}
           />
