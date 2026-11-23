@@ -32,7 +32,7 @@
       failed: $lastSyncFailed,
     }),
   );
-  const LIVE_WHILE_DOWNLOADING = new Set(["quick-start"]);
+  const LIVE_WHILE_DOWNLOADING = new Set(["quick-start", "today"]);
   const HIDDEN_WHILE_DOWNLOADING = new Set(["this-week", "next-step"]);
 
   let baseWidgets = $state<RuntimeWidgetDefinition[]>(

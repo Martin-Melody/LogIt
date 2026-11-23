@@ -45,7 +45,7 @@
         <div class="flex items-center justify-between gap-2 text-sm">
           <span class="flex items-center gap-1.5">
             <Flame class="h-4 w-4 {streak.currentWeeks > 0 ? 'text-amber-500' : 'text-muted-foreground'}" />
-            <span class="font-medium tabular-nums">{streak.currentWeeks}-week streak</span>
+            <span class="font-medium tabular-nums">{streak.currentWeeks > 0 ? `${streak.currentWeeks}-week streak` : "Streak starts after a full week"}</span>
           </span>
           <span class="text-xs text-muted-foreground tabular-nums">
             {#if streak.pausedNow}Paused{:else}This week {streak.thisWeek.done}/{streak.thisWeek.needed}{/if}

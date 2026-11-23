@@ -256,16 +256,18 @@ test.describe("first workout", () => {
 test.describe("week one", () => {
   const answers = { goal: "both", experience: "under2", days: 4, equipment: "gym", minutes: 45 };
 
-  test("Home shows 'Your first week' with the plan's days", async ({ page }) => {
+  test("Home's Today card shows week one with what fits, and one workout to start (decision D1)", async ({ page }) => {
     await page.clock.setFixedTime(new Date("2026-11-17T09:00:00")); // a Tuesday
     await seedAnswers(page, 4, answers);
     await goToOnboarding(page);
     await page.getByRole("button", { name: "I'll start later" }).click();
     await page.waitForURL(atHome, { timeout: 10_000 });
 
-    await expect(page.getByText("Your first week", { exact: true })).toBeVisible();
     // Mon/Tue/Thu/Fri from a Tuesday: today, Thursday and Friday, not four days in a row (round 10).
-    await expect(page.getByText("0 of 3 done. Your first full week starts Monday.")).toBeVisible();
+    await expect(page.getByText("0 of 3", { exact: true })).toBeVisible();
+    await expect(page.getByText("week one", { exact: true })).toBeVisible();
+    // One answer to "what now?": a single Start button on Home.
+    await expect(page.getByRole("button", { name: /^Start / })).toHaveCount(1);
     await page.screenshot({ path: "test-results/first-week-home.png" });
   });
 

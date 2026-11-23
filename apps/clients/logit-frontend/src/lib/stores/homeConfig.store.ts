@@ -4,6 +4,7 @@ import { onActiveOwnerChange } from "$lib/data/activeOwner";
 import { writable, type Writable } from "svelte/store";
 import type { HomeConfig, WidgetSlot } from "$lib/features/widgets/widget";
 import { localWidgetRegistry } from "$lib/features/widgets/localWidgetRegistry";
+import { withTodayCard } from "$lib/features/widgets/todayMigration";
 import { listInstalledPluginManifests } from "$lib/plugins/catalog";
 import type { PluginManifest, WidgetPluginCapability } from "$lib/plugins";
 
@@ -52,7 +53,7 @@ function load(): HomeConfig {
   try {
     const raw = getAccountItem(STORAGE_KEY);
     if (!raw) return defaultConfig();
-    return mergeWithRegistry((JSON.parse(raw) as HomeConfig).slots);
+    return mergeWithRegistry(withTodayCard((JSON.parse(raw) as HomeConfig).slots));
   } catch {
     return defaultConfig();
   }
@@ -214,7 +215,8 @@ function createHomeConfigStore() {
 
   /** Applied by pullAndApplyProfile() (syncService.ts) when a newer remote config lands. */
   function applyRemote(config: HomeConfig) {
-    const merged = mergeWithRegistry(config.slots);
+    // A layout from a device on an older app version doesn't know Today yet.
+    const merged = mergeWithRegistry(withTodayCard(config.slots));
     save(merged);
     store.set(merged);
   }

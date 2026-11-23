@@ -163,7 +163,7 @@ test.describe("Quick Start on home", () => {
       );
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Start Day 1 — Upper A" }).click();
+    await page.getByRole("button", { name: "Start Upper A" }).click();
     await page.waitForURL("**/session/current");
     await expect(page.getByRole("main")).toContainText("Bench Press");
     const draft = await page.evaluate(() => JSON.parse(localStorage.getItem("logit:draft:v1") ?? "null"));

@@ -4,6 +4,7 @@ import type { WidgetRegistry } from "./widgetRegistry";
 import WidgetCard from "./render/WidgetCard.svelte";
 import GoalsWidget from "$lib/features/goals/GoalsWidget.svelte";
 import ThisWeekWidget from "$lib/features/onboarding/ThisWeekWidget.svelte";
+import TodayWidget from "$lib/features/home/TodayWidget.svelte";
 import NextStepWidget from "$lib/features/onboarding/NextStepWidget.svelte";
 import { quickStartWidget } from "@logit/core/plugins/builtinWidgets/quickStart";
 import { todaysPlanWidget } from "@logit/core/plugins/builtinWidgets/todaysPlan";
@@ -18,12 +19,23 @@ import { mobilityWidget } from "@logit/core/plugins/builtinWidgets/mobility";
 
 const BUNDLED: WidgetDefinition[] = [
   {
+    // One answer to "what now?" (decision D1): replaces This week, Quick start and Today's plan,
+    // which stay available in Customize but are off by default.
+    id: "today",
+    guideMark: "quick-start",
+    label: "Today",
+    description: "This week, and today's workout with its next weights.",
+    component: TodayWidget,
+    defaultEnabled: true,
+    defaultOrder: -2,
+  },
+  {
     // Shows only for a split on a weekday schedule; "Your first week" during week one.
     id: "this-week",
     label: "This week",
     description: "Your training days this week; a missed one moves forward instead of being lost.",
     component: ThisWeekWidget,
-    defaultEnabled: true,
+    defaultEnabled: false,
     defaultOrder: -1,
   },
   {
@@ -33,7 +45,7 @@ const BUNDLED: WidgetDefinition[] = [
     description: "Start or continue a workout.",
     component: WidgetCard,
     props: { plugin: quickStartWidget },
-    defaultEnabled: true,
+    defaultEnabled: false,
     defaultOrder: 0,
   },
   {
@@ -43,7 +55,7 @@ const BUNDLED: WidgetDefinition[] = [
     description: "See today's exercises from your active split.",
     component: WidgetCard,
     props: { plugin: todaysPlanWidget },
-    defaultEnabled: true,
+    defaultEnabled: false,
     defaultOrder: 1,
   },
   {
