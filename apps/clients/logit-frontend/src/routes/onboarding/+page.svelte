@@ -154,12 +154,12 @@
     { id: "2plus", title: "2+ years", blurb: "A plan that keeps up with you" },
     { id: "compete", title: "I compete", blurb: "Powerlifting: the big three come first" },
   ];
-  const DAYS: { days: DaysPerWeek; label: string; blurb: string }[] = [
+  const DAYS: { days: DaysPerWeek; label: string; blurb: string }[] = $derived([
     { days: 2, label: "2 days", blurb: "Busy weeks" },
-    { days: 3, label: "3 days", blurb: "Steady progress" },
-    { days: 4, label: "4 days", blurb: "The sweet spot" },
+    { days: 3, label: "3 days", blurb: answers.experience === "new" ? "A good start" : "Steady progress" },
+    { days: 4, label: "4 days", blurb: "Each muscle twice a week" },
     { days: 5, label: "5–6 days", blurb: "All in" },
-  ];
+  ]);
   const WEEK = [1, 2, 3, 4, 5, 6, 0];
   const WEEK_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 

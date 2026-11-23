@@ -53,7 +53,8 @@
   import { barbellFor, chosenMachine, dumbbellWeightsKg, effectiveMachine, machinesFor, usesMachine, type ExtraLoad, type Place, type PlaceMachine } from "@logit/core/domain/place";
   import { placesStore } from "$lib/features/places/places.svelte";
   import { goto } from "$app/navigation";
-  import { formatLoad } from "@logit/core/domain/units";
+  import { formatLoad, formatWeight } from "@logit/core/domain/units";
+  import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import MachinePickerSheet from "$lib/features/places/MachinePickerSheet.svelte";
   import MachineEditorSheet from "$lib/features/places/MachineEditorSheet.svelte";
   import WhereTodaySheet from "$lib/features/places/WhereTodaySheet.svelte";
@@ -150,6 +151,13 @@
   });
   const firstEver = $derived(prevLoaded && prevSets === null && !fromBestLift);
   const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
+  // A beginner's first barbell lift is planned on the empty bar (decision D3): say so plainly
+  // instead of "pick a weight you could lift 8 times", which means nothing on day one.
+  const emptyBarKg = $derived($equipment.barbell.barKg);
+  const emptyBarStart = $derived(
+    exercise?.equipment === "barbell" &&
+      data.sets.some((s) => s.setType !== "warmup" && s.target?.weight != null && Math.abs(s.target.weight - emptyBarKg) < 0.6),
+  );
   // The hint says how heavy to go and the first set plans the rest, so the algorithm's own
   // "First time" line would only repeat it, before and after that set.
   const cardSuggestion = $derived(
@@ -274,6 +282,14 @@
   let detailExerciseId = $state<string | null>(null);
   // A machine opened from the exercise's "Where you do it" (any place, not only today's).
   let editorPlace = $state<Place | null | undefined>(undefined);
+
+  function openHowTo() {
+    const id = data.exerciseId ?? exercise?.id;
+    if (id) {
+      detailTab = "howto";
+      detailExerciseId = id;
+    }
+  }
 
   function openDetail() {
     const id = data.exerciseId ?? exercise?.id;
@@ -562,6 +578,15 @@
     playSound("tap");
   }
 
+  const AS_PLANNED_KEY = "logit:hint:logged-as-planned";
+  function loggedAsPlanned(setId: string, kg: number, reps: number) {
+    const shown = Number(getAccountItem(AS_PLANNED_KEY) ?? 0) || 0;
+    if (shown >= 3) return;
+    setAccountItem(AS_PLANNED_KEY, String(shown + 1));
+    const load = bodyweight ? formatLoad(kg, get(profile).weightUnit, true) : formatWeight(kg, get(profile).weightUnit);
+    toast(`Logged ${load} × ${reps}. Did more?`, { action: { label: "Change", onClick: () => openEditSet(setId) } });
+  }
+
   async function handleComplete(setId: string) {
     const set = data.sets.find((s) => s.id === setId);
     if (!set) return;
@@ -608,6 +633,9 @@
       void triggerHaptic();
       if (optionsSetId === setId) optionsSetId = null;
       askEffort(set);
+      // An empty reps box logged the plan's reps (bug hunt 3.12): say so the first few times,
+      // so someone who did 12 learns they can change it.
+      if (fill && set.target && fill.reps === set.target.reps) loggedAsPlanned(setId, fill.weight ?? set.weight, fill.reps);
     } else if (effortSetId === setId) {
       effortSetId = null;
     }
@@ -1055,6 +1083,10 @@
         {#if bodyweight}
           <p class="text-sm font-semibold">First time? Do as many good reps as you can.</p>
           <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it.</p>
+        {:else if emptyBarStart}
+          <p class="text-sm font-semibold">Start with the empty bar: {formatWeight(emptyBarKg, $profile.weightUnit)}</p>
+          <p class="text-xs text-muted-foreground">Do {firstTimeMin > 1 && firstTimeMin < firstTimeReps ? `${firstTimeMin}–${firstTimeReps}` : firstTimeReps} slow reps. If they felt easy, put {$profile.weightUnit === "lbs" ? "5 lb" : "2.5 kg"} on each side for the next set. LogIt plans next time from what you do today.</p>
+          <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium" onclick={openHowTo}>How to</button>
         {:else}
           <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
           <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it. No need to know your max.</p>

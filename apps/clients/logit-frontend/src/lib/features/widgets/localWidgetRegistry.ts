@@ -50,7 +50,6 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "todays-plan",
-    guideMark: "todays-plan",
     label: "Today's Plan",
     description: "See today's exercises from your active split.",
     component: WidgetCard,

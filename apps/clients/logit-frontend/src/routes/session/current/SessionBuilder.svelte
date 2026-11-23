@@ -894,7 +894,6 @@
         class="size-12 rounded-full shadow-lg"
         disabled={ui.saving || ui.finishing}
         aria-label="Add block"
-        data-guide="session-add-exercise"
         onclick={openAddBlock}
       >
         <Plus class="size-5" />

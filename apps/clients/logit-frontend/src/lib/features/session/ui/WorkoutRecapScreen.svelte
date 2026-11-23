@@ -22,6 +22,10 @@
   import { profile } from "$lib/stores/profile.store";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import Confetti from "./Confetti.svelte";
+  import { getWorkoutRepo } from "$lib/data/repoProvider";
+  import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
+  import { formatPrescription } from "$lib/features/session/planFormat";
+  import type { WorkoutRepo } from "@logit/core/data/workoutRepo";
   import CountUp from "./CountUp.svelte";
 
   const weightUnit = get(profile).weightUnit;
@@ -36,6 +40,34 @@
   } = $props();
 
   const durationMs = Math.max(0, Date.now() - session.startedAtMs);
+
+  // A first workout says so, and leaves out volume: "1,640 kg" means nothing on day one (bug hunt 3.13).
+  let firstWorkout = $state(false);
+  // What each lift is planned at next time, worked out with this workout counted (decision D3).
+  let nextTime = $state<{ name: string; text: string }[]>([]);
+  onMount(() => {
+    const repo = getWorkoutRepo();
+    void repo.listRecentSessions({ limit: 1 }).then((r) => (firstWorkout = !r.some((x) => x.endedAtMs && x.id !== session.id))).catch(() => {});
+    void loadNextTime(repo);
+  });
+
+  async function loadNextTime(repo: WorkoutRepo) {
+    // This workout isn't saved until Done, so the planner is shown it alongside the saved ones.
+    const done = { ...session, endedAtMs: Date.now() };
+    const withToday = Object.create(repo) as WorkoutRepo;
+    withToday.listAllSessions = async () => [done, ...(await repo.listAllSessions()).filter((x) => x.id !== session.id)];
+    withToday.listRecentSessions = async (o) => [done, ...(await repo.listRecentSessions(o)).filter((x) => x.id !== session.id)];
+    const deps = { ...getProgressionDeps(), workoutRepo: withToday };
+    const out: { name: string; text: string }[] = [];
+    for (const ex of exercises.slice(0, 6)) {
+      const working = ex.sets.filter((x) => x.setType !== "warmup").length;
+      const s = await getSuggestion({ id: ex.exerciseId, name: ex.exerciseName }, deps, { sets: working }).catch(() => null);
+      const first = s?.sets[0];
+      if (!s || !first) continue;
+      out.push({ name: ex.exerciseName, text: first.weight === 0 && !s.bodyweightLoad ? `${s.sets.length} sets` : formatPrescription([first], weightUnit, !!s.bodyweightLoad) });
+    }
+    nextTime = out;
+  }
   const exercises = getExercises(session);
   const topSet = getTopSetHighlight(session);
   const totalSets = exercises.reduce((n, ex) => n + ex.sets.length, 0);
@@ -91,7 +123,7 @@
   // Hero stats — the two or three numbers that matter, count up on reveal.
   type HeroStat = { label: string; value: number; fmt: (n: number) => string; noCount?: boolean };
   const heroStats: HeroStat[] = $derived([
-    ...(totalVolume > 0
+    ...(totalVolume > 0 && !firstWorkout
       ? [{ label: `Volume (${weightUnit})`, value: totalVolume, fmt: (n: number) => Math.round(n).toLocaleString() }]
       : []),
     ...(totalSets > 0 ? [{ label: "Sets", value: totalSets, fmt: (n: number) => String(Math.round(n)) }] : []),
@@ -205,7 +237,7 @@
           <Check class="h-8 w-8" strokeWidth={3} />
         </div>
         <div in:fly={{ y: 12, duration: 380, delay: 220 }}>
-          <h1 class="text-2xl font-bold tracking-tight">Workout complete</h1>
+          <h1 class="text-2xl font-bold tracking-tight">{firstWorkout ? "First workout done" : "Workout complete"}</h1>
           <p class="text-sm text-muted-foreground mt-1">
             {#if showDuration}{`${formatDuration(durationMs)} · `}{/if}{blockCount} exercise{blockCount === 1 ? "" : "s"}
           </p>
@@ -313,7 +345,7 @@
           <div class="flex items-baseline justify-between gap-2">
             <span class="text-sm font-medium truncate">{ex.exerciseName}</span>
             <span class="text-xs text-muted-foreground tabular-nums shrink-0">
-              {workingSets(ex)} set{workingSets(ex) === 1 ? "" : "s"}{exerciseVolume(ex) > 0 ? ` · ${exerciseVolume(ex).toLocaleString()} ${weightUnit}` : ""}
+              {workingSets(ex)} set{workingSets(ex) === 1 ? "" : "s"}{exerciseVolume(ex) > 0 && !firstWorkout ? ` · ${exerciseVolume(ex).toLocaleString()} ${weightUnit}` : ""}
             </span>
           </div>
           {#if ex.sets.length > 0}
@@ -351,6 +383,21 @@
           {/each}
         </div>
       </div>
+
+      {#if nextTime.length}
+        <div class="mx-4 mt-4" in:fade={{ duration: 300 }}>
+          <p class="text-xs font-medium text-muted-foreground mb-1.5">Next time</p>
+          <ul class="rounded-lg border border-border divide-y divide-border">
+            {#each nextTime as line (line.name)}
+              <li class="flex items-baseline justify-between gap-3 px-3 py-2.5 text-sm">
+                <span class="min-w-0 truncate">{line.name}</span>
+                <span class="shrink-0 font-semibold tabular-nums text-sky-700 dark:text-sky-300">{line.text}</span>
+              </li>
+            {/each}
+          </ul>
+          <p class="mt-1.5 text-xs text-muted-foreground">Worked out from the sets you just logged.</p>
+        </div>
+      {/if}
     {/if}
   </div>
 
