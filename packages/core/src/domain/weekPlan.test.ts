@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildStarterPlan, starterPlanToSplit } from "./starterPlan";
-import { planWeek, weekPlanLine } from "./weekPlan";
+import { planWeek, weekChipLabel, weekPlanLine } from "./weekPlan";
 import { dayOfWeek } from "./dateIso";
 
 // Upper / Lower on Mon, Tue, Thu, Fri (canvas O8). 2026-11-16 is a Monday.
@@ -119,5 +119,17 @@ describe("Today's plan follows the moved week (canvas O8)", () => {
   it("without the week, each workout stays on its weekday (splits people set up themselves)", async () => {
     const { planSplit } = await import("./splitSchedule");
     expect(planSplit(split, { last: null }, "2026-11-18").startNext?.name).toBe("Upper B");
+  });
+});
+
+describe("week strip chips (bug hunt 8.3)", () => {
+  it("drops the words every day shares: Full Body A / B / C are A, B, C", () => {
+    const week = ["Full Body A", "Full Body B", "Full Body C"];
+    expect(week.map((n) => weekChipLabel(n, week))).toEqual(["A", "B", "C"]);
+  });
+  it("keeps what tells days apart when they differ", () => {
+    const week = ["Upper A", "Lower A", "Upper B"];
+    expect(week.map((n) => weekChipLabel(n, week))).toEqual(["Up A", "Lo A", "Up B"]);
+    expect(weekChipLabel("Push", ["Push", "Pull"])).toBe("Push");
   });
 });

@@ -12,6 +12,7 @@ import { splitDayTitle } from "@logit/core/domain/splitSchedule";
  * split is given (rest days don't count). */
 export function splitDayLabel(day: Pick<SplitDay, "id" | "orderIndex" | "name" | "rest">, split?: WorkoutSplit | null): string {
   if (split) return splitDayTitle(split, day);
+  if (day.name && /^day\s*\d+$/i.test(day.name.trim())) return day.name.trim();
   return day.name ? `Day ${day.orderIndex + 1} — ${day.name}` : `Day ${day.orderIndex + 1}`;
 }
 

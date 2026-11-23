@@ -146,6 +146,19 @@ export function planWeek(
   };
 }
 
+/**
+ * A week-strip chip. Full Body A / B / C are "A", "B", "C" (not "Fu A", bug hunt 8.3): when every
+ * day this week shares the words before a one-letter (or number) ending, the ending tells them apart.
+ */
+export function weekChipLabel(name: string | undefined, weekNames: readonly string[]): string {
+  if (!name) return "";
+  const words = name.split(/\s+/);
+  const last = words.at(-1)!;
+  const prefix = words.slice(0, -1).join(" ");
+  if (words.length > 1 && /^[A-Z0-9]{1,2}$/i.test(last) && weekNames.every((n) => n.startsWith(`${prefix} `))) return last;
+  return words.length > 1 ? `${words[0]!.slice(0, 2)} ${last.slice(0, 1)}` : name.slice(0, 4);
+}
+
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const NUMBER_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven"];
 

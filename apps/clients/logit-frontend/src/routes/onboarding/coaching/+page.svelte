@@ -6,6 +6,7 @@
   import { goto } from "$app/navigation";
   import { ArrowLeft, Clock, MessageSquare, Monitor, Share } from "lucide-svelte";
   import { apiClient } from "@logit/core/api/client";
+  import { getServerMode } from "@logit/core/api/serverConfig";
   import { authStore } from "$lib/api/authStore.svelte";
   import { onboarding } from "$lib/stores/onboarding.store";
   import { resetTours } from "$lib/tour/index";
@@ -13,6 +14,8 @@
   const HERE = "/onboarding/coaching";
   let trainToo = $state(true);
 
+  // Said before the account is made, not after (bug hunt 4.7). A self-hosted server includes everything.
+  const ownServer = $derived(authStore.isAuthenticated ? apiClient.isSelfHosted() : getServerMode() === "selfhosted");
   const hasStudio = $derived(authStore.user?.tier === "Studio" || (authStore.isAuthenticated && apiClient.isSelfHosted()));
 
   async function setUp() {
@@ -61,8 +64,10 @@
   </ul>
 
   <div class="flex-1 min-h-6"></div>
-  {#if authStore.isAuthenticated && !hasStudio}
-    <p class="mb-2 text-[13px] text-muted-foreground">Coaching clients is the Studio plan.</p>
+  {#if !hasStudio && !ownServer}
+    <p class="mb-2 text-[13px] text-muted-foreground">
+      Coaching clients is the Studio plan{authStore.isAuthenticated ? "." : ". Making the account is free; Studio comes after."}
+    </p>
   {/if}
   <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold" onclick={() => void setUp()}>
     {!authStore.isAuthenticated ? "Make an account to coach" : hasStudio ? "Set up my coaching" : "See the Studio plan"}

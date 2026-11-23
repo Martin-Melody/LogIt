@@ -264,7 +264,9 @@
     <p class="text-sm text-muted-foreground mb-5">
       {mode === "login"
         ? "Your workouts, splits and settings come back with you."
-        : "Back up your training, train with friends, get coached."}
+        : redirectTo.startsWith("/onboarding/coaching")
+          ? "Your coaching space: clients, programs and check-ins. Coaching clients is the Studio plan."
+          : "Back up your training, train with friends, get coached."}
     </p>
 
     <!-- Log in / Sign up toggle -->
