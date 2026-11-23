@@ -1270,6 +1270,8 @@ test.describe("finish session", () => {
   test("recap counts bodyweight work at bodyweight ± the logged number", async ({ page }) => {
     await seedSession(page, {
       bodyweightKg: 90,
+      // Not a first workout: that one leaves volume out (decision D3).
+      history: [makeCompletedSession("Pec Deck", [makeSet("ps1", 0, 10, 40)])],
       session: makeSession([
         makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
         makeStrengthBlock("b2", 1, "Pull-Up", [makeSet("s3", 0, 6, 0)]),
