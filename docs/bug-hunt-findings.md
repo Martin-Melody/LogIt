@@ -260,8 +260,8 @@ an unplanned workout with a run and push-ups, all checked again on the web dashb
 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
-| 13.1 | Run distance "3" (box says "km / m") | Saved as **3 m**; only "3.0" means km, and "5,2" becomes 5 m | easy | open (important) |
-| 13.2 | Run duration | The box opens the number keypad, which on Android has no ":"; a plain number counts as seconds, so "20" is 20 seconds and "2000" is 33:20 | easy (plain number = minutes, 4 digits = mm:ss) | open (important) |
+| 13.1 | Run distance "3" (box says "km / m") | Saved as **3 m**; only "3.0" means km, and "5,2" becomes 5 m | easy | fixed (c8a069a) |
+| 13.2 | Run duration | The box opens the number keypad, which on Android has no ":"; a plain number counts as seconds, so "20" is 20 seconds and "2000" is 33:20 | easy (plain number = minutes, 4 digits = mm:ss) | fixed (c8a069a) |
 | 13.3 | Adding an exercise or a cardio block during a workout | It arrives collapsed ("Push-Up 0 of 3"; "Running" with nothing to fill in): one more tap before anything can be logged, and a cardio block also needs "+ Add first interval" | easy | open |
 | 13.4 | Bodyweight exercise, first time | "First time? Pick a weight you could lift about 8 times" for push-ups | easy | open |
 | 13.5 | Home › Recent sessions | "Top: Push-Up 15×0" (bodyweight shown as 0; same family as 9.7) | easy | open |
@@ -315,7 +315,7 @@ a local self-hosted one; driven over the WebView's DevTools connection and real 
 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
-| 17.1 | Rest alerts with the app in the background | No "Rest complete" notification after 100 s: notification permission was never asked (Lou signed in instead of going through the reminders step), and the app only asks when it schedules the alert, which happens as it goes to the background, where Android can't show the question. Anyone who didn't allow notifications earlier never gets rest alerts | easy (ask at the first rest, in the foreground, like the exact-alarm question) | open (important) |
+| 17.1 | Rest alerts with the app in the background | No "Rest complete" notification after 100 s: notification permission was never asked (Lou signed in instead of going through the reminders step), and the app only asks when it schedules the alert, which happens as it goes to the background, where Android can't show the question. Anyone who didn't allow notifications earlier never gets rest alerts | easy (ask at the first rest, in the foreground, like the exact-alarm question) | fixed (c8a069a) |
 | 17.2 | Accounts on this phone | Every account shows "No name yet @lou_r10", though the server has her name (Lou) | easy | open |
 | 17.3 | After moving to her own server | "Your Pro plan is still running… Cancel it in Google Play" for a Pro plan the admin gave her (nothing to cancel there) | easy | open |
 | 17.4 | Lou's first sign-in on the phone | Home showed only Quick start and Goals (no plan, no workouts, no "Getting your training…" note) until the app was reloaded; Fay's sign-in later showed the loading note and filled in by itself. Seen once | — (watch) | open |
