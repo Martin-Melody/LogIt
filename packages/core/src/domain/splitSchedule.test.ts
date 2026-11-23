@@ -12,6 +12,7 @@ import {
   planSplit,
   removeDay,
   rotationSlots,
+  splitDayTitle,
   suggestWeekdays,
 } from "./splitSchedule";
 
@@ -304,5 +305,13 @@ describe("duplicateSplit", () => {
     expect(day.groups![0]!.id).not.toBe("g1");
     expect(day.blocks.every((b) => b.groupId === day.groups![0]!.id)).toBe(true);
     expect(day.blocks.map((b) => b.id)).not.toContain("a");
+  });
+});
+
+describe("splitDayTitle (bug hunt 4.18)", () => {
+  it("doesn't repeat a name that's already the day's number", () => {
+    const days = [{ id: "a", orderIndex: 0, name: "Day 1", rest: false, blocks: [] }, { id: "b", orderIndex: 1, name: "Legs", rest: false, blocks: [] }] as SplitDay[];
+    expect(splitDayTitle({ days }, days[0]!)).toBe("Day 1");
+    expect(splitDayTitle({ days }, days[1]!)).toBe("Day 2 — Legs");
   });
 });

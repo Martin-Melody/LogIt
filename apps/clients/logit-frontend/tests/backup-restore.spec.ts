@@ -99,4 +99,34 @@ test.describe("backup & restore", () => {
     await page.getByRole("button", { name: /Restore selected/ }).click();
     await expect(page.getByText(/Restore complete/)).toBeVisible();
   });
+
+  test("a new phone restores a LogIt backup from onboarding's Import my history", async ({ page }) => {
+    // Someone without an account moving phones picks "Import my history" first; it used to say
+    // "This file doesn't look like a workout log" (bug hunt round 9).
+    const now = Date.now();
+    const backup = {
+      version: 2,
+      exportedAtMs: now,
+      exercises: [{ id: "ex-own", name: "Zercher Carry Hold", notes: null, isCore: false, createdAtMs: now, primaryMuscles: [], secondaryMuscles: [] }],
+      sessions: [{
+        id: "sess_restored", startedAtMs: now - 86_400_000, endedAtMs: now - 86_000_000, note: "Shoulder felt tight",
+        blocks: [{ id: "b1", type: "strength", orderIndex: 0, data: { exerciseName: "Landmine Press", exerciseId: "core_landmine_press",
+          sets: [{ id: "s1", setType: "normal", reps: 8, weight: 30, orderIndex: 0, completed: true }] } }],
+      }],
+    };
+    await page.goto("/");
+    await page.getByRole("button", { name: "Get started" }).click();
+    await page.getByRole("button", { name: /Build muscle/ }).click();
+    await page.getByRole("button", { name: /2\+ years/ }).click();
+    await page.getByRole("button", { name: /Import my history/ }).click();
+    page.once("filechooser", (fc) => {
+      void fc.setFiles({ name: "logit-backup.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
+    });
+    await page.getByRole("button", { name: /Choose the file/ }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByText("Landmine Press").first()).toBeVisible();
+    const restored = await page.evaluate(() => JSON.parse(localStorage.getItem("logit:exercises:custom") ?? "[]"));
+    expect(restored.map((e: { name: string }) => e.name)).toContain("Zercher Carry Hold");
+  });
 });

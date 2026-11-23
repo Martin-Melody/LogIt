@@ -8,6 +8,8 @@
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { coachApi } from "@logit/core/api/coachApi";
+  import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
+  import { coachProblemText, needsCoach, type PaymentClient } from "@logit/core/domain/coachPayments";
   import { toast } from "$lib/components/ui/sonner";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
@@ -33,6 +35,12 @@
     }
   }
   onMount(load);
+  // Payments that need the coach (failed, overdue, paused) belong here too, not only on the
+  // Payments page (bug hunt 6.2). No payments set up: nothing to add.
+  let payments = $state<PaymentClient[]>([]);
+  onMount(async () => {
+    try { payments = needsCoach((await coachPaymentsApi.overview()).clients); } catch { payments = []; }
+  });
   onMount(() => onSampleActivity(() => void load()));
 
   const items = $derived(overview ? needsYou(overview) : []);
@@ -134,7 +142,7 @@
           <h2 class="text-sm font-semibold">Needs you</h2>
           <span class="text-xs text-muted-foreground">Newest first</span>
         </div>
-        {#if items.length === 0}
+        {#if items.length === 0 && payments.length === 0}
           <p class="border-t border-border py-4 text-[13px] text-muted-foreground">
             {overview.clients.length === 0 ? "No clients yet. Invite someone from Clients, or share an invite link." : "Nothing waiting. Nice."}
           </p>
@@ -159,6 +167,17 @@
               <button type="button" disabled={busy === i.request.relationshipId} onclick={() => accept(i.request.relationshipId, who)}
                 class="h-8 rounded-[9px] bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50">Accept</button>
             {/if}
+          </div>
+        {/each}
+        {#each payments as c (c.relationshipId)}
+          {@const who = c.client.displayName || c.client.username}
+          <div class="flex items-center gap-3 border-t border-border py-3">
+            <Avatar name={who} url={c.client.avatarUrl} />
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="text-[13px] font-medium">{coachProblemText(c)}</span>
+              <span class="text-xs text-muted-foreground">Payments</span>
+            </span>
+            <a href="/coaching/payments" class="h-8 shrink-0 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Open payments</a>
           </div>
         {/each}
       </section>

@@ -94,7 +94,7 @@
           </tbody>
         </table>
       </div>
-      <p class="text-[13px] text-muted-foreground">Prices and income live in Google Play Console. Logit only knows who has which plan, and until when.</p>
+      <p class="text-[13px] text-muted-foreground">Prices and income live in Google Play Console. LogIt only knows who has which plan, and until when.</p>
     </section>
   {/if}
 </div>

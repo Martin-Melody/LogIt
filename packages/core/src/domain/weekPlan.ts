@@ -30,6 +30,9 @@ export type WeekPlan = {
   moves: { dayId: string; dayName: string; fromWeekday: number; toWeekday: number }[];
   /** Workouts that no longer fit this week. */
   leftOver: { dayId: string; dayName: string }[];
+  /** Done, plus the ones laid out today or on the plan's own days: what a first week asks for
+   * (a Thursday start on Mon/Wed/Fri isn't asked to train Thu, Fri and Sat). */
+  onSchedule: number;
 };
 
 type DoneSession = { startedAtMs: number; source?: { dayId?: string } | null };
@@ -74,6 +77,8 @@ export function planWeek(
   const doneOn = new Map<number, DoneSession>();
   for (const s of thisWeek) doneOn.set(dates.indexOf(localIso(s.startedAtMs)), s);
 
+  // A device that didn't make the plan has no start saved: the split's own date is the start.
+  const start = planStartIso ?? (split.createdAtMs ? localIso(split.createdAtMs) : undefined);
   // Lay the workouts not done yet onto today and the days after it, in plan order, each on
   // its own day or the first free day after the one before it.
   const remaining = workouts.filter((d) => !doneIds.has(d.id));
@@ -81,15 +86,23 @@ export function planWeek(
   const moves: WeekPlan["moves"] = [];
   const leftOver: WeekPlan["leftOver"] = [];
   let pointer = doneOn.has(t) ? t + 1 : t;
+  let notDue = 0;
   for (const day of remaining) {
     const original = pos(day.weekday!);
     let at = Math.max(pointer, original);
     while (doneOn.has(at) && at < 7) at++;
     if (at > 6) {
+      // Its day came before the plan started, so it was never due: not "won't fit this week".
+      if (start && dates[original]! < start) {
+        notDue++;
+        continue;
+      }
       leftOver.push({ dayId: day.id, dayName: dayLabel(split, day) });
       continue;
     }
-    const moved = at !== original;
+    // A workout whose day came before the plan started wasn't missed: never "Wednesday's
+    // workout moved" to someone who joined on Thursday.
+    const moved = at !== original && (!start || dates[original]! >= start);
     placed.set(at, { day, fromWeekday: moved ? day.weekday : undefined });
     if (moved) moves.push({ dayId: day.id, dayName: dayLabel(split, day), fromWeekday: day.weekday!, toWeekday: (at + 1) % 7 });
     pointer = at + 1;
@@ -97,7 +110,7 @@ export function planWeek(
 
   // Only a workout missed after the plan started moves things: one laid out late because the
   // plan began mid-week (and whatever it pushes along) isn't "moved".
-  const missed = remaining.some((d) => pos(d.weekday!) < t && (!planStartIso || dates[pos(d.weekday!)]! >= planStartIso));
+  const missed = remaining.some((d) => pos(d.weekday!) < t && (!start || dates[pos(d.weekday!)]! >= start));
   if (!missed) {
     moves.length = 0;
     for (const p of placed.values()) delete p.fromWeekday;
@@ -125,11 +138,25 @@ export function planWeek(
     slots,
     done: doneOn.size,
     planned: workouts.length,
-    remaining: remaining.length,
+    remaining: remaining.length - notDue,
     daysLeft: 7 - t,
     moves,
     leftOver,
+    onSchedule: doneOn.size + [...placed.keys()].filter((i) => i === t || workouts.some((d) => pos(d.weekday!) === i)).length,
   };
+}
+
+/**
+ * A week-strip chip. Full Body A / B / C are "A", "B", "C" (not "Fu A", bug hunt 8.3): when every
+ * day this week shares the words before a one-letter (or number) ending, the ending tells them apart.
+ */
+export function weekChipLabel(name: string | undefined, weekNames: readonly string[]): string {
+  if (!name) return "";
+  const words = name.split(/\s+/);
+  const last = words.at(-1)!;
+  const prefix = words.slice(0, -1).join(" ");
+  if (words.length > 1 && /^[A-Z0-9]{1,2}$/i.test(last) && weekNames.every((n) => n.startsWith(`${prefix} `))) return last;
+  return words.length > 1 ? `${words[0]!.slice(0, 2)} ${last.slice(0, 1)}` : name.slice(0, 4);
 }
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

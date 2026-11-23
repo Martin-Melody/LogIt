@@ -4,7 +4,7 @@
   "name": "Calisthenics Starter",
   "description": "12 common bodyweight movements — push-ups, chin-ups, pistol squats, Nordic curls and core holds — added straight to your exercise catalogue.",
   "version": "1.0.0",
-  "author": "Logit Samples",
+  "author": "LogIt Samples",
   "integrity": "sha256-Uc4DC/jVV671OhMrWSn0Ozq/TP6bEJUZrULtWBVQNNI=",
   "homepageUrl": "/sample-plugins/calisthenics-starter/README.txt",
   "sourceUrl": "/sample-plugins/calisthenics-starter/manifest.json",

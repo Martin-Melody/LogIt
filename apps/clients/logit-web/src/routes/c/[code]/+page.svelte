@@ -277,7 +277,7 @@
       {/if}
     </section>
     {#if signedIn && !info.isSelf && done !== "paid" && (done === "active" || done === "requested" || info.relationship === "active" || info.relationship === "requested")}
-      <GetTheApp title="Get Logit on your phone">
+      <GetTheApp title="Get LogIt on your phone">
         <span class="text-[13px] text-slate-400">{coachName}'s program, check-ins and messages all live in the app.</span>
       </GetTheApp>
     {/if}

@@ -17,7 +17,7 @@
 
   async function follow(p: SuggestedPerson) {
     const id = p.user.id;
-    const before = status[id] ?? "none";
+    const before = status[id] ?? p.user.followStatus ?? "none";
     try {
       if (before === "none") status[id] = await socialApi.follow(p.user.username);
       else {
@@ -52,8 +52,8 @@
   }
 
   function label(p: SuggestedPerson) {
-    const s = status[p.user.id] ?? "none";
-    return s === "following" ? "Following" : s === "requested" ? "Requested" : p.user.isPrivate ? "Request" : "Follow";
+    const s = status[p.user.id] ?? p.user.followStatus ?? "none";
+    return s === "following" ? "Following" : s === "requested" ? "Requested" : p.user.isPrivate ? "Request" : p.user.followsYou ? "Follow back" : "Follow";
   }
 </script>
 

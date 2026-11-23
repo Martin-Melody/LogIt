@@ -98,17 +98,35 @@
     }
   }
 
-  onMount(async () => {
-    localInbox.markAllRead();
-    await loadSocial();
-    if (!authStore.isAuthenticated) return;
-    void socialApi.getFollowRequests().then((r) => (requests = r)).catch(() => {});
+  let opened = $state(false);
+
+  async function markSeen() {
     try {
       await notificationsApi.markRead();
       unreadNotifications.clear();
     } catch {
       // non-fatal
     }
+  }
+
+  onMount(async () => {
+    localInbox.markAllRead();
+    await loadSocial();
+    if (!authStore.isAuthenticated) return;
+    void socialApi.getFollowRequests().then((r) => (requests = r)).catch(() => {});
+    await markSeen();
+    opened = true;
+  });
+
+  // New ones while this page is open (the badge store checks every 20 s, and when the app comes
+  // back to the front): show them here too, instead of only after leaving and coming back.
+  $effect(() => {
+    if (!opened || $unreadNotifications === 0 || loading) return;
+    void (async () => {
+      await loadSocial();
+      void socialApi.getFollowRequests().then((r) => (requests = r)).catch(() => {});
+      await markSeen();
+    })();
   });
 
   $effect(() => {
@@ -164,10 +182,16 @@
     if (n.type === "Quote") return "quoted your post";
     if (n.type === "FollowRequest") return "asked to follow you";
     if (n.type === "FollowAccepted") return "accepted your follow request";
+    if (n.type === "CoachInvite") return "wants to coach you";
+    if (n.type === "CoachProgram") return "sent you a program";
+    if (n.type === "CoachPaymentFailed") return "couldn't take your coaching payment. Check your card in My coach";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
   function socialTarget(n: ApiNotification) {
+    if (n.type === "CoachInvite") return "/clients";
+    if (n.type === "CoachProgram") return "/splits";
+    if (n.type === "CoachPaymentFailed") return "/clients";
     if (n.type === "Follow") return `/social/${n.actor.username}`;
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }
@@ -178,7 +202,7 @@
   }
 
   function prText(n: Extract<LocalNotification, { kind: "pr" }>) {
-    const set = `${n.reps} × ${formatWeight(n.weightKg, $profile.weightUnit)}`;
+    const set = `${formatWeight(n.weightKg, $profile.weightUnit)} × ${n.reps}`;
     return n.prKind === "weight" ? `${set}, your heaviest yet` : `${set}, most reps at that weight`;
   }
 

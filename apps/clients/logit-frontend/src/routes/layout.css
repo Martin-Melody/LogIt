@@ -12,7 +12,9 @@
   @apply min-w-0 flex-1 truncate text-base font-semibold;
 }
 
-main {
+/* Only during a page change (set in +layout.svelte): a named element is its own stacking
+   layer, which put sheets and dialogs opened from a page under the bottom bar. */
+html[data-page-transition] main {
   view-transition-name: page;
 }
 

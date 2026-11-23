@@ -59,6 +59,36 @@ describe("readWorkoutCsv: LogIt's spreadsheet layout", () => {
     expect(new Date(monthFirst.workouts[0]!.startedAtMs).getMonth()).toBe(2); // March
   });
 
+  it("reads a Hevy-style export: date inside start_time, month names, pounds, set types", () => {
+    const hevy = readWorkoutCsv(`"title","start_time","end_time","exercise_title","set_index","set_type","weight_lbs","reps","rpe"
+"Upper","5 Oct 2026, 07:00","5 Oct 2026, 08:05","Bench Press (Barbell)","0","warmup","111","10",""
+"Upper","5 Oct 2026, 07:00","5 Oct 2026, 08:05","Bench Press (Barbell)","1","failure","185","8","9"
+"Lower","Oct 8, 2026 18:30","Oct 8, 2026 19:30","Squat (Barbell)","0","normal","225","5",""
+`);
+    expect(hevy.problems).toEqual([]);
+    expect(hevy.unitUnknown).toBe(false);
+    const [upper, lower] = hevy.workouts;
+    expect(new Date(upper!.startedAtMs)).toEqual(new Date(2026, 9, 5, 7, 0));
+    expect(upper!.endedAtMs! - upper!.startedAtMs).toBe(65 * 60_000);
+    expect(upper!.exercises[0]!.sets.map((x) => [x.setType, x.weight, x.unit, x.reps, x.rpe])).toEqual([
+      ["warmup", 111, "lb", 10, undefined], ["failure", 185, "lb", 8, 9],
+    ]);
+    expect(new Date(lower!.startedAtMs)).toEqual(new Date(2026, 9, 8, 18, 30));
+  });
+
+  it("reads Strong's zero-filled columns as empty: a plank is a 60 s hold, not 0 reps", () => {
+    const strong = readWorkoutCsv(`Date,Workout Name,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,RPE
+2026-09-07 18:00:00,Legs,Plank,1,0,0,0,60,
+2026-09-07 18:00:00,Legs,Squat (Barbell),1,100,5,0,0,8
+`);
+    const [plank, squat] = strong.workouts[0]!.exercises;
+    expect(plank!.sets[0]).toMatchObject({ seconds: 60 });
+    expect(plank!.sets[0]!.reps).toBeUndefined();
+    expect(blockKindOf(plank!)).not.toBe("strength");
+    expect(squat!.sets[0]).toMatchObject({ weight: 100, reps: 5, rpe: 8 });
+    expect(squat!.sets[0]!.seconds).toBeUndefined();
+  });
+
   it("refuses a file that isn't a workout log", () => {
     expect(() => readWorkoutCsv("name,email\nx,y")).toThrow(/date and an exercise column/);
   });

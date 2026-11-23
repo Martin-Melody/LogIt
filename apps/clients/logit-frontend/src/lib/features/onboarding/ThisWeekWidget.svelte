@@ -17,7 +17,7 @@
   import { localDateIso } from "@logit/core/domain/nutrition";
   import { dayOfWeek, weekStartIso } from "@logit/core/domain/dateIso";
   import { targetForWeek } from "@logit/core/domain/weeklyStreak";
-  import { planWeek, weekPlanLine, type WeekPlan } from "@logit/core/domain/weekPlan";
+  import { planWeek, weekPlanLine, type WeekPlan, weekChipLabel } from "@logit/core/domain/weekPlan";
   import { inFirstWeek, planStartIso } from "./firstWeek";
 
   const SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -43,14 +43,13 @@
   // Lowered for this week already ("Make it 3"): don't offer to lower it again.
   const lowered = $derived(target < $goalsStore.streak.weeklyTarget);
   const today = $derived(week?.slots.find((s) => s.dateIso === todayIso) ?? null);
+  // Started late in the week: only what fits before Sunday on their own days (or today) is asked for.
+  const fits = $derived(week?.onSchedule ?? 0);
   // Only the workout days (and days trained on) in the first week, like the mockup; a whole week after.
   const shown = $derived(week ? (firstWeek ? week.slots.filter((s) => s.state !== "rest") : week.slots) : []);
 
-  function short(name: string | undefined): string {
-    if (!name) return "";
-    const words = name.split(/\s+/);
-    return words.length > 1 ? `${words[0]!.slice(0, 2)} ${words.at(-1)!.slice(0, 1)}` : name.slice(0, 4);
-  }
+  const dayNames = $derived(shown.map((s) => s.dayName).filter((n): n is string => !!n));
+  const short = (name: string | undefined) => weekChipLabel(name, dayNames);
 
   async function startMoved() {
     const split = $activeSplit;
@@ -88,7 +87,9 @@
         {/each}
       </div>
       <p class="text-[13px] text-muted-foreground">
-        {#if firstWeek && !week.moves.length}
+        {#if firstWeek && !week.moves.length && fits < target}
+          {week.done} of {fits} done. Your first full week starts Monday.
+        {:else if firstWeek && !week.moves.length}
           {week.done} of {target} done. {week.done >= target ? "That's your first week on the streak." : `Finish all ${target === 1 ? "of it" : target === 2 ? "both" : target} for your first week on the streak.`}
         {:else}
           {weekPlanLine(week, dayOfWeek(todayIso), target)}

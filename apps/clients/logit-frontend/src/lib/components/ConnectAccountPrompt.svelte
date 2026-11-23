@@ -44,7 +44,7 @@
       <div>
         <h2 class="text-base font-semibold">Account required</h2>
         <p class="text-sm text-muted-foreground mt-1">
-          {feature} requires a Logit account. It's free to sign up.
+          {feature} requires a LogIt account. It's free to sign up.
         </p>
       </div>
       <button type="button" class="text-muted-foreground hover:text-foreground -mt-0.5 ml-4" onclick={onclose}>

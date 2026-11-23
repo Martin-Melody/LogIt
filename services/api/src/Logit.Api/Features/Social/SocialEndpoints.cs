@@ -106,7 +106,8 @@ public static class SocialEndpoints
             .Include(f => f.Follower)
             .Where(f => f.FollowedId == user.Id)
             .ToListAsync();
-        return Results.Ok(follows.Select(f => f.Follower.ToProfileDto(false)));
+        var dto = await MappingExtensions.ProfilesForCaller(db, caller.GetUserIdOrNull(), follows.Select(f => f.FollowerId).ToList());
+        return Results.Ok(follows.Select(f => dto(f.Follower)));
     }
 
     private static async Task<IResult> GetFollowing(string username, ClaimsPrincipal caller, AppDbContext db)
@@ -119,7 +120,8 @@ public static class SocialEndpoints
             .Include(f => f.Followed)
             .Where(f => f.FollowerId == user.Id)
             .ToListAsync();
-        return Results.Ok(follows.Select(f => f.Followed.ToProfileDto(false)));
+        var dto = await MappingExtensions.ProfilesForCaller(db, caller.GetUserIdOrNull(), follows.Select(f => f.FollowedId).ToList());
+        return Results.Ok(follows.Select(f => dto(f.Followed)));
     }
 
     private static async Task<IResult> GetUserPosts(
@@ -529,7 +531,13 @@ public static class SocialEndpoints
         id = await db.SharedPostIdAsync(id);
         if (comment is null || comment.DeletedAt is not null || comment.PostId != id)
             return Results.NotFound();
-        if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
+        var userId = caller.GetUserId();
+        if (comment.AuthorId != userId)
+        {
+            // The post's author may remove comments on their post too (bug hunt 5.12), as on Instagram.
+            var postAuthorId = await db.Posts.Where(p => p.Id == id).Select(p => p.AuthorId).FirstOrDefaultAsync();
+            if (postAuthorId != userId) return Results.Forbid();
+        }
 
         // Deleting a top-level comment takes its replies with it (as on Instagram).
         var now = DateTime.UtcNow;

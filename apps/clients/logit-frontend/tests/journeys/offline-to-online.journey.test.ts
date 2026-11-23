@@ -39,14 +39,17 @@ describe("offline → account on getlogit.app", () => {
     expect(server.workoutNames).toEqual(["Push day"]);
   });
 
-  it("a Free account's backup belongs to one phone: a second phone is refused until it signs in again", async () => {
+  it("a Free account's backup belongs to one phone: a second phone is asked, and refused until it takes it", async () => {
     const user = newUser("onephone");
     const first = await new Device("first phone").launch();
     await first.register(user);
     await first.finishOnboarding({ name: "Sam", split: "First split" });
 
     const second = await new Device("second phone").launch();
-    await second.signIn(user); // signing in moves the backup to this phone
+    await second.signIn(user);
+    // The first phone still holds it: the app asks "Back up this phone instead?" (decision D5).
+    expect(second.app.client.apiClient.isBackupElsewhere()).toBe(true);
+    await second.app.client.apiClient.moveBackupHere(); // "Back up this phone"
     await second.saveSplit("Second split");
     await first.launch();
     await first.saveSplit("Made on the first phone");

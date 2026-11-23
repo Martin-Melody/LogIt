@@ -61,6 +61,25 @@ public class CoachPaymentTests : IAsyncLifetime
         await _db.CoachClientRelationships.Include(r => r.Payment).AsNoTracking().SingleAsync();
 
     [Fact]
+    public async Task The_webhook_and_the_success_page_arriving_together_dont_fail()
+    {
+        // Seen with real Stripe: checkout.session.completed and the client's return to the link
+        // page landed together; one of them failed on the relationship's unique key (500).
+        _stripe.PeriodEnd = T0.AddMonths(1);
+        var info = Checkout(_monthly);
+        await using var other = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_conn).Options);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Jwt:Secret"] = Secret }).Build();
+        var otherSvc = new CoachPaymentService(other, _stripe, _email, config, NullLogger<CoachPaymentService>.Instance);
+        _stripe.Meanwhile = () => otherSvc.FulfillCheckoutAsync(Acct, info, T0, default);
+
+        var rel = await _svc.FulfillCheckoutAsync(Acct, info, T0, default);
+
+        Assert.NotNull(rel);
+        Assert.Equal(1, await _db.CoachClientRelationships.CountAsync());
+        Assert.Equal(1, await _db.CoachClientPayments.CountAsync());
+    }
+
+    [Fact]
     public void Checkout_details_survive_stripe_metadata()
     {
         var meta = new CheckoutMeta(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, new SharingDto(true, false, true, false, true));
@@ -114,6 +133,10 @@ public class CoachPaymentTests : IAsyncLifetime
         Assert.Equal((await Rel()).Payment!.Id, PaymentFixLinks.Read(token, Secret, T0.AddDays(31)));
         await _svc.InvoiceFailedAsync(Acct, "sub_1", T0.AddDays(33), default, attempt: 2); // Stripe's retry fails too
         Assert.Equal(3, _email.Sent.Count); // nobody is emailed again
+        // The client is told in the app too, once (decision D6, bug hunt 6.3).
+        var notes = await _db.Notifications.Where(n => n.UserId == _client.Id).ToListAsync();
+        Assert.Equal([NotificationType.CoachPaymentFailed], notes.Select(n => n.Type));
+        Assert.Equal(_coach.Id, notes[0].ActorId);
 
         await _svc.SweepAsync(T0.AddDays(36), default); // 6 days unpaid: default rule is 7
         Assert.Equal(CoachClientStatus.Active, (await Rel()).Status);
@@ -220,6 +243,25 @@ public class CoachPaymentTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Cancelled_before_the_paid_up_date_keeps_coaching_until_then()
+    {
+        // Decision D6, bug hunt 6.4: paid to the end of the month, cancelled in Stripe on day 5.
+        _stripe.PeriodEnd = T0.AddMonths(1);
+        await _svc.FulfillCheckoutAsync(Acct, Checkout(_monthly), T0, default);
+        await _svc.SubscriptionChangedAsync(Acct, new StripeSubscriptionInfo("sub_1", "canceled", false, T0.AddMonths(1)), T0.AddDays(5), default);
+        var p = (await Rel()).Payment!;
+        Assert.Equal(PaymentStates.Paid, p.State);
+        Assert.Null(p.UnpaidSince);
+
+        await _svc.SweepAsync(T0.AddDays(12.1), default); // 7 days after the cancel: still paid up
+        Assert.Equal(CoachClientStatus.Active, (await Rel()).Status);
+        await _svc.SweepAsync(T0.AddMonths(1).AddHours(1), default);
+        Assert.Equal(T0.AddMonths(1), (await Rel()).Payment!.UnpaidSince);
+        await _svc.SweepAsync(T0.AddMonths(1).AddDays(7.1), default); // the coach's 7 days, from the paid-up date
+        Assert.Equal(CoachClientStatus.Paused, (await Rel()).Status);
+    }
+
+    [Fact]
     public async Task Leaving_coaching_cancels_the_plan()
     {
         await _svc.FulfillCheckoutAsync(Acct, Checkout(_monthly), T0, default);
@@ -269,8 +311,14 @@ public class CoachPaymentTests : IAsyncLifetime
         public Task<ConnectAccountStatus> GetAccountAsync(string accountId, CancellationToken ct) => Task.FromResult(new ConnectAccountStatus(true, false, "Alex", "eur"));
         public Task<CheckoutStart> CreateCheckoutAsync(CheckoutStartRequest req, CancellationToken ct) => Task.FromResult(new CheckoutStart("cs_new", "https://checkout.stripe.test"));
         public Task<CheckoutInfo> GetCheckoutAsync(string accountId, string sessionId, CancellationToken ct) => throw new NotSupportedException();
-        public Task<StripeSubscriptionInfo> GetSubscriptionAsync(string accountId, string subscriptionId, CancellationToken ct) =>
-            Task.FromResult(new StripeSubscriptionInfo(subscriptionId, "active", false, PeriodEnd));
+        /// Runs once, the next time a subscription is read: lets a test land a second request
+        /// in the middle of the first (the moment between its checks and its save).
+        public Func<Task>? Meanwhile { get; set; }
+        public async Task<StripeSubscriptionInfo> GetSubscriptionAsync(string accountId, string subscriptionId, CancellationToken ct)
+        {
+            if (Meanwhile is { } meanwhile) { Meanwhile = null; await meanwhile(); }
+            return new StripeSubscriptionInfo(subscriptionId, "active", false, PeriodEnd);
+        }
         public Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct)
         {
             StopAtEnd.Add((subscriptionId, cancel));

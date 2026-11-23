@@ -63,10 +63,12 @@
   }>();
 
   const meta = $derived(setTypeMeta(setType));
+  // Warm-ups aren't numbered (setNumber 0): read out as their type instead.
+  const setName = $derived(setNumber ? `Set ${setNumber}` : meta.label);
   const shown = (kg: number) => roundDisplayWeight(toDisplayWeight(kg, weightUnit), weightUnit);
 
   const lastText = $derived(
-    prev && prev.reps > 0 ? `${prev.reps} × ${formatLoad(prev.weight, weightUnit, bodyweight, { withUnit: false })}` : "",
+    prev && prev.reps > 0 ? `${formatLoad(prev.weight, weightUnit, bodyweight, { withUnit: false })} × ${prev.reps}` : "",
   );
 
   // Still only planned: nothing logged or typed yet.
@@ -112,7 +114,8 @@
   });
 
   function num(value: string) {
-    const n = Number(value);
+    // "82,5" from a comma keypad is 82.5.
+    const n = Number(value.trim().replace(",", "."));
     return Number.isFinite(n) ? n : 0;
   }
 
@@ -154,7 +157,7 @@
     class="flex h-11 flex-col items-center justify-center gap-0.5 rounded-md cursor-grab active:cursor-grabbing transition-colors duration-150 {optionsOpen ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}"
     style="touch-action: none"
     use:gripAction
-    aria-label="Set {setNumber || ''}, drag to reorder"
+    aria-label="{setName}, drag to reorder"
     tabindex="-1"
     data-testid="set-number"
     {disabled}
@@ -177,7 +180,7 @@
   <!-- Last time, for this set -->
   <span
     class="h-10 min-w-0 truncate text-left text-[13px] leading-10 tabular-nums text-muted-foreground"
-    aria-label={lastText ? `Set ${setNumber}, last time ${lastText}` : `Set ${setNumber}, nothing last time`}
+    aria-label={lastText ? `${setName}, last time ${lastText}` : `${setName}, nothing last time`}
     data-testid="set-last"
   >
     {lastText}
@@ -191,7 +194,7 @@
       class="{box} {was?.weight ? wasBox : ''} {weightValue === '' ? (weightIsPlan ? 'font-medium text-info' : 'font-normal text-muted-foreground') : ''}"
       onclick={onPickWeight}
       {disabled}
-      aria-label="Set {setNumber} weight: {weightValue || weightPlaceholder || 'not set'} {weightUnit}. Change"
+      aria-label="{setName} weight: {weightValue || weightPlaceholder || 'not set'} {weightUnit}. Change"
       data-testid="set-weight"
     >
       {weightValue || weightPlaceholder || "–"}
@@ -212,11 +215,14 @@
         {bwPrefix}
       </span>
     {/if}
+    <!-- Text + decimal keypad, so "82,5" is 82.5 (a number box dropped the comma: 825). Bodyweight
+         sets keep the number box: their minus (assisted) isn't on every decimal keypad. -->
     <input
       class="{box} {was?.weight ? wasBox : ''} {weightIsPlan ? planPh : plainPh} {bodyweight ? (bwPrefix === 'BW+' ? 'pl-[2.6rem] pr-1 text-left' : 'pl-[2.05rem] pr-1 text-left') : ''}"
-      type="number"
+      type={bodyweight ? "number" : "text"}
+      inputmode={bodyweight ? undefined : "decimal"}
       step={weightUnit === "lbs" ? "1" : "0.5"}
-      aria-label="Set {setNumber} weight ({bodyweight ? `${weightUnit} on top of bodyweight` : weightUnit})"
+      aria-label="{setName} weight ({bodyweight ? `${weightUnit} on top of bodyweight` : weightUnit})"
       placeholder={weightPlaceholder}
       value={weightValue}
       {disabled}
@@ -239,7 +245,7 @@
     type="number"
     min="0"
     inputmode="numeric"
-    aria-label="Set {setNumber} reps"
+    aria-label="{setName} reps"
     placeholder={repsPlaceholder}
     value={repsValue}
     {disabled}

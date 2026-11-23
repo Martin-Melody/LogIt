@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { OverviewData } from "./overviewData";
+  import TrainOnPhone from "./TrainOnPhone.svelte";
   import type { BuiltinWidgetId } from "./layout.svelte";
 
   // One Overview widget's content. The frame (title, edit controls) is drawn by the page.
@@ -77,6 +78,7 @@
     {:else if !data.splitName}
       <p class="text-xs text-muted-foreground">Pick an active split in the app to see what's planned.</p>
     {/if}
+    <TrainOnPhone nextTitle={data.nextUp?.title ?? null} />
   </div>
 {:else if id === "goals"}
   {#if data.goals.length === 0}

@@ -290,6 +290,8 @@ export function dayNumber(split: Pick<WorkoutSplit, "days">, dayId: string): num
 export function splitDayTitle(split: Pick<WorkoutSplit, "days">, day: Pick<SplitDay, "id" | "name" | "rest" | "orderIndex">): string {
   if (day.rest) return "Rest day";
   const n = dayNumber(split, day.id) ?? day.orderIndex + 1;
+  // A day already called "Day 1" (a coach program day with no name) isn't "Day 1 — Day 1" (bug hunt 4.18).
+  if (day.name && /^day\s*\d+$/i.test(day.name.trim())) return day.name.trim();
   return day.name ? `Day ${n} — ${day.name}` : `Day ${n}`;
 }
 

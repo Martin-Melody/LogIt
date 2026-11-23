@@ -61,7 +61,7 @@ describe("the first week", () => {
   });
 
   it("finishing it shows the week-complete screen once", () => {
-    expect(afterWorkoutRoute("s4", 3, true)).toBe("/onboarding/week-done");
+    expect(afterWorkoutRoute("s4", 3, true)).toBe("/onboarding/week-done?id=s4");
     expect(afterWorkoutRoute("s5", 4, true)).toBe("/");
   });
 });

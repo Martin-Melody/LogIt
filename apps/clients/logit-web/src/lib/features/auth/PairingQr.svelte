@@ -86,7 +86,7 @@
   <div class="flex items-center gap-3.5 rounded-xl border border-border bg-card p-3.5">
     <div class="relative size-[104px] shrink-0 rounded-lg bg-white p-1.5 ring-1 ring-border">
       {#if status === "showing" && svg}
-        <div class="size-full [&>svg]:size-full" role="img" aria-label="QR code to scan with the Logit app on your phone">
+        <div class="size-full [&>svg]:size-full" role="img" aria-label="QR code to scan with the LogIt app on your phone">
           {@html svg}
         </div>
       {:else}
@@ -107,7 +107,7 @@
         {:else if status === "paused"}
           The code ran out. Show a new one when you're ready.
         {:else}
-          Open Logit, tap your account, then <strong class="font-medium text-foreground">Sign in on a computer</strong>, and scan this. No password.
+          Open LogIt, tap your account, then <strong class="font-medium text-foreground">Sign in on a computer</strong>, and scan this. No password.
         {/if}
       </span>
     </div>

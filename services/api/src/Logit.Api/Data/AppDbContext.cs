@@ -219,6 +219,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.Property(r => r.AppVersion).HasMaxLength(100);
             e.Property(r => r.Platform).HasMaxLength(20);
             e.Property(r => r.Note).HasMaxLength(DiagnosticsLimits.MaxNoteChars);
+            e.Property(r => r.Kind).HasMaxLength(10).HasDefaultValue("report");
+            e.Property(r => r.DeviceId).HasMaxLength(64);
             e.HasOne(r => r.User)
              .WithMany()
              .HasForeignKey(r => r.UserId)

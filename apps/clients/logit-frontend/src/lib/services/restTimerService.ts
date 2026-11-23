@@ -98,7 +98,7 @@ function reconcile(session: WorkoutSession | null): void {
           if (typeof document === "undefined" || document.visibilityState !== "hidden") playSound("warn");
         }, warnAt - now)
       : undefined;
-    if (!existing) void askForExactAlarmsOnce();
+    if (!existing) void askForRestAlertsOnce();
     scheduled.set(rest.setId, { endsAtMs: rest.endsAtMs, timeoutId, warnId });
     // A rest started or moved while the app is in the background (e.g. from a widget).
     if (inBackground()) void scheduleOsNotification(rest.setId, rest.endsAtMs);
@@ -107,15 +107,27 @@ function reconcile(session: WorkoutSession | null): void {
 }
 
 const EXACT_ALARMS_ASKED_KEY = "logit:exact-alarms-asked";
+const NOTIFICATIONS_ASKED_KEY = "logit:rest-notifications-asked";
 
-/** Android: at the first rest, if LogIt may not set exact alarms, offer it once (the same as
- * Settings › Workout › Rest alerts on time). Web and iOS don't have the setting. */
-async function askForExactAlarmsOnce(): Promise<void> {
+/** Android, at the first rest: if LogIt may not post notifications, offer it once; otherwise, if
+ * it may not set exact alarms, offer that once (the same as Settings › Workout › Rest alerts on
+ * time). Asked here because the alert is booked as the app goes to the background, where Android
+ * can't show the question. Web and iOS don't have the exact-alarm check, so they stop at it. */
+async function askForRestAlertsOnce(): Promise<void> {
   try {
-    if (localStorage.getItem(EXACT_ALARMS_ASKED_KEY)) return;
     const { LocalNotifications } = await import("@capacitor/local-notifications");
-    if ((await LocalNotifications.checkExactNotificationSetting()).exact_alarm === "granted") return;
-    if (localStorage.getItem(EXACT_ALARMS_ASKED_KEY)) return; // two rests started at once
+    const exact = (await LocalNotifications.checkExactNotificationSetting()).exact_alarm === "granted";
+    const { display } = await LocalNotifications.checkPermissions();
+    if (display === "prompt" || display === "prompt-with-rationale") {
+      if (localStorage.getItem(NOTIFICATIONS_ASKED_KEY)) return;
+      localStorage.setItem(NOTIFICATIONS_ASKED_KEY, "1");
+      toast("Get a notification when your rest ends, even with LogIt in the background?", {
+        duration: 12_000,
+        action: { label: "Allow", onClick: () => void LocalNotifications.requestPermissions().catch(() => {}) },
+      });
+      return;
+    }
+    if (display !== "granted" || exact || localStorage.getItem(EXACT_ALARMS_ASKED_KEY)) return;
     localStorage.setItem(EXACT_ALARMS_ASKED_KEY, "1");
     toast("With LogIt in the background, rest alerts can come late. Allow alarms so they're on time?", {
       duration: 12_000,

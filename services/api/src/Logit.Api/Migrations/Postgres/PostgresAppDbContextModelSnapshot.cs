@@ -817,6 +817,17 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DeviceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("report");
+
                     b.Property<string>("Log")
                         .IsRequired()
                         .HasColumnType("text");
@@ -830,7 +841,7 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -2023,6 +2034,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long>("UpdatedAtMs")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -2450,8 +2464,7 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("User");
                 });

@@ -68,7 +68,7 @@ function loadEntries(): LogEntry[] {
 
 let entries: LogEntry[] | null = null;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
-const listeners = new Set<() => void>();
+const listeners = new Set<(entry?: LogEntry) => void>();
 
 function buffer(): LogEntry[] {
   if (!entries) entries = loadEntries();
@@ -219,7 +219,7 @@ function write(level: LogLevel, area: string, msg: string, data?: unknown): void
       // Move it to the end so the list stays in order of latest activity.
       list.splice(i, 1);
       list.push(e);
-      afterWrite(level);
+      afterWrite(level, e);
       return;
     }
   }
@@ -228,16 +228,16 @@ function write(level: LogLevel, area: string, msg: string, data?: unknown): void
   if (cleanData) entry.data = cleanData;
   list.push(entry);
   if (list.length > MAX_ENTRIES) list.splice(0, list.length - MAX_ENTRIES);
-  afterWrite(level);
+  afterWrite(level, entry);
 }
 
-function afterWrite(level: LogLevel): void {
+function afterWrite(level: LogLevel, entry: LogEntry): void {
   // An error may be followed by a crash or the app being killed: save it straight away.
   if (level === "error") persistNow();
   else schedulePersist();
   for (const fn of listeners) {
     try {
-      fn();
+      fn(entry);
     } catch {}
   }
 }
@@ -266,8 +266,9 @@ export function clearLog(): void {
   }
 }
 
-/** Called after every new or repeated entry. Returns an unsubscribe function. */
-export function onLogChange(fn: () => void): () => void {
+/** Called after every new or repeated entry (passed in; absent after clearLog). Returns an
+ * unsubscribe function. */
+export function onLogChange(fn: (entry?: LogEntry) => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
@@ -292,7 +293,7 @@ export function formatLogEntry(e: LogEntry): string {
 /** The whole log as text, with a header of key: value lines (device, app version, …). Times
  * are UTC. */
 export function formatLog(header: Record<string, string | number | boolean | null | undefined>, list = getLogEntries()): string {
-  const lines = ["Logit diagnostics", `Created: ${iso(Date.now())} UTC`];
+  const lines = ["LogIt diagnostics", `Created: ${iso(Date.now())} UTC`];
   for (const [k, v] of Object.entries(header)) {
     if (v !== undefined && v !== null && v !== "") lines.push(`${k}: ${cleanString(String(v))}`);
   }

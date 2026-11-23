@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+  import { carriedWeight } from "./carryWeight";
   import FinishSetupCard from "$lib/features/exercise/FinishSetupCard.svelte";
   import { needsSetup } from "@logit/core/domain/exerciseGuess";
   import { hasStartingLift } from "$lib/features/onboarding/startingLifts";
@@ -29,6 +30,7 @@
     useReplan,
     shortBy,
     isUntouchedPlannedSet,
+    getExercises,
   } from "@logit/core/domain/workout";
   import { suggestionToPlan } from "@logit/core/domain/progression";
   import { warmupSets } from "@logit/core/domain/warmup";
@@ -51,7 +53,8 @@
   import { barbellFor, chosenMachine, dumbbellWeightsKg, effectiveMachine, machinesFor, usesMachine, type ExtraLoad, type Place, type PlaceMachine } from "@logit/core/domain/place";
   import { placesStore } from "$lib/features/places/places.svelte";
   import { goto } from "$app/navigation";
-  import { formatLoad } from "@logit/core/domain/units";
+  import { formatLoad, formatWeight } from "@logit/core/domain/units";
+  import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import MachinePickerSheet from "$lib/features/places/MachinePickerSheet.svelte";
   import MachineEditorSheet from "$lib/features/places/MachineEditorSheet.svelte";
   import WhereTodaySheet from "$lib/features/places/WhereTodaySheet.svelte";
@@ -79,6 +82,7 @@
   import { swapTargetFor, type SwapTarget } from "@logit/core/domain/swaps";
   import { coachFor, type CachedCoach } from "$lib/features/coaching/coachCache";
   import ExerciseDetailSheet from "$lib/features/exercise/components/ExerciseDetailSheet.svelte";
+  import { justAdded } from "../justAdded";
 
   const {
     blockId,
@@ -94,7 +98,14 @@
   }: BlockBaseProps<StrengthBlockData> = $props();
 
   let suggestion = $state<ProgressionOutput | null>(null);
-  let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  // Back in a workout after the app was closed: the exercise you were on is open, not hidden.
+  const resumingHere = untrack(() => {
+    const s = get(currentSession);
+    const exercises = s ? getExercises(s) : [];
+    const current = exercises.find((e) => e.sets.some((x) => !x.completed && x.setType !== "warmup"));
+    return current?.id === blockId && exercises.some((e) => e.sets.some((x) => x.completed));
+  });
+  let collapsed = $state(get(profile).blocksCollapsedByDefault && !resumingHere && !untrack(() => justAdded.delete(blockId)));
   // Plan this block's sets once the suggestion arrives: on first load if it has
   // none yet, and after a swap (replacing only the planned, not-yet-done sets).
   let planPending = $state(untrack(() => data.sets.length === 0));
@@ -140,6 +151,13 @@
   });
   const firstEver = $derived(prevLoaded && prevSets === null && !fromBestLift);
   const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
+  // A beginner's first barbell lift is planned on the empty bar (decision D3): say so plainly
+  // instead of "pick a weight you could lift 8 times", which means nothing on day one.
+  const emptyBarKg = $derived($equipment.barbell.barKg);
+  const emptyBarStart = $derived(
+    exercise?.equipment === "barbell" &&
+      data.sets.some((s) => s.setType !== "warmup" && s.target?.weight != null && Math.abs(s.target.weight - emptyBarKg) < 0.6),
+  );
   // The hint says how heavy to go and the first set plans the rest, so the algorithm's own
   // "First time" line would only repeat it, before and after that set.
   const cardSuggestion = $derived(
@@ -150,6 +168,13 @@
   function withFirstSetPlan(s: WorkoutSession, setId: string): WorkoutSession {
     if (!firstEver || data.sets.some((x) => x.completed && x.id !== setId)) return s;
     return planRestFromFirstSet(s, blockId, setId, firstTimeMin);
+  }
+
+  /** Correcting that first set (825 typed for 82.5) re-plans the sets it planned. */
+  function withFirstSetFix(s: WorkoutSession, setId: string): WorkoutSession {
+    const set = data.sets.find((x) => x.id === setId);
+    if (!firstEver || !set?.completed || data.sets.some((x) => x.completed && x.id !== setId)) return s;
+    return planRestFromFirstSet(s, blockId, setId, firstTimeMin, true);
   }
 
   /** A set 2+ reps short of its aim re-plans the untouched sets after it (lighter). Weights
@@ -258,6 +283,14 @@
   // A machine opened from the exercise's "Where you do it" (any place, not only today's).
   let editorPlace = $state<Place | null | undefined>(undefined);
 
+  function openHowTo() {
+    const id = data.exerciseId ?? exercise?.id;
+    if (id) {
+      detailTab = "howto";
+      detailExerciseId = id;
+    }
+  }
+
   function openDetail() {
     const id = data.exerciseId ?? exercise?.id;
     if (id) {
@@ -338,9 +371,10 @@
         const settings = await getExerciseProgressionSettings({ id: exerciseId, name }, getProgressionDeps()).catch(() => null);
         firstTimeReps = settings?.repRange?.[1] ?? 8;
         firstTimeMin = settings?.repRange?.[0] ?? 1;
-        // The workout's first exercise opens so the first-set hint is seen.
-        if (get(currentSession)?.blocks[0]?.id === blockId && !data.sets.some((s) => s.completed)) collapsed = false;
       }
+      // A new workout's first exercise opens (and with it the first-set hint), so there's
+      // somewhere to start rather than a list of closed cards.
+      if (get(currentSession)?.blocks[0]?.id === blockId && !data.sets.some((s) => s.completed)) collapsed = false;
     } catch {
       prevSets = null;
     } finally {
@@ -454,7 +488,9 @@
     return logged ?? suggestion?.sets.find((s) => (s.weight ?? 0) > 0)?.weight ?? 0;
   });
   // No ramp for bodyweight work: "BW+2.5" isn't a bar to build up to.
-  const canWarmup = $derived(!hasWarmup && warmupWorkingKg > 0 && !bodyweight);
+  // Shown before a weight is typed too (greyed): appearing on the first weight pushed the tick
+  // away from under the finger.
+  const canWarmup = $derived(!hasWarmup && !bodyweight);
 
   async function handleAddWarmup() {
     const workingKg = warmupWorkingKg;
@@ -473,14 +509,30 @@
 
   async function handleRepsChange(setId: string, reps: number) {
     const safe = Number.isFinite(reps) ? Math.max(0, reps) : 0;
-    await onMutate((s: WorkoutSession) => updateSet(s, blockId, setId, { reps: safe }));
+    await onMutate((s: WorkoutSession) => withFirstSetFix(updateSet(s, blockId, setId, { reps: safe }), setId));
   }
 
   async function handleWeightChange(setId: string, weight: number) {
     // Negative weight is meaningful: net assistance on a bodyweight / assisted-machine
     // movement (e.g. −25 = bodyweight minus 25 kg on the assisted dip machine).
     const safe = Number.isFinite(weight) ? weight : 0;
-    await onMutate((s: WorkoutSession) => updateSet(s, blockId, setId, { weight: safe }));
+    await onMutate((s: WorkoutSession) => withFirstSetFix(updateSet(s, blockId, setId, { weight: safe }), setId));
+    if (!bodyweight) warnIfTypo(setId, safe);
+  }
+
+  /** 3× the plan, the other sets or last time is almost always a typo (825 for 82.5): say so,
+   * with a one-tap fix when dropping a digit lands near it. Nothing is blocked. */
+  function warnIfTypo(setId: string, kg: number) {
+    const set = data.sets.find((x) => x.id === setId);
+    const others = data.sets.filter((x) => x.id !== setId && x.weight > 0).map((x) => x.weight);
+    const ref = set?.target?.weight || Math.max(0, ...others, ...(prevSets ?? []).map((x) => x.weight));
+    if (!(ref > 0) || kg < ref * 3) return;
+    const unit = get(profile).weightUnit;
+    const fixed = kg / 10;
+    const fix = fixed >= ref / 2 && fixed <= ref * 2
+      ? { action: { label: `Make it ${formatLoad(fixed, unit, false)}`, onClick: () => void handleWeightChange(setId, fixed) } }
+      : {};
+    toast.warning(`${formatLoad(kg, unit, false)}? That's ${Math.round(kg / ref)}× ${formatLoad(ref, unit, false)}.`, fix);
   }
 
   async function handleDeleteSet(setId: string) {
@@ -526,6 +578,15 @@
     playSound("tap");
   }
 
+  const AS_PLANNED_KEY = "logit:hint:logged-as-planned";
+  function loggedAsPlanned(setId: string, kg: number, reps: number) {
+    const shown = Number(getAccountItem(AS_PLANNED_KEY) ?? 0) || 0;
+    if (shown >= 3) return;
+    setAccountItem(AS_PLANNED_KEY, String(shown + 1));
+    const load = bodyweight ? formatLoad(kg, get(profile).weightUnit, true) : formatWeight(kg, get(profile).weightUnit);
+    toast(`Logged ${load} × ${reps}. Did more?`, { action: { label: "Change", onClick: () => openEditSet(setId) } });
+  }
+
   async function handleComplete(setId: string) {
     const set = data.sets.find((s) => s.id === setId);
     if (!set) return;
@@ -545,6 +606,9 @@
         return;
       }
     }
+    // No weight and none planned: carry the set before it rather than logging 0 kg.
+    const before = !wasCompleted && !fill?.weight ? carriedWeight(data.sets, set) : undefined;
+    if (before !== undefined) fill = { reps: fill?.reps ?? set.reps, weight: before };
     // In a superset / circuit the group's rest wins; else the set's own override,
     // else the per-type default. A group rest of 0 goes straight on.
     const effectiveRest = groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[set.setType];
@@ -569,6 +633,9 @@
       void triggerHaptic();
       if (optionsSetId === setId) optionsSetId = null;
       askEffort(set);
+      // An empty reps box logged the plan's reps (bug hunt 3.12): say so the first few times,
+      // so someone who did 12 learns they can change it.
+      if (fill && set.target && fill.reps === set.target.reps) loggedAsPlanned(setId, fill.weight ?? set.weight, fill.reps);
     } else if (effortSetId === setId) {
       effortSetId = null;
     }
@@ -598,14 +665,16 @@
         groups.push({ lead: null, leadNum: 0, drops: [set] });
         i++;
       } else {
-        leadCount++;
+        // Warm-ups show "W" and aren't counted: working sets are 1, 2, 3 like the plan, and line up with last time's.
+        const warmup = set.setType === "warmup";
+        if (!warmup) leadCount++;
         const drops: SetEntry[] = [];
         i++;
         while (i < sorted.length && isContinuationSet(sorted[i]!.setType)) {
           drops.push(sorted[i]!);
           i++;
         }
-        groups.push({ lead: set, leadNum: leadCount, drops });
+        groups.push({ lead: set, leadNum: warmup ? 0 : leadCount, drops });
       }
     }
     return groups;
@@ -997,7 +1066,7 @@
       <button
         type="button"
         class="w-full h-10 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40 border-b border-border/50"
-        disabled={saving}
+        disabled={saving || warmupWorkingKg <= 0}
         onclick={handleAddWarmup}
         transition:reveal
       >
@@ -1011,8 +1080,17 @@
     {/if}
     {#if showFirstSetHint}
       <div class="mx-3 my-2 flex flex-col gap-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
-        <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
-        <p class="text-xs text-muted-foreground">Logit plans every set after this one from it. No need to know your max.</p>
+        {#if bodyweight}
+          <p class="text-sm font-semibold">First time? Do as many good reps as you can.</p>
+          <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it.</p>
+        {:else if emptyBarStart}
+          <p class="text-sm font-semibold">Start with the empty bar: {formatWeight(emptyBarKg, $profile.weightUnit)}</p>
+          <p class="text-xs text-muted-foreground">Do {firstTimeMin > 1 && firstTimeMin < firstTimeReps ? `${firstTimeMin}–${firstTimeReps}` : firstTimeReps} slow reps. If they felt easy, put {$profile.weightUnit === "lbs" ? "5 lb" : "2.5 kg"} on each side for the next set. LogIt plans next time from what you do today.</p>
+          <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium" onclick={openHowTo}>How to</button>
+        {:else}
+          <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
+          <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it. No need to know your max.</p>
+        {/if}
       </div>
     {/if}
     <SetsTableHeader weightUnit={$profile.weightUnit} />
@@ -1131,7 +1209,7 @@
       <button
         type="button"
         class="w-full h-10 px-3 -mt-1 mb-1 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-        disabled={saving}
+        disabled={saving || warmupWorkingKg <= 0}
         onclick={handleAddWarmup}
         transition:reveal
       >
@@ -1257,7 +1335,7 @@
   <WeightPickerSheet
     open={!!weightPick}
     source={weightSource}
-    title="Set {weightPick.number || ''} · {data.exerciseName}"
+    title="{weightPick.number ? `Set ${weightPick.number}` : 'Warm-up'} · {data.exerciseName}"
     weightKg={weightPick.weight}
     plannedKg={weightPick.planned}
     lastKg={weightPick.last}

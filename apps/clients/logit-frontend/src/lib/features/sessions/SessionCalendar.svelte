@@ -195,7 +195,7 @@
       {#if streak}
         <span class="flex items-center gap-1.5 text-[13px] font-medium">
           <Flame class="h-4 w-4 {streak.currentWeeks > 0 ? 'text-amber-500' : 'text-muted-foreground'}" />
-          {streak.currentWeeks}-week streak
+          {streak.currentWeeks > 0 ? `${streak.currentWeeks}-week streak` : "No streak yet"}
         </span>
       {/if}
       <span class="text-xs text-muted-foreground tabular-nums">{footer}</span>

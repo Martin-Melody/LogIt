@@ -14,6 +14,7 @@ import { mergeExerciseInGoal, mergeExerciseInSession, mergeExerciseInSplit, type
 import { getExerciseProgressionSettings, saveExerciseProgressionSettings } from "@logit/core/usecases/progression/exerciseProgressionSettings";
 import type { Exercise } from "@logit/core/domain/exercise";
 import type { StrengthBlockData } from "@logit/core/domain/workout";
+import { touchSession } from "@logit/core/domain/workout";
 
 /** How many logged sets of `from` would move (for the confirm line). */
 export async function countSets(from: ExerciseRef): Promise<number> {
@@ -42,8 +43,9 @@ export async function mergeOwnExercise(from: Exercise, to: Exercise): Promise<vo
   const moved = [];
   for (const s of await workouts.listAllSessions()) {
     if (s.id === draftId) continue;
-    const next = mergeExerciseInSession(s, a, b);
-    if (!next) continue;
+    const merged = mergeExerciseInSession(s, a, b);
+    if (!merged) continue;
+    const next = touchSession(merged);
     await workouts.saveSession(next);
     moved.push(next);
   }

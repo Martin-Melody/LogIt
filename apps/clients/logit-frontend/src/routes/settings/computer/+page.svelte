@@ -46,7 +46,7 @@
   async function lookUp(raw: string) {
     const text = raw.trim();
     if (!text.startsWith(PAIRING_QR_PREFIX)) {
-      error = "That isn't a Logit sign-in code. Scan the QR on the computer's sign-in page.";
+      error = "That isn't a LogIt sign-in code. Scan the QR on the computer's sign-in page.";
       return;
     }
     error = null;
@@ -69,7 +69,7 @@
     } catch (e) {
       error = e instanceof Error && e.message === "scanner-preparing"
         ? "The scanner is getting ready. Try again in a moment."
-        : "Couldn't open the scanner. Check Logit can use the camera.";
+        : "Couldn't open the scanner. Check LogIt can use the camera.";
     }
   }
 
@@ -147,7 +147,7 @@
       <div class="flex h-14 w-14 items-center justify-center rounded-full bg-muted"><Monitor class="h-7 w-7" /></div>
       <div>
         <h1 class="mb-1.5 text-[22px] font-bold">Sign in on a computer</h1>
-        <p class="text-sm leading-relaxed text-muted-foreground">On the computer, open <strong class="font-medium text-foreground">app.getlogit.app</strong> and scan the code on the sign-in page. No password needed.</p>
+        <p class="text-sm leading-relaxed text-muted-foreground">On the computer, open <strong class="font-medium text-foreground">{apiClient.isSelfHosted() ? "your server's dashboard" : "app.getlogit.app"}</strong> and scan the code on the sign-in page. No password needed.</p>
       </div>
       {#if native}
         <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-[15px] font-medium text-primary-foreground disabled:opacity-50"

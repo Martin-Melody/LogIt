@@ -70,6 +70,8 @@ export type WidgetInput = {
     splitId?: string;
     dayLabel?: string;
     scheduled: boolean;
+    /** A rotation split: the day shown is next in line, not one set for today. */
+    rotation?: boolean;
     /** 0-based position of the shown day, and how many days the split has. */
     dayIndex?: number;
     dayCount?: number;
@@ -89,6 +91,8 @@ export type WidgetInput = {
     rest?: boolean;
     /** The shown workout is already done (today). */
     done?: boolean;
+    /** The shown workout has been started and isn't finished yet. */
+    inProgress?: boolean;
     /** The user paged to this one with ‹ › (not the page the card opens on). */
     picked?: boolean;
     /** Today is a planned rest day (the card opens on the next workout). */

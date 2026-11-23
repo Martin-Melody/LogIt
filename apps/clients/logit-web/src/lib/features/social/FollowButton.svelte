@@ -10,6 +10,7 @@
     // Unset counts as "none" (lists bind each row's entry before it exists).
     status = $bindable(),
     isPrivate = false,
+    followsYou = false,
     primary = false,
     class: className = "",
     onchange,
@@ -17,6 +18,8 @@
     username: string;
     status?: FollowStatus | undefined;
     isPrivate?: boolean;
+    /** They follow you: "Follow back". */
+    followsYou?: boolean;
     primary?: boolean;
     class?: string;
     onchange?: (status: FollowStatus) => void;
@@ -26,7 +29,7 @@
 
   const current = $derived<FollowStatus>(status ?? "none");
   const label = $derived(
-    current === "following" ? "Following" : current === "requested" ? "Requested" : isPrivate ? "Request to follow" : "Follow",
+    current === "following" ? "Following" : current === "requested" ? "Requested" : isPrivate ? "Request to follow" : followsYou ? "Follow back" : "Follow",
   );
 
   async function toggle() {

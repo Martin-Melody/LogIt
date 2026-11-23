@@ -496,38 +496,36 @@ const ph = (id: string, route: string, target: string, title: string, body: stri
 
 export const PHONE_CHAPTERS: Chapter[] = [
   {
-    id: "app.home", walkthrough: "app", title: "Home", blurb: "Quick Start, today's plan and where things are", minutes: 1, feature: "settings",
+    id: "app.home", walkthrough: "app", title: "Home", blurb: "Today's workout and where things are", minutes: 1, feature: "settings",
+    // Four steps, no jargon (decision D3, bug hunt 3.11): it was seven, and said "split".
     steps: [
-      ph("quick-start", "/", "quick-start", "Quick Start", "Start today's workout from here. If you have a split set up it loads your planned session automatically; otherwise it starts a blank session."),
-      ph("todays-plan", "/", "todays-plan", "Today's plan", "Shows the exercises scheduled for today from your active split. Tap Edit to jump straight to the split."),
-      ph("customize", "/", "home-customize", "Customise Home", "Rearrange or hide the cards on this page: show only what matters to you."),
-      ph("bell", "/", "header-bell", "Notifications", "Likes, comments, follows and messages from your coach show up here."),
-      ph("sessions", "/", "nav-sessions", "Session history", "Every finished workout is saved here. Tap any session to review your sets, reps and weights."),
-      ph("more", "/", "nav-more", "More", "Splits, Progress, Library, Settings and Plugins all live here. Tap More any time to reach them."),
-      ph("profile", "/", "nav-profile", "Profile", "Your details, stats and personal records."),
+      ph("quick-start", "/", "quick-start", "Today", "Your next workout and the weights to lift. Tap Start when you're ready."),
+      ph("sessions", "/", "nav-sessions", "Your workouts", "Every workout you finish is kept here."),
+      ph("customize", "/", "home-customize", "Make Home yours", "Show, hide and move the cards on this page."),
+      ph("more", "/", "nav-more", "Everything else", "Your plan, progress, exercises and settings are under More."),
     ],
   },
   {
     id: "app.session", walkthrough: "app", title: "Workout", blurb: "Logging sets and finishing", minutes: 1, feature: "workouts",
+    // Three steps (decision D3, bug hunt 3.11), the first-time hint stays readable above them.
     steps: [
-      ph("card", "/session/current", "session-exercise-header", "Exercise card", "Tap the name for progress, how-to and settings, and the machine under it to pick or add one. Tap a set's number for its options. ⋯ swaps, supersets or removes the exercise."),
-      ph("complete", "/session/current", "session-set-complete", "Complete a set", "Tap this circle after finishing a set. It marks the set done and starts your rest timer."),
-      ph("add", "/session/current", "session-add-exercise", "Add an exercise", "Tap + to search your library or add a brand-new exercise."),
-      ph("finish", "/session/current", "session-finish", "Finish", "Tap Finish when you're done. Your session is saved and your next targets are worked out. To throw a workout away, use the ⋯ menu next to it."),
+      ph("complete", "/session/current", "session-set-complete", "Tick a set when it's done", "It logs what's in the boxes, and your rest timer starts."),
+      ph("card", "/session/current", "session-exercise-header", "How to", "Tap an exercise's name to see how it's done, your progress and its settings."),
+      ph("finish", "/session/current", "session-finish", "Finish", "Tap Finish when you're done. Skipped sets are fine; your next weights are worked out from what you did."),
     ],
   },
   {
     id: "app.splits", walkthrough: "app", title: "Splits", blurb: "Your plans, and which one is active", minutes: 1, feature: "splits",
     steps: [
       ph("new", "/splits", "splits-new", "Make a split", "Tap New to build a training split. Add days (like Push, Pull, Legs) and fill each day with exercises."),
-      ph("active", "/splits", "splits-set-active", "Set active", "Only one split is active at a time. Quick Start on Home loads today's day from it."),
+      ph("active", "/splits", "splits-set-active", "Set active", "Only one split is active at a time. Home's Today card offers its next workout."),
     ],
   },
   {
     id: "app.split-detail", walkthrough: "app", title: "A split", blurb: "Days and setting it active", minutes: 1, feature: "splits",
     steps: [
       ph("name", "/splits/[id]", "split-detail-name", "Rename it", "Tap the name to rename the split, like \"Push / Pull / Legs\"."),
-      ph("active", "/splits/[id]", "split-detail-set-active", "Make it active", "Make this your current split. Quick Start loads today's day from it."),
+      ph("active", "/splits/[id]", "split-detail-set-active", "Make it active", "Make this your current split. Home's Today card offers its next workout."),
       ph("days", "/splits/[id]", "split-detail-days", "Training days", "Each day is its own workout. Drag to reorder them."),
       ph("add-day", "/splits/[id]", "split-detail-add-day", "Add a day", "Add a day, then tap it to add exercises."),
     ],
@@ -535,7 +533,7 @@ export const PHONE_CHAPTERS: Chapter[] = [
   {
     id: "app.split-day", walkthrough: "app", title: "A training day", blurb: "Naming it and adding exercises", minutes: 1, feature: "splits",
     steps: [
-      ph("name", "/splits/[id]/days/[dayId]", "split-day-name", "Day name", "Tap to rename this day, like \"Push\" or \"Monday\". The name shows up in Quick Start."),
+      ph("name", "/splits/[id]/days/[dayId]", "split-day-name", "Day name", "Tap to rename this day, like \"Push\" or \"Monday\". The name shows up on Home."),
       ph("add", "/splits/[id]/days/[dayId]", "split-day-add-block", "Add an exercise", "Tap + to add an exercise, cardio or mobility to this day. Search your library or type a new name to make one."),
     ],
   },

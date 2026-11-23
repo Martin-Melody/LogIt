@@ -132,14 +132,14 @@
       {#each shownMuscles as m (m)}
         <button type="button" aria-pressed={muscles.includes(m)} class={chip(muscles.includes(m), "h-10 px-3 text-[13px]")} onclick={() => toggle(m)}>{MUSCLE_LABELS[m]}</button>
       {/each}
-      {#if !allMuscles}<button type="button" class={chip(false, "h-10 px-3 text-[13px] border-dashed")} onclick={() => (allMuscles = true)}>More…</button>{/if}
+      {#if !allMuscles}<button type="button" class={chip(false, "h-11 px-3 text-[13px] border-dashed")} onclick={() => (allMuscles = true)}>More…</button>{/if}
     </div>
     <p class="text-xs font-semibold text-muted-foreground">Done with</p>
     <div class="flex flex-wrap gap-1.5" role="group" aria-label="Equipment">
       {#each shownEquipment as [e, label] (e)}
-        <button type="button" aria-pressed={equipment === e} class={chip(equipment === e, "h-10 px-3 text-[13px]")} onclick={() => (equipment = equipment === e ? undefined : e)}>{label}</button>
+        <button type="button" aria-pressed={equipment === e} class={chip(equipment === e, "h-11 px-3 text-[13px]")} onclick={() => (equipment = equipment === e ? undefined : e)}>{label}</button>
       {/each}
-      {#if !allEquipment}<button type="button" class={chip(false, "h-10 px-3 text-[13px] border-dashed")} onclick={() => (allEquipment = true)}>More…</button>{/if}
+      {#if !allEquipment}<button type="button" class={chip(false, "h-11 px-3 text-[13px] border-dashed")} onclick={() => (allEquipment = true)}>More…</button>{/if}
     </div>
     <button type="button" class="h-11 rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50"
       disabled={saving || muscles.length === 0} onclick={() => void save()}>Save</button>

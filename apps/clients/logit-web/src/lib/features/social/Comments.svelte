@@ -132,6 +132,10 @@
               <button type="button" onclick={() => like(c)} aria-pressed={c.isLikedByMe} class="py-1 hover:text-foreground {c.isLikedByMe ? 'font-semibold text-rose-600 dark:text-rose-300' : ''}">{c.isLikedByMe ? "Liked" : "Like"}{c.likeCount ? ` · ${c.likeCount}` : ""}</button>
               <button type="button" onclick={() => reply(c)} class="py-1 hover:text-foreground">Reply</button>
               <button type="button" onclick={() => { reportId = c.id; reportOpen = true; }} class="py-1 hover:text-foreground">Report</button>
+              <!-- Your post: you may remove anyone's comment on it (bug hunt 5.12). -->
+              {#if self?.id === postAuthorId}
+                <button type="button" onclick={() => { deleteId = c.id; deleteOpen = true; }} class="py-1 hover:text-foreground">Remove</button>
+              {/if}
             {:else}
               {#if c.likeCount}<span class="py-1">{c.likeCount} like{c.likeCount === 1 ? "" : "s"}</span>{/if}
               <button type="button" onclick={() => { editingId = c.id; editDraft = c.body; }} class="py-1 hover:text-foreground">Edit</button>

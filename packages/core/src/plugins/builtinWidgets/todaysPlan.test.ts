@@ -20,6 +20,10 @@ describe("the page the card opens on", () => {
     expect(v.subtitle).toBe("Day 2 — Lower · Scheduled");
   });
 
+  it("says next in your rotation for a rotation split, which has no schedule (bug hunt 14.4)", async () => {
+    expect((await view({ dateIso: "2026-11-13", rotation: true })).subtitle).toBe("Day 2 — Lower · Next in your rotation");
+  });
+
   it("says Later today with what's done", async () => {
     const v = await view({ dateIso: "2026-11-13", doneToday: ["Lower"] });
     expect(v.title).toBe("Later today");
@@ -51,6 +55,12 @@ describe("opening on today", () => {
     const v = await view({ dateIso: "2026-11-13", done: true, doneToday: ["Push"], nextUp: { dateIso: "2026-11-14", label: "Lower" } });
     expect(v.title).toBe("Today");
     expect(texts(v).slice(0, 2)).toEqual(["Done", "Next: Tomorrow · Lower"]);
+  });
+
+  it("today's workout started but not finished: In progress, nothing next yet", async () => {
+    const v = await view({ dateIso: "2026-11-13", inProgress: true });
+    expect(texts(v)[0]).toBe("In progress");
+    expect(texts(v).some((t) => t.startsWith("Next:"))).toBe(false);
   });
 
   it("a rest day today: Rest day, and what's next", async () => {

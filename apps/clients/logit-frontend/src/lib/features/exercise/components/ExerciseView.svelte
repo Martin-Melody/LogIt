@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+  import VideoEmbed from "./VideoEmbed.svelte";
   import { Copy, Package, RotateCcw, Trash2, ChevronRight } from "lucide-svelte";
   import type { Snippet } from "svelte";
   import { goto } from "$app/navigation";
@@ -122,6 +123,13 @@
     const trimmed = draftName.trim();
     if (!exercise || !trimmed) { draftName = exercise?.name ?? ""; return; }
     if (trimmed !== exercise.name) void saveField({ name: trimmed });
+  }
+
+  let draftVideo = $state("");
+  $effect(() => { draftVideo = exercise?.videoUrl ?? ""; });
+  function commitVideo() {
+    const v = draftVideo.trim() || undefined;
+    if (exercise && v !== exercise.videoUrl) void saveField({ videoUrl: v });
   }
 
   function commitNotes() {
@@ -309,6 +317,9 @@
         </section>
       {/if}
 
+      {#if ex.videoUrl}
+        <VideoEmbed url={ex.videoUrl} title="{ex.name}, how it's done" />
+      {/if}
       <section class="flex flex-col gap-2" aria-label="How to do it">
         <h3 class="text-[15px] font-semibold">How to do it</h3>
         {#if editable}
@@ -321,6 +332,14 @@
           <p class="text-sm text-muted-foreground">No steps written for this one yet.</p>
         {/if}
       </section>
+
+      {#if editable}
+        <section class="flex flex-col gap-2">
+          <label for="ex-video" class="text-[15px] font-semibold">Video</label>
+          <input id="ex-video" type="url" inputmode="url" bind:value={draftVideo} onblur={commitVideo} placeholder="A YouTube link"
+            class="h-11 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
+        </section>
+      {/if}
 
       <section class="flex flex-col gap-2">
         <label for="ex-notes" class="text-[15px] font-semibold">Your notes</label>

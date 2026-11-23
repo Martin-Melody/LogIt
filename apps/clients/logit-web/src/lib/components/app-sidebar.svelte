@@ -317,7 +317,7 @@
                 </div>
                 <span class="flex min-w-0 flex-1 flex-col text-left leading-tight">
                   <span class="truncate text-sm font-medium">{userName}</span>
-                  <span class="truncate text-xs text-muted-foreground">{tier} · Account</span>
+                  <span class="truncate text-xs text-muted-foreground">{apiClient.isSelfHosted() ? "Own server" : tier} · Account</span>
                 </span>
                 <ChevronsUpDownIcon class="size-4" />
               </Sidebar.MenuButton>

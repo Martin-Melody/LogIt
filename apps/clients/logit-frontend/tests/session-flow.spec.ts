@@ -71,6 +71,8 @@ async function seedSession(page: Page, opts: SeedOpts = {}) {
   await page.addInitScript(
     ({ session, progressionState, history, blocksCollapsedByDefault, bodyweightKg }) => {
       localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+      // Suggestions off unless a test sets an algorithm (web seeds the default once otherwise).
+      localStorage.setItem("logit:progression:config-seeded:v1", "1");
       localStorage.setItem(
         "logit:tours:v1",
         JSON.stringify({ home: true, session: true, splits: true }),
@@ -416,7 +418,7 @@ test.describe("managing sets", () => {
 
     await page.getByText("+ Add first set").click();
 
-    await expect(page.getByTestId("set-last").first()).toHaveText("6 × 90");
+    await expect(page.getByTestId("set-last").first()).toHaveText("90 × 6");
   });
 
   test("add set button uses suggestion weight as default", async ({ page }) => {
@@ -1164,7 +1166,7 @@ test.describe("finish session", () => {
 
     await page.getByRole("button", { name: "Finish workout" }).click();
 
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
   });
 
   test("a session note is saved and shown on the recap", async ({ page }) => {
@@ -1197,14 +1199,14 @@ test.describe("finish session", () => {
 
     await page.getByRole("button", { name: "Finish workout" }).click();
 
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
     // "Sets" stat label in recap (exact match avoids "2 sets" exercise count chip)
     await expect(page.getByText("Sets", { exact: true })).toBeVisible();
     await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
 
     // Per-exercise breakdown lists what was done.
     await expect(page.getByText("What you did")).toBeVisible();
-    await expect(page.getByText("5×100").first()).toBeVisible();
+    await expect(page.getByText("100×5").first()).toBeVisible();
   });
 
   test("recap keeps the buttons on screen with a long summary", async ({ page }) => {
@@ -1218,7 +1220,7 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
 
     await expect(page.getByRole("button", { name: "Save & finish" })).toBeInViewport();
     await expect(page.getByRole("button", { name: "Back to workout" })).toBeInViewport();
@@ -1236,11 +1238,11 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
 
     const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
-    await expect(breakdown.getByText("8×BW−25")).toBeVisible();
-    await expect(breakdown.getByText("5×BW+2.5")).toBeVisible();
+    await expect(breakdown.getByText("BW−25×8")).toBeVisible();
+    await expect(breakdown.getByText("BW+2.5×5")).toBeVisible();
     // The first-time PR card uses the same BW form, with no 1RM estimate.
     await expect(page.getByText("5 reps @ BW+2.5 kg")).toBeVisible();
     // Only the 10 × 50 pec deck: with no bodyweight known the dips aren't
@@ -1258,7 +1260,7 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
 
     await expect(page.getByText("3 new exercises")).toBeVisible();
     await expect(page.getByText(/Bench Press, Squat, Row/)).toBeVisible();
@@ -1268,6 +1270,8 @@ test.describe("finish session", () => {
   test("recap counts bodyweight work at bodyweight ± the logged number", async ({ page }) => {
     await seedSession(page, {
       bodyweightKg: 90,
+      // Not a first workout: that one leaves volume out (decision D3).
+      history: [makeCompletedSession("Pec Deck", [makeSet("ps1", 0, 10, 40)])],
       session: makeSession([
         makeStrengthBlock("b1", 0, "Dips", [makeSet("s1", 0, 5, 2.5), makeSet("s2", 1, 8, -25)]),
         makeStrengthBlock("b2", 1, "Pull-Up", [makeSet("s3", 0, 6, 0)]),
@@ -1276,7 +1280,7 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
 
     // Dips 5 × 92.5 + 8 × 65 = 983 (rounded), pull-ups 6 × 90 = 540, pec deck 500.
     const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
@@ -1298,7 +1302,7 @@ test.describe("finish session", () => {
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
 
     // The breakdown shows a "Superset" bracket over both members.
     const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
@@ -1317,7 +1321,7 @@ test.describe("finish session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
     await expect(page.getByText("Bench Press Weight PR")).toBeVisible();
   });
 
@@ -1328,11 +1332,11 @@ test.describe("finish session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Back to workout" }).click();
 
-    await expect(page.getByText("Workout complete")).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).not.toBeVisible();
     await expect(page.getByText("Bench Press")).toBeVisible();
   });
 
@@ -1345,7 +1349,7 @@ test.describe("finish session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("Workout complete")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Save & finish" }).click();
 

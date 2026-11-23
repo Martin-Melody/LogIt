@@ -18,8 +18,10 @@ export const todaysPlanWidget: WidgetPlugin = {
     const notes: WidgetView["body"] = [];
     if (plan?.picked) {
       if (plan.done) notes.push({ kind: "text", text: "Done", tone: "success" });
+      else if (plan.inProgress) notes.push({ kind: "text", text: "In progress", tone: "muted" });
     } else if (plan) {
       if (plan.done) notes.push({ kind: "text", text: "Done", tone: "success" });
+      else if (plan.inProgress) notes.push({ kind: "text", text: "In progress", tone: "muted" });
       else if (plan.doneToday?.length) notes.push({ kind: "text", text: `${joinAnd(plan.doneToday)} done today`, tone: "success" });
       if (plan.restToday && !plan.rest) notes.push({ kind: "text", text: "Rest day today", tone: "muted" });
       else if (plan.restBefore?.length) notes.push({ kind: "text", text: restUntil(plan.restBefore, input.timeZone), tone: "muted" });
@@ -116,9 +118,14 @@ function shortDate(iso: string, timeZone?: string): string {
   });
 }
 
+/** A rotation has no schedule, just the next day in line (bug hunt 14.4). */
+function scheduledWord(plan: NonNullable<WidgetInput["todaysPlan"]>): string {
+  return plan.rotation ? "Next in your rotation" : "Scheduled";
+}
+
 /** No date to go by (a weekday split with no weekdays set yet): the plain heading. */
 function fallbackHeading(plan: WidgetInput["todaysPlan"]): { title: string; subtitle?: string } {
-  const parts = [plan?.dayLabel, plan?.scheduled ? "Scheduled" : null].filter(Boolean);
+  const parts = [plan?.dayLabel, plan?.scheduled ? scheduledWord(plan) : null].filter(Boolean);
   return { title: "Today's plan", subtitle: parts.join(" · ") || undefined };
 }
 
@@ -149,7 +156,7 @@ function pageHeading(plan: NonNullable<WidgetInput["todaysPlan"]>, input: Widget
   const iso = plan.dateIso;
   if (!iso || iso === today) {
     const title = plan.rest || plan.done ? "Today" : plan.doneToday?.length ? "Later today" : "Today's plan";
-    const scheduled = !plan.picked && plan.scheduled && title === "Today's plan" && subtitle ? `${subtitle} · Scheduled` : subtitle;
+    const scheduled = !plan.picked && plan.scheduled && title === "Today's plan" && subtitle ? `${subtitle} · ${scheduledWord(plan)}` : subtitle;
     return { title, subtitle: scheduled };
   }
   if (iso === tomorrow) return { title: "Tomorrow", subtitle };

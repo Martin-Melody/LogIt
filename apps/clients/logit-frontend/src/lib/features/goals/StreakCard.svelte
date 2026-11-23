@@ -50,7 +50,7 @@
         </div>
         <div>
           <p class="text-base font-semibold leading-tight tabular-nums">
-            {streak?.currentWeeks ?? 0}-week streak
+            {streak?.currentWeeks ? `${streak.currentWeeks}-week streak` : "No streak yet"}
           </p>
           <p class="text-xs text-muted-foreground">Best {streak?.bestWeeks ?? 0} {streak?.bestWeeks === 1 ? "week" : "weeks"}</p>
         </div>

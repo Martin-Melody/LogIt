@@ -58,7 +58,11 @@ public class CoachPaymentService(
     /// A finished checkout: start (or restart) coaching. Safe to call twice for the same
     /// checkout (the webhook and the success page both do). Returns the relationship, or null
     /// when the checkout isn't paid or doesn't belong to a coach on this server.
-    public async Task<CoachClientRelationship?> FulfillCheckoutAsync(
+    public Task<CoachClientRelationship?> FulfillCheckoutAsync(
+        string accountId, CheckoutInfo info, DateTime now, CancellationToken ct) =>
+        OnceMoreIfRaced(() => FulfillCheckoutOnceAsync(accountId, info, now, ct));
+
+    private async Task<CoachClientRelationship?> FulfillCheckoutOnceAsync(
         string accountId, CheckoutInfo info, DateTime now, CancellationToken ct)
     {
         if (!info.Paid) return null;
@@ -148,7 +152,16 @@ public class CoachPaymentService(
     }
 
     /// A monthly payment went through: paid up again, and a pause from the rule is lifted.
-    public async Task InvoicePaidAsync(
+    public Task InvoicePaidAsync(
+        string accountId, string subscriptionId, string invoiceId, long amountPaid, string currency,
+        DateTime? periodEnd, DateTime now, CancellationToken ct) =>
+        OnceMoreIfRaced(async () =>
+        {
+            await InvoicePaidOnceAsync(accountId, subscriptionId, invoiceId, amountPaid, currency, periodEnd, now, ct);
+            return true;
+        });
+
+    private async Task InvoicePaidOnceAsync(
         string accountId, string subscriptionId, string invoiceId, long amountPaid, string currency,
         DateTime? periodEnd, DateTime now, CancellationToken ct)
     {
@@ -182,7 +195,18 @@ public class CoachPaymentService(
         payment.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
         await EmailCoachOnce(account, payment, now, ct);
-        if (attempt <= 1) await EmailClientFailed(account, payment, now, ct);
+        if (attempt <= 1)
+        {
+            await EmailClientFailed(account, payment, now, ct);
+            // In the app too, not only by email and on My coach (decision D6, bug hunt 6.3).
+            db.Notifications.Add(new Notification
+            {
+                UserId = payment.Relationship.ClientId,
+                ActorId = payment.Relationship.CoachId,
+                Type = NotificationType.CoachPaymentFailed,
+            });
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     /// Any change to a monthly plan (stopped, restarted, given up on by Stripe, renewed).
@@ -209,6 +233,12 @@ public class CoachPaymentService(
             case "past_due":
                 payment.State = PaymentStates.Failed;
                 payment.UnpaidSince ??= now;
+                break;
+            case "canceled" when payment.State == PaymentStates.Paid && payment.PaidUntil is { } paidTo && paidTo > now:
+                // Cancelled with time still paid for: coaching runs to the paid-up date, and the
+                // coach's rule counts from there, not from today (decision D6, bug hunt 6.4).
+                // The sweeper ends it on that date.
+                payment.StopsAtPeriodEnd = true;
                 break;
             case "canceled" or "unpaid" or "incomplete_expired":
                 payment.State = PaymentStates.Ended;
@@ -361,6 +391,27 @@ public class CoachPaymentService(
             log.LogWarning("Couldn't cancel subscription {Sub} on {Account}: {Reason}", subscriptionId, accountId, ex.Message);
         }
     }
+
+    /// Stripe sends invoice.paid and checkout.session.completed within a second, and the
+    /// client's return to the link page confirms the same checkout: their check-then-insert rows
+    /// (the relationship, the receipt) can collide on a unique key. Running once more sees the
+    /// other's rows and takes the "already done" path instead of answering 500.
+    private async Task<T> OnceMoreIfRaced<T>(Func<Task<T>> work)
+    {
+        try { return await work(); }
+        catch (DbUpdateException ex) when (IsDuplicate(ex))
+        {
+            db.ChangeTracker.Clear();
+            return await work();
+        }
+    }
+
+    internal static bool IsDuplicate(DbUpdateException ex) => ex.InnerException switch
+    {
+        Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 } => true, // constraint
+        Npgsql.PostgresException { SqlState: "23505" } => true, // unique_violation
+        _ => false,
+    };
 
     private async Task AddReceipt(Guid coachId, Guid? relId, string externalId, long amount, string currency, DateTime paidAt, CancellationToken ct)
     {

@@ -58,9 +58,9 @@
       {#if next.cue}<span class="text-xs font-semibold text-muted-foreground">Or move on to a harder stretch</span>{/if}
       <div class="flex flex-wrap gap-1.5">
         {#each next.harder as d (d.name)}
-          <button type="button" class={chip(false, "h-10 px-3 text-[13px]")} onclick={() => onHarder(d)}>{d.name}</button>
+          <button type="button" class={chip(false, "h-11 px-3 text-[13px]")} onclick={() => onHarder(d)}>{d.name}</button>
         {/each}
-        <button type="button" class={chip(false, "h-10 px-3 text-[13px] border-dashed")} onclick={onPick}>Something else…</button>
+        <button type="button" class={chip(false, "h-11 px-3 text-[13px] border-dashed")} onclick={onPick}>Something else…</button>
       </div>
       {#if !next.cue}
         <button type="button" class="h-10 self-start rounded-lg border border-border bg-background px-3 text-sm font-medium" onclick={onNotYet}>Not yet</button>

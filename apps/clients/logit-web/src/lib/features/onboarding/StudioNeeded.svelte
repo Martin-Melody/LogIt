@@ -13,7 +13,7 @@
   <p class="text-sm leading-relaxed text-muted-foreground">
     {what === "links"
       ? "An invite link lets a real person ask you to coach them. While you try things out, the sample clients play your clients: programs, check-ins and messages all work on them."
-      : "With Studio, clients pay you through Logit's web checkout, straight to your own Stripe account. Until then, you can coach the sample clients for free."}
+      : "With Studio, clients pay you through LogIt's web checkout, straight to your own Stripe account. Until then, you can coach the sample clients for free."}
   </p>
   <div class="flex flex-wrap gap-2">
     <a href={free ? "/upgrade" : `${MARKETING_URL}/pricing`} class="rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">See Studio</a>

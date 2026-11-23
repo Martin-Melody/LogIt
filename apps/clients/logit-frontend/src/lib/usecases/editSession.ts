@@ -1,5 +1,5 @@
 import { getWorkoutRepo } from "$lib/data/repoProvider";
-import { getExercises } from "@logit/core/domain/workout";
+import { getExercises, touchSession } from "@logit/core/domain/workout";
 import type { MobilityBlockData, WorkoutSession } from "@logit/core/domain/workout";
 import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
 import { refreshMobilityProgressionState } from "@logit/core/usecases/progression/getMobilitySuggestion";
@@ -11,6 +11,7 @@ import { pushSession } from "$lib/sync/syncService";
  * exercise and drill it had before or has now (one taken out no longer counts either).
  */
 export async function editSession(session: WorkoutSession, before?: WorkoutSession | null): Promise<void> {
+  session = touchSession(session);
   await saveSessionDetails(session);
   const deps = getProgressionDeps();
   const both = [before, session].filter((s): s is WorkoutSession => !!s);
@@ -33,6 +34,7 @@ export async function editSession(session: WorkoutSession, before?: WorkoutSessi
 
 /** Save a past session where nothing that progression reads changed (name, note). */
 export async function saveSessionDetails(session: WorkoutSession): Promise<void> {
+  session = touchSession(session);
   await getWorkoutRepo().saveSession(session);
   pushSession(session);
 }

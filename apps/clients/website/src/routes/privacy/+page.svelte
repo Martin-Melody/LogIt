@@ -76,7 +76,7 @@
 
   <h2>Diagnostics</h2>
   <p>
-    The app keeps a log on your device to help fix problems (Settings › Diagnostics). It leaves
+    The app keeps a log on your device to help fix problems (Settings › About › Diagnostics). It leaves
     your device only if you choose <em>Send to LogIt</em>; we delete sent reports after 30 days, or
     sooner if you delete your account.
   </p>

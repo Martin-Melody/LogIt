@@ -113,6 +113,7 @@
           oncountchange={(d) => oncommentcountchange?.(post.id, d)}
           onreply={startReply}
           {justSent}
+          postAuthorId={post?.repostOf && !post.body ? post.repostOf.authorId : post?.authorId}
         />
       {/if}
     </div>

@@ -16,6 +16,7 @@
   import { getNutritionRepo, getHabitRepo } from "$lib/data/repoProvider";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import FirstDownloadNotice from "$lib/sync/FirstDownloadNotice.svelte";
+  import BackupNote from "$lib/features/home/BackupNote.svelte";
   import PendingCard from "$lib/sync/PendingCard.svelte";
   import { firstDownloadState } from "$lib/sync/firstDownload";
   import { firstDownloadAt, lastSyncFailed, planIncludesSync, syncRunning } from "$lib/sync/syncService";
@@ -32,7 +33,7 @@
       failed: $lastSyncFailed,
     }),
   );
-  const LIVE_WHILE_DOWNLOADING = new Set(["quick-start"]);
+  const LIVE_WHILE_DOWNLOADING = new Set(["quick-start", "today"]);
   const HIDDEN_WHILE_DOWNLOADING = new Set(["this-week", "next-step"]);
 
   let baseWidgets = $state<RuntimeWidgetDefinition[]>(
@@ -108,6 +109,8 @@
       detail="Sessions, splits and progress. You can start a workout meanwhile."
     />
   {/if}
+
+  <BackupNote />
 
   {#each activeWidgets as widget, i (widget.id)}
     {@const WidgetComponent = widget.component}

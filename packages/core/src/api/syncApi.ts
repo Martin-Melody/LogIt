@@ -3,6 +3,8 @@ import { apiClient, type ApiFetcher } from "./client";
 export type RemoteSession = {
   id: string;
   startedAtMs: number;
+  /** When it last changed; the server keeps the newer copy (older servers ignore it). */
+  updatedAtMs?: number;
   dataJson: string | null;
   deletedAtMs?: number | null;
 };

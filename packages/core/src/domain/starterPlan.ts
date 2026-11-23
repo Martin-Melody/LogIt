@@ -21,7 +21,18 @@ export type StarterAnswers = {
   minutes: PlanLength;
 };
 
-export type StarterExercise = { name: string; id?: string; sets: number; repRange: [number, number] };
+export type StarterExercise = {
+  name: string;
+  id?: string;
+  sets: number;
+  repRange: [number, number];
+  /** Someone just starting begins barbell lifts with the empty bar (decision D3, bug hunt 3.9). */
+  startKg?: number;
+};
+
+/** A standard bar. Deadlifts aren't started on it: the bar needs plates to sit at shin height. */
+const EMPTY_BAR_KG = 20;
+const NOT_FROM_EMPTY_BAR = new Set(["core_deadlift"]);
 export type StarterDay = { name: string; short: string; weekday: number; exercises: StarterExercise[]; minutes: number };
 export type StarterPlan = { kind: PlanKind; name: string; daysPerWeek: number; days: StarterDay[] };
 
@@ -29,7 +40,7 @@ export const GOAL_LABELS: Record<TrainingGoal, { title: string; blurb: string; e
   strength: { title: "Get stronger", blurb: "Lift heavier every few weeks", echo: "Stronger" },
   muscle: { title: "Build muscle", blurb: "Look and feel bigger", echo: "Bigger" },
   both: { title: "Both", blurb: "Stronger and bigger, a bit of both", echo: "Stronger and bigger" },
-  fit: { title: "Stay fit", blurb: "Keep moving, keep what you've built", echo: "Fit" },
+  fit: { title: "Get fit", blurb: "Feel better and keep moving", echo: "Fit" },
   leaner: { title: "Lose fat, keep my strength", blurb: "Leaner without going backwards", echo: "Leaner and strong" },
 };
 
@@ -168,11 +179,14 @@ export function buildStarterPlan(answers: StarterAnswers, kind: PlanKind = planK
       if (!name || used.has(name)) continue;
       used.add(name);
       const main = MAIN_SLOTS.has(slot);
+      const core = BY_NAME.get(name);
+      const emptyBar = answers.experience === "new" && core?.equipment === "barbell" && !NOT_FROM_EMPTY_BAR.has(core.id);
       exercises.push({
         name,
-        id: BY_NAME.get(name)?.id,
+        id: core?.id,
         sets: ISOLATION_SLOTS.has(slot) ? 2 : 3,
         repRange: main ? ranges.main : ranges.other,
+        ...(emptyBar ? { startKg: EMPTY_BAR_KG } : {}),
       });
     }
     return { name: day.name, short: day.short, weekday: day.weekday, exercises, minutes: estimateMinutes(exercises) };
@@ -188,7 +202,7 @@ export function starterPlanToSplit(plan: StarterPlan): WorkoutSplit {
     const dayId = split.days[split.days.length - 1]!.id;
     split = { ...split, days: split.days.map((d) => (d.id === dayId ? { ...d, weekday: day.weekday } : d)) };
     for (const ex of day.exercises) {
-      split = addPlannedStrength(split, dayId, { exerciseName: ex.name, exerciseId: ex.id, targets: { sets: ex.sets } });
+      split = addPlannedStrength(split, dayId, { exerciseName: ex.name, exerciseId: ex.id, targets: { sets: ex.sets, ...(ex.startKg ? { weight: ex.startKg } : {}) } });
     }
   }
   return split;

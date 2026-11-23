@@ -32,6 +32,11 @@ describe("linearMobility", () => {
     expect(out.sets[0].durationSec).toBe(20);
   });
 
+  it("says first time, not last → next, when there's no last time (bug hunt 13.13)", () => {
+    expect(run({ drill: { name: "T", metric: "hold", perSide: true } }).label).toBe("First time: aim 20 s L · 20 s R");
+    expect(run({ history: [session([{ durationSec: 45, targetSec: 45, completed: true, depth: 4 }])] }).label).toMatch(/^Last → next/);
+  });
+
   it("adds hold time when the target was met", () => {
     const out = run({
       history: [session([{ durationSec: 45, targetSec: 45, completed: true, depth: 4 }])],

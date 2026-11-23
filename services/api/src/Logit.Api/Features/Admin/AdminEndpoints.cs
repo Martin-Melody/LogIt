@@ -89,8 +89,10 @@ public static class AdminEndpoints
                 r.AppVersion,
                 r.Platform,
                 r.Note,
+                r.Kind,
+                r.DeviceId,
                 Chars = r.Log.Length,
-                User = new { r.User.Id, r.User.Username },
+                User = r.User == null ? null : new { r.User.Id, r.User.Username },
             })
             .ToListAsync();
         return Results.Ok(new { reports });
@@ -100,11 +102,11 @@ public static class AdminEndpoints
     {
         var r = await db.DiagnosticReports
             .Where(x => x.Id == id)
-            .Select(x => new { x.Id, x.CreatedAt, x.AppVersion, x.Platform, x.Note, x.Log, User = new { x.User.Id, x.User.Username } })
+            .Select(x => new { x.Id, x.CreatedAt, x.AppVersion, x.Platform, x.Note, x.Kind, x.DeviceId, x.Log, User = x.User == null ? null : new { x.User.Id, x.User.Username } })
             .FirstOrDefaultAsync();
         if (r is null) return Results.NotFound(new { error = "Report not found." });
         // Reading someone's log is recorded, like changing their account.
-        var owner = await db.Users.FindAsync(r.User.Id);
+        var owner = r.User is null ? null : await db.Users.FindAsync(r.User.Id);
         AdminLog.Add(db, http, "diagnostics.view", owner);
         await db.SaveChangesAsync();
         return Results.Ok(r);

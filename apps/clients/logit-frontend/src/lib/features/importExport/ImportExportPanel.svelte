@@ -92,6 +92,8 @@
       await importData(parsedData, categories);
       phase = "done";
       parsedData = null;
+      // Every store read the old data at start: start the app again on the restored data.
+      setTimeout(() => window.location.replace("/"), 1200);
     } catch (e) {
       errorMsg = e instanceof Error ? e.message : "Import failed.";
       phase = "error";
@@ -243,8 +245,7 @@
         <div
           class="flex items-center gap-2 text-sm text-success"
         >
-          <Check class="h-4 w-4" /> Restore complete. You may need to reload the
-          app to see your data.
+          <Check class="h-4 w-4" /> Restore complete. Opening your data…
         </div>
       {:else if phase === "error"}
         <div

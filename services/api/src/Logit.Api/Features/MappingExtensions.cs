@@ -1,4 +1,5 @@
 using Logit.Api.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Logit.Api.Features;
 
@@ -16,7 +17,9 @@ public record ProfileDto(
     // withheld and posts / follow lists answer 403.
     bool IsPrivate = false, string? FollowStatus = null, bool CanSeeContent = true,
     // A sandbox sample client (Features/Sandbox). Only its own coach ever sees one.
-    bool IsSample = false);
+    bool IsSample = false,
+    // This account follows the caller ("Follows you", "Follow back").
+    bool FollowsYou = false);
 
 public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount, RepostSourceDto? RepostOf, bool AuthorIsPrivate = false);
 
@@ -35,7 +38,7 @@ public static class MappingExtensions
     public static ProfileDto ToProfileDto(
         this User user, bool isSelf,
         int followerCount = 0, int followingCount = 0, bool isFollowing = false,
-        bool requested = false)
+        bool requested = false, bool followsYou = false)
     {
         var canSee = isSelf || isFollowing || !user.IsPrivate;
         return new(user.Id, user.Username, user.DisplayName, user.Bio, user.AvatarUrl,
@@ -46,7 +49,8 @@ public static class MappingExtensions
             user.IsPrivate,
             isSelf ? null : isFollowing ? "following" : requested ? "requested" : "none",
             canSee,
-            user.IsSample);
+            user.IsSample,
+            !isSelf && followsYou);
     }
 
     /// `hiddenAuthors`: private accounts the caller isn't allowed to see (Privacy.HiddenAuthorsAsync).
@@ -87,4 +91,16 @@ public static class MappingExtensions
             comment.Likes.Count,
             callerId.HasValue && comment.Likes.Any(l => l.UserId == callerId.Value),
             comment.ParentCommentId);
+
+    /// The caller's relation to each of `users`: whom they follow, whom they've asked to follow,
+    /// and who follows them, for lists of people (followers, following).
+    public static async Task<Func<User, ProfileDto>> ProfilesForCaller(
+        Data.AppDbContext db, Guid? callerId, IReadOnlyCollection<Guid> ids)
+    {
+        if (callerId is not { } me) return u => u.ToProfileDto(false);
+        var following = (await db.Follows.Where(f => f.FollowerId == me && ids.Contains(f.FollowedId)).Select(f => f.FollowedId).ToListAsync()).ToHashSet();
+        var followers = (await db.Follows.Where(f => f.FollowedId == me && ids.Contains(f.FollowerId)).Select(f => f.FollowerId).ToListAsync()).ToHashSet();
+        var requested = (await db.FollowRequests.Where(r => r.RequesterId == me && ids.Contains(r.TargetId)).Select(r => r.TargetId).ToListAsync()).ToHashSet();
+        return u => u.ToProfileDto(u.Id == me, 0, 0, following.Contains(u.Id), requested.Contains(u.Id), followers.Contains(u.Id));
+    }
 }

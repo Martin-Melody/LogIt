@@ -25,7 +25,8 @@ export type HistorySummary = { workouts: number; exercises: number; prs: number;
 
 const BIG_THREE = { squat: ["core_squat", "squat"], bench: ["core_bench_press", "bench press"], deadlift: ["core_deadlift", "deadlift"] } as const;
 
-/** `sessions` in any order. Lifts: the three with the most weighted working sets. */
+/** `sessions` in any order. Lifts: squat, bench and deadlift when all three are there (they're
+ * what the total under them adds up), else the three with the most weighted working sets. */
 export function summariseHistory(sessions: WorkoutSession[]): HistorySummary | null {
   const sorted = [...sessions].sort((a, b) => a.startedAtMs - b.startedAtMs);
   if (!sorted.length) return null;
@@ -54,9 +55,12 @@ export function summariseHistory(sessions: WorkoutSession[]): HistorySummary | n
       }
     }
   }
+  const big = new Set<string>(Object.values(BIG_THREE).flat());
+  const isBig = (e: { name: string; exerciseId?: string }) => big.has(e.exerciseId ?? "") || big.has(e.name.trim().toLowerCase());
+  const allBig = Object.values(BIG_THREE).every((keys) => keys.some((k) => sets1rm.get(k)?.length));
   const lifts = [...sets.values()]
     .filter((e) => e.byMonth.size > 0)
-    .sort((a, b) => b.count - a.count)
+    .sort((a, b) => (allBig ? Number(isBig(b)) - Number(isBig(a)) : 0) || b.count - a.count)
     .slice(0, 3)
     .map((e): LiftTrend => {
       const months = [...e.byMonth].sort((a, b) => a[0] - b[0]).map(([monthMs, kg]) => ({ monthMs, kg: Math.round(kg * 10) / 10 }));

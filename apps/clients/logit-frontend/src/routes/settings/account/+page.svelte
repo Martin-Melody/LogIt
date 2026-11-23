@@ -17,7 +17,8 @@
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import { getServerMode } from "@logit/core/api/serverConfig";
   import { profile } from "$lib/stores/profile.store";
-  import { syncAll, pushAllLocalData, lastSyncedAt } from "$lib/sync/syncService";
+  import { syncAll, pushAllLocalData, lastSyncedAt, syncRunning, planIncludesSync, markFullUploadDue } from "$lib/sync/syncService";
+  import { outboxSize } from "$lib/sync/outbox";
   import { getActiveOwnerId } from "$lib/data/activeOwner";
   import { isNativePlatform } from "$lib/platform/isNative";
   import { replayTour } from "$lib/tour/index";
@@ -56,9 +57,26 @@
   });
   // What the account card says about backup (design canvas 6). Free accounts back up one phone
   // (the one they last signed in on); self-hosted servers include everything.
+  // Changes not on the server yet: the last good sync alone said "Backed up · synced just now"
+  // while the server was unreachable (bug hunt 15.1). Re-read whenever a sync starts or ends.
+  const waiting = $derived.by(() => {
+    void [$syncRunning, $lastSyncedAt, connectionStatus.state];
+    return outboxSize();
+  });
+  const waitingText = $derived(`${waiting} change${waiting === 1 ? "" : "s"} waiting`);
+  const backupElsewhere = $derived(!!authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere());
+  let movingBackup = $state(false);
+  async function moveBackupHere() {
+    movingBackup = true;
+    try { await apiClient.moveBackupHere(); markFullUploadDue(); await syncAll().catch(() => {}); } catch {} finally { movingBackup = false; }
+  }
   const backupLine = $derived(
-    authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()
-      ? "Your free backup is on another phone. Sign in again here to move it, or get Pro to sync both"
+    backupElsewhere
+      ? "Your free backup is on your other phone. Move it here, or get Pro to back up both"
+      : connectionStatus.state === "disconnected"
+        ? `Can't reach the server${waiting ? ` · ${waitingText}, kept on this phone` : ""}`
+      : waiting && !$syncRunning
+        ? `${waitingText} to back up`
       : $lastSyncedAt
         ? `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`
         : "Not backed up yet",
@@ -155,7 +173,7 @@
       </div>
       <div class="flex items-center gap-2">
         <p class="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] text-muted-foreground"><ConnectionDot /> {backupLine}</p>
-        {#if authStore.user.tier !== "Free"}
+        {#if authStore.user.tier !== "Free" || planIncludesSync()}
           <Button id="settings-sync" data-guide="settings-sync" variant="outline" size="sm" class="shrink-0"
             disabled={syncing || serverMode === "offline"} onclick={() => void manualSync()}>
             {#if syncing}<Loader2 class="size-3.5 animate-spin" />{/if}
@@ -163,6 +181,11 @@
           </Button>
         {/if}
       </div>
+      {#if backupElsewhere}
+        <Button variant="outline" class="h-11 w-fit" disabled={movingBackup} onclick={() => void moveBackupHere()}>
+          {movingBackup ? "Moving…" : "Move backup here"}
+        </Button>
+      {/if}
     </div>
 
     <section id="plan" class="scroll-mt-4 rounded-xl border border-border bg-card px-3.5 [&>div]:border-t-0">
@@ -173,14 +196,14 @@
       <a id="coaching" href="/clients" class={linkRow}>
         <span class="flex flex-1 flex-col gap-0.5">
           <span class="text-[15px] font-medium">Coaching</span>
-          <span class="text-[13px] text-muted-foreground">View invites, or manage clients on a Studio plan</span>
+          <span class="text-[13px] text-muted-foreground">{apiClient.isSelfHosted() ? "View invites, or manage your clients" : "View invites, or manage clients on a Studio plan"}</span>
         </span>
         <ChevronRight class="size-4 shrink-0 text-muted-foreground" />
       </a>
       <a id="computer" href="/settings/computer" class={linkRow}>
         <span class="flex flex-1 flex-col gap-0.5">
           <span class="text-[15px] font-medium">Sign in on a computer</span>
-          <span class="text-[13px] text-muted-foreground">Scan the code on app.getlogit.app, and see where you're signed in</span>
+          <span class="text-[13px] text-muted-foreground">Scan the code on {apiClient.isSelfHosted() ? "your server's dashboard" : "app.getlogit.app"}, and see where you're signed in</span>
         </span>
         <ChevronRight class="size-4 shrink-0 text-muted-foreground" />
       </a>

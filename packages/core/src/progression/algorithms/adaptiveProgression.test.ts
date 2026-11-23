@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { adaptiveProgression, isCompound, setToSetDrop, strengthEstimate } from "./adaptiveProgression";
 import type { ExerciseHistoryEntry, PrecedingExercise, ProgressionInput } from "../../domain/progression";
 import type { SetEntry } from "../../domain/workout";
+import { startingLiftEntry } from "../../domain/startingLift";
 
 const DAY = 86_400_000;
 const NOW = Date.now();
@@ -23,6 +24,67 @@ function input(overrides: Partial<ProgressionInput>): ProgressionInput {
 }
 
 describe("LogIt Adaptive", () => {
+  it("doesn't plan later sets lighter than they were done last time (a beginner's 3 × 8 × 20, no reps-left answers)", async () => {
+    // As the split day asks: Full Body A, squat 3 × 8, lateral raise 2 × 10.
+    const squat = await adaptiveProgression.suggest(input({ history: [entry(1, [[20, 8], [20, 8], [20, 8]])], plannedTargets: { sets: 3, reps: 8 } }));
+    expect(squat.sets.map((s) => s.weight)).toEqual([20, 20, 20]);
+    expect(squat.change?.text).toBe("Same weight");
+    // Not 10 × 4 then 10 × 1.5.
+    const raise = await adaptiveProgression.suggest(input({ exercise: CURL, history: [entry(1, [[4, 10], [4, 10]])], plannedTargets: { sets: 2, reps: 10 } }));
+    expect(raise.sets.map((s) => s.weight)).toEqual([4, 4]);
+  });
+
+  it("moves on for someone who ticks the plan and never says how hard (round 10, T2)", async () => {
+    // Ticked untouched three times: before, 20 × 8 for good while they got stronger.
+    const ticked = (daysAgo: number, w: number, reps: number) => {
+      const e = entry(daysAgo, [[w, reps], [w, reps], [w, reps]]);
+      e.sets.forEach((x) => (x.target = { reps, weight: w }));
+      return e;
+    };
+    const out = await adaptiveProgression.suggest(input({ history: [ticked(2, 20, 8)], plannedTargets: { sets: 3, reps: 8 } }));
+    expect(out.sets[0]!.weight * (1 + out.sets[0]!.reps / 30)).toBeGreaterThan(20 * (1 + 8 / 30));
+    expect(out.reasoning?.summary?.join(" ")).toMatch(/20 × 8 as planned \(counted as 1 more in the tank\)/);
+    // A miss last time is planned from what was done, not from an older session's extra rep.
+    const missed = entry(2, [[22.5, 6], [22.5, 5], [22.5, 5]]);
+    missed.sets.forEach((x) => (x.target = { reps: 8, weight: 22.5 }));
+    const after = await adaptiveProgression.suggest(input({ history: [missed, ticked(4, 22.5, 6)], plannedTargets: { sets: 3, reps: 6 } }));
+    expect(after.sets[0]).toMatchObject({ weight: 22.5, reps: 6 });
+  });
+
+  it("plans day one from a typed-in best lift about 10% lighter (decision D4, bug hunt 14.3)", async () => {
+    const lift = startingLiftEntry({ exerciseName: "Bench press", weightKg: 100, reps: 5, enteredAtMs: NOW - DAY });
+    const out = await adaptiveProgression.suggest(input({ history: [lift], plannedTargets: { sets: 3, reps: 5 } }));
+    // 100 × 5 at full effort was 100, 97.5, 95.
+    expect(out.sets[0]!.weight).toBe(90);
+    expect(out.sets.every((s) => s.weight <= 90)).toBe(true);
+    expect(out.reasoning?.summary?.join(" ")).toMatch(/about 10% lighter/);
+    // A logged session takes over at full strength.
+    const logged = await adaptiveProgression.suggest(input({ history: [entry(1, [[100, 5], [100, 5], [100, 5]])], plannedTargets: { sets: 3, reps: 5 } }));
+    expect(logged.sets[0]!.weight).toBeGreaterThanOrEqual(100);
+  });
+
+  it("says so after three sessions short of the plan, and not before (decision D4, bug hunt 10.2)", async () => {
+    const short = (daysAgo: number) => {
+      const e = entry(daysAgo, [[100, 5], [100, 4], [100, 4]]);
+      e.sets.forEach((x) => (x.target = { reps: 5, weight: 100 }));
+      return e;
+    };
+    const two = await adaptiveProgression.suggest(input({ history: [short(2), short(5)], plannedTargets: { sets: 3, reps: 5 } }));
+    expect(two.notes).toBeUndefined();
+    const three = await adaptiveProgression.suggest(input({ history: [short(2), short(5), short(9)], plannedTargets: { sets: 3, reps: 5 } }));
+    expect(three.notes).toMatch(/Short of the plan 3 sessions running/);
+  });
+
+  it("adds reps before weight to bodyweight work (decision D4, bug hunt 4.17)", async () => {
+    const pushUp = { name: "Push-Up", primaryMuscles: ["chest", "triceps"], secondaryMuscles: ["shoulders"], exerciseType: "bodyweight" } as ProgressionInput["exercise"];
+    const out = await adaptiveProgression.suggest(input({ exercise: pushUp, history: [entry(2, [[0, 10], [0, 8], [0, 8]])] }));
+    expect(out.sets.every((s) => s.weight === 0)).toBe(true);
+    // Weighted dips keep their own range: added weight is already the way forward there.
+    const dips = { ...pushUp, name: "Dip" };
+    const weighted = await adaptiveProgression.suggest(input({ exercise: dips, history: [entry(2, [[10, 8], [10, 8], [10, 8]])] }));
+    expect(weighted.sets[0]!.weight).toBeGreaterThan(10);
+  });
+
   it("plans every set from the strength estimate, not from last session's light sets", async () => {
     // Martin's example: 7 × 95, 9 × 68, 6 × 60.
     const out = await adaptiveProgression.suggest(input({ history: [entry(3, [[95, 7], [68, 9], [60, 6]])] }));
@@ -35,6 +97,60 @@ describe("LogIt Adaptive", () => {
     const out = await adaptiveProgression.suggest(input({ history: [entry(2, [[95, 9], [95, 8], [95, 7]]), entry(6, [[95, 7], [95, 6], [95, 5]])] }));
     expect(out.sets[0]!.weight).toBe(100); // e1RM 123.5 → 7 reps at ≈ 100
     expect(out.change).toMatchObject({ kind: "increase", text: "+5 kg" });
+  });
+
+  it("counts the reps you said were left, so doing the plan with reps to spare moves it on", async () => {
+    const easy = entry(2, [[12.5, 7], [12.5, 6], [12.5, 5]]);
+    easy.sets.forEach((x) => (x.rpe = 8)); // "2 left" on every set
+    const est = strengthEstimate([easy], NOW);
+    expect(est?.kg).toBeCloseTo(12.5 * (1 + 9 / 30), 5);
+    expect(est?.from).toMatchObject({ reps: 7, left: 2 });
+    const out = await adaptiveProgression.suggest(input({ history: [easy], userPreferences: { increment: 2.5 } }));
+    const before = await adaptiveProgression.suggest(input({ history: [entry(2, [[12.5, 7], [12.5, 6], [12.5, 5]])], userPreferences: { increment: 2.5 } }));
+    expect(out.sets[0]!.weight * (1 + out.sets[0]!.reps / 30)).toBeGreaterThan(before.sets[0]!.weight * (1 + before.sets[0]!.reps / 30));
+    expect(out.reasoning?.summary?.join(" ")).toMatch(/12\.5 × 7 with 2 left/);
+    const failed = entry(2, [[12.5, 7]]);
+    failed.sets[0]!.rpe = 10; // nothing left: no credit
+    expect(strengthEstimate([failed], NOW)?.kg).toBeCloseTo(12.5 * (1 + 7 / 30), 5);
+  });
+
+  it("with light dumbbells (12.5 → 15 is a 20% jump) the reps keep climbing until the next weight fits", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const stuck = await adaptiveProgression.suggest(input({ history: [top([[12.5, 8], [12.5, 7], [12.5, 6]])] }));
+    expect(stuck.sets[0]).toMatchObject({ weight: 12.5 });
+    expect(stuck.sets[0]!.reps).toBeGreaterThan(8); // a couple over the 5–8 range, not stuck at 8
+    const next = await adaptiveProgression.suggest(input({ history: [top([[12.5, 10], [12.5, 9], [12.5, 8]])] }));
+    expect(next.sets[0]!.weight).toBe(15);
+    expect(next.sets[0]!.reps).toBeGreaterThanOrEqual(5); // never a weight it can't do the range's fewest with
+  });
+
+  it("with a 25% jump (10 → 12.5 kg) the reps keep going past the range until it fits", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const out = await adaptiveProgression.suggest(input({ history: [top([[10, 10], [10, 9], [10, 8]])] }));
+    expect(out.sets[0]).toMatchObject({ weight: 10 });
+    expect(out.sets[0]!.reps).toBeGreaterThan(10);
+  });
+
+  it("after a step up, a set that would fall under the range is lighter by what the estimate allows, not a step per rep", async () => {
+    const top = (pairs: [number, number][]) => { const e = entry(2, pairs); e.sets.forEach((x) => (x.rpe = 8)); return e; };
+    const out = await adaptiveProgression.suggest(input({ history: [top([[12.5, 10], [12.5, 9], [12.5, 8]])] }));
+    expect(out.sets[0]!.weight).toBe(15);
+    expect(Math.min(...out.sets.map((x) => x.weight))).toBeGreaterThanOrEqual(12.5); // was 15, 12.5, 10
+  });
+
+  it("keeps a dumbbell off the step grid (4 kg) instead of dropping to 2.5 kg", async () => {
+    const e = entry(2, [[4, 10], [4, 9]]); e.sets.forEach((x) => (x.rpe = 8));
+    const out = await adaptiveProgression.suggest(input({ exercise: CURL, history: [e] }));
+    expect(out.sets[0]!.weight).toBe(4);
+    expect(out.sets[0]!.reps).toBeGreaterThanOrEqual(10);
+     const later = entry(2, [[4, 15], [4, 14]]); later.sets.forEach((x) => (x.rpe = 8));
+    expect((await adaptiveProgression.suggest(input({ exercise: CURL, history: [later] }))).sets[0]!.weight).toBe(5); // not 6.5
+  });
+
+  it("a lift whose reps got past what the estimate counts goes up a step, instead of 12.5 × 15 for good", async () => {
+    const e = entry(2, [[12.5, 15], [12.5, 14], [12.5, 13]]); e.sets.forEach((x) => (x.rpe = 8));
+    const out = await adaptiveProgression.suggest(input({ exercise: CURL, history: [e] }));
+    expect(out.sets[0]).toMatchObject({ weight: 15, reps: 8 });
   });
 
   it("doesn't let one off day drag the estimate down", () => {

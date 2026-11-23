@@ -16,6 +16,10 @@ name: Android release
 # Optional repo variable:
 #   MARKETING_URL               baked into the build (default: https://getlogit.app)
 #
+# Crash reports: every build except play_track=production sends crashes automatically
+# (VITE_CRASH_REPORTS=auto). Promoting a test AAB to production in Play Console keeps that on,
+# so build the production release separately with play_track=production.
+#
 # Without the keystore secrets the build still runs and produces a debug-signed
 # artifact you can smoke-test, but it can't be uploaded to Play.
 
@@ -93,6 +97,9 @@ jobs:
         working-directory: apps/clients/logit-frontend
         env:
           VITE_MARKETING_URL: ${{ vars.MARKETING_URL || 'https://getlogit.app' }}
+          # Test builds (every track but production) send crashes by themselves; see
+          # src/lib/platform/crashReports.ts. A production release must be built with play_track=production.
+          VITE_CRASH_REPORTS: ${{ github.event.inputs.play_track == 'production' && 'off' || 'auto' }}
         run: npm run build
 
       - name: Capacitor sync

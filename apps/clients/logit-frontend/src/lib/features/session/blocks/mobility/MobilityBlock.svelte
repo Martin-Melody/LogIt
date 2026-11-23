@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import { get } from "svelte/store";
@@ -44,6 +45,7 @@
   import EditMobilitySetDialog from "$lib/features/session/ui/EditMobilitySetDialog.svelte";
   import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
   import MobilityDrillDetailSheet from "$lib/features/session/ui/MobilityDrillDetailSheet.svelte";
+  import { justAdded } from "../justAdded";
 
   const {
     blockId,
@@ -58,7 +60,7 @@
     onMutate,
   }: BlockBaseProps<MobilityBlockData> = $props();
 
-  let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  let collapsed = $state(get(profile).blocksCollapsedByDefault && !untrack(() => justAdded.delete(blockId)));
   const weightUnit = $derived(($profile.weightUnit ?? "kg") as WeightUnit);
 
   const groups = $derived(mobilitySetGroups(data));

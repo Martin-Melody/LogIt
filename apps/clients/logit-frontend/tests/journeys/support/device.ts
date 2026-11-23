@@ -54,6 +54,16 @@ type App = Awaited<ReturnType<typeof loadApp>>;
 
 let deviceCount = 0;
 
+/** Every phone made in this file, so each test can stop them all (see stopAllDevices). */
+const running = new Set<Device>();
+
+/** Stops every phone's timers. A phone left running kept its 20 s notification check, which then
+ * fired during a later test and was counted against that test's phone and server. */
+export async function stopAllDevices(): Promise<void> {
+  for (const d of running) await d.stop();
+  running.clear();
+}
+
 export class Device {
   readonly name: string;
   readonly db: SQLiteDBConnection;
@@ -74,6 +84,7 @@ export class Device {
   constructor(name = `phone-${++deviceCount}`) {
     this.name = name;
     this.db = createNodeSqliteDb();
+    running.add(this);
   }
 
   get app(): App {

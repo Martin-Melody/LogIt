@@ -24,6 +24,17 @@ describe("the plan onboarding builds", () => {
     expect(plan.days[0]!.minutes).toBeLessThanOrEqual(55);
   });
 
+  it("someone just starting begins barbell lifts with the empty bar, deadlifts aside (decision D3)", () => {
+    const plan = buildStarterPlan({ goal: "fit", experience: "new", days: 3, equipment: "gym", minutes: 45 });
+    const all = plan.days.flatMap((d) => d.exercises);
+    const squat = all.find((e) => e.id === "core_squat");
+    expect(squat?.startKg).toBe(20);
+    expect(all.find((e) => e.id === "core_deadlift")?.startKg).toBeUndefined();
+    expect(starterPlanToSplit(plan).days[0]!.blocks.find((b) => b.type === "strength" && b.exerciseName === "Squat")).toMatchObject({ targets: { weight: 20 } });
+    const under2 = buildStarterPlan({ goal: "fit", experience: "under2", days: 3, equipment: "gym", minutes: 45 });
+    expect(under2.days.flatMap((d) => d.exercises).some((e) => e.startKg)).toBe(false);
+  });
+
   it("picks the plan from the days", () => {
     expect([2, 3, 4, 5].map((d) => planKindFor(d as DaysPerWeek))).toEqual(["fullbody2", "fullbody3", "upperlower4", "ulppl5"]);
     expect(buildStarterPlan({ ...base, days: 5 }).days.map((d) => d.weekday)).toEqual([1, 2, 4, 5, 6]);

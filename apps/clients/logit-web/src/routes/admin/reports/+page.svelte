@@ -4,6 +4,7 @@
   import { page } from "$app/state";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import * as Alert from "$lib/components/ui/alert";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
@@ -16,6 +17,8 @@
   let error = $state<string | null>(null);
   let loading = $state(true);
   let busy = $state(false);
+  // Deleting for everyone can't be undone: asked first (bug hunt 5.13).
+  let confirmDelete = $state<Report | null>(null);
   let author = $state<PersonRow | null>(null);
 
   const MONTH = 30 * 86_400_000;
@@ -134,12 +137,12 @@
         {/if}
         {#if r.status === "Open"}
           <div class="flex flex-wrap gap-2.5">
-            <button type="button" class="{btn} bg-destructive font-semibold text-white" disabled={busy || !preview || preview.deleted} onclick={() => resolve(r, "delete-target")}>Delete {r.targetType.toLowerCase()}</button>
+            <button type="button" class="{btn} bg-destructive font-semibold text-white" disabled={busy || !preview || preview.deleted} onclick={() => (confirmDelete = r)}>Delete {r.targetType.toLowerCase()}</button>
             <button type="button" class="{btn} bg-muted hover:bg-accent" disabled={busy} onclick={() => resolve(r, "dismiss")}>Dismiss report</button>
             {#if author}<a href="/admin/people?id={author.id}" class="{btn} ml-auto bg-muted hover:bg-accent">Open @{author.username}'s page</a>{/if}
           </div>
           <div class="flex flex-col gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
-            <p><strong class="font-medium text-foreground">Delete</strong> removes it for everyone and closes {sameTarget > 1 ? "every open report on it" : "the report"}. Logit doesn't tell @{preview?.author ?? "the author"}.</p>
+            <p><strong class="font-medium text-foreground">Delete</strong> removes it for everyone and closes {sameTarget > 1 ? "every open report on it" : "the report"}. LogIt doesn't tell @{preview?.author ?? "the author"}.</p>
             <p><strong class="font-medium text-foreground">Dismiss</strong> keeps it and closes {sameTarget > 1 ? "every open report on it" : "the report"}. @{r.reporter.username} can still block @{preview?.author ?? "the author"} themselves.</p>
           </div>
         {:else}
@@ -149,3 +152,16 @@
     {/if}
   </section>
 </div>
+
+<AlertDialog.Root open={confirmDelete !== null} onOpenChange={(o) => { if (!o) confirmDelete = null; }}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Delete this {confirmDelete?.targetType.toLowerCase() ?? "post"} for everyone?</AlertDialog.Title>
+      <AlertDialog.Description>It can't be brought back. Its open reports close too.</AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={() => { const r = confirmDelete; confirmDelete = null; if (r) void resolve(r, "delete-target"); }}>Delete</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>

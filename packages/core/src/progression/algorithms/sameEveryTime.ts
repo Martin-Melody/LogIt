@@ -14,7 +14,7 @@ export const sameEveryTime: MobilityProgressionAlgorithm = {
   id: SAME_EVERY_TIME_ID,
   name: "Same every time",
   description: "The same holds every session: last time's, or 30 seconds each to start. Nothing changes unless you change it.",
-  author: "Logit",
+  author: "LogIt",
   defaultState: null,
   defaultPreferences: DEFAULT_PREFERENCES,
   preferencesSchema: [

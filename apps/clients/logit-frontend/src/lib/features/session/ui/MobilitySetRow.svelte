@@ -129,6 +129,7 @@
         class="h-10 w-12 shrink-0 rounded-md border bg-background px-1 text-[15px] font-semibold tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
         type="number" min="0" inputmode="numeric"
         placeholder={prevReps ?? "0"}
+        aria-label="Reps{set.side ? `, ${set.side}` : ''}"
         value={set.reps ? String(set.reps) : ""}
         {disabled}
         onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
@@ -148,6 +149,7 @@
       value={displayLoad}
       {disabled}
       title="Added load"
+      aria-label="Added load ({weightUnit}){set.side ? `, ${set.side}` : ''}"
       onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
       onchange={(e) => {
         const v = num((e.currentTarget as HTMLInputElement).value);

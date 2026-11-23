@@ -14,8 +14,9 @@ export const progressionWidget: WidgetPlugin = {
         title: "Progression",
         body: [],
         empty: {
-          text: "Finish a session and pick an algorithm in Settings to see targets here.",
-          action: { navigate: "/settings" },
+          // An algorithm is always set (LogIt Adaptive by default): only a workout is missing (bug hunt 4.11).
+          text: "Your next weights show here after your first workout.",
+          action: { navigate: "/settings/progression" },
         },
       };
     }
