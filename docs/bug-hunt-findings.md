@@ -91,8 +91,8 @@ client "sam_client" (phone: "I have a coach", the coach's link code), side by si
 | 4.4 | Client's Coaching page | Showed "Coach your own clients — Studio is bought in the LogIt Android app" to someone who just said they have a coach | Hidden for clients (coached, asking, or invited) | fixed (ef7a132) |
 | 4.5 | Invite card wording | "…and you're connected", but the coach has to accept | "They open your link and choose what you can see. You accept them here." | fixed (ef7a132) |
 | 4.6 | Share message, algorithm authors, diagnostics header | "Train with me on Logit", "logit" | LogIt | fixed (ef7a132) |
-| 4.7 | Coach intro | Studio is only mentioned after the account is made ("Coaching clients is the Studio plan") | — | needs a decision |
-| 4.8 | Sign-up screen for a coach | "Back up your training, train with friends, get coached." | — | needs a decision |
+| 4.7 | Coach intro | Studio is only mentioned after the account is made ("Coaching clients is the Studio plan") | — | fixed (ab4e654) |
+| 4.8 | Sign-up screen for a coach | "Back up your training, train with friends, get coached." | — | fixed (ab4e654) |
 | 4.9 | Free account in a browser | 18 refused sync requests on every sync (web backup is Pro); nothing on screen | — (Android sends the device id, so not on phones) | fixed (8082c54) |
 | 4.10 | Buying Studio | Only in the Android app through Play; after buying, nothing brings the coach back to coaching setup | — test on the emulator with Play test cards | open |
 | 4.11 | Home Progression card for a new user | "Finish a session and pick an algorithm in Settings to see targets here" though the default algorithm is set | — | needs a decision |
@@ -102,7 +102,7 @@ client "sam_client" (phone: "I have a coach", the coach's link code), side by si
 | 4.15 | Coach's program on the client's Home | Even after Start program, Home says "No exercises planned"; Quick start only offers a blank workout; the program lives in More › Splits | — (Home doesn't know coach programs; design) | needs a decision |
 | 4.16 | Splits tour for a coached client | "Tap New to build a training split" next to the coach's program | — | needs a decision |
 | 4.17 | Bodyweight push-ups after 10/8/8 | Next plan "3 × 5 @ 2.5 kg" (big-lift range 5–8, so extra reps become added weight) | — (progression design: reps first, then a harder variation?) | needs a decision |
-| 4.18 | Program day with no name | "Day 1 — Day 1" | — | needs a decision |
+| 4.18 | Program day with no name | "Day 1 — Day 1" | — | fixed (ab4e654) |
 | 4.19 | Coach edits an assigned program | Reaches the client's phone only on its next sync (by design: "It reaches their phone on its next sync") | — | ok |
 | 4.20 | Client stops coaching | "Their program, check-ins and habits leave your app" — but they stayed, even after sync and reload (the phone only pulled changes, and nothing is sent when coaching ends) | Coach program / check-in / habit / nutrition pulls fetch the whole small list and drop what's no longer assigned; also covers the coach removing a client | fixed (ef7a132) |
 | 4.21 | Coach's web Today with no clients | "Sample clients are already in" when there are none | Said only when samples exist | fixed (ef7a132) |
@@ -122,13 +122,13 @@ Ava (Pro), Ben, Cara (private) and Dev side by side on phones; hosted-mode API.
 | 5.4 | Followers / following lists | Every person came back as "not followed" by you (the server never looked) | Lists carry your real status and whether they follow you | fixed (3d4716f) |
 | 5.5 | Search for a private account you already asked | Showed "Follow" again | Shows "Requested" | fixed (3d4716f) |
 | 5.6 | Sign-up through the API (and the app's form, which doesn't check) | Accepted "ava ava" (a space) and an empty display name; spaces break @mentions and profile links | Server: usernames 3–30 letters, digits or underscores; an empty display name becomes the username | fixed (3d4716f) |
-| 5.7 | Suggestions | The admin account shows in "People you might know" | — | needs a decision |
+| 5.7 | Suggestions | The admin account shows in "People you might know" | — | fixed (7da5378) |
 | 5.8 | Push notifications | None: a like is only seen after opening LogIt | — (Martin wants push; FCM) | open |
 | 5.9 | Follow, request, accept, like, comment, mention | Each notified the right person once, opened the right place | — | ok |
 | 5.10 | Comment menu (press and hold) and every sheet or dialog opened from a page | Drawn under the bottom bar: "Delete comment" hidden, "Edit comment" half covered (the page was its own layer all the time, for the page-change animation) | The page is named for the animation only while it runs | fixed (3d4716f) |
 | 5.11 | Blocking | The blocked person could still comment and like; their earlier comments, likes and notifications stayed (blocks only hid profiles and posts) | A block counts both ways wherever "can see" is checked; blocking removes their likes and comments on your posts and the notifications between you (as on Instagram) | fixed (3d4716f) |
-| 5.12 | Your own post | You can only report a comment on it, not remove it | — | needs a decision |
-| 5.13 | Reported post deleted by the admin | Others see "This post isn't available" with a "Try again" button that can't help; the admin's Delete has no confirmation | — | needs a decision |
+| 5.12 | Your own post | You can only report a comment on it, not remove it | — | fixed (7da5378) |
+| 5.13 | Reported post deleted by the admin | Others see "This post isn't available" with a "Try again" button that can't help; the admin's Delete has no confirmation | — | fixed (7da5378) |
 | 5.14 | Photo posts | Don't exist (text plus an attached workout, PR, split, …), but the Play data-safety notes say "photos in posts" | — | needs a decision |
 | 5.15 | Session ends while the app is open | Every request is refused (401) every minute and nothing on screen changes until a restart | — | open |
 | 5.16 | Replies, editing, reposts, quotes, report → admin delete, account deletion, Discover | Worked: right notifications, counts after reload, everything of a deleted account gone | — | ok |
@@ -171,7 +171,7 @@ account with a second phone still signed in.
 |---|---|---|---|---|
 | 8.1 | Delete account: the password box | Placeholder only, no label: a screen reader announces an unnamed field | Labelled | fixed (e23faf8) |
 | 8.2 | Second phone still signed in to a deleted account | Says "Backed up · synced just now" after a sync that can't have worked, until a restart; then "Not signed in", local copy kept | — (same gap as 5.15: the app doesn't notice a session ending while open) | open |
-| 8.3 | Week strip chips | "Fu A", "Fu B", "Fu C" for Full Body A/B/C | — | needs a decision |
+| 8.3 | Week strip chips | "Fu A", "Fu B", "Fu C" for Full Body A/B/C | — | fixed (ab4e654) |
 | 8.4 | Move to another server | Only in the Android app; not testable in a browser | — test in the emulator round | open |
 | 8.5 | 3 weeks off; new days (Mon/Wed/Fri → Tue/Thu/Sat); a 23:30 Dublin workout opened in Tokyo; making an account keeps offline training; a new phone gets plan, workouts and progression back; deleting the account removes it and its data from the server and that phone | Worked: no guilt after the break, the estimate 5% lower after 3+ weeks so the plan holds rather than rises, the week strip follows the new days, the Tokyo week counts the workout once ("today, done"), the app shows the server's username rule | — | ok |
 
@@ -186,7 +186,7 @@ off, unplanned workouts, a custom exercise, then a backup file restored on a new
 | 9.2 | Right after a restore | Home showed no plan and old data until the app restarted; Settings said "You may need to reload the app" (the Android app has no reload) | Both restore paths start the app again on the restored data | fixed (d454de3) |
 | 9.3 | Workout tour | "Tap a set's number for its options" — a set's number only moves it now; options are behind a swipe | "Swipe a set left to edit or delete it, and hold its number to move it." | fixed (d454de3) |
 | 9.4 | Import screen | "Strong and Hevy are next", though both import already | "Export files from Strong and Hevy go straight in, and so does a LogIt backup file." | fixed (d454de3) |
-| 9.5 | Welcome screen | No "restore a backup" for someone without an account (only "Get started" / "I already have an account"); 9.1 covers it for experienced lifters only | — | needs a decision |
+| 9.5 | Welcome screen | No "restore a backup" for someone without an account (only "Get started" / "I already have an account"); 9.1 covers it for experienced lifters only | — | fixed (ab4e654) |
 | 9.6 | Exercise card | Header "Last time 20 × 12" (kg × reps), set rows "12 × 20" (reps × kg) | — | fixed (fae2566) |
 | 9.7 | Workout summary for bodyweight PR | "Pull-Up · 10 reps @ 0 kg · ≈0 kg 1RM" | — | fixed (fae2566) |
 | 9.8 | Home after unplanned workouts | "Monday's workout moved to today · Start Full Body A", Quick start "Start Day 3 — Full Body C" and Today "Rest day" at once | — (same family as 1.15) | needs a decision |
