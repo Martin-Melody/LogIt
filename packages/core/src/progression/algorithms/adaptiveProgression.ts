@@ -275,7 +275,10 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
       change: {
         kind: "first",
         text: "First time",
-        detail: lo === hi ? `Pick a weight you can do ${lo} reps with.` : `Pick a weight you can do ${lo}–${hi} reps with.`,
+        // A weight already planned (a beginner's empty bar): start there, not "pick a weight".
+        detail: weight > 0
+          ? `Start at ${fmtKg(weight)}; next time is planned from how the reps go.`
+          : lo === hi ? `Pick a weight you can do ${lo} reps with.` : `Pick a weight you can do ${lo}–${hi} reps with.`,
       },
       reasoning: {
         inputs: { historySessions: input.history.length },
