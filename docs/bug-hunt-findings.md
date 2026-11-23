@@ -93,7 +93,7 @@ client "sam_client" (phone: "I have a coach", the coach's link code), side by si
 | 4.6 | Share message, algorithm authors, diagnostics header | "Train with me on Logit", "logit" | LogIt | fixed (ef7a132) |
 | 4.7 | Coach intro | Studio is only mentioned after the account is made ("Coaching clients is the Studio plan") | — | needs a decision |
 | 4.8 | Sign-up screen for a coach | "Back up your training, train with friends, get coached." | — | needs a decision |
-| 4.9 | Free account in a browser | 18 refused sync requests on every sync (web backup is Pro); nothing on screen | — (Android sends the device id, so not on phones) | open |
+| 4.9 | Free account in a browser | 18 refused sync requests on every sync (web backup is Pro); nothing on screen | — (Android sends the device id, so not on phones) | fixed (8082c54) |
 | 4.10 | Buying Studio | Only in the Android app through Play; after buying, nothing brings the coach back to coaching setup | — test on the emulator with Play test cards | open |
 | 4.11 | Home Progression card for a new user | "Finish a session and pick an algorithm in Settings to see targets here" though the default algorithm is set | — | needs a decision |
 | 4.12 | Coach's program with no load, client types set 1 and ticks the rest | Sets 2–3 saved as **0 kg** (10×12, 8×0, 8×0); volume and next plans built on it | A set ticked with no weight and none planned carries the set before it (added/assisted weight too) | fixed (ef7a132) |
@@ -145,7 +145,7 @@ onboarding on 2026-11-16.
 | # | Found | What it did to the user | Fix | Status |
 |---|---|---|---|---|
 | 6.1 | Stripe sends invoice.paid and checkout.session.completed within a second, and the client's return to the link page confirms the same checkout | Two of the three requests failed on a unique key (the relationship, the receipt) and answered 500; Stripe retried, so it came right, but it's a crash on the money path | The paying and invoice-paid handlers run once more after a duplicate-key clash and take the "already done" path | fixed (9c26b01) |
-| 6.2 | Coach's Today page | "Needs you: Nothing waiting" while Payments says "Sam's payment didn't go through… Needs you" | — | open |
+| 6.2 | Coach's Today page | "Needs you: Nothing waiting" while Payments says "Sam's payment didn't go through… Needs you" | — | fixed (533903f) |
 | 6.3 | Client after a failed card | Only My coach says so (and the email); Home and notifications say nothing | — | needs a decision |
 | 6.4 | Subscription cancelled before its paid-up date (coach cancels in Stripe) | Coaching pauses 7 days from now although the client paid to 22 Dec | — (should it count from the paid-up date? depends on refunds) | needs a decision |
 | 6.5 | Package, invite link with a price, pay page, Stripe Checkout (4242), webhooks, receipts, declined card (both sides told, rule date shown), the fix link → Stripe's card page, paying again, "Stop paying at the end of the month" (Stripe agrees), the plan ending, switching to paid elsewhere | Worked | — | ok |
@@ -158,7 +158,7 @@ between steps.
 | # | Found | What it did to the user | Fix | Status |
 |---|---|---|---|---|
 | 7.1 | A set corrected on phone B (4 → 6 reps) | Never reached phone A or the web, and was then overwritten on the server: "Sync now" on A re-sends every session and the server kept the latest push, and a pull skipped any session the phone already had. Edits to past workouts were lost between devices | Sessions carry when they last changed (finishing, editing, merging stamp it); the server keeps the newer copy (a push with no time, from an older app, still wins); a pull takes a newer copy of a session it already has | fixed (fc13828) |
-| 7.2 | Session name | Both phones call it "Push" (from the muscles), the web "Bench Press" (from the exercises) | — | open |
+| 7.2 | Session name | Both phones call it "Push" (from the muscles), the web "Bench Press" (from the exercises) | — | fixed (533903f) |
 | 7.3 | New workout, habit created and ticked on the other phone, kg → lb, deleting a workout | Reached the other phone and the web | — | ok |
 
 ## Round 8 — P7 life happens (2026-11-22, e23faf8)
@@ -187,8 +187,8 @@ off, unplanned workouts, a custom exercise, then a backup file restored on a new
 | 9.3 | Workout tour | "Tap a set's number for its options" — a set's number only moves it now; options are behind a swipe | "Swipe a set left to edit or delete it, and hold its number to move it." | fixed (d454de3) |
 | 9.4 | Import screen | "Strong and Hevy are next", though both import already | "Export files from Strong and Hevy go straight in, and so does a LogIt backup file." | fixed (d454de3) |
 | 9.5 | Welcome screen | No "restore a backup" for someone without an account (only "Get started" / "I already have an account"); 9.1 covers it for experienced lifters only | — | needs a decision |
-| 9.6 | Exercise card | Header "Last time 20 × 12" (kg × reps), set rows "12 × 20" (reps × kg) | — | open |
-| 9.7 | Workout summary for bodyweight PR | "Pull-Up · 10 reps @ 0 kg · ≈0 kg 1RM" | — | open |
+| 9.6 | Exercise card | Header "Last time 20 × 12" (kg × reps), set rows "12 × 20" (reps × kg) | — | fixed (fae2566) |
+| 9.7 | Workout summary for bodyweight PR | "Pull-Up · 10 reps @ 0 kg · ≈0 kg 1RM" | — | fixed (fae2566) |
 | 9.8 | Home after unplanned workouts | "Monday's workout moved to today · Start Full Body A", Quick start "Start Day 3 — Full Body C" and Today "Rest day" at once | — (same family as 1.15) | needs a decision |
 | 9.9 | Offline onboarding and logging, a new exercise, suggestions off (kept through the restore), the backup's contents, T3: suggestions on after unplanned weeks plan from that history (+2.5 kg, "aim 7, 6, 5") | Worked | — | ok |
 
@@ -210,7 +210,7 @@ T6: "Ray" (Pro) trains, gets Studio, coaches Lou, on the phone and the web dashb
 | 10.5 | T4: coach invites someone by username | Nothing tells them: no notification, the invite only shows on Settings › Coaching | Notification "Dana wants to coach you", opening the Coaching page (web: My coach) | fixed |
 | 10.6 | T4: coach assigns a program | Nothing tells the client it came; it's only in More › Splits | Notification "Dana sent you a program", opening Splits (web: My coach); once per assignment, not per edit | fixed |
 | 10.7 | T4: a client who had her own plan | Home keeps her own plan (first-week card, "Start Day 3 — Full Body C"); the coach's program is never offered there (4.15 from a solo lifter's side) | — | needs a decision |
-| 10.8 | T4: right after stopping coaching | The Coaching page shows only "Coach your own clients — Studio is bought in the LogIt Android app"; no way to find or join another coach there | — | open |
+| 10.8 | T4: right after stopping coaching | The Coaching page shows only "Coach your own clients — Studio is bought in the LogIt Android app"; no way to find or join another coach there | — | fixed (533903f) |
 | 10.9 | T1: three weeks after the fix, account prompts, food card, streak, PRs | Plans move (squat 20 × 8 → 20 × 12 → 22.5 × 8, pulldown 25 → 27.5 kg); two gentle "Save to a free account" prompts (after workouts 1 and 2); the food card can be dismissed; streak counts whole weeks only; PR notifications right | — | ok |
 | 10.10 | T4: Dana's program day, stopping, the server | Program workout planned and logged (Squat 4 × 5 @ 50); Lou's own plan follows it (shared lift history); stopping removes the program, keeps her plan active and all three workouts (the program one named "Heavy · Dana's 4-week strength"); Dana gets 404 for her data and an empty roster | — | ok |
 | 10.11 | T6: a lifter given Studio | More gets Clients, Messages, Library; Coaching says "Invite your first client"; web "Welcome to Studio"; his own plan, sessions and progress stay apart from the coaching space; Lou listed with "Own plan" | — | ok |
@@ -230,12 +230,12 @@ key and invites "Kim", who joins from a fresh phone.
 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
-| 11.1 | Admin with a Free account signs in to the dashboard | Lands on "Your training starts on your phone / What Pro adds"; nothing links to the admin console (only typing /admin) | easy | open |
-| 11.2 | Dashboard sign-up opened while the server is still starting (right after `docker compose up`) | The page asks the server once; when that fails it never asks again: no admin-key field on a fresh server, and after a try it says "invite-only, enter the invite code" — the admin key is refused there. A reload fixes it | easy | open |
-| 11.3 | Dashboard sign-up hint | "Letters, numbers, dots and underscores", but dots are refused ("3–30 letters, numbers or underscores", 5.6); the phone's hint is right | easy | open |
-| 11.4 | Admin's invite message | "Go to Settings › Account, tap 'Connect to a different server'": a fresh install can't reach Settings and no such button exists; the way is "I already have an account" › Server › My own server | easy | open |
-| 11.5 | Self-hosted wording | Dashboard sidebar says "Free · Account" for everyone on a self-hosted server; phone Settings "manage clients on a Studio plan" and "Scan the code on app.getlogit.app" (should be this server's dashboard) | easy | open |
-| 11.6 | Self-hosted dashboard login | "Compare plans" links to getlogit.app pricing, which don't apply there | easy | open |
+| 11.1 | Admin with a Free account signs in to the dashboard | Lands on "Your training starts on your phone / What Pro adds"; nothing links to the admin console (only typing /admin) | easy | fixed (533903f) |
+| 11.2 | Dashboard sign-up opened while the server is still starting (right after `docker compose up`) | The page asks the server once; when that fails it never asks again: no admin-key field on a fresh server, and after a try it says "invite-only, enter the invite code" — the admin key is refused there. A reload fixes it | easy | fixed (533903f) |
+| 11.3 | Dashboard sign-up hint | "Letters, numbers, dots and underscores", but dots are refused ("3–30 letters, numbers or underscores", 5.6); the phone's hint is right | easy | fixed (533903f) |
+| 11.4 | Admin's invite message | "Go to Settings › Account, tap 'Connect to a different server'": a fresh install can't reach Settings and no such button exists; the way is "I already have an account" › Server › My own server | easy | fixed (533903f) |
+| 11.5 | Self-hosted wording | Dashboard sidebar says "Free · Account" for everyone on a self-hosted server; phone Settings "manage clients on a Studio plan" and "Scan the code on app.getlogit.app" (should be this server's dashboard) | easy | fixed (533903f) |
+| 11.6 | Self-hosted dashboard login | "Compare plans" links to getlogit.app pricing, which don't apply there | easy | fixed (533903f) |
 | 11.7 | Admin: people, temporary password (old one refused, new one works), sign-out, plan given by hand, reports, diagnostics, subscriptions, growth, server page, invites (made, sent, used, shown as used); self-hosted setup with the admin key, server picker ("Invite-only" shown), invite sign-up, "Own server · Everything included", sync and dashboard without Pro | Worked | — | ok |
 | 11.8 | Two people on one phone (Accounts on this phone) | Android only (the web build sends you to Settings) | — | to the emulator round |
 
@@ -247,8 +247,8 @@ plans given and taken away by the admin.
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
 | 12.1 | Free, signs in on a second phone | The free backup moves to that phone. The first phone says so in Settings only ("Your free backup is on another phone…"); Home says nothing, and workouts logged there from then on are on that phone only | decision (where to tell them) | open |
-| 12.2 | The phone that lost the free backup | Sends all 18 sync requests on every sync and every one is refused (36 per "Sync now") | easy (stop after "backup on another phone" until sign-in or Pro) | open |
-| 12.3 | Second phone signs in on the day the plan was made (a Sunday) | "Full Body B and Full Body C won't fit this week. Next week starts fresh." about days before she joined (the plan's start date isn't on that phone) | easy (leave out pre-start workouts) | open |
+| 12.2 | The phone that lost the free backup | Sends all 18 sync requests on every sync and every one is refused (36 per "Sync now") | easy (stop after "backup on another phone" until sign-in or Pro) | fixed (8082c54) |
+| 12.3 | Second phone signs in on the day the plan was made (a Sunday) | "Full Body B and Full Body C won't fit this week. Next week starts fresh." about days before she joined (the plan's start date isn't on that phone) | easy (leave out pre-start workouts) | fixed (8082c54) |
 | 12.4 | Pro → Free with two phones | The phone that signed in last keeps the backup, not the one she trains on | decision | open |
 | 12.5 | Pro given: both phones sync, a workout on A reaches B and the web; Pro taken away: data kept on the server and both phones, web dashboard drops to the upgrade page honestly | Worked | — | ok |
 
@@ -262,16 +262,16 @@ an unplanned workout with a run and push-ups, all checked again on the web dashb
 |---|---|---|---|---|
 | 13.1 | Run distance "3" (box says "km / m") | Saved as **3 m**; only "3.0" means km, and "5,2" becomes 5 m | easy | fixed (c8a069a) |
 | 13.2 | Run duration | The box opens the number keypad, which on Android has no ":"; a plain number counts as seconds, so "20" is 20 seconds and "2000" is 33:20 | easy (plain number = minutes, 4 digits = mm:ss) | fixed (c8a069a) |
-| 13.3 | Adding an exercise or a cardio block during a workout | It arrives collapsed ("Push-Up 0 of 3"; "Running" with nothing to fill in): one more tap before anything can be logged, and a cardio block also needs "+ Add first interval" | easy | open |
-| 13.4 | Bodyweight exercise, first time | "First time? Pick a weight you could lift about 8 times" for push-ups | easy | open |
-| 13.5 | Home › Recent sessions | "Top: Push-Up 15×0" (bodyweight shown as 0; same family as 9.7) | easy | open |
-| 13.6 | Nutrition with height saved but no birth date | "Add height & birth date" | easy | open |
-| 13.7 | Fields with no label for screen readers | Nutrition goal (trend window, max adjustment), Settings (rest timer seconds ×3), New goal (exercise), Browse plugins (search), Clients (username), run Duration/Distance (placeholder only) | easy | open |
-| 13.8 | Profile | An icon button (chevron) with no name; "Sign out" 28 px tall | easy | open |
-| 13.9 | Browse plugins | "turn them on" and "import page" are 16 px text inside a sentence, not buttons (against "actions are buttons") | easy | open |
+| 13.3 | Adding an exercise or a cardio block during a workout | It arrives collapsed ("Push-Up 0 of 3"; "Running" with nothing to fill in): one more tap before anything can be logged, and a cardio block also needs "+ Add first interval" | easy | fixed (fae2566) |
+| 13.4 | Bodyweight exercise, first time | "First time? Pick a weight you could lift about 8 times" for push-ups | easy | fixed (fae2566) |
+| 13.5 | Home › Recent sessions | "Top: Push-Up 15×0" (bodyweight shown as 0; same family as 9.7) | easy | fixed (fae2566) |
+| 13.6 | Nutrition with height saved but no birth date | "Add height & birth date" | easy | fixed (a579c56) |
+| 13.7 | Fields with no label for screen readers | Nutrition goal (trend window, max adjustment), Settings (rest timer seconds ×3), New goal (exercise), Browse plugins (search), Clients (username), run Duration/Distance (placeholder only) | easy | fixed (a579c56) |
+| 13.8 | Profile | An icon button (chevron) with no name; "Sign out" 28 px tall | easy | fixed (a579c56) |
+| 13.9 | Browse plugins | "turn them on" and "import page" are 16 px text inside a sentence, not buttons (against "actions are buttons") | easy | fixed (a579c56) |
 | 13.10 | Chips and segment buttons on most screens (Insights ranges, Exercises tabs, Settings units/theme, Social tabs, nutrition goal, Home "Edit split" 28 px) | 28–37 px tall, under the 44 px touch size | decision (design system) | open |
-| 13.11 | Sample plugins | "by Logit Samples" (should be LogIt) | easy | open |
-| 13.13 | Mobility drill, first time | "Last → next: 20s L · 20s R" when there is no last time; its two "±kg" boxes have no labels; the drill also arrives collapsed (13.3) | easy | open |
+| 13.11 | Sample plugins | "by Logit Samples" (should be LogIt) | easy | fixed (a579c56) |
+| 13.13 | Mobility drill, first time | "Last → next: 20s L · 20s R" when there is no last time; its two "±kg" boxes have no labels; the drill also arrives collapsed (13.3) | easy | fixed (fae2566) |
 | 13.12 | Every feature screen (31) loads with no errors; nutrition goal → 2,070 kcal, food search (through the server, nothing sent elsewhere from the phone), 50 g oats logged, weight, habit, lift goal with projection, plugin pack install asks first; food, weight, habit and goal all on the web dashboard | Worked | — | ok |
 
 Supersets: round 14. Not covered: music bar (Android, needs a music app), sounds.
@@ -283,10 +283,10 @@ rotation split.
 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
-| 14.1 | Warm-up ramp added | Working sets are numbered 5, 6, 7 after four warm-ups (W W W W 5 6 7), while the plan above says sets 1–3 | easy | open |
+| 14.1 | Warm-up ramp added | Working sets are numbered 5, 6, 7 after four warm-ups (W W W W 5 6 7), while the plan above says sets 1–3 | easy | fixed (fae2566) |
 | 14.2 | Superset of Bench (with warm-ups) and Barbell Row | Warm-ups count as superset rounds: round 1 pairs the 20 kg × 10 warm-up with the row's first working set; "Round 1 of 7", "0 of 10" | bigger | open |
 | 14.3 | Day one from best lifts (bench 100 × 5) | Plans 100 × 5, 100 × 4, 100 × 3: the best recent 5-rep set as set one, every set to failure in the first workout | decision | open |
-| 14.4 | Home for a rotation split | "Day 1 — Upper A · Scheduled" (nothing is scheduled in a rotation) | easy | open |
+| 14.4 | Home for a rotation split | "Day 1 — Upper A · Scheduled" (nothing is scheduled in a rotation) | easy | fixed (fae2566) |
 | 14.5 | Home Progression card after best lifts | "Finish a session and pick an algorithm in Settings" (same as 4.11) | decision (with 4.11) | open |
 | 14.6 | Best lifts (live max estimate), Train your way (Adaptive / 5/3/1 / Linear / Build my own), warm-up ramp weights (20 × 10, 40 × 5, 60 × 3, 80 × 2 before 100), superset/circuit sheet, switching a split to "In order" | Worked | — | ok |
 
@@ -294,7 +294,7 @@ rotation split.
 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
-| 15.1 | Server unreachable, a weight just logged | Settings says "Backed up · synced just now" and there's no Sync now; the change reached the server only once it was back (it did) — same gap as 5.15/8.2: the status shows the last good sync, not that changes are waiting | easy (say "1 change waiting" / "Can't reach the server") | open |
+| 15.1 | Server unreachable, a weight just logged | Settings says "Backed up · synced just now" and there's no Sync now; the change reached the server only once it was back (it did) — same gap as 5.15/8.2: the status shows the last good sync, not that changes are waiting | easy (say "1 change waiting" / "Can't reach the server") | fixed (8082c54) |
 | 15.2 | Dark mode (Home, Nutrition, Sessions, Settings), text at 130 % (Home, Nutrition), food search with the server unreachable (results still come), weight logged offline reaching the server later | Worked: readable, nothing cut off or overflowing | — | ok |
 
 ## Round 16 — T2 in the app: two years of history (2026-11-22)
@@ -316,8 +316,8 @@ a local self-hosted one; driven over the WebView's DevTools connection and real 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
 | 17.1 | Rest alerts with the app in the background | No "Rest complete" notification after 100 s: notification permission was never asked (Lou signed in instead of going through the reminders step), and the app only asks when it schedules the alert, which happens as it goes to the background, where Android can't show the question. Anyone who didn't allow notifications earlier never gets rest alerts | easy (ask at the first rest, in the foreground, like the exact-alarm question) | fixed (c8a069a) |
-| 17.2 | Accounts on this phone | Every account shows "No name yet @lou_r10", though the server has her name (Lou) | easy | open |
-| 17.3 | After moving to her own server | "Your Pro plan is still running… Cancel it in Google Play" for a Pro plan the admin gave her (nothing to cancel there) | easy | open |
+| 17.2 | Accounts on this phone | Every account shows "No name yet @lou_r10", though the server has her name (Lou) | easy | fixed (533903f) |
+| 17.3 | After moving to her own server | "Your Pro plan is still running… Cancel it in Google Play" for a Pro plan the admin gave her (nothing to cancel there) | easy | fixed (533903f) |
 | 17.4 | Lou's first sign-in on the phone | Home showed only Quick start and Goals (no plan, no workouts, no "Getting your training…" note) until the app was reloaded; Fay's sign-in later showed the loading note and filled in by itself. Seen once | — (watch) | open |
 | 17.5 | Share a Strong CSV into LogIt | "LogIt couldn't read that file", but the test shared it from the shell, which can't grant file access the way a Files app does | — (check on a real phone) | not tested |
 | 17.6 | Signing in pulls plan and workouts into the phone's database; a second account added and switched to (no password, data kept apart); Move to another server (checks the address, sees "Invite only", asks for the code, copies 4 workouts, the split, nutrition, habits, settings; the server has them); crash reports from a test build arrive anonymously within a second with the log before them, and stay off on a self-hosted server | Worked | — | ok |

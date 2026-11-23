@@ -657,7 +657,7 @@ test.describe("bodyweight loads", () => {
 
     // Sets 1 and 3 hit 8 → up 2.5 (BW+2.5, BW−22.5); sets 2 and 4 aim for one more rep.
     await expect.poll(() => getTargetText(page)).toBe("5×2.5kg|7reps|5×-22.5kg|8×-25kg");
-    await expect(page.getByTestId("set-last")).toHaveText(["10 × BW", "6 × BW", "10 × BW−25", "7 × BW−25"]);
+    await expect(page.getByTestId("set-last")).toHaveText(["BW × 10", "BW × 6", "BW−25 × 10", "BW−25 × 7"]);
     await expect(page.getByText("+2.5kg on 2 sets")).toBeVisible();
     await expect(page.getByRole("button", { name: /Warm-up ramp/ })).toHaveCount(0);
   });

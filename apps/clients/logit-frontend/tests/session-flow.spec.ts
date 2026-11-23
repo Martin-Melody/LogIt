@@ -418,7 +418,7 @@ test.describe("managing sets", () => {
 
     await page.getByText("+ Add first set").click();
 
-    await expect(page.getByTestId("set-last").first()).toHaveText("6 × 90");
+    await expect(page.getByTestId("set-last").first()).toHaveText("90 × 6");
   });
 
   test("add set button uses suggestion weight as default", async ({ page }) => {
@@ -1241,8 +1241,8 @@ test.describe("finish session", () => {
     await expect(page.getByText("Workout complete")).toBeVisible();
 
     const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
-    await expect(breakdown.getByText("8×BW−25")).toBeVisible();
-    await expect(breakdown.getByText("5×BW+2.5")).toBeVisible();
+    await expect(breakdown.getByText("BW−25×8")).toBeVisible();
+    await expect(breakdown.getByText("BW+2.5×5")).toBeVisible();
     // The first-time PR card uses the same BW form, with no 1RM estimate.
     await expect(page.getByText("5 reps @ BW+2.5 kg")).toBeVisible();
     // Only the 10 × 50 pec deck: with no bodyweight known the dips aren't
