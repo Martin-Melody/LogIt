@@ -190,7 +190,7 @@
           </Button>
           {#if portalError}<p class="text-xs text-destructive">{portalError}</p>{/if}
         {/if}
-        {#if plan.title === "Free"}
+        {#if plan.title === "Free" && !apiClient.isSelfHosted()}
           <a href={PRICING_URL} class="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Compare plans</a>
         {/if}
       {/if}

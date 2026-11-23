@@ -127,7 +127,11 @@
       return;
     }
     if (isBlockedFreeTier) {
-      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isPayFix && !isWelcome && !isTrialCoaching && !isAdminPath) await goto("/upgrade");
+      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isPayFix && !isWelcome && !isTrialCoaching && !isAdminPath) {
+        // An admin on a Free account runs the server from here: the console, not the upgrade page (bug hunt 11.1).
+        await adminState.refresh();
+        await goto(adminState.isAdmin ? "/admin" : "/upgrade");
+      }
       return;
     }
     if (isUpgrade) await goto("/");

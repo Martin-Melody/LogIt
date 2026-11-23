@@ -42,9 +42,9 @@
     const until = i.expiresAt ? `, until ${shortDate(at(i.expiresAt))}` : "";
     return `You're invited to my LogIt server.\n\n` +
       `1. Install LogIt from Google Play.\n` +
-      `2. Go to Settings › Account, tap "Connect to a different server" and enter:\n` +
+      `2. Open it and tap "I already have an account", then Server › My own server, and enter:\n` +
       `   ${apiClient.getBaseUrl()}\n` +
-      `3. Tap Sign up and use invite code ${i.code}\n` +
+      `3. Tap Use this server, then Create account, and use invite code ${i.code}\n` +
       `   (${howMany}${until}).`;
   }
 

@@ -24,7 +24,10 @@
     const s = await apiClient.sessionSummary(account.id);
     if (!s.signedIn) return { account, detail: `Signed out · ${s.server}`, signedIn: false };
     const plan = s.selfHosted ? "Own server" : (s.user?.tier ?? "Free");
-    return { account, detail: `${plan} · ${s.server}`, signedIn: true };
+    // An account signed in on this phone has its name on the server even when the phone's row
+    // never got one: "No name yet @lou" for Lou (bug hunt 17.2).
+    const named = account.displayName ? account : { ...account, displayName: s.user?.displayName ?? "" };
+    return { account: named, detail: `${plan} · ${s.server}`, signedIn: true };
   }
 
   onMount(async () => {

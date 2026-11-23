@@ -53,6 +53,9 @@ export type MovedFrom = {
   username: string;
   tier: AuthUser["tier"] | null;
   selfHosted: boolean;
+  /** The plan is a Google Play subscription that renews: worth cancelling. A plan given by hand
+   * has nothing to cancel in Play (bug hunt 17.3). */
+  playSubscription: boolean;
 };
 
 export type MoveResult =
@@ -100,7 +103,14 @@ export async function moveToServer(req: MoveRequest): Promise<MoveResult> {
     username: oldUser.username,
     tier: oldUser.tier ?? null,
     selfHosted: apiClient.isSelfHosted(),
+    playSubscription: false,
   };
+  if (!from.selfHosted && (from.tier === "Pro" || from.tier === "Studio")) {
+    const status = await apiClient.getBillingStatus().catch(() => null);
+    const sub = status?.subscription;
+    // Unknown (the server didn't answer): say it, as before, rather than risk a charge.
+    from.playSubscription = !status || (!!sub && sub.source === "google" && sub.grantsAccess && sub.autoRenewing);
+  }
   const target = req.url ? normalizeUrl(req.url) : null;
   if ((target ?? hostedBaseUrl()) === from.baseUrl.replace(/\/+$/, "")) {
     return { ok: false, error: `This account is already on ${from.server}.` };

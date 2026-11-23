@@ -103,7 +103,7 @@
   }
 
   const planStillRunning = $derived(
-    !!done && done.toOwnServer && !done.from.selfHosted && (done.from.tier === "Pro" || done.from.tier === "Studio") && !oldDeleted,
+    !!done && done.toOwnServer && !done.from.selfHosted && (done.from.tier === "Pro" || done.from.tier === "Studio") && done.from.playSubscription && !oldDeleted,
   );
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 </script>

@@ -256,6 +256,15 @@
       </div>
     {/if}
 
+    {#if coaches.length === 0 && requests.length === 0 && received.length === 0}
+      <!-- No coach (never had one, or just left one): the way to a new one (bug hunt 10.8). -->
+      <div class="border-b border-border px-3 pt-3 pb-3">
+        <p class="pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">My coach</p>
+        <p class="pb-2.5 text-sm text-muted-foreground">Have a coach? Enter their code or scan their QR code.</p>
+        <Button variant="outline" class="h-11 w-full" onclick={() => goto("/onboarding/coach")}>I have a coach</Button>
+      </div>
+    {/if}
+
     <!-- A client (coached, asking, or invited) isn't shown the Studio offer for coaching others. -->
     {#if isStudio || (coaches.length === 0 && requests.length === 0 && received.length === 0)}
     <div class="border-b border-border">

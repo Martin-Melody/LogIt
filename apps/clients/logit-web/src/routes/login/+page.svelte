@@ -66,6 +66,8 @@
     error = null;
     password = "";
     confirmPassword = "";
+    // The server may not have answered when the page opened (still starting): ask again (bug hunt 11.2).
+    if (m === "register" && !registration) void loadRegistration();
     // Carry what was typed across: an email typed to sign in is the sign-up email.
     if (m === "register" && usernameOrEmail.includes("@") && !email) email = usernameOrEmail.trim();
     await tick();
@@ -105,8 +107,9 @@
       }
     } catch (err) {
       if (err instanceof ApiError && (err.code === "invite_required" || err.code === "invite_invalid")) {
-        registration = { mode: "invite", selfHosted: registration?.selfHosted ?? true };
-        inviteError = err.code === "invite_invalid"
+        // Ask the server again rather than assume: a new server being set up wants its admin key.
+        registration = (await apiClient.getRegistrationInfo()) ?? { mode: "invite", selfHosted: registration?.selfHosted ?? true };
+        inviteError = registration.setup ? null : err.code === "invite_invalid"
           ? "That code isn't valid, has expired or has been used up. Check it with whoever sent it."
           : "This server is invite-only. Enter the invite code you were sent.";
       } else if (mode === "register" && err instanceof ApiError && err.status === 409) {
@@ -218,7 +221,7 @@
           <div class="flex flex-col gap-1.5">
             <Label for="username">Username</Label>
             <Input id="username" type="text" bind:value={username} autocomplete="username" aria-describedby="username-help" />
-            <p id="username-help" class="text-xs text-muted-foreground">How friends find you on Social. Letters, numbers, dots and underscores.</p>
+            <p id="username-help" class="text-xs text-muted-foreground">How friends find you on Social. 3–30 letters, numbers and underscores.</p>
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="password">Password</Label>
@@ -259,7 +262,10 @@
         {:else}
           <span></span>
         {/if}
-        <a href={PRICING_URL} class="text-muted-foreground hover:text-foreground">Compare plans</a>
+        <!-- A self-hosted server includes everything: getlogit.app's plans don't apply there (bug hunt 11.6). -->
+        {#if !registration?.selfHosted}
+          <a href={PRICING_URL} class="text-muted-foreground hover:text-foreground">Compare plans</a>
+        {/if}
       </div>
 
       <!-- This dashboard only talks to its own server: a self-hosted server comes with its own

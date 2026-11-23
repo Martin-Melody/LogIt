@@ -687,7 +687,7 @@
             <Users class="h-3.5 w-3.5 shrink-0" />
             <span class="text-left">
               <span class="block">Coaching</span>
-              <span class="block text-xs text-muted-foreground">View invites, or manage clients on a Studio plan</span>
+              <span class="block text-xs text-muted-foreground">{apiClient.isSelfHosted() ? "View invites, or manage your clients" : "View invites, or manage clients on a Studio plan"}</span>
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />
@@ -699,7 +699,7 @@
             <Monitor class="h-3.5 w-3.5 shrink-0" />
             <span class="text-left">
               <span class="block">Sign in on a computer</span>
-              <span class="block text-xs text-muted-foreground">Scan the code on app.getlogit.app, and see where you're signed in</span>
+              <span class="block text-xs text-muted-foreground">Scan the code on {apiClient.isSelfHosted() ? "your server's dashboard" : "app.getlogit.app"}, and see where you're signed in</span>
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />

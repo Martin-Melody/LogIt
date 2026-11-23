@@ -5,6 +5,7 @@
  */
 import { createId } from "./ids";
 import { estimated1RM } from "./oneRepMax";
+import { CORE_EXERCISES, coreExerciseById, findExerciseByName } from "./coreExercises";
 import type { MuscleGroup } from "./exercise";
 import type { ProgramDay, ProgramStrength } from "./CoachProgram";
 import type { PlannedBlock, PlannedGroup, SplitDay, WorkoutSplit } from "./WorkoutSplit";
@@ -208,13 +209,18 @@ export type TitleContext = {
   inferredDayName?: string | null;
 };
 
-/** What a session is called on the Sessions pages. */
+/** The built-in exercises' muscles: what a caller without the lifter's own list goes by. */
+const coreMusclesOf: MusclesOf = (id, name) =>
+  (id ? coreExerciseById(id)?.primaryMuscles : undefined) ?? findExerciseByName(CORE_EXERCISES, name)?.primaryMuscles;
+
+/** What a session is called on the Sessions pages. Without `musclesOf` the built-in exercises
+ * stand in, so the web names a workout "Push" like the phone does, not "Bench Press" (bug hunt 7.2). */
 export function sessionTitle(session: WorkoutSession, ctx: TitleContext = {}): string {
   return (
     session.name?.trim() ||
     session.source?.dayName ||
     ctx.inferredDayName ||
-    autoSessionName(session, ctx.musclesOf)
+    autoSessionName(session, ctx.musclesOf ?? coreMusclesOf)
   );
 }
 
