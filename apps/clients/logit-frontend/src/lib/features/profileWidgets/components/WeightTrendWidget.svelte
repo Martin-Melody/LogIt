@@ -35,7 +35,7 @@
 
 <Card.Root>
   <Card.Header>
-    <Card.Title class="text-sm flex items-center gap-1.5"><TrendingUp class="h-3.5 w-3.5 text-muted-foreground" /> Weight Trend</Card.Title>
+    <Card.Title class="text-sm flex items-center gap-1.5"><TrendingUp class="h-3.5 w-3.5 text-muted-foreground" /> Weight trend</Card.Title>
   </Card.Header>
 
   <Card.Content>

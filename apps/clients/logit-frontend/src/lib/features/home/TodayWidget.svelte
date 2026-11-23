@@ -1,4 +1,5 @@
 <script lang="ts">
+  import StreakLine from "$lib/features/goals/StreakLine.svelte";
   // Home's Today card (decision D1, design canvas "LogIt decisions D1–D3, D5, D11"): the week
   // strip, and one answer to "what now?" — today's workout with its next weights and one Start,
   // or done / rest with what's next. Replaces This week, Quick start and Today's plan, which each
@@ -195,7 +196,7 @@
 </script>
 
 <Card.Root class="w-full">
-  <Card.Content class="flex flex-col gap-4 pt-5">
+  <Card.Content class="flex flex-col gap-4 pt-1">
     <!-- The client's own split's week, only while their own plan leads. -->
     {#if week && week.planned > 0 && !coached}
       <div class="flex items-center justify-between gap-3">
@@ -216,10 +217,10 @@
             </span>
           {/each}
         </div>
-        <div class="text-right">
+        <div class="flex flex-col items-end text-right">
           {#if streakWeeks > 0}
-            <div class="text-[15px] font-semibold tabular-nums">{streakWeeks} week{streakWeeks === 1 ? "" : "s"}</div>
-            <div class="text-[11px] text-muted-foreground">in a row</div>
+            <StreakLine weeks={streakWeeks} />
+            <div class="text-[11px] text-muted-foreground tabular-nums">{week.done} of {goal} this week</div>
           {:else}
             <!-- Never "0-week streak" (bug hunt 3.14): the week so far instead. -->
             <div class="text-[15px] font-semibold tabular-nums">{week.done} of {goal}</div>

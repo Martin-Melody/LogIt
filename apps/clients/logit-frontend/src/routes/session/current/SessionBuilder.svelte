@@ -1,7 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { get } from "svelte/store";
-  import { Plus } from "lucide-svelte";
   import { toast } from "$lib/components/ui/sonner/index";
   import { onMount, untrack } from "svelte";
 
@@ -16,9 +15,8 @@
   import { refreshMobilityProgressionState } from "@logit/core/usecases/progression/getMobilitySuggestion";
   import { mobilityDrillKey, getMobilityDrillLeadSide } from "$lib/data/mobilityDrillPrefs";
 
-  import { Button } from "$lib/components/ui/button/index.js";
   import { keyboard } from "$lib/stores/keybaord.store";
-  import { bottomNavHeight } from "$lib/stores/bottomNav.store";
+  import { Plus } from "lucide-svelte";
   import { reveal } from "$lib/transitions";
   import { autoTour, destroyActiveTour } from "$lib/tour/index";
 
@@ -57,7 +55,14 @@
   import type { ExerciseType } from "@logit/core/domain/exercise";
 
   import CurrentSessionHeader from "./Components/CurrentSessionHeader.svelte";
-  import MusicBar from "$lib/features/music/MusicBar.svelte";
+  import WorkoutDock from "$lib/features/session/ui/WorkoutDock.svelte";
+  import WorkoutMenuSheet from "$lib/features/session/ui/WorkoutMenuSheet.svelte";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import ReorderSheet from "$lib/features/session/ui/ReorderSheet.svelte";
+  import { blockStages, blockProgress, type BlockStage } from "$lib/features/session/stage";
+  import { openAllSignal } from "$lib/features/session/openAll";
+  import { music } from "$lib/features/music/nowPlaying.svelte";
+  import { addButton } from "$lib/components/ui/choice";
   import { onWorkoutFinished } from "$lib/features/music/sessionMusic";
   import { justAdded } from "$lib/features/session/blocks/justAdded";
 
@@ -107,44 +112,29 @@
   let shareSession = $state<WorkoutSession | null>(null);
   let hasPreviousSession = $state(false);
   let noteOpen = $state(false);
+  let reorderOpen = $state(false);
   // Set to the exercise's name while asking for bodyweight (see addExerciseWithName).
   let bodyweightPromptFor = $state<string | null>(null);
 
   async function saveNote(value: string) {
     await onMutate((s) => setSessionNote(s, value));
   }
-  let musicBarEl = $state<HTMLDivElement | null>(null);
   let blocksListEl = $state<HTMLElement | null>(null);
-  let musicBarHeight = $state(0);
-  // Finish and Discard are in the header, so the only bar at the bottom is the music bar
-  // (sitting on the bottom nav), and only while it has something to show.
-  let musicBarVisible = $state(false);
-  // The add button (and the shrunk circuit timer) sit just above the music bar, or just
-  // above the nav when there's no music bar.
-  const addButtonBottom = $derived(
-    $bottomNavHeight + (musicBarVisible ? musicBarHeight : 0) + 12,
-  );
+  // The bottom bar's height: the shrunk circuit timer sits just above it.
+  let dockHeight = $state(0);
+  const addButtonBottom = $derived(dockHeight + 12);
+  let menuOpen = $state(false);
+  let confirmDiscard = $state(false);
+  let whereOpen = $state(false);
+  let noteEl = $state<HTMLTextAreaElement | null>(null);
 
-  // The bar is taken out and put back (e.g. while the keyboard is open), so keep the last
-  // good height while it's gone: measuring a missing bar used to drop the add button to
-  // the very bottom, where it stayed.
-  function updateAddButtonOffset() {
-    const h = musicBarEl?.offsetHeight ?? 0;
-    if (h > 0) musicBarHeight = h;
+  function openNote() {
+    noteOpen = true;
+    setTimeout(() => {
+      noteEl?.scrollIntoView({ block: "center", behavior: "smooth" });
+      noteEl?.focus();
+    }, 50);
   }
-
-  $effect(() => {
-    const el = musicBarEl;
-    if (!el) return;
-    updateAddButtonOffset();
-    const observer = new ResizeObserver(() => updateAddButtonOffset());
-    observer.observe(el);
-    window.addEventListener("resize", updateAddButtonOffset);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateAddButtonOffset);
-    };
-  });
 
   function getSessionOrNull(): WorkoutSession | null {
     return get(currentSession);
@@ -669,6 +659,23 @@
 
   const liveOrderedBlocks = $derived(liveBlockOrder(sortedBlocks));
 
+  // Done blocks fold to a line, the current one is lifted out as a card, the rest are "Up next".
+  const stages = $derived($currentSession ? blockStages($currentSession) : new Map<string, BlockStage>());
+  const setTotals = $derived(
+    sortedBlocks.map(blockProgress).reduce((a, p) => ({ total: a.total + p.total, done: a.done + p.done }), { total: 0, done: 0 }),
+  );
+  const workoutTitle = $derived($currentSession?.name?.trim() || $currentSession?.source?.dayName || "Workout");
+  const discardDescription = $derived.by(() => {
+    const n = sessionExercises.length + nonStrengthBlockCount;
+    if (n === 0) return "This empty workout will be discarded. This can't be undone.";
+    return `${n} exercise${n === 1 ? "" : "s"}` + (loggedSetCount > 0 ? ` and ${loggedSetCount} logged set${loggedSetCount === 1 ? "" : "s"}` : "") + " will be permanently deleted. This can't be undone.";
+  });
+  const placeName = $derived($currentSession?.placeId ? placesStore.byId($currentSession.placeId)?.name ?? null : null);
+  const restLabel = $derived.by(() => {
+    const ms = $profile.restDefaults.normal;
+    return ms ? `${Math.floor(ms / 60000)}:${String(Math.round((ms % 60000) / 1000)).padStart(2, "0")}` : null;
+  });
+
   // Fold runs of consecutive blocks that share a superset id into one group.
   type RenderItem =
     | { kind: "block"; block: SessionBlock }
@@ -704,9 +711,8 @@
 </script>
 
 <div
-  class="flex flex-col {circuitBarShown
-    ? musicBarVisible ? 'pb-64' : 'pb-44'
-    : musicBarVisible ? 'pb-40' : 'pb-20'}"
+  class="flex flex-col"
+  style="padding-bottom: {dockHeight + (circuitBarShown ? CIRCUIT_BAR_SPACE : 0) + 16}px"
   onpointerdown={(e) => {
     if (!(e.target as HTMLElement).closest("input, textarea")) {
       const active = document.activeElement as HTMLElement | null;
@@ -717,18 +723,16 @@
   }}
 >
   <CurrentSessionHeader
+    title={workoutTitle}
     saving={ui.saving || ui.finishing}
     error={ui.error}
     startedAtMs={$currentSession?.startedAtMs ?? null}
     showActions={!ui.finishing}
     canFinish={!!$currentSession && !$currentSession.endedAtMs && hasLoggableWork}
-    exerciseCount={sessionExercises.length + nonStrengthBlockCount}
-    {loggedSetCount}
+    loggedSetCount={setTotals.done}
+    totalSetCount={setTotals.total}
     onFinish={showRecap}
-    onDiscard={discardSession}
-    history={$history}
-    onUndo={undo}
-    onRedo={redo}
+    onMenu={() => (menuOpen = true)}
   />
 
   {#if !ui.finishing}
@@ -741,12 +745,23 @@
       />
     {:else}
       <div bind:this={blocksListEl}>
-        {#each renderItems as item (item.kind === "superset" ? item.supersetId : item.block.id)}
-          {#if item.kind === "superset"}
-            <div transition:reveal>
+        {#each renderItems as item, idx (item.kind === "superset" ? item.supersetId : item.block.id)}
+          {@const firstId = item.kind === "superset" ? item.blocks[0].id : item.block.id}
+          {@const stage = stages.get(firstId)}
+          {@const prevStage = idx > 0 ? stages.get(renderItems[idx - 1]!.kind === "superset" ? (renderItems[idx - 1] as { blocks: SessionBlock[] }).blocks[0]!.id : (renderItems[idx - 1] as { block: SessionBlock }).block.id) : undefined}
+          {#if stage === "next" && prevStage !== "next" && [...stages.values()].includes("current")}
+            <h2 class="mx-4 mt-3 mb-1 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground" transition:reveal>Up next</h2>
+          {/if}
+          <div
+            class="transition-[margin,border-color,background-color] duration-200 motion-reduce:transition-none {stage === 'current' ? 'mx-2 my-2 overflow-hidden rounded-xl border border-input bg-card' : ''} {item.kind === 'block' && blockDragId === item.block.id ? 'opacity-50' : ''}"
+            data-stage={stage}
+            transition:reveal
+          >
+            {#if item.kind === "superset"}
               <SupersetGroup
                 supersetId={item.supersetId}
                 blocks={item.blocks}
+                {stage}
                 saving={ui.saving || ui.finishing}
                 dragging={blockDragId === item.blocks[0].id && blockDragSpan > 1}
                 draggingBlockId={blockDragSpan === 1 ? blockDragId : null}
@@ -754,33 +769,32 @@
                 memberGripAction={(id) => makeBlockGripAction(id)}
                 onGroupBlock={openGroupPicker}
                 onDeleteBlock={onDeleteBlock}
+                onReorder={() => (reorderOpen = true)}
                 {onMutate}
               />
-            </div>
-          {:else}
-            <div
-              class="transition-opacity {blockDragId === item.block.id ? 'opacity-50' : ''}"
-              transition:reveal
-            >
+            {:else}
               <BlockHost
                 type={item.block.type}
                 blockId={item.block.id}
                 data={item.block.data}
+                {stage}
                 saving={ui.saving || ui.finishing}
                 gripAction={makeBlockGripAction(item.block.id)}
                 onGroup={() => openGroupPicker(item.block.id)}
+                onReorder={() => (reorderOpen = true)}
                 onDelete={() => onDeleteBlock(item.block.id)}
                 {onMutate}
               />
-            </div>
-          {/if}
+            {/if}
+          </div>
         {/each}
       </div>
 
       <!-- Session note -->
-      <div class="px-3 py-3 border-t border-border/50">
+      <div class="px-3 py-3">
         {#if noteOpen || $currentSession?.note}
           <textarea
+            bind:this={noteEl}
             rows="2"
             placeholder="Session note — how it felt, sleep, anything…"
             transition:reveal
@@ -790,12 +804,8 @@
             onblur={(e) => void saveNote((e.currentTarget as HTMLTextAreaElement).value)}
           ></textarea>
         {:else}
-          <button
-            type="button"
-            class="-mx-2 h-11 px-2 text-xs text-muted-foreground hover:text-foreground"
-            onclick={() => (noteOpen = true)}
-          >
-            + Session note
+          <button type="button" class={addButton} onclick={() => (noteOpen = true)}>
+            <Plus class="h-3.5 w-3.5" /> Session note
           </button>
         {/if}
       </div>
@@ -892,31 +902,49 @@
   {/if}
 
   {#if !ui.finishing && !$keyboard.visible}
-    <div
-      class="fixed right-3 z-20"
-      style={`bottom: ${addButtonBottom + (circuitBarShown ? CIRCUIT_BAR_SPACE : 0)}px;`}
-    >
-      <Button
-        size="icon"
-        class="size-12 rounded-full shadow-lg"
-        disabled={ui.saving || ui.finishing}
-        aria-label="Add block"
-        onclick={openAddBlock}
-      >
-        <Plus class="size-5" />
-      </Button>
-    </div>
-
-    <!-- Stays mounted when empty so the music bar can work out whether it has anything to show. -->
-    <div
-      bind:this={musicBarEl}
-      class="fixed left-0 right-0 z-10 bg-background {musicBarVisible ? 'border-t border-border px-3 py-2' : ''}"
-      style="bottom: {$bottomNavHeight}px"
-    >
-      <MusicBar bind:visible={musicBarVisible} />
+    <div class="fixed inset-x-0 bottom-0 z-20" bind:offsetHeight={dockHeight}>
+      <WorkoutDock session={$currentSession} disabled={ui.saving || ui.finishing} onAdd={openAddBlock} {onMutate} />
     </div>
   {/if}
 </div>
+
+{#if reorderOpen && $currentSession}
+  <ReorderSheet session={$currentSession} onClose={() => (reorderOpen = false)} onMutate={(u) => onMutate(u)} />
+{/if}
+
+<WorkoutMenuSheet
+  open={menuOpen}
+  onOpenChange={(v) => (menuOpen = v)}
+  history={$history}
+  saving={ui.saving || ui.finishing}
+  onUndo={() => void undo()}
+  onRedo={() => void redo()}
+  onReorder={() => (reorderOpen = true)}
+  onOpenAll={() => openAllSignal.update((n) => n + 1)}
+  onNote={openNote}
+  {placeName}
+  onPlace={placesStore.active.length > 0 ? () => (whereOpen = true) : undefined}
+  {restLabel}
+  onRest={() => void goto("/settings/workout")}
+  onMusic={music.supported ? () => void goto("/settings/music") : undefined}
+  onDiscard={() => (confirmDiscard = true)}
+/>
+
+<ConfirmDialog
+  open={confirmDiscard}
+  onOpenChange={(v) => (confirmDiscard = v)}
+  title="Discard this workout?"
+  description={discardDescription}
+  confirmLabel="Discard"
+  cancelLabel="Keep going"
+  saving={ui.saving || ui.finishing}
+  onConfirm={discardSession}
+/>
+
+{#if whereOpen && $currentSession}
+  <WhereTodaySheet session={$currentSession} changing
+    onPick={(placeId) => { whereOpen = false; void onMutate((s) => ({ ...s, placeId, placeAsked: true })); }} />
+{/if}
 
 {#if askWhere && $currentSession}
   <WhereTodaySheet session={$currentSession} onPick={(placeId) => void onMutate((s) => ({ ...s, placeId, placeAsked: true }))} />

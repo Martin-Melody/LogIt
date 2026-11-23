@@ -1663,6 +1663,39 @@ export function getRunningRests(
 }
 
 /**
+ * A running rest made longer or shorter (−15 / +15 on the rest bar): the set's own rest becomes
+ * what it was plus `deltaMs`, never under 0. Only a set whose rest is running changes.
+ */
+export function adjustRest(
+  session: WorkoutSession,
+  setId: string,
+  deltaMs: number,
+  restDefaults: Record<string, number | undefined>,
+): WorkoutSession {
+  let changed = false;
+  const blocks = session.blocks.map((block) => {
+    if (block.type === "strength") {
+      const data = block.data as StrengthBlockData;
+      const set = data.sets.find((s) => s.id === setId && typeof s.restStartedAtMs === "number");
+      if (!set) return block;
+      changed = true;
+      const restDurationMs = Math.max(0, strengthRestMs(set, restDefaults) + deltaMs);
+      return { ...block, data: { ...data, sets: data.sets.map((s) => (s.id === setId ? { ...s, restDurationMs } : s)) } };
+    }
+    if (block.type === "mobility") {
+      const data = block.data as MobilityBlockData;
+      const set = data.sets.find((s) => s.id === setId && typeof s.restStartedAtMs === "number");
+      if (!set) return block;
+      changed = true;
+      const restDurationMs = Math.max(0, mobilityRestMs(set, data) + deltaMs);
+      return { ...block, data: { ...data, sets: data.sets.map((s) => (s.id === setId ? { ...s, restDurationMs } : s)) } };
+    }
+    return block;
+  });
+  return changed ? { ...session, blocks } : session;
+}
+
+/**
  * End a set's rest. With `startedAtMs`, only the rest that started then is cleared, so a
  * rest that ended while the set was re-ticked (a new rest) is left running. Returns the same
  * session object when nothing changed.

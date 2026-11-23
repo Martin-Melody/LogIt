@@ -30,3 +30,32 @@ export function chip(selected: boolean, className?: string): string {
     className,
   );
 }
+
+/**
+ * "Add here" buttons (Add a set, Warm-up ramp, Session note…): a dashed outline, so they read
+ * as a place to add something and not as content (DESIGN.md › Buttons).
+ */
+export const addButton =
+  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-input px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground disabled:opacity-50";
+
+export type TagTone = "up" | "plan" | "warn" | "new" | "done" | "neutral";
+
+/** One tag shape everywhere (DESIGN.md › Tags): tinted fill, no outline; the tone says what kind. */
+export function tagClass(tone: TagTone, className?: string): string {
+  return cn(
+    "inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-md px-1.5 text-[11px] font-semibold tabular-nums",
+    {
+      up: "bg-foreground/12 text-foreground",
+      plan: "bg-info/15 text-info",
+      warn: "bg-warning/15 text-warning",
+      new: "bg-foreground/6 text-muted-foreground",
+      done: "bg-success/15 text-success",
+      neutral: "bg-muted text-foreground",
+    }[tone],
+    className,
+  );
+}
+
+/** A row in a bottom-sheet menu (exercise menu, workout menu): icon, label, value on the right. */
+export const menuRow =
+  "flex min-h-[54px] w-full items-center gap-3.5 border-t border-border px-2 text-left text-[15px] transition-colors hover:bg-muted/40 disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0";

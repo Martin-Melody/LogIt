@@ -2,7 +2,7 @@ import type { WidgetInput, WidgetPlugin, WidgetView } from "../widgetView.js";
 
 export const weightTrendWidget: WidgetPlugin = {
   id: "weight-trend",
-  name: "Weight Trend",
+  name: "Weight trend",
   description: "Smoothed bodyweight trend and weekly rate.",
   needs: ["bodyweight"],
 
@@ -14,7 +14,7 @@ export const weightTrendWidget: WidgetPlugin = {
 
     if (!bw || bw.trendPoints.length < 2) {
       return {
-        title: "Weight Trend",
+        title: "Weight trend",
         body: [],
         empty: {
           text: "Log your weight a few times to track the trend.",
@@ -32,7 +32,7 @@ export const weightTrendWidget: WidgetPlugin = {
     const points = bw.trendPoints.map((p, i) => ({ x: i, y: p.kg }));
 
     return {
-      title: "Weight Trend",
+      title: "Weight trend",
       body: [
         {
           kind: "stat-grid",

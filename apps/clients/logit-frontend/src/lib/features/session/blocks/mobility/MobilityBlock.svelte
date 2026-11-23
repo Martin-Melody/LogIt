@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { openAllSignal } from "$lib/features/session/openAll";
+  import { foldFor } from "$lib/features/session/stage";
   import { untrack } from "svelte";
   import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
@@ -54,13 +56,39 @@
     grouped = false,
     groupRestMs,
     round,
+    stage,
     gripAction,
     onGroup,
     onDelete,
     onMutate,
   }: BlockBaseProps<MobilityBlockData> = $props();
 
-  let collapsed = $state(get(profile).blocksCollapsedByDefault && !untrack(() => justAdded.delete(blockId)));
+  const freshlyAdded = untrack(() => justAdded.delete(blockId));
+  let collapsed = $state(
+    untrack(() => stage) ? !freshlyAdded && foldFor(untrack(() => stage)!, get(profile).blocksCollapsedByDefault) : get(profile).blocksCollapsedByDefault && !freshlyAdded,
+  );
+
+  // Done and upcoming blocks fold, the one you're on opens (stage.ts); a tap overrides until the stage changes.
+  let seenStage = untrack(() => stage);
+  $effect(() => {
+    const st = stage;
+    untrack(() => {
+      if (!st || st === seenStage) return;
+      seenStage = st;
+      collapsed = foldFor(st, get(profile).blocksCollapsedByDefault);
+    });
+  });
+
+  // "Open every exercise" in the workout menu.
+  let seenOpenAll = get(openAllSignal);
+  $effect(() => {
+    const n = $openAllSignal;
+    untrack(() => {
+      if (n === seenOpenAll) return;
+      seenOpenAll = n;
+      collapsed = false;
+    });
+  });
   const weightUnit = $derived(($profile.weightUnit ?? "kg") as WeightUnit);
 
   const groups = $derived(mobilitySetGroups(data));

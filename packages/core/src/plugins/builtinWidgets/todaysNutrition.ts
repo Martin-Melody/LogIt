@@ -4,7 +4,7 @@ const g = (n: number) => `${Math.round(n)} g`;
 
 export const todaysNutritionWidget: WidgetPlugin = {
   id: "todays-nutrition",
-  name: "Today's Nutrition",
+  name: "Today's nutrition",
   description: "Calories & macros consumed vs your target.",
   needs: ["nutrition"],
 
@@ -13,7 +13,7 @@ export const todaysNutritionWidget: WidgetPlugin = {
 
     if (!n?.hasGoal || !n.targetKcal) {
       return {
-        title: "Today's Nutrition",
+        title: "Today's nutrition",
         body: [],
         empty: {
           text: "Set a goal for calorie & macro targets.",
@@ -48,7 +48,7 @@ export const todaysNutritionWidget: WidgetPlugin = {
     };
 
     return {
-      title: "Today's Nutrition",
+      title: "Today's nutrition",
       subtitle:
         left >= 0 ? `${left} kcal left` + (n.sourceLabel ? ` · ${n.sourceLabel}` : "") : `${-left} kcal over`,
       body: [bars],

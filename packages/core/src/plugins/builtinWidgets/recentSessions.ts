@@ -16,7 +16,7 @@ function duration(startMs: number, endMs: number): string {
 
 export const recentSessionsWidget: WidgetPlugin = {
   id: "last-session",
-  name: "Recent Sessions",
+  name: "Recent sessions",
   description: "Jump back into a recent session.",
   needs: ["workouts"],
 
@@ -28,14 +28,14 @@ export const recentSessionsWidget: WidgetPlugin = {
 
     if (sessions.length === 0) {
       return {
-        title: "Recent Sessions",
+        title: "Recent sessions",
         body: [],
         empty: { text: "No sessions yet — log your first workout.", action: { startEmptyWorkout: true } },
       };
     }
 
     return {
-      title: "Recent Sessions",
+      title: "Recent sessions",
       body: [
         {
           kind: "list",

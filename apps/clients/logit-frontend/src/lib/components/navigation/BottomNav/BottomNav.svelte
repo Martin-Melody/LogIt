@@ -13,8 +13,11 @@
   let showMore = $state(false);
 
   const hasSession = $derived(!!$currentSession);
-  // Hidden on the plan screen (a step with its own Start bar); shown on the workout screen.
-  const hidden = $derived($keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/plan"));
+  // Hidden on the plan screen (a step with its own Start bar) and on the workout screen, whose
+  // own bottom bar (Add to workout, music, rest) stands in for it; minimise goes back.
+  const hidden = $derived(
+    $keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/plan") || page.url.pathname.startsWith("/session/current"),
+  );
   const onWorkout = $derived(page.url.pathname.startsWith("/session/current"));
 
   // One entry per bar slot (positional, so nothing shifts sideways). Signed out, an item

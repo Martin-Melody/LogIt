@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { openAllSignal } from "$lib/features/session/openAll";
+  import { foldFor } from "$lib/features/session/stage";
+  import { untrack } from "svelte";
   // A workout block from a plugin (docs/plugin-workout-blocks.md, design canvas B1): drawn
   // from the plugin's declaration with the app's own parts. Without the declaration (plugin
   // removed, another phone) it's the plain view from the block's own data (B3).
@@ -18,11 +21,35 @@
   import PluginBlockView from "./PluginBlockView.svelte";
   import { formatBlockValue } from "./format";
 
-  let { blockId, blockType, data, saving, grouped = false, round, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<PluginBlockData> = $props();
+  let { blockId, blockType, data, saving, grouped = false, round, stage, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<PluginBlockData> = $props();
 
   const decl = $derived(blockType ? getBlockDeclaration(blockType.slice(PLUGIN_BLOCK_PREFIX.length)) : null);
   const unit = $derived($profile.weightUnit);
-  let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  let collapsed = $state(
+    untrack(() => stage) ? foldFor(untrack(() => stage)!, get(profile).blocksCollapsedByDefault) : get(profile).blocksCollapsedByDefault,
+  );
+
+  // Done and upcoming blocks fold, the one you're on opens (stage.ts); a tap overrides until the stage changes.
+  let seenStage = untrack(() => stage);
+  $effect(() => {
+    const st = stage;
+    untrack(() => {
+      if (!st || st === seenStage) return;
+      seenStage = st;
+      collapsed = foldFor(st, get(profile).blocksCollapsedByDefault);
+    });
+  });
+
+  // "Open every exercise" in the workout menu.
+  let seenOpenAll = get(openAllSignal);
+  $effect(() => {
+    const n = $openAllSignal;
+    untrack(() => {
+      if (n === seenOpenAll) return;
+      seenOpenAll = n;
+      collapsed = false;
+    });
+  });
   let confirmRemove = $state(false);
   let moreOpen = $state<Record<string, boolean>>({});
 
