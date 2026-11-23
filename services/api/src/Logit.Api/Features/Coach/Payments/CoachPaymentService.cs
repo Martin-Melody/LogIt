@@ -195,7 +195,18 @@ public class CoachPaymentService(
         payment.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
         await EmailCoachOnce(account, payment, now, ct);
-        if (attempt <= 1) await EmailClientFailed(account, payment, now, ct);
+        if (attempt <= 1)
+        {
+            await EmailClientFailed(account, payment, now, ct);
+            // In the app too, not only by email and on My coach (decision D6, bug hunt 6.3).
+            db.Notifications.Add(new Notification
+            {
+                UserId = payment.Relationship.ClientId,
+                ActorId = payment.Relationship.CoachId,
+                Type = NotificationType.CoachPaymentFailed,
+            });
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     /// Any change to a monthly plan (stopped, restarted, given up on by Stripe, renewed).
@@ -222,6 +233,12 @@ public class CoachPaymentService(
             case "past_due":
                 payment.State = PaymentStates.Failed;
                 payment.UnpaidSince ??= now;
+                break;
+            case "canceled" when payment.State == PaymentStates.Paid && payment.PaidUntil is { } paidTo && paidTo > now:
+                // Cancelled with time still paid for: coaching runs to the paid-up date, and the
+                // coach's rule counts from there, not from today (decision D6, bug hunt 6.4).
+                // The sweeper ends it on that date.
+                payment.StopsAtPeriodEnd = true;
                 break;
             case "canceled" or "unpaid" or "incomplete_expired":
                 payment.State = PaymentStates.Ended;

@@ -184,12 +184,14 @@
     if (n.type === "FollowAccepted") return "accepted your follow request";
     if (n.type === "CoachInvite") return "wants to coach you";
     if (n.type === "CoachProgram") return "sent you a program";
+    if (n.type === "CoachPaymentFailed") return "couldn't take your coaching payment. Check your card in My coach";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
   function socialTarget(n: ApiNotification) {
     if (n.type === "CoachInvite") return "/clients";
     if (n.type === "CoachProgram") return "/splits";
+    if (n.type === "CoachPaymentFailed") return "/clients";
     if (n.type === "Follow") return `/social/${n.actor.username}`;
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }

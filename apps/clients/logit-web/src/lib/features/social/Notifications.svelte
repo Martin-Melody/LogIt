@@ -90,10 +90,11 @@
       case "FollowAccepted": return "accepted your follow request";
       case "CoachInvite": return "wants to coach you";
       case "CoachProgram": return "sent you a program";
+      case "CoachPaymentFailed": return "couldn't take your coaching payment. Check your card in My coach";
       default: return "";
     }
   }
-  const href = (n: ApiNotification) => (n.type === "CoachInvite" || n.type === "CoachProgram" ? "/my-coach" : n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`);
+  const href = (n: ApiNotification) => (n.type === "CoachInvite" || n.type === "CoachProgram" || n.type === "CoachPaymentFailed" ? "/my-coach" : n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`);
 </script>
 
 {#snippet row(n: ApiNotification)}

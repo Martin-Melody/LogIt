@@ -133,6 +133,10 @@ public class CoachPaymentTests : IAsyncLifetime
         Assert.Equal((await Rel()).Payment!.Id, PaymentFixLinks.Read(token, Secret, T0.AddDays(31)));
         await _svc.InvoiceFailedAsync(Acct, "sub_1", T0.AddDays(33), default, attempt: 2); // Stripe's retry fails too
         Assert.Equal(3, _email.Sent.Count); // nobody is emailed again
+        // The client is told in the app too, once (decision D6, bug hunt 6.3).
+        var notes = await _db.Notifications.Where(n => n.UserId == _client.Id).ToListAsync();
+        Assert.Equal([NotificationType.CoachPaymentFailed], notes.Select(n => n.Type));
+        Assert.Equal(_coach.Id, notes[0].ActorId);
 
         await _svc.SweepAsync(T0.AddDays(36), default); // 6 days unpaid: default rule is 7
         Assert.Equal(CoachClientStatus.Active, (await Rel()).Status);
@@ -236,6 +240,25 @@ public class CoachPaymentTests : IAsyncLifetime
         var p = (await Rel()).Payment!;
         Assert.Equal(PaymentStates.Ended, p.State);
         Assert.Equal(T0.AddMonths(1), p.UnpaidSince);
+    }
+
+    [Fact]
+    public async Task Cancelled_before_the_paid_up_date_keeps_coaching_until_then()
+    {
+        // Decision D6, bug hunt 6.4: paid to the end of the month, cancelled in Stripe on day 5.
+        _stripe.PeriodEnd = T0.AddMonths(1);
+        await _svc.FulfillCheckoutAsync(Acct, Checkout(_monthly), T0, default);
+        await _svc.SubscriptionChangedAsync(Acct, new StripeSubscriptionInfo("sub_1", "canceled", false, T0.AddMonths(1)), T0.AddDays(5), default);
+        var p = (await Rel()).Payment!;
+        Assert.Equal(PaymentStates.Paid, p.State);
+        Assert.Null(p.UnpaidSince);
+
+        await _svc.SweepAsync(T0.AddDays(12.1), default); // 7 days after the cancel: still paid up
+        Assert.Equal(CoachClientStatus.Active, (await Rel()).Status);
+        await _svc.SweepAsync(T0.AddMonths(1).AddHours(1), default);
+        Assert.Equal(T0.AddMonths(1), (await Rel()).Payment!.UnpaidSince);
+        await _svc.SweepAsync(T0.AddMonths(1).AddDays(7.1), default); // the coach's 7 days, from the paid-up date
+        Assert.Equal(CoachClientStatus.Paused, (await Rel()).Status);
     }
 
     [Fact]
