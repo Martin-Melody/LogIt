@@ -67,7 +67,8 @@ What earlier rounds taught us, so new designs start closer to LogIt. The visual 
 - **Show "now" next to "proposed"** so the change is visible, and say which parts are structure and which are look.
 - **Cover the whole flow.** A workout mockup shows every block kind (strength, superset, circuit, cardio, mobility, plugin blocks) and every sheet reachable from it, not just the happy path for one barbell lift.
 - **What makes LogIt look like LogIt** (details in DESIGN.md): the workout is a log, with full-width sections and a column grid, not a stack of cards; last time sits beside this time; planned numbers are blue until you type over them; the primary is pale grey with no brand accent; colour only means plan, done, record or delete.
-- **No game decoration.** Flames, XP, badges and coloured stat chips pull it towards other apps and against the no-guilt tone.
+- **Reuse the app's own patterns before inventing one.** The 2026-11-21 mockups felt foreign because they brought in patterns used nowhere else in LogIt (exercises as separate cards, a progress-bar header, a docked action bar, "Up next" badges, hint boxes) instead of the app's full-width sections, tags with a one-line reason, ⋯ menus and bottom sheets. If a redesign really needs a new pattern, change it app-wide (theme or shared component) so every screen gets it, not just the one being redesigned.
+- **No new game mechanics.** The existing flame streak and tags are fine; XP, levels, leagues and confetti rewards are not.
 
 ## Accessibility & Inclusion
 

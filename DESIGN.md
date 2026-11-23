@@ -140,8 +140,8 @@ A cool slate monochrome (hue 260, almost no chroma), with four meaning colours a
 
 ### Meaning colours
 - **Plan Blue** (`plan-blue`, the theme's `--info`): a number the app planned for you and you haven't changed yet. It shows as a blue placeholder in the kg and reps boxes and turns white once you type over it. Also the edge of a box that was re-planned mid-workout.
-- **Done Green** (`done-green`, `--success`): done days on the week strip, a successful save, "moving up" tags.
-- **Record Amber** (`record-amber`, `--highlight` / `--warning`): personal records, trophies, favourites, and warnings.
+- **Done Green** (`done-green`, `--success`): done days on the week strip, a successful save, the answer row after a set.
+- **Record Amber** (`record-amber`, `--highlight` / `--warning`): personal records, trophies, favourites, the streak flame, and warnings (a lighter plan).
 - **Delete Red** (`destructive`): delete and discard only.
 - **Macro colours** (`macro-protein`, `macro-carbs`, `macro-fat`): nutrition bars only, the same everywhere.
 
@@ -163,12 +163,12 @@ The light theme in `packages/ui/src/theme.css` mirrors every token. It is the so
 - **Title** (600, 15px): exercise names, row titles, card titles, sheet section headings.
 - **Body** (400, 14px): sentences, explanations, buttons (500).
 - **Number** (600, 15px, tabular): kg and reps in the set boxes and anything you compare down a column.
-- **Label** (400, 12–13px, Pencil Grey): last time, column headings (#, Last, kg, Reps), metadata. 11px only for tags and day letters.
+- **Label** (400, 12–13px, Pencil Grey): last time, column headings (#, Last, kg, Reps), metadata. 11px for tags, day letters and the all-caps group labels.
 
 ### Named Rules
 **The Tabular Rule.** Every number that can sit above or below another number uses tabular figures.
 
-**The No Shouting Rule.** No all-caps eyebrow labels, no letter-spaced kickers. Headings are sentence case.
+**The One Label Rule.** Groups in a list (Settings sections, "LAST WEEK · 4 WORKOUTS" in Sessions, "SUPERSET" in a plan) get one small all-caps label (11–12px, Pencil Grey, slight tracking). Card and page titles are sentence case ("Recent sessions", not "Recent Sessions"). Nothing else is all caps.
 
 ## Layout
 
@@ -203,6 +203,9 @@ Gently rounded. The base radius is 10px; set boxes and buttons use 8px; cards us
 - **Chips** (filters, wrapping choices, machines): 44px pills with a hairline edge and Pencil Grey text; selected = Chalk Grey fill with dark text.
 - **Segmented** (theme, units, set type, a fixed row of options): a Slate Step track 44px tall; the selected option is raised in the page colour with a small shadow.
 
+### Tags
+- Small rounded tags (11px, 600, 6px radius, about 20px tall) say what changed: "+2 kg" (Slate Step fill), "Same weight" (Plan Blue tint), "−2.25 kg" (Record Amber tint), "First time" (hairline outline). They sit at the start of a one-line explanation ("A set goes up at 7 reps").
+
 ### Cards
 - 14px radius, Log Page fill, hairline border, 12px vertical padding. Used on Home and lists, **not** for exercises inside a workout.
 
@@ -235,6 +238,6 @@ Gently rounded. The base radius is 10px; set boxes and buttons use 8px; cards us
 - **Don't** design a screen that could belong to any other workout app. Generic fitness-app patterns (summary chips, coloured stat tiles, a stack of rounded exercise cards) are the anti-reference.
 - **Don't** turn the workout's exercises into separate rounded cards; they're full-width sections of one log.
 - **Don't** add a brand accent colour, gradients or glows.
-- **Don't** use flames, XP, badges or other game-like decoration; streaks are shown plainly.
-- **Don't** use all-caps eyebrow labels or letter-spaced kickers.
+- **Don't** add XP, levels, leagues or confetti-style rewards. The streak is a small amber flame with "10-week streak", the same wherever it appears.
+- **Don't** use all-caps anywhere except the small group labels above lists.
 - **Don't** add shadows to cards or rows.
