@@ -81,6 +81,7 @@
   import { swapTargetFor, type SwapTarget } from "@logit/core/domain/swaps";
   import { coachFor, type CachedCoach } from "$lib/features/coaching/coachCache";
   import ExerciseDetailSheet from "$lib/features/exercise/components/ExerciseDetailSheet.svelte";
+  import { justAdded } from "../justAdded";
 
   const {
     blockId,
@@ -103,7 +104,7 @@
     const current = exercises.find((e) => e.sets.some((x) => !x.completed && x.setType !== "warmup"));
     return current?.id === blockId && exercises.some((e) => e.sets.some((x) => x.completed));
   });
-  let collapsed = $state(get(profile).blocksCollapsedByDefault && !resumingHere);
+  let collapsed = $state(get(profile).blocksCollapsedByDefault && !resumingHere && !untrack(() => justAdded.delete(blockId)));
   // Plan this block's sets once the suggestion arrives: on first load if it has
   // none yet, and after a swap (replacing only the planned, not-yet-done sets).
   let planPending = $state(untrack(() => data.sets.length === 0));
@@ -636,14 +637,16 @@
         groups.push({ lead: null, leadNum: 0, drops: [set] });
         i++;
       } else {
-        leadCount++;
+        // Warm-ups show "W" and aren't counted: working sets are 1, 2, 3 like the plan, and line up with last time's.
+        const warmup = set.setType === "warmup";
+        if (!warmup) leadCount++;
         const drops: SetEntry[] = [];
         i++;
         while (i < sorted.length && isContinuationSet(sorted[i]!.setType)) {
           drops.push(sorted[i]!);
           i++;
         }
-        groups.push({ lead: set, leadNum: leadCount, drops });
+        groups.push({ lead: set, leadNum: warmup ? 0 : leadCount, drops });
       }
     }
     return groups;
@@ -1049,8 +1052,13 @@
     {/if}
     {#if showFirstSetHint}
       <div class="mx-3 my-2 flex flex-col gap-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
-        <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
-        <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it. No need to know your max.</p>
+        {#if bodyweight}
+          <p class="text-sm font-semibold">First time? Do as many good reps as you can.</p>
+          <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it.</p>
+        {:else}
+          <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
+          <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it. No need to know your max.</p>
+        {/if}
       </div>
     {/if}
     <SetsTableHeader weightUnit={$profile.weightUnit} />
@@ -1295,7 +1303,7 @@
   <WeightPickerSheet
     open={!!weightPick}
     source={weightSource}
-    title="Set {weightPick.number || ''} · {data.exerciseName}"
+    title="{weightPick.number ? `Set ${weightPick.number}` : 'Warm-up'} · {data.exerciseName}"
     weightKg={weightPick.weight}
     plannedKg={weightPick.planned}
     lastKg={weightPick.last}

@@ -7,7 +7,7 @@
   import { Button } from "$lib/components/ui/button";
   import type { WorkoutSession, CardioBlockData, MobilityBlockData, ExerciseEntry } from "@logit/core/domain/workout";
   import { getExercises, getTopSetHighlight, foldSupersets, groupLabel, setTypeMeta, getExerciseVolumeKg } from "@logit/core/domain/workout";
-  import { usesBodyweightLoad, type ExerciseType } from "@logit/core/domain/exercise";
+  import type { ExerciseType } from "@logit/core/domain/exercise";
   import { getLoadMode } from "@logit/core/domain/bodyweight";
   import { loadBodyweightLookup, profileBodyweightKg } from "$lib/features/bodyweight/bodyweight";
   import { formatDuration } from "@logit/core/domain/time";
@@ -169,7 +169,8 @@
   const breakdown = foldSupersets(exercises);
 
   function isBodyweight(ex: ExerciseEntry): boolean {
-    return usesBodyweightLoad(exerciseType(ex), ex.sets.map((s) => s.weight));
+    // By name too: a push-up or pull-up whose exercise has no type yet is still bodyweight work.
+    return getLoadMode(exerciseType(ex), ex.sets.map((s) => s.weight), ex.exerciseName) === "bodyweight";
   }
   function isBodyweightName(name: string): boolean {
     const ex = exercises.find((e) => e.exerciseName === name);
@@ -321,7 +322,7 @@
                 {@const meta = setTypeMeta(s.setType)}
                 <span class={s.setType === "warmup" ? "opacity-75" : ""}>
                   {#if meta.short}<span class="text-[11px] font-bold">{meta.short}</span>{/if}
-                  {s.reps}×{formatLoad(s.weight, weightUnit, isBodyweight(ex), { withUnit: false })}
+                  {formatLoad(s.weight, weightUnit, isBodyweight(ex), { withUnit: false })}×{s.reps}
                 </span>
               {/each}
             </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight, MoreHorizontal, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -7,6 +8,7 @@
   import { profile } from "$lib/stores/profile.store";
   import type { CardioBlockData, CardioInterval, WorkoutSession } from "@logit/core/domain/workout";
   import type { BlockBaseProps } from "$lib/features/session/blocks/types";
+  import { justAdded } from "../justAdded";
   import { distanceInputValue, formatDistance, parseDistance, parseDuration } from "./cardioInput";
 
   const {
@@ -20,7 +22,8 @@
     onMutate,
   }: BlockBaseProps<CardioBlockData> = $props();
 
-  let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  const isNew = untrack(() => justAdded.delete(blockId));
+  let collapsed = $state(get(profile).blocksCollapsedByDefault && !isNew);
   const unit = get(profile).weightUnit === "lbs" ? "mi" : "km";
 
   function sortByOrder(a: { orderIndex: number }, b: { orderIndex: number }) {
@@ -70,6 +73,9 @@
     );
     if (collapsed) collapsed = false;
   }
+
+  // A run added mid-workout starts with one interval to fill in, not "+ Add first interval".
+  if (isNew && untrack(() => data.intervals.length === 0)) void addInterval();
 
   async function updateInterval(intervalId: string, patch: Partial<CardioInterval>) {
     await onMutate((s) =>

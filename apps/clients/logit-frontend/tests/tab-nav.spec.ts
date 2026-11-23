@@ -158,7 +158,7 @@ test("the bell opens the inbox with the device's own notifications", async ({ pa
   await bell.click();
   await expect(page).toHaveURL(/\/inbox$/);
   await expect(page.getByText("New PR · Bench Press")).toBeVisible();
-  await expect(page.getByText("5 × 102.5 kg, your heaviest yet")).toBeVisible();
+  await expect(page.getByText("102.5 kg × 5, your heaviest yet")).toBeVisible();
   await expect(page.getByText("+2.5 kg next time")).toBeVisible();
 
   await page.getByRole("button", { name: "Progression" }).click();

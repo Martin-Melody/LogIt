@@ -53,7 +53,12 @@ export const recentSessionsWidget: WidgetPlugin = {
                 }
               }
             }
-            if (best) topSet = `${best.name} ${best.reps}×${best.weight}`;
+            if (best) {
+              // Weight first like the set rows ("80 kg × 3"); bodyweight work has no weight to show.
+              const unit = input.prefs.weightUnit;
+              const w = Math.round((unit === "lbs" ? best.weight * 2.20462 : best.weight) * 10) / 10;
+              topSet = best.weight > 0 ? `${best.name} ${w} ${unit} × ${best.reps}` : `${best.name} ${best.reps} reps`;
+            }
             return {
               label: dateLabel(s.endedAtMs ?? s.startedAtMs),
               sublabel: topSet

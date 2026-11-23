@@ -200,7 +200,7 @@
   }
 
   function prText(n: Extract<LocalNotification, { kind: "pr" }>) {
-    const set = `${n.reps} × ${formatWeight(n.weightKg, $profile.weightUnit)}`;
+    const set = `${formatWeight(n.weightKg, $profile.weightUnit)} × ${n.reps}`;
     return n.prKind === "weight" ? `${set}, your heaviest yet` : `${set}, most reps at that weight`;
   }
 

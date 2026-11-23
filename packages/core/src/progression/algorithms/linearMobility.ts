@@ -168,6 +168,7 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
   const nextStreak: Record<string, SideStreak> = { ...state.streak };
   const labelParts: string[] = [];
   const noteParts: string[] = [];
+  let seeded = 0;
 
   for (const sideKey of sideKeys) {
     const prevStreak = state.streak[sideKey] ?? { hits: 0, misses: 0 };
@@ -184,11 +185,8 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
         ? { durationSec: p.startHoldSec }
         : { reps: p.repFloor, loadKg: 0 };
       nextStreak[sideKey] = { hits: 0, misses: 0 };
-      labelParts.push(
-        isHold
-          ? `${p.startHoldSec}s${SIDE_LABEL[sideKey] ?? ""}`
-          : `${p.repFloor}×${SIDE_LABEL[sideKey] ?? ""}`.replace("× ", "×"),
-      );
+      seeded++;
+      labelParts.push(`${isHold ? `${p.startHoldSec} s` : `${p.repFloor} reps`}${SIDE_LABEL[sideKey] ?? ""}`);
     } else if (isHold) {
       const lastBest = bestNumber(lastSets.map((s) => s.durationSec));
       const lastTargets = lastSets
@@ -275,7 +273,10 @@ function suggest(input: MobilityProgressionInput): MobilityProgressionOutput {
       ...(state.declinedWeek ? { declinedWeek: state.declinedWeek } : {}),
       ...(state.picked ? { picked: state.picked } : {}),
     } satisfies LinearMobilityState,
-    label: labelParts.length ? `Last → next: ${labelParts.join(" · ")}` : undefined,
+    // Nothing to compare with on a first go, so no "Last →" (bug hunt 13.13).
+    label: !labelParts.length ? undefined
+      : seeded === sideKeys.length ? `First time: aim ${labelParts.join(" · ")}`
+      : `Last → next: ${labelParts.join(" · ")}`,
     notes: noteParts.length ? noteParts.join(" ") : undefined,
     ...(next ? { next } : {}),
   };
