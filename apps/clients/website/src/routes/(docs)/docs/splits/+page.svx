@@ -11,7 +11,7 @@ title: Splits and schedules
 <FeatureFacts id="splits" />
 
 A split is your plan: training days (Push, Pull, Legs, or Monday, Wednesday, Friday), each with its
-exercises and sets. One split is **active**; Quick Start trains from it.
+exercises and sets. One split is **active**; the Today card on Home trains from it.
 
 ## Your first plan
 

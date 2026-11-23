@@ -16,7 +16,7 @@
   // Hidden on the plan screen (a step with its own Start bar) and on the workout screen, whose
   // own bottom bar (Add to workout, music, rest) stands in for it; minimise goes back.
   const hidden = $derived(
-    $keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/plan") || page.url.pathname.startsWith("/session/current"),
+    $keyboard.visible || $overlayOpen || page.url.pathname.startsWith("/session/plan") || (page.url.pathname.startsWith("/session/current") && hasSession),
   );
   const onWorkout = $derived(page.url.pathname.startsWith("/session/current"));
 

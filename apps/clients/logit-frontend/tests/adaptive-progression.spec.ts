@@ -69,7 +69,7 @@ test("plans every set from the strength estimate, not last session's light sets"
   await expect.poll(() => plannedSets(page)).toBe("7×95kg|6×95kg|5×95kg");
   await expect(page.getByText("Same weight").first()).toBeVisible();
 
-  await page.getByText("Why?").first().click();
+  await page.getByTestId("reason-line").first().click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Your strength estimate is 117 kg");
   await expect(dialog).toContainText("68 kg and 60 kg sets were well under");

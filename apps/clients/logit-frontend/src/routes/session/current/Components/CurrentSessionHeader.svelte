@@ -51,9 +51,7 @@
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
   });
 
-  const sub = $derived(
-    [saving ? "Saving…" : elapsedLabel, totalSetCount > 0 ? `${loggedSetCount} of ${totalSetCount} sets` : null].filter(Boolean).join(" · "),
-  );
+  const setsLabel = $derived(totalSetCount > 0 ? `${loggedSetCount} of ${totalSetCount} sets` : null);
   const pct = $derived(totalSetCount > 0 ? Math.min(100, (loggedSetCount / totalSetCount) * 100) : 0);
 </script>
 
@@ -61,7 +59,7 @@
 <PageHeader bell={false}>
   <button
     type="button"
-    class="-ml-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+    class="-ml-1.5 -my-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
     aria-label="Minimise workout"
     onclick={() => back("/")}
   >
@@ -70,7 +68,9 @@
 
   <div class="flex min-w-0 flex-1 flex-col">
     <h1 class="truncate text-base font-semibold leading-tight">{title}</h1>
-    {#if sub}<span class="truncate text-xs text-muted-foreground tabular-nums" aria-label="Workout time and sets">{sub}</span>{/if}
+    <span class="truncate text-xs text-muted-foreground tabular-nums">
+      {#if saving}Saving…{:else if elapsedLabel}<span aria-label="Elapsed workout time">{elapsedLabel}</span>{/if}{#if setsLabel}{saving || elapsedLabel ? " · " : ""}{setsLabel}{/if}
+    </span>
   </div>
 
   {#if showActions}
@@ -87,7 +87,7 @@
 
     <button
       type="button"
-      class="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+      class="-mr-2 -my-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
       aria-label="Workout options"
       onclick={onMenu}
     >

@@ -189,7 +189,7 @@
   const summary = $derived.by(() => {
     const parts: string[] = [];
     parts.push(kind === "circuit" ? "Circuit" : "Superset");
-    if (info?.label?.trim()) parts.push(`${blocks.length} exercise${blocks.length === 1 ? "" : "s"}`);
+    parts.push(`${blocks.length} exercise${blocks.length === 1 ? "" : "s"}`);
     if (collapsed && progress.roundCount > 0) {
       parts.push(`round ${progress.currentRound} of ${progress.roundCount}`);
       return parts.join(" · ");
@@ -296,7 +296,7 @@
             {@const open = roundOpen(r)}
             {@const done = tally.done === tally.total}
             {#if open}
-              <div class="border-t border-border/60" transition:reveal>
+              <div class="border-t border-border/60">
                 <button
                   type="button"
                   class="flex min-h-10 w-full items-center gap-2.5 px-3 text-left text-[13px]"

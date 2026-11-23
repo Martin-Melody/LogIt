@@ -672,17 +672,17 @@ test.describe("bodyweight loads", () => {
     await goToSession(page);
     await expect.poll(() => getTargetText(page)).toBe("7×-25kg|7×-25kg|7×-25kg");
 
-    // Swipe left shows edit and delete; edit opens the set's details under it (design canvas
-    // S-C). Tapping the set number does nothing but drag. Every tap in the details saves.
+    // Swipe left shows edit and delete; edit opens the set's options sheet (design canvas
+    // S-set-options). Tapping the set number does nothing but drag. Every tap in it saves.
     await page.getByTestId("set-number").nth(1).click();
     await expect(page.getByTestId("set-options")).toHaveCount(0);
     await page.getByRole("button", { name: "Edit set" }).nth(1).dispatchEvent("click");
     const options = page.getByTestId("set-options");
     await expect(options).toBeVisible();
-    await expect(options.getByRole("button", { name: /Delete/ })).toHaveCount(0);
+    await expect(options.getByRole("button", { name: /Delete/ })).toHaveCount(1);
     await options.getByRole("button", { name: "2 left (RPE 8)" }).click();
     await expect(page.getByTestId("set-number").nth(1)).toContainText("2 left");
-    await options.getByRole("button", { name: "Done" }).click();
+    await page.keyboard.press("Escape");
     await expect(options).toHaveCount(0);
 
     // Ticking set 1 asks how many more were in it (S-D); one tap answers.

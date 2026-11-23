@@ -32,7 +32,7 @@ test("remove an exercise, undo from the toast, redo, and undo again from ⋯", a
   await expect(name).toBeVisible();
 
   await page.getByRole("button", { name: "More actions for Lateral Raise" }).click();
-  await page.getByRole("menuitem", { name: "Remove exercise" }).click();
+  await page.getByRole("button", { name: "Remove from this workout" }).click();
   await page.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(name).toHaveCount(0);
   await expect(page.getByText("Lateral Raise removed.")).toBeVisible();

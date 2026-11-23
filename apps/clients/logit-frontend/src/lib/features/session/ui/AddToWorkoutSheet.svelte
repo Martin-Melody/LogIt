@@ -172,7 +172,7 @@
 {#snippet rowButton(r: Row)}
   {@const on = isPicked(r)}
   {@const Icon = ICON[r.pick.kind]}
-  <button type="button" class="flex min-h-14 w-full items-center gap-3 border-t border-border px-1 text-left first:border-t-0" aria-pressed={on} onclick={() => toggle(r)}>
+  <button type="button" class="flex min-h-14 w-full items-center gap-3 border-t border-border px-1 text-left first:border-t-0" role="checkbox" aria-checked={on} onclick={() => toggle(r)}>
     <span class="flex size-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors {on ? 'border-primary bg-primary text-primary-foreground' : 'border-input'}">
       {#if on}<Check class="h-3.5 w-3.5" strokeWidth={3} />{/if}
     </span>

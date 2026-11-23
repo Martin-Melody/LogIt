@@ -83,7 +83,7 @@
           {#each section.items as item (item.id)}
             {@const on = picked.includes(item.id)}
             <button type="button" class="flex min-h-[54px] w-full items-center gap-3 border-t border-border px-1 text-left first-of-type:border-t-0 disabled:opacity-50"
-              aria-pressed={on} disabled={saving} onclick={() => onToggle(item.id)}>
+              role="checkbox" aria-checked={on} disabled={saving} onclick={() => onToggle(item.id)}>
               <span class="flex size-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors {on ? 'border-primary bg-primary text-primary-foreground' : 'border-input'}">
                 {#if on}<Check class="size-3.5" strokeWidth={3} />{/if}
               </span>

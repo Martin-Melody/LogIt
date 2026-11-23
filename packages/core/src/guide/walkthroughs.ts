@@ -79,7 +79,7 @@ export const PRO_CHAPTERS: Chapter[] = [
       {
         id: "splits", on: "web", route: "/plan", target: "plan-splits", kind: "look",
         title: "Your splits",
-        body: "Open Training › Plan. These are the splits from your phone. The one marked Active is what Quick Start trains from.",
+        body: "Open Training › Plan. These are the splits from your phone. The one marked Active is what Quick start trains from.",
       },
       {
         id: "editor", on: "web", route: "/plan", target: "plan-editor", kind: "look",

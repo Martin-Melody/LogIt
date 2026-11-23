@@ -216,6 +216,16 @@ Gently rounded. The base radius is 10px; set boxes and buttons use 8px; cards us
 - A done set fills its tick and its row takes a faint Slate Step tint.
 - Swipe left for set options; swipe right or tick to close.
 
+### The workout screen (merged design, built 2026-11-23)
+- **Stages:** the exercise you're on is lifted out as a card (Log Page fill, Field Edge border, 14px radius); finished ones fold to one line with what was done; the rest sit under a small "Up next" label, folded, their plan in Plan Blue (`stage.ts`).
+- **Reason line:** a tag and one sentence ("+2 kg · A set goes up at 7 reps") as one full-width button with a chevron, opening Why this weight? (three numbers, then the steps).
+- **Header:** minimise chevron, the day's name with "time · x of y sets", Finish, ⋮, and a 3px progress line along the bottom.
+- **Bottom bar:** during a workout the nav steps aside for Add to workout and a music button; a running rest takes Add's place in the music bar's shape (−15 / +15 / Skip, the next set in blue). Minimised, the workout is a pill above the nav everywhere else.
+- **Every block kind** (strength, superset rounds with A/B letters, mobility, cardio, plugin) uses the same header and the same row grammar; their settings live in the ⋯ sheet.
+
+### Menu sheets
+- One shape for every menu (`ActionSheet`): a title and subtitle, then 54px rows with an icon, a label and a value on the right; destructive rows in Delete Red. A row closes the sheet before it acts.
+
 ### Bottom sheets
 - Everything that pops up mid-workout is a bottom sheet: 16px top corners, a grab bar, drag down to close, Android back closes the newest one, max 90% of the screen height.
 

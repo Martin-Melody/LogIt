@@ -137,15 +137,19 @@
   let prsLoaded = $state(false);
   // Hero stats — the two or three numbers that matter, count up on reveal.
   type HeroStat = { label: string; value: number; fmt: (n: number) => string; noCount?: boolean };
-  const heroStats: HeroStat[] = $derived([
-    ...(showDuration ? [{ label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true }] : []),
-    ...(totalSets > 0 ? [{ label: "Sets", value: totalSets, fmt: (n: number) => String(Math.round(n)) }] : []),
-    ...(prsLoaded && prs.some((p) => p.kind !== "first")
-      ? [{ label: prs.filter((p) => p.kind !== "first").length === 1 ? "Best lift" : "Best lifts", value: prs.filter((p) => p.kind !== "first").length, fmt: (n: number) => String(Math.round(n)) }]
-      : totalVolume > 0 && !firstWorkout
+  const heroStats: HeroStat[] = $derived.by(() => {
+    const best = prsLoaded ? prs.filter((p) => p.kind !== "first").length : 0;
+    const out: HeroStat[] = [
+      ...(showDuration ? [{ label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true }] : []),
+      ...(totalSets > 0 ? [{ label: "Sets", value: totalSets, fmt: (n: number) => String(Math.round(n)) }] : []),
+      ...(totalVolume > 0 && !firstWorkout
         ? [{ label: `Volume (${weightUnit})`, value: totalVolume, fmt: (n: number) => Math.round(n).toLocaleString() }]
         : []),
-  ]);
+    ];
+    // Three tiles at most (design canvas S-finish): best lifts when there's room.
+    if (best > 0 && out.length < 3) out.push({ label: best === 1 ? "Best lift" : "Best lifts", value: best, fmt: (n: number) => String(Math.round(n)) });
+    return out;
+  });
   let note = $state(session.note ?? "");
 
   function formatHold(s: number): string {
