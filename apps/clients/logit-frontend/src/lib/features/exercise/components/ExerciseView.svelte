@@ -55,7 +55,7 @@
     /** Called after the exercise is deleted: the host closes or goes back. */
     onDeleted?: () => void;
     /** A "Where you do it" row: open that machine (or add one, machineId null). Default: Settings. */
-    onMachine?: (place: Place, machineId: string | null) => void;
+    onMachine?: (place: Place | null, machineId: string | null) => void;
   } = $props();
 
   let exercise = $state<Exercise | null>(null);
@@ -307,6 +307,49 @@
       {/if}
 
     {:else if shown === "howto"}
+      <!-- First on the tab: in a workout this is where you add the machine (Martin 2026-11-23). -->
+      {#if showWhere && (places.length || usesMachine(ex.equipment))}
+        <section class="flex flex-col" aria-label="Where you do it">
+          <h3 class="pb-1 text-[15px] font-semibold">Where you do it</h3>
+          {#if !places.length}
+            <!-- No place yet: the first machine makes "My gym", like the card's chip. -->
+            <button type="button" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2 text-left"
+              onclick={() => (onMachine ? onMachine(null, null) : void goto("/settings/places"))}>
+              <span class="text-[15px] font-medium">Add the machine you use</span>
+              <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
+          {/if}
+          {#each places as p (p.id)}
+            {#if usesMachine(ex.equipment)}
+              {@const here = machinesFor(p, ex.id)}
+              {@const m = chosenMachine(p, ex.id) ?? here[0] ?? null}
+              <button type="button" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2 text-left"
+                onclick={() => openMachine(p, m?.id ?? null)}>
+                <span class="flex min-w-0 flex-col gap-0.5">
+                  <span class="text-[15px] font-medium">{p.name}</span>
+                  <span class="text-[13px] text-muted-foreground">{m ? machineLine(m) : "No machine for this yet. Add one"}</span>
+                </span>
+                <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            {:else if onMachine}
+              <!-- In a workout: shown, not opened (the place's settings are a page). -->
+              <div class="flex min-h-14 flex-col justify-center gap-0.5 border-t border-border/60 py-2">
+                <span class="text-[15px] font-medium">{p.name}</span>
+                <span class="text-[13px] text-muted-foreground">{freeWeightLine(p, ex)}</span>
+              </div>
+            {:else}
+              <a href="/settings/places/{p.id}" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2">
+                <span class="flex min-w-0 flex-col gap-0.5">
+                  <span class="text-[15px] font-medium">{p.name}</span>
+                  <span class="text-[13px] text-muted-foreground">{freeWeightLine(p, ex)}</span>
+                </span>
+                <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+              </a>
+            {/if}
+          {/each}
+        </section>
+      {/if}
+
       {#if ex.primaryMuscles.length || ex.secondaryMuscles.length}
         <section class="flex flex-col gap-2" aria-label="Works">
           <h3 class="text-[15px] font-semibold">Works</h3>
@@ -346,40 +389,6 @@
         <textarea id="ex-notes" rows="2" bind:value={draftNotes} onblur={commitNotes} placeholder="Seat height, grip, anything to remember"
           class="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
       </section>
-
-      {#if places.length && showWhere}
-        <section class="flex flex-col" aria-label="Where you do it">
-          <h3 class="pb-1 text-[15px] font-semibold">Where you do it</h3>
-          {#each places as p (p.id)}
-            {#if usesMachine(ex.equipment)}
-              {@const here = machinesFor(p, ex.id)}
-              {@const m = chosenMachine(p, ex.id) ?? here[0] ?? null}
-              <button type="button" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2 text-left"
-                onclick={() => openMachine(p, m?.id ?? null)}>
-                <span class="flex min-w-0 flex-col gap-0.5">
-                  <span class="text-[15px] font-medium">{p.name}</span>
-                  <span class="text-[13px] text-muted-foreground">{m ? machineLine(m) : "No machine for this yet. Add one"}</span>
-                </span>
-                <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
-              </button>
-            {:else if onMachine}
-              <!-- In a workout: shown, not opened (the place's settings are a page). -->
-              <div class="flex min-h-14 flex-col justify-center gap-0.5 border-t border-border/60 py-2">
-                <span class="text-[15px] font-medium">{p.name}</span>
-                <span class="text-[13px] text-muted-foreground">{freeWeightLine(p, ex)}</span>
-              </div>
-            {:else}
-              <a href="/settings/places/{p.id}" class="flex min-h-14 items-center justify-between gap-2 border-t border-border/60 py-2">
-                <span class="flex min-w-0 flex-col gap-0.5">
-                  <span class="text-[15px] font-medium">{p.name}</span>
-                  <span class="text-[13px] text-muted-foreground">{freeWeightLine(p, ex)}</span>
-                </span>
-                <ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
-              </a>
-            {/if}
-          {/each}
-        </section>
-      {/if}
 
     {:else}
       <!-- How it goes up: the panel carries its own heading. -->
