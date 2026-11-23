@@ -25,7 +25,7 @@
       post = p;
     }).catch((e) => {
       if (want !== id) return;
-      error = e instanceof ApiError && e.status === 404 ? "This post isn't available. It was deleted, or it's from a private account you don't follow." : "Couldn't load this post.";
+      error = e instanceof ApiError && e.status === 404 ? "This post was removed, or it's from a private account you don't follow." : "Couldn't load this post.";
     });
   });
 </script>

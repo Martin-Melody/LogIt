@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button";
+  import { back } from "$lib/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -17,6 +19,8 @@
 
   let post = $state<ApiPost | null>(null);
   let postError = $state<string | null>(null);
+  // Gone for good (removed, or private): trying again can't bring it back (bug hunt 5.13).
+  let postGone = $state(false);
   let loading = $state(true);
 
   let comments = $state<ApiComment[]>([]);
@@ -49,10 +53,12 @@
   async function loadPost() {
     loading = true;
     postError = null;
+    postGone = false;
     try {
       post = await socialApi.getPost(id);
     } catch (e) {
-      postError = e instanceof ApiError && e.status === 404 ? "This post isn't available." : "Couldn't load the post.";
+      postGone = e instanceof ApiError && e.status === 404;
+      postError = postGone ? "This post was removed, or it's from a private account you don't follow." : "Couldn't load the post.";
     } finally {
       loading = false;
     }
@@ -105,7 +111,11 @@
   {:else if postError}
     <div class="flex flex-col items-center gap-3 py-20 text-center px-6">
       <p class="text-sm text-muted-foreground">{postError}</p>
-      <button type="button" class="text-sm text-primary" onclick={loadPost}>Try again</button>
+      {#if postGone}
+        <Button variant="outline" class="h-11" onclick={() => back("/social")}>Back to Social</Button>
+      {:else}
+        <Button variant="outline" class="h-11" onclick={loadPost}>Try again</Button>
+      {/if}
     </div>
   {:else if post}
     <div class="border-b border-border">
@@ -122,6 +132,7 @@
         oncountchange={(d) => { if (post) post = { ...post, commentCount: Math.max(0, post.commentCount + d) }; }}
         onreply={startReply}
         {justSent}
+        postAuthorId={post?.repostOf && !post.body ? post.repostOf.authorId : post?.authorId}
       />
       {#if nextCursor}
         <button type="button" class="w-full text-xs text-muted-foreground py-3 disabled:opacity-50" disabled={loadingMore} onclick={() => loadComments(true)}>

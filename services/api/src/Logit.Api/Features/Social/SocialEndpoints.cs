@@ -531,7 +531,13 @@ public static class SocialEndpoints
         id = await db.SharedPostIdAsync(id);
         if (comment is null || comment.DeletedAt is not null || comment.PostId != id)
             return Results.NotFound();
-        if (comment.AuthorId != caller.GetUserId()) return Results.Forbid();
+        var userId = caller.GetUserId();
+        if (comment.AuthorId != userId)
+        {
+            // The post's author may remove comments on their post too (bug hunt 5.12), as on Instagram.
+            var postAuthorId = await db.Posts.Where(p => p.Id == id).Select(p => p.AuthorId).FirstOrDefaultAsync();
+            if (postAuthorId != userId) return Results.Forbid();
+        }
 
         // Deleting a top-level comment takes its replies with it (as on Instagram).
         var now = DateTime.UtcNow;
