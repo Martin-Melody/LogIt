@@ -45,7 +45,7 @@
 </script>
 
 <Dialog.Root open={exerciseName !== null} onOpenChange={(v) => { if (!v) onClose(false); }}>
-  <Dialog.Content class="sm:max-w-[400px]">
+  <Dialog.Content sheet class="bg-card">
     <Dialog.Header>
       <Dialog.Title>What do you weigh?</Dialog.Title>
       <Dialog.Description>
@@ -69,9 +69,9 @@
       </div>
     </form>
 
-    <Dialog.Footer class="gap-2">
-      <Button variant="outline" onclick={() => onClose(false)} disabled={saving}>Not now</Button>
-      <Button onclick={save} disabled={!valid || saving}>Save</Button>
-    </Dialog.Footer>
+    <div class="flex gap-2">
+      <Button variant="secondary" class="h-12 flex-1 rounded-xl border border-input" onclick={() => onClose(false)} disabled={saving}>Not now</Button>
+      <Button class="h-12 flex-1 rounded-xl font-semibold" onclick={save} disabled={!valid || saving}>Save</Button>
+    </div>
   </Dialog.Content>
 </Dialog.Root>

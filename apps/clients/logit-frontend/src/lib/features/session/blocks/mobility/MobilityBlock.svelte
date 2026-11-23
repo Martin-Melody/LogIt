@@ -2,11 +2,13 @@
   import { openAllSignal } from "$lib/features/session/openAll";
   import { foldFor } from "$lib/features/session/stage";
   import { untrack } from "svelte";
-  import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal, Link2 } from "lucide-svelte";
+  import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Timer, Hash, ArrowLeftRight, MoreHorizontal, Link2, Check, Ruler, Split, ArrowDownUp } from "lucide-svelte";
+  import ActionSheet, { type ActionItem } from "$lib/components/ActionSheet.svelte";
+  import RestPickerSheet from "$lib/features/session/ui/RestPickerSheet.svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import { get } from "svelte/store";
   import { SvelteMap } from "svelte/reactivity";
-  import { segment, segmentTrack, chip } from "$lib/components/ui/choice";
+  import { addButton } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
   import { toast } from "$lib/components/ui/sonner/index";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -43,7 +45,6 @@
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import MobilitySetRow from "$lib/features/session/ui/MobilitySetRow.svelte";
   import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
-  import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
   import EditMobilitySetDialog from "$lib/features/session/ui/EditMobilitySetDialog.svelte";
   import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
   import MobilityDrillDetailSheet from "$lib/features/session/ui/MobilityDrillDetailSheet.svelte";
@@ -57,6 +58,7 @@
     groupRestMs,
     round,
     stage,
+    onReorder,
     gripAction,
     onGroup,
     onDelete,
@@ -310,6 +312,26 @@
   // ── Swap drill ─────────────────────────────────────────────────────────────
   let swapOpen = $state(false);
   let confirmRemove = $state(false);
+  let menuOpen = $state(false);
+  let restPickOpen = $state(false);
+  const doneSets = $derived(data.sets.filter((x) => x.completed).length);
+  const allDone = $derived(data.sets.length > 0 && doneSets === data.sets.length);
+  // The folded line: "2 × 8 each side", or "2 × 30 s" for holds.
+  const foldedSummary = $derived.by(() => {
+    if (!groups.length) return "";
+    const first = data.sets[0];
+    const each = data.metric === "hold" ? `${first?.durationSec ?? first?.targetSec ?? 0} s` : `${first?.reps ?? 0}`;
+    return `${groups.length} × ${each}${data.perSide ? " each side" : ""}`;
+  });
+  const menuItems = $derived<ActionItem[]>([
+    { icon: ArrowLeftRight, label: "Swap drill", onSelect: () => (swapOpen = true) },
+    ...(onGroup ? [{ icon: Link2, label: "Superset or circuit with…", onSelect: () => onGroup() }] : []),
+    { icon: Ruler, label: "Measure by", value: data.metric === "hold" ? "Hold" : "Reps", onSelect: () => void switchMetric(data.metric === "hold" ? "reps" : "hold") },
+    { icon: Split, label: "Sides", value: data.perSide ? `Per side, ${blockLead === "right" ? "right" : "left"} first` : "Both together", onSelect: () => void togglePerSide() },
+    { icon: Timer, label: "Rest after each set", value: data.restBetweenSetsMs ? fmtRest(data.restBetweenSetsMs) : "Off", onSelect: () => (restPickOpen = true) },
+    ...(onReorder ? [{ icon: ArrowDownUp, label: "Change the order", onSelect: onReorder }] : []),
+    { icon: Trash2, label: "Remove from this workout", destructive: true, onSelect: () => (confirmRemove = true) },
+  ]);
   async function handleSwap(sel: { drillName: string; drillId?: string }) {
     const name = sel.drillName.trim();
     if (!name) return;
@@ -510,9 +532,9 @@
   }
 </script>
 
-<div class="border-t border-border bg-muted/20">
-  <!-- Same row as a strength exercise: every control a 44px target, swap and
-       remove in the ⋯ menu. -->
+<div class={stage === "current" ? "" : round === undefined ? "border-t border-border bg-muted/20" : ""}>
+  <!-- Same row as a strength exercise: every control a 44px target, swap, measuring,
+       sides, rest and remove in the ⋯ sheet. -->
   <div class="flex items-center {round === undefined ? 'pl-1' : 'pl-3'} pr-1">
     {#if round === undefined}
       <button
@@ -545,53 +567,29 @@
       disabled={saving}
       aria-label="{data.drillName} — open details"
     >
-      <span class="text-sm font-semibold truncate block">{data.drillName}</span>
+      <span class="block truncate font-semibold {stage === 'current' ? 'text-[17px]' : 'text-[15px]'}">{data.drillName}</span>
+      {#if collapsed && foldedSummary}<span class="block truncate text-xs font-normal tabular-nums {allDone ? 'text-muted-foreground' : 'text-info'}">Mobility · {foldedSummary}</span>{/if}
     </button>
 
     <!--
       Reps used to show as a Repeat icon (⟲), which read as a second swap
       control next to ⇄. Hash (#) reads as "counted reps".
     -->
-    <span class="shrink-0 text-muted-foreground" title={data.metric === "hold" ? "Timed hold" : "Reps"}>
-      {#if data.metric === "hold"}<Timer class="h-4 w-4" />{:else}<Hash class="h-4 w-4" />{/if}
-    </span>
-
-    {#if !collapsed && round === undefined}
-      <button
-        type="button"
-        class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
-        onclick={addSet}
-        disabled={saving}
-        aria-label="Add set"
-      >
-        <span class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Plus class="h-4 w-4" />
-        </span>
-      </button>
+    {#if data.sets.length > 0}
+      <span class="flex shrink-0 items-center gap-1 text-xs tabular-nums {allDone ? 'text-success' : 'text-muted-foreground'}">
+        {#if allDone}<Check class="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />{/if}{doneSets} of {data.sets.length}
+      </span>
     {/if}
 
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
-        disabled={saving}
-        aria-label="More actions for {data.drillName}"
-      >
-        <MoreHorizontal class="h-5 w-5" />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content>
-        <DropdownMenu.Item onSelect={() => (swapOpen = true)}>
-          <ArrowLeftRight /> Swap drill
-        </DropdownMenu.Item>
-        {#if onGroup}
-          <DropdownMenu.Item onSelect={onGroup}>
-            <Link2 /> Superset / circuit with…
-          </DropdownMenu.Item>
-        {/if}
-        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
-          <Trash2 /> Remove drill
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+    <button
+      type="button"
+      class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+      disabled={saving}
+      aria-label="More actions for {data.drillName}"
+      onclick={() => (menuOpen = true)}
+    >
+      <MoreHorizontal class="h-5 w-5" />
+    </button>
 
     <ConfirmDialog
       title="Remove drill?"
@@ -657,50 +655,19 @@
             onComplete={() => toggleComplete(rowSet)}
           />
         </SwipeRevealRow>
-        {#if typeof rowSet.restStartedAtMs === "number"}
-          <div transition:reveal>
-            <RestProgressBar
-              restStartedAtMs={rowSet.restStartedAtMs}
-              restDurationMs={mobilityRestMs(rowSet, data)}
-              onDismiss={() => handleDismissRest(rowSet.id)}
-            />
-          </div>
-        {/if}
       {/if}
     {/each}
   {/if}
 {:else if !collapsed}
-  <div class="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-border">
-    <div class={cn(segmentTrack, "flex-none")}>
-      <button type="button" class={segment(data.metric === "hold")} aria-pressed={data.metric === "hold"} disabled={saving} onclick={() => switchMetric("hold")}>Hold</button>
-      <button type="button" class={segment(data.metric === "reps")} aria-pressed={data.metric === "reps"} disabled={saving} onclick={() => switchMetric("reps")}>Reps</button>
-    </div>
-    <button
-      type="button"
-      class={chip(data.perSide)}
-      aria-pressed={data.perSide}
-      disabled={saving}
-      onclick={togglePerSide}
-    >
-      {data.perSide ? `Per side: ${blockLead === "right" ? "R / L" : "L / R"}` : "Both sides together"}
-    </button>
-    <button
-      type="button"
-      class={chip(!!data.restBetweenSetsMs)}
-      disabled={saving}
-      onclick={cycleRest}
-      title="Rest after each set / side"
-    >
-      Rest {data.restBetweenSetsMs ? fmtRest(data.restBetweenSetsMs) : "off"}
-    </button>
+  <div class="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] gap-1.5 border-t border-border/60 px-3 pb-1 pt-2 text-xs text-muted-foreground">
+    <span class="text-center">#</span><span>Last</span><span class="text-center">{data.metric === "hold" ? "Seconds" : "Reps"}</span><span class="text-center">{$profile.weightUnit}</span><span></span>
   </div>
-
   {#if groups.length > 0}
     <div bind:this={groupsListEl}>
       {#each liveGroupOrder(groups) as group (groupKey(group))}
         {@const gc = isGroupCollapsed(group)}
         <div class="border-b border-border/60 last:border-b-0" transition:reveal>
-          <div class="flex items-center gap-1 px-3 text-xs uppercase tracking-wide text-muted-foreground font-medium">
+          <div class="flex items-center gap-1 px-3 text-xs text-muted-foreground font-medium">
             <button
               type="button"
               class="shrink-0 flex items-center justify-center h-11 w-9 -ml-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
@@ -757,15 +724,6 @@
                     onComplete={() => toggleComplete(group.set)}
                   />
                 </SwipeRevealRow>
-                {#if typeof group.set.restStartedAtMs === "number"}
-                  <div transition:reveal>
-                    <RestProgressBar
-                      restStartedAtMs={group.set.restStartedAtMs}
-                      restDurationMs={mobilityRestMs(group.set, data)}
-                      onDismiss={() => handleDismissRest(group.set.id)}
-                    />
-                  </div>
-                {/if}
               {:else}
                 {@const ordered = group.lead === "right"
                   ? [{ s: group.right, l: "R" }, { s: group.left, l: "L" }]
@@ -790,15 +748,6 @@
                         onComplete={() => toggleComplete(rowSet)}
                       />
                     </SwipeRevealRow>
-                    {#if typeof rowSet.restStartedAtMs === "number"}
-                      <div transition:reveal>
-                        <RestProgressBar
-                          restStartedAtMs={rowSet.restStartedAtMs}
-                          restDurationMs={mobilityRestMs(rowSet, data)}
-                          onDismiss={() => handleDismissRest(rowSet.id)}
-                        />
-                      </div>
-                    {/if}
                   {/if}
                 {/each}
               {/if}
@@ -807,17 +756,30 @@
         </div>
       {/each}
     </div>
-  {:else}
-    <button
-      type="button"
-      class="w-full px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
-      disabled={saving}
-      onclick={addSet}
-    >
-      + Add first set
-    </button>
   {/if}
+  <div class="flex flex-wrap gap-2 px-3 pt-2 pb-3">
+    <button type="button" class={addButton} disabled={saving} onclick={addSet}>
+      <Plus class="h-3.5 w-3.5" /> {groups.length ? "Add a set" : "Add first set"}
+    </button>
+  </div>
 {/if}
+
+<ActionSheet
+  open={menuOpen}
+  onOpenChange={(v) => (menuOpen = v)}
+  title={data.drillName}
+  subtitle="Mobility · {data.metric === 'hold' ? 'timed hold' : 'reps'}{data.perSide ? ' each side' : ''}"
+  items={menuItems}
+/>
+
+<RestPickerSheet
+  open={restPickOpen}
+  onOpenChange={(v) => (restPickOpen = v)}
+  title="Rest after each set"
+  subtitle={data.drillName}
+  valueMs={data.restBetweenSetsMs ?? 60_000}
+  onSave={(ms) => void onMutate((s) => setMobilityRestBetweenSets(s, blockId, ms > 0 ? ms : undefined))}
+/>
 
 <EditMobilitySetDialog
   open={editSet.open}

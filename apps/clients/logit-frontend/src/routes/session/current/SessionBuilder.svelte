@@ -11,7 +11,7 @@
   import { refreshProgressionState } from "@logit/core/usecases/progression/getSuggestion";
   import { getProgressionDeps } from "$lib/usecases/progressionDeps";
   import type { WorkoutSession, SessionBlock, MobilityBlockData, MobilityMetric } from "@logit/core/domain/workout";
-  import { addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote, dropUnloggedPlannedSets, groupIntoSuperset, minGroupSize, type GroupKind } from "@logit/core/domain/workout";
+  import { blockDisplayName, addExercise, addCardioBlock, addMobilityBlock, removeExercise, getExercises, setSessionNote, dropUnloggedPlannedSets, groupIntoSuperset, minGroupSize, type GroupKind } from "@logit/core/domain/workout";
   import { refreshMobilityProgressionState } from "@logit/core/usecases/progression/getMobilitySuggestion";
   import { mobilityDrillKey, getMobilityDrillLeadSide } from "$lib/data/mobilityDrillPrefs";
 
@@ -24,10 +24,7 @@
   import { getBlockDeclaration } from "$lib/plugins/blockPluginStore";
   import { addPluginBlock, isPluginBlockType, pluginBlockType, type PluginBlockData } from "@logit/core/domain/blockPlugin";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
-  import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
-  import AddCardioDialog from "$lib/features/session/ui/AddCardioDialog.svelte";
-  import AddMobilityDialog from "$lib/features/session/ui/AddMobilityDialog.svelte";
-  import BlockPickerSheet from "$lib/features/session/ui/BlockPickerSheet.svelte";
+  import AddToWorkoutSheet, { type AddPick } from "$lib/features/session/ui/AddToWorkoutSheet.svelte";
   import EmptySessionCard from "$lib/features/session/ui/EmptySessionCard.svelte";
   import SupersetGroup from "$lib/features/session/ui/SupersetGroup.svelte";
   import CircuitOverlay from "$lib/features/session/circuit/CircuitOverlay.svelte";
@@ -99,14 +96,11 @@
     error: null as string | null,
   });
 
-  const addBlockUi = $state({
-    pickerOpen: false,
-    strengthOpen: false,
-    cardioOpen: false,
-    mobilityOpen: false,
-  });
+  const addBlockUi = $state({ sheetOpen: false });
 
   let recapSession = $state<WorkoutSession | null>(null);
+  // Planned but not done, so left out of what's saved: named on the finish screen.
+  let recapSkipped = $state<string[]>([]);
   // PRs the recap worked out, for the inbox once the session is saved.
   let recapPrs: SessionPR[] = [];
   let shareSession = $state<WorkoutSession | null>(null);
@@ -273,19 +267,23 @@
   function openAddBlock() {
     if (ui.finishing) return;
     destroyActiveTour();
-    const defs = listBlockDefs().filter((d) => !isPluginBlockType(d.type));
-    if (defs.length === 1) {
-      addBlockUi.strengthOpen = true;
-    } else {
-      addBlockUi.pickerOpen = true;
-    }
+    addBlockUi.sheetOpen = true;
   }
 
-  function onBlockTypeSelected(type: string) {
-    if (type === "strength") addBlockUi.strengthOpen = true;
-    else if (type === "cardio") addBlockUi.cardioOpen = true;
-    else if (type === "mobility") addBlockUi.mobilityOpen = true;
-    else if (isPluginBlockType(type)) void addPluginBlockOfType(type);
+  /** "Add to workout": each pick in order; "As a superset" groups the new blocks. */
+  async function addPicks(picks: AddPick[], asGroup: boolean) {
+    const before = new Set((getSessionOrNull()?.blocks ?? []).map((b) => b.id));
+    for (const p of picks) {
+      if (p.kind === "strength") await addExerciseWithName({ name: p.name, exerciseId: p.exerciseId });
+      else if (p.kind === "cardio") await addCardioWithName(p.name);
+      else if (p.kind === "mobility") await addMobilityWithDrill({ drillName: p.name, drillId: p.drillId, metric: p.metric, perSide: p.perSide });
+      else await addPluginBlockOfType(p.type);
+    }
+    if (asGroup) {
+      const added = (getSessionOrNull()?.blocks ?? []).filter((b) => !before.has(b.id)).map((b) => b.id);
+      if (added.length >= 2) await onMutate((s) => groupIntoSuperset(s, added, undefined, "superset"));
+    }
+    returnToGroupPicker();
   }
 
   /** A plugin block, remembering block fields and `remember` fields from the last one logged. */
@@ -399,7 +397,7 @@
     if (!groupUi.adding) return;
     setTimeout(() => {
       if (!groupUi.adding) return;
-      if (addBlockUi.pickerOpen || addBlockUi.strengthOpen || addBlockUi.cardioOpen || addBlockUi.mobilityOpen) return;
+      if (addBlockUi.sheetOpen) return;
       groupUi.adding = false;
       const anchorId = groupUi.anchorId;
       if (!anchorId || !getSessionOrNull()?.blocks.some((b) => b.id === anchorId)) {
@@ -420,6 +418,14 @@
     if (!s) return;
     destroyActiveTour();
     // Recap what will actually be saved: planned sets nobody did aren't part of it.
+    recapSkipped = sortedBlocks.flatMap((b) => {
+      const p = blockProgress(b);
+      if (p.total === 0 || p.done === p.total) return [];
+      const name = blockDisplayName(b);
+      if (p.done === 0) return [name];
+      const left = p.total - p.done;
+      return [`${left} set${left === 1 ? "" : "s"} of ${name}`];
+    });
     recapSession = dropUnloggedPlannedSets(s);
   }
 
@@ -815,6 +821,9 @@
   {#if recapSession}
     <WorkoutRecapScreen
       session={recapSession}
+      title={workoutTitle}
+      skipped={recapSkipped}
+      onNote={async (n) => { await saveNote(n); if (recapSession) recapSession = { ...recapSession, note: n || null }; }}
       onPrs={(prs) => (recapPrs = prs)}
       onDone={confirmFinish}
       onCancel={() => { recapSession = null; }}
@@ -829,13 +838,16 @@
     onclose={() => { shareSession = null; }}
   />
 
-  <BlockPickerSheet
-    open={addBlockUi.pickerOpen}
+  <AddToWorkoutSheet
+    open={addBlockUi.sheetOpen}
+    session={$currentSession}
+    saving={ui.saving || ui.finishing}
+    allowGroup={!groupUi.adding}
     onOpenChange={(v) => {
-      addBlockUi.pickerOpen = v;
+      addBlockUi.sheetOpen = v;
       if (!v) returnToGroupPicker();
     }}
-    onSelect={onBlockTypeSelected}
+    onAdd={addPicks}
   />
 
   {#if groupModel}
@@ -859,42 +871,12 @@
     />
   {/if}
 
-  <AddExerciseDialog
-    open={addBlockUi.strengthOpen}
-    saving={ui.saving || ui.finishing}
-    onOpenChange={(v) => {
-      addBlockUi.strengthOpen = v;
-      if (!v) returnToGroupPicker();
-    }}
-    onSubmit={addExerciseWithName}
-  />
-
   <BodyweightPromptDialog
     exerciseName={bodyweightPromptFor}
     onClose={(saved) => {
       if (!saved) dismissBodyweightPrompt();
       bodyweightPromptFor = null;
     }}
-  />
-
-  <AddCardioDialog
-    open={addBlockUi.cardioOpen}
-    saving={ui.saving || ui.finishing}
-    onOpenChange={(v) => {
-      addBlockUi.cardioOpen = v;
-      if (!v) returnToGroupPicker();
-    }}
-    onSubmit={addCardioWithName}
-  />
-
-  <AddMobilityDialog
-    open={addBlockUi.mobilityOpen}
-    saving={ui.saving || ui.finishing}
-    onOpenChange={(v) => {
-      addBlockUi.mobilityOpen = v;
-      if (!v) returnToGroupPicker();
-    }}
-    onSubmit={addMobilityWithDrill}
   />
 
   {#if !ui.finishing}

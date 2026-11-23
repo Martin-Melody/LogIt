@@ -42,9 +42,10 @@
     onDiscard: () => void;
   } = $props();
 
+  // After the sheet has gone, so a sheet or screen it opens isn't caught in its closing.
   function run(fn: () => void) {
     onOpenChange(false);
-    fn();
+    setTimeout(fn, 200);
   }
 
   const tile =

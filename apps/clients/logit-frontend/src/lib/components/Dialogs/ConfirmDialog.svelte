@@ -46,27 +46,19 @@
     <Dialog.Trigger {child} />
   {/if}
 
-  <Dialog.Content class="sm:max-w-[420px]">
-    <Dialog.Header>
-      <Dialog.Title>{title}</Dialog.Title>
-      <Dialog.Description>{description}</Dialog.Description>
-    </Dialog.Header>
-
-    <Dialog.Footer>
-      <Button
-        variant="outline"
-        onclick={() => setOpen(false)}
-        disabled={saving}
-      >
-        {cancelLabel}
-      </Button>
-      <Button
-        variant="destructive"
-        onclick={() => void confirm()}
-        disabled={saving}
-      >
+  <!-- A bottom sheet like every other one (design canvas S-confirm): the action first, full width. -->
+  <Dialog.Content sheet showCloseButton={false} class="gap-3 bg-card">
+    <div class="flex flex-col gap-1.5">
+      <Dialog.Title class="text-[19px] font-semibold">{title}</Dialog.Title>
+      <Dialog.Description class="text-sm leading-relaxed">{description}</Dialog.Description>
+    </div>
+    <div class="mt-1.5 flex flex-col gap-2">
+      <Button variant="destructive" class="h-12 w-full rounded-xl text-[15px] font-semibold" onclick={() => void confirm()} disabled={saving}>
         {confirmLabel}
       </Button>
-    </Dialog.Footer>
+      <Button variant="secondary" class="h-12 w-full rounded-xl border border-input text-[15px]" onclick={() => setOpen(false)} disabled={saving}>
+        {cancelLabel}
+      </Button>
+    </div>
   </Dialog.Content>
 </Dialog.Root>

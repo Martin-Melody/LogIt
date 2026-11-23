@@ -84,7 +84,9 @@
   import { setsLine } from "$lib/features/session/planFormat";
   import { addButton } from "$lib/components/ui/choice";
   import { ArrowDownUp, ArrowLeftRight, ChartLine, Flame, Link2, Rows3 as MachineIcon, Timer, Trash2 } from "lucide-svelte";
-  import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
+  import SwapSheet from "$lib/features/session/ui/SwapSheet.svelte";
+  import { getSplit } from "$lib/usecases/Splits/getSplit";
+  import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import CoachSwapSheet from "$lib/features/session/ui/CoachSwapSheet.svelte";
   import { swapTargetFor, type SwapTarget } from "@logit/core/domain/swaps";
   import { coachFor, type CachedCoach } from "$lib/features/coaching/coachCache";
@@ -347,7 +349,38 @@
     }
   }
 
-  async function handleSwap(selection: { name: string; exerciseId?: string }) {
+  /** "Change the plan too": the split day this workout came from gets the new exercise. */
+  async function swapInPlan(from: { name: string; id?: string }, to: { name: string; exerciseId?: string }) {
+    const src = get(currentSession)?.source;
+    if (!src || src.kind !== "split") return;
+    try {
+      const split = await getSplit(src.parentId);
+      if (!split) return;
+      let changed = false;
+      const days = split.days.map((d) => {
+        if (d.id !== src.dayId) return d;
+        return {
+          ...d,
+          blocks: d.blocks.map((b) => {
+            if (changed || b.type !== "strength") return b;
+            const same = (from.id && b.exerciseId === from.id) || b.exerciseName.toLowerCase() === from.name.toLowerCase();
+            if (!same) return b;
+            changed = true;
+            return { ...b, exerciseName: to.name, exerciseId: to.exerciseId };
+          }),
+        };
+      });
+      if (changed) {
+        await saveSplit({ ...split, days });
+        toast(`${split.name}: ${from.name} is now ${to.name}`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't change the plan");
+    }
+  }
+
+  async function handleSwap(selection: { name: string; exerciseId?: string }, changePlan = false) {
+    const from = { name: data.exerciseName, id: data.exerciseId };
     const trimmed = selection.name.trim();
     if (!trimmed) return;
     try {
@@ -361,6 +394,7 @@
       await onMutate((s: WorkoutSession) =>
         swapExercise(s, blockId, { exerciseName: trimmed, exerciseId }),
       );
+      if (changePlan) await swapInPlan(from, { name: trimmed, exerciseId });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't swap the exercise");
     }
@@ -1354,13 +1388,15 @@
     onPick={handleSwap}
   />
 {:else}
-  <AddExerciseDialog
+  <SwapSheet
     open={swapOpen}
-    saving={saving}
-    title="Swap exercise"
-    description="Pick a different exercise — your logged sets stay."
     onOpenChange={(v) => (swapOpen = v)}
-    onSubmit={handleSwap}
+    exerciseName={data.exerciseName}
+    exerciseId={data.exerciseId}
+    {doneCount}
+    totalCount={workingSetCount}
+    canChangePlan={$currentSession?.source?.kind === "split"}
+    onPick={(sel, changePlan) => handleSwap(sel, changePlan)}
   />
 {/if}
 

@@ -86,13 +86,13 @@
   const prevReps = $derived(prev?.reps ? String(prev.reps) : null);
 </script>
 
-<!-- Same sizes as a strength set row: 40px boxes, 44px buttons, and a done set
-     tinted rather than faded so it stays readable. -->
-<div class="grid grid-cols-[1.5rem_1fr_auto] gap-1.5 items-center px-3 py-0.5 transition-colors {set.completed ? 'bg-muted/40' : ''}">
-  <span class="text-xs text-muted-foreground tabular-nums text-center">{label ?? ""}</span>
+<!-- The strength set row's grid (merged design): label, last time, two number boxes, tick.
+     A hold keeps its start/stop timer beside last time. -->
+<div class="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_3.25rem_2.75rem] items-center gap-1.5 px-3 py-0.5 transition-colors {set.completed ? 'bg-muted/40' : ''}">
+  <span class="text-center text-xs font-medium text-muted-foreground tabular-nums">{label ?? ""}</span>
 
-  <div class="flex items-center gap-2 min-w-0">
-    {#if metric === "hold"}
+  {#if metric === "hold"}
+    <div class="flex min-w-0 items-center gap-2">
       <button
         type="button"
         class="relative h-10 w-10 shrink-0 flex items-center justify-center rounded-full border-2 {running ? 'border-primary text-primary' : 'border-muted-foreground hover:border-primary'}"
@@ -112,55 +112,52 @@
         {/if}
         {#if running}<Square class="h-3.5 w-3.5" />{:else}<Play class="h-3.5 w-3.5" />{/if}
       </button>
-      <span class="text-sm tabular-nums font-medium">
-        {#if holdDisplay === null}
-          <span class="text-muted-foreground font-normal">{fmt(target ?? 0)} goal</span>
-        {:else}
-          {holdDisplay}{#if target && !running}<span class="text-muted-foreground font-normal"> / {fmt(target)}</span>{/if}
-        {/if}
+      <span class="min-w-0 truncate text-[13px] tabular-nums text-muted-foreground">
+        {running ? fmt(elapsed) : prev?.durationSec ? fmt(prev.durationSec) : ""}
       </span>
-    {:else}
-      <button type="button" class="h-10 w-10 shrink-0 flex items-center justify-center rounded-md border text-muted-foreground hover:text-foreground disabled:opacity-50"
-        {disabled} aria-label="One fewer rep"
-        onclick={() => void onPatch({ reps: Math.max(0, (set.reps ?? 0) - 1) || undefined })}>
-        <Minus class="h-4 w-4" />
-      </button>
-      <input
-        class="h-10 w-12 shrink-0 rounded-md border bg-background px-1 text-[15px] font-semibold tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
-        type="number" min="0" inputmode="numeric"
-        placeholder={prevReps ?? "0"}
-        aria-label="Reps{set.side ? `, ${set.side}` : ''}"
-        value={set.reps ? String(set.reps) : ""}
-        {disabled}
-        onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
-        onchange={(e) => void onPatch({ reps: num((e.currentTarget as HTMLInputElement).value) || undefined })}
-      />
-      <button type="button" class="h-10 w-10 shrink-0 flex items-center justify-center rounded-md border text-muted-foreground hover:text-foreground"
-        {disabled} aria-label="One more rep"
-        onclick={() => void onPatch({ reps: (set.reps ?? 0) + 1 })}>
-        <Plus class="h-4 w-4" />
-      </button>
-    {/if}
-
+    </div>
     <input
-      class="h-10 w-14 shrink-0 ml-auto rounded-md border bg-background px-1.5 text-sm tabular-nums text-center focus:outline-none focus:ring-1 focus:ring-ring"
-      type="number" min="0" step={weightUnit === "lbs" ? "1" : "0.5"}
-      placeholder={prevLoad ?? "±kg"}
-      value={displayLoad}
+      class="h-10 w-full rounded-md border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums placeholder:font-medium placeholder:text-info focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+      type="number" min="0" inputmode="numeric"
+      placeholder={target ? String(target) : prev?.durationSec ? String(prev.durationSec) : "s"}
+      aria-label="Seconds held{set.side ? `, ${set.side}` : ''}"
+      value={set.durationSec ? String(set.durationSec) : ""}
       {disabled}
-      title="Added load"
-      aria-label="Added load ({weightUnit}){set.side ? `, ${set.side}` : ''}"
       onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
-      onchange={(e) => {
-        const v = num((e.currentTarget as HTMLInputElement).value);
-        void onPatch({ loadKg: v > 0 ? fromDisplayWeight(v, weightUnit) : undefined });
-      }}
+      onchange={(e) => void onPatch({ durationSec: num((e.currentTarget as HTMLInputElement).value) || undefined })}
     />
-  </div>
+  {:else}
+    <span class="h-10 min-w-0 truncate text-[13px] leading-10 tabular-nums text-muted-foreground">{prevReps ? `× ${prevReps}` : ""}</span>
+    <input
+      class="h-10 w-full rounded-md border border-border bg-background px-2 text-center text-[15px] font-semibold tabular-nums placeholder:font-medium placeholder:text-info focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+      type="number" min="0" inputmode="numeric"
+      placeholder={prevReps ?? "0"}
+      aria-label="Reps{set.side ? `, ${set.side}` : ''}"
+      value={set.reps ? String(set.reps) : ""}
+      {disabled}
+      onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+      onchange={(e) => void onPatch({ reps: num((e.currentTarget as HTMLInputElement).value) || undefined })}
+    />
+  {/if}
+
+  <input
+    class="h-10 w-full rounded-md border border-border bg-background px-1 text-center text-sm tabular-nums placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+    type="number" min="0" step={weightUnit === "lbs" ? "1" : "0.5"}
+    placeholder={prevLoad ?? "+kg"}
+    value={displayLoad}
+    {disabled}
+    title="Added load"
+    aria-label="Added load ({weightUnit}){set.side ? `, ${set.side}` : ''}"
+    onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+    onchange={(e) => {
+      const v = num((e.currentTarget as HTMLInputElement).value);
+      void onPatch({ loadKg: v > 0 ? fromDisplayWeight(v, weightUnit) : undefined });
+    }}
+  />
 
   <button
     type="button"
-    class="flex h-11 w-11 shrink-0 items-center justify-center"
+    class="flex h-11 w-11 items-center justify-center justify-self-center"
     onclick={() => void onComplete()}
     {disabled}
     aria-label={set.completed ? "Mark incomplete" : "Mark complete"}

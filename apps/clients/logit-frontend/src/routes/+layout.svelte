@@ -2,6 +2,7 @@
   import "./layout.css";
   import favicon from "$lib/assets/favicon.png";
   import BottomNav from "$lib/components/navigation/BottomNav/BottomNav.svelte";
+  import WorkoutPill from "$lib/features/session/ui/WorkoutPill.svelte";
   import AppHeader from "$lib/components/navigation/AppHeader/AppHeader.svelte";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Toaster } from "$lib/components/ui/sonner/index";
@@ -115,6 +116,7 @@
         class="bg-background pb-[env(safe-area-inset-bottom)]"
         bind:offsetHeight={footerHeight}
       >
+        <WorkoutPill />
         <BottomNav />
       </footer>
     </div>

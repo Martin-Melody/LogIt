@@ -2,8 +2,10 @@
   import { openAllSignal } from "$lib/features/session/openAll";
   import { foldFor } from "$lib/features/session/stage";
   import { untrack } from "svelte";
-  import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight, MoreHorizontal, Link2 } from "lucide-svelte";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import { Plus, Trash2, Timer, Ruler, GripVertical, ChevronDown, ChevronRight, MoreHorizontal, Link2, ArrowDownUp, Check } from "lucide-svelte";
+  import { addButton } from "$lib/components/ui/choice";
+  import ActionSheet, { type ActionItem } from "$lib/components/ActionSheet.svelte";
+  import { blockProgress } from "$lib/features/session/stage";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { createId } from "@logit/core/domain/ids";
   import { get } from "svelte/store";
@@ -19,6 +21,7 @@
     saving,
     grouped = false,
     stage,
+    onReorder,
     gripAction,
     onGroup,
     onDelete,
@@ -260,10 +263,17 @@
   const totalDuration = $derived(
     sortedIntervals.reduce((sum, iv) => sum + (iv.durationMs ?? 0), 0)
   );
+  let menuOpen = $state(false);
+  const progress = $derived(blockProgress({ id: blockId, type: "cardio", orderIndex: 0, data }));
+  const menuItems = $derived<ActionItem[]>([
+    ...(onGroup ? [{ icon: Link2, label: "Superset or circuit with…", onSelect: () => onGroup() }] : []),
+    ...(onReorder ? [{ icon: ArrowDownUp, label: "Change the order", onSelect: onReorder }] : []),
+    { icon: Trash2, label: "Remove from this workout", destructive: true, onSelect: () => (confirmRemove = true) },
+  ]);
 </script>
 
 <!-- Block header -->
-<div class="border-t border-border bg-muted/20">
+<div class={stage === "current" ? "" : "border-t border-border bg-muted/20"}>
   <!-- Same row as a strength exercise: 44px controls, remove in the ⋯ menu. -->
   <div class="flex items-center pl-1 pr-1">
     <!-- Grip handle -->
@@ -305,43 +315,27 @@
       />
     {:else}
       <button type="button" class="flex-1 min-w-0 h-11 pl-1 pr-2 text-left" onclick={startEdit} disabled={saving} aria-label="{data.activityName} — rename">
-        <span class="text-sm font-semibold truncate block">{data.activityName}</span>
+        <span class="block truncate font-semibold {stage === 'current' ? 'text-[17px]' : 'text-[15px]'}">{data.activityName}</span>
+        {#if collapsed}<span class="block truncate text-xs font-normal text-muted-foreground tabular-nums">Cardio{totalDuration > 0 ? ` · ${formatDuration(totalDuration)}` : ""}{totalDistance > 0 ? ` · ${formatDistance(totalDistance, unit)}` : ""}</span>{/if}
       </button>
     {/if}
 
-    {#if !collapsed}
-      <button
-        type="button"
-        class="shrink-0 ml-1 h-11 w-11 flex items-center justify-center disabled:opacity-50"
-        onclick={addInterval}
-        disabled={saving}
-        aria-label="Add interval"
-      >
-        <span class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Plus class="h-4 w-4" />
-        </span>
-      </button>
+    {#if progress.total > 0}
+      <span class="flex shrink-0 items-center gap-1 text-xs tabular-nums {progress.done === progress.total ? 'text-success' : 'text-muted-foreground'}">
+        {#if progress.done === progress.total}<Check class="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />{/if}{progress.done} of {progress.total}
+      </span>
     {/if}
+    <button
+      type="button"
+      class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+      disabled={saving}
+      aria-label="More actions for {data.activityName}"
+      onclick={() => (menuOpen = true)}
+    >
+      <MoreHorizontal class="h-5 w-5" />
+    </button>
 
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
-        disabled={saving}
-        aria-label="More actions for {data.activityName}"
-      >
-        <MoreHorizontal class="h-5 w-5" />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content>
-        {#if onGroup}
-          <DropdownMenu.Item onSelect={onGroup}>
-            <Link2 /> Superset / circuit with…
-          </DropdownMenu.Item>
-        {/if}
-        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
-          <Trash2 /> Remove activity
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+    <ActionSheet open={menuOpen} onOpenChange={(v) => (menuOpen = v)} title={data.activityName} subtitle="Cardio" items={menuItems} />
 
     <ConfirmDialog
       title="Remove activity?"
@@ -444,13 +438,10 @@
       {/each}
     </div>
   {:else}
-    <button
-      type="button"
-      class="w-full min-h-11 px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
-      disabled={saving}
-      onclick={addInterval}
-    >
-      + Add first interval
-    </button>
   {/if}
+  <div class="flex flex-wrap gap-2 px-3 pt-2 pb-3">
+    <button type="button" class={addButton} disabled={saving} onclick={addInterval}>
+      <Plus class="h-3.5 w-3.5" /> {sortedIntervals.length ? "Add an interval" : "Add first interval"}
+    </button>
+  </div>
 {/if}

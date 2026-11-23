@@ -4,7 +4,7 @@
   // the split day editor can use the same sheet.
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { Plus, Search } from "lucide-svelte";
+  import { Check, Plus, Search } from "lucide-svelte";
   import type { GroupPickerSection } from "$lib/features/session/grouping";
   import type { GroupKind } from "@logit/core/domain/workout";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
@@ -53,53 +53,54 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content class="sm:max-w-[420px] max-h-[85dvh] flex flex-col gap-0 p-0 overflow-hidden">
-    <Dialog.Header class="px-5 pt-5 pb-3 pr-12 text-left">
-      <Dialog.Title class="leading-snug">{title}</Dialog.Title>
-      <Dialog.Description>
-        Tick the exercises to group. They run in workout order, and you can drag them inside the group later.
-      </Dialog.Description>
-    </Dialog.Header>
+  <!-- Design canvas S-group: a bottom sheet; superset or circuit first, then what joins it. -->
+  <Dialog.Content sheet class="top-20 flex max-h-none flex-col gap-3 bg-card">
+    <div class="flex flex-col gap-0.5 pr-8">
+      <Dialog.Title class="text-[19px] font-semibold leading-snug">{title}</Dialog.Title>
+      <Dialog.Description class="sr-only">Tick the exercises to group. They run in workout order.</Dialog.Description>
+    </div>
+    {#if showSizeHint && kind && onKindChange}
+      <div class={segmentTrack} role="radiogroup" aria-label="Group type">
+        {#each [["superset", "Superset"], ["circuit", "Circuit"]] as [k, text] (k)}
+          <button type="button" role="radio" aria-checked={kind === k} class={segment(kind === k) + " flex-1"}
+            disabled={saving || (k === "superset" && picked.length === 0)} onclick={() => onKindChange(k as GroupKind)}>{text}</button>
+        {/each}
+      </div>
+      <p class="-mt-1 text-[13px] leading-snug text-muted-foreground">
+        {kind === "circuit"
+          ? "Rounds through every exercise with the countdown. Can hold cardio, mobility and plugin blocks, and can be just this one."
+          : "One after the other with no rest, then rest after the round."}
+      </p>
+    {/if}
 
-    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain border-t border-border">
+    <div class="-mx-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4">
       {#if isEmpty}
-        <p class="px-5 py-4 text-sm text-muted-foreground">Nothing else in this workout yet.</p>
+        <p class="py-4 text-sm text-muted-foreground">Nothing else in this workout yet.</p>
       {/if}
       {#each sections as section (section.title)}
         {#if section.items.length > 0}
-          <p class="px-5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {section.title}
-          </p>
+          <h3 class="mb-1 mt-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">{section.title}</h3>
           {#each section.items as item (item.id)}
-            <label class="flex min-h-[52px] cursor-pointer items-center gap-3 border-t border-border/60 px-5 py-2 hover:bg-muted/40">
-              <input
-                type="checkbox"
-                class="size-5 shrink-0 accent-primary"
-                checked={picked.includes(item.id)}
-                disabled={saving}
-                onchange={() => onToggle(item.id)}
-              />
+            {@const on = picked.includes(item.id)}
+            <button type="button" class="flex min-h-[54px] w-full items-center gap-3 border-t border-border px-1 text-left first-of-type:border-t-0 disabled:opacity-50"
+              aria-pressed={on} disabled={saving} onclick={() => onToggle(item.id)}>
+              <span class="flex size-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors {on ? 'border-primary bg-primary text-primary-foreground' : 'border-input'}">
+                {#if on}<Check class="size-3.5" strokeWidth={3} />{/if}
+              </span>
               <span class="min-w-0">
-                <span class="block truncate text-sm font-medium">{item.name}</span>
+                <span class="block truncate text-[15px]">{item.name}</span>
                 <span class="block truncate text-xs text-muted-foreground">{item.detail}</span>
               </span>
-            </label>
+            </button>
           {/each}
         {/if}
       {/each}
 
       {#if onAddAnother}
-        <button
-          type="button"
-          class="flex min-h-[56px] w-full items-center gap-3 border-t border-border/60 px-5 py-2 text-left hover:bg-muted/40 disabled:opacity-50"
-          disabled={saving}
-          onclick={onAddAnother}
-        >
-          <span class="flex size-5 shrink-0 items-center justify-center rounded border-[1.5px] border-dashed border-muted-foreground/60">
-            <Plus class="size-3.5" />
-          </span>
+        <button type="button" class="flex min-h-[56px] w-full items-center gap-3 border-t border-border px-1 text-left disabled:opacity-50" disabled={saving} onclick={onAddAnother}>
+          <span class="flex size-6 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-input"><Plus class="size-3.5" /></span>
           <span class="min-w-0 flex-1">
-            <span class="block text-sm font-medium">Add another exercise</span>
+            <span class="block text-[15px]">Something not in this workout</span>
             <span class="block truncate text-xs text-muted-foreground">{addAnotherDetail}</span>
           </span>
           <Search class="size-4 shrink-0 text-muted-foreground" />
@@ -107,31 +108,8 @@
       {/if}
     </div>
 
-    <div class="flex flex-col gap-2 border-t border-border px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-      {#if showSizeHint && kind && onKindChange}
-        <div class={segmentTrack} role="radiogroup" aria-label="Group type">
-          {#each [["superset", "Superset"], ["circuit", "Circuit"]] as [k, text] (k)}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={kind === k}
-              class={segment(kind === k) + " flex-1"}
-              disabled={saving || (k === "superset" && picked.length === 0)}
-              onclick={() => onKindChange(k as GroupKind)}
-            >
-              {text}
-            </button>
-          {/each}
-        </div>
-        <p class="text-center text-xs text-muted-foreground">
-          {kind === "circuit"
-            ? "Rounds through every exercise, with the countdown. Can be just this one."
-            : "Two or more exercises back to back, one rest per round."}
-        </p>
-      {/if}
-      <Button class="h-12 text-[15px]" disabled={saving || !confirmable} onclick={() => void onConfirm()}>
-        {confirmLabel}
-      </Button>
-    </div>
+    <Button class="h-12 shrink-0 rounded-xl text-[15px] font-semibold" disabled={saving || !confirmable} onclick={() => void onConfirm()}>
+      {confirmLabel}
+    </Button>
   </Dialog.Content>
 </Dialog.Root>

@@ -44,7 +44,7 @@
         type="button"
         class="{menuRow} {item.destructive ? 'text-destructive' : ''}"
         disabled={item.disabled}
-        onclick={() => { onOpenChange(false); item.onSelect(); }}
+        onclick={() => { onOpenChange(false); setTimeout(item.onSelect, 200); }}
       >
         <item.icon />
         <span class="min-w-0 flex-1 truncate">{item.label}</span>

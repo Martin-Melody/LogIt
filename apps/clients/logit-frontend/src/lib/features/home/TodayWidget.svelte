@@ -199,8 +199,17 @@
   <Card.Content class="flex flex-col gap-4 pt-1">
     <!-- The client's own split's week, only while their own plan leads. -->
     {#if week && week.planned > 0 && !coached}
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex gap-1.5" role="img"
+      <div class="flex flex-col gap-2.5">
+        <div class="flex items-center justify-between gap-3">
+          {#if streakWeeks > 0}
+            <span class="text-[13px] text-muted-foreground tabular-nums">This week · {week.done} of {goal}</span>
+            <StreakLine weeks={streakWeeks} />
+          {:else}
+            <!-- Never "0-week streak" (bug hunt 3.14): the week so far instead. -->
+            <span class="text-[13px] text-muted-foreground tabular-nums">{firstWeek ? "Week one" : "This week"} · {week.done} of {goal}</span>
+          {/if}
+        </div>
+        <div class="flex justify-between" role="img"
           aria-label={`This week: ${week.slots.filter((s) => s.state !== "rest").map((s) => `${WEEKDAYS[s.weekday]} ${s.state}`).join(", ")}`}>
           {#each week.slots as slot (slot.dateIso)}
             <span class="flex w-8 flex-col items-center gap-1">
@@ -216,16 +225,6 @@
               {/if}
             </span>
           {/each}
-        </div>
-        <div class="flex flex-col items-end text-right">
-          {#if streakWeeks > 0}
-            <StreakLine weeks={streakWeeks} />
-            <div class="text-[11px] text-muted-foreground tabular-nums">{week.done} of {goal} this week</div>
-          {:else}
-            <!-- Never "0-week streak" (bug hunt 3.14): the week so far instead. -->
-            <div class="text-[15px] font-semibold tabular-nums">{week.done} of {goal}</div>
-            <div class="text-[11px] text-muted-foreground">{firstWeek ? "week one" : "this week"}</div>
-          {/if}
         </div>
       </div>
     {/if}
