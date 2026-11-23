@@ -5,7 +5,7 @@ title: Mobility progression
 A mobility progression algorithm decides your next targets for a **stretching /
 mobility drill**, given its history — the stretching counterpart of a
 [progression algorithm](/docs/plugins/progression). The user picks one in
-**Settings → Mobility progression**; the app calls it whenever a Mobility block
+**Settings → Mobility**; the app calls it whenever a Mobility block
 needs a suggestion, and persists the returned `nextState` per drill after a
 session.
 

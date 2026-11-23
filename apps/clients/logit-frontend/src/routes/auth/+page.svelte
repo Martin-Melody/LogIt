@@ -245,7 +245,10 @@
           : "This server is invite-only. Enter the invite code you were sent.";
         return;
       }
-      authError = e instanceof ApiError ? e.message : "Something went wrong. Please try again.";
+      // fetch() throws a TypeError when no answer came back at all: offline, or a wrong address.
+      authError = e instanceof ApiError ? e.message
+        : e instanceof TypeError ? `Couldn't reach ${apiClient.getBaseUrl().replace(/^https?:\/\//, "")}. Check the server address and your connection.`
+        : "Something went wrong. Please try again.";
     } finally {
       authLoading = false;
     }

@@ -14,7 +14,7 @@ the app uses, so it always matches what each plan really unlocks.
 
 ## Buying, changing and cancelling
 
-Plans are bought in the Android app (the plan card in Settings), monthly or yearly, through Google Play.
+Plans are bought in the Android app (Settings → Account), monthly or yearly, through Google Play.
 Cancel in the Play Store under Payments and subscriptions; you keep your plan until the period you've
 paid for ends. If you self-host the server, sync and the dashboard are free. See [Your account](/docs/account).
 

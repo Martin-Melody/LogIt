@@ -23,7 +23,7 @@ test.describe("backup & restore", () => {
       localStorage.setItem("logit:plugin-settings:v1", JSON.stringify({ "demo.plugin": { enabled: true } }));
     });
 
-    await page.goto("/settings");
+    await page.goto("/settings/data");
     await page.waitForLoadState("networkidle");
 
     // ── Export ────────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ test.describe("backup & restore", () => {
     const ctx = await page.context().browser()!.newContext();
     const fresh = await ctx.newPage();
     await bypass(fresh);
-    await fresh.goto("/settings");
+    await fresh.goto("/settings/data");
     await fresh.waitForLoadState("networkidle");
 
     fresh.once("filechooser", (fc) => {
@@ -70,7 +70,7 @@ test.describe("backup & restore", () => {
 
   test("a v1 backup still imports (no nutrition/habits/plugins sections)", async ({ page }) => {
     await bypass(page);
-    await page.goto("/settings");
+    await page.goto("/settings/data");
     await page.waitForLoadState("networkidle");
 
     const v1 = JSON.stringify({

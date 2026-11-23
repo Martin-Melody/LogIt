@@ -110,7 +110,7 @@ const EXACT_ALARMS_ASKED_KEY = "logit:exact-alarms-asked";
 const NOTIFICATIONS_ASKED_KEY = "logit:rest-notifications-asked";
 
 /** Android, at the first rest: if LogIt may not post notifications, offer it once; otherwise, if
- * it may not set exact alarms, offer that once (the same as Settings › Session › Rest alerts on
+ * it may not set exact alarms, offer that once (the same as Settings › Workout › Rest alerts on
  * time). Asked here because the alert is booked as the app goes to the background, where Android
  * can't show the question. Web and iOS don't have the exact-alarm check, so they stop at it. */
 async function askForRestAlertsOnce(): Promise<void> {

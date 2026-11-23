@@ -7,7 +7,7 @@ import { deviceInfoHeader, getDeviceInfo } from "./deviceInfo";
  * Test builds (VITE_CRASH_REPORTS=auto, set by the Android release workflow for every Play track
  * but production) send each crash to the hosted service by themselves, also without an account:
  * the crash, the log lines before it and the device header. Production builds send nothing;
- * there the Send button in Settings › Diagnostics is the only way out. Self-hosted: never.
+ * there the Send button in Settings › About › Diagnostics is the only way out. Self-hosted: never.
  */
 export const crashReportsOn = import.meta.env.VITE_CRASH_REPORTS === "auto";
 

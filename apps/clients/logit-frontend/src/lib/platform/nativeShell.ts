@@ -76,7 +76,7 @@ async function wireBackButton(): Promise<void> {
 export function routeForAppLink(url: string): string | null {
   // A shared algorithm: logit://a?c=logit-alg1:… or https://getlogit.app/a#logit-alg1:…
   const code = url.match(/logit-alg1:[A-Za-z0-9_-]+/)?.[0];
-  if (code) return `/settings?algorithmCode=${encodeURIComponent(code)}#sec-progression`;
+  if (code) return `/settings/progression?algorithmCode=${encodeURIComponent(code)}`;
   return null;
 }
 

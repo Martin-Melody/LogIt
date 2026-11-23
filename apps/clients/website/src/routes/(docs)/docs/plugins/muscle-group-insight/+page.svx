@@ -6,7 +6,7 @@ A muscle group insight algorithm looks at your training history for one muscle
 group — its weekly volume and the trend of every exercise that primarily
 targets it — and says what (if anything) your own data suggests about the
 volume/frequency that works for you. The user picks one in
-**Settings → Muscle groups**; the app calls it once per muscle group whenever
+**Settings → Insights → Muscle groups**; the app calls it once per muscle group whenever
 that tab is viewed.
 
 Unlike a [progression algorithm](/docs/plugins/progression), the input here

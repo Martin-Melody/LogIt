@@ -6,7 +6,6 @@
     Check,
     AlertTriangle,
   } from "lucide-svelte";
-  import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import {
     exportData,
@@ -137,15 +136,7 @@
   };
 </script>
 
-<Card.Root id="sec-data" class="w-full scroll-mt-3">
-  <Card.Header>
-    <Card.Title>Backup & Restore</Card.Title>
-    <Card.Description>
-      Export your training data to a file and import it back when needed.
-    </Card.Description>
-  </Card.Header>
-
-  <Card.Content class="flex flex-col gap-4">
+<div class="flex w-full flex-col gap-4 rounded-xl border border-border bg-card p-4">
     <!-- Workout history from another app or a spreadsheet (its own screen). -->
     <div class="flex flex-col gap-2">
       <p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">From another app</p>
@@ -156,7 +147,7 @@
     </div>
 
     <!-- Export -->
-    <div class="flex flex-col gap-2">
+    <div id="export" class="flex scroll-mt-4 flex-col gap-2">
       <p
         class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
       >
@@ -184,7 +175,7 @@
     <div class="border-t border-border"></div>
 
     <!-- Import -->
-    <div class="flex flex-col gap-2">
+    <div id="restore" class="flex scroll-mt-4 flex-col gap-2">
       <p
         class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
       >
@@ -282,5 +273,4 @@
         </Button>
       {/if}
     </div>
-  </Card.Content>
-</Card.Root>
+</div>

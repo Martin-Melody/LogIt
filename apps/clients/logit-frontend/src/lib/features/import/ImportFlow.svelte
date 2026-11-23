@@ -102,7 +102,7 @@
     error = null;
     busy = true;
     try {
-      // A LogIt backup (Settings › Download backup file) restores everything, here too: someone
+      // A LogIt backup (Settings › Backup & import › Download backup file) restores everything, here too: someone
       // moving phones without an account picks "Import my history" first.
       if (/^\s*\{/.test(file.text)) {
         const data = parseExportFile(file.text);

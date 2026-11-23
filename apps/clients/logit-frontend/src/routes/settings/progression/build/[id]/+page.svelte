@@ -106,7 +106,7 @@
         return;
       }
       toast(isNew ? `Saved ${row.name}. Pick it in Progression, or on any exercise.` : `Saved ${row.name}`);
-      back("/settings#sec-progression");
+      back("/settings/progression");
     } finally {
       saving = false;
     }
@@ -132,7 +132,7 @@
     for (const s of changed) pushExerciseSetting(s);
     bumpProgression();
     toast(`Deleted ${recipe.name}`);
-    await goto("/settings#sec-progression");
+    await goto("/settings/progression");
   }
 
   type Opt<T> = { value: T; label: string };
@@ -212,7 +212,7 @@
 {/snippet}
 
 <PageHeader>
-  <button type="button" class="flex size-11 items-center justify-center rounded-lg" aria-label="Close" onclick={() => back("/settings#sec-progression")}>
+  <button type="button" class="flex size-11 items-center justify-center rounded-lg" aria-label="Close" onclick={() => back("/settings/progression")}>
     <X class="size-[22px]" />
   </button>
   <h1 class="page-title flex-1">{isNew ? "New algorithm" : "Edit algorithm"}</h1>

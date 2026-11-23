@@ -43,7 +43,7 @@ Sign-ups are invite-only unless you set `REGISTRATION_MODE=open` in `.env`, so s
 
 ## 5. Connect the app
 
-In the LogIt app, open the sign-in screen (Settings › Account), tap **Connect to a different server** and enter your server's address: for example `http://192.168.1.10:8080` on your home network, or your server's public address. Then tap **Sign up** and enter the invite code. Your account exists only on your server.
+In the LogIt app, open the sign-in screen (Settings › Account › Sign in), tap **Connect to a different server** and enter your server's address: for example `http://192.168.1.10:8080` on your home network, or your server's public address. Then tap **Sign up** and enter the invite code. Your account exists only on your server.
 
 ## 6. Open the dashboard
 

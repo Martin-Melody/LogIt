@@ -130,12 +130,15 @@ test("the shared header follows the page on in-app navigation", async ({ page })
   await page.waitForLoadState("networkidle");
   await expect(page.locator("header.page-header")).toContainText("Settings");
 
+  await page.getByRole("link", { name: /^Appearance/ }).click();
+  await expect(page.locator("header.page-header")).toContainText("Appearance");
+
   await page.getByText("Customise navigation").first().click();
   await expect(page).toHaveURL(/\/settings\/navbar$/);
   await expect(page.locator("header.page-header")).toContainText("Customise navigation");
 
   await page.getByRole("button", { name: "Back" }).click();
-  await expect(page.locator("header.page-header")).toContainText("Settings");
+  await expect(page.locator("header.page-header")).toContainText("Appearance");
 });
 
 test("the bell opens the inbox with the device's own notifications", async ({ page }) => {

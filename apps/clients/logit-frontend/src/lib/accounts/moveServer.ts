@@ -10,7 +10,7 @@ import { apiClient, apiBaseUrl, ApiError, type AuthUser } from "@logit/core/api/
 import { getSessionScope, setSessionScope, sessionKey } from "@logit/core/api/sessionScope";
 import { setServerMode } from "@logit/core/api/serverConfig";
 import { tokenStorage } from "@logit/core/api/tokenStorage";
-import { testServerConnection } from "@logit/core/api/testConnection";
+import { normalizeServerUrl, testServerConnection } from "@logit/core/api/testConnection";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { log } from "@logit/core/platform/log";
@@ -23,7 +23,7 @@ export type ServerCheck =
 
 /** Whether a Logit server answers at `url` (null = getlogit.app), and whether it needs an invite to sign up. */
 export async function checkServer(url: string | null): Promise<ServerCheck> {
-  const base = url ? normalizeUrl(url) : hostedBaseUrl();
+  const base = url ? normalizeServerUrl(url) : hostedBaseUrl();
   if ((await testServerConnection(base)) !== "ok") return { reachable: false };
   try {
     const res = await fetch(`${base}/auth/registration`);
@@ -68,7 +68,7 @@ export type MoveCounts = { workouts: number; splits: number };
 export function serverName(url: string | null): string {
   if (!url) return HOSTED_SERVER;
   try {
-    return new URL(normalizeUrl(url)).host;
+    return new URL(normalizeServerUrl(url)).host;
   } catch {
     return url;
   }
@@ -77,11 +77,6 @@ export function serverName(url: string | null): string {
 /** The server the account in use is on, as a host name. */
 export function currentServerName(): string {
   return apiClient.isSelfHosted() ? serverName(apiBaseUrl()) : HOSTED_SERVER;
-}
-
-function normalizeUrl(url: string): string {
-  const trimmed = url.trim().replace(/\/+$/, "");
-  return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
 function hostedBaseUrl(): string {
@@ -111,7 +106,7 @@ export async function moveToServer(req: MoveRequest): Promise<MoveResult> {
     // Unknown (the server didn't answer): say it, as before, rather than risk a charge.
     from.playSubscription = !status || (!!sub && sub.source === "google" && sub.grantsAccess && sub.autoRenewing);
   }
-  const target = req.url ? normalizeUrl(req.url) : null;
+  const target = req.url ? normalizeServerUrl(req.url) : null;
   if ((target ?? hostedBaseUrl()) === from.baseUrl.replace(/\/+$/, "")) {
     return { ok: false, error: `This account is already on ${from.server}.` };
   }

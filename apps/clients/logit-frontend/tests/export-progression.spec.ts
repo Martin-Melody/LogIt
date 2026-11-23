@@ -28,7 +28,7 @@ test("progression settings and built algorithms survive a backup and restore", a
     );
   });
 
-  await page.goto("/settings");
+  await page.goto("/settings/data");
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: /Download backup file/ }).click();
   const file = await (await downloading).path();

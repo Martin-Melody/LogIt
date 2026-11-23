@@ -85,7 +85,7 @@
 <div class="flex flex-wrap items-start gap-6">
   <section aria-label="Reports" class="min-w-0 flex-[1_1_300px] md:max-w-[360px] {page.url.searchParams.has('id') ? 'max-md:hidden' : ''}">
     <h1 class="text-[26px] font-bold tracking-tight">Diagnostics</h1>
-    <p class="mb-3 text-[13px] text-muted-foreground">Logs people sent from Settings › Diagnostics. Deleted after 30 days.</p>
+    <p class="mb-3 text-[13px] text-muted-foreground">Logs people sent from Settings › About › Diagnostics. Deleted after 30 days.</p>
     {#if error}
       <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
     {:else if loading}
@@ -101,7 +101,7 @@
             </a>
           </li>
         {:else}
-          <li class="px-3 py-3 text-[13px] text-muted-foreground">No reports. People can send one from the app's Settings › Diagnostics; test builds send crashes by themselves.</li>
+          <li class="px-3 py-3 text-[13px] text-muted-foreground">No reports. People can send one from the app's Settings › About › Diagnostics; test builds send crashes by themselves.</li>
         {/each}
       </ul>
     {/if}
