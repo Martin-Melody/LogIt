@@ -25,7 +25,7 @@ or product change waiting on Martin; mock-up first).
 | 1.12 | Device without the saved plan start | "Monday's workout moved" to someone who joined today | Falls back to the split's creation date | fixed (61fb823) |
 | 1.13 | Second device during a workout | Shows the day as "Done" | — the running workout doesn't sync | open |
 | 1.14 | Typo in the very first set of a never-done exercise | No warning | — nothing to compare with | open |
-| 1.15 | Home showed "Start Upper" and "Start Day 4 — Lower" at once; plan preview −0.5 kg vs workout +2 kg for the same sets | Confusing | — left for later on Martin's say | needs a decision |
+| 1.15 | Home showed "Start Upper" and "Start Day 4 — Lower" at once; plan preview −0.5 kg vs workout +2 kg for the same sets | Confusing | — left for later on Martin's say | fixed (38e5ec7) |
 
 ## Round 2 — P1 28 days, P3/P4 imports (2026-11-21, PR #105, merged 2026-11-22)
 
@@ -64,14 +64,14 @@ lifts, light dumbbells; no "reps left" answers (as a hurried beginner would).
 | 3.4 | Typing the first weight | A "+ Warm-up ramp" row appeared above the sets and moved the tick from under the finger (mis-tap) | Row always there, greyed until a weight; the tick moves 0 px | fixed (b8ce02e) |
 | 3.5 | Workout 2 | Opened with every exercise collapsed | A new workout's first exercise opens | fixed (b8ce02e) |
 | 3.6 | App name | "Logit" in 19 places, "LogIt" elsewhere | All visible text says LogIt | fixed (b8ce02e) |
-| 3.7 | Goal choices | No option for someone just starting; "Stay fit — keep what you've built" assumes they've built something | — | needs a decision |
-| 3.8 | Days a week | "4 days — The sweet spot" above "Not sure? Start with 3" for a beginner | — | needs a decision |
-| 3.9 | Starting weight | "Pick a weight you could lift about 12 times" means nothing to someone who never squatted; no "start with the empty bar (20 kg)" | — (beginner day-one mockups) | needs a decision |
+| 3.7 | Goal choices | No option for someone just starting; "Stay fit — keep what you've built" assumes they've built something | — | fixed (a435928) |
+| 3.8 | Days a week | "4 days — The sweet spot" above "Not sure? Start with 3" for a beginner | — | fixed (a435928) |
+| 3.9 | Starting weight | "Pick a weight you could lift about 12 times" means nothing to someone who never squatted; no "start with the empty bar (20 kg)" | — (beginner day-one mockups) | fixed (a435928) |
 | 3.10 | How to | Three text cues, no picture | — (beginner day-one mockups) | needs a decision |
-| 3.11 | Tours | Workout tour covers the first-time hint; step 1 packs four instructions; Home tour is 7 steps with "split" jargon | — | needs a decision |
-| 3.12 | Empty reps box | Logs the bottom of the range (8) silently; a beginner who did 12 never learns to change it | — | needs a decision |
-| 3.13 | Workout summary | "Squat 3 sets · 480 kg" and "Volume (kg) 1,640" after an empty-bar workout | — | needs a decision |
-| 3.14 | Home after workout 1 | "0-week streak"; "Start Day 1 — Full Body A" right after doing it, and A again tomorrow | — (related to 1.15) | needs a decision |
+| 3.11 | Tours | Workout tour covers the first-time hint; step 1 packs four instructions; Home tour is 7 steps with "split" jargon | — | fixed (a435928) |
+| 3.12 | Empty reps box | Logs the bottom of the range (8) silently; a beginner who did 12 never learns to change it | — | fixed (a435928) |
+| 3.13 | Workout summary | "Squat 3 sets · 480 kg" and "Volume (kg) 1,640" after an empty-bar workout | — | fixed (a435928) |
+| 3.14 | Home after workout 1 | "0-week streak"; "Start Day 1 — Full Body A" right after doing it, and A again tomorrow | — (related to 1.15) | fixed (38e5ec7) |
 | 3.15 | Plan card | "A set goes up at 8 reps" beside a plan that didn't go up after 8 | — | needs a decision |
 | 3.16 | "Other plans", "Why?" | Text links, not buttons | — | needs a decision |
 
@@ -99,7 +99,7 @@ client "sam_client" (phone: "I have a coach", the coach's link code), side by si
 | 4.12 | Coach's program with no load, client types set 1 and ticks the rest | Sets 2–3 saved as **0 kg** (10×12, 8×0, 8×0); volume and next plans built on it | A set ticked with no weight and none planned carries the set before it (added/assisted weight too) | fixed (ef7a132) |
 | 4.13 | Web dashboard "Me" for a Studio coach | "Welcome to Pro, dana_coach" | "Welcome to the dashboard" | fixed (ef7a132) |
 | 4.14 | Web dashboard text | "Open Logit", "Get Logit on your phone", … | LogIt | fixed (ef7a132) |
-| 4.15 | Coach's program on the client's Home | Even after Start program, Home says "No exercises planned"; Quick start only offers a blank workout; the program lives in More › Splits | — (Home doesn't know coach programs; design) | needs a decision |
+| 4.15 | Coach's program on the client's Home | Even after Start program, Home says "No exercises planned"; Quick start only offers a blank workout; the program lives in More › Splits | — (Home doesn't know coach programs; design) | fixed (4927772) |
 | 4.16 | Splits tour for a coached client | "Tap New to build a training split" next to the coach's program | — | needs a decision |
 | 4.17 | Bodyweight push-ups after 10/8/8 | Next plan "3 × 5 @ 2.5 kg" (big-lift range 5–8, so extra reps become added weight) | — (progression design: reps first, then a harder variation?) | fixed (e145971) |
 | 4.18 | Program day with no name | "Day 1 — Day 1" | — | fixed (ab4e654) |
@@ -107,7 +107,7 @@ client "sam_client" (phone: "I have a coach", the coach's link code), side by si
 | 4.20 | Client stops coaching | "Their program, check-ins and habits leave your app" — but they stayed, even after sync and reload (the phone only pulled changes, and nothing is sent when coaching ends) | Coach program / check-in / habit / nutrition pulls fetch the whole small list and drop what's no longer assigned; also covers the coach removing a client | fixed (ef7a132) |
 | 4.21 | Coach's web Today with no clients | "Sample clients are already in" when there are none | Said only when samples exist | fixed (ef7a132) |
 | 4.22 | Coach drops from Studio with a client (P9) | Decision 2026-11-11 was "relationships stay, read-only"; in fact the server locks every coaching screen: web shows the raw "This feature requires a Studio-tier account or higher.", the phone hides the client and shows the Studio offer | — needs the server's coaching reads opened for a coach with real clients, and editing turned off in the dashboard (sizeable) | open (important) |
-| 4.23 | Client's coach content | Check-ins are only reachable through More › Splits › From your coach (like the program, 4.15) | — | needs a decision |
+| 4.23 | Client's coach content | Check-ins are only reachable through More › Splits › From your coach (like the program, 4.15) | — | fixed (4927772) |
 | 4.24 | Messages, check-in answers, coach seeing the client's workout, program edits with "Also update" | Worked both ways (messages ~3 s; edits on the next sync) | — | ok |
 
 ## Round 5 — P12 social and notifications (2026-11-22, 3d4716f; plan: docs/testing-social.md)
@@ -189,7 +189,7 @@ off, unplanned workouts, a custom exercise, then a backup file restored on a new
 | 9.5 | Welcome screen | No "restore a backup" for someone without an account (only "Get started" / "I already have an account"); 9.1 covers it for experienced lifters only | — | fixed (ab4e654) |
 | 9.6 | Exercise card | Header "Last time 20 × 12" (kg × reps), set rows "12 × 20" (reps × kg) | — | fixed (fae2566) |
 | 9.7 | Workout summary for bodyweight PR | "Pull-Up · 10 reps @ 0 kg · ≈0 kg 1RM" | — | fixed (fae2566) |
-| 9.8 | Home after unplanned workouts | "Monday's workout moved to today · Start Full Body A", Quick start "Start Day 3 — Full Body C" and Today "Rest day" at once | — (same family as 1.15) | needs a decision |
+| 9.8 | Home after unplanned workouts | "Monday's workout moved to today · Start Full Body A", Quick start "Start Day 3 — Full Body C" and Today "Rest day" at once | — (same family as 1.15) | fixed (38e5ec7) |
 | 9.9 | Offline onboarding and logging, a new exercise, suggestions off (kept through the restore), the backup's contents, T3: suggestions on after unplanned weeks plan from that history (+2.5 kg, "aim 7, 6, 5") | Worked | — | ok |
 
 ## Round 10 — T1, T2, T4, T6: users who change over time (2026-11-22)
@@ -209,7 +209,7 @@ T6: "Ray" (Pro) trains, gets Studio, coaches Lou, on the phone and the web dashb
 | 10.4 | T4: an account that never finished setup signs in from the welcome screen | Lands back on the same welcome screen ("Get started / I already have an account") | Signing in from there carries on at "What do you want from training?" | fixed |
 | 10.5 | T4: coach invites someone by username | Nothing tells them: no notification, the invite only shows on Settings › Coaching | Notification "Dana wants to coach you", opening the Coaching page (web: My coach) | fixed |
 | 10.6 | T4: coach assigns a program | Nothing tells the client it came; it's only in More › Splits | Notification "Dana sent you a program", opening Splits (web: My coach); once per assignment, not per edit | fixed |
-| 10.7 | T4: a client who had her own plan | Home keeps her own plan (first-week card, "Start Day 3 — Full Body C"); the coach's program is never offered there (4.15 from a solo lifter's side) | — | needs a decision |
+| 10.7 | T4: a client who had her own plan | Home keeps her own plan (first-week card, "Start Day 3 — Full Body C"); the coach's program is never offered there (4.15 from a solo lifter's side) | — | fixed (4927772) |
 | 10.8 | T4: right after stopping coaching | The Coaching page shows only "Coach your own clients — Studio is bought in the LogIt Android app"; no way to find or join another coach there | — | fixed (533903f) |
 | 10.9 | T1: three weeks after the fix, account prompts, food card, streak, PRs | Plans move (squat 20 × 8 → 20 × 12 → 22.5 × 8, pulldown 25 → 27.5 kg); two gentle "Save to a free account" prompts (after workouts 1 and 2); the food card can be dismissed; streak counts whole weeks only; PR notifications right | — | ok |
 | 10.10 | T4: Dana's program day, stopping, the server | Program workout planned and logged (Squat 4 × 5 @ 50); Lou's own plan follows it (shared lift history); stopping removes the program, keeps her plan active and all three workouts (the program one named "Heavy · Dana's 4-week strength"); Dana gets 404 for her data and an empty roster | — | ok |
@@ -246,10 +246,10 @@ plans given and taken away by the admin.
 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
-| 12.1 | Free, signs in on a second phone | The free backup moves to that phone. The first phone says so in Settings only ("Your free backup is on another phone…"); Home says nothing, and workouts logged there from then on are on that phone only | decision (where to tell them) | open |
+| 12.1 | Free, signs in on a second phone | The free backup moves to that phone. The first phone says so in Settings only ("Your free backup is on another phone…"); Home says nothing, and workouts logged there from then on are on that phone only | decision (where to tell them) | fixed (850aa5f) |
 | 12.2 | The phone that lost the free backup | Sends all 18 sync requests on every sync and every one is refused (36 per "Sync now") | easy (stop after "backup on another phone" until sign-in or Pro) | fixed (8082c54) |
 | 12.3 | Second phone signs in on the day the plan was made (a Sunday) | "Full Body B and Full Body C won't fit this week. Next week starts fresh." about days before she joined (the plan's start date isn't on that phone) | easy (leave out pre-start workouts) | fixed (8082c54) |
-| 12.4 | Pro → Free with two phones | The phone that signed in last keeps the backup, not the one she trains on | decision | open |
+| 12.4 | Pro → Free with two phones | The phone that signed in last keeps the backup, not the one she trains on | decision | fixed (850aa5f) |
 | 12.5 | Pro given: both phones sync, a workout on A reaches B and the web; Pro taken away: data kept on the server and both phones, web dashboard drops to the upgrade page honestly | Worked | — | ok |
 
 ## Round 13 — P6 uses everything (2026-11-22)
@@ -304,7 +304,7 @@ sets) from onboarding's Import my history, offline. Timed on a desktop browser (
 
 | # | Found | What it did to the user | Size | Status |
 |---|---|---|---|---|
-| 16.1 | Web app storage | Everything lives in localStorage: 312 workouts take 1 MB of the ~5 MB browsers allow, so a web-only lifter fills it after roughly 1,500 workouts (fewer with notes or more sets) and saving would start failing. The Android app uses SQLite and isn't affected | bigger (IndexedDB for the web) / decision (is the web app a real place to train?) | open |
+| 16.1 | Web app storage | Everything lives in localStorage: 312 workouts take 1 MB of the ~5 MB browsers allow, so a web-only lifter fills it after roughly 1,500 workouts (fewer with notes or more sets) and saving would start failing. The Android app uses SQLite and isn't affected | bigger (IndexedDB for the web) / decision (is the web app a real place to train?) | fixed (91d0cda) |
 | 16.2 | Progress screen with 2 years | Longest main-thread block 0.3 s on a desktop CPU (could be ~1 s on a mid phone); other screens 0.05–0.23 s | — (watch on the emulator) | open |
 | 16.3 | Restore (≈6 s), Home, Sessions ("104-week streak"), Progress, Insights ("1 moving, 6 stuck"), weekly sets, an exercise ("Plateaued: no new best in 55 sessions"), Profile: each 1.2–2.2 s to content | Worked | — | ok |
 
