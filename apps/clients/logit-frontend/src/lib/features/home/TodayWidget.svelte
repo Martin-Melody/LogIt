@@ -29,6 +29,13 @@
   import { todayCard, type TodayCard } from "@logit/core/domain/todayCard";
   import type { SplitDay } from "@logit/core/domain/WorkoutSplit";
   import type { StrengthBlockData } from "@logit/core/domain/workout";
+  import { assignedPrograms } from "$lib/stores/assignedPrograms.store";
+  import { getCheckinRepo, getCoachProgramRepo } from "$lib/data/repoProvider";
+  import { listRecentSessions } from "$lib/usecases/listRecentSessions";
+  import { cachedReviews, coachFor } from "$lib/features/coaching/coachCache";
+  import { checkinRows, type CheckinRow } from "@logit/core/domain/Checkin";
+  import { programToday, type ProgramToday } from "@logit/core/domain/programToday";
+  import type { ProgramDay, ProgramStrength } from "@logit/core/domain/CoachProgram";
 
   const LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
   const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -44,6 +51,11 @@
   let lines = $state<Line[]>([]);
   let more = $state(0);
   let picking = $state(false);
+  // A coach's running program leads the card (decision D2); "My own plan today" is a one-off.
+  let coached = $state<ProgramToday | null>(null);
+  let choosing = $state(false);
+  let choice = $state<"program" | "plan" | "empty">("program");
+  let checkin = $state<CheckinRow | null>(null);
 
   $effect(() => {
     const split = $activeSplit;
@@ -59,12 +71,75 @@
       week = null;
     }
     void loadWeeklyStreak().then((s) => (streakWeeks = s.currentWeeks)).catch(() => {});
+    void loadCoached();
   });
+
+  async function loadCoached() {
+    try {
+      const [programs, sessions, activeId] = await Promise.all([
+        assignedPrograms.refresh(),
+        listRecentSessions(30),
+        getCoachProgramRepo().getActiveProgramId().catch(() => null),
+      ]);
+      const now = Date.now();
+      const running = programs
+        .map((p) => programToday(p, sessions, now))
+        .filter((t): t is ProgramToday => t !== null)
+        .sort((a, b) => Number(b.program.id === activeId) - Number(a.program.id === activeId));
+      coached = running[0] ?? null;
+      const [schedules, submissions] = await Promise.all([
+        getCheckinRepo().listAssignedSchedules(),
+        getCheckinRepo().listSubmissions(),
+      ]);
+      checkin = checkinRows(schedules, submissions, cachedReviews()).current.find((r) => r.state === "due" || r.state === "draft" || r.state === "late") ?? null;
+    } catch {
+      coached = null;
+    }
+  }
+
+  // At the start of a line, and mid-sentence, when the coach's name isn't known yet.
+  const coachName = $derived(coached ? (coachFor(coached.program.coachId)?.name ?? "Your coach") : "");
+  const coachRef = $derived(coached ? (coachFor(coached.program.coachId)?.name ?? "your coach") : "");
+  const coach = $derived(coached ? coachFor(coached.program.coachId) : undefined);
+  const programDayName = (day: ProgramDay) => day.name?.trim() || `Day ${day.orderIndex + 1}`;
+  /** "72.5 kg × 8", or "3 × 8" with no weight, from what the coach wrote. */
+  function programTarget(b: ProgramStrength): string | null {
+    const first = b.sets[0];
+    if (!first) return null;
+    const reps = first.reps ?? (first.repsMin != null ? `${first.repsMin}–${first.repsMax ?? ""}` : null);
+    // Weight first, like every set row (bug hunt 9.6): "72.5 kg × 8".
+    if (first.weight) return `${first.weight} kg × ${reps ?? "?"}`;
+    const load = first.percent1RM ? ` · ${first.percent1RM}%` : "";
+    return reps != null ? `${b.sets.length} × ${reps}${load}` : `${b.sets.length} sets${load}`;
+  }
+  function programLines(day: ProgramDay): Line[] {
+    return [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex).slice(0, SHOWN)
+      .map((b) => ({ name: b.type === "strength" ? b.exerciseName : (b as { activityName?: string }).activityName ?? "Cardio", target: b.type === "strength" ? programTarget(b) : null }));
+  }
+
+  async function startProgramDay(day: ProgramDay) {
+    if (!coached) return;
+    choosing = false;
+    if ($currentSession !== null) return void goto("/session/current");
+    const p = coached.program;
+    await getCoachProgramRepo().setActiveProgramId(p.id);
+    await currentSession.startFromProgramDay(day, { id: p.id, name: p.name, coachId: p.coachId ?? coach?.coachId });
+    await goto("/session/current");
+  }
+
+  async function startChoice() {
+    if (choice === "program" && coached?.next) return startProgramDay(coached.next.day);
+    if (choice === "plan" && ownDay) return start(ownDay);
+    choosing = false;
+    await startEmptyWorkout();
+  }
 
   // The day the card shows exercises for: today's, else the next one.
   const startDay = $derived(card.kind === "start" ? card.day : null);
   const nextDay = $derived(card.kind === "done" || card.kind === "rest" ? (card.next?.day ?? null) : null);
   const shownDay = $derived<SplitDay | null>(startDay ?? nextDay);
+  // The client's own plan for today (beside a coach's program): its workout for today, else its next one.
+  const ownDay = $derived(startDay ?? nextDay);
 
   $effect(() => {
     const day = shownDay;
@@ -121,7 +196,8 @@
 
 <Card.Root class="w-full">
   <Card.Content class="flex flex-col gap-4 pt-5">
-    {#if week && week.planned > 0}
+    <!-- The client's own split's week, only while their own plan leads. -->
+    {#if week && week.planned > 0 && !coached}
       <div class="flex items-center justify-between gap-3">
         <div class="flex gap-1.5" role="img"
           aria-label={`This week: ${week.slots.filter((s) => s.state !== "rest").map((s) => `${WEEKDAYS[s.weekday]} ${s.state}`).join(", ")}`}>
@@ -153,7 +229,63 @@
       </div>
     {/if}
 
-    {#if card.kind === "continue"}
+    {#if checkin && card.kind !== "continue"}
+      <div class="flex items-center gap-3 rounded-xl bg-muted/60 px-3.5 py-3">
+        <div class="flex min-w-0 flex-1 flex-col">
+          <span class="text-[15px] font-semibold">{checkin.schedule.name}</span>
+          <span class="text-[13px] text-muted-foreground">{checkin.state === "late" ? "Late" : checkin.state === "draft" ? "Draft saved" : "Due"}{checkin.dueMs ? ` · ${new Date(checkin.dueMs).toLocaleDateString(undefined, { weekday: "long" })}` : ""}</span>
+        </div>
+        <button type="button" class="h-11 shrink-0 rounded-[10px] border border-border px-3.5 text-sm font-medium" onclick={() => goto(`/checkins/${checkin!.schedule.id}`)}>Fill in</button>
+      </div>
+    {/if}
+
+    {#if coached && card.kind !== "continue" && (coached.next || coached.doneToday.length)}
+      {@const day = coached.doneToday.length ? null : coached.next?.day}
+      {#if day && coached.next && coached.next.atMs <= Date.now()}
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-2xl font-bold tracking-tight">{programDayName(day)}</h2>
+            <span class="shrink-0 text-[13px] text-muted-foreground">Today</span>
+          </div>
+          <p class="text-[13px] text-muted-foreground">{coachName}'s program · {coached.program.name} · week {coached.weekNumber} of {coached.totalWeeks} · {coached.doneThisWeek} of {coached.daysThisWeek} this week</p>
+        </div>
+        {@render exerciseList(programLines(day), Math.max(0, day.blocks.length - SHOWN))}
+        <button type="button" class="h-[52px] rounded-xl bg-primary text-base font-semibold text-primary-foreground" onclick={() => void startProgramDay(day)}>Start {programDayName(day)}</button>
+        <div class="flex gap-2">
+          <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => { choice = split ? "plan" : "empty"; choosing = true; }}>{split ? "My own plan today" : "Something else"}</button>
+          {#if coach}
+            <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => goto(`/messages/${coach.relationshipId}`)}>Message {coach.name.split(" ")[0]}</button>
+          {/if}
+        </div>
+      {:else}
+        <div class="flex flex-col gap-1.5">
+          {#if coached.doneToday.length}
+            <div class="flex items-center gap-2.5">
+              <span class="flex size-7 items-center justify-center rounded-full bg-success/15 text-success"><Check class="size-4" strokeWidth={2.6} /></span>
+              <h2 class="text-xl font-bold tracking-tight">{coached.doneToday.map(programDayName).join(" and ")} done</h2>
+            </div>
+          {:else}
+            <h2 class="text-xl font-bold tracking-tight">This week's done</h2>
+          {/if}
+          <p class="text-[13px] text-muted-foreground">{coachName}'s program · week {coached.weekNumber} of {coached.totalWeeks}</p>
+        </div>
+        {#if coached.next}
+          <div class="flex flex-col gap-2.5 border-t border-border pt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-base font-semibold">{programDayName(coached.next.day)}</h3>
+              <span class="shrink-0 text-[13px] text-muted-foreground">Next{coached.next.atMs > Date.now() ? ` · ${when(localDateIso(new Date(coached.next.atMs)))}` : ""}</span>
+            </div>
+            {@render exerciseList(programLines(coached.next.day), Math.max(0, coached.next.day.blocks.length - SHOWN))}
+          </div>
+        {/if}
+        <div class="flex gap-2">
+          {#if coached.next}
+            <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => void startProgramDay(coached!.next!.day)}>Train anyway</button>
+          {/if}
+          <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => void startEmptyWorkout()}>Empty workout</button>
+        </div>
+      {/if}
+    {:else if card.kind === "continue"}
       <div class="flex flex-col gap-3">
         <h2 class="text-xl font-bold tracking-tight">Workout in progress</h2>
         <button type="button" class="h-[52px] rounded-xl bg-primary text-base font-semibold text-primary-foreground" onclick={() => goto("/session/current")}>Continue workout</button>
@@ -218,6 +350,10 @@
 </Card.Root>
 
 {#snippet exercises()}
+  {@render exerciseList(lines, more)}
+{/snippet}
+
+{#snippet exerciseList(lines: Line[], more: number)}
   {#if lines.length}
     <ul class="flex flex-col gap-2.5 text-[15px]">
       {#each lines as line, i (i)}
@@ -241,6 +377,33 @@
           <span class="text-xs text-muted-foreground">{day.blocks.length} exercise{day.blocks.length === 1 ? "" : "s"}</span>
         </button>
       {/each}
+    </div>
+  </BottomSheet>
+{/if}
+
+{#if choosing && coached?.next}
+  <BottomSheet label="What are you training today?" onclose={() => (choosing = false)}>
+    <h2 class="px-5 pb-1 text-lg font-bold">What are you training today?</h2>
+    <p class="px-5 pb-3 text-sm text-muted-foreground">Just for today. {coachRef === "your coach" ? "Your coach" : coachRef}'s program carries on where it left off next time.</p>
+    <div class="flex flex-col gap-2 px-4" role="radiogroup" aria-label="Today's workout">
+      {#each [
+        { id: "program", title: programDayName(coached.next.day), detail: `${coachName}'s program · week ${coached.weekNumber}` },
+        ...(split && ownDay ? [{ id: "plan", title: name(ownDay), detail: `My plan · ${split.name}` }] : []),
+        { id: "empty", title: "Empty workout", detail: "Add exercises as you go" },
+      ] as opt (opt.id)}
+        <button type="button" role="radio" aria-checked={choice === opt.id}
+          class="flex min-h-16 items-center gap-3 rounded-xl border px-3.5 py-3 text-left {choice === opt.id ? 'border-foreground bg-muted' : 'border-border'}"
+          onclick={() => (choice = opt.id as typeof choice)}>
+          <span class="size-5 shrink-0 rounded-full {choice === opt.id ? 'ring-[6px] ring-inset ring-foreground' : 'ring-2 ring-inset ring-muted-foreground'}"></span>
+          <span class="flex flex-col"><span class="text-[15px] font-semibold">{opt.title}</span><span class="text-[13px] text-muted-foreground">{opt.detail}</span></span>
+        </button>
+      {/each}
+    </div>
+    <p class="px-5 pt-3 text-[13px] text-muted-foreground">If you share workouts with {coachRef}, they see this one too. Your own plan leads Home again when the program ends{coached.endsAtMs ? ` on ${new Date(coached.endsAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : ""}.</p>
+    <div class="px-4 pb-5 pt-3">
+      <button type="button" class="h-[52px] w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground" onclick={() => void startChoice()}>
+        Start {choice === "program" ? programDayName(coached.next.day) : choice === "plan" && ownDay ? name(ownDay) : "an empty workout"}
+      </button>
     </div>
   </BottomSheet>
 {/if}
