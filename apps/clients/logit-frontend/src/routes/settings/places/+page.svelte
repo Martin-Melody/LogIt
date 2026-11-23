@@ -52,7 +52,7 @@
     <ArrowLeft class="h-4 w-4" /> Settings
   </button>
   <h1 class="mb-1.5 text-[22px] font-bold">Your places</h1>
-  <p class="mb-5 text-sm text-muted-foreground">Where you train and what's there. Logit uses it to plan weights you can actually pick up. Optional.</p>
+  <p class="mb-5 text-sm text-muted-foreground">Where you train and what's there. LogIt uses it to plan weights you can actually pick up. Optional.</p>
 
   {#if placesStore.active.length > 0}
     <ul class="mb-4 flex flex-col rounded-xl border border-border">

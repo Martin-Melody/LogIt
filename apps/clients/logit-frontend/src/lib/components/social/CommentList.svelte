@@ -18,9 +18,11 @@
     onreply?: (comment: ApiComment) => void;
     /** The reply just sent: its thread opens even if it's folded. */
     justSent?: ApiComment | null;
+    /** Who the comments belong to: they may remove any comment on their post (bug hunt 5.12). */
+    postAuthorId?: string | null;
   }
 
-  let { comments = $bindable(), postId, oncountchange, onreply, justSent = null }: Props = $props();
+  let { comments = $bindable(), postId, oncountchange, onreply, justSent = null, postAuthorId = null }: Props = $props();
 
   // Instagram-style threads: replies under their comment, folded behind "View N replies" when
   // there are more than 3. Threads you open (or reply in) stay open.
@@ -270,6 +272,12 @@
           <Trash2 class="h-4 w-4" /> Delete comment
         </button>
       {:else}
+        {#if postAuthorId && authStore.user?.id === postAuthorId}
+          <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-destructive hover:bg-muted/50"
+            onclick={() => { pendingDeleteId = menuComment!.id; menuComment = null; }}>
+            <Trash2 class="h-4 w-4" /> Remove from your post
+          </button>
+        {/if}
         <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50"
           onclick={() => { reportComment = menuComment; menuComment = null; }}>
           <Flag class="h-4 w-4 text-muted-foreground" /> Report comment

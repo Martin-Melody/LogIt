@@ -22,6 +22,9 @@
   import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
   import { canRemind, getWorkoutReminders, mondayFirst, reminderSentence, setWorkoutReminders } from "$lib/features/onboarding/workoutReminders";
   import { markSaveAsked } from "$lib/features/onboarding/afterWorkout";
+  import { planWeek } from "@logit/core/domain/weekPlan";
+  import { localDateIso } from "@logit/core/domain/nutrition";
+  import { planStartIso } from "$lib/features/onboarding/firstWeek";
 
   const saveOnly = page.url.searchParams.get("save") === "again";
   const sessionId = page.url.searchParams.get("id") ?? "";
@@ -29,6 +32,8 @@
   let session = $state<WorkoutSession | null>(null);
   let split = $state<WorkoutSplit | null>(null);
   let doneThisWeek = $state(1);
+  /** Workouts that still fit this week (started on a Sunday: just today's), like Home's card. */
+  let fits = $state<number | null>(null);
   let workoutsSoFar = $state(1);
   let nextTime = $state<{ name: string; text: string }[]>([]);
   let liftCount = $state(0);
@@ -40,7 +45,8 @@
   let reminderNote = $state<string | null>(null);
   let showSave = $state(saveOnly);
 
-  const target = $derived(get(goalsStore).streak.weeklyTarget || split?.days.filter((d) => !d.rest).length || 3);
+  const weekly = $derived(get(goalsStore).streak.weeklyTarget || split?.days.filter((d) => !d.rest).length || 3);
+  const target = $derived(fits !== null && fits < weekly ? Math.max(fits, doneThisWeek) : weekly);
   const workoutDays = $derived(split?.days.filter((d) => !d.rest) ?? []);
   const needed = $derived(split?.schedule === "weekdays" ? workoutDays.length : 0);
   const sentence = $derived(weekdays.length ? reminderSentence(weekdays, time) : "");
@@ -69,6 +75,10 @@
     const all = await getWorkoutRepo().listAllSessions();
     workoutsSoFar = all.length;
     doneThisWeek = new Set(all.filter((s) => s.startedAtMs >= weekStart()).map((s) => new Date(s.startedAtMs).toDateString())).size || 1;
+    if (split?.schedule === "weekdays") {
+      const w = planWeek(split, all, localDateIso(new Date()), planStartIso());
+      fits = w.onSchedule;
+    }
     if (session) {
       const lifts = getExercises(session).filter((ex) => ex.sets.some((s) => s.completed));
       liftCount = lifts.length;
@@ -126,7 +136,7 @@
       const dayNames: Record<number, string> = {};
       for (const d of get(activeSplit)?.days ?? []) if (d.weekday !== undefined && d.name) dayNames[d.weekday] = d.name;
       const result = await setWorkoutReminders({ on: remind, weekdays, time, dayNames, permissionDenied: getWorkoutReminders()?.permissionDenied });
-      if (result === "denied" && remind) reminderNote = "Reminders are off. You can turn them on in Android's settings for Logit.";
+      if (result === "denied" && remind) reminderNote = "Reminders are off. You can turn them on in Android's settings for LogIt.";
       if (!apiClient.isAuthenticated()) {
         showSave = true;
         saving = false;
@@ -151,7 +161,7 @@
 
 <div class="flex flex-col min-h-screen bg-background text-foreground px-6 pt-12 pb-7">
   {#if !saveOnly}
-    <p class="text-[13px] font-semibold text-muted-foreground mb-1">Workout {doneThisWeek} of {target} this week</p>
+    <p class="text-[13px] font-semibold text-muted-foreground mb-1">Workout {doneThisWeek} of {target} this week{target < weekly ? ". Your first full week starts Monday" : ""}</p>
     <h1 class="text-[26px] font-bold mb-3.5">{session?.name || session?.source?.dayName || "Workout"}, done</h1>
     <div class="grid gap-1.5 mb-5" style="grid-template-columns: repeat({target}, minmax(0, 1fr))" role="img" aria-label="{doneThisWeek} of {target} workouts this week">
       {#each Array.from({ length: target }) as _, i (i)}
@@ -200,7 +210,7 @@
           </label>
         {/if}
         {#if explainReminder}
-          <p class="text-[13px] text-muted-foreground">One notification on your training days, nothing else. Android will ask if Logit may send it.</p>
+          <p class="text-[13px] text-muted-foreground">One notification on your training days, nothing else. Android will ask if LogIt may send it.</p>
         {/if}
       </div>
     {/if}

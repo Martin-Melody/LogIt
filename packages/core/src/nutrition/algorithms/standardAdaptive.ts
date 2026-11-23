@@ -87,15 +87,16 @@ export const standardAdaptive: NutritionAlgorithm = {
       // or both. Say exactly what's missing rather than always blaming height/birth date —
       // those are commonly already set when this fires. kcal 0 → the usecase shows the
       // "incomplete" state unless a manual override is set.
-      const missingProfile =
-        goal.heightCm == null || goal.heightCm <= 0 || goal.birthDateIso == null;
-      const missingWeight = !(input.currentWeightKg != null && input.currentWeightKg > 0);
-      const sourceLabel =
-        missingProfile && missingWeight
-          ? "Add height, birth date & a recent weight"
-          : missingProfile
-            ? "Add height & birth date"
-            : "Log a recent weight";
+      // Only what's missing: "Add height & birth date" when only the birth date was (bug hunt 13.6).
+      const missing = [
+        ...(goal.heightCm == null || goal.heightCm <= 0 ? ["height"] : []),
+        ...(goal.birthDateIso == null ? ["birth date"] : []),
+        ...(!(input.currentWeightKg != null && input.currentWeightKg > 0) ? ["a recent weight"] : []),
+      ];
+      const joined = missing.length > 1 ? `${missing.slice(0, -1).join(", ")} & ${missing.at(-1)}` : (missing[0] ?? "");
+      const sourceLabel = !missing.length ? "Finish your nutrition profile"
+        : missing.length === 1 && missing[0] === "a recent weight" ? "Log a recent weight"
+        : `Add ${joined}`;
       return { kcal: 0, sourceLabel };
     }
 

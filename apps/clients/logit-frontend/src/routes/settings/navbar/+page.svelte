@@ -8,10 +8,10 @@
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import * as Card from "$lib/components/ui/card";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { navConfig, NAV_ITEM_DEFS, BAR_SLOTS } from "$lib/stores/navConfig.store";
+  import { navConfig, NAV_ITEM_DEFS, BAR_SLOTS, canCoach } from "$lib/stores/navConfig.store";
 
-  function isAvailable(def: { authRequired: boolean }): boolean {
-    return !def.authRequired || authStore.isAuthenticated;
+  function isAvailable(def: { authRequired: boolean; coachOnly?: boolean }): boolean {
+    return (!def.authRequired || authStore.isAuthenticated) && (!def.coachOnly || canCoach());
   }
 
   const visibleBarCount = $derived(

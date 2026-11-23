@@ -74,6 +74,10 @@
     }
   }
 
+  /** Whose report it is: "Crash · sam", "Crash · no account", or the username for a sent report. */
+  const who = (r: DiagnosticsRow) =>
+    r.kind === "crash" ? `Crash · ${r.user?.username ?? "no account"}` : (r.user?.username ?? "no account");
+
   const btn = "inline-flex h-[34px] items-center whitespace-nowrap rounded-[9px] bg-muted px-3 text-[13px] font-medium hover:bg-accent disabled:opacity-50";
   const code = "rounded bg-muted px-1.5 py-0.5 font-mono text-xs";
 </script>
@@ -92,12 +96,12 @@
           <li>
             <a href="/admin/diagnostics?id={r.id}" aria-current={selectedId === r.id ? "page" : undefined}
               class="block rounded-lg px-3 py-2.5 hover:bg-muted {selectedId === r.id ? 'bg-muted' : ''}">
-              <span class="flex justify-between gap-3 text-sm font-medium"><span class="truncate">{r.user.username}</span><span class="shrink-0 text-xs font-normal text-muted-foreground">{when(at(r.createdAt))}</span></span>
+              <span class="flex justify-between gap-3 text-sm font-medium"><span class="truncate">{who(r)}</span><span class="shrink-0 text-xs font-normal text-muted-foreground">{when(at(r.createdAt))}</span></span>
               <span class="block truncate text-[13px] text-muted-foreground">{r.platform} · {r.appVersion}{r.note ? ` · "${r.note}"` : ""}</span>
             </a>
           </li>
         {:else}
-          <li class="px-3 py-3 text-[13px] text-muted-foreground">No reports. People can send one from the app's Settings › Diagnostics.</li>
+          <li class="px-3 py-3 text-[13px] text-muted-foreground">No reports. People can send one from the app's Settings › Diagnostics; test builds send crashes by themselves.</li>
         {/each}
       </ul>
     {/if}
@@ -114,8 +118,8 @@
         <a href="/admin/diagnostics" class="{btn} self-start md:hidden"><ArrowLeftIcon class="mr-1.5 size-4" />All reports</a>
         <div class="flex flex-wrap items-start gap-2.5">
           <div class="min-w-0 flex-[1_1_300px]">
-            <h2 class="text-[22px] font-bold tracking-tight">{r.user.username}, {when(at(r.createdAt), Date.now(), true)}</h2>
-            <p class="text-[13px] text-muted-foreground">{r.platform} · app {r.appVersion} · <a href="/admin/people?id={r.user.id}" class="text-primary hover:underline">their page</a></p>
+            <h2 class="text-[22px] font-bold tracking-tight">{who(r)}, {when(at(r.createdAt), Date.now(), true)}</h2>
+            <p class="text-[13px] text-muted-foreground">{r.platform} · app {r.appVersion}{#if r.deviceId} · phone {r.deviceId.slice(0, 6)}{/if}{#if r.user} · <a href="/admin/people?id={r.user.id}" class="text-primary hover:underline">their page</a>{/if}</p>
           </div>
           <button type="button" class={btn} onclick={copy}>Copy log</button>
           <button type="button" class={btn} onclick={() => remove(r)}>Delete</button>

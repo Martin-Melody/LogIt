@@ -11,6 +11,7 @@
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
+  import { crashReportsOn } from "$lib/platform/crashReports";
   import {
     clearLog,
     formatLog,
@@ -283,7 +284,7 @@ Last: {new Date(e.tLast ?? e.t).toLocaleString()}
       <Card.Header>
         <Card.Title>Send to Logit</Card.Title>
         <Card.Description>
-          Something not working? Send this log and the device details above to the Logit team.
+          Something not working? Send this log and the device details above to the LogIt team.
           It's linked to your account so we can look into it, and deleted after 30 days.
         </Card.Description>
       </Card.Header>
@@ -295,7 +296,7 @@ Last: {new Date(e.tLast ?? e.t).toLocaleString()}
           </p>
           <Button variant="ghost" size="sm" class="w-fit" onclick={() => (sentRef = null)}>Send another</Button>
         {:else}
-          <Textarea bind:value={note} maxlength={2000} rows={3}
+          <Textarea bind:value={note} maxlength={2000} rows={3} aria-label="What happened"
             placeholder="What happened? (optional) e.g. my workout from this morning isn't on my other phone" />
           <Button class="w-fit" disabled={sending} onclick={send}>{sending ? "Sending…" : "Send report"}</Button>
         {/if}
@@ -304,10 +305,16 @@ Last: {new Date(e.tLast ?? e.t).toLocaleString()}
   {:else if info}
     <p class="px-1 text-xs text-muted-foreground">
       {#if info.serverMode === "cloud" && !info.signedIn}
-        Sign in to send this log to the Logit team, or save the file and send it yourself.
-      {:else}
+        Sign in to send this log to the LogIt team, or save the file and send it yourself.
+      {:else if !crashReportsOn}
         Nothing here is sent anywhere. To share it, use Copy or Save file.
       {/if}
+    </p>
+  {/if}
+  {#if crashReportsOn && info?.serverMode !== "selfhosted"}
+    <p class="px-1 text-xs text-muted-foreground">
+      This is a test build: if the app crashes, the error and the log lines before it are sent to the Logit
+      team by themselves. Nothing you logged (workouts, food, notes) is in them.
     </p>
   {/if}
 </div>

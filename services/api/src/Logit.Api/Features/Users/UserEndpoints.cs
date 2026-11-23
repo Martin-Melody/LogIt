@@ -85,6 +85,10 @@ public static class UserEndpoints
                 u.AvatarUrl,
                 FollowerCount = u.Followers.Count,
                 IsFollowing = u.Followers.Any(f => f.FollowerId == callerId),
+                // A private account already asked shows "Requested", not "Follow" again.
+                IsRequested = db.FollowRequests.Any(r => r.RequesterId == callerId && r.TargetId == u.Id),
+                FollowsYou = db.Follows.Any(f => f.FollowerId == u.Id && f.FollowedId == callerId),
+                u.IsPrivate,
             })
             .ToListAsync();
 
@@ -102,6 +106,7 @@ public static class UserEndpoints
         var isSelf = false;
         var isFollowing = false;
         var requested = false;
+        var followsYou = false;
 
         if (caller.Identity?.IsAuthenticated == true)
         {
@@ -115,10 +120,11 @@ public static class UserEndpoints
                     return Results.NotFound();
                 isFollowing = await db.Follows.AnyAsync(f => f.FollowerId == callerId && f.FollowedId == user.Id);
                 requested = !isFollowing && await db.FollowRequests.AnyAsync(r => r.RequesterId == callerId && r.TargetId == user.Id);
+                followsYou = await db.Follows.AnyAsync(f => f.FollowerId == user.Id && f.FollowedId == callerId);
             }
         }
 
-        return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing, requested));
+        return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing, requested, followsYou));
     }
 }
 

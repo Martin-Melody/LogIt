@@ -20,9 +20,18 @@ describe("recentSessionsWidget", () => {
     const list = view.body[0];
     expect(list.kind).toBe("list");
     if (list.kind === "list") {
-      expect(list.items[0].sublabel).toBe("Top: Bench 3×80");
+      expect(list.items[0].sublabel).toBe("Top: Bench 80 kg × 3");
       expect(list.items[0].action).toEqual({ navigate: "/sessions/a" });
     }
+  });
+
+  it("shows bodyweight work as reps, not × 0 (bug hunt 13.5)", () => {
+    const view = recentSessionsWidget.compute({
+      ...base,
+      workouts: [{ id: "a", startedAtMs: NOW - 3600_000, endedAtMs: NOW - 1800_000, exercises: [{ name: "Push-Up", sets: [{ weight: 0, reps: 15 }] }] }],
+    });
+    const list = view.body[0];
+    if (list.kind === "list") expect(list.items[0].sublabel).toBe("Top: Push-Up 15 reps");
   });
 
   it("is empty with no sessions", () => {

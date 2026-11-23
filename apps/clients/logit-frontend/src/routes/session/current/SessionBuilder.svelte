@@ -59,6 +59,7 @@
   import CurrentSessionHeader from "./Components/CurrentSessionHeader.svelte";
   import MusicBar from "$lib/features/music/MusicBar.svelte";
   import { onWorkoutFinished } from "$lib/features/music/sessionMusic";
+  import { justAdded } from "$lib/features/session/blocks/justAdded";
 
   onMount(() => {
     setTimeout(() => autoTour("app.session"), 600);
@@ -381,7 +382,13 @@
   async function addAndTick(updater: (s: WorkoutSession) => WorkoutSession): Promise<string | null> {
     const forGroup = groupUi.adding ? groupUi.anchorId : null;
     const before = new Set((getSessionOrNull()?.blocks ?? []).map((b) => b.id));
-    await onMutate(updater);
+    await onMutate((cur) => {
+      const next = updater(cur);
+      // Marked inside the update, before the new block renders, so it opens on arrival.
+      const had = new Set(cur.blocks.map((b) => b.id));
+      for (const b of next.blocks) if (!had.has(b.id)) justAdded.add(b.id);
+      return next;
+    });
     if (!forGroup || groupUi.anchorId !== forGroup) return null;
     const added = (getSessionOrNull()?.blocks ?? [])
       .map((b) => b.id)
@@ -887,7 +894,6 @@
         class="size-12 rounded-full shadow-lg"
         disabled={ui.saving || ui.finishing}
         aria-label="Add block"
-        data-guide="session-add-exercise"
         onclick={openAddBlock}
       >
         <Plus class="size-5" />

@@ -142,7 +142,8 @@
         {#if profile.isSelf}
           <button type="button" onclick={() => (editing = true)} class="h-9 rounded-[9px] border border-border px-3.5 text-[13px] font-medium hover:bg-muted">Edit profile</button>
         {:else}
-          <FollowButton username={profile.username} bind:status isPrivate={!!profile.isPrivate} primary class="h-9 px-3.5 text-[13px]" onchange={onFollowChange} />
+          {#if profile.followsYou}<span class="text-xs text-muted-foreground">Follows you</span>{/if}
+          <FollowButton username={profile.username} bind:status isPrivate={!!profile.isPrivate} followsYou={!!profile.followsYou} primary class="h-9 px-3.5 text-[13px]" onchange={onFollowChange} />
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
               {#snippet child({ props })}

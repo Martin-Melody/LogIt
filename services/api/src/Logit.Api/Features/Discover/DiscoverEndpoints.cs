@@ -45,9 +45,17 @@ public static class DiscoverEndpoints
             return Results.Ok(new { people = Array.Empty<object>(), hidden = true, arm = (string?)null });
 
         var (items, arm) = await discover.PeopleAsync(userId, Math.Clamp(limit, 1, 30));
+        // Someone who follows you shows "Follow back" (people you follow or asked aren't suggested).
+        var ids = items.Select(i => i.User.Id).ToList();
+        var followsYou = (await db.Follows.Where(f => f.FollowedId == userId && ids.Contains(f.FollowerId)).Select(f => f.FollowerId).ToListAsync()).ToHashSet();
         return Results.Ok(new
         {
-            people = items.Select(i => new { user = i.User.ToProfileDto(false, i.FollowerCount), i.Reason, i.Recipe }),
+            people = items.Select(i => new
+            {
+                user = i.User.ToProfileDto(false, i.FollowerCount, followsYou: followsYou.Contains(i.User.Id)),
+                i.Reason,
+                i.Recipe,
+            }),
             hidden = false,
             arm,
         });

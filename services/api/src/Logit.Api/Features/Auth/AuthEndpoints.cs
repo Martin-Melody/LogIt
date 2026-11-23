@@ -54,6 +54,11 @@ public static class AuthEndpoints
             : req.Username.Trim().ToLowerInvariant();
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
 
+        // The sign-up form says letters, numbers and underscores: a space or a dot breaks
+        // @mentions and profile links, so the server holds to it too.
+        if (!Usernames.IsValid(normalizedUsername))
+            return Results.BadRequest(new { error = "Usernames are 3–30 letters, numbers or underscores.", code = "bad_username", field = "username" });
+
         if (await db.Users.AnyAsync(u => u.Username == normalizedUsername))
             return Results.Conflict(new { error = "Username already taken." });
 
@@ -79,7 +84,7 @@ public static class AuthEndpoints
             Username = normalizedUsername,
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-            DisplayName = req.DisplayName.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(req.DisplayName) ? normalizedUsername : req.DisplayName.Trim(),
             InviteId = inviteId,
             IsAdmin = withKey,
             // New accounts start in Discover (they can turn it off in Social settings); older
@@ -166,13 +171,19 @@ public static class AuthEndpoints
 
         // Other devices keep their tokens: signing in on a second phone must not sign the
         // first one out. Every token is revoked only on a password reset (ResetPassword).
-        // The phone signing in holds a Free account's backup from now on (FreeBackup).
-        Sync.FreeBackup.MoveTo(user, httpRequest.Headers[Sync.FreeBackup.DeviceHeader]);
+        // The phone signing in holds a Free account's backup from now on (FreeBackup), unless
+        // another phone holds it and the app asks first (decision D5, bug hunt 12.1).
+        var device = Sync.FreeBackup.Normalize(httpRequest.Headers[Sync.FreeBackup.DeviceHeader]);
+        var elsewhere = req.AskBeforeMovingBackup
+            && !config.GetValue<bool>("Deployment:SelfHosted")
+            && user.Tier == UserTier.Free
+            && device is not null && user.BackupDeviceId is not null && user.BackupDeviceId != device;
+        if (!elsewhere) Sync.FreeBackup.MoveTo(user, device);
         var refresh = tokens.CreateRefreshToken(user.Id, DeviceLabel.From(httpRequest));
         db.RefreshTokens.Add(refresh);
         await db.SaveChangesAsync();
 
-        return Results.Ok(BuildAuthResponse(user, refresh, tokens, config));
+        return Results.Ok(BuildAuthResponse(user, refresh, tokens, config) with { BackupElsewhere = elsewhere });
     }
 
     private static async Task<IResult> Refresh(

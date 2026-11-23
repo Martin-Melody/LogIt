@@ -171,9 +171,9 @@
           <Server class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         {/if}
         <p class="text-xs text-muted-foreground flex-1 min-w-0 truncate">
-          {serverMode === "cloud" ? "Logit cloud" : "Self-hosted"}
+          {serverMode === "cloud" ? "LogIt cloud" : "Self-hosted"}
         </p>
-        <Button variant="ghost" size="sm" class="text-muted-foreground h-7 text-xs shrink-0"
+        <Button variant="ghost" size="sm" class="text-muted-foreground h-11 -my-1.5 text-xs shrink-0"
           onclick={() => void authStore.logout()}>
           Sign out
         </Button>

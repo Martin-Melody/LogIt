@@ -92,6 +92,11 @@ describe("sessionTitle", () => {
     expect(sessionTitle(legs, { musclesOf })).toBe("Legs");
   });
 
+  it("goes by the built-in exercises when no list is given, like the web (bug hunt 7.2)", () => {
+    const push = session(4, [strength("Bench Press", [set(80, 5)]), strength("Overhead Press", [set(40, 8)]), strength("Triceps Pushdown", [set(20, 12)])]);
+    expect(sessionTitle(push)).toBe("Push");
+  });
+
   it("falls back to the first exercise, Mobility, or the activity", () => {
     expect(autoSessionName(legs)).toBe("Squat");
     expect(autoSessionName(session(3, [hold("Pigeon", [30])]))).toBe("Mobility");

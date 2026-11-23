@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildStarterPlan, starterPlanToSplit } from "./starterPlan";
-import { planWeek, weekPlanLine } from "./weekPlan";
+import { planWeek, weekChipLabel, weekPlanLine } from "./weekPlan";
 import { dayOfWeek } from "./dateIso";
 
 // Upper / Lower on Mon, Tue, Thu, Fri (canvas O8). 2026-11-16 is a Monday.
@@ -51,11 +51,33 @@ describe("this week of a weekday plan", () => {
     expect(weekPlanLine(p, 3)).toBe("Four to go, five days left.");
   });
 
+  it("a Thursday start on Mon/Wed/Fri asks for what fits its days, and never names a day before it (round 10)", () => {
+    const mwf = { ...starterPlanToSplit(buildStarterPlan({ goal: "fit", experience: "new", days: 3, equipment: "gym", minutes: 45 })), createdAtMs: 0 };
+    expect(mwf.days.filter((d) => !d.rest).map((d) => d.weekday)).toEqual([1, 3, 5]);
+    const [a, b] = mwf.days.filter((d) => !d.rest);
+    // Full Body A done on the day they joined: Friday is left on their days, not Thu + Fri + Sat.
+    const thu = planWeek(mwf, [did("2026-11-26", a!.id)], "2026-11-26", "2026-11-26");
+    expect(thu.onSchedule).toBe(2);
+    // Friday skipped: on Saturday B (a Wednesday workout, before they joined) is today, not "moved".
+    const sat = planWeek(mwf, [did("2026-11-26", a!.id)], "2026-11-28", "2026-11-26");
+    expect(sat.slots[5]).toMatchObject({ dayId: b!.id, state: "today" });
+    expect(sat.slots[5]!.movedFromWeekday).toBeUndefined();
+    expect(weekPlanLine(sat, 6)).toBe("Friday's workout moved to Sunday. Two to go, two days left.");
+  });
+
   it("on a device without the saved start, the split's own date stands in (made Saturday, nothing moved)", () => {
     const madeSat = { ...split, createdAtMs: at("2026-11-21", 19) };
     const p = planWeek(madeSat, [], "2026-11-21");
     expect(p.moves).toEqual([]);
     expect(weekPlanLine(p, 6)).not.toContain("moved");
+  });
+
+  it("a plan made on Sunday doesn't call its weekday workouts left over (bug hunt 12.3)", () => {
+    const mwf = { ...starterPlanToSplit(buildStarterPlan({ goal: "fit", experience: "new", days: 3, equipment: "gym", minutes: 45 })), createdAtMs: at("2026-11-22", 10) };
+    const p = planWeek(mwf, [], "2026-11-22");
+    expect(p.leftOver).toEqual([]);
+    expect(p.remaining).toBe(1);
+    expect(weekPlanLine(p, 0)).toBe("One to go, today left.");
   });
 
   it("last week's workouts don't count", () => {
@@ -97,5 +119,17 @@ describe("Today's plan follows the moved week (canvas O8)", () => {
   it("without the week, each workout stays on its weekday (splits people set up themselves)", async () => {
     const { planSplit } = await import("./splitSchedule");
     expect(planSplit(split, { last: null }, "2026-11-18").startNext?.name).toBe("Upper B");
+  });
+});
+
+describe("week strip chips (bug hunt 8.3)", () => {
+  it("drops the words every day shares: Full Body A / B / C are A, B, C", () => {
+    const week = ["Full Body A", "Full Body B", "Full Body C"];
+    expect(week.map((n) => weekChipLabel(n, week))).toEqual(["A", "B", "C"]);
+  });
+  it("keeps what tells days apart when they differ", () => {
+    const week = ["Upper A", "Lower A", "Upper B"];
+    expect(week.map((n) => weekChipLabel(n, week))).toEqual(["Up A", "Lo A", "Up B"]);
+    expect(weekChipLabel("Push", ["Push", "Pull"])).toBe("Push");
   });
 });

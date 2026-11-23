@@ -102,7 +102,7 @@
 <div class="flex max-w-[1000px] flex-col gap-[18px]">
   <header>
     <h1 class="text-[26px] font-bold tracking-tight">Server</h1>
-    <p class="mt-0.5 text-sm text-muted-foreground">Settings and health for this Logit server. Things marked in amber need a look.</p>
+    <p class="mt-0.5 text-sm text-muted-foreground">Settings and health for this LogIt server. Things marked in amber need a look.</p>
   </header>
 
   {#if error}
@@ -185,7 +185,7 @@
         {#if info.canDownloadBackup}<button type="button" class="{btn} bg-primary font-semibold text-primary-foreground" disabled={busy === "backup"} onclick={downloadBackup}>{busy === "backup" ? "Making a copy…" : "Download a backup"}</button>{/if}
       </div>
       {#if info.selfHosted}
-        <p class="text-[13px] leading-relaxed text-muted-foreground">Logit doesn't back this server up. Everything people sync (workouts, plans, posts, coaching) is in one database on this machine. If the disk fails, the machine is reinstalled or someone runs <code class={code}>docker compose down -v</code>, it's gone. Phones keep their own copy of each person's training, but not of everything else.</p>
+        <p class="text-[13px] leading-relaxed text-muted-foreground">LogIt doesn't back this server up. Everything people sync (workouts, plans, posts, coaching) is in one database on this machine. If the disk fails, the machine is reinstalled or someone runs <code class={code}>docker compose down -v</code>, it's gone. Phones keep their own copy of each person's training, but not of everything else.</p>
         <p class="text-[13px] leading-relaxed text-muted-foreground">Keep copies somewhere else: another disk, another computer, or cloud storage.</p>
         {#if info.canDownloadBackup}
           <p class="text-[13px] leading-relaxed text-muted-foreground">To make one every night, add this to the server's crontab (<code class={code}>crontab -e</code>) with your <code class={code}>ADMIN_KEY</code> from .env, and point the path somewhere that isn't this disk:</p>

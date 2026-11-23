@@ -53,7 +53,8 @@ public sealed class DiscoverService(AppDbContext db, DiscoverExperiment experime
     public static IQueryable<User> EligiblePeople(DiscoverContext ctx)
     {
         var excluded = ctx.Excluded.ToList();
-        return ctx.Db.Users.Where(u => !u.HideFromSuggestions && !u.IsSample && u.Origin == null && !excluded.Contains(u.Id));
+        // Admins run the server; they aren't people to follow (bug hunt 5.7).
+        return ctx.Db.Users.Where(u => !u.HideFromSuggestions && !u.IsSample && !u.IsAdmin && u.Origin == null && !excluded.Contains(u.Id));
     }
 
     /// Takes the recipes' lists in turn: each recipe adds its best item not already in the

@@ -116,6 +116,8 @@ public static class CoachEndpoints
             relationship.ApplySharing(SharingDto.All);
             relationship.UpdatedAt = DateTime.UtcNow;
         }
+        // Otherwise nothing tells them: the invite only shows on their Coaching page.
+        db.Notifications.Add(new Notification { UserId = client.Id, ActorId = coachId, Type = NotificationType.CoachInvite });
         await db.SaveChangesAsync();
 
         return Results.Created($"/coach/invites/{relationship.Id}", new { relationshipId = relationship.Id });
@@ -439,6 +441,7 @@ public static class CoachEndpoints
                 DeletedAtMs = req.DeletedAtMs,
             };
             db.CoachPrograms.Add(stored);
+            if (recipientUserId.HasValue && !req.DeletedAtMs.HasValue) NotifyProgram(db, coachId, recipientUserId.Value);
             await db.SaveChangesAsync();
             return Results.Ok(new { id = stored.Id, programId = stored.ProgramId, updatedAtMs = stored.UpdatedAtMs });
         }
@@ -456,7 +459,11 @@ public static class CoachEndpoints
         if (recipientUserId.HasValue)
         {
             // A new client starts the program afresh.
-            if (stored.RecipientUserId != recipientUserId) stored.StartedAtMs = null;
+            if (stored.RecipientUserId != recipientUserId)
+            {
+                stored.StartedAtMs = null;
+                if (!req.DeletedAtMs.HasValue) NotifyProgram(db, coachId, recipientUserId.Value);
+            }
             stored.RecipientUserId = recipientUserId;
             stored.RelationshipId = relationshipId;
         }
@@ -464,6 +471,10 @@ public static class CoachEndpoints
         await db.SaveChangesAsync();
         return Results.Ok(new { id = stored.Id, programId = stored.ProgramId, updatedAtMs = stored.UpdatedAtMs });
     }
+
+    /// A program reaches the client's phone on its next sync, but nothing else said it came.
+    private static void NotifyProgram(AppDbContext db, Guid coachId, Guid clientId) =>
+        db.Notifications.Add(new Notification { UserId = clientId, ActorId = coachId, Type = NotificationType.CoachProgram });
 
     private static async Task<IResult> GetMyPrograms(
         [FromQuery] Guid? recipientId,

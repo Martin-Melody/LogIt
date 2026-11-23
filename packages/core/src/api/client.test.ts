@@ -56,6 +56,32 @@ describe("api errors", () => {
   });
 });
 
+describe("sync the plan doesn't include (bug hunt 12.2, 4.9)", () => {
+  it("asks once, then stops sending a refused /sync request until an hour has passed or the plan changes", async () => {
+    await apiClient.reloadSession();
+    vi.useFakeTimers();
+    try {
+      const fetch = vi.fn(async () => reply(403, { error: "Your free backup is on another phone.", code: "backup_other_device" }));
+      vi.stubGlobal("fetch", fetch);
+      for (let i = 0; i < 3; i++) {
+        const err = await apiClient.fetch("/sync/splits").catch((e) => e);
+        expect(err).toMatchObject({ status: 403, code: "backup_other_device" });
+      }
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(apiClient.isBackupElsewhere()).toBe(true);
+      // Other routes and other requests aren't held back.
+      await apiClient.fetch("/sync/habits").catch(() => {});
+      await apiClient.fetch("/users/me").catch(() => {});
+      expect(fetch).toHaveBeenCalledTimes(3);
+      vi.advanceTimersByTime(60 * 60 * 1000);
+      await apiClient.fetch("/sync/splits").catch(() => {});
+      expect(fetch).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("forgetPickedServer", () => {
   it("does nothing when no server was picked", async () => {
     localStorage.setItem("logit:auth:access", "a");

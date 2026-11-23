@@ -113,7 +113,7 @@ export const learnedMuscleGroupInsight: MuscleGroupInsightAlgorithm = {
   name: "Learned (personalized)",
   description:
     "Learns your personal sweet spot per muscle group from your own training history — a median-split correlation between weekly volume and session-over-session improvement, silent until there's real support for a claim.",
-  author: "Logit",
+  author: "LogIt",
   defaultState: null,
   analyze,
 };

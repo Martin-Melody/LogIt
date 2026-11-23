@@ -20,6 +20,10 @@ describe("the page the card opens on", () => {
     expect(v.subtitle).toBe("Day 2 — Lower · Scheduled");
   });
 
+  it("says next in your rotation for a rotation split, which has no schedule (bug hunt 14.4)", async () => {
+    expect((await view({ dateIso: "2026-11-13", rotation: true })).subtitle).toBe("Day 2 — Lower · Next in your rotation");
+  });
+
   it("says Later today with what's done", async () => {
     const v = await view({ dateIso: "2026-11-13", doneToday: ["Lower"] });
     expect(v.title).toBe("Later today");

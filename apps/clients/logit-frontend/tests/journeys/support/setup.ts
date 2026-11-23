@@ -3,7 +3,7 @@
 // (the SQLite database, localStorage/Preferences, the secure token store) lives on the
 // simulated device in device.ts, so `device.launch()` can drop every module and boot the app
 // again against the same phone.
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
 import { currentDevice } from "./deviceState";
 
 // A plugin that does nothing: every method resolves to {}, listeners can be added and removed.
@@ -122,3 +122,26 @@ vi.mock("@capacitor/status-bar", () => ({ StatusBar: noopPlugin(), Style: enumLi
 vi.mock("@capacitor/share", () => ({ Share: noopPlugin() }));
 vi.mock("@capacitor-mlkit/barcode-scanning", () => ({ BarcodeScanner: noopPlugin(), BarcodeFormat: enumLike() }));
 vi.mock("@capacitor-mlkit/text-recognition", () => ({ TextRecognition: noopPlugin() }));
+
+// Each test's phones stop when it ends, so no timer from one test reaches the next. Module
+// reloads between phones mean a timer can belong to a copy of a module the phone no longer
+// holds (the 20 s notification check), so every interval a test started is cleared as well.
+const intervals = new Set<ReturnType<typeof setInterval>>();
+const realSetInterval = globalThis.setInterval;
+const realClearInterval = globalThis.clearInterval;
+globalThis.setInterval = ((...args: Parameters<typeof setInterval>) => {
+  const id = realSetInterval(...args);
+  intervals.add(id);
+  return id;
+}) as typeof setInterval;
+globalThis.clearInterval = ((id?: ReturnType<typeof setInterval>) => {
+  if (id !== undefined) intervals.delete(id);
+  realClearInterval(id);
+}) as typeof clearInterval;
+
+afterEach(async () => {
+  const { stopAllDevices } = await import("./device");
+  await stopAllDevices();
+  for (const id of intervals) realClearInterval(id);
+  intervals.clear();
+});

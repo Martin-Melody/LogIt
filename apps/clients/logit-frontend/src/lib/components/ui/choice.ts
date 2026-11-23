@@ -9,12 +9,12 @@ import { cn } from "$lib/utils.js";
  * - Chip: filters and wrapping lists (exercise filter, settings sections,
  *   machines). Rounded pill, filled when selected.
  */
-export const segmentTrack = "flex h-10 items-stretch gap-0.5 rounded-lg bg-muted p-[3px] text-sm";
+export const segmentTrack = "flex h-11 items-stretch gap-0.5 rounded-lg bg-muted p-[3px] text-sm";
 
 export function segment(selected: boolean, className?: string): string {
   return cn(
     // The ::after stretches the tap area over the track's 3px padding, so the
-    // whole 40px track height is the target, not just the 34px pill.
+    // whole 44px track height is the target (the touch-size guideline, decision D10), not just the 38px pill.
     "relative inline-flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 font-medium tabular-nums transition-colors disabled:opacity-50 after:absolute after:-inset-y-[3px] after:inset-x-0 after:content-['']",
     selected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
     className,
@@ -23,7 +23,7 @@ export function segment(selected: boolean, className?: string): string {
 
 export function chip(selected: boolean, className?: string): string {
   return cn(
-    "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-50",
+    "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-50",
     selected
       ? "border-primary bg-primary text-primary-foreground"
       : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground",

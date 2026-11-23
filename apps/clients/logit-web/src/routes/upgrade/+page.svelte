@@ -11,6 +11,7 @@
   import * as Alert from "$lib/components/ui/alert";
   import GetTheApp from "$lib/features/onboarding/GetTheApp.svelte";
   import UsersIcon from "@lucide/svelte/icons/users";
+  import { adminState } from "$lib/features/admin/adminState.svelte";
 
   const user = $derived(apiClient.getUser());
   const MARKETING_URL: string = import.meta.env.VITE_MARKETING_URL || "https://getlogit.app";
@@ -65,7 +66,10 @@
   <div class="flex w-full max-w-[1040px] flex-col gap-2">
     <p class="text-sm text-muted-foreground">Account ready · @{user?.username} · Free</p>
     <h1 class="text-[32px] font-bold leading-tight tracking-tight">Your training starts on your phone</h1>
-    <p class="max-w-[70ch] text-[15px] text-muted-foreground">Logging happens in the gym, so Logit lives on your phone. Your account is ready there too.</p>
+    <p class="max-w-[70ch] text-[15px] text-muted-foreground">Logging happens in the gym, so LogIt lives on your phone. Your account is ready there too.</p>
+    {#if adminState.isAdmin}
+      <Button href="/admin" variant="outline" class="mt-2 w-fit">Open the admin console</Button>
+    {/if}
   </div>
 
   <div class="flex w-full max-w-[1040px] flex-wrap items-stretch gap-5">
@@ -108,7 +112,7 @@
         </div>
       {:else}
         <p class="text-sm leading-relaxed text-muted-foreground">
-          To get Pro, open Logit on your Android phone, signed in as <span class="font-medium text-foreground">@{user?.username}</span>, and go to
+          To get Pro, open LogIt on your Android phone, signed in as <span class="font-medium text-foreground">@{user?.username}</span>, and go to
           Settings › Account › See plans. Google Play takes the payment, and this dashboard opens straight after.
         </p>
       {/if}

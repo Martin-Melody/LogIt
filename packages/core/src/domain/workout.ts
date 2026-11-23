@@ -287,6 +287,9 @@ export type WorkoutSession = {
   id: string;
   startedAtMs: number;
   endedAtMs?: number;
+  /** Last change (finished, edited): with two devices, sync keeps the newer copy. Older
+   * sessions don't have it; their end time stands in (sessionChangedAtMs). */
+  updatedAtMs?: number;
   blocks: SessionBlock[];
   excludeFromProgression?: boolean;
   /** Free-text note for the whole session ("slept badly", "great energy"). */
@@ -749,7 +752,17 @@ export function finishSession(
   session: WorkoutSession,
   endedAtMs: number = nowMs(),
 ): WorkoutSession {
-  return { ...session, endedAtMs };
+  return { ...session, endedAtMs, updatedAtMs: nowMs() };
+}
+
+/** A past session changed by hand (an edit, a merge): stamped so sync keeps it over an older copy. */
+export function touchSession(session: WorkoutSession): WorkoutSession {
+  return { ...session, updatedAtMs: nowMs() };
+}
+
+/** When a session last changed, for sync: its stamp, else its end, else its start. */
+export function sessionChangedAtMs(session: WorkoutSession): number {
+  return session.updatedAtMs ?? session.endedAtMs ?? session.startedAtMs;
 }
 
 export function getSessionDurationMs(session: WorkoutSession): number | null {

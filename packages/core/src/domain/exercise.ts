@@ -74,12 +74,14 @@ export type Exercise = {
   equipment?: Equipment;
   /** Short how-to points shown with the exercise ("Elbows under the bar"). */
   cues?: string[];
+  /** A video of it being done (YouTube), shown in How to and loaded only when tapped (decision D3). */
+  videoUrl?: string;
   media?: LibraryMedia[];
   /** Last edit. Missing on exercises from before the library; sync treats that as 0. */
   updatedAtMs?: number;
 };
 
-export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles" | "exerciseType" | "machines" | "defaultMachineId" | "equipment" | "cues">>;
+export type ExercisePatch = Partial<Pick<Exercise, "name" | "notes" | "primaryMuscles" | "secondaryMuscles" | "exerciseType" | "machines" | "defaultMachineId" | "equipment" | "cues" | "videoUrl">>;
 
 /**
  * Whether an exercise's weights are relative to bodyweight (0 = BW, negative =

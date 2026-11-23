@@ -70,6 +70,8 @@ export type WidgetInput = {
     splitId?: string;
     dayLabel?: string;
     scheduled: boolean;
+    /** A rotation split: the day shown is next in line, not one set for today. */
+    rotation?: boolean;
     /** 0-based position of the shown day, and how many days the split has. */
     dayIndex?: number;
     dayCount?: number;

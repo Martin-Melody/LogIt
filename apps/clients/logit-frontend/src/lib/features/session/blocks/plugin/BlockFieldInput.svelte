@@ -49,7 +49,7 @@
   {:else if field.type === "scale"}
     <div class="grid gap-1.5" style="grid-template-columns: repeat({scale.length}, minmax(0, 1fr))" role="group" aria-label={field.label}>
       {#each scale as s (s)}
-        <button type="button" aria-pressed={value === s} class={chip(value === s, "h-10 rounded-lg px-0")} {disabled} onclick={() => onchange(value === s ? null : s)}>{s}</button>
+        <button type="button" aria-pressed={value === s} class={chip(value === s, "h-11 rounded-lg px-0")} {disabled} onclick={() => onchange(value === s ? null : s)}>{s}</button>
       {/each}
     </div>
   {:else if field.type === "choice" || field.type === "tags"}
@@ -57,7 +57,7 @@
     <div class="flex flex-wrap gap-1.5" role="group" aria-label={field.label}>
       {#each options as o (o)}
         {@const on = picked.includes(o)}
-        <button type="button" aria-pressed={on} class={chip(on, "h-10 px-3 text-[13px]")} {disabled}
+        <button type="button" aria-pressed={on} class={chip(on, "h-11 px-3 text-[13px]")} {disabled}
           onclick={() => onchange(field.type === "tags" ? (on ? picked.filter((x) => x !== o) as string[] : [...(picked as string[]), o]) : on ? null : o)}>{o}</button>
       {/each}
     </div>

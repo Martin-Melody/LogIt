@@ -221,6 +221,17 @@ builder.Services.AddRateLimiter(o =>
                 Window = TimeSpan.FromHours(1),
                 QueueLimit = 0,
             }));
+    // Crash reports need no sign-in: 10 per phone (or address) per hour. The app sends at most
+    // a few per session, so this only stops a crash loop or someone posting junk.
+    o.AddPolicy(DiagnosticsEndpoints.CrashRateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            DiagnosticsEndpoints.DeviceIdOf(ctx) ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0,
+            }));
 });
 
 Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];

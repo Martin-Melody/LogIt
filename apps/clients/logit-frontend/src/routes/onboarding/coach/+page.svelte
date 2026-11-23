@@ -10,6 +10,8 @@
   import { coachApi, SHARE_ALL, type InviteLinkInfo, type Sharing } from "@logit/core/api/coachApi";
   import { authStore } from "$lib/api/authStore.svelte";
   import { onboarding } from "$lib/stores/onboarding.store";
+  import { get } from "svelte/store";
+  import { back } from "$lib/navigation";
   import { resetTours } from "$lib/tour/index";
   import { isNativePlatform } from "$lib/platform/isNative";
   import SharingList from "$lib/components/coaching/SharingList.svelte";
@@ -93,7 +95,7 @@
 
 <div class="flex flex-col min-h-screen bg-background text-foreground px-6 pt-10 pb-7">
   <div class="flex items-center min-h-11">
-    <button type="button" class="flex items-center gap-1 min-h-11 text-sm text-muted-foreground" onclick={() => { onboarding.setStep(1); void goto("/onboarding"); }}>
+    <button type="button" class="flex items-center gap-1 min-h-11 text-sm text-muted-foreground" onclick={() => { if (get(onboarding).completed) { back("/clients"); return; } onboarding.setStep(1); void goto("/onboarding"); }}>
       <ArrowLeft class="h-4 w-4" /> Back
     </button>
   </div>

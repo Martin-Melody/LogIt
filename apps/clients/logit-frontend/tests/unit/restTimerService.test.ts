@@ -11,9 +11,12 @@ vi.mock("$app/navigation", () => ({ goto: vi.fn() }));
 const schedule = vi.fn(async () => {});
 const cancel = vi.fn(async () => {});
 const exactAlarm = { state: "granted" };
+const notifications = { display: "granted" };
+const requestPermissions = vi.fn(async () => ({ display: "granted" }));
 vi.mock("@capacitor/local-notifications", () => ({
   LocalNotifications: {
-    requestPermissions: async () => ({ display: "granted" }),
+    requestPermissions,
+    checkPermissions: async () => ({ display: notifications.display }),
     checkExactNotificationSetting: async () => ({ exact_alarm: exactAlarm.state }),
     schedule,
     cancel,
@@ -168,6 +171,27 @@ describe("rest timer", () => {
       await advance(0);
       expect(toast).toHaveBeenCalledTimes(1);
     } finally {
+      exactAlarm.state = "granted";
+    }
+  });
+
+  it("asks once, at the first rest and in the foreground, for notifications when they were never allowed (bug hunt 17.1)", async () => {
+    notifications.display = "prompt";
+    exactAlarm.state = "denied";
+    try {
+      sessionStore.set(workout(Date.now()));
+      await advance(0);
+      expect(toast).toHaveBeenCalledTimes(1);
+      const [text, opts] = toast.mock.calls[0] as unknown as [string, { action: { label: string; onClick: () => void } }];
+      expect(text).toMatch(/notification when your rest ends/);
+      opts.action.onClick();
+      expect(requestPermissions).toHaveBeenCalled();
+      sessionStore.set(workout(null));
+      sessionStore.set(workout(Date.now()));
+      await advance(0);
+      expect(toast).toHaveBeenCalledTimes(1);
+    } finally {
+      notifications.display = "granted";
       exactAlarm.state = "granted";
     }
   });

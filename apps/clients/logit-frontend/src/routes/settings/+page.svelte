@@ -44,7 +44,8 @@
   import { equipment } from "$lib/stores/equipment.store";
   import { DEFAULT_BARBELL } from "@logit/core/domain/plates";
   import { toDisplayWeight, fromDisplayWeight } from "@logit/core/domain/units";
-  import { syncAll, pushAllLocalData, lastSyncedAt, pushExerciseSetting } from "$lib/sync/syncService";
+  import { syncAll, pushAllLocalData, lastSyncedAt, pushExerciseSetting, syncRunning, planIncludesSync } from "$lib/sync/syncService";
+  import { outboxSize } from "$lib/sync/outbox";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import {
@@ -114,6 +115,7 @@
   }
 
   // --- Account ---
+  let movingBackup = $state(false);
   let serverMode = $state<ServerMode>(getServerMode());
   // The server the account in use lives on, as people know it.
   const serverHost = $derived.by(() => {
@@ -123,9 +125,20 @@
   // What the account card says about backup (design canvas 6). Free accounts on getlogit.app
   // don't sync yet; self-hosted servers include everything.
   // Free accounts back up one phone (the one they last signed in on).
+  // Changes not on the server yet: the last good sync alone said "Backed up · synced just now"
+  // while the server was unreachable (bug hunt 15.1). Re-read whenever a sync starts or ends.
+  const waiting = $derived.by(() => {
+    void [$syncRunning, $lastSyncedAt, connectionStatus.state];
+    return outboxSize();
+  });
+  const waitingText = $derived(`${waiting} change${waiting === 1 ? "" : "s"} waiting`);
   const backupLine = $derived(
     authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()
-      ? "Your free backup is on another phone. Sign in again here to move it, or get Pro to sync both"
+      ? "Your free backup is on your other phone. Move it here, or get Pro to back up both"
+      : connectionStatus.state === "disconnected"
+        ? `Can't reach the server${waiting ? ` · ${waitingText}, kept on this phone` : ""}`
+      : waiting && !$syncRunning
+        ? `${waitingText} to back up`
       : $lastSyncedAt
         ? `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`
         : "Not backed up yet",
@@ -649,11 +662,17 @@
             <span class="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">{apiClient.isSelfHosted() ? "Own server" : authStore.user.tier}</span>
           </div>
           <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><ConnectionDot /> {backupLine}</p>
+          {#if authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()}
+            <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium disabled:opacity-60" disabled={movingBackup}
+              onclick={async () => { movingBackup = true; try { await apiClient.moveBackupHere(); (await import("$lib/sync/syncService")).markFullUploadDue(); await syncAll().catch(() => {}); } catch {} finally { movingBackup = false; } }}>
+              {movingBackup ? "Moving…" : "Move backup here"}
+            </button>
+          {/if}
         </div>
 
         <PlanCard />
 
-        {#if authStore.user.tier !== "Free"}
+        {#if authStore.user.tier !== "Free" || planIncludesSync()}
           <button type="button" data-guide="settings-sync"
             class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             disabled={syncing || serverMode === "offline"}
@@ -675,7 +694,7 @@
             <Users class="h-3.5 w-3.5 shrink-0" />
             <span class="text-left">
               <span class="block">Coaching</span>
-              <span class="block text-xs text-muted-foreground">View invites, or manage clients on a Studio plan</span>
+              <span class="block text-xs text-muted-foreground">{apiClient.isSelfHosted() ? "View invites, or manage your clients" : "View invites, or manage clients on a Studio plan"}</span>
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />
@@ -687,7 +706,7 @@
             <Monitor class="h-3.5 w-3.5 shrink-0" />
             <span class="text-left">
               <span class="block">Sign in on a computer</span>
-              <span class="block text-xs text-muted-foreground">Scan the code on app.getlogit.app, and see where you're signed in</span>
+              <span class="block text-xs text-muted-foreground">Scan the code on {apiClient.isSelfHosted() ? "your server's dashboard" : "app.getlogit.app"}, and see where you're signed in</span>
             </span>
           </span>
           <ChevronRight class="h-4 w-4 shrink-0" />
@@ -1300,6 +1319,7 @@
                   type="number"
                   min="5"
                   max="600"
+                  aria-label="Rest after {label}, seconds"
                   class="h-10 w-16 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                   value={seconds}
                   onchange={(e) =>
@@ -1498,6 +1518,7 @@
             <input
               type="password"
               placeholder="Confirm your password"
+              aria-label="Confirm your password"
               autocomplete="current-password"
               class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={deleteAccountPassword}

@@ -131,6 +131,9 @@
   // WebView still has history (after deleting or signing out of the last account).
   $effect(() => onBack(() => (step > 0 ? go(prevStep(step)) : void import("@capacitor/app").then(({ App }) => App.exitApp()))));
 
+  // Restore a backup opened from the welcome screen: its Back goes back there.
+  let fromWelcome = $state(false);
+
   function go(next: number) {
     onboarding.setStep(next);
     if (next === 4) {
@@ -151,12 +154,12 @@
     { id: "2plus", title: "2+ years", blurb: "A plan that keeps up with you" },
     { id: "compete", title: "I compete", blurb: "Powerlifting: the big three come first" },
   ];
-  const DAYS: { days: DaysPerWeek; label: string; blurb: string }[] = [
+  const DAYS: { days: DaysPerWeek; label: string; blurb: string }[] = $derived([
     { days: 2, label: "2 days", blurb: "Busy weeks" },
-    { days: 3, label: "3 days", blurb: "Steady progress" },
-    { days: 4, label: "4 days", blurb: "The sweet spot" },
+    { days: 3, label: "3 days", blurb: answers.experience === "new" ? "A good start" : "Steady progress" },
+    { days: 4, label: "4 days", blurb: "Each muscle twice a week" },
     { days: 5, label: "5–6 days", blurb: "All in" },
-  ];
+  ]);
   const WEEK = [1, 2, 3, 4, 5, 6, 0];
   const WEEK_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -409,6 +412,10 @@
         <button type="button" class="h-12 rounded-lg border border-border text-[15px] font-medium" onclick={() => goto("/auth?mode=login")}>
           I already have an account
         </button>
+        <!-- A LogIt backup file, without an account (bug hunt 9.5): the import screen restores it. -->
+        <button type="button" class="h-11 rounded-lg text-sm font-medium text-muted-foreground" onclick={() => { fromWelcome = true; go(8); }}>
+          Restore a backup
+        </button>
       </div>
     </div>
 
@@ -545,7 +552,7 @@
   {:else if step === 8}
     <div class="flex flex-col flex-1 px-6 pt-10 pb-7" in:fade={{ duration: 150 }}>
       <!-- A CSV shared to LogIt before onboarding was done is opened here ("onboarding"). -->
-      <ImportFlow onexit={() => go(5)} ondone={() => void afterImport()} shared="onboarding" />
+      <ImportFlow onexit={() => { go(fromWelcome ? 0 : 5); fromWelcome = false; }} ondone={() => void afterImport()} onrestored={() => { resetTours(); onboarding.complete(); }} shared="onboarding" />
     </div>
 
   {:else if step === 9}

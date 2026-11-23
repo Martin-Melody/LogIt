@@ -57,6 +57,7 @@
                 max={field.max}
                 step={field.step ?? 1}
                 value={getNum(field.key)}
+                aria-label={field.unit ? `${field.label}, ${field.unit}` : field.label}
                 class="h-10 w-20 rounded-md border bg-background px-2 text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                 onchange={(e) => onChange(field.key, Number((e.target as HTMLInputElement).value))}
               />

@@ -363,9 +363,9 @@ describe("getSuggestion — a best lift typed in at onboarding", () => {
   it("plans LogIt Adaptive's sets from it and says so in Why", async () => {
     const out = await plan("logit-adaptive");
     const weight = out!.sets[0]!.weight;
-    // Estimated max 175 kg; a working set sits well under it but near the entered 150 × 5.
-    expect(weight).toBeGreaterThan(120);
-    expect(weight).toBeLessThanOrEqual(150);
+    // Estimated max 175 kg; day one is planned about 10% under it (decision D4), so well under 150 × 5.
+    expect(weight).toBeGreaterThan(105);
+    expect(weight).toBeLessThanOrEqual(135);
     expect(out!.reasoning!.summary![0]).toContain("best lift you entered: 150 kg × 5");
     expect(out!.reasoning!.summary!.join(" ")).not.toContain("today");
     expect(out!.change?.text).toBe("From your best lift");
@@ -383,5 +383,43 @@ describe("getSuggestion — a best lift typed in at onboarding", () => {
     const weight = out!.sets[0]!.weight;
     expect(weight).toBeGreaterThan(110);
     expect(weight).toBeLessThan(150);
+  });
+});
+
+describe("getSuggestion — set count outside a workout", () => {
+  const echo: ProgressionAlgorithm = {
+    id: "echo",
+    name: "Echo",
+    description: "test double",
+    defaultState: null,
+    suggest: (input) => ({ sets: [], nextState: null, label: `sets:${input.plannedTargets?.sets ?? "none"}` }),
+  };
+  const set = (orderIndex: number, setType = "normal") => ({ id: `s${orderIndex}`, setType, reps: 10, weight: 4, orderIndex, completed: true });
+  const session = {
+    id: "sess_1",
+    startedAtMs: 1_000,
+    endedAtMs: 2_000,
+    blocks: [
+      { id: "b1", type: "strength", orderIndex: 0, data: { exerciseName: "Lateral Raise", sets: [set(0, "warmup"), set(1), set(2)] } },
+    ],
+  };
+  const deps = {
+    workoutRepo: { listRecentSessions: async () => [session], listAllSessions: async () => [session] },
+    exerciseRepo: { getById: async () => null, getByName: async () => null },
+    progressionRepo: {
+      getConfig: async () => ({ algorithmId: "echo" }),
+      getExerciseState: async () => null,
+      getAlgorithmPreferences: async () => null,
+      listExerciseStates: async () => [],
+    },
+    algorithmRegistry: { get: async () => echo },
+  } as unknown as ProgressionDeps;
+
+  it("plans as many working sets as last time (warm-ups not counted), like Home's Progression card", async () => {
+    expect((await getSuggestion({ name: "Lateral Raise" }, deps))?.label).toBe("sets:2");
+  });
+
+  it("leaves a given plan alone", async () => {
+    expect((await getSuggestion({ name: "Lateral Raise" }, deps, { sets: 4 }))?.label).toBe("sets:4");
   });
 });

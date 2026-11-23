@@ -1,4 +1,4 @@
-import type { ProgressionAlgorithm, ProgressionGoalInput, ProgressionInput, ProgressionOutput, PrecedingExercise } from "../../domain/progression";
+import type { ProgressionAlgorithm, ProgressionGoalInput, ProgressionInput, ProgressionOutput, PrecedingExercise, ExerciseHistoryEntry } from "../../domain/progression";
 import { liftGoalPace, sameExercise, type Goal } from "../../domain/goals";
 import { getExerciseProgressionSettings, getMuscleSetTargets, resolveAlgorithmId } from "./exerciseProgressionSettings";
 import { strengthEstimate } from "../../progression/algorithms/adaptiveProgression";
@@ -197,7 +197,7 @@ export async function getSuggestion(
     history,
     state,
     userPreferences,
-    plannedTargets,
+    plannedTargets: plannedTargets ?? (currentSession ? undefined : lastTimeSets(history)),
     incrementOverride,
     sessionContext,
     suggestedTrialRepRange,
@@ -399,4 +399,11 @@ async function muscleWeekFor(
   const custom = (await getMuscleSetTargets(deps).catch(() => null))?.[muscle];
   const target = setTargetFor(muscle, undefined, custom);
   return { muscle, done: Math.round(done * 10) / 10, lo: target.lo, hi: target.hi };
+}
+
+/** Outside a workout (Home, the first-workout summary, progress pages) there's no split day to
+ * say how many sets: plan as many working sets as last time, not the algorithm's default 3. */
+function lastTimeSets(history: ExerciseHistoryEntry[]): PlannedTargets | undefined {
+  const n = history[0]?.sets.filter((s) => (s.setType === "normal" || !s.setType) && s.reps > 0).length ?? 0;
+  return n > 0 ? { sets: n } : undefined;
 }

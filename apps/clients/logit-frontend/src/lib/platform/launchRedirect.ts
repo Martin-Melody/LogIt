@@ -16,6 +16,7 @@ export function launchRedirect(s: {
 }): string | null {
   if (!s.ready || isAccountScreen(s.path)) return null;
   if (s.needsAccountAuth) return "/auth";
-  if (!s.onboardingCompleted) return "/onboarding";
+  // The plans page is part of onboarding for a coach ("See the Studio plan").
+  if (!s.onboardingCompleted && !s.path.startsWith("/plans")) return "/onboarding";
   return null;
 }
