@@ -72,6 +72,14 @@ describe("this week of a weekday plan", () => {
     expect(weekPlanLine(p, 6)).not.toContain("moved");
   });
 
+  it("a plan made on Sunday doesn't call its weekday workouts left over (bug hunt 12.3)", () => {
+    const mwf = { ...starterPlanToSplit(buildStarterPlan({ goal: "fit", experience: "new", days: 3, equipment: "gym", minutes: 45 })), createdAtMs: at("2026-11-22", 10) };
+    const p = planWeek(mwf, [], "2026-11-22");
+    expect(p.leftOver).toEqual([]);
+    expect(p.remaining).toBe(1);
+    expect(weekPlanLine(p, 0)).toBe("One to go, today left.");
+  });
+
   it("last week's workouts don't count", () => {
     expect(planWeek(split, [did("2026-11-13", upA!.id)], "2026-11-16").done).toBe(0);
   });

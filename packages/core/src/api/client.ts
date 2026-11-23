@@ -28,6 +28,7 @@ function deviceId(): string | null {
 
 const USER_KEY = "logit:auth:user";
 const SELF_HOSTED_KEY = "logit:auth:selfHosted";
+const REFUSED_SYNC_KEY = "logit:sync:refused";
 // serverConfig.ts's MODE_KEY (it imports this file, so the name is repeated here).
 const SERVER_MODE_KEY = "logit:server:mode";
 // Each of these is stored per account on the phone: see sessionScope.ts.
@@ -138,6 +139,8 @@ function routeOf(path: string): string {
 }
 
 const SLOW_REQUEST_MS = 5000;
+const REFUSED_SYNC_MS = 60 * 60 * 1000;
+const BACKUP_ELSEWHERE_MESSAGE = "Your free backup is on another phone. Sign in on this phone to move it here, or get Pro to sync both.";
 
 class ApiClient {
   private tokens: StoredTokens | null = null;
@@ -146,6 +149,28 @@ class ApiClient {
   private refreshPromise: Promise<boolean> | null = null;
   /** A Free account whose backup is held by another phone (the server said so); signing in here moves it back. */
   private backupElsewhere = false;
+  /** /sync routes the server refused (403) for this account's plan, and when. Asked again after
+   * REFUSED_SYNC_MS, a sign-in or a plan change: a phone without the free backup (or Free on the
+   * web) sent every sync request on every sync, all refused (bug hunt 12.2, 4.9). Kept per
+   * account on the phone so reopening the app doesn't send them all again. */
+  private refusedSync = new Map<string, { at: number; code?: string }>();
+
+  private loadRefusedSync(): void {
+    try {
+      this.refusedSync = new Map(Object.entries(JSON.parse(localStorage.getItem(sessionKey(REFUSED_SYNC_KEY)) ?? "{}")));
+    } catch {
+      this.refusedSync = new Map();
+    }
+  }
+
+  private setRefusedSync(key: string | null, code?: string): void {
+    if (key) this.refusedSync.set(key, { at: Date.now(), ...(code ? { code } : {}) });
+    else this.refusedSync.clear();
+    try {
+      if (this.refusedSync.size) localStorage.setItem(sessionKey(REFUSED_SYNC_KEY), JSON.stringify(Object.fromEntries(this.refusedSync)));
+      else localStorage.removeItem(sessionKey(REFUSED_SYNC_KEY));
+    } catch {}
+  }
 
   async init(): Promise<void> {
     this.tokens = await tokenStorage.get();
@@ -158,6 +183,7 @@ class ApiClient {
       }
       this.cachedIsSelfHosted = localStorage.getItem(sessionKey(SELF_HOSTED_KEY)) === "true";
     }
+    this.loadRefusedSync();
   }
 
   /**
@@ -239,6 +265,7 @@ class ApiClient {
   }
 
   private saveUser(user: AuthUser, isSelfHosted: boolean): void {
+    if (this.cachedUser?.tier !== user.tier) this.setRefusedSync(null);
     this.cachedUser = user;
     this.cachedIsSelfHosted = isSelfHosted;
     localStorage.setItem(sessionKey(USER_KEY), JSON.stringify(user));
@@ -299,6 +326,13 @@ class ApiClient {
     const route = routeOf(path);
     const requestId = newRequestId();
     const started = Date.now();
+    const syncKey = path.startsWith("/sync/") ? `${method} ${route}` : null;
+    const refused = syncKey ? this.refusedSync.get(syncKey) : undefined;
+    if (refused && Date.now() - refused.at < REFUSED_SYNC_MS) {
+      const elsewhere = refused.code === "backup_other_device";
+      if (elsewhere) this.backupElsewhere = true;
+      throw new ApiError(403, elsewhere ? BACKUP_ELSEWHERE_MESSAGE : fallbackErrorMessage(403), refused.code);
+    }
 
     // A caller that brings its own token (withToken) keeps it, and a 401 isn't retried with ours.
     const ownToken = !!(init.headers as Record<string, string> | undefined)?.["Authorization"];
@@ -353,6 +387,7 @@ class ApiClient {
       if (res.status >= 500) log.error("api", `${method} ${route} ${res.status}`, details);
       else log.warn("api", `${method} ${route} ${res.status}`, details);
       if (code === "backup_other_device") this.backupElsewhere = true;
+      if (syncKey && res.status === 403) this.setRefusedSync(syncKey, code);
       throw new ApiError(res.status, message, code);
     }
 
@@ -383,6 +418,7 @@ class ApiClient {
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
     this.backupElsewhere = false; // signing in on this phone moves a Free backup here
+    this.setRefusedSync(null);
     return data.user;
   }
 
@@ -418,6 +454,7 @@ class ApiClient {
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
     this.backupElsewhere = false; // signing in on this phone moves a Free backup here
+    this.setRefusedSync(null);
     return data.user;
   }
 

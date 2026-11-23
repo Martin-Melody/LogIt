@@ -44,7 +44,8 @@
   import { equipment } from "$lib/stores/equipment.store";
   import { DEFAULT_BARBELL } from "@logit/core/domain/plates";
   import { toDisplayWeight, fromDisplayWeight } from "@logit/core/domain/units";
-  import { syncAll, pushAllLocalData, lastSyncedAt, pushExerciseSetting } from "$lib/sync/syncService";
+  import { syncAll, pushAllLocalData, lastSyncedAt, pushExerciseSetting, syncRunning, planIncludesSync } from "$lib/sync/syncService";
+  import { outboxSize } from "$lib/sync/outbox";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import {
@@ -123,9 +124,20 @@
   // What the account card says about backup (design canvas 6). Free accounts on getlogit.app
   // don't sync yet; self-hosted servers include everything.
   // Free accounts back up one phone (the one they last signed in on).
+  // Changes not on the server yet: the last good sync alone said "Backed up · synced just now"
+  // while the server was unreachable (bug hunt 15.1). Re-read whenever a sync starts or ends.
+  const waiting = $derived.by(() => {
+    void [$syncRunning, $lastSyncedAt, connectionStatus.state];
+    return outboxSize();
+  });
+  const waitingText = $derived(`${waiting} change${waiting === 1 ? "" : "s"} waiting`);
   const backupLine = $derived(
     authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()
       ? "Your free backup is on another phone. Sign in again here to move it, or get Pro to sync both"
+      : connectionStatus.state === "disconnected"
+        ? `Can't reach the server${waiting ? ` · ${waitingText}, kept on this phone` : ""}`
+      : waiting && !$syncRunning
+        ? `${waitingText} to back up`
       : $lastSyncedAt
         ? `Backed up · synced ${formatLastSynced($lastSyncedAt).toLowerCase()}`
         : "Not backed up yet",
@@ -653,7 +665,7 @@
 
         <PlanCard />
 
-        {#if authStore.user.tier !== "Free"}
+        {#if authStore.user.tier !== "Free" || planIncludesSync()}
           <button type="button" data-guide="settings-sync"
             class="w-full flex items-center justify-between border-t border-border py-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             disabled={syncing || serverMode === "offline"}

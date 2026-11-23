@@ -86,11 +86,17 @@ export function planWeek(
   const moves: WeekPlan["moves"] = [];
   const leftOver: WeekPlan["leftOver"] = [];
   let pointer = doneOn.has(t) ? t + 1 : t;
+  let notDue = 0;
   for (const day of remaining) {
     const original = pos(day.weekday!);
     let at = Math.max(pointer, original);
     while (doneOn.has(at) && at < 7) at++;
     if (at > 6) {
+      // Its day came before the plan started, so it was never due: not "won't fit this week".
+      if (start && dates[original]! < start) {
+        notDue++;
+        continue;
+      }
       leftOver.push({ dayId: day.id, dayName: dayLabel(split, day) });
       continue;
     }
@@ -132,7 +138,7 @@ export function planWeek(
     slots,
     done: doneOn.size,
     planned: workouts.length,
-    remaining: remaining.length,
+    remaining: remaining.length - notDue,
     daysLeft: 7 - t,
     moves,
     leftOver,
