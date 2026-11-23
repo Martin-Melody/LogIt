@@ -126,7 +126,7 @@
       suggestedSets = out?.sets ?? [];
       await maybePrefillTargets(out?.sets ?? [], true);
       toast(keepsSame ? `${data.drillName}: the same holds every time` : `${data.drillName} progresses again`, {
-        description: "Change it here, or for every drill in Settings › Mobility progression.",
+        description: "Change it here, or for every drill in Settings › Mobility.",
       });
     } finally {
       switching = false;

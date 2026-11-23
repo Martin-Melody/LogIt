@@ -58,7 +58,7 @@ async function plannedSets(page: Page): Promise<string> {
 
 test("build an algorithm, preview it, and use it on one exercise", async ({ page }) => {
   await seed(page);
-  await page.goto("/settings");
+  await page.goto("/settings/progression");
   await page.getByRole("button", { name: "Build an algorithm" }).click();
   await page.waitForURL(/\/settings\/progression\/build\/new/);
 

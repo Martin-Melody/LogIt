@@ -10,10 +10,19 @@ title: Settings and your home screen
 
 <FeatureFacts id="settings" />
 
+## Finding a setting
+
+Settings is a short list of pages. Under Training: Workout, Progression, Mobility, Units & equipment,
+Places, Music and Sounds. Under App: Appearance, Insights, Plugins, and Backup & import. Each row
+shows what it's set to, so you can check without opening it. Your account is the card at the top.
+
+Search at the top of Settings finds a setting by name and opens its page with that setting
+highlighted. On a tablet or computer the list stays on the left and the page opens beside it.
+
 ## Home screen and bottom bar
 
 Choose what the home screen shows, and in what order, with the Customise home button (the sliders) at
-the top of Home. Settings › Customise navigation decides which pages sit in the bottom bar; the rest are
+the top of Home. Settings › Appearance › Customise navigation decides which pages sit in the bottom bar; the rest are
 under More.
 
 ## Music during a workout
@@ -24,7 +33,7 @@ The first time, LogIt asks you to switch it on in Android's Notification access.
 access to see and control what's playing; it doesn't read your notifications, and no Spotify or Google
 sign-in is needed.
 
-Settings › Session › Music has the rest: paste a playlist's share link to save it, link a playlist to a
+Settings › Music has the rest: paste a playlist's share link to save it, link a playlist to a
 day of your split, start that playlist when a workout starts, and pause the music when you finish. The
 music bar isn't on iPhone or the web.
 
@@ -32,7 +41,7 @@ music bar isn't on iPhone or the web.
 
 <FeatureFacts id="import-workouts" />
 
-Settings › Backup & Restore › Import workouts brings in your history from a spreadsheet saved as CSV,
+Settings › Backup & import › Import workouts brings in your history from a spreadsheet saved as CSV,
 one row per set: the date, the exercise, and the reps (or seconds for a hold, or a distance for cardio).
 Weight, unit, RPE, set type and notes come across too if the file has them. The screen has a template
 to start from.

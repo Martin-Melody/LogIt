@@ -560,7 +560,7 @@ export const PHONE_CHAPTERS: Chapter[] = [
   {
     id: "phone.sync", walkthrough: "pro", title: "Sync and your devices", blurb: "How your phone and the web stay the same", minutes: 1, feature: "sync",
     steps: [
-      ph("sync", "/settings", "settings-sync", "Synced", "With Pro your workouts, splits, habits, goals and food lists sync by themselves whenever you're online. Sync now does it straight away. Everything is also on the web dashboard at app.getlogit.app."),
+      ph("sync", "/settings/account", "settings-sync", "Synced", "With Pro your workouts, splits, habits, goals and food lists sync by themselves whenever you're online. Sync now does it straight away. Everything is also on the web dashboard at app.getlogit.app."),
     ],
   },
   {

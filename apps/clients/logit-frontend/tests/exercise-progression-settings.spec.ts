@@ -71,7 +71,7 @@ test("a rep range set on bench changes its plan and shows in Settings", async ({
   await page.goto("/session/current");
   await expect.poll(() => plannedSets(page)).toBe("5×100kg|4×100kg|3×100kg");
 
-  await page.goto("/settings");
+  await page.goto("/settings/progression");
   await expect(page.getByTestId("exercise-overrides")).toContainText("Bench Press");
   await expect(page.getByTestId("exercise-overrides")).toContainText("3–6 reps");
 
@@ -79,7 +79,7 @@ test("a rep range set on bench changes its plan and shows in Settings", async ({
   await page.goto("/exercises/core_bench_press");
   await page.getByRole("tab", { name: "Settings" }).click();
   await page.getByRole("region", { name: "How it progresses" }).getByRole("radio", { name: /^Default/ }).click();
-  await page.goto("/settings");
+  await page.goto("/settings/progression");
   await expect(page.getByTestId("exercise-overrides")).toContainText("None yet");
 });
 

@@ -8,35 +8,55 @@ async function bypass(page: Page) {
 }
 
 test.describe("settings", () => {
-  test("Units section switches weight unit and persists it", async ({ page }) => {
+  test("a row opens its page, which switches the weight unit and keeps it", async ({ page }) => {
     await bypass(page);
     await page.goto("/settings");
-    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("link", { name: /^Units & equipment/ })).toContainText("kg · cm");
 
-    const units = page.locator("#sec-units");
-    await expect(units).toContainText("Weight");
-    await expect(units).toContainText("Height");
-
-    // Default is kg; switch to lb.
+    await page.getByRole("link", { name: /^Units & equipment/ }).click();
+    await expect(page).toHaveURL(/\/settings\/units$/);
+    const units = page.locator("#units");
     await units.getByRole("button", { name: "lb", exact: true }).click();
 
     await expect
-      .poll(async () =>
-        page.evaluate(() => {
-          const p = JSON.parse(localStorage.getItem("logit:profile:v1") ?? "{}");
-          return p.weightUnit;
-        }),
-      )
+      .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("logit:profile:v1") ?? "{}").weightUnit))
       .toBe("lbs");
+    await page.getByRole("button", { name: "Back" }).click();
+    await expect(page.getByRole("link", { name: /^Units & equipment/ })).toContainText("lb · cm");
   });
 
-  test("quick-nav jumps to a section", async ({ page }) => {
+  test("search finds a setting and opens its page at it", async ({ page }) => {
     await bypass(page);
     await page.goto("/settings");
-    await page.waitForLoadState("networkidle");
+    await page.getByPlaceholder("Search settings").fill("plate");
+    await expect(page.getByRole("link", { name: /^Plates/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Your places/ })).toBeVisible();
 
-    await page.getByRole("button", { name: "Danger", exact: true }).click();
-    // The Danger zone card is the scroll target.
-    await expect(page.locator("#sec-danger")).toBeInViewport({ timeout: 5000 });
+    await page.getByRole("link", { name: /^Plates/ }).click();
+    await expect(page).toHaveURL(/\/settings\/units#bar-plates$/);
+    await expect(page.locator("#bar-plates")).toBeInViewport();
+
+    await page.goto("/settings");
+    await page.getByPlaceholder("Search settings").fill("zzz");
+    await expect(page.getByText("No settings match")).toBeVisible();
+  });
+
+  test("an old link to a section lands on its page", async ({ page }) => {
+    await bypass(page);
+    await page.goto("/settings#sec-session");
+    await expect(page).toHaveURL(/\/settings\/workout$/);
+    await expect(page.getByText("Collapse blocks by default")).toBeVisible();
+  });
+
+  test("on a wide screen the list stays beside the open page", async ({ page }) => {
+    await bypass(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/settings");
+    await expect(page).toHaveURL(/\/settings\/account$/);
+
+    await page.getByRole("link", { name: "Workout", exact: true }).click();
+    await expect(page).toHaveURL(/\/settings\/workout$/);
+    await expect(page.getByRole("link", { name: "Workout", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByText("Collapse blocks by default")).toBeVisible();
   });
 });

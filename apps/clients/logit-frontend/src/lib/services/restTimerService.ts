@@ -109,7 +109,7 @@ function reconcile(session: WorkoutSession | null): void {
 const EXACT_ALARMS_ASKED_KEY = "logit:exact-alarms-asked";
 
 /** Android: at the first rest, if LogIt may not set exact alarms, offer it once (the same as
- * Settings › Session › Rest alerts on time). Web and iOS don't have the setting. */
+ * Settings › Workout › Rest alerts on time). Web and iOS don't have the setting. */
 async function askForExactAlarmsOnce(): Promise<void> {
   try {
     if (localStorage.getItem(EXACT_ALARMS_ASKED_KEY)) return;

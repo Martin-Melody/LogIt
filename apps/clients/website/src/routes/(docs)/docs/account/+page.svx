@@ -14,17 +14,17 @@ lets you follow people and have a coach; Pro adds sync between phones and the we
 
 ## Sign in or create an account
 
-On the phone, open Settings and choose Log in. On the web, go to app.getlogit.app.
+On the phone, open Settings, tap the card at the top, and choose Log in. On the web, go to app.getlogit.app.
 
 ## Change your plan
 
-In the Android app, open Settings and use the plan card under Account. Pick Pro or Studio, monthly or
+In the Android app, open Settings › Account and use the plan card. Pick Pro or Studio, monthly or
 yearly; Google Play takes the payment. The web dashboard's Upgrade page explains the plans but can't take
 payment. See [What each plan can do](/docs/plans).
 
 ## Move to another server
 
-On the phone, **Settings › Move to another server** copies your workouts, splits, nutrition, habits
+On the phone, **Settings › Account › Move to another server** copies your workouts, splits, nutrition, habits
 and settings to another server: from getlogit.app to your own, or back. Make a new account there or
 sign in to one you have; if the server is invite-only you'll be asked for the code. The phone only
 switches once everything has been copied, so if the copy stops nothing changes and you can try

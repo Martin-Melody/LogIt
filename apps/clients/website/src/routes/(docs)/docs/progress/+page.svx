@@ -63,5 +63,5 @@ that, each drill moves on instead: load if it takes load, otherwise a harder ver
 ("elbows down to the floor") and harder stretches to switch to, or one you pick, which is remembered.
 **Not yet** asks again the next week. If you'd rather do the same thing every time, like 30-second
 holds, tap **Keep it the same** on the drill in a workout, or pick **Same every time** in Settings ›
-Mobility progression for every drill. Same every time repeats your last session's holds, or starts at 30
+Mobility for every drill. Same every time repeats your last session's holds, or starts at 30
 seconds. Drills you've set on their own are listed there too, with a button to put them back.

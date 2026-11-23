@@ -1,4 +1,4 @@
-// The app-wide circuit defaults (Settings › Session). They live in the profile's
+// The app-wide circuit defaults (Settings › Workout). They live in the profile's
 // `restDefaults` next to the per-set-type rests, under their own keys, so they sync and
 // persist with them without a new column. 0 means off; missing means the built-in default.
 

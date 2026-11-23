@@ -15,7 +15,7 @@ title: Logging a workout
 Tap Quick Start on Home. With an active split, today's day loads with its planned sets; otherwise you
 start an empty workout. Tap the circle on a set when you've done it: it fills in what was planned and
 starts your rest timer, then asks how many more you could have done: one tap, or ignore it. You can turn
-that off in Settings › Session. Tap a set's number for its options right under it: the kind of set, how hard it
+that off in Settings › Workout. Tap a set's number for its options right under it: the kind of set, how hard it
 was, rest after it, a note, or delete. Tap an exercise's name for its progress, how to do it and its
 settings, and the machine under the name to pick, add or fix a machine. Add exercises with +. Tap Finish at the top
 when you're done; progression works out your next targets from it. To throw a workout away, use
