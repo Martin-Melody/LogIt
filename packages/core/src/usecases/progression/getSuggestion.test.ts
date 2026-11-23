@@ -363,9 +363,9 @@ describe("getSuggestion — a best lift typed in at onboarding", () => {
   it("plans LogIt Adaptive's sets from it and says so in Why", async () => {
     const out = await plan("logit-adaptive");
     const weight = out!.sets[0]!.weight;
-    // Estimated max 175 kg; a working set sits well under it but near the entered 150 × 5.
-    expect(weight).toBeGreaterThan(120);
-    expect(weight).toBeLessThanOrEqual(150);
+    // Estimated max 175 kg; day one is planned about 10% under it (decision D4), so well under 150 × 5.
+    expect(weight).toBeGreaterThan(105);
+    expect(weight).toBeLessThanOrEqual(135);
     expect(out!.reasoning!.summary![0]).toContain("best lift you entered: 150 kg × 5");
     expect(out!.reasoning!.summary!.join(" ")).not.toContain("today");
     expect(out!.change?.text).toBe("From your best lift");

@@ -14,6 +14,7 @@ import { estimated1RM } from "../../domain/oneRepMax";
 import { nowMs } from "../../domain/time";
 import { MAX_FATIGUE_DISCOUNT, calibrateSensitivity, computeFatigueScore } from "../fatigue";
 import { linearProgression } from "./linearProgression";
+import { STARTING_LIFT_SESSION_ID } from "../../domain/startingLift";
 
 // LogIt Adaptive: every working set is planned from a current strength estimate, not from
 // last session's sets. The estimate is the best estimated 1RM (Epley) from the last few
@@ -85,6 +86,12 @@ const LAYOFF_MS = 21 * DAY_MS;
 const LAYOFF_FACTOR = 0.95;
 /** Epley is unreliable past this many reps, so longer sets count as this many. */
 const MAX_REPS_FOR_ESTIMATE = 15;
+/** Day one from a typed-in best lift: about 10% under it, not every set to failure (decision D4). */
+const FIRST_SESSION_FACTOR = 0.9;
+/** Short of the plan this many sessions running: say so (decision D4). */
+const STALL_SESSIONS = 3;
+/** Push-ups, dips with no weight added…: reps go up to this before weight is added (decision D4). */
+const BODYWEIGHT_REP_RANGE: [number, number] = [8, 20];
 const DEFAULT_SET_DROP = 1;
 const MIN_DROP_SAMPLES = 4;
 
@@ -193,6 +200,20 @@ export function setToSetDrop(history: ExerciseHistoryEntry[]): { drop: number; s
   return { drop: Math.max(0, Math.min(3, Math.round(mean * 2) / 2)), samples: drops.length, learned: true };
 }
 
+/**
+ * How many of the latest sessions in a row fell short of their planned reps on a working
+ * set. Stops at a session that made them all, or one with nothing planned.
+ */
+export function sessionsShortOfPlan(history: ExerciseHistoryEntry[]): number {
+  let n = 0;
+  for (const h of history) {
+    const planned = workingSetsOf(h).filter((s) => s.target && s.target.reps > 0);
+    if (planned.length === 0 || !planned.some((s) => s.reps < s.target!.reps)) break;
+    n++;
+  }
+  return n;
+}
+
 function suggest(input: ProgressionInput): ProgressionOutput | Promise<ProgressionOutput> {
   const prefs = readPreferences(input.userPreferences);
   const state = (input.state ?? {}) as AdaptiveState;
@@ -215,11 +236,18 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   // Weights relative to bodyweight, and assistance: Linear Progression plans those.
   const bwLoad = usesBodyweightLoad(input.exercise.exerciseType, input.history.flatMap((h) => h.sets.map((s) => s.weight)));
   if (input.exercise.exerciseType === "assisted" || bwLoad) {
+    // Bodyweight with nothing added yet: more reps first, weight only past 20 (push-ups after
+    // 10/8/8 got "5 × +2.5 kg", bug hunt 4.17). A set range, or added weight already, is kept.
+    const addsLoad = input.history.some((h) => h.sets.some((s) => s.weight > 0));
+    const repsFirst = bwLoad && !addsLoad && !plannedReps && !input.repRange;
+    const [bwLo, bwHi] = repsFirst ? BODYWEIGHT_REP_RANGE : [lo, hi];
     return Promise.resolve(
       linearProgression.suggest({
         ...input,
+        // As the exercise's own range: Linear keeps the range in its saved state otherwise.
+        ...(repsFirst ? { repRange: BODYWEIGHT_REP_RANGE } : {}),
         state: state.linear ?? null,
-        userPreferences: { repRangeMin: lo, repRangeMax: hi, workingSets: plannedSets ?? prefs.workingSets, increment: prefs.increment, suggestionDetail: "block" },
+        userPreferences: { repRangeMin: bwLo, repRangeMax: bwHi, workingSets: plannedSets ?? prefs.workingSets, increment: prefs.increment, suggestionDetail: "block" },
       }),
     ).then((out) => ({
       ...out,
@@ -230,8 +258,11 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
     }));
   }
 
-  const estimate = strengthEstimate(input.history, now);
   const last = input.history[0];
+  const measured = strengthEstimate(input.history, now);
+  // Nothing logged yet, only the best lift typed in: plan about 10% under it (bug hunt 14.3).
+  const fromStartingLift = last?.sessionId === STARTING_LIFT_SESSION_ID;
+  const estimate = measured && fromStartingLift ? { ...measured, kg: measured.kg * FIRST_SESSION_FACTOR } : measured;
   const lastWorking = last ? workingSetsOf(last) : [];
   const setCount = plannedSets ?? Math.max(prefs.workingSets, Math.min(lastWorking.length, 6));
 
@@ -342,6 +373,7 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
   const summary = [
     `Your strength estimate is ${fmtKg(Math.round(estimate.kg))}, from ${fmtKg(estimate.from.weight).replace(" kg", "")} × ${estimate.from.reps}${estimate.from.asPlanned ? " as planned (counted as 1 more in the tank)" : estimate.from.left ? ` with ${estimate.from.left} left` : ""} ${whenLabel(estimate.from.performedAtMs, now)}.`,
     ...(estimate.layoff ? ["It's been over three weeks since you trained this, so the estimate is taken 5% lower."] : []),
+    ...(fromStartingLift ? ["It's your first session from the best lift you entered, so it's planned about 10% lighter. From the next one, your own sets plan it."] : []),
     `For ${rangeText} ${effortText}, that's about ${fmtKg(topWeight)}.`,
     drop.learned
       ? `Your reps usually drop by about ${drop.drop} a set, so the sets aim for ${sets.map((s) => s.reps).join(", ")}.`
@@ -385,10 +417,18 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
     summary,
   };
 
+  // Short of the plan three sessions running: the estimate has stopped moving. Said, not forced:
+  // never "missed", never red (bug hunt 10.2).
+  const short = sessionsShortOfPlan(input.history);
+  const notes = short >= STALL_SESSIONS
+    ? `Short of the plan ${short} sessions running. A lighter session, about 10% off, often gets it moving again.`
+    : undefined;
+
   return {
     sets,
     nextState: { ...state, estimateKg: Math.round(estimate.kg * 10) / 10 } satisfies AdaptiveState,
     displayMode: "block",
+    ...(notes ? { notes } : {}),
     change,
     reasoning,
     progressGoal: { reps: aimReps },
