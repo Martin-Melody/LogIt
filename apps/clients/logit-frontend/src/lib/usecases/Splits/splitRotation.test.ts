@@ -51,4 +51,34 @@ describe("getSplitPlan, from the workouts themselves", () => {
     expect(plan.doneToday).toEqual([]);
     expect(plan.laterToday.map((d) => d.id)).toEqual(["pull"]);
   });
+
+  it("Martin's week: Push B&B Legs B&B Push, rest, rest; started from Splits, so no pointer", () => {
+    const ppl = {
+      ...split,
+      days: [
+        { id: "push1", orderIndex: 0, name: "Push", blocks: [] },
+        { id: "bb1", orderIndex: 1, name: "Back & Biceps", blocks: [] },
+        { id: "legs", orderIndex: 2, name: "Legs", blocks: [] },
+        { id: "bb2", orderIndex: 3, name: "Back & Biceps", blocks: [] },
+        { id: "push2", orderIndex: 4, name: "Push", blocks: [] },
+        { id: "r1", orderIndex: 5, name: "Rest", rest: true, blocks: [] },
+        { id: "r2", orderIndex: 6, name: "Rest", rest: true, blocks: [] },
+      ],
+    } as unknown as WorkoutSplit;
+    const week = [
+      done("push2", new Date(2026, 10, 20, 7, 2)),
+      done("bb2", new Date(2026, 10, 19, 7, 2)),
+      done("legs", new Date(2026, 10, 18, 7, 22)),
+      done("bb1", new Date(2026, 10, 17, 7, 8)),
+      done("push1", new Date(2026, 10, 16, 7, 32)),
+    ];
+    // Monday morning: the rest days are over, Push is today.
+    sessions = week;
+    expect(getSplitPlan(ppl, new Date(2026, 10, 23, 6, 30)).laterToday.map((d) => d.id)).toEqual(["push1"]);
+    // Monday evening, Push done: Back & Biceps tomorrow.
+    sessions = [done("push1", new Date(2026, 10, 23, 7, 8)), ...week];
+    const evening = getSplitPlan(ppl, new Date(2026, 10, 23, 18, 0));
+    expect(evening.doneToday.map((d) => d.id)).toEqual(["push1"]);
+    expect(evening.next).toMatchObject({ dateIso: "2026-11-24", days: [{ id: "bb1" }] });
+  });
 });
