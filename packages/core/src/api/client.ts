@@ -1,3 +1,4 @@
+import { normalizeServerUrl } from "./testConnection";
 import { tokenStorage, type StoredTokens } from "./tokenStorage";
 import { getSessionScope, sessionKey } from "./sessionScope";
 import { log } from "../platform/log";
@@ -519,7 +520,7 @@ class ApiClient {
   // Self-hosting
 
   setBaseUrl(url: string): void {
-    localStorage.setItem(sessionKey(BASE_URL_KEY), url.replace(/\/$/, ""));
+    localStorage.setItem(sessionKey(BASE_URL_KEY), normalizeServerUrl(url));
   }
 
   getBaseUrl(): string {
