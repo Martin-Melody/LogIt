@@ -253,7 +253,7 @@
           {/if}
           <div class="grid grid-cols-2 gap-2" role="group" aria-label="Weight unit">
             {#each [["kg", "kg"], ["lb", "lb"]] as [u, label] (u)}
-              <button type="button" aria-pressed={unit === u} class={chip(unit === u, "h-10 rounded-lg")} onclick={() => (unit = u as WeightUnit)}>{label}</button>
+              <button type="button" aria-pressed={unit === u} class={chip(unit === u, "h-11 rounded-lg")} onclick={() => (unit = u as WeightUnit)}>{label}</button>
             {/each}
           </div>
         </div>
