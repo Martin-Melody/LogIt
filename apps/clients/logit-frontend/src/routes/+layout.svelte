@@ -113,7 +113,7 @@
       </main>
 
       <footer
-        class="bg-background pb-[env(safe-area-inset-bottom)]"
+        class="relative z-30 bg-background pb-[env(safe-area-inset-bottom)]"
         bind:offsetHeight={footerHeight}
       >
         <WorkoutPill />

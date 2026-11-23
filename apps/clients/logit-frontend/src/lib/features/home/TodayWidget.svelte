@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { authStore } from "$lib/api/authStore.svelte";
   import StreakLine from "$lib/features/goals/StreakLine.svelte";
   // Home's Today card (decision D1, design canvas "LogIt decisions D1–D3, D5, D11"): the week
   // strip, and one answer to "what now?" — today's workout with its next weights and one Start,
@@ -92,7 +93,11 @@
         getCheckinRepo().listAssignedSchedules(),
         getCheckinRepo().listSubmissions(),
       ]);
-      checkin = checkinRows(schedules, submissions, cachedReviews()).current.find((r) => r.state === "due" || r.state === "draft" || r.state === "late") ?? null;
+      // A coach's check-in only while signed in: without a server it can't be sent, and an
+      // account kept on the phone after signing out has no coach any more.
+      checkin = authStore.isAuthenticated
+        ? checkinRows(schedules, submissions, cachedReviews()).current.find((r) => r.state === "due" || r.state === "draft" || r.state === "late") ?? null
+        : null;
     } catch {
       coached = null;
     }
