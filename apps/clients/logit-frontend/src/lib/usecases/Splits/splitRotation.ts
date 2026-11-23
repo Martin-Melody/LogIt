@@ -4,6 +4,8 @@ import { planSplit, splitTimeline, type SplitPlan, type SplitProgress, type Time
 import { localDateIso } from "@logit/core/domain/nutrition";
 import { movesMissed, weekSessions } from "$lib/features/onboarding/weekSessions";
 import { planStartIso } from "$lib/features/onboarding/firstWeek";
+import { currentSession } from "$lib/stores/currentSession.store";
+import { get } from "svelte/store";
 
 export type RotationState = {
   lastDayId: string;
@@ -44,13 +46,8 @@ function readRaw(splitId: string): RotationState | null {
   }
 }
 
-function loadState(splitId: string): RotationState | null {
-  const state = readRaw(splitId);
-  // Auto-reset after a week gap so old state doesn't haunt a returning user
-  if (state && Date.now() - state.recordedAtMs > RESET_AFTER_MS) return null;
-  return state;
-}
-
+/** Still written and synced because older app versions plan from it; this version plans from
+ * the workouts themselves (a pointer moved on Start stayed moved when that workout was deleted). */
 export function advanceRotation(splitId: string, dayId: string): void {
   if (typeof localStorage === "undefined") return;
   try {
@@ -99,20 +96,20 @@ export function applyRemoteRotations(remote: Record<string, RotationState>): voi
 }
 
 function progressOf(split: WorkoutSplit, todayIso: string): SplitProgress {
-  const state = loadState(split.id);
-  let last = state ? { dayId: state.lastDayId, dateIso: localDateIso(new Date(state.recordedAtMs)) } : null;
-  // doneOnDay belongs to the day it was recorded; yesterday's list says nothing about today.
-  const doneTodayIds = last?.dateIso === todayIso ? [...(state?.doneOnDay ?? [])] : [];
-  // The finished workouts themselves count too, however they were started (Martin's Push was
-  // done but Home offered the next day as today: the pointer only moves from the plan screen).
-  const fromSplit = weekSessions().filter(
-    (s) => s.source?.kind === "split" && s.source.parentId === split.id && split.days.some((d) => d.id === s.source!.dayId),
+  // Where you are comes from the workouts you have: finished ones and the one running now.
+  // Deleted or discarded ones don't count. A week away starts the split over.
+  const since = Date.now() - RESET_AFTER_MS;
+  const draft = get(currentSession);
+  const fromSplit = [...(draft ? [draft] : []), ...weekSessions()].filter(
+    (s) =>
+      s.startedAtMs > since &&
+      s.source?.kind === "split" &&
+      s.source.parentId === split.id &&
+      split.days.some((d) => d.id === s.source!.dayId),
   );
   const newest = fromSplit[0];
-  if (newest && (!state || newest.startedAtMs > state.recordedAtMs)) {
-    last = { dayId: newest.source!.dayId, dateIso: localDateIso(new Date(newest.startedAtMs)) };
-  }
-  for (const s of fromSplit) if (localDateIso(new Date(s.startedAtMs)) === todayIso) doneTodayIds.push(s.source!.dayId);
+  const last = newest ? { dayId: newest.source!.dayId, dateIso: localDateIso(new Date(newest.startedAtMs)) } : null;
+  const doneTodayIds = fromSplit.filter((s) => localDateIso(new Date(s.startedAtMs)) === todayIso).map((s) => s.source!.dayId);
   // A plan from onboarding carries a missed workout forward through the week.
   if (split.schedule === "weekdays" && movesMissed(split.id)) {
     return { last, doneTodayIds, week: { sessions: weekSessions(), planStartIso: planStartIso() } };

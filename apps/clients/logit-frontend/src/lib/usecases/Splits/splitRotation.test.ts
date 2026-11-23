@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
 import type { WorkoutSession } from "@logit/core/domain/workout";
 
@@ -9,6 +9,8 @@ vi.mock("$lib/features/onboarding/weekSessions", () => ({
 }));
 vi.mock("$lib/features/onboarding/firstWeek", () => ({ planStartIso: () => undefined }));
 vi.mock("$lib/data/accountStorage", () => ({ getAccountItem: () => null, setAccountItem: () => {} }));
+let draft: WorkoutSession | null = null;
+vi.mock("$lib/stores/currentSession.store", () => ({ currentSession: { subscribe: (run: (v: unknown) => void) => (run(draft), () => {}) } }));
 
 const { getSplitPlan } = await import("./splitRotation");
 
@@ -34,6 +36,13 @@ const done = (dayId: string, at: Date): WorkoutSession => ({
 });
 
 describe("getSplitPlan, from the workouts themselves", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ now: new Date(2026, 10, 23, 18, 0) });
+    draft = null;
+    localStorage.clear();
+  });
+  afterEach(() => vi.useRealTimers());
+
   it("a split day finished today is done today, and the next day is tomorrow (no rotation pointer)", () => {
     const now = new Date(2026, 10, 23, 18, 0);
     sessions = [done("push", new Date(2026, 10, 23, 7, 8))];
@@ -50,6 +59,22 @@ describe("getSplitPlan, from the workouts themselves", () => {
     const plan = getSplitPlan(split, now);
     expect(plan.doneToday).toEqual([]);
     expect(plan.laterToday.map((d) => d.id)).toEqual(["pull"]);
+  });
+
+  it("tomorrow's day started by mistake and deleted doesn't count, even with the old pointer moved", () => {
+    const now = new Date(2026, 10, 23, 20, 0);
+    localStorage.setItem("logit:split-rotation:ppl:v1", JSON.stringify({ lastDayId: "pull", recordedAtMs: now.getTime(), doneOnDay: ["push", "pull"] }));
+    sessions = [done("push", new Date(2026, 10, 23, 7, 8))];
+    const plan = getSplitPlan(split, now);
+    expect(plan.doneToday.map((d) => d.id)).toEqual(["push"]);
+    expect(plan.next).toMatchObject({ dateIso: "2026-11-24", days: [{ id: "pull" }] });
+  });
+
+  it("the workout running now counts as done today", () => {
+    draft = { ...done("push", new Date(2026, 10, 23, 7, 8)), endedAtMs: undefined } as WorkoutSession;
+    sessions = [];
+    const plan = getSplitPlan(split, new Date(2026, 10, 23, 7, 30));
+    expect(plan.doneToday.map((d) => d.id)).toEqual(["push"]);
   });
 
   it("Martin's week: Push B&B Legs B&B Push, rest, rest; started from Splits, so no pointer", () => {
