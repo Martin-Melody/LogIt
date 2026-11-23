@@ -601,15 +601,14 @@ test.describe("supersets", () => {
 
   test("with 'Collapse blocks by default' on, a group starts collapsed", async ({ page }) => {
     await seedSession(page, {
-      session: makeSession(
-        [
+      session: makeSession([
+        // The exercise being worked on comes first, so the group waits under Up next, folded.
+        makeStrengthBlock("b0", 0, "Squat", [{ ...makeSet("s0", 0, 5, 100), completed: true }, makeSet("s0b", 1, 5, 100)]),
+        ...[
           makeStrengthBlock("b1", 1, "Bench Press", [makeSet("s1", 0, 8, 60)]),
           makeStrengthBlock("b2", 2, "Row", [makeSet("s2", 0, 8, 40)]),
-        ].map((b) => ({ ...b, data: { ...b.data, superset: { id: "g1" } } })).concat([
-          // The exercise being worked on comes first, so the group waits under Up next, folded.
-          makeStrengthBlock("b0", 0, "Squat", [{ ...makeSet("s0", 0, 5, 100), completed: true }, makeSet("s0b", 1, 5, 100)]),
-        ]),
-      ),
+        ].map((b) => ({ ...b, data: { ...b.data, superset: { id: "g1" } } })),
+      ]),
       blocksCollapsedByDefault: true,
     });
     await goToSession(page);
