@@ -95,13 +95,13 @@ client "sam_client" (phone: "I have a coach", the coach's link code), side by si
 | 4.8 | Sign-up screen for a coach | "Back up your training, train with friends, get coached." | — | fixed (ab4e654) |
 | 4.9 | Free account in a browser | 18 refused sync requests on every sync (web backup is Pro); nothing on screen | — (Android sends the device id, so not on phones) | fixed (8082c54) |
 | 4.10 | Buying Studio | Only in the Android app through Play; after buying, nothing brings the coach back to coaching setup | — test on the emulator with Play test cards | open |
-| 4.11 | Home Progression card for a new user | "Finish a session and pick an algorithm in Settings to see targets here" though the default algorithm is set | — | needs a decision |
+| 4.11 | Home Progression card for a new user | "Finish a session and pick an algorithm in Settings to see targets here" though the default algorithm is set | — | fixed (e145971) |
 | 4.12 | Coach's program with no load, client types set 1 and ticks the rest | Sets 2–3 saved as **0 kg** (10×12, 8×0, 8×0); volume and next plans built on it | A set ticked with no weight and none planned carries the set before it (added/assisted weight too) | fixed (ef7a132) |
 | 4.13 | Web dashboard "Me" for a Studio coach | "Welcome to Pro, dana_coach" | "Welcome to the dashboard" | fixed (ef7a132) |
 | 4.14 | Web dashboard text | "Open Logit", "Get Logit on your phone", … | LogIt | fixed (ef7a132) |
 | 4.15 | Coach's program on the client's Home | Even after Start program, Home says "No exercises planned"; Quick start only offers a blank workout; the program lives in More › Splits | — (Home doesn't know coach programs; design) | needs a decision |
 | 4.16 | Splits tour for a coached client | "Tap New to build a training split" next to the coach's program | — | needs a decision |
-| 4.17 | Bodyweight push-ups after 10/8/8 | Next plan "3 × 5 @ 2.5 kg" (big-lift range 5–8, so extra reps become added weight) | — (progression design: reps first, then a harder variation?) | needs a decision |
+| 4.17 | Bodyweight push-ups after 10/8/8 | Next plan "3 × 5 @ 2.5 kg" (big-lift range 5–8, so extra reps become added weight) | — (progression design: reps first, then a harder variation?) | fixed (e145971) |
 | 4.18 | Program day with no name | "Day 1 — Day 1" | — | fixed (ab4e654) |
 | 4.19 | Coach edits an assigned program | Reaches the client's phone only on its next sync (by design: "It reaches their phone on its next sync") | — | ok |
 | 4.20 | Client stops coaching | "Their program, check-ins and habits leave your app" — but they stayed, even after sync and reload (the phone only pulled changes, and nothing is sent when coaching ends) | Coach program / check-in / habit / nutrition pulls fetch the whole small list and drop what's no longer assigned; also covers the coach removing a client | fixed (ef7a132) |
@@ -146,8 +146,8 @@ onboarding on 2026-11-16.
 |---|---|---|---|---|
 | 6.1 | Stripe sends invoice.paid and checkout.session.completed within a second, and the client's return to the link page confirms the same checkout | Two of the three requests failed on a unique key (the relationship, the receipt) and answered 500; Stripe retried, so it came right, but it's a crash on the money path | The paying and invoice-paid handlers run once more after a duplicate-key clash and take the "already done" path | fixed (9c26b01) |
 | 6.2 | Coach's Today page | "Needs you: Nothing waiting" while Payments says "Sam's payment didn't go through… Needs you" | — | fixed (533903f) |
-| 6.3 | Client after a failed card | Only My coach says so (and the email); Home and notifications say nothing | — | needs a decision |
-| 6.4 | Subscription cancelled before its paid-up date (coach cancels in Stripe) | Coaching pauses 7 days from now although the client paid to 22 Dec | — (should it count from the paid-up date? depends on refunds) | needs a decision |
+| 6.3 | Client after a failed card | Only My coach says so (and the email); Home and notifications say nothing | — | fixed (5ec0028) |
+| 6.4 | Subscription cancelled before its paid-up date (coach cancels in Stripe) | Coaching pauses 7 days from now although the client paid to 22 Dec | — (should it count from the paid-up date? depends on refunds) | fixed (5ec0028) |
 | 6.5 | Package, invite link with a price, pay page, Stripe Checkout (4242), webhooks, receipts, declined card (both sides told, rule date shown), the fix link → Stripe's card page, paying again, "Stop paying at the end of the month" (Stripe agrees), the plan ending, switching to paid elsewhere | Worked | — | ok |
 
 ## Round 7 — P2/P6 one account on two phones and the web (2026-11-22, fc13828)
@@ -204,7 +204,7 @@ T6: "Ray" (Pro) trains, gets Studio, coaches Lou, on the phone and the web dashb
 | # | Found | What it did to the user | Fix | Status |
 |---|---|---|---|---|
 | 10.1 | T2: someone who ticks every set as planned and never answers "How many more could you have done?" | The same weight for good: squat 20 kg × 8 for 26 weeks while their real 1-rep max went 40 → 57 kg (the plan assumed every set was to failure) | A set ticked just as planned last time, with no answer, counts as 1 rep left (last time only, so a missed session plans from what was done). "Why?" says "20 × 8 as planned (counted as 1 more in the tank)" | fixed |
-| 10.2 | T2: once strength stops growing | The plan keeps asking for about a rep more than they make (it plans from the best of the last 4 sessions), with no deload and nothing saying they've stalled; rep ranges stay the beginner defaults for good | — (deloads / "you've stalled" are a product feature) | needs a decision |
+| 10.2 | T2: once strength stops growing | The plan keeps asking for about a rep more than they make (it plans from the best of the last 4 sessions), with no deload and nothing saying they've stalled; rep ranges stay the beginner defaults for good | — (deloads / "you've stalled" are a product feature) | fixed (e145971) |
 | 10.3 | T1: sign-up on a Thursday, plan Mon/Wed/Fri | Home: "1 of 3 done. Finish all 3 for your first week on the streak" (Thu, Fri and Sat in a row); first-workout screen "Workout 1 of 3"; on Saturday "Wednesday's workout moved to today", a day before they joined. A Tuesday start on Mon/Tue/Thu/Fri was asked for 4 days in a row | The first week asks only for workouts that land today or on the plan's own days ("1 of 2 done. Your first full week starts Monday"); a workout whose day came before the plan started is never called moved | fixed |
 | 10.4 | T4: an account that never finished setup signs in from the welcome screen | Lands back on the same welcome screen ("Get started / I already have an account") | Signing in from there carries on at "What do you want from training?" | fixed |
 | 10.5 | T4: coach invites someone by username | Nothing tells them: no notification, the invite only shows on Settings › Coaching | Notification "Dana wants to coach you", opening the Coaching page (web: My coach) | fixed |
@@ -285,9 +285,9 @@ rotation split.
 |---|---|---|---|---|
 | 14.1 | Warm-up ramp added | Working sets are numbered 5, 6, 7 after four warm-ups (W W W W 5 6 7), while the plan above says sets 1–3 | easy | fixed (fae2566) |
 | 14.2 | Superset of Bench (with warm-ups) and Barbell Row | Warm-ups count as superset rounds: round 1 pairs the 20 kg × 10 warm-up with the row's first working set; "Round 1 of 7", "0 of 10" | bigger | open |
-| 14.3 | Day one from best lifts (bench 100 × 5) | Plans 100 × 5, 100 × 4, 100 × 3: the best recent 5-rep set as set one, every set to failure in the first workout | decision | open |
+| 14.3 | Day one from best lifts (bench 100 × 5) | Plans 100 × 5, 100 × 4, 100 × 3: the best recent 5-rep set as set one, every set to failure in the first workout | decision | fixed (e145971) |
 | 14.4 | Home for a rotation split | "Day 1 — Upper A · Scheduled" (nothing is scheduled in a rotation) | easy | fixed (fae2566) |
-| 14.5 | Home Progression card after best lifts | "Finish a session and pick an algorithm in Settings" (same as 4.11) | decision (with 4.11) | open |
+| 14.5 | Home Progression card after best lifts | "Finish a session and pick an algorithm in Settings" (same as 4.11) | decision (with 4.11) | fixed (e145971) |
 | 14.6 | Best lifts (live max estimate), Train your way (Adaptive / 5/3/1 / Linear / Build my own), warm-up ramp weights (20 × 10, 40 × 5, 60 × 3, 80 × 2 before 100), superset/circuit sheet, switching a split to "In order" | Worked | — | ok |
 
 ## Round 15 — conditions: dark mode, large text, server unreachable (2026-11-22)
