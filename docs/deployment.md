@@ -172,6 +172,30 @@ where `subscription` is the one giving access (else the latest) with `source`, `
 and `manageUrl` (Google Play's or the App Store's subscription page; null for Stripe, which uses
 `POST /billing/portal`).
 
+## Push notifications
+
+Phones get pushes through Firebase Cloud Messaging (Firebase project `logit-play`, the same
+Google Cloud project as billing). `PushDispatcher` looks at new Inbox notifications once a minute
+and decides, per person: coaching goes straight away; likes, comments and follows are gathered
+into at most one push every 4 hours; quiet mode (22:00–07:00 in the phone's time zone by default)
+holds everything and sends one summary when it ends; "Pause all", the per-type choices and
+anything already read in the app are dropped. Workout reminders and rest alerts are local to the
+phone and never pass through the server. A push says who and what, never the content.
+
+Config (production `.env` names in brackets):
+
+- `Push:ServiceAccountJson` (`PUSH_SERVICE_ACCOUNT_JSON`, the key on one line: `jq -c . key.json`)
+  or `Push:ServiceAccountKeyFile` (a path). Service account `logit-fcm-sender` with the role
+  "Firebase Cloud Messaging API Admin" (`roles/firebasecloudmessaging.admin`). The project comes
+  from the key.
+- `Push:AcceptRelay` (`true` in production): `POST /push/relay` passes self-hosted servers' pushes
+  on to Firebase (600 per 10 minutes per address, nothing stored). 404 when off.
+- `Push:RelayUrl`, for self-hosted servers only: `https://api.getlogit.app/push/relay`. Off by
+  default (`PUSH_RELAY_URL` in the root `.env.example`).
+
+With neither a key nor a relay, the server doesn't push and `GET /push/settings` says
+`available: false`, so the app can say so.
+
 ## Coach payments (Stripe Connect)
 
 Studio coaches can be paid by their clients through their **own** Stripe accounts. LogIt is a Stripe

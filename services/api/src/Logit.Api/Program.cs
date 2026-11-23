@@ -19,6 +19,7 @@ using Logit.Api.Features.Users;
 using Logit.Api.Features.Sandbox;
 using Logit.Api.Features.Guide;
 using Logit.Api.Features.Foods;
+using Logit.Api.Features.Push;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -105,6 +106,19 @@ builder.Services.AddHostedService<SubscriptionSweeper>();
 builder.Services.AddSingleton<Logit.Api.Features.Coach.Payments.ICoachStripe, Logit.Api.Features.Coach.Payments.CoachStripe>();
 builder.Services.AddScoped<Logit.Api.Features.Coach.Payments.CoachPaymentService>();
 builder.Services.AddHostedService<Logit.Api.Features.Coach.Payments.CoachPaymentSweeper>();
+// Push notifications: Firebase with this server's own key, else a relay (self-hosted, opt-in), else none.
+builder.Services.AddHttpClient("push", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton<IPushSender>(sp =>
+{
+    var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("push");
+    var config = sp.GetRequiredService<IConfiguration>();
+    var fcm = new FcmPushSender(http, config, sp.GetRequiredService<ILogger<FcmPushSender>>());
+    if (fcm.IsConfigured) return fcm;
+    if (config["Push:RelayUrl"] is { Length: > 0 } relay)
+        return new RelayPushSender(http, relay, sp.GetRequiredService<ILogger<RelayPushSender>>());
+    return new NoPushSender();
+});
+builder.Services.AddHostedService<PushDispatcher>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -232,6 +246,16 @@ builder.Services.AddRateLimiter(o =>
                 Window = TimeSpan.FromHours(1),
                 QueueLimit = 0,
             }));
+    // One self-hosted server relays for all its users, so this is per server, and generous.
+    o.AddPolicy(PushEndpoints.RelayRateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 600,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+            }));
 });
 
 Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
@@ -290,6 +314,7 @@ api.MapPluginEndpoints();
 api.MapSandboxEndpoints();
 api.MapGuideEndpoints();
 api.MapFoodSearchEndpoints();
+api.MapPushEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

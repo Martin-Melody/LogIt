@@ -29,6 +29,9 @@ public class Notification
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReadAt { get; set; }
 
+    /// When the push dispatcher dealt with it (sent, gathered into a summary, or skipped).
+    public DateTime? PushedAt { get; set; }
+
     public User User { get; set; } = null!;
     public User Actor { get; set; } = null!;
 }

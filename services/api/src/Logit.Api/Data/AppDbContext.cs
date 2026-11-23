@@ -18,6 +18,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<FollowRequest> FollowRequests => Set<FollowRequest>();
+    public DbSet<PushDevice> PushDevices => Set<PushDevice>();
+    public DbSet<PushSettings> PushSettings => Set<PushSettings>();
     public DbSet<DiscoverDismissal> DiscoverDismissals => Set<DiscoverDismissal>();
     public DbSet<DiscoverImpression> DiscoverImpressions => Set<DiscoverImpression>();
     public DbSet<CoachClientRelationship> CoachClientRelationships => Set<CoachClientRelationship>();
@@ -304,6 +306,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         {
             e.HasIndex(n => new { n.UserId, n.CreatedAt });
             e.HasIndex(n => new { n.UserId, n.ReadAt });
+            e.HasIndex(n => n.PushedAt);
             e.HasOne(n => n.User)
              .WithMany()
              .HasForeignKey(n => n.UserId)
@@ -312,6 +315,21 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .WithMany()
              .HasForeignKey(n => n.ActorId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<PushDevice>(e =>
+        {
+            e.HasIndex(d => d.Token).IsUnique();
+            e.Property(d => d.Token).HasMaxLength(512);
+            e.Property(d => d.Platform).HasMaxLength(16);
+            e.HasOne(d => d.User).WithMany().HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<PushSettings>(e =>
+        {
+            e.HasKey(s => s.UserId);
+            e.Property(s => s.TimeZone).HasMaxLength(64);
+            e.HasOne(s => s.User).WithOne().HasForeignKey<PushSettings>(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<CoachClientRelationship>(e =>
