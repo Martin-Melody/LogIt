@@ -115,6 +115,7 @@
   }
 
   // --- Account ---
+  let movingBackup = $state(false);
   let serverMode = $state<ServerMode>(getServerMode());
   // The server the account in use lives on, as people know it.
   const serverHost = $derived.by(() => {
@@ -133,7 +134,7 @@
   const waitingText = $derived(`${waiting} change${waiting === 1 ? "" : "s"} waiting`);
   const backupLine = $derived(
     authStore.user && authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()
-      ? "Your free backup is on another phone. Sign in again here to move it, or get Pro to sync both"
+      ? "Your free backup is on your other phone. Move it here, or get Pro to back up both"
       : connectionStatus.state === "disconnected"
         ? `Can't reach the server${waiting ? ` · ${waitingText}, kept on this phone` : ""}`
       : waiting && !$syncRunning
@@ -661,6 +662,12 @@
             <span class="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">{apiClient.isSelfHosted() ? "Own server" : authStore.user.tier}</span>
           </div>
           <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><ConnectionDot /> {backupLine}</p>
+          {#if authStore.user.tier === "Free" && !apiClient.isSelfHosted() && apiClient.isBackupElsewhere()}
+            <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium disabled:opacity-60" disabled={movingBackup}
+              onclick={async () => { movingBackup = true; try { await apiClient.moveBackupHere(); (await import("$lib/sync/syncService")).markFullUploadDue(); await syncAll().catch(() => {}); } catch {} finally { movingBackup = false; } }}>
+              {movingBackup ? "Moving…" : "Move backup here"}
+            </button>
+          {/if}
         </div>
 
         <PlanCard />

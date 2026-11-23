@@ -166,6 +166,17 @@
   let whoseTraining = $state<OfflineTraining | null>(null);
   let answerWhose: ((choice: "add" | "keep-separate" | null) => void) | null = null;
 
+  // A Free account whose backup another phone holds (decision D5): ask before moving it here.
+  let askingBackup = $state(false);
+  let movingBackup = $state(false);
+  let answerBackup: ((choice: "here" | "keep" | "pro") => void) | null = null;
+  function askBackup(): Promise<"here" | "keep" | "pro"> {
+    askingBackup = true;
+    return new Promise((resolve) => {
+      answerBackup = (choice) => { answerBackup = null; resolve(choice); };
+    });
+  }
+
   function askWhoseTraining(found: OfflineTraining): Promise<"add" | "keep-separate" | null> {
     whoseTraining = found;
     return new Promise((resolve) => {
@@ -199,6 +210,24 @@
           offlineTraining = choice;
         }
         await authStore.login(form.username.trim(), form.password, { offlineTraining });
+        if (apiClient.isBackupElsewhere()) {
+          const choice = await askBackup();
+          if (choice === "here") {
+            movingBackup = true;
+            try {
+              await apiClient.moveBackupHere();
+              const sync = await import("$lib/sync/syncService");
+              sync.markFullUploadDue();
+              void sync.syncAll().catch(() => {});
+            } catch {
+              // Still signed in; Home's note offers the move again.
+            } finally {
+              movingBackup = false;
+            }
+          }
+          askingBackup = false;
+          if (choice === "pro") return void (await goto("/plans"));
+        }
       } else {
         const displayName = get(profile).name.trim() || form.username.trim();
         await authStore.register(
@@ -472,6 +501,29 @@
     </div>
   {/if}
 </div>
+
+{#if askingBackup}
+  <div class="fixed inset-0 z-50 flex flex-col justify-end bg-black/50" role="presentation">
+    <div class="rounded-t-2xl bg-background px-6 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby="backup-title">
+      <div class="h-1 w-10 rounded-full bg-muted-foreground/30 self-center"></div>
+      <div>
+        <h2 id="backup-title" class="text-lg font-bold">Back up this phone instead?</h2>
+        <p class="mt-1 text-sm text-muted-foreground">A free account backs up one phone. Right now that's your other phone.</p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-lg bg-muted px-3.5 py-3 text-sm">
+        <p><span class="font-semibold">Back up this phone:</span> <span class="text-muted-foreground">your workouts come here, and this phone backs up from now on. The other phone keeps what it has; new workouts there stay there.</span></p>
+        <p class="border-t border-border pt-2"><span class="font-semibold">Keep the other phone:</span> <span class="text-muted-foreground">this phone starts empty, and what you log here stays here.</span></p>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <button type="button" class="h-12 rounded-lg bg-primary text-primary-foreground text-[15px] font-semibold disabled:opacity-60" disabled={movingBackup} onclick={() => answerBackup?.("here")}>
+          {movingBackup ? "Moving your backup…" : "Back up this phone"}
+        </button>
+        <button type="button" class="h-12 rounded-lg border border-border text-[15px] font-medium" disabled={movingBackup} onclick={() => answerBackup?.("keep")}>Keep backing up the other phone</button>
+        <button type="button" class="h-11 text-sm font-semibold text-primary" disabled={movingBackup} onclick={() => answerBackup?.("pro")}>Back up both phones with Pro</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 {#if whoseTraining}
   <div class="fixed inset-0 z-50 flex flex-col justify-end bg-black/50" role="presentation">

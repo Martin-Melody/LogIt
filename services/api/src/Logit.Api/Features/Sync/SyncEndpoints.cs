@@ -19,6 +19,8 @@ public static class SyncEndpoints
         // Sessions and check-in submissions also flow to a Studio coach, so an actively-coached
         // Free client gets these two (and only these two) without paying — see RequireTier.
         group.MapPost("/sessions", PushSessions).RequireTier(UserTier.Pro, orActivelyCoached: true);
+        // "Back up this phone instead" (decision D5): a Free account's backup moves to this phone.
+        group.MapPost("/backup/here", MoveBackupHere);
         group.MapGet("/sessions", PullSessions).RequireTier(UserTier.Pro, orActivelyCoached: true);
 
         group.MapPost("/checkins", PushCheckinSubmissions).RequireTier(UserTier.Pro, orActivelyCoached: true);
@@ -145,6 +147,17 @@ public static class SyncEndpoints
         if (toInsert.Count > 0)
             db.SyncedWorkoutSessions.AddRange(toInsert);
 
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> MoveBackupHere(ClaimsPrincipal caller, HttpRequest request, AppDbContext db)
+    {
+        var user = await db.Users.FindAsync(caller.GetUserId());
+        if (user is null) return Results.NotFound();
+        if (FreeBackup.Normalize(request.Headers[FreeBackup.DeviceHeader]) is null)
+            return Results.BadRequest(new { error = "Only a phone can hold the free backup." });
+        FreeBackup.MoveTo(user, request.Headers[FreeBackup.DeviceHeader]);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }

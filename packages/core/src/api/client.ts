@@ -47,6 +47,8 @@ export interface AuthResponse {
   refreshToken: string;
   user: AuthUser;
   isSelfHosted: boolean;
+  /** A Free account's backup is held by another phone and was left there (decision D5). */
+  backupElsewhere?: boolean;
 }
 
 export interface PairingStart {
@@ -140,7 +142,7 @@ function routeOf(path: string): string {
 
 const SLOW_REQUEST_MS = 5000;
 const REFUSED_SYNC_MS = 60 * 60 * 1000;
-const BACKUP_ELSEWHERE_MESSAGE = "Your free backup is on another phone. Sign in on this phone to move it here, or get Pro to sync both.";
+const BACKUP_ELSEWHERE_MESSAGE = "Your free backup is on another phone. Move it here from the app, or get Pro to back up both.";
 
 class ApiClient {
   private tokens: StoredTokens | null = null;
@@ -248,6 +250,13 @@ class ApiClient {
   /** The server refused this phone's sync because another phone holds this Free account's backup. */
   isBackupElsewhere(): boolean {
     return this.backupElsewhere;
+  }
+
+  /** "Back up this phone instead": a Free account's backup moves to this phone (decision D5). */
+  async moveBackupHere(): Promise<void> {
+    await this.fetch("/sync/backup/here", { method: "POST" });
+    this.backupElsewhere = false;
+    this.setRefusedSync(null);
   }
 
   isAuthenticated(): boolean {
@@ -441,7 +450,9 @@ class ApiClient {
     try {
       data = await this.fetch("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ usernameOrEmail, password }),
+        // This app asks "Back up this phone instead?" itself (decision D5), so the server leaves
+        // a Free backup where it is and says so (backupElsewhere).
+        body: JSON.stringify({ usernameOrEmail, password, askBeforeMovingBackup: true }),
       });
     } catch (e) {
       // Servers from before 2026-11-14 answer a failed sign-in with a bare 401.
@@ -453,7 +464,8 @@ class ApiClient {
     this.tokens = { accessToken: data.accessToken, refreshToken: data.refreshToken };
     await tokenStorage.set(this.tokens);
     this.saveUser(data.user, data.isSelfHosted);
-    this.backupElsewhere = false; // signing in on this phone moves a Free backup here
+    // Signing in moves a Free backup here, unless another phone holds it (then the app asks).
+    this.backupElsewhere = !!data.backupElsewhere;
     this.setRefusedSync(null);
     return data.user;
   }

@@ -13,7 +13,7 @@ public static class FreeBackup
     public const string DeviceHeader = "X-Logit-Device";
     public const string OtherDeviceCode = "backup_other_device";
     public const string OtherDeviceMessage =
-        "Your free backup is on another phone. Sign in on this phone to move it here, or get Pro to sync both.";
+        "Your free backup is on another phone. Move it here from the app, or get Pro to back up both.";
     private const int MaxDeviceIdLength = 64;
 
     public enum Decision
