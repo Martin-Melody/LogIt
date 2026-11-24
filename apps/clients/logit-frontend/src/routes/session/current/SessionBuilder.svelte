@@ -61,6 +61,7 @@
   import { music } from "$lib/features/music/nowPlaying.svelte";
   import { addButton } from "$lib/components/ui/choice";
   import { onWorkoutFinished } from "$lib/features/music/sessionMusic";
+  import { offerInviteOnce } from "$lib/features/friends/invite.svelte";
   import { justAdded } from "$lib/features/session/blocks/justAdded";
 
   onMount(() => {
@@ -442,9 +443,12 @@
       // The first workout of a plan from onboarding goes on to "When will you train?".
       const workoutsBefore = sessionSnapshot ? (await getWorkoutRepo().listAllSessions()).length : 0;
       const weekDone = sessionSnapshot ? await completesFirstWeek(sessionSnapshot).catch(() => false) : false;
-      await goto(sessionSnapshot ? afterWorkoutRoute(sessionSnapshot.id, workoutsBefore, weekDone) : "/");
+      const next = sessionSnapshot ? afterWorkoutRoute(sessionSnapshot.id, workoutsBefore, weekDone) : "/";
+      await goto(next);
       await currentSession.finish();
       onWorkoutFinished();
+      // "Invite a friend" once (design canvas T3), but not on top of onboarding's next step.
+      if (!next.startsWith("/onboarding")) offerInviteOnce();
       void recentSessions.refresh(5);
 
       if (sessionSnapshot) {

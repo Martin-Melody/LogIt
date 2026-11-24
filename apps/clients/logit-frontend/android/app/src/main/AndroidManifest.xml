@@ -62,6 +62,21 @@
                 <data android:scheme="https" android:host="getlogit.app" android:path="/a" />
             </intent-filter>
 
+            <!-- A friend's invite: the website's "Open in LogIt" (logit://f?c=logit-fr1:…) and, once
+                 App Links are verified, the link itself (https://getlogit.app/f#logit-fr1:…). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="logit" android:host="f" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="getlogit.app" android:path="/f" />
+            </intent-filter>
+
         </activity>
 
         <provider

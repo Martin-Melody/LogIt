@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<FollowRequest> FollowRequests => Set<FollowRequest>();
     public DbSet<PushDevice> PushDevices => Set<PushDevice>();
+    public DbSet<FriendInvite> FriendInvites => Set<FriendInvite>();
     public DbSet<PushSettings> PushSettings => Set<PushSettings>();
     public DbSet<DiscoverDismissal> DiscoverDismissals => Set<DiscoverDismissal>();
     public DbSet<DiscoverImpression> DiscoverImpressions => Set<DiscoverImpression>();
@@ -315,6 +316,14 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .WithMany()
              .HasForeignKey(n => n.ActorId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<FriendInvite>(e =>
+        {
+            e.HasKey(i => i.Code);
+            e.Property(i => i.Code).HasMaxLength(16);
+            e.HasIndex(i => i.InviterId);
+            e.HasOne(i => i.Inviter).WithMany().HasForeignKey(i => i.InviterId).OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<PushDevice>(e =>

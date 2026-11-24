@@ -936,6 +936,25 @@ namespace Logit.Api.Migrations
                     b.ToTable("FollowRequests");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.FriendInvite", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InviterId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("InviterId");
+
+                    b.ToTable("FriendInvites");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2635,6 +2654,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("Requester");
 
                     b.Navigation("Target");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.FriendInvite", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Inviter")
+                        .WithMany()
+                        .HasForeignKey("InviterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Inviter");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>

@@ -319,6 +319,7 @@ api.MapGuideEndpoints();
 api.MapFoodSearchEndpoints();
 api.MapPushEndpoints();
 api.MapTrainingEndpoints();
+api.MapFriendInviteEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

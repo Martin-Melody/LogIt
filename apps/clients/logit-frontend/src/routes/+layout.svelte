@@ -1,5 +1,7 @@
 <script lang="ts">
   import CheerPill from "$lib/components/social/CheerPill.svelte";
+  import InviteFriendSheet from "$lib/components/social/InviteFriendSheet.svelte";
+  import { holdInvite, inviteSheet, takeHeldInvite } from "$lib/features/friends/invite.svelte";
   import "./layout.css";
   import favicon from "$lib/assets/favicon.png";
   import BottomNav from "$lib/components/navigation/BottomNav/BottomNav.svelte";
@@ -45,7 +47,14 @@
       needsAccountAuth: $needsAccountAuth,
       path: page.url.pathname,
     });
+    // A friend's invite opened before there's an account: keep it for after onboarding.
+    const invite = page.url.pathname === "/social/invite" ? page.url.searchParams.get("c") : null;
+    if (to && invite) holdInvite(invite);
     if (to) void goto(to);
+    else if ($appReady && $onboarding.completed && authStore.isAuthenticated && !isOnboarding) {
+      const held = takeHeldInvite();
+      if (held && page.url.pathname !== "/social/invite") void goto(held);
+    }
   });
 
   onMount(async () => {
@@ -130,4 +139,5 @@
 
 <Toaster position="top-center" richColors />
 <CheerPill />
+{#if inviteSheet.open}<InviteFriendSheet onclose={() => (inviteSheet.open = false)} />{/if}
 <ModeWatcher defaultMode="system" modeStorageKey="logit:mode" />
