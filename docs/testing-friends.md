@@ -103,7 +103,7 @@ it; Pause drops it. Offline: a message waits and sends when back, with a visible
 Across clients: Ava on the web dashboard and Ben on the phone, then both on the web: every step above
 gives the same result (one server API); the web shows unread while open (no web push).
 
-**F4 Stories.** Ava finishes a workout with a record → "Add to your story?" offered (only after a
+**F4 Stories** (built: PR #123; photo stories, the week's-last-workout offer and web stories later). Ava finishes a workout with a record → "Add to your story?" offered (only after a
 record or the week's last workout, not every session). Your story vs Close friends. Ben sees the
 ring, opens it, cheers or replies (reply = a message). Cara (private, Ava public) sees it; when
 Ava is private, only approved followers. Hide story from Dev → Dev never sees it. 24 h later it's
