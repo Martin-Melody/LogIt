@@ -3,6 +3,7 @@ using Logit.Api.Data;
 using Logit.Api.Data.Entities;
 using Logit.Api.Features.Auth;
 using Logit.Api.Features.Email;
+using Logit.Api.Features.Push;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +12,7 @@ namespace Logit.Api.Features.Admin;
 /// The admin console's Server page: settings that win over .env, health, test email, backups.
 public static class AdminServer
 {
-    public static async Task<IResult> GetServer(AppDbContext db, IConfiguration cfg, IEmailSender email)
+    public static async Task<IResult> GetServer(AppDbContext db, IConfiguration cfg, IEmailSender email, IPushSender push, PushRelay relay)
     {
         var saved = await db.ServerSettings.FirstOrDefaultAsync(x => x.Key == Registration.ModeSettingKey);
         var sqlite = IsSqlite(db);
@@ -49,6 +50,8 @@ public static class AdminServer
             },
             Errors = errors,
             CanDownloadBackup = sqlite,
+            // "firebase": this server has its own key (getlogit.app); "relay": it can hand pushes to getlogit.app.
+            Push = new { Mode = push is FcmPushSender ? "firebase" : "relay", RelayOn = relay.On },
         });
     }
 
@@ -64,6 +67,21 @@ public static class AdminServer
         setting.UpdatedAt = DateTime.UtcNow;
         AdminLog.Add(db, http, "server.registration", detail: mode == "invite" ? "invite-only" : "anyone can sign up");
         await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    public record PushRelayRequest(bool On);
+
+    /// P5: a self-hosted server hands its pushes to getlogit.app only once an admin says so.
+    public static async Task<IResult> SetPushRelay(PushRelayRequest req, AppDbContext db, HttpContext http, PushRelay relay)
+    {
+        var setting = await db.ServerSettings.FindAsync(PushRelay.SettingKey);
+        if (setting is null) db.ServerSettings.Add(setting = new ServerSetting { Key = PushRelay.SettingKey });
+        setting.Value = req.On ? "on" : "off";
+        setting.UpdatedAt = DateTime.UtcNow;
+        AdminLog.Add(db, http, "server.push-relay", detail: req.On ? "on" : "off");
+        await db.SaveChangesAsync();
+        relay.On = req.On;
         return Results.NoContent();
     }
 

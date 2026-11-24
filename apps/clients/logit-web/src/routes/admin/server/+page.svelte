@@ -43,6 +43,19 @@
     }
   }
 
+  async function setRelay(on: boolean) {
+    busy = "push";
+    try {
+      await adminApi.setPushRelay(on);
+      toast.success(on ? "Pushes now go through getlogit.app" : "Push notifications are off");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't change push notifications");
+    } finally {
+      busy = null;
+    }
+  }
+
   async function testEmail() {
     busy = "email";
     emailResult = null;
@@ -156,6 +169,32 @@
           <li>In .env next to docker-compose.yml, fill in <code class={code}>SMTP_HOST</code>, <code class={code}>SMTP_PORT</code>, <code class={code}>SMTP_USER</code>, <code class={code}>SMTP_PASSWORD</code> and <code class={code}>SMTP_FROM_ADDRESS</code> from your email provider.</li>
           <li>Run <code class={code}>docker compose up -d</code>, then send yourself a test email from here.</li>
         </ol>
+      {/if}
+    </section>
+
+    <section aria-labelledby="push" class="{card} border-border">
+      <div class="flex flex-wrap items-start justify-between gap-x-5 gap-y-2.5">
+        <div class="flex max-w-[62ch] flex-col gap-1.5">
+          <h2 id="push" class="text-[15px] font-semibold">Push notifications</h2>
+          {#if info.push.mode === "firebase"}
+            <p class="text-[13px] leading-relaxed text-muted-foreground">This server sends pushes through Firebase with its own key, and passes on pushes from self-hosted servers that turned them on.</p>
+          {:else}
+            <p class="text-[13px] leading-relaxed text-muted-foreground">Phones get pushes only through LogIt's Firebase project. Turn this on and this server hands each push to getlogit.app, which passes it to Google and keeps nothing.</p>
+          {/if}
+        </div>
+        {#if info.push.mode === "relay"}
+          <button type="button" role="switch" aria-checked={info.push.relayOn} aria-labelledby="push" disabled={busy === "push"}
+            class="{btn} border {info.push.relayOn ? 'border-border bg-muted hover:bg-accent' : 'border-primary bg-primary font-semibold text-primary-foreground'}"
+            onclick={() => setRelay(!info!.push.relayOn)}>{info.push.relayOn ? "Turn off" : "Turn on"}</button>
+        {/if}
+      </div>
+      {#if info.push.mode === "relay"}
+        <dl class="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+          <dt class="text-muted-foreground">What's sent</dt><dd>The phone's push token and the text shown, like "Ava liked your post"</dd>
+          <dt class="text-muted-foreground">Never sent</dt><dd>Messages, comments, workouts, or anything else from this server</dd>
+          <dt class="text-muted-foreground">Status</dt>
+          <dd>{info.push.relayOn ? "On. Each person chooses which kinds they get in the app's settings." : "Off. Members see their notifications in the app's inbox."}</dd>
+        </dl>
       {/if}
     </section>
 

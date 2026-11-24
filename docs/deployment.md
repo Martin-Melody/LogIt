@@ -176,7 +176,7 @@ and `manageUrl` (Google Play's or the App Store's subscription page; null for St
 
 Phones get pushes through Firebase Cloud Messaging (Firebase project `logit-play`, the same
 Google Cloud project as billing). `PushDispatcher` looks at new Inbox notifications once a minute
-and decides, per person: coaching goes straight away; likes, comments and follows are gathered
+and decides, per person: coach messages and coaching go straight away; likes, comments and follows are gathered
 into at most one push every 4 hours; quiet mode (22:00–07:00 in the phone's time zone by default)
 holds everything and sends one summary when it ends; "Pause all", the per-type choices and
 anything already read in the app are dropped. Workout reminders and rest alerts are local to the
@@ -190,11 +190,16 @@ Config (production `.env` names in brackets):
   from the key.
 - `Push:AcceptRelay` (`true` in production): `POST /push/relay` passes self-hosted servers' pushes
   on to Firebase (600 per 10 minutes per address, nothing stored). 404 when off.
-- `Push:RelayUrl`, for self-hosted servers only: `https://api.getlogit.app/push/relay`. Off by
-  default (`PUSH_RELAY_URL` in the root `.env.example`).
+- Self-hosted servers (no key) hand their pushes to that relay once an admin turns on "Push
+  notifications" on the admin console's Server page (saved as server setting `push.relay`; off by
+  default). `Push:RelayUrl` (`PUSH_RELAY_URL`) changes the relay, default
+  `https://api.getlogit.app/push/relay`.
 
-With neither a key nor a relay, the server doesn't push and `GET /push/settings` says
-`available: false`, so the app can say so.
+Until then the server doesn't push and `GET /push/settings` says `available: false`, so the app
+can say so.
+
+Coach messages are pushed too (channel `messages`, straight away, "Sam" / "sent you a message");
+the app's channels are `messages`, `coaching` and `social`.
 
 ## Coach payments (Stripe Connect)
 

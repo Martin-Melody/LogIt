@@ -179,6 +179,8 @@ export interface ServerInfo {
   holds: { people: number; workouts: number; posts: number };
   errors: { date: string; count: number; topRoute: string | null }[];
   canDownloadBackup: boolean;
+  /** "firebase": this server sends with its own key; "relay": it can hand pushes to getlogit.app. */
+  push: { mode: "firebase" | "relay"; relayOn: boolean };
 }
 
 /** On getlogit.app the admin API is reached through the dashboard's own domain (/admin-api,
@@ -222,6 +224,7 @@ export const adminApi = {
 
   server: () => f<ServerInfo>("/admin/api/server"),
   setRegistration: (mode: "open" | "invite") => send<void>("/admin/api/server/registration", "PUT", { mode }),
+  setPushRelay: (on: boolean) => send<void>("/admin/api/server/push-relay", "PUT", { on }),
   sendTestEmail: () => send<{ sentTo: string }>("/admin/api/server/test-email", "POST"),
   backup: () => f<Blob>("/admin/api/server/backup"),
 

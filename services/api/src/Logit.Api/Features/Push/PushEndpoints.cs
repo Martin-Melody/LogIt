@@ -116,7 +116,7 @@ public static class PushEndpoints
         if (string.IsNullOrWhiteSpace(req.Token) || req.Token.Length > 512
             || string.IsNullOrWhiteSpace(req.Title) || req.Title.Length > 120
             || string.IsNullOrWhiteSpace(req.Body) || req.Body.Length > 240
-            || req.Channel is not ("social" or "coaching")
+            || req.Channel is not ("social" or "coaching" or "messages")
             || req.Data is { Count: > 8 } || req.Data?.Any(kv => kv.Key.Length > 40 || kv.Value.Length > 200) == true)
             return Results.BadRequest();
         var result = await sender.SendAsync(req.Token, new PushMessage(req.Title, req.Body, req.Channel, req.Data ?? []), ct);

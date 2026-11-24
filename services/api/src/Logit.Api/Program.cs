@@ -106,17 +106,18 @@ builder.Services.AddHostedService<SubscriptionSweeper>();
 builder.Services.AddSingleton<Logit.Api.Features.Coach.Payments.ICoachStripe, Logit.Api.Features.Coach.Payments.CoachStripe>();
 builder.Services.AddScoped<Logit.Api.Features.Coach.Payments.CoachPaymentService>();
 builder.Services.AddHostedService<Logit.Api.Features.Coach.Payments.CoachPaymentSweeper>();
-// Push notifications: Firebase with this server's own key, else a relay (self-hosted, opt-in), else none.
+// Push notifications: Firebase with this server's own key, else (self-hosted) the relay through
+// getlogit.app, which an admin turns on in the console.
 builder.Services.AddHttpClient("push", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton(sp => new PushRelay(
+    sp.GetRequiredService<IConfiguration>()["Push:RelayUrl"] is { Length: > 0 } url ? url : PushRelay.DefaultUrl));
 builder.Services.AddSingleton<IPushSender>(sp =>
 {
     var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("push");
-    var config = sp.GetRequiredService<IConfiguration>();
-    var fcm = new FcmPushSender(http, config, sp.GetRequiredService<ILogger<FcmPushSender>>());
-    if (fcm.IsConfigured) return fcm;
-    if (config["Push:RelayUrl"] is { Length: > 0 } relay)
-        return new RelayPushSender(http, relay, sp.GetRequiredService<ILogger<RelayPushSender>>());
-    return new NoPushSender();
+    var fcm = new FcmPushSender(http, sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILogger<FcmPushSender>>());
+    return fcm.IsConfigured
+        ? fcm
+        : new RelayPushSender(http, sp.GetRequiredService<PushRelay>(), sp.GetRequiredService<ILogger<RelayPushSender>>());
 });
 builder.Services.AddHostedService<PushDispatcher>();
 builder.Services.AddEndpointsApiExplorer();
@@ -267,6 +268,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+    app.Services.GetRequiredService<PushRelay>().On =
+        (await db.ServerSettings.FindAsync(PushRelay.SettingKey))?.Value == "on";
 }
 
 app.Logger.LogInformation("Logit API starting ({Environment}, {Database}, self-hosted: {SelfHosted}, trust forwarded headers: {TrustForwarded})",
