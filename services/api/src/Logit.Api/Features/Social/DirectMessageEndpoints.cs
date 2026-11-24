@@ -31,12 +31,14 @@ public static class DirectMessageEndpoints
 
     public record PersonDto(string Username, string DisplayName, string? AvatarUrl);
     public record ThreadDto(Guid Id, PersonDto? Other, string LastBody, long LastAtMs, bool LastMine, bool Unread);
-    public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null);
+    /// PhotoHidden: a photo in a request you haven't accepted (shown blurred, address withheld).
+    public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null,
+        string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false);
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
     public record ChatDto(Guid? ThreadId, PersonDto? Other, bool Accepted, long? SeenAtMs, bool CanSend, string? Why, List<MessageDto> Messages);
-    public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string? Body, string? CardType = null, string? CardJson = null);
+    public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string? Body, string? CardType = null, string? CardJson = null, Guid? PhotoId = null);
 
     /// What can be shared into a chat as a card (post payload formats).
     public static readonly string[] CardTypes = ["WorkoutSession", "PersonalRecord"];
@@ -45,8 +47,14 @@ public static class DirectMessageEndpoints
     public const string StoryCard = "Story";
     private const int MaxCardJson = 4000;
 
-    private static MessageDto Dto(DirectMessage x, Guid me, DateTime now) =>
-        new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType, x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson);
+    /// `request`: the viewer hasn't accepted this thread, so a photo's address is withheld.
+    private static MessageDto Dto(DirectMessage x, Guid me, DateTime now, bool request = false)
+    {
+        var hidden = request && x.SenderId != me && x.PhotoId is not null;
+        return new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType,
+            x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson,
+            x.PhotoId is { } p && !hidden ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, hidden);
+    }
 
     /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
     private static bool QuoteExpired(string? json, DateTime now)
@@ -62,7 +70,8 @@ public static class DirectMessageEndpoints
 
     /// The list's one-line preview: the text, or what was shared.
     private static string Preview(DirectMessage x) =>
-        x.Body.Length > 0 ? x.Body : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
+        x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
+        : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
     private static PersonDto? Person(User? u) => u is null ? null : new(u.Username, u.DisplayName, u.AvatarUrl);
@@ -149,7 +158,7 @@ public static class DirectMessageEndpoints
             var rows = await db.DirectMessages
                 .Where(x => x.ThreadId == mine.ThreadId && x.CreatedAt < cutoff && (mine.ClearedAt == null || x.CreatedAt > mine.ClearedAt))
                 .OrderByDescending(x => x.CreatedAt).Take(Page).ToListAsync();
-            messages = rows.AsEnumerable().Reverse().Select(x => Dto(x, meId, clock.GetUtcNow().UtcDateTime)).ToList();
+            messages = rows.AsEnumerable().Reverse().Select(x => Dto(x, meId, clock.GetUtcNow().UtcDateTime, !mine.Accepted)).ToList();
             var theirs = other is null ? null : await db.DmMembers.FirstOrDefaultAsync(m => m.ThreadId == mine.ThreadId && m.UserId == other.Id);
             if (theirs is { Accepted: true, LastReadAt: { } read } && me.ShowReadReceipts && other!.ShowReadReceipts) seen = Ms(read);
         }
@@ -181,7 +190,7 @@ public static class DirectMessageEndpoints
             try { using var _ = System.Text.Json.JsonDocument.Parse(req.CardJson); }
             catch (System.Text.Json.JsonException) { return Results.BadRequest(new { error = "That can't be shared in a message." }); }
         }
-        if (body.Length == 0 && req.CardType is null) return Results.BadRequest(new { error = "Write something first." });
+        if (body.Length == 0 && req.CardType is null && req.PhotoId is null) return Results.BadRequest(new { error = "Write something first." });
         if (body.Length > MaxLength) return Results.BadRequest(new { error = $"Keep it under {MaxLength} characters." });
         if (string.IsNullOrWhiteSpace(req.ClientId) || req.ClientId.Length > 64) return Results.BadRequest(new { error = "Missing message id." });
 
@@ -212,6 +221,9 @@ public static class DirectMessageEndpoints
         if (await BlockedAsync(db, meId, other.Id)) return Results.NotFound();
 
         var now = clock.GetUtcNow().UtcDateTime;
+        Photo? photo = null;
+        if (req.PhotoId is { } photoId && (photo = await Photos.PhotoEndpoints.OwnedAsync(db, meId, photoId)) is null)
+            return Results.BadRequest(new { error = "That photo didn't upload. Try again." });
         var cardJson = req.CardType is null ? null : req.CardJson;
         if (req.CardType == StoryCard)
         {
@@ -265,6 +277,7 @@ public static class DirectMessageEndpoints
         {
             ClientId = req.ClientId, Thread = thread!, SenderId = meId, Body = body, CreatedAt = now,
             CardType = req.CardType, CardJson = cardJson,
+            PhotoId = photo?.Id, PhotoWidth = photo?.Width ?? 0, PhotoHeight = photo?.Height ?? 0,
         };
         db.DirectMessages.Add(message);
         thread!.LastMessageAt = now;

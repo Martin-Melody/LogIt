@@ -7,13 +7,13 @@ import { isNativePlatform } from "./isNative";
  * On web: falls back to a programmatic <input type="file">.
  * Always resolves to a File so callers are platform-agnostic.
  */
-export async function pickImageFile(): Promise<File> {
+export async function pickImageFile(from: "prompt" | "photos" | "camera" = "prompt"): Promise<File> {
   if (isNativePlatform()) {
     const { Camera, CameraResultType, CameraSource } = await import("@capacitor/camera");
 
     const photo = await Camera.getPhoto({
       resultType: CameraResultType.Base64,
-      source: CameraSource.Prompt,
+      source: from === "photos" ? CameraSource.Photos : from === "camera" ? CameraSource.Camera : CameraSource.Prompt,
       quality: 90,
       correctOrientation: true,
     });
@@ -29,6 +29,7 @@ export async function pickImageFile(): Promise<File> {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
+      if (from === "camera") input.capture = "environment";
 
       input.onchange = () => {
         const file = input.files?.[0];

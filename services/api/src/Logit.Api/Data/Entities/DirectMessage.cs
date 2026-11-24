@@ -45,6 +45,12 @@ public class DirectMessage
     /// "PersonalRecord"); a snapshot, so it doesn't change if the sender edits the workout.
     public string? CardType { get; set; }
     public string? CardJson { get; set; }
+    /// A photo sent with the message (/photos/{id}; friends overhaul, design canvas M5). Its size
+    /// is kept here so the bubble has its shape before the picture loads. The id stays after the
+    /// file is gone (the sender's account deleted), and the apps show "Photo unavailable".
+    public Guid? PhotoId { get; set; }
+    public int PhotoWidth { get; set; }
+    public int PhotoHeight { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     /// When the push dispatcher dealt with it (sent, or skipped).
     public DateTime? PushedAt { get; set; }

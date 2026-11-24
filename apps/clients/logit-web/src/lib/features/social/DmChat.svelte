@@ -8,6 +8,9 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import ImageIcon from "@lucide/svelte/icons/image";
+  import ChatPhoto from "./ChatPhoto.svelte";
+  import { pickAndUploadPhoto } from "./chatPhoto";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import { cardTitle, readCard, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
@@ -103,11 +106,29 @@
     sharing = false;
     if (!chat) return;
     try {
-      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), "", card);
+      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), "", { card });
       await load(true);
       onchange?.();
     } catch (e) {
       sendError = e instanceof Error ? `${e.message} Try again.` : "Couldn't send. Try again.";
+    }
+  }
+
+  let uploading = $state(false);
+  async function sendPhoto() {
+    if (!chat) return;
+    sendError = null;
+    try {
+      const photo = await pickAndUploadPhoto();
+      if (!photo) return;
+      uploading = true;
+      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), "", { photoId: photo.id });
+      await load(true);
+      onchange?.();
+    } catch (e) {
+      sendError = e instanceof Error ? `${e.message} Try again.` : "Couldn't send the photo. Try again.";
+    } finally {
+      uploading = false;
     }
   }
 
@@ -212,6 +233,7 @@
             <span class="text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
           </div>
         {/if}
+        {#if m.photoUrl || m.photoHidden}<ChatPhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
         {#if m.body}
           <div class="max-w-[70%] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'self-end bg-primary/15' : 'self-start bg-muted'}">
             <span class="whitespace-pre-wrap break-words">{m.body}</span>
@@ -219,6 +241,7 @@
           </div>
         {/if}
       {/each}
+      {#if uploading}<span class="self-end text-[11px] text-muted-foreground">Sending photo…</span>{/if}
       {#if seen}<span class="self-end text-[11px] text-muted-foreground">Seen</span>{/if}
     {/if}
   </div>
@@ -237,6 +260,7 @@
   {:else if chat}
     <form class="flex flex-col gap-1.5 border-t border-border px-4 py-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
       <div class="flex items-end gap-2">
+        <button type="button" onclick={sendPhoto} disabled={uploading} aria-label="Send a photo" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50"><ImageIcon class="size-4" /></button>
         <button type="button" onclick={openShare} aria-label="Share a workout or record" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground"><PlusIcon class="size-4" /></button>
         <label for="dm-compose" class="sr-only">Message {name}</label>
         <textarea id="dm-compose" bind:value={draft} onkeydown={onKey} rows={2} maxlength={2000} placeholder="Message {name}"

@@ -7,7 +7,12 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
-  import { Loader2, MoreHorizontal, Plus, Send, Trash2, User } from "lucide-svelte";
+  import { Camera, Dumbbell, Image as ImageIcon, Loader2, MoreHorizontal, Plus, Send, Trash2, User } from "lucide-svelte";
+  import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
+  import { pickImageFile } from "$lib/platform/filePick";
+  import { resizeImageFile } from "$lib/platform/imageResize";
+  import { uploadPhoto } from "@logit/core/api/photosApi";
+  import { ApiError } from "@logit/core/api/client";
   import MessageCard from "$lib/components/social/MessageCard.svelte";
   import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
@@ -41,6 +46,8 @@
   let listEl = $state<HTMLDivElement | null>(null);
   let now = $state(Date.now());
   let sharing = $state(false);
+  let attachOpen = $state(false);
+  let uploading = $state(0);
   let menuOpen = $state(false);
   let confirmDelete = $state(false);
 
@@ -113,6 +120,30 @@
     await scrollDown();
     await sending;
     await load();
+  }
+
+  // Photos are uploaded first, so they need a connection; the message itself then waits in the
+  // outbox like any other.
+  async function sendPhoto(from: "photos" | "camera") {
+    if (!chat || !to) return;
+    let file: File;
+    try {
+      file = await pickImageFile(from);
+    } catch {
+      return; // cancelled
+    }
+    uploading++;
+    await scrollDown();
+    try {
+      const photo = await uploadPhoto(await resizeImageFile(file, 2048, 0.85));
+      const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", undefined, photo);
+      await sending;
+      await load();
+    } catch (e) {
+      toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Photos need a connection. Try again when you're online.");
+    } finally {
+      uploading--;
+    }
   }
 
   async function deleteChat() {
@@ -199,6 +230,7 @@
         <div in:fade={{ duration: 150 }} class="flex flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
           {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
           {#if card}<MessageCard {card} mine={m.mine} />{/if}
+          {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
           {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
         </div>
       {/each}
@@ -207,6 +239,7 @@
         <div in:fade={{ duration: 150 }} class="flex flex-col items-end gap-1">
           {#if p.card?.type === "Story"}<span class="px-1 text-[12px] text-muted-foreground">Replying to {name}'s story</span>{/if}
           {#if p.card && readCard(p.card.type, p.card.json)}<div class="opacity-60"><MessageCard card={readCard(p.card.type, p.card.json)!} mine /></div>{/if}
+          {#if p.photo}<MessagePhoto url={p.photo.url} width={p.photo.width} height={p.photo.height} mine dim />{/if}
           {#if p.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl bg-primary/60 px-3.5 py-2 text-[15px] leading-snug text-primary-foreground">{p.body}</p>{/if}
           {#if p.error}
             <span class="flex items-center gap-2 text-[12px] text-destructive">{p.error}
@@ -219,6 +252,9 @@
           {/if}
         </div>
       {/each}
+      {#if uploading > 0}
+        <div in:fade={{ duration: 150 }} class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Loader2 class="size-4 animate-spin" />Sending photo</div>
+      {/if}
     {/if}
   </div>
 
@@ -234,7 +270,7 @@
     {#if chat.messages.length > 0}<p class="shrink-0 border-t border-border px-4 py-3 text-center text-[13px] text-muted-foreground">{chat.why}</p>{/if}
   {:else if chat}
     <form class="flex shrink-0 items-end gap-2 border-t border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
-      <button type="button" aria-label="Share a workout or record" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (sharing = true)}><Plus class="size-5" /></button>
+      <button type="button" aria-label="Send a photo, workout or record" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (attachOpen = true)}><Plus class="size-5" /></button>
       <Textarea
         bind:value={draft}
         rows={1}
@@ -252,6 +288,16 @@
 </div>
 
 {#if sharing}<ShareCardSheet onpick={sendCard} onclose={() => (sharing = false)} />{/if}
+<ActionSheet
+  open={attachOpen}
+  onOpenChange={(v) => (attachOpen = v)}
+  title="Send"
+  items={[
+    { icon: ImageIcon, label: "Photo", onSelect: () => void sendPhoto("photos") },
+    { icon: Camera, label: "Camera", onSelect: () => void sendPhoto("camera") },
+    { icon: Dumbbell, label: "Workout or record", onSelect: () => (sharing = true) },
+  ]}
+/>
 <ActionSheet
   open={menuOpen}
   onOpenChange={(v) => (menuOpen = v)}

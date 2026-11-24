@@ -3,6 +3,7 @@
 // the client id makes a resend after a dropped connection safe.
 import { ApiError } from "@logit/core/api/client";
 import { dmApi, type DmTo } from "@logit/core/api/dmApi";
+import type { SentPhoto } from "@logit/core/api/photosApi";
 import { authStore } from "$lib/api/authStore.svelte";
 
 export interface PendingDm {
@@ -10,6 +11,8 @@ export interface PendingDm {
   to: DmTo;
   body: string;
   card?: { type: string; json: string };
+  /** Already uploaded (photos need a connection); only its id is sent with the message. */
+  photo?: SentPhoto;
   createdAtMs: number;
   /** Set when the server refused it (blocked, their controls): shown instead of retrying. */
   error?: string;
@@ -54,7 +57,7 @@ async function sendWaiting(): Promise<void> {
   for (const p of [...outbox.items]) {
     if (p.error) continue;
     try {
-      await dmApi.send($state.snapshot(p.to), p.clientId, p.body, p.card ? $state.snapshot(p.card) : undefined);
+      await dmApi.send($state.snapshot(p.to), p.clientId, p.body, { card: p.card ? $state.snapshot(p.card) : undefined, photoId: p.photo?.id });
       outbox.items = outbox.items.filter((x) => x.clientId !== p.clientId);
     } catch (e) {
       if (!(e instanceof ApiError) || e.status >= 500 || e.status === 429) break; // offline or the server's trouble: later
@@ -64,9 +67,9 @@ async function sendWaiting(): Promise<void> {
   }
 }
 
-export function queueDm(to: DmTo, body: string, card?: { type: string; json: string }): Promise<void> {
+export function queueDm(to: DmTo, body: string, card?: { type: string; json: string }, photo?: SentPhoto): Promise<void> {
   load();
-  outbox.items = [...outbox.items, { clientId: crypto.randomUUID(), to, body, ...(card ? { card } : {}), createdAtMs: Date.now() }];
+  outbox.items = [...outbox.items, { clientId: crypto.randomUUID(), to, body, ...(card ? { card } : {}), ...(photo ? { photo } : {}), createdAtMs: Date.now() }];
   save();
   return flushOutbox();
 }
