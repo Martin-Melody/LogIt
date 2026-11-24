@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
@@ -50,9 +51,10 @@
   let {
     isStudio = false,
     userName,
+    userAvatar = null,
     tier,
     onLogout,
-  }: { isStudio?: boolean; userName: string; tier: string; onLogout: () => void } = $props();
+  }: { isStudio?: boolean; userName: string; userAvatar?: string | null; tier: string; onLogout: () => void } = $props();
 
   const sidebar = useSidebar();
 
@@ -316,9 +318,13 @@
                 size="lg"
                 class="border border-sidebar-border bg-card data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
-                <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold">
-                  {userName.slice(0, 1).toUpperCase()}
-                </div>
+                {#if userAvatar}
+                  <img src={photoSrc(userAvatar)} alt="" class="size-8 shrink-0 rounded-full object-cover" />
+                {:else}
+                  <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold">
+                    {userName.slice(0, 1).toUpperCase()}
+                  </div>
+                {/if}
                 <span class="flex min-w-0 flex-1 flex-col text-left leading-tight">
                   <span class="truncate text-sm font-medium">{userName}</span>
                   <span class="truncate text-xs text-muted-foreground">{apiClient.isSelfHosted() ? "Own server" : tier} · Account</span>

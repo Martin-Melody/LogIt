@@ -35,7 +35,8 @@ public static class DirectMessageEndpoints
     public record ThreadDto(Guid Id, PersonDto? Other, string LastBody, long LastAtMs, bool LastMine, bool Unread);
     /// PhotoHidden: a photo in a request you haven't accepted (shown blurred, address withheld).
     public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null,
-        string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false, bool Edited = false);
+        string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false, bool Edited = false,
+        bool Deleted = false, bool RemovedByLogIt = false);
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
@@ -55,7 +56,8 @@ public static class DirectMessageEndpoints
         var hidden = request && x.SenderId != me && x.PhotoId is not null;
         return new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType,
             x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson,
-            x.PhotoId is { } p && !hidden ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, hidden, x.EditedAt is not null);
+            x.PhotoId is { } p && !hidden ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, hidden, x.EditedAt is not null,
+            x.DeletedAt is not null, x.RemovedByLogIt);
     }
 
     /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
@@ -72,7 +74,8 @@ public static class DirectMessageEndpoints
 
     /// The list's one-line preview: the text, or what was shared.
     private static string Preview(DirectMessage x) =>
-        x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
+        x.RemovedByLogIt ? "Message removed by LogIt" : x.DeletedAt is not null ? "Unsent a message"
+        : x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
         : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
@@ -305,7 +308,7 @@ public static class DirectMessageEndpoints
     private static async Task<IResult> Edit(Guid id, EditRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
     {
         var me = caller.GetUserId();
-        var message = await db.DirectMessages.FirstOrDefaultAsync(m => m.Id == id && m.SenderId == me);
+        var message = await db.DirectMessages.FirstOrDefaultAsync(m => m.Id == id && m.SenderId == me && m.DeletedAt == null);
         if (message is null) return Results.NotFound();
         var body = (req.Body ?? "").Trim();
         if (message.Body.Length == 0) return Results.BadRequest(new { error = "Only text can be edited." });
@@ -326,19 +329,26 @@ public static class DirectMessageEndpoints
     private static async Task<IResult> Unsend(Guid id, ClaimsPrincipal caller, AppDbContext db, Photos.IPhotoStore store, CancellationToken ct)
     {
         var me = caller.GetUserId();
-        if (!await db.DirectMessages.AnyAsync(m => m.Id == id && m.SenderId == me, ct)) return Results.NotFound();
+        if (!await db.DirectMessages.AnyAsync(m => m.Id == id && m.SenderId == me && m.DeletedAt == null, ct)) return Results.NotFound();
         await UnsendAsync(db, store, id, ct);
         return Results.NoContent();
     }
 
-    /// Deletes a message and the photo sent with it (also used when a report is upheld).
-    public static async Task UnsendAsync(AppDbContext db, Photos.IPhotoStore store, Guid id, CancellationToken ct)
+    /// Empties a message and deletes the photo sent with it; both people then see where it was
+    /// ("unsent a message", or "removed by LogIt" when a report is upheld).
+    public static async Task UnsendAsync(AppDbContext db, Photos.IPhotoStore store, Guid id, CancellationToken ct, bool byLogIt = false)
     {
         var message = await db.DirectMessages.FirstOrDefaultAsync(m => m.Id == id, ct);
-        if (message is null) return;
+        if (message is null || message.DeletedAt is not null) return;
         if (message.PhotoId is { } photo && message.SenderId is { } sender)
             await Photos.PhotoEndpoints.DeleteOwnedAsync(db, store, sender, [photo], ct);
-        db.DirectMessages.Remove(message);
+        message.Body = "";
+        message.CardType = null;
+        message.CardJson = null;
+        message.PhotoId = null;
+        message.PhotoWidth = message.PhotoHeight = 0;
+        message.DeletedAt = DateTime.UtcNow;
+        message.RemovedByLogIt = byLogIt;
         await db.SaveChangesAsync(ct);
     }
 

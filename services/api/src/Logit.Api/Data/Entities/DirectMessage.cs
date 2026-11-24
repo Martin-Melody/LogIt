@@ -54,6 +54,10 @@ public class DirectMessage
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     /// Set when the sender edited the text (within 15 minutes, as on Instagram); shown as "Edited".
     public DateTime? EditedAt { get; set; }
+    /// Unsent by the sender (or removed by LogIt after a report): the row stays so both people see
+    /// "unsent a message" where it was; its text, card and photo are gone.
+    public DateTime? DeletedAt { get; set; }
+    public bool RemovedByLogIt { get; set; }
     /// When the push dispatcher dealt with it (sent, or skipped).
     public DateTime? PushedAt { get; set; }
 }

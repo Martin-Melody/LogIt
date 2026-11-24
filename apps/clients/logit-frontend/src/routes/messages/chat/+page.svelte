@@ -11,7 +11,7 @@
   import ReportSheet from "$lib/components/social/ReportSheet.svelte";
   import { socialApi } from "@logit/core/api/socialApi";
   import { longpress } from "$lib/swipe";
-  import { DM_EDIT_WINDOW_MS } from "@logit/core/api/dmApi";
+  import { DM_EDIT_WINDOW_MS, unsent } from "@logit/core/api/dmApi";
   import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
   import { pickImageFile } from "$lib/platform/filePick";
   import { resizeImageFile } from "$lib/platform/imageResize";
@@ -101,7 +101,7 @@
     if (!chat) return;
     try {
       await dmApi.unsend(m.id);
-      chat = { ...chat, messages: chat.messages.filter((x) => x.id !== m.id) };
+      chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? unsent(x) : x)) };
     } catch {
       toast.error("Couldn't unsend it. Try again.");
     }
@@ -122,9 +122,11 @@
   const lastMine = $derived(chat?.messages.findLast((m) => m.mine) ?? null);
   const seen = $derived(!!chat?.seenAtMs && !!lastMine && chat.seenAtMs >= lastMine.createdAtMs && chat.messages.at(-1)?.mine);
 
-  async function scrollDown() {
+  // Opening a chat lands on the newest message at once (a long history would mean a long
+  // animation every time); a message arriving while it's open glides into view.
+  async function scrollDown(smooth = true) {
     await tick();
-    listEl?.scrollTo({ top: listEl.scrollHeight, behavior: "smooth" });
+    listEl?.scrollTo({ top: listEl.scrollHeight, behavior: smooth ? "smooth" : "instant" });
   }
 
   async function load(first = false) {
@@ -142,7 +144,7 @@
       error = null;
       if (first) older = next.messages.length >= 50;
       if (next.threadId && next.accepted && next.messages.some((m) => !m.mine)) void dmApi.read(next.threadId).catch(() => {});
-      if (first || next.messages.length > before) await scrollDown();
+      if (first || next.messages.length > before) await scrollDown(!first);
     } catch (e) {
       if (!chat) error = e instanceof Error && "status" in e && (e as { status: number }).status === 404 ? "This conversation isn't available." : "Couldn't load this conversation.";
     }
@@ -286,12 +288,14 @@
         {#if gap(chat.messages, i)}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(m.createdAtMs, now)}</p>{/if}
         {@const story = m.cardType === "Story"}
         {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
-        <div in:fade={{ duration: 150 }} use:longpress={() => (picked = m)} class="flex shrink-0 select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
+        <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
           {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
           {#if card}<MessageCard {card} mine={m.mine} />{/if}
           {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
           {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
-          {#if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
+          {#if m.deleted}
+            <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${name} unsent a message`}</p>
+          {:else if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
         </div>
       {/each}
       {#if seen}<p transition:fade={{ duration: 150 }} class="pr-1 text-right text-[12px] text-muted-foreground">Seen</p>{/if}

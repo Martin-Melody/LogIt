@@ -152,7 +152,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
     private static async Task<int> DispatchDirectMessagesAsync(AppDbContext db, IPushSender sender, DateTime now, CancellationToken ct)
     {
         var tooOld = now - MaxAge;
-        await db.DirectMessages.Where(m => m.PushedAt == null && m.CreatedAt < tooOld)
+        // Too old, or unsent before its push went out: done with them.
+        await db.DirectMessages.Where(m => m.PushedAt == null && (m.CreatedAt < tooOld || m.DeletedAt != null))
             .ExecuteUpdateAsync(s => s.SetProperty(m => m.PushedAt, now), ct);
         var pending = await db.DirectMessages.Include(m => m.Sender)
             .Where(m => m.PushedAt == null)

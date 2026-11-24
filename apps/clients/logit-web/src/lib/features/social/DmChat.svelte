@@ -12,7 +12,7 @@
   import ChatPhoto from "./ChatPhoto.svelte";
   import ReportDialog from "./ReportDialog.svelte";
   import { socialApi } from "@logit/core/api/socialApi";
-  import { DM_EDIT_WINDOW_MS, type DmMessage } from "@logit/core/api/dmApi";
+  import { DM_EDIT_WINDOW_MS, unsent, type DmMessage } from "@logit/core/api/dmApi";
   import { pickAndUploadPhoto } from "./chatPhoto";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
@@ -150,7 +150,7 @@
     if (!chat) return;
     try {
       await dmApi.unsend(m.id);
-      chat = { ...chat, messages: chat.messages.filter((x) => x.id !== m.id) };
+      chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? unsent(x) : x)) };
       onchange?.();
     } catch {
       sendError = "Couldn't unsend it. Try again.";
@@ -304,7 +304,11 @@
             <span class="mt-0.5 block text-right text-[10px] text-muted-foreground">{m.edited ? "Edited · " : ""}{time(m.createdAtMs)}</span>
           </div>
         {/if}
+        {#if m.deleted}
+          <span class="rounded-xl border border-border px-3 py-2 text-[13px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${name} unsent a message`}</span>
+        {/if}
         </div>
+        {#if !m.deleted}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger>
             {#snippet child({ props })}
@@ -321,6 +325,7 @@
             {/if}
           </DropdownMenu.Content>
         </DropdownMenu.Root>
+        {/if}
         </div>
       {/each}
       {#if uploading}<span class="self-end text-[11px] text-muted-foreground">Sending photo…</span>{/if}

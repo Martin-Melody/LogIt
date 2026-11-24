@@ -221,6 +221,7 @@
     <AppSidebar
       {isStudio}
       userName={apiClient.getUser()?.displayName ?? apiClient.getUser()?.username ?? "Account"}
+      userAvatar={apiClient.getUser()?.avatarUrl ?? null}
       tier={apiClient.getUser()?.tier ?? "Free"}
       onLogout={logout}
     />
