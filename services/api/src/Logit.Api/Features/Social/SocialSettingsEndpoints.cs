@@ -23,17 +23,19 @@ public static class SocialSettingsEndpoints
 
     public record SocialSettingsDto(
         bool IsPrivate, bool? ShowInDiscover, bool HideFromSuggestions, bool HidePeopleSuggestions,
-        int PendingRequests, int NotInterestedCount);
+        int PendingRequests, int NotInterestedCount, bool ShowTraining, CheersFrom CheersFrom);
 
     /// Every field optional: only the ones sent change. `ShowInDiscover` can't be cleared back
     /// to "not asked".
     public record UpdateSocialSettingsRequest(
-        bool? IsPrivate, bool? ShowInDiscover, bool? HideFromSuggestions, bool? HidePeopleSuggestions);
+        bool? IsPrivate, bool? ShowInDiscover, bool? HideFromSuggestions, bool? HidePeopleSuggestions,
+        bool? ShowTraining = null, CheersFrom? CheersFrom = null);
 
     private static async Task<SocialSettingsDto> ToDtoAsync(AppDbContext db, User user) => new(
         user.IsPrivate, user.ShowInDiscover, user.HideFromSuggestions, user.HidePeopleSuggestions,
         await db.FollowRequests.CountAsync(r => r.TargetId == user.Id),
-        await db.DiscoverDismissals.CountAsync(d => d.UserId == user.Id));
+        await db.DiscoverDismissals.CountAsync(d => d.UserId == user.Id),
+        user.ShowTraining, user.CheersFrom);
 
     private static async Task<IResult> GetSettings(ClaimsPrincipal caller, AppDbContext db)
     {
@@ -63,6 +65,17 @@ public static class SocialSettingsEndpoints
         if (req.ShowInDiscover is { } show) user.ShowInDiscover = show;
         if (req.HideFromSuggestions is { } hideMe) user.HideFromSuggestions = hideMe;
         if (req.HidePeopleSuggestions is { } hidePeople) user.HidePeopleSuggestions = hidePeople;
+        if (req.ShowTraining is { } showTraining)
+        {
+            user.ShowTraining = showTraining;
+            // Off hides the dot at once, not after the next refresh.
+            if (!showTraining) user.TrainingUntil = null;
+        }
+        if (req.CheersFrom is { } cheers)
+        {
+            if (!Enum.IsDefined(cheers)) return Results.BadRequest(new { error = "Unknown choice." });
+            user.CheersFrom = cheers;
+        }
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Results.Ok(await ToDtoAsync(db, user));

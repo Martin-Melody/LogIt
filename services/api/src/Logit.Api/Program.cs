@@ -318,6 +318,7 @@ api.MapSandboxEndpoints();
 api.MapGuideEndpoints();
 api.MapFoodSearchEndpoints();
 api.MapPushEndpoints();
+api.MapTrainingEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

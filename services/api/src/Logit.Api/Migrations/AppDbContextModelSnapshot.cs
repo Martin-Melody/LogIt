@@ -1305,6 +1305,9 @@ namespace Logit.Api.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Cheers")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("Coaching")
                         .HasColumnType("INTEGER");
 
@@ -2149,6 +2152,9 @@ namespace Logit.Api.Migrations
                     b.Property<string>("Bio")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("CheersFrom")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("CoachSwapRule")
                         .HasColumnType("TEXT");
 
@@ -2218,11 +2224,23 @@ namespace Logit.Api.Migrations
                     b.Property<bool?>("ShowInDiscover")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("ShowTraining")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Tier")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("TrainingSince")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("TrainingUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TrainingWhat")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");

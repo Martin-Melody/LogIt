@@ -45,6 +45,16 @@ public class User
     public bool HideFromSuggestions { get; set; }
     /// Don't show "People you might know" to this account (they closed the section).
     public bool HidePeopleSuggestions { get; set; }
+    /// "Show when you're training" (Instagram's activity status): accounts this one follows see a
+    /// green dot while a workout runs. Off also hides everyone else's from this account.
+    public bool ShowTraining { get; set; } = true;
+    /// Who may cheer this account on (and later reply to its stories).
+    public CheersFrom CheersFrom { get; set; } = CheersFrom.Everyone;
+    /// While a workout runs the phone refreshes this every few minutes; past it, not training.
+    public DateTime? TrainingUntil { get; set; }
+    public DateTime? TrainingSince { get; set; }
+    /// The day's name ("Push A"), shown next to the green dot.
+    public string? TrainingWhat { get; set; }
     /// A sample client in a Studio coach's sandbox (see Features/Sandbox). Nobody signs in as one:
     /// it has no usable password, only its coach gets short-lived tokens for it, and it's left
     /// out of social, search, suggestions, admin counts and payments.
@@ -75,3 +85,6 @@ public class User
 }
 
 public enum UserTier { Free, Pro, Studio }
+
+/// Stored as int: add at the end. "Following" = people this account follows.
+public enum CheersFrom { Everyone, Following, Off }

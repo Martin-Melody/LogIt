@@ -1310,6 +1310,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("Cheers")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("Coaching")
                         .HasColumnType("boolean");
 
@@ -2154,6 +2157,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("Bio")
                         .HasColumnType("text");
 
+                    b.Property<int>("CheersFrom")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CoachSwapRule")
                         .HasColumnType("text");
 
@@ -2223,11 +2229,23 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool?>("ShowInDiscover")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ShowTraining")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("text");
 
                     b.Property<int>("Tier")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime?>("TrainingSince")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("TrainingUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TrainingWhat")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

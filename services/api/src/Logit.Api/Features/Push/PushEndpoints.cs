@@ -68,16 +68,16 @@ public static class PushEndpoints
     }
 
     public record PushSettingsDto(
-        bool Available, PushAudience Likes, PushAudience Comments, bool Follows, bool Messages, bool Coaching,
+        bool Available, PushAudience Likes, PushAudience Comments, bool Follows, bool Messages, bool Coaching, bool Cheers,
         DateTime? PausedUntil, bool QuietOn, int QuietFromMinute, int QuietToMinute, int QuietDays, string TimeZone);
 
     /// Every field optional: only the ones sent change. Send `resume: true` to end a pause.
     public record UpdatePushSettingsRequest(
-        PushAudience? Likes, PushAudience? Comments, bool? Follows, bool? Messages, bool? Coaching,
+        PushAudience? Likes, PushAudience? Comments, bool? Follows, bool? Messages, bool? Coaching, bool? Cheers,
         DateTime? PausedUntil, bool? Resume, bool? QuietOn, int? QuietFromMinute, int? QuietToMinute, int? QuietDays);
 
     private static PushSettingsDto ToDto(PushSettings s, bool available, DateTime now) => new(
-        available, s.Likes, s.Comments, s.Follows, s.Messages, s.Coaching,
+        available, s.Likes, s.Comments, s.Follows, s.Messages, s.Coaching, s.Cheers,
         s.PausedUntil > now ? DateTime.SpecifyKind(s.PausedUntil.Value, DateTimeKind.Utc) : null,
         s.QuietOn, s.QuietFromMinute, s.QuietToMinute, s.QuietDays, s.TimeZone);
 
@@ -111,6 +111,7 @@ public static class PushEndpoints
         if (req.Follows is { } follows) s.Follows = follows;
         if (req.Messages is { } messages) s.Messages = messages;
         if (req.Coaching is { } coaching) s.Coaching = coaching;
+        if (req.Cheers is { } cheers) s.Cheers = cheers;
         if (req.PausedUntil is { } pause) s.PausedUntil = pause.ToUniversalTime();
         if (req.Resume == true) s.PausedUntil = null;
         if (req.QuietOn is { } quiet) s.QuietOn = quiet;

@@ -76,7 +76,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             }
             if (wanted.Count == 0 || InQuiet(settings, now)) continue;
 
-            var instant = wanted.Where(n => Of(n.Type) == Kind.Coaching).ToList();
+            // Coaching and cheers go straight away; a cheer is no use an hour after the workout.
+            var instant = wanted.Where(n => Of(n.Type) is Kind.Coaching or Kind.Cheers).ToList();
             List<Notification> batch;
             if (instant.Count < wanted.Count && (settings.LastBundleAt is null || now - settings.LastBundleAt >= BundleGap))
             {
@@ -164,13 +165,14 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
 
     private static string NameOf(User u) => string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName;
 
-    public enum Kind { Likes, Comments, Follows, Coaching }
+    public enum Kind { Likes, Comments, Follows, Coaching, Cheers }
 
     public static Kind Of(NotificationType type) => type switch
     {
         NotificationType.Like or NotificationType.Repost => Kind.Likes,
         NotificationType.Comment or NotificationType.Reply or NotificationType.Mention or NotificationType.Quote => Kind.Comments,
         NotificationType.Follow or NotificationType.FollowRequest or NotificationType.FollowAccepted => Kind.Follows,
+        NotificationType.Cheer => Kind.Cheers,
         _ => Kind.Coaching,
     };
 
@@ -182,6 +184,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             Kind.Likes => From(s.Likes),
             Kind.Comments => From(s.Comments),
             Kind.Follows => s.Follows,
+            Kind.Cheers => s.Cheers,
             _ => s.Coaching,
         };
     }
@@ -215,6 +218,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.CoachInvite => "wants to coach you",
         NotificationType.CoachProgram => "sent you a program",
         NotificationType.CoachPaymentFailed => "couldn't take your coaching payment",
+        NotificationType.Cheer => "is cheering you on",
         _ => "sent you something",
     };
 
@@ -227,6 +231,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Follow => ("new follower", "new followers"),
         NotificationType.FollowRequest => ("follow request", "follow requests"),
         NotificationType.FollowAccepted => ("accepted request", "accepted requests"),
+        NotificationType.Cheer => ("cheer", "cheers"),
         _ => ("coaching update", "coaching updates"),
     };
 
