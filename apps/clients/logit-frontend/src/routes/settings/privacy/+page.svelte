@@ -87,7 +87,7 @@
 
     <SettingsSection title="Who can reach you">
       <a href="/settings/privacy/training" class={link}>
-        <span class="flex-1 text-[15px] font-medium">Training now and cheers</span>
+        <span class="flex-1 text-[15px] font-medium">Story and training now</span>
         <span class="flex items-center gap-1.5 text-sm text-muted-foreground">{settings.showTraining ? "Showing" : "Off"}<ChevronRight class="size-4" /></span>
       </a>
       <a href="/settings/privacy/messages" class={link}>

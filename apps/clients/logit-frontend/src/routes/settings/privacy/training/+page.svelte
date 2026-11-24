@@ -1,17 +1,20 @@
-<!-- Settings › Privacy › Training now and cheers (design canvas S4, its training-now half; the
-     story rows come with stories). Training now is Instagram's activity status. -->
+<!-- Settings › Privacy › Story and training now (design canvas S4): Close friends and Hide story
+     from (Instagram's story controls), who can cheer and reply, and training now (Instagram's
+     activity status). -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Loader2 } from "lucide-svelte";
+  import { ChevronRight, Loader2 } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import { socialApi, type SocialSettings } from "@logit/core/api/socialApi";
+  import { storiesApi } from "@logit/core/api/storiesApi";
 
   let settings = $state<SocialSettings | null>(null);
   let error = $state(false);
+  let lists = $state<{ closeFriends: number; hidden: number } | null>(null);
 
   async function load() {
     try {
@@ -21,7 +24,11 @@
       error = true;
     }
   }
-  onMount(load);
+  onMount(() => {
+    void load();
+    storiesApi.lists().then((l) => (lists = { closeFriends: l.closeFriends.length, hidden: l.hidden.length })).catch(() => {});
+  });
+  const count = (n: number | undefined, none: string) => (n === undefined ? "" : n === 0 ? none : `${n} ${n === 1 ? "person" : "people"}`);
 
   async function set(change: Partial<SocialSettings>) {
     if (!settings) return;
@@ -36,19 +43,31 @@
   }
 
   const CHEERS: { value: SocialSettings["cheersFrom"]; label: string }[] = [
-    { value: "Everyone", label: "Everyone who can see you training" },
+    { value: "Everyone", label: "Everyone who can see you" },
     { value: "Following", label: "People you follow" },
     { value: "Off", label: "Off" },
   ];
+  const link = `${settingRow} w-full text-left text-inherit no-underline hover:bg-muted/40`;
   const option = "flex min-h-13 cursor-pointer items-center justify-between gap-3 border-b border-border px-3 text-[15px] last:border-b-0";
 </script>
 
-<SettingsPage title="Training now and cheers">
+<SettingsPage title="Story and training now">
   {#if error}
     <p class="px-1 text-sm text-muted-foreground">Couldn't load your settings. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if !settings}
     <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
   {:else}
+    <SettingsSection title="Story" note="Stories follow your account: your followers see them, and on a private account only the followers you accepted.">
+      <a href="/settings/privacy/story/close-friends" class={link}>
+        <span class="flex-1 text-[15px] font-medium">Close friends</span>
+        <span class="flex items-center gap-1.5 text-sm text-muted-foreground">{count(lists?.closeFriends, "Nobody yet")}<ChevronRight class="size-4" /></span>
+      </a>
+      <a href="/settings/privacy/story/hidden" class={link}>
+        <span class="flex-1 text-[15px] font-medium">Hide story from</span>
+        <span class="flex items-center gap-1.5 text-sm text-muted-foreground">{count(lists?.hidden, "Nobody")}<ChevronRight class="size-4" /></span>
+      </a>
+    </SettingsSection>
+
     <SettingsSection title="Training now" note="Turn it off and you won't see when others are training either, as on Instagram.">
       <div id="show-training" class={settingRow}>
         <span class="flex flex-1 flex-col gap-0.5">
@@ -59,8 +78,8 @@
       </div>
     </SettingsSection>
 
-    <SettingsSection title="Cheers" note="A cheer arrives as a small pill and a light buzz mid-workout, never over a set or a rest.">
-      <RadioGroup.Root value={settings.cheersFrom} aria-label="Who can cheer you on" onValueChange={(v) => set({ cheersFrom: v as SocialSettings["cheersFrom"] })}>
+    <SettingsSection title="Cheers and replies" note="Who can cheer you on while you train, and cheer or reply to your stories. A cheer mid-workout is a small pill and a light buzz, never over a set or a rest.">
+      <RadioGroup.Root value={settings.cheersFrom} aria-label="Who can cheer you on and reply to your stories" onValueChange={(v) => set({ cheersFrom: v as SocialSettings["cheersFrom"] })}>
         {#each CHEERS as c (c.value)}
           <label class={option}>
             {c.label}

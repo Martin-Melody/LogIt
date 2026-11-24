@@ -10,7 +10,7 @@
   import PlusIcon from "@lucide/svelte/icons/plus";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
-  import { cardTitle, readCard, recordCard, workoutCard } from "@logit/core/domain/messageCard";
+  import { cardTitle, readCard, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
 
   // One conversation between people (the phone's chat screen, design canvas M2), by username
   // or thread. Same server rules as the phone: a request you received shows Accept / Delete;
@@ -199,7 +199,9 @@
         {#if i === 0 || dayLabel(m.createdAtMs) !== dayLabel(chat.messages[i - 1]!.createdAtMs)}
           <div class="py-1.5 text-center text-[11px] text-muted-foreground">{dayLabel(m.createdAtMs)}</div>
         {/if}
-        {@const card = readCard(m.cardType, m.cardJson)}
+        {@const story = m.cardType === "Story"}
+        {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
+        {#if story}<span class="px-1 text-[11px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
         {#if card}
           <div class="flex w-[280px] max-w-[70%] flex-col gap-1 rounded-xl border border-border bg-background px-3 py-2.5 {m.mine ? 'self-end' : 'self-start'}">
             <span class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

@@ -91,7 +91,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   { page: "Notifications", href: "/settings/notifications#training", title: "Workout reminders and rest alerts", detail: "Your own training notifications", keywords: "reminder rest timer" },
 
   { page: "Privacy", href: "/settings/privacy#private", title: "Private account", detail: "Approve who follows you", keywords: "privacy followers" },
-  { page: "Privacy", href: "/settings/privacy/training", title: "Training now and cheers", detail: "The green dot while you train, and who can cheer you on", keywords: "activity status online cheer" },
+  { page: "Privacy", href: "/settings/privacy/training", title: "Story and training now", detail: "Close friends, hide your story, the green dot while you train, and who can cheer or reply", keywords: "activity status online cheer story stories close friends hide replies" },
   { page: "Privacy", href: "/settings/privacy/messages", title: "Messages", detail: "Who can message you, message requests and read receipts", keywords: "dm direct message request seen read receipts inbox" },
   { page: "Privacy", href: "/settings/privacy#discover", title: "Discover and suggestions", detail: "Whether people who don't follow you find your posts", keywords: "discover suggest" },
 

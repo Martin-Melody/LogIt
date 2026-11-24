@@ -44,3 +44,15 @@ export function cardTitle(card: Card): string {
   const n = exercises?.length ?? 0;
   return [name || "Workout", duration ? `${Math.round(duration / 60_000)} min` : "", n ? `${n} exercise${n === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ");
 }
+
+/** A reply to a story: the quoted story's card, or null once the story has gone (or while the
+ * reply is still waiting to send, before the server filled the quote in). */
+export function readStoryQuote(json: string | null | undefined): Card | null {
+  if (!json) return null;
+  try {
+    const q = JSON.parse(json);
+    return q?.data ? readCard(q.type, JSON.stringify(q.data)) : null;
+  } catch {
+    return null;
+  }
+}

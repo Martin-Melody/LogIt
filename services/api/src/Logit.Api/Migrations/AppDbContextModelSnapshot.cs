@@ -218,6 +218,21 @@ namespace Logit.Api.Migrations
                     b.ToTable("CheckinSchedules");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CloseFriend", b =>
+                {
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FriendId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("OwnerId", "FriendId");
+
+                    b.HasIndex("FriendId");
+
+                    b.ToTable("CloseFriends");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientPayment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1589,6 +1604,79 @@ namespace Logit.Api.Migrations
                     b.ToTable("ServerSettings");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.Story", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CardJson")
+                        .IsRequired()
+                        .HasMaxLength(3800)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CardType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CloseFriends")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("AuthorId", "ExpiresAt");
+
+                    b.ToTable("Stories");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryHide", b =>
+                {
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("HiddenId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("OwnerId", "HiddenId");
+
+                    b.HasIndex("HiddenId");
+
+                    b.ToTable("StoryHides");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryView", b =>
+                {
+                    b.Property<Guid>("StoryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ViewerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Cheered")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("StoryId", "ViewerId");
+
+                    b.HasIndex("ViewerId");
+
+                    b.ToTable("StoryViews");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2463,6 +2551,23 @@ namespace Logit.Api.Migrations
                     b.Navigation("Relationship");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CloseFriend", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Friend")
+                        .WithMany()
+                        .HasForeignKey("FriendId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Friend");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientPayment", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
@@ -2941,6 +3046,53 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Story", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryHide", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Hidden")
+                        .WithMany()
+                        .HasForeignKey("HiddenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hidden");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryView", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Story", "Story")
+                        .WithMany()
+                        .HasForeignKey("StoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Viewer")
+                        .WithMany()
+                        .HasForeignKey("ViewerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Story");
+
+                    b.Navigation("Viewer");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>

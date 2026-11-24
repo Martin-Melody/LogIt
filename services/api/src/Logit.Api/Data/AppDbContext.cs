@@ -23,6 +23,10 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<DmThread> DmThreads => Set<DmThread>();
     public DbSet<DmMember> DmMembers => Set<DmMember>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+    public DbSet<Story> Stories => Set<Story>();
+    public DbSet<StoryView> StoryViews => Set<StoryView>();
+    public DbSet<CloseFriend> CloseFriends => Set<CloseFriend>();
+    public DbSet<StoryHide> StoryHides => Set<StoryHide>();
     public DbSet<PushSettings> PushSettings => Set<PushSettings>();
     public DbSet<DiscoverDismissal> DiscoverDismissals => Set<DiscoverDismissal>();
     public DbSet<DiscoverImpression> DiscoverImpressions => Set<DiscoverImpression>();
@@ -344,6 +348,36 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(m => m.PushedAt);
             e.HasOne(m => m.Thread).WithMany().HasForeignKey(m => m.ThreadId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(m => m.Sender).WithMany().HasForeignKey(m => m.SenderId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<Story>(e =>
+        {
+            e.Property(x => x.CardType).HasMaxLength(32);
+            e.Property(x => x.CardJson).HasMaxLength(3800);
+            e.HasIndex(x => new { x.AuthorId, x.ExpiresAt });
+            e.HasIndex(x => x.ExpiresAt);
+            e.HasOne(x => x.Author).WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<StoryView>(e =>
+        {
+            e.HasKey(v => new { v.StoryId, v.ViewerId });
+            e.HasIndex(v => v.ViewerId);
+            e.HasOne(v => v.Story).WithMany().HasForeignKey(v => v.StoryId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(v => v.Viewer).WithMany().HasForeignKey(v => v.ViewerId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<CloseFriend>(e =>
+        {
+            e.HasKey(c => new { c.OwnerId, c.FriendId });
+            e.HasIndex(c => c.FriendId);
+            e.HasOne<User>().WithMany().HasForeignKey(c => c.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.Friend).WithMany().HasForeignKey(c => c.FriendId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<StoryHide>(e =>
+        {
+            e.HasKey(h => new { h.OwnerId, h.HiddenId });
+            e.HasIndex(h => h.HiddenId);
+            e.HasOne<User>().WithMany().HasForeignKey(h => h.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(h => h.Hidden).WithMany().HasForeignKey(h => h.HiddenId).OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<FriendInvite>(e =>

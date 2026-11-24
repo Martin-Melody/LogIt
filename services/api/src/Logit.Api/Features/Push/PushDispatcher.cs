@@ -220,7 +220,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
 
     public static Kind Of(NotificationType type) => type switch
     {
-        NotificationType.Like or NotificationType.Repost => Kind.Likes,
+        NotificationType.Like or NotificationType.Repost or NotificationType.StoryCheer => Kind.Likes,
         NotificationType.Comment or NotificationType.Reply or NotificationType.Mention or NotificationType.Quote => Kind.Comments,
         NotificationType.Follow or NotificationType.FollowRequest or NotificationType.FollowAccepted => Kind.Follows,
         NotificationType.Cheer => Kind.Cheers,
@@ -270,6 +270,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.CoachProgram => "sent you a program",
         NotificationType.CoachPaymentFailed => "couldn't take your coaching payment",
         NotificationType.Cheer => "is cheering you on",
+        NotificationType.StoryCheer => "cheered your story",
         _ => "sent you something",
     };
 

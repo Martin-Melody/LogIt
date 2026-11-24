@@ -12,7 +12,7 @@
   import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import { readCard } from "@logit/core/domain/messageCard";
+  import { readCard, readStoryQuote } from "@logit/core/domain/messageCard";
   import { toast } from "svelte-sonner";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -194,8 +194,10 @@
       {/if}
       {#each chat.messages as m, i (m.id)}
         {#if gap(chat.messages, i)}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(m.createdAtMs, now)}</p>{/if}
-        {@const card = readCard(m.cardType, m.cardJson)}
+        {@const story = m.cardType === "Story"}
+        {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
         <div in:fade={{ duration: 150 }} class="flex flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
+          {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
           {#if card}<MessageCard {card} mine={m.mine} />{/if}
           {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
         </div>
@@ -203,6 +205,7 @@
       {#if seen}<p transition:fade={{ duration: 150 }} class="pr-1 text-right text-[12px] text-muted-foreground">Seen</p>{/if}
       {#each pending as p (p.clientId)}
         <div in:fade={{ duration: 150 }} class="flex flex-col items-end gap-1">
+          {#if p.card?.type === "Story"}<span class="px-1 text-[12px] text-muted-foreground">Replying to {name}'s story</span>{/if}
           {#if p.card && readCard(p.card.type, p.card.json)}<div class="opacity-60"><MessageCard card={readCard(p.card.type, p.card.json)!} mine /></div>{/if}
           {#if p.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl bg-primary/60 px-3.5 py-2 text-[15px] leading-snug text-primary-foreground">{p.body}</p>{/if}
           {#if p.error}

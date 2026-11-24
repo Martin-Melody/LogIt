@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -38,9 +40,25 @@ public static class DirectMessageEndpoints
 
     /// What can be shared into a chat as a card (post payload formats).
     public static readonly string[] CardTypes = ["WorkoutSession", "PersonalRecord"];
+    /// A reply to a story: the client sends {"storyId"}, the server stores the story's card and
+    /// when it expires, so the quote disappears with the story.
+    public const string StoryCard = "Story";
     private const int MaxCardJson = 4000;
 
-    private static MessageDto Dto(DirectMessage x, Guid me) => new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType, x.CardJson);
+    private static MessageDto Dto(DirectMessage x, Guid me, DateTime now) =>
+        new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType, x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson);
+
+    /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
+    private static bool QuoteExpired(string? json, DateTime now)
+    {
+        if (json is null) return true;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return !doc.RootElement.TryGetProperty("expiresAtMs", out var e) || e.GetInt64() <= Ms(now);
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException) { return true; }
+    }
 
     /// The list's one-line preview: the text, or what was shared.
     private static string Preview(DirectMessage x) =>
@@ -102,7 +120,7 @@ public static class DirectMessageEndpoints
 
     /// One conversation, by the other person's username (also before any message) or by thread
     /// id (a deleted account has no username). `before` pages back through older messages.
-    private static async Task<IResult> Chat(string? username, Guid? threadId, long? before, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Chat(string? username, Guid? threadId, long? before, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
     {
         var meId = caller.GetUserId();
         var me = await db.Users.FirstAsync(u => u.Id == meId);
@@ -131,7 +149,7 @@ public static class DirectMessageEndpoints
             var rows = await db.DirectMessages
                 .Where(x => x.ThreadId == mine.ThreadId && x.CreatedAt < cutoff && (mine.ClearedAt == null || x.CreatedAt > mine.ClearedAt))
                 .OrderByDescending(x => x.CreatedAt).Take(Page).ToListAsync();
-            messages = rows.AsEnumerable().Reverse().Select(x => Dto(x, meId)).ToList();
+            messages = rows.AsEnumerable().Reverse().Select(x => Dto(x, meId, clock.GetUtcNow().UtcDateTime)).ToList();
             var theirs = other is null ? null : await db.DmMembers.FirstOrDefaultAsync(m => m.ThreadId == mine.ThreadId && m.UserId == other.Id);
             if (theirs is { Accepted: true, LastReadAt: { } read } && me.ShowReadReceipts && other!.ShowReadReceipts) seen = Ms(read);
         }
@@ -148,11 +166,15 @@ public static class DirectMessageEndpoints
     private static async Task<bool> TheyAcceptedAsync(AppDbContext db, DmMember mine, Guid otherId) =>
         await db.DmMembers.AnyAsync(m => m.ThreadId == mine.ThreadId && m.UserId == otherId && m.Accepted);
 
-    private static async Task<IResult> Send(SendRequest req, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Send(SendRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
     {
         var meId = caller.GetUserId();
         var body = (req.Body ?? "").Trim();
-        if (req.CardType is not null)
+        if (req.CardType == StoryCard)
+        {
+            if (body.Length == 0) return Results.BadRequest(new { error = "Write something first." });
+        }
+        else if (req.CardType is not null)
         {
             if (!CardTypes.Contains(req.CardType)) return Results.BadRequest(new { error = "That can't be shared in a message." });
             if (string.IsNullOrEmpty(req.CardJson) || req.CardJson.Length > MaxCardJson) return Results.BadRequest(new { error = "That's too big to share." });
@@ -164,7 +186,7 @@ public static class DirectMessageEndpoints
         if (string.IsNullOrWhiteSpace(req.ClientId) || req.ClientId.Length > 64) return Results.BadRequest(new { error = "Missing message id." });
 
         var dup = await db.DirectMessages.FirstOrDefaultAsync(x => x.SenderId == meId && x.ClientId == req.ClientId);
-        if (dup is not null) return Results.Ok(Dto(dup, meId));
+        if (dup is not null) return Results.Ok(Dto(dup, meId, clock.GetUtcNow().UtcDateTime));
 
         var me = await db.Users.FirstAsync(u => u.Id == meId);
         User? other;
@@ -189,6 +211,33 @@ public static class DirectMessageEndpoints
         if (other.Id == meId) return Results.BadRequest(new { error = "You can't message yourself." });
         if (await BlockedAsync(db, meId, other.Id)) return Results.NotFound();
 
+        var now = clock.GetUtcNow().UtcDateTime;
+        var cardJson = req.CardType is null ? null : req.CardJson;
+        if (req.CardType == StoryCard)
+        {
+            Guid storyId;
+            try
+            {
+                using var doc = JsonDocument.Parse(req.CardJson ?? "");
+                storyId = doc.RootElement.GetProperty("storyId").GetGuid();
+            }
+            catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException or KeyNotFoundException)
+            {
+                return Results.BadRequest(new { error = "Missing story." });
+            }
+            var story = await StoryEndpoints.Visible(db, meId, now).FirstOrDefaultAsync(s => s.Id == storyId && s.AuthorId == other.Id);
+            if (story is null) return Results.NotFound(new { error = "This story has gone." });
+            if (!await StoryEndpoints.MayReplyAsync(db, other, meId))
+                return Results.Json(new { error = "They've turned replies off." }, statusCode: 403);
+            cardJson = new JsonObject
+            {
+                ["storyId"] = story.Id,
+                ["type"] = story.CardType,
+                ["data"] = JsonNode.Parse(story.CardJson),
+                ["expiresAtMs"] = Ms(story.ExpiresAt),
+            }.ToJsonString();
+        }
+
         var mine = thread?.Members.FirstOrDefault(m => m.UserId == meId);
         var theirs = thread?.Members.FirstOrDefault(m => m.UserId == other.Id);
         if (theirs is not { Accepted: true })
@@ -211,12 +260,11 @@ public static class DirectMessageEndpoints
         }
         if (mine is null) thread!.Members.Add(mine = new DmMember { UserId = meId });
         mine.Accepted = true; // replying accepts a request
-        var now = DateTime.UtcNow;
         mine.LastReadAt = now;
         var message = new DirectMessage
         {
             ClientId = req.ClientId, Thread = thread!, SenderId = meId, Body = body, CreatedAt = now,
-            CardType = req.CardType, CardJson = req.CardType is null ? null : req.CardJson,
+            CardType = req.CardType, CardJson = cardJson,
         };
         db.DirectMessages.Add(message);
         thread!.LastMessageAt = now;
@@ -230,9 +278,9 @@ public static class DirectMessageEndpoints
             db.ChangeTracker.Clear();
             var key = PairKey(meId, other.Id);
             var id = await db.DmThreads.Where(t => t.PairKey == key).Select(t => t.Id).FirstAsync();
-            return await Send(req with { Username = null, ThreadId = id }, caller, db);
+            return await Send(req with { Username = null, ThreadId = id }, caller, db, clock);
         }
-        return Results.Ok(Dto(message, meId));
+        return Results.Ok(Dto(message, meId, now));
     }
 
     private static async Task<IResult> Read(Guid id, ClaimsPrincipal caller, AppDbContext db)

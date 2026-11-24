@@ -11,7 +11,7 @@
   import type { WorkoutSession } from "@logit/core/domain/workout";
   import { dayTime } from "$lib/features/friends/dmTime";
 
-  const { onpick, onclose }: { onpick: (card: { type: string; json: string }) => void; onclose: () => void } = $props();
+  const { onpick, onclose, title = "Share a workout or record" }: { onpick: (card: { type: string; json: string }) => void; onclose: () => void; title?: string } = $props();
 
   let tab = $state<"workouts" | "records">("workouts");
   let sessions = $state<WorkoutSession[] | null>(null);
@@ -27,9 +27,9 @@
   const row = "flex min-h-14 w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted/50";
 </script>
 
-<BottomSheet label="Share a workout or record" {onclose}>
+<BottomSheet label={title} {onclose}>
   <div class="flex flex-col gap-3 px-4 pb-4">
-    <h2 class="text-[17px] font-semibold">Share a workout or record</h2>
+    <h2 class="text-[17px] font-semibold">{title}</h2>
     <div class={segmentTrack} role="tablist" aria-label="What to share">
       <button type="button" role="tab" aria-selected={tab === "workouts"} class={segment(tab === "workouts")} onclick={() => (tab = "workouts")}>Workouts</button>
       <button type="button" role="tab" aria-selected={tab === "records"} class={segment(tab === "records")} onclick={() => (tab = "records")}>Records</button>

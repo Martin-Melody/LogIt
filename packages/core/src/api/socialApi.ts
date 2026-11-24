@@ -192,7 +192,7 @@ export type ReportReason =
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
 export type NotificationKind =
-  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer";
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer";
 
 export interface SocialSettings {
   isPrivate: boolean;

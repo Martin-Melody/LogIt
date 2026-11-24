@@ -120,6 +120,7 @@ builder.Services.AddSingleton<IPushSender>(sp =>
         : new RelayPushSender(http, sp.GetRequiredService<PushRelay>(), sp.GetRequiredService<ILogger<RelayPushSender>>());
 });
 builder.Services.AddHostedService<PushDispatcher>();
+builder.Services.AddHostedService<Logit.Api.Features.Social.StorySweeper>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -321,6 +322,7 @@ api.MapPushEndpoints();
 api.MapTrainingEndpoints();
 api.MapFriendInviteEndpoints();
 api.MapDirectMessageEndpoints();
+api.MapStoryEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 
