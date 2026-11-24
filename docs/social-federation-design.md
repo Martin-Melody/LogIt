@@ -126,13 +126,54 @@ understand a `payloadJson` shape just renders the `body` and a generic card.
 - `Notification` — remote likes/comments/follows map onto the same table
   (`ActorId` points at the mirrored remote user row).
 
+## Friends overhaul (decided 2026-11-24)
+
+The friends overhaul (`docs/friends-overhaul.md`) adds stories, training now,
+cheers, messages, groups with events, boards and photos. All of it fits the
+model above: each is a few more activities, and the person's own instance stays
+the one that applies their privacy choices and pushes to their phone.
+
+| Feature | Activities | Who decides |
+|---|---|---|
+| Messages and requests | `Create(Message)`, `Read`, `Delete(Message)` to the recipient's instance | The recipient's instance applies their message controls (chats, requests, refuse) |
+| Training now | `Presence(Training)`, `Presence(Done)` to instances with followers who may see it | Sent only while "Show when you're training" is on |
+| Cheers | `Cheer` to the trainee's instance, which turns it into a push | The trainee's "Cheers and replies" setting |
+| Stories | `Create(Story)` with `expiresAt` and the allowed viewers; `Delete(Story)` at expiry or on delete | The author's instance picks which instances get it (audience, Close friends, Hide story from) |
+| Groups and events | The group lives on one home instance. `Join`, `Leave`, `Create(GroupMessage)`, `Rsvp` go to it; it sends page, event and chat updates to members' instances | The home instance owns the group; each member's instance owns their choices |
+| Boards | `Summary(Week)`: done of planned, weeks kept, volume against their own usual | Sent only if the member is on boards (globally or for that group); never workouts or weights |
+| Photos | The receiving instance copies the photo into its own photo store and serves its copy; deleted with what it belongs to | Replaces "no media federation" below |
+
+Notifications and pushes need nothing new: a remote like, message or cheer
+lands as an ordinary `Notification` on the recipient's own instance, and its
+push dispatcher (or the relay, for self-hosters) sends it.
+
+**Trust limit.** Close friends, Hide story from, the 24-hour expiry and read
+receipts rely on the receiving instance honouring them once content has been
+sent, as with email or Mastodon. This is why peering is registered, not open: an
+instance that ignores the rules can be suspended or blocked. The story audience
+picker says that close-friends stories reach friends on other servers too.
+
+**Rules for building the friends features now**, so federation adds transport
+and not rewrites:
+
+1. **Photos from another instance are stored by absolute address**
+   (`https://their-server/photos/…`, or the local copy's address). Local photos
+   are saved as `/photos/…`, which the apps resolve against their own server
+   (`photoSrc`); that is only right for local photos.
+2. **Filter before sending, never after.** Anything a setting turns off is not
+   sent anywhere: boards, training now, story audiences, read receipts.
+3. **Every new item has a permanent id and a home instance**: stories, messages,
+   groups, events, cheers, RSVPs. A group belongs to exactly one instance.
+4. **Social writes go through one place on the server** (the activity point that
+   federation will deliver from), not straight into each feature's tables.
+
 ## Open decisions for Martin
 
 1. **Keypair algorithm** — Ed25519 (small, fast, modern) vs RSA-2048 (universal,
    ActivityPub-compatible if we ever bridge). Recommend Ed25519 now, add RSA only
    if bridging.
-2. **Protected accounts** — do we support "followers must be approved" at launch,
-   or is every profile public? (Affects `Accept(Follow)` being automatic.)
+2. ~~**Protected accounts**~~ — answered: private accounts exist (approved
+   followers), so `Accept(Follow)` is manual for a private account.
 3. **Handle rendering in the UI** — always show `@user@instance`, or show bare
    `@user` for same-instance and full handle only for remote? (Familiar apps that
    federate, e.g. Mastodon, show bare locally.)
@@ -141,8 +182,9 @@ understand a `payloadJson` shape just renders the `body` and a generic card.
 5. **Free-tier hosted users and federation** — a free hosted account is
    "mobile social only" today. Do their posts federate out to peers, or is
    federation a Pro perk on the hosted instance? (Self-hosters always get it.)
-6. **DMs** — `project_unified_inbox` puts social DMs at "federation-era." In
-   scope for Phase 3, or Phase 3.5?
+6. ~~**DMs**~~ — answered (2026-11-24): messages between people ship in the
+   friends overhaul before federation, so messages between instances are part of
+   Phase 3.
 
 ## Not doing
 
@@ -150,4 +192,5 @@ understand a `payloadJson` shape just renders the `body` and a generic card.
   demand; the activity shapes above keep the door open.
 - Cross-instance search / discovery of arbitrary handles — you can follow a
   handle you know; global remote search is later.
-- Media federation — no image posts exist yet (see the Phase 2 scope).
+- ~~Media federation~~ — now needed: photo storage exists (2026-11-24) and
+  stories and messages carry photos. See the Friends overhaul section.
