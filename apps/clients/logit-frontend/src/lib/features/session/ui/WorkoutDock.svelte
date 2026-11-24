@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Music, Plus, Timer } from "lucide-svelte";
+  import { Music, Plus } from "lucide-svelte";
   import { get } from "svelte/store";
   import {
     adjustRest,
@@ -14,8 +14,9 @@
 
   // The workout's bottom bar (merged design): it stands in for the nav during a workout.
   // "Add to workout" and the music button; while a rest runs, the rest takes Add's place
-  // (same shape as the music bar) with −15 / +15 / Skip and the set that's next. A track
-  // playing shows the now-playing bar above it.
+  // with a big clock, the set that's next, and −15 / +15 / Skip under them (canvas "Rest bar"
+  // B, 24 Nov: easy to read from the bench); the music button moves into the clock row. A
+  // track playing shows the now-playing bar above it.
   const {
     session,
     disabled = false,
@@ -65,7 +66,7 @@
       if (!set) continue;
       const kg = set.weight || set.target?.weight || 0;
       const reps = set.reps || set.target?.reps || 0;
-      const load = kg > 0 ? `${formatLoad(kg, get(profile).weightUnit, false, { withUnit: false })} × ${reps}` : `× ${reps}`;
+      const load = kg > 0 ? `${formatLoad(kg, get(profile).weightUnit, false)} × ${reps}` : `× ${reps}`;
       return i === from ? load : `${d.exerciseName} · ${load}`;
     }
     return null;
@@ -82,7 +83,7 @@
     void onMutate((s) => clearRest(s, r.setId, r.startedAtMs), { auto: true });
   }
 
-  const small = "flex h-10 min-w-11 shrink-0 items-center justify-center rounded-md border border-input px-2 text-[13px] font-medium tabular-nums transition-colors hover:bg-muted disabled:opacity-50";
+  const restBtn = "flex h-11 items-center justify-center rounded-md border border-input bg-background text-[15px] font-medium tabular-nums transition-colors hover:bg-muted";
 </script>
 
 <div class="flex flex-col gap-2 border-t border-border bg-background px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
@@ -91,16 +92,21 @@
   </div>
   <div class="flex gap-2">
     {#if rest}
-      <div class="relative flex h-12 min-w-0 flex-1 items-center gap-2.5 overflow-hidden rounded-xl border border-border bg-muted/60 pl-2.5 pr-1.5"
+      <div class="relative flex min-w-0 flex-1 flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-muted/60 px-3 pt-3 pb-3.5"
         role="timer" aria-live="off" aria-label="Rest timer, {clock} left">
-        <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background"><Timer class="size-4" /></span>
-        <span class="flex min-w-0 flex-1 flex-col leading-tight">
-          <span class="text-[13px] font-semibold tabular-nums">Rest {clock}</span>
-          {#if nextLine}<span class="truncate text-xs text-muted-foreground">Then <span class="font-medium text-info">{nextLine}</span></span>{/if}
-        </span>
-        <button type="button" class={small} aria-label="15 seconds less" onclick={() => nudge(-15_000)}>−15</button>
-        <button type="button" class={small} aria-label="15 seconds more" onclick={() => nudge(15_000)}>+15</button>
-        <button type="button" class={small} onclick={skip}>Skip</button>
+        <div class="flex items-center gap-3.5">
+          <span class="text-[34px] leading-9 font-bold tracking-tight tabular-nums">{clock}</span>
+          <span class="flex min-w-0 flex-1 flex-col text-[13px] leading-[18px] text-muted-foreground">
+            {nextLine ? "Rest, then" : "Rest"}
+            {#if nextLine}<span class="line-clamp-2 text-base font-semibold text-info">{nextLine}</span>{/if}
+          </span>
+          {#if musicAvailable}{@render musicButton("size-11 bg-background")}{/if}
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" class={restBtn} aria-label="15 seconds less" onclick={() => nudge(-15_000)}>−15</button>
+          <button type="button" class={restBtn} aria-label="15 seconds more" onclick={() => nudge(15_000)}>+15</button>
+          <button type="button" class={restBtn} onclick={skip}>Skip</button>
+        </div>
         <span class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-foreground/10" aria-hidden="true">
           <span class="block h-full bg-foreground transition-[width] duration-200 motion-reduce:transition-none" style="width: {progress * 100}%"></span>
         </span>
@@ -115,11 +121,13 @@
       >
         <Plus class="size-5" /> Add to workout
       </button>
-    {/if}
-    {#if musicAvailable}
-      <button type="button" class="flex size-12 shrink-0 items-center justify-center rounded-xl border border-input bg-muted" aria-label="Music" onclick={() => musicBar?.openMusic()}>
-        <Music class="size-5" />
-      </button>
+      {#if musicAvailable}{@render musicButton("size-12 bg-muted")}{/if}
     {/if}
   </div>
 </div>
+
+{#snippet musicButton(cls: string)}
+  <button type="button" class="flex shrink-0 items-center justify-center rounded-xl border border-input {cls}" aria-label="Music" onclick={() => musicBar?.openMusic()}>
+    <Music class="size-5" />
+  </button>
+{/snippet}
