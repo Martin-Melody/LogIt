@@ -651,12 +651,12 @@ public static class AdminEndpoints
         // A reported message: what the reporter saw (its text, photo or card). An unsent message is gone.
         var messageIds = await db.Reports.Where(r => r.TargetType == ReportTargetType.Message).Select(r => r.TargetId).ToListAsync();
         foreach (var m in await db.DirectMessages.Where(m => messageIds.Contains(m.Id))
-                     .Select(m => new { m.Id, m.Body, m.PhotoId, m.CardType, Author = m.Sender == null ? "deleted account" : m.Sender.Username }).ToListAsync())
+                     .Select(m => new { m.Id, m.Body, m.PhotoId, m.CardType, m.DeletedAt, Author = m.Sender == null ? "deleted account" : m.Sender.Username }).ToListAsync())
             previews[m.Id] = new
             {
                 kind = "message",
                 Body = m.Body.Length > 0 ? m.Body : m.PhotoId is not null ? "[Photo]" : m.CardType is not null ? $"[{m.CardType} card]" : "",
-                deleted = false,
+                deleted = m.DeletedAt != null,
                 m.Author,
                 photoUrl = m.PhotoId is { } p ? Logit.Api.Features.Photos.PhotoEndpoints.UrlOf(p) : null,
             };
@@ -686,7 +686,7 @@ public static class AdminEndpoints
                     if (comment is not null) comment.DeletedAt = now;
                     break;
                 case ReportTargetType.Message:
-                    await Social.DirectMessageEndpoints.UnsendAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), report.TargetId, default);
+                    await Social.DirectMessageEndpoints.UnsendAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), report.TargetId, default, byLogIt: true);
                     break;
             }
             report.Status = ReportStatus.Actioned;

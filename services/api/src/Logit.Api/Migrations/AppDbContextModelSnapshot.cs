@@ -912,6 +912,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("EditedAt")
                         .HasColumnType("TEXT");
 
@@ -926,6 +929,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("RemovedByLogIt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("SenderId")
                         .HasColumnType("TEXT");

@@ -917,6 +917,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("EditedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -931,6 +934,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("RemovedByLogIt")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("SenderId")
                         .HasColumnType("uuid");

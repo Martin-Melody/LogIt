@@ -132,9 +132,15 @@ public class MessagePhotoTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await ava.PostAsJsonAsync("/reports", report)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await ben.PostAsJsonAsync("/reports", report)).StatusCode);
 
-        // Ben unsends the photo: gone for both, file included.
-        (await ben.DeleteAsync($"/dm/messages/{pic.GetProperty("id").GetGuid()}")).EnsureSuccessStatusCode();
-        Assert.Equal(1, (await ava.GetFromJsonAsync<JsonElement>("/dm/chat?username=ben", ApiFactory.Json)).GetProperty("messages").GetArrayLength());
+        // Ben unsends the photo: both see that he did, the photo itself is gone (file included),
+        // and it can't be edited, unsent or reported again.
+        var picId = pic.GetProperty("id").GetGuid();
+        (await ben.DeleteAsync($"/dm/messages/{picId}")).EnsureSuccessStatusCode();
+        var unsent = (await ava.GetFromJsonAsync<JsonElement>("/dm/chat?username=ben", ApiFactory.Json)).GetProperty("messages")[1];
+        Assert.Equal((true, false, JsonValueKind.Null), (unsent.GetProperty("deleted").GetBoolean(), unsent.GetProperty("removedByLogIt").GetBoolean(), unsent.GetProperty("photoUrl").ValueKind));
+        Assert.Equal("Unsent a message", (await ava.GetFromJsonAsync<JsonElement>("/dm/threads?box=chats", ApiFactory.Json))[0].GetProperty("lastBody").GetString());
         Assert.Equal(HttpStatusCode.NotFound, (await _api.CreateClient().GetAsync(photo.GetProperty("url").GetString())).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ben.DeleteAsync($"/dm/messages/{picId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.PostAsJsonAsync("/reports", report)).StatusCode); // nothing left to report
     }
 }

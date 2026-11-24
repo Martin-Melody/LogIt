@@ -43,7 +43,14 @@ export interface DmMessage {
   voiceHidden: boolean;
   /** The sender changed the text after sending it. */
   edited: boolean;
+  /** Unsent: shown as "… unsent a message" where it was; its content is gone. */
+  deleted: boolean;
+  /** Removed by LogIt after a report. */
+  removedByLogIt: boolean;
 }
+
+/** What's left of a message once it's unsent, for showing it before the next reload. */
+export const unsent = (m: DmMessage): DmMessage => ({ ...m, deleted: true, body: "", cardType: null, cardJson: null, photoUrl: null, photoHidden: false, voiceUrl: null, voiceHidden: false });
 
 /** Your own text can be edited for this long after sending, as on Instagram. */
 export const DM_EDIT_WINDOW_MS = 15 * 60_000;
