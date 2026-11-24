@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -72,7 +73,7 @@
           <button type="button" class="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40" onclick={() => goto(`/social/${u.username}`)}>
             <div class="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold overflow-hidden shrink-0">
               {#if u.avatarUrl}
-                <img src={u.avatarUrl} alt={u.displayName} class="h-full w-full object-cover" />
+                <img src={photoSrc(u.avatarUrl)} alt={u.displayName} class="h-full w-full object-cover" />
               {:else}
                 {initials(u.displayName)}
               {/if}

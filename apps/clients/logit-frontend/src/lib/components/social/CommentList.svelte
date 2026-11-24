@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { Loader2, Trash2, X, Pencil, Check, Flag, Heart } from "lucide-svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { socialApi, type ApiComment } from "@logit/core/api/socialApi";
@@ -158,7 +159,7 @@
       >
         <div class="{reply ? 'h-6 w-6' : 'h-7 w-7'} rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold shrink-0 mt-0.5 overflow-hidden">
           {#if comment.authorAvatarUrl}
-            <img src={comment.authorAvatarUrl} alt={comment.authorDisplayName} class="h-full w-full object-cover" />
+            <img src={photoSrc(comment.authorAvatarUrl)} alt={comment.authorDisplayName} class="h-full w-full object-cover" />
           {:else}
             {initials(comment.authorDisplayName)}
           {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   // Accounts on this phone (design canvas 8b): each keeps its own training, settings and
   // sign-in, so switching is one tap with no password. "Add account" signs someone else in
   // alongside; the account in use stays as it is.
@@ -85,7 +86,7 @@
           onclick={() => void switchTo(row.account)}>
           <span class="h-11 w-11 shrink-0 overflow-hidden rounded-full flex items-center justify-center text-sm font-semibold {active ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/15'}">
             {#if row.account.avatarDataUrl}
-              <img src={row.account.avatarDataUrl} alt="" class="h-full w-full object-cover" />
+              <img src={photoSrc(row.account.avatarDataUrl)} alt="" class="h-full w-full object-cover" />
             {:else}
               {initials(row.account.displayName || row.account.username)}
             {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import type { RepostSource } from "@logit/core/api/socialApi";
   import { formatDistanceToNow } from "$lib/utils";
@@ -23,7 +24,7 @@
   <div class="flex items-center gap-1.5 text-xs min-w-0">
     <span class="h-4 w-4 rounded-full bg-muted flex items-center justify-center text-[9px] font-semibold shrink-0 overflow-hidden">
       {#if source.authorAvatarUrl}
-        <img src={source.authorAvatarUrl} alt={source.authorDisplayName} class="h-full w-full object-cover" />
+        <img src={photoSrc(source.authorAvatarUrl)} alt={source.authorDisplayName} class="h-full w-full object-cover" />
       {:else}
         {source.authorDisplayName.charAt(0).toUpperCase()}
       {/if}

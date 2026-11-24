@@ -61,6 +61,13 @@
     on your device. A photo you attach to a meal is stored with your diary, and is uploaded only if
     you sync.
   </p>
+  <p>
+    Your profile picture and progress photo stay on your phone until you have an account and they
+    show on your profile. Then they're uploaded to the LogIt server, which saves a smaller copy
+    without any of the photo's details (no location, camera or time taken). Anyone shown your
+    profile can see them, as before. Changing or removing one deletes the old copy, and deleting your
+    account deletes them all.
+  </p>
 
   <h2>Music controls (Android)</h2>
   <p>

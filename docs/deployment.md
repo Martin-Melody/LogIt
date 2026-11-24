@@ -172,6 +172,25 @@ where `subscription` is the one giving access (else the latest) with `source`, `
 and `manageUrl` (Google Play's or the App Store's subscription page; null for Stripe, which uses
 `POST /billing/portal`).
 
+## Photos
+
+Profile pictures and progress photos (and later photos in posts, messages and stories) are
+uploaded to `POST /photos`. The server decodes each one and saves it again as a JPEG: turned
+upright, at most 2048 px on the long side, with no metadata kept (no location or camera details).
+Each photo gets a random address, `/photos/<id>`, which loads without signing in (an `<img>` can't
+sign in) and can't be guessed. 60 uploads an hour per person (`Photos:UploadsPerHour`). Deleting
+an account deletes its photos within 10 minutes (`PhotoSweeper`).
+
+Where they're kept:
+
+- Self-hosted: a folder, `/data/photos` in `docker-compose.yml`, next to the database, so a
+  backup of the `/data` volume has both. `Photos:Folder` changes it.
+- getlogit.app: a Cloudflare R2 bucket once `PHOTOS_S3_SERVICE_URL`
+  (`https://<account id>.r2.cloudflarestorage.com`), `PHOTOS_S3_BUCKET`, `PHOTOS_S3_ACCESS_KEY` and
+  `PHOTOS_S3_SECRET_KEY` are in the server's `.env` (an R2 API token with Object Read & Write on
+  that bucket only). Until then the `api-photos` volume on the server, which the nightly database
+  backup does not include (Hetzner's server backups do).
+
 ## Push notifications
 
 Phones get pushes through Firebase Cloud Messaging (Firebase project `logit-play`, the same
