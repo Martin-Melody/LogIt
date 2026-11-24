@@ -186,7 +186,7 @@ export interface BlockedUser {
   createdAt: string;
 }
 
-export type ReportTargetType = "Post" | "Comment" | "User";
+export type ReportTargetType = "Post" | "Comment" | "User" | "Message";
 export type ReportReason =
   | "Spam" | "Harassment" | "HateSpeech" | "Violence"
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";

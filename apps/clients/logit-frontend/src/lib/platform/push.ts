@@ -63,6 +63,9 @@ export async function startPush(): Promise<void> {
     // In the app: no banner (the badge and Inbox update), only a fresh count.
     await push.addListener("pushNotificationReceived", (n) => {
       void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.refresh());
+      // A message: the Messages count in the top bar goes up straight away (it used to wait for
+      // the next page change or its one-minute check).
+      void import("$lib/features/friends/messagesUnread.svelte").then((m) => m.refreshMessagesUnread(true));
       // A cheer while LogIt is open shows as the workout pill, not a banner.
       const data = n.data as Record<string, string> | undefined;
       if (data?.type === "Cheer") {

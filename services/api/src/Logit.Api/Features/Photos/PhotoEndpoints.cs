@@ -47,6 +47,10 @@ public static class PhotoEndpoints
 
     public static string UrlOf(Guid id) => $"/photos/{id:N}";
 
+    /// A photo the user uploaded, for attaching to something they send; null if it isn't theirs.
+    public static Task<Photo?> OwnedAsync(AppDbContext db, Guid ownerId, Guid id) =>
+        db.Photos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == ownerId);
+
     private static readonly Regex PhotoRef = new("/photos/([0-9a-f]{32})", RegexOptions.Compiled);
 
     /// The photos a piece of text (an avatar address, a profile's JSON) points at.

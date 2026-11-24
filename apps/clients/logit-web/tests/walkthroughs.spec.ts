@@ -66,7 +66,7 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
   },
   "message.sent": async (p) => {
     await p.locator('[data-guide="message-compose"] textarea').fill("How's the knee this week?");
-    await p.locator('[data-guide="message-compose"]').getByRole("button", { name: /Send/ }).click();
+    await p.locator('[data-guide="message-compose"]').getByRole("button", { name: "Send", exact: true }).click();
   },
 };
 

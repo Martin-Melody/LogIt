@@ -497,6 +497,15 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("PhotoHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PhotoWidth")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -898,8 +907,26 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PhotoHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PhotoWidth")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("RemovedByLogIt")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("SenderId")
                         .HasColumnType("uuid");

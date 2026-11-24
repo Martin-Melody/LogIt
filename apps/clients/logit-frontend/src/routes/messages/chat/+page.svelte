@@ -7,7 +7,16 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
-  import { Loader2, MoreHorizontal, Plus, Send, Trash2, User } from "lucide-svelte";
+  import { Ban, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, MoreHorizontal, Pencil, Plus, Send, Trash2, Undo2, User, X } from "lucide-svelte";
+  import ReportSheet from "$lib/components/social/ReportSheet.svelte";
+  import { socialApi } from "@logit/core/api/socialApi";
+  import { longpress } from "$lib/swipe";
+  import { DM_EDIT_WINDOW_MS, unsent } from "@logit/core/api/dmApi";
+  import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
+  import { pickImageFile } from "$lib/platform/filePick";
+  import { resizeImageFile } from "$lib/platform/imageResize";
+  import { uploadPhoto } from "@logit/core/api/photosApi";
+  import { ApiError } from "@logit/core/api/client";
   import MessageCard from "$lib/components/social/MessageCard.svelte";
   import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
@@ -41,6 +50,62 @@
   let listEl = $state<HTMLDivElement | null>(null);
   let now = $state(Date.now());
   let sharing = $state(false);
+  let attachOpen = $state(false);
+  let uploading = $state(0);
+  // Long-press a message (Instagram): Edit / Copy / Unsend on yours, Copy / Report on theirs.
+  let picked = $state<DmMessage | null>(null);
+  let editing = $state<DmMessage | null>(null);
+  let confirmUnsend = $state<DmMessage | null>(null);
+  let confirmBlock = $state(false);
+
+  async function block() {
+    if (!chat?.other) return;
+    try {
+      await socialApi.blockUser(chat.other.username);
+      toast.success(`Blocked ${name}`);
+      await goto("/messages", { replaceState: true });
+    } catch {
+      toast.error("Couldn't block. Try again.");
+    }
+  }
+  let reporting = $state<{ type: "Message" | "User"; id: string; what: string } | null>(null);
+
+  const canEdit = (m: DmMessage) => m.mine && !!m.body && Date.now() - m.createdAtMs < DM_EDIT_WINDOW_MS;
+  const messageActions = $derived.by(() => {
+    const m = picked;
+    if (!m) return [];
+    return [
+      ...(canEdit(m) ? [{ icon: Pencil, label: "Edit", onSelect: () => { editing = m; draft = m.body; } }] : []),
+      ...(m.body ? [{ icon: Copy, label: "Copy text", onSelect: () => void navigator.clipboard?.writeText(m.body).then(() => toast.success("Copied")) }] : []),
+      ...(m.mine
+        ? [{ icon: Undo2, label: "Unsend", destructive: true, onSelect: () => (confirmUnsend = m) }]
+        : [{ icon: Flag, label: "Report", destructive: true, onSelect: () => (reporting = { type: "Message", id: m.id, what: "message" }) }]),
+    ];
+  });
+
+  async function saveEdit() {
+    const m = editing;
+    const body = draft.trim();
+    if (!m || !body || !chat) return;
+    try {
+      const updated = await dmApi.edit(m.id, body);
+      chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? updated : x)) };
+      editing = null;
+      draft = "";
+    } catch (e) {
+      toast.error(e instanceof ApiError && e.message ? e.message : "Couldn't save that. Try again.");
+    }
+  }
+
+  async function unsend(m: DmMessage) {
+    if (!chat) return;
+    try {
+      await dmApi.unsend(m.id);
+      chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? unsent(x) : x)) };
+    } catch {
+      toast.error("Couldn't unsend it. Try again.");
+    }
+  }
   let menuOpen = $state(false);
   let confirmDelete = $state(false);
 
@@ -57,9 +122,11 @@
   const lastMine = $derived(chat?.messages.findLast((m) => m.mine) ?? null);
   const seen = $derived(!!chat?.seenAtMs && !!lastMine && chat.seenAtMs >= lastMine.createdAtMs && chat.messages.at(-1)?.mine);
 
-  async function scrollDown() {
+  // Opening a chat lands on the newest message at once (a long history would mean a long
+  // animation every time); a message arriving while it's open glides into view.
+  async function scrollDown(smooth = true) {
     await tick();
-    listEl?.scrollTo({ top: listEl.scrollHeight, behavior: "smooth" });
+    listEl?.scrollTo({ top: listEl.scrollHeight, behavior: smooth ? "smooth" : "instant" });
   }
 
   async function load(first = false) {
@@ -77,7 +144,7 @@
       error = null;
       if (first) older = next.messages.length >= 50;
       if (next.threadId && next.accepted && next.messages.some((m) => !m.mine)) void dmApi.read(next.threadId).catch(() => {});
-      if (first || next.messages.length > before) await scrollDown();
+      if (first || next.messages.length > before) await scrollDown(!first);
     } catch (e) {
       if (!chat) error = e instanceof Error && "status" in e && (e as { status: number }).status === 404 ? "This conversation isn't available." : "Couldn't load this conversation.";
     }
@@ -96,6 +163,7 @@
   }
 
   async function send() {
+    if (editing) return saveEdit();
     const body = draft.trim();
     if (!body || !chat || !to) return;
     draft = "";
@@ -113,6 +181,30 @@
     await scrollDown();
     await sending;
     await load();
+  }
+
+  // Photos are uploaded first, so they need a connection; the message itself then waits in the
+  // outbox like any other.
+  async function sendPhoto(from: "photos" | "camera") {
+    if (!chat || !to) return;
+    let file: File;
+    try {
+      file = await pickImageFile(from);
+    } catch {
+      return; // cancelled
+    }
+    uploading++;
+    await scrollDown();
+    try {
+      const photo = await uploadPhoto(await resizeImageFile(file, 2048, 0.85));
+      const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", undefined, photo);
+      await sending;
+      await load();
+    } catch (e) {
+      toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Photos need a connection. Try again when you're online.");
+    } finally {
+      uploading--;
+    }
   }
 
   async function deleteChat() {
@@ -196,17 +288,22 @@
         {#if gap(chat.messages, i)}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(m.createdAtMs, now)}</p>{/if}
         {@const story = m.cardType === "Story"}
         {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
-        <div in:fade={{ duration: 150 }} class="flex flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
+        <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
           {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
           {#if card}<MessageCard {card} mine={m.mine} />{/if}
+          {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
           {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
+          {#if m.deleted}
+            <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${name} unsent a message`}</p>
+          {:else if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
         </div>
       {/each}
       {#if seen}<p transition:fade={{ duration: 150 }} class="pr-1 text-right text-[12px] text-muted-foreground">Seen</p>{/if}
       {#each pending as p (p.clientId)}
-        <div in:fade={{ duration: 150 }} class="flex flex-col items-end gap-1">
+        <div in:fade={{ duration: 150 }} class="flex shrink-0 flex-col items-end gap-1">
           {#if p.card?.type === "Story"}<span class="px-1 text-[12px] text-muted-foreground">Replying to {name}'s story</span>{/if}
           {#if p.card && readCard(p.card.type, p.card.json)}<div class="opacity-60"><MessageCard card={readCard(p.card.type, p.card.json)!} mine /></div>{/if}
+          {#if p.photo}<MessagePhoto url={p.photo.url} width={p.photo.width} height={p.photo.height} mine dim />{/if}
           {#if p.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl bg-primary/60 px-3.5 py-2 text-[15px] leading-snug text-primary-foreground">{p.body}</p>{/if}
           {#if p.error}
             <span class="flex items-center gap-2 text-[12px] text-destructive">{p.error}
@@ -219,6 +316,9 @@
           {/if}
         </div>
       {/each}
+      {#if uploading > 0}
+        <div in:fade={{ duration: 150 }} class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Loader2 class="size-4 animate-spin" />Sending photo</div>
+      {/if}
     {/if}
   </div>
 
@@ -233,8 +333,14 @@
   {:else if chat && !chat.canSend}
     {#if chat.messages.length > 0}<p class="shrink-0 border-t border-border px-4 py-3 text-center text-[13px] text-muted-foreground">{chat.why}</p>{/if}
   {:else if chat}
-    <form class="flex shrink-0 items-end gap-2 border-t border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
-      <button type="button" aria-label="Share a workout or record" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (sharing = true)}><Plus class="size-5" /></button>
+    {#if editing}
+      <div transition:fade={{ duration: 120 }} class="flex shrink-0 items-center gap-2 border-t border-border px-4 pt-2 text-[13px] text-muted-foreground">
+        <Pencil class="size-3.5" /><span class="flex-1">Editing message</span>
+        <button type="button" aria-label="Stop editing" class="flex size-9 items-center justify-center" onclick={() => { editing = null; draft = ""; }}><X class="size-4" /></button>
+      </div>
+    {/if}
+    <form class="flex shrink-0 items-end gap-2 {editing ? '' : 'border-t'} border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
+      <button type="button" aria-label="Send a photo, workout or record" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (attachOpen = true)}><Plus class="size-5" /></button>
       <Textarea
         bind:value={draft}
         rows={1}
@@ -253,12 +359,24 @@
 
 {#if sharing}<ShareCardSheet onpick={sendCard} onclose={() => (sharing = false)} />{/if}
 <ActionSheet
+  open={attachOpen}
+  onOpenChange={(v) => (attachOpen = v)}
+  title="Send"
+  items={[
+    { icon: ImageIcon, label: "Photo", onSelect: () => void sendPhoto("photos") },
+    { icon: Camera, label: "Camera", onSelect: () => void sendPhoto("camera") },
+    { icon: Dumbbell, label: "Workout or record", onSelect: () => (sharing = true) },
+  ]}
+/>
+<ActionSheet
   open={menuOpen}
   onOpenChange={(v) => (menuOpen = v)}
   title={name}
   items={[
     ...(chat?.other ? [{ icon: User, label: "View profile", onSelect: () => void goto(`/social/${chat!.other!.username}`) }] : []),
     { icon: Trash2, label: "Delete chat", destructive: true, onSelect: () => (confirmDelete = true) },
+    ...(chat?.other ? [{ icon: Flag, label: "Report", destructive: true, onSelect: () => (reporting = { type: "User", id: chat!.other!.id!, what: `@${chat!.other!.username}` }) }] : []),
+    ...(chat?.other ? [{ icon: Ban, label: `Block ${name}`, destructive: true, onSelect: () => (confirmBlock = true) }] : []),
   ]}
 />
 <ConfirmDialog
@@ -268,4 +386,24 @@
   description="It's removed for you only. {name} keeps their copy, and a new message from them starts it again."
   confirmLabel="Delete"
   onConfirm={deleteChat}
+/>
+<ActionSheet open={!!picked} onOpenChange={(v) => { if (!v) picked = null; }} title={picked?.mine ? "Your message" : `${name}'s message`} items={messageActions} />
+<ConfirmDialog
+  open={!!confirmUnsend}
+  onOpenChange={(v) => { if (!v) confirmUnsend = null; }}
+  title="Unsend this message?"
+  description="It's removed for everyone in the chat."
+  confirmLabel="Unsend"
+  onConfirm={() => { const m = confirmUnsend; confirmUnsend = null; if (m) void unsend(m); }}
+/>
+{#if reporting}
+  <ReportSheet open targetType={reporting.type} targetId={reporting.id} what={reporting.what} onclose={() => (reporting = null)} />
+{/if}
+<ConfirmDialog
+  open={confirmBlock}
+  onOpenChange={(v) => (confirmBlock = v)}
+  title="Block {name}?"
+  description="They can't message you, see your profile, stories or training, or find you. They aren't told. You can unblock them in Settings › Privacy."
+  confirmLabel="Block"
+  onConfirm={block}
 />

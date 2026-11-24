@@ -492,6 +492,15 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("PhotoHeight")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PhotoWidth")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("TEXT");
 
@@ -893,8 +902,26 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PhotoHeight")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PhotoWidth")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("RemovedByLogIt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("SenderId")
                         .HasColumnType("TEXT");
