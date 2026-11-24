@@ -59,10 +59,10 @@ test("a short set makes the rest lighter, and the plan can be kept and un-kept",
 });
 
 test("a set that beat its aim makes the rest heavier", async ({ page }) => {
-  // Martin's T-Bar Row (24 Nov): 42.5 × 13 made the rest 42.5, then 45 × 8 where 42.5 × 8 was the aim.
+  // Martin's T-Bar Row (24 Nov): planned 42.5 × 13, 8, 6; set 2 was 45 × 8.
   await seed(page, [{
     id: "b-tbar", name: "T-Bar Row", sets: [
-      { id: "s1", reps: 13, weight: 42.5, completed: true, target: t(13, 52.5) },
+      { id: "s1", reps: 13, weight: 42.5, completed: true, target: t(13, 42.5) },
       { id: "s2", reps: 8, weight: 45, target: t(8, 42.5) },
       { id: "s3", reps: 0, weight: 42.5, target: t(6, 42.5) },
     ],

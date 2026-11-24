@@ -81,15 +81,16 @@ describe("a short set re-plans the sets after it", () => {
 });
 
 describe("a set that beat its aim re-plans the sets after it up", () => {
-  // Martin's T-Bar Row, 24 Nov: 42.5 × 13 re-planned the rest to 42.5; then 45 × 8 where 42.5 × 8 was the aim.
+  // Martin's T-Bar Row, 24 Nov: planned 42.5 × 13, 8, 6; set 1 hit its 13, set 2 was 45 × 8.
   it("goes up to the weight the set was worth, keeping the reps and the first plan", () => {
     const s = session([
-      { reps: 13, weight: 42.5, completed: true, target: { reps: 13, weight: 52.5 } },
-      { reps: 8, weight: 45, completed: true, target: { reps: 8, weight: 42.5, planned: { reps: 8, weight: 52.5 }, replanned: { reps: 8, weight: 42.5, why: "short" } } },
-      { reps: 0, weight: 42.5, target: { reps: 6, weight: 42.5, planned: { reps: 6, weight: 52.5 }, replanned: { reps: 6, weight: 42.5, why: "short" } } },
+      { reps: 13, weight: 42.5, completed: true, target: { reps: 13, weight: 42.5 } },
+      { reps: 8, weight: 45, completed: true, target: { reps: 8, weight: 42.5 } },
+      plan(6, 42.5),
     ]);
+    expect(replanAfterSet(s, "b", "s1", loads)).toEqual(s);
     expect(sets(replanAfterSet(s, "b", "s2", loads))[2]).toMatchObject({
-      weight: 45, target: { reps: 6, weight: 45, planned: { reps: 6, weight: 52.5 }, replanned: { reps: 6, weight: 45, why: "over" } },
+      weight: 45, target: { reps: 6, weight: 45, planned: { reps: 6, weight: 42.5 }, replanned: { reps: 6, weight: 45, why: "over" } },
     });
   });
 

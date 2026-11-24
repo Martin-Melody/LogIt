@@ -587,7 +587,7 @@ function replanSet(set: SetEntry, reps: number, weight: number, why: ReplanReaso
  * the lighter weight rounds back to the same one, the reps come down instead, by up to 2;
  * past that it's one loadable step lighter at the same reps, like the planner keeps sets in
  * the rep range. A set that beat its aim by as much re-plans them up the same way (45 × 8
- * where 42.5 × 8 was planned turns 42.5 × 6 into 45 × 6); when the heavier weight rounds
+ * where 42.5 × 8 was planned turns the next 42.5 × 6 into 45 × 6); when the heavier weight rounds
  * back to the same one, the reps go up instead, by up to 2. The first re-plan keeps the
  * original in `target.planned`.
  */
