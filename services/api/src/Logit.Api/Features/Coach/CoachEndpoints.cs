@@ -934,7 +934,7 @@ public static class CoachEndpoints
         if (string.IsNullOrWhiteSpace(req.MessageId))
             return Results.BadRequest(new { error = "messageId is required." });
         var body = (req.Body ?? string.Empty).Trim();
-        if (body.Length == 0 && req.PhotoId is null) return Results.BadRequest(new { error = "Message body is empty." });
+        if (body.Length == 0 && req.PhotoId is null && req.VoiceId is null) return Results.BadRequest(new { error = "Message body is empty." });
         if (body.Length > 5000) return Results.BadRequest(new { error = "Message too long." });
 
         var relationship = await ParticipantRelationship(callerId, req.RelationshipId, db);
@@ -948,9 +948,15 @@ public static class CoachEndpoints
         Photo? photo = null;
         if (req.PhotoId is { } photoId && (photo = await Logit.Api.Features.Photos.PhotoEndpoints.OwnedAsync(db, callerId, photoId)) is null)
             return Results.BadRequest(new { error = "That photo didn't upload. Try again." });
+        VoiceNote? voice = null;
+        if (req.VoiceId is { } voiceId && (voice = await Logit.Api.Features.Voice.VoiceEndpoints.OwnedAsync(db, callerId, voiceId)) is null)
+            return Results.BadRequest(new { error = "That voice message didn't upload. Try again." });
 
         var message = new CoachMessage
         {
+            VoiceId = voice?.Id,
+            VoiceMs = voice?.DurationMs ?? 0,
+            VoicePeaks = voice is null ? null : Logit.Api.Features.Voice.VoiceEndpoints.Peaks(req.VoicePeaks),
             PhotoId = photo?.Id,
             PhotoWidth = photo?.Width ?? 0,
             PhotoHeight = photo?.Height ?? 0,
@@ -984,7 +990,8 @@ public static class CoachEndpoints
             .OrderBy(m => m.SyncedAt)
             .Select(m => new MessageDto(
                 m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
-                m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight))
+                m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -1008,7 +1015,8 @@ public static class CoachEndpoints
             .OrderBy(m => m.SyncedAt)
             .Select(m => new ThreadMessageDto(
                 m.RelationshipId, m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
-                m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight))
+                m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -1059,12 +1067,13 @@ public static class CoachEndpoints
 
 public record AcceptInviteRequest(SharingDto? Sharing);
 
-public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs, string? ContextDateIso = null, Guid? PhotoId = null);
+public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs, string? ContextDateIso = null, Guid? PhotoId = null,
+    Guid? VoiceId = null, string? VoicePeaks = null);
 public record MarkReadRequest(Guid RelationshipId, long UpToMs);
 public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
-    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0);
+    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null);
 public record ThreadMessageDto(Guid RelationshipId, string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
-    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0);
+    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null);
 
 public record UpsertProgramRequest(
     string ProgramId,

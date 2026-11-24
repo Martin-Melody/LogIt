@@ -521,6 +521,16 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("VoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("VoiceMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("VoicePeaks")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RelationshipId", "SyncedAt");
@@ -933,6 +943,16 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<Guid>("ThreadId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid?>("VoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("VoiceMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("VoicePeaks")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
 
@@ -2542,6 +2562,36 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.VoiceNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Bytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("VoiceNotes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
@@ -3372,6 +3422,16 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Invite");
 
                     b.Navigation("SampleOwner");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.VoiceNote", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>

@@ -3,7 +3,10 @@
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount, onDestroy, tick } from "svelte";
   import { page } from "$app/state";
-  import { Camera, Image as ImageIcon, Loader2, Plus, Send } from "lucide-svelte";
+  import { Camera, Image as ImageIcon, Loader2, Mic, Plus, Send } from "lucide-svelte";
+  import VoiceMessage from "$lib/components/social/VoiceMessage.svelte";
+  import VoiceRecorderBar from "$lib/components/social/VoiceRecorderBar.svelte";
+  import type { MessageVoice } from "@logit/core/api/voiceApi";
   import { toast } from "svelte-sonner";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
@@ -27,6 +30,13 @@
   let draft = $state("");
   let attachOpen = $state(false);
   let uploading = $state(0);
+  let recording = $state(false);
+
+  async function sendVoice(voice: MessageVoice) {
+    recording = false;
+    await sendMessage(relationshipId, "", undefined, voice);
+    await refresh(false);
+  }
   let listEl = $state<HTMLDivElement | null>(null);
   let poll: ReturnType<typeof setInterval> | undefined;
 
@@ -110,6 +120,10 @@
               {#if !m.body}<p class="px-1 text-[11px] text-muted-foreground">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>{/if}
             </div>
           {/if}
+          {#if m.voice}
+            <VoiceMessage voice={m.voice} mine={m.mine} dim={m.mine && !m.synced} />
+            {#if !m.body}<p class="px-1 text-[11px] text-muted-foreground">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>{/if}
+          {/if}
           {#if m.body}
           <div class="max-w-[80%] rounded-lg px-3 py-2 text-sm {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">
             <p class="whitespace-pre-wrap break-words">{m.body}</p>
@@ -124,6 +138,9 @@
     {/if}
   </div>
 
+  {#if recording}
+    <VoiceRecorderBar onsend={sendVoice} oncancel={() => (recording = false)} />
+  {:else}
   <form class="flex items-end gap-2 px-3 py-2 border-t border-border shrink-0" onsubmit={(e) => { e.preventDefault(); void send(); }}>
     <button type="button" aria-label="Send a photo" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (attachOpen = true)}><Plus class="size-5" /></button>
     <textarea
@@ -133,10 +150,15 @@
       class="flex-1 resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
       onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
     ></textarea>
-    <Button type="submit" size="icon" class="h-11 w-11 shrink-0" disabled={ui.sending || !draft.trim()}>
-      <Send class="h-4 w-4" />
-    </Button>
+    {#if draft.trim()}
+      <Button type="submit" size="icon" class="h-11 w-11 shrink-0" disabled={ui.sending}>
+        <Send class="h-4 w-4" />
+      </Button>
+    {:else}
+      <button type="button" aria-label="Record a voice message" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground" onclick={() => (recording = true)}><Mic class="size-5" /></button>
+    {/if}
   </form>
+  {/if}
 </div>
 
 <ActionSheet

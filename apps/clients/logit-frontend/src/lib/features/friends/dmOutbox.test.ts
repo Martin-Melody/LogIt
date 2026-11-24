@@ -33,11 +33,11 @@ describe("message outbox", () => {
 
   it("sends an uploaded photo by its id, even after waiting offline", async () => {
     send.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    await queueDm({ username: "ben" }, "", undefined, { id: "p1", url: "/photos/p1", width: 3, height: 4 });
+    await queueDm({ username: "ben" }, "", { photo: { id: "p1", url: "/photos/p1", width: 3, height: 4 } });
     expect(outbox.items[0]!.photo?.id).toBe("p1");
     send.mockResolvedValue({});
     await flushOutbox();
-    expect(send).toHaveBeenLastCalledWith({ username: "ben" }, expect.any(String), "", { card: undefined, photoId: "p1" });
+    expect(send).toHaveBeenLastCalledWith({ username: "ben" }, expect.any(String), "", { card: undefined, photoId: "p1", voice: undefined });
     expect(outbox.items).toEqual([]);
   });
 });

@@ -10,6 +10,10 @@
   import PlusIcon from "@lucide/svelte/icons/plus";
   import ImageIcon from "@lucide/svelte/icons/image";
   import ChatPhoto from "./ChatPhoto.svelte";
+  import ChatVoice from "./ChatVoice.svelte";
+  import VoiceRecorder from "./VoiceRecorder.svelte";
+  import MicIcon from "@lucide/svelte/icons/mic";
+  import type { MessageVoice } from "@logit/core/api/voiceApi";
   import ReportDialog from "./ReportDialog.svelte";
   import { socialApi } from "@logit/core/api/socialApi";
   import { DM_EDIT_WINDOW_MS, unsent, type DmMessage } from "@logit/core/api/dmApi";
@@ -119,6 +123,18 @@
   }
 
   let uploading = $state(false);
+  let recording = $state(false);
+  async function sendVoice(voice: MessageVoice) {
+    recording = false;
+    if (!chat || !voice.id) return;
+    try {
+      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), "", { voice: { id: voice.id, peaks: voice.peaks } });
+      await load(true);
+      onchange?.();
+    } catch (e) {
+      sendError = e instanceof Error ? `${e.message} Try again.` : "Couldn't send. Try again.";
+    }
+  }
   // Each message's ⋯ (Instagram's long-press menu): Edit / Copy / Unsend on yours, Copy / Report on theirs.
   let editing = $state<DmMessage | null>(null);
   let confirmUnsend = $state<DmMessage | null>(null);
@@ -298,6 +314,10 @@
           <ChatPhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />
           {#if !m.body}<span class="px-1 text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>{/if}
         {/if}
+        {#if m.voiceUrl || m.voiceHidden}
+          <ChatVoice voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />
+          {#if !m.body}<span class="px-1 text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>{/if}
+        {/if}
         {#if m.body}
           <div class="max-w-[520px] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'bg-primary/15' : 'bg-muted'}">
             <span class="whitespace-pre-wrap break-words">{m.body}</span>
@@ -347,14 +367,19 @@
   {:else if chat}
     <form class="flex flex-col gap-1.5 border-t border-border px-4 py-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
       {#if editing}<div class="flex items-center justify-between text-xs text-muted-foreground"><span>Editing message · Enter saves</span><button type="button" class="font-medium text-foreground hover:underline" onclick={stopEdit}>Cancel</button></div>{/if}
+      {#if recording}
+        <VoiceRecorder onsend={sendVoice} oncancel={() => (recording = false)} onerror={(m) => (sendError = m)} />
+      {:else}
       <div class="flex items-end gap-2">
         <button type="button" onclick={sendPhoto} disabled={uploading} aria-label="Send a photo" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50"><ImageIcon class="size-4" /></button>
         <button type="button" onclick={openShare} aria-label="Share a workout or record" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground"><PlusIcon class="size-4" /></button>
         <label for="dm-compose" class="sr-only">Message {name}</label>
         <textarea id="dm-compose" bind:value={draft} onkeydown={onKey} rows={2} maxlength={2000} placeholder="Message {name}"
           class="flex-1 resize-y rounded-[10px] border border-input bg-background px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
+        <button type="button" onclick={() => { sendError = null; recording = true; }} aria-label="Record a voice message" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground"><MicIcon class="size-4" /></button>
         <button type="submit" disabled={sending || !draft.trim()} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send</button>
       </div>
+      {/if}
       {#if sendError}<p class="text-xs text-destructive">{sendError}</p>{:else}<span class="text-[11px] text-muted-foreground">Enter sends · Shift+Enter for a new line</span>{/if}
     </form>
   {/if}

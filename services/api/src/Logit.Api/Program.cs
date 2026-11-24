@@ -21,6 +21,7 @@ using Logit.Api.Features.Guide;
 using Logit.Api.Features.Foods;
 using Logit.Api.Features.Push;
 using Logit.Api.Features.Photos;
+using Logit.Api.Features.Voice;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -346,6 +347,7 @@ api.MapFriendInviteEndpoints();
 api.MapDirectMessageEndpoints();
 api.MapStoryEndpoints();
 api.MapPhotoEndpoints();
+api.MapVoiceEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

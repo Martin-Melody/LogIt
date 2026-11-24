@@ -116,7 +116,7 @@
   function sendReply() {
     const text = reply.trim();
     if (!text || !story || !author) return;
-    void queueDm({ username: author.user.username }, text, storyReplyCard(story.id));
+    void queueDm({ username: author.user.username }, text, { card: storyReplyCard(story.id) });
     reply = "";
     (document.activeElement as HTMLElement | null)?.blur();
     toast.success(`Sent to ${name}`);

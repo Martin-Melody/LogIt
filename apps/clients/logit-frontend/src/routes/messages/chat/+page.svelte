@@ -7,11 +7,14 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
-  import { Ban, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, MoreHorizontal, Pencil, Plus, Send, Trash2, Undo2, User, X } from "lucide-svelte";
+  import { Ban, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, Mic, MoreHorizontal, Pencil, Plus, Send, Trash2, Undo2, User, X } from "lucide-svelte";
   import ReportSheet from "$lib/components/social/ReportSheet.svelte";
   import { socialApi } from "@logit/core/api/socialApi";
   import { longpress } from "$lib/swipe";
   import { DM_EDIT_WINDOW_MS, unsent } from "@logit/core/api/dmApi";
+  import VoiceMessage from "$lib/components/social/VoiceMessage.svelte";
+  import VoiceRecorderBar from "$lib/components/social/VoiceRecorderBar.svelte";
+  import type { MessageVoice } from "@logit/core/api/voiceApi";
   import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
   import { pickImageFile } from "$lib/platform/filePick";
   import { resizeImageFile } from "$lib/platform/imageResize";
@@ -52,6 +55,18 @@
   let sharing = $state(false);
   let attachOpen = $state(false);
   let uploading = $state(0);
+  let recording = $state(false);
+
+  // A voice message is uploaded by the recording bar; the message then waits in the outbox.
+  async function sendVoice(voice: MessageVoice) {
+    recording = false;
+    if (!chat || !to) return;
+    const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", { voice });
+    await scrollDown();
+    await sending;
+    await load();
+  }
+
   // Long-press a message (Instagram): Edit / Copy / Unsend on yours, Copy / Report on theirs.
   let picked = $state<DmMessage | null>(null);
   let editing = $state<DmMessage | null>(null);
@@ -177,7 +192,7 @@
   async function sendCard(card: { type: string; json: string }) {
     sharing = false;
     if (!chat || !to) return;
-    const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", card);
+    const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", { card });
     await scrollDown();
     await sending;
     await load();
@@ -197,7 +212,7 @@
     await scrollDown();
     try {
       const photo = await uploadPhoto(await resizeImageFile(file, 2048, 0.85));
-      const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", undefined, photo);
+      const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", { photo });
       await sending;
       await load();
     } catch (e) {
@@ -292,6 +307,7 @@
           {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
           {#if card}<MessageCard {card} mine={m.mine} />{/if}
           {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
+          {#if m.voiceUrl || m.voiceHidden}<VoiceMessage voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />{/if}
           {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
           {#if m.deleted}
             <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${name} unsent a message`}</p>
@@ -304,6 +320,7 @@
           {#if p.card?.type === "Story"}<span class="px-1 text-[12px] text-muted-foreground">Replying to {name}'s story</span>{/if}
           {#if p.card && readCard(p.card.type, p.card.json)}<div class="opacity-60"><MessageCard card={readCard(p.card.type, p.card.json)!} mine /></div>{/if}
           {#if p.photo}<MessagePhoto url={p.photo.url} width={p.photo.width} height={p.photo.height} mine dim />{/if}
+          {#if p.voice}<VoiceMessage voice={p.voice} mine dim />{/if}
           {#if p.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl bg-primary/60 px-3.5 py-2 text-[15px] leading-snug text-primary-foreground">{p.body}</p>{/if}
           {#if p.error}
             <span class="flex items-center gap-2 text-[12px] text-destructive">{p.error}
@@ -332,6 +349,8 @@
     </div>
   {:else if chat && !chat.canSend}
     {#if chat.messages.length > 0}<p class="shrink-0 border-t border-border px-4 py-3 text-center text-[13px] text-muted-foreground">{chat.why}</p>{/if}
+  {:else if chat && recording}
+    <VoiceRecorderBar onsend={sendVoice} oncancel={() => (recording = false)} />
   {:else if chat}
     {#if editing}
       <div transition:fade={{ duration: 120 }} class="flex shrink-0 items-center gap-2 border-t border-border px-4 pt-2 text-[13px] text-muted-foreground">
@@ -350,9 +369,15 @@
         class="max-h-32 min-h-11 flex-1 resize-none rounded-2xl"
         onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
       />
-      <button type="submit" aria-label="Send" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40" disabled={!draft.trim()}>
-        <Send class="size-[18px]" />
-      </button>
+      {#if draft.trim()}
+        <button type="submit" aria-label="Send" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <Send class="size-[18px]" />
+        </button>
+      {:else}
+        <button type="button" aria-label="Record a voice message" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground" onclick={() => (recording = true)}>
+          <Mic class="size-5" />
+        </button>
+      {/if}
     </form>
   {/if}
 </div>

@@ -28,6 +28,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<CloseFriend> CloseFriends => Set<CloseFriend>();
     public DbSet<StoryHide> StoryHides => Set<StoryHide>();
     public DbSet<Photo> Photos => Set<Photo>();
+    public DbSet<VoiceNote> VoiceNotes => Set<VoiceNote>();
     public DbSet<PushSettings> PushSettings => Set<PushSettings>();
     public DbSet<DiscoverDismissal> DiscoverDismissals => Set<DiscoverDismissal>();
     public DbSet<DiscoverImpression> DiscoverImpressions => Set<DiscoverImpression>();
@@ -344,6 +345,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.Property(m => m.Body).HasMaxLength(2000);
             e.Property(m => m.CardType).HasMaxLength(32);
             e.Property(m => m.CardJson).HasMaxLength(4000);
+            e.Property(m => m.VoicePeaks).HasMaxLength(64);
             e.HasIndex(m => new { m.ThreadId, m.CreatedAt });
             e.HasIndex(m => new { m.SenderId, m.ClientId }).IsUnique();
             e.HasIndex(m => m.PushedAt);
@@ -389,6 +391,12 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasOne(i => i.Inviter).WithMany().HasForeignKey(i => i.InviterId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        model.Entity<VoiceNote>(e =>
+        {
+            e.Property(v => v.ContentType).HasMaxLength(32);
+            e.HasIndex(v => v.OwnerId);
+            e.HasOne(v => v.Owner).WithMany().HasForeignKey(v => v.OwnerId).OnDelete(DeleteBehavior.SetNull);
+        });
         model.Entity<Photo>(e =>
         {
             e.Property(p => p.ContentType).HasMaxLength(32);
@@ -707,6 +715,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 
         model.Entity<CoachMessage>(e =>
         {
+            e.Property(m => m.VoicePeaks).HasMaxLength(64);
             e.HasIndex(m => new { m.SenderUserId, m.MessageId }).IsUnique();
             e.HasIndex(m => new { m.RelationshipId, m.SyncedAt });
             e.HasOne(m => m.Relationship)

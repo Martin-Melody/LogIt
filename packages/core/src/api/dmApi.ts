@@ -36,6 +36,11 @@ export interface DmMessage {
   photoHeight: number;
   /** A photo in a request you haven't accepted: shown blurred until you do. */
   photoHidden: boolean;
+  /** A voice message (/voice/…, through voiceSrc), its length and waveform; locked in an unaccepted request. */
+  voiceUrl: string | null;
+  voiceMs: number;
+  voicePeaks: string | null;
+  voiceHidden: boolean;
   /** The sender changed the text after sending it. */
   edited: boolean;
   /** Unsent: shown as "… unsent a message" where it was; its content is gone. */
@@ -45,7 +50,7 @@ export interface DmMessage {
 }
 
 /** What's left of a message once it's unsent, for showing it before the next reload. */
-export const unsent = (m: DmMessage): DmMessage => ({ ...m, deleted: true, body: "", cardType: null, cardJson: null, photoUrl: null, photoHidden: false });
+export const unsent = (m: DmMessage): DmMessage => ({ ...m, deleted: true, body: "", cardType: null, cardJson: null, photoUrl: null, photoHidden: false, voiceUrl: null, voiceHidden: false });
 
 /** Your own text can be edited for this long after sending, as on Instagram. */
 export const DM_EDIT_WINDOW_MS = 15 * 60_000;
@@ -72,13 +77,14 @@ export const dmApi = {
   threads: (box: "chats" | "requests") => apiClient.fetch<DmThread[]>(`/dm/threads?box=${box}`),
   unread: () => apiClient.fetch<{ chats: number; requests: number }>("/dm/unread"),
   chat: (to: DmTo, beforeMs?: number) => apiClient.fetch<DmChat>(`/dm/chat?${q(to)}${beforeMs ? `&before=${beforeMs}` : ""}`),
-  send: (to: DmTo, clientId: string, body: string, extra: { card?: { type: string; json: string }; photoId?: string } = {}) =>
+  send: (to: DmTo, clientId: string, body: string, extra: { card?: { type: string; json: string }; photoId?: string; voice?: { id: string; peaks: string } } = {}) =>
     apiClient.fetch<DmMessage>("/dm/send", {
       method: "POST",
       body: JSON.stringify({
         ...to, clientId, body,
         ...(extra.card ? { cardType: extra.card.type, cardJson: extra.card.json } : {}),
         ...(extra.photoId ? { photoId: extra.photoId } : {}),
+        ...(extra.voice ? { voiceId: extra.voice.id, voicePeaks: extra.voice.peaks } : {}),
       }),
     }),
   read: (threadId: string) => apiClient.fetch<void>(`/dm/threads/${threadId}/read`, { method: "POST" }),
