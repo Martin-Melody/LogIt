@@ -12,14 +12,20 @@ title: Logging a workout
 
 ## On the phone
 
-Tap Quick Start on Home. With an active split, today's day loads with its planned sets; otherwise you
-start an empty workout. Tap the circle on a set when you've done it: it fills in what was planned and
-starts your rest timer, then asks how many more you could have done: one tap, or ignore it. You can turn
-that off in Settings › Workout. Tap a set's number for its options right under it: the kind of set, how hard it
-was, rest after it, a note, or delete. Tap an exercise's name for its progress, how to do it and its
-settings, and the machine under the name to pick, add or fix a machine. Add exercises with +. Tap Finish at the top
-when you're done; progression works out your next targets from it. To throw a workout away, use
-Discard workout in the ⋯ menu next to Finish. The tour the app shows on your first
+Tap Start on Home's Today card. With an active split, today's day loads with its planned sets; otherwise you
+start an empty workout. The exercise you're on is lifted out as a card; the ones you've finished fold to
+one line with what you did, and the rest wait under Up next with their plan in blue. Tap any of them to
+open it. Tap the circle on a set when you've done it: it fills in what was planned and starts your rest
+timer in the bar at the bottom (−15, +15 or Skip), then asks how many more you could have done: one tap,
+or ignore it. You can turn that off in Settings › Workout. Tap the line under an exercise's name ("+2 kg ·
+A set goes up at 7 reps") to see why it planned that weight. Swipe a set left for its options (the kind
+of set, reps left, rest after it, a note, move it or delete it), and hold its number to drag it. The ⋯ next
+to an exercise swaps it (just today, or in your plan too), groups it into a superset or circuit, adds
+warm-ups, sets its rest or machine, or removes it. Add to workout at the bottom finds exercises, cardio,
+drills and plugin blocks, several at once. The ⋮ menu at the top has Undo, Redo, Change the order and
+Discard workout. Tap Finish when you're done: you see what's planned for next time and what you skipped,
+and progression works out your next targets from it. The chevron at the top left minimises the workout
+to a bar above the nav, so you can look at anything else and come straight back. The tour the app shows on your first
 workout:
 
 <HowTo id="app.session" />

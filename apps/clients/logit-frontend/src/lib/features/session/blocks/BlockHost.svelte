@@ -11,8 +11,11 @@
     grouped = false,
     groupRestMs,
     round,
+    roundLabel,
+    stage,
     gripAction,
     onGroup,
+    onReorder,
     onDelete,
     onMutate,
   } = $props<{
@@ -23,8 +26,11 @@
     grouped?: boolean;
     groupRestMs?: number;
     round?: number;
+    roundLabel?: string;
+    stage?: import("$lib/features/session/stage").BlockStage;
     gripAction: GripAction;
     onGroup?: () => void;
+    onReorder?: () => void;
     onDelete: () => void | Promise<void>;
     onMutate: (updater: (session: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) => Promise<void>;
   }>();
@@ -42,8 +48,11 @@
     {grouped}
     {groupRestMs}
     {round}
+    {roundLabel}
+    {stage}
     {gripAction}
     {onGroup}
+    {onReorder}
     {onDelete}
     {onMutate}
   />

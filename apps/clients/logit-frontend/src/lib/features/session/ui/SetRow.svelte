@@ -35,6 +35,8 @@
     onRemove,
     optionsOpen = false,
     focusReps = false,
+    label = null,
+    lastPrefix = "",
   } = $props<{
     setNumber?: number;
     setType?: string;
@@ -60,6 +62,10 @@
     optionsOpen?: boolean;
     /** Put the cursor in reps (a set ticked with nothing entered, or one just added). */
     focusReps?: boolean;
+    /** A letter tile instead of the set number: a superset's round, "A" and "B" (merged design). */
+    label?: string | null;
+    /** Before last time, e.g. the exercise's name in a round. */
+    lastPrefix?: string;
   }>();
 
   const meta = $derived(setTypeMeta(setType));
@@ -162,7 +168,9 @@
     data-testid="set-number"
     {disabled}
   >
-    {#if meta.short}
+    {#if label}
+      <span class="flex size-6 items-center justify-center rounded-md bg-muted text-xs font-semibold text-foreground">{label}</span>
+    {:else if meta.short}
       <span
         class="text-[11px] font-bold leading-none px-1 py-0.5 rounded-md border tabular-nums {meta.badgeClass}"
         title={meta.label}
@@ -183,7 +191,7 @@
     aria-label={lastText ? `${setName}, last time ${lastText}` : `${setName}, nothing last time`}
     data-testid="set-last"
   >
-    {lastText}
+    {#if lastPrefix}<span class="text-foreground/80">{lastPrefix}</span>{#if lastText} · {/if}{/if}{lastText}
   </span>
 
   <!-- Weight -->

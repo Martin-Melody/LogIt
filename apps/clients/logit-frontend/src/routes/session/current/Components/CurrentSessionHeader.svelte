@@ -1,47 +1,39 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import { MoreVertical, Music, Trash2, Undo2, Redo2 } from "lucide-svelte";
-  import type { WorkoutHistory } from "$lib/stores/currentSession.store";
-  import BackButton from "$lib/components/navigation/BackButton.svelte";
+  import { ChevronDown, MoreVertical } from "lucide-svelte";
   import { back } from "$lib/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { Button } from "$lib/components/ui/button";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
-  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import { music } from "$lib/features/music/nowPlaying.svelte";
 
+  // The workout's header (merged design, canvas row "v2 and v3 merged"): minimise (back to
+  // where you were; the pill above the nav brings you back), the day's name with the time
+  // and sets done, Finish, the workout menu, and a thin progress line along the bottom.
   const {
+    title = "Workout",
     saving = false,
     error = null,
     startedAtMs = null,
     showActions = true,
     canFinish = false,
-    exerciseCount = 0,
     loggedSetCount = 0,
+    totalSetCount = 0,
     onFinish = () => {},
-    onDiscard,
-    history = null,
-    onUndo = () => {},
-    onRedo = () => {},
+    onMenu = () => {},
   }: {
+    title?: string;
     saving?: boolean;
     error?: string | null;
     startedAtMs?: number | null;
-    /** Finish and the ⋯ menu; hidden while the workout is being finished. */
+    /** Finish and the ⋮ menu; hidden while the workout is being finished. */
     showActions?: boolean;
     canFinish?: boolean;
-    exerciseCount?: number;
     loggedSetCount?: number;
+    /** Every working set planned or logged, for "4 of 15 sets" and the line. */
+    totalSetCount?: number;
     onFinish?: () => void | Promise<void>;
-    onDiscard?: () => void | Promise<void>;
-    /** What Undo / Redo would do: the first two items in ⋯, each naming its step. */
-    history?: WorkoutHistory | null;
-    onUndo?: () => void | Promise<void>;
-    onRedo?: () => void | Promise<void>;
+    onMenu?: () => void;
   } = $props();
 
   let now = $state(Date.now());
-  let confirmDiscard = $state(false);
 
   $effect(() => {
     if (startedAtMs == null) return;
@@ -59,35 +51,27 @@
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
   });
 
-  const discardDescription = $derived(
-    exerciseCount === 0
-      ? "This empty workout will be discarded. This can't be undone."
-      : `${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}` +
-        (loggedSetCount > 0
-          ? ` and ${loggedSetCount} logged set${loggedSetCount === 1 ? "" : "s"}`
-          : "") +
-        " will be permanently deleted. This can't be undone.",
-  );
+  const setsLabel = $derived(totalSetCount > 0 ? `${loggedSetCount} of ${totalSetCount} sets` : null);
+  const pct = $derived(totalSetCount > 0 ? Math.min(100, (loggedSetCount / totalSetCount) * 100) : 0);
 </script>
 
-<!-- In the shared header (same place as every other page's, so landing here doesn't
-     shift the page), without the bell while training. Finish and Discard live up here
-     so the bottom of the screen only holds the music bar and the nav. -->
+<!-- In the shared header (same place as every other page's), without the bell while training. -->
 <PageHeader bell={false}>
-  <BackButton onclick={() => back("/")} />
+  <button
+    type="button"
+    class="-ml-1.5 -my-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+    aria-label="Minimise workout"
+    onclick={() => back("/")}
+  >
+    <ChevronDown class="h-5 w-5" />
+  </button>
 
-  <h1 class="page-title">Workout</h1>
-
-  {#if saving}
-    <span class="text-xs text-muted-foreground shrink-0">Saving…</span>
-  {:else if elapsedLabel}
-    <span
-      class="text-xs text-muted-foreground shrink-0 tabular-nums"
-      aria-label="Elapsed workout time"
-    >
-      {elapsedLabel}
+  <div class="flex min-w-0 flex-1 flex-col">
+    <h1 class="truncate text-base font-semibold leading-tight">{title}</h1>
+    <span class="truncate text-xs text-muted-foreground tabular-nums">
+      {#if saving}Saving…{:else if elapsedLabel}<span aria-label="Elapsed workout time">{elapsedLabel}</span>{/if}{#if setsLabel}{saving || elapsedLabel ? " · " : ""}{setsLabel}{/if}
     </span>
-  {/if}
+  </div>
 
   {#if showActions}
     <Button
@@ -101,61 +85,23 @@
       Finish
     </Button>
 
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        class="-mr-2 -my-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
-        aria-label="Workout options"
-      >
-        <MoreVertical class="h-5 w-5" />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" class="w-60">
-        <DropdownMenu.Item disabled={!history?.undo || saving} onSelect={() => void onUndo()} class="min-h-12" data-testid="workout-undo">
-          <Undo2 />
-          <span class="flex min-w-0 flex-col leading-tight">
-            Undo
-            {#if history?.undo}<span class="truncate text-xs text-muted-foreground">{history.undo.label}</span>{/if}
-          </span>
-        </DropdownMenu.Item>
-        <DropdownMenu.Item disabled={!history?.redo || saving} onSelect={() => void onRedo()} class="min-h-12" data-testid="workout-redo">
-          <Redo2 />
-          <span class="flex min-w-0 flex-col leading-tight">
-            Redo
-            {#if history?.redo}<span class="truncate text-xs text-muted-foreground">{history.redo.label}</span>{/if}
-          </span>
-        </DropdownMenu.Item>
-        <div class="my-1 h-px bg-border" role="separator"></div>
-        {#if music.supported}
-          <DropdownMenu.Item onSelect={() => void goto("/settings/music")}>
-            <Music /> Music settings
-          </DropdownMenu.Item>
-          <div class="my-1 h-px bg-border" role="separator"></div>
-        {/if}
-        {#if onDiscard}
-          <DropdownMenu.Item
-            variant="destructive"
-            disabled={saving}
-            onSelect={() => (confirmDiscard = true)}
-          >
-            <Trash2 /> Discard workout…
-          </DropdownMenu.Item>
-        {/if}
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+    <button
+      type="button"
+      class="-mr-2 -my-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+      aria-label="Workout options"
+      onclick={onMenu}
+    >
+      <MoreVertical class="h-5 w-5" />
+    </button>
+  {/if}
+
+  {#if totalSetCount > 0}
+    <div class="pointer-events-none absolute inset-x-0 -bottom-px h-[3px] bg-muted" role="progressbar" aria-label="Sets done"
+      aria-valuemin={0} aria-valuemax={totalSetCount} aria-valuenow={loggedSetCount}>
+      <div class="h-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style="width: {pct}%"></div>
+    </div>
   {/if}
 </PageHeader>
-
-{#if onDiscard}
-  <ConfirmDialog
-    open={confirmDiscard}
-    onOpenChange={(v) => (confirmDiscard = v)}
-    title="Discard this workout?"
-    description={discardDescription}
-    confirmLabel="Discard"
-    cancelLabel="Keep going"
-    {saving}
-    onConfirm={onDiscard}
-  />
-{/if}
 
 {#if error}
   <p class="px-3 py-1.5 text-sm text-destructive border-b border-border">{error}</p>

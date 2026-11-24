@@ -199,17 +199,17 @@ test("home screen auto-adds the nutrition widgets once a goal exists", async ({ 
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible({ timeout: 20000 });
 
   const nutWidget = page
-    .locator("div", { has: page.getByText("Today's Nutrition", { exact: true }) })
+    .locator("div", { has: page.getByText("Today's nutrition", { exact: true }) })
     .first();
-  await expect(page.getByText("Today's Nutrition", { exact: true })).toBeVisible();
+  await expect(page.getByText("Today's nutrition", { exact: true })).toBeVisible();
   await expect(nutWidget.getByText(/kcal (left|over)/)).toBeVisible();
-  await expect(page.getByText("Weight Trend", { exact: true })).toBeVisible();
+  await expect(page.getByText("Weight trend", { exact: true })).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/10-home-widgets.png`, fullPage: true });
 
   // Both are listed on the customise screen too.
   await page.goto("/home/customize");
-  await expect(page.getByText("Today's Nutrition", { exact: true })).toBeVisible();
-  await expect(page.getByText("Weight Trend", { exact: true })).toBeVisible();
+  await expect(page.getByText("Today's nutrition", { exact: true })).toBeVisible();
+  await expect(page.getByText("Weight trend", { exact: true })).toBeVisible();
 });
 
 test("Today's Nutrition widget rolls over to the new day when the app returns to the foreground", async ({ page }) => {
@@ -241,7 +241,7 @@ test("Today's Nutrition widget rolls over to the new day when the app returns to
 
   await page.goto("/");
   const widget = page
-    .locator("div", { has: page.getByText("Today's Nutrition", { exact: true }) })
+    .locator("div", { has: page.getByText("Today's nutrition", { exact: true }) })
     .first();
   await expect(widget.getByText(/kcal (left|over)/)).toBeVisible({ timeout: 20000 });
   const kcalLeft = (t: string) => Number((t.match(/([\d,]+)\s*kcal/)?.[1] ?? "").replace(/,/g, ""));

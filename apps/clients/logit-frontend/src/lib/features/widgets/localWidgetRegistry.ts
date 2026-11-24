@@ -41,7 +41,7 @@ const BUNDLED: WidgetDefinition[] = [
   {
     id: "quick-start",
     guideMark: "quick-start",
-    label: "Quick Start",
+    label: "Quick start",
     description: "Start or continue a workout.",
     component: WidgetCard,
     props: { plugin: quickStartWidget },
@@ -50,7 +50,7 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "todays-plan",
-    label: "Today's Plan",
+    label: "Today's plan",
     description: "See today's exercises from your active split.",
     component: WidgetCard,
     props: { plugin: todaysPlanWidget },
@@ -71,7 +71,7 @@ const BUNDLED: WidgetDefinition[] = [
   // WidgetCard, with a sandboxed plugin.
   {
     id: "last-session",
-    label: "Recent Sessions",
+    label: "Recent sessions",
     description: "Jump back into a recent session.",
     component: WidgetCard,
     props: { plugin: recentSessionsWidget },
@@ -89,7 +89,7 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "activity-tracker",
-    label: "Activity Tracker",
+    label: "Activity tracker",
     description: "Monthly workout calendar. Tap for a full year view.",
     component: WidgetCard,
     props: { plugin: activityWidget },
@@ -98,7 +98,7 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "muscle-map",
-    label: "Muscle Focus",
+    label: "Muscle focus",
     description: "Body map showing which muscles you've trained this week.",
     component: WidgetCard,
     props: { plugin: muscleFocusWidget },
@@ -107,7 +107,7 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "todays-nutrition",
-    label: "Today's Nutrition",
+    label: "Today's nutrition",
     description: "Calories & macros consumed vs your target. Auto-added once you set a nutrition goal.",
     component: WidgetCard,
     props: { plugin: todaysNutritionWidget },
@@ -116,7 +116,7 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "weight-trend",
-    label: "Weight Trend",
+    label: "Weight trend",
     description: "Smoothed bodyweight trend and weekly rate. Auto-added once you set a nutrition goal.",
     component: WidgetCard,
     props: { plugin: weightTrendWidget },

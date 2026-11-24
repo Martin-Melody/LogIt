@@ -5,8 +5,19 @@
   import MusicSheet from "./MusicSheet.svelte";
   import MusicSetupSheet from "./MusicSetupSheet.svelte";
 
-  /** Whether anything is drawn, so the page can leave room for it. */
-  let { visible = $bindable(false) }: { visible?: boolean } = $props();
+  /** Whether anything is drawn, so the page can leave room for it. `playingOnly`: only the
+   * now-playing bar (the workout's bottom bar has its own music button, see openMusic). */
+  let {
+    visible = $bindable(false),
+    available = $bindable(false),
+    playingOnly = false,
+  }: { visible?: boolean; available?: boolean; playingOnly?: boolean } = $props();
+
+  /** The music sheet, or the setup sheet while music access isn't set up. */
+  export function openMusic() {
+    if (mode === "setup" || music.granted === false) setupOpen = true;
+    else sheetOpen = true;
+  }
 
   let sheetOpen = $state(false);
   let setupOpen = $state(false);
@@ -25,7 +36,8 @@
   });
 
   $effect(() => {
-    visible = mode !== "hidden";
+    visible = playingOnly ? mode === "playing" : mode !== "hidden";
+    available = music.supported && $musicSettings.barEnabled;
   });
 
   const progress = $derived(
@@ -36,7 +48,7 @@
   );
 </script>
 
-{#if mode === "setup"}
+{#if mode === "setup" && !playingOnly}
   <button
     type="button"
     class="flex h-[52px] w-full items-center gap-2.5 rounded-xl border border-dashed border-border px-3 text-left"
@@ -48,7 +60,7 @@
     <span class="flex-1 text-[13px] font-medium">Control your music from here</span>
     <span class="text-xs text-muted-foreground">Set up</span>
   </button>
-{:else if mode === "idle"}
+{:else if mode === "idle" && !playingOnly}
   <button
     type="button"
     class="flex h-[52px] w-full items-center gap-2.5 rounded-xl border border-border bg-muted/60 px-3 text-left"

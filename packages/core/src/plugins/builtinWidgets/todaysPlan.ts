@@ -7,7 +7,7 @@ import type {
 
 export const todaysPlanWidget: WidgetPlugin = {
   id: "todays-plan",
-  name: "Today's Plan",
+  name: "Today's plan",
   description: "See today's exercises from your active split.",
   needs: ["todaysPlan"],
 

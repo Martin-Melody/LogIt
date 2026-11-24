@@ -26,7 +26,7 @@
     today?: Snippet;
     excludeSessionId?: string;
     onClose?: () => void;
-    onMachine?: (place: Place, machineId: string | null) => void;
+    onMachine?: (place: Place | null, machineId: string | null) => void;
   } = $props();
 
   let ex = $state<Exercise | null>(null);

@@ -197,7 +197,7 @@
         <div class="flex items-center gap-2">
           <span class="flex-1 text-sm">{row.name}</span>
           {#if row.kind === "strength" && row.tag}
-            <span class="whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {row.tag.cls}">{row.tag.text}</span>
+            <span class={row.tag.cls}>{row.tag.text}</span>
           {/if}
         </div>
         {#if row.kind === "strength"}

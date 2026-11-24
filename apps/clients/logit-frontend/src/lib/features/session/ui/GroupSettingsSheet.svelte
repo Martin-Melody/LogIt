@@ -112,7 +112,7 @@
   ></button>
 
   <div
-    class="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-w-[500px] flex-col rounded-t-xl border-t border-border bg-background max-h-[88dvh]"
+    class="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-w-[500px] flex-col rounded-t-2xl border-t border-border bg-card max-h-[88dvh]"
     role="dialog"
     aria-modal="true"
     aria-label="Edit {kindWord}"

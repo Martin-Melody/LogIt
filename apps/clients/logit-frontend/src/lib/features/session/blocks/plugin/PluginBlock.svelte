@@ -1,10 +1,15 @@
 <script lang="ts">
+  import ActionSheet from "$lib/components/ActionSheet.svelte";
+  import { addButton } from "$lib/components/ui/choice";
+  import { ArrowDownUp } from "lucide-svelte";
+  import { openAllSignal } from "$lib/features/session/openAll";
+  import { foldFor } from "$lib/features/session/stage";
+  import { untrack } from "svelte";
   // A workout block from a plugin (docs/plugin-workout-blocks.md, design canvas B1): drawn
   // from the plugin's declaration with the app's own parts. Without the declaration (plugin
   // removed, another phone) it's the plain view from the block's own data (B3).
   import { get } from "svelte/store";
   import { Check, ChevronDown, ChevronRight, GripVertical, Link2, MoreHorizontal, Plus, Puzzle, RotateCcw, Trash2 } from "lucide-svelte";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { profile } from "$lib/stores/profile.store";
   import { reveal } from "$lib/transitions";
@@ -18,12 +23,37 @@
   import PluginBlockView from "./PluginBlockView.svelte";
   import { formatBlockValue } from "./format";
 
-  let { blockId, blockType, data, saving, grouped = false, round, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<PluginBlockData> = $props();
+  let { blockId, blockType, data, saving, grouped = false, round, stage, onReorder, gripAction, onGroup, onDelete, onMutate }: BlockBaseProps<PluginBlockData> = $props();
 
   const decl = $derived(blockType ? getBlockDeclaration(blockType.slice(PLUGIN_BLOCK_PREFIX.length)) : null);
   const unit = $derived($profile.weightUnit);
-  let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  let collapsed = $state(
+    untrack(() => stage) ? foldFor(untrack(() => stage)!, get(profile).blocksCollapsedByDefault) : get(profile).blocksCollapsedByDefault,
+  );
+
+  // Done and upcoming blocks fold, the one you're on opens (stage.ts); a tap overrides until the stage changes.
+  let seenStage = untrack(() => stage);
+  $effect(() => {
+    const st = stage;
+    untrack(() => {
+      if (!st || st === seenStage) return;
+      seenStage = st;
+      collapsed = foldFor(st, get(profile).blocksCollapsedByDefault);
+    });
+  });
+
+  // "Open every exercise" in the workout menu.
+  let seenOpenAll = get(openAllSignal);
+  $effect(() => {
+    const n = $openAllSignal;
+    untrack(() => {
+      if (n === seenOpenAll) return;
+      seenOpenAll = n;
+      collapsed = false;
+    });
+  });
   let confirmRemove = $state(false);
+  let menuOpen = $state(false);
   let moreOpen = $state<Record<string, boolean>>({});
 
   // A group's "by round" view shows only that round's entry.
@@ -41,7 +71,7 @@
   const entryNo = (id: string) => data.entries.findIndex((e) => e.id === id) + 1;
 </script>
 
-<div class="border-t border-border bg-muted/20">
+<div class={stage === "current" ? "" : "border-t border-border bg-muted/20"}>
   <div class="flex items-center pl-1 pr-1">
     <button type="button" class="flex h-11 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground active:cursor-grabbing"
       style="touch-action: none" use:gripAction aria-label={grouped ? "Drag to reorder within the group" : "Drag to reorder"} tabindex="-1" disabled={saving}>
@@ -53,25 +83,20 @@
     </button>
     <span class="flex min-w-0 flex-1 items-center gap-2 pl-1 pr-2">
       <Puzzle class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      <span class="truncate text-sm font-semibold">{decl?.name ?? data.name}</span>
+      <span class="truncate font-semibold {stage === 'current' ? 'text-[17px]' : 'text-[15px]'}">{decl?.name ?? data.name}</span>
     </span>
-    <span class="shrink-0 pr-1 text-xs text-muted-foreground tabular-nums">{done.length} of {data.entries.length}</span>
-    {#if !collapsed && decl}
-      <button type="button" class="ml-1 flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-50" disabled={saving}
-        aria-label="Add {decl.entry.one.toLowerCase()}" onclick={() => change(addEntry(decl))}>
-        <span class="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground"><Plus class="h-4 w-4" /></span>
-      </button>
-    {/if}
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
-        disabled={saving} aria-label="More actions for {data.name}">
-        <MoreHorizontal class="h-5 w-5" />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content>
-        {#if onGroup}<DropdownMenu.Item onSelect={onGroup}><Link2 /> Superset / circuit with…</DropdownMenu.Item>{/if}
-        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}><Trash2 /> Remove {data.name}</DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+    <span class="flex shrink-0 items-center gap-1 pr-1 text-xs tabular-nums {data.entries.length && done.length === data.entries.length ? 'text-success' : 'text-muted-foreground'}">
+      {#if data.entries.length && done.length === data.entries.length}<Check class="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />{/if}{done.length} of {data.entries.length}
+    </span>
+    <button type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+      disabled={saving} aria-label="More actions for {data.name}" onclick={() => (menuOpen = true)}>
+      <MoreHorizontal class="h-5 w-5" />
+    </button>
+    <ActionSheet open={menuOpen} onOpenChange={(v) => (menuOpen = v)} title={decl?.name ?? data.name} subtitle="Plugin block" items={[
+      ...(onGroup ? [{ icon: Link2, label: "Superset or circuit with…", onSelect: () => onGroup() }] : []),
+      ...(onReorder ? [{ icon: ArrowDownUp, label: "Change the order", onSelect: onReorder }] : []),
+      { icon: Trash2, label: "Remove from this workout", destructive: true, onSelect: () => (confirmRemove = true) },
+    ]} />
     <ConfirmDialog title="Remove {data.name}?" description="Removes this block and everything logged in it." confirmLabel="Remove"
       {saving} onConfirm={onDelete} open={confirmRemove} onOpenChange={(v: boolean) => (confirmRemove = v)} />
   </div>
@@ -134,7 +159,12 @@
           </div>
         {/each}
 
-        <p class="border-t border-border/60 px-3.5 py-2 text-[13px] text-muted-foreground">{data.summary}</p>
+        <div class="flex flex-wrap gap-2 border-t border-border/60 px-3 pt-2 pb-3">
+          <button type="button" class={addButton} disabled={saving} onclick={() => change(addEntry(decl))}>
+            <Plus class="h-3.5 w-3.5" /> Add {decl.entry.one.toLowerCase()}
+          </button>
+        </div>
+        <p class="px-3.5 pb-2 text-[13px] text-muted-foreground">{data.summary}</p>
       {/if}
     </div>
   {/if}

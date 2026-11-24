@@ -1,3 +1,4 @@
+import { tagClass } from "$lib/components/ui/choice";
 import type { ProgressionChange, SuggestedSet } from "@logit/core/domain/progression";
 import type { SetTarget } from "@logit/core/domain/workout";
 import type { WeightUnit } from "@logit/core/domain/units";
@@ -31,18 +32,9 @@ export function formatPrescription(sets: SuggestedSet[], unit: WeightUnit, bodyw
 
 /** Tailwind classes for a change tag; the colours differ in lightness, not only hue. */
 export function changeTagClass(kind: ProgressionChange["kind"]): string {
-  switch (kind) {
-    case "increase":
-      return "bg-foreground text-background";
-    case "deload":
-      return "border border-warning/60 bg-warning/10 text-warning";
-    case "repeat":
-      return "border border-border bg-muted text-foreground";
-    case "first":
-      return "border border-border text-muted-foreground";
-    default:
-      return "bg-info/10 text-info dark:bg-info/15";
-  }
+  return tagClass(
+    kind === "increase" ? "up" : kind === "deload" ? "warn" : kind === "repeat" ? "neutral" : kind === "first" ? "new" : "plan",
+  );
 }
 
 /**
@@ -93,4 +85,24 @@ export function meterRow(done: number, target: number, goalReps: number, logged?
     spoken = target > 0 ? `${done} reps, the ${target} aimed for` : `${done} reps`;
   }
   return { right, spoken, cells, converted: false };
+}
+
+/**
+ * Sets in one line: "103 × 8, 8, 6", or "56.25 × 8, 8 · 52.5 × 8" when the weight changes
+ * (the folded lines of the merged workout design). Units left off, like the set table.
+ */
+export function setsLine(
+  sets: { weight: number; reps: number }[],
+  unit: WeightUnit,
+  bodyweight = false,
+): string {
+  const runs: { weight: number; reps: number[] }[] = [];
+  for (const s of sets) {
+    const last = runs.at(-1);
+    if (last && Math.abs(last.weight - s.weight) < 0.001) last.reps.push(s.reps);
+    else runs.push({ weight: s.weight, reps: [s.reps] });
+  }
+  return runs
+    .map((r) => (r.weight || bodyweight ? `${formatLoad(r.weight, unit, bodyweight, { withUnit: false })} × ${r.reps.join(", ")}` : `× ${r.reps.join(", ")}`))
+    .join(" · ");
 }

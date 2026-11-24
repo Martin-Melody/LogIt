@@ -1,6 +1,7 @@
 <script lang="ts">
+  import StreakLine from "$lib/features/goals/StreakLine.svelte";
   import { untrack } from "svelte";
-  import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Flame } from "lucide-svelte";
+  import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-svelte";
   import { localDateIso } from "@logit/core/domain/nutrition";
   import type { WeeklyStreak } from "@logit/core/domain/weeklyStreak";
 
@@ -193,10 +194,7 @@
   {:else if streak || monthCount != null}
     <div class="flex items-center justify-between gap-2 border-t border-border pt-2">
       {#if streak}
-        <span class="flex items-center gap-1.5 text-[13px] font-medium">
-          <Flame class="h-4 w-4 {streak.currentWeeks > 0 ? 'text-amber-500' : 'text-muted-foreground'}" />
-          {streak.currentWeeks > 0 ? `${streak.currentWeeks}-week streak` : "No streak yet"}
-        </span>
+        <StreakLine weeks={streak.currentWeeks} />
       {/if}
       <span class="text-xs text-muted-foreground tabular-nums">{footer}</span>
     </div>

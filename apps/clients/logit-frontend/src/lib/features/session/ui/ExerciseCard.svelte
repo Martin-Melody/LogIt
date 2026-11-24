@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Timer, ArrowLeftRight, Link2, MoreHorizontal, ArrowDownUp, Undo2 } from "lucide-svelte";
+  import { Plus, ChevronDown, ChevronRight, GripVertical, Timer, MoreHorizontal, ArrowDownUp, Undo2, Check } from "lucide-svelte";
   import { fade } from "svelte/transition";
   import { Button } from "$lib/components/ui/button";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
-  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
+  import WhySheet from "./WhySheet.svelte";
+  import type { BlockStage } from "$lib/features/session/stage";
+  import { addButton } from "$lib/components/ui/choice";
   import type { ProgressionOutput } from "@logit/core/domain/progression";
-  import { changeTagClass, meterRow } from "$lib/features/session/planFormat";
+  import { changeTagClass } from "$lib/features/session/planFormat";
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { formatLoad } from "@logit/core/domain/units";
@@ -16,7 +16,6 @@
     exerciseName = "",
     setCount = 0,
     doneCount = 0,
-    meter = [],
     saving = false,
     collapsed = false,
     hasActiveTimer = false,
@@ -24,14 +23,10 @@
     weightUnit = "kg",
     bodyweight = false,
     grouped = false,
-    canSuperset = false,
     roundView = false,
     gripAction,
     onAddSet = () => {},
     onOpenDetail = () => {},
-    onSwap = () => {},
-    onSuperset = () => {},
-    onDelete = () => {},
     onToggleCollapse = () => {},
     onDismissNudge = () => {},
     onAcceptNudge = () => {},
@@ -40,16 +35,20 @@
     notice,
     replan = null,
     onToggleReplan = () => {},
+    stage,
+    summary = "",
+    nextTime = null,
+    canWarmup = false,
+    warmupDisabled = false,
+    onAddWarmup = () => {},
+    onMenu = () => {},
+    onSettings,
     children,
   } = $props<{
     exerciseName?: string;
     setCount?: number;
     /** Working sets ticked off so far. */
     doneCount?: number;
-    /** Per working set: reps done (0 if not yet) and reps planned, for the meter. When
-     * the set was done at a different weight, `done` is worked out at the planned
-     * weight and `logged` holds the reps typed in. */
-    meter?: { done: number; target: number; logged?: number }[];
     saving?: boolean;
     collapsed?: boolean;
     hasActiveTimer?: boolean;
@@ -58,15 +57,11 @@
     /** Weights are relative to bodyweight (BW, BW−25, BW+10). */
     bodyweight?: boolean;
     grouped?: boolean;
-    canSuperset?: boolean;
     /** One round of a group: just the name, menu and that round's set (no grip, collapse, add set or meter). */
     roundView?: boolean;
     gripAction: GripAction;
     onAddSet?: () => void | Promise<void>;
     onOpenDetail?: () => void;
-    onSwap?: () => void;
-    onSuperset?: () => void | Promise<void>;
-    onDelete?: () => void | Promise<void>;
     onToggleCollapse?: () => void;
     onDismissNudge?: (nudgeId: string) => void | Promise<void>;
     onAcceptNudge?: (nudgeId: string) => void | Promise<void>;
@@ -80,31 +75,39 @@
      * swaps between the re-plan and the original plan. */
     replan?: { text: string; kept: boolean; action: string } | null;
     onToggleReplan?: () => void | Promise<void>;
+    /** Where it is in the workout: done and upcoming ones fold to one line (merged design). */
+    stage?: BlockStage;
+    /** The folded line: what was done ("103 × 8, 8, 6") or what's planned (shown blue). */
+    summary?: string;
+    /** Folded and done: what happens next time ("+2 kg"). */
+    nextTime?: string | null;
+    canWarmup?: boolean;
+    warmupDisabled?: boolean;
+    onAddWarmup?: () => void | Promise<void>;
+    /** The exercise menu sheet (swap, superset, warm-ups, rest, machine, order, remove). */
+    onMenu?: () => void;
+    /** "Change how it plans" in Why this weight?: the exercise's settings. */
+    onSettings?: () => void;
     children?: import("svelte").Snippet;
   }>();
 
-  let confirmRemove = $state(false);
+  let whyOpen = $state(false);
 
   const goal = $derived(suggestion?.progressGoal ?? null);
-  const fatiguePct = $derived(Math.round(suggestion?.reasoning?.computed?.fatigueDiscountPct ?? 0));
-  const showMeter = $derived(!collapsed && goal !== null && meter.length > 0 && goal.reps <= 30);
-
-  // One cell per rep up to the goal: reps towards today's aim (blue), reps beyond it
-  // (green), the aim still to do (dashed), or still to go before the weight goes up.
-  const meterRows = $derived(
-    showMeter && goal
-      ? meter.map((m: { done: number; target: number; logged?: number }, i: number) => ({
-          label: `${i + 1}`,
-          ...meterRow(m.done, m.target, goal.reps, m.logged),
-        }))
-      : [],
-  );
-  const anyConverted = $derived(meterRows.some((r: { converted: boolean }) => r.converted));
+  const current = $derived(stage === "current");
+  const folded = $derived(collapsed && !roundView);
+  const allDone = $derived(setCount > 0 && doneCount >= setCount);
+  // The reason line, one tap to Why this weight? (was text and an underlined "Why?").
+  const reasonText = $derived.by(() => {
+    if (!suggestion) return "";
+    if (goal) return goal.weight !== undefined ? `${goal.reps} on every set → ${formatLoad(goal.weight, weightUnit, bodyweight)}` : `A set goes up at ${goal.reps} reps`;
+    return suggestion.change?.detail ?? suggestion.label ?? "";
+  });
 </script>
 
-<div class="border-b border-border/50">
+<div class={current ? "" : "border-b border-border/50"}>
 <!-- Exercise section header -->
-<div class="border-t border-border bg-muted/20" data-guide="session-exercise-header">
+<div class={roundView ? "hidden" : current ? "" : "border-t border-border bg-muted/20"} data-guide="session-exercise-header">
   <!-- Every control here is a 44px target. Swap / superset / remove live in the
        ⋯ menu so the row doesn't need six icons and the name keeps its room. -->
   <div class="flex items-center {roundView ? 'pl-3' : 'pl-1'} pr-1">
@@ -145,11 +148,14 @@
       disabled={saving}
       aria-label="{exerciseName} — open details"
     >
-      <span class="text-[15px] font-semibold truncate block">{exerciseName}</span>
-      {#if lastTime && !roundView}<span class="block truncate text-xs font-normal text-muted-foreground">{lastTime}</span>{/if}
+      <span class="block truncate font-semibold {current ? 'text-[17px]' : 'text-[15px]'}">{exerciseName}</span>
+      {#if folded && summary}
+        <span class="block truncate text-xs font-normal tabular-nums {allDone ? 'text-muted-foreground' : 'text-info'}">{summary}{#if allDone && nextTime} · next time <span class="text-success">{nextTime}</span>{/if}</span>
+      {:else if lastTime && !roundView}<span class="block truncate text-xs font-normal text-muted-foreground">{lastTime}</span>{/if}
     </button>
 
-    <span class="text-xs text-muted-foreground shrink-0 tabular-nums">
+    <span class="flex shrink-0 items-center gap-1 text-xs tabular-nums {allDone ? 'text-success' : 'text-muted-foreground'}">
+      {#if allDone}<Check class="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />{/if}
       {#if setCount > 0}{doneCount} of {setCount}{:else}0 sets{/if}
     </span>
 
@@ -160,38 +166,15 @@
     {/if}
 
 
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
-        disabled={saving}
-        aria-label="More actions for {exerciseName}"
-      >
-        <MoreHorizontal class="h-5 w-5" />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content>
-        <DropdownMenu.Item onSelect={onSwap}>
-          <ArrowLeftRight /> Swap exercise
-        </DropdownMenu.Item>
-        {#if canSuperset}
-          <DropdownMenu.Item onSelect={() => void onSuperset()}>
-            <Link2 /> Superset / circuit with…
-          </DropdownMenu.Item>
-        {/if}
-        <DropdownMenu.Item variant="destructive" onSelect={() => (confirmRemove = true)}>
-          <Trash2 /> Remove exercise
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
-
-    <ConfirmDialog
-      title="Remove exercise?"
-      description="Removes this exercise and all its sets from the session."
-      confirmLabel="Remove"
-      {saving}
-      onConfirm={onDelete}
-      open={confirmRemove}
-      onOpenChange={(v: boolean) => (confirmRemove = v)}
-    />
+    <button
+      type="button"
+      class="shrink-0 h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-50"
+      disabled={saving}
+      aria-label="More actions for {exerciseName}"
+      onclick={onMenu}
+    >
+      <MoreHorizontal class="h-5 w-5" />
+    </button>
   </div>
 
   {#if !collapsed && !roundView && chip}
@@ -200,75 +183,20 @@
   {/if}
 
   {#if !collapsed && !roundView && suggestion && suggestion.sets.length > 0}
-    {#if showMeter && goal}
-      <div class="px-3 pb-2.5 flex flex-col gap-1.5" data-testid="progress-meter">
-        <div class="flex items-center gap-2">
-          {#if suggestion.change}
-            <span class="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
-              {suggestion.change.text}
-            </span>
-          {/if}
-          <p class="flex-1 text-xs text-muted-foreground">
-            {#if goal.weight !== undefined}
-              {goal.reps} on every set → <strong class="font-semibold text-foreground">{formatLoad(goal.weight, weightUnit, bodyweight)}</strong>
-            {:else}
-              A set goes up at <strong class="font-semibold text-foreground">{goal.reps} reps</strong>
-            {/if}
-          </p>
-          {#if suggestion.reasoning}
-            <ReasoningDialog reasoning={suggestion.reasoning} />
-          {/if}
+    {#if reasonText || suggestion.change}
+      {#if suggestion.reasoning}
+        <button type="button" class="mx-3 mb-2 flex min-h-11 w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg border border-border bg-foreground/[0.02] px-2.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/50"
+          data-testid="reason-line" aria-label="Why this weight? {suggestion.change?.text ?? ''} {reasonText}" onclick={() => (whyOpen = true)}>
+          {#if suggestion.change}<span class={changeTagClass(suggestion.change.kind)}>{suggestion.change.text}</span>{/if}
+          <span class="min-w-0 flex-1 [&_b]:font-semibold [&_b]:text-foreground">{reasonText}</span>
+          <ChevronRight class="h-4 w-4 shrink-0" aria-hidden="true" />
+        </button>
+      {:else}
+        <div class="mx-3 mb-2 flex min-h-11 items-center gap-2 text-xs text-muted-foreground" data-testid="reason-line">
+          {#if suggestion.change}<span class={changeTagClass(suggestion.change.kind)}>{suggestion.change.text}</span>{/if}
+          <span class="min-w-0 flex-1">{reasonText}</span>
         </div>
-        {#each meterRows as row (row.label)}
-          <div class="flex items-center gap-2" aria-label="Set {row.label}: {row.spoken}">
-            <span class="w-3 text-[11px] tabular-nums text-muted-foreground">{row.label}</span>
-            <div class="flex flex-1 gap-[3px]" aria-hidden="true">
-              {#each row.cells as cell, c (c)}
-                <span
-                  class="h-2.5 flex-1 rounded-[2px]
-                    {cell === 'hit'
-                    ? 'bg-info'
-                    : cell === 'bonus'
-                      ? 'bg-success'
-                      : cell === 'target'
-                      ? 'border border-dashed border-muted-foreground/60'
-                      : 'bg-muted-foreground/15'}"
-                ></span>
-              {/each}
-            </div>
-            <span class="w-11 text-right text-[11px] tabular-nums text-muted-foreground">{row.right}</span>
-          </div>
-        {/each}
-        {#if suggestion.change?.detail}
-          <p class="text-xs text-muted-foreground">{suggestion.change.detail}</p>
-        {/if}
-        {#if anyConverted}
-          <p class="text-xs text-muted-foreground">
-            ≈ Done at a different weight from the plan, so shown as reps at the planned weight.
-          </p>
-        {/if}
-        {#if fatiguePct > 0}
-          <p class="text-xs text-muted-foreground">
-            {fatiguePct}% lighter today: earlier exercises already worked these muscles.
-          </p>
-        {/if}
-      </div>
-    {:else}
-      <div class="px-3 pb-1.5 -mt-1 flex items-center gap-2 flex-wrap">
-        {#if suggestion.change}
-          <span class="shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold {changeTagClass(suggestion.change.kind)}">
-            {suggestion.change.text}
-          </span>
-        {/if}
-        {#if suggestion.change?.detail}
-          <p class="text-xs text-muted-foreground">{suggestion.change.detail}</p>
-        {:else if suggestion.label}
-          <p class="text-xs text-muted-foreground">{suggestion.label}</p>
-        {/if}
-        {#if suggestion.reasoning}
-          <ReasoningDialog reasoning={suggestion.reasoning} />
-        {/if}
-      </div>
+      {/if}
     {/if}
     {#if suggestion.notes}
       <p class="px-3 pb-1.5 text-xs text-warning -mt-1">{suggestion.notes}</p>
@@ -320,15 +248,30 @@
     {#if !roundView && notice}{@render notice()}{/if}
     {@render children?.()}
     {#if !roundView && setCount > 0}
-      <button
-        type="button"
-        class="flex min-h-11 w-full items-center gap-1.5 px-3 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-        onclick={() => void onAddSet()}
-        disabled={saving}
-      >
-        <Plus class="h-4 w-4" /> Add a set
-      </button>
+      <div class="flex flex-wrap gap-2 px-3 pt-2 pb-3">
+        <button type="button" class={addButton} onclick={() => void onAddSet()} disabled={saving}>
+          <Plus class="h-3.5 w-3.5" /> Add a set
+        </button>
+        {#if canWarmup}
+          <button type="button" class={addButton} onclick={() => void onAddWarmup()} disabled={saving || warmupDisabled} transition:reveal>
+            <Plus class="h-3.5 w-3.5" /> Warm-up ramp
+          </button>
+        {/if}
+      </div>
     {/if}
   </div>
 {/if}
 </div>
+
+{#if suggestion?.reasoning}
+  <WhySheet
+    open={whyOpen}
+    onOpenChange={(v) => (whyOpen = v)}
+    {exerciseName}
+    {suggestion}
+    {lastTime}
+    {weightUnit}
+    {bodyweight}
+    {onSettings}
+  />
+{/if}

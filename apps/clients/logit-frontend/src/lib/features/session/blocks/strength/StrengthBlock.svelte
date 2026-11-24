@@ -6,6 +6,8 @@
 
 <script lang="ts">
   import { carriedWeight } from "./carryWeight";
+  import { openAllSignal } from "$lib/features/session/openAll";
+  import { foldFor } from "$lib/features/session/stage";
   import FinishSetupCard from "$lib/features/exercise/FinishSetupCard.svelte";
   import { needsSetup } from "@logit/core/domain/exerciseGuess";
   import { hasStartingLift } from "$lib/features/onboarding/startingLifts";
@@ -74,10 +76,17 @@
   import SetsTableHeader from "$lib/features/session/ui/SetsTableHeader.svelte";
   import SetRow from "$lib/features/session/ui/SetRow.svelte";
   import SwipeRevealRow from "$lib/features/session/ui/SwipeRevealRow.svelte";
-  import SetOptionsTray from "$lib/features/session/ui/SetOptionsTray.svelte";
+  import SetOptionsSheet from "$lib/features/session/ui/SetOptionsSheet.svelte";
   import EffortPrompt from "$lib/features/session/ui/EffortPrompt.svelte";
-  import RestProgressBar from "$lib/features/session/ui/RestProgressBar.svelte";
-  import AddExerciseDialog from "$lib/features/session/ui/AddExerciseDialog.svelte";
+  import ActionSheet, { type ActionItem } from "$lib/components/ActionSheet.svelte";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import RestPickerSheet from "$lib/features/session/ui/RestPickerSheet.svelte";
+  import { setsLine } from "$lib/features/session/planFormat";
+  import { addButton } from "$lib/components/ui/choice";
+  import { ArrowDownUp, ArrowLeftRight, ChartLine, Flame, Link2, Rows3 as MachineIcon, Timer, Trash2 } from "lucide-svelte";
+  import SwapSheet from "$lib/features/session/ui/SwapSheet.svelte";
+  import { getSplit } from "$lib/usecases/Splits/getSplit";
+  import { saveSplit } from "$lib/usecases/Splits/saveSplit";
   import CoachSwapSheet from "$lib/features/session/ui/CoachSwapSheet.svelte";
   import { swapTargetFor, type SwapTarget } from "@logit/core/domain/swaps";
   import { coachFor, type CachedCoach } from "$lib/features/coaching/coachCache";
@@ -91,8 +100,11 @@
     grouped = false,
     groupRestMs,
     round,
+    roundLabel,
+    stage,
     gripAction,
     onGroup,
+    onReorder,
     onDelete,
     onMutate,
   }: BlockBaseProps<StrengthBlockData> = $props();
@@ -105,7 +117,34 @@
     const current = exercises.find((e) => e.sets.some((x) => !x.completed && x.setType !== "warmup"));
     return current?.id === blockId && exercises.some((e) => e.sets.some((x) => x.completed));
   });
-  let collapsed = $state(get(profile).blocksCollapsedByDefault && !resumingHere && !untrack(() => justAdded.delete(blockId)));
+  const freshlyAdded = untrack(() => justAdded.delete(blockId));
+  let collapsed = $state(
+    untrack(() => stage)
+      ? !freshlyAdded && foldFor(untrack(() => stage)!, get(profile).blocksCollapsedByDefault)
+      : get(profile).blocksCollapsedByDefault && !resumingHere && !freshlyAdded,
+  );
+
+  // Done and upcoming blocks fold, the one you're on opens (stage.ts); a tap overrides until the stage changes.
+  let seenStage = untrack(() => stage);
+  $effect(() => {
+    const st = stage;
+    untrack(() => {
+      if (!st || st === seenStage) return;
+      seenStage = st;
+      collapsed = foldFor(st, get(profile).blocksCollapsedByDefault);
+    });
+  });
+
+  // "Open every exercise" in the workout menu.
+  let seenOpenAll = get(openAllSignal);
+  $effect(() => {
+    const n = $openAllSignal;
+    untrack(() => {
+      if (n === seenOpenAll) return;
+      seenOpenAll = n;
+      collapsed = false;
+    });
+  });
   // Plan this block's sets once the suggestion arrives: on first load if it has
   // none yet, and after a swap (replacing only the planned, not-yet-done sets).
   let planPending = $state(untrack(() => data.sets.length === 0));
@@ -126,7 +165,7 @@
   // Where the editor was opened from, so closing it steps back there (Martin: back goes to
   // the previous screen): "Which machine?", the exercise's "Where you do it", or the card.
   let editorFrom = $state<"picker" | "exercise" | "card">("card");
-  let detailTab = $state<"auto" | "howto">("auto");
+  let detailTab = $state<"auto" | "howto" | "settings">("auto");
   // "Where are you today?" asked again from the card (M1's "Not at … today?", or no place yet).
   let whereOpen = $state(false);
   // The first machine made "My gym" (M3): said once, on this card.
@@ -310,7 +349,38 @@
     }
   }
 
-  async function handleSwap(selection: { name: string; exerciseId?: string }) {
+  /** "Change the plan too": the split day this workout came from gets the new exercise. */
+  async function swapInPlan(from: { name: string; id?: string }, to: { name: string; exerciseId?: string }) {
+    const src = get(currentSession)?.source;
+    if (!src || src.kind !== "split") return;
+    try {
+      const split = await getSplit(src.parentId);
+      if (!split) return;
+      let changed = false;
+      const days = split.days.map((d) => {
+        if (d.id !== src.dayId) return d;
+        return {
+          ...d,
+          blocks: d.blocks.map((b) => {
+            if (changed || b.type !== "strength") return b;
+            const same = (from.id && b.exerciseId === from.id) || b.exerciseName.toLowerCase() === from.name.toLowerCase();
+            if (!same) return b;
+            changed = true;
+            return { ...b, exerciseName: to.name, exerciseId: to.exerciseId };
+          }),
+        };
+      });
+      if (changed) {
+        await saveSplit({ ...split, days });
+        toast(`${split.name}: ${from.name} is now ${to.name}`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't change the plan");
+    }
+  }
+
+  async function handleSwap(selection: { name: string; exerciseId?: string }, changePlan = false) {
+    const from = { name: data.exerciseName, id: data.exerciseId };
     const trimmed = selection.name.trim();
     if (!trimmed) return;
     try {
@@ -324,6 +394,7 @@
       await onMutate((s: WorkoutSession) =>
         swapExercise(s, blockId, { exerciseName: trimmed, exerciseId }),
       );
+      if (changePlan) await swapInPlan(from, { name: trimmed, exerciseId });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't swap the exercise");
     }
@@ -581,10 +652,11 @@
   const AS_PLANNED_KEY = "logit:hint:logged-as-planned";
   function loggedAsPlanned(setId: string, kg: number, reps: number) {
     const shown = Number(getAccountItem(AS_PLANNED_KEY) ?? 0) || 0;
-    if (shown >= 3) return;
+    // The effort question after the tick already asks this (decision: one question per set).
+    if (shown >= 3 || get(profile).askEffortAfterSet) return;
     setAccountItem(AS_PLANNED_KEY, String(shown + 1));
     const load = bodyweight ? formatLoad(kg, get(profile).weightUnit, true) : formatWeight(kg, get(profile).weightUnit);
-    toast(`Logged ${load} × ${reps}. Did more?`, { action: { label: "Change", onClick: () => openEditSet(setId) } });
+    toast(`Logged ${load} × ${reps}. Did more?`, { id: "logged-as-planned", action: { label: "Change", onClick: () => openEditSet(setId) } });
   }
 
   async function handleComplete(setId: string) {
@@ -758,6 +830,26 @@
     return result;
   }
 
+  /** Move up / Move down in the set's options: swaps it with its neighbour. */
+  async function moveSet(setId: string, dir: -1 | 1) {
+    await onMutate((s: WorkoutSession) => {
+      const idx = s.blocks.findIndex((b) => b.id === blockId);
+      if (idx === -1) return s;
+      const block = s.blocks[idx] as SessionBlock<StrengthBlockData>;
+      const sorted = [...block.data.sets].sort(sortByOrderIndex);
+      const from = sorted.findIndex((x) => x.id === setId);
+      const to = from + dir;
+      if (from === -1 || to < 0 || to >= sorted.length) return s;
+      [sorted[from], sorted[to]] = [sorted[to]!, sorted[from]!];
+      const order = new Map(sorted.map((x, i) => [x.id, i]));
+      const updated = { ...block, data: { ...block.data, sets: block.data.sets.map((x) => ({ ...x, orderIndex: order.get(x.id) ?? x.orderIndex })) } };
+      return { ...s, blocks: s.blocks.map((b, i) => (i === idx ? updated : b)) };
+    });
+  }
+  const optionsSet = $derived(optionsSetId ? data.sets.find((x) => x.id === optionsSetId) ?? null : null);
+  const optionsIndex = $derived(optionsSet ? [...data.sets].sort(sortByOrderIndex).findIndex((x) => x.id === optionsSet.id) : -1);
+  const optionsNumber = $derived(optionsSet && optionsSet.setType !== "warmup" ? workingSets.findIndex((x) => x.id === optionsSet.id) + 1 : 0);
+
   async function commitSetDrag() {
     const from = setDragFromIdx;
     const to = setDragToIdx;
@@ -838,6 +930,72 @@
       placesStore.save({ ...p, extraLoad: { ...(p.extraLoad ?? {}), dumbbells: extra } });
     }
   }
+
+  // The folded lines (merged design): done sets, or the plan still to do (shown blue).
+  const foldedSummary = $derived.by(() => {
+    const unit = $profile.weightUnit;
+    const done = workingSets.filter((x) => x.completed);
+    if (workingSets.length && done.length === workingSets.length) return setsLine(done, unit, bodyweight);
+    const todo = workingSets.filter((x) => !x.completed).map((x) => ({
+      weight: x.weight || x.target?.weight || 0,
+      reps: x.reps || x.target?.reps || 0,
+    }));
+    return todo.length ? setsLine(todo, unit, bodyweight) : "";
+  });
+  // Every working set hit the goal's reps: next time goes up to the goal's weight.
+  const nextTime = $derived.by(() => {
+    const goal = suggestion?.progressGoal;
+    if (!goal || goal.weight === undefined || !workingSets.length) return null;
+    const hit = workingSets.every((x) => x.completed && x.reps >= goal.reps);
+    return hit ? formatLoad(goal.weight, $profile.weightUnit, bodyweight) : null;
+  });
+
+  let menuOpen = $state(false);
+  let confirmRemove = $state(false);
+  let restPickOpen = $state(false);
+  const restNowMs = $derived(
+    groupRest() ?? workingSets.find((x) => !x.completed)?.restDurationMs ?? $profile.restDefaults.normal ?? 120_000,
+  );
+  function restLabel(ms: number): string {
+    return `${Math.floor(ms / 60_000)}:${String(Math.round((ms % 60_000) / 1000)).padStart(2, "0")}`;
+  }
+  /** "Rest between sets": the sets still to do take it. */
+  async function setRestForRemaining(ms: number) {
+    await onMutate((s: WorkoutSession) => {
+      let next = s;
+      for (const x of data.sets) if (!x.completed) next = updateSet(next, blockId, x.id, { restDurationMs: ms });
+      return next;
+    });
+  }
+  function openSettings() {
+    const id = data.exerciseId ?? exercise?.id;
+    if (id) {
+      detailTab = "settings";
+      detailExerciseId = id;
+    }
+  }
+  const machineValue = $derived(
+    chosen ? chosen.name : place && exercise && !onMachine && exercise.equipment === "barbell"
+      ? (() => { const bar = barbellFor(place, exercise.name); return bar ? `${formatLoad(bar.barKg, $profile.weightUnit, false)} bar` : null; })()
+      : null,
+  );
+  function openMachine() {
+    if (place && placeMachines.length) machinePickerOpen = true;
+    else if (onMachine) { editorFrom = "card"; machineEditor = { open: true, machineId: null }; }
+    else openHowTo();
+  }
+  const menuItems = $derived<ActionItem[]>([
+    { icon: ChartLine, label: "Progress and history", onSelect: openDetail },
+    { icon: ArrowLeftRight, label: "Swap for another exercise", onSelect: openSwap },
+    ...(onGroup ? [{ icon: Link2, label: "Superset or circuit with…", onSelect: () => onGroup() }] : []),
+    ...(canWarmup && round === undefined
+      ? [{ icon: Flame, label: "Add warm-up sets", value: warmupWorkingKg > 0 ? `up to ${formatLoad(warmupWorkingKg, $profile.weightUnit, false)}` : null, disabled: warmupWorkingKg <= 0, onSelect: () => void handleAddWarmup() }]
+      : []),
+    { icon: Timer, label: "Rest between sets", value: restLabel(restNowMs), onSelect: () => (restPickOpen = true) },
+    { icon: MachineIcon, label: onMachine ? "Machine" : "Machine or bar", value: machineValue, onSelect: openMachine },
+    ...(onReorder ? [{ icon: ArrowDownUp, label: "Change the order", onSelect: onReorder }] : []),
+    { icon: Trash2, label: "Remove from this workout", destructive: true, onSelect: () => (confirmRemove = true) },
+  ]);
 
   // "Last time 59 × 10, 10, 9" under the name (X1).
   const lastTime = $derived.by(() => {
@@ -954,7 +1112,6 @@
   exerciseName={data.exerciseName}
   setCount={workingSetCount}
   {doneCount}
-  {meter}
   {saving}
   suggestion={cardSuggestion}
   collapsed={round === undefined ? collapsed : false}
@@ -963,14 +1120,18 @@
   weightUnit={$profile.weightUnit}
   {bodyweight}
   {grouped}
-  canSuperset={!!onGroup}
   {gripAction}
+  {stage}
+  summary={foldedSummary}
+  {nextTime}
+  canWarmup={canWarmup && data.sets.length > 0}
+  warmupDisabled={warmupWorkingKg <= 0}
+  onAddWarmup={handleAddWarmup}
+  onMenu={() => (menuOpen = true)}
+  onSettings={openSettings}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
   onOpenDetail={openDetail}
-  onSwap={openSwap}
-  onSuperset={onGroup}
-  {onDelete}
   onDismissNudge={handleDismissNudge}
   onAcceptNudge={handleAcceptNudge}
   {lastTime}
@@ -1031,6 +1192,8 @@
       >
         <SetRow
           setNumber={roundNum}
+          label={roundLabel ?? null}
+          lastPrefix={roundLabel ? data.exerciseName : ""}
           setType={roundSet.setType}
           reps={roundSet.reps}
           weight={roundSet.weight}
@@ -1051,28 +1214,8 @@
         />
       </SwipeRevealRow>
       {@render setExtras(roundSet, roundNum || null)}
-      {#if typeof roundSet.restStartedAtMs === "number"}
-        <div transition:reveal>
-          <RestProgressBar
-            restStartedAtMs={roundSet.restStartedAtMs}
-            restDurationMs={strengthRestMs(roundSet, $profile.restDefaults)}
-            onDismiss={() => handleDismissRest(roundSet.id)}
-          />
-        </div>
-      {/if}
     {/if}
   {:else if data.sets.length > 0}
-    {#if canWarmup}
-      <button
-        type="button"
-        class="w-full h-10 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40 border-b border-border/50"
-        disabled={saving || warmupWorkingKg <= 0}
-        onclick={handleAddWarmup}
-        transition:reveal
-      >
-        + Warm-up ramp
-      </button>
-    {/if}
     {#if exercise && needsSetup(exercise)}
       {#key exercise.id}
         <FinishSetupCard {exercise} onsaved={(updated) => (exercise = updated)} onmerged={(into) => (exercise = into)} />
@@ -1131,15 +1274,6 @@
             />
           </SwipeRevealRow>
           {@render setExtras(lead, group.leadNum)}
-          {#if typeof lead.restStartedAtMs === "number"}
-            <div transition:reveal>
-              <RestProgressBar
-                restStartedAtMs={lead.restStartedAtMs}
-                restDurationMs={strengthRestMs(lead, $profile.restDefaults)}
-                onDismiss={() => handleDismissRest(lead.id)}
-              />
-            </div>
-          {/if}
         {/if}
 
         {#if group.drops.length > 0}
@@ -1173,51 +1307,77 @@
                 />
               </SwipeRevealRow>
               {@render setExtras(drop, null)}
-              {#if typeof drop.restStartedAtMs === "number"}
-                <div transition:reveal>
-                  <RestProgressBar
-                    restStartedAtMs={drop.restStartedAtMs}
-                    restDurationMs={strengthRestMs(drop, $profile.restDefaults)}
-                    onDismiss={() => handleDismissRest(drop.id)}
-                  />
-                </div>
-              {/if}
             {/each}
-            <button
-              type="button"
-              class="w-full pl-3 py-1.5 text-xs text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-              disabled={saving}
-              onclick={() => handleAddDrop(group.drops[group.drops.length - 1]!.id)}
-            >
-              + Add drop
-            </button>
+            <div class="px-3 py-1.5">
+              <button type="button" class={addButton} disabled={saving} onclick={() => handleAddDrop(group.drops[group.drops.length - 1]!.id)}>
+                <Plus class="h-3.5 w-3.5" /> Add drop
+              </button>
+            </div>
           </div>
         {/if}
         </div>
       {/each}
     </div>
   {:else}
-    <button
-      type="button"
-      class="w-full px-3 py-3 text-sm text-muted-foreground text-left hover:bg-muted/30"
-      disabled={saving}
-      onclick={handleAddSet}
-    >
-      + Add first set
-    </button>
-    {#if canWarmup}
-      <button
-        type="button"
-        class="w-full h-10 px-3 -mt-1 mb-1 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-        disabled={saving || warmupWorkingKg <= 0}
-        onclick={handleAddWarmup}
-        transition:reveal
-      >
-        + Warm-up ramp
+    <div class="flex flex-wrap gap-2 px-3 pt-1 pb-3">
+      <button type="button" class={addButton} disabled={saving} onclick={handleAddSet}>
+        <Plus class="h-3.5 w-3.5" /> Add first set
       </button>
-    {/if}
+      {#if canWarmup}
+        <button type="button" class={addButton} disabled={saving || warmupWorkingKg <= 0} onclick={handleAddWarmup} transition:reveal>
+          <Plus class="h-3.5 w-3.5" /> Warm-up ramp
+        </button>
+      {/if}
+    </div>
   {/if}
 </ExerciseCard>
+
+{#if optionsSet}
+  <SetOptionsSheet
+    open={!!optionsSet}
+    onOpenChange={(v) => { if (!v) optionsSetId = null; }}
+    title="{optionsNumber ? `Set ${optionsNumber}` : setTypeMeta(optionsSet.setType).label} · {data.exerciseName}"
+    subtitle={optionsSet.target ? `Planned ${formatLoad(optionsSet.target.weight, $profile.weightUnit, bodyweight)} × ${optionsSet.target.reps}` : null}
+    setType={optionsSet.setType}
+    rpe={optionsSet.rpe}
+    note={optionsSet.note}
+    restMs={restFor(optionsSet)}
+    disabled={saving}
+    canMoveUp={optionsIndex > 0}
+    canMoveDown={optionsIndex !== -1 && optionsIndex < data.sets.length - 1}
+    onChange={(patch) => patchSet(optionsSet.id, patch)}
+    onMoveUp={() => void moveSet(optionsSet.id, -1)}
+    onMoveDown={() => void moveSet(optionsSet.id, 1)}
+    onDelete={() => void handleDeleteSet(optionsSet.id)}
+  />
+{/if}
+
+<ActionSheet
+  open={menuOpen}
+  onOpenChange={(v) => (menuOpen = v)}
+  title={data.exerciseName}
+  subtitle={[exercise?.primaryMuscles?.[0], exercise?.equipment].filter(Boolean).join(" · ") || null}
+  items={menuItems}
+/>
+
+<ConfirmDialog
+  title="Remove {data.exerciseName}?"
+  description="Removes this exercise and all its sets from the workout."
+  confirmLabel="Remove"
+  {saving}
+  onConfirm={onDelete}
+  open={confirmRemove}
+  onOpenChange={(v: boolean) => (confirmRemove = v)}
+/>
+
+<RestPickerSheet
+  open={restPickOpen}
+  onOpenChange={(v) => (restPickOpen = v)}
+  title="Rest between sets"
+  subtitle="{data.exerciseName} · the sets still to do"
+  valueMs={restNowMs}
+  onSave={(ms) => void setRestForRemaining(ms)}
+/>
 
 {#if coachSwap}
   <CoachSwapSheet
@@ -1228,31 +1388,20 @@
     onPick={handleSwap}
   />
 {:else}
-  <AddExerciseDialog
+  <SwapSheet
     open={swapOpen}
-    saving={saving}
-    title="Swap exercise"
-    description="Pick a different exercise — your logged sets stay."
     onOpenChange={(v) => (swapOpen = v)}
-    onSubmit={handleSwap}
+    exerciseName={data.exerciseName}
+    exerciseId={data.exerciseId}
+    {doneCount}
+    totalCount={workingSetCount}
+    canChangePlan={$currentSession?.source?.kind === "split"}
+    onPick={(sel, changePlan) => handleSwap(sel, changePlan)}
   />
 {/if}
 
 {#snippet setExtras(set: SetEntry, num: number | null)}
-  {#if optionsSetId === set.id}
-    <div transition:reveal>
-      <SetOptionsTray
-        setNumber={num}
-        setType={set.setType}
-        rpe={set.rpe}
-        note={set.note}
-        restMs={restFor(set)}
-        disabled={saving}
-        onChange={(patch) => patchSet(set.id, patch)}
-        onDone={() => (optionsSetId = null)}
-      />
-    </div>
-  {:else if effortSetId === set.id}
+  {#if effortSetId === set.id && optionsSetId !== set.id}
     <div transition:reveal>
       <EffortPrompt setNumber={num} onAnswer={(rpe) => { effortSetId = null; void patchSet(set.id, { rpe }); }} />
     </div>
