@@ -6,11 +6,13 @@ import { getMessagesRepo } from "$lib/data/repoProvider";
 
 export const messagesUnread = $state({ count: 0 });
 
-export async function refreshMessagesUnread(): Promise<void> {
+/** `pull`: fetch new coach messages first (they reach the phone by sync), e.g. when a push came in. */
+export async function refreshMessagesUnread(pull = false): Promise<void> {
   if (!authStore.isAuthenticated) {
     messagesUnread.count = 0;
     return;
   }
+  if (pull) await import("$lib/sync/syncService").then((m) => m.pullAndMergeMessages()).catch(() => {});
   const [chats, coach] = await Promise.all([
     dmApi.unread().then((u) => u.chats).catch(() => null),
     getMessagesRepo().unreadCount().catch(() => 0),
