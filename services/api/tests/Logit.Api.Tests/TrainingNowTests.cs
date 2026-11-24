@@ -46,7 +46,9 @@ public class TrainingNowTests : IDisposable
         Assert.Equal(("ben", "Push A"), (seen.GetProperty("username").GetString(), seen.GetProperty("what").GetString()));
         Assert.Empty(await Training(cara));
 
-        _clock.Now = Noon.AddMinutes(21); // the phone stopped refreshing
+        _clock.Now = Noon.AddMinutes(40); // a long rest with the screen locked
+        Assert.Equal(["ben"], await Training(ava));
+        _clock.Now = Noon.AddMinutes(46); // the phone stopped refreshing for good
         Assert.Empty(await Training(ava));
 
         (await ben.PutAsJsonAsync("/training/now", new { what = "Push A" })).EnsureSuccessStatusCode();
@@ -97,6 +99,40 @@ public class TrainingNowTests : IDisposable
 
         var settings = await ben.GetFromJsonAsync<JsonElement>("/users/me/social-settings", ApiFactory.Json);
         Assert.Equal(("Off", true), (settings.GetProperty("cheersFrom").GetString(), settings.GetProperty("showTraining").GetBoolean()));
+    }
+
+    [Fact]
+    public async Task A_cheer_is_pushed_only_while_they_are_still_training()
+    {
+        var push = new FakePushSender();
+        using var api = new ApiFactory
+        {
+            ConfigureTestServices = s =>
+            {
+                s.AddSingleton<TimeProvider>(_clock);
+                s.AddSingleton<IPushSender>(push);
+                s.Remove(s.Single(d => d.ImplementationType == typeof(PushDispatcher)));
+            },
+        };
+        var (ben, _, _) = await api.SignUpAsync("ben");
+        var (ava, _, _) = await api.SignUpAsync("ava");
+        (await ben.PutAsJsonAsync("/push/devices", new { token = "ben-phone", timeZone = "UTC" })).EnsureSuccessStatusCode();
+        (await ben.PutAsJsonAsync("/push/settings", new { quietOn = false })).EnsureSuccessStatusCode();
+        await Follow(ben, "ava");
+        async Task<int> Dispatch() { using var sc = api.Services.CreateScope(); return await PushDispatcher.DispatchAsync(sc.ServiceProvider, default); }
+
+        (await ben.PutAsJsonAsync("/training/now", new { what = "Push A" })).EnsureSuccessStatusCode();
+        (await ava.PostAsync("/training/ben/cheer", null)).EnsureSuccessStatusCode();
+        Assert.Equal(1, await Dispatch());
+        Assert.Equal(("ava", "is cheering you on"), (push.Sent[0].Message.Title, push.Sent[0].Message.Body));
+
+        // Next workout: Ava cheers, but Ben has finished before the dispatcher runs.
+        (await ben.DeleteAsync("/training/now")).EnsureSuccessStatusCode();
+        (await ben.PutAsJsonAsync("/training/now", new { what = "Pull A" })).EnsureSuccessStatusCode();
+        (await ava.PostAsync("/training/ben/cheer", null)).EnsureSuccessStatusCode();
+        (await ben.DeleteAsync("/training/now")).EnsureSuccessStatusCode();
+        Assert.Equal(0, await Dispatch());
+        Assert.Single(push.Sent);
     }
 
     [Fact]

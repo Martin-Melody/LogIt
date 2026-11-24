@@ -68,10 +68,14 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
                 ? (await db.Follows.Where(f => f.FollowerId == userId).Select(f => f.FollowedId).ToListAsync(ct)).ToHashSet()
                 : [];
             var paused = settings.PausedUntil > now;
+            // A cheer is only worth a push mid-workout; afterwards it stays in the Inbox only.
+            var stillTraining = !group.Any(n => n.Type == NotificationType.Cheer)
+                || await db.Users.AnyAsync(u => u.Id == userId && u.TrainingUntil > now, ct);
             var wanted = new List<Notification>();
             foreach (var n in group)
             {
-                if (!paused && n.ReadAt is null && Wanted(settings, n, following)) wanted.Add(n);
+                if (!paused && n.ReadAt is null && Wanted(settings, n, following)
+                    && (n.Type != NotificationType.Cheer || stillTraining)) wanted.Add(n);
                 else n.PushedAt = now;
             }
             if (wanted.Count == 0 || InQuiet(settings, now)) continue;

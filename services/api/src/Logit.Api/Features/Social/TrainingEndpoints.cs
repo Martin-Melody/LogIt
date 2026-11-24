@@ -13,9 +13,10 @@ namespace Logit.Api.Features.Social;
 /// allows it.
 public static class TrainingEndpoints
 {
-    /// The phone refreshes training now every few minutes while a workout runs; a phone that
-    /// went quiet (closed, crashed) stops showing after this.
-    public static readonly TimeSpan Freshness = TimeSpan.FromMinutes(20);
+    /// The phone refreshes training now every few minutes while a workout runs and whenever the
+    /// app comes back to the front. A locked phone can't refresh, so this covers a long rest with
+    /// the screen off; a phone that went quiet for good (closed, crashed) stops showing after it.
+    public static readonly TimeSpan Freshness = TimeSpan.FromMinutes(45);
 
     public static void MapTrainingEndpoints(this IEndpointRouteBuilder app)
     {

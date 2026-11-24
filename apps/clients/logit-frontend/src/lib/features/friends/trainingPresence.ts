@@ -1,6 +1,7 @@
 // Tells the server "training now" while a workout runs, so friends see the green dot (design
-// canvas S1/T1). Refreshed every 5 minutes (the server forgets it 20 minutes after the last),
-// cleared when the workout ends or is thrown away. The server applies who may see it.
+// canvas S1/T1). Refreshed every 5 minutes and whenever the app comes back to the front (a locked
+// phone runs no timers; the server keeps it 45 minutes), cleared when the workout ends or is
+// thrown away. The server applies who may see it.
 import { get } from "svelte/store";
 import { trainingApi } from "@logit/core/api/trainingApi";
 import { authStore } from "$lib/api/authStore.svelte";
@@ -22,6 +23,11 @@ export function isTrainingNow(session: { startedAtMs: number; endedAtMs?: number
 export function startTrainingPresence(): void {
   if (started) return;
   started = true;
+  document.addEventListener("visibilitychange", () => {
+    const session = get(currentSession);
+    if (document.visibilityState === "visible" && timer && authStore.isAuthenticated && isTrainingNow(session, Date.now()))
+      void trainingApi.start(session?.name ?? null).catch(() => {});
+  });
   currentSession.subscribe((session) => {
     const training = authStore.isAuthenticated && isTrainingNow(session, Date.now());
     if (training && !timer) {
