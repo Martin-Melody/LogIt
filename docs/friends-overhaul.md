@@ -70,6 +70,12 @@ people know for it (Strava clubs, Facebook groups).
 6. Boards on Social, the Home cards and the new way to customise Home.
 7. Federation (`docs/social-federation-design.md`).
 
+## Testing
+
+`docs/testing-friends.md`: the ethos check every part must pass, who sees what (feature × privacy
+switch), journeys F1–F13 with what must be true, the test layers, and open questions. Each build
+step is checked against it before its PR.
+
 ## Rules so federation fits later
 
 From the "Friends overhaul" section of `docs/social-federation-design.md`:
