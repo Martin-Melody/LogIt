@@ -851,6 +851,46 @@ namespace Logit.Api.Migrations
                     b.ToTable("DiagnosticReports");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DirectMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SenderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PushedAt");
+
+                    b.HasIndex("SenderId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("ThreadId", "CreatedAt");
+
+                    b.ToTable("DirectMessages");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverDismissal", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -898,6 +938,55 @@ namespace Logit.Api.Migrations
                     b.HasIndex("Arm", "Recipe");
 
                     b.ToTable("DiscoverImpressions");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmMember", b =>
+                {
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Accepted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ClearedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ThreadId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DmMembers");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastMessageAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PairKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PairKey")
+                        .IsUnique();
+
+                    b.ToTable("DmThreads");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
@@ -2184,6 +2273,12 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("DmFromFollowers")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DmFromOthers")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -2241,6 +2336,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool?>("ShowInDiscover")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShowReadReceipts")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ShowTraining")
@@ -2592,6 +2690,24 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DirectMessage", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Logit.Api.Data.Entities.DmThread", "Thread")
+                        .WithMany()
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("Thread");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverDismissal", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "HiddenUser")
@@ -2616,6 +2732,25 @@ namespace Logit.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmMember", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.DmThread", "Thread")
+                        .WithMany("Members")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Thread");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
@@ -3014,6 +3149,11 @@ namespace Logit.Api.Migrations
                     b.Navigation("Likes");
 
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmThread", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>

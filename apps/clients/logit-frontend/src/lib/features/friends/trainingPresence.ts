@@ -44,3 +44,8 @@ export function startTrainingPresence(): void {
     }
   });
 }
+
+/** "n min in" for someone training now (at least 1). */
+export function minutesIn(friend: { since: string }, nowMs: number): number {
+  return Math.max(1, Math.round((nowMs - new Date(friend.since).getTime()) / 60_000));
+}

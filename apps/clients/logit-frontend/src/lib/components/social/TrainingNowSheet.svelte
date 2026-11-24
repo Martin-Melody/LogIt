@@ -1,6 +1,7 @@
 <!-- Tapping someone who's training (design canvas T1): who, what and how long, Cheer and their
      profile. A cheer is one tap; the server lets one per workout through. -->
 <script lang="ts">
+  import { minutesIn } from "$lib/features/friends/trainingPresence";
   import { goto } from "$app/navigation";
   import { ThumbsUp } from "lucide-svelte";
   import { toast } from "svelte-sonner";
@@ -11,7 +12,7 @@
   const { friend, onclose }: { friend: TrainingFriend; onclose: () => void } = $props();
   let state = $state<"idle" | "sending" | "sent">("idle");
 
-  const minutes = $derived(Math.max(1, Math.round((Date.now() - new Date(friend.since).getTime()) / 60_000)));
+  const minutes = $derived(minutesIn(friend, Date.now()));
 
   async function cheer() {
     state = "sending";

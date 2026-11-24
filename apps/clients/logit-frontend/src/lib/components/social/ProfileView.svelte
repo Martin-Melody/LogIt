@@ -255,6 +255,9 @@
           {:else if followStatus === "requested"}<Clock class="h-4 w-4" /> Requested
           {:else}<UserPlus class="h-4 w-4" /> {profile.isPrivate ? "Request to follow" : profile.followsYou ? "Follow back" : "Follow"}{/if}
         </button>
+        <button type="button" class="px-5 py-2 rounded-md border border-border text-sm font-medium hover:bg-muted/40" onclick={() => goto(`/messages/chat?u=${encodeURIComponent(profile!.username)}`)}>
+          Message
+        </button>
         <button type="button" class="p-2 rounded-md border border-border text-muted-foreground" aria-label="More" onclick={() => (menuOpen = true)}>
           <MoreHorizontal class="h-4 w-4" />
         </button>

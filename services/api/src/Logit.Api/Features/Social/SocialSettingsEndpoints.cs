@@ -23,19 +23,21 @@ public static class SocialSettingsEndpoints
 
     public record SocialSettingsDto(
         bool IsPrivate, bool? ShowInDiscover, bool HideFromSuggestions, bool HidePeopleSuggestions,
-        int PendingRequests, int NotInterestedCount, bool ShowTraining, CheersFrom CheersFrom);
+        int PendingRequests, int NotInterestedCount, bool ShowTraining, CheersFrom CheersFrom,
+        DmFromFollowers DmFromFollowers, DmFromOthers DmFromOthers, bool ShowReadReceipts);
 
     /// Every field optional: only the ones sent change. `ShowInDiscover` can't be cleared back
     /// to "not asked".
     public record UpdateSocialSettingsRequest(
         bool? IsPrivate, bool? ShowInDiscover, bool? HideFromSuggestions, bool? HidePeopleSuggestions,
-        bool? ShowTraining = null, CheersFrom? CheersFrom = null);
+        bool? ShowTraining = null, CheersFrom? CheersFrom = null,
+        DmFromFollowers? DmFromFollowers = null, DmFromOthers? DmFromOthers = null, bool? ShowReadReceipts = null);
 
     private static async Task<SocialSettingsDto> ToDtoAsync(AppDbContext db, User user) => new(
         user.IsPrivate, user.ShowInDiscover, user.HideFromSuggestions, user.HidePeopleSuggestions,
         await db.FollowRequests.CountAsync(r => r.TargetId == user.Id),
         await db.DiscoverDismissals.CountAsync(d => d.UserId == user.Id),
-        user.ShowTraining, user.CheersFrom);
+        user.ShowTraining, user.CheersFrom, user.DmFromFollowers, user.DmFromOthers, user.ShowReadReceipts);
 
     private static async Task<IResult> GetSettings(ClaimsPrincipal caller, AppDbContext db)
     {
@@ -76,6 +78,17 @@ public static class SocialSettingsEndpoints
             if (!Enum.IsDefined(cheers)) return Results.BadRequest(new { error = "Unknown choice." });
             user.CheersFrom = cheers;
         }
+        if (req.DmFromFollowers is { } fromFollowers)
+        {
+            if (!Enum.IsDefined(fromFollowers)) return Results.BadRequest(new { error = "Unknown choice." });
+            user.DmFromFollowers = fromFollowers;
+        }
+        if (req.DmFromOthers is { } fromOthers)
+        {
+            if (!Enum.IsDefined(fromOthers)) return Results.BadRequest(new { error = "Unknown choice." });
+            user.DmFromOthers = fromOthers;
+        }
+        if (req.ShowReadReceipts is { } receipts) user.ShowReadReceipts = receipts;
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Results.Ok(await ToDtoAsync(db, user));

@@ -22,3 +22,13 @@ describe("cheer pill", () => {
     expect(cheerText(["Alex", "Riya", "Dev"])).toBe("Alex and 2 others are cheering you on");
   });
 });
+
+import { shortAgo } from "./dmTime";
+describe("message times", () => {
+  it("reads like Instagram's inbox", () => {
+    const now = Date.UTC(2026, 10, 24, 12);
+    expect(shortAgo(now - 20_000, now)).toBe("now");
+    expect(shortAgo(now - 4 * 60_000, now)).toBe("4m");
+    expect(shortAgo(now - 2 * 3_600_000, now)).toBe("2h");
+  });
+});

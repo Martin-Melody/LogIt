@@ -206,6 +206,12 @@ export interface SocialSettings {
   showTraining: boolean;
   /** Who may cheer you on (and later reply to your stories). "Following" = people you follow. */
   cheersFrom: "Everyone" | "Following" | "Off";
+  /** Instagram's message controls: your followers reach chats or requests… */
+  dmFromFollowers: "Chats" | "Requests";
+  /** …everyone else (people you don't follow and who don't follow you) requests or nothing. */
+  dmFromOthers: "Requests" | "Off";
+  /** Read receipts, both ways. */
+  showReadReceipts: boolean;
 }
 
 export interface FollowRequestItem {

@@ -50,6 +50,12 @@ public class User
     public bool ShowTraining { get; set; } = true;
     /// Who may cheer this account on (and later reply to its stories).
     public CheersFrom CheersFrom { get; set; } = CheersFrom.Everyone;
+    /// Instagram's message controls. People this account follows always reach its chats;
+    /// followers go to chats or requests; everyone else to requests or not at all.
+    public DmFromFollowers DmFromFollowers { get; set; } = DmFromFollowers.Chats;
+    public DmFromOthers DmFromOthers { get; set; } = DmFromOthers.Requests;
+    /// Read receipts, both ways: off, and nobody sees this account read theirs, nor it theirs.
+    public bool ShowReadReceipts { get; set; } = true;
     /// While a workout runs the phone refreshes this every few minutes; past it, not training.
     public DateTime? TrainingUntil { get; set; }
     public DateTime? TrainingSince { get; set; }

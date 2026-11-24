@@ -320,6 +320,7 @@ api.MapFoodSearchEndpoints();
 api.MapPushEndpoints();
 api.MapTrainingEndpoints();
 api.MapFriendInviteEndpoints();
+api.MapDirectMessageEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 

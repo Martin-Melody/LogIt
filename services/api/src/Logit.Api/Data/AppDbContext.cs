@@ -20,6 +20,9 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<FollowRequest> FollowRequests => Set<FollowRequest>();
     public DbSet<PushDevice> PushDevices => Set<PushDevice>();
     public DbSet<FriendInvite> FriendInvites => Set<FriendInvite>();
+    public DbSet<DmThread> DmThreads => Set<DmThread>();
+    public DbSet<DmMember> DmMembers => Set<DmMember>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
     public DbSet<PushSettings> PushSettings => Set<PushSettings>();
     public DbSet<DiscoverDismissal> DiscoverDismissals => Set<DiscoverDismissal>();
     public DbSet<DiscoverImpression> DiscoverImpressions => Set<DiscoverImpression>();
@@ -316,6 +319,29 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .WithMany()
              .HasForeignKey(n => n.ActorId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<DmThread>(e =>
+        {
+            e.Property(t => t.PairKey).HasMaxLength(80);
+            e.HasIndex(t => t.PairKey).IsUnique();
+        });
+        model.Entity<DmMember>(e =>
+        {
+            e.HasKey(m => new { m.ThreadId, m.UserId });
+            e.HasIndex(m => m.UserId);
+            e.HasOne(m => m.Thread).WithMany(t => t.Members).HasForeignKey(m => m.ThreadId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.User).WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<DirectMessage>(e =>
+        {
+            e.Property(m => m.ClientId).HasMaxLength(64);
+            e.Property(m => m.Body).HasMaxLength(2000);
+            e.HasIndex(m => new { m.ThreadId, m.CreatedAt });
+            e.HasIndex(m => new { m.SenderId, m.ClientId }).IsUnique();
+            e.HasIndex(m => m.PushedAt);
+            e.HasOne(m => m.Thread).WithMany().HasForeignKey(m => m.ThreadId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.Sender).WithMany().HasForeignKey(m => m.SenderId).OnDelete(DeleteBehavior.SetNull);
         });
 
         model.Entity<FriendInvite>(e =>

@@ -39,6 +39,7 @@ export function startBackgroundSync(): void {
   void import("./push").then((m) => m.startPush());
   void import("$lib/features/friends/trainingPresence").then((m) => m.startTrainingPresence());
   void import("$lib/features/friends/cheers.svelte").then((m) => m.startCheers());
+  void import("$lib/features/friends/dmOutbox.svelte").then((m) => m.startOutbox());
 }
 
 export function stopBackgroundSync(): void {

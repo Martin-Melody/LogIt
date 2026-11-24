@@ -1,6 +1,6 @@
 <!-- Settings › Privacy (friends overhaul, design canvas P1): one place for who sees you and who
      can reach you. Saved to your account, so the web dashboard has the same switches. Rows for
-     messages, comments, mentions and boards arrive with those features. -->
+     comments, mentions and boards arrive with those features. -->
 <script lang="ts">
   import { onMount } from "svelte";
   import { ChevronRight, Loader2 } from "lucide-svelte";
@@ -89,6 +89,10 @@
       <a href="/settings/privacy/training" class={link}>
         <span class="flex-1 text-[15px] font-medium">Training now and cheers</span>
         <span class="flex items-center gap-1.5 text-sm text-muted-foreground">{settings.showTraining ? "Showing" : "Off"}<ChevronRight class="size-4" /></span>
+      </a>
+      <a href="/settings/privacy/messages" class={link}>
+        <span class="flex-1 text-[15px] font-medium">Messages</span>
+        <span class="flex items-center gap-1.5 text-sm text-muted-foreground">{settings.dmFromOthers === "Off" ? "Followers only" : "Requests on"}<ChevronRight class="size-4" /></span>
       </a>
     </SettingsSection>
 

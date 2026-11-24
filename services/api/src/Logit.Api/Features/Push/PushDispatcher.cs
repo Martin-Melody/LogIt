@@ -97,6 +97,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         }
 
         sent += await DispatchMessagesAsync(db, sender, now, ct);
+        sent += await DispatchDirectMessagesAsync(db, sender, now, ct);
         await db.SaveChangesAsync(ct);
         return sent;
     }
@@ -142,6 +143,52 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
                     : new Dictionary<string, string> { ["type"] = "Message" });
             sent += await SendAsync(db, sender, group.Key, message, ct);
             foreach (var m in wanted) m.PushedAt = now;
+        }
+        return sent;
+    }
+
+    /// Messages between people, like coach messages: straight away, who and never what. A message
+    /// that lands in someone's requests makes no push (Instagram); reading it first drops it.
+    private static async Task<int> DispatchDirectMessagesAsync(AppDbContext db, IPushSender sender, DateTime now, CancellationToken ct)
+    {
+        var tooOld = now - MaxAge;
+        await db.DirectMessages.Where(m => m.PushedAt == null && m.CreatedAt < tooOld)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.PushedAt, now), ct);
+        var pending = await db.DirectMessages.Include(m => m.Sender)
+            .Where(m => m.PushedAt == null)
+            .OrderBy(m => m.CreatedAt)
+            .Take(2000)
+            .ToListAsync(ct);
+
+        var sent = 0;
+        var recipients = await db.DmMembers
+            .Where(r => pending.Select(m => m.ThreadId).Contains(r.ThreadId))
+            .ToListAsync(ct);
+        var toRecipient = pending
+            .SelectMany(m => recipients.Where(r => r.ThreadId == m.ThreadId && r.UserId != m.SenderId).Select(r => (r, m)))
+            .GroupBy(x => x.r.UserId);
+        foreach (var m in pending) m.PushedAt = now;
+        foreach (var group in toRecipient)
+        {
+            if (!await db.PushDevices.AnyAsync(d => d.UserId == group.Key, ct)) continue;
+            var settings = await SettingsFor(db, group.Key, ct);
+            if (!settings.Messages || settings.PausedUntil > now) continue;
+            var wanted = group.Where(x => x.r.Accepted && !(x.r.LastReadAt >= x.m.CreatedAt) && x.m.Sender is not null).Select(x => x.m).ToList();
+            if (wanted.Count == 0) continue;
+            if (InQuiet(settings, now))
+            {
+                foreach (var m in wanted) m.PushedAt = null; // held until quiet time ends
+                continue;
+            }
+            var names = wanted.AsEnumerable().Reverse().Select(m => m.Sender!).DistinctBy(u => u.Id).Select(NameOf).ToList();
+            var message = new PushMessage(
+                names.Count == 1 ? names[0] : names.Count == 2 ? $"{names[0]} and {names[1]}" : $"{names[0]} and {names.Count - 1} others",
+                names.Count > 1 ? $"{wanted.Count} messages" : wanted.Count == 1 ? "sent you a message" : $"sent you {wanted.Count} messages",
+                "messages",
+                wanted.Select(m => m.ThreadId).Distinct().Count() == 1
+                    ? new Dictionary<string, string> { ["type"] = "DirectMessage", ["threadId"] = wanted[0].ThreadId.ToString() }
+                    : new Dictionary<string, string> { ["type"] = "DirectMessage" });
+            sent += await SendAsync(db, sender, group.Key, message, ct);
         }
         return sent;
     }

@@ -2,7 +2,10 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2, Search, PenSquare, Settings2, Check } from "lucide-svelte";
+  import { Loader2, Search, PenSquare, Settings2, Check, MessageCircle } from "lucide-svelte";
+  import { onMount } from "svelte";
+  import { scale } from "svelte/transition";
+  import { dmApi } from "@logit/core/api/dmApi";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
   import PostCard from "$lib/components/social/PostCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -14,6 +17,16 @@
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import UserSearchSheet from "$lib/components/UserSearchSheet.svelte";
   import { unreadNotifications } from "$lib/stores/notifications.store";
+
+  // Chats with something unread (message requests never badge Social, as on Instagram).
+  let dmUnread = $state(0);
+  onMount(() => {
+    if (!authStore.isAuthenticated) return;
+    const check = () => void dmApi.unread().then((u) => (dmUnread = u.chats)).catch(() => {});
+    check();
+    const poll = setInterval(check, 60_000);
+    return () => clearInterval(poll);
+  });
 
   let posts = $state<ApiPost[]>([]);
   // One status instead of three loading flags: the flags let a refresh and a "load more" run at
@@ -221,6 +234,10 @@
     {#if authStore.isAuthenticated}
       <button type="button" class="p-2 text-muted-foreground" aria-label="Search people" onclick={() => (showSearch = true)}>
         <Search class="h-[1.15rem] w-[1.15rem]" />
+      </button>
+      <button type="button" class="relative p-2 text-muted-foreground" aria-label={dmUnread > 0 ? `Messages, ${dmUnread} unread` : "Messages"} onclick={() => goto("/messages")}>
+        <MessageCircle class="h-[1.15rem] w-[1.15rem]" />
+        {#if dmUnread > 0}<span transition:scale={{ duration: 150 }} class="absolute right-1 top-1 size-2 rounded-full bg-primary"></span>{/if}
       </button>
       <button type="button" class="p-2 text-muted-foreground" aria-label="Privacy" onclick={() => goto("/settings/privacy")}>
         <Settings2 class="h-[1.15rem] w-[1.15rem]" />
