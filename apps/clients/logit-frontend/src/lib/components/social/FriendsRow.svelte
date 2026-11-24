@@ -3,6 +3,7 @@
      now (the green dot). Tapping a story opens the viewer; someone only training opens
      TrainingNowSheet. -->
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { Plus } from "lucide-svelte";
   import { trainingApi, type TrainingFriend } from "@logit/core/api/trainingApi";
@@ -36,7 +37,7 @@
 {#snippet circle(name: string, src: string | null | undefined, ring: "new" | "seen" | "none", training: boolean)}
   <span class="relative flex size-[68px] items-center justify-center rounded-full {ring === 'new' ? 'ring-2 ring-foreground' : ring === 'seen' ? 'ring-1 ring-border' : ''}">
     <span class="flex size-16 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-muted text-lg font-semibold">
-      {#if src}<img {src} alt="" class="size-full object-cover" />{:else}{name.charAt(0).toUpperCase()}{/if}
+      {#if src}<img src={photoSrc(src)} alt="" class="size-full object-cover" />{:else}{name.charAt(0).toUpperCase()}{/if}
     </span>
     {#if training}<span class="absolute bottom-0.5 right-0.5 size-4 rounded-full border-[3px] border-background bg-success" aria-hidden="true"></span>{/if}
   </span>

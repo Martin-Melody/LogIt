@@ -1,5 +1,6 @@
 <!-- Settings › Account: who's signed in, backup and plan, coaching, sign-in, signing out and deleting. -->
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { ChevronRight, Loader2 } from "lucide-svelte";
@@ -159,7 +160,7 @@
       <div class="flex items-center gap-3">
         <div class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-base font-semibold">
           {#if $profile.avatarDataUrl}
-            <img src={$profile.avatarDataUrl} alt="" class="size-full object-cover" />
+            <img src={photoSrc($profile.avatarDataUrl)} alt="" class="size-full object-cover" />
           {:else}
             {initialsOf($profile.name || authStore.user.username)}
           {/if}
@@ -255,7 +256,7 @@
     <div class="flex items-center gap-3 rounded-xl border border-border bg-card p-3.5">
       <div class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-base font-semibold">
         {#if $profile.avatarDataUrl}
-          <img src={$profile.avatarDataUrl} alt="" class="size-full object-cover" />
+          <img src={photoSrc($profile.avatarDataUrl)} alt="" class="size-full object-cover" />
         {:else}
           {initialsOf($profile.name)}
         {/if}

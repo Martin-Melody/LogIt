@@ -27,6 +27,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<StoryView> StoryViews => Set<StoryView>();
     public DbSet<CloseFriend> CloseFriends => Set<CloseFriend>();
     public DbSet<StoryHide> StoryHides => Set<StoryHide>();
+    public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<PushSettings> PushSettings => Set<PushSettings>();
     public DbSet<DiscoverDismissal> DiscoverDismissals => Set<DiscoverDismissal>();
     public DbSet<DiscoverImpression> DiscoverImpressions => Set<DiscoverImpression>();
@@ -386,6 +387,13 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.Property(i => i.Code).HasMaxLength(16);
             e.HasIndex(i => i.InviterId);
             e.HasOne(i => i.Inviter).WithMany().HasForeignKey(i => i.InviterId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<Photo>(e =>
+        {
+            e.Property(p => p.ContentType).HasMaxLength(32);
+            e.HasIndex(p => p.OwnerId);
+            e.HasOne(p => p.Owner).WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.SetNull);
         });
 
         model.Entity<PushDevice>(e =>

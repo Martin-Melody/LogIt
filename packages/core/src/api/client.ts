@@ -348,7 +348,8 @@ class ApiClient {
     const ownToken = !!(init.headers as Record<string, string> | undefined)?.["Authorization"];
     const doRequest = async (token: string | null) => {
       const headers: Record<string, string> = {
-        "Content-Type": "application/json",
+        // A form (a photo upload) sets its own multipart type and boundary.
+        ...(typeof FormData !== "undefined" && init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         "X-Request-Id": requestId,
         ...(deviceId() ? { "X-Logit-Device": deviceId()! } : {}),
         ...(init.headers as Record<string, string>),

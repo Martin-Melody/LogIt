@@ -1,5 +1,6 @@
 <script lang="ts">
   import { log } from "@logit/core/platform/log";
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { Camera, User } from "lucide-svelte";
   import * as Avatar from "$lib/components/ui/avatar";
   import { profile } from "$lib/stores/profile.store";
@@ -58,7 +59,7 @@
 >
   <Avatar.Root class="size-full rounded-full">
     {#if avatarDataUrl}
-      <Avatar.Image src={avatarDataUrl} alt={name || "Profile photo"} />
+      <Avatar.Image src={photoSrc(avatarDataUrl)} alt={name || "Profile photo"} />
     {/if}
     <Avatar.Fallback class="size-full rounded-full bg-muted border flex items-center justify-center">
       {#if ini}

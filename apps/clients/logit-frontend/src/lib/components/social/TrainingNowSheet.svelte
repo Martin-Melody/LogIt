@@ -1,6 +1,7 @@
 <!-- Tapping someone who's training (design canvas T1): who, what and how long, Cheer and their
      profile. A cheer is one tap; the server lets one per workout through. -->
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { minutesIn } from "$lib/features/friends/trainingPresence";
   import { goto } from "$app/navigation";
   import { ThumbsUp } from "lucide-svelte";
@@ -30,7 +31,7 @@
   <div class="flex flex-col gap-4 px-4 pb-2">
     <div class="flex items-center gap-3">
       <span class="relative flex size-[52px] shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold">
-        {#if friend.avatarUrl}<img src={friend.avatarUrl} alt="" class="size-full rounded-full object-cover" />{:else}{friend.displayName.charAt(0).toUpperCase()}{/if}
+        {#if friend.avatarUrl}<img src={photoSrc(friend.avatarUrl)} alt="" class="size-full rounded-full object-cover" />{:else}{friend.displayName.charAt(0).toUpperCase()}{/if}
         <span class="absolute bottom-0 right-0 size-4 rounded-full border-[3px] border-card bg-success" aria-hidden="true"></span>
       </span>
       <span class="flex flex-col gap-0.5">

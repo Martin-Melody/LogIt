@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { log } from "@logit/core/platform/log";
   import { Camera, ImagePlus, Loader2, X } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
@@ -52,7 +53,7 @@
       onclick={pick}
     >
       {#if $profile.progressPhotoDataUrl}
-        <img src={$profile.progressPhotoDataUrl} alt="Your progress" class="h-full w-full object-cover" />
+        <img src={photoSrc($profile.progressPhotoDataUrl)} alt="Your progress" class="h-full w-full object-cover" />
         <div class="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-background border border-border flex items-center justify-center shadow-sm">
           {#if picking}<Loader2 class="h-3.5 w-3.5 animate-spin text-muted-foreground" />{:else}<Camera class="h-3.5 w-3.5 text-muted-foreground" />{/if}
         </div>

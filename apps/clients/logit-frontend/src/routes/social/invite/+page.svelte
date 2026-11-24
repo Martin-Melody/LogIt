@@ -1,6 +1,7 @@
 <!-- Opening a friend's invite (from the link, the QR or the website's "Open in LogIt"): who sent
      it, then "Follow each other". Journey F2 in docs/testing-friends.md. -->
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -65,7 +66,7 @@
       <Loader2 class="size-5 animate-spin text-muted-foreground" />
     {:else}
       <span class="flex size-20 items-center justify-center overflow-hidden rounded-full bg-muted text-2xl font-semibold">
-        {#if preview.avatarUrl}<img src={preview.avatarUrl} alt="" class="size-full object-cover" />{:else}{preview.displayName.charAt(0).toUpperCase()}{/if}
+        {#if preview.avatarUrl}<img src={photoSrc(preview.avatarUrl)} alt="" class="size-full object-cover" />{:else}{preview.displayName.charAt(0).toUpperCase()}{/if}
       </span>
       <div class="flex flex-col gap-1">
         <h2 class="text-xl font-bold tracking-tight">{preview.displayName} invited you</h2>

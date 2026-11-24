@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import type { PublicProfileData } from "@logit/core/api/socialApi";
   import type { CardKind } from "./profileCards";
 
@@ -41,7 +42,7 @@
 {:else if kind === "badges" && data.badges?.length}
   <div class="flex flex-wrap gap-1.5">{#each data.badges as b (b.id)}<span class="rounded-full border border-border px-2.5 py-0.5 text-xs">{b.label}</span>{/each}</div>
 {:else if kind === "photo" && data.progressPhoto}
-  <img src={data.progressPhoto.dataUrl} alt="{name}'s progress photo" class="max-h-64 w-full rounded-lg object-cover" draggable="false" />
+  <img src={photoSrc(data.progressPhoto.dataUrl)} alt="{name}'s progress photo" class="max-h-64 w-full rounded-lg object-cover" draggable="false" />
 {:else if kind === "body" && data.bodyStats && (data.bodyStats.height != null || data.bodyStats.weight != null)}
   {@const b = data.bodyStats}
   <span class="text-sm">{[b.height != null ? `${b.height} ${b.heightUnit}` : "", b.weight != null ? `${b.weight} ${b.weightUnit}` : ""].filter(Boolean).join(" · ")}</span>

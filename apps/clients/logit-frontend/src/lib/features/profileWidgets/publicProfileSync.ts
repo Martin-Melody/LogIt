@@ -10,6 +10,7 @@
 // nothing in that blob is visible to other users. This one is.
 import { get } from "svelte/store";
 import { apiClient } from "@logit/core/api/client";
+import { publishPhoto } from "@logit/core/api/photosApi";
 import { authStore } from "$lib/api/authStore.svelte";
 import { profile } from "$lib/stores/profile.store";
 import { profileConfig } from "$lib/stores/profileConfig.store";
@@ -36,12 +37,19 @@ export async function pushPublicProfileSnapshot(): Promise<void> {
       order: s.orderIndex,
     }));
 
+    // The pictures go up once as server photos, so posts and comments carry an address, not the picture.
+    const [avatarUrl, progressPhotoUrl] = await Promise.all([
+      publishPhoto(profileSnap.avatarDataUrl),
+      publishPhoto(profileSnap.progressPhotoDataUrl),
+    ]);
+
     await apiClient.fetch("/users/me", {
       method: "PATCH",
       body: JSON.stringify({
         displayName: profileSnap.name || undefined,
         bio: profileSnap.bio || undefined,
-        avatarUrl: profileSnap.avatarDataUrl || undefined,
+        // "" clears it on the server (and deletes the old picture there).
+        avatarUrl: avatarUrl ?? "",
         publicProfileJson: JSON.stringify({
           widgets: widgetSlots,
           bodyStats: {
@@ -66,9 +74,8 @@ export async function pushPublicProfileSnapshot(): Promise<void> {
             weight: r.weight,
             reps: r.reps,
           })),
-          progressPhoto: profileSnap.progressPhotoDataUrl
-            ? { dataUrl: profileSnap.progressPhotoDataUrl, updatedAtMs: Date.now() }
-            : null,
+          // `dataUrl` is the field's old name: it now holds a /photos/ address.
+          progressPhoto: progressPhotoUrl ? { dataUrl: progressPhotoUrl, updatedAtMs: Date.now() } : null,
           weightTrend,
           streak,
           badges,

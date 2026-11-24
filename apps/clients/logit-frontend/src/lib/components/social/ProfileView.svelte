@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import {
@@ -205,7 +206,7 @@
   <div class="flex flex-col items-center gap-3 px-4 pt-6 pb-5 border-b border-border">
     <div data-guide={avatarGuideMark} class="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-xl font-semibold overflow-hidden">
       {#if profile.avatarUrl}
-        <img src={profile.avatarUrl} alt={profile.displayName} class="h-full w-full object-cover" />
+        <img src={photoSrc(profile.avatarUrl)} alt={profile.displayName} class="h-full w-full object-cover" />
       {:else}
         {initials(profile.displayName)}
       {/if}
@@ -323,7 +324,7 @@
               <div class="rounded-lg border border-border p-3">
                 <p class="text-xs font-semibold mb-1.5">Progress photo</p>
                 <img
-                  src={publicData.progressPhoto.dataUrl}
+                  src={photoSrc(publicData.progressPhoto.dataUrl)}
                   alt="{profile.displayName}'s current progress photo"
                   class="w-full rounded-md object-cover aspect-square"
                 />

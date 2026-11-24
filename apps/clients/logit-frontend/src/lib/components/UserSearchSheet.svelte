@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { toast } from "svelte-sonner";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
@@ -172,7 +173,7 @@
                 onclick={() => openProfile(user.username)}
               >
                 {#if user.avatarUrl}
-                  <img src={user.avatarUrl} alt={user.displayName} class="h-full w-full object-cover" />
+                  <img src={photoSrc(user.avatarUrl)} alt={user.displayName} class="h-full w-full object-cover" />
                 {:else}
                   {initials(user.displayName)}
                 {/if}

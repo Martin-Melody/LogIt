@@ -21,6 +21,8 @@ services:
       Smtp__Password: ${SMTP_PASSWORD:-}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-}
       Push__RelayUrl: ${PUSH_RELAY_URL:-}
+      # Photos people upload, next to the database (so a backup of /data has both).
+      Photos__Folder: /data/photos
     volumes:
       - api-data:/data
     restart: unless-stopped

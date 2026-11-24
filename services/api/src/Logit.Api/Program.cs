@@ -20,6 +20,7 @@ using Logit.Api.Features.Sandbox;
 using Logit.Api.Features.Guide;
 using Logit.Api.Features.Foods;
 using Logit.Api.Features.Push;
+using Logit.Api.Features.Photos;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -121,6 +122,17 @@ builder.Services.AddSingleton<IPushSender>(sp =>
 });
 builder.Services.AddHostedService<PushDispatcher>();
 builder.Services.AddHostedService<Logit.Api.Features.Social.StorySweeper>();
+// Photos: an S3-compatible bucket when Photos:S3:Bucket is set (Cloudflare R2 on getlogit.app),
+// otherwise a folder on this server (Photos:Folder; docker-compose.yml puts it in /data/photos).
+builder.Services.AddSingleton<IPhotoStore>(sp =>
+{
+    var c = sp.GetRequiredService<IConfiguration>();
+    if (c["Photos:S3:Bucket"] is { Length: > 0 } bucket)
+        return new S3PhotoStore(c["Photos:S3:ServiceUrl"]!, bucket, c["Photos:S3:AccessKey"]!, c["Photos:S3:SecretKey"]!);
+    var folder = c["Photos:Folder"] is { Length: > 0 } f ? f : Path.Combine(builder.Environment.ContentRootPath, "photos");
+    return new FolderPhotoStore(folder);
+});
+builder.Services.AddHostedService<PhotoSweeper>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -248,6 +260,16 @@ builder.Services.AddRateLimiter(o =>
                 Window = TimeSpan.FromHours(1),
                 QueueLimit = 0,
             }));
+    // 60 photos an hour per person: plenty for posting, not enough to fill a disk.
+    o.AddPolicy(PhotoEndpoints.UploadRateLimitPolicy, ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue("Photos:UploadsPerHour", 60),
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0,
+            }));
     // One self-hosted server relays for all its users, so this is per server, and generous.
     o.AddPolicy(PushEndpoints.RelayRateLimitPolicy, ctx =>
         RateLimitPartition.GetFixedWindowLimiter(
@@ -323,6 +345,7 @@ api.MapTrainingEndpoints();
 api.MapFriendInviteEndpoints();
 api.MapDirectMessageEndpoints();
 api.MapStoryEndpoints();
+api.MapPhotoEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 
