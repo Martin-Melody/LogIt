@@ -5,6 +5,7 @@
   // normal goal → plan steps afterwards.
   import { goto } from "$app/navigation";
   import { ArrowLeft, Clock, MessageSquare, Monitor, Share } from "lucide-svelte";
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { apiClient } from "@logit/core/api/client";
   import { getServerMode } from "@logit/core/api/serverConfig";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -72,11 +73,11 @@
   <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold" onclick={() => void setUp()}>
     {!authStore.isAuthenticated ? "Make an account to coach" : hasStudio ? "Set up my coaching" : "See the Studio plan"}
   </button>
-  <label class="mt-3 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
+  <div class="mt-3 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-muted px-3.5 py-3">
     <span class="flex flex-col">
       <span class="text-[15px] font-medium">I train too</span>
       <span class="text-[13px] text-muted-foreground">Set up my own plan afterwards</span>
     </span>
-    <input type="checkbox" class="h-[22px] w-[22px] accent-primary" bind:checked={trainToo} />
-  </label>
+    <Switch checked={trainToo} label="I train too" onchange={(v) => (trainToo = v)} />
+  </div>
 </div>

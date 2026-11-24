@@ -55,6 +55,7 @@ A great workout app first. Privacy and making it your own come second: you can s
 4. Habit over activation: design for week two, not day one.
 5. Every action is a real button, everything that changes animates, every sheet swipes down, back goes to the previous screen.
 6. LogIt only taps you on the shoulder when a person did something for you, or when your own plan says it's time. Notifications (push or in the app) are for a message, a coach's program or check-in, a payment problem, a comment, like or follow, a reminder you set, or a rest ending. Never "you haven't trained in 3 days", streak warnings, "come back", offers, or anything sent only to get the app opened. A push says who and what, never the message itself.
+7. Our own components over the browser's or Android's: on/off is `Switch`, pick one is `RadioGroup`, segments or chips (`choice.ts`), a list to choose from is `Select`, times are `TimeField`, dates `DateField` (all in `components/ui`). Never a native `<select>` (Android draws it as a radio-button dialog), `<input type="time">`, `<input type="date">`, checkbox or radio. If a needed control is missing, add it to `components/ui` (bits-ui, shadcn-svelte style) rather than using the native one. Native is only for what has no stand-in (text and number fields, file pickers).
 
 ## Accessibility & Inclusion
 

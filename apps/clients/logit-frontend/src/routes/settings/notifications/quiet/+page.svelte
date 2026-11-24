@@ -5,6 +5,7 @@
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
+  import { TimeField } from "$lib/components/ui/time-field";
   import { changePushSettings, clock, loadPushSettings, pushSettings } from "$lib/features/settings/pushSettings.svelte";
 
   const s = $derived(pushSettings.value);
@@ -18,8 +19,6 @@
     const [h, m] = value.split(":").map(Number);
     if (Number.isFinite(h) && Number.isFinite(m)) void changePushSettings({ [key]: h! * 60 + m! });
   }
-
-  const time = "h-10 rounded-md bg-transparent px-1 text-right text-[15px] font-semibold tabular-nums focus:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 </script>
 
 <SettingsPage title="Quiet mode">
@@ -29,16 +28,16 @@
         <span class="flex-1 text-[15px] font-medium">Quiet mode</span>
         <Switch checked={s.quietOn} label="Quiet mode" onchange={(on) => changePushSettings({ quietOn: on })} />
       </div>
-      <label class={settingRow}>
+      <div class={settingRow}>
         <span class="flex-1 text-[15px]">From</span>
-        <input type="time" class={time} value={clock(s.quietFromMinute)} disabled={!s.quietOn}
-          onchange={(e) => setTime("quietFromMinute", (e.target as HTMLInputElement).value)} />
-      </label>
-      <label class={settingRow}>
+        <TimeField aria-label="Quiet from" value={clock(s.quietFromMinute)} disabled={!s.quietOn}
+          onchange={(v) => setTime("quietFromMinute", v)} />
+      </div>
+      <div class={settingRow}>
         <span class="flex-1 text-[15px]">To</span>
-        <input type="time" class={time} value={clock(s.quietToMinute)} disabled={!s.quietOn}
-          onchange={(e) => setTime("quietToMinute", (e.target as HTMLInputElement).value)} />
-      </label>
+        <TimeField aria-label="Quiet until" value={clock(s.quietToMinute)} disabled={!s.quietOn}
+          onchange={(v) => setTime("quietToMinute", v)} />
+      </div>
       <div class="flex flex-col gap-2.5 px-3 pb-4 pt-3">
         <span id="days" class="text-[15px]">Days</span>
         <div class="flex justify-between" role="group" aria-labelledby="days">

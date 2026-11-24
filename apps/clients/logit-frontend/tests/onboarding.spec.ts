@@ -159,7 +159,8 @@ test.describe("your plan", () => {
     await seedAnswers(page, 4, answers);
     await goToOnboarding(page);
 
-    await page.getByLabel("Equipment").selectOption("dumbbells");
+    await page.getByRole("button", { name: "Equipment" }).click();
+    await page.getByRole("option", { name: "Dumbbells only" }).click();
 
     await expect(page.getByText("Dumbbell Bench Press", { exact: true })).toBeVisible();
     await expect(page.getByText("Bench Press", { exact: true })).not.toBeVisible();
