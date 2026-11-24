@@ -92,6 +92,15 @@
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="barcode_ui" />
+
+        <!-- Pushes (Firebase): the LogIt status-bar icon, and the Social channel for any push
+             that names none. The app makes the channels (lib/platform/push.ts). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_logit" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="social" />
     </application>
 
     <!-- Permissions -->

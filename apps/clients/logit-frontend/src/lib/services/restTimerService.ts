@@ -161,6 +161,14 @@ function notifId(setId: string): number {
 }
 
 const REST_CHANNEL_ID = "rest-timer";
+const REST_ALERTS_OFF_KEY = "logit:rest-alerts-off";
+
+/** Settings › Notifications › Rest alerts: the phone notification when a rest ends in the background. */
+export const restAlertsOn = () => typeof localStorage === "undefined" || localStorage.getItem(REST_ALERTS_OFF_KEY) !== "1";
+export function setRestAlerts(on: boolean): void {
+  if (on) localStorage.removeItem(REST_ALERTS_OFF_KEY);
+  else localStorage.setItem(REST_ALERTS_OFF_KEY, "1");
+}
 let channelReady: Promise<void> | null = null;
 
 /**
@@ -190,6 +198,7 @@ async function ensureRestChannel(): Promise<void> {
 /** Schedule (or move) the set's notification. The same id replaces any pending one, so
  * scheduling again after a reload doesn't stack a second alert. */
 async function scheduleOsNotification(setId: string, atMs: number) {
+  if (!restAlertsOn()) return;
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
     const perm = await LocalNotifications.requestPermissions();

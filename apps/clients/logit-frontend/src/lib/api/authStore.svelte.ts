@@ -293,6 +293,7 @@ function createAuthStore() {
 
   async function logout() {
     if (user) {
+      await (await import("$lib/platform/push")).forgetPushDevice();
       try { await apiClient.logout(); } catch (e) { log.warn("auth", "Server sign-out failed (signed out locally anyway)", e); }
     }
     log.info("auth", "Signed out");
@@ -370,6 +371,7 @@ function createAuthStore() {
     }
     const ownerId = getActiveOwnerId();
     if (user) {
+      await (await import("$lib/platform/push")).forgetPushDevice();
       try { await apiClient.logout(); } catch (e) { log.warn("auth", "Server sign-out failed (signed out locally anyway)", e); }
     }
     log.info("auth", opts.keepHere ? "Signed out, kept on the phone" : "Signed out and removed from the phone");
