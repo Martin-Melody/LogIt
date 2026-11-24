@@ -32,16 +32,29 @@ public static class PushEndpoints
         if (string.IsNullOrWhiteSpace(req.Token) || req.Token.Length > 512) return Results.BadRequest(new { error = "A push token is needed." });
         var userId = caller.GetUserId();
         var now = clock.GetUtcNow().UtcDateTime;
-        var device = await db.PushDevices.SingleOrDefaultAsync(d => d.Token == req.Token);
-        if (device is null) db.PushDevices.Add(device = new PushDevice { Token = req.Token, CreatedAt = now });
-        device.UserId = userId;
-        device.Platform = req.Platform is "android" or "ios" ? req.Platform : "android";
-        device.LastSeenAt = now;
+        var zone = req.TimeZone is { Length: > 0 and <= 64 } z && TimeZoneInfo.TryFindSystemTimeZoneById(z, out _) ? z : null;
 
-        if (req.TimeZone is { Length: > 0 and <= 64 } zone && TimeZoneInfo.TryFindSystemTimeZoneById(zone, out _))
-            (await SettingsFor(db, userId)).TimeZone = zone;
-        await db.SaveChangesAsync();
-        return Results.NoContent();
+        // The app can send the same new token twice at once (start and coming to the front, both
+        // retried after a token refresh). The one that loses the race on the unique token (or the
+        // user's settings row) finds the other's rows on its next try and updates them.
+        for (var attempt = 1; ; attempt++)
+        {
+            var device = await db.PushDevices.SingleOrDefaultAsync(d => d.Token == req.Token);
+            if (device is null) db.PushDevices.Add(device = new PushDevice { Token = req.Token, CreatedAt = now });
+            device.UserId = userId;
+            device.Platform = req.Platform is "android" or "ios" ? req.Platform : "android";
+            device.LastSeenAt = now;
+            if (zone is not null) (await SettingsFor(db, userId)).TimeZone = zone;
+            try
+            {
+                await db.SaveChangesAsync();
+                return Results.NoContent();
+            }
+            catch (DbUpdateException) when (attempt < 3)
+            {
+                db.ChangeTracker.Clear();
+            }
+        }
     }
 
     public record RemoveDeviceRequest(string Token);
@@ -116,7 +129,7 @@ public static class PushEndpoints
         if (string.IsNullOrWhiteSpace(req.Token) || req.Token.Length > 512
             || string.IsNullOrWhiteSpace(req.Title) || req.Title.Length > 120
             || string.IsNullOrWhiteSpace(req.Body) || req.Body.Length > 240
-            || req.Channel is not ("social" or "coaching")
+            || req.Channel is not ("social" or "coaching" or "messages")
             || req.Data is { Count: > 8 } || req.Data?.Any(kv => kv.Key.Length > 40 || kv.Value.Length > 200) == true)
             return Results.BadRequest();
         var result = await sender.SendAsync(req.Token, new PushMessage(req.Title, req.Body, req.Channel, req.Data ?? []), ct);

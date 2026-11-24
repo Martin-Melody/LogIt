@@ -8,6 +8,8 @@
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import { Loader2 } from "lucide-svelte";
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
+  import { TimeField } from "$lib/components/ui/time-field";
   import { apiClient } from "@logit/core/api/client";
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { activeSplit } from "$lib/stores/activeSplit.store";
@@ -196,18 +198,18 @@
 
     {#if canRemind()}
       <div class="mt-3 flex flex-col gap-2 rounded-xl bg-muted px-3.5 py-3">
-        <label class="flex min-h-11 items-center justify-between gap-3">
+        <div class="flex min-h-11 items-center justify-between gap-3">
           <span class="flex flex-col">
             <span class="text-[15px] font-medium">Remind me on those days</span>
             <span class="text-[13px] text-muted-foreground">At {time.replace(/^0(\d)/, "$1")}, with the day's workout</span>
           </span>
-          <input type="checkbox" class="h-[22px] w-[22px] accent-primary" checked={remind} onchange={toggleRemind} />
-        </label>
+          <Switch checked={remind} label="Remind me on those days" onchange={toggleRemind} />
+        </div>
         {#if remind}
-          <label class="flex items-center justify-between gap-3 text-sm">
+          <div class="flex items-center justify-between gap-3 text-sm">
             <span class="text-muted-foreground">Time</span>
-            <input type="time" bind:value={time} class="h-9 rounded-md border border-border bg-background px-2 text-sm" />
-          </label>
+            <TimeField bind:value={time} aria-label="Reminder time" class="bg-background" />
+          </div>
         {/if}
         {#if explainReminder}
           <p class="text-[13px] text-muted-foreground">One notification on your training days, nothing else. Android will ask if LogIt may send it.</p>

@@ -13,6 +13,8 @@ name: Android release
 #   ANDROID_KEY_ALIAS           key alias (e.g. logit-upload)
 #   ANDROID_KEY_PASSWORD        key password
 #   PLAY_SERVICE_ACCOUNT_JSON   (optional) Google Play service-account JSON; omit to skip upload
+#   GOOGLE_SERVICES_JSON        Firebase's google-services.json (push notifications); without it
+#                               the build works but phones can't get pushes
 # Optional repo variable:
 #   MARKETING_URL               baked into the build (default: https://getlogit.app)
 #
@@ -105,6 +107,17 @@ jobs:
       - name: Capacitor sync
         working-directory: apps/clients/logit-frontend
         run: npx cap sync android
+
+      # Kept out of the public repo; app/build.gradle applies Firebase only when the file is there.
+      - name: Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::GOOGLE_SERVICES_JSON not set — this build can't get push notifications."
+            exit 0
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > apps/clients/logit-frontend/android/app/google-services.json
 
       - name: Decode keystore
         id: keystore

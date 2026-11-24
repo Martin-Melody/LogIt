@@ -93,17 +93,26 @@ public class FcmPushSender : IPushSender
     }
 }
 
-/// For self-hosted servers, which have no Firebase key: hands the token and the text to a
-/// server that has one (getlogit.app's /push/relay). Off unless Push:RelayUrl is set.
-public class RelayPushSender(HttpClient http, string relayUrl, ILogger<RelayPushSender> log) : IPushSender
+/// For self-hosted servers, which have no Firebase key: whether this server hands its pushes to
+/// getlogit.app. Off until an admin turns it on (Server page); saved as a ServerSetting.
+public class PushRelay(string url)
 {
-    public bool IsConfigured => true;
+    public const string SettingKey = "push.relay";
+    public const string DefaultUrl = "https://api.getlogit.app/push/relay";
+    public string Url { get; } = url;
+    public bool On { get; set; }
+}
+
+/// Hands the token and the text to getlogit.app's /push/relay, which sends with its key.
+public class RelayPushSender(HttpClient http, PushRelay relay, ILogger<RelayPushSender> log) : IPushSender
+{
+    public bool IsConfigured => relay.On;
 
     public async Task<PushResult> SendAsync(string token, PushMessage message, CancellationToken ct)
     {
         try
         {
-            using var res = await http.PostAsJsonAsync(relayUrl, new RelayRequest(token, message.Title, message.Body, message.Channel,
+            using var res = await http.PostAsJsonAsync(relay.Url, new RelayRequest(token, message.Title, message.Body, message.Channel,
                 message.Data.ToDictionary()), ct);
             if (res.IsSuccessStatusCode) return PushResult.Sent;
             if (res.StatusCode == HttpStatusCode.Gone) return PushResult.BadToken;
@@ -119,10 +128,3 @@ public class RelayPushSender(HttpClient http, string relayUrl, ILogger<RelayPush
 }
 
 public record RelayRequest(string Token, string Title, string Body, string Channel, Dictionary<string, string>? Data);
-
-/// No way to push (no key, no relay): the Inbox still works.
-public class NoPushSender : IPushSender
-{
-    public bool IsConfigured => false;
-    public Task<PushResult> SendAsync(string token, PushMessage message, CancellationToken ct) => Task.FromResult(PushResult.Failed);
-}

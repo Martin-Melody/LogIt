@@ -477,6 +477,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<long?>("ReadAtMs")
                         .HasColumnType("INTEGER");
 

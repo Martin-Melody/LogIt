@@ -159,6 +159,19 @@ public class PushTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_same_new_token_sent_twice_at_once_is_saved_once_without_an_error()
+    {
+        // The app registers at start and again on coming to the front; after a token refresh both
+        // retries can land together (seen on Martin's phone, 2026-11-24).
+        var (http, _, _) = await _api.SignUpAsync("ava");
+        var body = new { token = "new-phone", platform = "android", timeZone = "Europe/Dublin" };
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => http.PutAsJsonAsync("/push/devices", body)));
+        Assert.All(results, r => Assert.Equal(HttpStatusCode.NoContent, r.StatusCode));
+        Assert.Equal(1, await _api.WithDbAsync(db => db.PushDevices.CountAsync()));
+        Assert.Equal(1, await _api.WithDbAsync(db => db.PushSettings.CountAsync()));
+    }
+
+    [Fact]
     public async Task Settings_round_trip_and_reject_nonsense()
     {
         var (http, _) = await WithPhone("ava", "ava-phone");
@@ -176,6 +189,39 @@ public class PushTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, (await http.PutAsJsonAsync("/push/settings", new { quietToMinute = 1440 })).StatusCode);
     }
 
+    [Fact]
+    public async Task Coach_messages_go_out_straight_away_on_their_own_channel()
+    {
+        var (clientHttp, client) = await WithPhone("ava", "ava-phone");
+        var (_, coach, _) = await _api.SignUpAsync("sam");
+        var rel = Guid.NewGuid();
+        await _api.WithDbAsync(async db =>
+        {
+            db.CoachClientRelationships.Add(new CoachClientRelationship { Id = rel, CoachId = coach, ClientId = client, Status = CoachClientStatus.Active });
+            db.CoachMessages.AddRange(
+                new CoachMessage { MessageId = "m1", RelationshipId = rel, SenderUserId = coach, Body = "secret plan", SyncedAt = _clock.Now },
+                new CoachMessage { MessageId = "m2", RelationshipId = rel, SenderUserId = coach, Body = "more", SyncedAt = _clock.Now },
+                // Ava's own message to Sam: Sam has no phone, so nothing.
+                new CoachMessage { MessageId = "m3", RelationshipId = rel, SenderUserId = client, Body = "ok", SyncedAt = _clock.Now });
+            await db.SaveChangesAsync();
+        });
+
+        Assert.Equal(1, await Dispatch());
+        var m = _push.Sent.Single().Message;
+        Assert.Equal(("sam", "sent you 2 messages", "messages", rel.ToString()), (m.Title, m.Body, m.Channel, m.Data["relationshipId"]));
+        Assert.DoesNotContain("secret", m.Body);
+        Assert.Equal(0, await Dispatch());
+
+        (await clientHttp.PutAsJsonAsync("/push/settings", new { messages = false })).EnsureSuccessStatusCode();
+        await _api.WithDbAsync(async db =>
+        {
+            db.CoachMessages.Add(new CoachMessage { MessageId = "m4", RelationshipId = rel, SenderUserId = coach, Body = "x", SyncedAt = _clock.Now });
+            await db.SaveChangesAsync();
+        });
+        Assert.Equal(0, await Dispatch());
+        Assert.Equal(0, await _api.WithDbAsync(db => db.CoachMessages.CountAsync(x => x.PushedAt == null)));
+    }
+
     [Theory]
     [InlineData("2026-11-23T21:59:00Z", false)] // Monday, before
     [InlineData("2026-11-23T22:00:00Z", true)]
@@ -187,6 +233,28 @@ public class PushTests : IAsyncLifetime
     {
         var s = new PushSettings { TimeZone = "Europe/Dublin", QuietDays = 0b111_1101 }; // every day but Tuesday
         Assert.Equal(quiet, PushDispatcher.InQuiet(s, DateTime.Parse(utc).ToUniversalTime()));
+    }
+
+    [Fact]
+    public async Task A_self_hosted_server_relays_only_after_an_admin_turns_it_on()
+    {
+        const string key = "test-admin-key-that-is-long-enough-1234";
+        using var api = new ApiFactory { AdminKey = key, Settings = { ["Deployment:SelfHosted"] = "true" } };
+        var (admin, _, _) = await api.SignUpAsync("alex");
+        (await admin.PostAsJsonAsync("/admin/claim", new { key })).EnsureSuccessStatusCode();
+
+        async Task<JsonElement> Push() => (await admin.GetFromJsonAsync<JsonElement>("/admin/api/server", ApiFactory.Json)).GetProperty("push");
+        Assert.Equal(("relay", false), ((await Push()).GetProperty("mode").GetString(), (await Push()).GetProperty("relayOn").GetBoolean()));
+        Assert.False((await admin.GetFromJsonAsync<JsonElement>("/push/settings", ApiFactory.Json)).GetProperty("available").GetBoolean());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/admin/api/server/push-relay", new { on = true })).StatusCode);
+        Assert.True((await Push()).GetProperty("relayOn").GetBoolean());
+        Assert.True((await admin.GetFromJsonAsync<JsonElement>("/push/settings", ApiFactory.Json)).GetProperty("available").GetBoolean());
+        Assert.Equal("on", await api.WithDbAsync(db => db.ServerSettings.Where(s => s.Key == PushRelay.SettingKey).Select(s => s.Value).SingleAsync()));
+
+        // Without a Firebase key this server doesn't relay for others.
+        Assert.Equal(HttpStatusCode.NotFound, (await api.CreateClient().PostAsJsonAsync("/push/relay",
+            new { token = "t", title = "a", body = "b", channel = "social" })).StatusCode);
     }
 
     [Fact]

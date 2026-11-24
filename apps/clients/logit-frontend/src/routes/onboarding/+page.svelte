@@ -7,7 +7,8 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
-  import { ArrowLeft, ChevronDown, Loader2, Plus, X } from "lucide-svelte";
+  import { ArrowLeft, Loader2, Plus, X } from "lucide-svelte";
+  import * as Select from "$lib/components/ui/select";
   import Logo from "@logit/ui/Logo.svelte";
   import { onBack } from "$lib/components/sheet/sheet";
 
@@ -670,22 +671,18 @@
       <p class="text-[13px] font-semibold text-muted-foreground mb-1.5">Your plan</p>
       <h2 class="text-2xl font-bold leading-tight mb-3">{echo} in {plan.daysPerWeek} days a week</h2>
       <div class="flex flex-wrap gap-2 mb-3.5">
-        <label class="relative">
-          <span class="sr-only">Equipment</span>
-          <select class="h-9 appearance-none rounded-full border border-border bg-background pl-3 pr-8 text-[13px] font-medium"
-            value={answers.equipment} onchange={(e) => save({ equipment: (e.currentTarget as HTMLSelectElement).value as PlanEquipment })}>
-            {#each Object.entries(EQUIPMENT_LABELS) as [id, label] (id)}<option value={id}>{label}</option>{/each}
-          </select>
-          <ChevronDown class="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        </label>
-        <label class="relative">
-          <span class="sr-only">Workout length</span>
-          <select class="h-9 appearance-none rounded-full border border-border bg-background pl-3 pr-8 text-[13px] font-medium"
-            value={String(answers.minutes)} onchange={(e) => save({ minutes: Number((e.currentTarget as HTMLSelectElement).value) as PlanLength })}>
-            {#each Object.entries(LENGTH_LABELS) as [id, label] (id)}<option value={id}>{label}</option>{/each}
-          </select>
-          <ChevronDown class="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        </label>
+        <Select.Root type="single" value={answers.equipment} onValueChange={(v) => save({ equipment: v as PlanEquipment })}>
+          <Select.Trigger size="sm" class="rounded-full bg-background text-[13px] font-medium" aria-label="Equipment">{EQUIPMENT_LABELS[answers.equipment]}</Select.Trigger>
+          <Select.Content>
+            {#each Object.entries(EQUIPMENT_LABELS) as [id, label] (id)}<Select.Item value={id} {label} />{/each}
+          </Select.Content>
+        </Select.Root>
+        <Select.Root type="single" value={String(answers.minutes)} onValueChange={(v) => save({ minutes: Number(v) as PlanLength })}>
+          <Select.Trigger size="sm" class="rounded-full bg-background text-[13px] font-medium" aria-label="Workout length">{LENGTH_LABELS[answers.minutes]}</Select.Trigger>
+          <Select.Content>
+            {#each Object.entries(LENGTH_LABELS) as [id, label] (id)}<Select.Item value={id} {label} />{/each}
+          </Select.Content>
+        </Select.Root>
       </div>
 
       <div class="flex flex-col gap-3 rounded-xl border border-border p-4">

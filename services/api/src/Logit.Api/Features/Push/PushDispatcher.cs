@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Logit.Api.Features.Push;
 
 /// Turns new in-app notifications into pushes, once a minute, the way the 2026-11-23 decision set out:
-/// - coaching (and later messages) goes out straight away;
+/// - coach messages and coaching go out straight away;
 /// - likes, comments and follows are gathered: at most one push per <see cref="BundleGap"/>,
 ///   which covers everything waiting;
 /// - in quiet mode everything waits, and one summary goes out when it ends;
@@ -62,12 +62,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         foreach (var group in pending.GroupBy(n => n.UserId))
         {
             var userId = group.Key;
-            var settings = await db.PushSettings.FindAsync([userId], ct);
-            if (settings is null)
-            {
-                settings = new PushSettings { UserId = userId };
-                db.PushSettings.Add(settings);
-            }
+            var settings = await SettingsFor(db, userId, ct);
 
             var following = settings.Likes == PushAudience.Following || settings.Comments == PushAudience.Following
                 ? (await db.Follows.Where(f => f.FollowerId == userId).Select(f => f.FollowedId).ToListAsync(ct)).ToHashSet()
@@ -91,19 +86,83 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             else batch = instant;
             if (batch.Count == 0) continue;
 
-            var message = Compose(batch);
-            foreach (var device in await db.PushDevices.Where(d => d.UserId == userId).ToListAsync(ct))
-            {
-                var result = await sender.SendAsync(device.Token, message, ct);
-                if (result == PushResult.BadToken) db.PushDevices.Remove(device);
-                if (result == PushResult.Sent) sent++;
-            }
+            sent += await SendAsync(db, sender, userId, Compose(batch), ct);
             // Marked even when sending failed: the Inbox has them, and a retry storm helps nobody.
             foreach (var n in batch) n.PushedAt = now;
         }
+
+        sent += await DispatchMessagesAsync(db, sender, now, ct);
         await db.SaveChangesAsync(ct);
         return sent;
     }
+
+    /// Coach messages, straight away on their own channel ("Sam" / "sent you a message"). Pause,
+    /// the Messages switch and reading them first drop them; quiet mode holds them.
+    private static async Task<int> DispatchMessagesAsync(AppDbContext db, IPushSender sender, DateTime now, CancellationToken ct)
+    {
+        var tooOld = now - MaxAge;
+        await db.CoachMessages.Where(m => m.PushedAt == null && m.SyncedAt < tooOld)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.PushedAt, now), ct);
+        var pending = await db.CoachMessages.Include(m => m.Sender).Include(m => m.Relationship)
+            .Where(m => m.PushedAt == null)
+            .OrderBy(m => m.SyncedAt)
+            .Take(2000)
+            .ToListAsync(ct);
+
+        var sent = 0;
+        var toRecipient = pending.GroupBy(m => m.SenderUserId == m.Relationship.CoachId ? m.Relationship.ClientId : m.Relationship.CoachId);
+        foreach (var group in toRecipient)
+        {
+            if (!await db.PushDevices.AnyAsync(d => d.UserId == group.Key, ct))
+            {
+                foreach (var m in group) m.PushedAt = now;
+                continue;
+            }
+            var settings = await SettingsFor(db, group.Key, ct);
+            var wanted = new List<CoachMessage>();
+            foreach (var m in group)
+            {
+                if (settings.Messages && !(settings.PausedUntil > now) && m.ReadAtMs is null) wanted.Add(m);
+                else m.PushedAt = now;
+            }
+            if (wanted.Count == 0 || InQuiet(settings, now)) continue;
+
+            var names = wanted.AsEnumerable().Reverse().Select(m => m.Sender).DistinctBy(u => u.Id).Select(NameOf).ToList();
+            var message = new PushMessage(
+                names.Count == 1 ? names[0] : names.Count == 2 ? $"{names[0]} and {names[1]}" : $"{names[0]} and {names.Count - 1} others",
+                names.Count > 1 ? $"{wanted.Count} messages" : wanted.Count == 1 ? "sent you a message" : $"sent you {wanted.Count} messages",
+                "messages",
+                wanted.Select(m => m.RelationshipId).Distinct().Count() == 1
+                    ? new Dictionary<string, string> { ["type"] = "Message", ["relationshipId"] = wanted[0].RelationshipId.ToString() }
+                    : new Dictionary<string, string> { ["type"] = "Message" });
+            sent += await SendAsync(db, sender, group.Key, message, ct);
+            foreach (var m in wanted) m.PushedAt = now;
+        }
+        return sent;
+    }
+
+    /// A user's choices; a row with the defaults is made the first time (it also keeps LastBundleAt).
+    private static async Task<PushSettings> SettingsFor(AppDbContext db, Guid userId, CancellationToken ct)
+    {
+        var settings = await db.PushSettings.FindAsync([userId], ct);
+        if (settings is null) db.PushSettings.Add(settings = new PushSettings { UserId = userId });
+        return settings;
+    }
+
+    /// To each of the user's phones; tokens Firebase says are dead are deleted.
+    private static async Task<int> SendAsync(AppDbContext db, IPushSender sender, Guid userId, PushMessage message, CancellationToken ct)
+    {
+        var sent = 0;
+        foreach (var device in await db.PushDevices.Where(d => d.UserId == userId).ToListAsync(ct))
+        {
+            var result = await sender.SendAsync(device.Token, message, ct);
+            if (result == PushResult.BadToken) db.PushDevices.Remove(device);
+            if (result == PushResult.Sent) sent++;
+        }
+        return sent;
+    }
+
+    private static string NameOf(User u) => string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName;
 
     public enum Kind { Likes, Comments, Follows, Coaching }
 
@@ -177,7 +236,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
     {
         var newest = batch.OrderByDescending(n => n.CreatedAt).ToList();
         var names = newest.Select(n => n.Actor).DistinctBy(a => a.Id)
-            .Select(a => string.IsNullOrWhiteSpace(a.DisplayName) ? a.Username : a.DisplayName).ToList();
+            .Select(NameOf).ToList();
         var title = names.Count switch
         {
             1 => names[0],

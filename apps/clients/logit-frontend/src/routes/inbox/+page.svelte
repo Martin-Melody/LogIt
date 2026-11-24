@@ -34,7 +34,9 @@
   import { localInbox, type LocalNotification } from "$lib/features/inbox/localInbox";
   import { chip } from "$lib/components/ui/choice";
   import { formatDistanceToNow } from "$lib/utils";
-  import { popIn } from "$lib/transitions";
+  import { popIn, reveal } from "$lib/transitions";
+  import { askForPush, markPushAsked, pushAsked, pushPermission } from "$lib/platform/push";
+  import { pushApi } from "@logit/core/api/pushApi";
 
   // One inbox: social notifications from the server (signed in) merged with the ones
   // made on the device (PRs, progression changes). Opening it marks everything read.
@@ -99,6 +101,22 @@
   }
 
   let opened = $state(false);
+
+  // Design canvas P3: asked once, after the first notification, when this server can push and
+  // Android hasn't been asked. "Not now" never asks again; Settings › Notifications still can.
+  let askPush = $state(false);
+  async function checkAskPush() {
+    if (askPush || pushAsked() || social.length === 0 || (await pushPermission()) !== "prompt") return;
+    askPush = await pushApi.settings().then((s) => s.available, () => false);
+  }
+  $effect(() => {
+    if (social.length) void checkAskPush();
+  });
+  function answerAskPush(turnOn: boolean) {
+    askPush = false;
+    if (turnOn) void askForPush();
+    else markPushAsked();
+  }
 
   async function markSeen() {
     try {
@@ -234,6 +252,17 @@
       <p class="text-sm text-muted-foreground">{error}</p>
       <button type="button" class="h-11 shrink-0 text-sm text-primary" onclick={() => loadSocial()}>Try again</button>
     </div>
+  {/if}
+
+  {#if askPush}
+    <section transition:reveal aria-labelledby="ask-push-h" class="mx-3 my-2 flex flex-col gap-2.5 rounded-xl border border-border bg-card p-4">
+      <h2 id="ask-push-h" class="text-[15px] font-semibold">Get these on your phone</h2>
+      <p class="text-sm leading-relaxed text-muted-foreground">See when your coach messages you or someone comments, without opening LogIt. You choose which kinds in Settings.</p>
+      <div class="flex gap-2">
+        <button type="button" class="h-11 flex-1 rounded-[10px] bg-primary text-sm font-semibold text-primary-foreground" onclick={() => answerAskPush(true)}>Turn on</button>
+        <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => answerAskPush(false)}>Not now</button>
+      </div>
+    </section>
   {/if}
 
   {#if requests.length && (filter === "all" || filter === "social")}

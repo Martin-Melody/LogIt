@@ -26,4 +26,7 @@ public class CoachMessage
     public long? ReadAtMs { get; set; }
 
     public DateTime SyncedAt { get; set; } = DateTime.UtcNow;
+
+    /// When the push dispatcher dealt with it (sent, or skipped).
+    public DateTime? PushedAt { get; set; }
 }

@@ -47,6 +47,7 @@ public static class AdminEndpoints
 
         api.MapGet("/server", AdminServer.GetServer);
         api.MapPut("/server/registration", AdminServer.SetRegistration);
+        api.MapPut("/server/push-relay", AdminServer.SetPushRelay);
         api.MapPost("/server/test-email", AdminServer.SendTestEmail);
         api.MapGet("/server/backup", AdminServer.DownloadBackup);
         api.MapGet("/invites", GetInvites);

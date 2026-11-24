@@ -2,7 +2,7 @@
   import TextPage from "$lib/site/TextPage.svelte";
   import { PRIVACY_EMAIL } from "$lib/site";
 
-  const UPDATED = "19 November 2026";
+  const UPDATED = "24 November 2026";
 </script>
 
 <svelte:head>
@@ -74,6 +74,19 @@
     Playlist links you save in Settings › Music are kept on your device and are not synced.
   </p>
 
+  <h2>Push notifications</h2>
+  <p>
+    If you allow notifications, your phone gets a push token from Google's Firebase Cloud Messaging,
+    and the app gives it to your LogIt server so it can reach this phone. A push says who did what,
+    like "Ava liked your post" or "Sam sent you a message"; never what a message or comment says, and
+    nothing about your training. You choose which kinds you get in Settings › Notifications. The token
+    is removed when you sign out or delete your account, and forgotten when Google says the app is gone.
+  </p>
+  <p>
+    A self-hosted server can't reach Firebase itself. If its admin turns pushes on, it hands each one
+    to getlogit.app, which passes the token and that text to Google and keeps nothing.
+  </p>
+
   <h2>Diagnostics</h2>
   <p>
     The app keeps a log on your device to help fix problems (Settings › About › Diagnostics). It leaves
@@ -129,6 +142,7 @@
     <li><strong>Resend:</strong> sends LogIt's emails (password resets, invites, payment notices), so it handles your email address and the message.</li>
     <li><strong>Stripe:</strong> payments to coaches (see Coaching above), on the website only.</li>
     <li><strong>Google Play:</strong> app distribution and subscription payments.</li>
+    <li><strong>Google Firebase Cloud Messaging:</strong> delivers push notifications to your phone (see Push notifications above).</li>
   </ul>
   <p>We do not use advertising or analytics providers.</p>
 

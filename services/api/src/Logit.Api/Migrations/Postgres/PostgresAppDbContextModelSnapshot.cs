@@ -482,6 +482,9 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<long?>("ReadAtMs")
                         .HasColumnType("bigint");
 
