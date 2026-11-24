@@ -43,6 +43,10 @@ people know for it (Strava clubs, Facebook groups).
   Profile › Customise.
 - **Notifications** follow the push rules already built: messages, cheers and
   coaching straight away; likes, comments and follows gathered.
+- **Home cards** (24 Nov): Pinned meetup (pin an event to Home, else the next one
+  you're going to, with a countdown), Friends (new stories, who's training now)
+  and Social (latest unread). Each shows only when it has something and sits in
+  the normal Customise home list.
 - **The whole app is 16+** (23 Nov).
 
 ## Open
@@ -59,7 +63,7 @@ people know for it (Strava clubs, Facebook groups).
 3. Messages: chats, requests, message controls, photos in messages.
 4. Stories: viewer, adding a story, audience settings.
 5. Groups: page, events, chat, board, per-group settings.
-6. Boards on Social.
+6. Boards on Social, and the Home cards.
 7. Federation (`docs/social-federation-design.md`).
 
 ## Rules so federation fits later
