@@ -26,15 +26,15 @@
 </script>
 
 {#if hidden}
-  <div class="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-muted text-[13px] font-medium text-muted-foreground" style="width: {box.w}px; height: {box.h}px">
+  <div class="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl bg-muted text-[13px] font-medium text-muted-foreground" style="width: {box.w}px; height: {box.h}px">
     <Lock class="size-5" />Accept to see it
   </div>
 {:else if broken || !url}
-  <div class="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-border text-[13px] text-muted-foreground" style="width: {Math.min(box.w, 200)}px; height: 120px">
+  <div class="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-border text-[13px] text-muted-foreground" style="width: {Math.min(box.w, 200)}px; height: 120px">
     <ImageOff class="size-5" />Photo unavailable
   </div>
 {:else}
-  <button type="button" aria-label="Open photo" class="overflow-hidden rounded-2xl border border-border bg-muted transition-opacity {dim ? 'opacity-60' : ''} {mine ? 'self-end' : ''}" style="width: {box.w}px; height: {box.h}px" onclick={() => (open = true)}>
+  <button type="button" aria-label="Open photo" class="shrink-0 overflow-hidden rounded-2xl border border-border bg-muted transition-opacity {dim ? 'opacity-60' : ''} {mine ? 'self-end' : ''}" style="width: {box.w}px; height: {box.h}px" onclick={() => (open = true)}>
     <img src={photoSrc(url)} alt="" loading="lazy" class="size-full object-cover" onerror={() => (broken = true)} />
   </button>
   {#if open}<PhotoViewer src={photoSrc(url)!} onclose={() => (open = false)} />{/if}

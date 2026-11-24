@@ -27,13 +27,15 @@ public static class DirectMessageEndpoints
         g.MapPost("/threads/{id:guid}/read", Read);
         g.MapPost("/threads/{id:guid}/accept", Accept);
         g.MapDelete("/threads/{id:guid}", Delete);
+        g.MapPatch("/messages/{id:guid}", Edit);
+        g.MapDelete("/messages/{id:guid}", Unsend);
     }
 
-    public record PersonDto(string Username, string DisplayName, string? AvatarUrl);
+    public record PersonDto(string Username, string DisplayName, string? AvatarUrl, Guid Id);
     public record ThreadDto(Guid Id, PersonDto? Other, string LastBody, long LastAtMs, bool LastMine, bool Unread);
     /// PhotoHidden: a photo in a request you haven't accepted (shown blurred, address withheld).
     public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null,
-        string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false);
+        string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false, bool Edited = false);
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
@@ -53,7 +55,7 @@ public static class DirectMessageEndpoints
         var hidden = request && x.SenderId != me && x.PhotoId is not null;
         return new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType,
             x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson,
-            x.PhotoId is { } p && !hidden ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, hidden);
+            x.PhotoId is { } p && !hidden ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, hidden, x.EditedAt is not null);
     }
 
     /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
@@ -74,7 +76,7 @@ public static class DirectMessageEndpoints
         : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
-    private static PersonDto? Person(User? u) => u is null ? null : new(u.Username, u.DisplayName, u.AvatarUrl);
+    private static PersonDto? Person(User? u) => u is null ? null : new(u.Username, u.DisplayName, u.AvatarUrl, u.Id);
     private static string PairKey(Guid a, Guid b) => string.CompareOrdinal(a.ToString(), b.ToString()) < 0 ? $"{a}:{b}" : $"{b}:{a}";
 
     private static Task<bool> BlockedAsync(AppDbContext db, Guid a, Guid b) =>
@@ -294,6 +296,50 @@ public static class DirectMessageEndpoints
             return await Send(req with { Username = null, ThreadId = id }, caller, db, clock);
         }
         return Results.Ok(Dto(message, meId, now));
+    }
+
+    /// As on Instagram: your own text, within 15 minutes of sending it.
+    public static readonly TimeSpan EditWindow = TimeSpan.FromMinutes(15);
+    public record EditRequest(string? Body);
+
+    private static async Task<IResult> Edit(Guid id, EditRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    {
+        var me = caller.GetUserId();
+        var message = await db.DirectMessages.FirstOrDefaultAsync(m => m.Id == id && m.SenderId == me);
+        if (message is null) return Results.NotFound();
+        var body = (req.Body ?? "").Trim();
+        if (message.Body.Length == 0) return Results.BadRequest(new { error = "Only text can be edited." });
+        if (body.Length == 0) return Results.BadRequest(new { error = "Write something, or unsend it instead." });
+        if (body.Length > MaxLength) return Results.BadRequest(new { error = $"Keep it under {MaxLength} characters." });
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (now - message.CreatedAt > EditWindow) return Results.BadRequest(new { error = "Messages can be edited for 15 minutes after they're sent." });
+        if (body != message.Body)
+        {
+            message.Body = body;
+            message.EditedAt = now;
+            await db.SaveChangesAsync();
+        }
+        return Results.Ok(Dto(message, me, now));
+    }
+
+    /// Unsend (Instagram): the message goes for everyone, with its photo.
+    private static async Task<IResult> Unsend(Guid id, ClaimsPrincipal caller, AppDbContext db, Photos.IPhotoStore store, CancellationToken ct)
+    {
+        var me = caller.GetUserId();
+        if (!await db.DirectMessages.AnyAsync(m => m.Id == id && m.SenderId == me, ct)) return Results.NotFound();
+        await UnsendAsync(db, store, id, ct);
+        return Results.NoContent();
+    }
+
+    /// Deletes a message and the photo sent with it (also used when a report is upheld).
+    public static async Task UnsendAsync(AppDbContext db, Photos.IPhotoStore store, Guid id, CancellationToken ct)
+    {
+        var message = await db.DirectMessages.FirstOrDefaultAsync(m => m.Id == id, ct);
+        if (message is null) return;
+        if (message.PhotoId is { } photo && message.SenderId is { } sender)
+            await Photos.PhotoEndpoints.DeleteOwnedAsync(db, store, sender, [photo], ct);
+        db.DirectMessages.Remove(message);
+        await db.SaveChangesAsync(ct);
     }
 
     private static async Task<IResult> Read(Guid id, ClaimsPrincipal caller, AppDbContext db)

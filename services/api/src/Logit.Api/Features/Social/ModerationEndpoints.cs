@@ -104,6 +104,9 @@ public static class ModerationEndpoints
             ReportTargetType.Post => await db.Posts.AnyAsync(p => p.Id == req.TargetId && p.DeletedAt == null),
             ReportTargetType.Comment => await db.Comments.AnyAsync(c => c.Id == req.TargetId && c.DeletedAt == null),
             ReportTargetType.User => await db.Users.AnyAsync(u => u.Id == req.TargetId),
+            // Someone else's message in a chat you're in.
+            ReportTargetType.Message => await db.DirectMessages.AnyAsync(m => m.Id == req.TargetId && m.SenderId != callerId
+                && db.DmMembers.Any(x => x.ThreadId == m.ThreadId && x.UserId == callerId)),
             _ => false,
         };
         if (!targetExists) return Results.NotFound();

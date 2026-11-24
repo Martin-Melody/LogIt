@@ -4,6 +4,8 @@ import { apiClient } from "./client";
 // controls, requests, blocks and read receipts; see services/api DirectMessageEndpoints.
 
 export interface DmPerson {
+  /** Present on chats (for reporting); not on stories. */
+  id?: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
@@ -34,7 +36,12 @@ export interface DmMessage {
   photoHeight: number;
   /** A photo in a request you haven't accepted: shown blurred until you do. */
   photoHidden: boolean;
+  /** The sender changed the text after sending it. */
+  edited: boolean;
 }
+
+/** Your own text can be edited for this long after sending, as on Instagram. */
+export const DM_EDIT_WINDOW_MS = 15 * 60_000;
 
 export interface DmChat {
   /** Null before the first message. */
@@ -70,4 +77,8 @@ export const dmApi = {
   read: (threadId: string) => apiClient.fetch<void>(`/dm/threads/${threadId}/read`, { method: "POST" }),
   accept: (threadId: string) => apiClient.fetch<void>(`/dm/threads/${threadId}/accept`, { method: "POST" }),
   remove: (threadId: string) => apiClient.fetch<void>(`/dm/threads/${threadId}`, { method: "DELETE" }),
+  /** Your own text, within DM_EDIT_WINDOW_MS. */
+  edit: (messageId: string, body: string) => apiClient.fetch<DmMessage>(`/dm/messages/${messageId}`, { method: "PATCH", body: JSON.stringify({ body }) }),
+  /** Unsend: gone for everyone. */
+  unsend: (messageId: string) => apiClient.fetch<void>(`/dm/messages/${messageId}`, { method: "DELETE" }),
 };

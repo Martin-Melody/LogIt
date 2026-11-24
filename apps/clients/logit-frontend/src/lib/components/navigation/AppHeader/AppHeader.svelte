@@ -1,6 +1,7 @@
 <script lang="ts">
   import { headerSlot } from "./headerSlot.svelte";
   import NotificationsBell from "./NotificationsBell.svelte";
+  import MessagesButton from "./MessagesButton.svelte";
   import SyncIndicator from "$lib/sync/SyncIndicator.svelte";
 </script>
 
@@ -10,6 +11,7 @@
     {@render Content()}
     {#if bell}
       <SyncIndicator />
+      <MessagesButton />
       <NotificationsBell />
     {/if}
   </header>

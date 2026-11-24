@@ -131,10 +131,12 @@ export interface Report {
 }
 
 export interface ReportPreview {
-  kind: "post" | "comment";
+  kind: "post" | "comment" | "message";
   body: string;
   deleted: boolean;
   author: string;
+  /** A reported message's photo. */
+  photoUrl?: string | null;
 }
 
 export interface PluginReleaseRow {

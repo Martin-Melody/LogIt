@@ -18,14 +18,14 @@
 </script>
 
 {#if hidden}
-  <div class="flex flex-col items-center justify-center gap-1.5 rounded-xl bg-muted text-xs font-medium text-muted-foreground {mine ? 'self-end' : 'self-start'}" style="width: {box.w}px; height: {box.h}px">
+  <div class="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl bg-muted text-xs font-medium text-muted-foreground {mine ? 'self-end' : 'self-start'}" style="width: {box.w}px; height: {box.h}px">
     <LockIcon class="size-4" />Accept to see it
   </div>
 {:else if broken || !url}
-  <div class="flex items-center gap-2 rounded-xl border border-border px-3 py-3 text-xs text-muted-foreground {mine ? 'self-end' : 'self-start'}"><ImageOffIcon class="size-4" />Photo unavailable</div>
+  <div class="flex shrink-0 items-center gap-2 rounded-xl border border-border px-3 py-3 text-xs text-muted-foreground {mine ? 'self-end' : 'self-start'}"><ImageOffIcon class="size-4" />Photo unavailable</div>
 {:else}
   <button type="button" aria-label="Open photo" onclick={() => (open = true)}
-    class="overflow-hidden rounded-xl border border-border bg-muted {mine ? 'self-end' : 'self-start'}" style="width: {box.w}px; height: {box.h}px">
+    class="shrink-0 overflow-hidden rounded-xl border border-border bg-muted {mine ? 'self-end' : 'self-start'}" style="width: {box.w}px; height: {box.h}px">
     <img src={photoSrc(url)} alt="" loading="lazy" class="size-full object-cover" onerror={() => (broken = true)} />
   </button>
   <Dialog.Root bind:open>

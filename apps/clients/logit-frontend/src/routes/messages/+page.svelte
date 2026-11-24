@@ -4,7 +4,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ChevronRight, MessageSquare } from "lucide-svelte";
+  import { Ban, ChevronRight, Flag, MessageSquare, Trash2, User } from "lucide-svelte";
+  import { toast } from "svelte-sonner";
+  import ActionSheet from "$lib/components/ActionSheet.svelte";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import ReportSheet from "$lib/components/social/ReportSheet.svelte";
+  import { longpress } from "$lib/swipe";
+  import { socialApi } from "@logit/core/api/socialApi";
   import { replayTour } from "$lib/tour/index";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -28,7 +34,39 @@
     atMs: number;
     unread: boolean;
     coach: boolean;
+    /** A chat with a person: its thread and their account id (report). */
+    threadId?: string;
+    userId?: string;
   };
+
+  // Long-press a chat (Instagram's inbox): View profile, Delete chat, Report, Block.
+  let picked = $state<Row | null>(null);
+  let confirm = $state<{ kind: "delete" | "block"; row: Row } | null>(null);
+  let reporting = $state<Row | null>(null);
+  const rowActions = $derived.by(() => {
+    const r = picked;
+    if (!r || r.coach) return [];
+    return [
+      ...(r.username ? [{ icon: User, label: "View profile", onSelect: () => void goto(`/social/${r.username}`) }] : []),
+      { icon: Trash2, label: "Delete chat", destructive: true, onSelect: () => (confirm = { kind: "delete", row: r }) },
+      ...(r.userId ? [{ icon: Flag, label: "Report", destructive: true, onSelect: () => (reporting = r) }] : []),
+      ...(r.username ? [{ icon: Ban, label: `Block ${r.name}`, destructive: true, onSelect: () => (confirm = { kind: "block", row: r }) }] : []),
+    ];
+  });
+
+  async function act() {
+    const c = confirm;
+    confirm = null;
+    if (!c) return;
+    try {
+      if (c.kind === "delete" && c.row.threadId) await dmApi.remove(c.row.threadId);
+      if (c.kind === "block" && c.row.username) await socialApi.blockUser(c.row.username);
+      rows = (rows ?? []).filter((x) => x.key !== c.row.key);
+      toast.success(c.kind === "delete" ? "Chat deleted" : `Blocked ${c.row.name}`);
+    } catch {
+      toast.error("Couldn't do that. Try again.");
+    }
+  }
 
   let rows = $state<Row[] | null>(null);
   let requests = $state(0);
@@ -85,6 +123,8 @@
           atMs: t.lastAtMs,
           unread: t.unread,
           coach: false,
+          threadId: t.id,
+          userId: t.other?.id,
         })),
         ...coach,
       ].sort((a, b) => b.atMs - a.atMs);
@@ -136,7 +176,8 @@
     <ul data-guide="phone-messages-list">
       {#each rows as r (r.key)}
         <li>
-          <button type="button" class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/40" onclick={() => void goto(r.href)}>
+          <button type="button" class="flex w-full select-none items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/40" onclick={() => { if (!picked) void goto(r.href); }}
+            use:longpress={() => { if (!r.coach) picked = r; }}>
             <PersonAvatar name={r.name} src={r.avatarUrl} size={52} training={!!r.username && training.has(r.username)} />
             <span class="flex min-w-0 flex-1 flex-col gap-0.5">
               <span class="flex items-center gap-2 text-[15px] {r.unread ? 'font-semibold' : 'font-medium'}">
@@ -154,3 +195,18 @@
     </ul>
   {/if}
 </div>
+
+<ActionSheet open={!!picked} onOpenChange={(v) => { if (!v) picked = null; }} title={picked?.name ?? ""} items={rowActions} />
+<ConfirmDialog
+  open={!!confirm}
+  onOpenChange={(v) => { if (!v) confirm = null; }}
+  title={confirm?.kind === "block" ? `Block ${confirm.row.name}?` : "Delete this chat?"}
+  description={confirm?.kind === "block"
+    ? "They can't message you, see your profile, stories or training, or find you. They aren't told. You can unblock them in Settings › Privacy."
+    : `It's removed for you only. ${confirm?.row.name ?? "They"} keep their copy, and a new message from them starts it again.`}
+  confirmLabel={confirm?.kind === "block" ? "Block" : "Delete"}
+  onConfirm={act}
+/>
+{#if reporting?.userId}
+  <ReportSheet open targetType="User" targetId={reporting.userId} what="@{reporting.username}" onclose={() => (reporting = null)} />
+{/if}

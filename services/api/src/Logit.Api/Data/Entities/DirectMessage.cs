@@ -52,6 +52,8 @@ public class DirectMessage
     public int PhotoWidth { get; set; }
     public int PhotoHeight { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// Set when the sender edited the text (within 15 minutes, as on Instagram); shown as "Edited".
+    public DateTime? EditedAt { get; set; }
     /// When the push dispatcher dealt with it (sent, or skipped).
     public DateTime? PushedAt { get; set; }
 }

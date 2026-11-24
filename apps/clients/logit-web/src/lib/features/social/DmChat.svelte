@@ -10,6 +10,9 @@
   import PlusIcon from "@lucide/svelte/icons/plus";
   import ImageIcon from "@lucide/svelte/icons/image";
   import ChatPhoto from "./ChatPhoto.svelte";
+  import ReportDialog from "./ReportDialog.svelte";
+  import { socialApi } from "@logit/core/api/socialApi";
+  import { DM_EDIT_WINDOW_MS, type DmMessage } from "@logit/core/api/dmApi";
   import { pickAndUploadPhoto } from "./chatPhoto";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
@@ -86,6 +89,7 @@
   }
 
   async function send() {
+    if (editing) return saveEdit();
     const body = draft.trim();
     if (!body || sending || !chat) return;
     sending = true;
@@ -115,6 +119,47 @@
   }
 
   let uploading = $state(false);
+  // Each message's ⋯ (Instagram's long-press menu): Edit / Copy / Unsend on yours, Copy / Report on theirs.
+  let editing = $state<DmMessage | null>(null);
+  let confirmUnsend = $state<DmMessage | null>(null);
+  let reportOpen = $state(false);
+  let report = $state<{ type: "Message" | "User"; id: string; what: string }>({ type: "User", id: "", what: "" });
+  const canEdit = (m: DmMessage) => m.mine && !!m.body && Date.now() - m.createdAtMs < DM_EDIT_WINDOW_MS;
+
+  function startEdit(m: DmMessage) {
+    editing = m;
+    draft = m.body;
+  }
+  function stopEdit() {
+    editing = null;
+    draft = "";
+  }
+  async function saveEdit() {
+    const m = editing;
+    if (!m || !chat || !draft.trim()) return;
+    try {
+      const updated = await dmApi.edit(m.id, draft.trim());
+      chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? updated : x)) };
+      stopEdit();
+      onchange?.();
+    } catch (e) {
+      sendError = e instanceof Error ? e.message : "Couldn't save that. Try again.";
+    }
+  }
+  async function unsend(m: DmMessage) {
+    if (!chat) return;
+    try {
+      await dmApi.unsend(m.id);
+      chat = { ...chat, messages: chat.messages.filter((x) => x.id !== m.id) };
+      onchange?.();
+    } catch {
+      sendError = "Couldn't unsend it. Try again.";
+    }
+  }
+  function openReport(type: "Message" | "User", id: string, what: string) {
+    report = { type, id, what };
+    reportOpen = true;
+  }
   async function sendPhoto() {
     if (!chat) return;
     sendError = null;
@@ -135,6 +180,17 @@
   function openShare() {
     sharing = true;
     if (!sources) void loadComposerSources().then((s) => (sources = s)).catch(() => (sources = { sessions: [], prs: [], splits: [], library: [], habits: [] }));
+  }
+
+  let confirmBlock = $state(false);
+  async function block() {
+    if (!chat?.other) return;
+    try {
+      await socialApi.blockUser(chat.other.username);
+      ondelete?.();
+    } catch {
+      sendError = "Couldn't block. Try again.";
+    }
   }
 
   async function deleteChat() {
@@ -165,6 +221,7 @@
   }
 
   function onKey(e: KeyboardEvent) {
+    if (e.key === "Escape" && editing) return stopEdit();
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void send();
@@ -200,6 +257,8 @@
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end">
             <DropdownMenu.Item class="text-destructive" onclick={() => (confirmDelete = true)}>Delete chat</DropdownMenu.Item>
+            {#if chat.other?.id}<DropdownMenu.Item class="text-destructive" onclick={() => openReport("User", chat!.other!.id!, `@${chat!.other!.username}`)}>Report</DropdownMenu.Item>{/if}
+            {#if chat.other}<DropdownMenu.Item class="text-destructive" onclick={() => (confirmBlock = true)}>Block {name}</DropdownMenu.Item>{/if}
           </DropdownMenu.Content>
         </DropdownMenu.Root>
       {/if}
@@ -222,6 +281,8 @@
         {/if}
         {@const story = m.cardType === "Story"}
         {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
+        <div class="group flex shrink-0 items-center gap-1 {m.mine ? 'flex-row-reverse self-end' : 'self-start'} max-w-full {editing?.id === m.id ? 'opacity-60' : ''}">
+        <div class="flex min-w-0 flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
         {#if story}<span class="px-1 text-[11px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
         {#if card}
           <div class="flex w-[280px] max-w-[70%] flex-col gap-1 rounded-xl border border-border bg-background px-3 py-2.5 {m.mine ? 'self-end' : 'self-start'}">
@@ -233,13 +294,34 @@
             <span class="text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
           </div>
         {/if}
-        {#if m.photoUrl || m.photoHidden}<ChatPhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
+        {#if m.photoUrl || m.photoHidden}
+          <ChatPhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />
+          {#if !m.body}<span class="px-1 text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>{/if}
+        {/if}
         {#if m.body}
-          <div class="max-w-[70%] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'self-end bg-primary/15' : 'self-start bg-muted'}">
+          <div class="max-w-[520px] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'bg-primary/15' : 'bg-muted'}">
             <span class="whitespace-pre-wrap break-words">{m.body}</span>
-            <span class="mt-0.5 block text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
+            <span class="mt-0.5 block text-right text-[10px] text-muted-foreground">{m.edited ? "Edited · " : ""}{time(m.createdAtMs)}</span>
           </div>
         {/if}
+        </div>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            {#snippet child({ props })}
+              <button {...props} type="button" aria-label="Message options" class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-muted focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"><MoreHorizontalIcon class="size-4" /></button>
+            {/snippet}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content align={m.mine ? "end" : "start"}>
+            {#if canEdit(m)}<DropdownMenu.Item onclick={() => startEdit(m)}>Edit</DropdownMenu.Item>{/if}
+            {#if m.body}<DropdownMenu.Item onclick={() => void navigator.clipboard?.writeText(m.body)}>Copy text</DropdownMenu.Item>{/if}
+            {#if m.mine}
+              <DropdownMenu.Item class="text-destructive" onclick={() => (confirmUnsend = m)}>Unsend</DropdownMenu.Item>
+            {:else}
+              <DropdownMenu.Item class="text-destructive" onclick={() => openReport("Message", m.id, "message")}>Report</DropdownMenu.Item>
+            {/if}
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+        </div>
       {/each}
       {#if uploading}<span class="self-end text-[11px] text-muted-foreground">Sending photo…</span>{/if}
       {#if seen}<span class="self-end text-[11px] text-muted-foreground">Seen</span>{/if}
@@ -259,6 +341,7 @@
     {#if chat.messages.length > 0}<p class="border-t border-border px-4 py-3 text-center text-xs text-muted-foreground">{chat.why}</p>{/if}
   {:else if chat}
     <form class="flex flex-col gap-1.5 border-t border-border px-4 py-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
+      {#if editing}<div class="flex items-center justify-between text-xs text-muted-foreground"><span>Editing message · Enter saves</span><button type="button" class="font-medium text-foreground hover:underline" onclick={stopEdit}>Cancel</button></div>{/if}
       <div class="flex items-end gap-2">
         <button type="button" onclick={sendPhoto} disabled={uploading} aria-label="Send a photo" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50"><ImageIcon class="size-4" /></button>
         <button type="button" onclick={openShare} aria-label="Share a workout or record" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground"><PlusIcon class="size-4" /></button>
@@ -317,3 +400,29 @@
     </div>
   </Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root open={!!confirmUnsend} onOpenChange={(v) => { if (!v) confirmUnsend = null; }}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Unsend this message?</AlertDialog.Title>
+      <AlertDialog.Description>It's removed for everyone in the chat.</AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={() => { const m = confirmUnsend; confirmUnsend = null; if (m) void unsend(m); }}>Unsend</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>
+{#if report.id}<ReportDialog bind:open={reportOpen} targetType={report.type} targetId={report.id} what={report.what} />{/if}
+<AlertDialog.Root bind:open={confirmBlock}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Block {name}?</AlertDialog.Title>
+      <AlertDialog.Description>They can't message you, see your profile, stories or training, or find you. They aren't told. You can unblock them in Privacy.</AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={block}>Block</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>

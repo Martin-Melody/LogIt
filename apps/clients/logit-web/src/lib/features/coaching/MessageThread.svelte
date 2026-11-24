@@ -150,7 +150,10 @@
       {#if !compact && (i === 0 || dayLabel(m.createdAtMs) !== dayLabel(shown[i - 1].createdAtMs))}
         <div class="py-1.5 text-center text-[11px] text-muted-foreground">{dayLabel(m.createdAtMs)}</div>
       {/if}
-      {#if m.photoUrl}<ChatPhoto url={m.photoUrl} width={m.photoWidth ?? 0} height={m.photoHeight ?? 0} mine={m.mine} />{/if}
+      {#if m.photoUrl}
+        <ChatPhoto url={m.photoUrl} width={m.photoWidth ?? 0} height={m.photoHeight ?? 0} mine={m.mine} />
+        {#if !m.body}<span class="shrink-0 px-1 text-[10px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{time(m.createdAtMs)}</span>{/if}
+      {/if}
       {#if m.body || m.contextDateIso}
       <div class="max-w-[78%] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'self-end bg-primary/15' : 'self-start bg-muted'}">
         {#if m.contextDateIso}

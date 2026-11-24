@@ -107,4 +107,34 @@ public class MessagePhotoTests : IDisposable
             relationshipId = rel, messageId = "m3", body = "", createdAtMs = 3, photoId = photo.GetProperty("id").GetGuid(),
         })).StatusCode);
     }
+
+    [Fact]
+    public async Task Your_own_text_can_be_edited_for_15_minutes_and_unsent_and_theirs_reported()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        (await ava.PostAsync("/users/ben/follow", null)).EnsureSuccessStatusCode();
+        var photo = await Upload(ben);
+        var text = await (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "t1", body = "Same tiem Thursday?" })).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        var pic = await (await Send(ben, "ava", photo.GetProperty("id").GetGuid())).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        var textId = text.GetProperty("id").GetGuid();
+
+        // Ben fixes his typo; Ava sees it marked as edited. Ava can't edit Ben's message, and a photo has no text to edit.
+        var edited = await (await ben.PatchAsJsonAsync($"/dm/messages/{textId}", new { body = "Same time Thursday?" })).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        Assert.True(edited.GetProperty("edited").GetBoolean());
+        var seen = (await ava.GetFromJsonAsync<JsonElement>("/dm/chat?username=ben", ApiFactory.Json)).GetProperty("messages")[0];
+        Assert.Equal(("Same time Thursday?", true), (seen.GetProperty("body").GetString(), seen.GetProperty("edited").GetBoolean()));
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.PatchAsJsonAsync($"/dm/messages/{textId}", new { body = "hacked" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await ben.PatchAsJsonAsync($"/dm/messages/{pic.GetProperty("id").GetGuid()}", new { body = "x" })).StatusCode);
+
+        // Ava reports the photo (not her own message); Ben can't report his own.
+        var report = new { targetType = "Message", targetId = pic.GetProperty("id").GetGuid(), reason = "Spam" };
+        Assert.Equal(HttpStatusCode.NoContent, (await ava.PostAsJsonAsync("/reports", report)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ben.PostAsJsonAsync("/reports", report)).StatusCode);
+
+        // Ben unsends the photo: gone for both, file included.
+        (await ben.DeleteAsync($"/dm/messages/{pic.GetProperty("id").GetGuid()}")).EnsureSuccessStatusCode();
+        Assert.Equal(1, (await ava.GetFromJsonAsync<JsonElement>("/dm/chat?username=ben", ApiFactory.Json)).GetProperty("messages").GetArrayLength());
+        Assert.Equal(HttpStatusCode.NotFound, (await _api.CreateClient().GetAsync(photo.GetProperty("url").GetString())).StatusCode);
+    }
 }

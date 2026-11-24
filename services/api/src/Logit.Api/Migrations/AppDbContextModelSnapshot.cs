@@ -902,6 +902,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("PhotoHeight")
                         .HasColumnType("INTEGER");
 
