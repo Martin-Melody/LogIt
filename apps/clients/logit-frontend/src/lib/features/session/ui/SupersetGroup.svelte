@@ -27,7 +27,7 @@
   import { reveal } from "$lib/transitions";
   import { addButton, segment, segmentTrack } from "$lib/components/ui/choice";
   import { openAllSignal } from "$lib/features/session/openAll";
-  import { foldFor, type BlockStage } from "$lib/features/session/stage";
+  import { effortOpenIn, foldFor, type BlockStage } from "$lib/features/session/stage";
   import { untrack } from "svelte";
   import { formatLoad } from "@logit/core/domain/units";
   import type { MobilityBlockData, StrengthBlockData } from "@logit/core/domain/workout";
@@ -81,12 +81,17 @@
   let collapsed = $state(
     untrack(() => stage) ? foldFor(untrack(() => stage)!, get(profile).blocksCollapsedByDefault) : get(profile).blocksCollapsedByDefault,
   );
+  // Done waits while the last set's effort question is open in one of its exercises.
   let seenStage = untrack(() => stage);
+  let foldPending = false;
   $effect(() => {
     const st = stage;
+    const open = $effortOpenIn;
+    const asking = !!open && blocks.some((b: SessionBlock) => b.id === open);
     untrack(() => {
-      if (!st || st === seenStage) return;
-      seenStage = st;
+      if (st && st !== seenStage) { seenStage = st; foldPending = true; }
+      if (!st || !foldPending || (st === "done" && asking)) return;
+      foldPending = false;
       collapsed = foldFor(st, get(profile).blocksCollapsedByDefault);
     });
   });

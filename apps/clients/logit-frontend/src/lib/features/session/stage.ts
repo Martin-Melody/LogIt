@@ -1,5 +1,6 @@
 import type { CardioBlockData, MobilityBlockData, SessionBlock, StrengthBlockData, WorkoutSession } from "@logit/core/domain/workout";
 import type { PluginBlockData } from "@logit/core/domain/blockPlugin";
+import { writable } from "svelte/store";
 
 /**
  * Where a block is in the workout (merged design, canvas row "v2 and v3 merged"):
@@ -71,3 +72,7 @@ export function blockStages(session: Pick<WorkoutSession, "blocks">): Map<string
 export function foldFor(stage: BlockStage, foldOthers: boolean): boolean {
   return foldOthers && stage !== "current";
 }
+
+/** The block whose "how many more could you have done?" is on screen. Ticking an exercise's
+ * last set makes it "done", but it stays open until that's answered or goes away (Martin 24 Nov). */
+export const effortOpenIn = writable<string | null>(null);

@@ -106,13 +106,13 @@ export function createLocalExerciseRepo(): ExerciseRepo {
     async update(rawId: string, rawPatch: ExercisePatch) {
       const id = canonicalExerciseId(rawId);
       const patch: ExercisePatch & { updatedAtMs: number } = { ...rawPatch, updatedAtMs: Date.now() };
-      // Core exercises: notes and exerciseType can be overridden via an overlay
+      // Core exercises: notes, exerciseType, equipment and machines can be overridden via an overlay
       const coreIdx = CORE_EXERCISES.findIndex((e) => e.id === id);
       if (coreIdx !== -1) {
         const custom = readCustom();
         const overlayIdx = custom.findIndex((e) => e.id === id);
         const hasOverridableField =
-          patch.notes !== undefined || patch.exerciseType !== undefined ||
+          patch.notes !== undefined || patch.exerciseType !== undefined || patch.equipment !== undefined ||
           patch.machines !== undefined || patch.defaultMachineId !== undefined;
         if (hasOverridableField) {
           const base = { ...CORE_EXERCISES[coreIdx]! };

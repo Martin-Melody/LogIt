@@ -7,7 +7,7 @@
 <script lang="ts">
   import { carriedWeight } from "./carryWeight";
   import { openAllSignal } from "$lib/features/session/openAll";
-  import { foldFor } from "$lib/features/session/stage";
+  import { effortOpenIn, foldFor } from "$lib/features/session/stage";
   import FinishSetupCard from "$lib/features/exercise/FinishSetupCard.svelte";
   import { needsSetup } from "@logit/core/domain/exerciseGuess";
   import { hasStartingLift } from "$lib/features/onboarding/startingLifts";
@@ -27,7 +27,7 @@
     strengthRestMs,
     clearOtherRests,
     planRestFromFirstSet,
-    replanAfterShortSet,
+    replanAfterSet,
     replanForOrder,
     useReplan,
     shortBy,
@@ -69,7 +69,7 @@
   import { profileBodyweightKg } from "$lib/features/bodyweight/bodyweight";
 
   import { get } from "svelte/store";
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { profile } from "$lib/stores/profile.store";
   import { reveal, popIn } from "$lib/transitions";
   import ExerciseCard from "$lib/features/session/ui/ExerciseCard.svelte";
@@ -125,12 +125,16 @@
   );
 
   // Done and upcoming blocks fold, the one you're on opens (stage.ts); a tap overrides until the stage changes.
+  // Done waits while the last set's effort question is open.
   let seenStage = untrack(() => stage);
+  let foldPending = false;
   $effect(() => {
     const st = stage;
+    const asking = $effortOpenIn === blockId;
     untrack(() => {
-      if (!st || st === seenStage) return;
-      seenStage = st;
+      if (st && st !== seenStage) { seenStage = st; foldPending = true; }
+      if (!st || !foldPending || (st === "done" && asking)) return;
+      foldPending = false;
       collapsed = foldFor(st, get(profile).blocksCollapsedByDefault);
     });
   });
@@ -216,10 +220,10 @@
     return planRestFromFirstSet(s, blockId, setId, firstTimeMin, true);
   }
 
-  /** A set 2+ reps short of its aim re-plans the untouched sets after it (lighter). Weights
-   * on top of bodyweight aren't a load the 1RM maths can scale, so those are left. */
-  function withShortSetPlan(s: WorkoutSession, setId: string): WorkoutSession {
-    return bodyweight ? s : replanAfterShortSet(s, blockId, setId, loadsFor(weightSource, get(profile).weightUnit));
+  /** A set 2+ reps short of its aim re-plans the untouched sets after it lighter, 2+ over
+   * heavier. Weights on top of bodyweight aren't a load the 1RM maths can scale, so those are left. */
+  function withSetReplan(s: WorkoutSession, setId: string): WorkoutSession {
+    return bodyweight ? s : replanAfterSet(s, blockId, setId, loadsFor(weightSource, get(profile).weightUnit));
   }
 
   // The exercises before this one: when they change (dragged, one removed), an exercise not
@@ -274,6 +278,13 @@
       const by = shortIdx >= 0 ? Math.round(shortBy(working[shortIdx]!)!) : null;
       const verb = `${nums.length === 1 ? "is" : "are"} ${dir ?? "re-planned"}`;
       text = by ? `Set ${shortIdx + 1} was ${by} reps short, so ${sets} ${verb}.` : `${sets[0]!.toUpperCase()}${sets.slice(1)} ${verb}.`;
+    } else if (why === "over") {
+      // Up from the plan it had just before, which may still be under the first plan.
+      const first = working.indexOf(affected[0]!);
+      const overIdx = working.slice(0, first).findLastIndex((x) => x.completed && (shortBy(x) ?? 0) <= -1.99);
+      const by = overIdx >= 0 ? Math.round(-shortBy(working[overIdx]!)!) : null;
+      const verb = nums.length === 1 ? "goes up" : "go up";
+      text = by ? `Set ${overIdx + 1} beat its aim by ${by} reps, so ${sets} ${verb}.` : `${sets[0]!.toUpperCase()}${sets.slice(1)} ${verb}.`;
     } else {
       text = `Re-planned ${dir ? `${dir} ` : ""}for its new place in the workout.`;
     }
@@ -293,6 +304,10 @@
   // it was (S-D), and one waiting for its reps to be typed.
   let optionsSetId = $state<string | null>(null);
   let effortSetId = $state<string | null>(null);
+  $effect(() => {
+    if (!effortSetId) untrack(() => { if (get(effortOpenIn) === blockId) effortOpenIn.set(null); });
+  });
+  onDestroy(() => { if (get(effortOpenIn) === blockId) effortOpenIn.set(null); });
   let effortTimer: ReturnType<typeof setTimeout> | null = null;
   let focusSetId = $state<string | null>(null);
 
@@ -641,6 +656,7 @@
     effortSetId = null;
     if (!get(profile).askEffortAfterSet || set.setType === "warmup" || set.rpe != null) return;
     effortSetId = set.id;
+    effortOpenIn.set(blockId);
     effortTimer = setTimeout(() => { if (effortSetId === set.id) effortSetId = null; }, restFor(set) ?? 90_000);
   }
 
@@ -685,6 +701,8 @@
     // else the per-type default. A group rest of 0 goes straight on.
     const effectiveRest = groupRest() ?? set.restDurationMs ?? get(profile).restDefaults[set.setType];
     const startsRest = groupRestMs !== 0 && effectiveRest !== undefined;
+    // Before the save: ticking the last set makes the exercise "done", and it stays open for this.
+    if (!wasCompleted) askEffort(set);
 
     await onMutate((s: WorkoutSession) => {
       const next = updateSet(s, blockId, setId, {
@@ -694,7 +712,7 @@
         completed: !wasCompleted,
         restStartedAtMs: !wasCompleted && startsRest ? Date.now() : null,
       });
-      const planned = wasCompleted ? next : withShortSetPlan(withFirstSetPlan(next, setId), setId);
+      const planned = wasCompleted ? next : withSetReplan(withFirstSetPlan(next, setId), setId);
       // One rest at a time: a new rest replaces the previous set's.
       return !wasCompleted && startsRest ? clearOtherRests(planned, setId) : planned;
     });
@@ -704,7 +722,6 @@
     if (!wasCompleted) {
       void triggerHaptic();
       if (optionsSetId === setId) optionsSetId = null;
-      askEffort(set);
       // An empty reps box logged the plan's reps (bug hunt 3.12): say so the first few times,
       // so someone who did 12 learns they can change it.
       if (fill && set.target && fill.reps === set.target.reps) loggedAsPlanned(setId, fill.weight ?? set.weight, fill.reps);
