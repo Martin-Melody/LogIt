@@ -11,7 +11,7 @@
   import { reveal } from "$lib/transitions";
   import { isNativePlatform } from "$lib/platform/isNative";
   import { askForPush, openAndroidNotificationSettings, pushPermission, type PushPermission } from "$lib/platform/push";
-  import { AUDIENCE_LABEL, changePushSettings, loadPushSettings, pushSettings, quietSummary } from "$lib/features/settings/pushSettings.svelte";
+  import { AUDIENCE_LABEL, changePushSettings, clock, loadPushSettings, pushSettings, quietSummary } from "$lib/features/settings/pushSettings.svelte";
   import { getWorkoutReminders, mondayFirst, setWorkoutReminders, type WorkoutReminders } from "$lib/features/onboarding/workoutReminders";
   import { restAlertsOn, setRestAlerts } from "$lib/services/restTimerService";
 
@@ -48,7 +48,11 @@
     void changePushSettings({ pausedUntil: new Date(Date.now() + hours * 3_600_000).toISOString() });
   }
   const pauseLabel = (h: number) => (h < 1 ? "15 minutes" : h === 1 ? "1 hour" : `${h} hours`);
-  const until = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // 24-hour, like the quiet mode times.
+  const until = (iso: string) => {
+    const d = new Date(iso);
+    return clock(d.getHours() * 60 + d.getMinutes());
+  };
 
   const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   function remindersSummary(r: WorkoutReminders) {

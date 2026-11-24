@@ -38,6 +38,7 @@ export const FEATURES: Feature[] = [
     phone: [
       "/", "/settings", "/settings/walkthroughs", "/settings/navbar", "/settings/diagnostics", "/settings/music", "/settings/sounds", "/home/customize",
       "/settings/workout", "/settings/units", "/settings/appearance", "/settings/plugins", "/settings/about",
+      "/settings/notifications", "/settings/notifications/[kind]", "/settings/notifications/quiet",
       "/profile", "/profile/customize", "/onboarding", "/onboarding/first-workout", "/onboarding/week-done", "/onboarding/coaching", "/onboarding/coach",
     ],
     wherePhone: "Settings",
@@ -47,6 +48,7 @@ export const FEATURES: Feature[] = [
       "Replay any walkthrough from Settings › Walkthroughs",
       "Send a diagnostics report when something goes wrong",
       "Control Spotify, YouTube Music or any music app from a workout (Android)",
+      "Choose which notifications reach your phone, pause them, or keep nights quiet",
     ],
   },
 
