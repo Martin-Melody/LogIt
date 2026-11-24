@@ -87,7 +87,7 @@ Each journey: steps, then what must be true. Run by hand first (findings into
 - Offline: Ava trains offline → nobody sees her (fine); Ben cheers offline → a plain "Couldn't
   send that".
 
-**F2 Invite a friend.** After her first workout Ava sees "Invite a friend" once; shares the link
+**F2 Invite a friend** (built: PR #119). After her first workout Ava sees "Invite a friend" once; shares the link
 and shows the QR. Ben (no app) opens the link → installs → signs up → they follow each other.
 Ben with the app → straight to "Follow each other?" → yes. Cara (private) invites Ava: accepting
 the invite counts as Cara's approval, so they follow each other at once. "Not now" never shows the sheet again;
@@ -168,6 +168,12 @@ From checking PR #118 against F1 and F8 (both fixed on that PR):
 - **F8-a** A cheer that arrives in quiet mode would be held and summarised the next morning
   ("1 cheer"), which is useless. Fix: a cheer push goes out only while the person is still
   training; otherwise it stays in the Inbox only.
+
+From building F2 (fixed in PR #119):
+
+- **F2-a** Someone without an account who opened an invite was sent into onboarding and the invite
+  was lost; once kept, sign-in's own redirect to Home overrode it. Fix: the invite is held through
+  sign-up and onboarding and reopens once they're past the account screens.
 
 ## Decided (Martin, 24 Nov)
 
