@@ -10,7 +10,7 @@ export type WeightSource =
   | { kind: "dumbbells"; weightsKg: number[]; placeName?: string };
 
 /** Nearest loadable weight, and the next loadable one below, for re-planning sets mid-workout
- * (replanAfterShortSet). Without a source: 2.5 kg or 5 lb steps. */
+ * (replanAfterSet). Without a source: 2.5 kg or 5 lb steps. */
 export function loadsFor(source: WeightSource | null, unit: WeightUnit): { round: (kg: number) => number; down: (kg: number) => number } {
   if (source?.kind === "machine") {
     const m = source.machine;

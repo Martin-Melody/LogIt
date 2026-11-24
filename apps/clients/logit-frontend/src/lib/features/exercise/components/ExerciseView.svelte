@@ -262,6 +262,16 @@
   ];
 </script>
 
+{#snippet equipmentField(ex: Exercise)}
+  <label class="flex flex-col gap-1 text-sm font-medium">Equipment
+    <select value={ex.equipment ?? ""} onchange={(e) => void saveField({ equipment: ((e.currentTarget as HTMLSelectElement).value || undefined) as Equipment | undefined })}
+      class="h-10 rounded-md border bg-background px-3 text-sm font-normal">
+      <option value="">Not set</option>
+      {#each EQUIPMENT as eq (eq)}<option value={eq}>{label(EQUIPMENT_LABEL[eq])}</option>{/each}
+    </select>
+  </label>
+{/snippet}
+
 {#if error}
   <p class="px-4 py-2 text-sm text-destructive">{error}</p>
 {/if}
@@ -418,13 +428,7 @@
           <label class="flex flex-col gap-1 text-sm font-medium">Name
             <input bind:value={draftName} onblur={commitName} class="h-10 rounded-md border bg-background px-3 text-sm font-normal focus:outline-none focus:ring-1 focus:ring-ring" />
           </label>
-          <label class="flex flex-col gap-1 text-sm font-medium">Equipment
-            <select value={ex.equipment ?? ""} onchange={(e) => void saveField({ equipment: ((e.currentTarget as HTMLSelectElement).value || undefined) as Equipment | undefined })}
-              class="h-10 rounded-md border bg-background px-3 text-sm font-normal">
-              <option value="">Not set</option>
-              {#each EQUIPMENT as eq (eq)}<option value={eq}>{label(EQUIPMENT_LABEL[eq])}</option>{/each}
-            </select>
-          </label>
+          {@render equipmentField(ex)}
           <div class="flex flex-col gap-1 text-sm font-medium">Muscles
             <MusclePicker primary={ex.primaryMuscles} secondary={ex.secondaryMuscles} onChange={(m: { primary: MuscleGroup[]; secondary: MuscleGroup[] }) => void saveField({ primaryMuscles: m.primary, secondaryMuscles: m.secondary })} />
           </div>
@@ -434,6 +438,8 @@
             Make your own copy to change them.
           </p>
           <Button variant="outline" class="h-11 self-start" onclick={() => void makeOwnCopy()}><Copy class="h-4 w-4" /> Make my own copy</Button>
+          <!-- What your gym has (a T-bar row on a plate-loaded machine, Martin 24 Nov) is yours to set, and keeps the history. -->
+          {#if !fromCoach}{@render equipmentField(ex)}{/if}
         {/if}
       </section>
 

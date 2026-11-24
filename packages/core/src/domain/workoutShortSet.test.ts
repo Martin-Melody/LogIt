@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSession, replanAfterShortSet, replanForOrder, useReplan, type SetTarget, type WorkoutSession } from "./workout";
+import { createSession, replanAfterSet, replanForOrder, useReplan, type SetTarget, type WorkoutSession } from "./workout";
 
 type S = { reps: number; weight: number; completed?: boolean; setType?: string; target?: SetTarget };
 function session(sets: S[]): WorkoutSession {
@@ -22,7 +22,7 @@ describe("a short set re-plans the sets after it", () => {
   ]);
 
   it("keeps the reps and lowers the weight, remembering the original plan", () => {
-    const out = sets(replanAfterShortSet(s, "b", "s2", loads));
+    const out = sets(replanAfterSet(s, "b", "s2", loads));
     expect(out[2]).toMatchObject({ weight: 15, target: { reps: 8, weight: 15, planned: { reps: 8, weight: 17.5 } } });
     // 12.5 × 0.93 rounds back to 12.5, where 8 would be ~5: a step lighter keeps the 8.
     expect(out[3]).toMatchObject({ weight: 10, target: { reps: 8, weight: 10, planned: { reps: 8, weight: 12.5 } } });
@@ -31,17 +31,17 @@ describe("a short set re-plans the sets after it", () => {
 
   it("does nothing for one rep short, an unticked set, or a set with no plan", () => {
     const oneShort = session([{ reps: 9, weight: 17.5, completed: true, target: { reps: 10, weight: 17.5 } }, plan(8, 17.5)]);
-    expect(replanAfterShortSet(oneShort, "b", "s1", loads)).toEqual(oneShort);
+    expect(replanAfterSet(oneShort, "b", "s1", loads)).toEqual(oneShort);
     const notTicked = session([{ reps: 5, weight: 17.5, target: { reps: 10, weight: 17.5 } }, plan(8, 17.5)]);
-    expect(replanAfterShortSet(notTicked, "b", "s1", loads)).toEqual(notTicked);
+    expect(replanAfterSet(notTicked, "b", "s1", loads)).toEqual(notTicked);
     const noPlan = session([{ reps: 5, weight: 17.5, completed: true }, plan(8, 17.5)]);
-    expect(replanAfterShortSet(noPlan, "b", "s1", loads)).toEqual(noPlan);
+    expect(replanAfterSet(noPlan, "b", "s1", loads)).toEqual(noPlan);
   });
 
   it("judges a set done at another weight by the reps it's worth at the plan", () => {
-    // 8 at 20 kg ≈ 10.6 at 17.5: not short of 10.
+    // 8 at 20 kg ≈ 13 at 17.5: not short of 10 but 3 over, so the next set goes up.
     const heavier = session([{ reps: 8, weight: 20, completed: true, target: { reps: 10, weight: 17.5 } }, plan(8, 17.5)]);
-    expect(replanAfterShortSet(heavier, "b", "s1", loads)).toEqual(heavier);
+    expect(sets(replanAfterSet(heavier, "b", "s1", loads))[1]).toMatchObject({ weight: 20, target: { reps: 8, weight: 20 } });
   });
 
   it("leaves sets the lifter has typed into", () => {
@@ -50,25 +50,25 @@ describe("a short set re-plans the sets after it", () => {
       { reps: 0, weight: 20, target: { reps: 8, weight: 17.5 } },
       { reps: 6, weight: 17.5, target: { reps: 8, weight: 17.5 } },
     ]);
-    expect(replanAfterShortSet(typed, "b", "s1", loads)).toEqual(typed);
+    expect(replanAfterSet(typed, "b", "s1", loads)).toEqual(typed);
   });
 
   it("lowers the reps when the weight can't come down a step", () => {
     const machine = { round: (kg: number) => Math.round(kg / 10) * 10, down: (kg: number) => kg - 10 }; // 10 kg plates
     const m = session([{ reps: 8, weight: 50, completed: true, target: { reps: 10, weight: 50 } }, plan(10, 50)]);
-    expect(sets(replanAfterShortSet(m, "b", "s1", machine))[1]).toMatchObject({ weight: 50, target: { reps: 8, weight: 50, planned: { reps: 10, weight: 50 } } });
+    expect(sets(replanAfterSet(m, "b", "s1", machine))[1]).toMatchObject({ weight: 50, target: { reps: 8, weight: 50, planned: { reps: 10, weight: 50 } } });
   });
 
   it("a second short set keeps the first original plan", () => {
-    const once = replanAfterShortSet(s, "b", "s2", loads);
+    const once = replanAfterSet(s, "b", "s2", loads);
     const third = sets(once).map((x, i) => (i === 2 ? { ...x, reps: 5, completed: true } : x));
-    const twice = sets(replanAfterShortSet(session(third), "b", "s3", loads));
+    const twice = sets(replanAfterSet(session(third), "b", "s3", loads));
     expect(twice[3]).toMatchObject({ weight: 7.5, target: { weight: 7.5, planned: { reps: 8, weight: 12.5 } } });
     expect(twice[2]!.target!.planned).toEqual({ reps: 8, weight: 17.5 });
   });
 
   it("Keep the plan and Use lighter swap back and forth", () => {
-    const re = replanAfterShortSet(s, "b", "s2", loads);
+    const re = replanAfterSet(s, "b", "s2", loads);
     expect(sets(re)[2]!.target!.replanned).toEqual({ reps: 8, weight: 15, why: "short" });
     const kept = useReplan(re, "b", "plan");
     expect(sets(kept).slice(2).map((x) => [x.weight, x.target!.weight])).toEqual([[17.5, 17.5], [12.5, 12.5]]);
@@ -77,6 +77,31 @@ describe("a short set re-plans the sets after it", () => {
     // A set started in between keeps what it has.
     const started = session(sets(kept).map((x, i) => (i === 2 ? { ...x, reps: 8 } : x)));
     expect(sets(useReplan(started, "b", "replan"))[2]!.weight).toBe(17.5);
+  });
+});
+
+describe("a set that beat its aim re-plans the sets after it up", () => {
+  // Martin's T-Bar Row, 24 Nov: 42.5 × 13 re-planned the rest to 42.5; then 45 × 8 where 42.5 × 8 was the aim.
+  it("goes up to the weight the set was worth, keeping the reps and the first plan", () => {
+    const s = session([
+      { reps: 13, weight: 42.5, completed: true, target: { reps: 13, weight: 52.5 } },
+      { reps: 8, weight: 45, completed: true, target: { reps: 8, weight: 42.5, planned: { reps: 8, weight: 52.5 }, replanned: { reps: 8, weight: 42.5, why: "short" } } },
+      { reps: 0, weight: 42.5, target: { reps: 6, weight: 42.5, planned: { reps: 6, weight: 52.5 }, replanned: { reps: 6, weight: 42.5, why: "short" } } },
+    ]);
+    expect(sets(replanAfterSet(s, "b", "s2", loads))[2]).toMatchObject({
+      weight: 45, target: { reps: 6, weight: 45, planned: { reps: 6, weight: 52.5 }, replanned: { reps: 6, weight: 45, why: "over" } },
+    });
+  });
+
+  it("adds reps, at most 2, when the next weight up is too far", () => {
+    const machine = { round: (kg: number) => Math.round(kg / 10) * 10, down: (kg: number) => kg - 10 };
+    const m = session([{ reps: 13, weight: 50, completed: true, target: { reps: 10, weight: 50 } }, plan(10, 50)]);
+    expect(sets(replanAfterSet(m, "b", "s1", machine))[1]).toMatchObject({ weight: 50, target: { reps: 12, weight: 50, replanned: { why: "over" } } });
+  });
+
+  it("does nothing for one rep over", () => {
+    const oneOver = session([{ reps: 11, weight: 17.5, completed: true, target: { reps: 10, weight: 17.5 } }, plan(8, 17.5)]);
+    expect(replanAfterSet(oneOver, "b", "s1", loads)).toEqual(oneOver);
   });
 });
 
