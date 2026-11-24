@@ -47,6 +47,10 @@ people know for it (Strava clubs, Facebook groups).
   you're going to, with a countdown), Friends (new stories, who's training now)
   and Social (latest unread). Each shows only when it has something and sits in
   the normal Customise home list.
+- **Customising Home** (proposed 24 Nov, not yet approved): edit Home in place,
+  as on a phone's home screen. Long-press a card or tap Customise; drag by the
+  handle, − hides; "Add a card" opens the hidden cards with previews, filtered
+  by kind. Replaces today's arrows-only list page.
 - **The whole app is 16+** (23 Nov).
 
 ## Open
@@ -63,7 +67,7 @@ people know for it (Strava clubs, Facebook groups).
 3. Messages: chats, requests, message controls, photos in messages.
 4. Stories: viewer, adding a story, audience settings.
 5. Groups: page, events, chat, board, per-group settings.
-6. Boards on Social, and the Home cards.
+6. Boards on Social, the Home cards and the new way to customise Home.
 7. Federation (`docs/social-federation-design.md`).
 
 ## Rules so federation fits later
