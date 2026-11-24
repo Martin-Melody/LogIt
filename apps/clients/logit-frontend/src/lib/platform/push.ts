@@ -26,6 +26,7 @@ const AppSettings = registerPlugin<{ openNotificationSettings(): Promise<void> }
 
 let started = false;
 let token: string | null = null;
+let sending: string | null = null;
 
 // The module, not the plugin: a Capacitor plugin is a proxy that answers to any property,
 // `then` included, so returning it from an async function never resolves.
@@ -50,8 +51,13 @@ export async function startPush(): Promise<void> {
     for (const c of CHANNELS) await push.createChannel(c);
     await push.addListener("registration", ({ value }) => {
       token = value;
+      // Start and coming to the front can both register at once: one request per token is enough.
+      if (sending === value) return;
+      sending = value;
       const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      pushApi.registerDevice(value, zone).catch((e) => log.warn("push", "Couldn't register this phone for pushes", e));
+      pushApi.registerDevice(value, zone)
+        .catch((e) => log.warn("push", "Couldn't register this phone for pushes", e))
+        .finally(() => (sending = null));
     });
     await push.addListener("registrationError", (e) => log.warn("push", "Firebase registration failed", e));
     // In the app: no banner (the badge and Inbox update), only a fresh count.

@@ -159,6 +159,19 @@ public class PushTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_same_new_token_sent_twice_at_once_is_saved_once_without_an_error()
+    {
+        // The app registers at start and again on coming to the front; after a token refresh both
+        // retries can land together (seen on Martin's phone, 2026-11-24).
+        var (http, _, _) = await _api.SignUpAsync("ava");
+        var body = new { token = "new-phone", platform = "android", timeZone = "Europe/Dublin" };
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => http.PutAsJsonAsync("/push/devices", body)));
+        Assert.All(results, r => Assert.Equal(HttpStatusCode.NoContent, r.StatusCode));
+        Assert.Equal(1, await _api.WithDbAsync(db => db.PushDevices.CountAsync()));
+        Assert.Equal(1, await _api.WithDbAsync(db => db.PushSettings.CountAsync()));
+    }
+
+    [Fact]
     public async Task Settings_round_trip_and_reject_nonsense()
     {
         var (http, _) = await WithPhone("ava", "ava-phone");
