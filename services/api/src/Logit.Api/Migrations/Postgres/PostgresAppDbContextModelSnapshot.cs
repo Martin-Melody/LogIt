@@ -1070,6 +1070,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid?>("PostId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("ReadAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1082,6 +1085,8 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasKey("Id");
 
                     b.HasIndex("ActorId");
+
+                    b.HasIndex("PushedAt");
 
                     b.HasIndex("UserId", "CreatedAt");
 
@@ -1260,6 +1265,89 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("RepostOfId");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PushDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PushDevices");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PushSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Coaching")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Comments")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Follows")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastBundleAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Likes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Messages")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("PausedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("QuietDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuietFromMinute")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("QuietOn")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("QuietToMinute")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("PushSettings");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.RefreshToken", b =>
@@ -2620,6 +2708,28 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Author");
 
                     b.Navigation("RepostOf");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PushDevice", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.PushSettings", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("Logit.Api.Data.Entities.PushSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.RefreshToken", b =>
