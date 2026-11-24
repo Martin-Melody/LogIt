@@ -93,7 +93,7 @@ Ben with the app → straight to "Follow each other?" → yes. Cara (private) in
 the invite counts as Cara's approval, so they follow each other at once. "Not now" never shows the sheet again;
 Social › Find people always has it. No contacts uploaded.
 
-**F3 Messages and requests.** Ben messages Ava → straight to her chats (she follows him). Dev
+**F3 Messages and requests** (built: PR #120; photos, shared cards and group chats later). Ben messages Ava → straight to her chats (she follows him). Dev
 messages Ava → Requests, no push, no badge on Social; Ava accepts → it moves to chats and Dev
 sees "Seen" only from then. Photo in a request stays blurred until accepted. Ava sets "Everyone
 else: Don't receive" → Dev can't start a thread. Read receipts off → neither side sees "Seen".
@@ -174,6 +174,14 @@ From building F2 (fixed in PR #119):
 - **F2-a** Someone without an account who opened an invite was sent into onboarding and the invite
   was lost; once kept, sign-in's own redirect to Home overrode it. Fix: the invite is held through
   sign-up and onboarding and reopens once they're past the account screens.
+
+From building F3 (PR #120):
+
+- **F3-a** The offline outbox never sent anything after an empty first flush (app start with nothing
+  waiting): its "already sending" marker was set after it had cleared itself. Fixed, with a unit test.
+- **F10-a** (not fixed) A notification's actor is deleted with their account, so a deleted account's
+  cheers vanish from the Inbox instead of staying as "Deleted account" (decision 1). Needs
+  notifications to keep a null actor and show "Deleted account" for every type.
 
 ## Decided (Martin, 24 Nov)
 
