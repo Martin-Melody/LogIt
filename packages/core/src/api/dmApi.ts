@@ -25,6 +25,9 @@ export interface DmMessage {
   body: string;
   createdAtMs: number;
   mine: boolean;
+  /** A shared workout or record (see domain/messageCard). */
+  cardType: string | null;
+  cardJson: string | null;
 }
 
 export interface DmChat {
@@ -49,8 +52,11 @@ export const dmApi = {
   threads: (box: "chats" | "requests") => apiClient.fetch<DmThread[]>(`/dm/threads?box=${box}`),
   unread: () => apiClient.fetch<{ chats: number; requests: number }>("/dm/unread"),
   chat: (to: DmTo, beforeMs?: number) => apiClient.fetch<DmChat>(`/dm/chat?${q(to)}${beforeMs ? `&before=${beforeMs}` : ""}`),
-  send: (to: DmTo, clientId: string, body: string) =>
-    apiClient.fetch<DmMessage>("/dm/send", { method: "POST", body: JSON.stringify({ ...to, clientId, body }) }),
+  send: (to: DmTo, clientId: string, body: string, card?: { type: string; json: string }) =>
+    apiClient.fetch<DmMessage>("/dm/send", {
+      method: "POST",
+      body: JSON.stringify({ ...to, clientId, body, ...(card ? { cardType: card.type, cardJson: card.json } : {}) }),
+    }),
   read: (threadId: string) => apiClient.fetch<void>(`/dm/threads/${threadId}/read`, { method: "POST" }),
   accept: (threadId: string) => apiClient.fetch<void>(`/dm/threads/${threadId}/accept`, { method: "POST" }),
   remove: (threadId: string) => apiClient.fetch<void>(`/dm/threads/${threadId}`, { method: "DELETE" }),

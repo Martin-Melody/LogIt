@@ -9,6 +9,7 @@ export interface PendingDm {
   clientId: string;
   to: DmTo;
   body: string;
+  card?: { type: string; json: string };
   createdAtMs: number;
   /** Set when the server refused it (blocked, their controls): shown instead of retrying. */
   error?: string;
@@ -53,7 +54,7 @@ async function sendWaiting(): Promise<void> {
   for (const p of [...outbox.items]) {
     if (p.error) continue;
     try {
-      await dmApi.send($state.snapshot(p.to), p.clientId, p.body);
+      await dmApi.send($state.snapshot(p.to), p.clientId, p.body, p.card ? $state.snapshot(p.card) : undefined);
       outbox.items = outbox.items.filter((x) => x.clientId !== p.clientId);
     } catch (e) {
       if (!(e instanceof ApiError) || e.status >= 500 || e.status === 429) break; // offline or the server's trouble: later
@@ -63,9 +64,9 @@ async function sendWaiting(): Promise<void> {
   }
 }
 
-export function queueDm(to: DmTo, body: string): Promise<void> {
+export function queueDm(to: DmTo, body: string, card?: { type: string; json: string }): Promise<void> {
   load();
-  outbox.items = [...outbox.items, { clientId: crypto.randomUUID(), to, body, createdAtMs: Date.now() }];
+  outbox.items = [...outbox.items, { clientId: crypto.randomUUID(), to, body, ...(card ? { card } : {}), createdAtMs: Date.now() }];
   save();
   return flushOutbox();
 }

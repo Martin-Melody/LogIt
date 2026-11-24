@@ -95,7 +95,7 @@
   <section class="min-w-0 flex-1 flex-col {to ? 'flex' : 'hidden md:flex'}">
     {#if to}
       <button type="button" onclick={() => goto("/social/messages")} class="border-b border-border px-4 py-2 text-left text-xs text-muted-foreground md:hidden">‹ All messages</button>
-      <DmChat {to} onchange={load} />
+      <DmChat {to} onchange={load} ondelete={() => { void goto("/social/messages"); void load(); }} />
     {:else}
       <div class="m-auto flex w-full max-w-[420px] flex-col gap-6 px-6">
         <div class="flex flex-col items-center gap-2 text-center text-muted-foreground">

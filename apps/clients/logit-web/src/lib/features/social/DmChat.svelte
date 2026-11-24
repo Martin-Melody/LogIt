@@ -2,13 +2,21 @@
   import { onDestroy, tick } from "svelte";
   import { dmApi, type DmChat, type DmTo } from "@logit/core/api/dmApi";
   import Avatar from "./Avatar.svelte";
-  import { dmBadge } from "./socialData.svelte";
+  import { dmBadge, loadComposerSources, type ComposerSources } from "./socialData.svelte";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
+  import * as Dialog from "$lib/components/ui/dialog";
+  import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
+  import PlusIcon from "@lucide/svelte/icons/plus";
+  import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
+  import TrophyIcon from "@lucide/svelte/icons/trophy";
+  import { cardTitle, readCard, recordCard, workoutCard } from "@logit/core/domain/messageCard";
 
   // One conversation between people (the phone's chat screen, design canvas M2), by username
   // or thread. Same server rules as the phone: a request you received shows Accept / Delete;
   // "Seen" only with read receipts on for both. Polls while open; no push on the web.
 
-  let { to, onchange }: { to: DmTo; onchange?: () => void } = $props();
+  let { to, onchange, ondelete }: { to: DmTo; onchange?: () => void; ondelete?: () => void } = $props();
 
   let chat = $state<DmChat | null>(null);
   let error = $state<string | null>(null);
@@ -18,6 +26,10 @@
   let older = $state(false);
   let listEl = $state<HTMLDivElement | null>(null);
   let currentKey = "";
+  let confirmDelete = $state(false);
+  let sharing = $state(false);
+  let shareTab = $state<"workouts" | "records">("workouts");
+  let sources = $state<ComposerSources | null>(null);
 
   const name = $derived(chat?.other ? chat.other.displayName || chat.other.username : chat ? "Deleted account" : "");
   const lastMine = $derived(chat?.messages.findLast((m) => m.mine) ?? null);
@@ -87,6 +99,33 @@
     }
   }
 
+  async function sendCard(card: { type: string; json: string }) {
+    sharing = false;
+    if (!chat) return;
+    try {
+      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), "", card);
+      await load(true);
+      onchange?.();
+    } catch (e) {
+      sendError = e instanceof Error ? `${e.message} Try again.` : "Couldn't send. Try again.";
+    }
+  }
+
+  function openShare() {
+    sharing = true;
+    if (!sources) void loadComposerSources().then((s) => (sources = s)).catch(() => (sources = { sessions: [], prs: [], splits: [], library: [], habits: [] }));
+  }
+
+  async function deleteChat() {
+    if (!chat?.threadId) return;
+    try {
+      await dmApi.remove(chat.threadId);
+      ondelete?.();
+    } catch {
+      sendError = "Couldn't delete. Try again.";
+    }
+  }
+
   async function answer(accept: boolean) {
     if (!chat?.threadId) return;
     try {
@@ -131,6 +170,18 @@
       {:else}
         <Avatar name="" size={36} /><span class="text-sm font-semibold">{name}</span>
       {/if}
+      {#if chat.threadId}
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            {#snippet child({ props })}
+              <button {...props} type="button" aria-label="Chat options" class="ml-auto flex size-9 items-center justify-center rounded-[9px] border border-border"><MoreHorizontalIcon class="size-4" /></button>
+            {/snippet}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content align="end">
+            <DropdownMenu.Item class="text-destructive" onclick={() => (confirmDelete = true)}>Delete chat</DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      {/if}
     </header>
   {/if}
 
@@ -148,10 +199,23 @@
         {#if i === 0 || dayLabel(m.createdAtMs) !== dayLabel(chat.messages[i - 1]!.createdAtMs)}
           <div class="py-1.5 text-center text-[11px] text-muted-foreground">{dayLabel(m.createdAtMs)}</div>
         {/if}
-        <div class="max-w-[70%] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'self-end bg-primary/15' : 'self-start bg-muted'}">
-          <span class="whitespace-pre-wrap break-words">{m.body}</span>
-          <span class="mt-0.5 block text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
-        </div>
+        {@const card = readCard(m.cardType, m.cardJson)}
+        {#if card}
+          <div class="flex w-[280px] max-w-[70%] flex-col gap-1 rounded-xl border border-border bg-background px-3 py-2.5 {m.mine ? 'self-end' : 'self-start'}">
+            <span class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {#if card.type === "PersonalRecord"}<TrophyIcon class="size-3" />New record{:else}<DumbbellIcon class="size-3" />Workout{/if}
+            </span>
+            <span class="text-[13px] font-semibold tabular-nums">{cardTitle(card)}</span>
+            {#if card.type === "WorkoutSession" && card.data.exercises?.length}<span class="text-xs text-muted-foreground">{card.data.exercises.map((e) => `${e.name} (${e.sets})`).join(" · ")}</span>{/if}
+            <span class="text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
+          </div>
+        {/if}
+        {#if m.body}
+          <div class="max-w-[70%] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'self-end bg-primary/15' : 'self-start bg-muted'}">
+            <span class="whitespace-pre-wrap break-words">{m.body}</span>
+            <span class="mt-0.5 block text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
+          </div>
+        {/if}
       {/each}
       {#if seen}<span class="self-end text-[11px] text-muted-foreground">Seen</span>{/if}
     {/if}
@@ -171,6 +235,7 @@
   {:else if chat}
     <form class="flex flex-col gap-1.5 border-t border-border px-4 py-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
       <div class="flex items-end gap-2">
+        <button type="button" onclick={openShare} aria-label="Share a workout or record" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground"><PlusIcon class="size-4" /></button>
         <label for="dm-compose" class="sr-only">Message {name}</label>
         <textarea id="dm-compose" bind:value={draft} onkeydown={onKey} rows={2} maxlength={2000} placeholder="Message {name}"
           class="flex-1 resize-y rounded-[10px] border border-input bg-background px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
@@ -180,3 +245,49 @@
     </form>
   {/if}
 </div>
+
+<AlertDialog.Root bind:open={confirmDelete}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Delete this chat?</AlertDialog.Title>
+      <AlertDialog.Description>It's removed for you only. {name} keeps their copy, and a new message from them starts it again.</AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={deleteChat}>Delete</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>
+
+<Dialog.Root bind:open={sharing}>
+  <Dialog.Content class="sm:max-w-[440px]">
+    <Dialog.Header>
+      <Dialog.Title>Share a workout or record</Dialog.Title>
+      <Dialog.Description>It goes into the chat as a card.</Dialog.Description>
+    </Dialog.Header>
+    <div class="flex gap-1 self-start rounded-[9px] bg-muted p-0.5" role="tablist" aria-label="What to share">
+      {#each [["workouts", "Workouts"], ["records", "Records"]] as [v, label] (v)}
+        <button type="button" role="tab" aria-selected={shareTab === v} onclick={() => (shareTab = v as "workouts" | "records")}
+          class="h-7 rounded-[7px] px-3 text-xs font-medium {shareTab === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}">{label}</button>
+      {/each}
+    </div>
+    <div class="flex max-h-80 flex-col overflow-y-auto">
+      {#if !sources}
+        <p class="py-6 text-center text-[13px] text-muted-foreground">Loading…</p>
+      {:else if shareTab === "workouts"}
+        {#each sources.sessions as { session, title } (session.id)}
+          <button type="button" onclick={() => sendCard({ type: "WorkoutSession", json: workoutCard(session) })} class="flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-[13px] hover:bg-muted">
+            <DumbbellIcon class="size-4 shrink-0 text-muted-foreground" /><span class="min-w-0 flex-1 truncate">{title}</span>
+          </button>
+        {:else}<p class="py-6 text-center text-[13px] text-muted-foreground">Finished workouts show here.</p>{/each}
+      {:else}
+        {#each sources.prs as pr (pr.exerciseName + pr.atMs)}
+          {@const json = recordCard(pr)}
+          <button type="button" onclick={() => sendCard({ type: "PersonalRecord", json })} class="flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-[13px] hover:bg-muted">
+            <TrophyIcon class="size-4 shrink-0 text-muted-foreground" /><span class="min-w-0 flex-1 truncate tabular-nums">{cardTitle(readCard("PersonalRecord", json)!)}</span>
+          </button>
+        {:else}<p class="py-6 text-center text-[13px] text-muted-foreground">Your records show here once you've logged some.</p>{/each}
+      {/if}
+    </div>
+  </Dialog.Content>
+</Dialog.Root>

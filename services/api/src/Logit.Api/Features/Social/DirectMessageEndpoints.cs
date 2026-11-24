@@ -29,12 +29,22 @@ public static class DirectMessageEndpoints
 
     public record PersonDto(string Username, string DisplayName, string? AvatarUrl);
     public record ThreadDto(Guid Id, PersonDto? Other, string LastBody, long LastAtMs, bool LastMine, bool Unread);
-    public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine);
+    public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null);
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
     public record ChatDto(Guid? ThreadId, PersonDto? Other, bool Accepted, long? SeenAtMs, bool CanSend, string? Why, List<MessageDto> Messages);
-    public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string Body);
+    public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string? Body, string? CardType = null, string? CardJson = null);
+
+    /// What can be shared into a chat as a card (post payload formats).
+    public static readonly string[] CardTypes = ["WorkoutSession", "PersonalRecord"];
+    private const int MaxCardJson = 4000;
+
+    private static MessageDto Dto(DirectMessage x, Guid me) => new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType, x.CardJson);
+
+    /// The list's one-line preview: the text, or what was shared.
+    private static string Preview(DirectMessage x) =>
+        x.Body.Length > 0 ? x.Body : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
     private static PersonDto? Person(User? u) => u is null ? null : new(u.Username, u.DisplayName, u.AvatarUrl);
@@ -73,7 +83,7 @@ public static class DirectMessageEndpoints
             .ToListAsync();
         return Results.Ok(rows
             .OrderByDescending(r => r.Last!.CreatedAt)
-            .Select(r => new ThreadDto(r.ThreadId, Person(r.Other), r.Last!.Body, Ms(r.Last.CreatedAt), r.Last.SenderId == me,
+            .Select(r => new ThreadDto(r.ThreadId, Person(r.Other), Preview(r.Last!), Ms(r.Last!.CreatedAt), r.Last.SenderId == me,
                 r.Last.SenderId != me && (r.LastReadAt == null || r.LastReadAt < r.Last.CreatedAt))));
     }
 
@@ -121,7 +131,7 @@ public static class DirectMessageEndpoints
             var rows = await db.DirectMessages
                 .Where(x => x.ThreadId == mine.ThreadId && x.CreatedAt < cutoff && (mine.ClearedAt == null || x.CreatedAt > mine.ClearedAt))
                 .OrderByDescending(x => x.CreatedAt).Take(Page).ToListAsync();
-            messages = rows.AsEnumerable().Reverse().Select(x => new MessageDto(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == meId)).ToList();
+            messages = rows.AsEnumerable().Reverse().Select(x => Dto(x, meId)).ToList();
             var theirs = other is null ? null : await db.DmMembers.FirstOrDefaultAsync(m => m.ThreadId == mine.ThreadId && m.UserId == other.Id);
             if (theirs is { Accepted: true, LastReadAt: { } read } && me.ShowReadReceipts && other!.ShowReadReceipts) seen = Ms(read);
         }
@@ -142,12 +152,19 @@ public static class DirectMessageEndpoints
     {
         var meId = caller.GetUserId();
         var body = (req.Body ?? "").Trim();
-        if (body.Length == 0) return Results.BadRequest(new { error = "Write something first." });
+        if (req.CardType is not null)
+        {
+            if (!CardTypes.Contains(req.CardType)) return Results.BadRequest(new { error = "That can't be shared in a message." });
+            if (string.IsNullOrEmpty(req.CardJson) || req.CardJson.Length > MaxCardJson) return Results.BadRequest(new { error = "That's too big to share." });
+            try { using var _ = System.Text.Json.JsonDocument.Parse(req.CardJson); }
+            catch (System.Text.Json.JsonException) { return Results.BadRequest(new { error = "That can't be shared in a message." }); }
+        }
+        if (body.Length == 0 && req.CardType is null) return Results.BadRequest(new { error = "Write something first." });
         if (body.Length > MaxLength) return Results.BadRequest(new { error = $"Keep it under {MaxLength} characters." });
         if (string.IsNullOrWhiteSpace(req.ClientId) || req.ClientId.Length > 64) return Results.BadRequest(new { error = "Missing message id." });
 
         var dup = await db.DirectMessages.FirstOrDefaultAsync(x => x.SenderId == meId && x.ClientId == req.ClientId);
-        if (dup is not null) return Results.Ok(new MessageDto(dup.Id, dup.ClientId, dup.Body, Ms(dup.CreatedAt), true));
+        if (dup is not null) return Results.Ok(Dto(dup, meId));
 
         var me = await db.Users.FirstAsync(u => u.Id == meId);
         User? other;
@@ -196,7 +213,11 @@ public static class DirectMessageEndpoints
         mine.Accepted = true; // replying accepts a request
         var now = DateTime.UtcNow;
         mine.LastReadAt = now;
-        var message = new DirectMessage { ClientId = req.ClientId, Thread = thread!, SenderId = meId, Body = body, CreatedAt = now };
+        var message = new DirectMessage
+        {
+            ClientId = req.ClientId, Thread = thread!, SenderId = meId, Body = body, CreatedAt = now,
+            CardType = req.CardType, CardJson = req.CardType is null ? null : req.CardJson,
+        };
         db.DirectMessages.Add(message);
         thread!.LastMessageAt = now;
         try
@@ -211,7 +232,7 @@ public static class DirectMessageEndpoints
             var id = await db.DmThreads.Where(t => t.PairKey == key).Select(t => t.Id).FirstAsync();
             return await Send(req with { Username = null, ThreadId = id }, caller, db);
         }
-        return Results.Ok(new MessageDto(message.Id, message.ClientId, message.Body, Ms(now), true));
+        return Results.Ok(Dto(message, meId));
     }
 
     private static async Task<IResult> Read(Guid id, ClaimsPrincipal caller, AppDbContext db)

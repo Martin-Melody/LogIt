@@ -7,7 +7,12 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
-  import { Loader2, Send } from "lucide-svelte";
+  import { Loader2, MoreHorizontal, Plus, Send, Trash2, User } from "lucide-svelte";
+  import MessageCard from "$lib/components/social/MessageCard.svelte";
+  import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
+  import ActionSheet from "$lib/components/ActionSheet.svelte";
+  import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import { readCard } from "@logit/core/domain/messageCard";
   import { toast } from "svelte-sonner";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -35,6 +40,9 @@
   let training = $state<TrainingFriend | null>(null);
   let listEl = $state<HTMLDivElement | null>(null);
   let now = $state(Date.now());
+  let sharing = $state(false);
+  let menuOpen = $state(false);
+  let confirmDelete = $state(false);
 
   const name = $derived(chat?.other ? chat.other.displayName || chat.other.username : chat ? "Deleted account" : "");
   // Waiting messages for this chat: by username or thread, whichever the page was opened with.
@@ -98,6 +106,26 @@
     await load();
   }
 
+  async function sendCard(card: { type: string; json: string }) {
+    sharing = false;
+    if (!chat || !to) return;
+    const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", card);
+    await scrollDown();
+    await sending;
+    await load();
+  }
+
+  async function deleteChat() {
+    if (!chat?.threadId) return;
+    try {
+      await dmApi.remove(chat.threadId);
+      toast.success("Chat deleted");
+      await goto("/messages", { replaceState: true });
+    } catch {
+      toast.error("Couldn't delete. Try again.");
+    }
+  }
+
   async function accept() {
     if (!chat?.threadId) return;
     try {
@@ -143,6 +171,9 @@
     {:else}
       <h1 class="page-title">{name}</h1>
     {/if}
+    {#if chat?.threadId}
+      <button type="button" aria-label="Chat options" class="flex size-11 shrink-0 items-center justify-center text-muted-foreground" onclick={() => (menuOpen = true)}><MoreHorizontal class="size-5" /></button>
+    {/if}
   </PageHeader>
 
   <div bind:this={listEl} class="flex flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3">
@@ -163,14 +194,17 @@
       {/if}
       {#each chat.messages as m, i (m.id)}
         {#if gap(chat.messages, i)}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(m.createdAtMs, now)}</p>{/if}
-        <div in:fade={{ duration: 150 }} class="flex {m.mine ? 'justify-end' : 'justify-start'}">
-          <p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>
+        {@const card = readCard(m.cardType, m.cardJson)}
+        <div in:fade={{ duration: 150 }} class="flex flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
+          {#if card}<MessageCard {card} mine={m.mine} />{/if}
+          {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
         </div>
       {/each}
       {#if seen}<p transition:fade={{ duration: 150 }} class="pr-1 text-right text-[12px] text-muted-foreground">Seen</p>{/if}
       {#each pending as p (p.clientId)}
         <div in:fade={{ duration: 150 }} class="flex flex-col items-end gap-1">
-          <p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl bg-primary/60 px-3.5 py-2 text-[15px] leading-snug text-primary-foreground">{p.body}</p>
+          {#if p.card && readCard(p.card.type, p.card.json)}<div class="opacity-60"><MessageCard card={readCard(p.card.type, p.card.json)!} mine /></div>{/if}
+          {#if p.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl bg-primary/60 px-3.5 py-2 text-[15px] leading-snug text-primary-foreground">{p.body}</p>{/if}
           {#if p.error}
             <span class="flex items-center gap-2 text-[12px] text-destructive">{p.error}
               <button type="button" class="h-8 rounded-md border border-border px-2 text-foreground" onclick={() => discardDm(p.clientId)}>Remove</button>
@@ -197,6 +231,7 @@
     {#if chat.messages.length > 0}<p class="shrink-0 border-t border-border px-4 py-3 text-center text-[13px] text-muted-foreground">{chat.why}</p>{/if}
   {:else if chat}
     <form class="flex shrink-0 items-end gap-2 border-t border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
+      <button type="button" aria-label="Share a workout or record" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (sharing = true)}><Plus class="size-5" /></button>
       <Textarea
         bind:value={draft}
         rows={1}
@@ -212,3 +247,22 @@
     </form>
   {/if}
 </div>
+
+{#if sharing}<ShareCardSheet onpick={sendCard} onclose={() => (sharing = false)} />{/if}
+<ActionSheet
+  open={menuOpen}
+  onOpenChange={(v) => (menuOpen = v)}
+  title={name}
+  items={[
+    ...(chat?.other ? [{ icon: User, label: "View profile", onSelect: () => void goto(`/social/${chat!.other!.username}`) }] : []),
+    { icon: Trash2, label: "Delete chat", destructive: true, onSelect: () => (confirmDelete = true) },
+  ]}
+/>
+<ConfirmDialog
+  open={confirmDelete}
+  onOpenChange={(v) => (confirmDelete = v)}
+  title="Delete this chat?"
+  description="It's removed for you only. {name} keeps their copy, and a new message from them starts it again."
+  confirmLabel="Delete"
+  onConfirm={deleteChat}
+/>

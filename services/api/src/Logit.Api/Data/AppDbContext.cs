@@ -337,6 +337,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         {
             e.Property(m => m.ClientId).HasMaxLength(64);
             e.Property(m => m.Body).HasMaxLength(2000);
+            e.Property(m => m.CardType).HasMaxLength(32);
+            e.Property(m => m.CardJson).HasMaxLength(4000);
             e.HasIndex(m => new { m.ThreadId, m.CreatedAt });
             e.HasIndex(m => new { m.SenderId, m.ClientId }).IsUnique();
             e.HasIndex(m => m.PushedAt);

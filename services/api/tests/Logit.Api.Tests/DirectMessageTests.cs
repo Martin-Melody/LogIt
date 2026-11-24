@@ -139,4 +139,23 @@ public class DirectMessageTests : IDisposable
         Assert.Equal("see you Monday", chat.GetProperty("messages")[0].GetProperty("body").GetString());
         Assert.False(chat.GetProperty("canSend").GetBoolean());
     }
+
+    [Fact]
+    public async Task A_workout_or_record_can_be_shared_as_a_card_and_the_list_says_so()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        await Follow(ava, "ben");
+        var record = """{"exerciseName":"Squat","weight":107.5,"unit":"kg","reps":3}""";
+        (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card1", cardType = "PersonalRecord", cardJson = record })).EnsureSuccessStatusCode();
+
+        var thread = (await Get(ava, "/dm/threads?box=chats"))[0];
+        Assert.Equal("Shared a record", thread.GetProperty("lastBody").GetString());
+        var m = (await Get(ava, "/dm/chat?username=ben")).GetProperty("messages")[0];
+        Assert.Equal(("PersonalRecord", record, ""), (m.GetProperty("cardType").GetString(), m.GetProperty("cardJson").GetString(), m.GetProperty("body").GetString()));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card2", cardType = "Algorithm", cardJson = "{}" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card3", cardType = "WorkoutSession", cardJson = "not json" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card4", body = "  " })).StatusCode);
+    }
 }
