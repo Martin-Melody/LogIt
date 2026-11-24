@@ -1,4 +1,11 @@
 <script lang="ts">
+  import CheerPill from "$lib/components/social/CheerPill.svelte";
+  import InviteFriendSheet from "$lib/components/social/InviteFriendSheet.svelte";
+  import { holdInvite, inviteSheet, takeHeldInvite } from "$lib/features/friends/invite.svelte";
+  import StoryViewer from "$lib/components/social/StoryViewer.svelte";
+  import AddStorySheet from "$lib/components/social/AddStorySheet.svelte";
+  import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
+  import { stories } from "$lib/features/friends/stories.svelte";
   import "./layout.css";
   import favicon from "$lib/assets/favicon.png";
   import BottomNav from "$lib/components/navigation/BottomNav/BottomNav.svelte";
@@ -44,7 +51,14 @@
       needsAccountAuth: $needsAccountAuth,
       path: page.url.pathname,
     });
+    // A friend's invite opened before there's an account: keep it for after onboarding.
+    const invite = page.url.pathname === "/social/invite" ? page.url.searchParams.get("c") : null;
+    if (to && invite) holdInvite(invite);
     if (to) void goto(to);
+    else if ($appReady && $onboarding.completed && authStore.isAuthenticated && !isOnboarding) {
+      const held = takeHeldInvite();
+      if (held && page.url.pathname !== "/social/invite") void goto(held);
+    }
   });
 
   onMount(async () => {
@@ -128,4 +142,12 @@
 {/if}
 
 <Toaster position="top-center" richColors />
+<CheerPill />
+{#if inviteSheet.open}<InviteFriendSheet onclose={() => (inviteSheet.open = false)} />{/if}
+{#if stories.watching !== null}<StoryViewer training={stories.training} onclose={() => (stories.watching = null)} />{/if}
+{#if stories.picking}
+  <ShareCardSheet title="Add to your story" onclose={() => (stories.picking = false)}
+    onpick={(card) => { stories.picking = false; stories.adding = { cards: [{ label: "", ...card }], fromWorkout: false }; }} />
+{/if}
+{#if stories.adding}<AddStorySheet cards={stories.adding.cards} fromWorkout={stories.adding.fromWorkout} onclose={() => (stories.adding = null)} />{/if}
 <ModeWatcher defaultMode="system" modeStorageKey="logit:mode" />

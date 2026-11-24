@@ -14,7 +14,7 @@
   import AppSidebar from "$lib/components/app-sidebar.svelte";
   import { isCoachingPath } from "$lib/workspace";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
-  import { socialBadge } from "$lib/features/social/socialData.svelte";
+  import { socialBadge, dmBadge } from "$lib/features/social/socialData.svelte";
   import GuideLayer from "$lib/features/guide/GuideLayer.svelte";
   import GuidePanel from "$lib/features/guide/GuidePanel.svelte";
   import StudioModeDialog from "$lib/features/guide/StudioModeDialog.svelte";
@@ -38,6 +38,7 @@
     "/coaching/library": "Library",
     "/habits": "Habits & goals",
     "/social": "Social",
+    "/social/messages": "Messages",
     "/plugins": "Plugins",
     "/coaching": "Today",
     "/coaching/programs": "Programs",
@@ -173,6 +174,7 @@
       else void guide.load();
       if ((isStudio || apiClient.isSelfHosted()) && !sandbox.loaded) void sandbox.refresh();
       void socialBadge.refresh();
+      void dmBadge.refresh();
     }
     // Once per signed-in account: is it an admin, or may it claim admin?
     const userId = apiClient.isAuthenticated() ? apiClient.getUser()?.id ?? null : null;

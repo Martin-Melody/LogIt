@@ -113,12 +113,13 @@
         </a>
       </SettingsSection>
 
-      <SettingsSection title="From people" note="Messages and your coach arrive straight away. Likes, comments and follows are gathered into a few pushes a day.">
+      <SettingsSection title="From people" note="Messages, cheers and your coach arrive straight away. Likes, comments and follows are gathered into a few pushes a day.">
         {#each [
           { href: "likes", title: "Likes and comments", v: s.likes === s.comments ? AUDIENCE_LABEL[s.likes] : "Mixed" },
           { href: "follows", title: "Followers and requests", v: s.follows ? "On" : "Off" },
           { href: "messages", title: "Messages", v: s.messages ? "On" : "Off" },
           { href: "coaching", title: "Coaching", v: s.coaching ? "On" : "Off" },
+          { href: "cheers", title: "Cheers", v: s.cheers ? "On" : "Off" },
         ] as row (row.href)}
           <a href="/settings/notifications/{row.href}" class={link}>
             <span class="flex-1 text-[15px] font-medium">{row.title}</span>

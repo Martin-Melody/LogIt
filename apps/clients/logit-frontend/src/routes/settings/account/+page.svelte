@@ -9,7 +9,6 @@
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
   import DeleteAccountPanel from "$lib/features/settings/DeleteAccountPanel.svelte";
   import PlanCard from "$lib/components/billing/PlanCard.svelte";
-  import BlockedAccounts from "$lib/components/social/BlockedAccounts.svelte";
   import ConnectionDot from "$lib/components/ConnectionDot.svelte";
   import { Button } from "$lib/components/ui/button";
   import { reveal } from "$lib/transitions";
@@ -245,7 +244,6 @@
       </button>
     </SettingsSection>
 
-    <div id="blocked" class="scroll-mt-4 empty:hidden"><BlockedAccounts /></div>
 
     <div class="flex flex-col gap-2">
       <DeleteAccountPanel {serverHost} />

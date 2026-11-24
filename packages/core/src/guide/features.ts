@@ -215,9 +215,9 @@ export const FEATURES: Feature[] = [
     section: "More",
     plan: "Free",
     summary: "Follow people, share workouts and PRs, and find people in Discover.",
-    web: ["/social", "/social/post/[id]", "/social/[username]"],
+    web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]"],
     phone: [
-      "/social", "/social/settings", "/social/post/[id]", "/social/post/[id]/content",
+      "/social", "/social/invite", "/messages/chat", "/messages/requests", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
       "/social/[username]", "/social/[username]/followers", "/social/[username]/following", "/inbox",
     ],
     whereWeb: "People › Social",

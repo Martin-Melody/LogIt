@@ -8,6 +8,12 @@ describe("links that open the app", () => {
     expect(routeForAppLink(`logit://a?c=${code}`)).toBe(route);
     expect(routeForAppLink(`https://getlogit.app/a#${code}`)).toBe(route);
   });
+  it("sends a friend's invite to its page", () => {
+    const invite = "logit-fr1:abcd2345wxyz:aHR0cDovLzE5Mi4xNjguMS4yMDo4MDgw";
+    const route = `/social/invite?c=${encodeURIComponent(invite)}`;
+    expect(routeForAppLink(`logit://f?c=${invite}`)).toBe(route);
+    expect(routeForAppLink(`https://getlogit.app/f#${invite}`)).toBe(route);
+  });
   it("ignores anything else", () => {
     expect(routeForAppLink("logit://somewhere")).toBeNull();
   });

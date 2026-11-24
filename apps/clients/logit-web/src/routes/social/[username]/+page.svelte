@@ -144,6 +144,7 @@
         {:else}
           {#if profile.followsYou}<span class="text-xs text-muted-foreground">Follows you</span>{/if}
           <FollowButton username={profile.username} bind:status isPrivate={!!profile.isPrivate} followsYou={!!profile.followsYou} primary class="h-9 px-3.5 text-[13px]" onchange={onFollowChange} />
+          <a href="/social/messages?u={encodeURIComponent(profile.username)}" class="flex h-9 items-center rounded-[9px] border border-border px-3.5 text-[13px] font-medium hover:bg-muted">Message</a>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
               {#snippet child({ props })}

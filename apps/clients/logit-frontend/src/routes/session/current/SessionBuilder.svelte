@@ -61,6 +61,10 @@
   import { music } from "$lib/features/music/nowPlaying.svelte";
   import { addButton } from "$lib/components/ui/choice";
   import { onWorkoutFinished } from "$lib/features/music/sessionMusic";
+  import { offerInviteOnce } from "$lib/features/friends/invite.svelte";
+  import { stories } from "$lib/features/friends/stories.svelte";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { recordCard, workoutCard } from "@logit/core/domain/messageCard";
   import { justAdded } from "$lib/features/session/blocks/justAdded";
 
   onMount(() => {
@@ -442,9 +446,24 @@
       // The first workout of a plan from onboarding goes on to "When will you train?".
       const workoutsBefore = sessionSnapshot ? (await getWorkoutRepo().listAllSessions()).length : 0;
       const weekDone = sessionSnapshot ? await completesFirstWeek(sessionSnapshot).catch(() => false) : false;
-      await goto(sessionSnapshot ? afterWorkoutRoute(sessionSnapshot.id, workoutsBefore, weekDone) : "/");
+      const next = sessionSnapshot ? afterWorkoutRoute(sessionSnapshot.id, workoutsBefore, weekDone) : "/";
+      await goto(next);
       await currentSession.finish();
       onWorkoutFinished();
+      // After a record: "Add to your story?" (design canvas S3). Otherwise "Invite a friend"
+      // once (T3). Neither on top of onboarding's next step.
+      if (!next.startsWith("/onboarding")) {
+        if (sessionSnapshot && recapPrs.length > 0 && authStore.isAuthenticated) {
+          const pr = recapPrs[0];
+          stories.adding = {
+            fromWorkout: true,
+            cards: [
+              { label: "Record", type: "PersonalRecord", json: recordCard({ exerciseName: pr.exerciseName, weight: pr.weight, reps: pr.reps, atMs: Date.now() }) },
+              { label: "Whole workout", type: "WorkoutSession", json: workoutCard({ ...sessionSnapshot, endedAtMs: sessionSnapshot.endedAtMs ?? Date.now() }) },
+            ],
+          };
+        } else offerInviteOnce();
+      }
       void recentSessions.refresh(5);
 
       if (sessionSnapshot) {

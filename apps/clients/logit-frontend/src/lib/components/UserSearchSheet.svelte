@@ -5,7 +5,8 @@
   import { sheetUp } from "$lib/transitions";
   import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { goto } from "$app/navigation";
-  import { X, Search, UserPlus, UserCheck, Loader2 } from "lucide-svelte";
+  import { X, Search, UserPlus, UserCheck, Loader2, Link2 } from "lucide-svelte";
+  import { openInvite } from "$lib/features/friends/invite.svelte";
   import { socialApi, type UserSearchResult } from "@logit/core/api/socialApi";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
 
@@ -147,9 +148,12 @@
     <!-- Results -->
     <div class="overflow-y-auto flex-1">
       {#if !searched && query.trim().length < 2}
-        <p class="text-sm text-muted-foreground text-center py-12 px-6">
-          Search for people by username or display name.
-        </p>
+        <div class="flex flex-col items-center gap-4 px-6 py-10 text-center">
+          <p class="text-sm text-muted-foreground">Search for people by username or display name.</p>
+          <button type="button" class="flex h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium" onclick={() => { onclose(); openInvite(); }}>
+            <Link2 class="size-4" />Invite a friend
+          </button>
+        </div>
 
       {:else if searched && results.length === 0}
         <p class="text-sm text-muted-foreground text-center py-12 px-6">

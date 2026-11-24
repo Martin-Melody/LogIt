@@ -8,12 +8,13 @@
   import { AUDIENCE_LABEL, changePushSettings, loadPushSettings, pushSettings } from "$lib/features/settings/pushSettings.svelte";
   import type { PushAudience, PushSettings } from "@logit/core/api/pushApi";
 
-  type Switchable = "follows" | "messages" | "coaching";
+  type Switchable = "follows" | "messages" | "coaching" | "cheers";
   const KINDS: Record<string, { title: string; note?: string }> = {
     likes: { title: "Likes and comments" },
     follows: { title: "Followers and requests", note: "New followers, follow requests and accepted requests, gathered into a few pushes a day." },
     messages: { title: "Messages", note: "When your coach or client messages you. Arrives straight away and says who, never what." },
     coaching: { title: "Coaching", note: "Programs, coaching invites and payment problems. Arrives straight away." },
+    cheers: { title: "Cheers", note: "When a friend cheers you on mid-workout. Arrives straight away and says who." },
   };
   const kind = $derived(page.params.kind ?? "");
   const meta = $derived(KINDS[kind] ?? { title: "Notifications" });

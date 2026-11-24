@@ -14,7 +14,7 @@ import { isNativePlatform } from "./isNative";
 export type PushPermission = "granted" | "denied" | "prompt" | "unavailable";
 
 const CHANNELS = [
-  { id: "messages", name: "Messages", description: "When your coach or client messages you", importance: 4 as const },
+  { id: "messages", name: "Messages", description: "When someone, your coach or a client messages you", importance: 4 as const },
   { id: "coaching", name: "Coaching", description: "Programs, invites and payment problems", importance: 4 as const },
   { id: "social", name: "Social", description: "Likes, comments and follows, gathered a few times a day", importance: 3 as const },
 ];
@@ -61,8 +61,13 @@ export async function startPush(): Promise<void> {
     });
     await push.addListener("registrationError", (e) => log.warn("push", "Firebase registration failed", e));
     // In the app: no banner (the badge and Inbox update), only a fresh count.
-    await push.addListener("pushNotificationReceived", () => {
+    await push.addListener("pushNotificationReceived", (n) => {
       void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.refresh());
+      // A cheer while LogIt is open shows as the workout pill, not a banner.
+      const data = n.data as Record<string, string> | undefined;
+      if (data?.type === "Cheer") {
+        void import("$lib/features/friends/cheers.svelte").then((m) => m.cheerArrived(n.title ?? "A friend", data.notificationId));
+      }
     });
     await push.addListener("pushNotificationActionPerformed", ({ notification }) => {
       void goto(pushTarget(notification.data as Record<string, string> | undefined));
@@ -113,6 +118,7 @@ export async function forgetPushDevice(): Promise<void> {
 export function pushTarget(data: Record<string, string> | undefined): string {
   const type = data?.type;
   if (type === "Message") return data?.relationshipId ? `/messages/${data.relationshipId}` : "/messages";
+  if (type === "DirectMessage") return data?.threadId ? `/messages/chat?t=${data.threadId}` : "/messages";
   if (type === "CoachInvite" || type === "CoachPaymentFailed") return "/clients";
   if (type === "CoachProgram") return "/splits";
   if (data?.count === "1" && data.postId) return `/social/post/${data.postId}`;

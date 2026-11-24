@@ -192,7 +192,7 @@ export type ReportReason =
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
 export type NotificationKind =
-  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed";
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer";
 
 export interface SocialSettings {
   isPrivate: boolean;
@@ -202,6 +202,16 @@ export interface SocialSettings {
   hidePeopleSuggestions: boolean;
   pendingRequests: number;
   notInterestedCount: number;
+  /** "Show when you're training": the accounts you follow see a green dot while you train. */
+  showTraining: boolean;
+  /** Who may cheer you on (and later reply to your stories). "Following" = people you follow. */
+  cheersFrom: "Everyone" | "Following" | "Off";
+  /** Instagram's message controls: your followers reach chats or requests… */
+  dmFromFollowers: "Chats" | "Requests";
+  /** …everyone else (people you don't follow and who don't follow you) requests or nothing. */
+  dmFromOthers: "Requests" | "Off";
+  /** Read receipts, both ways. */
+  showReadReceipts: boolean;
 }
 
 export interface FollowRequestItem {

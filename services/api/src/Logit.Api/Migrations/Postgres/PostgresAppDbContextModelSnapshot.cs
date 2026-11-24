@@ -223,6 +223,21 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("CheckinSchedules");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CloseFriend", b =>
+                {
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FriendId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("OwnerId", "FriendId");
+
+                    b.HasIndex("FriendId");
+
+                    b.ToTable("CloseFriends");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientPayment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -856,6 +871,54 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("DiagnosticReports");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DirectMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("CardJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("CardType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SenderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PushedAt");
+
+                    b.HasIndex("SenderId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("ThreadId", "CreatedAt");
+
+                    b.ToTable("DirectMessages");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverDismissal", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -905,6 +968,55 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("DiscoverImpressions");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmMember", b =>
+                {
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Accepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ClearedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ThreadId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DmMembers");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PairKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PairKey")
+                        .IsUnique();
+
+                    b.ToTable("DmThreads");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.Property<Guid>("FollowerId")
@@ -939,6 +1051,25 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("TargetId", "CreatedAt");
 
                     b.ToTable("FollowRequests");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.FriendInvite", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InviterId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("InviterId");
+
+                    b.ToTable("FriendInvites");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
@@ -1343,6 +1474,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("Cheers")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("Coaching")
                         .HasColumnType("boolean");
 
@@ -1506,6 +1640,79 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasKey("Key");
 
                     b.ToTable("ServerSettings");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Story", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CardJson")
+                        .IsRequired()
+                        .HasMaxLength(3800)
+                        .HasColumnType("character varying(3800)");
+
+                    b.Property<string>("CardType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("CloseFriends")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("AuthorId", "ExpiresAt");
+
+                    b.ToTable("Stories");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryHide", b =>
+                {
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HiddenId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("OwnerId", "HiddenId");
+
+                    b.HasIndex("HiddenId");
+
+                    b.ToTable("StoryHides");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryView", b =>
+                {
+                    b.Property<Guid>("StoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ViewerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Cheered")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("StoryId", "ViewerId");
+
+                    b.HasIndex("ViewerId");
+
+                    b.ToTable("StoryViews");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
@@ -2187,6 +2394,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("Bio")
                         .HasColumnType("text");
 
+                    b.Property<int>("CheersFrom")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CoachSwapRule")
                         .HasColumnType("text");
 
@@ -2196,6 +2406,12 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("DmFromFollowers")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DmFromOthers")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -2256,11 +2472,26 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool?>("ShowInDiscover")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ShowReadReceipts")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowTraining")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("text");
 
                     b.Property<int>("Tier")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime?>("TrainingSince")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("TrainingUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TrainingWhat")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -2356,6 +2587,23 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Recipient");
 
                     b.Navigation("Relationship");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CloseFriend", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Friend")
+                        .WithMany()
+                        .HasForeignKey("FriendId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Friend");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientPayment", b =>
@@ -2593,6 +2841,24 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DirectMessage", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Logit.Api.Data.Entities.DmThread", "Thread")
+                        .WithMany()
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("Thread");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.DiscoverDismissal", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "HiddenUser")
@@ -2617,6 +2883,25 @@ namespace Logit.Api.Migrations.Postgres
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmMember", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.DmThread", "Thread")
+                        .WithMany("Members")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Thread");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
@@ -2655,6 +2940,17 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Requester");
 
                     b.Navigation("Target");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.FriendInvite", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Inviter")
+                        .WithMany()
+                        .HasForeignKey("InviterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Inviter");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
@@ -2798,6 +3094,53 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Story", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryHide", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Hidden")
+                        .WithMany()
+                        .HasForeignKey("HiddenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hidden");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.StoryView", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Story", "Story")
+                        .WithMany()
+                        .HasForeignKey("StoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Viewer")
+                        .WithMany()
+                        .HasForeignKey("ViewerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Story");
+
+                    b.Navigation("Viewer");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.SyncedCheckinSubmission", b =>
@@ -3014,6 +3357,11 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Likes");
 
                     b.Navigation("Replies");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmThread", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>

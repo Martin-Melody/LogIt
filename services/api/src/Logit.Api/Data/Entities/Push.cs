@@ -27,6 +27,7 @@ public class PushSettings
     public bool Follows { get; set; } = true;
     public bool Messages { get; set; } = true;
     public bool Coaching { get; set; } = true;
+    public bool Cheers { get; set; } = true;
 
     /// "Pause all": pushes from people are dropped until then (they stay in the Inbox).
     public DateTime? PausedUntil { get; set; }

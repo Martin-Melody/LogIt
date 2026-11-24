@@ -1,3 +1,4 @@
+import { dmApi } from "@logit/core/api/dmApi";
 import { notificationsApi } from "@logit/core/api/socialApi";
 import { apiClient } from "@logit/core/api/client";
 import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -57,6 +58,25 @@ export const socialBadge = {
     lastUnread = Date.now();
     try {
       unread.count = await notificationsApi.unreadCount();
+    } catch {
+      /* keep it */
+    }
+  },
+};
+
+// ── Unread messages (chats only; requests never badge, as on Instagram) ──────────
+
+const dmUnread = $state({ count: 0 });
+let lastDm = 0;
+
+export const dmBadge = {
+  get count() { return dmUnread.count; },
+  /** At most every 30 s unless forced. Never throws. */
+  async refresh(force = false) {
+    if (!force && Date.now() - lastDm < 30_000) return;
+    lastDm = Date.now();
+    try {
+      dmUnread.count = (await dmApi.unread()).chats;
     } catch {
       /* keep it */
     }
