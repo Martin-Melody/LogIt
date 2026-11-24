@@ -100,6 +100,8 @@ else: Don't receive" → Dev can't start a thread. Read receipts off → neither
 Shared workout / record card opens the right thing. Niamh (coach) can always message Ava; her
 thread shows "Coach". Block Dev → thread gone both ways. Push: who, never what; quiet mode holds
 it; Pause drops it. Offline: a message waits and sends when back, with a visible "Not sent yet".
+Across clients: Ava on the web dashboard and Ben on the phone, then both on the web: every step above
+gives the same result (one server API); the web shows unread while open (no web push).
 
 **F4 Stories.** Ava finishes a workout with a record → "Add to your story?" offered (only after a
 record or the week's last workout, not every session). Your story vs Close friends. Ben sees the
