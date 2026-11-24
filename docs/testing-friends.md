@@ -58,9 +58,9 @@ Each cell is what must happen. A journey checks a row; the privacy sweep (F9) ch
 | | Private account | Block | Their switch off | Your switch off | Quiet / Pause | Account deleted |
 |---|---|---|---|---|---|---|
 | **Training now** (green dot) | still shows to the accounts they follow | never, both ways | "Show when you're training" off: gone at once | yours off: you see nobody's | no effect (not a push) | gone |
-| **Cheer** | allowed if you can see them training | impossible | "Cheers" off: refused, plainly | — | push held / dropped like any push; the pill still shows in the app | their cheers stay in your Inbox as "deleted account" or vanish (open) |
+| **Cheer** | allowed if you can see them training | impossible | "Cheers" off: refused, plainly | — | push held / dropped like any push; the pill still shows in the app | their cheers stay in your Inbox as "Deleted account" |
 | **Story** | approved followers only | never | Hide story from / Close friends | — | — | gone at once |
-| **Message** | message controls decide (requests) | never; existing thread hidden | "Don't receive" for others | read receipts off both ways | push held / dropped | open (Instagram keeps "Instagram user") |
+| **Message** | message controls decide (requests) | never; existing thread hidden | "Don't receive" for others | read receipts off both ways | push held / dropped | thread stays, as "Deleted account" |
 | **Group page, events, chat** | membership is what counts | blocked member's messages hidden for you | per-group notifications | — | group pushes held / dropped | leaves every group |
 | **Board (group / friends)** | members / friends only | not on your board, you're not on theirs | "Show me on boards" off (global or this group) | — | — | gone from every board |
 | **Home cards** | follow the rows above | follow the rows above | follow the rows above | card hidden in Customise | — | — |
@@ -89,8 +89,8 @@ Each journey: steps, then what must be true. Run by hand first (findings into
 
 **F2 Invite a friend.** After her first workout Ava sees "Invite a friend" once; shares the link
 and shows the QR. Ben (no app) opens the link → installs → signs up → they follow each other.
-Ben with the app → straight to "Follow each other?" → yes. Cara opens Ava's link while private:
-Ava follows her only after Cara approves? (open). "Not now" never shows the sheet again;
+Ben with the app → straight to "Follow each other?" → yes. Cara (private) invites Ava: accepting
+the invite counts as Cara's approval, so they follow each other at once. "Not now" never shows the sheet again;
 Social › Find people always has it. No contacts uploaded.
 
 **F3 Messages and requests.** Ben messages Ava → straight to her chats (she follows him). Dev
@@ -115,14 +115,14 @@ Per-group notifications: every message / events and mentions / off. Leave the gr
 board, the going lists and the chat; Home card gone.
 
 **F6 Boards.** The week's board: done of planned, weeks kept, volume against own usual; order by
-share done then weeks. Ava with no plan this week (rest week) isn't punished (open: how she shows).
+share done then weeks. Ava with nothing planned this week shows as "Rest week", not at the bottom.
 "Show me on boards" off globally → off every board, still sees them; on globally, off for Iron
 Club → off only there. A beginner can top the board. Nobody's raw weights appear anywhere.
 
 **F7 Home cards and customising.** Meetup / Friends / Social cards appear only when they have
 something, in Customise the moment you join a group or follow someone. Edit Home in place: drag,
 −, Add a card with previews; back leaves edit mode; order survives a restart and syncs to the
-other phone (open: per phone or per account).
+other phone (per account).
 
 **F8 Notifications for friends.** Every new type through the push rules: cheer (straight away),
 message (straight away), message request (none), event change (straight away to those going),
@@ -169,15 +169,11 @@ From checking PR #118 against F1 and F8 (both fixed on that PR):
   ("1 cheer"), which is useless. Fix: a cheer push goes out only while the person is still
   training; otherwise it stays in the Inbox only.
 
-## Open questions
+## Decided (Martin, 24 Nov)
 
-Found while writing the flows; none blocks F1.
-
-1. Deleted accounts in messages and cheers: drop them, or "Deleted account" (Instagram keeps
-   messages under "Instagram user")?
-2. Invite a friend to a private account: does accepting the invite count as approving the follow?
-3. Boards and rest weeks: someone with no planned workouts this week, shown as "rest week" or left off?
-4. Home layout: per phone or per account (syncs between phones)?
-5. A blocked member in a group chat: hide their messages for you only (Instagram), or warn the
-   organiser too?
-6. Gym as its own kind of group, or any group can add a place (asked 24 Nov)?
+1. Deleted accounts in messages and cheers stay as "Deleted account" (Instagram's "Instagram user").
+2. Accepting an invite from a private account counts as approving the follow (they chose to invite).
+3. Someone with nothing planned this week shows on boards as "Rest week", not at the bottom.
+4. The Home layout is per account and syncs between phones.
+5. A blocked member's messages in a group chat are hidden for you only, as on Instagram.
+6. Any group can add a place; a gym is a group with a place, not a separate kind.
