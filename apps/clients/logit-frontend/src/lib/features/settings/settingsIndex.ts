@@ -4,7 +4,7 @@
 
 export type SettingsPageId =
   | "account" | "workout" | "progression" | "mobility" | "units" | "places" | "music" | "sounds"
-  | "notifications" | "appearance" | "insights" | "plugins" | "data" | "walkthroughs" | "about";
+  | "notifications" | "privacy" | "appearance" | "insights" | "plugins" | "data" | "walkthroughs" | "about";
 
 export type SettingsPage = { id: SettingsPageId; title: string; href: string };
 
@@ -25,6 +25,7 @@ export const SETTINGS_GROUPS: { label: string | null; pages: SettingsPage[] }[] 
     label: "App",
     pages: [
       { id: "notifications", title: "Notifications", href: "/settings/notifications" },
+      { id: "privacy", title: "Privacy", href: "/settings/privacy" },
       { id: "appearance", title: "Appearance", href: "/settings/appearance" },
       { id: "insights", title: "Insights", href: "/settings/insights" },
       { id: "plugins", title: "Plugins", href: "/settings/plugins" },
@@ -58,7 +59,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   { page: "Account", href: "/settings/account#password", title: "Change password", detail: "For your LogIt account" },
   { page: "Account", href: "/settings/account#switch-account", title: "Switch or add account", detail: "More than one account on this phone" },
   { page: "Account", href: "/settings/account#move-server", title: "Move to another server", detail: "Self-host, or move to getlogit.app", keywords: "self-hosted selfhost" },
-  { page: "Account", href: "/settings/account#blocked", title: "Blocked accounts", detail: "People you blocked in Social", keywords: "block social" },
+  { page: "Privacy", href: "/settings/privacy", title: "Blocked accounts", detail: "People you blocked in Social", keywords: "block social" },
   { page: "Account", href: "/settings/account#sign-out", title: "Sign out", detail: "Take this account off the phone", keywords: "logout log out" },
   { page: "Account", href: "/settings/account#delete", title: "Delete account", detail: "Your account and everything on the server", keywords: "remove close" },
 
@@ -88,6 +89,10 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   { page: "Notifications", href: "/settings/notifications/quiet", title: "Quiet mode", detail: "No pushes from people at night", keywords: "sleep night do not disturb schedule" },
   { page: "Notifications", href: "/settings/notifications/likes", title: "Likes and comments", detail: "From everyone, people you follow, or off", keywords: "social push" },
   { page: "Notifications", href: "/settings/notifications#training", title: "Workout reminders and rest alerts", detail: "Your own training notifications", keywords: "reminder rest timer" },
+
+  { page: "Privacy", href: "/settings/privacy#private", title: "Private account", detail: "Approve who follows you", keywords: "privacy followers" },
+  { page: "Privacy", href: "/settings/privacy/training", title: "Training now and cheers", detail: "The green dot while you train, and who can cheer you on", keywords: "activity status online cheer" },
+  { page: "Privacy", href: "/settings/privacy#discover", title: "Discover and suggestions", detail: "Whether people who don't follow you find your posts", keywords: "discover suggest" },
 
   { page: "Appearance", href: "/settings/appearance#theme", title: "Theme", detail: "System, light or dark", keywords: "dark mode light mode colour color" },
   { page: "Appearance", href: "/settings/navbar", title: "Customise navigation", detail: "The tabs in the bottom bar", keywords: "bottom bar tabs nav" },

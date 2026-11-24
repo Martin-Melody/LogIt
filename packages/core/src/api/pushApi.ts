@@ -13,6 +13,7 @@ export interface PushSettings {
   follows: boolean;
   messages: boolean;
   coaching: boolean;
+  cheers: boolean;
   /** ISO time while "Pause all" lasts, else null. */
   pausedUntil: string | null;
   quietOn: boolean;

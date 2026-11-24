@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CheerPill from "$lib/components/social/CheerPill.svelte";
   import "./layout.css";
   import favicon from "$lib/assets/favicon.png";
   import BottomNav from "$lib/components/navigation/BottomNav/BottomNav.svelte";
@@ -128,4 +129,5 @@
 {/if}
 
 <Toaster position="top-center" richColors />
+<CheerPill />
 <ModeWatcher defaultMode="system" modeStorageKey="logit:mode" />

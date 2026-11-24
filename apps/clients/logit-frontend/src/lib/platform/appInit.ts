@@ -37,6 +37,8 @@ export function startBackgroundSync(): void {
   document.addEventListener("visibilitychange", syncWhenVisible);
   void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.start());
   void import("./push").then((m) => m.startPush());
+  void import("$lib/features/friends/trainingPresence").then((m) => m.startTrainingPresence());
+  void import("$lib/features/friends/cheers.svelte").then((m) => m.startCheers());
 }
 
 export function stopBackgroundSync(): void {

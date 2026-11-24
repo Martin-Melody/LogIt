@@ -18,6 +18,7 @@
     TrendingUp,
     TrendingDown,
     Target,
+    ThumbsUp,
   } from "lucide-svelte";
   import {
     followedByText,
@@ -189,6 +190,7 @@
       : t === "Mention" ? AtSign
       : t === "Repost" ? Repeat2
       : t === "Quote" ? Quote
+      : t === "Cheer" ? ThumbsUp
       : UserPlus;
   }
 
@@ -203,6 +205,7 @@
     if (n.type === "CoachInvite") return "wants to coach you";
     if (n.type === "CoachProgram") return "sent you a program";
     if (n.type === "CoachPaymentFailed") return "couldn't take your coaching payment. Check your card in My coach";
+    if (n.type === "Cheer") return "cheered you on";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 

@@ -61,8 +61,13 @@ export async function startPush(): Promise<void> {
     });
     await push.addListener("registrationError", (e) => log.warn("push", "Firebase registration failed", e));
     // In the app: no banner (the badge and Inbox update), only a fresh count.
-    await push.addListener("pushNotificationReceived", () => {
+    await push.addListener("pushNotificationReceived", (n) => {
       void import("$lib/stores/notifications.store").then((m) => m.unreadNotifications.refresh());
+      // A cheer while LogIt is open shows as the workout pill, not a banner.
+      const data = n.data as Record<string, string> | undefined;
+      if (data?.type === "Cheer") {
+        void import("$lib/features/friends/cheers.svelte").then((m) => m.cheerArrived(n.title ?? "A friend", data.notificationId));
+      }
     });
     await push.addListener("pushNotificationActionPerformed", ({ notification }) => {
       void goto(pushTarget(notification.data as Record<string, string> | undefined));

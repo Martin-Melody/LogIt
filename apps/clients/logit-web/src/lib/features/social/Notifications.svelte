@@ -91,6 +91,7 @@
       case "CoachInvite": return "wants to coach you";
       case "CoachProgram": return "sent you a program";
       case "CoachPaymentFailed": return "couldn't take your coaching payment. Check your card in My coach";
+      case "Cheer": return "cheered you on";
       default: return "";
     }
   }

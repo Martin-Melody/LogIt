@@ -9,6 +9,7 @@
   import { discoverApi, socialApi, type ApiPost, type DiscoverPost, type SocialSettings } from "@logit/core/api/socialApi";
   import { caughtUpIndex } from "@logit/core/domain/socialFeed";
   import PeopleStrip from "$lib/components/social/PeopleStrip.svelte";
+  import FriendsRow from "$lib/components/social/FriendsRow.svelte";
   import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import UserSearchSheet from "$lib/components/UserSearchSheet.svelte";
@@ -221,7 +222,7 @@
       <button type="button" class="p-2 text-muted-foreground" aria-label="Search people" onclick={() => (showSearch = true)}>
         <Search class="h-[1.15rem] w-[1.15rem]" />
       </button>
-      <button type="button" class="p-2 text-muted-foreground" aria-label="Social settings" onclick={() => goto("/social/settings")}>
+      <button type="button" class="p-2 text-muted-foreground" aria-label="Privacy" onclick={() => goto("/settings/privacy")}>
         <Settings2 class="h-[1.15rem] w-[1.15rem]" />
       </button>
       <button type="button" class="p-2 text-muted-foreground" aria-label="New post" onclick={() => (showCreatePost = true)}>
@@ -243,6 +244,7 @@
     </div>
 
   {:else}
+    <FriendsRow />
     <div class="px-4 pb-2.5">
       <div role="tablist" aria-label="Feed" class="grid grid-cols-2 gap-[3px] rounded-[10px] bg-muted p-[3px]">
         <button type="button" role="tab" aria-selected={tab === "following"} onclick={() => setTab("following")}

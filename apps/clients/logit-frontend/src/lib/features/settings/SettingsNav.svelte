@@ -5,7 +5,7 @@
   import { page } from "$app/state";
   import {
     Bell, Blocks, ChartColumn, ChevronRight, Compass, Database, Info, MapPin, Music, PersonStanding, Ruler,
-    Search, SunMoon, Timer, TrendingUp, User, Volume2, X,
+    Search, Shield, SunMoon, Timer, TrendingUp, User, Volume2, X,
   } from "lucide-svelte";
   import { userPrefersMode } from "mode-watcher";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -36,7 +36,7 @@
   // lucide-svelte's icons are old-style component classes, hence `typeof Info`.
   const ICONS: Record<Exclude<SettingsPageId, "account">, typeof Info> = {
     workout: Timer, progression: TrendingUp, mobility: PersonStanding, units: Ruler, places: MapPin,
-    music: Music, sounds: Volume2, notifications: Bell, appearance: SunMoon, insights: ChartColumn, plugins: Blocks, data: Database,
+    music: Music, sounds: Volume2, notifications: Bell, privacy: Shield, appearance: SunMoon, insights: ChartColumn, plugins: Blocks, data: Database,
     walkthroughs: Compass, about: Info,
   };
 
