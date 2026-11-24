@@ -27,14 +27,14 @@ const AppSettings = registerPlugin<{ openNotificationSettings(): Promise<void> }
 let started = false;
 let token: string | null = null;
 
-async function plugin() {
-  return (await import("@capacitor/push-notifications")).PushNotifications;
-}
+// The module, not the plugin: a Capacitor plugin is a proxy that answers to any property,
+// `then` included, so returning it from an async function never resolves.
+const pushModule = () => import("@capacitor/push-notifications");
 
 export async function pushPermission(): Promise<PushPermission> {
   if (!isNativePlatform()) return "unavailable";
   try {
-    const { receive } = await (await plugin()).checkPermissions();
+    const { receive } = await (await pushModule()).PushNotifications.checkPermissions();
     return receive === "granted" ? "granted" : receive === "denied" ? "denied" : "prompt";
   } catch {
     return "unavailable";
@@ -46,7 +46,7 @@ export async function startPush(): Promise<void> {
   if (started || !isNativePlatform()) return;
   started = true;
   try {
-    const push = await plugin();
+    const { PushNotifications: push } = await pushModule();
     for (const c of CHANNELS) await push.createChannel(c);
     await push.addListener("registration", ({ value }) => {
       token = value;
@@ -71,7 +71,7 @@ export async function startPush(): Promise<void> {
 }
 
 async function registerIfAllowed(): Promise<void> {
-  if ((await pushPermission()) === "granted") await (await plugin()).register();
+  if ((await pushPermission()) === "granted") await (await pushModule()).PushNotifications.register();
 }
 
 /** Android's question (P3 "Turn on"). Returns whether it said yes. */
@@ -79,9 +79,10 @@ export async function askForPush(): Promise<boolean> {
   markPushAsked();
   if (!isNativePlatform()) return false;
   try {
-    const { receive } = await (await plugin()).requestPermissions();
+    const { PushNotifications } = await pushModule();
+    const { receive } = await PushNotifications.requestPermissions();
     if (receive !== "granted") return false;
-    await (await plugin()).register();
+    await PushNotifications.register();
     return true;
   } catch {
     return false;
