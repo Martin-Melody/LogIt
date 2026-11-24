@@ -1,3 +1,4 @@
+using Logit.Api.Features.Photos;
 using System.Security.Claims;
 using Logit.Api.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -32,11 +33,14 @@ public static class UserEndpoints
     private static async Task<IResult> UpdateMe(
         [FromBody] UpdateProfileRequest req,
         ClaimsPrincipal caller,
-        AppDbContext db)
+        AppDbContext db,
+        IPhotoStore photos,
+        CancellationToken ct)
     {
         var userId = caller.GetUserId();
         var user = await db.Users.FindAsync(userId);
         if (user is null) return Results.NotFound();
+        var shownBefore = PhotoEndpoints.RefsIn(user.AvatarUrl, user.PublicProfileJson);
 
         if (req.DisplayName is not null) user.DisplayName = req.DisplayName.Trim();
         if (req.Bio is not null) user.Bio = req.Bio.Trim();
@@ -44,6 +48,9 @@ public static class UserEndpoints
         if (req.PublicProfileJson is not null) user.PublicProfileJson = req.PublicProfileJson;
         if (req.OnboardingCompleted is not null) user.OnboardingCompleted = req.OnboardingCompleted.Value;
         user.UpdatedAt = DateTime.UtcNow;
+        // A profile picture or progress photo that was replaced or removed is deleted.
+        shownBefore.ExceptWith(PhotoEndpoints.RefsIn(user.AvatarUrl, user.PublicProfileJson));
+        await PhotoEndpoints.DeleteOwnedAsync(db, photos, userId, shownBefore, ct);
 
         await db.SaveChangesAsync();
 

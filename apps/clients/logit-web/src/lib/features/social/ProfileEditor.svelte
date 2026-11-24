@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { publishPhoto } from "@logit/core/api/photosApi";
   import { flip } from "svelte/animate";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { toast } from "$lib/components/ui/sonner";
@@ -103,6 +104,8 @@
       ? [...shown.map((id) => ({ id, enabled: true })), ...hiddenIds.map((id) => ({ id, enabled: false }))].map((w, i) => ({ ...w, order: i }))
       : null;
     try {
+      // Uploaded once as a server photo; the phone gets the address through its profile too.
+      avatar = await publishPhoto(avatar);
       const updated = await socialApi.updateMe({
         displayName,
         bio: bio.trim(),

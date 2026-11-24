@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import {
     Heart, MessageCircle, MoreHorizontal, Loader2, Check, X,
@@ -230,7 +231,7 @@
       onclick={() => void goto(`/social/${p.authorUsername}`)}
     >
       {#if p.authorAvatarUrl}
-        <img src={p.authorAvatarUrl} alt={p.authorDisplayName} class="h-full w-full object-cover" />
+        <img src={photoSrc(p.authorAvatarUrl)} alt={p.authorDisplayName} class="h-full w-full object-cover" />
       {:else}
         {p.authorDisplayName.charAt(0).toUpperCase()}
       {/if}

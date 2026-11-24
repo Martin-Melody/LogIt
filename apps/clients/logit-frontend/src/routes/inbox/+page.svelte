@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -272,7 +273,7 @@
         <div class="flex items-center gap-3">
           <button type="button" class="flex min-w-0 flex-1 items-center gap-3 text-left" onclick={() => goto(`/social/${r.user.username}`)}>
             <span class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold">
-              {#if r.user.avatarUrl}<img src={r.user.avatarUrl} alt="" class="h-full w-full object-cover" />{:else}{r.user.displayName.charAt(0).toUpperCase()}{/if}
+              {#if r.user.avatarUrl}<img src={photoSrc(r.user.avatarUrl)} alt="" class="h-full w-full object-cover" />{:else}{r.user.displayName.charAt(0).toUpperCase()}{/if}
             </span>
             <span class="min-w-0">
               <span class="block truncate text-sm font-semibold">{r.user.displayName}</span>
@@ -308,7 +309,7 @@
               <div class="relative shrink-0">
                 <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold">
                   {#if n.actor.avatarUrl}
-                    <img src={n.actor.avatarUrl} alt={n.actor.displayName} class="h-full w-full object-cover" />
+                    <img src={photoSrc(n.actor.avatarUrl)} alt={n.actor.displayName} class="h-full w-full object-cover" />
                   {:else}
                     {n.actor.displayName.charAt(0).toUpperCase()}
                   {/if}

@@ -55,9 +55,18 @@ services:
       # See docs/deployment.md "Push notifications".
       Push__ServiceAccountJson: ${PUSH_SERVICE_ACCOUNT_JSON:-}
       Push__AcceptRelay: "true"
+      # Photos: Cloudflare R2 bucket when PHOTOS_S3_BUCKET is set (docs/deployment.md "Photos");
+      # until then a volume on this server.
+      Photos__S3__ServiceUrl: ${PHOTOS_S3_SERVICE_URL:-}
+      Photos__S3__Bucket: ${PHOTOS_S3_BUCKET:-}
+      Photos__S3__AccessKey: ${PHOTOS_S3_ACCESS_KEY:-}
+      Photos__S3__SecretKey: ${PHOTOS_S3_SECRET_KEY:-}
+      Photos__Folder: /data/photos
       # Coach payments (Stripe Connect). Empty = off. See docs/deployment.md "Coach payments".
       Stripe__SecretKey: ${STRIPE_SECRET_KEY:-}
       Stripe__ConnectWebhookSecret: ${STRIPE_CONNECT_WEBHOOK_SECRET:-}
+    volumes:
+      - api-photos:/data/photos
     depends_on:
       db:
         condition: service_healthy
@@ -87,6 +96,7 @@ services:
       retries: 20
 
 volumes:
+  api-photos:
   db-data:
   caddy-data:
   caddy-config:

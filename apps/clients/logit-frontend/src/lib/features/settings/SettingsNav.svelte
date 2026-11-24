@@ -1,6 +1,7 @@
 <!-- Settings › the list of pages (the phone's Settings screen, and the sidebar on a wide screen):
      search, the account card, then a row per page showing what it's set to. -->
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import {
@@ -168,7 +169,7 @@
         {#if "noAccount" in account}
           <User class="size-1/2 text-muted-foreground" aria-hidden="true" />
         {:else if $profile.avatarDataUrl}
-          <img src={$profile.avatarDataUrl} alt="" class="size-full object-cover" />
+          <img src={photoSrc($profile.avatarDataUrl)} alt="" class="size-full object-cover" />
         {:else}
           {initials(account.name)}
         {/if}

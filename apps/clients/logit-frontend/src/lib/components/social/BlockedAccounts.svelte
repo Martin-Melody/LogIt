@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { Loader2 } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
@@ -50,7 +51,7 @@
           <div class="flex items-center gap-2">
             <div class="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold overflow-hidden shrink-0">
               {#if u.avatarUrl}
-                <img src={u.avatarUrl} alt={u.displayName} class="h-full w-full object-cover" />
+                <img src={photoSrc(u.avatarUrl)} alt={u.displayName} class="h-full w-full object-cover" />
               {:else}
                 {u.displayName.charAt(0).toUpperCase()}
               {/if}

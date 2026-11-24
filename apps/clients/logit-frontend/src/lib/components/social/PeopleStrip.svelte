@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import { X } from "lucide-svelte";
   import { toast } from "svelte-sonner";
@@ -75,7 +76,7 @@
           </button>
           <button type="button" class="flex flex-col items-center gap-1" onclick={() => goto(`/social/${p.user.username}`)}>
             <span class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-semibold">
-              {#if p.user.avatarUrl}<img src={p.user.avatarUrl} alt="" class="h-full w-full object-cover" />{:else}{p.user.displayName.charAt(0).toUpperCase()}{/if}
+              {#if p.user.avatarUrl}<img src={photoSrc(p.user.avatarUrl)} alt="" class="h-full w-full object-cover" />{:else}{p.user.displayName.charAt(0).toUpperCase()}{/if}
             </span>
             <span class="w-full truncate text-[13px] font-semibold">{p.user.displayName}</span>
           </button>
