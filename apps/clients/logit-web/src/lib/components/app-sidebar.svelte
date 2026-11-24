@@ -44,7 +44,8 @@
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { isCoachingPath } from "$lib/workspace";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
-  import { socialBadge } from "$lib/features/social/socialData.svelte";
+  import { dmBadge, socialBadge } from "$lib/features/social/socialData.svelte";
+  import MessageCircleIcon from "@lucide/svelte/icons/message-circle";
 
   let {
     isStudio = false,
@@ -87,7 +88,10 @@
     },
     {
       label: "People",
-      items: [{ label: "Social", href: "/social", icon: UsersRoundIcon, badge: () => socialBadge.count }],
+      items: [
+        { label: "Social", href: "/social", icon: UsersRoundIcon, badge: () => socialBadge.count },
+        { label: "Messages", href: "/social/messages", icon: MessageCircleIcon, badge: () => dmBadge.count },
+      ],
     },
     {
       label: "Extras",
