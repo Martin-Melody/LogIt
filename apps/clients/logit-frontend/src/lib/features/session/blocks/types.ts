@@ -22,12 +22,18 @@ export interface BlockBaseProps<T = unknown> {
    * "by round" view. Undefined = the whole block. Blocks without rounds ignore it.
    */
   round?: number;
+  /** The member's letter in a group's round ("A", "B"). */
+  roundLabel?: string;
   gripAction: GripAction;
+  /** Where the block is in the workout (done / current / next); undefined outside a live workout. */
+  stage?: import("$lib/features/session/stage").BlockStage;
   /**
    * Opens the "Superset / circuit with…" picker for this block. Blocks show the
    * menu item only when it's given (the workout screen passes it).
    */
   onGroup?: () => void;
+  /** Opens the workout's reorder mode ("Change the order" in the exercise menu). */
+  onReorder?: () => void;
   onDelete: () => void | Promise<void>;
   onMutate: (updater: (session: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) => Promise<void>;
 }

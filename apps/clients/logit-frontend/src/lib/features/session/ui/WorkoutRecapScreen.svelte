@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { fly, fade, scale } from "svelte/transition";
   import { backOut } from "svelte/easing";
-  import { Check, Trophy, Sparkles } from "lucide-svelte";
+  import { ArrowLeft, Info, Trophy, Sparkles } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import type { WorkoutSession, CardioBlockData, MobilityBlockData, ExerciseEntry } from "@logit/core/domain/workout";
   import { getExercises, getTopSetHighlight, foldSupersets, groupLabel, setTypeMeta, getExerciseVolumeKg } from "@logit/core/domain/workout";
@@ -27,11 +27,18 @@
   import { formatPrescription } from "$lib/features/session/planFormat";
   import type { WorkoutRepo } from "@logit/core/data/workoutRepo";
   import CountUp from "./CountUp.svelte";
+  import { tagClass } from "$lib/components/ui/choice";
 
   const weightUnit = get(profile).weightUnit;
 
-  const { session, onDone, onCancel, onShare, onPrs }: {
+  const { session, title = "Workout", skipped = [], onNote, onDone, onCancel, onShare, onPrs }: {
     session: WorkoutSession;
+    /** "Finish Upper". */
+    title?: string;
+    /** What's planned but not done, left out of what's saved ("Thoracic rotation", "1 set of Overhead Press"). */
+    skipped?: string[];
+    /** The note typed here, saved with the workout. */
+    onNote?: (note: string) => void | Promise<void>;
     onDone: () => void | Promise<void>;
     onCancel?: () => void;
     onShare?: (session: WorkoutSession) => void;
@@ -44,7 +51,7 @@
   // A first workout says so, and leaves out volume: "1,640 kg" means nothing on day one (bug hunt 3.13).
   let firstWorkout = $state(false);
   // What each lift is planned at next time, worked out with this workout counted (decision D3).
-  let nextTime = $state<{ name: string; text: string }[]>([]);
+  let nextTime = $state<{ name: string; text: string; change: string | null; up: boolean }[]>([]);
   onMount(() => {
     const repo = getWorkoutRepo();
     void repo.listRecentSessions({ limit: 1 }).then((r) => (firstWorkout = !r.some((x) => x.endedAtMs && x.id !== session.id))).catch(() => {});
@@ -58,13 +65,19 @@
     withToday.listAllSessions = async () => [done, ...(await repo.listAllSessions()).filter((x) => x.id !== session.id)];
     withToday.listRecentSessions = async (o) => [done, ...(await repo.listRecentSessions(o)).filter((x) => x.id !== session.id)];
     const deps = { ...getProgressionDeps(), workoutRepo: withToday };
-    const out: { name: string; text: string }[] = [];
+    const out: { name: string; text: string; change: string | null; up: boolean }[] = [];
     for (const ex of exercises.slice(0, 6)) {
       const working = ex.sets.filter((x) => x.setType !== "warmup").length;
       const s = await getSuggestion({ id: ex.exerciseId, name: ex.exerciseName }, deps, { sets: working }).catch(() => null);
       const first = s?.sets[0];
       if (!s || !first) continue;
-      out.push({ name: ex.exerciseName, text: first.weight === 0 && !s.bodyweightLoad ? `${s.sets.length} sets` : formatPrescription([first], weightUnit, !!s.bodyweightLoad) });
+      // Against today's heaviest working set: "+2" when it goes up, "same" when it doesn't.
+      const today = Math.max(0, ...ex.sets.filter((x) => x.setType !== "warmup" && x.completed !== false).map((x) => x.weight));
+      const diff = first.weight - today;
+      const change = today > 0 && first.weight > 0
+        ? Math.abs(diff) < 0.01 ? "same" : `${diff > 0 ? "+" : "−"}${formatLoad(Math.abs(diff), weightUnit, false, { withUnit: false })}`
+        : null;
+      out.push({ name: ex.exerciseName, text: first.weight === 0 && !s.bodyweightLoad ? `${s.sets.length} sets` : formatPrescription([first], weightUnit, !!s.bodyweightLoad), change, up: diff > 0.01 });
     }
     nextTime = out;
   }
@@ -120,15 +133,24 @@
     return sum + data.sets.reduce((s, set) => s + (set.reps ?? 0), 0);
   }, 0);
 
+  let prs = $state<SessionPR[]>([]);
+  let prsLoaded = $state(false);
   // Hero stats — the two or three numbers that matter, count up on reveal.
   type HeroStat = { label: string; value: number; fmt: (n: number) => string; noCount?: boolean };
-  const heroStats: HeroStat[] = $derived([
-    ...(totalVolume > 0 && !firstWorkout
-      ? [{ label: `Volume (${weightUnit})`, value: totalVolume, fmt: (n: number) => Math.round(n).toLocaleString() }]
-      : []),
-    ...(totalSets > 0 ? [{ label: "Sets", value: totalSets, fmt: (n: number) => String(Math.round(n)) }] : []),
-    ...(showDuration ? [{ label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true }] : []),
-  ]);
+  const heroStats: HeroStat[] = $derived.by(() => {
+    const best = prsLoaded ? prs.filter((p) => p.kind !== "first").length : 0;
+    const out: HeroStat[] = [
+      ...(showDuration ? [{ label: "Time", value: durationMs, fmt: () => formatDuration(durationMs), noCount: true }] : []),
+      ...(totalSets > 0 ? [{ label: "Sets", value: totalSets, fmt: (n: number) => String(Math.round(n)) }] : []),
+      ...(totalVolume > 0 && !firstWorkout
+        ? [{ label: `Volume (${weightUnit})`, value: totalVolume, fmt: (n: number) => Math.round(n).toLocaleString() }]
+        : []),
+    ];
+    // Three tiles at most (design canvas S-finish): best lifts when there's room.
+    if (best > 0 && out.length < 3) out.push({ label: best === 1 ? "Best lift" : "Best lifts", value: best, fmt: (n: number) => String(Math.round(n)) });
+    return out;
+  });
+  let note = $state(session.note ?? "");
 
   function formatHold(s: number): string {
     const m = Math.floor(s / 60);
@@ -142,8 +164,6 @@
     ...(totalMobilityReps > 0 ? [{ label: "Mobility reps", value: String(totalMobilityReps) }] : []),
   ];
 
-  let prs = $state<SessionPR[]>([]);
-  let prsLoaded = $state(false);
 
   // Full screen: hide the bottom nav (shown on the workout screen) while it's up.
   onMount(() => {
@@ -222,37 +242,26 @@
   }
 </script>
 
-<div class="fixed inset-0 z-50 flex flex-col bg-background">
-  <!-- Only the summary scrolls; the buttons below always stay on screen. -->
-  <div class="flex-1 min-h-0 overflow-y-auto pb-4">
-    <div class="relative">
-      <Confetti />
-
-      <!-- Beat 1 — the checkmark -->
-      <div class="flex flex-col items-center justify-center gap-3 px-6 pt-[calc(2.5rem+env(safe-area-inset-top))] pb-6 text-center">
-        <div
-          in:scale={{ duration: 480, start: 0.2, easing: backOut }}
-          class="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg"
-        >
-          <Check class="h-8 w-8" strokeWidth={3} />
-        </div>
-        <div in:fly={{ y: 12, duration: 380, delay: 220 }}>
-          <h1 class="text-2xl font-bold tracking-tight">{firstWorkout ? "First workout done" : "Workout complete"}</h1>
-          <p class="text-sm text-muted-foreground mt-1">
-            {#if showDuration}{`${formatDuration(durationMs)} · `}{/if}{blockCount} exercise{blockCount === 1 ? "" : "s"}
-          </p>
-        </div>
-      </div>
-    </div>
-
+<div class="fixed inset-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top)]">
+  <!-- Design canvas S-finish: a plain header; the summary scrolls, the buttons stay put. -->
+  <header class="page-header">
+    {#if onCancel}
+      <button type="button" class="-ml-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-muted" aria-label="Back to workout" onclick={onCancel}>
+        <ArrowLeft class="h-5 w-5" />
+      </button>
+    {/if}
+    <h1 class="page-title">{firstWorkout ? "First workout done" : `Finish ${title}`}</h1>
+  </header>
+  <div class="flex-1 min-h-0 overflow-y-auto pb-4 pt-3.5">
+    {#if prsLoaded && prs.some((p) => p.kind !== "first")}<div class="relative"><Confetti /></div>{/if}
     <!-- Beat 2 — hero stats -->
     <div class="mx-4 grid gap-2" style="grid-template-columns: repeat({heroStats.length}, 1fr)">
       {#each heroStats as stat, i (stat.label)}
         <div
           in:fly={{ y: 16, duration: 340, delay: 420 + i * 80 }}
-          class="flex flex-col items-center gap-0.5 rounded-lg border border-border px-2 py-3"
+          class="flex flex-col gap-0.5 rounded-xl border border-border bg-card px-3 py-2.5"
         >
-          <span class="text-xl font-bold tabular-nums">
+          <span class="text-xl font-semibold tabular-nums">
             {#if stat.noCount}
               {stat.fmt(stat.value)}
             {:else}
@@ -263,6 +272,30 @@
         </div>
       {/each}
     </div>
+
+    {#if nextTime.length}
+      <div class="mx-4 mt-4" in:fade={{ duration: 300 }}>
+        <h2 class="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">Next time</h2>
+        <ul class="overflow-hidden rounded-xl border border-border bg-card">
+          {#each nextTime as line (line.name)}
+            {@const best = prs.some((p) => p.exerciseName === line.name && p.kind !== "first")}
+            <li class="flex items-center gap-2.5 border-t border-border px-3.5 py-2.5 text-sm first:border-t-0">
+              <span class="min-w-0 truncate">{line.name}</span>
+              {#if best}<span class={tagClass("warn")}>Best</span>{/if}
+              <span class="ml-auto shrink-0 tabular-nums"><span class="font-semibold text-info">{line.text}</span>{#if line.change}<span class="ml-1.5 text-[13px] {line.up ? 'text-success' : 'text-muted-foreground'}">{line.change}</span>{/if}</span>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+
+    {#if skipped.length && onCancel}
+      <div class="mx-4 mt-3 flex items-start gap-2.5 rounded-xl bg-muted px-3 py-2.5 text-[13px] leading-snug">
+        <Info class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <span class="flex-1">{skipped.length === 1 ? skipped[0] : `${skipped.slice(0, -1).join(", ")} and ${skipped.at(-1)}`} {skipped.length === 1 && !/^\d/.test(skipped[0]!) ? "wasn't" : "weren't"} done, so {skipped.length === 1 ? "it's" : "they're"} left out.</span>
+        <button type="button" class="h-9 shrink-0 rounded-lg border border-input px-2.5 text-xs font-medium" onclick={onCancel}>Go back</button>
+      </div>
+    {/if}
 
     <!-- Beat 3 — PRs -->
     {#if prsLoaded && prs.length > 0}
@@ -330,13 +363,13 @@
       </div>
     {/if}
 
-    <!-- Session note -->
-    {#if session.note}
-      <div class="mx-4 mt-3 rounded-lg border border-border px-4 py-3" in:fade={{ duration: 300, delay: 850 }}>
-        <p class="text-xs text-muted-foreground">Note</p>
-        <p class="text-sm mt-0.5 whitespace-pre-wrap">{session.note}</p>
-      </div>
-    {/if}
+    <!-- Note -->
+    <div class="mx-4 mt-4 flex flex-col gap-1.5">
+      <label for="finish-note" class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">Note</label>
+      <input id="finish-note" type="text" bind:value={note} placeholder="How it felt, sleep, anything"
+        onchange={() => void onNote?.(note.trim())}
+        class="h-12 w-full rounded-xl border border-input bg-background px-3.5 text-[15px]" />
+    </div>
 
     <!-- Per-exercise breakdown -->
     {#if breakdown.length > 0}
@@ -363,7 +396,7 @@
       {/snippet}
 
       <div class="mx-4 mt-4" in:fade={{ duration: 300, delay: 880 }}>
-        <p class="text-xs font-medium text-muted-foreground mb-1.5">What you did</p>
+        <h2 class="mb-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">What you did</h2>
         <div class="rounded-lg border border-border divide-y divide-border overflow-hidden">
           {#each breakdown as group (group.kind === "superset" ? group.id : group.exercise.id)}
             {#if group.kind === "superset"}
@@ -384,20 +417,6 @@
         </div>
       </div>
 
-      {#if nextTime.length}
-        <div class="mx-4 mt-4" in:fade={{ duration: 300 }}>
-          <p class="text-xs font-medium text-muted-foreground mb-1.5">Next time</p>
-          <ul class="rounded-lg border border-border divide-y divide-border">
-            {#each nextTime as line (line.name)}
-              <li class="flex items-baseline justify-between gap-3 px-3 py-2.5 text-sm">
-                <span class="min-w-0 truncate">{line.name}</span>
-                <span class="shrink-0 font-semibold tabular-nums text-sky-700 dark:text-sky-300">{line.text}</span>
-              </li>
-            {/each}
-          </ul>
-          <p class="mt-1.5 text-xs text-muted-foreground">Worked out from the sets you just logged.</p>
-        </div>
-      {/if}
     {/if}
   </div>
 
@@ -405,12 +424,9 @@
     class="shrink-0 border-t border-border bg-background px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex flex-col gap-2"
     in:fade={{ duration: 300, delay: 650 }}
   >
-    <Button class="w-full" onclick={() => void onDone()}>Save & finish</Button>
+    <Button class="h-12 w-full rounded-xl text-[15px] font-semibold" onclick={async () => { if (note.trim() !== (session.note ?? "")) await onNote?.(note.trim()); void onDone(); }}>Save workout</Button>
     {#if onShare && authStore.isAuthenticated}
-      <Button variant="outline" class="w-full" onclick={() => onShare(session)}>Share workout</Button>
-    {/if}
-    {#if onCancel}
-      <Button variant="ghost" class="w-full" onclick={onCancel}>Back to workout</Button>
+      <Button variant="outline" class="h-11 w-full rounded-xl" onclick={async () => { if (note.trim() !== (session.note ?? "")) await onNote?.(note.trim()); onShare({ ...session, note: note.trim() || null }); }}>Save and share</Button>
     {/if}
   </div>
 </div>

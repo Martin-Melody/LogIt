@@ -384,6 +384,14 @@ function createAuthStore() {
     if (opts.keepHere) {
       const { updateLocalAccount } = await import("$lib/data/localAccountRepo");
       await updateLocalAccount(ownerId, { serverUserId: null });
+      // The training stays; a coach's check-ins don't (no coach without the account).
+      try {
+        const { getCheckinRepo } = await import("$lib/data/repoProvider");
+        const repo = getCheckinRepo();
+        for (const s of await repo.listAssignedSchedules()) await repo.removeScheduleFromRemote(s.id);
+      } catch (e) {
+        log.warn("auth", "Couldn't clear the coach's check-ins", e);
+      }
       setServerMode("offline");
       apiClient.resetBaseUrl();
       window.location.href = "/";

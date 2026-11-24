@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, ChevronDown, ChevronRight, GripVertical, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
+  import { Check, ChevronDown, ChevronRight, GripVertical, Link2, Link2Off, MoreHorizontal, Play, Plus, Repeat, Timer, Trash2, Zap } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import type { SessionBlock, WorkoutSession } from "@logit/core/domain/workout";
@@ -25,7 +25,12 @@
   import type { GripAction } from "$lib/features/session/blocks/types";
   import BlockHost from "$lib/features/session/blocks/BlockHost.svelte";
   import { reveal } from "$lib/transitions";
-  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import { addButton, segment, segmentTrack } from "$lib/components/ui/choice";
+  import { openAllSignal } from "$lib/features/session/openAll";
+  import { effortOpenIn, foldFor, type BlockStage } from "$lib/features/session/stage";
+  import { untrack } from "svelte";
+  import { formatLoad } from "@logit/core/domain/units";
+  import type { MobilityBlockData, StrengthBlockData } from "@logit/core/domain/workout";
   import { SvelteMap } from "svelte/reactivity";
   import { get } from "svelte/store";
   import { groupViews } from "./groupViews";
@@ -41,6 +46,8 @@
     onGroupBlock,
     onMutate,
     onDeleteBlock,
+    stage,
+    onReorder,
   } = $props<{
     supersetId: string;
     blocks: SessionBlock[];
@@ -55,6 +62,9 @@
     onGroupBlock?: (blockId: string) => void;
     onMutate: (updater: (s: WorkoutSession) => WorkoutSession, opts?: { auto?: boolean }) => Promise<void>;
     onDeleteBlock: (blockId: string) => void | Promise<void>;
+    /** Where the group is in the workout (stage.ts): it folds like a single exercise. */
+    stage?: BlockStage;
+    onReorder?: () => void;
   }>();
 
   const noopGrip: GripAction = () => ({ destroy() {} });
@@ -68,7 +78,37 @@
   let editOpen = $state(false);
   // Collapsed, the whole group is one line. It starts the way the "Collapse blocks by
   // default" setting says, like a single exercise, and never collapses on its own after that.
-  let collapsed = $state(get(profile).blocksCollapsedByDefault);
+  let collapsed = $state(
+    untrack(() => stage) ? foldFor(untrack(() => stage)!, get(profile).blocksCollapsedByDefault) : get(profile).blocksCollapsedByDefault,
+  );
+  // Done waits while the last set's effort question is open in one of its exercises.
+  let seenStage = untrack(() => stage);
+  let foldPending = false;
+  $effect(() => {
+    const st = stage;
+    const open = $effortOpenIn;
+    const asking = !!open && blocks.some((b: SessionBlock) => b.id === open);
+    untrack(() => {
+      if (st && st !== seenStage) { seenStage = st; foldPending = true; }
+      if (!st || !foldPending || (st === "done" && asking)) return;
+      foldPending = false;
+      collapsed = foldFor(st, get(profile).blocksCollapsedByDefault);
+    });
+  });
+
+  // "Open every exercise" in the workout menu.
+  let seenOpenAll = get(openAllSignal);
+  $effect(() => {
+    const n = $openAllSignal;
+    untrack(() => {
+      if (n === seenOpenAll) return;
+      seenOpenAll = n;
+      collapsed = false;
+    });
+  });
+  // The members' names ("Lateral Raise + Face Pull") unless the group has its own.
+  const title = $derived(info?.label?.trim() || blocks.map((b: SessionBlock) => blockDisplayName(b)).join(" + "));
+  const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const progress = $derived(groupProgress(blocks));
 
   // Expanded, a group shows its exercises one after another (the default: drag, warm-ups,
@@ -78,7 +118,8 @@
   const rounds = $derived(groupRounds(roundBlocks));
   const canShowRounds = $derived(rounds.length > 0);
   function initialView(): "rounds" | "exercises" {
-    return groupViews.get(supersetId) ?? "exercises";
+    // Rounds first (merged design), unless this group was switched to exercises.
+    return groupViews.get(supersetId) ?? (groupRounds(blocks.filter((b: SessionBlock) => b.type === "strength" || b.type === "mobility")).length > 0 ? "rounds" : "exercises");
   }
   let view = $state<"rounds" | "exercises">(initialView());
   function setView(v: "rounds" | "exercises") {
@@ -98,6 +139,26 @@
     if (t.done > 0 || r === progress.currentRound - 1) return `${t.done} of ${t.total} done`;
     if (r === progress.currentRound) return "Up next";
     return "";
+  }
+  /** A round in one line: "A 10 × 14 · B 25 × 15", done or (still to do) planned. */
+  function roundLine(r: number): string {
+    const unit = $profile.weightUnit;
+    return roundBlocks
+      .map((b: SessionBlock, i: number) => {
+        if (b.type === "strength") {
+          const set = [...(b.data as StrengthBlockData).sets].sort((x, y) => x.orderIndex - y.orderIndex)[r];
+          if (!set) return null;
+          const kg = set.completed ? set.weight : set.weight || set.target?.weight || 0;
+          const reps = set.completed ? set.reps : set.reps || set.target?.reps || 0;
+          return `${LETTERS[i]} ${kg ? `${formatLoad(kg, unit, false, { withUnit: false })} × ` : "× "}${reps}`;
+        }
+        const d = b.data as MobilityBlockData;
+        const set = [...d.sets].sort((x, y) => x.orderIndex - y.orderIndex)[r * (d.perSide ? 2 : 1)];
+        if (!set) return null;
+        return `${LETTERS[i]} ${d.metric === "hold" ? `${set.durationSec ?? set.targetSec ?? 0} s` : `× ${set.reps ?? 0}`}`;
+      })
+      .filter(Boolean)
+      .join(" · ");
   }
   /** Index in `blocks` of a member, for its rest (the last member rests between rounds). */
   function memberIndex(block: SessionBlock): number {
@@ -132,7 +193,7 @@
 
   const summary = $derived.by(() => {
     const parts: string[] = [];
-    if (info?.label?.trim()) parts.push(kind === "circuit" ? "Circuit" : "Superset");
+    parts.push(kind === "circuit" ? "Circuit" : "Superset");
     parts.push(`${blocks.length} exercise${blocks.length === 1 ? "" : "s"}`);
     if (collapsed && progress.roundCount > 0) {
       parts.push(`round ${progress.currentRound} of ${progress.roundCount}`);
@@ -148,11 +209,11 @@
   }
 </script>
 
-<div class="border-y border-primary/30 bg-primary/[0.03] transition-opacity {dragging ? 'opacity-50' : ''}">
-  <div class="flex items-center gap-2 py-1 pl-1 pr-1">
+<div class="transition-opacity {stage === 'current' ? '' : 'border-b border-border/50'} {dragging ? 'opacity-50' : ''}">
+  <div class="flex items-center pl-1 pr-1 {stage === 'current' ? '' : 'border-t border-border bg-muted/20'}">
     <button
       type="button"
-      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-primary/70 cursor-grab active:cursor-grabbing touch-none"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
       style="touch-action: none"
       use:groupGripAction
       aria-label="Drag {label.toLowerCase()} to reorder"
@@ -163,38 +224,31 @@
     </button>
     <button
       type="button"
-      class="shrink-0 -ml-2 h-11 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+      class="shrink-0 h-11 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
       onclick={() => (collapsed = !collapsed)}
       aria-expanded={!collapsed}
       aria-label="{collapsed ? 'Expand' : 'Collapse'} {label}"
     >
       {#if collapsed}<ChevronRight class="h-4 w-4" />{:else}<ChevronDown class="h-4 w-4" />{/if}
     </button>
+    <span class="ml-0.5 mr-2 flex size-[30px] shrink-0 items-center justify-center rounded-lg bg-muted" aria-hidden="true">
+      {#if kind === "circuit"}<Repeat class="h-4 w-4" />{:else}<Link2 class="h-4 w-4" />{/if}
+    </span>
     <button
       type="button"
-      class="flex-1 min-w-0 py-1.5 text-left rounded-md disabled:opacity-50"
+      class="flex-1 min-w-0 min-h-11 py-1 pr-2 text-left disabled:opacity-50"
       onclick={() => (editOpen = true)}
       disabled={saving}
       aria-label="Edit {label}"
     >
-      <span class="flex items-center gap-1 text-xs font-medium text-primary uppercase tracking-wide">
-        <span class="truncate">{label}</span>
-      </span>
-      <span class="block text-xs text-muted-foreground truncate">{summary}</span>
+      <span class="block truncate font-semibold {stage === 'current' ? 'text-[17px]' : 'text-[15px]'}">{title}</span>
+      <span class="block truncate text-xs text-muted-foreground">{summary}</span>
     </button>
-    {#if collapsed && progress.total > 0}
-      <span class="shrink-0 text-xs text-muted-foreground tabular-nums">{progress.done} of {progress.total}</span>
-    {/if}
-    {#if canRun || running}
-      <button
-        type="button"
-        class="shrink-0 flex h-8 items-center gap-1 rounded-md bg-primary pl-2 pr-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
-        onclick={startOrShow}
-        disabled={saving && !running}
-        aria-label={running ? `Show the ${label.toLowerCase()} timer` : `Start ${label.toLowerCase()}`}
-      >
-        {#if running}<Timer class="h-3.5 w-3.5" /> Running{:else}<Play class="h-3.5 w-3.5 fill-current" /> Start{/if}
-      </button>
+    {#if progress.total > 0}
+      {@const allDone = progress.done >= progress.total}
+      <span class="flex shrink-0 items-center gap-1 text-xs tabular-nums {allDone ? 'text-success' : 'text-muted-foreground'}">
+        {#if allDone}<Check class="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />{/if}{progress.done} of {progress.total}
+      </span>
     {/if}
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
@@ -242,41 +296,52 @@
       {/if}
 
       {#if byRound}
-        <div class="ml-3 border-l-2 border-primary/30">
+        <div>
           {#each rounds as tally, r (r)}
             {@const open = roundOpen(r)}
-            <div class="border-t border-border/60 first:border-t-0">
+            {@const done = tally.done === tally.total}
+            {#if open}
+              <div class="border-t border-border/60">
+                <button
+                  type="button"
+                  class="flex min-h-10 w-full items-center gap-2.5 px-3 text-left text-[13px]"
+                  onclick={() => roundChoice.set(r, false)}
+                  aria-expanded="true"
+                >
+                  {#if done}<span class="flex size-[22px] items-center justify-center rounded-full bg-primary text-primary-foreground"><Check class="h-3 w-3" strokeWidth={3} /></span>{/if}
+                  <span class="font-semibold">Round {r + 1}</span>
+                  <span class="ml-auto text-xs text-muted-foreground">{roundStatus(r)}</span>
+                </button>
+                {#each roundBlocks.filter((b: SessionBlock) => memberRoundCount(b) > r) as block (block.id)}
+                  <BlockHost
+                    type={block.type}
+                    blockId={block.id}
+                    data={block.data}
+                    {saving}
+                    grouped
+                    round={r}
+                    roundLabel={LETTERS[roundBlocks.indexOf(block)]}
+                    groupRestMs={memberRest(memberIndex(block))}
+                    gripAction={noopGrip}
+                    onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
+                    {onReorder}
+                    onDelete={() => onDeleteBlock(block.id)}
+                    {onMutate}
+                  />
+                {/each}
+              </div>
+            {:else}
               <button
                 type="button"
-                class="w-full min-h-11 flex items-center gap-2 pl-3 pr-4 text-left text-sm {open ? 'font-semibold' : 'text-muted-foreground'}"
-                onclick={() => roundChoice.set(r, !open)}
-                aria-expanded={open}
+                class="flex min-h-11 w-full items-center gap-2.5 border-t border-border/60 px-3 text-left text-[13px] tabular-nums text-muted-foreground"
+                onclick={() => roundChoice.set(r, true)}
+                aria-expanded="false"
               >
-                {#if open}<ChevronDown class="h-4 w-4 shrink-0" />{:else}<ChevronRight class="h-4 w-4 shrink-0" />{/if}
-                <span class="flex-1">Round {r + 1}</span>
-                <span class="text-xs font-normal text-muted-foreground">{roundStatus(r)}</span>
-                {#if tally.done === tally.total}<Check class="h-4 w-4 shrink-0 text-info" aria-hidden="true" />{/if}
+                {#if done}<span class="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check class="h-3 w-3" strokeWidth={3} /></span>{/if}
+                <span class="shrink-0 font-semibold text-foreground">Round {r + 1}</span>
+                <span class="min-w-0 truncate {done ? '' : 'text-info'}">{roundLine(r)}</span>
               </button>
-              {#if open}
-                <div transition:reveal>
-                  {#each roundBlocks.filter((b: SessionBlock) => memberRoundCount(b) > r) as block (block.id)}
-                    <BlockHost
-                      type={block.type}
-                      blockId={block.id}
-                      data={block.data}
-                      {saving}
-                      grouped
-                      round={r}
-                      groupRestMs={memberRest(memberIndex(block))}
-                      gripAction={noopGrip}
-                      onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
-                      onDelete={() => onDeleteBlock(block.id)}
-                      {onMutate}
-                    />
-                  {/each}
-                </div>
-              {/if}
-            </div>
+            {/if}
           {/each}
           {#each otherBlocks as block (block.id)}
             <BlockHost
@@ -288,13 +353,14 @@
               groupRestMs={memberRest(memberIndex(block))}
               gripAction={noopGrip}
               onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
+              {onReorder}
               onDelete={() => onDeleteBlock(block.id)}
               {onMutate}
             />
           {/each}
         </div>
       {:else}
-        <div class="ml-3 border-l-2 border-primary/30">
+        <div class="ml-3 border-l-2 border-border">
           {#each blocks as block, i (block.id)}
             <div class="transition-opacity {draggingBlockId === block.id ? 'opacity-50' : ''}" transition:reveal>
               <BlockHost
@@ -305,6 +371,8 @@
                 grouped
                 groupRestMs={memberRest(i)}
                 gripAction={memberGripAction ? memberGripAction(block.id) : noopGrip}
+                {stage}
+                {onReorder}
                 onGroup={onGroupBlock ? () => onGroupBlock(block.id) : undefined}
                 onDelete={() => onDeleteBlock(block.id)}
                 {onMutate}
@@ -314,14 +382,24 @@
         </div>
       {/if}
 
-      <button
-        type="button"
-        class="w-full h-11 px-3 text-xs font-medium text-primary text-left hover:bg-primary/5 disabled:opacity-40"
-        onclick={() => onMutate((s: WorkoutSession) => addSupersetRound(s, supersetId))}
-        disabled={saving}
-      >
-        <Plus class="inline h-3.5 w-3.5 -mt-0.5" /> Add round
-      </button>
+      <div class="flex flex-wrap gap-2 px-3 pt-2 pb-3">
+        <button type="button" class={addButton} onclick={() => onMutate((s: WorkoutSession) => addSupersetRound(s, supersetId))} disabled={saving}>
+          <Plus class="h-3.5 w-3.5" /> Add a round
+        </button>
+        {#if (canRun || running) && kind !== "circuit"}
+          <button type="button" class={addButton} onclick={startOrShow} disabled={saving && !running}>
+            {#if running}<Timer class="h-3.5 w-3.5" /> Show the timer{:else}<Play class="h-3.5 w-3.5" /> Countdown{/if}
+          </button>
+        {/if}
+      </div>
+      {#if (canRun || running) && kind === "circuit"}
+        <div class="px-3 pb-3">
+          <button type="button" class="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-50"
+            onclick={startOrShow} disabled={saving && !running}>
+            {#if running}<Timer class="h-4 w-4" /> Show the timer{:else}<Play class="h-4 w-4 fill-current" /> Start {label.toLowerCase()}{/if}
+          </button>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

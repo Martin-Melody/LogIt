@@ -127,7 +127,7 @@ async function openExerciseMenu(page: Page, i = 0) {
 /** ⋯ → "Superset / circuit with…", tick `names` in the picker and confirm. */
 async function groupWith(page: Page, names: string[], menuIndex = 0) {
   await openExerciseMenu(page, menuIndex);
-  await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+  await page.getByRole("button", { name: "Superset or circuit with…" }).click();
   for (const name of names) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
   await page.getByRole("button", { name: /^Make (superset|circuit)/ }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -294,54 +294,72 @@ test.describe("progression targets", () => {
     });
     await goToSession(page);
 
-    await expect(page.getByTestId("progress-meter")).toHaveCount(0);
-    await expect(page.getByText("+ Add first set")).toBeVisible();
+    await expect(page.getByTestId("reason-line")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add first set" })).toBeVisible();
   });
 });
 
 // ── Adding exercises ──────────────────────────────────────────────────────────
 
 test.describe("adding exercises", () => {
-  test("FAB opens the block picker then the add exercise dialog", async ({ page }) => {
+  test("Add to workout opens one sheet for every kind", async ({ page }) => {
     await seedSession(page, { session: makeSession([]) });
     await goToSession(page);
 
-    // Two block types registered → FAB opens picker first
-    await page.locator('[aria-label="Add block"]').click();
-    await expect(page.getByText("Strength exercise")).toBeVisible();
-
-    await page.getByText("Strength exercise").click();
-
-    await expect(page.locator('input[placeholder="e.g. Bench Press"]')).toBeVisible();
+    await page.getByTestId("add-to-workout").click();
+    const sheet = page.getByRole("dialog", { name: "Add to workout" });
+    await expect(sheet).toBeVisible();
+    for (const kind of ["All", "Strength", "Cardio", "Mobility"]) await expect(sheet.getByRole("button", { name: kind, exact: true })).toBeVisible();
+    await expect(sheet.getByRole("searchbox")).toBeVisible();
   });
 
   test("adding a new exercise name creates a block", async ({ page }) => {
     await seedSession(page, { session: makeSession([]) });
     await goToSession(page);
 
-    await page.locator('[aria-label="Add block"]').click();
-    await page.getByText("Strength exercise").click();
+    await addFromSheet(page, "Zercher Lunge Hold");
+    await expect(page.getByText("Zercher Lunge Hold")).toBeVisible();
+  });
 
-    const input = page.locator('input[placeholder="e.g. Bench Press"]');
-    await expect(input).toBeVisible();
-    await input.fill("Romanian Deadlift");
-    // Enter submits when no result matches — confirmNew() fires on keydown
-    await page.keyboard.press("Enter");
+  test("several picks become a superset", async ({ page }) => {
+    await seedSession(page, { session: makeSession([]) });
+    await goToSession(page);
 
-    await expect(page.locator('input[placeholder="e.g. Bench Press"]')).not.toBeVisible();
-    await expect(page.getByText("Romanian Deadlift")).toBeVisible();
+    await page.getByTestId("add-to-workout").click();
+    const sheet = page.getByRole("dialog", { name: "Add to workout" });
+    for (const name of ["Zercher Lunge Hold", "Banded Pull Apart X"]) {
+      await sheet.getByRole("searchbox").fill(name);
+      await sheet.getByRole("button", { name: new RegExp(`^Add “${name}”`) }).click();
+    }
+    await sheet.getByRole("button", { name: "As a superset" }).click();
+    await expect(page.getByText("Zercher Lunge Hold + Banded Pull Apart X")).toBeVisible();
   });
 });
 
+/** The swap sheet: search, then the match (or the new name). */
+async function swapTo(page: Page, name: string) {
+  const sheet = page.getByRole("dialog", { name: /Instead of/ });
+  await sheet.getByRole("searchbox").fill(name);
+  const exact = sheet.getByRole("button", { name: new RegExp(`^${name}\\b`) });
+  if (await exact.count()) await exact.first().click();
+  else await sheet.getByRole("button", { name: new RegExp(`^Use “${name}”`) }).click();
+  await expect(sheet).toHaveCount(0);
+}
+
+/** Add to workout: search, tick the match (or the new name), then Add. */
+async function addFromSheet(page: Page, name: string) {
+  await page.getByTestId("add-to-workout").click();
+  const sheet = page.getByRole("dialog", { name: "Add to workout" });
+  await sheet.getByRole("searchbox").fill(name);
+  const create = sheet.getByRole("button", { name: new RegExp(`^Add “${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}”`) });
+  if (await create.count()) await create.click();
+  else await sheet.getByRole("checkbox", { name: new RegExp(`^${name}`, "i") }).first().click();
+  await sheet.getByTestId("add-picked").click();
+  await expect(sheet).toHaveCount(0);
+}
+
 test.describe("bodyweight prompt", () => {
-  async function addExercise(page: Page, name: string) {
-    await page.locator('[aria-label="Add block"]').click();
-    await page.getByText("Strength exercise").click();
-    const input = page.locator('input[placeholder="e.g. Bench Press"]');
-    await input.fill(name);
-    await page.keyboard.press("Enter");
-    await expect(input).not.toBeVisible();
-  }
+  const addExercise = addFromSheet;
 
   test("asks for bodyweight when a bodyweight exercise is added and none is known", async ({ page }) => {
     await seedSession(page, { session: makeSession([]) });
@@ -398,7 +416,7 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.getByText("+ Add first set").click();
+    await page.getByRole("button", { name: "Add first set" }).click();
 
     // A set row should now be visible, with "Add a set" under it
     await expect(page.getByRole("button", { name: "Add a set" })).toBeVisible();
@@ -416,7 +434,7 @@ test.describe("managing sets", () => {
     });
     await goToSession(page);
 
-    await page.getByText("+ Add first set").click();
+    await page.getByRole("button", { name: "Add first set" }).click();
 
     await expect(page.getByTestId("set-last").first()).toHaveText("90 × 6");
   });
@@ -429,7 +447,7 @@ test.describe("managing sets", () => {
     await goToSession(page);
 
     // The plan creates the sets itself, weight filled in from the suggestion.
-    await expect(page.getByText("+ Add first set")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add first set" })).toHaveCount(0);
     await expect.poll(() => rowText(page, 0)).toContain("× 80");
 
     // A set added beyond the plan carries the same weight.
@@ -447,14 +465,14 @@ test.describe("managing sets", () => {
     await goToSession(page);
 
     await expect(page.locator('[data-testid="set-number"]')).toHaveCount(1);
-    await page.getByText("+ Warm-up ramp").click();
+    await page.getByRole("button", { name: "Warm-up ramp" }).click();
 
     // bar 20 + 40/60/80% of 100 → 4 warm-ups, then the working set = 5 rows.
     await expect(page.locator('[data-testid="set-number"]')).toHaveCount(5);
     // First row is a warm-up (W badge).
     await expect(page.locator("main").getByText("W", { exact: true }).first()).toBeVisible();
     // Offer is gone once warm-ups exist.
-    await expect(page.getByText("+ Warm-up ramp")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Warm-up ramp" })).toHaveCount(0);
   });
 
   test("marking a set complete toggles its visual state", async ({ page }) => {
@@ -499,11 +517,8 @@ test.describe("managing sets", () => {
     await goToSession(page);
 
     await openExerciseMenu(page);
-    await page.getByRole("menuitem", { name: "Swap exercise" }).click();
-    const input = page.locator('input[placeholder="e.g. Bench Press"]');
-    await expect(input).toBeVisible();
-    await input.fill("Incline Bench Press");
-    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Swap for another exercise" }).click();
+    await swapTo(page, "Incline Bench Press");
 
     // The card's name, not the Undo toast ("Swapped to …") that also names it.
     await expect(page.getByRole("button", { name: "Incline Bench Press — open details" })).toBeVisible();
@@ -520,21 +535,14 @@ test.describe("managing sets", () => {
     await seedSession(page, { session: makeSession([]) });
     await goToSession(page);
 
-    await page.locator('[aria-label="Add block"]').click();
-    await page.getByText("Strength exercise").click();
-    const addInput = page.locator('input[placeholder="e.g. Bench Press"]');
-    await addInput.fill("Overhead Press");
-    await page.keyboard.press("Enter");
+    await addFromSheet(page, "Overhead Press");
     await expect(page.getByText("Overhead Press")).toBeVisible();
 
     await openExerciseMenu(page);
-    await page.getByRole("menuitem", { name: "Swap exercise" }).click();
-    const swapInput = page.locator('input[placeholder="e.g. Bench Press"]');
-    await expect(swapInput).toBeVisible();
+    await page.getByRole("button", { name: "Swap for another exercise" }).click();
+    const swapInput = page.getByRole("dialog", { name: /Instead of/ }).getByRole("searchbox");
     await expect(swapInput).toBeEnabled();
-    await swapInput.fill("Incline Bench Press");
-    await expect(swapInput).toHaveValue("Incline Bench Press");
-    await page.keyboard.press("Enter");
+    await swapTo(page, "Incline Bench Press");
     await expect(page.getByRole("button", { name: "Incline Bench Press — open details" })).toBeVisible();
   });
 
@@ -545,7 +553,7 @@ test.describe("managing sets", () => {
     await goToSession(page);
 
     await openExerciseMenu(page);
-    await page.getByRole("menuitem", { name: "Remove exercise" }).click();
+    await page.getByRole("button", { name: "Remove from this workout" }).click();
     // Confirm dialog appears
     await page.getByRole("button", { name: "Remove" }).click();
 
@@ -569,36 +577,38 @@ test.describe("supersets", () => {
 
     await groupWith(page, ["Row"]);
 
-    await expect(page.getByText("SUPERSET")).toBeVisible();
+    await expect(page.getByText(/^Superset · /).first()).toBeVisible();
     await expect(page.getByText("2 exercises · 1 round")).toBeVisible();
 
-    await page.getByRole("button", { name: "Add round" }).click();
+    await page.getByRole("button", { name: "Add a round" }).click();
     await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
 
-    // By exercise (the default), each exercise now has 2 set rows.
-    await expect(page.getByRole("button", { name: "By exercise" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(4);
-
-    // By round, each round is its own row.
-    await page.getByRole("button", { name: "By round" }).click();
+    // By round (the default), each round is its own row.
+    await expect(page.getByRole("button", { name: "By round" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: /Round 2/ })).toBeVisible();
+
+    // By exercise, each exercise now has 2 set rows.
+    await page.getByRole("button", { name: "By exercise" }).click();
+    await expect(page.locator('[data-testid="set-number"]')).toHaveCount(4);
 
     // Ungroup (from the group's menu) restores plain blocks.
     await page.getByRole("button", { name: "More actions for this superset" }).click();
     await page.getByRole("menuitem", { name: "Ungroup" }).click();
-    await expect(page.getByText("SUPERSET")).not.toBeVisible();
+    await expect(page.getByText(/^Superset · /)).toHaveCount(0);
     await expect(page.getByText("Bench Press")).toBeVisible();
     await expect(page.getByText("Row", { exact: true })).toBeVisible();
   });
 
   test("with 'Collapse blocks by default' on, a group starts collapsed", async ({ page }) => {
     await seedSession(page, {
-      session: makeSession(
-        [
-          makeStrengthBlock("b1", 0, "Bench Press", [makeSet("s1", 0, 8, 60)]),
-          makeStrengthBlock("b2", 1, "Row", [makeSet("s2", 0, 8, 40)]),
+      session: makeSession([
+        // The exercise being worked on comes first, so the group waits under Up next, folded.
+        makeStrengthBlock("b0", 0, "Squat", [{ ...makeSet("s0", 0, 5, 100), completed: true }, makeSet("s0b", 1, 5, 100)]),
+        ...[
+          makeStrengthBlock("b1", 1, "Bench Press", [makeSet("s1", 0, 8, 60)]),
+          makeStrengthBlock("b2", 2, "Row", [makeSet("s2", 0, 8, 40)]),
         ].map((b) => ({ ...b, data: { ...b.data, superset: { id: "g1" } } })),
-      ),
+      ]),
       blocksCollapsedByDefault: true,
     });
     await goToSession(page);
@@ -608,7 +618,7 @@ test.describe("supersets", () => {
     await expect(page.getByRole("button", { name: "By exercise" })).toHaveCount(0);
 
     await toggle.click();
-    await expect(page.getByRole("button", { name: "By exercise" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "By round" })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("a drill's menu builds a circuit: same kind first, add another comes back ticked", async ({ page }) => {
@@ -626,7 +636,7 @@ test.describe("supersets", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "More actions for Hamstring stretch" }).click();
-    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    await page.getByRole("button", { name: "Superset or circuit with…" }).click();
     const picker = page.getByRole("dialog", { name: "Superset / circuit with Hamstring stretch" });
     await expect(picker).toBeVisible();
     // Mobility first, then everything else.
@@ -637,17 +647,21 @@ test.describe("supersets", () => {
     await expect(picker.getByRole("button", { name: "Make superset" })).toBeVisible();
 
     // A drill that isn't in the workout yet.
-    await picker.getByRole("button", { name: /Add another exercise/ }).click();
-    await page.getByRole("button", { name: /Mobility \/ Stretching/ }).click();
-    await page.getByPlaceholder("Search drills, or type a new one…").fill("Middle split");
-    await page.getByRole("dialog", { name: "Add mobility drill" }).getByRole("button", { name: "Add", exact: true }).click();
+    await picker.getByRole("button", { name: /Something not in this workout/ }).click();
+    const add = page.getByRole("dialog", { name: "Add to workout" });
+    await add.getByRole("button", { name: "Mobility", exact: true }).click();
+    await add.getByRole("searchbox").fill("Middle split");
+    const made = add.getByRole("button", { name: /^Add “Middle split”/ });
+    if (await made.count()) await made.click();
+    else await add.getByRole("checkbox", { name: /^Middle split/ }).first().click();
+    await add.getByTestId("add-picked").click();
 
     await expect(picker).toBeVisible();
     await expect(picker.getByRole("checkbox", { name: /Middle split/ })).toBeChecked();
     await picker.getByRole("button", { name: "Make circuit · 3 exercises" }).click();
     await expect(picker).toHaveCount(0);
 
-    await expect(page.getByText("CIRCUIT")).toBeVisible();
+    await expect(page.getByText(/^Circuit · /).first()).toBeVisible();
     // Grouped drills sit together, in workout order; Bench Press is pushed below.
     const names = await page.getByRole("button", { name: /^More actions for (?!this )/ }).evaluateAll((els) =>
       els.map((e) => e.getAttribute("aria-label")!.replace("More actions for ", "")),
@@ -679,23 +693,23 @@ test.describe("supersets", () => {
 
     // Not the last drill of the round: ticking it moves on without a rest.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
     // The last drill's first side goes straight on to the other side…
     await page.getByRole("button", { name: "Mark complete" }).first().click();
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
     // …and the end of the round rests with the drill's own rest.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
-    await page.getByLabel("Dismiss rest timer").click();
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(1);
+    await page.getByRole("button", { name: "Skip", exact: true }).click();
 
-    await page.getByRole("button", { name: "Add round" }).click();
+    await page.getByRole("button", { name: "Add a round" }).click();
     await expect(page.getByText("2 exercises · 2 rounds")).toBeVisible();
     // One new set for the hamstring, one L/R pair for the pigeon.
     await expect(page.locator('[data-testid="set-number"]')).toHaveCount(4);
     // Round 1 is all done, so the open hold rows are the new ones, each with the 30 s target.
     const holdRows = page.getByRole("row", { name: /Start hold timer/ });
     await expect(holdRows).toHaveCount(3);
-    await expect(page.getByRole("row", { name: /Start hold timer.*30s goal/ })).toHaveCount(3);
+    await expect(page.locator('input[placeholder="30"]')).toHaveCount(3);
   });
 
   test("one drill can be a circuit on its own, and run with the countdown", async ({ page }) => {
@@ -713,14 +727,14 @@ test.describe("supersets", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "More actions for Couch stretch" }).click();
-    await page.getByRole("menuitem", { name: "Superset / circuit with…" }).click();
+    await page.getByRole("button", { name: "Superset or circuit with…" }).click();
     const picker = page.getByRole("dialog", { name: "Superset / circuit with Couch stretch" });
     await expect(picker.getByRole("radio", { name: "Circuit" })).toHaveAttribute("aria-checked", "true");
     await expect(picker.getByRole("radio", { name: "Superset" })).toBeDisabled();
     await picker.getByRole("button", { name: "Make circuit · 1 exercise" }).click();
     await expect(picker).toHaveCount(0);
 
-    await expect(page.getByText("Circuit", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Circuit · /).first()).toBeVisible();
     await expect(page.getByText("1 exercise · 2 rounds")).toBeVisible();
     await page.getByRole("button", { name: "Start circuit" }).click();
     await expect(page.getByRole("dialog", { name: "Circuit timer" }).getByText("Round 1 of 2")).toBeVisible();
@@ -740,7 +754,7 @@ test.describe("supersets", () => {
 
     await page.getByRole("button", { name: "More actions for this superset" }).click();
     await page.getByRole("menuitem", { name: "Make it a circuit" }).click();
-    await expect(page.getByText("Circuit", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Circuit · /).first()).toBeVisible();
 
     await page.getByRole("button", { name: "More actions for this circuit" }).click();
     await page.getByRole("menuitem", { name: "Remove circuit and its exercises" }).click();
@@ -770,11 +784,11 @@ test.describe("supersets", () => {
 
     // First member — completing it flows straight on, no rest.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
 
     // Anchor (last member) — completing starts the one shared round rest.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(1);
   });
 
   test("a circuit rests between exercises by default; the edit sheet changes it", async ({ page }) => {
@@ -804,11 +818,11 @@ test.describe("supersets", () => {
     await circuit.getByLabel("Name").fill("Push pull");
     await circuit.getByRole("button", { name: "Save" }).click();
     await circuit.getByRole("button", { name: "Close" }).last().click();
-    await expect(page.getByText("PUSH PULL", { exact: false })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Edit Push pull$/i })).toBeVisible();
 
     // The first exercise now starts the 15 s rest between exercises.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(1);
     await expect.poll(async () =>
       page.evaluate(() => {
         const draft = JSON.parse(localStorage.getItem("logit:draft:v1")!);
@@ -821,10 +835,10 @@ test.describe("supersets", () => {
     await page.getByRole("button", { name: "Edit Push pull" }).click();
     await page.getByRole("dialog", { name: "Edit circuit" }).getByRole("button", { name: "Off", exact: true }).first().click();
     await page.getByRole("dialog", { name: "Edit circuit" }).getByRole("button", { name: "Close" }).last().click();
-    await page.getByLabel("Dismiss rest timer").click();
+    await page.getByRole("button", { name: "Skip", exact: true }).click();
     // Bench's second set, not the last exercise of its round.
     await page.getByRole("button", { name: "Mark complete" }).first().click();
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
   });
 
   test("by round: the round being worked on is open, and each round opens and closes", async ({ page }) => {
@@ -845,7 +859,7 @@ test.describe("supersets", () => {
     const round2 = page.getByRole("button", { name: /^Round 2/ });
     await expect(round1).toHaveAttribute("aria-expanded", "true");
     await expect(round2).toHaveAttribute("aria-expanded", "false");
-    await expect(round2).toContainText("Up next");
+    await expect(round2).toContainText("A ");
     // Round 1 shows each exercise once, with its first set.
     await expect(page.getByRole("button", { name: "Mark complete" })).toHaveCount(2);
 
@@ -854,8 +868,8 @@ test.describe("supersets", () => {
     await page.getByRole("button", { name: "Mark complete" }).first().click();
     await expect(round1).toContainText("Done");
     await expect(round2).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByLabel("Dismiss rest timer")).toHaveCount(1);
-    await page.getByLabel("Dismiss rest timer").click();
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toHaveCount(1);
+    await page.getByRole("button", { name: "Skip", exact: true }).click();
     await expect(round1).toHaveAttribute("aria-expanded", "false");
 
     // Any round can be opened or closed by hand.
@@ -904,11 +918,11 @@ test.describe("supersets", () => {
     await page.getByRole("button", { name: "Collapse Superset" }).click();
     await expect(page.getByText("2 exercises · round 1 of 1")).toBeVisible();
     await expect(page.getByText("1 of 2", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Add round" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add a round" })).toHaveCount(0);
     await expect(page.getByText("Row", { exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Expand Superset" }).click();
-    await expect(page.getByRole("button", { name: "Add round" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add a round" })).toBeVisible();
   });
 });
 
@@ -953,7 +967,7 @@ test.describe("circuit countdown", () => {
     await goToSession(page);
     await expect(page.getByText("2 exercises · 2 rounds · 30 s rest")).toBeVisible();
 
-    await page.getByRole("button", { name: "Start superset" }).click();
+    await page.getByRole("button", { name: "Countdown" }).click();
     const overlay = page.getByRole("dialog", { name: "Superset timer" });
     await expect(overlay.getByText("Get ready")).toBeVisible();
     await expect(overlay.getByRole("heading", { name: "Hamstring stretch" })).toBeVisible();
@@ -999,7 +1013,7 @@ test.describe("circuit countdown", () => {
     await overlay.getByRole("button", { name: "Shrink to see the workout" }).click();
     const bar = page.getByRole("region", { name: "Superset timer" });
     await expect(bar).toBeVisible();
-    await expect(page.getByRole("button", { name: "Show the superset timer" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Show the timer" })).toBeVisible();
     await bar.getByRole("button", { name: "Pause" }).click();
     await page.clock.runFor(60_000);
     await expect(bar.getByText("Paused")).toBeVisible();
@@ -1007,13 +1021,11 @@ test.describe("circuit countdown", () => {
     await overlay.getByRole("button", { name: "End" }).click();
     await expect(overlay).toHaveCount(0);
     await expect(bar).toHaveCount(0);
-    // The add button is back above the bottom nav, not stuck at the bottom.
-    const fab = await page.getByRole("button", { name: "Add block" }).boundingBox();
-    const nav = await page.getByRole("navigation", { name: "Main navigation" }).boundingBox();
-    expect(fab!.y + fab!.height).toBeLessThan(nav!.y);
+    // Add to workout is back in the bottom bar.
+    await expect(page.getByTestId("add-to-workout")).toBeInViewport();
     const sets = await draftSets(page);
     expect(sets["ham-1"]?.completed).toBeFalsy();
-    await expect(page.getByRole("button", { name: "Start superset" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Countdown" })).toBeVisible();
   });
 });
 
@@ -1166,7 +1178,7 @@ test.describe("finish session", () => {
 
     await page.getByRole("button", { name: "Finish workout" }).click();
 
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
   });
 
   test("a session note is saved and shown on the recap", async ({ page }) => {
@@ -1177,13 +1189,13 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
 
-    await page.getByRole("button", { name: "+ Session note" }).click();
+    await page.getByRole("button", { name: "Session note" }).click();
     const note = page.locator('textarea[placeholder^="Session note"]');
     await note.fill("felt strong today");
     await note.blur();
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByText("felt strong today")).toBeVisible();
+    await expect(page.getByLabel("Note")).toHaveValue("felt strong today");
   });
 
   test("recap screen shows session stats", async ({ page }) => {
@@ -1199,7 +1211,7 @@ test.describe("finish session", () => {
 
     await page.getByRole("button", { name: "Finish workout" }).click();
 
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
     // "Sets" stat label in recap (exact match avoids "2 sets" exercise count chip)
     await expect(page.getByText("Sets", { exact: true })).toBeVisible();
     await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
@@ -1220,9 +1232,9 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
 
-    await expect(page.getByRole("button", { name: "Save & finish" })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "Save workout" })).toBeInViewport();
     await expect(page.getByRole("button", { name: "Back to workout" })).toBeInViewport();
   });
 
@@ -1238,7 +1250,7 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
 
     const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
     await expect(breakdown.getByText("BW−25×8")).toBeVisible();
@@ -1260,7 +1272,7 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
 
     await expect(page.getByText("3 new exercises")).toBeVisible();
     await expect(page.getByText(/Bench Press, Squat, Row/)).toBeVisible();
@@ -1280,7 +1292,7 @@ test.describe("finish session", () => {
     });
     await goToSession(page);
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
 
     // Dips 5 × 92.5 + 8 × 65 = 983 (rounded), pull-ups 6 × 90 = 540, pec deck 500.
     const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
@@ -1302,7 +1314,7 @@ test.describe("finish session", () => {
     await expect(page.getByText("SUPERSET")).toBeVisible();
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
 
     // The breakdown shows a "Superset" bracket over both members.
     const breakdown = page.locator("text=What you did").locator("xpath=following-sibling::*[1]");
@@ -1321,7 +1333,7 @@ test.describe("finish session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
     await expect(page.getByText("Bench Press Weight PR")).toBeVisible();
   });
 
@@ -1332,11 +1344,11 @@ test.describe("finish session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Back to workout" }).click();
 
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).not.toBeVisible();
     await expect(page.getByText("Bench Press")).toBeVisible();
   });
 
@@ -1349,9 +1361,9 @@ test.describe("finish session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await expect(page.getByRole("heading", { name: /^(Workout complete|First workout done)$/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Finish .+|First workout done)$/ })).toBeVisible();
 
-    await page.getByRole("button", { name: "Save & finish" }).click();
+    await page.getByRole("button", { name: "Save workout" }).click();
 
     await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });
     expect(page.url()).toBe("http://localhost:5173/");
@@ -1377,7 +1389,7 @@ test.describe("finish session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Finish workout" }).click();
-    await page.getByRole("button", { name: "Save & finish" }).click();
+    await page.getByRole("button", { name: "Save workout" }).click();
 
     await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });
 
@@ -1401,7 +1413,7 @@ test.describe("discard session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Workout options" }).click();
-    await page.getByRole("menuitem", { name: "Discard workout" }).click();
+    await page.getByRole("button", { name: /Discard workout/ }).click();
 
     // Confirm dialog — the draft is untouched until the user confirms
     await expect(page.getByText("Discard this workout?")).toBeVisible();
@@ -1422,7 +1434,7 @@ test.describe("discard session", () => {
     await goToSession(page);
 
     await page.getByRole("button", { name: "Workout options" }).click();
-    await page.getByRole("menuitem", { name: "Discard workout" }).click();
+    await page.getByRole("button", { name: /Discard workout/ }).click();
     await page.getByRole("button", { name: "Discard", exact: true }).click();
 
     await page.waitForURL(/^\http:\/\/localhost:5173\/$/, { timeout: 10_000 });

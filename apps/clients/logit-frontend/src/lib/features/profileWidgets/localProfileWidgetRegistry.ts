@@ -44,7 +44,7 @@ const BUNDLED: WidgetDefinition[] = [
   },
   {
     id: "profile-weight-trend",
-    label: "Weight Trend",
+    label: "Weight trend",
     description: "A smoothed chart of your logged bodyweight.",
     component: WeightTrendWidget,
     defaultEnabled: false,

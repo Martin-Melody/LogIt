@@ -106,7 +106,8 @@
       <span class="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
     </a>
     {#if n.type === "Follow"}
-      <FollowButton username={n.actor.username} bind:status={followBack[n.id]} />
+      <FollowButton username={n.actor.username} bind:status={() => followBack[n.actor.id] ?? n.actor.followStatus, (v) => (followBack[n.actor.id] = v!)}
+        isPrivate={!!n.actor.isPrivate} followsYou />
     {/if}
   </div>
 {/snippet}

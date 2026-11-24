@@ -265,8 +265,7 @@ test.describe("week one", () => {
     await page.waitForURL(atHome, { timeout: 10_000 });
 
     // Mon/Tue/Thu/Fri from a Tuesday: today, Thursday and Friday, not four days in a row (round 10).
-    await expect(page.getByText("0 of 3", { exact: true })).toBeVisible();
-    await expect(page.getByText("week one", { exact: true })).toBeVisible();
+    await expect(page.getByText("Week one · 0 of 3", { exact: true })).toBeVisible();
     // One answer to "what now?": a single Start button on Home.
     await expect(page.getByRole("button", { name: /^Start / })).toHaveCount(1);
     await page.screenshot({ path: "test-results/first-week-home.png" });

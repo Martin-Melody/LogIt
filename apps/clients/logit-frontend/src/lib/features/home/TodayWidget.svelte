@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { authStore } from "$lib/api/authStore.svelte";
+  import StreakLine from "$lib/features/goals/StreakLine.svelte";
   // Home's Today card (decision D1, design canvas "LogIt decisions D1–D3, D5, D11"): the week
   // strip, and one answer to "what now?" — today's workout with its next weights and one Start,
   // or done / rest with what's next. Replaces This week, Quick start and Today's plan, which each
@@ -63,13 +65,13 @@
     void $recentSessions;
     void $lastSyncedAt;
     card = todayCard(split ? getSplitPlan(split) : null, { inProgress });
-    if (split?.schedule === "weekdays") {
-      void refreshWeekSessions()
-        .then((sessions) => (week = planWeek(split, sessions, todayIso, planStartIso())))
-        .catch(() => (week = null));
-    } else {
-      week = null;
-    }
+    // Again once the finished workouts are in: they say what's already done today.
+    void refreshWeekSessions()
+      .then((sessions) => {
+        card = todayCard(split ? getSplitPlan(split) : null, { inProgress });
+        week = split?.schedule === "weekdays" ? planWeek(split, sessions, todayIso, planStartIso()) : null;
+      })
+      .catch(() => (week = null));
     void loadWeeklyStreak().then((s) => (streakWeeks = s.currentWeeks)).catch(() => {});
     void loadCoached();
   });
@@ -91,7 +93,11 @@
         getCheckinRepo().listAssignedSchedules(),
         getCheckinRepo().listSubmissions(),
       ]);
-      checkin = checkinRows(schedules, submissions, cachedReviews()).current.find((r) => r.state === "due" || r.state === "draft" || r.state === "late") ?? null;
+      // A coach's check-in only while signed in: without a server it can't be sent, and an
+      // account kept on the phone after signing out has no coach any more.
+      checkin = authStore.isAuthenticated
+        ? checkinRows(schedules, submissions, cachedReviews()).current.find((r) => r.state === "due" || r.state === "draft" || r.state === "late") ?? null
+        : null;
     } catch {
       coached = null;
     }
@@ -195,11 +201,20 @@
 </script>
 
 <Card.Root class="w-full">
-  <Card.Content class="flex flex-col gap-4 pt-5">
+  <Card.Content class="flex flex-col gap-4 pt-1">
     <!-- The client's own split's week, only while their own plan leads. -->
     {#if week && week.planned > 0 && !coached}
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex gap-1.5" role="img"
+      <div class="flex flex-col gap-2.5">
+        <div class="flex items-center justify-between gap-3">
+          {#if streakWeeks > 0}
+            <span class="text-[13px] text-muted-foreground tabular-nums">This week · {week.done} of {goal}</span>
+            <StreakLine weeks={streakWeeks} />
+          {:else}
+            <!-- Never "0-week streak" (bug hunt 3.14): the week so far instead. -->
+            <span class="text-[13px] text-muted-foreground tabular-nums">{firstWeek ? "Week one" : "This week"} · {week.done} of {goal}</span>
+          {/if}
+        </div>
+        <div class="flex justify-between" role="img"
           aria-label={`This week: ${week.slots.filter((s) => s.state !== "rest").map((s) => `${WEEKDAYS[s.weekday]} ${s.state}`).join(", ")}`}>
           {#each week.slots as slot (slot.dateIso)}
             <span class="flex w-8 flex-col items-center gap-1">
@@ -215,16 +230,6 @@
               {/if}
             </span>
           {/each}
-        </div>
-        <div class="text-right">
-          {#if streakWeeks > 0}
-            <div class="text-[15px] font-semibold tabular-nums">{streakWeeks} week{streakWeeks === 1 ? "" : "s"}</div>
-            <div class="text-[11px] text-muted-foreground">in a row</div>
-          {:else}
-            <!-- Never "0-week streak" (bug hunt 3.14): the week so far instead. -->
-            <div class="text-[15px] font-semibold tabular-nums">{week.done} of {goal}</div>
-            <div class="text-[11px] text-muted-foreground">{firstWeek ? "week one" : "this week"}</div>
-          {/if}
         </div>
       </div>
     {/if}

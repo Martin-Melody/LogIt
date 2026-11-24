@@ -131,7 +131,7 @@
 {#if run && phase && phase.kind !== "done"}
   {#if $circuitRunner.expanded}
     <div
-      class="fixed inset-0 z-50 flex flex-col bg-[#0e1014] text-[#e4e6eb] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      class="fixed inset-0 z-50 flex flex-col bg-background text-foreground pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       role="dialog"
       aria-modal="true"
       aria-label="{title} timer"
@@ -139,17 +139,17 @@
       <div class="flex items-center px-2 pt-3">
         <button
           type="button"
-          class="h-11 w-11 flex items-center justify-center rounded-lg text-[#c3c8d0]"
+          class="h-11 w-11 flex items-center justify-center rounded-lg text-foreground/80"
           aria-label="Shrink to see the workout"
           onclick={() => circuitRunner.shrink()}
         >
           <ChevronDown class="h-5 w-5" />
         </button>
         <div class="flex-1 text-center">
-          <div class="text-xs font-semibold uppercase tracking-wide text-[#9aa1ab]">{title}</div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
           <div class="text-sm font-semibold mt-0.5">{roundLabel}</div>
         </div>
-        <button type="button" class="h-11 px-3 text-sm text-[#c3c8d0]" onclick={() => circuitRunner.end()}>End</button>
+        <button type="button" class="h-11 px-3 text-sm text-foreground/80" onclick={() => circuitRunner.end()}>End</button>
       </div>
 
       {#if step}
@@ -163,10 +163,10 @@
           {#each Array(step.memberCount) as _, i (i)}
             <div
               class="flex-1 h-1 rounded-sm {(phase.kind === 'rest' && !phase.between) || i < step.memberIndex
-                ? 'bg-[#6b717b]'
+                ? 'bg-muted-foreground'
                 : i === step.memberIndex
-                  ? 'bg-[#cfd3da]'
-                  : 'bg-[#2a2e36]'}"
+                  ? 'bg-primary'
+                  : 'bg-muted'}"
             ></div>
           {/each}
         </div>
@@ -174,49 +174,49 @@
 
       <div class="flex-1 flex flex-col items-center justify-center px-6 text-center min-h-0">
         {#if phase.kind === "lead" && step}
-          <div class="text-[15px] font-semibold uppercase tracking-widest text-[#9aa1ab]">
+          <div class="text-[15px] font-semibold uppercase tracking-widest text-muted-foreground">
             {paused ? "Paused" : phase.switching ? "Switch sides" : "Get ready"}
           </div>
           <div class="text-[200px] leading-none font-extrabold tabular-nums mt-2 mb-1" aria-live="polite">
             {Math.max(1, Math.ceil(remainingMs / 1000))}
           </div>
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
-          <p class="mt-2.5 text-base text-[#9aa1ab]">
+          <p class="mt-2.5 text-base text-muted-foreground">
             {step.metric === "reps" ? `${step.reps} reps${weight(step)}` : step.metric === "hold" ? secs(step.goalSec) : "Tap Done when you're finished"}{step.side ? ` · ${sideLabel(step.side)}` : ""}
           </p>
         {:else if phase.kind === "hold" && step}
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
           {#if step.side}
             <div class="flex gap-1.5 mt-3">
-              <span class="px-3 py-1 rounded-full bg-[#cfd3da] text-[#0e1014] text-[13px] font-bold">
+              <span class="px-3 py-1 rounded-full bg-primary text-primary-foreground text-[13px] font-bold">
                 {step.side === "left" ? "Left side" : "Right side"}
               </span>
               {#if nextIsSwitch}
-                <span class="px-3 py-1 rounded-full border border-[#3a3f48] text-[#9aa1ab] text-[13px] font-medium">
+                <span class="px-3 py-1 rounded-full border border-input text-muted-foreground text-[13px] font-medium">
                   {step.side === "left" ? "Right next" : "Left next"}
                 </span>
               {/if}
             </div>
           {/if}
-          {@render ring(`${clock(remainingMs)}`, `of ${secs(Math.round(totalMs / 1000))}`, "#cfd3da",
+          {@render ring(`${clock(remainingMs)}`, `of ${secs(Math.round(totalMs / 1000))}`, "var(--primary)",
             `${Math.ceil(remainingMs / 1000)} seconds left of ${Math.round(totalMs / 1000)}`)}
         {:else if phase.kind === "rest"}
           <h2 class="m-0 text-3xl font-bold leading-tight">Rest</h2>
-          <p class="mt-2 text-[15px] text-[#9aa1ab]">{phase.between ? "Before the next exercise" : "Between rounds"}</p>
-          {@render ring(`${clock(remainingMs)}`, `of ${Math.round(totalMs / 1000)} s`, "#7d8591",
+          <p class="mt-2 text-[15px] text-muted-foreground">{phase.between ? "Before the next exercise" : "Between rounds"}</p>
+          {@render ring(`${clock(remainingMs)}`, `of ${Math.round(totalMs / 1000)} s`, "var(--muted-foreground)",
             `${Math.ceil(remainingMs / 1000)} seconds of rest left of ${Math.round(totalMs / 1000)}`)}
         {:else if phase.kind === "reps" && step}
           <h2 class="m-0 text-3xl font-bold leading-tight">{step.drillName}</h2>
-          {#if step.side}<p class="mt-1 text-base text-[#9aa1ab] capitalize">{sideLabel(step.side)}</p>{/if}
-          {#if step.weightKg}<p class="mt-1 text-lg font-semibold text-[#c3c8d0]">{formatWeight(step.weightKg, $profile.weightUnit)}</p>{/if}
+          {#if step.side}<p class="mt-1 text-base text-muted-foreground capitalize">{sideLabel(step.side)}</p>{/if}
+          {#if step.weightKg}<p class="mt-1 text-lg font-semibold text-foreground/80">{formatWeight(step.weightKg, $profile.weightUnit)}</p>{/if}
           {#if step.metric === "done"}
             <p class="mt-6 text-5xl font-extrabold tabular-nums">{clock(elapsedMs)}</p>
-            <p class="mt-3 text-sm text-[#9aa1ab]">Tap Done when you're finished</p>
+            <p class="mt-3 text-sm text-muted-foreground">Tap Done when you're finished</p>
           {:else}
           <div class="flex items-center gap-4 mt-6">
             <button
               type="button"
-              class="h-14 w-14 rounded-full bg-[#1c1f25] flex items-center justify-center"
+              class="h-14 w-14 rounded-full bg-muted flex items-center justify-center"
               aria-label="One fewer rep"
               onclick={() => (repsValue = Math.max(0, repsValue - 1))}
             >
@@ -227,15 +227,15 @@
             </div>
             <button
               type="button"
-              class="h-14 w-14 rounded-full bg-[#1c1f25] flex items-center justify-center"
+              class="h-14 w-14 rounded-full bg-muted flex items-center justify-center"
               aria-label="One more rep"
               onclick={() => (repsValue += 1)}
             >
               <Plus class="h-5 w-5" />
             </button>
           </div>
-          <div class="text-xl font-semibold text-[#c3c8d0] mt-1">reps</div>
-          <p class="mt-5 text-sm text-[#9aa1ab]">{clock(elapsedMs)} so far · no time limit</p>
+          <div class="text-xl font-semibold text-foreground/80 mt-1">reps</div>
+          <p class="mt-5 text-sm text-muted-foreground">{clock(elapsedMs)} so far · no time limit</p>
           {/if}
         {/if}
       </div>
@@ -244,14 +244,14 @@
         <div class="px-4 pb-4 flex gap-2.5">
           <button
             type="button"
-            class="h-16 px-5 rounded-2xl bg-[#1c1f25] text-[15px] font-semibold"
+            class="h-16 px-5 rounded-2xl bg-muted text-[15px] font-semibold"
             onclick={() => void circuitRunner.skip()}
           >
             Skip
           </button>
           <button
             type="button"
-            class="flex-1 h-16 rounded-2xl bg-[#cfd3da] text-[#0e1014] text-lg font-bold flex items-center justify-center gap-2"
+            class="flex-1 h-16 rounded-2xl bg-primary text-primary-foreground text-lg font-bold flex items-center justify-center gap-2"
             onclick={() => void circuitRunner.finishReps(repsValue)}
           >
             <Check class="h-5 w-5" strokeWidth={2.5} /> Done
@@ -275,16 +275,16 @@
         </div>
       {/if}
 
-      <div class="mx-4 mb-6 px-4 py-3.5 rounded-2xl bg-[#17191e] flex items-center gap-3">
+      <div class="mx-4 mb-6 px-4 py-3.5 rounded-2xl bg-card flex items-center gap-3">
         {#if upcoming[0]}
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-[#9aa1ab]">{upNextLabel}</div>
+            <div class="text-xs text-muted-foreground">{upNextLabel}</div>
             <div class="text-[15px] font-semibold mt-0.5 truncate">{stepName(upcoming[0])}</div>
             {#if nextIsSwitch && upcoming[1]}
-              <div class="text-xs text-[#9aa1ab] mt-0.5 truncate">Then {stepName(upcoming[1])}</div>
+              <div class="text-xs text-muted-foreground mt-0.5 truncate">Then {stepName(upcoming[1])}</div>
             {/if}
           </div>
-          <div class="text-sm text-[#c3c8d0]">{goal(upcoming[0])}</div>
+          <div class="text-sm text-foreground/80">{goal(upcoming[0])}</div>
         {:else}
           <div class="flex-1 text-[15px] font-semibold">Last one</div>
         {/if}
@@ -292,16 +292,16 @@
     </div>
   {:else}
     <div
-      class="fixed left-3 right-3 z-30 h-[72px] rounded-2xl bg-[#0e1014] text-[#e4e6eb] flex items-center gap-3 pl-3 pr-2 shadow-[0_12px_30px_rgba(2,6,23,0.3)]"
+      class="fixed left-3 right-3 z-30 h-[72px] rounded-2xl bg-background text-foreground flex items-center gap-3 pl-3 pr-2 shadow-[0_12px_30px_rgba(2,6,23,0.3)]"
       style="bottom: {bottomOffset}px"
       role="region"
       aria-label="{title} timer"
     >
       <svg viewBox="0 0 48 48" width="48" height="48" class="shrink-0" aria-hidden="true">
-        <circle cx="24" cy="24" r={r} fill="none" stroke="#2a2e36" stroke-width="4" />
+        <circle cx="24" cy="24" r={r} fill="none" stroke="var(--muted)" stroke-width="4" />
         {#if phase.kind !== "reps"}
           <circle
-            cx="24" cy="24" r={r} fill="none" stroke="#cfd3da" stroke-width="4" stroke-linecap="round"
+            cx="24" cy="24" r={r} fill="none" stroke="var(--primary)" stroke-width="4" stroke-linecap="round"
             stroke-dasharray={c} stroke-dashoffset={c * (1 - progress)} transform="rotate(-90 24 24)"
           />
         {/if}
@@ -310,7 +310,7 @@
         <div class="text-sm font-semibold truncate">
           {#if phase.kind === "rest"}{phase.between ? "Rest" : "Rest between rounds"}{:else if step}{phase.kind === "lead" ? "Get ready: " : ""}{step.drillName}{step.side ? ` · ${sideLabel(step.side)}` : ""}{/if}
         </div>
-        <div class="text-xs text-[#9aa1ab] mt-0.5 truncate">
+        <div class="text-xs text-muted-foreground mt-0.5 truncate">
           {#if paused}Paused{:else if upcoming[0]}Next: {nextIsSwitch && step?.side ? sideLabel(upcoming[0].side) : stepName(upcoming[0])}{:else}Last one{/if}
         </div>
       </div>
@@ -342,7 +342,7 @@
 {#snippet ring(big: string, small: string, stroke: string, label: string)}
   <div class="relative w-[280px] h-[280px] max-w-[70vw] max-h-[70vw] mt-7">
     <svg viewBox="0 0 280 280" class="w-full h-full" role="img" aria-label={label}>
-      <circle cx="140" cy="140" r={R} fill="none" stroke="#23272e" stroke-width="12" />
+      <circle cx="140" cy="140" r={R} fill="none" stroke="var(--muted)" stroke-width="12" />
       <circle
         cx="140" cy="140" r={R} fill="none" stroke={stroke} stroke-width="12" stroke-linecap="round"
         stroke-dasharray={C} stroke-dashoffset={C * (1 - progress)} transform="rotate(-90 140 140)"
@@ -350,18 +350,18 @@
     </svg>
     <div class="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
       <div class="text-[88px] leading-none font-extrabold tabular-nums tracking-tight">{big}</div>
-      <div class="text-sm text-[#9aa1ab] mt-2">{paused ? "Paused" : small}</div>
+      <div class="text-sm text-muted-foreground mt-2">{paused ? "Paused" : small}</div>
     </div>
   </div>
 {/snippet}
 
 {#snippet pauseButton(big: boolean)}
-  <div class="flex flex-col items-center gap-1.5 text-xs text-[#9aa1ab]">
+  <div class="flex flex-col items-center gap-1.5 text-xs text-muted-foreground">
     <button
       type="button"
       class="rounded-full flex items-center justify-center {big
-        ? 'h-[72px] w-[72px] bg-[#cfd3da] text-[#0e1014]'
-        : 'h-14 w-14 bg-[#1c1f25] text-[#e4e6eb]'}"
+        ? 'h-[72px] w-[72px] bg-primary text-primary-foreground'
+        : 'h-14 w-14 bg-muted text-foreground'}"
       aria-label={paused ? "Resume" : "Pause"}
       onclick={() => (paused ? circuitRunner.resume() : circuitRunner.pause())}
     >
@@ -372,10 +372,10 @@
 {/snippet}
 
 {#snippet control(aria: string, text: string, onclick: () => void, icon: import("svelte").Snippet)}
-  <div class="flex flex-col items-center gap-1.5 text-xs text-[#9aa1ab]">
+  <div class="flex flex-col items-center gap-1.5 text-xs text-muted-foreground">
     <button
       type="button"
-      class="h-14 w-14 rounded-full bg-[#1c1f25] text-[#e4e6eb] flex items-center justify-center text-[15px] font-semibold"
+      class="h-14 w-14 rounded-full bg-muted text-foreground flex items-center justify-center text-[15px] font-semibold"
       aria-label={aria}
       {onclick}
     >

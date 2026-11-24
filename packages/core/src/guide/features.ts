@@ -62,7 +62,7 @@ export const FEATURES: Feature[] = [
     web: ["/sessions"],
     phone: ["/session/current", "/session/plan", "/sessions", "/sessions/[id]"],
     whereWeb: "Training › Sessions",
-    wherePhone: "Home › Quick Start, and Sessions",
+    wherePhone: "Home › Quick start, and Sessions",
     docs: "/docs/workouts",
     table: "Workouts, splits and progression",
     can: [

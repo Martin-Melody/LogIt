@@ -41,7 +41,7 @@
 </script>
 
 <Dialog.Root {open} onOpenChange={(v) => { if (!v) done(session.placeId ?? null); }}>
-  <Dialog.Content sheet class="flex flex-col gap-3">
+  <Dialog.Content sheet class="flex flex-col gap-3 bg-card">
     <Dialog.Header>
       <Dialog.Title>{changing ? "Where are you?" : "Where are you today?"}</Dialog.Title>
       <Dialog.Description>Machines and weights come from there.</Dialog.Description>

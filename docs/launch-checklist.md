@@ -17,8 +17,10 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 
 ## Martin: things only you can do
 
-- [ ] **Google Play Console account** ($25). Made 2026-11-19 (developer name "LogIt"); **identity
-      verification pending**: nothing app-side can be created until Google finishes it. Personal accounts
+- [x] **Google Play Console account** ($25). Made 2026-11-19 (developer name "LogIt"); identity
+      verified 2026-11-21 (personal account 7644235236860831014). App created 2026-11-21 (`ie.logit.app`, "LogIt: Gym &
+      Workout Tracker"); AAB versionCode 1 (1.0.0.0) released on **internal testing**, en-GB listing has icon, feature
+      graphic and 6 phone screenshots. No closed (alpha) release yet. Personal accounts
       need a **closed test with 12+ testers opted in for 14 days in a row** before production. Start lining
       up ~15 people now. (An organisation account skips this but needs a D-U-N-S number.)
 - [ ] **Payments profile** in Play Console (needed to create subscriptions). EU rules show a seller's
@@ -51,6 +53,8 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [ ] **Have someone check the privacy policy and terms** (updated 2026-11-13 for Google Play billing,
       EU hosting, plugins and diagnostics; 2026-11-19: names Hetzner, Cloudflare, Resend and Stripe, and
       covers paying a coach).
+- [ ] **Play Console › App content › Target audience: 16 and over** (decided 2026-11-23: the whole app is 16+,
+      because of the social features).
 - [x] **VPS**: Hetzner CX23 `logit-prod` (Germany), bought 2026-11-13 with Hetzner backups on. Claude set
       it up: `deploy` user, key-only SSH, auto security updates, Docker, swap. Hetzner firewall: 22 open, 80/443 only from
       Cloudflare's ranges (2026-11-13; update it and the Caddyfile if Cloudflare adds ranges).
@@ -73,8 +77,8 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       collects VAT on Play sales to EU customers; confirm.)
 - [x] **Google Cloud project + service account** (done 2026-11-19: project `logit-play`, service account
       `logit-billing`, key in production `.env`, Pub/Sub topic `play-billing` pushing to the API, test
-      message received). **Still to do after Play verification:** invite the service account in Play
-      Console › Users and permissions ("View financial data", "Manage orders and subscriptions") and set
+      message received). Service accounts `logit-billing` and `play-publisher` invited in Play Console
+      2026-11-21 (API access checked). **Still to do:** set
       Monetization setup's topic to `projects/logit-play/topics/play-billing`. Originally: linked to Play Console: the API needs it to check
       purchases, and Pub/Sub for renewal/cancel notices. Steps in docs/deployment.md "Billing → Google Play";
       the results go in the server's `.env` as `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` and
@@ -146,6 +150,8 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       HTTP/2 has no status text, so the app showed an empty (hidden) error. Login now answers
       `{ error, code: "invalid_credentials" }`, the app falls back to a message per status when a server sends
       none, and any endpoint given a body missing a required text field answers 400 (`missing_field`), not 500.
+- [ ] **16+ in the terms and at sign-up** (decided 2026-11-23): an age line in the terms, and an
+      "I'm 16 or over" tick when an account is made.
 
 ## After both halves are done
 
@@ -159,8 +165,6 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
 - [ ] Release build smoke test on a real phone, upload to the closed test. 2026-11-19: passed on the
       emulator (onboarding, workout, rest notification, sign-up and account deletion against production);
       Martin's phone still has an old release build signed with another key, so it needs uninstalling
-      (and its data exporting) first. Findings to look at: the welcome screen still shows the old
-      dumbbell and "Logit"; without exact-alarm permission the app tries to open the Alarms & reminders
-      page when it goes to the background; the first-week chips read "Fu B" for both Full Body B and C;
-      after deleting an account, back on the welcome screen doesn't exit.
+      (and its data exporting) first. The four findings (welcome mark, exact-alarm settings page,
+      "Fu B" chips, back on welcome) were fixed 2026-11-20 (57ea692, merged 347777f).
 - [ ] Production once the 14 days are up.

@@ -33,6 +33,7 @@ each as **optional** ("users can choose whether this data is collected") unless 
 | App activity › Other user-generated content (posts, likes, follows, check-in answers) | Yes | No | No | Optional | App functionality |
 | App info and performance › Diagnostics (the log sent from Settings › Diagnostics) | Yes | No | No | Optional (only when the user taps Send) | **App functionality** (fixing the problem they reported). If the form's help text files bug-fixing under Analytics, tick Analytics instead; nothing else |
 | App info and performance › Crash logs (**test builds only**: closed/internal tracks send each crash with the ~30 log lines before it, also without an account; production builds don't) | Yes | No | No | Required in test builds; none in production | App functionality. When the production release goes out, untick this again if nothing else sends crashes |
+| App activity › In-app search history (food/barcode searches sent to Open Food Facts when the phone has no match; no account info) | Yes | No | No | Required (online food search can't be switched off) | App functionality |
 | Device or other IDs (a random ID the app makes, so a free account knows which phone holds its backup; the Firebase push token, so the server can send this phone push notifications, only if notifications are allowed) | Yes | No | No | Optional | App functionality |
 
 Not collected: location, contacts, calendar, audio, files and docs, web browsing, installed apps,

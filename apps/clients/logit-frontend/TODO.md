@@ -9,9 +9,10 @@
       (`padPlannedSets`), and Start Day no longer falls back to an empty workout when the
       active split isn't loaded. Next: his answers (button label, plan screen shown, empty
       vs no sets) or logs over wireless ADB.
-- [ ] Server keeps several `SyncedSplits` rows for one split (Martin's "Upper / Lower" has
+- [x] Server keeps several `SyncedSplits` rows for one split (Martin's "Upper / Lower" has
       six under `split_chuHTTustOVMytKveBjvi`, one per edit on 2026-09-05). Should be one row
-      per user + ClientId (upsert, unique index).
+      per user + ClientId (upsert, unique index). Done 2026-11-16 (37b6e6d, unique index +
+      SyncRepeatedIdTests).
 
 - [ ] Leave a single exercise (or set) out of progression. Whole sessions can already be
       excluded (session details › Edit › "Exclude from progression"), e.g. a weekend at
@@ -220,6 +221,13 @@
   - Still to do later (Martin: "remember that has to be done"): per the Principle, the
     algorithm gets the machine of each history set and the machine chosen today and
     decides itself, e.g. learns a ratio between two machines once both have history.
+- [ ] Edit custom recipes and meals (Martin, 2026-11-22: "there is currently no way to edit
+      your custom recipes or meals"). Recipes do have an editor (tap the card in My foods ›
+      Recipes → `/nutrition/foods/recipe/[id]`), so either it's not found or he means
+      somewhere else (diary, web dashboard); check with him. Saved meals (MealTemplate) really
+      can't be edited: the sheet in `routes/nutrition/foods/+page.svelte` only renames or
+      deletes. Needed: add, remove and re-amount items, probably reusing `AmountSheet` +
+      `FoodSearchPanel` like the recipe page does.
 
 ## Principle
 

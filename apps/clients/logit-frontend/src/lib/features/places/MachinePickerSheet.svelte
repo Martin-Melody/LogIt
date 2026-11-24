@@ -59,7 +59,7 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content sheet class="flex flex-col gap-3">
+  <Dialog.Content sheet class="flex flex-col gap-3 bg-card">
     <Dialog.Header>
       <Dialog.Title>Which machine?</Dialog.Title>
       <Dialog.Description>{exerciseName} at {place.name}</Dialog.Description>

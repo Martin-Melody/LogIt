@@ -4,13 +4,13 @@ import type { WidgetInput, WidgetPlugin, WidgetView } from "../widgetView.js";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * "Muscle Focus" — sets logged per muscle group over the last 7 days, as a body
+ * "Muscle focus" — sets logged per muscle group over the last 7 days, as a body
  * map. The reference implementation of a built-in widget on the WidgetView
  * model: a pure function, same contract a community widget uses.
  */
 export const muscleFocusWidget: WidgetPlugin = {
   id: "muscle-map",
-  name: "Muscle Focus",
+  name: "Muscle focus",
   description: "Body map showing which muscles you've trained this week.",
   needs: ["workouts", "exercises"],
 
@@ -49,7 +49,7 @@ export const muscleFocusWidget: WidgetPlugin = {
 
     if (!anySets) {
       return {
-        title: "Muscle Focus",
+        title: "Muscle focus",
         subtitle: "Sets logged this week",
         body: [],
         empty: { text: "No sets logged this week yet.", action: { startEmptyWorkout: true } },
@@ -57,7 +57,7 @@ export const muscleFocusWidget: WidgetPlugin = {
     }
 
     return {
-      title: "Muscle Focus",
+      title: "Muscle focus",
       subtitle: "Sets logged this week",
       body: [
         {

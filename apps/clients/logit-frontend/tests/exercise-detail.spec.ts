@@ -73,4 +73,29 @@ test.describe("exercise detail", () => {
     await expect(page.getByRole("button", { name: /Start progression over/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Finish workout" })).toBeVisible();
   });
+
+  test("a machine can be added from the exercise sheet mid-workout, even with no gym yet", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("logit:onboarding:v1", JSON.stringify({ completed: true }));
+      localStorage.setItem("logit:tours:v1", JSON.stringify({ home: true, session: true, splits: true }));
+      localStorage.setItem("logit:profile:v1", JSON.stringify({ blocksCollapsedByDefault: false }));
+      localStorage.setItem(
+        "logit:draft:v1",
+        JSON.stringify({
+          id: "sess-machine",
+          startedAtMs: Date.now() - 60_000,
+          blocks: [{ id: "b1", type: "strength", orderIndex: 0, data: { exerciseName: "Pec Deck", exerciseId: "ex_core_pec_deck", sets: [] } }],
+        }),
+      );
+    });
+
+    await page.goto("/session/current");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Pec Deck — open details" }).click();
+
+    const sheet = page.getByRole("dialog", { name: "Pec Deck" });
+    await sheet.getByRole("tab", { name: "How to" }).click();
+    await sheet.getByRole("button", { name: "Add the machine you use" }).click();
+    await expect(page.getByRole("dialog", { name: "Add a machine" })).toBeVisible();
+  });
 });

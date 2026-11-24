@@ -138,7 +138,7 @@ export type SetTarget = {
   replanned?: { reps: number; weight: number; why: ReplanReason };
 };
 
-export type ReplanReason = "short" | "order";
+export type ReplanReason = "short" | "over" | "order";
 
 /** A planned set nobody has done yet: still at 0 reps and not ticked. */
 export function isUnloggedPlannedSet(s: SetEntry): boolean {
@@ -586,9 +586,12 @@ function replanSet(set: SetEntry, reps: number, weight: number, why: ReplanReaso
  * short today's set was (Epley), so 7 of 10 at 17.5 kg turns 17.5 × 8 into 15 × 8. When
  * the lighter weight rounds back to the same one, the reps come down instead, by up to 2;
  * past that it's one loadable step lighter at the same reps, like the planner keeps sets in
- * the rep range. The first re-plan keeps the original in `target.planned`.
+ * the rep range. A set that beat its aim by as much re-plans them up the same way (45 × 8
+ * where 42.5 × 8 was planned turns the next 42.5 × 6 into 45 × 6); when the heavier weight rounds
+ * back to the same one, the reps go up instead, by up to 2. The first re-plan keeps the
+ * original in `target.planned`.
  */
-export function replanAfterShortSet(
+export function replanAfterSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
@@ -601,7 +604,8 @@ export function replanAfterShortSet(
     const t = done?.target;
     if (!done?.completed || !t || !(t.weight > 0) || done.setType === "warmup" || isContinuationSet(done.setType)) return data;
     const short = shortBy(done);
-    if (short === null || short < SHORT_SET_REPS - 0.01) return data;
+    if (short === null || Math.abs(short) < SHORT_SET_REPS - 0.01) return data;
+    const over = short < 0;
     const ratio = estimated1RM(done.weight, done.reps) / estimated1RM(t.weight, t.reps);
     const next = new Map<string, SetEntry>();
     for (const set of sorted) {
@@ -609,13 +613,14 @@ export function replanAfterShortSet(
       const current = set.target!;
       let weight = loads.round(current.weight * ratio);
       let reps = current.reps;
-      if (weight >= current.weight) {
+      if (over ? weight <= current.weight : weight >= current.weight) {
         weight = current.weight;
         reps = Math.max(1, Math.round(repsAtLoad(current.reps, current.weight * ratio, current.weight) ?? current.reps));
-        if (reps < current.reps - SHORT_SET_REPS) [weight, reps] = [loads.down(current.weight), current.reps];
+        if (over) reps = Math.min(reps, current.reps + SHORT_SET_REPS);
+        else if (reps < current.reps - SHORT_SET_REPS) [weight, reps] = [loads.down(current.weight), current.reps];
       }
       if (weight === current.weight && reps === current.reps) continue;
-      next.set(set.id, replanSet(set, reps, weight, "short"));
+      next.set(set.id, replanSet(set, reps, weight, over ? "over" : "short"));
     }
     if (next.size === 0) return data;
     return { ...data, sets: data.sets.map((x) => next.get(x.id) ?? x) };
@@ -1660,6 +1665,39 @@ export function getRunningRests(
     }
   }
   return out;
+}
+
+/**
+ * A running rest made longer or shorter (−15 / +15 on the rest bar): the set's own rest becomes
+ * what it was plus `deltaMs`, never under 0. Only a set whose rest is running changes.
+ */
+export function adjustRest(
+  session: WorkoutSession,
+  setId: string,
+  deltaMs: number,
+  restDefaults: Record<string, number | undefined>,
+): WorkoutSession {
+  let changed = false;
+  const blocks = session.blocks.map((block) => {
+    if (block.type === "strength") {
+      const data = block.data as StrengthBlockData;
+      const set = data.sets.find((s) => s.id === setId && typeof s.restStartedAtMs === "number");
+      if (!set) return block;
+      changed = true;
+      const restDurationMs = Math.max(0, strengthRestMs(set, restDefaults) + deltaMs);
+      return { ...block, data: { ...data, sets: data.sets.map((s) => (s.id === setId ? { ...s, restDurationMs } : s)) } };
+    }
+    if (block.type === "mobility") {
+      const data = block.data as MobilityBlockData;
+      const set = data.sets.find((s) => s.id === setId && typeof s.restStartedAtMs === "number");
+      if (!set) return block;
+      changed = true;
+      const restDurationMs = Math.max(0, mobilityRestMs(set, data) + deltaMs);
+      return { ...block, data: { ...data, sets: data.sets.map((s) => (s.id === setId ? { ...s, restDurationMs } : s)) } };
+    }
+    return block;
+  });
+  return changed ? { ...session, blocks } : session;
 }
 
 /**

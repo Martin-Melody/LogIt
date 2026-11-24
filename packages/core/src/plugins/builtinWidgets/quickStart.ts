@@ -2,7 +2,7 @@ import type { WidgetInput, WidgetPlugin, WidgetView } from "../widgetView.js";
 
 export const quickStartWidget: WidgetPlugin = {
   id: "quick-start",
-  name: "Quick Start",
+  name: "Quick start",
   description: "Start or continue a workout.",
   needs: ["session"],
 

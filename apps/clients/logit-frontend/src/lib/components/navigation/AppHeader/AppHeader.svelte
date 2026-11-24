@@ -6,7 +6,7 @@
 
 {#if headerSlot.current}
   {@const { content: Content, bell } = headerSlot.current}
-  <header class="page-header bg-background">
+  <header class="page-header relative bg-background">
     {@render Content()}
     {#if bell}
       <SyncIndicator />
