@@ -38,7 +38,7 @@ public static class NotificationEndpoints
                 Type = n.Type.ToString(),
                 n.CreatedAt,
                 n.ReadAt,
-                Actor = new { n.Actor.Id, n.Actor.Username, n.Actor.DisplayName, n.Actor.AvatarUrl },
+                Actor = new { n.Actor.Id, n.Actor.Username, n.Actor.DisplayName, n.Actor.AvatarUrl, n.Actor.IsPrivate },
                 n.PostId,
                 n.CommentId,
             })
@@ -59,9 +59,21 @@ public static class NotificationEndpoints
             : await db.Posts.Where(p => postIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Body);
 
+        // The caller's follow status for each actor, so a "Follow back" button shows the truth.
+        var actorIds = rows.Select(r => r.Actor.Id).Distinct().ToList();
+        var following = await db.Follows.Where(f => f.FollowerId == userId && actorIds.Contains(f.FollowedId))
+            .Select(f => f.FollowedId).ToListAsync();
+        var requested = await db.FollowRequests.Where(f => f.RequesterId == userId && actorIds.Contains(f.TargetId))
+            .Select(f => f.TargetId).ToListAsync();
+
         var notifications = rows.Select(r => new
         {
-            r.Id, r.Type, r.CreatedAt, r.ReadAt, r.Actor, r.PostId, r.CommentId,
+            r.Id, r.Type, r.CreatedAt, r.ReadAt, r.PostId, r.CommentId,
+            Actor = new
+            {
+                r.Actor.Id, r.Actor.Username, r.Actor.DisplayName, r.Actor.AvatarUrl, r.Actor.IsPrivate,
+                FollowStatus = following.Contains(r.Actor.Id) ? "following" : requested.Contains(r.Actor.Id) ? "requested" : "none",
+            },
             PostBody = r.PostId != null && bodies.TryGetValue(r.PostId.Value, out var b) ? b : null,
         });
 

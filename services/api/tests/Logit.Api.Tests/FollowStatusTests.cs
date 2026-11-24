@@ -42,6 +42,21 @@ public class FollowStatusTests
     }
 
     [Fact]
+    public async Task A_follow_notification_carries_the_callers_status_for_follow_back()
+    {
+        using var api = new ApiFactory();
+        var (ava, _, _) = await api.SignUpAsync("ava");
+        var (ben, _, _) = await api.SignUpAsync("ben");
+        (await ben.PostAsync("/users/ava/follow", null)).EnsureSuccessStatusCode();
+
+        JsonElement Actor(JsonElement page) => page.GetProperty("notifications").EnumerateArray().Single().GetProperty("actor");
+        Assert.Equal("none", Actor(await Get(ava, "/notifications")).GetProperty("followStatus").GetString());
+
+        (await ava.PostAsync("/users/ben/follow", null)).EnsureSuccessStatusCode();
+        Assert.Equal("following", Actor(await Get(ava, "/notifications")).GetProperty("followStatus").GetString());
+    }
+
+    [Fact]
     public async Task Search_shows_a_request_already_sent()
     {
         using var api = new ApiFactory();

@@ -255,7 +255,11 @@ export interface ApiNotification {
   type: NotificationKind;
   createdAt: string;
   readAt: string | null;
-  actor: { id: string; username: string; displayName: string; avatarUrl: string | null };
+  actor: {
+    id: string; username: string; displayName: string; avatarUrl: string | null;
+    /** Your relation to the actor (older servers leave these out). */
+    isPrivate?: boolean; followStatus?: FollowStatus;
+  };
   postId: string | null;
   commentId: string | null;
   postBody: string | null;
