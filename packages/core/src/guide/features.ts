@@ -214,7 +214,7 @@ export const FEATURES: Feature[] = [
     title: "Social",
     section: "More",
     plan: "Free",
-    summary: "Follow people, share workouts and PRs, and find people in Discover.",
+    summary: "Follow people, share workouts and PRs, message friends, add stories, and cheer on friends who are training.",
     web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]"],
     phone: [
       "/social", "/social/invite", "/messages/chat", "/messages/requests", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
@@ -227,6 +227,10 @@ export const FEATURES: Feature[] = [
     can: [
       "Make your account private: only people you accept see your posts",
       "Keep your posts out of Discover",
+      "Choose who can message you: people you don't follow land in your requests, or can't message you at all",
+      "Add a story from a workout or record for everyone, or for Close friends only",
+      "Hide your story from chosen people",
+      "Hide that you're training, and choose who can cheer you on and reply to your stories",
     ],
   },
   {
