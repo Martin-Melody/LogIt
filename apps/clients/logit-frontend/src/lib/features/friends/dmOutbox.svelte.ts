@@ -4,6 +4,7 @@
 import { ApiError } from "@logit/core/api/client";
 import { dmApi, type DmTo } from "@logit/core/api/dmApi";
 import type { SentPhoto } from "@logit/core/api/photosApi";
+import type { MessageVoice } from "@logit/core/api/voiceApi";
 import { authStore } from "$lib/api/authStore.svelte";
 
 export interface PendingDm {
@@ -13,6 +14,8 @@ export interface PendingDm {
   card?: { type: string; json: string };
   /** Already uploaded (photos need a connection); only its id is sent with the message. */
   photo?: SentPhoto;
+  /** Also uploaded already. */
+  voice?: MessageVoice;
   createdAtMs: number;
   /** Set when the server refused it (blocked, their controls): shown instead of retrying. */
   error?: string;
@@ -57,7 +60,11 @@ async function sendWaiting(): Promise<void> {
   for (const p of [...outbox.items]) {
     if (p.error) continue;
     try {
-      await dmApi.send($state.snapshot(p.to), p.clientId, p.body, { card: p.card ? $state.snapshot(p.card) : undefined, photoId: p.photo?.id });
+      await dmApi.send($state.snapshot(p.to), p.clientId, p.body, {
+        card: p.card ? $state.snapshot(p.card) : undefined,
+        photoId: p.photo?.id,
+        voice: p.voice?.id ? { id: p.voice.id, peaks: p.voice.peaks } : undefined,
+      });
       outbox.items = outbox.items.filter((x) => x.clientId !== p.clientId);
     } catch (e) {
       if (!(e instanceof ApiError) || e.status >= 500 || e.status === 429) break; // offline or the server's trouble: later
@@ -67,9 +74,10 @@ async function sendWaiting(): Promise<void> {
   }
 }
 
-export function queueDm(to: DmTo, body: string, card?: { type: string; json: string }, photo?: SentPhoto): Promise<void> {
+export function queueDm(to: DmTo, body: string, extra: { card?: { type: string; json: string }; photo?: SentPhoto; voice?: MessageVoice } = {}): Promise<void> {
   load();
-  outbox.items = [...outbox.items, { clientId: crypto.randomUUID(), to, body, ...(card ? { card } : {}), ...(photo ? { photo } : {}), createdAtMs: Date.now() }];
+  const { card, photo, voice } = extra;
+  outbox.items = [...outbox.items, { clientId: crypto.randomUUID(), to, body, ...(card ? { card } : {}), ...(photo ? { photo } : {}), ...(voice ? { voice } : {}), createdAtMs: Date.now() }];
   save();
   return flushOutbox();
 }

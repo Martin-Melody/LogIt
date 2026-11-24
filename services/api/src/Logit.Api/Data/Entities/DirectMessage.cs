@@ -51,6 +51,10 @@ public class DirectMessage
     public Guid? PhotoId { get; set; }
     public int PhotoWidth { get; set; }
     public int PhotoHeight { get; set; }
+    /// A voice message (/voice/{id}), its length and the sender's waveform (a digit per bar).
+    public Guid? VoiceId { get; set; }
+    public int VoiceMs { get; set; }
+    public string? VoicePeaks { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     /// Set when the sender edited the text (within 15 minutes, as on Instagram); shown as "Edited".
     public DateTime? EditedAt { get; set; }

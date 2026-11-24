@@ -516,6 +516,16 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("SyncedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("VoiceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("VoiceMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("VoicePeaks")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RelationshipId", "SyncedAt");
@@ -921,6 +931,16 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ThreadId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("VoiceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("VoiceMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("VoicePeaks")
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -2531,6 +2551,36 @@ namespace Logit.Api.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.VoiceNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Bytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("VoiceNotes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.BillingSubscription", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
@@ -3361,6 +3411,16 @@ namespace Logit.Api.Migrations
                     b.Navigation("Invite");
 
                     b.Navigation("SampleOwner");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.VoiceNote", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachClientRelationship", b =>

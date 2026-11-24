@@ -92,7 +92,7 @@
           name,
           username: person.username,
           avatarUrl: person.avatarUrl ?? null,
-          preview: last ? `${last.mine ? "You: " : ""}${last.body || (last.photo ? "Sent a photo" : "")}` : "No messages yet",
+          preview: last ? `${last.mine ? "You: " : ""}${last.body || (last.photo ? "Sent a photo" : last.voice ? "Voice message" : "")}` : "No messages yet",
           atMs: last?.createdAtMs ?? 0,
           unread: (await repo.unreadCount(id)) > 0,
           coach: true,

@@ -35,12 +35,14 @@ public static class DirectMessageEndpoints
     public record ThreadDto(Guid Id, PersonDto? Other, string LastBody, long LastAtMs, bool LastMine, bool Unread);
     /// PhotoHidden: a photo in a request you haven't accepted (shown blurred, address withheld).
     public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null,
-        string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false, bool Edited = false);
+        string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false,
+        string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null, bool VoiceHidden = false, bool Edited = false);
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
     public record ChatDto(Guid? ThreadId, PersonDto? Other, bool Accepted, long? SeenAtMs, bool CanSend, string? Why, List<MessageDto> Messages);
-    public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string? Body, string? CardType = null, string? CardJson = null, Guid? PhotoId = null);
+    public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string? Body, string? CardType = null, string? CardJson = null, Guid? PhotoId = null,
+        Guid? VoiceId = null, string? VoicePeaks = null);
 
     /// What can be shared into a chat as a card (post payload formats).
     public static readonly string[] CardTypes = ["WorkoutSession", "PersonalRecord"];
@@ -52,10 +54,11 @@ public static class DirectMessageEndpoints
     /// `request`: the viewer hasn't accepted this thread, so a photo's address is withheld.
     private static MessageDto Dto(DirectMessage x, Guid me, DateTime now, bool request = false)
     {
-        var hidden = request && x.SenderId != me && x.PhotoId is not null;
+        var locked = request && x.SenderId != me; // photos and voice wait for the request to be accepted
         return new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType,
             x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson,
-            x.PhotoId is { } p && !hidden ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, hidden, x.EditedAt is not null);
+            x.PhotoId is { } p && !locked ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, locked && x.PhotoId is not null,
+            x.VoiceId is { } v && !locked ? Voice.VoiceEndpoints.UrlOf(v) : null, x.VoiceMs, x.VoicePeaks, locked && x.VoiceId is not null, x.EditedAt is not null);
     }
 
     /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
@@ -73,6 +76,7 @@ public static class DirectMessageEndpoints
     /// The list's one-line preview: the text, or what was shared.
     private static string Preview(DirectMessage x) =>
         x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
+        : x.VoiceId is not null ? $"Voice message · {x.VoiceMs / 60000}:{x.VoiceMs / 1000 % 60:00}"
         : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
@@ -192,7 +196,7 @@ public static class DirectMessageEndpoints
             try { using var _ = System.Text.Json.JsonDocument.Parse(req.CardJson); }
             catch (System.Text.Json.JsonException) { return Results.BadRequest(new { error = "That can't be shared in a message." }); }
         }
-        if (body.Length == 0 && req.CardType is null && req.PhotoId is null) return Results.BadRequest(new { error = "Write something first." });
+        if (body.Length == 0 && req.CardType is null && req.PhotoId is null && req.VoiceId is null) return Results.BadRequest(new { error = "Write something first." });
         if (body.Length > MaxLength) return Results.BadRequest(new { error = $"Keep it under {MaxLength} characters." });
         if (string.IsNullOrWhiteSpace(req.ClientId) || req.ClientId.Length > 64) return Results.BadRequest(new { error = "Missing message id." });
 
@@ -226,6 +230,9 @@ public static class DirectMessageEndpoints
         Photo? photo = null;
         if (req.PhotoId is { } photoId && (photo = await Photos.PhotoEndpoints.OwnedAsync(db, meId, photoId)) is null)
             return Results.BadRequest(new { error = "That photo didn't upload. Try again." });
+        VoiceNote? voice = null;
+        if (req.VoiceId is { } voiceId && (voice = await Voice.VoiceEndpoints.OwnedAsync(db, meId, voiceId)) is null)
+            return Results.BadRequest(new { error = "That voice message didn't upload. Try again." });
         var cardJson = req.CardType is null ? null : req.CardJson;
         if (req.CardType == StoryCard)
         {
@@ -280,6 +287,7 @@ public static class DirectMessageEndpoints
             ClientId = req.ClientId, Thread = thread!, SenderId = meId, Body = body, CreatedAt = now,
             CardType = req.CardType, CardJson = cardJson,
             PhotoId = photo?.Id, PhotoWidth = photo?.Width ?? 0, PhotoHeight = photo?.Height ?? 0,
+            VoiceId = voice?.Id, VoiceMs = voice?.DurationMs ?? 0, VoicePeaks = voice is null ? null : Voice.VoiceEndpoints.Peaks(req.VoicePeaks),
         };
         db.DirectMessages.Add(message);
         thread!.LastMessageAt = now;
@@ -331,13 +339,18 @@ public static class DirectMessageEndpoints
         return Results.NoContent();
     }
 
-    /// Deletes a message and the photo sent with it (also used when a report is upheld).
+    /// Deletes a message and the photo or recording sent with it (also used when a report is upheld).
     public static async Task UnsendAsync(AppDbContext db, Photos.IPhotoStore store, Guid id, CancellationToken ct)
     {
         var message = await db.DirectMessages.FirstOrDefaultAsync(m => m.Id == id, ct);
         if (message is null) return;
         if (message.PhotoId is { } photo && message.SenderId is { } sender)
             await Photos.PhotoEndpoints.DeleteOwnedAsync(db, store, sender, [photo], ct);
+        if (message.VoiceId is { } voiceId && await db.VoiceNotes.FirstOrDefaultAsync(v => v.Id == voiceId && v.OwnerId == message.SenderId, ct) is { } voice)
+        {
+            await store.DeleteAsync(Voice.VoiceEndpoints.KeyOf(voice.Id), ct);
+            db.VoiceNotes.Remove(voice);
+        }
         db.DirectMessages.Remove(message);
         await db.SaveChangesAsync(ct);
     }

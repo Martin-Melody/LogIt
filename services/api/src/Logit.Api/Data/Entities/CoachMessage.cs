@@ -28,6 +28,10 @@ public class CoachMessage
     public Guid? PhotoId { get; set; }
     public int PhotoWidth { get; set; }
     public int PhotoHeight { get; set; }
+    /// A voice message (/voice/{id}), its length and the sender's waveform (a digit per bar).
+    public Guid? VoiceId { get; set; }
+    public int VoiceMs { get; set; }
+    public string? VoicePeaks { get; set; }
 
     /// Set by the *recipient* when they've seen it (drives unread counts).
     public long? ReadAtMs { get; set; }

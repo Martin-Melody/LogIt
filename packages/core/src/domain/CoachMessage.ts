@@ -17,7 +17,11 @@ export type CoachMessage = {
   contextDateIso?: string;
   /** A photo sent with it (form checks, progress): /photos/… and its size. */
   photo?: MessagePhoto;
+  /** A voice message (up to a minute). */
+  voice?: MessageVoice;
 };
+
+export type MessageVoice = { id?: string; url: string; ms: number; peaks: string };
 
 export type MessagePhoto = { id?: string; url: string; width: number; height: number };
 
@@ -26,6 +30,7 @@ export function createOutgoingMessage(
   body: string,
   contextDateIso?: string,
   photo?: MessagePhoto,
+  voice?: MessageVoice,
 ): CoachMessage {
   return {
     id: createId("msg"),
@@ -37,5 +42,6 @@ export function createOutgoingMessage(
     synced: false,
     contextDateIso,
     ...(photo ? { photo } : {}),
+    ...(voice ? { voice } : {}),
   };
 }

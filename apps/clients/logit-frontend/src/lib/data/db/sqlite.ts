@@ -478,7 +478,8 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       mine INTEGER NOT NULL DEFAULT 0,
       synced INTEGER NOT NULL DEFAULT 0,
       context_date_iso TEXT NULL,
-      photo_json TEXT NULL
+      photo_json TEXT NULL,
+      voice_json TEXT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_coach_messages_thread
       ON coach_messages(owner_id, relationship_id, created_at_ms);
@@ -805,6 +806,9 @@ async function migrateCoachMessageContext(db: SQLiteDBConnection): Promise<void>
   } catch { /* column already exists */ }
   try {
     await db.run(`ALTER TABLE coach_messages ADD COLUMN photo_json TEXT NULL`, []);
+  } catch { /* column already exists */ }
+  try {
+    await db.run(`ALTER TABLE coach_messages ADD COLUMN voice_json TEXT NULL`, []);
   } catch { /* column already exists */ }
 }
 

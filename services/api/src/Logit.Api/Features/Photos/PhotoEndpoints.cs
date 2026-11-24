@@ -118,7 +118,11 @@ public class PhotoSweeper(IServiceScopeFactory scopes, ILogger<PhotoSweeper> log
         var orphans = await db.Photos.Where(p => p.OwnerId == null).Take(500).ToListAsync(ct);
         foreach (var p in orphans) await store.DeleteAsync(p.Id.ToString("N"), ct);
         db.Photos.RemoveRange(orphans);
+        // Voice messages live in the same store and go the same way.
+        var voices = await db.VoiceNotes.Where(v => v.OwnerId == null).Take(500).ToListAsync(ct);
+        foreach (var v in voices) await store.DeleteAsync(Voice.VoiceEndpoints.KeyOf(v.Id), ct);
+        db.VoiceNotes.RemoveRange(voices);
         await db.SaveChangesAsync(ct);
-        return orphans.Count;
+        return orphans.Count + voices.Count;
     }
 }
