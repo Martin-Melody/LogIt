@@ -189,7 +189,7 @@
   {#if sheet === "edit"}<GroupFormSheet {group} onclose={() => (sheet = null)} onsaved={(g) => (group = g)} />{/if}
   {#if sheet === "invite"}<GroupInviteSheet groupId={group.id} name={group.name} code={group.inviteCode} onclose={() => (sheet = null)} />{/if}
   {#if sheet === "pin"}<PinNoteSheet {group} onclose={() => (sheet = null)} onsaved={(g) => (group = g ?? (group ? { ...group, note: null } : null))} />{/if}
-  {#if sheet === "event"}<EventFormSheet groupId={group.id} place={group.place} onclose={() => (sheet = null)} onsaved={(e) => (events = [...events, e].sort((a, b) => a.startsAtMs - b.startsAtMs))} />{/if}
+  {#if sheet === "event"}<EventFormSheet groupId={group.id} place={group.place} onclose={() => (sheet = null)} onsaved={() => void eventsApi.list(group!.id).then((l) => (events = l)).catch(() => {})} />{/if}
   {#if sheet === "report"}<ReportSheet open targetType="Group" targetId={group.id} what="group" onclose={() => (sheet = null)} />{/if}
   <ConfirmDialog
     open={!!confirm}

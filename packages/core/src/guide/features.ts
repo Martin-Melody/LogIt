@@ -230,7 +230,8 @@ export const FEATURES: Feature[] = [
       "Start a group for your gym, club, team or friends, with a page, a pinned note and a group chat; people join with its link or QR",
       "Choose per group whether you're on its board and which notifications you get",
       "Make a group invite only, findable with you approving who joins, or open to anyone, and invite people from your chats",
-      "Plan group sessions, meets and races; say you're going, pin one to Home and get a reminder the evening before",
+      "Plan group sessions, meets and races, one-off or every week; say you're going, pin one to Home and get a reminder the evening before",
+      "Find events near you by place, sport, kind and when, and join the group to go",
     ],
   },
   {

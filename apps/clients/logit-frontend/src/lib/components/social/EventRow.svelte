@@ -8,7 +8,7 @@
   const { event, past = false, ongo }: { event: GroupEvent; past?: boolean; ongo?: (e: GroupEvent) => void } = $props();
   const badge = $derived(dayBadge(event.startsAtMs));
   const sub = $derived(
-    [eventShort(event.startsAtMs), event.kind === "Session" ? null : event.kind, event.place, event.cancelled ? "cancelled" : `${event.going} ${past ? "went" : "going"}`]
+    [eventShort(event.startsAtMs), event.kind === "Session" ? null : event.kind, event.sport, event.place, event.cancelled ? "cancelled" : `${event.going} ${past ? "went" : "going"}`]
       .filter(Boolean).join(" · "),
   );
 </script>

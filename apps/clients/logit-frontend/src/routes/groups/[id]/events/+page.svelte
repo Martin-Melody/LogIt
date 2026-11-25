@@ -69,5 +69,5 @@
 </div>
 
 {#if adding && group}
-  <EventFormSheet groupId={group.id} place={group.place} onclose={() => (adding = false)} onsaved={(e) => (upcoming = [...(upcoming ?? []), e].sort((a, b) => a.startsAtMs - b.startsAtMs))} />
+  <EventFormSheet groupId={group.id} place={group.place} onclose={() => (adding = false)} onsaved={() => void load()} />
 {/if}
