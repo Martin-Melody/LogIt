@@ -99,26 +99,26 @@ public class GroupPostTests : IDisposable
     }
 
     [Fact]
-    public async Task Only_posts_written_while_the_group_shows_posts_on_the_web_are_public_and_search_finds_posts()
+    public async Task Posts_in_a_findable_group_are_public_on_the_web_and_search_finds_posts()
     {
         var (conor, ava, kate, g) = await SetUp();
-        var before = await Json(await ava.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Written before" }));
-        Assert.Equal(HttpStatusCode.BadRequest, (await conor.PatchAsJsonAsync($"/groups/{(await Json(await conor.PostAsJsonAsync("/groups", new { name = "Secret" }))).GetProperty("id").GetString()}", new { postsOnWeb = true })).StatusCode);
-        var settings = await Json(await conor.PatchAsJsonAsync($"/groups/{g}", new { postsOnWeb = true }));
+        var settings = await Get(conor, $"/groups/{g}");
+        Assert.True(settings.GetProperty("posts").GetProperty("onWeb").GetBoolean());
         var slug = settings.GetProperty("posts").GetProperty("slug").GetString();
-        var after = await Json(await ava.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Best gyms in Sligo?", body = "Platforms please" }));
-        Assert.True(after.GetProperty("onWeb").GetBoolean());
+        var post = await Json(await ava.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Best gyms in Sligo?", body = "Platforms please" }));
+        Assert.True(post.GetProperty("onWeb").GetBoolean());
 
         var anon = _api.CreateClient();
         string PostSlug(JsonElement p) => $"{p.GetProperty("slug").GetString()}-{p.GetProperty("id").GetString()!.Replace("-", "")[..8]}";
-        var page = await Get(anon, $"/public/groups/{slug}/posts/{PostSlug(after)}");
+        var page = await Get(anon, $"/public/groups/{slug}/posts/{PostSlug(post)}");
         Assert.Equal("Best gyms in Sligo?", page.GetProperty("post").GetProperty("title").GetString());
-        Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync($"/public/groups/{slug}/posts/{PostSlug(before)}")).StatusCode);
         Assert.Single((await Get(anon, "/public/group-posts")).EnumerateArray());
 
-        // Off again: nothing on the web.
-        (await conor.PatchAsJsonAsync($"/groups/{g}", new { postsOnWeb = false })).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync($"/public/groups/{slug}/posts/{PostSlug(after)}")).StatusCode);
+        // Invite-only: nothing on the web.
+        (await conor.PatchAsJsonAsync($"/groups/{g}", new { access = "InviteOnly" })).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync($"/public/groups/{slug}/posts/{PostSlug(post)}")).StatusCode);
+        Assert.Empty((await Get(anon, "/public/group-posts")).EnumerateArray());
+        (await conor.PatchAsJsonAsync($"/groups/{g}", new { access = "Request" })).EnsureSuccessStatusCode();
 
         Assert.Equal(["Best gyms in Sligo?"], (await Get(kate, "/group-posts/search?q=gyms sligo")).EnumerateArray().Select(p => p.GetProperty("title").GetString()).ToList());
         Assert.Equal("best-gyms-in-sligo", GroupPostEndpoints.Slugify("Best gyms in Sligo?"));

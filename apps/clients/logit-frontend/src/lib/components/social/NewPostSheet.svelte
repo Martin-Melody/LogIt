@@ -92,7 +92,7 @@
       <button type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-border text-[14px] font-medium" onclick={() => (sharing = true)}><Dumbbell class="size-4" />Workout or record</button>
     </div>
     {#if group.posts?.onWeb}
-      <p class="flex items-start gap-2.5 rounded-xl border border-border px-3 py-2.5 text-[13px] leading-snug text-muted-foreground"><Globe class="mt-0.5 size-4 shrink-0" />This group shows its posts on the web, so anyone can read this on getlogit.app and find it on Google. Your name and photo show; your workouts never do.</p>
+      <p class="flex items-start gap-2.5 rounded-xl border border-border px-3 py-2.5 text-[13px] leading-snug text-muted-foreground"><Globe class="mt-0.5 size-4 shrink-0" />Anyone can find this group, so anyone can read this on getlogit.app and find it on Google. Your name and photo show; your workouts never do.</p>
     {/if}
     <button type="submit" disabled={posting || !title.trim()} class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-60">Post</button>
   </form>

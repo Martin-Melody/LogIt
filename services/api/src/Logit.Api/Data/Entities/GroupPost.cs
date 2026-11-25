@@ -25,8 +25,6 @@ public class GroupPost
     public string? CardJson { get; set; }
     /// Members only for this post's comments, narrower than the group's setting.
     public bool MembersOnlyComments { get; set; }
-    /// Written while the group showed posts on the web: only these ever appear there.
-    public bool OnWeb { get; set; }
     public bool Pinned { get; set; }
     /// Comments locked by a moderator.
     public bool Locked { get; set; }

@@ -1235,8 +1235,6 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool>("PostsOn")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("PostsOnWeb")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -1497,8 +1495,6 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool>("MembersOnlyComments")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("OnWeb")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("PhotoHeight")
                         .HasColumnType("integer");

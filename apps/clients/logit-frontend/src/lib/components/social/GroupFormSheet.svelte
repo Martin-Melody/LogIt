@@ -35,7 +35,6 @@
   // svelte-ignore state_referenced_locally
   let whoCanComment = $state<"Anyone" | "Members">(group?.posts?.whoCanComment ?? "Anyone");
   // svelte-ignore state_referenced_locally
-  let postsOnWeb = $state(group?.posts?.onWeb ?? false);
   let saving = $state(false);
   const accessOptions: { value: GroupAccess; label: string; note: string }[] = [
     { value: "InviteOnly", label: "Invite only", note: "Hidden from search. Join with the link, the QR or a member's invite" },
@@ -59,7 +58,7 @@
       const photoId = changedPhoto && photo ? (await uploadPhoto(photo)).id : undefined;
       const saved = group
         ? await groupsApi.edit(group.id, { name: name.trim(), kind, place: place.trim(), photoId, removePhoto: changedPhoto && !photo, access,
-            postsOn, whoCanPost, whoCanComment, postsOnWeb: postsOnWeb && access !== "InviteOnly" })
+            postsOn, whoCanPost, whoCanComment })
         : await groupsApi.create({ name: name.trim(), kind, place: place.trim() || null, photoId, access });
       onsaved?.(saved);
       onclose();
@@ -129,8 +128,7 @@
             <div class="flex flex-col gap-2 border-b border-border px-3 py-2.5"><span class="text-[15px]">Who can comment</span>
               <div class="flex flex-wrap gap-2">{#each [["Anyone", "Anyone on LogIt"], ["Members", "Members only"]] as [v, l] (v)}<button type="button" class={chip(whoCanComment === v)} aria-pressed={whoCanComment === v} onclick={() => (whoCanComment = v as "Anyone" | "Members")}>{l}</button>{/each}</div>
               <span class="text-[12px] text-muted-foreground">A post can keep its own comments to members.</span></div>
-            <div class="flex min-h-16 items-center gap-3 py-1.5 pl-3 pr-1.5"><span class="flex flex-1 flex-col gap-0.5"><span class="text-[15px]">Show posts on the web</span><span class="text-[12px] leading-snug text-muted-foreground">{access === "InviteOnly" ? "Only for groups anyone can find." : "Anyone can read posts written from now on at getlogit.app and find them on Google. Off takes them all off the web."}</span></span>
-              <Switch checked={postsOnWeb && access !== "InviteOnly"} disabled={access === "InviteOnly"} label="Show posts on the web" onchange={(v) => (postsOnWeb = v)} /></div>
+            <p class="px-3 py-2.5 text-[12px] leading-snug text-muted-foreground">{access === "InviteOnly" ? "Only members see the posts." : "Posts are public: anyone can read them in LogIt and at getlogit.app, and find them on Google."}</p>
           {/if}
         </div>
       </div>

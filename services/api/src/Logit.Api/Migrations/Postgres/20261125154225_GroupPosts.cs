@@ -30,12 +30,6 @@ namespace Logit.Api.Migrations.Postgres
                 nullable: false,
                 defaultValue: true);
 
-            migrationBuilder.AddColumn<bool>(
-                name: "PostsOnWeb",
-                table: "Groups",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
 
             migrationBuilder.AddColumn<string>(
                 name: "Slug",
@@ -76,7 +70,6 @@ namespace Logit.Api.Migrations.Postgres
                     CardType = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
                     CardJson = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
                     MembersOnlyComments = table.Column<bool>(type: "boolean", nullable: false),
-                    OnWeb = table.Column<bool>(type: "boolean", nullable: false),
                     Pinned = table.Column<bool>(type: "boolean", nullable: false),
                     Locked = table.Column<bool>(type: "boolean", nullable: false),
                     Upvotes = table.Column<int>(type: "integer", nullable: false),
@@ -233,9 +226,6 @@ namespace Logit.Api.Migrations.Postgres
                 name: "PostsOn",
                 table: "Groups");
 
-            migrationBuilder.DropColumn(
-                name: "PostsOnWeb",
-                table: "Groups");
 
             migrationBuilder.DropColumn(
                 name: "Slug",

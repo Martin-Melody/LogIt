@@ -66,7 +66,7 @@ public static class GroupEndpoints
     public record RequestDto(PersonDto User, long AtMs, string? FollowedBy);
     public record CreateRequest(string Name, string? Kind, string? Place, Guid? PhotoId, string? Access = null);
     public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false, string? Access = null,
-        bool? PostsOn = null, string? WhoCanPost = null, string? WhoCanComment = null, bool? PostsOnWeb = null);
+        bool? PostsOn = null, string? WhoCanPost = null, string? WhoCanComment = null);
     /// EventId: joining from an event in search, so you're going to it once you're in.
     public record JoinRequest(bool OnBoard = true, Guid? EventId = null);
     public record NoteRequest(string Text, bool Notify = true);
@@ -165,7 +165,7 @@ public static class GroupEndpoints
     }
 
     private static async Task<PostSettingsDto> PostSettingsAsync(AppDbContext db, Group g) =>
-        new(g.PostsOn, g.WhoCanPost.ToString(), g.WhoCanComment.ToString(), g.PostsOnWeb && g.Access != GroupAccess.InviteOnly, await GroupPostEndpoints.GroupSlugAsync(db, g));
+        new(g.PostsOn, g.WhoCanPost.ToString(), g.WhoCanComment.ToString(), GroupPostEndpoints.OnWeb(g), await GroupPostEndpoints.GroupSlugAsync(db, g));
 
     private static async Task<IResult> Get(Guid id, ClaimsPrincipal caller, AppDbContext db)
     {
@@ -208,11 +208,6 @@ public static class GroupEndpoints
         {
             if (!Enum.TryParse<GroupCommenting>(req.WhoCanComment, true, out var who)) return Results.BadRequest(new { error = "Anyone or Members." });
             g.WhoCanComment = who;
-        }
-        if (req.PostsOnWeb is { } web)
-        {
-            if (web && g.Access == GroupAccess.InviteOnly) return Results.BadRequest(new { error = "Only groups anyone can find can show posts on the web." });
-            g.PostsOnWeb = web;
         }
         if (req.PhotoId is { } pid && pid != g.PhotoId)
         {

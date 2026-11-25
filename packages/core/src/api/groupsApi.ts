@@ -114,7 +114,7 @@ export const groupsApi = {
   create: (g: { name: string; kind: GroupKind; place?: string | null; photoId?: string | null; access?: GroupAccess }) => apiClient.fetch<Group>("/groups", json("POST", g)),
   get: (id: string) => apiClient.fetch<Group>(`/groups/${id}`),
   edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean; access?: GroupAccess;
-    postsOn?: boolean; whoCanPost?: WhoCanPost; whoCanComment?: "Anyone" | "Members"; postsOnWeb?: boolean }) =>
+    postsOn?: boolean; whoCanPost?: WhoCanPost; whoCanComment?: "Anyone" | "Members" }) =>
     apiClient.fetch<Group>(`/groups/${id}`, json("PATCH", g)),
   remove: (id: string) => apiClient.fetch<void>(`/groups/${id}`, { method: "DELETE" }),
   pin: (id: string, text: string, notify: boolean) => apiClient.fetch<Group>(`/groups/${id}/note`, json("PUT", { text, notify })),

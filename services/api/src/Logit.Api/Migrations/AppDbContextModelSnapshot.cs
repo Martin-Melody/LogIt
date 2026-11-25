@@ -1230,8 +1230,6 @@ namespace Logit.Api.Migrations
                     b.Property<bool>("PostsOn")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("PostsOnWeb")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -1492,8 +1490,6 @@ namespace Logit.Api.Migrations
                     b.Property<bool>("MembersOnlyComments")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("OnWeb")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("PhotoHeight")
                         .HasColumnType("INTEGER");

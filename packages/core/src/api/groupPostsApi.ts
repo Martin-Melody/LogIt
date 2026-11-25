@@ -83,5 +83,5 @@ export const groupPostsApi = {
   search: (q: string) => apiClient.fetch<GroupPost[]>(`/group-posts/search?q=${encodeURIComponent(q)}`),
 };
 
-/** A post's public address on getlogit.app (groups that show posts on the web). */
+/** A post's public address on getlogit.app (posts in groups anyone can find). */
 export const postWebPath = (groupSlug: string, post: { slug: string; id: string }) => `/g/${groupSlug}/${post.slug}-${post.id.replace(/-/g, "").slice(0, 8)}`;

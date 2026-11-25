@@ -29,7 +29,6 @@ public class Group
     public bool PostsOn { get; set; } = true;
     public GroupPosting WhoCanPost { get; set; } = GroupPosting.Anyone;
     public GroupCommenting WhoCanComment { get; set; } = GroupCommenting.Anyone;
-    public bool PostsOnWeb { get; set; }
     public ICollection<GroupMember> Members { get; set; } = [];
 }
 

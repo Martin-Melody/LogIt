@@ -1,6 +1,6 @@
 // A group post on the web (design canvas Q6): rendered on Cloudflare when asked for, so search
-// engines read it. Only posts the API serves publicly (written while the group showed its posts
-// on the web); anything else is a 404.
+// engines read it. Only posts the API serves publicly (groups anyone can find); anything else
+// is a 404.
 import { error } from "@sveltejs/kit";
 import { env } from "$env/dynamic/public";
 import { HOSTED_API } from "@logit/core/domain/friendInvite";

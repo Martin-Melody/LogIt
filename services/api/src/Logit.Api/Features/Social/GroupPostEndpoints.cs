@@ -128,7 +128,7 @@ public static partial class GroupPostEndpoints
             return new PostDto(p.Id, brief, gone ? null : Person(p.Author), role is not null, role is GroupRole.Member or null ? null : role.ToString(),
                 gone ? "" : p.Title, gone ? "" : p.Body, p.Kind, p.Slug, gone || p.PhotoId is null ? null : PhotoEndpoints.UrlOf(p.PhotoId.Value), p.PhotoWidth, p.PhotoHeight,
                 gone ? null : p.CardType, gone ? null : p.CardJson, p.Upvotes, upvoted.Contains(p.Id), p.CommentCount, Ms(p.CreatedAt), Ms(p.LastActivityAt),
-                p.EditedAt is not null, gone, p.RemovedByModerator, p.Pinned, p.Locked, p.OnWeb, p.MembersOnlyComments, meId is not null && p.AuthorId == meId,
+                p.EditedAt is not null, gone, p.RemovedByModerator, p.Pinned, p.Locked, OnWeb(g), p.MembersOnlyComments, meId is not null && p.AuthorId == meId,
                 can, why, moderate);
         })];
     }
@@ -185,7 +185,7 @@ public static partial class GroupPostEndpoints
         {
             GroupId = groupId, AuthorId = me, Title = title, Body = Clean(req.Body, 10000) ?? "", Kind = kind, Slug = Slugify(title),
             PhotoId = photo?.Id, PhotoWidth = photo?.Width ?? 0, PhotoHeight = photo?.Height ?? 0, CardType = req.CardType, CardJson = req.CardType is null ? null : req.CardJson,
-            MembersOnlyComments = req.MembersOnlyComments, OnWeb = g.PostsOnWeb && g.Access != GroupAccess.InviteOnly, CreatedAt = now, LastActivityAt = now,
+            MembersOnlyComments = req.MembersOnlyComments, CreatedAt = now, LastActivityAt = now,
         };
         db.GroupPosts.Add(post);
         await db.SaveChangesAsync();
@@ -395,14 +395,17 @@ public static partial class GroupPostEndpoints
         return Results.Ok(result.OrderByDescending(p => p.Upvotes + p.CommentCount).ThenByDescending(p => p.LastActivityAtMs));
     }
 
-    /// The public page (canvas Q6): only posts written while the group showed posts on the web,
-    /// still on and still findable. {postSlug} ends with the post id's first 8 characters.
+    /// Public means public everywhere (Martin, 25 Nov): a group anyone can find has its posts on the
+    /// web, an invite-only one never does. No separate switch.
+    public static bool OnWeb(Group g) => g.PostsOn && g.Access != GroupAccess.InviteOnly;
+
+    /// The public page (canvas Q6). {postSlug} ends with the post id's first 8 characters.
     private static async Task<IResult> PublicThread(string slug, string postSlug, AppDbContext db)
     {
-        var g = await db.Groups.FirstOrDefaultAsync(x => x.Slug == slug && x.PostsOn && x.PostsOnWeb && x.Access != GroupAccess.InviteOnly);
+        var g = await db.Groups.FirstOrDefaultAsync(x => x.Slug == slug && x.PostsOn && x.Access != GroupAccess.InviteOnly);
         if (g is null) return Results.NotFound();
         var shortId = postSlug.Length >= 8 ? postSlug[^8..] : "";
-        var candidates = await db.GroupPosts.Include(p => p.Author).Where(p => p.GroupId == g.Id && p.OnWeb && p.DeletedAt == null).ToListAsync();
+        var candidates = await db.GroupPosts.Include(p => p.Author).Where(p => p.GroupId == g.Id && p.DeletedAt == null).ToListAsync();
         var post = candidates.FirstOrDefault(p => p.Id.ToString("N")[..8] == shortId);
         if (post is null) return Results.NotFound();
         return Results.Ok(new ThreadDto((await PostDtosAsync(db, [post], g, null, null))[0], await CommentsAsync(db, post, g, null)));
@@ -411,7 +414,7 @@ public static partial class GroupPostEndpoints
     /// For the website's sitemap: every post that's on the web, newest activity first.
     private static async Task<IResult> PublicIndex(AppDbContext db)
     {
-        var rows = await db.GroupPosts.Where(p => p.OnWeb && p.DeletedAt == null && p.Group.PostsOn && p.Group.PostsOnWeb && p.Group.Access != GroupAccess.InviteOnly && p.Group.Slug != "")
+        var rows = await db.GroupPosts.Where(p => p.DeletedAt == null && p.Group.PostsOn && p.Group.Access != GroupAccess.InviteOnly && p.Group.Slug != "")
             .OrderByDescending(p => p.LastActivityAt).Take(5000)
             .Select(p => new { GroupSlug = p.Group.Slug, p.Slug, p.Id, p.LastActivityAt }).ToListAsync();
         return Results.Ok(rows.Select(r => new { path = WebPath(r.GroupSlug, r.Slug, r.Id), lastModMs = Ms(r.LastActivityAt) }));

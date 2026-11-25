@@ -235,7 +235,7 @@ export const FEATURES: Feature[] = [
       "See this week's board with your friends and in each group: workouts done of planned, weeks kept and volume against your usual, never weights",
       "Keep yourself off every board, or one group's, and still see them",
       "Make members moderators: they remove messages, mute people in the chat, approve requests and handle the group's reports",
-      "Post questions, form checks and advice in groups, with comments that nest like Reddit; a group can show its posts on the web",
+      "Post questions, form checks and advice in groups, with comments that nest like Reddit; posts in groups anyone can find are public on the web too",
     ],
   },
   {
