@@ -24,6 +24,9 @@
   import EventRow from "$lib/components/social/EventRow.svelte";
   import EventFormSheet from "$lib/components/social/EventFormSheet.svelte";
   import { eventsApi, gatherSeries, type GroupEvent } from "@logit/core/api/eventsApi";
+  import { boardsApi, type BoardRow } from "@logit/core/api/boardsApi";
+  import BoardTable from "$lib/components/social/BoardTable.svelte";
+  import { sendBoardWeek, thisBoardWeek } from "$lib/features/groups/boardSync";
   import { shortAgo } from "$lib/features/friends/dmTime";
   import { back } from "$lib/navigation";
 
@@ -34,6 +37,8 @@
   let menuOpen = $state(false);
   let sheet = $state<"edit" | "invite" | "pin" | "report" | "event" | null>(null);
   let events = $state<GroupEvent[]>([]);
+  /** "This week" (G1): the top three, and you if you're further down. */
+  let week = $state<BoardRow[] | null>(null);
   let confirm = $state<"leave" | "delete" | "reset" | null>(null);
   const organiser = $derived(group?.me.role === "Organiser");
   const me = $derived(authStore.user?.username ?? "");
@@ -43,6 +48,11 @@
       group = await groupsApi.get(id);
       error = null;
       events = await eventsApi.list(id).catch(() => []);
+      void sendBoardWeek()
+        .then(() => thisBoardWeek())
+        .then((w) => boardsApi.group(id, w.week))
+        .then((b) => { const top = b.rows.slice(0, 3); const me = b.rows.find((r) => r.me); week = me && !top.includes(me) ? [...top, me] : top; })
+        .catch(() => (week = []));
       const threads = await dmApi.threads("chats").catch(() => []);
       unread = threads.some((t) => t.id === group?.threadId && t.unread);
     } catch (e) {
@@ -166,6 +176,16 @@
         {:else}
           <button type="button" class="mx-3 flex min-h-12 w-[calc(100%-1.5rem)] items-center gap-2 rounded-2xl border border-dashed border-border px-3.5 text-[14px] text-muted-foreground" onclick={() => (sheet = "event")}><CalendarPlus class="size-4" />Add an event: a session, a meet, a race</button>
         {/if}
+      </section>
+    {/if}
+
+    {#if week && week.length}
+      <section aria-labelledby="week-h" class="mt-5">
+        <div class="flex items-center justify-between px-4 pb-1.5">
+          <h2 id="week-h" class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">This week</h2>
+          <a href="/groups/{group.id}/board" class="flex h-9 items-center rounded-lg px-2.5 text-[13px] font-medium text-muted-foreground no-underline">See the board</a>
+        </div>
+        <div class="mx-3 overflow-hidden rounded-2xl border border-border bg-card"><BoardTable rows={week} compact /></div>
       </section>
     {/if}
 

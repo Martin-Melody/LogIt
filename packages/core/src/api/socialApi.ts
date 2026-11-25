@@ -212,6 +212,8 @@ export interface SocialSettings {
   dmFromOthers: "Requests" | "Off";
   /** Read receipts, both ways. */
   showReadReceipts: boolean;
+  /** "Show me on boards": the friends board and every group's board. */
+  showOnBoards: boolean;
 }
 
 export interface FollowRequestItem {

@@ -11,6 +11,7 @@
   import { caughtUpIndex } from "@logit/core/domain/socialFeed";
   import PeopleStrip from "$lib/components/social/PeopleStrip.svelte";
   import FriendsRow from "$lib/components/social/FriendsRow.svelte";
+  import FriendsBoardStrip from "$lib/components/social/FriendsBoardStrip.svelte";
   import ConnectAccountPrompt from "$lib/components/ConnectAccountPrompt.svelte";
   import CreatePostSheet from "$lib/components/CreatePostSheet.svelte";
   import UserSearchSheet from "$lib/components/UserSearchSheet.svelte";
@@ -247,6 +248,7 @@
 
   {:else}
     <FriendsRow />
+    <FriendsBoardStrip />
     <div class="px-4 pb-2.5">
       <div role="tablist" aria-label="Feed" class="grid grid-cols-2 gap-[3px] rounded-[10px] bg-muted p-[3px]">
         <button type="button" role="tab" aria-selected={tab === "following"} onclick={() => setTab("following")}

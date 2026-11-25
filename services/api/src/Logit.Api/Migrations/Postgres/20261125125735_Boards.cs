@@ -16,7 +16,7 @@ namespace Logit.Api.Migrations.Postgres
                 table: "Users",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.CreateTable(
                 name: "BoardWeeks",

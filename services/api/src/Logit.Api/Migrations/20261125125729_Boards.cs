@@ -16,7 +16,7 @@ namespace Logit.Api.Migrations
                 table: "Users",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.CreateTable(
                 name: "BoardWeeks",
