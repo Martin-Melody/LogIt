@@ -1,7 +1,8 @@
 <!-- One event in a list (design canvas G1, E2): the date block, name, when and who's going, and
-     Going / Go (a tap answers Going) or Cancelled. -->
+     Going / Go (a tap answers Going) or Cancelled. A repeating event shows how it repeats, as the
+     row for its next date. -->
 <script lang="ts">
-  import { Check } from "lucide-svelte";
+  import { Check, Repeat } from "lucide-svelte";
   import type { GroupEvent } from "@logit/core/api/eventsApi";
   import { dayBadge, eventShort } from "$lib/features/groups/eventTime";
 
@@ -16,7 +17,8 @@
 <div class="flex items-center gap-3 border-b border-border px-3.5 py-3 last:border-b-0 {event.cancelled || past ? 'opacity-60' : ''}">
   <a href="/events/{event.id}" class="flex min-w-0 flex-1 items-center gap-3 text-inherit no-underline">
     <span class="flex w-11 shrink-0 flex-col items-center tabular-nums"><span class="text-xl font-bold leading-tight">{badge.day}</span><span class="text-[12px] text-muted-foreground">{badge.month}</span></span>
-    <span class="flex min-w-0 flex-col gap-0.5"><span class="truncate text-[15px] font-semibold">{event.title}</span><span class="truncate text-[13px] text-muted-foreground">{sub}</span></span>
+    <span class="flex min-w-0 flex-col gap-0.5"><span class="truncate text-[15px] font-semibold">{event.title}</span><span class="truncate text-[13px] text-muted-foreground">{sub}</span>
+      {#if event.repeats}<span class="flex items-center gap-1 truncate text-[12px] text-muted-foreground"><Repeat class="size-3 shrink-0" />{event.repeats}</span>{/if}</span>
   </a>
   {#if event.cancelled}
     <span class="shrink-0 text-[12px] text-destructive">Cancelled</span>

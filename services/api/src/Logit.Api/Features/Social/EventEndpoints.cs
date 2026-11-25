@@ -37,7 +37,7 @@ public static class EventEndpoints
     /// Member: you're in its group (else it was found in search: GroupAccess and Requested say how to get in).
     public record EventDto(Guid Id, Guid GroupId, string GroupName, string Title, string Kind, long StartsAtMs, long? EndsAtMs, string? Place,
         string? Details, bool Cancelled, int Going, bool? Answer, bool Pinned, List<PersonDto> GoingPeople, bool CanEdit,
-        string? Sport, string? Repeats, bool Member, string GroupAccess, string? GroupPlace, int GroupMembers, bool Requested);
+        string? Sport, string? Repeats, bool Member, string GroupAccess, string? GroupPlace, int GroupMembers, bool Requested, Guid? SeriesId);
     public record Occurrence(DateTime StartsAt, DateTime? EndsAt);
     /// A repeating event: the phone works out the dates in its own time zone (so 7pm stays 7pm
     /// across the clock change) and sends them as Dates, with Repeats to show. Scope on edit and
@@ -77,7 +77,7 @@ public static class EventEndpoints
         return [.. rows.Select(r => new EventDto(r.Event.Id, r.Event.GroupId, r.GroupName, r.Event.Title, r.Event.Kind, Ms(r.Event.StartsAt),
             r.Event.EndsAt is { } end ? Ms(end) : null, r.Event.Place, r.Event.Details, r.Event.CancelledAt is not null, r.Going,
             r.Mine?.Going, r.Mine?.Pinned ?? false, r.Member ? going.GetValueOrDefault(r.Event.Id) ?? [] : [], r.Organiser,
-            r.Event.Sport, r.Event.Repeats, r.Member, r.Access.ToString(), r.GroupPlace, r.GroupMembers, r.Requested))];
+            r.Event.Sport, r.Event.Repeats, r.Member, r.Access.ToString(), r.GroupPlace, r.GroupMembers, r.Requested, r.Event.SeriesId))];
     }
 
     private static IQueryable<GroupEvent> Mine(AppDbContext db, Guid me) =>
