@@ -31,13 +31,12 @@ public class GroupPostTests : IDisposable
     }
 
     [Fact]
-    public async Task Members_post_anyone_signed_in_reads_and_comments_in_a_findable_group_and_replies_nest()
+    public async Task Anyone_signed_in_reads_posts_and_comments_in_a_findable_group_and_replies_nest()
     {
         var (conor, ava, kate, g) = await SetUp();
         var post = await Json(await ava.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Best gyms in Sligo for powerlifting?", body = "Moving in January.", kind = "Question" }));
         var id = post.GetProperty("id").GetString();
         Assert.Equal("best-gyms-in-sligo-for-powerlifting", post.GetProperty("slug").GetString());
-        Assert.Equal(HttpStatusCode.NotFound, (await kate.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Me too" })).StatusCode); // must join to post
 
         // Kate (outside the group) reads and comments, shown as not a member; Ava's own kind is offered next time.
         var c1 = await Json(await kate.PostAsJsonAsync($"/group-posts/{id}/comments", new { body = "Wine St is great." }));
@@ -62,6 +61,11 @@ public class GroupPostTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, (await kate.PostAsJsonAsync($"/group-posts/{quiet.GetProperty("id").GetString()}/comments", new { body = "hi" })).StatusCode);
         (await conor.PatchAsJsonAsync($"/groups/{g}", new { whoCanComment = "Members" })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Forbidden, (await kate.PostAsJsonAsync($"/group-posts/{id}/comments", new { body = "again" })).StatusCode);
+        // Anyone signed in posts in a findable group (Kate isn't a member), unless the group keeps it to members.
+        var outsider = await Json(await kate.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Visiting Sligo, any open gyms?" }));
+        Assert.False(outsider.GetProperty("authorIsMember").GetBoolean());
+        (await conor.PatchAsJsonAsync($"/groups/{g}", new { whoCanPost = "Members" })).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Forbidden, (await kate.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Again?" })).StatusCode);
         (await conor.PatchAsJsonAsync($"/groups/{g}", new { whoCanPost = "Staff" })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Forbidden, (await ava.PostAsJsonAsync($"/groups/{g}/posts", new { title = "Can I?" })).StatusCode);
 

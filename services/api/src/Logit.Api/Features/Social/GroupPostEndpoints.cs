@@ -164,12 +164,14 @@ public static partial class GroupPostEndpoints
     private static async Task<IResult> Create(Guid groupId, CreateRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
     {
         var me = caller.GetUserId();
-        var member = await db.GroupMembers.Include(m => m.Group).FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == me);
-        if (member is null || !member.Group.PostsOn) return Results.NotFound(new { error = "Join the group to post in it." });
-        var g = member.Group;
-        if (g.WhoCanPost == GroupPosting.Staff && !GroupEndpoints.CanModerate(member))
+        // Anyone who can read the posts can post (members or not), unless the group keeps it to members or staff.
+        var (g, member) = await ReaderAsync(db, groupId, me);
+        if (g is null) return Gone();
+        if (member is null && g.WhoCanPost != GroupPosting.Anyone)
+            return Results.Json(new { error = "Only members post in this group. You can comment." }, statusCode: 403);
+        if (g.WhoCanPost == GroupPosting.Staff && (member is null || !GroupEndpoints.CanModerate(member)))
             return Results.Json(new { error = "In this group only organisers and moderators post. You can comment." }, statusCode: 403);
-        if (member.MutedUntil > clock.GetUtcNow().UtcDateTime) return Results.Json(new { error = "A moderator muted you in this group for now." }, statusCode: 403);
+        if (member?.MutedUntil > clock.GetUtcNow().UtcDateTime) return Results.Json(new { error = "A moderator muted you in this group for now." }, statusCode: 403);
         var title = Clean(req.Title, 200);
         if (title is null) return Results.BadRequest(new { error = "Give the post a title." });
         var kind = Clean(req.Kind, 30) ?? "Question";

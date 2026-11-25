@@ -27,7 +27,7 @@ public class Group
     /// Posts (canvas Q4): on, who can post, who can comment, and whether posts show on the web
     /// (findable groups only; off until an organiser turns it on).
     public bool PostsOn { get; set; } = true;
-    public GroupPosting WhoCanPost { get; set; } = GroupPosting.Members;
+    public GroupPosting WhoCanPost { get; set; } = GroupPosting.Anyone;
     public GroupCommenting WhoCanComment { get; set; } = GroupCommenting.Anyone;
     public bool PostsOnWeb { get; set; }
     public ICollection<GroupMember> Members { get; set; } = [];

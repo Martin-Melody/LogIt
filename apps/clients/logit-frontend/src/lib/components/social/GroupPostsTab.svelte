@@ -2,17 +2,18 @@
 <script lang="ts">
   import { Loader2, PenSquare } from "lucide-svelte";
   import { groupPostsApi, type GroupPost, type PostSort } from "@logit/core/api/groupPostsApi";
-  import type { Group } from "@logit/core/api/groupsApi";
+  import type { PostsGroup } from "@logit/core/api/groupsApi";
   import { chip } from "$lib/components/ui/choice";
   import PostRow from "./PostRow.svelte";
   import NewPostSheet from "./NewPostSheet.svelte";
 
-  const { group }: { group: Group } = $props();
+  const { group }: { group: PostsGroup } = $props();
   let sort = $state<PostSort>("active");
   let posts = $state<GroupPost[] | null>(null);
   let more = $state(false);
   let writing = $state(false);
-  const canPost = $derived(group.posts?.whoCanPost !== "Staff" || group.me.role !== "Member");
+  const who = $derived(group.posts?.whoCanPost ?? "Members");
+  const canPost = $derived(who === "Staff" ? !!group.me && group.me.role !== "Member" : who === "Anyone" || !!group.me);
 
   async function load(reset = true) {
     const page = await groupPostsApi.list(group.id, sort, reset ? 0 : (posts?.length ?? 0)).catch(() => []);

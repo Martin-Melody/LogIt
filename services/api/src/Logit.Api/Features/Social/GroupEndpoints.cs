@@ -60,7 +60,7 @@ public static class GroupEndpoints
     public record MemberDto(PersonDto User, string Role, long JoinedAtMs, long? MutedUntilMs = null);
     /// Requested: you asked to join and wait. InvitedBy: a member invited you from a chat.
     public record PreviewDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string? Organiser,
-        List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null);
+        List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null, PostSettingsDto? Posts = null);
     /// A search result; State is "member", "requested", "invited" or "none".
     public record SearchDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string Access, string State, string? Followed);
     public record RequestDto(PersonDto User, long AtMs, string? FollowedBy);
@@ -161,9 +161,11 @@ public static class GroupEndpoints
             new MeDto(mine.Role.ToString(), mine.OnBoard, mine.Notify.ToString()),
             [.. organisers.Select(Person)], [.. preview.Select(Person)], g.Access.ToString(), requests, reports,
             mine.MutedUntil is { } mu && mu > DateTime.UtcNow ? Ms(mu) : null,
-            new PostSettingsDto(g.PostsOn, g.WhoCanPost.ToString(), g.WhoCanComment.ToString(), g.PostsOnWeb && g.Access != GroupAccess.InviteOnly,
-                await GroupPostEndpoints.GroupSlugAsync(db, g)));
+            await PostSettingsAsync(db, g));
     }
+
+    private static async Task<PostSettingsDto> PostSettingsAsync(AppDbContext db, Group g) =>
+        new(g.PostsOn, g.WhoCanPost.ToString(), g.WhoCanComment.ToString(), g.PostsOnWeb && g.Access != GroupAccess.InviteOnly, await GroupPostEndpoints.GroupSlugAsync(db, g));
 
     private static async Task<IResult> Get(Guid id, ClaimsPrincipal caller, AppDbContext db)
     {
@@ -199,7 +201,7 @@ public static class GroupEndpoints
         if (req.PostsOn is { } postsOn) g.PostsOn = postsOn;
         if (req.WhoCanPost is not null)
         {
-            if (!Enum.TryParse<GroupPosting>(req.WhoCanPost, true, out var who)) return Results.BadRequest(new { error = "Members or Staff." });
+            if (!Enum.TryParse<GroupPosting>(req.WhoCanPost, true, out var who)) return Results.BadRequest(new { error = "Anyone, Members or Staff." });
             g.WhoCanPost = who;
         }
         if (req.WhoCanComment is not null)
@@ -415,7 +417,7 @@ public static class GroupEndpoints
             .Select(m => m.User).Take(3).ToListAsync();
         var requested = await db.GroupJoinRequests.AnyAsync(r => r.GroupId == id && r.UserId == me);
         return Results.Ok(new PreviewDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, organiser, [.. followed.Select(Person)], member,
-            g.Access.ToString(), requested, invite?.Inviter.DisplayName));
+            g.Access.ToString(), requested, invite?.Inviter.DisplayName, g.PostsOn ? await PostSettingsAsync(db, g) : null));
     }
 
     /// Joining from search or an invite card: straight in when invited or the group is open; a

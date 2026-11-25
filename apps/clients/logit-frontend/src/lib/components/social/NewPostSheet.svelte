@@ -9,7 +9,7 @@
   import { ApiError } from "@logit/core/api/client";
   import { photoSrc, uploadPhoto } from "@logit/core/api/photosApi";
   import { DEFAULT_POST_KINDS, groupPostsApi, type GroupPost } from "@logit/core/api/groupPostsApi";
-  import type { Group } from "@logit/core/api/groupsApi";
+  import type { PostsGroup } from "@logit/core/api/groupsApi";
   import { cardTitle, readCard } from "@logit/core/domain/messageCard";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import { chip } from "$lib/components/ui/choice";
@@ -20,7 +20,7 @@
   import { pickImageFile } from "$lib/platform/filePick";
   import { resizeImageFile } from "$lib/platform/imageResize";
 
-  const { group, onclose, onposted }: { group: Group; onclose: () => void; onposted?: (p: GroupPost) => void } = $props();
+  const { group, onclose, onposted }: { group: PostsGroup; onclose: () => void; onposted?: (p: GroupPost) => void } = $props();
   let title = $state("");
   let body = $state("");
   let kinds = $state<string[]>(DEFAULT_POST_KINDS);

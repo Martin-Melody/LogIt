@@ -66,5 +66,7 @@ public class GroupVote
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-public enum GroupPosting { Members, Staff }
+/// Anyone: anyone signed in, members or not (Martin, 25 Nov), in groups anyone can find. Anyone
+/// is 0 so groups from before the setting existed are open too.
+public enum GroupPosting { Anyone, Members, Staff }
 public enum GroupCommenting { Anyone, Members }

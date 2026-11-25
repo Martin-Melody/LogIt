@@ -217,7 +217,7 @@ export const FEATURES: Feature[] = [
     summary: "Follow people, share workouts and PRs, and find people in Discover.",
     web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]", "/groups/[id]", "/groups/posts/[postId]"],
     phone: [
-      "/social", "/social/invite", "/messages/chat", "/messages/requests", "/groups/[id]", "/groups/[id]/members", "/groups/[id]/settings", "/groups/join", "/groups/[id]/events", "/groups/[id]/board", "/social/board", "/groups/[id]/reports", "/groups/posts/[postId]", "/events/[id]", "/events/[id]/people", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
+      "/social", "/social/invite", "/messages/chat", "/messages/requests", "/groups/[id]", "/groups/[id]/members", "/groups/[id]/settings", "/groups/join", "/groups/[id]/events", "/groups/[id]/board", "/social/board", "/groups/[id]/reports", "/groups/posts/[postId]", "/groups/[id]/posts", "/events/[id]", "/events/[id]/people", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
       "/social/[username]", "/social/[username]/followers", "/social/[username]/following", "/inbox",
     ],
     whereWeb: "People › Social",

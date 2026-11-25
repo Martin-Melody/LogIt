@@ -175,8 +175,8 @@
 
 <div class="flex h-full flex-col">
   <PageHeader>
-    <BackButton onclick={() => back(post ? `/groups/${post.group.id}?tab=posts` : "/messages")} />
-    {#if post}<a href="/groups/{post.group.id}?tab=posts" class="min-w-0 flex-1 truncate text-[13px] text-muted-foreground no-underline">{post.group.name} · Posts</a>{:else}<span class="flex-1"></span>{/if}
+    <BackButton onclick={() => back(post ? `/groups/${post.group.id}/posts` : "/messages")} />
+    {#if post}<a href="/groups/{post.group.id}/posts" class="min-w-0 flex-1 truncate text-[13px] text-muted-foreground no-underline">{post.group.name} · Posts</a>{:else}<span class="flex-1"></span>{/if}
     {#if post}<button type="button" aria-label="Post options" class="flex size-11 items-center justify-center text-muted-foreground" onclick={() => (menuOpen = true)}><MoreHorizontal class="size-5" /></button>{/if}
   </PageHeader>
 

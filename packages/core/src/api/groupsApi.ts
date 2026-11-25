@@ -48,8 +48,14 @@ export interface Group extends GroupBrief {
   /** You're muted in the chat until then. */
   mutedUntilMs: number | null;
   /** Posts (canvas Q4). */
-  posts: { on: boolean; whoCanPost: "Members" | "Staff"; whoCanComment: "Anyone" | "Members"; onWeb: boolean; slug: string } | null;
+  posts: PostSettings | null;
 }
+
+/** Who can post: anyone signed in (members or not), members, or organisers and moderators. */
+export type WhoCanPost = "Anyone" | "Members" | "Staff";
+export interface PostSettings { on: boolean; whoCanPost: WhoCanPost; whoCanComment: "Anyone" | "Members"; onWeb: boolean; slug: string }
+/** What the Posts list needs: a group you're in, or one you're looking at from outside (me null). */
+export type PostsGroup = Pick<Group, "id" | "name" | "posts"> & { me: Pick<Group["me"], "role"> | null };
 
 export interface GroupMember {
   user: GroupPerson;
@@ -83,6 +89,8 @@ export interface GroupPreview extends GroupBrief {
   requested: boolean;
   /** A member invited you from a chat (you can join straight away). */
   invitedBy: string | null;
+  /** Null when the group has posts off. */
+  posts: PostSettings | null;
 }
 
 export interface GroupSearchResult extends GroupBrief {
@@ -106,7 +114,7 @@ export const groupsApi = {
   create: (g: { name: string; kind: GroupKind; place?: string | null; photoId?: string | null; access?: GroupAccess }) => apiClient.fetch<Group>("/groups", json("POST", g)),
   get: (id: string) => apiClient.fetch<Group>(`/groups/${id}`),
   edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean; access?: GroupAccess;
-    postsOn?: boolean; whoCanPost?: "Members" | "Staff"; whoCanComment?: "Anyone" | "Members"; postsOnWeb?: boolean }) =>
+    postsOn?: boolean; whoCanPost?: WhoCanPost; whoCanComment?: "Anyone" | "Members"; postsOnWeb?: boolean }) =>
     apiClient.fetch<Group>(`/groups/${id}`, json("PATCH", g)),
   remove: (id: string) => apiClient.fetch<void>(`/groups/${id}`, { method: "DELETE" }),
   pin: (id: string, text: string, notify: boolean) => apiClient.fetch<Group>(`/groups/${id}/note`, json("PUT", { text, notify })),

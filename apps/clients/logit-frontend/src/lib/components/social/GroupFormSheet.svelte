@@ -6,7 +6,7 @@
   import { toast } from "svelte-sonner";
   import { ApiError } from "@logit/core/api/client";
   import { photoSrc, uploadPhoto } from "@logit/core/api/photosApi";
-  import { GROUP_KINDS, groupsApi, type Group, type GroupAccess, type GroupKind } from "@logit/core/api/groupsApi";
+  import { GROUP_KINDS, groupsApi, type Group, type GroupAccess, type GroupKind, type WhoCanPost } from "@logit/core/api/groupsApi";
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
@@ -31,7 +31,7 @@
   // svelte-ignore state_referenced_locally
   let postsOn = $state(group?.posts?.on ?? true);
   // svelte-ignore state_referenced_locally
-  let whoCanPost = $state<"Members" | "Staff">(group?.posts?.whoCanPost ?? "Members");
+  let whoCanPost = $state<WhoCanPost>(group?.posts?.whoCanPost ?? "Anyone");
   // svelte-ignore state_referenced_locally
   let whoCanComment = $state<"Anyone" | "Members">(group?.posts?.whoCanComment ?? "Anyone");
   // svelte-ignore state_referenced_locally
@@ -124,7 +124,8 @@
           <div class="flex min-h-14 items-center gap-3 border-b border-border py-1.5 pl-3 pr-1.5"><span class="flex flex-1 flex-col"><span class="text-[15px]">Posts</span><span class="text-[12px] text-muted-foreground">A Posts tab for threads, next to the chat</span></span><Switch checked={postsOn} label="Posts" onchange={(v) => (postsOn = v)} /></div>
           {#if postsOn}
             <div class="flex flex-col gap-2 border-b border-border px-3 py-2.5"><span class="text-[15px]">Who can post</span>
-              <div class="flex flex-wrap gap-2">{#each [["Members", "Members"], ["Staff", "Organisers and moderators"]] as [v, l] (v)}<button type="button" class={chip(whoCanPost === v)} aria-pressed={whoCanPost === v} onclick={() => (whoCanPost = v as "Members" | "Staff")}>{l}</button>{/each}</div></div>
+              <div class="flex flex-wrap gap-2">{#each [["Anyone", "Anyone on LogIt"], ["Members", "Members only"], ["Staff", "Organisers and moderators"]] as [v, l] (v)}<button type="button" class={chip(whoCanPost === v)} aria-pressed={whoCanPost === v} onclick={() => (whoCanPost = v as WhoCanPost)}>{l}</button>{/each}</div>
+              <span class="text-[12px] text-muted-foreground">People outside the group show as not a member.</span></div>
             <div class="flex flex-col gap-2 border-b border-border px-3 py-2.5"><span class="text-[15px]">Who can comment</span>
               <div class="flex flex-wrap gap-2">{#each [["Anyone", "Anyone on LogIt"], ["Members", "Members only"]] as [v, l] (v)}<button type="button" class={chip(whoCanComment === v)} aria-pressed={whoCanComment === v} onclick={() => (whoCanComment = v as "Anyone" | "Members")}>{l}</button>{/each}</div>
               <span class="text-[12px] text-muted-foreground">A post can keep its own comments to members.</span></div>
