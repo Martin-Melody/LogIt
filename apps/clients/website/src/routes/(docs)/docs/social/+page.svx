@@ -11,9 +11,10 @@ title: Social
 <FeatureFacts id="social" />
 
 Share workouts, PRs, splits and library items; follow people; like, comment and reply. Message
-friends, add a story made from a workout or record (gone after 24 hours), and cheer on friends who
-are training right now. Social on the phone is free; on the web it needs Pro. Messages work on both;
-stories are on the phone for now.
+friends with text, photos and voice messages, add a story (a photo, a workout or a record, or a
+photo with the record on top; gone after 24 hours), and cheer on friends who are training right
+now. Social on the phone is free; on the web it needs Pro. Messages work on both; stories are on
+the phone for now.
 
 <HowTo id="pro.social" />
 
