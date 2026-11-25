@@ -53,6 +53,9 @@ public static class DirectMessageEndpoints
     /// A reply to a story: the client sends {"storyId"}, the server stores the story's card and
     /// when it expires, so the quote disappears with the story.
     public const string StoryCard = "Story";
+    /// An invite to a group (canvas G16): the client sends {"groupId"}, the server checks you're a
+    /// member, records the invite and stores the group's name and look.
+    public const string GroupInviteCard = "GroupInvite";
     private const int MaxCardJson = 4000;
 
     /// `request`: the viewer hasn't accepted this thread, so a photo's address is withheld.
@@ -83,7 +86,8 @@ public static class DirectMessageEndpoints
         x.RemovedByLogIt ? "Message removed by LogIt" : x.DeletedAt is not null ? "Unsent a message"
         : x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
         : x.VoiceId is not null ? $"Voice message · {x.VoiceMs / 60000}:{x.VoiceMs / 1000 % 60:00}"
-        : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
+        : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType == GroupInviteCard ? "Sent a group invite"
+            : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
     private static PersonDto? Person(User? u) => u is null ? null : new(u.Username, u.DisplayName, u.AvatarUrl, u.Id);
@@ -227,7 +231,7 @@ public static class DirectMessageEndpoints
         {
             if (body.Length == 0) return Results.BadRequest(new { error = "Write something first." });
         }
-        else if (req.CardType is not null)
+        else if (req.CardType is not null && req.CardType != GroupInviteCard)
         {
             if (!CardTypes.Contains(req.CardType)) return Results.BadRequest(new { error = "That can't be shared in a message." });
             if (string.IsNullOrEmpty(req.CardJson) || req.CardJson.Length > MaxCardJson) return Results.BadRequest(new { error = "That's too big to share." });
@@ -265,7 +269,7 @@ public static class DirectMessageEndpoints
         }
         if (inGroup)
         {
-            if (req.CardType == StoryCard) return Results.BadRequest(new { error = "That can't be sent to a group." });
+            if (req.CardType is StoryCard or GroupInviteCard) return Results.BadRequest(new { error = "That can't be sent to a group." });
         }
         else
         {
@@ -308,6 +312,23 @@ public static class DirectMessageEndpoints
                 ["photoHeight"] = story.PhotoHeight,
                 ["expiresAtMs"] = Ms(story.ExpiresAt),
             }.ToJsonString();
+        }
+        else if (req.CardType == GroupInviteCard)
+        {
+            Guid groupId;
+            try
+            {
+                using var doc = JsonDocument.Parse(req.CardJson ?? "");
+                groupId = doc.RootElement.GetProperty("groupId").GetGuid();
+            }
+            catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException or KeyNotFoundException)
+            {
+                return Results.BadRequest(new { error = "Missing group." });
+            }
+            if (await db.GroupMembers.AnyAsync(m => m.GroupId == groupId && m.UserId == other!.Id))
+                return Results.BadRequest(new { error = "They're already in the group." });
+            cardJson = await GroupEndpoints.InviteCardAsync(db, groupId, meId, other!.Id, now);
+            if (cardJson is null) return Results.NotFound(new { error = "You're not in that group any more." });
         }
 
         var mine = thread?.Members.FirstOrDefault(m => m.UserId == meId);

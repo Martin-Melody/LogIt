@@ -21,7 +21,35 @@ public class Group
     public Guid? NoteById { get; set; }
     public DateTime? NoteAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public GroupAccess Access { get; set; } = GroupAccess.InviteOnly;
     public ICollection<GroupMember> Members { get; set; } = [];
+}
+
+/// Who can find and join (canvas G11, as Strava clubs / Facebook groups). Invites from members
+/// and the link always work.
+public enum GroupAccess { InviteOnly, Request, Open }
+
+/// Someone asked to join a findable group (G13); an organiser approves or declines (G14).
+public class GroupJoinRequest
+{
+    public Guid GroupId { get; set; }
+    public Group Group { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public bool OnBoard { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// A member invited someone from a chat (G15–G16): it lets them join straight away, also an
+/// invite-only group, whatever happens to the link.
+public class GroupInvite
+{
+    public Guid GroupId { get; set; }
+    public Group Group { get; set; } = null!;
+    public Guid InviteeId { get; set; }
+    public Guid InviterId { get; set; }
+    public User Inviter { get; set; } = null!;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public enum GroupRole { Member, Organiser }

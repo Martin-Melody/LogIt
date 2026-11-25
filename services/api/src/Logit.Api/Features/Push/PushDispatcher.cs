@@ -258,7 +258,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Comment or NotificationType.Reply or NotificationType.Mention or NotificationType.Quote => Kind.Comments,
         NotificationType.Follow or NotificationType.FollowRequest or NotificationType.FollowAccepted => Kind.Follows,
         NotificationType.Cheer => Kind.Cheers,
-        NotificationType.GroupNote => Kind.Groups,
+        NotificationType.GroupNote or NotificationType.GroupRequest or NotificationType.GroupApproved => Kind.Groups,
         _ => Kind.Coaching,
     };
 
@@ -309,6 +309,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Cheer => "is cheering you on",
         NotificationType.StoryCheer => "cheered your story",
         NotificationType.GroupNote => n.Group is null ? "pinned a note" : $"pinned a note in {n.Group.Name}",
+        NotificationType.GroupRequest => n.Group is null ? "asked to join your group" : $"asked to join {n.Group.Name}",
+        NotificationType.GroupApproved => n.Group is null ? "let you into the group" : $"let you into {n.Group.Name}",
         _ => "sent you something",
     };
 
@@ -323,6 +325,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.FollowAccepted => ("accepted request", "accepted requests"),
         NotificationType.Cheer => ("cheer", "cheers"),
         NotificationType.GroupNote => ("group note", "group notes"),
+        NotificationType.GroupRequest => ("request to join", "requests to join"),
+        NotificationType.GroupApproved => ("group joined", "groups joined"),
         _ => ("coaching update", "coaching updates"),
     };
 

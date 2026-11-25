@@ -1125,6 +1125,9 @@ namespace Logit.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Access")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -1162,10 +1165,56 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Access");
+
                     b.HasIndex("InviteCode")
                         .IsUnique();
 
                     b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupInvite", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InviteeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InviterId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GroupId", "InviteeId");
+
+                    b.HasIndex("InviteeId");
+
+                    b.HasIndex("InviterId");
+
+                    b.ToTable("GroupInvites");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupJoinRequest", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("OnBoard")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("GroupJoinRequests");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.GroupMember", b =>
@@ -3128,6 +3177,50 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Inviter");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupInvite", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("InviteeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Inviter")
+                        .WithMany()
+                        .HasForeignKey("InviterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Inviter");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupJoinRequest", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.GroupMember", b =>

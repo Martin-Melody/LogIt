@@ -34,19 +34,31 @@ public static class GroupEndpoints
         g.MapPut("/{id:guid}/members/{username}/role", SetRole).RequireAuthorization();
         g.MapDelete("/{id:guid}/members/{username}", Remove).RequireAuthorization();
         g.MapPut("/{id:guid}/me", MySettings).RequireAuthorization();
+        g.MapGet("/search", Search).RequireAuthorization();
+        g.MapGet("/{id:guid}/about", About).RequireAuthorization();
+        g.MapPost("/{id:guid}/join", JoinById).RequireAuthorization().RequireRateLimiting("social-write");
+        g.MapDelete("/{id:guid}/request", CancelRequest).RequireAuthorization();
+        g.MapGet("/{id:guid}/requests", Requests).RequireAuthorization();
+        g.MapPost("/{id:guid}/requests/{username}", Approve).RequireAuthorization();
+        g.MapDelete("/{id:guid}/requests/{username}", Decline).RequireAuthorization();
     }
 
     public record PersonDto(string Username, string DisplayName, string? AvatarUrl, Guid Id);
     public record BriefDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members);
     public record NoteDto(string Text, PersonDto? By, long AtMs);
     public record MeDto(string Role, bool OnBoard, string Notify);
+    /// Requests: how many are waiting (organisers only, else 0).
     public record GroupDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, Guid ThreadId, string InviteCode,
-        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview);
+        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview, string Access, int Requests);
     public record MemberDto(PersonDto User, string Role, long JoinedAtMs);
+    /// Requested: you asked to join and wait. InvitedBy: a member invited you from a chat.
     public record PreviewDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string? Organiser,
-        List<PersonDto> Followed, bool Member);
-    public record CreateRequest(string Name, string? Kind, string? Place, Guid? PhotoId);
-    public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false);
+        List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null);
+    /// A search result; State is "member", "requested", "invited" or "none".
+    public record SearchDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string Access, string State, string? Followed);
+    public record RequestDto(PersonDto User, long AtMs, string? FollowedBy);
+    public record CreateRequest(string Name, string? Kind, string? Place, Guid? PhotoId, string? Access = null);
+    public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false, string? Access = null);
     public record JoinRequest(bool OnBoard = true);
     public record NoteRequest(string Text, bool Notify = true);
     public record RoleRequest(string Role);
@@ -102,9 +114,11 @@ public static class GroupEndpoints
         Photo? photo = null;
         if (req.PhotoId is { } pid && (photo = await PhotoEndpoints.OwnedAsync(db, me, pid)) is null)
             return Results.BadRequest(new { error = "That photo didn't upload. Try again." });
+        var access = GroupAccess.InviteOnly;
+        if (req.Access is not null && !Enum.TryParse(req.Access, true, out access)) return Results.BadRequest(new { error = "InviteOnly, Request or Open." });
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var group = new Group { Name = name, Kind = kind, Place = Clean(req.Place, 60), PhotoId = photo?.Id, InviteCode = NewCode(), CreatedAt = now };
+        var group = new Group { Name = name, Kind = kind, Place = Clean(req.Place, 60), PhotoId = photo?.Id, InviteCode = NewCode(), CreatedAt = now, Access = access };
         group.Members.Add(new GroupMember { UserId = me, Role = GroupRole.Organiser, JoinedAt = now });
         db.Groups.Add(group);
         var thread = new DmThread { PairKey = $"g:{group.Id}", Group = group, CreatedAt = now, LastMessageAt = now };
@@ -129,10 +143,11 @@ public static class GroupEndpoints
             .ThenByDescending(m => m.Role).ThenBy(m => m.JoinedAt)
             .Select(m => m.User).Take(4).ToListAsync();
         var noteBy = g.NoteById is { } nb ? await db.Users.FindAsync(nb) : null;
+        var requests = mine.Role == GroupRole.Organiser ? await db.GroupJoinRequests.CountAsync(r => r.GroupId == groupId) : 0;
         return new GroupDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, threadId, g.InviteCode,
             g.Note is null ? null : new NoteDto(g.Note, noteBy is null ? null : Person(noteBy), Ms(g.NoteAt ?? g.CreatedAt)),
             new MeDto(mine.Role.ToString(), mine.OnBoard, mine.Notify.ToString()),
-            [.. organisers.Select(Person)], [.. preview.Select(Person)]);
+            [.. organisers.Select(Person)], [.. preview.Select(Person)], g.Access.ToString(), requests);
     }
 
     private static async Task<IResult> Get(Guid id, ClaimsPrincipal caller, AppDbContext db)
@@ -161,6 +176,11 @@ public static class GroupEndpoints
             g.Kind = kind;
         }
         if (req.Place is not null) g.Place = Clean(req.Place, 60);
+        if (req.Access is not null)
+        {
+            if (!Enum.TryParse<GroupAccess>(req.Access, true, out var access)) return Results.BadRequest(new { error = "InviteOnly, Request or Open." });
+            g.Access = access;
+        }
         if (req.PhotoId is { } pid && pid != g.PhotoId)
         {
             if (await PhotoEndpoints.OwnedAsync(db, me, pid) is null) return Results.BadRequest(new { error = "That photo didn't upload. Try again." });
@@ -290,7 +310,7 @@ public static class GroupEndpoints
             followed = [.. (await db.GroupMembers.Where(m => m.GroupId == g.Id && db.Follows.Any(f => f.FollowerId == me && f.FollowedId == m.UserId))
                 .Select(m => m.User).Take(3).ToListAsync()).Select(Person)];
         }
-        return Results.Ok(new PreviewDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, organiser, followed, member));
+        return Results.Ok(new PreviewDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, organiser, followed, member, g.Access.ToString()));
     }
 
     private static async Task<IResult> Join(string code, JoinRequest? req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
@@ -302,14 +322,165 @@ public static class GroupEndpoints
         if (await db.GroupMembers.CountAsync(m => m.GroupId == g.Id) >= MaxMembers) return Results.BadRequest(new { error = "This group is full." });
         if (await db.GroupMembers.CountAsync(m => m.UserId == me) >= MaxGroupsPerPerson)
             return Results.BadRequest(new { error = $"You're in {MaxGroupsPerPerson} groups. Leave one first." });
-        var now = clock.GetUtcNow().UtcDateTime;
-        db.GroupMembers.Add(new GroupMember { GroupId = g.Id, UserId = me, OnBoard = req?.OnBoard ?? true, JoinedAt = now });
-        var threadId = await db.DmThreads.Where(t => t.GroupId == g.Id).Select(t => t.Id).FirstAsync();
-        // The chat starts from now for you: earlier messages show, but none count as unread.
-        db.DmMembers.Add(new DmMember { ThreadId = threadId, UserId = me, Accepted = true, LastReadAt = now });
+        await AddMemberAsync(db, g.Id, me, req?.OnBoard ?? true, clock.GetUtcNow().UtcDateTime);
+        return Results.Ok(new { id = g.Id });
+    }
+
+    /// Adds someone to a group and its chat (which starts from now for them: earlier messages
+    /// show, none count as unread), and clears their request and invite.
+    private static async Task AddMemberAsync(AppDbContext db, Guid groupId, Guid userId, bool onBoard, DateTime now)
+    {
+        db.GroupMembers.Add(new GroupMember { GroupId = groupId, UserId = userId, OnBoard = onBoard, JoinedAt = now });
+        var threadId = await db.DmThreads.Where(t => t.GroupId == groupId).Select(t => t.Id).FirstAsync();
+        db.DmMembers.Add(new DmMember { ThreadId = threadId, UserId = userId, Accepted = true, LastReadAt = now });
+        db.GroupJoinRequests.RemoveRange(await db.GroupJoinRequests.Where(r => r.GroupId == groupId && r.UserId == userId).ToListAsync());
+        db.GroupInvites.RemoveRange(await db.GroupInvites.Where(i => i.GroupId == groupId && i.InviteeId == userId).ToListAsync());
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateException) { /* joined twice at once */ }
-        return Results.Ok(new { id = g.Id });
+    }
+
+    private static async Task<string?> FollowedMemberAsync(AppDbContext db, Guid groupId, Guid me) =>
+        await db.GroupMembers.Where(m => m.GroupId == groupId && db.Follows.Any(f => f.FollowerId == me && f.FollowedId == m.UserId))
+            .Select(m => m.User.DisplayName).FirstOrDefaultAsync();
+
+    /// Social › Search › Groups (canvas G12): findable groups by name or place. Invite-only groups
+    /// never appear (nor which of them anyone is in), except your own.
+    private static async Task<IResult> Search(string? q, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = caller.GetUserId();
+        var term = (q ?? "").Trim().ToLowerInvariant();
+        if (term.Length < 2) return Results.Ok(Array.Empty<SearchDto>());
+        var rows = await db.Groups
+            .Where(g => g.Access != GroupAccess.InviteOnly || g.Members.Any(m => m.UserId == me))
+            .Where(g => g.Name.ToLower().Contains(term) || (g.Place != null && g.Place.ToLower().Contains(term)))
+            .Select(g => new
+            {
+                Group = g,
+                Count = g.Members.Count,
+                Member = g.Members.Any(m => m.UserId == me),
+                Requested = db.GroupJoinRequests.Any(r => r.GroupId == g.Id && r.UserId == me),
+                Invited = db.GroupInvites.Any(i => i.GroupId == g.Id && i.InviteeId == me),
+                Followed = g.Members.Where(m => db.Follows.Any(f => f.FollowerId == me && f.FollowedId == m.UserId)).Select(m => m.User.DisplayName).FirstOrDefault(),
+            })
+            .OrderByDescending(r => r.Member).ThenByDescending(r => r.Count).Take(30).ToListAsync();
+        return Results.Ok(rows.Select(r => new SearchDto(r.Group.Id, r.Group.Name, r.Group.Kind, r.Group.Place, PhotoOf(r.Group), r.Count,
+            r.Group.Access.ToString(), r.Member ? "member" : r.Requested ? "requested" : r.Invited ? "invited" : "none", r.Followed)));
+    }
+
+    /// The join screen opened from search or an invite card: findable groups, or ones you're
+    /// invited to (or in).
+    private static async Task<IResult> About(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = caller.GetUserId();
+        var g = await db.Groups.FirstOrDefaultAsync(x => x.Id == id);
+        if (g is null) return Gone();
+        var member = await db.GroupMembers.AnyAsync(m => m.GroupId == id && m.UserId == me);
+        var invite = await db.GroupInvites.Include(i => i.Inviter).FirstOrDefaultAsync(i => i.GroupId == id && i.InviteeId == me);
+        if (!member && invite is null && g.Access == GroupAccess.InviteOnly) return Gone();
+        var count = await db.GroupMembers.CountAsync(m => m.GroupId == id);
+        var organiser = await db.GroupMembers.Where(m => m.GroupId == id && m.Role == GroupRole.Organiser).OrderBy(m => m.JoinedAt)
+            .Select(m => m.User.DisplayName).FirstOrDefaultAsync();
+        var followed = await db.GroupMembers.Where(m => m.GroupId == id && db.Follows.Any(f => f.FollowerId == me && f.FollowedId == m.UserId))
+            .Select(m => m.User).Take(3).ToListAsync();
+        var requested = await db.GroupJoinRequests.AnyAsync(r => r.GroupId == id && r.UserId == me);
+        return Results.Ok(new PreviewDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, organiser, [.. followed.Select(Person)], member,
+            g.Access.ToString(), requested, invite?.Inviter.DisplayName));
+    }
+
+    /// Joining from search or an invite card: straight in when invited or the group is open; a
+    /// request when it asks (organisers are told); not at all for an invite-only group.
+    private static async Task<IResult> JoinById(Guid id, JoinRequest? req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    {
+        var me = caller.GetUserId();
+        var g = await db.Groups.FirstOrDefaultAsync(x => x.Id == id);
+        if (g is null) return Gone();
+        if (await db.GroupMembers.AnyAsync(m => m.GroupId == id && m.UserId == me)) return Results.Ok(new { id, status = "member" });
+        var invited = await db.GroupInvites.AnyAsync(i => i.GroupId == id && i.InviteeId == me);
+        if (!invited && g.Access == GroupAccess.InviteOnly) return Gone();
+        if (await db.GroupMembers.CountAsync(m => m.GroupId == id) >= MaxMembers) return Results.BadRequest(new { error = "This group is full." });
+        if (await db.GroupMembers.CountAsync(m => m.UserId == me) >= MaxGroupsPerPerson)
+            return Results.BadRequest(new { error = $"You're in {MaxGroupsPerPerson} groups. Leave one first." });
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (invited || g.Access == GroupAccess.Open)
+        {
+            await AddMemberAsync(db, id, me, req?.OnBoard ?? true, now);
+            return Results.Ok(new { id, status = "member" });
+        }
+        if (!await db.GroupJoinRequests.AnyAsync(r => r.GroupId == id && r.UserId == me))
+        {
+            db.GroupJoinRequests.Add(new GroupJoinRequest { GroupId = id, UserId = me, OnBoard = req?.OnBoard ?? true, CreatedAt = now });
+            var organisers = await db.GroupMembers.Where(m => m.GroupId == id && m.Role == GroupRole.Organiser).Select(m => m.UserId).ToListAsync();
+            db.Notifications.AddRange(organisers.Select(o => new Notification { UserId = o, ActorId = me, Type = NotificationType.GroupRequest, GroupId = id, CreatedAt = now }));
+            try { await db.SaveChangesAsync(); }
+            catch (DbUpdateException) { /* asked twice at once */ }
+        }
+        return Results.Ok(new { id, status = "requested" });
+    }
+
+    private static async Task<IResult> CancelRequest(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = caller.GetUserId();
+        await db.GroupJoinRequests.Where(r => r.GroupId == id && r.UserId == me).ExecuteDeleteAsync();
+        await db.Notifications.Where(n => n.GroupId == id && n.ActorId == me && n.Type == NotificationType.GroupRequest).ExecuteDeleteAsync();
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> Requests(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = caller.GetUserId();
+        var mine = await MembershipAsync(db, id, me);
+        if (mine is null) return Gone();
+        if (mine.Role != GroupRole.Organiser) return NotOrganiser();
+        var rows = await db.GroupJoinRequests.Where(r => r.GroupId == id).OrderBy(r => r.CreatedAt)
+            .Select(r => new
+            {
+                r.User, r.CreatedAt,
+                // A member who follows them, to put a face to the name.
+                FollowedBy = db.GroupMembers.Where(m => m.GroupId == id && db.Follows.Any(f => f.FollowerId == m.UserId && f.FollowedId == r.UserId))
+                    .Select(m => m.User.DisplayName).FirstOrDefault(),
+            }).Take(500).ToListAsync();
+        return Results.Ok(rows.Select(r => new RequestDto(Person(r.User), Ms(r.CreatedAt), r.FollowedBy)));
+    }
+
+    private static async Task<IResult> Approve(Guid id, string username, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    {
+        var me = caller.GetUserId();
+        var mine = await MembershipAsync(db, id, me);
+        if (mine is null) return Gone();
+        if (mine.Role != GroupRole.Organiser) return NotOrganiser();
+        var request = await db.GroupJoinRequests.FirstOrDefaultAsync(r => r.GroupId == id && r.User.Username == username.ToLowerInvariant());
+        if (request is null) return Results.NotFound();
+        var now = clock.GetUtcNow().UtcDateTime;
+        db.Notifications.Add(new Notification { UserId = request.UserId, ActorId = me, Type = NotificationType.GroupApproved, GroupId = id, CreatedAt = now });
+        await db.Notifications.Where(n => n.GroupId == id && n.ActorId == request.UserId && n.Type == NotificationType.GroupRequest).ExecuteDeleteAsync();
+        await AddMemberAsync(db, id, request.UserId, request.OnBoard, now);
+        return Results.NoContent();
+    }
+
+    /// Declining tells nobody (as with follow requests).
+    private static async Task<IResult> Decline(Guid id, string username, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var mine = await MembershipAsync(db, id, caller.GetUserId());
+        if (mine is null) return Gone();
+        if (mine.Role != GroupRole.Organiser) return NotOrganiser();
+        var userId = await db.Users.Where(u => u.Username == username.ToLowerInvariant()).Select(u => (Guid?)u.Id).FirstOrDefaultAsync();
+        if (userId is null) return Results.NotFound();
+        await db.GroupJoinRequests.Where(r => r.GroupId == id && r.UserId == userId).ExecuteDeleteAsync();
+        await db.Notifications.Where(n => n.GroupId == id && n.ActorId == userId && n.Type == NotificationType.GroupRequest).ExecuteDeleteAsync();
+        return Results.NoContent();
+    }
+
+    /// A member invites someone from a chat (the "GroupInvite" message card): they may then join
+    /// straight away. Called by DirectMessageEndpoints.Send; null when the sender isn't a member.
+    public static async Task<string?> InviteCardAsync(AppDbContext db, Guid groupId, Guid inviterId, Guid inviteeId, DateTime now)
+    {
+        var g = await db.Groups.FirstOrDefaultAsync(x => x.Id == groupId && x.Members.Any(m => m.UserId == inviterId));
+        if (g is null) return null;
+        var invite = await db.GroupInvites.FirstOrDefaultAsync(i => i.GroupId == groupId && i.InviteeId == inviteeId);
+        if (invite is null) db.GroupInvites.Add(new GroupInvite { GroupId = groupId, InviteeId = inviteeId, InviterId = inviterId, CreatedAt = now });
+        else (invite.InviterId, invite.CreatedAt) = (inviterId, now);
+        var count = await db.GroupMembers.CountAsync(m => m.GroupId == groupId);
+        return System.Text.Json.JsonSerializer.Serialize(new { groupId = g.Id, name = g.Name, kind = g.Kind, place = g.Place, photoUrl = PhotoOf(g), members = count });
     }
 
     private static async Task<IResult> Members(Guid id, ClaimsPrincipal caller, AppDbContext db)

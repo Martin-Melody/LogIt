@@ -197,4 +197,71 @@ public class GroupTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await ava.SendAsync(req)).StatusCode);
         await _api.WithDbAsync(async db => Assert.Equal(0, await db.Groups.CountAsync()));
     }
+
+    [Fact]
+    public async Task Findable_groups_show_in_search_and_ask_to_join_waits_for_an_organiser()
+    {
+        var (conor, _, _) = await _api.SignUpAsync("conor");
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        var hidden = await Json(await conor.PostAsJsonAsync("/groups", new { name = "Iron Secret", place = "Dublin 8" }));
+        var ask = await Json(await conor.PostAsJsonAsync("/groups", new { name = "Iron Club", place = "Dublin 8", access = "Request" }));
+        var open = await Json(await conor.PostAsJsonAsync("/groups", new { name = "Phoenix Runners", place = "Dublin 7", access = "Open" }));
+        var (hiddenId, askId, openId) = (hidden.GetProperty("id").GetString(), ask.GetProperty("id").GetString(), open.GetProperty("id").GetString());
+
+        // Invite-only groups never show; findable ones match on name or place.
+        var found = (await Get(ava, "/groups/search?q=dublin")).EnumerateArray().Select(g => g.GetProperty("name").GetString()).ToList();
+        Assert.Equal(["Iron Club", "Phoenix Runners"], found.OrderBy(n => n).ToList());
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.GetAsync($"/groups/{hiddenId}/about")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.PostAsJsonAsync($"/groups/{hiddenId}/join", new { })).StatusCode);
+
+        // Open: straight in. Ask: a request, which the organiser sees and approves.
+        Assert.Equal("member", (await Json(await ava.PostAsJsonAsync($"/groups/{openId}/join", new { }))).GetProperty("status").GetString());
+        Assert.Equal("requested", (await Json(await ava.PostAsJsonAsync($"/groups/{askId}/join", new { onBoard = false }))).GetProperty("status").GetString());
+        Assert.True((await Get(ava, $"/groups/{askId}/about")).GetProperty("requested").GetBoolean());
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.GetAsync($"/groups/{askId}")).StatusCode);
+        Assert.Equal(1, (await Get(conor, $"/groups/{askId}")).GetProperty("requests").GetInt32());
+        Assert.Equal(HttpStatusCode.NotFound, (await ben.GetAsync($"/groups/{askId}/requests")).StatusCode); // not a member
+        Assert.Equal("ava", (await Get(conor, $"/groups/{askId}/requests"))[0].GetProperty("user").GetProperty("username").GetString());
+        (await conor.PostAsync($"/groups/{askId}/requests/ava", null)).EnsureSuccessStatusCode();
+        var page = await Get(ava, $"/groups/{askId}");
+        Assert.False(page.GetProperty("me").GetProperty("onBoard").GetBoolean()); // her choice when asking
+        await _api.WithDbAsync(async db =>
+        {
+            Assert.Equal(1, await db.Notifications.CountAsync(n => n.Type == NotificationType.GroupApproved));
+            Assert.Equal(0, await db.Notifications.CountAsync(n => n.Type == NotificationType.GroupRequest)); // dealt with
+        });
+
+        // Ben asks and Conor declines: nobody's told, Ben can ask again.
+        (await ben.PostAsJsonAsync($"/groups/{askId}/join", new { })).EnsureSuccessStatusCode();
+        (await conor.DeleteAsync($"/groups/{askId}/requests/ben")).EnsureSuccessStatusCode();
+        Assert.False((await Get(ben, $"/groups/{askId}/about")).GetProperty("requested").GetBoolean());
+    }
+
+    [Fact]
+    public async Task A_member_invites_someone_from_a_chat_and_they_join_an_invite_only_group()
+    {
+        var (conor, _, _) = await _api.SignUpAsync("conor");
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        (await ben.PostAsync("/users/ava/follow", null)).EnsureSuccessStatusCode();
+        var group = await Json(await conor.PostAsJsonAsync("/groups", new { name = "Iron Club" }));
+        var (id, code) = (group.GetProperty("id").GetString(), group.GetProperty("inviteCode").GetString());
+        (await ava.PostAsJsonAsync($"/groups/join/{code}", new { })).EnsureSuccessStatusCode();
+        (await conor.PostAsync($"/groups/{id}/invite/reset", null)).EnsureSuccessStatusCode(); // the old link is dead
+
+        // Ben (not a member) can't send an invite; Ava can, and the card carries the group.
+        var (_, _, _) = await _api.SignUpAsync("dev");
+        (await ben.PostAsync("/users/dev/follow", null)).EnsureSuccessStatusCode();
+        var card = new { username = "ben", clientId = "inv1", body = "", cardType = "GroupInvite", cardJson = JsonSerializer.Serialize(new { groupId = id }) };
+        Assert.Equal(HttpStatusCode.NotFound, (await ben.PostAsJsonAsync("/dm/send", card with { username = "dev", clientId = "inv0" })).StatusCode);
+        var sent = await Json(await ava.PostAsJsonAsync("/dm/send", card));
+        Assert.Equal("Iron Club", JsonDocument.Parse(sent.GetProperty("cardJson").GetString()!).RootElement.GetProperty("name").GetString());
+        Assert.Equal("Sent a group invite", (await Get(ben, "/dm/threads?box=chats"))[0].GetProperty("lastBody").GetString());
+
+        var about = await Get(ben, $"/groups/{id}/about");
+        Assert.Equal("ava", about.GetProperty("invitedBy").GetString());
+        Assert.Equal("member", (await Json(await ben.PostAsJsonAsync($"/groups/{id}/join", new { }))).GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, (await ava.PostAsJsonAsync("/dm/send", card with { clientId = "inv2" })).StatusCode); // already in
+    }
 }

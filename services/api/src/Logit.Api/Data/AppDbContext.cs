@@ -23,6 +23,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<DmThread> DmThreads => Set<DmThread>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
+    public DbSet<GroupJoinRequest> GroupJoinRequests => Set<GroupJoinRequest>();
+    public DbSet<GroupInvite> GroupInvites => Set<GroupInvite>();
     public DbSet<DmMember> DmMembers => Set<DmMember>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
     public DbSet<Story> Stories => Set<Story>();
@@ -344,6 +346,21 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.Property(g => g.InviteCode).HasMaxLength(24);
             e.HasIndex(g => g.InviteCode).IsUnique();
             e.Property(g => g.Note).HasMaxLength(500);
+            e.HasIndex(g => g.Access);
+        });
+        model.Entity<GroupJoinRequest>(e =>
+        {
+            e.HasKey(r => new { r.GroupId, r.UserId });
+            e.HasOne(r => r.Group).WithMany().HasForeignKey(r => r.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<GroupInvite>(e =>
+        {
+            e.HasKey(i => new { i.GroupId, i.InviteeId });
+            e.HasIndex(i => i.InviteeId);
+            e.HasOne(i => i.Group).WithMany().HasForeignKey(i => i.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(i => i.InviteeId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(i => i.Inviter).WithMany().HasForeignKey(i => i.InviterId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<GroupMember>(e =>
         {
