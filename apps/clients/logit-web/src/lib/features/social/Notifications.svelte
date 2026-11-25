@@ -99,6 +99,7 @@
       case "GroupEvent": return `added ${n.event?.title ?? "an event"}${n.group ? ` in ${n.group.name}` : ""}`;
       case "GroupEventChanged": return `changed the time or place of ${n.event?.title ?? "an event"}`;
       case "GroupEventCancelled": return `cancelled ${n.event?.title ?? "an event"}`;
+      case "GroupPostReply": return n.group ? `replied to you in ${n.group.name}` : "replied to you in a group";
       case "GroupReport": return "· a message was reported. Open the group's Reports in the app";
       case "GroupEventReminder": return `· ${n.event?.title ?? "Your event"} is tomorrow`;
       default: return "";

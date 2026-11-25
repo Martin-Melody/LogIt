@@ -215,9 +215,9 @@ export const FEATURES: Feature[] = [
     section: "More",
     plan: "Free",
     summary: "Follow people, share workouts and PRs, and find people in Discover.",
-    web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]"],
+    web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]", "/groups/[id]", "/groups/posts/[postId]"],
     phone: [
-      "/social", "/social/invite", "/messages/chat", "/messages/requests", "/groups/[id]", "/groups/[id]/members", "/groups/[id]/settings", "/groups/join", "/groups/[id]/events", "/groups/[id]/board", "/social/board", "/groups/[id]/reports", "/events/[id]", "/events/[id]/people", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
+      "/social", "/social/invite", "/messages/chat", "/messages/requests", "/groups/[id]", "/groups/[id]/members", "/groups/[id]/settings", "/groups/join", "/groups/[id]/events", "/groups/[id]/board", "/social/board", "/groups/[id]/reports", "/groups/posts/[postId]", "/events/[id]", "/events/[id]/people", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
       "/social/[username]", "/social/[username]/followers", "/social/[username]/following", "/inbox",
     ],
     whereWeb: "People › Social",
@@ -235,6 +235,7 @@ export const FEATURES: Feature[] = [
       "See this week's board with your friends and in each group: workouts done of planned, weeks kept and volume against your usual, never weights",
       "Keep yourself off every board, or one group's, and still see them",
       "Make members moderators: they remove messages, mute people in the chat, approve requests and handle the group's reports",
+      "Post questions, form checks and advice in groups, with comments that nest like Reddit; a group can show its posts on the web",
     ],
   },
   {

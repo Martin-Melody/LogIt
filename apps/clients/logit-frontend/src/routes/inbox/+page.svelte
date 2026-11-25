@@ -200,6 +200,7 @@
       : t === "GroupRequest" || t === "GroupApproved" ? UsersIcon
       : t.startsWith("GroupEvent") ? CalendarIcon
       : t === "GroupReport" ? FlagIcon
+      : t === "GroupPostReply" ? MessageCircle
       : UserPlus;
   }
 
@@ -222,7 +223,8 @@
     if (n.type === "GroupEvent") return `added ${n.event?.title ?? "an event"}${n.group ? ` in ${n.group.name}` : ""}`;
     if (n.type === "GroupEventChanged") return `changed the time or place of ${n.event?.title ?? "an event"}`;
     if (n.type === "GroupEventCancelled") return `cancelled ${n.event?.title ?? "an event"}`;
-    if (n.type === "GroupReport") return "· a message was reported. Open Reports in the group's ⋯";
+    if (n.type === "GroupReport") return "· something was reported. Open Reports in the group's ⋯";
+    if (n.type === "GroupPostReply") return n.group ? `replied to you in ${n.group.name}` : "replied to you in a group";
     if (n.type === "GroupEventReminder") return `· ${n.event?.title ?? "Your event"} is tomorrow`;
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
@@ -235,6 +237,7 @@
     if (n.type.startsWith("GroupEvent") && n.event) return `/events/${n.event.id}`;
     if (n.type === "GroupNote" || n.type === "GroupApproved") return n.group ? `/groups/${n.group.id}` : "/messages";
     if (n.type === "GroupReport") return n.group ? `/groups/${n.group.id}/reports` : "/messages";
+    if (n.type === "GroupPostReply") return n.groupPostId ? `/groups/posts/${n.groupPostId}` : "/messages";
     if (n.type === "GroupRequest") return n.group ? `/groups/${n.group.id}/members` : "/messages";
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }

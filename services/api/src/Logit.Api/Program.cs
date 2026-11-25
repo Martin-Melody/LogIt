@@ -179,6 +179,10 @@ builder.Services.AddRateLimiter(o =>
             AutoReplenishment = true,
         });
     });
+    // Signed-out reading of public group posts (getlogit.app renders them on Cloudflare, whose
+    // requests share a few addresses; pages are cached there for 5 minutes): roomy, per address.
+    o.AddPolicy("public-read", ctx => RateLimitPartition.GetTokenBucketLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+        _ => new TokenBucketRateLimiterOptions { TokenLimit = 600, TokensPerPeriod = 600, ReplenishmentPeriod = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
     // Sign-ups: 10 per address per 10 minutes. Stops scripted account creation and
     // guessing invite codes on invite-only servers. Registration:SignupsPer10Minutes
     // overrides it (CI raises it: the E2E suite creates many accounts from one address).

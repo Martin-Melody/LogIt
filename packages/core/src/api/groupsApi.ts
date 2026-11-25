@@ -47,6 +47,8 @@ export interface Group extends GroupBrief {
   reports: number;
   /** You're muted in the chat until then. */
   mutedUntilMs: number | null;
+  /** Posts (canvas Q4). */
+  posts: { on: boolean; whoCanPost: "Members" | "Staff"; whoCanComment: "Anyone" | "Members"; onWeb: boolean; slug: string } | null;
 }
 
 export interface GroupMember {
@@ -58,6 +60,10 @@ export interface GroupMember {
 
 /** A reported message in a group's chat (canvas D3); never who reported it. */
 export interface GroupReport {
+  /** "message", "post" or "comment". */
+  kind: "message" | "post" | "comment";
+  postId: string | null;
+  title: string | null;
   messageId: string;
   body: string;
   photoUrl: string | null;
@@ -99,7 +105,8 @@ export const groupsApi = {
   mine: () => apiClient.fetch<GroupBrief[]>("/groups"),
   create: (g: { name: string; kind: GroupKind; place?: string | null; photoId?: string | null; access?: GroupAccess }) => apiClient.fetch<Group>("/groups", json("POST", g)),
   get: (id: string) => apiClient.fetch<Group>(`/groups/${id}`),
-  edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean; access?: GroupAccess }) =>
+  edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean; access?: GroupAccess;
+    postsOn?: boolean; whoCanPost?: "Members" | "Staff"; whoCanComment?: "Anyone" | "Members"; postsOnWeb?: boolean }) =>
     apiClient.fetch<Group>(`/groups/${id}`, json("PATCH", g)),
   remove: (id: string) => apiClient.fetch<void>(`/groups/${id}`, { method: "DELETE" }),
   pin: (id: string, text: string, notify: boolean) => apiClient.fetch<Group>(`/groups/${id}/note`, json("PUT", { text, notify })),

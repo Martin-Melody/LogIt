@@ -37,7 +37,7 @@ public static partial class GroupPostEndpoints
         c.MapDelete("/{id:guid}", DeleteComment);
         c.MapPut("/{id:guid}/vote", VoteComment);
         // The web, signed out (canvas Q6): read only, posts that were written for the web.
-        var pub = app.MapGroup("/public").WithTags("Public").AllowAnonymous().RequireRateLimiting("social-write");
+        var pub = app.MapGroup("/public").WithTags("Public").AllowAnonymous().RequireRateLimiting("public-read");
         pub.MapGet("/groups/{slug}/posts/{postSlug}", PublicThread);
         pub.MapGet("/group-posts", PublicIndex);
     }

@@ -186,13 +186,13 @@ export interface BlockedUser {
   createdAt: string;
 }
 
-export type ReportTargetType = "Post" | "Comment" | "User" | "Message" | "Story" | "Group";
+export type ReportTargetType = "Post" | "Comment" | "User" | "Message" | "Story" | "Group" | "GroupPost" | "GroupComment";
 export type ReportReason =
   | "Spam" | "Harassment" | "HateSpeech" | "Violence"
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
 export type NotificationKind =
-  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer" | "GroupNote" | "GroupRequest" | "GroupApproved" | "GroupEvent" | "GroupEventChanged" | "GroupEventCancelled" | "GroupEventReminder" | "GroupReport";
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer" | "GroupNote" | "GroupRequest" | "GroupApproved" | "GroupEvent" | "GroupEventChanged" | "GroupEventCancelled" | "GroupEventReminder" | "GroupReport" | "GroupPostReply";
 
 export interface SocialSettings {
   isPrivate: boolean;
@@ -277,6 +277,8 @@ export interface ApiNotification {
   postBody: string | null;
   /** GroupNote: which group. */
   group?: { id: string; name: string } | null;
+  /** GroupPostReply: which post. */
+  groupPostId?: string | null;
   /** The GroupEvent… kinds: which event. */
   event?: { id: string; title: string; startsAt: string } | null;
 }
