@@ -103,11 +103,16 @@ it; Pause drops it. Offline: a message waits and sends when back, with a visible
 Across clients: Ava on the web dashboard and Ben on the phone, then both on the web: every step above
 gives the same result (one server API); the web shows unread while open (no web push).
 
-**F4 Stories** (built: PR #123; photo stories, the week's-last-workout offer and web stories later). Ava finishes a workout with a record → "Add to your story?" offered (only after a
+**F4 Stories** (built: PR #123, photo stories in the photo-stories PR; the week's-last-workout offer and web stories later). Ava finishes a workout with a record → "Add to your story?" offered (only after a
 record or the week's last workout, not every session). Your story vs Close friends. Ben sees the
 ring, opens it, cheers or replies (reply = a message). Cara (private, Ava public) sees it; when
 Ava is private, only approved followers. Hide story from Dev → Dev never sees it. 24 h later it's
 gone everywhere, including from the Home Friends card and any message that quoted it.
+Photo stories (canvas S5/S6): Ava adds a photo from "Your story" → A photo, or after a record
+taps Photo and keeps "Show the record on the photo" on → Ben sees the photo full screen with the
+record on top (a wide photo is shown whole on black), and his reply shows the photo in the chat.
+The bar waits for the photo to load. Ben can Report story (⋯). Deleting the story, or 24 hours
+passing, deletes the photo too (its address stops working).
 
 **F5 Groups, events, chat.** Conor creates Iron Club, pins a note, adds "Deadlift day". Ava joins
 from the QR: the join sheet shows what members see and "Show me on the board". Ava taps Going →

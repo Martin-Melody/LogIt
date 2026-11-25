@@ -1,15 +1,17 @@
-<!-- Watching stories (design canvas S2), as on Instagram: a bar per story, tap the right side
+<!-- Watching stories (design canvas S2, S6 for a photo), as on Instagram: a bar per story, tap the right side
      for the next, the left for the previous, hold to pause, swipe down or back to close. Then the
      next person's. Someone else's: reply (a message quoting the story) and Cheer (the story like,
-     only they see it). Yours: who watched and who cheered, and Delete. -->
+     only they see it), and Report. Yours: who watched and who cheered, and Delete. A photo story
+     waits for its photo before its bar starts. -->
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { MoreHorizontal, Send, ThumbsUp, Trash2, User, X } from "lucide-svelte";
+  import { Flag, MoreHorizontal, Send, ThumbsUp, Trash2, User, X } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import { ApiError } from "@logit/core/api/client";
   import { storiesApi, storyReplyCard, type StoryViewer as Viewer } from "@logit/core/api/storiesApi";
   import type { TrainingFriend } from "@logit/core/api/trainingApi";
   import { readCard } from "@logit/core/domain/messageCard";
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { sheetDrag, backDismiss } from "$lib/components/sheet/sheet";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
@@ -17,6 +19,8 @@
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import PersonAvatar from "./PersonAvatar.svelte";
   import StoryCard from "./StoryCard.svelte";
+  import StoryPhoto from "./StoryPhoto.svelte";
+  import ReportSheet from "./ReportSheet.svelte";
   import { firstUnseen, markSeen, stories } from "$lib/features/friends/stories.svelte";
   import { queueDm } from "$lib/features/friends/dmOutbox.svelte";
   import { shortAgo } from "$lib/features/friends/dmTime";
@@ -36,13 +40,17 @@
   let confirmDelete = $state(false);
   let viewers = $state<Viewer[] | null>(null);
   let viewersOpen = $state(false);
+  let reporting = $state(false);
+  /** The story whose photo has loaded (a photo story's bar waits for it). */
+  let loaded = $state<string | null>(null);
 
   const author = $derived(stories.row[ai]);
   const story = $derived(author?.stories[si]);
   const card = $derived(story ? readCard(story.cardType, story.cardJson) : null);
   const name = $derived(author ? author.user.displayName || author.user.username : "");
   const trainingNow = $derived(author ? training.find((t) => t.username === author.user.username) : undefined);
-  const paused = $derived(holding || typing || menuOpen || confirmDelete || viewersOpen || reply.length > 0);
+  const photo = $derived(story?.photoUrl ? photoSrc(story.photoUrl) : undefined);
+  const paused = $derived(holding || typing || menuOpen || confirmDelete || viewersOpen || reporting || reply.length > 0 || (!!photo && loaded !== story?.id));
 
   $effect(() => {
     openOverlay();
@@ -161,7 +169,15 @@
     use:sheetDrag={{ onDismiss: onclose }}
     use:backDismiss={onclose}
   >
-    <div data-sheet-bar class="flex gap-1 px-2 pb-2 pt-2" aria-hidden="true">
+    {#if photo}
+      {#key story.id}
+        <div class="absolute inset-0" in:fade={{ duration: 150 }}>
+          <StoryPhoto src={photo} width={story.photoWidth} height={story.photoHeight} onload={() => (loaded = story.id)} />
+          <div class="absolute inset-0 bg-[linear-gradient(180deg,rgb(0_0_0/45%)_0%,transparent_18%,transparent_70%,rgb(0_0_0/55%)_100%)]"></div>
+        </div>
+      {/key}
+    {/if}
+    <div data-sheet-bar class="relative flex gap-1 px-2 pb-2 pt-2" aria-hidden="true">
       {#each author.stories as s, i (s.id)}
         <span class="h-[3px] flex-1 overflow-hidden rounded-full bg-white/30">
           <span class="block h-full bg-white" style="width: {i < si ? 100 : i === si ? Math.min(100, progress * 100) : 0}%"></span>
@@ -169,7 +185,7 @@
       {/each}
     </div>
 
-    <header class="flex items-center gap-2.5 px-3">
+    <header class="relative flex items-center gap-2.5 px-3">
       <button type="button" class="flex min-w-0 flex-1 items-center gap-2.5 text-left" onclick={() => { onclose(); void goto(author.mine ? "/profile" : `/social/${author.user.username}`); }}>
         <PersonAvatar name={name} src={author.user.avatarUrl} size={36} training={!!trainingNow} />
         <span class="flex min-w-0 flex-col">
@@ -184,20 +200,22 @@
     </header>
 
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="flex flex-1 select-none items-center px-3" onpointerdown={down} onpointerup={up} onpointercancel={() => { clearTimeout(holdTimer); holding = false; }}>
+    <div class="relative flex flex-1 select-none px-3 {photo ? 'items-end pb-3' : 'items-center'}" onpointerdown={down} onpointerup={up} onpointercancel={() => { clearTimeout(holdTimer); holding = false; }}>
       {#key story.id}
         <div class="w-full text-foreground" in:fade={{ duration: 150 }}>
-          {#if card}<StoryCard {card} />{:else}<p class="text-center text-sm text-white/60">This story can't be shown here.</p>{/if}
+          {#if photo}
+            {#if card}<StoryCard {card} sticker />{/if}
+          {:else if card}<StoryCard {card} />{:else}<p class="text-center text-sm text-white/60">This story can't be shown here.</p>{/if}
         </div>
       {/key}
     </div>
 
     {#if author.mine}
-      <div class="flex justify-center px-3 pb-3 pt-2">
+      <div class="relative flex justify-center px-3 pb-3 pt-2">
         <button type="button" class="h-11 rounded-full px-4 text-[14px] font-medium text-white/80" onclick={openViewers}>Who's seen it</button>
       </div>
     {:else if author.canReply}
-      <form class="flex items-center gap-2 px-3 pb-3 pt-2" onsubmit={(e) => { e.preventDefault(); sendReply(); }}>
+      <form class="relative flex items-center gap-2 px-3 pb-3 pt-2" onsubmit={(e) => { e.preventDefault(); sendReply(); }}>
         <input
           bind:value={reply}
           onfocus={() => (typing = true)}
@@ -227,7 +245,10 @@
     title={author.mine ? "Your story" : name}
     items={author.mine
       ? [{ icon: Trash2, label: "Delete this story", destructive: true, onSelect: () => (confirmDelete = true) }]
-      : [{ icon: User, label: "View profile", onSelect: () => { onclose(); void goto(`/social/${author.user.username}`); } }]}
+      : [
+          { icon: User, label: "View profile", onSelect: () => { onclose(); void goto(`/social/${author.user.username}`); } },
+          { icon: Flag, label: "Report story", destructive: true, onSelect: () => (reporting = true) },
+        ]}
   />
   <ConfirmDialog
     open={confirmDelete}
@@ -237,6 +258,7 @@
     confirmLabel="Delete"
     onConfirm={remove}
   />
+  {#if reporting}<ReportSheet open targetType="Story" targetId={story.id} what="story" onclose={() => (reporting = false)} />{/if}
   {#if viewersOpen}
     <BottomSheet label="Who's seen it" onclose={() => (viewersOpen = false)} tall>
       <div class="flex flex-col gap-1 px-4 pb-4">

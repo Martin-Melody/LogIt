@@ -131,7 +131,7 @@ export interface Report {
 }
 
 export interface ReportPreview {
-  kind: "post" | "comment" | "message";
+  kind: "post" | "comment" | "message" | "story";
   body: string;
   deleted: boolean;
   author: string;

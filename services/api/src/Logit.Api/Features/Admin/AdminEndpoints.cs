@@ -661,6 +661,19 @@ public static class AdminEndpoints
                 photoUrl = m.PhotoId is { } p ? Logit.Api.Features.Photos.PhotoEndpoints.UrlOf(p) : null,
             };
 
+        // A reported story: its card or photo, while it lasts (it's gone after 24 hours).
+        var storyIds = await db.Reports.Where(r => r.TargetType == ReportTargetType.Story).Select(r => r.TargetId).ToListAsync();
+        foreach (var st in await db.Stories.Where(st => storyIds.Contains(st.Id))
+                     .Select(st => new { st.Id, st.CardType, st.PhotoId, Author = st.Author.Username }).ToListAsync())
+            previews[st.Id] = new
+            {
+                kind = "story",
+                Body = st.CardType.Length > 0 ? $"[{st.CardType} story]" : "[Photo story]",
+                deleted = false,
+                st.Author,
+                photoUrl = st.PhotoId is { } p ? Logit.Api.Features.Photos.PhotoEndpoints.UrlOf(p) : null,
+            };
+
         return Results.Ok(new { reports, previews });
     }
 
@@ -687,6 +700,11 @@ public static class AdminEndpoints
                     break;
                 case ReportTargetType.Message:
                     await Social.DirectMessageEndpoints.UnsendAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), report.TargetId, default, byLogIt: true);
+                    break;
+                case ReportTargetType.Story:
+                    var story = await db.Stories.AsNoTracking().FirstOrDefaultAsync(st => st.Id == report.TargetId);
+                    if (story is not null)
+                        await Social.StoryEndpoints.RemoveAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), [story]);
                     break;
             }
             report.Status = ReportStatus.Actioned;

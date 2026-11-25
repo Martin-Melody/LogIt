@@ -1,11 +1,14 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Logit.Api.Data;
+using Logit.Api.Features.Photos;
 using Logit.Api.Features.Push;
 using Logit.Api.Features.Social;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SkiaSharp;
 
 namespace Logit.Api.Tests;
 
@@ -14,10 +17,12 @@ public class StoryTests : IDisposable
 {
     private static readonly DateTime Noon = new(2026, 11, 24, 12, 0, 0, DateTimeKind.Utc);
     private readonly FakeClock _clock = new(Noon);
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), $"logit-photos-{Guid.NewGuid():N}");
     private readonly ApiFactory _api;
 
     public StoryTests() => _api = new ApiFactory
     {
+        Settings = { ["Photos:Folder"] = _folder },
         ConfigureTestServices = s =>
         {
             s.AddSingleton<TimeProvider>(_clock);
@@ -26,7 +31,11 @@ public class StoryTests : IDisposable
         },
     };
 
-    public void Dispose() => _api.Dispose();
+    public void Dispose()
+    {
+        _api.Dispose();
+        if (Directory.Exists(_folder)) Directory.Delete(_folder, true);
+    }
 
     private const string Record = """{"exerciseName":"Squat","weight":110,"unit":"kg","reps":3}""";
 
@@ -173,7 +182,7 @@ public class StoryTests : IDisposable
         Assert.Equal(JsonValueKind.Null, Messages(chat)[1].GetProperty("cardJson").ValueKind);
         using var scope = _api.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await StorySweeper.SweepAsync(db, _clock.Now);
+        await StorySweeper.SweepAsync(db, scope.ServiceProvider.GetRequiredService<IPhotoStore>(), _clock.Now);
         Assert.Equal(0, await db.Stories.CountAsync());
         Assert.Equal(0, await db.DirectMessages.CountAsync(m => m.CardJson != null));
 
@@ -184,5 +193,69 @@ public class StoryTests : IDisposable
             cardType = "Story", cardJson = JsonSerializer.Serialize(new { storyId = second }),
         });
         Assert.Equal(HttpStatusCode.NotFound, late.StatusCode);
+    }
+
+    private static async Task<JsonElement> Upload(HttpClient http)
+    {
+        using var bmp = new SKBitmap(90, 160);
+        using (var canvas = new SKCanvas(bmp)) canvas.Clear(SKColors.SteelBlue);
+        using var img = SKImage.FromBitmap(bmp);
+        var form = new MultipartFormDataContent();
+        var part = new ByteArrayContent(img.Encode(SKEncodedImageFormat.Png, 90).ToArray());
+        part.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        form.Add(part, "file", "p.png");
+        var res = await http.PostAsync("/photos", form);
+        res.EnsureSuccessStatusCode();
+        return await res.Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+    }
+
+    [Fact]
+    public async Task A_photo_story_carries_the_record_or_not_is_quoted_in_replies_and_leaves_with_the_story()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        var (cara, _, _) = await _api.SignUpAsync("cara");
+        await Follow(ben, "ava");
+        await Follow(ava, "ben");
+        var anon = _api.CreateClient();
+
+        // A photo with the record on top, and a photo on its own.
+        var withRecord = await Upload(ava);
+        var plain = await Upload(ava);
+        var res = await ava.PostAsJsonAsync("/stories", new { cardType = "PersonalRecord", cardJson = Record, closeFriends = false, photoId = withRecord.GetProperty("id").GetGuid() });
+        var first = (await res.Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json)).GetProperty("id").GetGuid();
+        (await ava.PostAsJsonAsync("/stories", new { closeFriends = false, photoId = plain.GetProperty("id").GetGuid() })).EnsureSuccessStatusCode();
+
+        var seen = (await ben.GetFromJsonAsync<JsonElement>("/stories", ApiFactory.Json))[0].GetProperty("stories");
+        Assert.Equal((withRecord.GetProperty("url").GetString(), 90, 160, "PersonalRecord"),
+            (seen[0].GetProperty("photoUrl").GetString(), seen[0].GetProperty("photoWidth").GetInt32(), seen[0].GetProperty("photoHeight").GetInt32(), seen[0].GetProperty("cardType").GetString()));
+        Assert.Equal(("", plain.GetProperty("url").GetString()), (seen[1].GetProperty("cardType").GetString(), seen[1].GetProperty("photoUrl").GetString()));
+
+        // Nothing at all, or someone else's photo, can't be a story.
+        Assert.Equal(HttpStatusCode.BadRequest, (await ava.PostAsJsonAsync("/stories", new { closeFriends = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/stories", new { closeFriends = false, photoId = plain.GetProperty("id").GetGuid() })).StatusCode);
+
+        // A reply quotes the photo.
+        var reply = await (await ben.PostAsJsonAsync("/dm/send", new
+        {
+            username = "ava", clientId = "r1", body = "Strong!", cardType = "Story", cardJson = JsonSerializer.Serialize(new { storyId = seen[1].GetProperty("id").GetGuid() }),
+        })).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        var quote = JsonDocument.Parse(reply.GetProperty("cardJson").GetString()!).RootElement;
+        Assert.Equal(plain.GetProperty("url").GetString(), quote.GetProperty("photoUrl").GetString());
+
+        // Ben reports the photo story (Cara, who can't see it, can't).
+        var report = new { targetType = "Story", targetId = seen[1].GetProperty("id").GetGuid(), reason = "Spam" };
+        Assert.Equal(HttpStatusCode.NoContent, (await ben.PostAsJsonAsync("/reports", report)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await cara.PostAsJsonAsync("/reports", report)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.PostAsJsonAsync("/reports", report)).StatusCode); // not your own
+
+        // Deleting a story deletes its photo; the sweeper does the same after 24 hours.
+        (await ava.DeleteAsync($"/stories/{first}")).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync(withRecord.GetProperty("url").GetString())).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await anon.GetAsync(plain.GetProperty("url").GetString())).StatusCode);
+        _clock.Now = Noon.AddHours(25);
+        using (var scope = _api.Services.CreateScope())
+            await StorySweeper.SweepAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<IPhotoStore>(), _clock.Now);
+        Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync(plain.GetProperty("url").GetString())).StatusCode);
     }
 }
