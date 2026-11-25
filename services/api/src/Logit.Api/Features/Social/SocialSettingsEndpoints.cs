@@ -24,20 +24,20 @@ public static class SocialSettingsEndpoints
     public record SocialSettingsDto(
         bool IsPrivate, bool? ShowInDiscover, bool HideFromSuggestions, bool HidePeopleSuggestions,
         int PendingRequests, int NotInterestedCount, bool ShowTraining, CheersFrom CheersFrom,
-        DmFromFollowers DmFromFollowers, DmFromOthers DmFromOthers, bool ShowReadReceipts);
+        DmFromFollowers DmFromFollowers, DmFromOthers DmFromOthers, bool ShowReadReceipts, bool ShowOnBoards);
 
     /// Every field optional: only the ones sent change. `ShowInDiscover` can't be cleared back
     /// to "not asked".
     public record UpdateSocialSettingsRequest(
         bool? IsPrivate, bool? ShowInDiscover, bool? HideFromSuggestions, bool? HidePeopleSuggestions,
         bool? ShowTraining = null, CheersFrom? CheersFrom = null,
-        DmFromFollowers? DmFromFollowers = null, DmFromOthers? DmFromOthers = null, bool? ShowReadReceipts = null);
+        DmFromFollowers? DmFromFollowers = null, DmFromOthers? DmFromOthers = null, bool? ShowReadReceipts = null, bool? ShowOnBoards = null);
 
     private static async Task<SocialSettingsDto> ToDtoAsync(AppDbContext db, User user) => new(
         user.IsPrivate, user.ShowInDiscover, user.HideFromSuggestions, user.HidePeopleSuggestions,
         await db.FollowRequests.CountAsync(r => r.TargetId == user.Id),
         await db.DiscoverDismissals.CountAsync(d => d.UserId == user.Id),
-        user.ShowTraining, user.CheersFrom, user.DmFromFollowers, user.DmFromOthers, user.ShowReadReceipts);
+        user.ShowTraining, user.CheersFrom, user.DmFromFollowers, user.DmFromOthers, user.ShowReadReceipts, user.ShowOnBoards);
 
     private static async Task<IResult> GetSettings(ClaimsPrincipal caller, AppDbContext db)
     {
@@ -89,6 +89,7 @@ public static class SocialSettingsEndpoints
             user.DmFromOthers = fromOthers;
         }
         if (req.ShowReadReceipts is { } receipts) user.ShowReadReceipts = receipts;
+        if (req.ShowOnBoards is { } boards) user.ShowOnBoards = boards;
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Results.Ok(await ToDtoAsync(db, user));

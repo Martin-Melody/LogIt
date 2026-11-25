@@ -349,6 +349,7 @@ api.MapDirectMessageEndpoints();
 api.MapStoryEndpoints();
 api.MapGroupEndpoints();
 api.MapEventEndpoints();
+api.MapBoardEndpoints();
 api.MapPhotoEndpoints();
 api.MapVoiceEndpoints();
 

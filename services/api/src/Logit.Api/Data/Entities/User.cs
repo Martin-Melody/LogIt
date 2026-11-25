@@ -56,6 +56,9 @@ public class User
     public DmFromOthers DmFromOthers { get; set; } = DmFromOthers.Requests;
     /// Read receipts, both ways: off, and nobody sees this account read theirs, nor it theirs.
     public bool ShowReadReceipts { get; set; } = true;
+    /// "Show me on boards" (canvas P1): the friends board and every group's board. Off, you still
+    /// see them; nobody sees you on them. Each group can also be turned off on its own.
+    public bool ShowOnBoards { get; set; } = true;
     /// While a workout runs the phone refreshes this every few minutes; past it, not training.
     public DateTime? TrainingUntil { get; set; }
     public DateTime? TrainingSince { get; set; }

@@ -147,6 +147,40 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("Blocks");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.BoardWeek", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("WeekStart")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("Done")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Planned")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Rest")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("VolumePct")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WeeksKept")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "WeekStart");
+
+                    b.HasIndex("WeekStart");
+
+                    b.ToTable("BoardWeeks");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinReview", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2762,6 +2796,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool?>("ShowInDiscover")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ShowOnBoards")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("ShowReadReceipts")
                         .HasColumnType("boolean");
 
@@ -2863,6 +2900,17 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Blocked");
 
                     b.Navigation("Blocker");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.BoardWeek", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.CheckinReview", b =>
