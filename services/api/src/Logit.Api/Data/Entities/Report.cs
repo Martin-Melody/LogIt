@@ -21,5 +21,10 @@ public class Report
     public DateTime? ReviewedAt { get; set; }
     public Guid? ReviewerId { get; set; }
 
+    /// A message in a group's chat: the group, whose moderators see it too (canvas D3).
+    public Guid? GroupId { get; set; }
+    /// The group's moderators dealt with it (removed it or kept it); LogIt's own review is separate.
+    public DateTime? GroupResolvedAt { get; set; }
+
     public User Reporter { get; set; } = null!;
 }

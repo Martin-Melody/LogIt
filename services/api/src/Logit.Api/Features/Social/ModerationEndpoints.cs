@@ -122,11 +122,22 @@ public static class ModerationEndpoints
             r.TargetId == req.TargetId && r.Status == ReportStatus.Open);
         if (dup) return Results.NoContent();
 
+        // A message in a group's chat also goes to that group's moderators (canvas D3), without
+        // saying who reported it.
+        Guid? groupId = targetType == ReportTargetType.Message
+            ? await db.DirectMessages.Where(m => m.Id == req.TargetId).Select(m => m.Thread.GroupId).FirstOrDefaultAsync()
+            : null;
+        if (groupId is { } gid && !await db.Reports.AnyAsync(r => r.GroupId == gid && r.TargetId == req.TargetId && r.GroupResolvedAt == null))
+        {
+            var mods = await db.GroupMembers.Where(m => m.GroupId == gid && (m.Role == GroupRole.Organiser || m.Role == GroupRole.Moderator)).Select(m => m.UserId).ToListAsync();
+            db.Notifications.AddRange(mods.Select(u => new Notification { UserId = u, ActorId = u, Type = NotificationType.GroupReport, GroupId = gid, CreatedAt = clock.GetUtcNow().UtcDateTime }));
+        }
         db.Reports.Add(new Report
         {
             ReporterId = callerId,
             TargetType = targetType,
             TargetId = req.TargetId,
+            GroupId = groupId,
             Reason = reason,
             Note = string.IsNullOrWhiteSpace(req.Note) ? null : req.Note.Trim(),
         });
