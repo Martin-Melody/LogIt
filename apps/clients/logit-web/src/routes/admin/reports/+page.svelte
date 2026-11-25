@@ -9,6 +9,7 @@
   import { toast } from "$lib/components/ui/sonner";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import { ago, shortDate, when } from "$lib/features/coaching/format";
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { adminApi, at, type PersonRow, type Report, type ReportPreview } from "$lib/features/admin/adminApi";
   import { adminState } from "$lib/features/admin/adminState.svelte";
 
@@ -123,6 +124,7 @@
           {#if preview}
             <div class="flex items-center gap-3"><Avatar name={preview.author} size={36} /><span class="text-sm">@{preview.author}</span></div>
             <p class="whitespace-pre-wrap text-[15px] leading-relaxed {preview.deleted ? 'text-muted-foreground line-through' : ''}">{preview.body}</p>
+            {#if preview.photoUrl}<img src={photoSrc(preview.photoUrl)} alt="What was reported" class="max-h-80 max-w-full rounded-lg border border-border object-contain" />{/if}
             {#if preview.deleted}<p class="text-xs text-muted-foreground">Already deleted.</p>{/if}
           {:else}
             <p class="text-[13px] text-muted-foreground">This {r.targetType.toLowerCase()} no longer exists.</p>

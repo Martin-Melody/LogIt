@@ -47,6 +47,10 @@ public static class PhotoEndpoints
 
     public static string UrlOf(Guid id) => $"/photos/{id:N}";
 
+    /// A photo the user uploaded, for attaching to something they send; null if it isn't theirs.
+    public static Task<Photo?> OwnedAsync(AppDbContext db, Guid ownerId, Guid id) =>
+        db.Photos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == ownerId);
+
     private static readonly Regex PhotoRef = new("/photos/([0-9a-f]{32})", RegexOptions.Compiled);
 
     /// The photos a piece of text (an avatar address, a profile's JSON) points at.
@@ -114,7 +118,11 @@ public class PhotoSweeper(IServiceScopeFactory scopes, ILogger<PhotoSweeper> log
         var orphans = await db.Photos.Where(p => p.OwnerId == null).Take(500).ToListAsync(ct);
         foreach (var p in orphans) await store.DeleteAsync(p.Id.ToString("N"), ct);
         db.Photos.RemoveRange(orphans);
+        // Voice messages live in the same store and go the same way.
+        var voices = await db.VoiceNotes.Where(v => v.OwnerId == null).Take(500).ToListAsync(ct);
+        foreach (var v in voices) await store.DeleteAsync(Voice.VoiceEndpoints.KeyOf(v.Id), ct);
+        db.VoiceNotes.RemoveRange(voices);
         await db.SaveChangesAsync(ct);
-        return orphans.Count;
+        return orphans.Count + voices.Count;
     }
 }

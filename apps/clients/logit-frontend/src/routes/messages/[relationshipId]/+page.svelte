@@ -3,7 +3,17 @@
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount, onDestroy, tick } from "svelte";
   import { page } from "$app/state";
-  import { Send } from "lucide-svelte";
+  import { Camera, Image as ImageIcon, Loader2, Mic, Plus, Send } from "lucide-svelte";
+  import VoiceMessage from "$lib/components/social/VoiceMessage.svelte";
+  import VoiceRecorderBar from "$lib/components/social/VoiceRecorderBar.svelte";
+  import type { MessageVoice } from "@logit/core/api/voiceApi";
+  import { toast } from "svelte-sonner";
+  import ActionSheet from "$lib/components/ActionSheet.svelte";
+  import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
+  import { pickImageFile } from "$lib/platform/filePick";
+  import { resizeImageFile } from "$lib/platform/imageResize";
+  import { uploadPhoto } from "@logit/core/api/photosApi";
+  import { ApiError } from "@logit/core/api/client";
   import { back } from "$lib/navigation";
   import { Button } from "$lib/components/ui/button";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
@@ -18,6 +28,15 @@
   const ui = $state({ loading: true, sending: false, error: null as string | null });
   let messages = $state<CoachMessage[]>([]);
   let draft = $state("");
+  let attachOpen = $state(false);
+  let uploading = $state(0);
+  let recording = $state(false);
+
+  async function sendVoice(voice: MessageVoice) {
+    recording = false;
+    await sendMessage(relationshipId, "", undefined, voice);
+    await refresh(false);
+  }
   let listEl = $state<HTMLDivElement | null>(null);
   let poll: ReturnType<typeof setInterval> | undefined;
 
@@ -51,6 +70,26 @@
     }
   }
 
+  // A form-check or progress photo (design canvas C1): uploaded first, so it needs a connection.
+  async function sendPhoto(from: "photos" | "camera") {
+    let file: File;
+    try {
+      file = await pickImageFile(from);
+    } catch {
+      return; // cancelled
+    }
+    uploading++;
+    try {
+      const photo = await uploadPhoto(await resizeImageFile(file, 2048, 0.85));
+      await sendMessage(relationshipId, "", photo);
+      await refresh(false);
+    } catch (e) {
+      toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Photos need a connection. Try again when you're online.");
+    } finally {
+      uploading--;
+    }
+  }
+
   onMount(async () => {
     await refresh();
     ui.loading = false;
@@ -74,17 +113,36 @@
       <p class="text-sm text-muted-foreground text-center py-8">No messages yet. Say hello 👋</p>
     {:else}
       {#each messages as m (m.id)}
-        <div class="flex {m.mine ? 'justify-end' : 'justify-start'}">
+        <div class="flex flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
+          {#if m.photo}
+            <div class="flex flex-col gap-0.5 {m.mine ? 'items-end' : 'items-start'}">
+              <MessagePhoto url={m.photo.url} width={m.photo.width} height={m.photo.height} mine={m.mine} dim={m.mine && !m.synced} />
+              {#if !m.body}<p class="px-1 text-[11px] text-muted-foreground">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>{/if}
+            </div>
+          {/if}
+          {#if m.voice}
+            <VoiceMessage voice={m.voice} mine={m.mine} dim={m.mine && !m.synced} />
+            {#if !m.body}<p class="px-1 text-[11px] text-muted-foreground">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>{/if}
+          {/if}
+          {#if m.body}
           <div class="max-w-[80%] rounded-lg px-3 py-2 text-sm {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">
             <p class="whitespace-pre-wrap break-words">{m.body}</p>
             <p class="text-[11px] opacity-80 mt-0.5">{fmt(m.createdAtMs)}{#if m.mine && !m.synced} · sending…{/if}</p>
           </div>
+          {/if}
         </div>
       {/each}
     {/if}
+    {#if uploading > 0}
+      <div class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Loader2 class="size-4 animate-spin" />Sending photo</div>
+    {/if}
   </div>
 
+  {#if recording}
+    <VoiceRecorderBar onsend={sendVoice} oncancel={() => (recording = false)} />
+  {:else}
   <form class="flex items-end gap-2 px-3 py-2 border-t border-border shrink-0" onsubmit={(e) => { e.preventDefault(); void send(); }}>
+    <button type="button" aria-label="Send a photo" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (attachOpen = true)}><Plus class="size-5" /></button>
     <textarea
       bind:value={draft}
       rows="1"
@@ -92,8 +150,23 @@
       class="flex-1 resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
       onkeydown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
     ></textarea>
-    <Button type="submit" size="icon" class="h-11 w-11 shrink-0" disabled={ui.sending || !draft.trim()}>
-      <Send class="h-4 w-4" />
-    </Button>
+    {#if draft.trim()}
+      <Button type="submit" size="icon" class="h-11 w-11 shrink-0" disabled={ui.sending}>
+        <Send class="h-4 w-4" />
+      </Button>
+    {:else}
+      <button type="button" aria-label="Record a voice message" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground" onclick={() => (recording = true)}><Mic class="size-5" /></button>
+    {/if}
   </form>
+  {/if}
 </div>
+
+<ActionSheet
+  open={attachOpen}
+  onOpenChange={(v) => (attachOpen = v)}
+  title="Send a photo"
+  items={[
+    { icon: ImageIcon, label: "Photo", onSelect: () => void sendPhoto("photos") },
+    { icon: Camera, label: "Camera", onSelect: () => void sendPhoto("camera") },
+  ]}
+/>

@@ -22,6 +22,17 @@ public class CoachMessage
     /// When set (YYYY-MM-DD), this message is a comment on the client's diary for that date.
     public string? ContextDateIso { get; set; }
 
+    /// A photo sent with the message (/photos/{id}; friends overhaul, design canvas M5). Its size
+    /// is kept here so the bubble has its shape before the picture loads. The id stays after the
+    /// file is gone (the sender's account deleted), and the apps show "Photo unavailable".
+    public Guid? PhotoId { get; set; }
+    public int PhotoWidth { get; set; }
+    public int PhotoHeight { get; set; }
+    /// A voice message (/voice/{id}), its length and the sender's waveform (a digit per bar).
+    public Guid? VoiceId { get; set; }
+    public int VoiceMs { get; set; }
+    public string? VoicePeaks { get; set; }
+
     /// Set by the *recipient* when they've seen it (drives unread counts).
     public long? ReadAtMs { get; set; }
 

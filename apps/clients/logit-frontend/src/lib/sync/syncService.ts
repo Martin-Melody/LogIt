@@ -714,6 +714,8 @@ export async function pullAndMergeMessages(): Promise<boolean> {
         mine: m.mine,
         synced: true,
         contextDateIso: m.contextDateIso ?? undefined,
+        ...(m.photoUrl ? { photo: { url: m.photoUrl, width: m.photoWidth ?? 0, height: m.photoHeight ?? 0 } } : {}),
+        ...(m.voiceUrl ? { voice: { url: m.voiceUrl, ms: m.voiceMs ?? 0, peaks: m.voicePeaks ?? "" } } : {}),
       });
     }
     setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());
@@ -733,6 +735,9 @@ export function pushMessage(message: CoachMessage): void {
     body: message.body,
     createdAtMs: message.createdAtMs,
     contextDateIso: message.contextDateIso,
+    photoId: message.photo?.id,
+    voiceId: message.voice?.id,
+    voicePeaks: message.voice?.peaks,
   };
   // On failure the message just stays unsynced locally: that flag is its queue, and the next
   // sync re-sends it (pushPendingMessages). It used to also go into the outbox, which sent it
@@ -756,6 +761,9 @@ export async function pushPendingMessages(): Promise<void> {
           body: m.body,
           createdAtMs: m.createdAtMs,
           contextDateIso: m.contextDateIso,
+          photoId: m.photo?.id,
+          voiceId: m.voice?.id,
+          voicePeaks: m.voice?.peaks,
         });
         await repo.markSynced(m.id);
       } catch (e) { syncWarn("pushPendingMessages", e); }

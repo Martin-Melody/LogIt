@@ -10,6 +10,23 @@ export function photoSrc(url: string | null | undefined): string | undefined {
   return url.startsWith("/photos/") ? `${apiBaseUrl()}${url}` : url;
 }
 
+/** A photo uploaded to send in a message or a story. */
+export interface SentPhoto {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+}
+
+/** Uploads a picture to send (a new copy every time, unlike publishPhoto). The server turns it
+ * upright, shrinks it and drops its location and camera details. */
+export async function uploadPhoto(picture: Blob | string): Promise<SentPhoto> {
+  const blob = typeof picture === "string" ? await (await fetch(picture)).blob() : picture;
+  const form = new FormData();
+  form.append("file", blob, "photo.jpg");
+  return apiClient.fetch<SentPhoto>("/photos", { method: "POST", body: form });
+}
+
 const CACHE_KEY = "logit:published-photos";
 
 /** djb2 over the whole data URL: enough to tell "the same picture as last time". */

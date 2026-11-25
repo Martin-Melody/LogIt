@@ -54,7 +54,7 @@
             username: c.client.username,
             avatarUrl: c.client.avatarUrl,
             unread: counts.find((x) => x.relationshipId === c.relationshipId)?.unread ?? 0,
-            last: last ? { body: last.body, mine: last.mine, at: last.createdAtMs } : null,
+            last: last ? { body: last.body || (last.photoUrl ? "Sent a photo" : last.voiceUrl ? "Voice message" : ""), mine: last.mine, at: last.createdAtMs } : null,
           };
         })
         .sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));

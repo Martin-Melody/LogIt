@@ -12,7 +12,18 @@ type Row = {
   mine: number;
   synced: number;
   context_date_iso: string | null;
+  photo_json: string | null;
+  voice_json: string | null;
 };
+
+function readJson<T>(json: string | null): T | undefined {
+  if (!json) return undefined;
+  try {
+    return JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+}
 
 function toMessage(r: Row): CoachMessage {
   return {
@@ -24,6 +35,8 @@ function toMessage(r: Row): CoachMessage {
     mine: r.mine === 1,
     synced: r.synced === 1,
     contextDateIso: r.context_date_iso ?? undefined,
+    photo: readJson(r.photo_json),
+    voice: readJson(r.voice_json),
   };
 }
 
@@ -43,9 +56,9 @@ export function createSqliteMessagesRepo(): MessagesRepo {
     async addOutgoing(m: CoachMessage): Promise<void> {
       const db = getDb();
       await db.run(
-        `INSERT OR IGNORE INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso)
-         VALUES(?, ?, ?, ?, ?, NULL, 1, 0, ?)`,
-        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.contextDateIso ?? null],
+        `INSERT OR IGNORE INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso, photo_json, voice_json)
+         VALUES(?, ?, ?, ?, ?, NULL, 1, 0, ?, ?, ?)`,
+        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.contextDateIso ?? null, m.photo ? JSON.stringify(m.photo) : null, m.voice ? JSON.stringify(m.voice) : null],
       );
     },
 
@@ -57,14 +70,16 @@ export function createSqliteMessagesRepo(): MessagesRepo {
     async upsertFromRemote(m: CoachMessage): Promise<void> {
       const db = getDb();
       await db.run(
-        `INSERT INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso)
-         VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?)
+        `INSERT INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso, photo_json, voice_json)
+         VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            body = excluded.body,
            read_at_ms = excluded.read_at_ms,
            context_date_iso = excluded.context_date_iso,
+           photo_json = excluded.photo_json,
+           voice_json = excluded.voice_json,
            synced = 1`,
-        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.readAtMs ?? null, m.mine ? 1 : 0, m.contextDateIso ?? null],
+        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.readAtMs ?? null, m.mine ? 1 : 0, m.contextDateIso ?? null, m.photo ? JSON.stringify(m.photo) : null, m.voice ? JSON.stringify(m.voice) : null],
       );
     },
 

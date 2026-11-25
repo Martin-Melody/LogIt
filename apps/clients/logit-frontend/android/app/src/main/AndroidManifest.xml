@@ -129,6 +129,11 @@
          infrequent, user-initiated image access to use the picker rather than a broad grant. -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Voice messages: the WebView records with getUserMedia, which Capacitor turns into a
+         RECORD_AUDIO request the first time the mic is tapped (never in the background). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
     <!-- Rest-timer fallback notification when the app is backgrounded. SCHEDULE_EXACT_ALARM is
          also declared by @capacitor/local-notifications; on API 33 it is granted by default, on
          API 34+ the timer falls back to an inexact alarm unless the user grants it. USE_EXACT_ALARM

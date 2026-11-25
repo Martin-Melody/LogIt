@@ -7,6 +7,12 @@ export interface RemoteMessage {
   readAtMs: number | null;
   mine: boolean;
   contextDateIso?: string | null;
+  photoUrl?: string | null;
+  photoWidth?: number;
+  photoHeight?: number;
+  voiceUrl?: string | null;
+  voiceMs?: number;
+  voicePeaks?: string | null;
 }
 
 export interface SendMessageInput {
@@ -16,6 +22,9 @@ export interface SendMessageInput {
   createdAtMs: number;
   /** Optional — tags the message as a comment on the client's diary for this date. */
   contextDateIso?: string;
+  photoId?: string;
+  voiceId?: string;
+  voicePeaks?: string;
 }
 
 /** The same calls as `messagesApi`, made with another identity (a sandbox sample client's token). */
