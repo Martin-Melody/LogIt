@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardTitle, readCard, readStoryQuote, recordCard } from "./messageCard";
+import { cardTitle, readCard, readStoryPhoto, readStoryQuote, recordCard } from "./messageCard";
 
 describe("message cards", () => {
   it("reads a record and a workout, and nothing broken", () => {
@@ -17,5 +17,12 @@ describe("message cards", () => {
     expect(cardTitle(readStoryQuote(q)!)).toBe("Squat 110 kg × 3");
     expect(readStoryQuote(JSON.stringify({ storyId: "s1" }))).toBeNull(); // still sending
     expect(readStoryQuote(null)).toBeNull();
+  });
+
+  it("reads a photo story's quoted photo, with or without a card", () => {
+    const q = JSON.stringify({ storyId: "s1", type: "", data: null, photoUrl: "/photos/abc", photoWidth: 900, photoHeight: 1600, expiresAtMs: 1 });
+    expect(readStoryPhoto(q)).toEqual({ url: "/photos/abc", width: 900, height: 1600 });
+    expect(readStoryQuote(q)).toBeNull();
+    expect(readStoryPhoto(JSON.stringify({ storyId: "s1" }))).toBeNull();
   });
 });

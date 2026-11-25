@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
+using Logit.Api.Features.Photos;
 using Microsoft.EntityFrameworkCore;
 
 namespace Logit.Api.Features.Social;
@@ -31,16 +32,21 @@ public static class StoryEndpoints
     }
 
     public record PersonDto(string Username, string DisplayName, string? AvatarUrl);
-    public record StoryDto(Guid Id, string CardType, string CardJson, long CreatedAtMs, long ExpiresAtMs, bool CloseFriends, bool Seen, bool Cheered);
+    public record StoryDto(Guid Id, string CardType, string CardJson, string? PhotoUrl, int PhotoWidth, int PhotoHeight,
+        long CreatedAtMs, long ExpiresAtMs, bool CloseFriends, bool Seen, bool Cheered);
     /// One circle in the row: whose, their live stories (oldest first), and whether they can be
     /// cheered and replied to by me.
     public record AuthorDto(PersonDto User, bool Mine, bool CanReply, List<StoryDto> Stories);
-    public record CreateRequest(string CardType, string CardJson, bool CloseFriends);
+    /// A card, a photo (uploaded first, POST /photos), or both (the card sits on the photo).
+    public record CreateRequest(string? CardType, string? CardJson, bool CloseFriends, Guid? PhotoId = null);
     public record ViewerDto(PersonDto User, bool Cheered, long ViewedAtMs);
     public record ListsDto(List<PersonDto> CloseFriends, List<PersonDto> Hidden);
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
     private static PersonDto Person(User u) => new(u.Username, u.DisplayName, u.AvatarUrl);
+    private static StoryDto Dto(Story s, long createdAtMs, bool seen, bool cheered) =>
+        new(s.Id, s.CardType, s.CardJson, s.PhotoId is { } p ? PhotoEndpoints.UrlOf(p) : null, s.PhotoWidth, s.PhotoHeight,
+            createdAtMs, Ms(s.ExpiresAt), s.CloseFriends, seen, cheered);
 
     /// The live stories `viewerId` may see (their own included).
     public static IQueryable<Story> Visible(AppDbContext db, Guid viewerId, DateTime now) =>
@@ -81,8 +87,7 @@ public static class StoryEndpoints
             var a = g.First();
             var mine = a.Author.Id == me;
             var canReply = !mine && a.Author.CheersFrom switch { CheersFrom.Off => false, CheersFrom.Following => a.AuthorFollowsMe, _ => true };
-            var stories = g.Select(r => new StoryDto(r.Story.Id, r.Story.CardType, r.Story.CardJson, Ms(r.Story.CreatedAt), Ms(r.Story.ExpiresAt),
-                r.Story.CloseFriends, mine || r.View != null, r.View?.Cheered ?? false)).ToList();
+            var stories = g.Select(r => Dto(r.Story, Ms(r.Story.CreatedAt), mine || r.View != null, r.View?.Cheered ?? false)).ToList();
             return new AuthorDto(Person(a.Author), mine, canReply, stories);
         });
         // Yours first, then unwatched ones, newest first (Instagram's order).
@@ -96,27 +101,52 @@ public static class StoryEndpoints
     private static async Task<IResult> Create(CreateRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
     {
         var me = caller.GetUserId();
-        if (!DirectMessageEndpoints.CardTypes.Contains(req.CardType)) return Results.BadRequest(new { error = "That can't go in a story." });
-        if (string.IsNullOrEmpty(req.CardJson) || req.CardJson.Length > MaxCardJson) return Results.BadRequest(new { error = "That's too big for a story." });
-        try { using var _ = JsonDocument.Parse(req.CardJson); }
-        catch (JsonException) { return Results.BadRequest(new { error = "That can't go in a story." }); }
+        if (req.CardType is null && req.PhotoId is null) return Results.BadRequest(new { error = "That can't go in a story." });
+        if (req.CardType is not null)
+        {
+            if (!DirectMessageEndpoints.CardTypes.Contains(req.CardType)) return Results.BadRequest(new { error = "That can't go in a story." });
+            if (string.IsNullOrEmpty(req.CardJson) || req.CardJson.Length > MaxCardJson) return Results.BadRequest(new { error = "That's too big for a story." });
+            try { using var _ = JsonDocument.Parse(req.CardJson); }
+            catch (JsonException) { return Results.BadRequest(new { error = "That can't go in a story." }); }
+        }
+        Photo? photo = null;
+        if (req.PhotoId is { } photoId && (photo = await PhotoEndpoints.OwnedAsync(db, me, photoId)) is null)
+            return Results.BadRequest(new { error = "That photo didn't upload. Try again." });
 
         var now = clock.GetUtcNow().UtcDateTime;
         if (await db.Stories.CountAsync(s => s.AuthorId == me && s.ExpiresAt > now) >= 30)
             return Results.BadRequest(new { error = "That's a lot of stories for one day. Try again later." });
-        var story = new Story { AuthorId = me, CardType = req.CardType, CardJson = req.CardJson, CloseFriends = req.CloseFriends, CreatedAt = now, ExpiresAt = now + Lifetime };
+        var story = new Story
+        {
+            AuthorId = me, CardType = req.CardType ?? "", CardJson = req.CardType is null ? "" : req.CardJson!, CloseFriends = req.CloseFriends,
+            PhotoId = photo?.Id, PhotoWidth = photo?.Width ?? 0, PhotoHeight = photo?.Height ?? 0, CreatedAt = now, ExpiresAt = now + Lifetime,
+        };
         db.Stories.Add(story);
         await db.SaveChangesAsync();
-        return Results.Ok(new StoryDto(story.Id, story.CardType, story.CardJson, Ms(now), Ms(story.ExpiresAt), story.CloseFriends, true, false));
+        return Results.Ok(Dto(story, Ms(now), true, false));
     }
 
-    private static async Task<IResult> Delete(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Delete(Guid id, ClaimsPrincipal caller, AppDbContext db, IPhotoStore store, CancellationToken ct)
     {
         var me = caller.GetUserId();
-        var n = await db.Stories.Where(s => s.Id == id && s.AuthorId == me).ExecuteDeleteAsync();
-        if (n == 0) return Results.NotFound();
-        await ForgetQuotesAsync(db, [id]);
+        var story = await db.Stories.FirstOrDefaultAsync(s => s.Id == id && s.AuthorId == me, ct);
+        if (story is null) return Results.NotFound();
+        await RemoveAsync(db, store, [story], ct);
         return Results.NoContent();
+    }
+
+    /// Deletes stories with their photos (file and row) and the cards quoted in replies.
+    public static async Task RemoveAsync(AppDbContext db, IPhotoStore store, IReadOnlyCollection<Story> stories, CancellationToken ct = default)
+    {
+        var ids = stories.Select(s => s.Id).ToList();
+        var photoIds = stories.Where(s => s.PhotoId is not null).Select(s => s.PhotoId!.Value).ToList();
+        await ForgetQuotesAsync(db, ids, ct);
+        await db.Stories.Where(s => ids.Contains(s.Id)).ExecuteDeleteAsync(ct);
+        if (photoIds.Count == 0) return;
+        var photos = await db.Photos.Where(p => photoIds.Contains(p.Id)).ToListAsync(ct);
+        foreach (var p in photos) await store.DeleteAsync(p.Id.ToString("N"), ct);
+        db.Photos.RemoveRange(photos);
+        await db.SaveChangesAsync(ct);
     }
 
     /// Replies that quoted these stories lose the quoted card ("Story no longer available").
@@ -229,7 +259,7 @@ public static class StoryEndpoints
 }
 
 /// Deletes stories 24 hours after they were posted, with their views and the cards quoted in
-/// replies (the stories row already stops showing them at that moment; this removes the data).
+/// replies and their photos (the stories row already stops showing them at that moment; this removes the data).
 public class StorySweeper(IServiceScopeFactory scopes, ILogger<StorySweeper> log, TimeProvider clock) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -240,7 +270,8 @@ public class StorySweeper(IServiceScopeFactory scopes, ILogger<StorySweeper> log
             try
             {
                 using var scope = scopes.CreateScope();
-                await SweepAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), clock.GetUtcNow().UtcDateTime, stoppingToken);
+                await SweepAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<IPhotoStore>(),
+                    clock.GetUtcNow().UtcDateTime, stoppingToken);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
@@ -249,11 +280,9 @@ public class StorySweeper(IServiceScopeFactory scopes, ILogger<StorySweeper> log
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
-    public static async Task SweepAsync(AppDbContext db, DateTime now, CancellationToken ct = default)
+    public static async Task SweepAsync(AppDbContext db, IPhotoStore store, DateTime now, CancellationToken ct = default)
     {
-        var gone = await db.Stories.Where(s => s.ExpiresAt <= now).Select(s => s.Id).Take(500).ToListAsync(ct);
-        if (gone.Count == 0) return;
-        await StoryEndpoints.ForgetQuotesAsync(db, gone, ct);
-        await db.Stories.Where(s => gone.Contains(s.Id)).ExecuteDeleteAsync(ct);
+        var gone = await db.Stories.AsNoTracking().Where(s => s.ExpiresAt <= now).Take(500).ToListAsync(ct);
+        if (gone.Count > 0) await StoryEndpoints.RemoveAsync(db, store, gone, ct);
     }
 }

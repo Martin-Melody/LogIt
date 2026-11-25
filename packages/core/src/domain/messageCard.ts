@@ -56,3 +56,14 @@ export function readStoryQuote(json: string | null | undefined): Card | null {
     return null;
   }
 }
+
+/** A reply to a photo story: the quoted photo, or null (no photo, or the story has gone). */
+export function readStoryPhoto(json: string | null | undefined): { url: string; width: number; height: number } | null {
+  if (!json) return null;
+  try {
+    const q = JSON.parse(json);
+    return typeof q?.photoUrl === "string" ? { url: q.photoUrl, width: q.photoWidth ?? 0, height: q.photoHeight ?? 0 } : null;
+  } catch {
+    return null;
+  }
+}

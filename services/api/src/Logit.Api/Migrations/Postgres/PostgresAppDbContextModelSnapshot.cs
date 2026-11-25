@@ -902,8 +902,8 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("character varying(2000)");
 
                     b.Property<string>("CardJson")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasMaxLength(4400)
+                        .HasColumnType("character varying(4400)");
 
                     b.Property<string>("CardType")
                         .HasMaxLength(32)
@@ -1716,6 +1716,15 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PhotoHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PhotoWidth")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

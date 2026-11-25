@@ -257,7 +257,10 @@ public static class DirectMessageEndpoints
             {
                 ["storyId"] = story.Id,
                 ["type"] = story.CardType,
-                ["data"] = JsonNode.Parse(story.CardJson),
+                ["data"] = story.CardJson.Length > 0 ? JsonNode.Parse(story.CardJson) : null,
+                ["photoUrl"] = story.PhotoId is { } sp ? Photos.PhotoEndpoints.UrlOf(sp) : null,
+                ["photoWidth"] = story.PhotoWidth,
+                ["photoHeight"] = story.PhotoHeight,
                 ["expiresAtMs"] = Ms(story.ExpiresAt),
             }.ToJsonString();
         }
