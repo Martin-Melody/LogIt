@@ -1,12 +1,12 @@
 <!-- A group's members (design canvas G7): everyone sees the list; organisers get ⋯ on each
-     member to make them an organiser or remove them. -->
+     member to make them an organiser or remove them, and requests to join at the top (G14). -->
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { Crown, Loader2, MoreHorizontal, Search, User, UserX } from "lucide-svelte";
   import { toast } from "svelte-sonner";
-  import { groupsApi, type Group, type GroupMember } from "@logit/core/api/groupsApi";
+  import { groupsApi, type Group, type GroupMember, type GroupRequest } from "@logit/core/api/groupsApi";
   import { authStore } from "$lib/api/authStore.svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -19,6 +19,7 @@
   const id = $derived(page.params.id!);
   let group = $state<Group | null>(null);
   let members = $state<GroupMember[] | null>(null);
+  let requests = $state<GroupRequest[]>([]);
   let error = $state(false);
   let query = $state("");
   let picked = $state<GroupMember | null>(null);
@@ -30,6 +31,7 @@
   async function load() {
     try {
       [group, members] = await Promise.all([groupsApi.get(id), groupsApi.members(id)]);
+      requests = group.me.role === "Organiser" ? await groupsApi.requests(id).catch(() => []) : [];
       error = false;
     } catch {
       error = true;
@@ -51,6 +53,21 @@
       await load();
       toast.success(role === "Organiser" ? `${m.user.displayName} is an organiser` : `${m.user.displayName} is a member`);
     } catch {
+      toast.error("Couldn't do that. Try again.");
+    }
+  }
+
+  // Approving adds them (and tells them); declining tells nobody.
+  async function answer(r: GroupRequest, approve: boolean) {
+    requests = requests.filter((x) => x.user.id !== r.user.id);
+    try {
+      if (approve) {
+        await groupsApi.approve(id, r.user.username);
+        await load();
+        toast.success(`${r.user.displayName} is in`);
+      } else await groupsApi.decline(id, r.user.username);
+    } catch {
+      requests = [r, ...requests];
       toast.error("Couldn't do that. Try again.");
     }
   }
@@ -105,6 +122,22 @@
         <Search class="size-4" /><input bind:value={query} placeholder="Search members" aria-label="Search members" class="min-w-0 flex-1 bg-transparent text-[14px] text-foreground outline-none placeholder:text-muted-foreground" />
       </label>
     {/if}
+    {#if requests.length}
+      <h2 class="px-4 pb-1 pt-3.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Asked to join · {requests.length}</h2>
+      <ul class="mb-3">
+        {#each requests as r (r.user.id)}
+          <li class="flex min-h-16 items-center gap-3 border-b border-border px-4">
+            <a href="/social/{r.user.username}" class="flex min-w-0 flex-1 items-center gap-3 py-2 text-inherit no-underline">
+              <PersonAvatar name={r.user.displayName} src={r.user.avatarUrl} size={40} />
+              <span class="flex min-w-0 flex-col"><span class="truncate text-[15px] font-medium">{r.user.displayName}</span><span class="truncate text-[12px] text-muted-foreground">@{r.user.username}{r.followedBy ? ` · followed by ${r.followedBy}` : ""}</span></span>
+            </a>
+            <button type="button" class="h-9 shrink-0 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground" onclick={() => answer(r, true)}>Approve</button>
+            <button type="button" class="h-9 shrink-0 rounded-lg border border-border px-3 text-[13px] font-semibold" onclick={() => answer(r, false)}>Decline</button>
+          </li>
+        {/each}
+      </ul>
+      <h2 class="px-4 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Members</h2>
+    {/if}
     <ul>
       {#each shown as m (m.user.id)}
         {@const mine = m.user.username === me}
@@ -133,4 +166,4 @@
   confirmLabel="Remove"
   onConfirm={remove}
 />
-{#if inviting && group}<GroupInviteSheet name={group.name} code={group.inviteCode} onclose={() => (inviting = false)} />{/if}
+{#if inviting && group}<GroupInviteSheet groupId={group.id} name={group.name} code={group.inviteCode} onclose={() => (inviting = false)} />{/if}

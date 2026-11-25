@@ -21,6 +21,7 @@
     Target,
     ThumbsUp,
     Pin,
+    Users as UsersIcon,
   } from "lucide-svelte";
   import {
     followedByText,
@@ -194,6 +195,7 @@
       : t === "Quote" ? Quote
       : t === "Cheer" || t === "StoryCheer" ? ThumbsUp
       : t === "GroupNote" ? Pin
+      : t === "GroupRequest" || t === "GroupApproved" ? UsersIcon
       : UserPlus;
   }
 
@@ -211,6 +213,8 @@
     if (n.type === "Cheer") return "cheered you on";
     if (n.type === "StoryCheer") return "cheered your story";
     if (n.type === "GroupNote") return n.group ? `pinned a note in ${n.group.name}` : "pinned a note in a group";
+    if (n.type === "GroupRequest") return n.group ? `asked to join ${n.group.name}` : "asked to join your group";
+    if (n.type === "GroupApproved") return n.group ? `let you into ${n.group.name}` : "let you into the group";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
@@ -219,7 +223,8 @@
     if (n.type === "CoachProgram") return "/splits";
     if (n.type === "CoachPaymentFailed") return "/clients";
     if (n.type === "Follow") return `/social/${n.actor.username}`;
-    if (n.type === "GroupNote") return n.group ? `/groups/${n.group.id}` : "/messages";
+    if (n.type === "GroupNote" || n.type === "GroupApproved") return n.group ? `/groups/${n.group.id}` : "/messages";
+    if (n.type === "GroupRequest") return n.group ? `/groups/${n.group.id}/members` : "/messages";
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }
 

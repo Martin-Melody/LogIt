@@ -21,7 +21,7 @@
   import { pickAndUploadPhoto } from "./chatPhoto";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
-  import { cardTitle, readCard, readStoryPhoto, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
+  import { cardTitle, readCard, readGroupInvite, readStoryPhoto, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
 
   // One conversation between people (the phone's chat screen, design canvas M2), by username
   // or thread. Same server rules as the phone: a request you received shows Accept / Delete;
@@ -306,10 +306,20 @@
         {@const story = m.cardType === "Story"}
         {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
         {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
+        {@const invite = m.cardType === "GroupInvite" ? readGroupInvite(m.cardJson) : null}
         <div class="group flex shrink-0 items-center gap-1 {m.mine ? 'flex-row-reverse self-end' : 'self-start'} max-w-full {editing?.id === m.id ? 'opacity-60' : ''}">
         <div class="flex min-w-0 flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
         {#if group && !m.mine && (i === 0 || chat.messages[i - 1]!.from?.id !== m.from?.id || chat.messages[i - 1]!.mine)}<span class="px-1 text-[11px] text-muted-foreground">{senderName(m)}</span>{/if}
         {#if story}<span class="px-1 text-[11px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
+        {#if invite}
+          <div class="flex w-[260px] max-w-[70%] flex-col gap-1.5 rounded-xl border border-border bg-background px-3 py-2.5 {m.mine ? 'self-end' : 'self-start'}">
+            <span class="text-[11px] text-muted-foreground">{m.mine ? "You sent an invite to a group" : "Invited you to a group"}</span>
+            <span class="text-[13px] font-semibold">{invite.name}</span>
+            <span class="text-xs text-muted-foreground">{[invite.kind, invite.place, `${invite.members} members`].filter(Boolean).join(" · ")}</span>
+            {#if !m.mine}<span class="text-xs text-muted-foreground">Open the chat in the LogIt app to join.</span>{/if}
+            <span class="text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
+          </div>
+        {/if}
         {#if storyPhoto}
           <div class="aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black {m.mine ? 'self-end' : 'self-start'}"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
         {:else if card}

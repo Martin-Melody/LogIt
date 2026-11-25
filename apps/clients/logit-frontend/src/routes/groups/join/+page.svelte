@@ -1,5 +1,7 @@
-<!-- Joining a group from its link or QR (design canvas G5): what members see, "Show me on the
-     board", then Join. Signed out, it asks for an account first and comes back here. -->
+<!-- Joining a group (design canvas G5, G13): from its link or QR (?c=), or from search or a
+     member's invite (?id=). What members see, "Show me on the board", then Join, or Ask to join
+     for a findable group that wants approval. Signed out, it asks for an account first and comes
+     back here. -->
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -16,6 +18,7 @@
   import { back } from "$lib/navigation";
 
   const raw = $derived(page.url.searchParams.get("c") ?? "");
+  const groupId = $derived(page.url.searchParams.get("id"));
   const invite = $derived(parseGroupInvite(raw));
   const sameServer = $derived(!!invite && invite.server === apiBaseUrl().replace(/\/+$/, ""));
   let preview = $state<GroupPreview | null>(null);
@@ -24,6 +27,16 @@
   let joining = $state(false);
 
   onMount(async () => {
+    if (groupId) {
+      if (!authStore.isAuthenticated) return;
+      try {
+        preview = await groupsApi.about(groupId);
+        if (preview.member) await goto(`/groups/${preview.id}`, { replaceState: true });
+      } catch (e) {
+        error = e instanceof ApiError && e.status === 404 ? "This group isn't open to join. Ask a member to invite you." : "Couldn't open the group. Try again in a moment.";
+      }
+      return;
+    }
     if (!invite) {
       error = "This group link is incomplete. Ask whoever sent it to send it again.";
       return;
@@ -40,21 +53,44 @@
     }
   });
 
+  // With the link or an invite you're straight in; a findable group may want approval first.
+  const asks = $derived(!!preview && !invite && !preview.invitedBy && preview.access === "Request");
+
   async function join() {
-    if (!invite || !preview) return;
+    if (!preview) return;
     joining = true;
     try {
-      const { id } = await groupsApi.join(invite.code, onBoard);
+      if (invite) {
+        await groupsApi.join(invite.code, onBoard);
+      } else {
+        const { status } = await groupsApi.joinById(preview.id, onBoard);
+        if (status === "requested") {
+          preview = { ...preview, requested: true };
+          toast.success("Asked. You'll get a notification when an organiser lets you in.");
+          joining = false;
+          return;
+        }
+      }
       toast.success(`You joined ${preview.name}`);
-      await goto(`/groups/${id}`, { replaceState: true });
+      await goto(`/groups/${preview.id}`, { replaceState: true });
     } catch (e) {
       joining = false;
       toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Couldn't join. Try again.");
     }
   }
 
+  async function cancelRequest() {
+    if (!preview) return;
+    try {
+      await groupsApi.cancelRequest(preview.id);
+      preview = { ...preview, requested: false };
+    } catch {
+      toast.error("Couldn't cancel. Try again.");
+    }
+  }
+
   function signIn() {
-    holdRoute(`/groups/join?c=${encodeURIComponent(raw)}`);
+    holdRoute(groupId ? `/groups/join?id=${groupId}` : `/groups/join?c=${encodeURIComponent(raw)}`);
     void goto("/onboarding");
   }
 
@@ -71,6 +107,11 @@
   <button type="button" aria-label="Close" class="-ml-2 flex size-11 items-center justify-center" onclick={() => back("/social")}><X class="size-[22px]" /></button>
   {#if error}
     <p class="px-2 py-14 text-center text-sm text-muted-foreground">{error}</p>
+  {:else if groupId && !authStore.isAuthenticated}
+    <div class="flex flex-col gap-3 px-2 py-14 text-center">
+      <p class="text-sm text-muted-foreground">Sign in to see this group.</p>
+      <button type="button" class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground" onclick={signIn}>Sign in or make an account</button>
+    </div>
   {:else if !preview}
     <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
   {:else}
@@ -78,6 +119,7 @@
       <GroupAvatar name={preview.name} src={preview.photoUrl} size={80} />
       <h1 class="text-2xl font-bold tracking-tight">{preview.name}</h1>
       <p class="text-sm text-muted-foreground">{[preview.kind, preview.place, `${preview.members} ${preview.members === 1 ? "member" : "members"}`, preview.organiser ? `run by ${preview.organiser}` : null].filter(Boolean).join(" · ")}</p>
+      {#if preview.invitedBy}<p class="text-[13px] font-medium">Invited by {preview.invitedBy}</p>{/if}
       {#if followedLine}
         <div class="mt-1 flex items-center gap-2">
           <span class="flex" aria-hidden="true">{#each preview.followed as p, i (p.id)}<span class="rounded-full border-2 border-background {i ? '-ml-2' : ''}"><PersonAvatar name={p.displayName} src={p.avatarUrl} size={28} /></span>{/each}</span>
@@ -101,8 +143,13 @@
 
     <div class="flex-1"></div>
     <div class="mt-6 flex flex-col gap-2">
-      {#if authStore.isAuthenticated}
-        <button type="button" disabled={joining} class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-60" onclick={join}>Join {preview.name}</button>
+      {#if authStore.isAuthenticated && preview.requested}
+        <button type="button" disabled class="h-12 rounded-lg border border-border text-[15px] font-semibold text-muted-foreground">Requested</button>
+        <button type="button" class="h-11 rounded-lg text-sm font-medium text-destructive" onclick={cancelRequest}>Cancel request</button>
+        <p class="text-center text-[13px] leading-snug text-muted-foreground">An organiser approves requests. You'll get a notification when you're in.</p>
+      {:else if authStore.isAuthenticated}
+        <button type="button" disabled={joining} class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-60" onclick={join}>{asks ? "Ask to join" : `Join ${preview.name}`}</button>
+        {#if asks}<p class="text-center text-[13px] leading-snug text-muted-foreground">An organiser approves requests. With a member's invite or the group's link you join straight away.</p>{/if}
       {:else}
         <button type="button" class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground" onclick={signIn}>Sign in or make an account</button>
       {/if}

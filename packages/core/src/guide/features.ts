@@ -229,6 +229,7 @@ export const FEATURES: Feature[] = [
       "Keep your posts out of Discover",
       "Start a group for your gym, club, team or friends, with a page, a pinned note and a group chat; people join with its link or QR",
       "Choose per group whether you're on its board and which notifications you get",
+      "Make a group invite only, findable with you approving who joins, or open to anyone, and invite people from your chats",
     ],
   },
   {

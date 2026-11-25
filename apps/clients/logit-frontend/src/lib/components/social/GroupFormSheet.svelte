@@ -1,12 +1,13 @@
-<!-- New group (design canvas G6, from Messages) and Edit group (G8): name, what it is, where, and
-     an optional photo. Whoever makes it is its organiser. -->
+<!-- New group (design canvas G6, from Messages) and Edit group (G8): name, what it is, where, an
+     optional photo, and who can find and join it (G11). Whoever makes it is its organiser. -->
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { Camera, X } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import { ApiError } from "@logit/core/api/client";
   import { photoSrc, uploadPhoto } from "@logit/core/api/photosApi";
-  import { GROUP_KINDS, groupsApi, type Group, type GroupKind } from "@logit/core/api/groupsApi";
+  import { GROUP_KINDS, groupsApi, type Group, type GroupAccess, type GroupKind } from "@logit/core/api/groupsApi";
+  import * as RadioGroup from "$lib/components/ui/radio-group";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import { chip } from "$lib/components/ui/choice";
   import { Input } from "$lib/components/ui/input";
@@ -24,7 +25,14 @@
   /** A new picture (data URL), or the group's current one, or none. */
   // svelte-ignore state_referenced_locally
   let photo = $state<string | null>(group?.photoUrl ?? null);
+  // svelte-ignore state_referenced_locally
+  let access = $state<GroupAccess>(group?.access ?? "InviteOnly");
   let saving = $state(false);
+  const accessOptions: { value: GroupAccess; label: string; note: string }[] = [
+    { value: "InviteOnly", label: "Invite only", note: "Hidden from search. Join with the link, the QR or a member's invite" },
+    { value: "Request", label: "Anyone can find it, ask to join", note: "In search; an organiser approves each request" },
+    { value: "Open", label: "Anyone can find it and join", note: "In search; no approval" },
+  ];
   const changedPhoto = $derived(photo !== (group?.photoUrl ?? null));
 
   async function choose() {
@@ -41,8 +49,8 @@
     try {
       const photoId = changedPhoto && photo ? (await uploadPhoto(photo)).id : undefined;
       const saved = group
-        ? await groupsApi.edit(group.id, { name: name.trim(), kind, place: place.trim(), photoId, removePhoto: changedPhoto && !photo })
-        : await groupsApi.create({ name: name.trim(), kind, place: place.trim() || null, photoId });
+        ? await groupsApi.edit(group.id, { name: name.trim(), kind, place: place.trim(), photoId, removePhoto: changedPhoto && !photo, access })
+        : await groupsApi.create({ name: name.trim(), kind, place: place.trim() || null, photoId, access });
       onsaved?.(saved);
       onclose();
       if (!group) await goto(`/groups/${saved.id}`);
@@ -87,6 +95,18 @@
       <Input bind:value={place} maxlength={60} placeholder="Dublin 8" class="h-12 text-[15px]" />
       <span class="text-[12px] text-muted-foreground">Shown under the name. A full address can go in the pinned note.</span>
     </label>
+    <div class="flex flex-col gap-2">
+      <span class="text-[13px] font-medium">Who can find and join it?</span>
+      <RadioGroup.Root value={access} aria-label="Who can find and join it?" onValueChange={(v) => (access = v as GroupAccess)} class="overflow-hidden rounded-xl border border-border">
+        {#each accessOptions as o (o.value)}
+          <label class="flex min-h-14 cursor-pointer items-center gap-3 border-b border-border px-3 py-2 last:border-b-0">
+            <span class="flex flex-1 flex-col gap-0.5"><span class="text-[15px]">{o.label}</span><span class="text-[12px] leading-snug text-muted-foreground">{o.note}</span></span>
+            <RadioGroup.Item value={o.value} />
+          </label>
+        {/each}
+      </RadioGroup.Root>
+      <span class="text-[12px] text-muted-foreground">Invites from members always work.</span>
+    </div>
     {#if !group}
       <p class="text-[13px] leading-relaxed text-muted-foreground">You're the organiser. People join with the group's link or QR, which you share next. Members see each other's names and photos, never workouts or weights.</p>
     {/if}

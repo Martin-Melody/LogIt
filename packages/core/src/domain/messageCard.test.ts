@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardTitle, readCard, readStoryPhoto, readStoryQuote, recordCard } from "./messageCard";
+import { cardTitle, readCard, readGroupInvite, readStoryPhoto, readStoryQuote, recordCard } from "./messageCard";
 
 describe("message cards", () => {
   it("reads a record and a workout, and nothing broken", () => {
@@ -24,5 +24,10 @@ describe("message cards", () => {
     expect(readStoryPhoto(q)).toEqual({ url: "/photos/abc", width: 900, height: 1600 });
     expect(readStoryQuote(q)).toBeNull();
     expect(readStoryPhoto(JSON.stringify({ storyId: "s1" }))).toBeNull();
+  });
+
+  it("reads a group invite, and nothing while it's still sending", () => {
+    expect(readGroupInvite(JSON.stringify({ groupId: "g1", name: "Iron Club", kind: "Gym", members: 14 }))).toEqual({ groupId: "g1", name: "Iron Club", kind: "Gym", place: null, photoUrl: null, members: 14 });
+    expect(readGroupInvite(JSON.stringify({ groupId: "g1" }))).toBeNull();
   });
 });

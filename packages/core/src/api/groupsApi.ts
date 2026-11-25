@@ -14,6 +14,8 @@ export type GroupKind = (typeof GROUP_KINDS)[number];
 export type GroupRole = "Member" | "Organiser";
 /** Every chat message; events, notes and mentions (the default); off. */
 export type GroupNotify = "All" | "Important" | "Off";
+/** Who can find and join (canvas G11): invite only (the default), findable with approval, findable and open. */
+export type GroupAccess = "InviteOnly" | "Request" | "Open";
 
 export interface GroupPerson extends DmPerson {
   id: string;
@@ -36,6 +38,9 @@ export interface Group extends GroupBrief {
   organisers: GroupPerson[];
   /** A few faces for the member row: people you follow first. */
   preview: GroupPerson[];
+  access: GroupAccess;
+  /** Requests waiting to join (organisers only). */
+  requests: number;
 }
 
 export interface GroupMember {
@@ -49,15 +54,34 @@ export interface GroupPreview extends GroupBrief {
   /** Members you follow (signed in only). */
   followed: GroupPerson[];
   member: boolean;
+  access: GroupAccess;
+  /** You asked to join and wait for an organiser. */
+  requested: boolean;
+  /** A member invited you from a chat (you can join straight away). */
+  invitedBy: string | null;
+}
+
+export interface GroupSearchResult extends GroupBrief {
+  access: GroupAccess;
+  state: "member" | "requested" | "invited" | "none";
+  /** Someone you follow who's a member. */
+  followed: string | null;
+}
+
+export interface GroupRequest {
+  user: GroupPerson;
+  atMs: number;
+  /** A member who follows them. */
+  followedBy: string | null;
 }
 
 const json = (method: string, body?: unknown) => ({ method, body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const groupsApi = {
   mine: () => apiClient.fetch<GroupBrief[]>("/groups"),
-  create: (g: { name: string; kind: GroupKind; place?: string | null; photoId?: string | null }) => apiClient.fetch<Group>("/groups", json("POST", g)),
+  create: (g: { name: string; kind: GroupKind; place?: string | null; photoId?: string | null; access?: GroupAccess }) => apiClient.fetch<Group>("/groups", json("POST", g)),
   get: (id: string) => apiClient.fetch<Group>(`/groups/${id}`),
-  edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean }) =>
+  edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean; access?: GroupAccess }) =>
     apiClient.fetch<Group>(`/groups/${id}`, json("PATCH", g)),
   remove: (id: string) => apiClient.fetch<void>(`/groups/${id}`, { method: "DELETE" }),
   pin: (id: string, text: string, notify: boolean) => apiClient.fetch<Group>(`/groups/${id}/note`, json("PUT", { text, notify })),
@@ -72,4 +96,18 @@ export const groupsApi = {
   /** The join screen; works for the group's own server only (federation comes later). */
   preview: (code: string) => apiClient.fetch<GroupPreview>(`/groups/join/${encodeURIComponent(code)}`),
   join: (code: string, onBoard: boolean) => apiClient.fetch<{ id: string }>(`/groups/join/${encodeURIComponent(code)}`, json("POST", { onBoard })),
+  search: (q: string) => apiClient.fetch<GroupSearchResult[]>(`/groups/search?q=${encodeURIComponent(q)}`),
+  /** The join screen from search or an invite card. */
+  about: (id: string) => apiClient.fetch<GroupPreview>(`/groups/${id}/about`),
+  /** Straight in (open, or invited), or a request (ask to join). */
+  joinById: (id: string, onBoard: boolean) => apiClient.fetch<{ id: string; status: "member" | "requested" }>(`/groups/${id}/join`, json("POST", { onBoard })),
+  cancelRequest: (id: string) => apiClient.fetch<void>(`/groups/${id}/request`, { method: "DELETE" }),
+  requests: (id: string) => apiClient.fetch<GroupRequest[]>(`/groups/${id}/requests`),
+  approve: (id: string, username: string) => apiClient.fetch<void>(`/groups/${id}/requests/${encodeURIComponent(username)}`, { method: "POST" }),
+  decline: (id: string, username: string) => apiClient.fetch<void>(`/groups/${id}/requests/${encodeURIComponent(username)}`, { method: "DELETE" }),
 };
+
+/** The message card that invites someone to a group (sent with dmApi / queueDm). */
+export function groupInviteCard(groupId: string): { type: "GroupInvite"; json: string } {
+  return { type: "GroupInvite", json: JSON.stringify({ groupId }) };
+}

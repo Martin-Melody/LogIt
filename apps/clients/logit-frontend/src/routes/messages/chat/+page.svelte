@@ -26,7 +26,8 @@
   import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import { readCard, readStoryPhoto, readStoryQuote } from "@logit/core/domain/messageCard";
+  import { readCard, readGroupInvite, readStoryPhoto, readStoryQuote } from "@logit/core/domain/messageCard";
+  import GroupInviteCard from "$lib/components/social/GroupInviteCard.svelte";
   import { toast } from "svelte-sonner";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -275,6 +276,8 @@
   {@const story = m.cardType === "Story"}
   {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
   {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
+  {@const invite = m.cardType === "GroupInvite" ? readGroupInvite(m.cardJson) : null}
+  {#if invite}<GroupInviteCard {invite} mine={m.mine} />{/if}
   {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
   {#if storyPhoto}
     <div class="relative aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>

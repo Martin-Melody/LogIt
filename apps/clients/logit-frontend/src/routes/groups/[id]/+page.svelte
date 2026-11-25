@@ -133,6 +133,11 @@
       </div>
     </div>
 
+    {#if group.requests > 0}
+      <a href="/groups/{group.id}/members" class="mx-3 mt-3.5 flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-card px-3.5 text-[14px] font-medium text-inherit no-underline">
+        {group.requests === 1 ? "1 person asked to join" : `${group.requests} people asked to join`}<ChevronRight class="size-4 text-muted-foreground" />
+      </a>
+    {/if}
     {#if group.note}
       <section aria-label="Pinned note" class="mx-3 mt-3.5 flex flex-col gap-1.5 rounded-2xl border border-border bg-card px-3.5 py-3">
         <span class="flex items-center gap-1.5 text-[12px] text-muted-foreground"><Pin class="size-3.5" />Pinned{group.note.by ? ` by ${group.note.by.username === me ? "you" : group.note.by.displayName || group.note.by.username}` : ""} · {shortAgo(group.note.atMs, Date.now())}</span>
@@ -160,7 +165,7 @@
 {#if group}
   <ActionSheet open={menuOpen} onOpenChange={(v) => (menuOpen = v)} title={group.name} items={menu} />
   {#if sheet === "edit"}<GroupFormSheet {group} onclose={() => (sheet = null)} onsaved={(g) => (group = g)} />{/if}
-  {#if sheet === "invite"}<GroupInviteSheet name={group.name} code={group.inviteCode} onclose={() => (sheet = null)} />{/if}
+  {#if sheet === "invite"}<GroupInviteSheet groupId={group.id} name={group.name} code={group.inviteCode} onclose={() => (sheet = null)} />{/if}
   {#if sheet === "pin"}<PinNoteSheet {group} onclose={() => (sheet = null)} onsaved={(g) => (group = g ?? (group ? { ...group, note: null } : null))} />{/if}
   {#if sheet === "report"}<ReportSheet open targetType="Group" targetId={group.id} what="group" onclose={() => (sheet = null)} />{/if}
   <ConfirmDialog
