@@ -82,7 +82,7 @@
     <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
   {:else}
     <SettingsSection title="Account">
-      {@render toggle("private", "Private account", "People ask to follow you. Only followers you accept see your posts and profile.", settings.isPrivate, (v) => set({ isPrivate: v }))}
+      {@render toggle("private", "Private account", "Off: anyone can see your profile and posts, in LogIt and on the web at getlogit.app, and find them on Google. On: people ask to follow you, only followers you accept see your posts, and nothing is on the web.", settings.isPrivate, (v) => set({ isPrivate: v }))}
     </SettingsSection>
 
     <SettingsSection title="Who can reach you">

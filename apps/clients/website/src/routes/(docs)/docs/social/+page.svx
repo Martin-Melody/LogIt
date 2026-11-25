@@ -13,7 +13,9 @@ title: Social
 Share workouts, PRs, splits and library items; follow people; like, comment and reply. Join groups
 for their chat, events and board; in groups anyone can find, anyone signed in can post and comment
 too. Social is free with any account, on the phone and on the
-web; posts in groups anyone can find can be read by anyone at getlogit.app, no account needed.
+web. Public means public everywhere: a public account's profile and posts, and the posts in groups
+anyone can find, can be read by anyone at getlogit.app and found on Google, no account needed. A
+private account and an invite-only group are never on the web.
 
 <HowTo id="pro.social" />
 

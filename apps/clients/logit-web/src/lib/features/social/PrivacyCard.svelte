@@ -58,7 +58,7 @@
 
   type Row = { key: "isPrivate" | "showInDiscover" | "hideFromSuggestions" | "hidePeopleSuggestions"; label: string; help: string; invert?: boolean };
   const ROWS: Row[] = [
-    { key: "isPrivate", label: "Private account", help: "People ask to follow you, and only followers you accept see your posts and profile cards." },
+    { key: "isPrivate", label: "Private account", help: "Off: anyone can see your profile and posts, in LogIt and on the web at getlogit.app, and find them on Google. On: people ask to follow you, only followers you accept see your posts, and nothing is on the web." },
     { key: "showInDiscover", label: "Show my posts in Discover", help: "Off: only your followers see them in a feed. Always off for a private account." },
     { key: "hideFromSuggestions", label: "Suggest me to people", help: "Your name in other people's \"People you might know\".", invert: true },
     { key: "hidePeopleSuggestions", label: "Show \"People you might know\"", help: "Turn back on here after hiding it.", invert: true },

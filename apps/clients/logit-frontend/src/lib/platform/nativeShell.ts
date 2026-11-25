@@ -87,6 +87,10 @@ export function routeForAppLink(url: string): string | null {
   // A group's link: logit://g?c=logit-gr1:… or https://getlogit.app/g#logit-gr1:…
   const group = url.match(/logit-gr1:[a-z0-9]+(?::[A-Za-z0-9_-]+)?/)?.[0];
   if (group) return `/groups/join?c=${encodeURIComponent(group)}`;
+  // A profile or post on the web (canvas W1–W3): https://getlogit.app/@ava[/p/<id>], or the
+  // website's "Open in LogIt" (logit://u/ava[/p/<id>]).
+  const web = url.match(/^(?:https:\/\/getlogit\.app\/@|logit:\/\/u\/)([A-Za-z0-9_.-]+)(?:\/p\/([0-9a-f-]{36}))?\/?(?:[?#].*)?$/);
+  if (web) return web[2] ? `/social/post/${web[2]}` : `/social/${encodeURIComponent(web[1].toLowerCase())}`;
   return null;
 }
 
