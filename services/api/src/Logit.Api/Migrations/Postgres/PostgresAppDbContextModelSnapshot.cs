@@ -1232,6 +1232,23 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
 
+                    b.Property<bool>("PostsOn")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("PostsOnWeb")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("WhoCanComment")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WhoCanPost")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Access");
@@ -1239,7 +1256,53 @@ namespace Logit.Api.Migrations.Postgres
                     b.HasIndex("InviteCode")
                         .IsUnique();
 
+                    b.HasIndex("Slug");
+
                     b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("RemovedByModerator")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Upvotes")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("GroupComments");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.GroupEvent", b =>
@@ -1383,6 +1446,127 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("GroupMembers");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<string>("CardJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("CardType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("CommentCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Locked")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MembersOnlyComments")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("OnWeb")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PhotoHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PhotoWidth")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Pinned")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RemovedByModerator")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Upvotes")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("GroupId", "CreatedAt");
+
+                    b.HasIndex("GroupId", "LastActivityAt");
+
+                    b.ToTable("GroupPosts");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CommentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId", "PostId", "CommentId")
+                        .IsUnique();
+
+                    b.ToTable("GroupVotes");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1515,7 +1699,13 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid?>("EventId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("GroupCommentId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GroupPostId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("PostId")
@@ -3362,6 +3552,24 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Inviter");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupComment", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Logit.Api.Data.Entities.GroupPost", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.GroupEvent", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.Group", "Group")
@@ -3434,6 +3642,39 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Group");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupPost", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupVote", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.GroupPost", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>

@@ -675,6 +675,13 @@ public static class AdminEndpoints
                 photoUrl = st.PhotoId is { } p ? Logit.Api.Features.Photos.PhotoEndpoints.UrlOf(p) : null,
             };
 
+        // A reported group post or comment: its words, or the post's photo.
+        var gpIds = await db.Reports.Where(r => r.TargetType == ReportTargetType.GroupPost || r.TargetType == ReportTargetType.GroupComment).Select(r => r.TargetId).ToListAsync();
+        foreach (var gp in await db.GroupPosts.Where(p => gpIds.Contains(p.Id)).Select(p => new { p.Id, p.Title, p.Body, p.PhotoId, p.DeletedAt, Author = p.Author == null ? "deleted account" : p.Author.Username }).ToListAsync())
+            previews[gp.Id] = new { kind = "post", Body = $"{gp.Title}\n{gp.Body}".Trim(), deleted = gp.DeletedAt != null, gp.Author, photoUrl = gp.PhotoId is { } ph ? Logit.Api.Features.Photos.PhotoEndpoints.UrlOf(ph) : null };
+        foreach (var gc in await db.GroupComments.Where(c => gpIds.Contains(c.Id)).Select(c => new { c.Id, c.Body, c.DeletedAt, Author = c.Author == null ? "deleted account" : c.Author.Username }).ToListAsync())
+            previews[gc.Id] = new { kind = "comment", gc.Body, deleted = gc.DeletedAt != null, gc.Author, photoUrl = (string?)null };
+
         // A reported group: its name, place and pinned note, and who organises it.
         var groupIds = await db.Reports.Where(r => r.TargetType == ReportTargetType.Group).Select(r => r.TargetId).ToListAsync();
         foreach (var g in await db.Groups.Where(g => groupIds.Contains(g.Id))
@@ -718,6 +725,15 @@ public static class AdminEndpoints
                     break;
                 case ReportTargetType.Message:
                     await Social.DirectMessageEndpoints.UnsendAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), report.TargetId, default, byLogIt: true);
+                    break;
+                case ReportTargetType.GroupPost:
+                    var gpost = await db.GroupPosts.FirstOrDefaultAsync(p => p.Id == report.TargetId);
+                    if (gpost is not null && gpost.DeletedAt is null)
+                        await Social.GroupPostEndpoints.RemovePostAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), gpost, false, now);
+                    break;
+                case ReportTargetType.GroupComment:
+                    var gcomment = await db.GroupComments.FirstOrDefaultAsync(c => c.Id == report.TargetId);
+                    if (gcomment is not null) (gcomment.Body, gcomment.DeletedAt) = ("", now);
                     break;
                 case ReportTargetType.Group:
                     var group = await db.Groups.FirstOrDefaultAsync(g => g.Id == report.TargetId);

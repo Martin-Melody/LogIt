@@ -350,6 +350,7 @@ api.MapStoryEndpoints();
 api.MapGroupEndpoints();
 api.MapEventEndpoints();
 api.MapBoardEndpoints();
+api.MapGroupPostEndpoints();
 api.MapPhotoEndpoints();
 api.MapVoiceEndpoints();
 
