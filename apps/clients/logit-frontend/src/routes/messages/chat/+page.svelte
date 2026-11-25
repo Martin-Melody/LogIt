@@ -4,10 +4,13 @@
      accept or reply. "Seen" only with read receipts on for both. A message sent offline waits,
      marked "Not sent yet", and goes when the connection is back. -->
 <script lang="ts">
+  import { muteItems } from "$lib/features/groups/muteItems";
   import { onMount, tick } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
+  import { groupsApi } from "@logit/core/api/groupsApi";
+  import { VolumeX } from "lucide-svelte";
   import { Ban, Calendar, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, Mic, MoreHorizontal, Pencil, Plus, Send, Settings2, Trash2, Undo2, User, Users, X } from "lucide-svelte";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
   import { eventsApi, type GroupEvent } from "@logit/core/api/eventsApi";
@@ -77,6 +80,28 @@
   let editing = $state<DmMessage | null>(null);
   let confirmUnsend = $state<DmMessage | null>(null);
   let confirmBlock = $state(false);
+  let confirmRemove = $state<DmMessage | null>(null);
+  let muting = $state<DmMessage | null>(null);
+
+  async function removeAsModerator(m: DmMessage) {
+    if (!chat || !group) return;
+    try {
+      await groupsApi.removeMessage(group.id, m.id);
+      chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? { ...unsent(x), removedByModerator: true } : x)) };
+    } catch {
+      toast.error("Couldn't remove it. Try again.");
+    }
+  }
+
+  async function muteSender(m: DmMessage, minutes: number) {
+    if (!group || !m.from) return;
+    try {
+      await groupsApi.mute(group.id, m.from.username, minutes);
+      toast.success(`${senderName(m)} is muted in the chat`);
+    } catch (e) {
+      toast.error(e instanceof ApiError && e.status === 403 ? "Only organisers can mute other moderators or organisers." : "Couldn't do that. Try again.");
+    }
+  }
 
   async function block() {
     if (!chat?.other) return;
@@ -97,9 +122,16 @@
     return [
       ...(canEdit(m) ? [{ icon: Pencil, label: "Edit", onSelect: () => { editing = m; draft = m.body; } }] : []),
       ...(m.body ? [{ icon: Copy, label: "Copy text", onSelect: () => void navigator.clipboard?.writeText(m.body).then(() => toast.success("Copied")) }] : []),
+      // A group's organisers and moderators (canvas D2): remove it for everyone, mute the sender.
+      ...(!m.mine && group && chat?.canModerate
+        ? [
+            { icon: Trash2, label: "Remove message", destructive: true, onSelect: () => (confirmRemove = m) },
+            ...(m.from ? [{ icon: VolumeX, label: `Mute ${senderName(m)} in the chat`, onSelect: () => (muting = m) }] : []),
+          ]
+        : []),
       ...(m.mine
         ? [{ icon: Undo2, label: "Unsend", destructive: true, onSelect: () => (confirmUnsend = m) }]
-        : [{ icon: Flag, label: "Report", destructive: true, onSelect: () => (reporting = { type: "Message", id: m.id, what: "message" }) }]),
+        : [{ icon: Flag, label: group ? "Report to LogIt" : "Report", destructive: true, onSelect: () => (reporting = { type: "Message", id: m.id, what: "message" }) }]),
     ];
   });
 
@@ -295,7 +327,7 @@
   {#if m.voiceUrl || m.voiceHidden}<VoiceMessage voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />{/if}
   {#if m.body}<p class="{inGroup ? 'max-w-full' : 'max-w-[78%]'} whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
   {#if m.deleted}
-    <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</p>
+    <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.removedByModerator ? "Removed by a moderator" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</p>
   {:else if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
 {/snippet}
 
@@ -402,6 +434,10 @@
         <button type="button" class="h-11 rounded-lg bg-primary text-sm font-semibold text-primary-foreground" onclick={accept}>Accept</button>
       </div>
     </div>
+  {:else if chat && chat.mutedUntilMs}
+    <p class="flex shrink-0 items-center gap-2.5 border-t border-border px-4 pb-5 pt-3.5 text-[14px] leading-snug text-muted-foreground">
+      <VolumeX class="size-[18px] shrink-0" />A moderator muted you in this chat until {new Date(chat.mutedUntilMs).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}. You can still read it, and everything else in the group works.
+    </p>
   {:else if chat && !chat.canSend}
     {#if chat.messages.length > 0}<p class="shrink-0 border-t border-border px-4 py-3 text-center text-[13px] text-muted-foreground">{chat.why}</p>{/if}
   {:else if chat && recording}
@@ -482,6 +518,20 @@
 {#if reporting}
   <ReportSheet open targetType={reporting.type} targetId={reporting.id} what={reporting.what} onclose={() => (reporting = null)} />
 {/if}
+<ConfirmDialog
+  open={!!confirmRemove}
+  onOpenChange={(v) => { if (!v) confirmRemove = null; }}
+  title="Remove this message?"
+  description="It's removed for everyone in the group and shows as removed by a moderator."
+  confirmLabel="Remove"
+  onConfirm={() => { const m = confirmRemove; confirmRemove = null; if (m) void removeAsModerator(m); }}
+/>
+<ActionSheet
+  open={!!muting}
+  onOpenChange={(v) => { if (!v) muting = null; }}
+  title={muting ? `Mute ${senderName(muting)} in the chat` : ""}
+  items={muteItems(muting, (m, min) => void muteSender(m, min))}
+/>
 <ConfirmDialog
   open={confirmBlock}
   onOpenChange={(v) => (confirmBlock = v)}

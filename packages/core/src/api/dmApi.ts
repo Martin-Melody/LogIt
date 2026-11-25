@@ -59,6 +59,8 @@ export interface DmMessage {
   deleted: boolean;
   /** Removed by LogIt after a report. */
   removedByLogIt: boolean;
+  /** Removed by one of the group's moderators. */
+  removedByModerator?: boolean;
   /** In a group: who sent it (null for your own). */
   from?: (DmPerson & { id: string }) | null;
 }
@@ -82,6 +84,10 @@ export interface DmChat {
   messages: DmMessage[];
   /** A group's chat. */
   group?: DmGroup | null;
+  /** In a group: you're an organiser or moderator. */
+  canModerate?: boolean;
+  /** In a group: you're muted until then. */
+  mutedUntilMs?: number | null;
 }
 
 /** Who a message goes to: a username, or a thread (a deleted account has no username). */

@@ -347,7 +347,7 @@
           </div>
         {/if}
         {#if m.deleted}
-          <span class="rounded-xl border border-border px-3 py-2 text-[13px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</span>
+          <span class="rounded-xl border border-border px-3 py-2 text-[13px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.removedByModerator ? "Removed by a moderator" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</span>
         {/if}
         </div>
         {#if !m.deleted}

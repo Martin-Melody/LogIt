@@ -11,7 +11,9 @@ export const groupLink = (code: string, server: string = apiBaseUrl()) => linkFo
 
 export const GROUP_KINDS = ["Gym", "Club", "Team", "Friends"] as const;
 export type GroupKind = (typeof GROUP_KINDS)[number];
-export type GroupRole = "Member" | "Organiser";
+export type GroupRole = "Member" | "Organiser" | "Moderator";
+/** Organisers and moderators keep a group civil; only organisers run it. */
+export const canModerate = (role: GroupRole) => role === "Organiser" || role === "Moderator";
 /** Every chat message; events, notes and mentions (the default); off. */
 export type GroupNotify = "All" | "Important" | "Off";
 /** Who can find and join (canvas G11): invite only (the default), findable with approval, findable and open. */
@@ -39,14 +41,30 @@ export interface Group extends GroupBrief {
   /** A few faces for the member row: people you follow first. */
   preview: GroupPerson[];
   access: GroupAccess;
-  /** Requests waiting to join (organisers only). */
+  /** Requests waiting to join (organisers and moderators). */
   requests: number;
+  /** Reported messages waiting (organisers and moderators). */
+  reports: number;
+  /** You're muted in the chat until then. */
+  mutedUntilMs: number | null;
 }
 
 export interface GroupMember {
   user: GroupPerson;
   role: GroupRole;
   joinedAtMs: number;
+  mutedUntilMs: number | null;
+}
+
+/** A reported message in a group's chat (canvas D3); never who reported it. */
+export interface GroupReport {
+  messageId: string;
+  body: string;
+  photoUrl: string | null;
+  sender: GroupPerson | null;
+  reasons: string[];
+  count: number;
+  latestAtMs: number;
 }
 
 export interface GroupPreview extends GroupBrief {
@@ -106,6 +124,12 @@ export const groupsApi = {
   cancelRequest: (id: string) => apiClient.fetch<void>(`/groups/${id}/request`, { method: "DELETE" }),
   requests: (id: string) => apiClient.fetch<GroupRequest[]>(`/groups/${id}/requests`),
   approve: (id: string, username: string) => apiClient.fetch<void>(`/groups/${id}/requests/${encodeURIComponent(username)}`, { method: "POST" }),
+  /** Mute someone in the chat for `minutes`, or lift it (null). */
+  mute: (id: string, username: string, minutes: number | null) =>
+    apiClient.fetch<void>(`/groups/${id}/members/${encodeURIComponent(username)}/mute`, json("PUT", { minutes })),
+  removeMessage: (id: string, messageId: string) => apiClient.fetch<void>(`/groups/${id}/messages/${messageId}`, { method: "DELETE" }),
+  reports: (id: string) => apiClient.fetch<GroupReport[]>(`/groups/${id}/reports`),
+  keep: (id: string, messageId: string) => apiClient.fetch<void>(`/groups/${id}/reports/${messageId}/keep`, { method: "POST" }),
   decline: (id: string, username: string) => apiClient.fetch<void>(`/groups/${id}/requests/${encodeURIComponent(username)}`, { method: "DELETE" }),
 };
 
