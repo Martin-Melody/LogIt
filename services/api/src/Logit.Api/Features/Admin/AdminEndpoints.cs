@@ -588,6 +588,7 @@ public static class AdminEndpoints
         var (to, username) = (user.Email, user.Username);
         await AdminLog.ForgetAsync(db, user.Id);
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
+        await Social.GroupEndpoints.ForgetAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), user.Id);
         db.Users.Remove(user);
         AdminLog.Add(db, http, "user.delete", user);
         await db.SaveChangesAsync();
@@ -674,6 +675,23 @@ public static class AdminEndpoints
                 photoUrl = st.PhotoId is { } p ? Logit.Api.Features.Photos.PhotoEndpoints.UrlOf(p) : null,
             };
 
+        // A reported group: its name, place and pinned note, and who organises it.
+        var groupIds = await db.Reports.Where(r => r.TargetType == ReportTargetType.Group).Select(r => r.TargetId).ToListAsync();
+        foreach (var g in await db.Groups.Where(g => groupIds.Contains(g.Id))
+                     .Select(g => new
+                     {
+                         g.Id, g.Name, g.Place, g.Note, g.PhotoId,
+                         Author = g.Members.Where(m => m.Role == GroupRole.Organiser).OrderBy(m => m.JoinedAt).Select(m => m.User.Username).FirstOrDefault(),
+                     }).ToListAsync())
+            previews[g.Id] = new
+            {
+                kind = "group",
+                Body = $"{g.Name}{(g.Place is null ? "" : $" · {g.Place}")}{(g.Note is null ? "" : $"\nPinned: {g.Note}")}",
+                deleted = false,
+                Author = g.Author ?? "nobody",
+                photoUrl = g.PhotoId is { } p ? Logit.Api.Features.Photos.PhotoEndpoints.UrlOf(p) : null,
+            };
+
         return Results.Ok(new { reports, previews });
     }
 
@@ -700,6 +718,11 @@ public static class AdminEndpoints
                     break;
                 case ReportTargetType.Message:
                     await Social.DirectMessageEndpoints.UnsendAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), report.TargetId, default, byLogIt: true);
+                    break;
+                case ReportTargetType.Group:
+                    var group = await db.Groups.FirstOrDefaultAsync(g => g.Id == report.TargetId);
+                    if (group is not null)
+                        await Social.GroupEndpoints.DeleteGroupAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), group);
                     break;
                 case ReportTargetType.Story:
                     var story = await db.Stories.AsNoTracking().FirstOrDefaultAsync(st => st.Id == report.TargetId);

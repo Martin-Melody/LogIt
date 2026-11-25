@@ -109,6 +109,8 @@ public static class ModerationEndpoints
                 && db.DmMembers.Any(x => x.ThreadId == m.ThreadId && x.UserId == callerId)),
             // Someone else's story you can see.
             ReportTargetType.Story => await StoryEndpoints.Visible(db, callerId, DateTime.UtcNow).AnyAsync(s => s.Id == req.TargetId && s.AuthorId != callerId),
+            // A group you're in.
+            ReportTargetType.Group => await db.GroupMembers.AnyAsync(m => m.GroupId == req.TargetId && m.UserId == callerId),
             _ => false,
         };
         if (!targetExists) return Results.NotFound();

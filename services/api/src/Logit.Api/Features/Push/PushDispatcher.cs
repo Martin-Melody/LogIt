@@ -52,7 +52,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             .Where(n => n.PushedAt == null && (n.CreatedAt < tooOld || !db.PushDevices.Any(d => d.UserId == n.UserId)))
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.PushedAt, now), ct);
 
-        var pending = await db.Notifications.Include(n => n.Actor)
+        var pending = await db.Notifications.Include(n => n.Actor).Include(n => n.Group)
             .Where(n => n.PushedAt == null)
             .OrderBy(n => n.CreatedAt)
             .Take(2000)
@@ -81,7 +81,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             if (wanted.Count == 0 || InQuiet(settings, now)) continue;
 
             // Coaching and cheers go straight away; a cheer is no use an hour after the workout.
-            var instant = wanted.Where(n => Of(n.Type) is Kind.Coaching or Kind.Cheers).ToList();
+            var instant = wanted.Where(n => Of(n.Type) is Kind.Coaching or Kind.Cheers or Kind.Groups).ToList();
             List<Notification> batch;
             if (instant.Count < wanted.Count && (settings.LastBundleAt is null || now - settings.LastBundleAt >= BundleGap))
             {
@@ -168,31 +168,64 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         var toRecipient = pending
             .SelectMany(m => recipients.Where(r => r.ThreadId == m.ThreadId && r.UserId != m.SenderId).Select(r => (r, m)))
             .GroupBy(x => x.r.UserId);
+        // Group chats: the group's name, and each member's choice (every message; mentions only; off).
+        var threadIds = pending.Select(m => m.ThreadId).Distinct().ToList();
+        var groups = await db.DmThreads.Where(t => threadIds.Contains(t.Id) && t.GroupId != null)
+            .Select(t => new { t.Id, GroupId = t.GroupId!.Value, t.Group!.Name }).ToDictionaryAsync(t => t.Id, ct);
+        var groupIds = groups.Values.Select(g => g.GroupId).ToList();
+        var levels = await db.GroupMembers.Where(m => groupIds.Contains(m.GroupId))
+            .Select(m => new { m.GroupId, m.UserId, m.Notify, m.User.Username }).ToListAsync(ct);
         foreach (var m in pending) m.PushedAt = now;
         foreach (var group in toRecipient)
         {
             if (!await db.PushDevices.AnyAsync(d => d.UserId == group.Key, ct)) continue;
             var settings = await SettingsFor(db, group.Key, ct);
             if (!settings.Messages || settings.PausedUntil > now) continue;
-            var wanted = group.Where(x => x.r.Accepted && !(x.r.LastReadAt >= x.m.CreatedAt) && x.m.Sender is not null).Select(x => x.m).ToList();
+            var blocked = await db.Blocks.Where(b => b.BlockerId == group.Key || b.BlockedId == group.Key)
+                .Select(b => b.BlockerId == group.Key ? b.BlockedId : b.BlockerId).ToListAsync(ct);
+            var wanted = group.Where(x => x.r.Accepted && !(x.r.LastReadAt >= x.m.CreatedAt) && x.m.Sender is not null && !blocked.Contains(x.m.Sender.Id))
+                .Select(x => x.m).ToList();
             if (wanted.Count == 0) continue;
             if (InQuiet(settings, now))
             {
                 foreach (var m in wanted) m.PushedAt = null; // held until quiet time ends
                 continue;
             }
-            var names = wanted.AsEnumerable().Reverse().Select(m => m.Sender!).DistinctBy(u => u.Id).Select(NameOf).ToList();
-            var message = new PushMessage(
-                names.Count == 1 ? names[0] : names.Count == 2 ? $"{names[0]} and {names[1]}" : $"{names[0]} and {names.Count - 1} others",
-                names.Count > 1 ? $"{wanted.Count} messages" : wanted.Count == 1 ? "sent you a message" : $"sent you {wanted.Count} messages",
-                "messages",
-                wanted.Select(m => m.ThreadId).Distinct().Count() == 1
-                    ? new Dictionary<string, string> { ["type"] = "DirectMessage", ["threadId"] = wanted[0].ThreadId.ToString() }
-                    : new Dictionary<string, string> { ["type"] = "DirectMessage" });
-            sent += await SendAsync(db, sender, group.Key, message, ct);
+            var direct = wanted.Where(m => !groups.ContainsKey(m.ThreadId)).ToList();
+            if (direct.Count > 0)
+            {
+                var names = direct.AsEnumerable().Reverse().Select(m => m.Sender!).DistinctBy(u => u.Id).Select(NameOf).ToList();
+                var message = new PushMessage(
+                    names.Count == 1 ? names[0] : names.Count == 2 ? $"{names[0]} and {names[1]}" : $"{names[0]} and {names.Count - 1} others",
+                    names.Count > 1 ? $"{direct.Count} messages" : direct.Count == 1 ? "sent you a message" : $"sent you {direct.Count} messages",
+                    "messages",
+                    direct.Select(m => m.ThreadId).Distinct().Count() == 1
+                        ? new Dictionary<string, string> { ["type"] = "DirectMessage", ["threadId"] = direct[0].ThreadId.ToString() }
+                        : new Dictionary<string, string> { ["type"] = "DirectMessage" });
+                sent += await SendAsync(db, sender, group.Key, message, ct);
+            }
+            foreach (var chat in wanted.Where(m => groups.ContainsKey(m.ThreadId)).GroupBy(m => m.ThreadId))
+            {
+                var g = groups[chat.Key];
+                var me = levels.FirstOrDefault(l => l.GroupId == g.GroupId && l.UserId == group.Key);
+                if (me is null || me.Notify == GroupNotify.Off) continue;
+                var mentions = chat.Where(m => Mentions(m.Body, me.Username)).ToList();
+                var messages = me.Notify == GroupNotify.All ? chat.ToList() : mentions;
+                if (messages.Count == 0) continue;
+                var who = NameOf(messages[^1].Sender!);
+                var body = mentions.Count > 0 && messages.Count == 1 ? $"{who} mentioned you"
+                    : messages.Count == 1 ? $"{who} sent a message" : $"{messages.Count} new messages";
+                sent += await SendAsync(db, sender, group.Key, new PushMessage(g.Name, body, "messages",
+                    new Dictionary<string, string> { ["type"] = "DirectMessage", ["threadId"] = chat.Key.ToString() }), ct);
+            }
         }
         return sent;
     }
+
+    /// "@ava" in a group message (not "email@ava.ie" or "@avalanche").
+    public static bool Mentions(string body, string username) =>
+        System.Text.RegularExpressions.Regex.IsMatch(body, $@"(?<![\w@.])@{System.Text.RegularExpressions.Regex.Escape(username)}(?![\w])",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     /// A user's choices; a row with the defaults is made the first time (it also keeps LastBundleAt).
     private static async Task<PushSettings> SettingsFor(AppDbContext db, Guid userId, CancellationToken ct)
@@ -217,7 +250,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
 
     private static string NameOf(User u) => string.IsNullOrWhiteSpace(u.DisplayName) ? u.Username : u.DisplayName;
 
-    public enum Kind { Likes, Comments, Follows, Coaching, Cheers }
+    public enum Kind { Likes, Comments, Follows, Coaching, Cheers, Groups }
 
     public static Kind Of(NotificationType type) => type switch
     {
@@ -225,6 +258,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Comment or NotificationType.Reply or NotificationType.Mention or NotificationType.Quote => Kind.Comments,
         NotificationType.Follow or NotificationType.FollowRequest or NotificationType.FollowAccepted => Kind.Follows,
         NotificationType.Cheer => Kind.Cheers,
+        NotificationType.GroupNote => Kind.Groups,
         _ => Kind.Coaching,
     };
 
@@ -237,6 +271,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             Kind.Comments => From(s.Comments),
             Kind.Follows => s.Follows,
             Kind.Cheers => s.Cheers,
+            // The group's own notification choice was applied when the notification was made.
+            Kind.Groups => s.Messages,
             _ => s.Coaching,
         };
     }
@@ -272,6 +308,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.CoachPaymentFailed => "couldn't take your coaching payment",
         NotificationType.Cheer => "is cheering you on",
         NotificationType.StoryCheer => "cheered your story",
+        NotificationType.GroupNote => n.Group is null ? "pinned a note" : $"pinned a note in {n.Group.Name}",
         _ => "sent you something",
     };
 
@@ -285,6 +322,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.FollowRequest => ("follow request", "follow requests"),
         NotificationType.FollowAccepted => ("accepted request", "accepted requests"),
         NotificationType.Cheer => ("cheer", "cheers"),
+        NotificationType.GroupNote => ("group note", "group notes"),
         _ => ("coaching update", "coaching updates"),
     };
 

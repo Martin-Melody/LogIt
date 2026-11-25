@@ -346,6 +346,7 @@ api.MapTrainingEndpoints();
 api.MapFriendInviteEndpoints();
 api.MapDirectMessageEndpoints();
 api.MapStoryEndpoints();
+api.MapGroupEndpoints();
 api.MapPhotoEndpoints();
 api.MapVoiceEndpoints();
 
