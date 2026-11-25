@@ -192,7 +192,7 @@ export type ReportReason =
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
 export type NotificationKind =
-  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer" | "GroupNote" | "GroupRequest" | "GroupApproved";
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer" | "GroupNote" | "GroupRequest" | "GroupApproved" | "GroupEvent" | "GroupEventChanged" | "GroupEventCancelled" | "GroupEventReminder";
 
 export interface SocialSettings {
   isPrivate: boolean;
@@ -275,6 +275,8 @@ export interface ApiNotification {
   postBody: string | null;
   /** GroupNote: which group. */
   group?: { id: string; name: string } | null;
+  /** The GroupEvent… kinds: which event. */
+  event?: { id: string; title: string; startsAt: string } | null;
 }
 
 export interface NotificationPage {
