@@ -147,7 +147,8 @@
 {#if stories.watching !== null}<StoryViewer training={stories.training} onclose={() => (stories.watching = null)} />{/if}
 {#if stories.picking}
   <ShareCardSheet title="Add to your story" onclose={() => (stories.picking = false)}
-    onpick={(card) => { stories.picking = false; stories.adding = { cards: [{ label: "", ...card }], fromWorkout: false }; }} />
+    onpick={(card) => { stories.picking = false; stories.adding = { cards: [{ label: "", ...card }], fromWorkout: false }; }}
+    onphoto={(photo) => { stories.picking = false; stories.adding = { cards: [], fromWorkout: false, photo }; }} />
 {/if}
-{#if stories.adding}<AddStorySheet cards={stories.adding.cards} fromWorkout={stories.adding.fromWorkout} onclose={() => (stories.adding = null)} />{/if}
+{#if stories.adding}<AddStorySheet cards={stories.adding.cards} fromWorkout={stories.adding.fromWorkout} photo={stories.adding.photo} onclose={() => (stories.adding = null)} />{/if}
 <ModeWatcher defaultMode="system" modeStorageKey="logit:mode" />

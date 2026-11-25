@@ -6,6 +6,7 @@
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ReportReason, type ReportTargetType } from "@logit/core/api/socialApi";
   import { toast } from "svelte-sonner";
+  import * as RadioGroup from "$lib/components/ui/radio-group";
 
   interface Props {
     open: boolean;
@@ -73,12 +74,11 @@
 
     <div class="overflow-y-auto px-4 py-3 flex flex-col gap-1">
       <p class="text-xs text-muted-foreground mb-1">Why are you reporting this?</p>
-      {#each REASONS as r (r.value)}
-        <label class="flex items-center gap-3 py-2.5 text-sm cursor-pointer">
-          <input type="radio" name="reason" value={r.value} bind:group={reason} class="accent-primary" />
-          {r.label}
-        </label>
-      {/each}
+      <RadioGroup.Root value={reason ?? ""} aria-label="Why are you reporting this?" onValueChange={(v) => (reason = v as ReportReason)}>
+        {#each REASONS as r (r.value)}
+          <label class="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[15px]">{r.label}<RadioGroup.Item value={r.value} /></label>
+        {/each}
+      </RadioGroup.Root>
 
       <textarea
         bind:value={note}

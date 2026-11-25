@@ -897,7 +897,7 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CardJson")
-                        .HasMaxLength(4000)
+                        .HasMaxLength(4400)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CardType")
@@ -1711,6 +1711,15 @@ namespace Logit.Api.Migrations
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("PhotoHeight")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PhotoWidth")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

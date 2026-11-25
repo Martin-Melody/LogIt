@@ -1,8 +1,8 @@
 <!-- "Share a workout or record" from a chat's + button: your recent finished workouts and your
-     records, one tap sends it as a card. -->
+     records, one tap sends it as a card. As the "Your story" picker it also offers a photo. -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Dumbbell, Trophy } from "lucide-svelte";
+  import { Camera, Dumbbell, Trophy } from "lucide-svelte";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { getWorkoutRepo } from "$lib/data/repoProvider";
@@ -10,8 +10,15 @@
   import { cardTitle, readCard, recordCard, workoutCard } from "@logit/core/domain/messageCard";
   import type { WorkoutSession } from "@logit/core/domain/workout";
   import { dayTime } from "$lib/features/friends/dmTime";
+  import { pickStoryPhoto } from "$lib/features/friends/stories.svelte";
 
-  const { onpick, onclose, title = "Share a workout or record" }: { onpick: (card: { type: string; json: string }) => void; onclose: () => void; title?: string } = $props();
+  const { onpick, onphoto, onclose, title = "Share a workout or record" }: {
+    onpick: (card: { type: string; json: string }) => void;
+    /** Offer "A photo" too (the story picker): called with the chosen photo. */
+    onphoto?: (photo: string) => void;
+    onclose: () => void;
+    title?: string;
+  } = $props();
 
   let tab = $state<"workouts" | "records">("workouts");
   let sessions = $state<WorkoutSession[] | null>(null);
@@ -30,6 +37,10 @@
 <BottomSheet label={title} {onclose}>
   <div class="flex flex-col gap-3 px-4 pb-4">
     <h2 class="text-[17px] font-semibold">{title}</h2>
+    {#if onphoto}
+      <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-lg border border-border text-[15px] font-semibold"
+        onclick={async () => { const p = await pickStoryPhoto(); if (p) onphoto(p); }}><Camera class="size-[18px]" />A photo</button>
+    {/if}
     <div class={segmentTrack} role="tablist" aria-label="What to share">
       <button type="button" role="tab" aria-selected={tab === "workouts"} class={segment(tab === "workouts")} onclick={() => (tab = "workouts")}>Workouts</button>
       <button type="button" role="tab" aria-selected={tab === "records"} class={segment(tab === "records")} onclick={() => (tab = "records")}>Records</button>

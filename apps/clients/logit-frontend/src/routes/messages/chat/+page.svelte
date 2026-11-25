@@ -18,13 +18,13 @@
   import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
   import { pickImageFile } from "$lib/platform/filePick";
   import { resizeImageFile } from "$lib/platform/imageResize";
-  import { uploadPhoto } from "@logit/core/api/photosApi";
+  import { photoSrc, uploadPhoto } from "@logit/core/api/photosApi";
   import { ApiError } from "@logit/core/api/client";
   import MessageCard from "$lib/components/social/MessageCard.svelte";
   import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import { readCard, readStoryQuote } from "@logit/core/domain/messageCard";
+  import { readCard, readStoryPhoto, readStoryQuote } from "@logit/core/domain/messageCard";
   import { toast } from "svelte-sonner";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -303,9 +303,12 @@
         {#if gap(chat.messages, i)}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(m.createdAtMs, now)}</p>{/if}
         {@const story = m.cardType === "Story"}
         {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
+        {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
         <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
-          {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
-          {#if card}<MessageCard {card} mine={m.mine} />{/if}
+          {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
+          {#if storyPhoto}
+            <div class="relative aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
+          {:else if card}<MessageCard {card} mine={m.mine} />{/if}
           {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
           {#if m.voiceUrl || m.voiceHidden}<VoiceMessage voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />{/if}
           {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}

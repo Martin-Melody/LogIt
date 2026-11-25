@@ -10,6 +10,7 @@
   import PlusIcon from "@lucide/svelte/icons/plus";
   import ImageIcon from "@lucide/svelte/icons/image";
   import ChatPhoto from "./ChatPhoto.svelte";
+  import { photoSrc } from "@logit/core/api/photosApi";
   import ChatVoice from "./ChatVoice.svelte";
   import VoiceRecorder from "./VoiceRecorder.svelte";
   import MicIcon from "@lucide/svelte/icons/mic";
@@ -20,7 +21,7 @@
   import { pickAndUploadPhoto } from "./chatPhoto";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
-  import { cardTitle, readCard, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
+  import { cardTitle, readCard, readStoryPhoto, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
 
   // One conversation between people (the phone's chat screen, design canvas M2), by username
   // or thread. Same server rules as the phone: a request you received shows Accept / Delete;
@@ -297,10 +298,13 @@
         {/if}
         {@const story = m.cardType === "Story"}
         {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
+        {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
         <div class="group flex shrink-0 items-center gap-1 {m.mine ? 'flex-row-reverse self-end' : 'self-start'} max-w-full {editing?.id === m.id ? 'opacity-60' : ''}">
         <div class="flex min-w-0 flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
-        {#if story}<span class="px-1 text-[11px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card ? "" : " · no longer available"}</span>{/if}
-        {#if card}
+        {#if story}<span class="px-1 text-[11px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
+        {#if storyPhoto}
+          <div class="aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black {m.mine ? 'self-end' : 'self-start'}"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
+        {:else if card}
           <div class="flex w-[280px] max-w-[70%] flex-col gap-1 rounded-xl border border-border bg-background px-3 py-2.5 {m.mine ? 'self-end' : 'self-start'}">
             <span class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {#if card.type === "PersonalRecord"}<TrophyIcon class="size-3" />New record{:else}<DumbbellIcon class="size-3" />Workout{/if}

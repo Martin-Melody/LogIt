@@ -3,7 +3,8 @@ namespace Logit.Api.Data.Entities;
 /// A story (friends overhaul, design canvas S1–S4; journey F4), copied from Instagram: it lasts
 /// 24 hours, follows the account's privacy (public: followers see it in their row; private:
 /// approved followers), can go to Close friends only, and can be hidden from chosen people.
-/// Made from a workout or a record (a card, the same format as a message card); photos later.
+/// Made from a workout or a record (a card, the same format as a message card), a photo, or a
+/// photo with the card on top. The photo is deleted with the story.
 public class Story
 {
     /// Permanent id (federation rule 3).
@@ -11,9 +12,12 @@ public class Story
     public Guid AuthorId { get; set; }
     public User Author { get; set; } = null!;
     public bool CloseFriends { get; set; }
-    /// "WorkoutSession" or "PersonalRecord", as in a message card.
+    /// "WorkoutSession" or "PersonalRecord", as in a message card; empty for a photo on its own.
     public string CardType { get; set; } = "";
     public string CardJson { get; set; } = "";
+    public Guid? PhotoId { get; set; }
+    public int PhotoWidth { get; set; }
+    public int PhotoHeight { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ExpiresAt { get; set; }
 }
