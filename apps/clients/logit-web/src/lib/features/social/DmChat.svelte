@@ -42,7 +42,9 @@
   let shareTab = $state<"workouts" | "records">("workouts");
   let sources = $state<ComposerSources | null>(null);
 
-  const name = $derived(chat?.other ? chat.other.displayName || chat.other.username : chat ? "Deleted account" : "");
+  const group = $derived(chat?.group ?? null);
+  const name = $derived(group ? group.name : chat?.other ? chat.other.displayName || chat.other.username : chat ? "Deleted account" : "");
+  const senderName = (m: DmMessage) => (m.from ? m.from.displayName || m.from.username : group ? "Someone" : name);
   const lastMine = $derived(chat?.messages.findLast((m) => m.mine) ?? null);
   const seen = $derived(!!chat?.seenAtMs && !!lastMine && chat.seenAtMs >= lastMine.createdAtMs && !!chat.messages.at(-1)?.mine);
 
@@ -257,7 +259,12 @@
 <div class="flex min-h-0 flex-1 flex-col">
   {#if chat}
     <header class="flex items-center gap-3 border-b border-border px-4 py-3">
-      {#if chat.other}
+      {#if group}
+        <span class="flex min-w-0 items-center gap-3">
+          <span aria-hidden="true" class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-muted text-[13px] font-bold">{#if group.photoUrl}<img src={photoSrc(group.photoUrl)} alt="" class="size-full object-cover" />{:else}{group.name.slice(0, 2).toUpperCase()}{/if}</span>
+          <span class="min-w-0"><span class="block truncate text-sm font-semibold">{group.name}</span><span class="block truncate text-xs text-muted-foreground">Group · {group.members} {group.members === 1 ? "member" : "members"}</span></span>
+        </span>
+      {:else if chat.other}
         <a href="/social/{chat.other.username}" class="flex min-w-0 items-center gap-3 hover:opacity-90">
           <Avatar name={name} url={chat.other.avatarUrl} size={36} />
           <span class="min-w-0"><span class="block truncate text-sm font-semibold">{name}</span><span class="block truncate text-xs text-muted-foreground">@{chat.other.username}</span></span>
@@ -301,6 +308,7 @@
         {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
         <div class="group flex shrink-0 items-center gap-1 {m.mine ? 'flex-row-reverse self-end' : 'self-start'} max-w-full {editing?.id === m.id ? 'opacity-60' : ''}">
         <div class="flex min-w-0 flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
+        {#if group && !m.mine && (i === 0 || chat.messages[i - 1]!.from?.id !== m.from?.id || chat.messages[i - 1]!.mine)}<span class="px-1 text-[11px] text-muted-foreground">{senderName(m)}</span>{/if}
         {#if story}<span class="px-1 text-[11px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
         {#if storyPhoto}
           <div class="aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black {m.mine ? 'self-end' : 'self-start'}"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
@@ -329,7 +337,7 @@
           </div>
         {/if}
         {#if m.deleted}
-          <span class="rounded-xl border border-border px-3 py-2 text-[13px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${name} unsent a message`}</span>
+          <span class="rounded-xl border border-border px-3 py-2 text-[13px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</span>
         {/if}
         </div>
         {#if !m.deleted}

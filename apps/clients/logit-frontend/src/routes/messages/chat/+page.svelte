@@ -1,5 +1,6 @@
 <!-- A chat with one person (design canvas M2), by ?u=<username> (also before the first message)
-     or ?t=<thread id>. A request you received shows Accept / Delete instead of the box until you
+     or ?t=<thread id>, or a group's chat (G3, by its thread id): names and faces on others'
+     messages, the header opens the group's page, no "Seen". A request you received shows Accept / Delete instead of the box until you
      accept or reply. "Seen" only with read receipts on for both. A message sent offline waits,
      marked "Not sent yet", and goes when the connection is back. -->
 <script lang="ts">
@@ -7,7 +8,8 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
-  import { Ban, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, Mic, MoreHorizontal, Pencil, Plus, Send, Trash2, Undo2, User, X } from "lucide-svelte";
+  import { Ban, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, Mic, MoreHorizontal, Pencil, Plus, Send, Settings2, Trash2, Undo2, User, Users, X } from "lucide-svelte";
+  import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
   import ReportSheet from "$lib/components/social/ReportSheet.svelte";
   import { socialApi } from "@logit/core/api/socialApi";
   import { longpress } from "$lib/swipe";
@@ -124,7 +126,12 @@
   let menuOpen = $state(false);
   let confirmDelete = $state(false);
 
-  const name = $derived(chat?.other ? chat.other.displayName || chat.other.username : chat ? "Deleted account" : "");
+  const group = $derived(chat?.group ?? null);
+  const name = $derived(group ? group.name : chat?.other ? chat.other.displayName || chat.other.username : chat ? "Deleted account" : "");
+  const senderName = (m: DmMessage) => (m.from ? m.from.displayName || m.from.username : group ? "Someone" : name);
+  // In a group, a run of messages from one person gets their name at the top and face at the bottom.
+  const sameRun = (list: DmMessage[], i: number, j: number) =>
+    j >= 0 && j < list.length && !list[j]!.mine && list[j]!.from?.id === list[i]!.from?.id && !gap(list, Math.max(i, j));
   // Waiting messages for this chat: by username or thread, whichever the page was opened with.
   const pending = $derived(
     outbox.items.filter(
@@ -264,10 +271,34 @@
   const gap = (list: DmMessage[], i: number) => i === 0 || list[i]!.createdAtMs - list[i - 1]!.createdAtMs > 3_600_000;
 </script>
 
+{#snippet content(m: DmMessage, inGroup: boolean)}
+  {@const story = m.cardType === "Story"}
+  {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
+  {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
+  {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
+  {#if storyPhoto}
+    <div class="relative aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
+  {:else if card}<MessageCard {card} mine={m.mine} />{/if}
+  {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
+  {#if m.voiceUrl || m.voiceHidden}<VoiceMessage voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />{/if}
+  {#if m.body}<p class="{inGroup ? 'max-w-full' : 'max-w-[78%]'} whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
+  {#if m.deleted}
+    <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</p>
+  {:else if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
+{/snippet}
+
 <div class="flex h-full flex-col">
   <PageHeader>
     <BackButton onclick={() => back("/messages")} />
-    {#if chat?.other}
+    {#if group}
+      <a href="/groups/{group.id}" class="flex min-w-0 flex-1 items-center gap-2.5 text-inherit no-underline">
+        <GroupAvatar name={group.name} src={group.photoUrl} size={36} />
+        <span class="flex min-w-0 flex-col">
+          <span class="truncate text-[15px] font-semibold leading-tight">{group.name}</span>
+          <span class="truncate text-[12px] text-muted-foreground">{group.members} {group.members === 1 ? "member" : "members"}</span>
+        </span>
+      </a>
+    {:else if chat?.other}
       <a href="/social/{chat.other.username}" class="flex min-w-0 flex-1 items-center gap-2.5 text-inherit no-underline">
         <PersonAvatar name={name} src={chat.other.avatarUrl} size={34} training={!!training} />
         <span class="flex min-w-0 flex-col">
@@ -294,28 +325,30 @@
       {/if}
       {#if chat.messages.length === 0 && pending.length === 0}
         <div class="m-auto flex flex-col items-center gap-2 text-center">
-          <PersonAvatar name={name} src={chat.other?.avatarUrl} size={72} />
+          {#if group}<GroupAvatar name={group.name} src={group.photoUrl} size={72} />{:else}<PersonAvatar name={name} src={chat.other?.avatarUrl} size={72} />{/if}
           <p class="text-[15px] font-semibold">{name}</p>
-          <p class="max-w-[30ch] text-sm text-muted-foreground">{chat.canSend ? "Say hello. Messages to people who don't follow you go to their requests." : chat.why}</p>
+          <p class="max-w-[30ch] text-sm text-muted-foreground">{group ? "Nothing here yet. Say hello to the group." : chat.canSend ? "Say hello. Messages to people who don't follow you go to their requests." : chat.why}</p>
         </div>
       {/if}
       {#each chat.messages as m, i (m.id)}
         {#if gap(chat.messages, i)}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(m.createdAtMs, now)}</p>{/if}
-        {@const story = m.cardType === "Story"}
-        {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
-        {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
-        <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
-          {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
-          {#if storyPhoto}
-            <div class="relative aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
-          {:else if card}<MessageCard {card} mine={m.mine} />{/if}
-          {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
-          {#if m.voiceUrl || m.voiceHidden}<VoiceMessage voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />{/if}
-          {#if m.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
-          {#if m.deleted}
-            <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.mine ? "You unsent a message" : `${name} unsent a message`}</p>
-          {:else if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
-        </div>
+        {#if group && !m.mine}
+          <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none items-end gap-2 {sameRun(chat.messages, i, i - 1) ? '' : 'mt-1.5'}">
+            <span class="w-7 shrink-0">
+              {#if !sameRun(chat.messages, i, i + 1)}
+                {#if m.from}<a href="/social/{m.from.username}" aria-label={senderName(m)}><PersonAvatar name={senderName(m)} src={m.from.avatarUrl} size={28} /></a>{:else}<PersonAvatar name={null} size={28} />{/if}
+              {/if}
+            </span>
+            <div class="flex min-w-0 max-w-[80%] flex-col items-start gap-1">
+              {#if !sameRun(chat.messages, i, i - 1)}<span class="px-1 text-[12px] text-muted-foreground">{senderName(m)}</span>{/if}
+              {@render content(m, true)}
+            </div>
+          </div>
+        {:else}
+          <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
+            {@render content(m, false)}
+          </div>
+        {/if}
       {/each}
       {#if seen}<p transition:fade={{ duration: 150 }} class="pr-1 text-right text-[12px] text-muted-foreground">Seen</p>{/if}
       {#each pending as p (p.clientId)}
@@ -400,7 +433,10 @@
   open={menuOpen}
   onOpenChange={(v) => (menuOpen = v)}
   title={name}
-  items={[
+  items={group ? [
+    { icon: Users, label: "Group page", onSelect: () => void goto(`/groups/${group.id}`) },
+    { icon: Settings2, label: "Your settings", onSelect: () => void goto(`/groups/${group.id}/settings`) },
+  ] : [
     ...(chat?.other ? [{ icon: User, label: "View profile", onSelect: () => void goto(`/social/${chat!.other!.username}`) }] : []),
     { icon: Trash2, label: "Delete chat", destructive: true, onSelect: () => (confirmDelete = true) },
     ...(chat?.other ? [{ icon: Flag, label: "Report", destructive: true, onSelect: () => (reporting = { type: "User", id: chat!.other!.id!, what: `@${chat!.other!.username}` }) }] : []),
@@ -415,7 +451,7 @@
   confirmLabel="Delete"
   onConfirm={deleteChat}
 />
-<ActionSheet open={!!picked} onOpenChange={(v) => { if (!v) picked = null; }} title={picked?.mine ? "Your message" : `${name}'s message`} items={messageActions} />
+<ActionSheet open={!!picked} onOpenChange={(v) => { if (!v) picked = null; }} title={picked?.mine ? "Your message" : `${picked ? senderName(picked) : name}'s message`} items={messageActions} />
 <ConfirmDialog
   open={!!confirmUnsend}
   onOpenChange={(v) => { if (!v) confirmUnsend = null; }}

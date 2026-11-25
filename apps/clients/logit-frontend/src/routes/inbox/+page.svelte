@@ -20,6 +20,7 @@
     TrendingDown,
     Target,
     ThumbsUp,
+    Pin,
   } from "lucide-svelte";
   import {
     followedByText,
@@ -192,6 +193,7 @@
       : t === "Repost" ? Repeat2
       : t === "Quote" ? Quote
       : t === "Cheer" || t === "StoryCheer" ? ThumbsUp
+      : t === "GroupNote" ? Pin
       : UserPlus;
   }
 
@@ -208,6 +210,7 @@
     if (n.type === "CoachPaymentFailed") return "couldn't take your coaching payment. Check your card in My coach";
     if (n.type === "Cheer") return "cheered you on";
     if (n.type === "StoryCheer") return "cheered your story";
+    if (n.type === "GroupNote") return n.group ? `pinned a note in ${n.group.name}` : "pinned a note in a group";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
@@ -216,6 +219,7 @@
     if (n.type === "CoachProgram") return "/splits";
     if (n.type === "CoachPaymentFailed") return "/clients";
     if (n.type === "Follow") return `/social/${n.actor.username}`;
+    if (n.type === "GroupNote") return n.group ? `/groups/${n.group.id}` : "/messages";
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }
 

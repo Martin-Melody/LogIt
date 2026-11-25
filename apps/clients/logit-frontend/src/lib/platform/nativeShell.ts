@@ -84,6 +84,9 @@ export function routeForAppLink(url: string): string | null {
   // A friend's invite: logit://f?c=logit-fr1:… or https://getlogit.app/f#logit-fr1:…
   const invite = url.match(/logit-fr1:[a-z0-9]+(?::[A-Za-z0-9_-]+)?/)?.[0];
   if (invite) return `/social/invite?c=${encodeURIComponent(invite)}`;
+  // A group's link: logit://g?c=logit-gr1:… or https://getlogit.app/g#logit-gr1:…
+  const group = url.match(/logit-gr1:[a-z0-9]+(?::[A-Za-z0-9_-]+)?/)?.[0];
+  if (group) return `/groups/join?c=${encodeURIComponent(group)}`;
   return null;
 }
 

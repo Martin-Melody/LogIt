@@ -1,10 +1,10 @@
-<!-- Messages (design canvas M1): chats with people and coach threads in one list, newest first,
+<!-- Messages (design canvas M1): chats with people, groups and coach threads in one list, newest first,
      Instagram's inbox. Message requests are a row at the top with their count; they never badge
      Social. Bold = unread; a green dot = training now. -->
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Ban, ChevronRight, Flag, MessageSquare, Trash2, User } from "lucide-svelte";
+  import { Ban, ChevronRight, Flag, MessageSquare, Trash2, User, Users } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -15,6 +15,8 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import PersonAvatar from "$lib/components/social/PersonAvatar.svelte";
+  import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
+  import GroupFormSheet from "$lib/components/social/GroupFormSheet.svelte";
   import { back } from "$lib/navigation";
   import { coachApi } from "@logit/core/api/coachApi";
   import { dmApi } from "@logit/core/api/dmApi";
@@ -37,6 +39,9 @@
     /** A chat with a person: its thread and their account id (report). */
     threadId?: string;
     userId?: string;
+    /** A group's chat: the group's id and member count. */
+    groupId?: string;
+    members?: number;
   };
 
   // Long-press a chat (Instagram's inbox): View profile, Delete chat, Report, Block.
@@ -46,6 +51,7 @@
   const rowActions = $derived.by(() => {
     const r = picked;
     if (!r || r.coach) return [];
+    if (r.groupId) return [{ icon: Users, label: "Group page", onSelect: () => void goto(`/groups/${r.groupId}`) }];
     return [
       ...(r.username ? [{ icon: User, label: "View profile", onSelect: () => void goto(`/social/${r.username}`) }] : []),
       { icon: Trash2, label: "Delete chat", destructive: true, onSelect: () => (confirm = { kind: "delete", row: r }) },
@@ -69,6 +75,7 @@
   }
 
   let rows = $state<Row[] | null>(null);
+  let creating = $state(false);
   let requests = $state(0);
   let training = $state<Set<string>>(new Set());
   let error = $state(false);
@@ -116,15 +123,17 @@
         ...chats.map((t) => ({
           key: t.id,
           href: `/messages/chat?t=${t.id}`,
-          name: t.other ? t.other.displayName || t.other.username : "Deleted account",
+          name: t.group ? t.group.name : t.other ? t.other.displayName || t.other.username : "Deleted account",
           username: t.other?.username ?? null,
-          avatarUrl: t.other?.avatarUrl ?? null,
-          preview: `${t.lastMine ? "You: " : ""}${t.lastBody}`,
+          avatarUrl: t.group ? t.group.photoUrl : (t.other?.avatarUrl ?? null),
+          preview: t.group && !t.lastBody && !t.lastMine && !t.lastBy ? "New group" : `${t.lastMine ? "You: " : t.lastBy ? `${t.lastBy}: ` : ""}${t.lastBody}`,
           atMs: t.lastAtMs,
           unread: t.unread,
           coach: false,
           threadId: t.id,
-          userId: t.other?.id,
+          userId: t.group ? undefined : t.other?.id,
+          groupId: t.group?.id,
+          members: t.group?.members,
         })),
         ...coach,
       ].sort((a, b) => b.atMs - a.atMs);
@@ -148,7 +157,8 @@
 <div class="flex flex-col pb-24">
   <PageHeader>
     <BackButton onclick={() => back("/social")} />
-    <h1 class="page-title">Messages</h1>
+    <h1 class="page-title flex-1">Messages</h1>
+    <button type="button" aria-label="New group" class="flex size-11 items-center justify-center text-muted-foreground" onclick={() => (creating = true)}><Users class="size-5" /></button>
   </PageHeader>
 
   {#if requests > 0}
@@ -170,7 +180,7 @@
   {:else if rows.length === 0}
     <div class="flex flex-col items-center gap-2 px-6 py-14 text-center text-muted-foreground">
       <MessageSquare class="size-6" />
-      <p class="text-sm">No messages yet. Open someone's profile and tap Message.</p>
+      <p class="text-sm">No messages yet. Open someone's profile and tap Message, or start a group.</p>
     </div>
   {:else}
     <ul data-guide="phone-messages-list">
@@ -178,10 +188,12 @@
         <li>
           <button type="button" class="flex w-full select-none items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/40" onclick={() => { if (!picked) void goto(r.href); }}
             use:longpress={() => { if (!r.coach) picked = r; }}>
-            <PersonAvatar name={r.name} src={r.avatarUrl} size={52} training={!!r.username && training.has(r.username)} />
+            {#if r.groupId}<GroupAvatar name={r.name} src={r.avatarUrl} size={52} />
+            {:else}<PersonAvatar name={r.name} src={r.avatarUrl} size={52} training={!!r.username && training.has(r.username)} />{/if}
             <span class="flex min-w-0 flex-1 flex-col gap-0.5">
               <span class="flex items-center gap-2 text-[15px] {r.unread ? 'font-semibold' : 'font-medium'}">
                 <span class="truncate">{r.name}</span>
+                {#if r.members}<span class="shrink-0 text-[13px] font-normal text-muted-foreground tabular-nums">· {r.members}</span>{/if}
                 {#if r.coach}<span class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Coach</span>{/if}
               </span>
               <span class="flex min-w-0 gap-1 text-sm {r.unread ? 'font-semibold text-foreground' : 'text-muted-foreground'}">
@@ -210,3 +222,4 @@
 {#if reporting?.userId}
   <ReportSheet open targetType="User" targetId={reporting.userId} what="@{reporting.username}" onclose={() => (reporting = null)} />
 {/if}
+{#if creating}<GroupFormSheet onclose={() => (creating = false)} />{/if}

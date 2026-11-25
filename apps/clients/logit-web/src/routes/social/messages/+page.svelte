@@ -5,6 +5,7 @@
   import MessageCircleIcon from "@lucide/svelte/icons/message-circle";
   import { dmApi, type DmThread, type DmTo } from "@logit/core/api/dmApi";
   import Avatar from "$lib/features/social/Avatar.svelte";
+  import { photoSrc } from "@logit/core/api/photosApi";
   import DmChat from "$lib/features/social/DmChat.svelte";
   import PrivacyCard from "$lib/features/social/PrivacyCard.svelte";
   import { dmBadge } from "$lib/features/social/socialData.svelte";
@@ -80,10 +81,12 @@
         {#each shown as t (t.id)}
           <button type="button" onclick={() => goto(`/social/messages?t=${t.id}`)}
             class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/60 {selected === t.id ? 'bg-muted' : ''}">
-            <Avatar name={t.other?.displayName ?? ""} url={t.other?.avatarUrl} size={40} />
+            {#if t.group}
+              <span aria-hidden="true" class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-muted text-sm font-bold">{#if t.group.photoUrl}<img src={photoSrc(t.group.photoUrl)} alt="" class="size-full object-cover" />{:else}{t.group.name.slice(0, 2).toUpperCase()}{/if}</span>
+            {:else}<Avatar name={t.other?.displayName ?? ""} url={t.other?.avatarUrl} size={40} />{/if}
             <span class="min-w-0 flex-1">
-              <span class="block truncate text-[13px] {t.unread ? 'font-semibold' : 'font-medium'}">{t.other ? t.other.displayName || t.other.username : "Deleted account"}</span>
-              <span class="flex gap-1 text-xs {t.unread ? 'font-semibold text-foreground' : 'text-muted-foreground'}"><span class="truncate">{t.lastMine ? "You: " : ""}{t.lastBody}</span><span class="shrink-0 font-normal text-muted-foreground">· {ago(t.lastAtMs)}</span></span>
+              <span class="block truncate text-[13px] {t.unread ? 'font-semibold' : 'font-medium'}">{t.group ? t.group.name : t.other ? t.other.displayName || t.other.username : "Deleted account"}</span>
+              <span class="flex gap-1 text-xs {t.unread ? 'font-semibold text-foreground' : 'text-muted-foreground'}"><span class="truncate">{t.lastMine ? "You: " : t.lastBy ? `${t.lastBy}: ` : ""}{t.lastBody || (t.group ? "New group" : "")}</span><span class="shrink-0 font-normal text-muted-foreground">· {ago(t.lastAtMs)}</span></span>
             </span>
             {#if t.unread}<span class="size-2 shrink-0 rounded-full bg-primary" aria-label="Unread"></span>{/if}
           </button>
