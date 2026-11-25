@@ -59,7 +59,8 @@ public static class GroupEndpoints
     public record RequestDto(PersonDto User, long AtMs, string? FollowedBy);
     public record CreateRequest(string Name, string? Kind, string? Place, Guid? PhotoId, string? Access = null);
     public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false, string? Access = null);
-    public record JoinRequest(bool OnBoard = true);
+    /// EventId: joining from an event in search, so you're going to it once you're in.
+    public record JoinRequest(bool OnBoard = true, Guid? EventId = null);
     public record NoteRequest(string Text, bool Notify = true);
     public record RoleRequest(string Role);
     public record MySettingsRequest(bool? OnBoard, string? Notify);
@@ -401,14 +402,21 @@ public static class GroupEndpoints
         if (await db.GroupMembers.CountAsync(m => m.UserId == me) >= MaxGroupsPerPerson)
             return Results.BadRequest(new { error = $"You're in {MaxGroupsPerPerson} groups. Leave one first." });
         var now = clock.GetUtcNow().UtcDateTime;
+        var goingTo = req?.EventId is { } eventId && await db.GroupEvents.AnyAsync(e => e.Id == eventId && e.GroupId == id && e.CancelledAt == null) ? eventId : (Guid?)null;
         if (invited || g.Access == GroupAccess.Open)
         {
             await AddMemberAsync(db, id, me, req?.OnBoard ?? true, now);
+            if (goingTo is { } ev) await GoingAsync(db, ev, me, now);
             return Results.Ok(new { id, status = "member" });
         }
-        if (!await db.GroupJoinRequests.AnyAsync(r => r.GroupId == id && r.UserId == me))
+        if (await db.GroupJoinRequests.FirstOrDefaultAsync(r => r.GroupId == id && r.UserId == me) is { } asked)
         {
-            db.GroupJoinRequests.Add(new GroupJoinRequest { GroupId = id, UserId = me, OnBoard = req?.OnBoard ?? true, CreatedAt = now });
+            if (goingTo is not null) asked.GoingTo = goingTo;
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            db.GroupJoinRequests.Add(new GroupJoinRequest { GroupId = id, UserId = me, OnBoard = req?.OnBoard ?? true, GoingTo = goingTo, CreatedAt = now });
             var organisers = await db.GroupMembers.Where(m => m.GroupId == id && m.Role == GroupRole.Organiser).Select(m => m.UserId).ToListAsync();
             db.Notifications.AddRange(organisers.Select(o => new Notification { UserId = o, ActorId = me, Type = NotificationType.GroupRequest, GroupId = id, CreatedAt = now }));
             try { await db.SaveChangesAsync(); }
@@ -454,7 +462,16 @@ public static class GroupEndpoints
         db.Notifications.Add(new Notification { UserId = request.UserId, ActorId = me, Type = NotificationType.GroupApproved, GroupId = id, CreatedAt = now });
         await db.Notifications.Where(n => n.GroupId == id && n.ActorId == request.UserId && n.Type == NotificationType.GroupRequest).ExecuteDeleteAsync();
         await AddMemberAsync(db, id, request.UserId, request.OnBoard, now);
+        if (request.GoingTo is { } ev) await GoingAsync(db, ev, request.UserId, now);
         return Results.NoContent();
+    }
+
+    private static async Task GoingAsync(AppDbContext db, Guid eventId, Guid userId, DateTime now)
+    {
+        if (await db.EventRsvps.FirstOrDefaultAsync(r => r.EventId == eventId && r.UserId == userId) is { } r) r.Going = true;
+        else db.EventRsvps.Add(new EventRsvp { EventId = eventId, UserId = userId, Going = true, UpdatedAt = now });
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateException) { /* answered at the same moment */ }
     }
 
     /// Declining tells nobody (as with follow requests).

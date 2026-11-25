@@ -1234,6 +1234,17 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Repeats")
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Sport")
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("StartsAt")
                         .HasColumnType("TEXT");
 
@@ -1243,6 +1254,10 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
+
+                    b.HasIndex("StartsAt");
 
                     b.HasIndex("GroupId", "StartsAt");
 
@@ -1281,6 +1296,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GoingTo")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("OnBoard")

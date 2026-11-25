@@ -37,6 +37,8 @@ public class GroupJoinRequest
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public bool OnBoard { get; set; } = true;
+    /// Asked from an event in search ("Ask to join"): marked going once let in.
+    public Guid? GoingTo { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

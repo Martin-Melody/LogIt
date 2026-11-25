@@ -357,7 +357,11 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.Property(x => x.Kind).HasMaxLength(16);
             e.Property(x => x.Place).HasMaxLength(120);
             e.Property(x => x.Details).HasMaxLength(1000);
+            e.Property(x => x.Sport).HasMaxLength(24);
+            e.Property(x => x.Repeats).HasMaxLength(60);
             e.HasIndex(x => new { x.GroupId, x.StartsAt });
+            e.HasIndex(x => x.SeriesId);
+            e.HasIndex(x => x.StartsAt);
             e.HasOne(x => x.Group).WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<EventRsvp>(e =>

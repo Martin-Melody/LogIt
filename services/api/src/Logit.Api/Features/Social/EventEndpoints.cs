@@ -12,6 +12,9 @@ namespace Logit.Api.Features.Social;
 public static class EventEndpoints
 {
     public static readonly string[] Kinds = ["Session", "Meet", "Race", "Social"];
+    public static readonly string[] Sports =
+        ["Strength", "Powerlifting", "Weightlifting", "Bodybuilding", "CrossFit", "Running", "Cycling", "Swimming", "Hyrox", "BJJ", "Boxing", "Yoga", "Other"];
+    public const int MaxRepeats = 120;
 
     public static void MapEventEndpoints(this IEndpointRouteBuilder app)
     {
@@ -19,6 +22,7 @@ public static class EventEndpoints
         app.MapPost("/groups/{groupId:guid}/events", Create).WithTags("Social").RequireAuthorization().RequireRateLimiting("social-write");
         var g = app.MapGroup("/events").WithTags("Social").RequireAuthorization();
         g.MapGet("/home", Home);
+        g.MapGet("/search", Search);
         g.MapGet("/{id:guid}", Get);
         g.MapPatch("/{id:guid}", Edit);
         g.MapPost("/{id:guid}/cancel", Cancel);
@@ -30,10 +34,16 @@ public static class EventEndpoints
     public record PersonDto(string Username, string DisplayName, string? AvatarUrl, Guid Id);
     /// Answer: true Going, false Can't make it, null not answered. GoingNames: a few of those
     /// going, for "Riya, Dev and 4 others".
+    /// Member: you're in its group (else it was found in search: GroupAccess and Requested say how to get in).
     public record EventDto(Guid Id, Guid GroupId, string GroupName, string Title, string Kind, long StartsAtMs, long? EndsAtMs, string? Place,
-        string? Details, bool Cancelled, int Going, bool? Answer, bool Pinned, List<PersonDto> GoingPeople, bool CanEdit);
+        string? Details, bool Cancelled, int Going, bool? Answer, bool Pinned, List<PersonDto> GoingPeople, bool CanEdit,
+        string? Sport, string? Repeats, bool Member, string GroupAccess, string? GroupPlace, int GroupMembers, bool Requested);
+    public record Occurrence(DateTime StartsAt, DateTime? EndsAt);
+    /// A repeating event: the phone works out the dates in its own time zone (so 7pm stays 7pm
+    /// across the clock change) and sends them as Dates, with Repeats to show. Scope on edit and
+    /// cancel: "one" (default) or "following" (this and every later date of the series).
     public record EventRequest(string? Title, string? Kind, DateTime? StartsAt, DateTime? EndsAt, string? Place, string? Details, bool Notify = true,
-        bool ClearEnd = false);
+        bool ClearEnd = false, string? Sport = null, List<Occurrence>? Dates = null, string? Repeats = null, string? Scope = null, bool ClearSport = false);
     public record AnswerRequest(bool? Going);
     public record PinRequest(bool Pinned);
     public record PeopleDto(List<PersonDto> Going, List<PersonDto> CantMakeIt);
@@ -53,6 +63,11 @@ public static class EventEndpoints
             Going = db.EventRsvps.Count(r => r.EventId == e.Id && r.Going == true),
             Mine = db.EventRsvps.Where(r => r.EventId == e.Id && r.UserId == me).Select(r => new { r.Going, r.Pinned }).FirstOrDefault(),
             Organiser = db.GroupMembers.Any(m => m.GroupId == e.GroupId && m.UserId == me && m.Role == GroupRole.Organiser),
+            Member = db.GroupMembers.Any(m => m.GroupId == e.GroupId && m.UserId == me),
+            e.Group.Access,
+            GroupPlace = e.Group.Place,
+            GroupMembers = db.GroupMembers.Count(m => m.GroupId == e.GroupId),
+            Requested = db.GroupJoinRequests.Any(r => r.GroupId == e.GroupId && r.UserId == me),
         }).ToListAsync();
         // A few faces per event: you first if you're going, then the earliest answers.
         var ids = rows.Select(r => r.Event.Id).ToList();
@@ -61,7 +76,8 @@ public static class EventEndpoints
             .GroupBy(r => r.EventId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.User.Id == me).Take(4).Select(r => Person(r.User)).ToList());
         return [.. rows.Select(r => new EventDto(r.Event.Id, r.Event.GroupId, r.GroupName, r.Event.Title, r.Event.Kind, Ms(r.Event.StartsAt),
             r.Event.EndsAt is { } end ? Ms(end) : null, r.Event.Place, r.Event.Details, r.Event.CancelledAt is not null, r.Going,
-            r.Mine?.Going, r.Mine?.Pinned ?? false, going.GetValueOrDefault(r.Event.Id) ?? [], r.Organiser))];
+            r.Mine?.Going, r.Mine?.Pinned ?? false, r.Member ? going.GetValueOrDefault(r.Event.Id) ?? [] : [], r.Organiser,
+            r.Event.Sport, r.Event.Repeats, r.Member, r.Access.ToString(), r.GroupPlace, r.GroupMembers, r.Requested))];
     }
 
     private static IQueryable<GroupEvent> Mine(AppDbContext db, Guid me) =>
@@ -97,23 +113,29 @@ public static class EventEndpoints
         if (member.Role != GroupRole.Organiser) return Results.Json(new { error = "Only the group's organisers can add events." }, statusCode: 403);
         var title = Clean(req.Title, 80);
         if (title is null) return Results.BadRequest(new { error = "Give the event a name." });
-        if (req.StartsAt is not { } start) return Results.BadRequest(new { error = "Choose when it starts." });
+        if (req.StartsAt is null && req.Dates is not { Count: > 0 }) return Results.BadRequest(new { error = "Choose when it starts." });
         var kind = req.Kind is null ? "Session" : Kinds.FirstOrDefault(k => k.Equals(req.Kind, StringComparison.OrdinalIgnoreCase));
         if (kind is null) return Results.BadRequest(new { error = "Choose Session, Meet, Race or Social." });
+        string? sport = null;
+        if (req.Sport is not null && (sport = Sports.FirstOrDefault(x => x.Equals(req.Sport, StringComparison.OrdinalIgnoreCase))) is null)
+            return Results.BadRequest(new { error = "That sport isn't on the list." });
         var now = clock.GetUtcNow().UtcDateTime;
-        var startsAt = Utc(start);
-        if (startsAt < now.AddMinutes(-5)) return Results.BadRequest(new { error = "That time has passed." });
-        DateTime? endsAt = req.EndsAt is { } end ? Utc(end) : null;
-        if (endsAt <= startsAt) return Results.BadRequest(new { error = "It has to end after it starts." });
-        if (await db.GroupEvents.CountAsync(e => e.GroupId == groupId && e.StartsAt > now) >= 100)
+        var dates = req.Dates is { Count: > 0 } d ? d : [new Occurrence(req.StartsAt!.Value, req.EndsAt)];
+        if (dates.Count > MaxRepeats) return Results.BadRequest(new { error = $"That's more than {MaxRepeats} dates. Pick an earlier end." });
+        var times = dates.Select(o => (Start: Utc(o.StartsAt), End: o.EndsAt is { } e ? Utc(e) : (DateTime?)null)).OrderBy(o => o.Start).ToList();
+        if (times[0].Start < now.AddMinutes(-5)) return Results.BadRequest(new { error = "That time has passed." });
+        if (times.Any(o => o.End <= o.Start)) return Results.BadRequest(new { error = "It has to end after it starts." });
+        if (await db.GroupEvents.CountAsync(e => e.GroupId == groupId && e.StartsAt > now) + times.Count > 300)
             return Results.BadRequest(new { error = "That's a lot of upcoming events. Cancel some first." });
 
-        var ev = new GroupEvent
+        Guid? series = times.Count > 1 ? Guid.NewGuid() : null;
+        var created = times.Select(o => new GroupEvent
         {
-            GroupId = groupId, Title = title, Kind = kind, StartsAt = startsAt, EndsAt = endsAt, Place = Clean(req.Place, 120),
-            Details = Clean(req.Details, 1000), CreatedById = me, CreatedAt = now,
-        };
-        db.GroupEvents.Add(ev);
+            GroupId = groupId, Title = title, Kind = kind, Sport = sport, StartsAt = o.Start, EndsAt = o.End, Place = Clean(req.Place, 120),
+            Details = Clean(req.Details, 1000), CreatedById = me, CreatedAt = now, SeriesId = series, Repeats = series is null ? null : Clean(req.Repeats, 60),
+        }).ToList();
+        db.GroupEvents.AddRange(created);
+        var ev = created[0]; // one notification for a whole series
         if (req.Notify)
         {
             var to = await db.GroupMembers.Where(m => m.GroupId == groupId && m.UserId != me && m.Notify != GroupNotify.Off).Select(m => m.UserId).ToListAsync();
@@ -123,20 +145,35 @@ public static class EventEndpoints
         return Results.Ok((await DtosAsync(db, db.GroupEvents.Where(e => e.Id == ev.Id), me))[0]);
     }
 
+    /// Members see their group's events; anyone signed in sees one in a findable group (from search).
     private static async Task<IResult> Get(Guid id, ClaimsPrincipal caller, AppDbContext db)
     {
         var me = caller.GetUserId();
-        var list = await DtosAsync(db, Mine(db, me).Where(e => e.Id == id), me);
+        var list = await DtosAsync(db, db.GroupEvents.Where(e => e.Id == id
+            && (e.Group.Access != GroupAccess.InviteOnly || db.GroupMembers.Any(m => m.GroupId == e.GroupId && m.UserId == me))), me);
         return list.Count == 0 ? Gone() : Results.Ok(list[0]);
     }
 
-    /// Tells everyone going (except whoever made the change) about a new time or place, or a cancellation.
-    private static async Task NotifyGoingAsync(AppDbContext db, GroupEvent ev, Guid actor, NotificationType type, DateTime now)
+    /// The dates an edit or cancel applies to: this one, or (scope "following") this and every
+    /// later date of its series.
+    private static async Task<List<GroupEvent>> TargetsAsync(AppDbContext db, GroupEvent ev, string? scope) =>
+        scope == "following" && ev.SeriesId is { } series
+            ? await db.GroupEvents.Where(e => e.SeriesId == series && e.StartsAt >= ev.StartsAt && e.CancelledAt == null).OrderBy(e => e.StartsAt).ToListAsync()
+            : [ev];
+
+    /// Tells everyone going to any of these (once each, except whoever made the change).
+    private static async Task NotifyGoingAsync(AppDbContext db, List<GroupEvent> events, Guid actor, NotificationType type, DateTime now)
     {
-        var to = await db.EventRsvps.Where(r => r.EventId == ev.Id && r.Going == true && r.UserId != actor
-                && db.GroupMembers.Any(m => m.GroupId == ev.GroupId && m.UserId == r.UserId && m.Notify != GroupNotify.Off))
-            .Select(r => r.UserId).ToListAsync();
-        db.Notifications.AddRange(to.Select(u => new Notification { UserId = u, ActorId = actor, Type = type, GroupId = ev.GroupId, EventId = ev.Id, CreatedAt = now }));
+        var ids = events.Select(e => e.Id).ToList();
+        var first = events[0];
+        var to = await db.EventRsvps.Where(r => ids.Contains(r.EventId) && r.Going == true && r.UserId != actor
+                && db.GroupMembers.Any(m => m.GroupId == first.GroupId && m.UserId == r.UserId && m.Notify != GroupNotify.Off))
+            .Select(r => new { r.UserId, r.EventId }).ToListAsync();
+        foreach (var u in to.GroupBy(x => x.UserId))
+        {
+            var eventId = events.First(e => u.Any(x => x.EventId == e.Id)).Id; // the earliest they're going to
+            db.Notifications.Add(new Notification { UserId = u.Key, ActorId = actor, Type = type, GroupId = first.GroupId, EventId = eventId, CreatedAt = now });
+        }
     }
 
     private static async Task<IResult> Edit(Guid id, EventRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
@@ -146,27 +183,45 @@ public static class EventEndpoints
         if (ev is null || member is null) return Gone();
         if (member.Role != GroupRole.Organiser) return Results.Json(new { error = "Only the group's organisers can change events." }, statusCode: 403);
         if (ev.CancelledAt is not null) return Results.BadRequest(new { error = "This event was cancelled." });
-        var (oldStart, oldPlace) = (ev.StartsAt, ev.Place);
-        if (req.Title is not null) ev.Title = Clean(req.Title, 80) ?? ev.Title;
-        if (req.Kind is not null) ev.Kind = Kinds.FirstOrDefault(k => k.Equals(req.Kind, StringComparison.OrdinalIgnoreCase)) ?? ev.Kind;
-        if (req.StartsAt is { } start) ev.StartsAt = Utc(start);
-        if (req.ClearEnd) ev.EndsAt = null;
-        else if (req.EndsAt is { } end) ev.EndsAt = Utc(end);
-        if (ev.EndsAt <= ev.StartsAt) return Results.BadRequest(new { error = "It has to end after it starts." });
-        if (req.Place is not null) ev.Place = Clean(req.Place, 120);
-        if (req.Details is not null) ev.Details = Clean(req.Details, 1000);
-        var now = clock.GetUtcNow().UtcDateTime;
-        if (ev.StartsAt != oldStart || ev.Place != oldPlace)
+        string? sport = null;
+        if (req.Sport is not null && (sport = Sports.FirstOrDefault(x => x.Equals(req.Sport, StringComparison.OrdinalIgnoreCase))) is null)
+            return Results.BadRequest(new { error = "That sport isn't on the list." });
+        // A new time moves every chosen date by the same amount (19:00 to 18:30 on each).
+        var startShift = req.StartsAt is { } start ? Utc(start) - ev.StartsAt : TimeSpan.Zero;
+        TimeSpan? length = req.ClearEnd ? null : req.EndsAt is { } end ? Utc(end) - (ev.StartsAt + startShift) : ev.EndsAt - ev.StartsAt;
+        if (length <= TimeSpan.Zero) return Results.BadRequest(new { error = "It has to end after it starts." });
+        var targets = await TargetsAsync(db, ev, req.Scope);
+        var moved = new List<GroupEvent>();
+        foreach (var t in targets)
         {
-            await NotifyGoingAsync(db, ev, me, NotificationType.GroupEventChanged, now);
-            if (ev.StartsAt != oldStart)
-                await db.EventRsvps.Where(r => r.EventId == id).ExecuteUpdateAsync(s => s.SetProperty(r => r.RemindedAt, (DateTime?)null));
+            var oldPlace = t.Place;
+            if (req.Title is not null) t.Title = Clean(req.Title, 80) ?? t.Title;
+            if (req.Kind is not null) t.Kind = Kinds.FirstOrDefault(k => k.Equals(req.Kind, StringComparison.OrdinalIgnoreCase)) ?? t.Kind;
+            if (sport is not null) t.Sport = sport;
+            else if (req.ClearSport) t.Sport = null;
+            t.StartsAt += startShift;
+            t.EndsAt = length is { } l ? t.StartsAt + l : null;
+            if (req.Place is not null) t.Place = Clean(req.Place, 120);
+            if (req.Details is not null) t.Details = Clean(req.Details, 1000);
+            if (startShift != TimeSpan.Zero || t.Place != oldPlace) moved.Add(t);
+        }
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (moved.Count > 0)
+        {
+            await NotifyGoingAsync(db, moved, me, NotificationType.GroupEventChanged, now);
+            if (startShift != TimeSpan.Zero)
+            {
+                var ids = moved.Select(m => m.Id).ToList();
+                await db.EventRsvps.Where(r => ids.Contains(r.EventId)).ExecuteUpdateAsync(s => s.SetProperty(r => r.RemindedAt, (DateTime?)null));
+            }
         }
         await db.SaveChangesAsync();
         return Results.Ok((await DtosAsync(db, db.GroupEvents.Where(e => e.Id == id), me))[0]);
     }
 
-    private static async Task<IResult> Cancel(Guid id, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    public record CancelRequest(string? Scope);
+
+    private static async Task<IResult> Cancel(Guid id, CancelRequest? req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
     {
         var me = caller.GetUserId();
         var (ev, member) = await LoadAsync(db, id, me);
@@ -174,10 +229,36 @@ public static class EventEndpoints
         if (member.Role != GroupRole.Organiser) return Results.Json(new { error = "Only the group's organisers can cancel events." }, statusCode: 403);
         if (ev.CancelledAt is not null) return Results.NoContent();
         var now = clock.GetUtcNow().UtcDateTime;
-        ev.CancelledAt = now;
-        await NotifyGoingAsync(db, ev, me, NotificationType.GroupEventCancelled, now);
+        var targets = await TargetsAsync(db, ev, req?.Scope);
+        foreach (var t in targets) t.CancelledAt = now;
+        await NotifyGoingAsync(db, targets, me, NotificationType.GroupEventCancelled, now);
         await db.SaveChangesAsync();
         return Results.NoContent();
+    }
+
+    /// Social › Search › Events (canvas V1): upcoming events in groups anyone can find (and your
+    /// own groups'), by a place or name, sport, kind and a window; a repeating event shows once,
+    /// at its next date.
+    private static async Task<IResult> Search(string? q, string? sport, string? kind, DateTime? from, DateTime? to, ClaimsPrincipal caller,
+        AppDbContext db, TimeProvider clock)
+    {
+        var me = caller.GetUserId();
+        var now = clock.GetUtcNow().UtcDateTime;
+        var term = (q ?? "").Trim().ToLowerInvariant();
+        var start = from is { } f && Utc(f) > now ? Utc(f) : now;
+        var events = db.GroupEvents.Where(e => e.CancelledAt == null && e.StartsAt >= start
+            && (e.Group.Access != GroupAccess.InviteOnly || db.GroupMembers.Any(m => m.GroupId == e.GroupId && m.UserId == me)));
+        if (to is { } t) events = events.Where(e => e.StartsAt < Utc(t));
+        if (!string.IsNullOrEmpty(sport)) events = events.Where(e => e.Sport == sport);
+        if (!string.IsNullOrEmpty(kind)) events = events.Where(e => e.Kind == kind);
+        if (term.Length > 0)
+            events = events.Where(e => e.Title.ToLower().Contains(term) || (e.Place != null && e.Place.ToLower().Contains(term))
+                || e.Group.Name.ToLower().Contains(term) || (e.Group.Place != null && e.Group.Place.ToLower().Contains(term)));
+        else if (string.IsNullOrEmpty(sport) && string.IsNullOrEmpty(kind)) return Results.Ok(Array.Empty<EventDto>());
+        var ids = (await events.OrderBy(e => e.StartsAt).Select(e => new { e.Id, e.SeriesId }).Take(500).ToListAsync())
+            .DistinctBy(e => e.SeriesId ?? e.Id).Take(50).Select(e => e.Id).ToList();
+        var list = await DtosAsync(db, db.GroupEvents.Where(e => ids.Contains(e.Id)), me);
+        return Results.Ok(list.OrderBy(e => e.StartsAtMs));
     }
 
     private static async Task<EventRsvp> RsvpAsync(AppDbContext db, Guid id, Guid me, DateTime now)

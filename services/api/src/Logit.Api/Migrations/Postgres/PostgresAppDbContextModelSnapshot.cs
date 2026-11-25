@@ -1239,6 +1239,17 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<string>("Repeats")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sport")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
                     b.Property<DateTime>("StartsAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1248,6 +1259,10 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("character varying(80)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
+
+                    b.HasIndex("StartsAt");
 
                     b.HasIndex("GroupId", "StartsAt");
 
@@ -1287,6 +1302,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GoingTo")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("OnBoard")
                         .HasColumnType("boolean");

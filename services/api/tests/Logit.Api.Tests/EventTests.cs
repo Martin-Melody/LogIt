@@ -121,4 +121,63 @@ public class EventTests : IDisposable
         Assert.Equal(0, (await Get(conor, $"/events/{soon.GetProperty("id").GetString()}")).GetProperty("going").GetInt32());
         Assert.Equal(HttpStatusCode.NoContent, (await ava.GetAsync("/events/home")).StatusCode);
     }
+
+    [Fact]
+    public async Task A_repeating_event_is_one_event_per_date_and_changes_apply_to_one_or_all_after_it()
+    {
+        var (conor, ava, _, groupId) = await GroupAsync();
+        var tue = new DateTime(2026, 12, 1, 19, 0, 0, DateTimeKind.Utc);
+        // Tue and Thu for three weeks.
+        var days = new[] { 0, 2, 7, 9, 14, 16 }.Select(d => new { startsAt = tue.AddDays(d), endsAt = tue.AddDays(d).AddMinutes(90) }).ToArray();
+        var first = await Json(await conor.PostAsJsonAsync($"/groups/{groupId}/events", new { title = "Evening session", sport = "strength", dates = days, repeats = "Every Tue and Thu" }));
+        Assert.Equal(("Strength", "Every Tue and Thu"), (first.GetProperty("sport").GetString(), first.GetProperty("repeats").GetString()));
+        var list = (await Get(ava, $"/groups/{groupId}/events")).EnumerateArray().ToList();
+        Assert.Equal(6, list.Count);
+        Assert.Equal(1, await Count(NotificationType.GroupEvent) / 2); // one each for Ava and Ben, not six
+        foreach (var e in list) (await ava.PutAsJsonAsync($"/events/{e.GetProperty("id").GetString()}/rsvp", new { going = true })).EnsureSuccessStatusCode();
+
+        // Move the third date and every one after it half an hour earlier: the first two stay.
+        var third = list[2].GetProperty("id").GetString();
+        (await conor.PatchAsJsonAsync($"/events/{third}", new { startsAt = tue.AddDays(7).AddMinutes(-30), scope = "following" })).EnsureSuccessStatusCode();
+        var after = (await Get(ava, $"/groups/{groupId}/events")).EnumerateArray().Select(e => DateTimeOffset.FromUnixTimeMilliseconds(e.GetProperty("startsAtMs").GetInt64()).UtcDateTime.TimeOfDay).ToList();
+        Assert.Equal([TimeSpan.FromHours(19), TimeSpan.FromHours(19), .. Enumerable.Repeat(new TimeSpan(18, 30, 0), 4)], after);
+        Assert.Equal(1, await Count(NotificationType.GroupEventChanged)); // Ava once, not four times
+
+        // Cancel just the fourth; then the fifth and everything after.
+        var rows = (await Get(ava, $"/groups/{groupId}/events")).EnumerateArray().ToList();
+        (await conor.PostAsJsonAsync($"/events/{rows[3].GetProperty("id").GetString()}/cancel", new { })).EnsureSuccessStatusCode();
+        (await conor.PostAsJsonAsync($"/events/{rows[4].GetProperty("id").GetString()}/cancel", new { scope = "following" })).EnsureSuccessStatusCode();
+        Assert.Equal([false, false, false, true, true, true], (await Get(ava, $"/groups/{groupId}/events")).EnumerateArray().Select(e => e.GetProperty("cancelled").GetBoolean()).ToList());
+        Assert.Equal(HttpStatusCode.BadRequest, (await conor.PostAsJsonAsync($"/groups/{groupId}/events", new { title = "Too many", dates = Enumerable.Range(1, 121).Select(i => new { startsAt = tue.AddDays(i) }) })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Events_in_findable_groups_show_in_search_and_going_from_there_joins_the_group()
+    {
+        var (conor, ava, _, hiddenGroup) = await GroupAsync();
+        var (dev, _, _) = await _api.SignUpAsync("dev");
+        var sunday = new DateTime(2026, 12, 6, 10, 0, 0, DateTimeKind.Utc);
+        var open = await Json(await conor.PostAsJsonAsync("/groups", new { name = "Sligo Harriers", place = "Sligo", access = "Open" }));
+        var ask = await Json(await conor.PostAsJsonAsync("/groups", new { name = "Iron Club", place = "Sligo town", access = "Request" }));
+        var race = await Json(await conor.PostAsJsonAsync($"/groups/{open.GetProperty("id").GetString()}/events", new { title = "Christmas 5k", kind = "Race", sport = "Running", startsAt = sunday, place = "Doorly Park" }));
+        var meet = await Json(await conor.PostAsJsonAsync($"/groups/{ask.GetProperty("id").GetString()}/events", new { title = "Mock meet", kind = "Meet", sport = "Powerlifting", startsAt = sunday.AddDays(7) }));
+        await conor.PostAsJsonAsync($"/groups/{hiddenGroup}/events", new { title = "Sligo secret session", startsAt = sunday });
+
+        List<string> Titles(JsonElement r) => [.. r.EnumerateArray().Select(e => e.GetProperty("title").GetString()!)];
+        Assert.Equal(["Christmas 5k", "Mock meet"], Titles(await Get(dev, "/events/search?q=sligo")));
+        Assert.Equal(["Christmas 5k"], Titles(await Get(dev, "/events/search?q=sligo&kind=Race")));
+        Assert.Equal(["Mock meet"], Titles(await Get(dev, "/events/search?sport=Powerlifting")));
+        Assert.Equal(["Christmas 5k"], Titles(await Get(dev, $"/events/search?q=sligo&to={sunday.AddDays(1):O}")));
+        var found = await Get(dev, $"/events/{race.GetProperty("id").GetString()}");
+        Assert.Equal((false, "Open"), (found.GetProperty("member").GetBoolean(), found.GetProperty("groupAccess").GetString()));
+
+        // Open group: join and go in one step. Ask-to-join: going once let in.
+        (await dev.PostAsJsonAsync($"/groups/{open.GetProperty("id").GetString()}/join", new { eventId = race.GetProperty("id").GetString() })).EnsureSuccessStatusCode();
+        Assert.True((await Get(dev, $"/events/{race.GetProperty("id").GetString()}")).GetProperty("answer").GetBoolean());
+        (await dev.PostAsJsonAsync($"/groups/{ask.GetProperty("id").GetString()}/join", new { eventId = meet.GetProperty("id").GetString() })).EnsureSuccessStatusCode();
+        Assert.True((await Get(dev, $"/events/{meet.GetProperty("id").GetString()}")).GetProperty("requested").GetBoolean());
+        (await conor.PostAsync($"/groups/{ask.GetProperty("id").GetString()}/requests/dev", null)).EnsureSuccessStatusCode();
+        Assert.True((await Get(dev, $"/events/{meet.GetProperty("id").GetString()}")).GetProperty("answer").GetBoolean());
+        _ = ava;
+    }
 }

@@ -12,6 +12,12 @@ public class GroupEvent
     public string Title { get; set; } = "";
     /// "Session", "Meet", "Race" or "Social".
     public string Kind { get; set; } = "Session";
+    /// Optional: "Strength", "Running", "BJJ"… (see EventEndpoints.Sports), for search.
+    public string? Sport { get; set; }
+    /// A repeating event's dates share this (each date is its own event, as on Meetup).
+    public Guid? SeriesId { get; set; }
+    /// How it repeats, as shown ("Every Tue and Thu"); null for a one-off.
+    public string? Repeats { get; set; }
     public DateTime StartsAt { get; set; }
     public DateTime? EndsAt { get; set; }
     public string? Place { get; set; }
