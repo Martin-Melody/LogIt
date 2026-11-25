@@ -123,6 +123,7 @@ builder.Services.AddSingleton<IPushSender>(sp =>
 });
 builder.Services.AddHostedService<PushDispatcher>();
 builder.Services.AddHostedService<Logit.Api.Features.Social.StorySweeper>();
+builder.Services.AddHostedService<Logit.Api.Features.Social.EventReminderSweeper>();
 // Photos: an S3-compatible bucket when Photos:S3:Bucket is set (Cloudflare R2 on getlogit.app),
 // otherwise a folder on this server (Photos:Folder; docker-compose.yml puts it in /data/photos).
 builder.Services.AddSingleton<IPhotoStore>(sp =>
@@ -347,6 +348,7 @@ api.MapFriendInviteEndpoints();
 api.MapDirectMessageEndpoints();
 api.MapStoryEndpoints();
 api.MapGroupEndpoints();
+api.MapEventEndpoints();
 api.MapPhotoEndpoints();
 api.MapVoiceEndpoints();
 

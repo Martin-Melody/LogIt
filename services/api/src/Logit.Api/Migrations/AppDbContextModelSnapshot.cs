@@ -1064,6 +1064,33 @@ namespace Logit.Api.Migrations
                     b.ToTable("DmThreads");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.EventRsvp", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("Going")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Pinned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("RemindedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EventRsvps");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.Property<Guid>("FollowerId")
@@ -1171,6 +1198,55 @@ namespace Logit.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Place")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId", "StartsAt");
+
+                    b.ToTable("GroupEvents");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.GroupInvite", b =>
@@ -1373,6 +1449,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("EventId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("TEXT");
 
@@ -1394,6 +1473,8 @@ namespace Logit.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ActorId");
+
+                    b.HasIndex("EventId");
 
                     b.HasIndex("GroupId");
 
@@ -3130,6 +3211,25 @@ namespace Logit.Api.Migrations
                     b.Navigation("Group");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.EventRsvp", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.GroupEvent", "Event")
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Followed")
@@ -3177,6 +3277,17 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Inviter");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupEvent", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.GroupInvite", b =>
@@ -3280,6 +3391,11 @@ namespace Logit.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Logit.Api.Data.Entities.GroupEvent", "Event")
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Logit.Api.Data.Entities.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
@@ -3292,6 +3408,8 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Actor");
+
+                    b.Navigation("Event");
 
                     b.Navigation("Group");
 

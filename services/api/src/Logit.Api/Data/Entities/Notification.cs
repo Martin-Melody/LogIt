@@ -4,7 +4,7 @@ namespace Logit.Api.Data.Entities;
 // elsewhere would renumber (and thus reinterpret) every existing row's stored value.
 // Stored as its underlying int (EF default) — new members go at the end so existing
 // rows keep their meaning.
-public enum NotificationType { Like, Comment, Follow, Mention, Repost, Quote, FollowRequest, FollowAccepted, Reply, CoachInvite, CoachProgram, CoachPaymentFailed, Cheer, StoryCheer, GroupNote, GroupRequest, GroupApproved }
+public enum NotificationType { Like, Comment, Follow, Mention, Repost, Quote, FollowRequest, FollowAccepted, Reply, CoachInvite, CoachProgram, CoachPaymentFailed, Cheer, StoryCheer, GroupNote, GroupRequest, GroupApproved, GroupEvent, GroupEventChanged, GroupEventCancelled, GroupEventReminder }
 
 /// An in-app notification for a user — someone liked/commented on their post, or
 /// followed them. Created as a side effect of the corresponding social action.
@@ -29,6 +29,10 @@ public class Notification
     /// Set for GroupNote, GroupRequest and GroupApproved.
     public Guid? GroupId { get; set; }
     public Group? Group { get; set; }
+
+    /// Set for the GroupEvent… types.
+    public Guid? EventId { get; set; }
+    public GroupEvent? Event { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReadAt { get; set; }

@@ -25,6 +25,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
     public DbSet<GroupJoinRequest> GroupJoinRequests => Set<GroupJoinRequest>();
     public DbSet<GroupInvite> GroupInvites => Set<GroupInvite>();
+    public DbSet<GroupEvent> GroupEvents => Set<GroupEvent>();
+    public DbSet<EventRsvp> EventRsvps => Set<EventRsvp>();
     public DbSet<DmMember> DmMembers => Set<DmMember>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
     public DbSet<Story> Stories => Set<Story>();
@@ -330,6 +332,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .HasForeignKey(n => n.ActorId)
              .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(n => n.Group).WithMany().HasForeignKey(n => n.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(n => n.Event).WithMany().HasForeignKey(n => n.EventId).OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<DmThread>(e =>
@@ -347,6 +350,22 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(g => g.InviteCode).IsUnique();
             e.Property(g => g.Note).HasMaxLength(500);
             e.HasIndex(g => g.Access);
+        });
+        model.Entity<GroupEvent>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(80);
+            e.Property(x => x.Kind).HasMaxLength(16);
+            e.Property(x => x.Place).HasMaxLength(120);
+            e.Property(x => x.Details).HasMaxLength(1000);
+            e.HasIndex(x => new { x.GroupId, x.StartsAt });
+            e.HasOne(x => x.Group).WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<EventRsvp>(e =>
+        {
+            e.HasKey(r => new { r.EventId, r.UserId });
+            e.HasIndex(r => r.UserId);
+            e.HasOne(r => r.Event).WithMany().HasForeignKey(r => r.EventId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<GroupJoinRequest>(e =>
         {

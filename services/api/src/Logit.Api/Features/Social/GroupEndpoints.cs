@@ -518,6 +518,7 @@ public static class GroupEndpoints
         if (them.UserId != me && mine.Role != GroupRole.Organiser) return NotOrganiser();
         db.GroupMembers.Remove(them);
         await db.DmMembers.Where(m => m.Thread.GroupId == id && m.UserId == them.UserId).ExecuteDeleteAsync(ct);
+        await db.EventRsvps.Where(r => r.Event.GroupId == id && r.UserId == them.UserId).ExecuteDeleteAsync(ct); // off the going lists
         await db.SaveChangesAsync(ct);
         // The last one out deletes the group.
         if (!await db.GroupMembers.AnyAsync(m => m.GroupId == id, ct)) await DeleteGroupAsync(db, store, mine.Group, ct);
