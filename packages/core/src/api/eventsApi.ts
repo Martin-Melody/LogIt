@@ -34,6 +34,8 @@ export interface GroupEvent {
   sport: EventSport | null;
   /** How a repeating event repeats ("Every Tue and Thu"); null for a one-off. */
   repeats: string | null;
+  /** Shared by a repeating event's dates. */
+  seriesId: string | null;
   /** You're in its group (else it came from search: groupAccess and requested say how to get in). */
   member: boolean;
   groupAccess: "InviteOnly" | "Request" | "Open";
@@ -93,4 +95,21 @@ export function goingLine(e: Pick<GroupEvent, "going" | "goingPeople">, me: stri
   const rest = e.going - names.length;
   if (rest <= 0) return `${names.join(" and ")} ${names.length === 1 && names[0] !== "You" ? "is" : "are"} going`;
   return `${names.join(", ")} and ${rest} ${rest === 1 ? "other" : "others"} going`;
+}
+
+/** A list with each repeating event's dates gathered under its next one (canvas E2): a one-off
+ * is { event, dates: [] }; a series is its first date here plus the rest. Order is kept. */
+export function gatherSeries(list: GroupEvent[]): { event: GroupEvent; dates: GroupEvent[] }[] {
+  const out: { event: GroupEvent; dates: GroupEvent[] }[] = [];
+  const bySeries = new Map<string, { event: GroupEvent; dates: GroupEvent[] }>();
+  for (const e of list) {
+    const series = e.seriesId ? bySeries.get(e.seriesId) : undefined;
+    if (series) series.dates.push(e);
+    else {
+      const item = { event: e, dates: [] as GroupEvent[] };
+      out.push(item);
+      if (e.seriesId) bySeries.set(e.seriesId, item);
+    }
+  }
+  return out;
 }

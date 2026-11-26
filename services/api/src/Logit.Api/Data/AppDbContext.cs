@@ -27,6 +27,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<GroupInvite> GroupInvites => Set<GroupInvite>();
     public DbSet<GroupEvent> GroupEvents => Set<GroupEvent>();
     public DbSet<EventRsvp> EventRsvps => Set<EventRsvp>();
+    public DbSet<BoardWeek> BoardWeeks => Set<BoardWeek>();
     public DbSet<DmMember> DmMembers => Set<DmMember>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
     public DbSet<Story> Stories => Set<Story>();
@@ -363,6 +364,13 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(x => x.SeriesId);
             e.HasIndex(x => x.StartsAt);
             e.HasOne(x => x.Group).WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<BoardWeek>(e =>
+        {
+            e.HasKey(b => new { b.UserId, b.WeekStart });
+            e.Property(b => b.WeekStart).HasMaxLength(10);
+            e.HasIndex(b => b.WeekStart);
+            e.HasOne(b => b.User).WithMany().HasForeignKey(b => b.UserId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<EventRsvp>(e =>
         {

@@ -121,7 +121,7 @@ event. Conor moves the time → one push to everyone going. Chat from the page a
 Per-group notifications: every message / events and mentions / off. Leave the group → off the
 board, the going lists and the chat; Home card gone.
 
-**F6 Boards.** The week's board: done of planned, weeks kept, volume against own usual; order by
+**F6 Boards** (built in the boards PR: each phone sends its week's numbers, never workouts). The week's board: done of planned, weeks kept, volume against own usual; order by
 share done then weeks. Ava with nothing planned this week shows as "Rest week", not at the bottom.
 "Show me on boards" off globally → off every board, still sees them; on globally, off for Iron
 Club → off only there. A beginner can top the board. Nobody's raw weights appear anywhere.

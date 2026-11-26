@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { sendBoardWeekOnce } from "$lib/features/groups/boardSync";
   import CheerPill from "$lib/components/social/CheerPill.svelte";
   import InviteFriendSheet from "$lib/components/social/InviteFriendSheet.svelte";
   import { holdInvite, inviteSheet, takeHeldInvite } from "$lib/features/friends/invite.svelte";
@@ -56,6 +57,7 @@
     if (to && invite) holdInvite(invite);
     if (to) void goto(to);
     else if ($appReady && $onboarding.completed && authStore.isAuthenticated && !isOnboarding) {
+      sendBoardWeekOnce();
       const held = takeHeldInvite();
       if (held && page.url.pathname !== "/social/invite") void goto(held);
     }

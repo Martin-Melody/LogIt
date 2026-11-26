@@ -5,7 +5,8 @@
   import { page } from "$app/state";
   import { Loader2 } from "lucide-svelte";
   import { toast } from "svelte-sonner";
-  import { eventsApi, type GroupEvent } from "@logit/core/api/eventsApi";
+  import { ChevronDown } from "lucide-svelte";
+  import { eventsApi, gatherSeries, type GroupEvent } from "@logit/core/api/eventsApi";
   import { groupsApi, type Group } from "@logit/core/api/groupsApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -19,6 +20,10 @@
   let past = $state<GroupEvent[]>([]);
   let error = $state(false);
   let adding = $state(false);
+  /** Repeating events whose dates are shown. */
+  let open = $state(new Set<string>());
+  const gathered = $derived(gatherSeries(upcoming ?? []));
+  const toggle = (id: string) => (open = open.has(id) ? new Set([...open].filter((x) => x !== id)) : new Set([...open, id]));
 
   async function load() {
     try {
@@ -57,7 +62,18 @@
   {:else}
     <h2 class="px-4 pb-1.5 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Upcoming</h2>
     {#if upcoming.length}
-      <div class="mx-3 rounded-2xl border border-border bg-card">{#each upcoming as e (e.id)}<EventRow event={e} ongo={go} />{/each}</div>
+      <div class="mx-3 rounded-2xl border border-border bg-card">
+        {#each gathered as g (g.event.id)}
+          <EventRow event={g.event} ongo={go} />
+          {#if g.dates.length}
+            {@const shown = open.has(g.event.seriesId ?? "")}
+            <button type="button" aria-expanded={shown} class="flex min-h-11 w-full items-center gap-1.5 border-b border-border pl-[4.4rem] pr-3.5 text-left text-[13px] font-medium text-muted-foreground last:border-b-0" onclick={() => toggle(g.event.seriesId ?? "")}>
+              {shown ? "Hide the other dates" : `${g.dates.length} more ${g.dates.length === 1 ? "date" : "dates"}`}<ChevronDown class="size-4 transition-transform {shown ? 'rotate-180' : ''}" />
+            </button>
+            {#if shown}<div class="bg-muted/30">{#each g.dates as d (d.id)}<EventRow event={{ ...d, repeats: null }} ongo={go} />{/each}</div>{/if}
+          {/if}
+        {/each}
+      </div>
     {:else}
       <p class="px-4 py-2 text-sm text-muted-foreground">Nothing planned yet.{group?.me.role === "Organiser" ? " Add a session, a meet or a race." : ""}</p>
     {/if}

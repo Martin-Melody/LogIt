@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { sendBoardWeek } from "$lib/features/groups/boardSync";
   import { goto } from "$app/navigation";
   import { get } from "svelte/store";
   import { toast } from "$lib/components/ui/sonner/index";
@@ -450,6 +451,7 @@
       await goto(next);
       await currentSession.finish();
       onWorkoutFinished();
+      void sendBoardWeek();
       // After a record: "Add to your story?" (design canvas S3). Otherwise "Invite a friend"
       // once (T3). Neither on top of onboarding's next step.
       if (!next.startsWith("/onboarding")) {

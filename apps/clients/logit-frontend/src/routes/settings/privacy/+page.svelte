@@ -96,6 +96,10 @@
       </a>
     </SettingsSection>
 
+    <SettingsSection title="Boards and groups" note="Each group can also be turned off on its own, in the group's Your settings.">
+      {@render toggle("boards", "Show me on boards", "The friends board on Social and each group's board. Off, you still see them; nobody sees you on them.", settings.showOnBoards !== false, (v) => set({ showOnBoards: v }))}
+    </SettingsSection>
+
     <SettingsSection title="Discover">
       {@render toggle("discover", "Show my posts in Discover", "People who don't follow you can find them there. Always off for a private account.", settings.showInDiscover === true && !settings.isPrivate, (v) => set({ showInDiscover: v }), settings.isPrivate)}
       {@render toggle("suggest-me", "Suggest me to people", "Show your name in \"People you might know\"", !settings.hideFromSuggestions, (v) => set({ hideFromSuggestions: !v }))}
