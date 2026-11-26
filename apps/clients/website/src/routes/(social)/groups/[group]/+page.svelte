@@ -62,5 +62,5 @@
 {#if data.posts.length === 0}
   <p class="px-6 py-10 text-center text-sm text-muted-foreground">No posts in this group yet.</p>
 {:else}
-  <div class="flex flex-col">{#each data.posts as post (post.id)}<ForumRow {post} />{/each}</div>
+  <div class="flex flex-col">{#each data.posts as post (post.id)}<ForumRow {post} showGroup={false} />{/each}</div>
 {/if}

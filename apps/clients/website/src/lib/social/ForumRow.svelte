@@ -8,15 +8,15 @@
   import Pin from "@lucide/svelte/icons/pin";
   import { ask } from "./prompt.svelte";
 
-  const { post }: { post: ForumPost } = $props();
+  const { post, showGroup = true }: { post: ForumPost; showGroup?: boolean } = $props();
   const when = shortDate;
 </script>
 
 <div class="relative flex flex-col gap-1.5 border-b border-border px-4 py-3.5 last:border-b-0 hover:bg-muted/40 sm:px-5">
-  {#if post.pinned || post.group}
+  {#if post.pinned || (showGroup && post.group)}
     <span class="flex items-center gap-2 text-xs text-muted-foreground">
       {#if post.pinned}<span class="flex items-center gap-1"><Pin class="size-3" />Pinned</span>{/if}
-      {#if post.group}<span class="rounded-md border border-border px-1.5 py-0.5">{post.group.name}</span>{/if}
+      {#if showGroup && post.group}<span class="rounded-md border border-border px-1.5 py-0.5">{post.group.name}</span>{/if}
     </span>
   {/if}
   <a href={post.webPath} class="text-[17px] font-semibold leading-snug text-heading after:absolute after:inset-0 after:content-['']">{post.title}</a>
