@@ -214,7 +214,7 @@ export const FEATURES: Feature[] = [
     title: "Social",
     section: "More",
     plan: "Free",
-    summary: "Follow people, share workouts and PRs, and find people in Discover.",
+    summary: "Follow people, share workouts and PRs, message friends, add stories, cheer on friends who are training, join groups and ask in the Forum.",
     web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]", "/groups/[id]", "/social/forum/[id]", "/social/tag/[tag]"],
     phone: [
       "/social", "/social/invite", "/messages/chat", "/messages/requests", "/groups/[id]", "/groups/[id]/members", "/groups/[id]/settings", "/groups/join", "/groups/[id]/events", "/groups/[id]/board", "/social/board", "/groups/[id]/reports", "/social/forum/[id]", "/social/tag/[tag]", "/groups/[id]/posts", "/events/[id]", "/events/[id]/people", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
@@ -227,6 +227,11 @@ export const FEATURES: Feature[] = [
     can: [
       "Make your account private: only people you accept see your posts",
       "Keep your posts out of Discover",
+      "Choose who can message you: people you don't follow land in your requests, or can't message you at all",
+      "Send photos and voice messages, and edit or unsend your own messages",
+      "Add a story from a photo, a workout or a record for everyone, or for Close friends only",
+      "Hide your story from chosen people",
+      "Hide that you're training, and choose who can cheer you on and reply to your stories",
       "Start a group for your gym, club, team or friends, with a page, a pinned note and a group chat; people join with its link or QR",
       "Choose per group whether you're on its board and which notifications you get",
       "Make a group invite only, findable with you approving who joins, or open to anyone, and invite people from your chats",

@@ -14,7 +14,10 @@ Share workouts, PRs, splits and library items; follow people; like, comment and 
 questions and start threads in the Forum, a tab in Social, with or without a group; a forum post
 from someone you follow, or in one of your groups, shows in your feed as a title card. Tag any post
 with #anything, like #sligo or #deadlift, and tap a tag to see every post with it. Join groups for
-their chat, events, board and posts. Social is free with any account, on the phone and on the web.
+their chat, events, board and posts. Message friends with text, photos and voice messages, add a
+story (a photo, a workout or a record, or a photo with the record on top; gone after 24 hours), and
+cheer on friends who are training right now. Social is free with any account, on the phone and on
+the web; stories are on the phone for now.
 
 Public means public everywhere: a public account's profile and posts, every forum post and every
 tag can be read by anyone at getlogit.app and found on Google, no account needed. A private
