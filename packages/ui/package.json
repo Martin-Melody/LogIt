@@ -16,6 +16,11 @@
       "types": "./src/ImageCropper.svelte",
       "svelte": "./src/ImageCropper.svelte",
       "default": "./src/ImageCropper.svelte"
+    },
+    "./RichText.svelte": {
+      "types": "./src/RichText.svelte",
+      "svelte": "./src/RichText.svelte",
+      "default": "./src/RichText.svelte"
     }
   },
   "files": [

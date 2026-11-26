@@ -4,6 +4,7 @@
      (?branch=). Upvotes only. Its #tags open their pages. The post's ⋯: share, delete (yours),
      report, and for moderators pin (in a group), lock, remove, take a tag off. Long-press a comment for copy, reply, delete, report. -->
 <script lang="ts">
+  import RichText from "@logit/ui/RichText.svelte";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -215,7 +216,7 @@
             <span class="flex items-center gap-2 text-[12px] text-muted-foreground">
               {#if post.author}<a href="/social/{post.author.username}" class="flex min-h-9 items-center gap-2 font-semibold text-foreground no-underline"><PersonAvatar name={name(post)} src={post.author.avatarUrl} size={22} />{name(post)}</a>{:else}<PersonAvatar name={null} src={null} size={22} />{name(post)}{/if}<span class="-ml-1.5">{post.authorRole ? ` · ${post.authorRole}` : ""}{post.group && !post.authorIsMember ? " · Not a member" : ""} · {shortAgo(post.createdAtMs, Date.now())}{post.edited ? " · Edited" : ""}</span>
             </span>
-            {#if post.body}<MentionText text={post.body} class="whitespace-pre-wrap break-words text-[15px] leading-relaxed" />{/if}
+            {#if post.body}<RichText text={post.body} class="text-[15px] leading-relaxed" mentionHref={(u) => `/social/${u}`} tagHref={(t) => `/social/tag/${encodeURIComponent(t)}`} />{/if}
             {#if post.photoUrl}<MessagePhoto url={post.photoUrl} width={post.photoWidth} height={post.photoHeight} />{/if}
             {#if post.cardType && readCard(post.cardType, post.cardJson)}<MessageCard card={readCard(post.cardType, post.cardJson)!} mine={false} />{/if}
             {#if post.tags.length}
