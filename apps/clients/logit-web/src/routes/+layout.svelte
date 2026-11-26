@@ -24,6 +24,7 @@
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
   import { sandbox } from "$lib/features/guide/sandbox.svelte";
   import { adminState } from "$lib/features/admin/adminState.svelte";
+  import CommandLayer from "$lib/features/commands/CommandLayer.svelte";
 
   let { children } = $props();
 
@@ -253,6 +254,7 @@
       </main>
     </Sidebar.Inset>
   </Sidebar.Provider>
+  <CommandLayer coach={isStudio} />
   <GuidePanel {walkthroughs} />
   <GuideLayer />
   <StudioModeDialog />

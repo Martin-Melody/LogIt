@@ -1,5 +1,10 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import RowMenuItems from "$lib/features/commands/RowMenuItems.svelte";
+  import { clientActions } from "$lib/features/commands/commands.svelte";
   import { canCoach } from "$lib/workspace";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
@@ -182,12 +187,18 @@
               <Table.Head class="px-3 py-2 font-medium">Check-in</Table.Head>
               <Table.Head class="px-3 py-2 font-medium">Program</Table.Head>
               <Table.Head class="px-3 py-2 font-medium">Messages</Table.Head>
+              <Table.Head class="w-10 px-1 py-2"><span class="sr-only">More</span></Table.Head>
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {#each shownClients as c (c.relationshipId)}
               {@const ck = checkinCell(c)}
-              <Table.Row class="border-t border-border align-middle">
+              {@const actions = clientActions(c)}
+              <!-- Right-click a row = its ⋯ menu: same items, and the ⋯ stays for everyone else. -->
+              <ContextMenu.Root>
+              <ContextMenu.Trigger>
+              {#snippet child({ props })}
+              <Table.Row {...props} class="border-t border-border align-middle data-[state=open]:bg-muted">
                 <Table.Cell class="px-3 py-3">
                   <a href="/clients/{c.id}" class="flex items-center gap-2.5" onclick={() => guideSignal("client.opened")}>
                     <Avatar name={c.name} url={c.avatarUrl} size={30} />
@@ -207,7 +218,20 @@
                 <Table.Cell class="px-3 py-3">
                   {#if c.unread}<a href="/messages?c={c.relationshipId}" class="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">{c.unread} new</a>{:else}<a href="/messages?c={c.relationshipId}" class="text-muted-foreground hover:text-foreground">Open</a>{/if}
                 </Table.Cell>
+                <Table.Cell class="px-1 py-3">
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger aria-label="More for {c.name}"
+                      class="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground">
+                      <EllipsisIcon class="size-4" />
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end" class="min-w-60 w-auto"><RowMenuItems {actions} kind="dropdown" /></DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                </Table.Cell>
               </Table.Row>
+              {/snippet}
+              </ContextMenu.Trigger>
+              <ContextMenu.Content class="min-w-60 w-auto"><RowMenuItems {actions} kind="context" /></ContextMenu.Content>
+              </ContextMenu.Root>
             {/each}
             {#each overview.sent as s (s.relationshipId)}
               <Table.Row class="border-t border-border align-middle">
@@ -222,10 +246,11 @@
                   <button type="button" disabled={busy === s.relationshipId} onclick={() => cancelInvite(s.relationshipId)}
                     class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted disabled:opacity-50">Cancel invite</button>
                 </Table.Cell>
+                <Table.Cell></Table.Cell>
               </Table.Row>
             {/each}
             {#if overview.clients.length === 0 && overview.sent.length === 0}
-              <Table.Row><Table.Cell colspan={6} class="px-3 py-6 text-center text-muted-foreground">No clients yet. Invite someone by username, or <a href="/coaching/links" class="text-primary hover:underline">share an invite link</a>.</Table.Cell></Table.Row>
+              <Table.Row><Table.Cell colspan={7} class="px-3 py-6 text-center text-muted-foreground">No clients yet. Invite someone by username, or <a href="/coaching/links" class="text-primary hover:underline">share an invite link</a>.</Table.Cell></Table.Row>
             {/if}
           </Table.Body>
         </Table.Root>

@@ -3,24 +3,7 @@
   import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
-  import ListIcon from "@lucide/svelte/icons/list";
-  import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
-  import AppleIcon from "@lucide/svelte/icons/apple";
-  import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
-  import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
-  import LibraryIcon from "@lucide/svelte/icons/library";
-  import SunriseIcon from "@lucide/svelte/icons/sunrise";
-  import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
-  import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
-  import LinkIcon from "@lucide/svelte/icons/link";
-  import WalletIcon from "@lucide/svelte/icons/wallet";
-  import ContactIcon from "@lucide/svelte/icons/contact";
-  import MessageSquareIcon from "@lucide/svelte/icons/message-square";
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
-  import UsersRoundIcon from "@lucide/svelte/icons/users-round";
-  import PuzzleIcon from "@lucide/svelte/icons/puzzle";
-  import LightbulbIcon from "@lucide/svelte/icons/lightbulb";
   import LogOutIcon from "@lucide/svelte/icons/log-out";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import SunIcon from "@lucide/svelte/icons/sun";
@@ -29,10 +12,6 @@
   import CompassIcon from "@lucide/svelte/icons/compass";
   import BookOpenIcon from "@lucide/svelte/icons/book-open";
   import ShieldIcon from "@lucide/svelte/icons/shield";
-  import ServerIcon from "@lucide/svelte/icons/server";
-  import StethoscopeIcon from "@lucide/svelte/icons/stethoscope";
-  import TicketIcon from "@lucide/svelte/icons/ticket";
-  import FlagIcon from "@lucide/svelte/icons/flag";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import { adminState } from "$lib/features/admin/adminState.svelte";
   import { guide, walkthroughsFor, chaptersOf } from "$lib/features/guide/guide.svelte";
@@ -45,9 +24,11 @@
   import { useSidebar } from "$lib/components/ui/sidebar";
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { isCoachingPath } from "$lib/workspace";
+  import { adminNav, clientGroup, coachGroups, meGroups } from "$lib/nav";
+  import SearchIcon from "@lucide/svelte/icons/search";
+  import { Kbd } from "$lib/components/ui/kbd";
+  import { commands, modKey } from "$lib/features/commands/commands.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
-  import { dmBadge, socialBadge } from "$lib/features/social/socialData.svelte";
-  import MessageCircleIcon from "@lucide/svelte/icons/message-circle";
 
   let {
     isStudio = false,
@@ -67,105 +48,7 @@
     return total > 0 && done < total ? `${done} of ${total}` : null;
   });
 
-  type NavItem = { label: string; href: string; icon: typeof LayoutDashboardIcon; badge?: () => number };
-  type NavGroup = { label: string | null; items: NavItem[] };
-
-  // "Me": your own training.
-  const meGroups: NavGroup[] = [
-    { label: null, items: [{ label: "Overview", href: "/", icon: LayoutDashboardIcon }] },
-    {
-      label: "Training",
-      items: [
-        { label: "Sessions", href: "/sessions", icon: ListIcon },
-        { label: "Progress", href: "/progress", icon: TrendingUpIcon },
-        { label: "Plan", href: "/plan", icon: CalendarDaysIcon },
-        { label: "Library", href: "/library", icon: LibraryIcon },
-      ],
-    },
-    {
-      label: "Body",
-      items: [
-        { label: "Nutrition", href: "/nutrition", icon: AppleIcon },
-        { label: "Habits & goals", href: "/habits", icon: CircleCheckIcon },
-      ],
-    },
-    {
-      label: "People",
-      items: [
-        { label: "Social", href: "/social", icon: UsersRoundIcon, badge: () => socialBadge.count },
-        { label: "Messages", href: "/social/messages", icon: MessageCircleIcon, badge: () => dmBadge.count },
-      ],
-    },
-    {
-      label: "Extras",
-      items: [
-        { label: "Insights", href: "/insights", icon: LightbulbIcon },
-        { label: "Plugins", href: "/plugins", icon: PuzzleIcon },
-      ],
-    },
-  ];
-
-  // "Coaching": a separate workspace, Studio accounts only.
-  const coachGroups: NavGroup[] = [
-    {
-      label: null,
-      items: [
-        { label: "Today", href: "/coaching", icon: SunriseIcon, badge: () => coachBadges.today },
-        { label: "Clients", href: "/clients", icon: ContactIcon },
-        { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon },
-        { label: "Library", href: "/coaching/library", icon: LibraryIcon },
-        { label: "Check-ins", href: "/coaching/checkins", icon: ClipboardCheckIcon, badge: () => coachBadges.checkins },
-        { label: "Messages", href: "/messages", icon: MessageSquareIcon, badge: () => coachBadges.messages },
-      ],
-    },
-    {
-      label: "Studio",
-      items: [
-        { label: "Invite links", href: "/coaching/links", icon: LinkIcon, badge: () => coachBadges.links },
-        { label: "Payments", href: "/coaching/payments", icon: WalletIcon, badge: () => coachBadges.payments },
-      ],
-    },
-  ];
-
-  // Your own coach (if you have one): program, messages, check-ins and what they can see.
-  const clientGroup: NavGroup = {
-    label: "Coach",
-    items: [{ label: "My coach", href: "/my-coach", icon: UserRoundIcon, badge: () => coachBadges.myCoach }],
-  };
-
-  // "Admin": the server's admin console, its own space like Coaching (admins only; the
-  // pages themselves check with the server).
-  const adminGroups: NavGroup[] = $derived([
-    { label: null, items: [{ label: "Overview", href: "/admin", icon: LayoutDashboardIcon }] },
-    {
-      label: "People",
-      items: [
-        { label: "People", href: "/admin/people", icon: UsersRoundIcon },
-        { label: "Invites", href: "/admin/invites", icon: TicketIcon },
-      ],
-    },
-    {
-      label: "Community",
-      items: [
-        { label: "Reports", href: "/admin/reports", icon: FlagIcon, badge: () => adminState.openReports },
-        { label: "Plugin reviews", href: "/admin/plugins", icon: PuzzleIcon, badge: () => adminState.pluginsWaiting },
-      ],
-    },
-    // getlogit.app only (the server refuses these on self-hosted servers too).
-    ...(apiClient.isSelfHosted() ? [] : [{
-      label: "getlogit.app",
-      items: [
-        { label: "Subscriptions", href: "/admin/subscriptions", icon: WalletIcon },
-        { label: "Growth", href: "/admin/growth", icon: TrendingUpIcon },
-        { label: "Diagnostics", href: "/admin/diagnostics", icon: StethoscopeIcon },
-        { label: "Discover tests", href: "/admin/discover", icon: CompassIcon },
-      ],
-    }]),
-    {
-      label: "Server",
-      items: [{ label: "Server", href: "/admin/server", icon: ServerIcon, badge: () => adminState.serverWarnings }],
-    },
-  ]);
+  const adminGroups = $derived(adminNav(apiClient.isSelfHosted()));
 
   const admin = $derived(page.url.pathname === "/admin" || page.url.pathname.startsWith("/admin/"));
   const coaching = $derived(!admin && isStudio && isCoachingPath(page.url.pathname, page.url.searchParams));
@@ -227,6 +110,12 @@
           class="{segBase} {coaching ? segOn : segOff}" onclick={() => switchTo("coaching")}>{!coaching && coachBadges.today > 0 ? `Coaching · ${coachBadges.today}` : "Coaching"}</button>
       </div>
     {/if}
+    <button type="button" onclick={() => { commands.palette = true; onNavClick(); }}
+      class="flex h-9 items-center gap-2 rounded-lg border border-sidebar-border bg-background px-2.5 text-left text-[13px] text-muted-foreground hover:text-foreground group-data-[collapsible=icon]:hidden">
+      <SearchIcon class="size-4" />
+      <span class="flex-1">Search or jump to…</span>
+      <Kbd>{modKey} K</Kbd>
+    </button>
   </Sidebar.Header>
 
   <Sidebar.Content>

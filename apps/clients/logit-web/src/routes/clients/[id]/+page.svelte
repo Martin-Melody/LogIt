@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
+  import { untrack } from "svelte";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -82,6 +83,19 @@
       setTab("programs");
     }
   }
+
+  // ?assign=1 (from ⌘K or a row menu): open the Programs tab with its assign dialog.
+  $effect(() => {
+    if (!c || !page.url.searchParams.has("assign")) return;
+    untrack(() => {
+      assignOnOpen = true;
+      programsTab?.openAssignDialog();
+      const u = new URL(page.url);
+      u.searchParams.delete("assign");
+      u.searchParams.set("tab", "programs");
+      void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
+    });
+  });
 
   function programLine(x: ClientSummary): string {
     const p = x.program;
