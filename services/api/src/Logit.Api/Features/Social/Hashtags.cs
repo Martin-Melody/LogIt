@@ -77,16 +77,19 @@ public static partial class Hashtags
     {
         var prefix = Normalize(q);
         if (prefix is null) return Results.Ok(Array.Empty<TagCountDto>());
-        return Results.Ok(await Counted(Public(db).Where(h => h.Tag.StartsWith(prefix)), 8));
+        return Results.Ok(await SuggestAsync(db, prefix));
     }
 
+    public static Task<List<TagCountDto>> SuggestAsync(AppDbContext db, string prefix, int take = 8) => Counted(Public(db).Where(h => h.Tag.StartsWith(prefix)), take);
+
     /// The Forum tab's row (F2): the most-used tags this week, topped up with all-time ones.
-    private static async Task<IResult> Trending(AppDbContext db, TimeProvider clock)
+    private static async Task<IResult> Trending(AppDbContext db, TimeProvider clock) => Results.Ok(await TrendingAsync(db, clock.GetUtcNow().UtcDateTime));
+
+    public static async Task<List<TagCountDto>> TrendingAsync(AppDbContext db, DateTime now, int take = 10)
     {
-        var since = clock.GetUtcNow().UtcDateTime.AddDays(-7);
-        var week = await Counted(Public(db).Where(h => h.CreatedAt >= since), 10);
-        if (week.Count < 10) week.AddRange((await Counted(Public(db), 20)).Where(x => week.All(w => w.Tag != x.Tag)).Take(10 - week.Count));
-        return Results.Ok(week);
+        var week = await Counted(Public(db).Where(h => h.CreatedAt >= now.AddDays(-7)), take);
+        if (week.Count < take) week.AddRange((await Counted(Public(db), take * 2)).Where(x => week.All(w => w.Tag != x.Tag)).Take(take - week.Count));
+        return week;
     }
 
     /// The most-used tags in `rows`, most first.

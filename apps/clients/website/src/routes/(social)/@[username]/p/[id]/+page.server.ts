@@ -14,5 +14,5 @@ export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
   if (!res.ok) error(502, "Couldn't load this post. Try again in a moment.");
   setHeaders({ "cache-control": "public, max-age=300" });
   const page = (await res.json()) as { profile: PublicProfile; post: ApiPost; comments: ApiComment[]; more: ApiPost[] };
-  return { ...page, api };
+  return { ...page, api, appPath: `/social/post/${params.id}` };
 };

@@ -22,6 +22,9 @@ public class Group
     public DateTime? NoteAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public GroupAccess Access { get; set; } = GroupAccess.InviteOnly;
+    /// Its name for the web address getlogit.app/groups/{slug}-{first 8 of id} (canvas S4);
+    /// only groups anyone can find have that page. Kept in step with the name.
+    public string Slug { get; set; } = "";
     public ICollection<GroupMember> Members { get; set; } = [];
 }
 

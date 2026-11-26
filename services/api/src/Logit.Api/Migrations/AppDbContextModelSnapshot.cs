@@ -1227,12 +1227,19 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Access");
 
                     b.HasIndex("InviteCode")
                         .IsUnique();
+
+                    b.HasIndex("Slug");
 
                     b.ToTable("Groups");
                 });

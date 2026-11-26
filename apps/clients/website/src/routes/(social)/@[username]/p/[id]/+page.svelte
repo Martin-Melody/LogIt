@@ -1,7 +1,8 @@
 <!-- One post on the web, signed out (design canvas W2): the post and its comments (replies under
      what they answer), then Sign in to like, comment or follow, and more from them. -->
 <script lang="ts">
-  import { DASHBOARD_URL, SITE_URL } from "$lib/site";
+  import { SITE_URL } from "$lib/site";
+  import { logIn } from "$lib/social/prompt.svelte";
   import { attachmentSummary } from "@logit/core/domain/sharedContent";
   import ProfileHead from "$lib/social/ProfileHead.svelte";
   import PublicPost from "$lib/social/PublicPost.svelte";
@@ -41,7 +42,7 @@
   <p class="whitespace-pre-wrap text-[15px] leading-relaxed">{c.body}</p>
 {/snippet}
 
-<div class="mx-auto flex max-w-[600px] flex-col gap-3 px-4 pb-24 pt-8 sm:px-6">
+<div class="flex flex-col gap-3 px-4 pb-10 pt-6 sm:px-5">
   <a href="/@{p.username}" class="no-underline"><ProfileHead profile={p} api={data.api} small /></a>
   <PublicPost {post} api={data.api} />
   {#if top.length}
@@ -59,7 +60,7 @@
   <div class="mt-2 flex flex-col gap-3 rounded-2xl border border-border p-5 sm:flex-row sm:items-center">
     <p class="flex-1 text-sm text-muted-foreground">Sign in to like, comment or follow. Any LogIt account works, and it's free.</p>
     <span class="flex gap-2">
-      <a href="{DASHBOARD_URL}/social/post/{post.id}" class="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Sign in</a>
+      <a href={logIn(data.appPath)} class="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Sign in</a>
       <a href="logit://u/{p.username}/p/{post.id}" class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold hover:bg-muted">Open in LogIt</a>
     </span>
   </div>

@@ -20,7 +20,9 @@ cheer on friends who are training right now. Social is free with any account, on
 the web; stories are on the phone for now.
 
 Public means public everywhere: a public account's profile and posts, every forum post and every
-tag can be read by anyone at getlogit.app and found on Google, no account needed. A private
+tag can be read by anyone at getlogit.app and found on Google, no account needed. Without an account
+you can browse Explore, the Forum, search and groups anyone can find at getlogit.app/explore; liking,
+replying, following and posting ask you to sign in. A private
 account's profile and posts, and forum posts in an invite-only group, are never on the web.
 
 <HowTo id="pro.social" />

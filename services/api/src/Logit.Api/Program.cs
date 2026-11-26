@@ -356,6 +356,7 @@ api.MapEventEndpoints();
 api.MapBoardEndpoints();
 api.MapGroupPostEndpoints();
 api.MapTagEndpoints();
+api.MapPublicSocialEndpoints();
 api.MapPublicProfileEndpoints();
 api.MapPhotoEndpoints();
 api.MapVoiceEndpoints();
