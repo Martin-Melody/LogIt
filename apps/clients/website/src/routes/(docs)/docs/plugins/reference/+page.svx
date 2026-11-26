@@ -1,5 +1,6 @@
 ---
 title: API reference
+description: "The types and shapes LogIt plugins use, from @logit/core."
 ---
 
 Import types from `@logit/core` for editor help. These are the shapes as of the

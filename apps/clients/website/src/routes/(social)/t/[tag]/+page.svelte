@@ -14,6 +14,8 @@
 
 <svelte:head>
   <title>#{t} · LogIt</title>
+  <!-- A tag on one or two posts is a thin copy of those posts. -->
+  {#if data.tag.forumPosts + data.tag.posts < 3}<meta name="robots" content="noindex" />{/if}
   <meta name="description" content={description} />
   <link rel="canonical" href="{SITE_URL}/t/{encodeURIComponent(t)}" />
   <meta property="og:title" content="#{t} on LogIt" />

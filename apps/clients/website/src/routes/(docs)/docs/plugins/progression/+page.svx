@@ -1,5 +1,6 @@
 ---
 title: Progression algorithms
+description: "Write a progression algorithm that decides your next sets, reps and weight for an exercise."
 ---
 
 A progression algorithm decides your next sets for an exercise, given its

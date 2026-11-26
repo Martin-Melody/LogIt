@@ -61,6 +61,7 @@ public class PublicSocialTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync($"/public{path[..^1]}x")).StatusCode);
         var secretPath = $"/public/groups/sligo-secret-lifters-{secret.GetProperty("id").GetString()!.Replace("-", "")[..8]}";
         Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync(secretPath)).StatusCode);
-        Assert.Equal([path], Names(await Get(anon, "/public/group-index"), "path"));
+        await Json(await cara.PostAsJsonAsync("/groups", new { name = "Empty Gym", place = "Sligo", access = "Open" }));
+        Assert.Equal([path], Names(await Get(anon, "/public/group-index"), "path")); // nothing on Empty Gym's page yet
     }
 }

@@ -1,5 +1,6 @@
 ---
 title: Widget primitives
+description: "Every building block a LogIt home-screen widget can use, with live previews."
 ---
 
 <script>

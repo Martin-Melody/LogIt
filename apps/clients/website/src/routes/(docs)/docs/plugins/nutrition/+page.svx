@@ -1,5 +1,6 @@
 ---
 title: Nutrition algorithms
+description: "Write a nutrition algorithm that turns a goal plus real intake and weight data into daily calorie and macro targets."
 ---
 
 ## nutrition-algorithm

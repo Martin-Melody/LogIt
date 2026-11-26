@@ -2,8 +2,12 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { flatDocs } from "./nav";
+  import { FEATURES } from "./using/guide";
 
-  let { children, title }: { children: import("svelte").Snippet; title?: string } = $props();
+  let { children, title, description }: { children: import("svelte").Snippet; title?: string; description?: string } = $props();
+
+  // "Using LogIt" pages share the app's own one-line summary; other pages set description: in their frontmatter.
+  const summary = $derived(description ?? FEATURES.find((f) => f.docs === page.url.pathname)?.summary);
 
   const idx = $derived(flatDocs.findIndex((d) => d.href === page.url.pathname));
   const prev = $derived(idx > 0 ? flatDocs[idx - 1] : null);
@@ -11,7 +15,8 @@
 </script>
 
 <svelte:head>
-  {#if title}<title>{title} · LogIt docs</title>{/if}
+  {#if title}<title>{title} · LogIt docs</title><meta property="og:title" content={title} />{/if}
+  {#if summary}<meta name="description" content={summary} /><meta property="og:description" content={summary} />{/if}
 </svelte:head>
 
 <article class="prose-site">

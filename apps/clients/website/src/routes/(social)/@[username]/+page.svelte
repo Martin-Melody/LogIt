@@ -14,6 +14,8 @@
 
 <svelte:head>
   <title>{p.displayName} (@{p.username}) · LogIt</title>
+  <!-- A page with nothing on it counts against the whole site in search; the profiles sitemap skips these too. -->
+  {#if data.posts.length === 0 && data.forum.length === 0}<meta name="robots" content="noindex" />{/if}
   <meta name="description" content={description} />
   <link rel="canonical" href="{SITE_URL}/@{p.username}" />
   <meta property="og:title" content="{p.displayName} (@{p.username})" />
