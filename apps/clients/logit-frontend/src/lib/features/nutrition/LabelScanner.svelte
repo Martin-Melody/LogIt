@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { log } from "@logit/core/platform/log";
   import { onMount } from "svelte";
-  import { X, Camera, Image as ImageIcon, LoaderCircle } from "lucide-svelte";
+  import { X, Camera, Image as ImageIcon } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { scanLabel, type LabelScanResult } from "$lib/features/nutrition/labelOcr";
 
@@ -57,7 +58,7 @@
 
   {#if phase === "working"}
     <div class="flex-1 flex flex-col items-center justify-center gap-3 text-white/80">
-      <LoaderCircle class="h-6 w-6 animate-spin" />
+      <Spinner class="h-6 w-6" />
       <p class="text-sm">Reading the label…</p>
     </div>
   {:else}

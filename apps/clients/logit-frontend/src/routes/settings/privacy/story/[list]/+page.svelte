@@ -1,9 +1,10 @@
 <!-- Settings › Privacy › Story › Close friends / Hide story from (design canvas S4), as on
      Instagram: tick people from your followers. Nobody is told they were added or removed. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { Check, Loader2, Search } from "lucide-svelte";
+  import { Check, Search } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import PersonAvatar from "$lib/components/social/PersonAvatar.svelte";
@@ -69,7 +70,7 @@
   {#if error}
     <p class="px-1 text-sm text-muted-foreground">Couldn't load your followers. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if people === null}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else if people.length === 0}
     <p class="px-1 py-8 text-center text-sm text-muted-foreground">Once people follow you, you can pick them here.</p>
   {:else}

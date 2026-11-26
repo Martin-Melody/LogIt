@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as Select from "$lib/components/ui/select/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -89,10 +91,12 @@
   {:else}
     <div class="px-3 py-2 border-b border-border flex items-center gap-2 text-sm">
       <span class="text-muted-foreground">Cadence</span>
-      <select value={schedule.cadence} class="h-10 rounded-md border bg-background px-2 text-sm"
-        onchange={(e) => void run((s) => C.setCadence(s, e.currentTarget.value as CheckinCadence))}>
-        {#each cadences as c}<option value={c} class="capitalize">{c}</option>{/each}
-      </select>
+      <Select.Root type="single" value={schedule.cadence} onValueChange={(v) => void run((s) => C.setCadence(s, v as CheckinCadence))}>
+        <Select.Trigger aria-label="Cadence" class="capitalize">{schedule.cadence}</Select.Trigger>
+        <Select.Content>
+          {#each cadences as c}<Select.Item value={c} label={c} class="capitalize" />{/each}
+        </Select.Content>
+      </Select.Root>
       <span class="ml-auto text-xs text-muted-foreground">{ui.saving ? "saving…" : "saved"}</span>
     </div>
 
@@ -112,13 +116,15 @@
             </button>
           </div>
           <div class="flex items-center gap-2">
-            <select value={q.type} class="h-10 rounded-md border bg-background px-1.5 text-sm"
-              onchange={(e) => void run((s) => C.updateQuestion(s, q.id, { type: e.currentTarget.value as CheckinQuestionType }))}>
-              {#each qTypes as t}<option value={t.v}>{t.l}</option>{/each}
-            </select>
+            <Select.Root type="single" value={q.type} onValueChange={(v) => void run((s) => C.updateQuestion(s, q.id, { type: v as CheckinQuestionType }))}>
+              <Select.Trigger aria-label="Answer type">{qTypes.find((t) => t.v === q.type)?.l ?? q.type}</Select.Trigger>
+              <Select.Content>
+                {#each qTypes as t}<Select.Item value={t.v} label={t.l} />{/each}
+              </Select.Content>
+            </Select.Root>
             <label class="flex items-center gap-1 text-xs text-muted-foreground">
-              <input type="checkbox" checked={q.required ?? false} disabled={ui.saving}
-                onchange={(e) => void run((s) => C.updateQuestion(s, q.id, { required: e.currentTarget.checked }))} />
+              <Checkbox checked={q.required ?? false} disabled={ui.saving}
+                onCheckedChange={(v) => void run((s) => C.updateQuestion(s, q.id, { required: v }))} />
               Required
             </label>
           </div>

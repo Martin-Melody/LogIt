@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as RadioGroup from "$lib/components/ui/radio-group";
   import * as Dialog from "$lib/components/ui/dialog";
   import * as Select from "$lib/components/ui/select";
   import { Button } from "$lib/components/ui/button";
@@ -119,10 +120,10 @@
           </Select.Root>
         </div>
 
-        <fieldset class="mt-4 flex flex-col">
-          <legend class="mb-1 text-xs font-medium text-muted-foreground">Where</legend>
+        <span id="save-target" class="mt-4 mb-1 block text-xs font-medium text-muted-foreground">Where</span>
+        <RadioGroup.Root bind:value={target} aria-labelledby="save-target" class="flex flex-col gap-0">
           <label class="flex min-h-12 cursor-pointer items-center gap-3 border-b border-border/60 text-sm">
-            <input type="radio" name="save-target" class="size-[18px] accent-primary" value="new" bind:group={target} />
+            <RadioGroup.Item value="new" />
             <span>Add as a new day <span class="text-muted-foreground">· {title}</span></span>
           </label>
           {#if days.length}
@@ -130,7 +131,7 @@
             {#each days as d (d.id)}
               {@const changes = d.id === fromDayId ? splitDayChanges(session, d) : null}
               <label class="flex min-h-11 cursor-pointer items-center gap-3 border-b border-border/60 py-1.5 text-sm">
-                <input type="radio" name="save-target" class="size-[18px] accent-primary" value={d.id} bind:group={target} />
+                <RadioGroup.Item value={d.id} />
                 <span class="flex min-w-0 flex-col">
                   <span class={d.id === fromDayId ? "font-medium" : ""}>{splitDayTitleFor(split!, d.id)}</span>
                   {#if d.id === fromDayId}
@@ -140,7 +141,7 @@
               </label>
             {/each}
           {/if}
-        </fieldset>
+        </RadioGroup.Root>
       </div>
 
       <div class="flex gap-2 border-t border-border px-5 pt-3 pb-4">

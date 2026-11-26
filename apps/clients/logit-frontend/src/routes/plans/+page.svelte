@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Check, Cloud, Monitor, CalendarDays, UserRound, UserPlus, RefreshCw, Clock, Loader2 } from "lucide-svelte";
+  import { Check, Cloud, Monitor, CalendarDays, UserRound, UserPlus, RefreshCw, Clock } from "lucide-svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import BillingSheet from "$lib/components/billing/BillingSheet.svelte";
@@ -197,7 +198,7 @@
             </p>
           {/if}
           <Button size="lg" class="w-full text-[15px] font-semibold" disabled={billing.busy || (billing.onHostedAccount() && (!offer || isCurrent))} onclick={() => void subscribe()}>
-            {#if billing.busy}<Loader2 class="animate-spin" />Confirming with Google Play…{:else}{ctaLabel}{/if}
+            {#if billing.busy}<Spinner />Confirming with Google Play…{:else}{ctaLabel}{/if}
           </Button>
           {#if price}
             <p class="text-center text-[11.5px] leading-normal text-muted-foreground">

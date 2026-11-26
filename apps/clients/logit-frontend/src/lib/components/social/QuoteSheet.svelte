@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
   import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
-  import { X, Loader2 } from "lucide-svelte";
+  import { X } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ApiPost, type RepostSource } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
@@ -86,7 +87,7 @@
         disabled={submitting || !body.trim()}
         onclick={() => void submit()}
       >
-        {#if submitting}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if}
+        {#if submitting}<Spinner class="h-3.5 w-3.5" />{/if}
         {submitting ? "Posting…" : "Post"}
       </button>
     </div>

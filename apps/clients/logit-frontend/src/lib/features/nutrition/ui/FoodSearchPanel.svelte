@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { log } from "@logit/core/platform/log";
-  import { LoaderCircle, ScanBarcode, ScanText, Search, X, Zap } from "lucide-svelte";
+  import { ScanBarcode, ScanText, Search, X, Zap } from "lucide-svelte";
   import {
     localDateIso,
     loggedItemPer100g,
@@ -321,7 +322,7 @@
         class="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none [&::-webkit-search-cancel-button]:hidden"
         aria-label="Search foods"
       />
-      {#if busy}<LoaderCircle class="size-4 shrink-0 animate-spin text-muted-foreground" />{/if}
+      {#if busy}<Spinner class="size-4 shrink-0 text-muted-foreground" />{/if}
       {#if query}
         <button type="button" class="flex size-10 shrink-0 items-center justify-center text-muted-foreground" aria-label="Clear search" onclick={() => { query = ""; result = null; input?.focus(); }}>
           <X class="size-[18px]" />

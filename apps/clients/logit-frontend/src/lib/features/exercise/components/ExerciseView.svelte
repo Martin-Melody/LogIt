@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+  import * as Select from "$lib/components/ui/select/index.js";
   import VideoEmbed from "./VideoEmbed.svelte";
   import { Copy, Package, RotateCcw, Trash2, ChevronRight } from "lucide-svelte";
   import type { Snippet } from "svelte";
@@ -263,13 +264,16 @@
 </script>
 
 {#snippet equipmentField(ex: Exercise)}
-  <label class="flex flex-col gap-1 text-sm font-medium">Equipment
-    <select value={ex.equipment ?? ""} onchange={(e) => void saveField({ equipment: ((e.currentTarget as HTMLSelectElement).value || undefined) as Equipment | undefined })}
-      class="h-10 rounded-md border bg-background px-3 text-sm font-normal">
-      <option value="">Not set</option>
-      {#each EQUIPMENT as eq (eq)}<option value={eq}>{label(EQUIPMENT_LABEL[eq])}</option>{/each}
-    </select>
-  </label>
+  <div class="flex flex-col gap-1 text-sm font-medium">
+    <label for="ex-equipment">Equipment</label>
+    <Select.Root type="single" value={ex.equipment ?? "none"} onValueChange={(v) => void saveField({ equipment: (v === "none" ? undefined : v) as Equipment | undefined })}>
+      <Select.Trigger id="ex-equipment" class="w-full font-normal">{ex.equipment ? label(EQUIPMENT_LABEL[ex.equipment]) : "Not set"}</Select.Trigger>
+      <Select.Content>
+        <Select.Item value="none" label="Not set" />
+        {#each EQUIPMENT as eq (eq)}<Select.Item value={eq} label={label(EQUIPMENT_LABEL[eq])} />{/each}
+      </Select.Content>
+    </Select.Root>
+  </div>
 {/snippet}
 
 {#if error}

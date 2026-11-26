@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
-  import { Loader2 } from "lucide-svelte";
+  
   import * as Card from "$lib/components/ui/card";
   import { socialApi, type BlockedUser } from "@logit/core/api/socialApi";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -45,7 +46,7 @@
     </Card.Header>
     <Card.Content class="flex flex-col gap-2">
       {#if loading}
-        <div class="flex justify-center py-3"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+        <div class="flex justify-center py-3"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
       {:else}
         {#each list as u (u.id)}
           <div class="flex items-center gap-2">

@@ -1,9 +1,10 @@
 <!-- Who's going (design canvas E4), and who can't make it. Members only; people who haven't
      answered aren't listed. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { Loader2 } from "lucide-svelte";
+  
   import { eventsApi, type GroupEvent } from "@logit/core/api/eventsApi";
   import type { GroupPerson } from "@logit/core/api/groupsApi";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -40,7 +41,7 @@
   {#if error}
     <p class="px-4 py-10 text-center text-sm text-muted-foreground">Couldn't load who's going.</p>
   {:else if !people}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     {#each [{ title: "Going", list: people.going }, { title: "Can't make it", list: people.cantMakeIt }] as part (part.title)}
       {#if part.list.length || part.title === "Going"}

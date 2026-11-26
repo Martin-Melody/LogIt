@@ -4,10 +4,11 @@
      (?branch=). Upvotes only. Its #tags open their pages. The post's ⋯: share, delete (yours),
      report, and for moderators pin (in a group), lock, remove, take a tag off. Long-press a comment for copy, reply, delete, report. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
-  import { ChevronUp, Copy, Flag, Hash, Loader2, Lock, MessageCircle, MoreHorizontal, Pin, Send, Share2, Trash2, Unlock, X } from "lucide-svelte";
+  import { ChevronUp, Copy, Flag, Hash, Lock, MessageCircle, MoreHorizontal, Pin, Send, Share2, Trash2, Unlock, X } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import { Capacitor } from "@capacitor/core";
   import { ApiError } from "@logit/core/api/client";
@@ -197,7 +198,7 @@
     {#if error}
       <p class="px-6 py-14 text-center text-sm text-muted-foreground">{error}</p>
     {:else if !thread || !post}
-      <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+      <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
     {:else}
       {#if !branchId}
         <article class="flex flex-col gap-2 border-b border-border px-4 pb-3 pt-2">

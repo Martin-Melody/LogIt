@@ -2,13 +2,14 @@
      by name or place (invite-only ones never show); tapping one opens its join screen, or its page
      if you're in. Events: upcoming events in findable groups by place or name, sport, kind and when. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { toast } from "svelte-sonner";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
   import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import { goto } from "$app/navigation";
-  import { X, Search, UserPlus, UserCheck, Loader2, Link2 } from "lucide-svelte";
+  import { X, Search, UserPlus, UserCheck, Link2 } from "lucide-svelte";
   import { openInvite } from "$lib/features/friends/invite.svelte";
   import { socialApi, type UserSearchResult } from "@logit/core/api/socialApi";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -233,7 +234,7 @@
         class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
       {#if loading}
-        <Loader2 class="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+        <Spinner class="h-4 w-4 text-muted-foreground shrink-0" />
       {/if}
       <button type="button" class="p-1 text-muted-foreground" onclick={onclose}>
         <X class="h-4 w-4" />
@@ -370,7 +371,7 @@
                 onclick={() => void toggleFollow(user)}
               >
                 {#if togglingId === user.id}
-                  <Loader2 class="h-3 w-3 animate-spin" />
+                  <Spinner class="h-3 w-3" />
                 {:else if isFollowing}
                   <UserCheck class="h-3 w-3" /> Following
                 {:else if isRequested}

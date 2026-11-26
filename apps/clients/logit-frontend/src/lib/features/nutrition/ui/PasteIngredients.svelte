@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { fly } from "svelte/transition";
-  import { AlertTriangle, LoaderCircle, X } from "lucide-svelte";
+  import { AlertTriangle, X } from "lucide-svelte";
   import { parseIngredientList, scaleMacros } from "@logit/core/domain/nutrition";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { loadMyFoods, matchIngredientLine, sizeLine, type MatchedLine } from "../foodFinder";
@@ -113,7 +114,7 @@
         disabled={!text.trim() || phase === "matching"}
         onclick={() => void match()}
       >
-        {#if phase === "matching"}<LoaderCircle class="size-5 animate-spin" />Finding foods…{:else}Find these foods{/if}
+        {#if phase === "matching"}<Spinner class="size-5" />Finding foods…{:else}Find these foods{/if}
       </button>
     </div>
   {:else}

@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   // Accounts on this phone (design canvas 8b): each keeps its own training, settings and
   // sign-in, so switching is one tap with no password. "Add account" signs someone else in
   // alongside; the account in use stays as it is.
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { Check, Loader2, Plus } from "lucide-svelte";
+  import { Check, Plus } from "lucide-svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { apiClient } from "@logit/core/api/client";
   import { getActiveOwnerId } from "$lib/data/activeOwner";
@@ -73,7 +74,7 @@
 </script>
 
 {#if loading}
-  <div class="flex justify-center py-10"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+  <div class="flex justify-center py-10"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
 {:else}
   <ul class="flex flex-col gap-1.5">
     {#each rows as row (row.account.id)}
@@ -99,7 +100,7 @@
             <span class="truncate text-[13px] text-muted-foreground">{row.detail}</span>
           </span>
           {#if busyId === row.account.id}
-            <Loader2 class="h-4 w-4 animate-spin text-muted-foreground" />
+            <Spinner class="h-4 w-4 text-muted-foreground" />
           {:else if active}
             <Check class="h-5 w-5" aria-label="Current account" />
           {/if}
@@ -110,7 +111,7 @@
       <button type="button" class="w-full min-h-16 flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-muted/60"
         disabled={adding} onclick={() => void addAccount()}>
         <span class="h-11 w-11 shrink-0 rounded-full border-[1.5px] border-dashed border-muted-foreground/50 flex items-center justify-center">
-          {#if adding}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Plus class="h-5 w-5 text-muted-foreground" />{/if}
+          {#if adding}<Spinner class="h-4 w-4" />{:else}<Plus class="h-5 w-5 text-muted-foreground" />{/if}
         </span>
         <span class="flex flex-col">
           <span class="text-[15px] font-medium">Add account</span>

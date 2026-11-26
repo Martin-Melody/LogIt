@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { back } from "$lib/navigation";
   // Sign in on a computer (web onboarding W1, the phone side). The web sign-in page shows a QR;
   // this scans it, says which browser is asking, and only signs it in when the person says yes
   // (server Features/Auth/PairingEndpoints.cs). The question warns about the one thing the server
   // can't stop: approving a code someone else put in front of you.
   import { onDestroy, onMount } from "svelte";
-  import { ArrowLeft, Check, Loader2, Monitor, ScanLine, XCircle } from "lucide-svelte";
+  import { ArrowLeft, Check, Monitor, ScanLine, XCircle } from "lucide-svelte";
   import { apiClient, ApiError, PAIRING_QR_PREFIX, type SignedInSession } from "@logit/core/api/client";
   import { isNativePlatform } from "$lib/platform/isNative";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -120,7 +121,7 @@
       <div class="flex-1"></div>
       <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-[15px] font-medium text-primary-foreground disabled:opacity-50"
         disabled={step.kind === "answering" || secondsLeft === 0} onclick={() => void answer(true)}>
-        {#if step.kind === "answering"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        {#if step.kind === "answering"}<Spinner class="h-4 w-4" />{/if}
         Yes, sign it in
       </button>
       <button type="button" class="h-12 rounded-lg border border-border text-[15px] font-medium disabled:opacity-50"
@@ -152,7 +153,7 @@
       {#if native}
         <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-[15px] font-medium text-primary-foreground disabled:opacity-50"
           disabled={step.kind === "looking"} onclick={() => void scan()}>
-          {#if step.kind === "looking"}<Loader2 class="h-4 w-4 animate-spin" />{:else}<ScanLine class="h-4 w-4" />{/if}
+          {#if step.kind === "looking"}<Spinner class="h-4 w-4" />{:else}<ScanLine class="h-4 w-4" />{/if}
           Scan the code
         </button>
       {:else}

@@ -1,10 +1,11 @@
 <!-- A group's posts seen from outside (canvas F6): the Forum filtered to posts labelled with the
      group, New post picks it, and Join at the top. Members go to their Posts tab. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2 } from "lucide-svelte";
+  
   import { ApiError } from "@logit/core/api/client";
   import { groupsApi, type GroupPreview } from "@logit/core/api/groupsApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -37,7 +38,7 @@
     {#if error}
       <p class="px-6 py-14 text-center text-sm text-muted-foreground">{error}</p>
     {:else if !preview || preview.member}
-      <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+      <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
     {:else}
       <div class="flex items-center gap-3 px-4 pb-2 pt-1">
         <GroupAvatar name={preview.name} src={preview.photoUrl} size={48} />

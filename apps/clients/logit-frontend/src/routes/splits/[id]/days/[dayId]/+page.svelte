@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import { removeDay, splitDayTitle } from "@logit/core/domain/splitSchedule";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   // One day of a split: what to train, in order, with targets. Looks like the workout
@@ -813,7 +814,7 @@
               <button type="button" class={segment(block.metric === "reps")} aria-pressed={block.metric === "reps"} disabled={ui.saving} onclick={() => setDrill(block, { metric: "reps" })}>Reps</button>
             </div>
             <label class="flex h-10 shrink-0 items-center gap-2 rounded-md border border-border px-3 text-sm">
-              <input type="checkbox" class="size-4 accent-primary" checked={block.perSide} disabled={ui.saving} onchange={() => setDrill(block, { perSide: !block.perSide })} />
+              <Checkbox checked={!!block.perSide} disabled={ui.saving} onCheckedChange={(v) => setDrill(block, { perSide: v })} />
               Each side
             </label>
           </div>

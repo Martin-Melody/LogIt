@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as Select from "$lib/components/ui/select/index.js";
+  import { DateField } from "$lib/components/ui/date-field/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -118,13 +120,11 @@
     </p>
     <div class="flex flex-wrap items-center gap-2 px-3 py-2 text-sm border-b border-border">
       <label for="program-start-mode" class="text-muted-foreground">Starts</label>
-      <select
-        id="program-start-mode"
-        class="h-9 rounded-md border border-input bg-background px-2 text-sm"
+      <Select.Root
+        type="single"
         value={program.startMode === "fixed-date" ? "fixed-date" : "manual"}
         disabled={ui.saving}
-        onchange={(e) => {
-          const mode = e.currentTarget.value;
+        onValueChange={(mode) => {
           void run((p) =>
             mode === "fixed-date"
               ? P.setProgramStart(p, { mode: "fixed-date", startDateMs: p.startDateMs ?? P.startOfLocalDayMs() })
@@ -132,19 +132,19 @@
           );
         }}
       >
-        <option value="manual">When the client taps Start</option>
-        <option value="fixed-date">On a date</option>
-      </select>
+        <Select.Trigger id="program-start-mode" size="sm">{program.startMode === "fixed-date" ? "On a date" : "When the client taps Start"}</Select.Trigger>
+        <Select.Content>
+          <Select.Item value="manual" label="When the client taps Start" />
+          <Select.Item value="fixed-date" label="On a date" />
+        </Select.Content>
+      </Select.Root>
       {#if program.startMode === "fixed-date"}
-        <input
-          id="program-start-date"
-          type="date"
+        <DateField
           aria-label="Start date"
-          class="h-9 rounded-md border border-input bg-background px-2 text-sm"
-          value={program.startDateMs != null ? P.toDateInputValue(program.startDateMs) : ""}
+          class="w-auto"
           disabled={ui.saving}
-          onchange={(e) => {
-            const ms = P.fromDateInputValue(e.currentTarget.value);
+          bind:value={() => (program?.startDateMs != null ? P.toDateInputValue(program.startDateMs) : undefined), (v) => {
+            const ms = v ? P.fromDateInputValue(v) : null;
             if (ms != null) void run((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms }));
           }}
         />
@@ -228,10 +228,12 @@
                               <input type="number" inputmode="decimal" placeholder="RPE" value={set.rpe ?? ""}
                                 class="h-10 w-12 rounded-md border bg-background px-1"
                                 onblur={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { rpe: num(e.currentTarget.value) }))} />
-                              <select value={set.setType} class="h-10 rounded-md border bg-background px-1"
-                                onchange={(e) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: e.currentTarget.value as SetType }))}>
-                                {#each setTypes as t}<option value={t.type}>{t.label}</option>{/each}
-                              </select>
+                              <Select.Root type="single" value={set.setType} onValueChange={(v) => void run((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: v as SetType }))}>
+                                <Select.Trigger aria-label="Set type" class="px-2">{setTypes.find((t) => t.type === set.setType)?.label ?? set.setType}</Select.Trigger>
+                                <Select.Content>
+                                  {#each setTypes as t}<Select.Item value={t.type} label={t.label} />{/each}
+                                </Select.Content>
+                              </Select.Root>
                               <button type="button" class="ml-auto p-0.5 text-muted-foreground hover:text-destructive"
                                 onclick={() => void run((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>
                                 <Trash class="h-3 w-3" />

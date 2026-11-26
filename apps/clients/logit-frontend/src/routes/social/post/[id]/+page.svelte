@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Button } from "$lib/components/ui/button";
   import { back } from "$lib/navigation";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -6,7 +7,7 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2, Send } from "lucide-svelte";
+  import { Send } from "lucide-svelte";
   import { socialApi, type ApiPost, type ApiComment } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -107,7 +108,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex justify-center py-20"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-20"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
   {:else if postError}
     <div class="flex flex-col items-center gap-3 py-20 text-center px-6">
       <p class="text-sm text-muted-foreground">{postError}</p>
@@ -124,7 +125,7 @@
 
     <!-- Comments -->
     {#if commentsLoading}
-      <div class="flex justify-center py-8"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+      <div class="flex justify-center py-8"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
     {:else}
       <CommentList
         bind:comments
@@ -157,7 +158,7 @@
         onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit(); } }}
       ></textarea>
       <button type="button" class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40" disabled={!draft.trim() || submitting} onclick={submit} aria-label="Send">
-        {#if submitting}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Send class="h-4 w-4" />{/if}
+        {#if submitting}<Spinner class="h-4 w-4" />{:else}<Send class="h-4 w-4" />{/if}
       </button>
     </div>
     </div>

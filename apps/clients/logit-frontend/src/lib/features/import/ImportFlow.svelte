@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   // Import workouts (design canvas I1 bring your history, E1b does this look right?, I2 match
   // your exercises). The file is read on the phone; nothing is saved until "Import".
   // Spreadsheets today; Strong and Hevy join once their real export files are in the tests.
   // Used by Settings › Import workouts and by onboarding ("Pick up where you left off").
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
-  import { ArrowLeft, Download, Loader2, Upload } from "lucide-svelte";
+  import { ArrowLeft, Download, Upload } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { onBack } from "$lib/components/sheet/sheet";
   import { chip } from "$lib/components/ui/choice";
@@ -224,7 +225,7 @@
       <div class="flex-1"></div>
       <button type="button" class="flex h-[52px] items-center justify-center gap-2 rounded-[10px] bg-primary text-base font-semibold text-primary-foreground disabled:opacity-60"
         disabled={busy} onclick={() => void choose()}>
-        {#if busy}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Upload class="h-4 w-4" />{/if} Choose the file
+        {#if busy}<Spinner class="h-4 w-4" />{:else}<Upload class="h-4 w-4" />{/if} Choose the file
       </button>
       <p class="text-xs text-muted-foreground">The file is read on this phone; it only leaves through your normal sync.</p>
     </div>
@@ -292,7 +293,7 @@
       {#if error}<p class="text-sm text-destructive" role="alert">{error}</p>{/if}
       <button type="button" class="flex h-[52px] items-center justify-center gap-2 rounded-[10px] bg-primary text-base font-semibold text-primary-foreground disabled:opacity-60"
         disabled={busy || !unit} onclick={() => void doImport()}>
-        {#if busy}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        {#if busy}<Spinner class="h-4 w-4" />{/if}
         {unit ? `Import ${summary.workouts} workout${summary.workouts === 1 ? "" : "s"}` : "Pick kg or lb first"}
       </button>
       <p class="text-xs text-muted-foreground">Exercises LogIt doesn't know are kept as your own; nothing is dropped. Importing the same file again adds nothing twice, and you can undo it for {UNDO_DAYS} days.</p>

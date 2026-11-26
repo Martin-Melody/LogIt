@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2, Search, PenSquare, Settings2, Check, MessagesSquare } from "lucide-svelte";
+  import { Search, PenSquare, Settings2, Check, MessagesSquare } from "lucide-svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import NewPostSheet from "$lib/components/social/NewPostSheet.svelte";
   import { onMount } from "svelte";
@@ -257,7 +258,7 @@
   </PageHeader>
 
   {#if !authStore.ready || (loading && authStore.isAuthenticated)}
-    <div class="flex justify-center py-20"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-20"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
 
   {:else if !authStore.isAuthenticated}
     <div class="flex flex-col items-center justify-center gap-4 px-6 py-20 text-center flex-1">
@@ -303,7 +304,7 @@
         class="flex justify-center overflow-hidden"
         style="height: {refreshing || (tab === 'discover' && discStatus === 'loading' && disc.length > 0) ? 40 : pullDist}px; transition: {dragging ? 'none' : 'height 200ms ease-out'};"
       >
-        <Loader2
+        <Spinner
           class="h-4 w-4 my-2 text-muted-foreground {refreshing ? 'animate-spin' : ''}"
           style="opacity: {refreshing ? 1 : Math.min(pullDist / PULL_THRESHOLD, 1)};"
         />
@@ -359,7 +360,7 @@
 
           <div bind:this={sentinel} class="h-px"></div>
           {#if loadingMore}
-            <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            <div class="flex justify-center py-4"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
           {/if}
         {/if}
 
@@ -378,7 +379,7 @@
       {:else}
         <PeopleStrip />
         {#if discStatus === "idle" || (discStatus === "loading" && disc.length === 0)}
-          <div class="flex justify-center py-16"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          <div class="flex justify-center py-16"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
         {:else if discStatus === "error"}
           <div class="flex flex-col items-center gap-3 py-16 text-center px-6">
             <p class="text-sm text-muted-foreground">Couldn't load Discover. Check your connection.</p>
@@ -394,7 +395,7 @@
           </div>
           <div bind:this={discSentinel} class="h-px"></div>
           {#if discStatus === "more"}
-            <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            <div class="flex justify-center py-4"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
           {/if}
         {/if}
       {/if}

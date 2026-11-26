@@ -1,8 +1,9 @@
 <!-- A list of forum posts (design canvas F2, F4–F6): the Forum, one group's posts, one tag's or one
      person's. Sort chips, New post, and the rows; `skip` pages on. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import type { Snippet } from "svelte";
-  import { Loader2, PenSquare } from "lucide-svelte";
+  import { PenSquare } from "lucide-svelte";
   import { forumApi, type ForumPost, type PostSort } from "@logit/core/api/forumApi";
   import { chip } from "$lib/components/ui/choice";
   import PostRow from "./PostRow.svelte";
@@ -55,7 +56,7 @@
 </div>
 {@render top?.()}
 {#if posts === null}
-  <div class="flex justify-center py-10"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+  <div class="flex justify-center py-10"><Spinner class="size-5 text-muted-foreground" /></div>
 {:else if posts.length === 0}
   <p class="px-6 py-10 text-center text-sm text-muted-foreground">{empty}</p>
 {:else}

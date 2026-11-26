@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -195,7 +196,7 @@
 </script>
 
 {#if profileLoading}
-  <div class="flex justify-center py-16"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+  <div class="flex justify-center py-16"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
 
 {:else if profileError}
   <div class="flex flex-col items-center gap-3 py-16 text-center px-6">
@@ -346,7 +347,7 @@
       {/if}
     </div>
   {:else if postsLoading}
-    <div class="flex justify-center py-12"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-12"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
   {:else if posts.length === 0}
     <p class="text-sm text-muted-foreground text-center py-12">No posts yet.</p>
   {:else}
@@ -357,7 +358,7 @@
     </div>
     <div bind:this={sentinel} class="h-px"></div>
     {#if loadingMore}
-      <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+      <div class="flex justify-center py-4"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
     {/if}
   {/if}
   {/if}
@@ -394,7 +395,7 @@
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (confirmBlock = false)}>Cancel</button>
       <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={blocking} onclick={doBlock}>
-        {#if blocking}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Block
+        {#if blocking}<Spinner class="h-3.5 w-3.5" />{/if} Block
       </button>
     </div>
   </div>

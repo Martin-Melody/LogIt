@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import {
     Download,
     Upload,
@@ -212,12 +213,7 @@
               {@const k = key as keyof ImportCategories}
               {#if present[k]}
                 <li class="flex items-center gap-2">
-                  <input
-                    id="cat-{k}"
-                    type="checkbox"
-                    class="h-4 w-4 accent-primary"
-                    bind:checked={categories[k]}
-                  />
+                  <Checkbox id="cat-{k}" bind:checked={categories[k]} />
                   <label for="cat-{k}" class="text-sm cursor-pointer select-none">
                     {categoryLabels[k]}{#if MERGE_CATEGORIES.includes(k)}<span class="text-muted-foreground"> · merged</span>{/if}
                   </label>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as RadioGroup from "$lib/components/ui/radio-group";
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { back } from "$lib/navigation";
   // Settings › Your places (My gym, design canvas G1/G10). Optional: with no places everything
   // works as before. Making one starts from a template; "Where are you today?" only shows with
@@ -82,15 +84,15 @@
       <label for="place-name" class="text-sm font-medium">Name</label>
       <input id="place-name" bind:value={name} placeholder={kind === "home" ? "Home" : "Northside Fitness"}
         class="h-11 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
-      <fieldset class="flex flex-col gap-1.5">
-        <legend class="mb-1.5 text-sm font-medium">Start from</legend>
+      <span id="place-template" class="mb-0 text-sm font-medium">Start from</span>
+      <RadioGroup.Root bind:value={template} aria-labelledby="place-template" class="flex flex-col gap-1.5">
         {#each TEMPLATES as t (t.id)}
           <label class="flex min-h-12 items-center gap-3 rounded-lg border px-3 py-2 {template === t.id ? 'border-2 border-foreground' : 'border-border'}">
-            <input type="radio" name="template" value={t.id} bind:group={template} class="h-4 w-4 accent-foreground" />
+            <RadioGroup.Item value={t.id} />
             <span><span class="block text-sm font-medium">{t.label}</span><span class="block text-xs text-muted-foreground">{t.hint}</span></span>
           </label>
         {/each}
-      </fieldset>
+      </RadioGroup.Root>
       <p class="text-xs text-muted-foreground">You can change everything after. A home place is never shared and has no location.</p>
       <div class="flex gap-2">
         <button type="submit" class="h-11 flex-1 rounded-lg bg-primary text-sm font-medium text-primary-foreground">Make it</button>
@@ -105,12 +107,12 @@
   {/if}
 
   {#if placesStore.active.length >= 2}
-    <label class="mt-6 flex items-start justify-between gap-3 border-t border-border pt-4">
+    <div class="mt-6 flex items-start justify-between gap-3 border-t border-border pt-4">
       <span>
         <span class="block text-sm font-medium">Ask "Where are you today?"</span>
         <span class="block text-xs text-muted-foreground">When a workout starts. Your usual place for the day is picked, and you can always skip it.</span>
       </span>
-      <input type="checkbox" class="mt-1 h-5 w-5 accent-foreground" bind:checked={ask} onchange={() => placesStore.setAsk(ask)} />
-    </label>
+      <Switch checked={ask} label={'Ask "Where are you today?"'} onchange={(v) => { ask = v; placesStore.setAsk(v); }} />
+    </div>
   {/if}
 </div>

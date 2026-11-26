@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Loader2 } from "lucide-svelte";
+  
   import { isPrivateError, socialApi, type ApiProfile } from "@logit/core/api/socialApi";
   import { authStore } from "$lib/api/authStore.svelte";
   import { toast } from "svelte-sonner";
@@ -57,7 +58,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex justify-center py-16"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
   {:else if isPrivate}
     <p class="text-sm text-muted-foreground text-center py-16 px-8">This account is private. Only people they've accepted can see this list.</p>
   {:else if error}

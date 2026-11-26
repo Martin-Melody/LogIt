@@ -1,7 +1,8 @@
 <!-- Delete the account, or everything on this phone when there's no account (design canvas 8):
      what goes, a copy first if wanted, then the password. -->
 <script lang="ts">
-  import { Loader2, TriangleAlert } from "lucide-svelte";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  import { TriangleAlert } from "lucide-svelte";
   import { Button } from "$lib/components/ui/button";
   import { reveal } from "$lib/transitions";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -105,7 +106,7 @@
         {/if}
       </div>
       <Button variant="outline" size="sm" class="self-start" disabled={savingCopy || deleting} onclick={() => void saveCopy()}>
-        {#if savingCopy}<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />{/if}
+        {#if savingCopy}<Spinner class="mr-1.5 h-3.5 w-3.5" />{/if}
         {copySaved ? "Copy saved" : "Save a copy first"}
       </Button>
       {#if signedIn}
@@ -117,7 +118,7 @@
       <div class="flex gap-2">
         <Button variant="outline" size="sm" class="border-destructive text-destructive hover:bg-destructive/10 disabled:opacity-50"
           disabled={deleting} onclick={() => void confirm()}>
-          {#if deleting}<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />{/if}
+          {#if deleting}<Spinner class="mr-1.5 h-3.5 w-3.5" />{/if}
           {signedIn ? "Delete account" : "Delete everything on this phone"}
         </Button>
         <Button variant="outline" size="sm" disabled={deleting} onclick={cancel}>Cancel</Button>

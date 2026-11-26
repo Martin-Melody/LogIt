@@ -2,8 +2,9 @@
      red dot, the time and a live waveform; delete or send. Stops by itself at a minute. Tap, not
      hold, so it works with chalk on your hands. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onDestroy, onMount } from "svelte";
-  import { Loader2, Send, Trash2 } from "lucide-svelte";
+  import { Send, Trash2 } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import { ApiError } from "@logit/core/api/client";
   import { startRecording, uploadVoice, voiceTime, type MessageVoice, type Recording } from "@logit/core/api/voiceApi";
@@ -73,7 +74,7 @@
       </span>
     </div>
     <button type="button" aria-label="Send voice message" onclick={send} disabled={sending} class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-60">
-      {#if sending}<Loader2 class="size-[18px] animate-spin" />{:else}<Send class="size-[18px]" />{/if}
+      {#if sending}<Spinner class="size-[18px]" />{:else}<Send class="size-[18px]" />{/if}
     </button>
   </div>
   <p class="text-center text-[12px] text-muted-foreground">{sending ? "Sending…" : "Recording · up to 1 minute"}</p>

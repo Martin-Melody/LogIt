@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Slider } from "$lib/components/ui/slider/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { goto } from "$app/navigation";
   import { toast } from "svelte-sonner";
@@ -77,18 +78,17 @@
 
         {#if duration > 0}
           <div class="flex flex-col gap-1">
-            <input
-              type="range"
-              min="0"
+            <Slider
+              type="single"
+              min={0}
               max={duration}
-              step="1000"
+              step={1000}
               value={shownMs}
               disabled={!np.canSeek}
               aria-label="Position in track"
-              class="w-full accent-primary disabled:opacity-60"
-              oninput={(e) => (dragMs = Number((e.target as HTMLInputElement).value))}
-              onchange={(e) => {
-                const v = Number((e.target as HTMLInputElement).value);
+              class="py-3"
+              onValueChange={(v) => (dragMs = v)}
+              onValueCommit={(v) => {
                 dragMs = null;
                 void musicControls.seekTo(v);
               }}

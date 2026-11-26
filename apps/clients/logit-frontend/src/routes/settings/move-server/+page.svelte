@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { back } from "$lib/navigation";
   // Move to another server (design canvas 9 and 10). The training comes along: it's uploaded to
   // the new server and the phone only switches once that has landed (lib/accounts/moveServer.ts).
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { ArrowLeft, ArrowRight, Check, CheckCircle, Loader2, XCircle } from "lucide-svelte";
+  import { ArrowLeft, ArrowRight, Check, CheckCircle, XCircle } from "lucide-svelte";
   import { apiClient } from "@logit/core/api/client";
   import { isNativePlatform } from "$lib/platform/isNative";
   import { billing } from "$lib/billing/billing.svelte";
@@ -147,7 +148,7 @@
           <div class="flex gap-2">
             <button type="button" class="flex-1 h-11 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-50"
               disabled={!oldPassword || deleting} onclick={() => void removeOld()}>
-              {#if deleting}<Loader2 class="inline h-4 w-4 animate-spin" />{:else}Delete it{/if}
+              {#if deleting}<Spinner class="inline h-4 w-4" />{:else}Delete it{/if}
             </button>
             <button type="button" class="flex-1 h-11 rounded-lg border border-border text-sm" onclick={() => (showDelete = false)}>Keep it</button>
           </div>
@@ -198,7 +199,7 @@
         </div>
       {/if}
       {#if check === "checking"}
-        <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 class="h-3.5 w-3.5 animate-spin" /> Checking…</p>
+        <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><Spinner class="h-3.5 w-3.5" /> Checking…</p>
       {:else if reachable}
         <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Found a LogIt server</p>
       {:else if check}
@@ -248,7 +249,7 @@
     {#if error}<p class="mb-3 text-sm text-destructive" role="alert">{error}</p>{/if}
     <button type="button" class="h-12 rounded-lg bg-primary text-primary-foreground text-[15px] font-medium disabled:opacity-50 flex items-center justify-center gap-2"
       disabled={!canMove} onclick={() => void move()}>
-      {#if moving}<Loader2 class="h-4 w-4 animate-spin" /> Copying your training…{:else if error}Try again{:else}Move my training{/if}
+      {#if moving}<Spinner class="h-4 w-4" /> Copying your training…{:else if error}Try again{:else}Move my training{/if}
     </button>
     <p class="mt-2.5 text-xs text-muted-foreground">Nothing changes until everything has been copied. Social posts and followers stay on {from}.</p>
   {/if}

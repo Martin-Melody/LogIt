@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   // Tag training blocks (adaptive-progression-engine.md §10.3.3) — mark a
   // period of an exercise's history with a reason (injury, tempo/technique
   // change, deliberate variation, other) so it doesn't leave an
@@ -201,7 +202,7 @@
           {/if}
         </div>
         <label class="flex items-center gap-2 text-xs text-muted-foreground">
-          <input type="checkbox" bind:checked={ongoing} class="h-3.5 w-3.5" />
+          <Checkbox bind:checked={ongoing} />
           Still ongoing — I'm not sure when this ends yet
         </label>
 

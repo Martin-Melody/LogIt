@@ -4,6 +4,7 @@
      accept or reply. "Seen" only with read receipts on for both. A message sent offline waits,
      marked "Not sent yet", and goes when the connection is back. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { muteItems } from "$lib/features/groups/muteItems";
   import { onMount, tick } from "svelte";
   import { goto } from "$app/navigation";
@@ -11,7 +12,7 @@
   import { fade } from "svelte/transition";
   import { groupsApi } from "@logit/core/api/groupsApi";
   import { VolumeX } from "lucide-svelte";
-  import { Ban, Calendar, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, Mic, MoreHorizontal, Pencil, Plus, Send, Settings2, Trash2, Undo2, User, Users, X } from "lucide-svelte";
+  import { Ban, Calendar, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Mic, MoreHorizontal, Pencil, Plus, Send, Settings2, Trash2, Undo2, User, Users, X } from "lucide-svelte";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
   import { eventsApi, type GroupEvent } from "@logit/core/api/eventsApi";
   import { eventShort } from "$lib/features/groups/eventTime";
@@ -369,7 +370,7 @@
     {#if error}
       <p class="py-10 text-center text-sm text-muted-foreground">{error}</p>
     {:else if !chat}
-      <div class="flex justify-center py-10"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+      <div class="flex justify-center py-10"><Spinner class="size-5 text-muted-foreground" /></div>
     {:else}
       {#if older}
         <button type="button" class="mx-auto mb-2 h-9 rounded-full border border-border px-4 text-[13px] font-medium" onclick={loadOlder}>Earlier messages</button>
@@ -421,7 +422,7 @@
         </div>
       {/each}
       {#if uploading > 0}
-        <div in:fade={{ duration: 150 }} class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Loader2 class="size-4 animate-spin" />Sending photo</div>
+        <div in:fade={{ duration: 150 }} class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Spinner class="size-4" />Sending photo</div>
       {/if}
     {/if}
   </div>

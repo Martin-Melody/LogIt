@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -315,7 +316,7 @@
   {/if}
 
   {#if loading && rows.length === 0}
-    <div class="flex justify-center py-20"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-20"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
   {:else if rows.length === 0}
     <div class="flex flex-col items-center gap-2 px-6 py-20 text-center">
       <Bell class="h-6 w-6 text-muted-foreground/50" />
@@ -405,7 +406,7 @@
     </ul>
     <div bind:this={sentinel} class="h-px"></div>
     {#if loadingMore}
-      <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+      <div class="flex justify-center py-4"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
     {/if}
   {/if}
 </div>

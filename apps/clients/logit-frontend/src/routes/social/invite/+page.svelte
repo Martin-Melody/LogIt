@@ -1,11 +1,12 @@
 <!-- Opening a friend's invite (from the link, the QR or the website's "Open in LogIt"): who sent
      it, then "Follow each other". Journey F2 in docs/testing-friends.md. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2 } from "lucide-svelte";
+  
   import { toast } from "svelte-sonner";
   import { ApiError, apiBaseUrl } from "@logit/core/api/client";
   import { friendsApi, parseInvite, type InvitePreview } from "@logit/core/api/friendsApi";
@@ -63,7 +64,7 @@
     {#if error}
       <p class="text-sm text-muted-foreground">{error}</p>
     {:else if !preview}
-      <Loader2 class="size-5 animate-spin text-muted-foreground" />
+      <Spinner class="size-5 text-muted-foreground" />
     {:else}
       <span class="flex size-20 items-center justify-center overflow-hidden rounded-full bg-muted text-2xl font-semibold">
         {#if preview.avatarUrl}<img src={photoSrc(preview.avatarUrl)} alt="" class="size-full object-cover" />{:else}{preview.displayName.charAt(0).toUpperCase()}{/if}

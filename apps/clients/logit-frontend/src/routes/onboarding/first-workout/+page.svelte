@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   // After the first workout of a plan from onboarding (design canvas O5, then O6): where the
   // week stands, what next time looks like, and "When will you train?" with a reminder, said
   // back as one sentence (a when-and-where plan roughly doubles follow-through). Then, with no
@@ -7,7 +8,7 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { get } from "svelte/store";
-  import { Loader2 } from "lucide-svelte";
+  
   import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { TimeField } from "$lib/components/ui/time-field";
   import { apiClient } from "@logit/core/api/client";
@@ -225,7 +226,7 @@
     <div class="flex-1 min-h-6"></div>
     <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
       disabled={!canConfirm} onclick={() => void confirm()}>
-      {#if saving}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+      {#if saving}<Spinner class="h-4 w-4" />{/if}
       That's my plan
     </button>
   {/if}

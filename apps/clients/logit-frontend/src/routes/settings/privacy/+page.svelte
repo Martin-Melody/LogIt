@@ -2,8 +2,9 @@
      can reach you. Saved to your account, so the web dashboard has the same switches. Rows for
      comments, mentions and boards arrive with those features. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
-  import { ChevronRight, Loader2 } from "lucide-svelte";
+  import { ChevronRight } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
@@ -79,7 +80,7 @@
   {#if error}
     <p class="px-1 text-sm text-muted-foreground">Couldn't load your settings. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if !settings}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     <SettingsSection title="Account">
       {@render toggle("private", "Private account", "Off: anyone can see your profile and posts, in LogIt and on the web at getlogit.app, and find them on Google. On: people ask to follow you, only followers you accept see your posts, and nothing is on the web.", settings.isPrivate, (v) => set({ isPrivate: v }))}
@@ -114,7 +115,7 @@
       {#if showHidden}
         <div transition:reveal>
           {#if hidden === null}
-            <div class="flex justify-center py-4"><Loader2 class="size-4 animate-spin text-muted-foreground" /></div>
+            <div class="flex justify-center py-4"><Spinner class="size-4 text-muted-foreground" /></div>
           {:else if hidden.length === 0}
             <p class="px-3 pb-3 text-[13px] text-muted-foreground">Nobody.</p>
           {:else}
