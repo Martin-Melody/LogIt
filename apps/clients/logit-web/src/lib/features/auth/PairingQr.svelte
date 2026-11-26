@@ -3,6 +3,7 @@
      new one comes automatically while the page is open, up to a limit, then on a click. The
      poll secret stays in this component and never reaches the URL or storage. -->
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { onDestroy, onMount } from "svelte";
   import QRCode from "qrcode";
   import { apiClient, type PairingState } from "@logit/core/api/client";
@@ -90,7 +91,7 @@
           {@html svg}
         </div>
       {:else}
-        <div class="size-full animate-pulse rounded bg-muted" aria-hidden="true"></div>
+        <Skeleton class="size-full rounded" aria-hidden="true" />
       {/if}
       {#if status === "denied" || status === "paused"}
         <button type="button" onclick={again}

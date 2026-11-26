@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   // First launch (design canvas row 2: welcome, O1 goal, E0 experience, O2 days, O3 plan).
   // One tap per question, no Continue buttons, no account or name: four taps from "Get
   // started" to a workout. The answers build a plan (core domain/starterPlan.ts) that is
@@ -7,7 +8,7 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
-  import { ArrowLeft, Loader2, Plus, X } from "lucide-svelte";
+  import { ArrowLeft, Plus, X } from "lucide-svelte";
   import * as Select from "$lib/components/ui/select";
   import Logo from "@logit/ui/Logo.svelte";
   import { onBack } from "$lib/components/sheet/sheet";
@@ -631,7 +632,7 @@
           <button type="button" class="h-[52px] rounded-[10px] bg-primary text-base font-semibold text-primary-foreground" onclick={() => void changeSplit()}>Continue</button>
         {/if}
       {:else}
-        <Loader2 class="mx-auto mt-24 h-6 w-6 animate-spin text-muted-foreground" />
+        <Spinner class="mx-auto mt-24 h-6 w-6 text-muted-foreground" />
       {/if}
     </div>
 
@@ -657,7 +658,7 @@
       {#if error}<p class="mb-2 text-sm text-destructive" role="alert">{error}</p>{/if}
       <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
         disabled={busy !== null} onclick={() => void startNow()}>
-        {#if busy === "start"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        {#if busy === "start"}<Spinner class="h-4 w-4" />{/if}
         {answers.style === "own" ? "Set up my rules" : `Start ${startName} now`}
       </button>
       <button type="button" class="min-h-11 text-sm text-muted-foreground" disabled={busy !== null} onclick={() => void startLater()}>
@@ -747,7 +748,7 @@
       {:else}
         <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
           disabled={busy !== null || building} onclick={() => void startNow()}>
-          {#if busy === "start"}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+          {#if busy === "start"}<Spinner class="h-4 w-4" />{/if}
           Start {firstDay.name} now
         </button>
         <button type="button" class="min-h-11 text-sm text-muted-foreground" disabled={busy !== null} onclick={() => void startLater()}>

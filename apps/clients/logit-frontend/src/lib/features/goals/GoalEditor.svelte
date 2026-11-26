@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import { untrack } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import { chip } from "$lib/components/ui/choice";
@@ -226,7 +227,7 @@
   {#if kind !== "bodyweight"}
     <div class="flex flex-col gap-1.5">
       <label class="flex items-center gap-2 text-sm">
-        <input type="checkbox" class="h-4 w-4 accent-primary" bind:checked={hasDeadline} />
+        <Checkbox bind:checked={hasDeadline} />
         By a date
       </label>
       {#if hasDeadline}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import LockIcon from "@lucide/svelte/icons/lock";
@@ -205,12 +206,11 @@
     {:else}
       <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div class="flex min-w-0 flex-col gap-3">
-          <div role="tablist" aria-label="Profile" class="flex gap-1 border-b border-border">
-            {#each tab === "followers" || tab === "following" ? [["posts", "Posts"], ["forum", "Forum"], [tab, tab === "followers" ? "Followers" : "Following"]] : [["posts", "Posts"], ["forum", "Forum"]] as [t, label] (t)}
-              <button type="button" role="tab" aria-selected={tab === t} onclick={() => setTab(t as Tab)}
-                class="-mb-px h-10 border-b-2 px-3 text-[13px] {tab === t ? 'border-foreground font-semibold' : 'border-transparent text-muted-foreground'}">{label}</button>
-            {/each}
-          </div>
+          <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
+            <Tabs.List variant="line" aria-label="Profile" class="gap-1">
+              {#each tab === "followers" || tab === "following" ? [["posts", "Posts"], ["forum", "Forum"], [tab, tab === "followers" ? "Followers" : "Following"]] : [["posts", "Posts"], ["forum", "Forum"]] as [t, label] (t)}<Tabs.Trigger value={t}>{label}</Tabs.Trigger>{/each}
+            </Tabs.List>
+          </Tabs.Root>
       {#if tab === "forum"}
         {#key username}<ForumPosts filter={{ user: username }} canPost={profile.isSelf} sorts={["new", "top"]} empty="No forum posts yet." />{/key}
       {:else if tab === "posts"}

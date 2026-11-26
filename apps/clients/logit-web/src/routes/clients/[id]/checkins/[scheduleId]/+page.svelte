@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -147,10 +149,10 @@
       <Card.Content class="pt-0 flex flex-col gap-3">
         <label class="text-sm flex items-center gap-2">
           <span class="text-muted-foreground">Cadence</span>
-          <select value={schedule.cadence} class="rounded border bg-background px-2 py-1 text-sm capitalize"
+          <NativeSelect.Root value={schedule.cadence} class="capitalize"
             onchange={(e) => void run((s) => C.setCadence(s, e.currentTarget.value as CheckinCadence))}>
-            {#each cadences as c}<option value={c}>{c}</option>{/each}
-          </select>
+            {#each cadences as c}<NativeSelect.Option value={c}>{c}</NativeSelect.Option>{/each}
+          </NativeSelect.Root>
         </label>
 
         <div class="flex flex-col divide-y divide-border border-y border-border">
@@ -164,13 +166,13 @@
                   onclick={() => void run((s) => C.removeQuestion(s, q.id))}>Remove</button>
               </div>
               <div class="flex items-center gap-3 text-xs">
-                <select value={q.type} class="rounded border bg-background px-1.5 py-0.5"
+                <NativeSelect.Root value={q.type}
                   onchange={(e) => void run((s) => C.updateQuestion(s, q.id, { type: e.currentTarget.value as CheckinQuestionType }))}>
-                  {#each qTypes as t}<option value={t.v}>{t.l}</option>{/each}
-                </select>
+                  {#each qTypes as t}<NativeSelect.Option value={t.v}>{t.l}</NativeSelect.Option>{/each}
+                </NativeSelect.Root>
                 <label class="flex items-center gap-1 text-muted-foreground">
-                  <input type="checkbox" checked={q.required ?? false}
-                    onchange={(e) => void run((s) => C.updateQuestion(s, q.id, { required: e.currentTarget.checked }))} />
+                  <Checkbox checked={q.required ?? false}
+                    onCheckedChange={(v) => void run((s) => C.updateQuestion(s, q.id, { required: v }))} />
                   Required
                 </label>
               </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as RadioGroup from "$lib/components/ui/radio-group";
   import * as Dialog from "$lib/components/ui/dialog";
   import { toast } from "$lib/components/ui/sonner";
   import { socialApi, type ApiPost, type PostType } from "@logit/core/api/socialApi";
@@ -139,10 +140,10 @@
       {:else if options.length === 0}
         <p class="text-[13px] text-muted-foreground">{EMPTY[kind]}</p>
       {:else}
-        <div role="radiogroup" aria-label="Pick one" class="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
+        <RadioGroup.Root value={picked == null ? "" : String(picked)} onValueChange={(v) => (picked = Number(v))} aria-label="Pick one" class="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
           {#each (showAll ? options : options.slice(0, 4)) as o, i (i)}
             <label class="flex items-center gap-3 rounded-[9px] border px-3 py-2.5 text-[13px] {picked === i ? 'border-primary bg-muted' : 'border-border'}">
-              <input type="radio" name="attach-pick" checked={picked === i} onchange={() => (picked = i)} class="accent-primary" />
+              <RadioGroup.Item value={String(i)} />
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-semibold">{o.title}</span>
                 <span class="block truncate text-xs text-muted-foreground">{o.detail}</span>
@@ -152,7 +153,7 @@
           {#if !showAll && options.length > 4}
             <button type="button" onclick={() => (showAll = true)} class="self-start px-0.5 text-xs text-muted-foreground hover:text-foreground">Show {options.length - 4} more</button>
           {/if}
-        </div>
+        </RadioGroup.Root>
       {/if}
     {/if}
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { get } from "svelte/store";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -43,7 +44,7 @@
           <ChartView lines={drawn.lines} bucket={chart.bucket} {unit} height={240} />
           <p class="text-[13px] leading-relaxed">{drawn.summary}</p>
         {:else}
-          <div class="h-60 animate-pulse rounded-lg bg-muted"></div>
+          <Skeleton class="h-60 rounded-lg" />
         {/if}
       </Card.Content>
     </Card.Root>

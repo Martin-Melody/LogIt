@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { DateField } from "$lib/components/ui/date-field/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -231,7 +233,7 @@
         <div class="grid grid-cols-2 gap-3">
           <label class="flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Birth date</span>
-            <input type="date" max={localDateIso()} class="h-8 rounded border border-border bg-background px-2 text-sm" bind:value={goal.birthDateIso} />
+            <DateField aria-label="Birth date" maxIso={localDateIso()} class="h-8" bind:value={goal.birthDateIso} />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Height (cm)</span>
@@ -240,9 +242,9 @@
         </div>
         <label class="flex flex-col gap-1">
           <span class="text-xs text-muted-foreground">Activity level</span>
-          <select class="h-8 rounded border border-border bg-background px-2 text-sm" bind:value={goal.activityLevel}>
-            {#each ACTIVITY as a (a.value)}<option value={a.value}>{a.label}</option>{/each}
-          </select>
+          <NativeSelect.Root size="sm" bind:value={goal.activityLevel}>
+            {#each ACTIVITY as a (a.value)}<NativeSelect.Option value={a.value}>{a.label}</NativeSelect.Option>{/each}
+          </NativeSelect.Root>
         </label>
       </Card.Content>
     </Card.Root>

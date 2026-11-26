@@ -1,4 +1,8 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
+  import { DateField } from "$lib/components/ui/date-field/index.js";
+  import * as RadioGroup from "$lib/components/ui/radio-group";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import * as Dialog from "$lib/components/ui/dialog";
@@ -249,14 +253,14 @@
           <div class="flex items-baseline justify-between px-3 pb-1 pt-2"><h2 class="text-sm font-semibold">Swaps in their workouts</h2><span class="text-xs text-muted-foreground">Last 4 weeks · {swaps.length}</span></div>
           {#if swaps.length}
             <div class="overflow-x-auto">
-              <table class="w-full border-collapse text-[13px]">
-                <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Date</th><th class="px-3 py-2 font-medium">Planned</th><th class="px-3 py-2 font-medium">Did instead</th><th class="px-3 py-2 font-medium">Why it was allowed</th></tr></thead>
-                <tbody>
+              <Table.Root class="w-full border-collapse text-[13px]">
+                <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Date</Table.Head><Table.Head class="px-3 py-2 font-medium">Planned</Table.Head><Table.Head class="px-3 py-2 font-medium">Did instead</Table.Head><Table.Head class="px-3 py-2 font-medium">Why it was allowed</Table.Head></Table.Row></Table.Header>
+                <Table.Body>
                   {#each swaps as w, i (w.sessionId + i)}
-                    <tr class="border-t border-border align-top"><td class="px-3 py-2.5">{weekdayDate(w.startedAtMs)}</td><td class="px-3 py-2.5">{w.planned}</td><td class="px-3 py-2.5 font-semibold">{w.didInstead}</td><td class="px-3 py-2.5 text-muted-foreground">{SWAP_WHY_LABEL[w.why]}</td></tr>
+                    <Table.Row class="border-t border-border align-top"><Table.Cell class="px-3 py-2.5">{weekdayDate(w.startedAtMs)}</Table.Cell><Table.Cell class="px-3 py-2.5">{w.planned}</Table.Cell><Table.Cell class="px-3 py-2.5 font-semibold">{w.didInstead}</Table.Cell><Table.Cell class="px-3 py-2.5 text-muted-foreground">{SWAP_WHY_LABEL[w.why]}</Table.Cell></Table.Row>
                   {/each}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table.Root>
             </div>
           {:else}
             <p class="px-3 pb-2 text-[13px] text-muted-foreground">No swaps. {name} did every exercise as planned.</p>
@@ -269,11 +273,11 @@
     <section class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
       <h2 class="text-sm font-semibold">Exercise swaps for {name}</h2>
       <label for="swap-rule" class="text-xs font-medium text-muted-foreground">During workouts from your programs</label>
-      <select id="swap-rule" disabled={savingRule} value={clientRule ?? ""} onchange={(e) => setRule(e.currentTarget.value)}
-        class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px]">
-        <option value="">Your default: {swapRuleLabel(defaultRule)}</option>
-        {#each SWAP_RULES as r (r.key)}<option value={r.key}>{r.label}</option>{/each}
-      </select>
+      <NativeSelect.Root id="swap-rule" disabled={savingRule} value={clientRule ?? ""} onchange={(e) => setRule(e.currentTarget.value)}
+        >
+        <NativeSelect.Option value="">Your default: {swapRuleLabel(defaultRule)}</NativeSelect.Option>
+        {#each SWAP_RULES as r (r.key)}<NativeSelect.Option value={r.key}>{r.label}</NativeSelect.Option>{/each}
+      </NativeSelect.Root>
       <p class="text-xs leading-relaxed text-muted-foreground">{clientRule ? "Set differently from your default. " : ""}{RULE_NOTE[effectiveRule]}</p>
       {#if clientRule}<button type="button" disabled={savingRule} onclick={() => setRule("")} class="w-fit text-xs text-muted-foreground underline hover:text-foreground">Back to your default</button>{/if}
     </section>
@@ -298,37 +302,37 @@
       <Dialog.Title>Assign a program to {name}</Dialog.Title>
       <Dialog.Description>They get their own copy, which you can change for them without touching your library.</Dialog.Description>
     </Dialog.Header>
-    <fieldset class="flex flex-col gap-1.5">
-      <legend class="pb-1.5 text-xs font-medium text-muted-foreground">From your library</legend>
+    <span id="cp-pick" class="text-xs font-medium text-muted-foreground">From your library</span>
+    <RadioGroup.Root bind:value={pick} aria-labelledby="cp-pick" class="flex flex-col gap-1.5">
       {#each library as t (t.id)}
         {@const now = current.some((x) => x.p.sourceProgramId === t.id)}
         {@const before = !now && copies.some((c) => c.sourceProgramId === t.id)}
         {@const d = t.weeks[0]?.days.length ?? 0}
         <label class="flex cursor-pointer items-start gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {pick === t.id ? 'border-primary bg-muted' : 'border-border'}">
-          <input type="radio" name="pick" value={t.id} bind:group={pick} class="mt-0.5" />
+          <RadioGroup.Item value={t.id} />
           <span><span class="block font-semibold">{t.name}</span><span class="text-xs text-muted-foreground">{t.weeks.length} week{t.weeks.length === 1 ? "" : "s"} · {d} day{d === 1 ? "" : "s"}{now ? ` · ${name} is on this now` : before ? ` · ${name} has had this before` : ""}</span></span>
         </label>
       {:else}
         <p class="text-[13px] text-muted-foreground">Your library is empty. <a href="/coaching/programs" class="text-primary hover:underline">Build a program</a> to reuse it, or start one just for {name}:</p>
       {/each}
       <label class="flex cursor-pointer items-start gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {pick === '__blank' ? 'border-primary bg-muted' : 'border-border'}">
-        <input type="radio" name="pick" value="__blank" bind:group={pick} class="mt-0.5" />
+        <RadioGroup.Item value="__blank" />
         <span><span class="block font-semibold">Start from scratch</span><span class="text-xs text-muted-foreground">A new program just for {name}</span></span>
       </label>
-    </fieldset>
+    </RadioGroup.Root>
     {#if pick !== "__blank"}
-      <fieldset class="flex flex-col gap-1.5">
-        <legend class="pb-1.5 text-xs font-medium text-muted-foreground">Starts</legend>
+      <span id="cp-start" class="text-xs font-medium text-muted-foreground">Starts</span>
+      <RadioGroup.Root bind:value={startMode} aria-labelledby="cp-start" class="flex flex-col gap-1.5">
         <label class="flex items-center gap-2.5 rounded-[9px] border px-3 py-2 text-[13px] {startMode === 'date' ? 'border-primary bg-muted' : 'border-border'}">
-          <input type="radio" name="start" value="date" bind:group={startMode} />
+          <RadioGroup.Item value="date" />
           <span class="flex-1">On a date</span>
-          <input type="date" bind:value={startDate} aria-label="Start date" disabled={startMode !== "date"} class="h-8 rounded-md border border-input bg-background px-2 text-[13px]" />
+          <DateField bind:value={startDate} aria-label="Start date" disabled={startMode !== "date"} class="h-8 w-auto text-[13px]" />
         </label>
         <label class="flex items-center gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {startMode === 'manual' ? 'border-primary bg-muted' : 'border-border'}">
-          <input type="radio" name="start" value="manual" bind:group={startMode} />
+          <RadioGroup.Item value="manual" />
           <span>When they tap Start on their phone</span>
         </label>
-      </fieldset>
+      </RadioGroup.Root>
       {#if lastEnd}<p class="text-xs text-muted-foreground">Their current program ends {weekdayDate(lastEnd - DAY)}. Starting on {weekdayDate(lastEnd)} follows straight on.</p>{/if}
       <p class="text-xs text-muted-foreground">Percent loads turn into kilos from {name}'s own lifts.</p>
     {/if}

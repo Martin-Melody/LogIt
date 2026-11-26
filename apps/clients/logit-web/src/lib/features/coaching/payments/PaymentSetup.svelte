@@ -1,4 +1,8 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
+  import * as RadioGroup from "$lib/components/ui/radio-group";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { untrack } from "svelte";
   import { toast } from "$lib/components/ui/sonner";
   import { coachPaymentsApi, type PackageInput } from "@logit/core/api/coachPaymentsApi";
@@ -140,9 +144,9 @@
             <span class="flex flex-col gap-0.5"><span class="text-[15px] font-semibold">Connect Stripe</span><span class="text-[13px] leading-relaxed text-muted-foreground">The money goes straight to your bank. Stripe asks for your ID and bank details, about 10 minutes. Stripe charges its normal card fees; LogIt charges nothing.</span></span>
             <div class="flex flex-wrap items-end gap-2.5">
               <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Where your business is
-                <select bind:value={country} class="h-[38px] min-w-[200px] rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                  {#each PAYMENT_COUNTRIES as c (c.code)}<option value={c.code}>{c.name}</option>{/each}
-                </select>
+                <NativeSelect.Root bind:value={country} class="min-w-[200px]">
+                  {#each PAYMENT_COUNTRIES as c (c.code)}<NativeSelect.Option value={c.code}>{c.name}</NativeSelect.Option>{/each}
+                </NativeSelect.Root>
               </label>
               <button type="button" disabled={connecting} onclick={connect} class="h-[38px] rounded-[9px] bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{connecting ? "Opening Stripe…" : "Connect Stripe ↗"}</button>
             </div>
@@ -191,28 +195,28 @@
         <button type="button" onclick={openNew} class="h-[30px] rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground">New package</button>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] border-collapse text-[13px]">
-          <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Package</th><th class="px-3 py-2 font-medium">Price</th><th class="px-3 py-2 font-medium">On invite links</th><th class="px-3 py-2 font-medium">Clients</th><th></th></tr></thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[640px] border-collapse text-[13px]">
+          <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Package</Table.Head><Table.Head class="px-3 py-2 font-medium">Price</Table.Head><Table.Head class="px-3 py-2 font-medium">On invite links</Table.Head><Table.Head class="px-3 py-2 font-medium">Clients</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+          <Table.Body>
             {#each data.packages as p (p.id)}
-              <tr class="border-t border-border">
-                <td class="px-3 py-3">
+              <Table.Row class="border-t border-border">
+                <Table.Cell class="px-3 py-3">
                   <span class="block font-medium {p.hidden ? 'text-muted-foreground' : ''}">{p.name}</span>
                   {#if p.description}<span class="line-clamp-1 text-xs text-muted-foreground">{p.description.split(/\n+/).join(" · ")}</span>{/if}
-                </td>
-                <td class="px-3 py-3 {p.hidden ? 'text-muted-foreground' : ''}">{priceText(p)}</td>
-                <td class="px-3 py-3 {p.links.length ? '' : 'text-muted-foreground'}">{p.links.length ? p.links.join(", ") : "None"}</td>
-                <td class="px-3 py-3">{p.clients}</td>
-                <td class="px-3 py-3 text-right">
+                </Table.Cell>
+                <Table.Cell class="px-3 py-3 {p.hidden ? 'text-muted-foreground' : ''}">{priceText(p)}</Table.Cell>
+                <Table.Cell class="px-3 py-3 {p.links.length ? '' : 'text-muted-foreground'}">{p.links.length ? p.links.join(", ") : "None"}</Table.Cell>
+                <Table.Cell class="px-3 py-3">{p.clients}</Table.Cell>
+                <Table.Cell class="px-3 py-3 text-right">
                   {#if p.hidden}<span class="mr-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Hidden</span>{/if}
                   <button type="button" onclick={() => openEdit(p)} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Edit</button>
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             {:else}
-              <tr><td colspan="5" class="px-3 py-6 text-center text-muted-foreground">No packages yet. Make one, then put it on an invite link.</td></tr>
+              <Table.Row><Table.Cell colspan={5} class="px-3 py-6 text-center text-muted-foreground">No packages yet. Make one, then put it on an invite link.</Table.Cell></Table.Row>
             {/each}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </div>
     </section>
 
@@ -228,10 +232,10 @@
               <input bind:value={form.price} required inputmode="decimal" placeholder="120" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             <label class="flex flex-[1_1_200px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">How they pay
-              <select bind:value={form.interval} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                <option value="month">Every month until cancelled</option>
-                <option value="once">Once, for a set number of weeks</option>
-              </select>
+              <NativeSelect.Root bind:value={form.interval}>
+                <NativeSelect.Option value="month">Every month until cancelled</NativeSelect.Option>
+                <NativeSelect.Option value="once">Once, for a set number of weeks</NativeSelect.Option>
+              </NativeSelect.Root>
             </label>
             {#if form.interval === "once"}
               <label class="flex flex-[0_1_100px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Weeks
@@ -243,7 +247,7 @@
             <textarea bind:value={form.description} maxlength="600" rows="3" placeholder="Custom program, weekly check-in with written feedback, messages within 24 h." class="rounded-[9px] border border-input bg-background px-2.5 py-2 text-[13px] text-foreground"></textarea>
           </label>
           {#if editing !== "new"}
-            <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={form.hidden} class="size-4 accent-primary" /> Hidden: comes off its links; clients already on it keep paying</label>
+            <label class="flex items-center gap-2.5 text-[13px]"><Checkbox bind:checked={form.hidden} /> Hidden: comes off its links; clients already on it keep paying</label>
             <p class="text-xs text-muted-foreground">A new price applies to people who pay from now on. Clients already paying keep their price.</p>
           {/if}
           {#if formError}<p class="text-xs text-destructive">{formError}</p>{/if}
@@ -260,11 +264,10 @@
         <h2 class="text-sm font-semibold">When a payment fails</h2>
         <p class="mt-1 text-[13px] leading-relaxed text-muted-foreground">LogIt emails your client a link to update their card, and Stripe tries it again over a few days. Choose what happens to coaching meanwhile. The same applies when a one-off package runs out or a monthly plan is stopped. This is your default; you can change it for one client on the Clients tab.</p>
       </div>
-      <fieldset class="flex flex-col gap-2">
-        <legend class="sr-only">If a payment fails</legend>
+      <RadioGroup.Root bind:value={settings.failRule} aria-label="If a payment fails" class="flex flex-col gap-2">
         {#each rules as r (r.value)}
           <label class="flex items-start gap-3 rounded-[9px] border p-3 text-[13px] {settings.failRule === r.value ? 'border-primary bg-muted' : 'border-border'}">
-            <input type="radio" name="fail-rule" value={r.value} bind:group={settings.failRule} class="mt-0.5 size-4 accent-primary" />
+            <RadioGroup.Item value={r.value} />
             <span class="flex flex-col gap-1">
               <span class="flex flex-wrap items-center gap-1.5 font-medium">
                 {r.title}
@@ -277,9 +280,9 @@
             </span>
           </label>
         {/each}
-      </fieldset>
-      <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={settings.emailOnFail} class="size-4 accent-primary" /> Email me about payments (new clients and failed cards)</label>
-      <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={settings.showClientNote} class="size-4 accent-primary" /> Show the client a note in the app (no price, no pay button)</label>
+      </RadioGroup.Root>
+      <label class="flex items-center gap-2.5 text-[13px]"><Checkbox bind:checked={settings.emailOnFail} /> Email me about payments (new clients and failed cards)</label>
+      <label class="flex items-center gap-2.5 text-[13px]"><Checkbox bind:checked={settings.showClientNote} /> Show the client a note in the app (no price, no pay button)</label>
       <div class="flex justify-end"><button type="submit" disabled={savingSettings} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Save</button></div>
     </form>
   {/if}

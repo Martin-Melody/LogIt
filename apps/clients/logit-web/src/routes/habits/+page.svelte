@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
@@ -351,30 +352,30 @@
         <p class="px-2.5 pb-3 text-[13px] text-muted-foreground">No habits yet. <button type="button" class="text-primary hover:underline" onclick={() => { editingHabit = null; habitDialog = true; }}>Add one</button>.</p>
       {:else}
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[820px] border-collapse text-[13px]">
-            <thead>
-              <tr class="text-left text-xs text-muted-foreground">
-                <th class="px-2.5 py-2 font-medium">Habit</th>
-                <th class="px-2.5 py-2 font-medium">How often</th>
-                <th class="px-2.5 py-2 font-medium">
+          <Table.Root class="w-full min-w-[820px] border-collapse text-[13px]">
+            <Table.Header>
+              <Table.Row class="text-left text-xs text-muted-foreground">
+                <Table.Head class="px-2.5 py-2 font-medium">Habit</Table.Head>
+                <Table.Head class="px-2.5 py-2 font-medium">How often</Table.Head>
+                <Table.Head class="px-2.5 py-2 font-medium">
                   <span class="grid grid-cols-4 gap-[3px]" style="width: calc(28 * 16px)">
                     {#each weekStarts as w, i (w)}<span>{i === 3 ? "This week" : new Date(w + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>{/each}
                   </span>
-                </th>
-                <th class="px-2.5 py-2 font-medium">This week</th>
-                <th class="w-16 px-2.5 py-2"><span class="sr-only">Edit</span></th>
-              </tr>
-            </thead>
-            <tbody>
+                </Table.Head>
+                <Table.Head class="px-2.5 py-2 font-medium">This week</Table.Head>
+                <Table.Head class="w-16 px-2.5 py-2"><span class="sr-only">Edit</span></Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {#each habitRows as row (row.habit.id)}
                 {@const h = row.habit}
-                <tr class="border-t border-border">
-                  <td class="px-2.5 py-2.5 font-medium">
+                <Table.Row class="border-t border-border">
+                  <Table.Cell class="px-2.5 py-2.5 font-medium">
                     {h.name}{#if h.target}{" "}<span class="font-normal text-muted-foreground">{h.target.value}{h.target.unit ? ` ${h.target.unit}` : ""}</span>{/if}
                     {#if row.coach}<span class="ml-1.5 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary" title={row.note}>From your coach</span>{/if}
-                  </td>
-                  <td class="px-2.5 py-2.5 text-muted-foreground">{cadenceText(h)}</td>
-                  <td class="px-2.5 py-2.5">
+                  </Table.Cell>
+                  <Table.Cell class="px-2.5 py-2.5 text-muted-foreground">{cadenceText(h)}</Table.Cell>
+                  <Table.Cell class="px-2.5 py-2.5">
                     <span class="grid grid-cols-[repeat(28,13px)] gap-[3px]">
                       {#each days as d (d)}
                         {@const c = cell(h, d)}
@@ -386,19 +387,19 @@
                           class="block size-[13px] rounded-[3px] {CELL[c]} {d < todayIso ? 'cursor-pointer hover:ring-2 hover:ring-primary/60' : 'cursor-default'} {fixing?.habit.id === h.id && fixing.dateIso === d ? 'ring-2 ring-primary' : ''}"></button>
                       {/each}
                     </span>
-                  </td>
-                  <td class="px-2.5 py-2.5 tabular-nums">{thisWeek(h)}</td>
-                  <td class="px-2.5 py-2.5">
+                  </Table.Cell>
+                  <Table.Cell class="px-2.5 py-2.5 tabular-nums">{thisWeek(h)}</Table.Cell>
+                  <Table.Cell class="px-2.5 py-2.5">
                     {#if row.coach}
                       <span class="text-xs text-muted-foreground">Coach's</span>
                     {:else}
                       <Button variant="outline" size="sm" onclick={() => { editingHabit = h; habitDialog = true; }}>Edit</Button>
                     {/if}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               {/each}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table.Root>
         </div>
         {#if fixing}
           <form class="mx-2.5 flex flex-wrap items-center gap-2.5 rounded-lg bg-muted px-3 py-2.5 text-[13px]"

@@ -2,6 +2,8 @@
      card in your chat with them, which lets them join straight away), or share the link and QR
      for the gym wall. Members already in the group aren't listed. -->
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { onMount } from "svelte";
   import { Copy, QrCode, Search, Share2 } from "lucide-svelte";
   import { toast } from "svelte-sonner";
@@ -105,7 +107,7 @@
       </label>
     {/if}
     {#if people === null}
-      {#each [0, 1, 2] as i (i)}<div class="flex items-center gap-3 py-1.5"><span class="size-10 animate-pulse rounded-full bg-muted"></span><span class="h-4 w-32 animate-pulse rounded bg-muted"></span></div>{/each}
+      {#each [0, 1, 2] as i (i)}<div class="flex items-center gap-3 py-1.5"><Skeleton class="size-10 rounded-full" /><Skeleton class="h-4 w-32 rounded" /></div>{/each}
     {:else if people.length === 0}
       <p class="py-2 text-sm text-muted-foreground">People you chat with or follow show here. Or share the link below.</p>
     {:else}
@@ -123,10 +125,10 @@
         {/each}
       </ul>
     {/if}
-    <div class="flex items-center gap-2.5 text-[12px] text-muted-foreground"><span class="h-px flex-1 bg-border"></span>or share the link<span class="h-px flex-1 bg-border"></span></div>
+    <div class="flex items-center gap-2.5 text-[12px] text-muted-foreground"><Separator class="flex-1" />or share the link<Separator class="flex-1" /></div>
     {#if showQr}
       <div transition:reveal class="flex flex-col items-center gap-2">
-        {#if qr}<img src={qr} alt="QR code to join {name}" class="size-[200px] rounded-2xl bg-white p-2" />{:else}<div class="size-[200px] animate-pulse rounded-2xl bg-muted"></div>{/if}
+        {#if qr}<img src={qr} alt="QR code to join {name}" class="size-[200px] rounded-2xl bg-white p-2" />{:else}<Skeleton class="size-[200px] rounded-2xl" />{/if}
         <span class="text-[13px] text-muted-foreground">Print it for the wall, or let them scan it</span>
       </div>
     {/if}

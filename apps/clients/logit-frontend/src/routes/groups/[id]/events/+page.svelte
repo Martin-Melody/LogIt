@@ -1,9 +1,10 @@
 <!-- A group's events (design canvas E2): upcoming, with cancelled ones marked until their day,
      and past. Organisers add one from here too. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { Loader2 } from "lucide-svelte";
+  
   import { toast } from "svelte-sonner";
   import { ChevronDown } from "lucide-svelte";
   import { eventsApi, gatherSeries, type GroupEvent } from "@logit/core/api/eventsApi";
@@ -58,7 +59,7 @@
   {#if error}
     <p class="px-4 py-10 text-center text-sm text-muted-foreground">Couldn't load the events. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if !upcoming}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     <h2 class="px-4 pb-1.5 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Upcoming</h2>
     {#if upcoming.length}

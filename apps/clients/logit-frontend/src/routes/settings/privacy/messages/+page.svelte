@@ -1,8 +1,9 @@
 <!-- Settings › Privacy › Messages (design canvas P2): Instagram's message controls. People you
      follow always reach your chats; your coach always can, in the coach thread. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
-  import { Loader2 } from "lucide-svelte";
+  
   import { toast } from "svelte-sonner";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
@@ -42,7 +43,7 @@
   {#if error}
     <p class="px-1 text-sm text-muted-foreground">Couldn't load your settings. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if !settings}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     <SettingsSection title="People who follow you" note="People you follow always reach your chats.">
       <RadioGroup.Root value={settings.dmFromFollowers} aria-label="Messages from people who follow you" onValueChange={(v) => set({ dmFromFollowers: v as SocialSettings["dmFromFollowers"] })}>

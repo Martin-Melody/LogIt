@@ -2,8 +2,9 @@
      from (Instagram's story controls), who can cheer and reply, and training now (Instagram's
      activity status). -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
-  import { ChevronRight, Loader2 } from "lucide-svelte";
+  import { ChevronRight } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
@@ -55,7 +56,7 @@
   {#if error}
     <p class="px-1 text-sm text-muted-foreground">Couldn't load your settings. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if !settings}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     <SettingsSection title="Story" note="Stories follow your account: your followers see them, and on a private account only the followers you accepted.">
       <a href="/settings/privacy/story/close-friends" class={link}>

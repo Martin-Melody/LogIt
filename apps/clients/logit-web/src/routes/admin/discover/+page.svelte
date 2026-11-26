@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { adminApi, type DiscoverRow } from "$lib/features/admin/adminApi";
@@ -44,20 +45,20 @@
         <h2 id="k-{kind}" class="text-[15px] font-semibold">{title}</h2>
         {#if list.length}
           <div class="overflow-x-auto">
-            <table class="w-full min-w-[680px] text-[13px] tabular-nums">
-              <thead><tr class="text-left text-xs text-muted-foreground"><th class="pb-2 font-medium">Version</th><th class="pb-2 font-medium">Recipe</th><th class="pb-2 font-medium">Shown</th>{#if kind === "post"}<th class="pb-2 font-medium">Liked</th><th class="pb-2 font-medium">Commented</th>{/if}<th class="pb-2 font-medium">{followed}</th></tr></thead>
-              <tbody>
+            <Table.Root class="w-full min-w-[680px] text-[13px] tabular-nums">
+              <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="pb-2 font-medium">Version</Table.Head><Table.Head class="pb-2 font-medium">Recipe</Table.Head><Table.Head class="pb-2 font-medium">Shown</Table.Head>{#if kind === "post"}<Table.Head class="pb-2 font-medium">Liked</Table.Head><Table.Head class="pb-2 font-medium">Commented</Table.Head>{/if}<Table.Head class="pb-2 font-medium">{followed}</Table.Head></Table.Row></Table.Header>
+              <Table.Body>
                 {#each list as r (r.arm + r.recipe)}
-                  <tr class="border-t border-border">
-                    <td class="py-2.5">{r.arm}</td>
-                    <td class="py-2.5">{r.recipe}</td>
-                    <td class="py-2.5">{r.shown.toLocaleString()}</td>
-                    {#if kind === "post"}<td class="py-2.5">{r.liked.toLocaleString()}</td><td class="py-2.5">{r.commented.toLocaleString()}</td>{/if}
-                    <td class="py-2.5"><span class="mr-2 inline-block h-2 rounded bg-chart-1/75 align-middle" style="width: {Math.max(2, Math.round((r.followRate / best) * 96))}px"></span>{pct(r.followRate)}</td>
-                  </tr>
+                  <Table.Row class="border-t border-border">
+                    <Table.Cell class="py-2.5">{r.arm}</Table.Cell>
+                    <Table.Cell class="py-2.5">{r.recipe}</Table.Cell>
+                    <Table.Cell class="py-2.5">{r.shown.toLocaleString()}</Table.Cell>
+                    {#if kind === "post"}<Table.Cell class="py-2.5">{r.liked.toLocaleString()}</Table.Cell><Table.Cell class="py-2.5">{r.commented.toLocaleString()}</Table.Cell>{/if}
+                    <Table.Cell class="py-2.5"><span class="mr-2 inline-block h-2 rounded bg-chart-1/75 align-middle" style="width: {Math.max(2, Math.round((r.followRate / best) * 96))}px"></span>{pct(r.followRate)}</Table.Cell>
+                  </Table.Row>
                 {/each}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table.Root>
           </div>
         {:else}
           <p class="text-[13px] text-muted-foreground">Nothing shown in the last {days} days.</p>

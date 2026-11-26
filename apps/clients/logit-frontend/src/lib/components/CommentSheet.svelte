@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Loader2, Send, X } from "lucide-svelte";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  import { Send, X } from "lucide-svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { socialApi, type ApiComment, type ApiPost } from "@logit/core/api/socialApi";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
@@ -104,7 +105,7 @@
     <div class="flex-1 overflow-y-auto">
       {#if loading}
         <div class="flex justify-center py-10">
-          <Loader2 class="h-4 w-4 animate-spin text-muted-foreground" />
+          <Spinner class="h-4 w-4 text-muted-foreground" />
         </div>
       {:else}
         <CommentList
@@ -137,7 +138,7 @@
           onclick={() => void submit()}
         >
           {#if submitting}
-            <Loader2 class="h-4 w-4 animate-spin" />
+            <Spinner class="h-4 w-4" />
           {:else}
             <Send class="h-4 w-4" />
           {/if}

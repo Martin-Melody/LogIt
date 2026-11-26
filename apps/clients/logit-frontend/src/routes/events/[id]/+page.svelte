@@ -3,6 +3,7 @@
      both pushed to everyone going, and for a repeating event, this one or all after it (V4).
      Opened from search before you're in its group (V2): the group, and Join and go / Ask to join. -->
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -170,7 +171,7 @@
   {#if error}
     <p class="px-6 py-14 text-center text-sm text-muted-foreground">{error}</p>
   {:else if !ev}
-    <div class="flex flex-col gap-3 px-4"><span class="h-4 w-32 animate-pulse rounded bg-muted"></span><span class="h-7 w-48 animate-pulse rounded bg-muted"></span></div>
+    <div class="flex flex-col gap-3 px-4"><Skeleton class="h-4 w-32 rounded" /><Skeleton class="h-7 w-48 rounded" /></div>
   {:else}
     <div class="flex flex-col gap-1.5 px-4">
       <a href={ev.member ? `/groups/${ev.groupId}` : `/groups/join?id=${ev.groupId}`} class="w-fit text-[13px] text-muted-foreground no-underline">{[ev.groupName, ev.kind, ev.sport].filter(Boolean).join(" · ")}</a>

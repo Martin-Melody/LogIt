@@ -3,10 +3,11 @@
      for a findable group that wants approval. Signed out, it asks for an account first and comes
      back here. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2, MessagesSquare, X } from "lucide-svelte";
+  import { MessagesSquare, X } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import { ApiError, apiBaseUrl } from "@logit/core/api/client";
   import { groupsApi, parseGroupInvite, type GroupPreview } from "@logit/core/api/groupsApi";
@@ -113,7 +114,7 @@
       <button type="button" class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground" onclick={signIn}>Sign in or make an account</button>
     </div>
   {:else if !preview}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     <div class="flex flex-col items-center gap-2.5 px-2 pt-2 text-center">
       <GroupAvatar name={preview.name} src={preview.photoUrl} size={80} />

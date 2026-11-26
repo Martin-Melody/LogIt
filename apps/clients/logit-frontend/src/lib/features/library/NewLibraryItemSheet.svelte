@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as Select from "$lib/components/ui/select/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import { Drawer } from "vaul-svelte";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import type { Equipment, ExerciseType, MuscleGroup } from "@logit/core/domain/exercise";
@@ -136,10 +138,13 @@
           </div>
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium" for="lib-eq">Equipment</label>
-            <select id="lib-eq" class={input} bind:value={equipment}>
-              <option value="">Not set</option>
-              {#each EQUIPMENT as e (e)}<option value={e}>{capitalise(EQUIPMENT_LABEL[e])}</option>{/each}
-            </select>
+            <Select.Root type="single" bind:value={() => equipment || "none", (v) => (equipment = (v === "none" ? "" : v) as typeof equipment)}>
+              <Select.Trigger id="lib-eq" class="w-full">{equipment ? capitalise(EQUIPMENT_LABEL[equipment]) : "Not set"}</Select.Trigger>
+              <Select.Content>
+                <Select.Item value="none" label="Not set" />
+                {#each EQUIPMENT as e (e)}<Select.Item value={e} label={capitalise(EQUIPMENT_LABEL[e])} />{/each}
+              </Select.Content>
+            </Select.Root>
           </div>
           <div class="flex flex-col gap-1.5">
             <span class="text-sm font-medium">Type</span>
@@ -160,9 +165,12 @@
         {:else}
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium" for="lib-area">Body area</label>
-            <select id="lib-area" class={input} bind:value={area}>
-              {#each MOBILITY_AREAS as a (a)}<option value={a}>{capitalise(MOBILITY_AREA_LABEL[a])}</option>{/each}
-            </select>
+            <Select.Root type="single" bind:value={() => area, (v) => (area = v as MobilityArea)}>
+            <Select.Trigger id="lib-area" class="w-full">{capitalise(MOBILITY_AREA_LABEL[area])}</Select.Trigger>
+            <Select.Content>
+              {#each MOBILITY_AREAS as a (a)}<Select.Item value={a} label={capitalise(MOBILITY_AREA_LABEL[a])} />{/each}
+            </Select.Content>
+          </Select.Root>
           </div>
           <div class="flex flex-col gap-1.5">
             <span class="text-sm font-medium">Measured by</span>
@@ -172,7 +180,7 @@
             </div>
           </div>
           <label class="flex h-10 items-center gap-2 text-sm">
-            <input type="checkbox" class="h-4 w-4" bind:checked={perSide} /> Each side separately
+            <Checkbox bind:checked={perSide} /> Each side separately
           </label>
         {/if}
 

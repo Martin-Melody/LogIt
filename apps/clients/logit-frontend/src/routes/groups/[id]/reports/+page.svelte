@@ -2,10 +2,11 @@
      its chat with why, and Remove / Mute / Keep it. Who reported them is never shown. Reports
      also go to LogIt; "Keep it" only clears one from this list. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { muteItems } from "$lib/features/groups/muteItems";
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { Check, Loader2 } from "lucide-svelte";
+  import { Check } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { groupsApi, type Group, type GroupReport } from "@logit/core/api/groupsApi";
@@ -72,7 +73,7 @@
   {#if error}
     <p class="px-4 py-10 text-center text-sm text-muted-foreground">Couldn't load the reports. Only the group's organisers and moderators see them.</p>
   {:else if !reports}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else if reports.length === 0}
     <div class="flex flex-col items-center gap-2 px-6 py-14 text-center text-muted-foreground"><Check class="size-6" /><p class="text-sm">Nothing to look at. Reported messages in the group's chat show up here.</p></div>
   {:else}

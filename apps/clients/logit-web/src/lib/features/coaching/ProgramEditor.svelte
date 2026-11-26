@@ -1,7 +1,12 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
+  import ConfirmDialog, { type Ask } from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import { DateField } from "$lib/components/ui/date-field/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
-  import { beforeNavigate } from "$app/navigation";
+  import { beforeNavigate, goto } from "$app/navigation";
   import * as P from "@logit/core/domain/CoachProgram";
   import type { CoachProgram, ProgramDay, ProgramSet, ProgramStrength } from "@logit/core/domain/CoachProgram";
   import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
@@ -54,8 +59,14 @@
     index = await loadExerciseIndex([]).catch(() => null);
   });
 
+  let ask = $state<Ask | null>(null);
+  let leaving = false;
   beforeNavigate((nav) => {
-    if (dirty && !saving && !confirm("Leave without saving? Your changes to this program will be lost.")) nav.cancel();
+    if (leaving || !dirty || saving) return;
+    nav.cancel(); // closing the tab ('leave') gets the browser's own prompt from this
+    const to = nav.to?.url;
+    if (nav.type === "leave" || !to) return;
+    ask = { title: "Leave without saving?", text: "Your changes to this program will be lost.", action: "Leave", run: () => { leaving = true; void goto(to); } };
   });
 
   function edit(fn: (p: CoachProgram) => CoachProgram) {
@@ -165,10 +176,10 @@
 
   function removeWeek() {
     if (!week || draft.weeks.length <= 1) return;
-    if (week.days.length && !confirm(`Remove week ${week.weekNumber} and its days?`)) return;
     const id = week.id;
-    edit((p) => P.removeWeek(p, id));
-    weekId = draft.weeks[0]?.id ?? "";
+    const remove = () => { edit((p) => P.removeWeek(p, id)); weekId = draft.weeks[0]?.id ?? ""; };
+    if (!week.days.length) return remove();
+    ask = { title: `Remove week ${week.weekNumber} and its days?`, action: "Remove week", run: remove };
   }
 
   function addDay() {
@@ -225,14 +236,14 @@
   {#if mode === "copy"}
     <div class="flex flex-wrap items-center gap-2 text-[13px]">
       <label for="start-mode" class="text-muted-foreground">Starts</label>
-      <select id="start-mode" class={input} value={draft.startMode === "fixed-date" ? "fixed-date" : "manual"}
+      <NativeSelect.Root size="sm" id="start-mode" value={draft.startMode === "fixed-date" ? "fixed-date" : "manual"}
         onchange={(e) => { const m = e.currentTarget.value; edit((p) => m === "fixed-date" ? P.setProgramStart(p, { mode: "fixed-date", startDateMs: p.startDateMs ?? P.startOfLocalDayMs() }) : P.setProgramStart(p, { mode: "manual" })); }}>
-        <option value="manual">When they tap Start</option>
-        <option value="fixed-date">On a date</option>
-      </select>
+        <NativeSelect.Option value="manual">When they tap Start</NativeSelect.Option>
+        <NativeSelect.Option value="fixed-date">On a date</NativeSelect.Option>
+      </NativeSelect.Root>
       {#if draft.startMode === "fixed-date"}
-        <input type="date" aria-label="Start date" class={input} value={draft.startDateMs != null ? P.toDateInputValue(draft.startDateMs) : ""}
-          onchange={(e) => { const ms = P.fromDateInputValue(e.currentTarget.value); if (ms != null) edit((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms })); }} />
+        <DateField aria-label="Start date" class="h-8 w-auto text-[13px]"
+          bind:value={() => (draft.startDateMs != null ? P.toDateInputValue(draft.startDateMs) : undefined), (v) => { const ms = v ? P.fromDateInputValue(v) : null; if (ms != null) edit((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms })); }} />
       {:else if draft.clientStartedAtMs}
         <span class="text-xs text-muted-foreground">They started on {new Date(draft.clientStartedAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
       {/if}
@@ -248,11 +259,11 @@
     </div>
     <span class="flex flex-wrap items-center gap-2">
       <label for="copy-week" class="sr-only">Copy this week to</label>
-      <select id="copy-week" bind:value={copyTo} onchange={copyWeek} class="h-[30px] rounded-lg border border-border bg-background px-2 text-xs">
-        <option value="">Copy week {week?.weekNumber} to…</option>
-        {#each weeks.filter((w) => w.id !== week?.id) as w (w.id)}<option value={w.id}>Week {w.weekNumber} (replaces it)</option>{/each}
-        <option value="__new">A new week at the end</option>
-      </select>
+      <NativeSelect.Root size="sm" id="copy-week" bind:value={copyTo} onchange={copyWeek}>
+        <NativeSelect.Option value="">Copy week {week?.weekNumber} to…</NativeSelect.Option>
+        {#each weeks.filter((w) => w.id !== week?.id) as w (w.id)}<NativeSelect.Option value={w.id}>Week {w.weekNumber} (replaces it)</NativeSelect.Option>{/each}
+        <NativeSelect.Option value="__new">A new week at the end</NativeSelect.Option>
+      </NativeSelect.Root>
       <button type="button" onclick={addDay} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">+ Day</button>
       {#if weeks.length > 1}<button type="button" onclick={removeWeek} class="h-[30px] rounded-lg border border-border px-2.5 text-xs text-destructive hover:bg-muted">Remove week</button>{/if}
     </span>
@@ -275,24 +286,24 @@
             <input id="dayname-{day.id}" value={day.name ?? `Day ${di + 1}`} class="h-8 w-44 rounded-[7px] border border-transparent bg-transparent px-1 text-sm font-semibold hover:border-input focus:border-input"
               oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { name: v })); }} />
             <label class="sr-only" for="weekday-{day.id}">Weekday</label>
-            <select id="weekday-{day.id}" class="h-8 rounded-[7px] border border-input bg-background px-1.5 text-xs" value={day.weekday ?? ""}
+            <NativeSelect.Root size="sm" id="weekday-{day.id}" value={day.weekday ?? ""}
               onchange={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { weekday: v === "" ? undefined : Number(v) })); }}>
-              <option value="">Any day</option>
-              {#each WEEKDAYS as w, i (w)}<option value={i}>{w}</option>{/each}
-            </select>
+              <NativeSelect.Option value="">Any day</NativeSelect.Option>
+              {#each WEEKDAYS as w, i (w)}<NativeSelect.Option value={i}>{w}</NativeSelect.Option>{/each}
+            </NativeSelect.Root>
           </span>
           <span class="flex gap-3">
-            <button type="button" class="text-xs text-destructive hover:underline" onclick={() => { if (!day.blocks.length || confirm(`Remove ${day.name ?? "this day"}?`)) edit((p) => P.removeDay(p, week.id, day.id)); }}>Remove day</button>
+            <button type="button" class="text-xs text-destructive hover:underline" onclick={() => { const remove = () => edit((p) => P.removeDay(p, week.id, day.id)); if (!day.blocks.length) remove(); else ask = { title: `Remove ${day.name ?? "this day"}?`, action: "Remove day", run: remove }; }}>Remove day</button>
             <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => (openDay = null)}>Close</button>
           </span>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[640px] border-collapse text-[13px]">
-            <thead><tr class="text-left text-[11px] text-muted-foreground"><th class="w-[30%] px-2 py-1.5 font-medium">Exercise / set</th><th class="px-2 py-1.5 font-medium">Reps</th><th class="px-2 py-1.5 font-medium">Load</th><th class="px-2 py-1.5 font-medium">RPE</th><th class="px-2 py-1.5 font-medium">Rest</th><th class="px-2 py-1.5 font-medium">Tempo</th><th class="px-2 py-1.5 font-medium">Type</th><th></th></tr></thead>
-            <tbody>
+          <Table.Root class="w-full min-w-[640px] border-collapse text-[13px]">
+            <Table.Header><Table.Row class="text-left text-[11px] text-muted-foreground"><Table.Head class="w-[30%] px-2 py-1.5 font-medium">Exercise / set</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Reps</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Load</Table.Head><Table.Head class="px-2 py-1.5 font-medium">RPE</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Rest</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Tempo</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Type</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+            <Table.Body>
               {#each [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) as block, bi (block.id)}
-                <tr class="border-t border-border">
-                  <td colspan="8" class="px-2 pb-1 pt-3">
+                <Table.Row class="border-t border-border">
+                  <Table.Cell colspan={8} class="px-2 pb-1 pt-3">
                     <span class="flex flex-wrap items-center gap-2">
                       {#if labels.get(block.id)}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(block.id)}</span>{/if}
                       <span class="font-semibold">{block.type === "strength" ? block.exerciseName : block.activityName}</span>
@@ -336,36 +347,36 @@
                         </div>
                       {/if}
                     {/if}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
                 {#if block.type === "strength"}
                   {#each block.sets as set, si (set.id)}
-                    <tr>
-                      <td class="px-2 py-1 text-muted-foreground">Set {si + 1}</td>
-                      <td class="px-2 py-1"><input aria-label="Reps, set {si + 1}" class="{input} w-[72px]" value={P.repsText(set)} onchange={(e) => setField(day, block, set, "reps", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="Load, set {si + 1}" class="{input} w-[76px]" value={P.loadText(set)} placeholder="–" onchange={(e) => setField(day, block, set, "load", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="RPE, set {si + 1}" class="{input} w-[52px]" value={set.rpe ?? ""} onchange={(e) => setField(day, block, set, "rpe", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="Rest, set {si + 1}" class="{input} w-[64px]" value={P.restText(set.restSec)} onchange={(e) => setField(day, block, set, "rest", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="Tempo, set {si + 1}" class="{input} w-[80px]" value={set.tempo ?? ""} onchange={(e) => setField(day, block, set, "tempo", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1">
+                    <Table.Row>
+                      <Table.Cell class="px-2 py-1 text-muted-foreground">Set {si + 1}</Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Reps, set {si + 1}" class="{input} w-[72px]" value={P.repsText(set)} onchange={(e) => setField(day, block, set, "reps", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Load, set {si + 1}" class="{input} w-[76px]" value={P.loadText(set)} placeholder="–" onchange={(e) => setField(day, block, set, "load", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="RPE, set {si + 1}" class="{input} w-[52px]" value={set.rpe ?? ""} onchange={(e) => setField(day, block, set, "rpe", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Rest, set {si + 1}" class="{input} w-[64px]" value={P.restText(set.restSec)} onchange={(e) => setField(day, block, set, "rest", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Tempo, set {si + 1}" class="{input} w-[80px]" value={set.tempo ?? ""} onchange={(e) => setField(day, block, set, "tempo", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1">
                         {#if set.setType === "amrap"}<span class="text-xs text-muted-foreground">AMRAP</span>{:else}
-                          <select aria-label="Set type, set {si + 1}" class="{input} px-1" value={set.setType}
+                          <NativeSelect.Root size="sm" aria-label="Set type, set {si + 1}" value={set.setType}
                             onchange={(e) => { const v = e.currentTarget.value as SetType; edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: v })); }}>
-                            {#each setTypes as t (t.type)}<option value={t.type}>{t.label}</option>{/each}
-                          </select>
+                            {#each setTypes as t (t.type)}<NativeSelect.Option value={t.type}>{t.label}</NativeSelect.Option>{/each}
+                          </NativeSelect.Root>
                         {/if}
-                      </td>
-                      <td class="px-2 py-1"><button type="button" aria-label="Remove set {si + 1}" class="text-muted-foreground hover:text-destructive" onclick={() => edit((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>✕</button></td>
-                    </tr>
+                      </Table.Cell>
+                      <Table.Cell class="px-2 py-1"><button type="button" aria-label="Remove set {si + 1}" class="text-muted-foreground hover:text-destructive" onclick={() => edit((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>✕</button></Table.Cell>
+                    </Table.Row>
                   {/each}
-                  <tr><td colspan="8" class="px-2 pb-1"><button type="button" class="text-xs text-muted-foreground hover:text-foreground"
-                    onclick={() => addSetLike(day, block)}>+ Set</button></td></tr>
+                  <Table.Row><Table.Cell colspan={8} class="px-2 pb-1"><button type="button" class="text-xs text-muted-foreground hover:text-foreground"
+                    onclick={() => addSetLike(day, block)}>+ Set</button></Table.Cell></Table.Row>
                 {/if}
               {:else}
-                <tr><td colspan="8" class="px-2 py-3 text-xs text-muted-foreground">No exercises yet.</td></tr>
+                <Table.Row><Table.Cell colspan={8} class="px-2 py-3 text-xs text-muted-foreground">No exercises yet.</Table.Cell></Table.Row>
               {/each}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table.Root>
         </div>
         {#if adding === day.id}
           <div class="max-w-sm pt-1">
@@ -396,7 +407,7 @@
         {#if mode === "library" && copies.length}
           <span class="text-xs text-muted-foreground">Also update:</span>
           {#each copies as c (c.id)}
-            <label class="flex items-center gap-1.5 text-[13px]"><input type="checkbox" value={c.id} bind:group={tick} /> {c.label}</label>
+            <label class="flex items-center gap-1.5 text-[13px]"><Checkbox checked={tick.includes(c.id)} onCheckedChange={(v) => (tick = v ? [...tick, c.id] : tick.filter((x) => x !== c.id))} /> {c.label}</label>
           {/each}
         {/if}
       </div>
@@ -409,3 +420,5 @@
     {#if mode === "copy"}<p class="-mt-1 text-xs text-muted-foreground">Only this client's copy changes. It reaches their phone on its next sync.</p>{/if}
   {/if}
 </div>
+
+<ConfirmDialog bind:ask />

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -202,13 +204,13 @@
       <section aria-label="What to chart" class="flex flex-[1_1_300px] flex-col gap-4 rounded-[10px] border border-border bg-card px-[18px] py-4">
         <div class="flex flex-col gap-1.5">
           <label class={label} for="chart-show">Show</label>
-          <select id="chart-show" class={control} value={chart.metric} onchange={(e) => setMetric((e.target as HTMLSelectElement).value as ChartMetric)}>
+          <NativeSelect.Root id="chart-show" class="w-full" value={chart.metric} onchange={(e) => setMetric((e.target as HTMLSelectElement).value as ChartMetric)}>
             {#each groups as g (g)}
-              <optgroup label={g}>
-                {#each CHART_METRICS.filter((m) => m.group === g) as m (m.id)}<option value={m.id}>{m.label}</option>{/each}
-              </optgroup>
+              <NativeSelect.OptGroup label={g}>
+                {#each CHART_METRICS.filter((m) => m.group === g) as m (m.id)}<NativeSelect.Option value={m.id}>{m.label}</NativeSelect.Option>{/each}
+              </NativeSelect.OptGroup>
             {/each}
-          </select>
+          </NativeSelect.Root>
         </div>
 
         {#if def?.pick === "lifts"}
@@ -266,9 +268,9 @@
 
         <div class="flex flex-col gap-1.5">
           <label class={label} for="chart-compare">Compare with</label>
-          <select id="chart-compare" class={control} bind:value={chart.compare}>
-            {#each CHART_COMPARES.filter((c) => c.id !== chart!.metric) as c (c.id)}<option value={c.id}>{c.label}</option>{/each}
-          </select>
+          <NativeSelect.Root id="chart-compare" class="w-full" bind:value={chart.compare}>
+            {#each CHART_COMPARES.filter((c) => c.id !== chart!.metric) as c (c.id)}<NativeSelect.Option value={c.id}>{c.label}</NativeSelect.Option>{/each}
+          </NativeSelect.Root>
           <span class="text-xs text-muted-foreground">Gets its own scale on the right.</span>
         </div>
 
@@ -312,20 +314,20 @@
           <h2 class="mb-1 text-sm font-semibold">Show it on</h2>
           {#if clientId}
             <label class="flex items-start gap-2.5 py-2 text-[13px] leading-snug">
-              <input type="checkbox" class="mt-0.5 size-[18px] accent-primary" bind:checked={chart.showOn.phoneHome} />
+              <Checkbox class="mt-0.5" bind:checked={chart.showOn.phoneHome} />
               <span>{client?.name}'s phone home screen<br /><span class="text-xs text-muted-foreground">It always shows in their Insights as "From you". They can hide it.</span></span>
             </label>
           {:else}
             <label class="flex items-start gap-2.5 py-2 text-[13px] leading-snug">
-              <input type="checkbox" class="mt-0.5 size-[18px] accent-primary" bind:checked={chart.showOn.overview} />
+              <Checkbox class="mt-0.5" bind:checked={chart.showOn.overview} />
               <span>Overview here<br /><span class="text-xs text-muted-foreground">Added at the bottom; move it with Edit on the Overview.</span></span>
             </label>
             <label class="flex items-start gap-2.5 py-2 text-[13px] leading-snug">
-              <input type="checkbox" class="mt-0.5 size-[18px] accent-primary" bind:checked={chart.showOn.phoneHome} />
+              <Checkbox class="mt-0.5" bind:checked={chart.showOn.phoneHome} />
               <span>My phone's home screen<br /><span class="text-xs text-muted-foreground">Shows after the phone's next sync. The phone draws it from its own data.</span></span>
             </label>
             <label class="flex items-start gap-2.5 py-2 text-[13px] leading-snug">
-              <input type="checkbox" class="mt-0.5 size-[18px] accent-primary" bind:checked={chart.showOn.coach} />
+              <Checkbox class="mt-0.5" bind:checked={chart.showOn.coach} />
               <span>My coach's view of me<br /><span class="text-xs text-muted-foreground">Only works for things you share with them in My coach.</span></span>
             </label>
           {/if}

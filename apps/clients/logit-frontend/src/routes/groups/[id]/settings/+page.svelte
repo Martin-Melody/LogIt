@@ -1,10 +1,11 @@
 <!-- Your settings in a group (design canvas P3): on the board or not (Strava's hide from
      leaderboards), notifications per group (Facebook groups), report, leave. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2 } from "lucide-svelte";
+  
   import { toast } from "svelte-sonner";
   import { groupsApi, type Group, type GroupNotify } from "@logit/core/api/groupsApi";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -72,7 +73,7 @@
   {#if error}
     <p class="px-1 text-sm text-muted-foreground">Couldn't load the group. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if !group}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     <SettingsSection title="What members see" note="Members always see your name and photo in the member list and on events you're going to. Your workouts and weights are never shown to the group.">
       <div class={settingRow}>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Select from "$lib/components/ui/select/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Timer, Hash, Check } from "lucide-svelte";
@@ -197,9 +198,12 @@
         <div class="flex flex-col gap-1.5" transition:reveal>
           <p class="text-xs text-muted-foreground">“{name.trim()}” is new, so it's saved to your library.</p>
           <label class="sr-only" for="new-drill-area">Body area</label>
-          <select id="new-drill-area" class="h-10 w-full rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" bind:value={area}>
-            {#each MOBILITY_AREAS as a (a)}<option value={a}>Area: {MOBILITY_AREA_LABEL[a]}</option>{/each}
-          </select>
+          <Select.Root type="single" bind:value={() => area, (v) => (area = v as MobilityArea)}>
+            <Select.Trigger id="new-drill-area" class="w-full">Area: {MOBILITY_AREA_LABEL[area]}</Select.Trigger>
+            <Select.Content>
+              {#each MOBILITY_AREAS as a (a)}<Select.Item value={a} label={MOBILITY_AREA_LABEL[a]} />{/each}
+            </Select.Content>
+          </Select.Root>
         </div>
       {/if}
 

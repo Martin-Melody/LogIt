@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ConfirmDialog, { type Ask } from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { onMount } from "svelte";
   import { goto, beforeNavigate } from "$app/navigation";
   import { page } from "$app/state";
@@ -80,8 +81,14 @@
     }
   }
 
+  let ask = $state<Ask | null>(null);
+  let leaving = false;
   beforeNavigate((nav) => {
-    if (dirty && !saving && !confirm("Leave without saving? Your answers so far will be lost.")) nav.cancel();
+    if (leaving || !dirty || saving) return;
+    nav.cancel(); // closing the tab ('leave') gets the browser's own prompt from this
+    const to = nav.to?.url;
+    if (nav.type === "leave" || !to) return;
+    ask = { title: "Leave without saving?", text: "Your answers so far will be lost.", action: "Leave", run: () => { leaving = true; void goto(to); } };
   });
 
   const sent = $derived(!!sub?.submittedAtMs);
@@ -234,3 +241,5 @@
     {/if}
   {/if}
 </div>
+
+<ConfirmDialog bind:ask />

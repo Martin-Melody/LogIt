@@ -1,4 +1,7 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
   import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
@@ -306,16 +309,16 @@
           {#if byWeekday}
             <div class="flex flex-col gap-1.5">
               <label for="day-weekday" class="text-xs text-muted-foreground">Day</label>
-              <select id="day-weekday" value={String(day.weekday ?? "")} onchange={(e) => setWeekday(e.currentTarget.value)}
-                class="h-9 w-36 rounded-lg border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring">
-                {#if day.weekday == null}<option value="" disabled>Pick a day</option>{/if}
-                {#each WEEKDAYS as w (w.n)}<option value={String(w.n)}>{w.label}</option>{/each}
-              </select>
+              <NativeSelect.Root id="day-weekday" value={String(day.weekday ?? "")} onchange={(e) => setWeekday(e.currentTarget.value)}
+                class="w-36">
+                {#if day.weekday == null}<NativeSelect.Option value="" disabled>Pick a day</NativeSelect.Option>{/if}
+                {#each WEEKDAYS as w (w.n)}<NativeSelect.Option value={String(w.n)}>{w.label}</NativeSelect.Option>{/each}
+              </NativeSelect.Root>
             </div>
           {:else if !isFirst}
             <label class="flex h-9 items-center gap-2 text-[13px]">
-              <input type="checkbox" checked={!!day.sameDayAsPrevious}
-                onchange={(e) => onChange(setSameDayAsPrevious(split, dayId, e.currentTarget.checked))} />
+              <Checkbox checked={!!day.sameDayAsPrevious}
+                onCheckedChange={(v) => onChange(setSameDayAsPrevious(split, dayId, v))} />
               Same day as the one before (a second workout)
             </label>
           {/if}
@@ -335,19 +338,19 @@
         <p class="rounded-lg border border-dashed border-border px-4 py-6 text-center text-[13px] text-muted-foreground">Nothing planned yet. Search below to add the first exercise.</p>
       {:else}
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[720px] border-collapse text-[13px]">
-            <thead>
-              <tr class="text-left text-xs text-muted-foreground">
-                <th class="w-7 px-1 py-2"><span class="sr-only">Order</span></th>
-                <th class="px-2 py-2 font-medium">Exercise</th>
-                <th class="px-2 py-2 font-medium">Sets</th>
-                <th class="px-2 py-2 font-medium">Reps</th>
-                <th class="px-2 py-2 font-medium">Weight</th>
-                <th class="px-2 py-2 font-medium">Last time</th>
-                <th class="w-9 px-1 py-2"><span class="sr-only">Remove</span></th>
-              </tr>
-            </thead>
-            <tbody ondragenter={(e) => runOrder.allow(e)} ondragover={(e) => runOrder.allow(e)} ondrop={dropRuns}>
+          <Table.Root class="w-full min-w-[720px] border-collapse text-[13px]">
+            <Table.Header>
+              <Table.Row class="text-left text-xs text-muted-foreground">
+                <Table.Head class="w-7 px-1 py-2"><span class="sr-only">Order</span></Table.Head>
+                <Table.Head class="px-2 py-2 font-medium">Exercise</Table.Head>
+                <Table.Head class="px-2 py-2 font-medium">Sets</Table.Head>
+                <Table.Head class="px-2 py-2 font-medium">Reps</Table.Head>
+                <Table.Head class="px-2 py-2 font-medium">Weight</Table.Head>
+                <Table.Head class="px-2 py-2 font-medium">Last time</Table.Head>
+                <Table.Head class="w-9 px-1 py-2"><span class="sr-only">Remove</span></Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body ondragenter={(e) => runOrder.allow(e)} ondragover={(e) => runOrder.allow(e)} ondrop={dropRuns}>
               {#each runOrder.arrange(runs, runKey) as run, ri (runKey(run))}
                 {@const key = runKey(run)}
                 <tr
@@ -358,9 +361,9 @@
                   {#if run.kind === "block"}
                     {@const b = run.block}
                     {@const info = b.type === "strength" ? index.get(b.exerciseName) : undefined}
-                    <td class="px-1 py-1.5 align-middle">
+                    <Table.Cell class="px-1 py-1.5 align-middle">
                       {#if grouping}
-                        <input type="checkbox" aria-label="Pick {plannedBlockName(b)}" checked={picked.includes(b.id)} onchange={() => togglePick(b.id)} class="ml-1.5" />
+                        <Checkbox aria-label="Pick {plannedBlockName(b)}" checked={picked.includes(b.id)} onCheckedChange={() => togglePick(b.id)} class="ml-1.5" />
                       {:else}
                         <button type="button" draggable="true" aria-label="Move {plannedBlockName(b)} (arrow keys)"
                           ondragstart={(e) => runOrder.start(runs.map(runKey), key, e, (e.currentTarget as HTMLElement).closest("tr"))}
@@ -370,38 +373,38 @@
                           <GripVerticalIcon class="size-4" />
                         </button>
                       {/if}
-                    </td>
-                    <td class="px-2 py-1.5 font-medium">
+                    </Table.Cell>
+                    <Table.Cell class="px-2 py-1.5 font-medium">
                       {plannedBlockName(b)}
                       {#if b.type === "mobility"}<span class="ml-1.5 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">Mobility</span>{/if}
                       {#if b.type === "cardio"}<span class="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Cardio</span>{/if}
-                    </td>
+                    </Table.Cell>
                     {#if b.type === "strength"}
-                      <td class="px-2 py-1.5"><input aria-label="{b.exerciseName} sets" inputmode="numeric" class={cell} value={b.targets?.sets ?? ""} onchange={(e) => setStrength(b, "sets", e.currentTarget.value)} /></td>
-                      <td class="px-2 py-1.5"><input aria-label="{b.exerciseName} reps" inputmode="numeric" class={cell} value={b.targets?.reps ?? ""} onchange={(e) => setStrength(b, "reps", e.currentTarget.value)} /></td>
-                      <td class="px-2 py-1.5 whitespace-nowrap"><input aria-label="{b.exerciseName} weight in {unit}" inputmode="decimal" class={cell} value={shownWeight(b.targets?.weight)} onchange={(e) => setStrength(b, "weight", e.currentTarget.value)} /> <span class="text-xs text-muted-foreground">{unit}</span></td>
-                      <td class="px-2 py-1.5 text-muted-foreground">{lastText(info)}</td>
+                      <Table.Cell class="px-2 py-1.5"><input aria-label="{b.exerciseName} sets" inputmode="numeric" class={cell} value={b.targets?.sets ?? ""} onchange={(e) => setStrength(b, "sets", e.currentTarget.value)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1.5"><input aria-label="{b.exerciseName} reps" inputmode="numeric" class={cell} value={b.targets?.reps ?? ""} onchange={(e) => setStrength(b, "reps", e.currentTarget.value)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1.5 whitespace-nowrap"><input aria-label="{b.exerciseName} weight in {unit}" inputmode="decimal" class={cell} value={shownWeight(b.targets?.weight)} onchange={(e) => setStrength(b, "weight", e.currentTarget.value)} /> <span class="text-xs text-muted-foreground">{unit}</span></Table.Cell>
+                      <Table.Cell class="px-2 py-1.5 text-muted-foreground">{lastText(info)}</Table.Cell>
                     {:else if b.type === "mobility"}
-                      <td class="px-2 py-1.5"><input aria-label="{b.drillName} sets" inputmode="numeric" class={cell} value={b.targets?.sets ?? ""} onchange={(e) => setMobility(b, "sets", e.currentTarget.value)} /></td>
-                      <td class="px-2 py-1.5 whitespace-nowrap">
+                      <Table.Cell class="px-2 py-1.5"><input aria-label="{b.drillName} sets" inputmode="numeric" class={cell} value={b.targets?.sets ?? ""} onchange={(e) => setMobility(b, "sets", e.currentTarget.value)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1.5 whitespace-nowrap">
                         {#if b.metric === "hold"}
                           <input aria-label="{b.drillName} hold in seconds" inputmode="numeric" class={cell} value={b.targets?.holdSec ?? ""} onchange={(e) => setMobility(b, "holdSec", e.currentTarget.value)} /> <span class="text-xs text-muted-foreground">s{b.perSide ? " / side" : ""}</span>
                         {:else}
                           <input aria-label="{b.drillName} reps" inputmode="numeric" class={cell} value={b.targets?.reps ?? ""} onchange={(e) => setMobility(b, "reps", e.currentTarget.value)} />{#if b.perSide}{" "}<span class="text-xs text-muted-foreground">/ side</span>{/if}
                         {/if}
-                      </td>
-                      <td class="px-2 py-1.5 text-muted-foreground">–</td>
-                      <td class="px-2 py-1.5"></td>
+                      </Table.Cell>
+                      <Table.Cell class="px-2 py-1.5 text-muted-foreground">–</Table.Cell>
+                      <Table.Cell class="px-2 py-1.5"></Table.Cell>
                     {:else}
-                      <td class="px-2 py-1.5 text-muted-foreground" colspan="4">Timed on the day</td>
+                      <Table.Cell class="px-2 py-1.5 text-muted-foreground" colspan={4}>Timed on the day</Table.Cell>
                     {/if}
-                    <td class="px-1 py-1.5">
+                    <Table.Cell class="px-1 py-1.5">
                       <button type="button" aria-label="Remove {plannedBlockName(b)}" onclick={() => remove(b)} class="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><XIcon class="size-4" /></button>
-                    </td>
+                    </Table.Cell>
                   {:else}
                     {@const g = run.group}
                     {@const kind = groupKindOf(run.members.length, g.kind)}
-                    <td colspan="7" class="py-2.5">
+                    <Table.Cell colspan={7} class="py-2.5">
                       <div role="group" aria-label={groupLabel(run.members.length, g.label, g.kind)} class="flex flex-col gap-2 rounded-[10px] border border-primary/35 bg-primary/5 px-3 py-2.5"
                         ondragenter={(e) => { if (memberGroup === g.id) memberOrder.allow(e); }}
                         ondragover={(e) => { if (memberGroup === g.id) { memberOrder.allow(e); e.stopPropagation(); } }}
@@ -423,11 +426,11 @@
                             onchange={(e) => { const n = num(e.currentTarget.value); editDay((d) => setPlannedGroupSettings(d, g.id, { roundRestMs: n == null ? null : n * 1000 })); }} />
                           {#if run.members.length === 2}
                             <label for="kind-{g.id}" class="sr-only">Kind</label>
-                            <select id="kind-{g.id}" value={kind}
+                            <NativeSelect.Root size="sm" id="kind-{g.id}" value={kind}
                               onchange={(e) => { const k = e.currentTarget.value as "superset" | "circuit"; editDay((d) => setPlannedGroupKind(d, g.id, k)); }}
-                              class="h-7 rounded-md border border-input bg-background px-1.5 text-xs">
-                              <option value="superset">Superset</option><option value="circuit">Circuit</option>
-                            </select>
+                              >
+                              <NativeSelect.Option value="superset">Superset</NativeSelect.Option><NativeSelect.Option value="circuit">Circuit</NativeSelect.Option>
+                            </NativeSelect.Root>
                           {/if}
                           <span class="flex-1"></span>
                           <button type="button" onclick={() => editDay((d) => ungroupPlanned(d, g.id))} class="h-7 rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Ungroup</button>
@@ -467,12 +470,12 @@
                           </div>
                         {/each}
                       </div>
-                    </td>
+                    </Table.Cell>
                   {/if}
                 </tr>
               {/each}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table.Root>
         </div>
       {/if}
 

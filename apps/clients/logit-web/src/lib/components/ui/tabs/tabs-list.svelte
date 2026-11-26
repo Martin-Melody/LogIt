@@ -1,17 +1,17 @@
 <script lang="ts" module>
 	import { tv, type VariantProps } from "tailwind-variants";
 
+	// Two looks (DESIGN.md): segmented (a grey track, the chosen tab raised, like choice.ts) and
+	// line (an underline, for switching what a whole page shows).
 	export const tabsListVariants = tv({
-		base: "rounded-lg p-[3px] group-data-horizontal/tabs:h-8 data-[variant=line]:rounded-none group/tabs-list inline-flex w-fit items-center justify-center text-muted-foreground group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col",
+		base: "group/tabs-list flex w-full items-stretch text-muted-foreground",
 		variants: {
 			variant: {
-				default: "cn-tabs-list-variant-default bg-muted",
-				line: "cn-tabs-list-variant-line gap-1 bg-transparent",
+				segmented: "h-9 gap-0.5 rounded-lg bg-muted p-[3px]",
+				line: "border-b border-border",
 			},
 		},
-		defaultVariants: {
-			variant: "default",
-		},
+		defaultVariants: { variant: "segmented" },
 	});
 
 	export type TabsListVariant = VariantProps<typeof tabsListVariants>["variant"];
@@ -19,16 +19,17 @@
 
 <script lang="ts">
 	import { Tabs as TabsPrimitive } from "bits-ui";
+	import { setContext } from "svelte";
 	import { cn } from "$lib/utils.js";
 
 	let {
 		ref = $bindable(null),
-		variant = "default",
+		variant = "segmented",
 		class: className,
 		...restProps
-	}: TabsPrimitive.ListProps & {
-		variant?: TabsListVariant;
-	} = $props();
+	}: TabsPrimitive.ListProps & { variant?: TabsListVariant } = $props();
+	// Triggers read the look from here, so a caller's class on a trigger overrides it cleanly.
+	setContext("tabs-variant", () => variant);
 </script>
 
 <TabsPrimitive.List

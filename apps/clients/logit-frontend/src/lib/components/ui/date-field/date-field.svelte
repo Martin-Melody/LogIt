@@ -10,6 +10,7 @@
 		maxIso?: string;
 		/** Earliest selectable date, ISO. */
 		minIso?: string;
+		disabled?: boolean;
 		class?: string;
 		"aria-label"?: string;
 	};
@@ -18,6 +19,7 @@
 		value = $bindable<string | undefined>(),
 		maxIso,
 		minIso,
+		disabled = false,
 		class: className,
 		"aria-label": ariaLabel,
 	}: Props = $props();
@@ -44,6 +46,7 @@
 	maxValue={maxDv}
 	minValue={minDv}
 	granularity="day"
+	{disabled}
 	onValueChange={(v) => (value = v ? v.toString() : undefined)}
 >
 	<DateFieldPrimitive.Input

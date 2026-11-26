@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Tabs as TabsPrimitive } from "bits-ui";
+	import { getContext } from "svelte";
 	import { cn } from "$lib/utils.js";
 
 	let {
@@ -7,13 +8,18 @@
 		class: className,
 		...restProps
 	}: TabsPrimitive.TriggerProps = $props();
+	const variant = getContext<(() => string) | undefined>("tabs-variant") ?? (() => "segmented");
 </script>
 
 <TabsPrimitive.Trigger
 	bind:ref
 	data-slot="tabs-trigger"
 	class={cn(
-		"data-[state=active]:bg-background data-[state=active]:text-foreground text-muted-foreground focus-visible:ring-ring relative after:absolute after:-inset-y-[3px] after:inset-x-0 after:content-[''] inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-1 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		"relative inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap px-3 text-sm font-medium tabular-nums text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		// segmented: the ::after stretches the tap area over the track's padding (full-height target)
+		variant() === "line"
+			? "-mb-px min-h-11 border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:font-semibold"
+			: "rounded-md after:absolute after:-inset-y-[3px] after:inset-x-0 after:content-[''] data-[state=active]:bg-background data-[state=active]:shadow-sm",
 		className
 	)}
 	{...restProps}

@@ -3,6 +3,7 @@
      has an account (same as the server), so the password step follows whatever was typed.
      Signed in on the phone? Scan the QR instead (PairingQr). -->
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount, tick } from "svelte";
@@ -154,7 +155,7 @@
       {#if mode === "login"}
         <PairingQr onSignedIn={() => void goto(nextPath("/"))} />
         <div class="flex items-center gap-2.5 text-[13px] text-muted-foreground">
-          <span class="h-px flex-1 bg-border"></span>or<span class="h-px flex-1 bg-border"></span>
+          <Separator class="flex-1" />or<Separator class="flex-1" />
         </div>
       {/if}
 

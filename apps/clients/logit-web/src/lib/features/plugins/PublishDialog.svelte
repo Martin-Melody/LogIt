@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as RadioGroup from "$lib/components/ui/radio-group";
   import * as Dialog from "$lib/components/ui/dialog";
   import { toast } from "$lib/components/ui/sonner";
   import { pluginsApi, type MyPlugin } from "@logit/core/api/pluginsApi";
@@ -155,15 +156,14 @@
         <button type="button" onclick={() => (open = false)} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px]">Done</button>
       </Dialog.Footer>
     {:else}
-      <fieldset class="flex flex-col gap-2.5">
-        <legend class="sr-only">Who can get it</legend>
+      <RadioGroup.Root bind:value={who} aria-label="Who can get it" class="flex flex-col gap-2.5">
         {#each OPTIONS as [value, title, text] (value)}
           <label class="flex cursor-pointer items-start gap-3 rounded-[10px] border p-3.5 {who === value ? 'border-primary bg-primary/5' : 'border-border'}">
-            <input type="radio" name="publish-who" {value} bind:group={who} class="mt-1" />
+            <RadioGroup.Item {value} class="mt-0.5" />
             <span class="flex flex-col gap-0.5"><span class="text-sm font-semibold">{title}</span><span class="text-[13px] leading-normal text-muted-foreground">{text}</span></span>
           </label>
         {/each}
-      </fieldset>
+      </RadioGroup.Root>
 
       <div class="flex flex-wrap gap-3">
         <div class="flex flex-[0_1_140px] flex-col gap-1.5">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { log } from "@logit/core/platform/log";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { Camera, User } from "lucide-svelte";
@@ -72,7 +73,7 @@
   {#if editable}
     <div class="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-background border border-border flex items-center justify-center shadow-sm pointer-events-none">
       {#if picking}
-        <div class="h-3 w-3 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
+        <Spinner class="size-3.5 text-muted-foreground" />
       {:else}
         <Camera class="h-3.5 w-3.5 text-muted-foreground" />
       {/if}

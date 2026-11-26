@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { Loader2 } from "lucide-svelte";
+  
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  
   import { authStore } from "$lib/api/authStore.svelte";
   import { firstDownloadAt, planIncludesSync, syncRunning } from "$lib/sync/syncService";
 
@@ -25,7 +27,7 @@
 
 {#if show}
   <span role="status" class="flex size-6 shrink-0 items-center justify-center text-muted-foreground" title="Updating…">
-    <Loader2 class="size-4 animate-spin" aria-hidden="true" />
+    <Spinner class="size-4" aria-hidden="true" />
     <span class="sr-only">Updating</span>
   </span>
 {/if}

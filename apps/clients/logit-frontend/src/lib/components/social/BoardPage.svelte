@@ -1,8 +1,9 @@
 <!-- A whole board (design canvas G4 for a group, B2 for friends): this week, how it's scored,
      the table, and a note when you're not on it. Sends your own numbers first so your row is fresh. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
-  import { Loader2 } from "lucide-svelte";
+  
   import type { Board } from "@logit/core/api/boardsApi";
   import { trainingApi } from "@logit/core/api/trainingApi";
   import BoardTable from "./BoardTable.svelte";
@@ -28,7 +29,7 @@
 {#if error}
   <p class="px-4 py-10 text-center text-sm text-muted-foreground">Couldn't load the board.</p>
 {:else if !board}
-  <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+  <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
 {:else}
   <div class="flex flex-col gap-1 px-4 pb-2 pt-3.5">
     <h2 class="text-[15px] font-semibold">This week <span class="font-normal text-muted-foreground">· {weekText(board.week)}</span></h2>

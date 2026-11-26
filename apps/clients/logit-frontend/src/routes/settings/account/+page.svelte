@@ -1,9 +1,10 @@
 <!-- Settings › Account: who's signed in, backup and plan, coaching, sign-in, signing out and deleting. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ChevronRight, Loader2 } from "lucide-svelte";
+  import { ChevronRight } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
@@ -176,7 +177,7 @@
         {#if authStore.user.tier !== "Free" || planIncludesSync()}
           <Button id="settings-sync" data-guide="settings-sync" variant="outline" size="sm" class="shrink-0"
             disabled={syncing || serverMode === "offline"} onclick={() => void manualSync()}>
-            {#if syncing}<Loader2 class="size-3.5 animate-spin" />{/if}
+            {#if syncing}<Spinner class="size-3.5" />{/if}
             {syncing ? "Syncing…" : "Sync now"}
           </Button>
         {/if}
@@ -316,7 +317,7 @@
       </div>
       <div class="flex flex-col gap-2.5">
         <Button class="h-12" disabled={signingOut} onclick={() => void confirmSignOut("remove")}>
-          {#if signingOut}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+          {#if signingOut}<Spinner class="h-4 w-4" />{/if}
           {signOutSheet.backedUp ? "Sign out" : "Save a copy, then sign out"}
         </Button>
         {#if signOutSheet.canKeepHere}

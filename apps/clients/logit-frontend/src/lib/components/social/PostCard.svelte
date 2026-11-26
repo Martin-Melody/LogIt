@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import {
@@ -277,7 +278,7 @@
           disabled={!editDraft.trim() || savingEdit}
           onclick={saveEdit}
         >
-          {#if savingEdit}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Check class="h-3.5 w-3.5" />{/if} Save
+          {#if savingEdit}<Spinner class="h-3.5 w-3.5" />{:else}<Check class="h-3.5 w-3.5" />{/if} Save
         </button>
       </div>
     </div>
@@ -329,7 +330,7 @@
       </button>
       {#if !isOwn && canRepost}
         <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50 disabled:opacity-50" disabled={reposting} onclick={() => void doRepost()}>
-          {#if reposting}<Loader2 class="h-4 w-4 text-muted-foreground animate-spin" />{:else}<Repeat2 class="h-4 w-4 text-muted-foreground" />{/if}
+          {#if reposting}<Spinner class="h-4 w-4 text-muted-foreground" />{:else}<Repeat2 class="h-4 w-4 text-muted-foreground" />{/if}
           Repost
         </button>
       {/if}
@@ -384,7 +385,7 @@
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (confirmBlock = false)}>Cancel</button>
       <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={blocking} onclick={doBlock}>
-        {#if blocking}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Block
+        {#if blocking}<Spinner class="h-3.5 w-3.5" />{/if} Block
       </button>
     </div>
   </div>
@@ -399,7 +400,7 @@
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (confirmDelete = false)}>Cancel</button>
       <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={deleting} onclick={doDelete}>
-        {#if deleting}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Delete
+        {#if deleting}<Spinner class="h-3.5 w-3.5" />{/if} Delete
       </button>
     </div>
   </div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
@@ -188,19 +190,19 @@
               <input bind:value={name} required maxlength="80" placeholder="Instagram bio" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             <label class="flex flex-[1_1_140px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Stops working
-              <select bind:value={expires} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                <option value="">Never</option><option value="7">In 7 days</option><option value="30">In 30 days</option><option value="90">In 90 days</option>
-              </select>
+              <NativeSelect.Root bind:value={expires}>
+                <NativeSelect.Option value="">Never</NativeSelect.Option><NativeSelect.Option value="7">In 7 days</NativeSelect.Option><NativeSelect.Option value="30">In 30 days</NativeSelect.Option><NativeSelect.Option value="90">In 90 days</NativeSelect.Option>
+              </NativeSelect.Root>
             </label>
             <label class="flex flex-[1_1_120px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Max people
               <input bind:value={maxUses} inputmode="numeric" placeholder="No limit" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             {#if paymentsReady && packages.length}
               <label class="flex flex-[1_1_180px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">They pay for
-                <select bind:value={packageId} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                  <option value="">Nothing (free link)</option>
-                  {#each packages as p (p.id)}<option value={p.id}>{p.name} · {priceText(p)}</option>{/each}
-                </select>
+                <NativeSelect.Root bind:value={packageId}>
+                  <NativeSelect.Option value="">Nothing (free link)</NativeSelect.Option>
+                  {#each packages as p (p.id)}<NativeSelect.Option value={p.id}>{p.name} · {priceText(p)}</NativeSelect.Option>{/each}
+                </NativeSelect.Root>
               </label>
             {/if}
             <button type="submit" disabled={creating || !name.trim()} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Create link</button>
@@ -215,41 +217,41 @@
 
         <section data-guide="links-table" class="rounded-[10px] border border-border bg-card px-1.5 py-2">
           <div class="overflow-x-auto">
-            <table class="w-full min-w-[760px] border-collapse text-[13px]">
-              <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Name</th><th class="px-3 py-2 font-medium">Link</th><th class="px-3 py-2 font-medium">People</th><th class="px-3 py-2 font-medium">They pay for</th><th class="px-3 py-2 font-medium">Stops</th><th></th></tr></thead>
-              <tbody>
+            <Table.Root class="w-full min-w-[760px] border-collapse text-[13px]">
+              <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Name</Table.Head><Table.Head class="px-3 py-2 font-medium">Link</Table.Head><Table.Head class="px-3 py-2 font-medium">People</Table.Head><Table.Head class="px-3 py-2 font-medium">They pay for</Table.Head><Table.Head class="px-3 py-2 font-medium">Stops</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+              <Table.Body>
                 {#each links as l (l.id)}
                   {@const live = l.state === "active" || l.state === "full"}
-                  <tr class="border-t border-border">
-                    <td class="px-3 py-3 font-medium {live ? '' : 'text-muted-foreground'}">{l.name}</td>
-                    <td class="px-3 py-3">
+                  <Table.Row class="border-t border-border">
+                    <Table.Cell class="px-3 py-3 font-medium {live ? '' : 'text-muted-foreground'}">{l.name}</Table.Cell>
+                    <Table.Cell class="px-3 py-3">
                       <span class="whitespace-nowrap font-mono text-xs {live ? '' : 'text-muted-foreground'}">{location.host}/c/{l.code}</span>
                       {#if live}<button type="button" onclick={() => copy(l)} class="ml-1.5 h-[30px] whitespace-nowrap rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Copy</button>{/if}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</td>
-                    <td class="px-3 py-3">
+                    </Table.Cell>
+                    <Table.Cell class="whitespace-nowrap px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</Table.Cell>
+                    <Table.Cell class="px-3 py-3">
                       {#if live && paymentsReady && packages.length}
-                        <select value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
-                          class="h-[30px] max-w-[200px] rounded-lg border border-input bg-background px-1.5 text-xs">
-                          <option value="">Free</option>
-                          {#each packages as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
-                        </select>
+                        <NativeSelect.Root size="sm" value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
+                          class="max-w-[200px]">
+                          <NativeSelect.Option value="">Free</NativeSelect.Option>
+                          {#each packages as p (p.id)}<NativeSelect.Option value={p.id}>{p.name}</NativeSelect.Option>{/each}
+                        </NativeSelect.Root>
                       {:else}
                         <span class="text-muted-foreground">{l.packageName ?? "Free"}</span>
                       {/if}
-                    </td>
-                    <td class="px-3 py-3">
+                    </Table.Cell>
+                    <Table.Cell class="px-3 py-3">
                       {#if stateLabel[l.state]}<span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{stateLabel[l.state]}</span>{:else}<span class="text-muted-foreground">{l.expiresAt ? shortDate(Date.parse(l.expiresAt)) : "Never"}</span>{/if}
-                    </td>
-                    <td class="px-3 py-3 text-right">
+                    </Table.Cell>
+                    <Table.Cell class="px-3 py-3 text-right">
                       {#if l.state !== "off"}<button type="button" onclick={() => (turningOff = l)} class="h-[30px] whitespace-nowrap rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Turn off</button>{/if}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 {:else}
-                  <tr><td colspan="6" class="px-3 py-6 text-center text-muted-foreground">No links yet. Make one above.</td></tr>
+                  <Table.Row><Table.Cell colspan={6} class="px-3 py-6 text-center text-muted-foreground">No links yet. Make one above.</Table.Cell></Table.Row>
                 {/each}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table.Root>
           </div>
         </section>
       </div>

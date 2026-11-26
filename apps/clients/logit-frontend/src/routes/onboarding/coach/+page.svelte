@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   // "I have a coach" from the goal screen (design canvas C3). Coaching needs an account (a
   // free one is enough), so without one this asks for that first and comes back. Then the
   // coach's code (or their QR), their card as soon as it's recognised, what they may see,
   // and connect. No goal or plan questions: the coach's program covers them.
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { ArrowLeft, Loader2, ScanLine } from "lucide-svelte";
+  import { ArrowLeft, ScanLine } from "lucide-svelte";
   import { ApiError } from "@logit/core/api/client";
   import { coachApi, SHARE_ALL, type InviteLinkInfo, type Sharing } from "@logit/core/api/coachApi";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -121,14 +123,14 @@
     </div>
 
     {#if isNativePlatform()}
-      <div class="my-4 flex items-center gap-2.5 text-[13px] text-muted-foreground"><span class="h-px flex-1 bg-border"></span>or<span class="h-px flex-1 bg-border"></span></div>
+      <div class="my-4 flex items-center gap-2.5 text-[13px] text-muted-foreground"><Separator class="flex-1" />or<Separator class="flex-1" /></div>
       <button type="button" class="flex h-12 items-center justify-center gap-2.5 rounded-[10px] border border-border text-[15px] font-semibold" onclick={() => void scan()}>
         <ScanLine class="h-[18px] w-[18px]" /> Scan your coach's QR code
       </button>
     {/if}
 
     {#if looking}
-      <p class="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 class="h-4 w-4 animate-spin" /> Checking…</p>
+      <p class="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><Spinner class="h-4 w-4" /> Checking…</p>
     {:else if lookupError}
       <p class="mt-5 text-sm text-destructive">{lookupError}</p>
     {:else if info}
@@ -168,7 +170,7 @@
     {:else}
       <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
         disabled={!info || info.isSelf || sending || (info.state !== "active" && info.relationship !== "invited")} onclick={() => void connect()}>
-        {#if sending}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        {#if sending}<Spinner class="h-4 w-4" />{/if}
         {info && !info.isSelf ? (info.relationship === "invited" ? `Accept ${coachName} as my coach` : `Connect with ${coachName}`) : "Connect"}
       </button>
     {/if}

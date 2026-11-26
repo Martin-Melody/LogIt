@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Slider } from "$lib/components/ui/slider/index.js";
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { back } from "$lib/navigation";
   // Settings › Sounds (design canvas S2): Timers and Celebrations on, Taps off by default;
   // each group has a play button to hear it. Vibration comes with every sound, and on its own
@@ -40,25 +42,23 @@
           onclick={() => playSound(g.sample, { preview: true })}>
           <Play class="h-3.5 w-3.5 fill-current" />
         </button>
-        <input type="checkbox" class="h-[22px] w-[22px] accent-primary" aria-label="{g.title} sounds" checked={s[g.key]}
-          onchange={(e) => update({ [g.key]: (e.currentTarget as HTMLInputElement).checked })} />
+        <Switch checked={s[g.key]} label="{g.title} sounds" onchange={(on) => update({ [g.key]: on })} />
       </li>
     {/each}
   </ul>
 
   <div class="flex flex-col gap-2.5 rounded-xl border border-border p-3.5">
-    <label for="sound-volume" class="text-[15px] font-medium">Volume over your music</label>
-    <input id="sound-volume" type="range" min="0" max="100" value={s.volume} class="w-full accent-primary"
-      onchange={(e) => { update({ volume: Number((e.currentTarget as HTMLInputElement).value) }); playSound("rest", { preview: true }); }} />
+    <span id="sound-volume" class="text-[15px] font-medium">Volume over your music</span>
+    <Slider type="single" value={s.volume} min={0} max={100} aria-labelledby="sound-volume" class="py-3"
+      onValueCommit={(v) => { update({ volume: v }); playSound("rest", { preview: true }); }} />
     <span class="text-[13px] text-muted-foreground">Sounds play over whatever's playing.</span>
   </div>
 
-  <label class="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border p-3.5">
+  <div class="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border p-3.5">
     <span class="flex flex-col">
       <span class="text-[15px] font-medium">Vibration</span>
       <span class="text-[13px] text-muted-foreground">With every sound, and on its own when sounds are off</span>
     </span>
-    <input type="checkbox" class="h-[22px] w-[22px] accent-primary" checked={s.vibration}
-      onchange={(e) => update({ vibration: (e.currentTarget as HTMLInputElement).checked })} />
-  </label>
+    <Switch checked={s.vibration} label="Vibration" onchange={(on) => update({ vibration: on })} />
+  </div>
 </div>

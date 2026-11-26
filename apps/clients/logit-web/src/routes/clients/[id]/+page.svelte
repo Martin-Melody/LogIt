@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
   import { goto } from "$app/navigation";
@@ -115,17 +116,18 @@
       </div>
     </header>
 
-    <div role="tablist" aria-label="Client" data-guide="client-tabs" class="flex flex-wrap gap-0.5 border-b border-border">
+    <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
+    <Tabs.List variant="line" aria-label="Client" data-guide="client-tabs" class="flex-wrap gap-0.5">
       {#each TABS as t (t.id)}
         {@const locked = t.area && !c.sharing[t.area]}
-        <button type="button" role="tab" aria-selected={tab === t.id} onclick={() => setTab(t.id)}
-          class="-mb-px inline-flex h-9 items-center gap-1.5 border-b-2 px-3.5 text-[13px] {tab === t.id ? 'border-primary font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'} {locked ? 'opacity-70' : ''}">
+        <Tabs.Trigger value={t.id} class="px-3.5 {locked ? 'opacity-70' : ''}">
           {#if locked}<LockIcon class="size-3" aria-label="not shared" />{/if}{t.label}
           {#if t.id === "checkins" && c.toReview.length}<span class="rounded-full bg-warning/12 px-1.5 text-[11px] font-semibold text-warning">{c.toReview.length}</span>{/if}
           {#if t.id === "messages" && c.unread}<span class="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">{c.unread}</span>{/if}
-        </button>
+        </Tabs.Trigger>
       {/each}
-    </div>
+    </Tabs.List>
+    </Tabs.Root>
 
     {#key clientId}
       {#if tab === "overview"}

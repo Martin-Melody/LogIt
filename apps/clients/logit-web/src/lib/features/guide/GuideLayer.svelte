@@ -2,6 +2,7 @@
      and a pop-up beside it. The page stays usable underneath, so "do" steps can be done for
      real; the step moves on when the page sends the step's guideSignal. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { page } from "$app/state";
   import { routeMatches } from "@logit/core/guide/progress";
   import { Button } from "$lib/components/ui/button";
@@ -113,7 +114,7 @@
       <p class="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">Open the page this step is about to carry on.</p>
     {:else if waiting}
       <div class="mt-3 flex items-center gap-2.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground" role="status">
-        <span class="size-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+        <Spinner class="size-3.5 shrink-0" aria-hidden="true" />
         {step.arrives}
       </div>
     {:else if missing}

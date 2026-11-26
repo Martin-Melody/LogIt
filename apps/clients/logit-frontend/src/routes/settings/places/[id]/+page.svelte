@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Switch from "$lib/components/ui/switch/Switch.svelte";
   import { back } from "$lib/navigation";
   // One place (design canvas G1 for a gym, G10 for home): what's there. Every change saves
   // straight away. Machines open their own screen (X6/X7).
@@ -105,10 +106,10 @@
     <section aria-labelledby="bar-h" class="flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <h2 id="bar-h" class="text-sm font-semibold">Barbell and plates</h2>
-        <label class="flex items-center gap-2 text-xs text-muted-foreground">There's a barbell
-          <input type="checkbox" class="h-5 w-5 accent-foreground" checked={!!place.barbell}
-            onchange={(e) => save({ barbell: e.currentTarget.checked ? { barKg: 20, platesKg: [25, 20, 15, 10, 5, 2.5, 1.25] } : undefined })} />
-        </label>
+        <span class="flex items-center gap-1 text-xs text-muted-foreground">There's a barbell
+          <Switch checked={!!place.barbell} label="There's a barbell"
+            onchange={(on) => save({ barbell: on ? { barKg: 20, platesKg: [25, 20, 15, 10, 5, 2.5, 1.25] } : undefined })} />
+        </span>
       </div>
       {#if place.barbell}
         <label class="flex items-center justify-between gap-3 text-sm">Bar weight (kg)

@@ -2,11 +2,12 @@
      roles; organisers and moderators mute members in the chat, remove them, and answer requests
      to join at the top (G14). -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { muteItems } from "$lib/features/groups/muteItems";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Crown, Loader2, MoreHorizontal, Search, Shield, User, UserX, Volume2, VolumeX } from "lucide-svelte";
+  import { Crown, MoreHorizontal, Search, Shield, User, UserX, Volume2, VolumeX } from "lucide-svelte";
   import { toast } from "svelte-sonner";
   import { canModerate, groupsApi, type Group, type GroupMember, type GroupRequest, type GroupRole } from "@logit/core/api/groupsApi";
   import { authStore } from "$lib/api/authStore.svelte";
@@ -135,7 +136,7 @@
   {#if error}
     <p class="px-4 py-10 text-center text-sm text-muted-foreground">Couldn't load the members. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if !members}
-    <div class="flex justify-center py-16"><Loader2 class="size-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-16"><Spinner class="size-5 text-muted-foreground" /></div>
   {:else}
     {#if members.length > 8}
       <label class="mx-4 my-2.5 flex h-10 items-center gap-2 rounded-lg bg-muted px-3 text-muted-foreground">

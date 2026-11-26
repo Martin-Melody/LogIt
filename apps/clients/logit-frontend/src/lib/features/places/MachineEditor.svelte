@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   // Add or change a machine at a place (design canvas X6 then X7, M2). Asks what people can see
   // on the machine: how the weight goes on, then the numbers on the stack, in runs, because many
   // stacks go up 5 kg at a time for the first plates and 10 kg after (Martin). Anything odder is
@@ -285,7 +286,7 @@
       </div>
       {#each shown as e (e.id)}
         <label class="flex min-h-11 items-center gap-3 text-sm">
-          <input type="checkbox" class="h-5 w-5 accent-foreground" checked={exerciseIds.includes(e.id)} onchange={() => toggleExercise(e.id)} />
+          <Checkbox checked={exerciseIds.includes(e.id)} onCheckedChange={() => toggleExercise(e.id)} />
           {e.name}
         </label>
       {/each}

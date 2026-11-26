@@ -1,4 +1,6 @@
 <script lang="ts">
+import { Separator } from "$lib/components/ui/separator/index.js";
+import { Skeleton } from "$lib/components/ui/skeleton/index.js";
 import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -458,8 +460,8 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
       <a href="/nutrition/goal" class="block rounded-2xl p-4 text-inherit" data-testid="day-summary">
         {#if firstDownload && !nut?.goal && !nut?.coachPlan}
           {#if firstDownload === "loading"}
-            <span class="block h-4 w-3/4 animate-pulse rounded-md bg-muted"></span>
-            <span class="mt-2.5 block h-3 w-1/2 animate-pulse rounded-md bg-muted"></span>
+            <Skeleton class="block h-4 w-3/4 rounded-md" />
+            <Skeleton class="mt-2.5 block h-3 w-1/2 rounded-md" />
           {:else}
             <span class="block text-sm text-muted-foreground">Your goal hasn't downloaded yet.</span>
           {/if}
@@ -551,7 +553,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
               <span class="min-w-0 flex-1">
                 <span class="block text-[15px] font-semibold">{MEAL_LABELS[m]}</span>
                 <span class="block truncate text-xs text-muted-foreground tabular-nums">
-                  {#if all.length && mt}{fmtNum(mt.kcal)} kcal · {macroLine(mt)}{#if !open}{` · ${all.length} item${all.length === 1 ? "" : "s"}`}{/if}{:else if firstDownload === "loading"}<span class="mt-1 block h-3 w-1/2 animate-pulse rounded-md bg-muted" aria-label="Loading"></span>{:else if firstDownload}Not downloaded yet{:else}Nothing yet{/if}
+                  {#if all.length && mt}{fmtNum(mt.kcal)} kcal · {macroLine(mt)}{#if !open}{` · ${all.length} item${all.length === 1 ? "" : "s"}`}{/if}{:else if firstDownload === "loading"}<Skeleton class="mt-1 block h-3 w-1/2 rounded-md" aria-label="Loading" />{:else if firstDownload}Not downloaded yet{:else}Nothing yet{/if}
                 </span>
               </span>
             </button>
@@ -618,7 +620,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
           <span class="block text-xs font-medium text-muted-foreground">Weight trend</span>
           <span class="flex items-baseline gap-2">
             {#if firstDownload === "loading" && nut?.trend.currentKg == null}
-              <span class="my-2 block h-4 w-20 animate-pulse rounded-md bg-muted" aria-label="Loading"></span>
+              <Skeleton class="my-2 block h-4 w-20 rounded-md" aria-label="Loading" />
             {:else}
               <span class="text-[22px] font-bold tabular-nums">{fmtWeight(nut?.trend.currentKg ?? null, unit)}</span>
             {/if}
@@ -681,7 +683,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
       <div class="py-1">
         <button type="button" class={opt} onclick={() => goto(addHref(m))}><Plus class="size-5 text-muted-foreground" />Add food</button>
         <button type="button" class={opt} onclick={() => { menuFor = null; quickNew = m; }}><Zap class="size-5 text-muted-foreground" />Quick add calories</button>
-        <div class="my-1 h-px bg-border"></div>
+        <Separator class="my-1" />
         {#if yest.length}
           <button type="button" class={opt} onclick={() => void copyFrom(addDays(dateIso, -1), m)}>
             <Copy class="size-5 shrink-0 text-muted-foreground" />
@@ -697,7 +699,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
             <Bookmark class="size-5 shrink-0 text-muted-foreground" />
             <span class="min-w-0 flex-1"><span class="block">Save as a meal</span><span class="block text-xs text-muted-foreground">Log all {items.length} again in one tap</span></span>
           </button>
-          <div class="my-1 h-px bg-border"></div>
+          <Separator class="my-1" />
           <button type="button" class={opt} onclick={() => (menuMode = "move")}><MoveHorizontal class="size-5 text-muted-foreground" />Move to another meal…</button>
           <button type="button" class="{opt} text-destructive" onclick={() => void clearMeal(m)}><Trash2 class="size-5" />Clear {MEAL_LABELS[m].toLowerCase()}</button>
         {/if}

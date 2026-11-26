@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { cn } from "$lib/utils.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { ArrowLeft, ChevronRight, Eye, EyeOff, Loader2, CheckCircle, XCircle, Ticket } from "lucide-svelte";
+  import { ArrowLeft, ChevronRight, Eye, EyeOff, CheckCircle, XCircle, Ticket } from "lucide-svelte";
   import { get } from "svelte/store";
   import { authStore } from "$lib/api/authStore.svelte";
   import { profile } from "$lib/stores/profile.store";
@@ -282,7 +283,7 @@
         class="w-full py-3 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
         disabled={forgotLoading || !forgotEmail.trim()}
         onclick={() => void submitForgotPassword()}>
-        {#if forgotLoading}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        {#if forgotLoading}<Spinner class="h-4 w-4" />{/if}
         {forgotLoading ? "Sending…" : "Send reset link"}
       </button>
       <button type="button" class="w-full py-2 text-sm text-muted-foreground"
@@ -433,7 +434,7 @@
         class="w-full py-3 mt-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
         disabled={submitDisabled}>
         {#if authLoading}
-          <Loader2 class="h-4 w-4 animate-spin" />
+          <Spinner class="h-4 w-4" />
           {mode === "login" ? "Signing in…" : "Creating account…"}
         {:else}
           {mode === "login" ? "Sign in" : "Create account"}
@@ -485,7 +486,7 @@
               <p class="text-xs text-warning">HTTP is unencrypted. Use HTTPS if you can.</p>
             {/if}
             {#if urlTestResult === "testing"}
-              <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 class="h-3.5 w-3.5 animate-spin" /> Checking…</p>
+              <p class="flex items-center gap-1.5 text-xs text-muted-foreground"><Spinner class="h-3.5 w-3.5" /> Checking…</p>
             {:else if urlTestResult === "ok"}
               <p class="flex items-center gap-1.5 text-xs text-success"><CheckCircle class="h-3.5 w-3.5" /> Found a LogIt server</p>
             {:else if urlTestResult === "error"}

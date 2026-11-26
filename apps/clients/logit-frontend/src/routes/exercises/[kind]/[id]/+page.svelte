@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as Select from "$lib/components/ui/select/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
@@ -194,9 +196,12 @@
       {:else}
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium" for="item-area">Body area</label>
-          <select id="item-area" class={input} bind:value={area}>
-            {#each MOBILITY_AREAS as a (a)}<option value={a}>{capitalise(MOBILITY_AREA_LABEL[a])}</option>{/each}
-          </select>
+          <Select.Root type="single" bind:value={() => area, (v) => (area = v as MobilityArea)}>
+            <Select.Trigger id="item-area" class="w-full">{capitalise(MOBILITY_AREA_LABEL[area])}</Select.Trigger>
+            <Select.Content>
+              {#each MOBILITY_AREAS as a (a)}<Select.Item value={a} label={capitalise(MOBILITY_AREA_LABEL[a])} />{/each}
+            </Select.Content>
+          </Select.Root>
         </div>
         <div class="flex flex-col gap-1.5">
           <span class="text-sm font-medium">Measured by</span>
@@ -206,7 +211,7 @@
           </div>
         </div>
         <label class="flex h-10 items-center gap-2 text-sm">
-          <input type="checkbox" class="h-4 w-4" bind:checked={perSide} /> Each side separately
+          <Checkbox bind:checked={perSide} /> Each side separately
         </label>
       {/if}
 

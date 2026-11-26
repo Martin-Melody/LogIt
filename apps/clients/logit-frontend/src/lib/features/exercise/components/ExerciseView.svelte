@@ -7,6 +7,8 @@
 </script>
 
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
+  import * as Select from "$lib/components/ui/select/index.js";
   import VideoEmbed from "./VideoEmbed.svelte";
   import { Copy, Package, RotateCcw, Trash2, ChevronRight } from "lucide-svelte";
   import type { Snippet } from "svelte";
@@ -263,13 +265,16 @@
 </script>
 
 {#snippet equipmentField(ex: Exercise)}
-  <label class="flex flex-col gap-1 text-sm font-medium">Equipment
-    <select value={ex.equipment ?? ""} onchange={(e) => void saveField({ equipment: ((e.currentTarget as HTMLSelectElement).value || undefined) as Equipment | undefined })}
-      class="h-10 rounded-md border bg-background px-3 text-sm font-normal">
-      <option value="">Not set</option>
-      {#each EQUIPMENT as eq (eq)}<option value={eq}>{label(EQUIPMENT_LABEL[eq])}</option>{/each}
-    </select>
-  </label>
+  <div class="flex flex-col gap-1 text-sm font-medium">
+    <label for="ex-equipment">Equipment</label>
+    <Select.Root type="single" value={ex.equipment ?? "none"} onValueChange={(v) => void saveField({ equipment: (v === "none" ? undefined : v) as Equipment | undefined })}>
+      <Select.Trigger id="ex-equipment" class="w-full font-normal">{ex.equipment ? label(EQUIPMENT_LABEL[ex.equipment]) : "Not set"}</Select.Trigger>
+      <Select.Content>
+        <Select.Item value="none" label="Not set" />
+        {#each EQUIPMENT as eq (eq)}<Select.Item value={eq} label={label(EQUIPMENT_LABEL[eq])} />{/each}
+      </Select.Content>
+    </Select.Root>
+  </div>
 {/snippet}
 
 {#if error}
@@ -282,13 +287,14 @@
   <p class="px-4 py-6 text-sm text-muted-foreground">Exercise not found.</p>
 {:else}
   {@const ex = exercise}
-  <div role="tablist" aria-label="{ex.name}" class="sticky top-0 z-10 flex border-b border-border bg-background px-4">
-    {#each [["progress", "Progress"], ["howto", "How to"], ["settings", "Settings"]] as [id, name] (id)}
-      <button type="button" role="tab" aria-selected={shown === id} data-testid="exercise-tab-{id}"
-        class="min-h-11 flex-1 border-b-2 text-sm {shown === id ? 'border-foreground font-semibold' : 'border-transparent text-muted-foreground'}"
-        onclick={() => (tab = id as ExerciseTab)}>{name}</button>
-    {/each}
-  </div>
+  <!-- sticky sits on the Root: it's the list's parent, and sticky can't leave its parent -->
+  <Tabs.Root value={shown} onValueChange={(v) => (tab = v as ExerciseTab)} class="sticky top-0 z-10 bg-background">
+    <Tabs.List variant="line" aria-label={ex.name} class="px-4">
+      {#each [["progress", "Progress"], ["howto", "How to"], ["settings", "Settings"]] as [id, name] (id)}
+        <Tabs.Trigger value={id} data-testid="exercise-tab-{id}">{name}</Tabs.Trigger>
+      {/each}
+    </Tabs.List>
+  </Tabs.Root>
 
   {#key shown}
   <div class="flex flex-col gap-5 px-4 py-4" role="tabpanel" in:popIn={{ duration: 180, y: 6 }}>

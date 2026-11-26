@@ -2,6 +2,7 @@
      read it until you accept. Delete hides it (a new message brings it back); Block is on their
      profile, as on posts. -->
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { toast } from "svelte-sonner";
@@ -55,7 +56,7 @@
   {#if error}
     <p class="px-4 py-6 text-sm text-muted-foreground">Couldn't load requests. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if threads === null}
-    <div class="flex items-center gap-3 px-4 py-3"><span class="size-12 animate-pulse rounded-full bg-muted"></span><span class="h-4 w-40 animate-pulse rounded bg-muted"></span></div>
+    <div class="flex items-center gap-3 px-4 py-3"><Skeleton class="size-12 rounded-full" /><Skeleton class="h-4 w-40 rounded" /></div>
   {:else if threads.length === 0}
     <p class="px-4 py-14 text-center text-sm text-muted-foreground">No message requests.</p>
   {:else}

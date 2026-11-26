@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -283,9 +286,9 @@
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="np-family" class="text-xs font-medium text-muted-foreground">Type</label>
-        <select id="np-family" bind:value={newFamily} class={input}>
-          {#each PLUGIN_FAMILIES as f (f)}<option value={f}>{FAMILY_LABELS[f]}</option>{/each}
-        </select>
+        <NativeSelect.Root id="np-family" bind:value={newFamily} class="w-full">
+          {#each PLUGIN_FAMILIES as f (f)}<NativeSelect.Option value={f}>{FAMILY_LABELS[f]}</NativeSelect.Option>{/each}
+        </NativeSelect.Root>
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="np-id" class="text-xs font-medium text-muted-foreground">Id</label>
@@ -343,7 +346,7 @@
             <legend class="pb-1.5 text-xs font-medium text-muted-foreground">What it gets</legend>
             {#each WIDGET_NEEDS as n (n.need)}
               <label class="flex items-start gap-2 text-[13px] leading-snug" title={n.detail}>
-                <input type="checkbox" checked={needs?.includes(n.need) ?? false} onchange={(e) => toggleNeed(n.need, e.currentTarget.checked)} class="mt-0.5" />
+                <Checkbox checked={needs?.includes(n.need) ?? false} onCheckedChange={(v) => toggleNeed(n.need, v)} class="mt-0.5" />
                 {n.label}
               </label>
             {/each}
@@ -359,10 +362,12 @@
       <!-- Editor -->
       <section class="flex min-w-0 flex-[999_1_460px] flex-col overflow-hidden rounded-[10px] border border-border bg-card">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/50 px-2 pt-1.5">
-          <div role="tablist" aria-label="File" class="flex gap-0.5">
-            <button type="button" role="tab" aria-selected={view === "code"} onclick={() => (view = "code")} class="px-3 py-2 text-xs {view === 'code' ? 'border-b-2 border-primary' : 'text-muted-foreground'}">{sourceFileName(family)}</button>
-            <button type="button" role="tab" aria-selected={view === "manifest"} onclick={() => (view = "manifest")} class="px-3 py-2 text-xs {view === 'manifest' ? 'border-b-2 border-primary' : 'text-muted-foreground'}">manifest.json</button>
-          </div>
+          <Tabs.Root value={view} onValueChange={(v) => (view = v as "code" | "manifest")} class="w-auto">
+            <Tabs.List variant="line" aria-label="File" class="w-auto gap-0.5 border-b-0">
+              <Tabs.Trigger value="code" class="h-auto py-2 text-xs data-[state=active]:font-medium">{sourceFileName(family)}</Tabs.Trigger>
+              <Tabs.Trigger value="manifest" class="h-auto py-2 text-xs data-[state=active]:font-medium">manifest.json</Tabs.Trigger>
+            </Tabs.List>
+          </Tabs.Root>
           <span class="flex items-center gap-2 pb-1.5">
             <label for="b-upload" class="inline-flex h-7 cursor-pointer items-center rounded-[8px] border border-border px-2.5 text-xs">Upload files…</label>
             <input id="b-upload" type="file" multiple accept=".js,.mjs,.json" class="sr-only" onchange={upload} />

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import type { WidgetView } from "@logit/core/plugins/widgetView";
   import { checkWidgetView } from "@logit/core/plugins/widgetViewCheck";
   import { sampleFamilyInput, sampleWidgetInput } from "@logit/core/plugins/sampleInputs";
@@ -74,7 +75,7 @@
     {#if view}
       <WidgetViewRenderer {view} />
     {:else if !error}
-      <div class="h-28 animate-pulse rounded-[10px] bg-muted"></div>
+      <Skeleton class="h-28 rounded-[10px]" />
     {/if}
   {:else if output !== undefined}
     <pre class="max-h-80 overflow-auto rounded-lg bg-muted px-3 py-2.5 font-mono text-xs leading-relaxed">{JSON.stringify(output, null, 2)}</pre>

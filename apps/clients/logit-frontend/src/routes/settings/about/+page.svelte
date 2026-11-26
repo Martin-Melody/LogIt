@@ -1,7 +1,8 @@
 <!-- Settings › About: policies and diagnostics; in a dev build, the reset tools too. -->
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { goto } from "$app/navigation";
-  import { ChevronRight, ExternalLink, Loader2, RotateCcw, Trash2 } from "lucide-svelte";
+  import { ChevronRight, ExternalLink, RotateCcw, Trash2 } from "lucide-svelte";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -108,7 +109,7 @@
               </div>
               <button type="button" class="flex size-11 shrink-0 items-center justify-center text-destructive/60 transition-colors hover:text-destructive disabled:opacity-40"
                 disabled={deletingAccountId === account.id} onclick={() => void deleteLocalAccount(account.id)} aria-label="Delete account">
-                {#if deletingAccountId === account.id}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Trash2 class="h-3.5 w-3.5" />{/if}
+                {#if deletingAccountId === account.id}<Spinner class="h-3.5 w-3.5" />{:else}<Trash2 class="h-3.5 w-3.5" />{/if}
               </button>
             </div>
           {/each}

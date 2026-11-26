@@ -1,10 +1,10 @@
 <!-- "Share a workout or record" from a chat's + button: your recent finished workouts and your
      records, one tap sends it as a card. As the "Your story" picker it also offers a photo. -->
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onMount } from "svelte";
   import { Camera, Dumbbell, Trophy } from "lucide-svelte";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
-  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import { getWorkoutRepo } from "$lib/data/repoProvider";
   import { getPersonalRecords, type PersonalRecord } from "$lib/usecases/getPersonalRecords";
   import { cardTitle, readCard, recordCard, workoutCard } from "@logit/core/domain/messageCard";
@@ -41,10 +41,12 @@
       <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-lg border border-border text-[15px] font-semibold"
         onclick={async () => { const p = await pickStoryPhoto(); if (p) onphoto(p); }}><Camera class="size-[18px]" />A photo</button>
     {/if}
-    <div class={segmentTrack} role="tablist" aria-label="What to share">
-      <button type="button" role="tab" aria-selected={tab === "workouts"} class={segment(tab === "workouts")} onclick={() => (tab = "workouts")}>Workouts</button>
-      <button type="button" role="tab" aria-selected={tab === "records"} class={segment(tab === "records")} onclick={() => (tab = "records")}>Records</button>
-    </div>
+    <Tabs.Root bind:value={tab}>
+      <Tabs.List aria-label="What to share">
+        <Tabs.Trigger value="workouts">Workouts</Tabs.Trigger>
+        <Tabs.Trigger value="records">Records</Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
     <div class="flex max-h-[50vh] flex-col overflow-y-auto">
       {#if tab === "workouts"}
         {#if sessions === null}

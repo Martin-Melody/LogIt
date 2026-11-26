@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { fade } from "svelte/transition";
   import { sheetUp } from "$lib/transitions";
   import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
-  import { X, Loader2 } from "lucide-svelte";
+  import { X } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ReportReason, type ReportTargetType } from "@logit/core/api/socialApi";
   import { toast } from "svelte-sonner";
@@ -96,7 +97,7 @@
         disabled={!reason || submitting}
         onclick={submit}
       >
-        {#if submitting}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        {#if submitting}<Spinner class="h-4 w-4" />{/if}
         Submit report
       </button>
     </div>

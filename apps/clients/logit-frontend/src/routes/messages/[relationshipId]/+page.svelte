@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount, onDestroy, tick } from "svelte";
   import { page } from "$app/state";
-  import { Camera, Image as ImageIcon, Loader2, Mic, Plus, Send } from "lucide-svelte";
+  import { Camera, Image as ImageIcon, Mic, Plus, Send } from "lucide-svelte";
   import VoiceMessage from "$lib/components/social/VoiceMessage.svelte";
   import VoiceRecorderBar from "$lib/components/social/VoiceRecorderBar.svelte";
   import type { MessageVoice } from "@logit/core/api/voiceApi";
@@ -134,7 +135,7 @@
       {/each}
     {/if}
     {#if uploading > 0}
-      <div class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Loader2 class="size-4 animate-spin" />Sending photo</div>
+      <div class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Spinner class="size-4" />Sending photo</div>
     {/if}
   </div>
 

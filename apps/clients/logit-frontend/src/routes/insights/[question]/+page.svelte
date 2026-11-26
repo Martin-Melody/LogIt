@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { page } from "$app/state";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -140,7 +141,7 @@
           {#if answer.mini && answer.mini.kind !== "rows"}<MiniViz mini={answer.mini} />{/if}
           <p class="text-[13px] leading-relaxed text-muted-foreground">{answer.detail}</p>
         {:else}
-          <div class="h-20 animate-pulse rounded-lg bg-muted"></div>
+          <Skeleton class="h-20 rounded-lg" />
         {/if}
       </Card.Content>
     </Card.Root>

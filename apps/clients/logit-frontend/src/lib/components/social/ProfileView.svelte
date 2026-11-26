@@ -1,8 +1,10 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ChevronDown, CirclePlay, ImageIcon, Loader2, Lock, Flag, Ban, Plus, Share2, Star, UserMinus } from "lucide-svelte";
+  import { ChevronDown, CirclePlay, ImageIcon, Lock, Flag, Ban, Plus, Share2, Star, UserMinus } from "lucide-svelte";
   import { longpress } from "$lib/swipe";
   import { socialApi, type ApiProfile, type ApiPost, type FollowStatus, type PublicProfileData } from "@logit/core/api/socialApi";
   import { storiesApi } from "@logit/core/api/storiesApi";
@@ -264,7 +266,7 @@
 {/snippet}
 
 {#if profileLoading}
-  <div class="flex justify-center py-16"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+  <div class="flex justify-center py-16"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
 
 {:else if profileError}
   <div class="flex flex-col items-center gap-3 py-16 text-center px-6">
@@ -345,11 +347,11 @@
       </p>
     </div>
   {:else}
-  <div role="tablist" aria-label="@{username}" class="flex border-b border-border">
-    {#each [["posts", "Posts"], ["forum", "Forum"], ...(isSelf || cards.length > 0 ? [["training", "Training"]] : [])] as [v, label] (v)}
-      <button type="button" role="tab" aria-selected={view === v} data-guide={v === "training" ? trainingGuideMark : undefined} class="h-11 flex-1 text-[14px] {view === v ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => (view = v as typeof view)}>{label}</button>
-    {/each}
-  </div>
+  <Tabs.Root value={view} onValueChange={(v) => (view = v as typeof view)}>
+    <Tabs.List variant="line" aria-label="@{username}">
+      {#each [["posts", "Posts"], ["forum", "Forum"], ...(isSelf || cards.length > 0 ? [["training", "Training"]] : [])] as [v, label] (v)}<Tabs.Trigger value={v} data-guide={v === "training" ? trainingGuideMark : undefined}>{label}</Tabs.Trigger>{/each}
+    </Tabs.List>
+  </Tabs.Root>
 
   {#if view === "forum"}
     <ForumList filter={{ user: username }} canPost={isSelf} sorts={["new", "top"]} empty={isSelf ? "Your forum posts show here." : "No forum posts yet."} />
@@ -366,7 +368,7 @@
       </div>
     {/if}
   {:else if postsLoading}
-    <div class="flex justify-center py-12"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-12"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
   {:else if posts.length === 0}
     <p class="text-sm text-muted-foreground text-center py-12">No posts yet.</p>
   {:else}
@@ -377,7 +379,7 @@
     </div>
     <div bind:this={sentinel} class="h-px"></div>
     {#if loadingMore}
-      <div class="flex justify-center py-4"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
+      <div class="flex justify-center py-4"><Spinner class="h-4 w-4 text-muted-foreground" /></div>
     {/if}
   {/if}
   {/if}
@@ -406,7 +408,7 @@
     <div class="flex gap-2 justify-end pt-1">
       <button type="button" class="text-xs text-muted-foreground px-3 py-1.5" onclick={() => (confirmBlock = false)}>Cancel</button>
       <button type="button" class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50" disabled={blocking} onclick={doBlock}>
-        {#if blocking}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Block
+        {#if blocking}<Spinner class="h-3.5 w-3.5" />{/if} Block
       </button>
     </div>
   </div>

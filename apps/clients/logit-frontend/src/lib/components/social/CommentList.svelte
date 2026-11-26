@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
-  import { Loader2, Trash2, X, Pencil, Check, Flag, Heart } from "lucide-svelte";
+  import { Trash2, X, Pencil, Check, Flag, Heart } from "lucide-svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { socialApi, type ApiComment } from "@logit/core/api/socialApi";
   import { formatDistanceToNow } from "$lib/utils";
@@ -189,7 +190,7 @@
                   disabled={!editDraft.trim() || savingEditId === comment.id}
                   onclick={() => void saveEdit(comment)}
                 >
-                  {#if savingEditId === comment.id}<Loader2 class="h-3 w-3 animate-spin" />{:else}<Check class="h-3 w-3" />{/if}
+                  {#if savingEditId === comment.id}<Spinner class="h-3 w-3" />{:else}<Check class="h-3 w-3" />{/if}
                 </button>
                 <button
                   type="button"
@@ -301,7 +302,7 @@
         class="text-xs bg-destructive text-destructive-foreground rounded-md px-3 py-1.5 flex items-center gap-1 disabled:opacity-50"
         disabled={!target || deletingId === target.id}
         onclick={() => target && void remove(target)}>
-        {#if target && deletingId === target.id}<Loader2 class="h-3.5 w-3.5 animate-spin" />{/if} Delete
+        {#if target && deletingId === target.id}<Spinner class="h-3.5 w-3.5" />{/if} Delete
       </button>
     </div>
   </div>

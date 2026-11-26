@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onDestroy, tick } from "svelte";
   import { dmApi, type DmChat, type DmTo } from "@logit/core/api/dmApi";
   import Avatar from "./Avatar.svelte";
@@ -426,12 +427,11 @@
       <Dialog.Title>Share a workout or record</Dialog.Title>
       <Dialog.Description>It goes into the chat as a card.</Dialog.Description>
     </Dialog.Header>
-    <div class="flex gap-1 self-start rounded-[9px] bg-muted p-0.5" role="tablist" aria-label="What to share">
-      {#each [["workouts", "Workouts"], ["records", "Records"]] as [v, label] (v)}
-        <button type="button" role="tab" aria-selected={shareTab === v} onclick={() => (shareTab = v as "workouts" | "records")}
-          class="h-7 rounded-[7px] px-3 text-xs font-medium {shareTab === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}">{label}</button>
-      {/each}
-    </div>
+    <Tabs.Root value={shareTab} onValueChange={(v) => (shareTab = v as "workouts" | "records")} class="self-start">
+      <Tabs.List aria-label="What to share" class="h-8 w-auto rounded-[9px] p-0.5">
+        {#each [["workouts", "Workouts"], ["records", "Records"]] as [v, label] (v)}<Tabs.Trigger value={v} class="flex-none rounded-[7px] text-xs">{label}</Tabs.Trigger>{/each}
+      </Tabs.List>
+    </Tabs.Root>
     <div class="flex max-h-80 flex-col overflow-y-auto">
       {#if !sources}
         <p class="py-6 text-center text-[13px] text-muted-foreground">Loading…</p>

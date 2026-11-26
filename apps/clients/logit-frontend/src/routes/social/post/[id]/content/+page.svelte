@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { prText } from "$lib/components/social/prText";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -171,7 +172,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex justify-center py-20"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
+    <div class="flex justify-center py-20"><Spinner class="h-5 w-5 text-muted-foreground" /></div>
 
   {:else if error}
     <div class="flex flex-col items-center gap-3 py-20 text-center px-6">
@@ -324,7 +325,7 @@
           disabled={copying}
           onclick={copyToMine}
         >
-          {#if copying}<Loader2 class="h-4 w-4 animate-spin" />{:else}<Download class="h-4 w-4" />{/if}
+          {#if copying}<Spinner class="h-4 w-4" />{:else}<Download class="h-4 w-4" />{/if}
           {sharedRecipe ? "Add to my algorithms" : "Copy to mine"}
         </button>
       </div>

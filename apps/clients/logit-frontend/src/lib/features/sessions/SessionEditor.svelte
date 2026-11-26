@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
+  import { TimeField } from "$lib/components/ui/time-field/index.js";
+  import { DateField } from "$lib/components/ui/date-field/index.js";
   import { Plus, MoreHorizontal, X, ArrowUp, ArrowDown, ArrowLeftRight, Trash2, Link2 } from "lucide-svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
@@ -258,7 +261,7 @@
       {/if}
       <DropdownMenu.Item disabled={!canMove(b.id, -1)} onSelect={() => move(b.id, -1)}><ArrowUp /> Move up</DropdownMenu.Item>
       <DropdownMenu.Item disabled={!canMove(b.id, 1)} onSelect={() => move(b.id, 1)}><ArrowDown /> Move down</DropdownMenu.Item>
-      <div class="my-1 h-px bg-border" role="separator"></div>
+      <Separator class="my-1" />
       <DropdownMenu.Item variant="destructive" onSelect={() => apply((s) => removeExercise(s, b.id))}>
         <Trash2 /> Remove
       </DropdownMenu.Item>
@@ -283,15 +286,15 @@
     <div class="grid grid-cols-[1.4fr_1fr_1fr] gap-2">
       <label class="flex min-w-0 flex-col gap-1">
         <span class="text-xs font-medium text-muted-foreground">Day</span>
-        <input type="date" class={field} value={dayValue} disabled={saving} onchange={(e) => setTimes(e.currentTarget.value, fromValue, toValue)} />
+        <DateField class="h-10" aria-label="Day" disabled={saving} bind:value={() => dayValue, (v) => { if (v) setTimes(v, fromValue, toValue); }} />
       </label>
       <label class="flex min-w-0 flex-col gap-1">
         <span class="text-xs font-medium text-muted-foreground">From</span>
-        <input type="time" class={field} value={fromValue} disabled={saving} onchange={(e) => setTimes(dayValue, e.currentTarget.value, toValue)} />
+        <TimeField class="h-10" aria-label="From" value={fromValue} disabled={saving} onchange={(v) => setTimes(dayValue, v, toValue)} />
       </label>
       <label class="flex min-w-0 flex-col gap-1">
         <span class="text-xs font-medium text-muted-foreground">To</span>
-        <input type="time" class={field} value={toValue} disabled={saving} onchange={(e) => setTimes(dayValue, fromValue, e.currentTarget.value)} />
+        <TimeField class="h-10" aria-label="To" value={toValue} disabled={saving} onchange={(v) => setTimes(dayValue, fromValue, v)} />
       </label>
     </div>
     <label class="flex flex-col gap-1">

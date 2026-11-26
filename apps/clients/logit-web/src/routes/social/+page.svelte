@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -162,12 +163,13 @@
   <div class="flex min-w-0 flex-[999_1_520px] flex-col gap-3.5">
     <header class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-[26px] font-bold tracking-tight">Social</h1>
-      <div role="tablist" aria-label="Feed" data-guide="social-tabs" class="flex gap-1 rounded-[10px] border border-border bg-card p-1">
-        {#each [["following", "Following"], ["discover", "Discover"], ["forum", "Forum"], ["notifications", socialBadge.count ? `Notifications · ${socialBadge.count}` : "Notifications"]] as [t, label] (t)}
-          <button type="button" role="tab" aria-selected={tab === t} onclick={() => go(t as Tab)}
-            class="h-8 rounded-lg px-3 text-[13px] {tab === t ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">{label}</button>
-        {/each}
-      </div>
+      <Tabs.Root value={tab} onValueChange={(v) => go(v as Tab)}>
+        <Tabs.List aria-label="Feed" data-guide="social-tabs" class="h-auto w-auto gap-1 rounded-[10px] border border-border bg-card p-1">
+          {#each [["following", "Following"], ["discover", "Discover"], ["forum", "Forum"], ["notifications", socialBadge.count ? `Notifications · ${socialBadge.count}` : "Notifications"]] as [t, label] (t)}
+            <Tabs.Trigger value={t} class="h-8 flex-none after:hidden data-[state=active]:shadow-none rounded-lg data-[state=active]:bg-primary data-[state=active]:font-semibold data-[state=active]:text-primary-foreground">{label}</Tabs.Trigger>
+          {/each}
+        </Tabs.List>
+      </Tabs.Root>
     </header>
 
     {#if settings && tab !== "notifications"}<DiscoverQuestion bind:settings={settings!} />{/if}

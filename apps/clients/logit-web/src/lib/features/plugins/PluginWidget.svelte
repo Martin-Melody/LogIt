@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import type { WidgetView } from "@logit/core/plugins/widgetView";
   import type { WidgetDataNeed } from "@logit/core/plugins/widgetView";
   import { checkWidgetView } from "@logit/core/plugins/widgetViewCheck";
@@ -34,5 +35,5 @@
 {:else if error}
   <p class="text-[13px] text-muted-foreground">This plugin didn't load: {error}</p>
 {:else}
-  <div class="h-14 animate-pulse rounded-lg bg-muted"></div>
+  <Skeleton class="h-14 rounded-lg" />
 {/if}

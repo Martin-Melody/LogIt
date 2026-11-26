@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { replayTour } from "$lib/tour/index";
   import { onMount } from "svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -56,7 +57,7 @@
           {#if answers}
             <span class="text-sm font-semibold">{a.answer}</span>
           {:else}
-            <span class="h-4 w-2/3 animate-pulse rounded bg-muted"></span>
+            <Skeleton class="h-4 w-2/3 rounded" />
           {/if}
         </span>
         {#if !locked}<ChevronRight class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />{/if}

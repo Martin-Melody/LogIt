@@ -1,7 +1,9 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { log } from "@logit/core/platform/log";
-  import { LoaderCircle, ScanBarcode, ScanText, Search, X, Zap } from "lucide-svelte";
+  import { ScanBarcode, ScanText, Search, X, Zap } from "lucide-svelte";
   import {
     localDateIso,
     loggedItemPer100g,
@@ -36,7 +38,7 @@
   import FoodRow from "./FoodRow.svelte";
   import FoodEditor from "./FoodEditor.svelte";
   import { MEAL_LABELS, fmtNum } from "./meals";
-  import { chip, cn } from "./style";
+  import { chip } from "./style";
 
   // Search for a food, the same way everywhere: type (forgiving search), scan a barcode,
   // scan a label, or pick from recents / favourites / your own foods. Picking hands the
@@ -321,7 +323,7 @@
         class="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none [&::-webkit-search-cancel-button]:hidden"
         aria-label="Search foods"
       />
-      {#if busy}<LoaderCircle class="size-4 shrink-0 animate-spin text-muted-foreground" />{/if}
+      {#if busy}<Spinner class="size-4 shrink-0 text-muted-foreground" />{/if}
       {#if query}
         <button type="button" class="flex size-10 shrink-0 items-center justify-center text-muted-foreground" aria-label="Clear search" onclick={() => { query = ""; result = null; input?.focus(); }}>
           <X class="size-[18px]" />
@@ -351,17 +353,13 @@
       {/if}
     </div>
 
-    <div class="flex gap-1 overflow-x-auto px-3 pt-3 pb-1.5" role="tablist">
-      {#each tabs as [id, label] (id)}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === id}
-          class={cn("h-10 shrink-0 rounded-full px-3 text-[13px] font-medium", tab === id ? "bg-foreground text-background" : "text-muted-foreground")}
-          onclick={() => (tab = id)}
-        >{label}</button>
-      {/each}
-    </div>
+    <Tabs.Root value={tab} onValueChange={(v) => (tab = v as typeof tab)}>
+      <Tabs.List aria-label="Find food" class="h-auto gap-1 overflow-x-auto rounded-none bg-transparent px-3 pt-3 pb-1.5">
+        {#each tabs as [id, label] (id)}
+          <Tabs.Trigger value={id} class="h-10 flex-none rounded-full text-[13px] after:hidden data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none">{label}</Tabs.Trigger>
+        {/each}
+      </Tabs.List>
+    </Tabs.Root>
 
     <div>
       {#if tab === "recent"}
