@@ -178,8 +178,23 @@ function touchDay(day: DiaryDay): DiaryDay {
   return { ...day, updatedAtMs: nowMs() };
 }
 
+/** "HH:MM" (24-hour, local) of a moment, for the "Time eaten" field. */
+export function timeOfDay(ms: number): string {
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** The moment `hhmm` ("19:02", local) on a YYYY-MM-DD day. */
+export function atTimeOn(dateIso: string, hhmm: string): number {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  const [h, min] = hhmm.split(":").map(Number);
+  return new Date(y!, m! - 1, d!, h, min).getTime();
+}
+
+/** A time set on the item is kept (eaten earlier, logged now); otherwise today's items get
+ * "now", and an earlier day's get none. */
 export function addDiaryItem(day: DiaryDay, item: Omit<LoggedItem, "id">): DiaryDay {
-  const loggedAtMs = day.dateIso === localDateIso() ? nowMs() : item.loggedAtMs;
+  const loggedAtMs = item.loggedAtMs ?? (day.dateIso === localDateIso() ? nowMs() : undefined);
   return touchDay({ ...day, items: [...day.items, { ...item, loggedAtMs, id: createId("nitem") }] });
 }
 
@@ -218,8 +233,9 @@ export function copyDiaryItems(day: DiaryDay, items: LoggedItem[], meal?: MealSl
   let next = day;
   for (const it of items) {
     if (meal && it.meal !== meal) continue;
-    const { id: _id, photoDataUrl: _photo, ...rest } = it;
-    next = addDiaryItem(next, rest);
+    const { id: _id, photoDataUrl: _photo, loggedAtMs, ...rest } = it;
+    // Same time of day, on the day it's copied to.
+    next = addDiaryItem(next, loggedAtMs === undefined ? rest : { ...rest, loggedAtMs: atTimeOn(day.dateIso, timeOfDay(loggedAtMs)) });
   }
   return next;
 }
