@@ -113,7 +113,7 @@
     <button type="button" onclick={() => { commands.palette = true; onNavClick(); }}
       class="flex h-9 items-center gap-2 rounded-lg border border-sidebar-border bg-background px-2.5 text-left text-[13px] text-muted-foreground hover:text-foreground group-data-[collapsible=icon]:hidden">
       <SearchIcon class="size-4" />
-      <span class="flex-1">Search or jump to…</span>
+      <span class="flex-1 truncate">{admin ? "Find a person or page…" : "Search or jump to…"}</span>
       <Kbd>{modKey} K</Kbd>
     </button>
   </Sidebar.Header>

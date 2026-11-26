@@ -14,9 +14,10 @@
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import { loadCoachingOverview, type ClientSummary } from "$lib/features/coaching/coachingData";
-  import { when } from "$lib/features/coaching/format";
+  import { shortDate, when } from "$lib/features/coaching/format";
+  import { adminApi, at, type PersonRow } from "$lib/features/admin/adminApi";
   import { navFor, workspaceOf, type NavItem } from "$lib/nav";
-  import { clientActions, commands, isTyping, modKey } from "./commands.svelte";
+  import { clientActions, commands, isTyping, modKey, personActions, type RowAction } from "./commands.svelte";
 
   // ⌘K (go + find + do), the "?" shortcuts list, and G-then-a-letter page jumps, for the
   // whole dashboard. Mounted once by the root layout for signed-in pages with the sidebar.
@@ -26,8 +27,12 @@
   const pages = $derived<NavItem[]>(navFor(ws, apiClient.isSelfHosted()).flatMap((g) => g.items));
 
   let search = $state("");
-  let client = $state<ClientSummary | null>(null);
+  // A client (Coaching) or an account (admin) whose actions fill the palette.
+  type Picked = { name: string; avatarUrl: string | null; line: string; actions: RowAction[] };
+  let picked = $state<Picked | null>(null);
   let clients = $state<ClientSummary[]>([]);
+  let people = $state<PersonRow[]>([]);
+  const meId = apiClient.getUser()?.id;
 
   function loadClients() {
     loadCoachingOverview()
@@ -46,10 +51,21 @@
   $effect(() => {
     if (!commands.palette) {
       search = "";
-      client = null;
+      picked = null;
     } else if (ws === "coaching") {
       untrack(loadClients);
     }
+  });
+
+  // Admin: everyone on the server matching what's typed (name, username or email).
+  let peopleTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    if (!commands.palette || ws !== "admin" || picked) return;
+    const q = search.trim();
+    clearTimeout(peopleTimer);
+    peopleTimer = setTimeout(() => {
+      adminApi.people(q).then((r) => { if (search.trim() === q) people = r.users.slice(0, 8); }).catch(() => {});
+    }, q ? 200 : 0);
   });
 
   function go(href: string) {
@@ -57,9 +73,25 @@
     void goto(href);
   }
 
-  function pick(c: ClientSummary) {
-    client = c;
+  function runAction(a: RowAction) {
+    if (a.href) return go(a.href);
+    commands.palette = false;
+    a.run?.();
+  }
+
+  function pickClient(c: ClientSummary) {
+    picked = { name: c.name, avatarUrl: c.avatarUrl, line: clientLine(c), actions: clientActions(c) };
     search = "";
+  }
+
+  function pickPerson(p: PersonRow) {
+    picked = { name: p.displayName || p.username, avatarUrl: null, line: personLine(p), actions: personActions(p, meId) };
+    search = "";
+  }
+
+  function personLine(p: PersonRow): string {
+    const seen = p.lastActive ? `last seen ${when(at(p.lastActive))}` : "not seen yet";
+    return [`@${p.username}`, `joined ${shortDate(at(p.createdAt))}`, seen, `${p.postCount} post${p.postCount === 1 ? "" : "s"}`, ...(p.isAdmin ? ["Admin"] : [])].join(" · ");
   }
 
   function clientLine(c: ClientSummary): string {
@@ -73,9 +105,9 @@
 
   // Backspace in an empty box steps back from a client's actions to everything.
   function onInputKey(e: KeyboardEvent) {
-    if (e.key === "Backspace" && search === "" && client) {
+    if (e.key === "Backspace" && search === "" && picked) {
       e.preventDefault();
-      client = null;
+      picked = null;
     }
   }
 
@@ -121,21 +153,21 @@
 
 <Command.Dialog bind:open={commands.palette} title="Search or jump to" description="Find a page{ws === 'coaching' ? ', a client' : ''} or something to do"
   class="top-[12vh] sm:max-w-[640px]" shouldFilter={true}>
-  {#if client}
-    {@const c = client}
+  {#if picked}
+    {@const c = picked}
     <div class="flex items-center gap-2 px-3 pt-3 text-[13px]">
       <span class="inline-flex items-center gap-1.5 rounded-full bg-muted py-0.5 pr-2.5 pl-1 font-medium"><Avatar name={c.name} url={c.avatarUrl} size={20} />{c.name}</span>
-      <span class="truncate text-xs text-muted-foreground">{clientLine(c)}</span>
+      <span class="truncate text-xs text-muted-foreground">{c.line}</span>
     </div>
   {/if}
   <Command.Input bind:value={search} onkeydown={onInputKey}
-    placeholder={client ? "What do you want to do?" : ws === "coaching" ? "Search clients and pages, or type what to do" : "Search pages, or type what to do"} />
+    placeholder={picked ? "What do you want to do?" : ws === "coaching" ? "Search clients and pages, or type what to do" : ws === "admin" ? "Find a person (name, username or email) or a page" : "Search pages, or type what to do"} />
   <Command.List class="max-h-[min(60vh,520px)]">
     <Command.Empty>Nothing matches “{search}”.</Command.Empty>
-    {#if client}
+    {#if picked}
       <Command.Group heading="Actions">
-        {#each clientActions(client) as a (a.id)}
-          <Command.Item value={a.label} disabled={!!a.disabled} onSelect={() => go(a.href)} class="min-h-10">
+        {#each picked.actions as a (a.id)}
+          <Command.Item value={a.label} disabled={!!a.disabled} onSelect={() => runAction(a)} class="min-h-10 {a.danger ? 'text-destructive data-selected:text-destructive' : ''}">
             <span class="flex-1">{a.label}</span>
             {#if a.disabled}<Command.Shortcut class="tracking-normal">{a.disabled}</Command.Shortcut>{:else if a.id === "open"}<Command.Shortcut><Kbd>↵</Kbd></Command.Shortcut>{/if}
           </Command.Item>
@@ -145,10 +177,23 @@
       {#if ws === "coaching" && clients.length}
         <Command.Group heading="Clients">
           {#each clients as c (c.relationshipId)}
-            <Command.Item value="client {c.name} {c.username}" onSelect={() => pick(c)} class="min-h-11">
+            <Command.Item value="client {c.name} {c.username}" onSelect={() => pickClient(c)} class="min-h-11">
               <Avatar name={c.name} url={c.avatarUrl} size={26} />
               <span class="font-medium">{c.name}</span>
               <span class="truncate text-xs text-muted-foreground">{clientLine(c)}</span>
+              <Command.Shortcut class="tracking-normal">Actions ›</Command.Shortcut>
+            </Command.Item>
+          {/each}
+        </Command.Group>
+      {/if}
+      {#if ws === "admin" && people.length}
+        <Command.Group heading="People">
+          {#each people as p (p.id)}
+            <!-- The server already matched these, so the value carries the search too. -->
+            <Command.Item value="person {p.displayName} {p.username} {p.email} {search}" onSelect={() => pickPerson(p)} class="min-h-11">
+              <Avatar name={p.displayName || p.username} size={26} />
+              <span class="font-medium">{p.displayName || p.username}</span>
+              <span class="truncate text-xs text-muted-foreground">@{p.username}{p.isAdmin ? " · Admin" : ""}</span>
               <Command.Shortcut class="tracking-normal">Actions ›</Command.Shortcut>
             </Command.Item>
           {/each}
@@ -186,8 +231,8 @@
   </Command.List>
   <div class="flex gap-4 border-t border-border px-3 py-2 text-xs text-muted-foreground">
     <span class="flex items-center gap-1.5"><Kbd>↑</Kbd><Kbd>↓</Kbd> move</span>
-    <span class="flex items-center gap-1.5"><Kbd>↵</Kbd> {client ? "run" : "open"}</span>
-    {#if client}<span class="flex items-center gap-1.5"><Kbd>⌫</Kbd> back</span>{/if}
+    <span class="flex items-center gap-1.5"><Kbd>↵</Kbd> {picked ? "run" : "open"}</span>
+    {#if picked}<span class="flex items-center gap-1.5"><Kbd>⌫</Kbd> back</span>{/if}
     <span class="ml-auto flex items-center gap-1.5"><Kbd>Esc</Kbd> close</span>
   </div>
 </Command.Dialog>

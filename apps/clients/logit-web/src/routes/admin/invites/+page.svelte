@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
+  import PersonHoverCard from "$lib/features/admin/PersonHoverCard.svelte";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { onMount } from "svelte";
   import { flip } from "svelte/animate";
@@ -167,7 +168,7 @@
                 <Table.Cell class="whitespace-nowrap px-3 py-3">{stateText(i) || (i.expiresAt ? shortDate(at(i.expiresAt)) : "Never")}</Table.Cell>
                 <Table.Cell class="px-3 py-3">
                   {#if i.usedBy.length}
-                    {#each i.usedBy.slice(0, 3) as u, n (u.id)}{n ? ", " : ""}<a href="/admin/people?id={u.id}" class="text-primary hover:underline">{u.username}</a>{/each}{i.usedBy.length > 3 ? `, +${i.usedBy.length - 3}` : ""}
+                    {#each i.usedBy.slice(0, 3) as u, n (u.id)}{n ? ", " : ""}<PersonHoverCard username={u.username} id={u.id} class="text-primary hover:underline">{u.username}</PersonHoverCard>{/each}{i.usedBy.length > 3 ? `, +${i.usedBy.length - 3}` : ""}
                   {:else}<span class="text-muted-foreground">Nobody yet</span>{/if}
                 </Table.Cell>
                 <Table.Cell class="px-3 py-3 text-right">

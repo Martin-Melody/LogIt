@@ -12,12 +12,19 @@
 
 {#each actions as a (a.id)}
   {#if a.separatorBefore}<Separator />{/if}
-  <Item disabled={!!a.disabled} class="min-h-8 gap-4 whitespace-nowrap">
-    {#snippet child({ props })}
-      <a href={a.href} {...props}>
-        <span class="flex-1">{a.label}</span>
-        {#if a.disabled}<span class="text-xs text-muted-foreground">{a.disabled}</span>{/if}
-      </a>
-    {/snippet}
-  </Item>
+  {#if a.href}
+    <Item disabled={!!a.disabled} variant={a.danger ? "destructive" : "default"} class="min-h-8 gap-4 whitespace-nowrap">
+      {#snippet child({ props })}
+        <a href={a.href} {...props}>
+          <span class="flex-1">{a.label}</span>
+          {#if a.disabled}<span class="text-xs text-muted-foreground">{a.disabled}</span>{/if}
+        </a>
+      {/snippet}
+    </Item>
+  {:else}
+    <Item disabled={!!a.disabled} variant={a.danger ? "destructive" : "default"} onSelect={a.run} class="min-h-8 gap-4 whitespace-nowrap">
+      <span class="flex-1">{a.label}</span>
+      {#if a.disabled}<span class="text-xs text-muted-foreground">{a.disabled}</span>{/if}
+    </Item>
+  {/if}
 {/each}

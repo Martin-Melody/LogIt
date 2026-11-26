@@ -4,6 +4,12 @@
   import { page } from "$app/state";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import * as Alert from "$lib/components/ui/alert";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import RowMenuItems from "$lib/features/commands/RowMenuItems.svelte";
+  import { personActions } from "$lib/features/commands/commands.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
   import { reveal } from "$lib/transitions";
@@ -25,8 +31,10 @@
   let personError = $state<string | null>(null);
   let busy = $state(false);
 
-  // Inline confirmations, one at a time: "reset" | "signout" | "admin".
-  let confirming = $state<string | null>(null);
+  // The question asked before a change, one at a time: "reset" | "signout" | "admin".
+  // ?do=… (from ⌘K or a row menu) asks it as soon as the person has loaded.
+  let confirming = $state<"reset" | "signout" | "admin" | null>(null);
+  let deleteInput = $state<HTMLInputElement | null>(null);
   let tempPassword = $state<string | null>(null);
   let displayName = $state("");
   let email = $state("");
@@ -61,6 +69,17 @@
   }
 
   onMount(loadList);
+
+  $effect(() => {
+    const ask = page.url.searchParams.get("do");
+    if (!ask || !person || person.id !== selectedId) return;
+    const u = new URL(page.url);
+    u.searchParams.delete("do");
+    void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
+    if (ask === "reset" || ask === "admin" || (ask === "signout" && person.activeTokens > 0)) confirming = ask;
+    else if (ask === "signout") toast.info(`${nameOf(person)} isn't signed in anywhere`);
+    else if (ask === "delete") requestAnimationFrame(() => { deleteInput?.scrollIntoView({ block: "center", behavior: "smooth" }); deleteInput?.focus({ preventScroll: true }); });
+  });
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   function onSearch() {
@@ -159,9 +178,14 @@
     {:else}
       <ul class="flex flex-col">
         {#each people as p (p.id)}
-          <li>
+          {@const actions = personActions(p, meId)}
+          <!-- Right-click a row = its ⋯ menu. -->
+          <ContextMenu.Root>
+          <ContextMenu.Trigger>
+          {#snippet child({ props })}
+          <li {...props} class="group flex items-center rounded-lg hover:bg-muted data-[state=open]:bg-muted {selectedId === p.id ? 'bg-muted' : ''}">
             <a href="/admin/people?id={p.id}" aria-current={selectedId === p.id ? "page" : undefined}
-              class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-muted {selectedId === p.id ? 'bg-muted' : ''}">
+              class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5">
               <Avatar name={nameOf(p)} />
               <span class="flex min-w-0 flex-col">
                 <span class="flex items-center gap-2 text-sm font-medium">
@@ -171,7 +195,18 @@
                 <span class="truncate text-xs text-muted-foreground">@{p.username} · {lastSeen(p)}</span>
               </span>
             </a>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger aria-label="More for {nameOf(p)}"
+                class="mr-1.5 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background/60 hover:text-foreground data-[state=open]:text-foreground">
+                <EllipsisIcon class="size-4" />
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end" class="w-auto min-w-60"><RowMenuItems {actions} kind="dropdown" /></DropdownMenu.Content>
+            </DropdownMenu.Root>
           </li>
+          {/snippet}
+          </ContextMenu.Trigger>
+          <ContextMenu.Content class="w-auto min-w-60"><RowMenuItems {actions} kind="context" /></ContextMenu.Content>
+          </ContextMenu.Root>
         {:else}
           <li class="px-3 py-6 text-center text-[13px] text-muted-foreground">{search ? "Nobody matches that." : "Nobody here yet."}</li>
         {/each}
@@ -212,15 +247,8 @@
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border py-3">
             <div class="min-w-0 flex-[1_1_300px]"><div class="text-sm font-medium">Reset password</div><p class="text-[13px] text-muted-foreground">Makes a temporary password for you to send them, and signs them out everywhere. They can change it in Settings.</p></div>
-            {#if confirming !== "reset"}<button type="button" class={btnSecondary} onclick={() => (confirming = "reset")}>Make a temporary password</button>{/if}
+            <button type="button" class={btnSecondary} onclick={() => (confirming = "reset")}>Make a temporary password</button>
           </div>
-          {#if confirming === "reset"}
-            <div transition:reveal class="-mx-5 flex flex-wrap items-center gap-3 bg-muted/60 px-5 py-3 text-[13px]">
-              <span class="min-w-0 flex-[1_1_260px]">{name}'s current password stops working{p.activeTokens ? ` and ${p.activeTokens} device${p.activeTokens === 1 ? " is" : "s are"} signed out` : ""}.</span>
-              <button type="button" class={btnSecondary} onclick={() => (confirming = null)}>Cancel</button>
-              <button type="button" class={btnPrimary} disabled={busy} onclick={() => resetPassword(p)}>Reset it</button>
-            </div>
-          {/if}
           {#if tempPassword}
             <div transition:reveal class="-mx-5 flex flex-wrap items-center gap-3 bg-success/10 px-5 py-3">
               <div class="min-w-0 flex-[1_1_240px]"><div class="text-sm font-medium">Temporary password for {name}</div><p class="text-[13px] text-muted-foreground">Shown once. Send it to them yourself.</p></div>
@@ -231,27 +259,13 @@
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border py-3">
             <div class="min-w-0 flex-[1_1_300px]"><div class="text-sm font-medium">Sign out everywhere</div><p class="text-[13px] text-muted-foreground">For a lost phone. Their data stays; they sign in again.</p></div>
-            {#if confirming !== "signout"}<button type="button" class={btnSecondary} disabled={p.activeTokens === 0} onclick={() => (confirming = "signout")}>{p.activeTokens ? `Sign out on ${p.activeTokens} device${p.activeTokens === 1 ? "" : "s"}` : "Not signed in anywhere"}</button>{/if}
+            <button type="button" class={btnSecondary} disabled={p.activeTokens === 0} onclick={() => (confirming = "signout")}>{p.activeTokens ? `Sign out on ${p.activeTokens} device${p.activeTokens === 1 ? "" : "s"}` : "Not signed in anywhere"}</button>
           </div>
-          {#if confirming === "signout"}
-            <div transition:reveal class="-mx-5 flex flex-wrap items-center gap-3 bg-muted/60 px-5 py-3 text-[13px]">
-              <span class="min-w-0 flex-[1_1_260px]">{name} will need their password to sign in again.</span>
-              <button type="button" class={btnSecondary} onclick={() => (confirming = null)}>Cancel</button>
-              <button type="button" class={btnPrimary} disabled={busy} onclick={() => signOut(p)}>Sign them out</button>
-            </div>
-          {/if}
 
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
             <div class="min-w-0 flex-[1_1_300px]"><div class="text-sm font-medium">Admin</div><p class="text-[13px] text-muted-foreground">{p.isAdmin ? `${name} can see everyone on this server and change their accounts.` : "Admins can see everyone on this server and change their accounts."}</p></div>
-            {#if confirming !== "admin"}<button type="button" class={btnSecondary} onclick={() => (confirming = "admin")}>{p.isAdmin ? (p.id === meId ? "Stop being an admin" : `Remove ${name} as an admin`) : `Make ${name} an admin`}</button>{/if}
+            <button type="button" class={btnSecondary} onclick={() => (confirming = "admin")}>{p.isAdmin ? (p.id === meId ? "Stop being an admin" : `Remove ${name} as an admin`) : `Make ${name} an admin`}</button>
           </div>
-          {#if confirming === "admin"}
-            <div transition:reveal class="-mx-5 mt-3 flex flex-wrap items-center gap-3 bg-muted/60 px-5 py-3 text-[13px]">
-              <span class="min-w-0 flex-[1_1_260px]">{p.isAdmin ? (p.id === meId ? "You'll lose the admin console straight away." : `${name} loses the admin console straight away.`) : `${name} gets everything you can do here.`} Every admin gets an email about it.</span>
-              <button type="button" class={btnSecondary} onclick={() => (confirming = null)}>Cancel</button>
-              <button type="button" class={btnPrimary} disabled={busy} onclick={() => toggleAdmin(p)}>{p.isAdmin ? "Remove admin" : "Make admin"}</button>
-            </div>
-          {/if}
         </section>
 
         <section aria-labelledby="devices" class="rounded-[14px] border border-border bg-card px-5 py-4">
@@ -296,7 +310,7 @@
           <h3 id="delete" class="mb-1 text-[15px] font-semibold">Delete {p.username}'s account</h3>
           <p class="mb-3 text-[13px] text-muted-foreground">Deletes their workouts, plans, posts and everything else on this server. It can't be undone. Data on their phone stays there.</p>
           <form class="flex flex-wrap items-end gap-2.5" onsubmit={(e) => { e.preventDefault(); if (deleteTyped.trim() === p.username) void deletePerson(p); }}>
-            <label class="flex max-w-[280px] flex-[1_1_200px] flex-col gap-1.5 text-[13px] font-medium">Type {p.username} to confirm<input bind:value={deleteTyped} autocomplete="off" class={input} /></label>
+            <label class="flex max-w-[280px] flex-[1_1_200px] flex-col gap-1.5 text-[13px] font-medium">Type {p.username} to confirm<input bind:this={deleteInput} bind:value={deleteTyped} autocomplete="off" class={input} /></label>
             <button type="submit" class={btnDanger} disabled={busy || deleteTyped.trim() !== p.username}>Delete account</button>
           </form>
         </section>
@@ -304,3 +318,31 @@
     {/if}
   </section>
 </div>
+
+{#if person}
+  {@const p = person}
+  {@const name = nameOf(p)}
+  <AlertDialog.Root open={confirming !== null} onOpenChange={(o) => { if (!o) confirming = null; }}>
+    <AlertDialog.Content>
+      <AlertDialog.Header>
+        <AlertDialog.Title>
+          {#if confirming === "reset"}Make a temporary password for {name}?
+          {:else if confirming === "signout"}Sign {name} out on {p.activeTokens} device{p.activeTokens === 1 ? "" : "s"}?
+          {:else if p.isAdmin}{p.id === meId ? "Stop being an admin?" : `Remove ${name} as an admin?`}
+          {:else}Make {name} an admin?{/if}
+        </AlertDialog.Title>
+        <AlertDialog.Description>
+          {#if confirming === "reset"}{name}'s current password stops working{p.activeTokens ? ` and ${p.activeTokens} device${p.activeTokens === 1 ? " is" : "s are"} signed out` : ""}. You'll see the new one once, to send them.
+          {:else if confirming === "signout"}{name} will need their password to sign in again. Their data stays.
+          {:else}{p.isAdmin ? (p.id === meId ? "You'll lose the admin console straight away." : `${name} loses the admin console straight away.`) : `${name} gets everything you can do here.`} Every admin gets an email about it.{/if}
+        </AlertDialog.Description>
+      </AlertDialog.Header>
+      <AlertDialog.Footer>
+        <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+        <AlertDialog.Action disabled={busy} onclick={() => { const c = confirming; if (c === "reset") void resetPassword(p); else if (c === "signout") void signOut(p); else if (c === "admin") void toggleAdmin(p); }}>
+          {confirming === "reset" ? "Reset it" : confirming === "signout" ? "Sign them out" : p.isAdmin ? "Remove admin" : "Make admin"}
+        </AlertDialog.Action>
+      </AlertDialog.Footer>
+    </AlertDialog.Content>
+  </AlertDialog.Root>
+{/if}
