@@ -34,6 +34,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<Hashtag> Hashtags => Set<Hashtag>();
     public DbSet<DmMember> DmMembers => Set<DmMember>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+    public DbSet<DmReaction> DmReactions => Set<DmReaction>();
     public DbSet<Story> Stories => Set<Story>();
     public DbSet<StoryView> StoryViews => Set<StoryView>();
     public DbSet<CloseFriend> CloseFriends => Set<CloseFriend>();
@@ -463,6 +464,14 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(m => m.PushedAt);
             e.HasOne(m => m.Thread).WithMany().HasForeignKey(m => m.ThreadId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(m => m.Sender).WithMany().HasForeignKey(m => m.SenderId).OnDelete(DeleteBehavior.SetNull);
+        });
+        model.Entity<DmReaction>(e =>
+        {
+            e.HasKey(r => new { r.MessageId, r.UserId });
+            e.Property(r => r.Emoji).HasMaxLength(16);
+            e.HasIndex(r => r.UserId);
+            e.HasOne(r => r.Message).WithMany().HasForeignKey(r => r.MessageId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<Story>(e =>

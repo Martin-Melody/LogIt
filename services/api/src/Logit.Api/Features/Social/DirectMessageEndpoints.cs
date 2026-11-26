@@ -29,6 +29,7 @@ public static class DirectMessageEndpoints
         g.MapDelete("/threads/{id:guid}", Delete);
         g.MapPatch("/messages/{id:guid}", Edit);
         g.MapDelete("/messages/{id:guid}", Unsend);
+        g.MapPut("/messages/{id:guid}/reaction", React).RequireRateLimiting("social-write");
     }
 
     public record PersonDto(string Username, string DisplayName, string? AvatarUrl, Guid Id);
@@ -40,7 +41,12 @@ public static class DirectMessageEndpoints
     public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null,
         string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false,
         string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null, bool VoiceHidden = false, bool Edited = false,
-        bool Deleted = false, bool RemovedByLogIt = false, PersonDto? From = null, bool RemovedByModerator = false);
+        bool Deleted = false, bool RemovedByLogIt = false, PersonDto? From = null, bool RemovedByModerator = false, List<ReactionDto>? Reactions = null);
+    /// One emoji on a message: how many people picked it, and whether you did.
+    public record ReactionDto(string Emoji, int Count, bool Mine);
+    public record ReactRequest(string? Emoji);
+    /// The reactions offered (the apps show these six; anything else is refused).
+    public static readonly string[] Reactions = ["💪", "🔥", "❤️", "😂", "👏", "😮"];
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
@@ -61,14 +67,25 @@ public static class DirectMessageEndpoints
     private const int MaxCardJson = 4000;
 
     /// `request`: the viewer hasn't accepted this thread, so a photo's address is withheld.
-    private static MessageDto Dto(DirectMessage x, Guid me, DateTime now, bool request = false, User? from = null)
+    private static MessageDto Dto(DirectMessage x, Guid me, DateTime now, bool request = false, User? from = null, List<DmReaction>? reactions = null)
     {
         var locked = request && x.SenderId != me; // photos and voice wait for the request to be accepted
         return new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType,
             x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson,
             x.PhotoId is { } p && !locked ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, locked && x.PhotoId is not null,
             x.VoiceId is { } v && !locked ? Voice.VoiceEndpoints.UrlOf(v) : null, x.VoiceMs, x.VoicePeaks, locked && x.VoiceId is not null, x.EditedAt is not null,
-            x.DeletedAt is not null, x.RemovedByLogIt, Person(from), x.RemovedByModerator);
+            x.DeletedAt is not null, x.RemovedByLogIt, Person(from), x.RemovedByModerator,
+            x.DeletedAt is not null || reactions is null || reactions.Count == 0 ? null
+                : [.. reactions.GroupBy(r => r.Emoji).OrderBy(gr => gr.Min(r => r.CreatedAt))
+                    .Select(gr => new ReactionDto(gr.Key, gr.Count(), gr.Any(r => r.UserId == me)))]);
+    }
+
+    /// Reactions on these messages, by message, leaving out people `hide` says to (blocks, in a group).
+    private static async Task<Dictionary<Guid, List<DmReaction>>> ReactionsAsync(AppDbContext db, List<Guid> ids, Guid me, bool hideBlocked)
+    {
+        var q = db.DmReactions.Where(r => ids.Contains(r.MessageId));
+        if (hideBlocked) q = q.Where(r => !db.Blocks.Any(bl => (bl.BlockerId == me && bl.BlockedId == r.UserId) || (bl.BlockerId == r.UserId && bl.BlockedId == me)));
+        return (await q.ToListAsync()).GroupBy(r => r.MessageId).ToDictionary(gr => gr.Key, gr => gr.ToList());
     }
 
     /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
@@ -193,7 +210,8 @@ public static class DirectMessageEndpoints
             var rows = await db.DirectMessages
                 .Where(x => x.ThreadId == mine.ThreadId && x.CreatedAt < cutoff && (mine.ClearedAt == null || x.CreatedAt > mine.ClearedAt))
                 .OrderByDescending(x => x.CreatedAt).Take(Page).ToListAsync();
-            messages = rows.AsEnumerable().Reverse().Select(x => Dto(x, meId, clock.GetUtcNow().UtcDateTime, !mine.Accepted)).ToList();
+            var reactions = await ReactionsAsync(db, [.. rows.Select(x => x.Id)], meId, false);
+            messages = rows.AsEnumerable().Reverse().Select(x => Dto(x, meId, clock.GetUtcNow().UtcDateTime, !mine.Accepted, null, reactions.GetValueOrDefault(x.Id))).ToList();
             var theirs = other is null ? null : await db.DmMembers.FirstOrDefaultAsync(m => m.ThreadId == mine.ThreadId && m.UserId == other.Id);
             if (theirs is { Accepted: true, LastReadAt: { } read } && me.ShowReadReceipts && other!.ShowReadReceipts) seen = Ms(read);
         }
@@ -220,8 +238,9 @@ public static class DirectMessageEndpoints
         var count = await db.GroupMembers.CountAsync(m => m.GroupId == group.Id);
         var member = await db.GroupMembers.FirstAsync(m => m.GroupId == group.Id && m.UserId == me);
         var muted = member.MutedUntil > now ? member.MutedUntil : null;
+        var reactions = await ReactionsAsync(db, [.. rows.Select(x => x.Id)], me, true);
         return new ChatDto(mine.ThreadId, null, true, null, muted is null, muted is null ? null : "A moderator muted you in this chat.",
-            [.. rows.AsEnumerable().Reverse().Select(x => Dto(x, me, now, false, x.SenderId == me ? null : x.Sender))], GroupOf(group, count),
+            [.. rows.AsEnumerable().Reverse().Select(x => Dto(x, me, now, false, x.SenderId == me ? null : x.Sender, reactions.GetValueOrDefault(x.Id)))], GroupOf(group, count),
             GroupEndpoints.CanModerate(member), muted is { } mu ? Ms(mu) : null);
     }
 
@@ -443,7 +462,44 @@ public static class DirectMessageEndpoints
         message.VoiceId = null;
         message.VoiceMs = 0;
         message.VoicePeaks = null;
+        db.DmReactions.RemoveRange(await db.DmReactions.Where(r => r.MessageId == id).ToListAsync(ct));
         await db.SaveChangesAsync(ct);
+    }
+
+    /// React to a message, change your reaction, or take it back (Emoji null). One per person,
+    /// like Instagram; only in chats you've accepted, never across a block, not while muted.
+    /// Returns the message's reactions as you now see them.
+    private static async Task<IResult> React(Guid id, ReactRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    {
+        var me = caller.GetUserId();
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (req.Emoji is { } pick && !Reactions.Contains(pick)) return Results.BadRequest(new { error = "That reaction isn't available." });
+        var msg = await db.DirectMessages.Include(m => m.Thread).FirstOrDefaultAsync(m => m.Id == id && m.DeletedAt == null);
+        if (msg is null) return Results.NotFound();
+        var member = await db.DmMembers.FirstOrDefaultAsync(m => m.ThreadId == msg.ThreadId && m.UserId == me);
+        if (member is null || (member.ClearedAt is { } cleared && msg.CreatedAt <= cleared)) return Results.NotFound();
+        if (!member.Accepted) return Results.BadRequest(new { error = "Accept the request first." });
+        if (msg.Thread.GroupId is { } groupId)
+        {
+            if (msg.SenderId is { } sender && sender != me && await BlockedAsync(db, me, sender)) return Results.NotFound();
+            var gm = await db.GroupMembers.FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == me);
+            if (gm is null) return Results.NotFound();
+            if (gm.MutedUntil > now) return Results.BadRequest(new { error = "A moderator muted you in this chat." });
+        }
+        else
+        {
+            var other = await db.DmMembers.Where(m => m.ThreadId == msg.ThreadId && m.UserId != me).Select(m => (Guid?)m.UserId).FirstOrDefaultAsync();
+            if (other is { } o && await BlockedAsync(db, me, o)) return Results.NotFound();
+        }
+
+        var mine = await db.DmReactions.FirstOrDefaultAsync(r => r.MessageId == id && r.UserId == me);
+        if (req.Emoji is null) { if (mine is not null) db.DmReactions.Remove(mine); }
+        else if (mine is null) db.DmReactions.Add(new DmReaction { MessageId = id, UserId = me, Emoji = req.Emoji, CreatedAt = now });
+        else { mine.Emoji = req.Emoji; mine.CreatedAt = now; }
+        await db.SaveChangesAsync();
+
+        var all = (await ReactionsAsync(db, [id], me, msg.Thread.GroupId is not null)).GetValueOrDefault(id);
+        return Results.Ok(Dto(msg, me, now, false, null, all).Reactions ?? []);
     }
 
     private static async Task<IResult> Read(Guid id, ClaimsPrincipal caller, AppDbContext db)

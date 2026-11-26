@@ -158,4 +158,49 @@ public class DirectMessageTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card3", cardType = "WorkoutSession", cardJson = "not json" })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card4", body = "  " })).StatusCode);
     }
+
+    [Fact]
+    public async Task Reactions_one_per_person_change_or_take_back_and_go_with_an_unsend()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        var (dev, _, _) = await _api.SignUpAsync("dev");
+        await Follow(ava, "ben");
+        var sent = await (await Send(ben, "ava", "180 for a triple")).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        var id = sent.GetProperty("id").GetString();
+        async Task<JsonElement> React(HttpClient who, string? emoji) =>
+            await (await who.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji })).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        JsonElement Reactions(JsonElement chat) => chat.GetProperty("messages")[0].GetProperty("reactions");
+
+        var r = await React(ava, "💪");
+        Assert.Equal(("💪", 1, true), (r[0].GetProperty("emoji").GetString(), r[0].GetProperty("count").GetInt32(), r[0].GetProperty("mine").GetBoolean()));
+        await React(ben, "💪");
+        var seenByBen = Reactions(await Get(ben, "/dm/chat?username=ava"));
+        Assert.Equal((2, true), (seenByBen[0].GetProperty("count").GetInt32(), seenByBen[0].GetProperty("mine").GetBoolean()));
+
+        // Picking another changes it; null takes it back.
+        r = await React(ava, "🔥");
+        Assert.Equal(2, r.GetArrayLength());
+        r = await React(ava, null);
+        Assert.Equal(1, r.GetArrayLength());
+
+        // Only the six offered, only by people in the chat.
+        Assert.Equal(HttpStatusCode.BadRequest, (await ava.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "🍕" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await dev.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "💪" })).StatusCode);
+
+        // Unsent: the reactions go with it.
+        (await ben.DeleteAsync($"/dm/messages/{id}")).EnsureSuccessStatusCode();
+        Assert.Equal(JsonValueKind.Null, Reactions(await Get(ava, "/dm/chat?username=ben")).ValueKind);
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "💪" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Reacting_waits_for_an_accepted_request()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (dev, _, _) = await _api.SignUpAsync("dev");
+        var sent = await (await Send(dev, "ava", "hi")).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        var id = sent.GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.BadRequest, (await ava.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "👏" })).StatusCode);
+    }
 }

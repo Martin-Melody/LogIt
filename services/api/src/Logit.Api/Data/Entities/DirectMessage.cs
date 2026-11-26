@@ -70,6 +70,17 @@ public class DirectMessage
     public DateTime? PushedAt { get; set; }
 }
 
+/// A reaction to a message (Instagram: one per person, tap again or pick another to change it).
+public class DmReaction
+{
+    public Guid MessageId { get; set; }
+    public DirectMessage Message { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public string Emoji { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 /// Stored as int: add at the end.
 public enum DmFromFollowers { Chats, Requests }
 public enum DmFromOthers { Requests, Off }
