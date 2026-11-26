@@ -398,6 +398,7 @@
         <div class="flex justify-between"><dd>This list</dd><Kbd>?</Kbd></div>
         <dt class="mt-2 text-[11px] tracking-wider text-muted-foreground uppercase">On a row with ⋯</dt>
         <div class="flex justify-between"><dd>Its menu</dd><span class="text-muted-foreground">Right-click</span></div>
+        <div class="flex justify-between"><dd>Its menu, from the keyboard</dd><span class="flex gap-1"><Kbd>.</Kbd><span class="text-muted-foreground">or</span><Kbd>Shift</Kbd><Kbd>F10</Kbd></span></div>
       </dl>
       <dl class="flex flex-col gap-2">
         <dt class="text-[11px] tracking-wider text-muted-foreground uppercase">Go to</dt>

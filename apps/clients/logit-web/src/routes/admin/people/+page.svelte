@@ -6,10 +6,7 @@
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import * as Alert from "$lib/components/ui/alert";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
-  import * as ContextMenu from "$lib/components/ui/context-menu";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
-  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
-  import RowMenuItems from "$lib/features/commands/RowMenuItems.svelte";
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
   import { personActions } from "$lib/features/commands/commands.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
@@ -180,10 +177,8 @@
       <ul class="flex flex-col">
         {#each people as p (p.id)}
           {@const actions = personActions(p, meId)}
-          <!-- Right-click a row = its ⋯ menu. -->
-          <ContextMenu.Root>
-          <ContextMenu.Trigger>
-          {#snippet child({ props })}
+          <ActionMenu {actions} label="More for {nameOf(p)}">
+          {#snippet children({ props, more })}
           <li {...props} class="group flex items-center rounded-lg hover:bg-muted data-[state=open]:bg-muted {selectedId === p.id ? 'bg-muted' : ''}">
             <a href="/admin/people?id={p.id}" aria-current={selectedId === p.id ? "page" : undefined}
               class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5">
@@ -196,18 +191,10 @@
                 <span class="truncate text-xs text-muted-foreground">@{p.username} · {lastSeen(p)}</span>
               </span>
             </a>
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger aria-label="More for {nameOf(p)}"
-                class="mr-1.5 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background/60 hover:text-foreground data-[state=open]:text-foreground">
-                <EllipsisIcon class="size-4" />
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content align="end" class="w-auto min-w-60"><RowMenuItems {actions} kind="dropdown" /></DropdownMenu.Content>
-            </DropdownMenu.Root>
+            {@render more("mr-1.5 hover:bg-background/60")}
           </li>
           {/snippet}
-          </ContextMenu.Trigger>
-          <ContextMenu.Content class="w-auto min-w-60"><RowMenuItems {actions} kind="context" /></ContextMenu.Content>
-          </ContextMenu.Root>
+          </ActionMenu>
         {:else}
           <li class="px-3 py-6 text-center text-[13px] text-muted-foreground">{search ? "Nobody matches that." : "Nobody here yet."}</li>
         {/each}

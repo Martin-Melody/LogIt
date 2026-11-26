@@ -44,6 +44,34 @@ export function isTyping(e: KeyboardEvent): boolean {
   return !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 }
 
+/** "." (no modifiers), Shift+F10 or the Menu key: open the action menu of what has focus. */
+export function isMenuKey(e: Pick<KeyboardEvent, "key" | "shiftKey" | "ctrlKey" | "metaKey" | "altKey">): boolean {
+  if (e.key === "." && !e.ctrlKey && !e.metaKey && !e.altKey) return true;
+  return (e.key === "F10" && e.shiftKey) || e.key === "ContextMenu";
+}
+
+/**
+ * What's wrong with an action list, against the menu rules (canvas X4): ids unique; every
+ * action goes somewhere or does something; nothing above the first item's line; red items
+ * only at the end, after a line; a greyed item says why in a few words.
+ */
+export function actionListProblems(list: RowAction[]): string[] {
+  const problems: string[] = [];
+  const ids = new Set<string>();
+  list.forEach((a, i) => {
+    if (ids.has(a.id)) problems.push(`"${a.id}" is listed twice`);
+    ids.add(a.id);
+    if (!a.href && !a.run) problems.push(`"${a.label}" does nothing`);
+    if (i === 0 && a.separatorBefore) problems.push("the list starts with a line");
+    if (i === 0 && a.danger) problems.push(`"${a.label}" is red and first`);
+    if (a.danger && i > 0 && !list[i - 1]!.danger && !a.separatorBefore) problems.push(`"${a.label}" is red without a line above it`);
+    if (a.danger && list.slice(i + 1).some((b) => !b.danger)) problems.push(`"${a.label}" is red but not at the end`);
+    if (a.disabled !== undefined && (a.disabled.trim() === "" || a.disabled.length > 30)) problems.push(`"${a.label}" is greyed without a short reason`);
+    if (/[.!]$/.test(a.label)) problems.push(`"${a.label}" ends with punctuation`);
+  });
+  return problems;
+}
+
 /** Admin: everything you can do to an account from People's ⋯ menu, right-click, or ⌘K.
  * Anything that changes the account opens their page with the question already asked. */
 export function personActions(p: PersonRow, meId: string | undefined): RowAction[] {
