@@ -16,6 +16,7 @@
   import { chip, cn } from "./style";
   import BottomSheet from "./BottomSheet.svelte";
   import { MEAL_LABELS, fmtNum } from "./meals";
+  import MealTimeRow from "./MealTimeRow.svelte";
   import {
     defaultPortion,
     fmtAmount,
@@ -37,6 +38,8 @@
     computed: MacroTotals;
     /** Other nutrients for this amount; undefined when the food has none. */
     nutrients: Nutrients | undefined;
+    /** "Time eaten", only when it was changed. */
+    loggedAtMs?: number;
   };
 
   interface Props {
@@ -53,6 +56,10 @@
     /** Looking a food up: the button first says "Add to diary…" and shows the meal chips
      * (starting on this meal); only the second tap logs. */
     askMeal?: MealSlot | null;
+    /** The diary day, for "Time eaten" under the meal chips; none hides it. */
+    dateIso?: string;
+    /** The entry's time when editing one; null = saved without one. */
+    loggedAtMs?: number | null;
     favourite?: { on: boolean; toggle: () => void } | null;
     ondelete?: (() => void) | null;
     extra?: Snippet<[{ grams: number }]>;
@@ -71,6 +78,8 @@
     meal: initialMeal = null,
     confirmText = (m) => (m ? `Add to ${MEAL_LABELS[m]}` : "Add"),
     askMeal = null,
+    dateIso,
+    loggedAtMs,
     favourite = null,
     ondelete = null,
     extra,
@@ -85,6 +94,7 @@
   let portionId = $state(start.portionId);
   let meal = $state<MealSlot | null>(untrack(() => initialMeal));
   let showMore = $state(false);
+  let pickedAt = $state<number | undefined>();
 
   const options = $derived(portionOptions(food.servings, { rawUnits }));
   const visible = $derived(options.filter((o) => !o.more || showMore || o.id === portionId));
@@ -139,6 +149,7 @@
       meal,
       computed: adds,
       nutrients: addsNutrients,
+      ...(pickedAt !== undefined ? { loggedAtMs: pickedAt } : {}),
     });
   }
 
@@ -297,6 +308,9 @@
         </button>
       {/each}
     </div>
+    {#if dateIso}
+      <MealTimeRow class="px-4 pt-3" {dateIso} startMs={loggedAtMs} onchange={(ms) => (pickedAt = ms)} />
+    {/if}
   {/if}
 
   {#snippet footer()}

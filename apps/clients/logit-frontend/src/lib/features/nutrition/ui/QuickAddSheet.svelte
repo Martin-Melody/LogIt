@@ -4,14 +4,20 @@
   import BottomSheet from "./BottomSheet.svelte";
   import { MEAL_LABELS } from "./meals";
   import { chip } from "./style";
+  import MealTimeRow from "./MealTimeRow.svelte";
 
   // Calories (and optionally macros) without a food: a restaurant meal, a guess.
   interface Props {
     meal: MealSlot;
-    onadd: (r: { name: string; computed: MacroTotals; meal: MealSlot }) => void;
+    /** The diary day, for "Time eaten". */
+    dateIso: string;
+    /** The entry's time, when editing one. */
+    loggedAtMs?: number | null;
+    onadd: (r: { name: string; computed: MacroTotals; meal: MealSlot; loggedAtMs?: number }) => void;
     onclose: () => void;
   }
-  const { meal: startMeal, onadd, onclose }: Props = $props();
+  const { meal: startMeal, dateIso, loggedAtMs, onadd, onclose }: Props = $props();
+  let pickedAt = $state<number | undefined>();
 
   let meal = $state<MealSlot>(untrack(() => startMeal));
   const f = $state({ name: "", kcal: "", protein: "", carbs: "", fat: "" });
@@ -24,6 +30,7 @@
       name: f.name.trim() || "Quick add",
       computed: { kcal, proteinG: n(f.protein), carbsG: n(f.carbs), fatG: n(f.fat) },
       meal,
+      ...(pickedAt !== undefined ? { loggedAtMs: pickedAt } : {}),
     });
   }
   const inputCls = "h-12 w-full min-w-0 rounded-xl bg-muted px-3 text-[15px] outline-none focus:ring-2 focus:ring-ring";
@@ -52,6 +59,7 @@
         <button type="button" class={chip(m === meal, "px-0")} aria-pressed={m === meal} onclick={() => (meal = m)}>{MEAL_LABELS[m]}</button>
       {/each}
     </div>
+    <MealTimeRow {dateIso} startMs={loggedAtMs} onchange={(ms) => (pickedAt = ms)} />
   </div>
   {#snippet footer()}
     <button type="button" class="h-13 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-50" disabled={kcal <= 0} onclick={add}>
