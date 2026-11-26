@@ -574,6 +574,16 @@ export function isUntouchedPlannedSet(set: SetEntry): boolean {
     && set.setType !== "warmup" && !isContinuationSet(set.setType);
 }
 
+/** The reps a planned set aims for at a weight changed by hand before doing it: scaled from
+ * the plan (Epley) but at most `SHORT_SET_REPS` more or fewer, so 3 kg off doesn't add 5 reps.
+ * The planned reps at the planned weight, or when either weight isn't a load (0 or less). */
+export function targetRepsAt(t: Pick<SetTarget, "reps" | "weight">, weight: number): number {
+  if (Math.abs(weight - t.weight) < 0.001) return t.reps;
+  const at = repsAtLoad(t.reps, t.weight, weight);
+  if (at === null) return t.reps;
+  return Math.min(t.reps + SHORT_SET_REPS, Math.max(1, t.reps - SHORT_SET_REPS, Math.round(at)));
+}
+
 /** The set re-planned to `reps` × `weight`, keeping the very first plan in `planned`. */
 function replanSet(set: SetEntry, reps: number, weight: number, why: ReplanReason): SetEntry {
   const { planned, replanned: _, ...current } = set.target!;
