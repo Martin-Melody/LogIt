@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
   import PersonHoverCard from "$lib/features/admin/PersonHoverCard.svelte";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { onMount } from "svelte";
   import { flip } from "svelte/animate";
   import * as Alert from "$lib/components/ui/alert";
@@ -125,9 +125,7 @@
         <input bind:value={uses} inputmode="numeric" class={input} />
       </label>
       <label class="flex flex-[1_1_150px] flex-col gap-1.5 text-[13px] font-medium">Ends after
-        <NativeSelect.Root bind:value={ends}>
-          <NativeSelect.Option value="7">7 days</NativeSelect.Option><NativeSelect.Option value="30">30 days</NativeSelect.Option><NativeSelect.Option value="90">90 days</NativeSelect.Option><NativeSelect.Option value="">Never</NativeSelect.Option>
-        </NativeSelect.Root>
+        <OptionSelect bind:value={ends} options={[{ value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }, { value: "", label: "Never" }]} />
       </label>
       <button type="submit" disabled={creating} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Create invite</button>
     </form>

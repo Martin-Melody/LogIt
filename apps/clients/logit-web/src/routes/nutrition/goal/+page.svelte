@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DateField } from "$lib/components/ui/date-field/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -242,9 +242,7 @@
         </div>
         <label class="flex flex-col gap-1">
           <span class="text-xs text-muted-foreground">Activity level</span>
-          <NativeSelect.Root size="sm" bind:value={goal.activityLevel}>
-            {#each ACTIVITY as a (a.value)}<NativeSelect.Option value={a.value}>{a.label}</NativeSelect.Option>{/each}
-          </NativeSelect.Root>
+          <OptionSelect size="sm" bind:value={goal.activityLevel} options={ACTIVITY.map((a) => ({ value: a.value, label: a.label }))} />
         </label>
       </Card.Content>
     </Card.Root>

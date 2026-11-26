@@ -1,5 +1,5 @@
 <script lang="ts">
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -77,8 +77,7 @@
     onNavClick();
   }
 
-  function viewClientTraining(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
+  function viewClientTraining(value: string) {
     if (!value) return;
     viewingClient.set(value);
     void goto("/progress");
@@ -149,14 +148,8 @@
         <Sidebar.GroupLabel class="uppercase tracking-wider text-[11px]">A client's training</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <label for="client-training" class="sr-only">Open a client's training</label>
-          <NativeSelect.Root size="sm" id="client-training"
-            class="w-full"
-            value="" onchange={viewClientTraining}>
-            <NativeSelect.Option value="">Choose a client…</NativeSelect.Option>
-            {#each viewingClient.clients as c (c.relationshipId)}
-              <NativeSelect.Option value={c.client.id}>{c.client.displayName || c.client.username}</NativeSelect.Option>
-            {/each}
-          </NativeSelect.Root>
+          <OptionSelect size="sm" id="client-training" class="w-full" value="" onValueChange={viewClientTraining} placeholder="Choose a client…"
+            options={viewingClient.clients.map((c) => ({ value: c.client.id, label: c.client.displayName || c.client.username }))} />
         </Sidebar.GroupContent>
       </Sidebar.Group>
     {/if}

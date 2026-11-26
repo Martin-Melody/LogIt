@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
   import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
@@ -309,11 +309,8 @@
           {#if byWeekday}
             <div class="flex flex-col gap-1.5">
               <label for="day-weekday" class="text-xs text-muted-foreground">Day</label>
-              <NativeSelect.Root id="day-weekday" value={String(day.weekday ?? "")} onchange={(e) => setWeekday(e.currentTarget.value)}
-                class="w-36">
-                {#if day.weekday == null}<NativeSelect.Option value="" disabled>Pick a day</NativeSelect.Option>{/if}
-                {#each WEEKDAYS as w (w.n)}<NativeSelect.Option value={String(w.n)}>{w.label}</NativeSelect.Option>{/each}
-              </NativeSelect.Root>
+              <OptionSelect id="day-weekday" class="w-36" value={String(day.weekday ?? "")} onValueChange={setWeekday} placeholder="Pick a day"
+                options={WEEKDAYS.map((w) => ({ value: String(w.n), label: w.label }))} />
             </div>
           {:else if !isFirst}
             <label class="flex h-9 items-center gap-2 text-[13px]">
@@ -426,11 +423,9 @@
                             onchange={(e) => { const n = num(e.currentTarget.value); editDay((d) => setPlannedGroupSettings(d, g.id, { roundRestMs: n == null ? null : n * 1000 })); }} />
                           {#if run.members.length === 2}
                             <label for="kind-{g.id}" class="sr-only">Kind</label>
-                            <NativeSelect.Root size="sm" id="kind-{g.id}" value={kind}
-                              onchange={(e) => { const k = e.currentTarget.value as "superset" | "circuit"; editDay((d) => setPlannedGroupKind(d, g.id, k)); }}
-                              >
-                              <NativeSelect.Option value="superset">Superset</NativeSelect.Option><NativeSelect.Option value="circuit">Circuit</NativeSelect.Option>
-                            </NativeSelect.Root>
+                            <OptionSelect size="sm" id="kind-{g.id}" value={kind}
+                              onValueChange={(v) => { const k = v as "superset" | "circuit"; editDay((d) => setPlannedGroupKind(d, g.id, k)); }}
+                              options={[{ value: "superset", label: "Superset" }, { value: "circuit", label: "Circuit" }]} />
                           {/if}
                           <span class="flex-1"></span>
                           <button type="button" onclick={() => editDay((d) => ungroupPlanned(d, g.id))} class="h-7 rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Ungroup</button>

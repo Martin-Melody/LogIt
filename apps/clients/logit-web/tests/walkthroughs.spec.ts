@@ -60,8 +60,11 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
   "program.assigned": async (p) => {
     await p.locator('[data-guide="programs-assign"]').click();
     const dialog = p.getByRole("dialog", { name: /Assign/ });
-    const niamh = dialog.locator("option", { hasText: "Niamh" });
-    if (await niamh.count()) await dialog.locator("select").first().selectOption({ label: (await niamh.first().textContent())!.trim() });
+    // The client picker is our own Select: open it, then pick Niamh if she's listed.
+    await dialog.getByRole("button", { name: "Client" }).click();
+    const niamh = p.getByRole("option", { name: /Niamh/ });
+    if (await niamh.count()) await niamh.first().click();
+    else await p.keyboard.press("Escape");
     await dialog.getByRole("button", { name: "Assign", exact: true }).click();
   },
   "message.sent": async (p) => {

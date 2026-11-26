@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
@@ -190,19 +190,16 @@
               <input bind:value={name} required maxlength="80" placeholder="Instagram bio" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             <label class="flex flex-[1_1_140px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Stops working
-              <NativeSelect.Root bind:value={expires}>
-                <NativeSelect.Option value="">Never</NativeSelect.Option><NativeSelect.Option value="7">In 7 days</NativeSelect.Option><NativeSelect.Option value="30">In 30 days</NativeSelect.Option><NativeSelect.Option value="90">In 90 days</NativeSelect.Option>
-              </NativeSelect.Root>
+              <OptionSelect bind:value={expires} aria-label="Link expires"
+                options={[{ value: "", label: "Never" }, { value: "7", label: "In 7 days" }, { value: "30", label: "In 30 days" }, { value: "90", label: "In 90 days" }]} />
             </label>
             <label class="flex flex-[1_1_120px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Max people
               <input bind:value={maxUses} inputmode="numeric" placeholder="No limit" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             {#if paymentsReady && packages.length}
               <label class="flex flex-[1_1_180px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">They pay for
-                <NativeSelect.Root bind:value={packageId}>
-                  <NativeSelect.Option value="">Nothing (free link)</NativeSelect.Option>
-                  {#each packages as p (p.id)}<NativeSelect.Option value={p.id}>{p.name} · {priceText(p)}</NativeSelect.Option>{/each}
-                </NativeSelect.Root>
+                <OptionSelect bind:value={packageId} aria-label="What people pay for"
+                  options={[{ value: "", label: "Nothing (free link)" }, ...packages.map((p) => ({ value: p.id, label: `${p.name} · ${priceText(p)}` }))]} />
               </label>
             {/if}
             <button type="submit" disabled={creating || !name.trim()} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Create link</button>
@@ -231,11 +228,9 @@
                     <Table.Cell class="whitespace-nowrap px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</Table.Cell>
                     <Table.Cell class="px-3 py-3">
                       {#if live && paymentsReady && packages.length}
-                        <NativeSelect.Root size="sm" value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
-                          class="max-w-[200px]">
-                          <NativeSelect.Option value="">Free</NativeSelect.Option>
-                          {#each packages as p (p.id)}<NativeSelect.Option value={p.id}>{p.name}</NativeSelect.Option>{/each}
-                        </NativeSelect.Root>
+                        <OptionSelect size="sm" class="max-w-[200px]" value={l.packageId ?? ""} onValueChange={(v) => changePackage(l, v)}
+                          aria-label="What people pay for through {l.name}"
+                          options={[{ value: "", label: "Free" }, ...packages.map((p) => ({ value: p.id, label: p.name }))]} />
                       {:else}
                         <span class="text-muted-foreground">{l.packageName ?? "Free"}</span>
                       {/if}
