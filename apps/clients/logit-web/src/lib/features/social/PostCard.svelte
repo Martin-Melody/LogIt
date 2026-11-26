@@ -1,6 +1,10 @@
 <script lang="ts">
   import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
+  import ProfileHoverCard from "./ProfileHoverCard.svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import RowMenuItems from "$lib/features/commands/RowMenuItems.svelte";
+  import type { RowAction } from "$lib/features/commands/commands.svelte";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { toast } from "$lib/components/ui/sonner";
   import { ApiError } from "@logit/core/api/client";
@@ -144,14 +148,32 @@
       toast.error("Couldn't do that");
     }
   }
+  // One list for the ⋯ and right-click on the post (canvas board 16).
+  const actions = $derived<RowAction[]>([
+    { id: "link", label: "Copy link", run: copyLink },
+    ...(canRepost ? [{ id: "quote", label: "Quote", run: () => (quoteOpen = true) }] : []),
+    ...(isOwn
+      ? [
+          ...(!plainRepost ? [{ id: "edit", label: "Edit", run: () => { draft = p.body ?? ""; editing = true; } }] : []),
+          { id: "delete", label: plainRepost ? "Undo repost" : "Delete", danger: true, run: () => (confirmDelete = true) },
+        ]
+      : [
+          ...(reason ? [{ id: "ni", label: "Not interested", run: notInterested }] : []),
+          { id: "report", label: "Report post", run: () => (reportOpen = true) },
+          { id: "block", label: `Block @${author.authorUsername}`, danger: true, run: () => (confirmBlock = true) },
+        ]),
+  ]);
 </script>
 
-<article class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
+<ContextMenu.Root>
+<ContextMenu.Trigger>
+{#snippet child({ props })}
+<article {...props} class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
   {#if reason}
     <p class="text-xs text-muted-foreground">{#if suggested}<span class="font-semibold text-foreground/80">Suggested</span>{" · "}{/if}{reason}</p>
   {/if}
   {#if plainRepost}
-    <p class="text-xs text-muted-foreground">{#if isOwn}You reposted{:else}<a href="/social/{p.authorUsername}" class="hover:underline">{p.authorDisplayName}</a>{" reposted"}{/if}</p>
+    <p class="text-xs text-muted-foreground">{#if isOwn}You reposted{:else}<ProfileHoverCard username={p.authorUsername} class="hover:underline">{p.authorDisplayName}</ProfileHoverCard>{" reposted"}{/if}</p>
   {/if}
 
   <div class="flex items-center gap-2.5">
@@ -161,7 +183,7 @@
         <a href="/social/{author.authorUsername}" class="hover:underline">You</a>
         <span class="font-normal text-muted-foreground">{"· "}<a href={link} class="hover:underline">{timeAgo(author.createdAt)}</a>{p.editedAt && !plainRepost ? " · edited" : ""}</span>
       {:else}
-        <a href="/social/{author.authorUsername}" class="hover:underline">{author.authorDisplayName}</a>
+        <ProfileHoverCard username={author.authorUsername} class="hover:underline">{author.authorDisplayName}</ProfileHoverCard>
         <span class="font-normal text-muted-foreground">@{author.authorUsername} · <a href={link} class="hover:underline">{timeAgo(author.createdAt)}</a>{p.editedAt && !plainRepost ? " · edited" : ""}</span>
       {/if}
     </span>
@@ -174,18 +196,7 @@
           <button {...props} type="button" aria-label="More" class="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"><MoreHorizontalIcon class="size-4" /></button>
         {/snippet}
       </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" class="min-w-48">
-        <DropdownMenu.Item onclick={copyLink}>Copy link</DropdownMenu.Item>
-        {#if canRepost}<DropdownMenu.Item onclick={() => (quoteOpen = true)}>Quote</DropdownMenu.Item>{/if}
-        {#if isOwn}
-          {#if !plainRepost}<DropdownMenu.Item onclick={() => { draft = p.body ?? ""; editing = true; }}>Edit</DropdownMenu.Item>{/if}
-          <DropdownMenu.Item class="text-destructive" onclick={() => (confirmDelete = true)}>{plainRepost ? "Undo repost" : "Delete"}</DropdownMenu.Item>
-        {:else}
-          {#if reason}<DropdownMenu.Item onclick={notInterested}>Not interested</DropdownMenu.Item>{/if}
-          <DropdownMenu.Item onclick={() => (reportOpen = true)}>Report post</DropdownMenu.Item>
-          <DropdownMenu.Item class="text-destructive" onclick={() => (confirmBlock = true)}>Block @{author.authorUsername}</DropdownMenu.Item>
-        {/if}
-      </DropdownMenu.Content>
+      <DropdownMenu.Content align="end" class="min-w-48"><RowMenuItems {actions} kind="dropdown" /></DropdownMenu.Content>
     </DropdownMenu.Root>
   </div>
 
@@ -240,6 +251,10 @@
     {/if}
   </div>
 </article>
+{/snippet}
+</ContextMenu.Trigger>
+<ContextMenu.Content class="min-w-48"><RowMenuItems {actions} kind="context" /></ContextMenu.Content>
+</ContextMenu.Root>
 
 <QuoteDialog bind:open={quoteOpen} post={p} {onposted} />
 <ReportDialog bind:open={reportOpen} targetType="Post" targetId={p.id} what="post" />
