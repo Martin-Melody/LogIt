@@ -55,7 +55,7 @@ test.describe("message thread", () => {
     });
     await goToThread(page, "rel-1");
 
-    const bubbles = page.locator("div.max-w-\\[80\\%\\]");
+    const bubbles = page.locator("[data-slot=bubble-content]");
     await expect(bubbles).toHaveCount(2);
     await expect(bubbles.nth(0)).toContainText("Hey, how did the session go?");
     await expect(bubbles.nth(1)).toContainText("Went great, hit a PR!");
@@ -76,7 +76,7 @@ test.describe("message thread", () => {
     await seedThread(page, {});
     await goToThread(page, "rel-1");
 
-    const input = page.getByPlaceholder("Message…");
+    const input = page.getByRole("textbox", { name: /^Message / });
     await input.fill("On my way!");
     await page.locator('button[type="submit"]').click();
 
@@ -92,7 +92,7 @@ test.describe("message thread", () => {
     await seedThread(page, {});
     await goToThread(page, "rel-1");
 
-    const input = page.getByPlaceholder("Message…");
+    const input = page.getByRole("textbox", { name: /^Message / });
     await input.fill("Quick question");
     await input.press("Enter");
 
