@@ -218,6 +218,22 @@ export function setDiaryItems(day: DiaryDay, items: LoggedItem[]): DiaryDay {
   return touchDay({ ...day, items });
 }
 
+/** Change how much of an item was eaten: its macros and nutrients scale with the grams, and the
+ * portion becomes plain grams (web food menu, canvas board 13). */
+export function resizeDiaryItem(day: DiaryDay, itemId: string, grams: number): DiaryDay {
+  const it = day.items.find((x) => x.id === itemId);
+  if (!it || !(grams > 0) || !(it.grams > 0)) return day;
+  const f = grams / it.grams;
+  return updateDiaryItem(day, itemId, {
+    grams,
+    computed: roundMacros({ kcal: it.computed.kcal * f, proteinG: it.computed.proteinG * f, carbsG: it.computed.carbsG * f, fatG: it.computed.fatG * f }),
+    ...(it.nutrients ? { nutrients: roundNutrients(scaleNutrients(it.nutrients, f * 100)) } : {}),
+    servingLabel: `${Math.round(grams)} g`,
+    amount: undefined,
+    portionId: undefined,
+  });
+}
+
 /** Move one item to another meal, keeping the rest untouched. */
 export function moveDiaryItem(day: DiaryDay, itemId: string, meal: MealSlot): DiaryDay {
   return updateDiaryItem(day, itemId, { meal });

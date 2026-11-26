@@ -1,5 +1,11 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import SessionMenuItems from "$lib/features/sessions/SessionMenuItems.svelte";
+  import ExerciseHoverCard from "$lib/features/exercise/ExerciseHoverCard.svelte";
+  import Composer from "$lib/features/social/Composer.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -33,6 +39,10 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
   let query = $state("");
+  // "Post it to my feed" from a session's menu opens the composer with it attached.
+  let posting = $state(false);
+  let postId = $state<string | undefined>(undefined);
+  const post = (id: string) => { postId = id; posting = true; };
 
   async function load(clientId: string | null) {
     loading = true;
@@ -133,14 +143,31 @@
           <p class="px-3.5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</p>
           {#each g.items as s (s.id)}
             {@const prCount = prs.get(s.id)?.length ?? 0}
+            <!-- Right-click a row = its ⋯ menu (canvas board 11). -->
+            <ContextMenu.Root>
+            <ContextMenu.Trigger>
+            {#snippet child({ props })}
+            <div {...props} class="group/row relative rounded-lg data-[state=open]:bg-muted/50">
             <button type="button" onclick={() => void select(s.id)} aria-current={s.id === selectedId ? "true" : undefined}
-              class="flex flex-col gap-0.5 rounded-lg px-3.5 py-3 text-left {s.id === selectedId ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
+              class="flex w-full flex-col gap-0.5 rounded-lg px-3.5 py-3 pr-11 text-left {s.id === selectedId ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
               <span class="flex items-center justify-between gap-2">
                 <span class="truncate text-sm font-semibold">{sessionTitle(s)}</span>
                 {#if prCount > 0}<span class="shrink-0 rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">{prCount} PR{prCount === 1 ? "" : "s"}</span>{/if}
               </span>
               <span class="text-xs text-muted-foreground">{dateLine(s)}{minutes(s) ? ` · ${minutes(s)} min` : ""} · {tonnes(sessionVolumeKg(s))}</span>
             </button>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger aria-label="More for {sessionTitle(s)}"
+                class="absolute top-2.5 right-2 grid size-8 place-items-center rounded-md text-muted-foreground opacity-0 hover:bg-background/60 hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100">
+                <EllipsisIcon class="size-4" />
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end" class="min-w-56"><SessionMenuItems session={s} {sessions} kind="dropdown" onpost={post} /></DropdownMenu.Content>
+            </DropdownMenu.Root>
+            </div>
+            {/snippet}
+            </ContextMenu.Trigger>
+            <ContextMenu.Content class="min-w-56"><SessionMenuItems session={s} {sessions} kind="context" onpost={post} /></ContextMenu.Content>
+            </ContextMenu.Root>
           {/each}
         {/each}
       </nav>
@@ -183,7 +210,7 @@
                   <Table.Row class="border-t border-border align-top">
                     <Table.Cell class="px-2.5 py-2.5 font-medium">
                       {#if b.type === "strength" && (b.data as StrengthBlockData).exerciseId}
-                        <a href="/exercises/{(b.data as StrengthBlockData).exerciseId}" class="hover:underline">{blockDisplayName(b)}</a>
+                        <ExerciseHoverCard exerciseId={(b.data as StrengthBlockData).exerciseId!} name={blockDisplayName(b)} {sessions} class="hover:underline">{blockDisplayName(b)}</ExerciseHoverCard>
                       {:else}{blockDisplayName(b)}{/if}
                       {#if isPr}<span class="ml-1.5 rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">PR</span>{/if}
                     </Table.Cell>
@@ -208,3 +235,5 @@
     </div>
   {/if}
 </div>
+
+<Composer bind:open={posting} workoutId={postId} />

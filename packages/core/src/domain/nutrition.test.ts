@@ -318,3 +318,17 @@ describe("addDiaryItem loggedAtMs (§9 nutrition x training correlation)", () =>
     expect(withItem.items[0]!.loggedAtMs).toBeUndefined();
   });
 });
+
+describe("resizeDiaryItem", () => {
+  it("scales the macros with the grams and shows grams as the portion", async () => {
+    const { createDiaryDay, addDiaryItem, resizeDiaryItem } = await import("./nutrition");
+    let day = addDiaryItem(createDiaryDay("2026-11-26"), {
+      meal: "breakfast", name: "Oats", grams: 80, servingLabel: "1 cup", amount: 1, portionId: "cup",
+      computed: { kcal: 300, proteinG: 10, carbsG: 54, fatG: 6 },
+    });
+    day = resizeDiaryItem(day, day.items[0]!.id, 40);
+    const it = day.items[0]!;
+    expect([it.grams, it.computed.kcal, it.computed.proteinG, it.servingLabel, it.amount]).toEqual([40, 150, 5, "40 g", undefined]);
+    expect(resizeDiaryItem(day, it.id, 0)).toBe(day); // nothing for zero
+  });
+});
