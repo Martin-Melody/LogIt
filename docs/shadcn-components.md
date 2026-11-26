@@ -10,6 +10,23 @@ Apps: **app** = `apps/clients/logit-frontend` (phone + web app), **web** = `apps
 Adding one: `cd apps/clients/<app> && npx shadcn-svelte@latest add <name>`, then restyle to DESIGN.md
 (radius, 44px touch targets, Chalk Grey primary). Keep the look of `choice.ts`, sheets and Set row.
 
+## Status (2026-11-26, branch docs/shadcn-first)
+
+Section 1 is done: Spinner, Skeleton, Separator, Tabs (segmented + line looks), Table, Checkbox,
+RadioGroup, Slider, Select / NativeSelect (web), DateField / TimeField, AlertDialog (web confirms).
+`packages/ui/src/theme.css` maps shadcn's `data-open:`/`data-checked:`/`data-active:`/`data-horizontal:`
+variants onto bits-ui's `data-state`/`data-orientation`, so components added with the CLI work as-is.
+Left on purpose: the app's ConfirmDialog stays a bottom sheet (it must swipe down, principle 5);
+filter chips that said `role="tablist"` wait for Toggle Group; tooltips go with the web power tools below.
+
+## Web: design with these in mind
+
+Some components on the list don't fit a current screen, but designing the web dashboard around them is
+where the polish comes from (Martin, 2026-11-26): ⌘K Command (go + find + do), Context Menu on every row
+that has a ⋯ menu, Hover Card on names, Breadcrumb on deep pages, Kbd + a shortcuts sheet, Tooltip on
+icon-only buttons and sidebar items, Resizable in the plugin builder. Coaches first, then admins, then
+everyone. Mock-ups: the "LogIt web: coach power tools" Design canvas.
+
 ## 1. Already installed, mostly not used (cheapest wins)
 
 | Component | Where it's hand-rolled now | Notes |
