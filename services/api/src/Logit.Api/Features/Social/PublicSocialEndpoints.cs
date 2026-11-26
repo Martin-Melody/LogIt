@@ -29,6 +29,7 @@ public static class PublicSocialEndpoints
         pub.MapGet("/search", Search);
         pub.MapGet("/groups", Groups);
         pub.MapGet("/groups/{groupSlug}", GroupPage);
+        pub.MapGet("/group-index", GroupIndex);
     }
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
@@ -108,6 +109,14 @@ public static class PublicSocialEndpoints
             query = query.Where(g => g.Name.ToLower().Contains(w) || (g.Place != null && g.Place.ToLower().Contains(w)));
         var groups = await query.OrderByDescending(g => db.GroupMembers.Count(m => m.GroupId == g.Id)).ThenBy(g => g.Name).Take(40).ToListAsync();
         return Results.Ok(await CardsAsync(db, groups));
+    }
+
+    /// For the website's sitemap: every group anyone can find, with its latest post's time.
+    private static async Task<IResult> GroupIndex(AppDbContext db)
+    {
+        var rows = await Findable(db).OrderBy(g => g.CreatedAt).Take(5000)
+            .Select(g => new { Group = g, Last = db.GroupPosts.Where(p => p.GroupId == g.Id && p.DeletedAt == null).Max(p => (DateTime?)p.LastActivityAt) }).ToListAsync();
+        return Results.Ok(rows.Select(r => new { path = GroupWebPath(r.Group), lastModMs = Ms(r.Last ?? r.Group.CreatedAt) }));
     }
 
     /// S4: getlogit.app/groups/{slug}-{first 8 of id}. What it is, upcoming events and its forum
