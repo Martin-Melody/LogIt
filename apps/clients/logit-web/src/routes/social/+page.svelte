@@ -37,7 +37,7 @@
   );
   let trending = $state<TagCount[] | null>(null);
   $effect(() => {
-    if (tab === "forum" && trending === null) void tagsApi.trending().then((t) => (trending = t)).catch(() => (trending = []));
+    if ((tab === "forum" || tab === "following") && trending === null) void tagsApi.trending().then((t) => (trending = t)).catch(() => (trending = []));
   });
   function go(t: Tab) {
     void goto(t === "following" ? "/social" : `/social?tab=${t}`, { noScroll: true, keepFocus: true });
@@ -271,6 +271,15 @@
         </section>
       {/if}
       <PeopleSearch />
+      {#if trending?.length}
+        <!-- Trending (canvas S7): the same tags signed-out visitors see on getlogit.app. -->
+        <section class="flex flex-col gap-1.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
+          <h2 class="text-sm font-semibold">Trending</h2>
+          {#each trending.slice(0, 6) as t (t.tag)}
+            <a href="/social/tag/{encodeURIComponent(t.tag)}" class="flex justify-between text-[13px] hover:underline"><span class="text-sky-700 dark:text-sky-300">#{t.tag}</span><span class="text-muted-foreground">{t.count}</span></a>
+          {/each}
+        </section>
+      {/if}
       <PeopleSuggestions title="People to follow" limit={4} />
     {:else if tab === "discover"}
       <PeopleSearch />

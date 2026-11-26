@@ -14,5 +14,6 @@ export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
   if (res.status === 404) error(404, "This post isn't on the web, or it was removed.");
   if (!res.ok) error(502, "Couldn't load this post. Try again in a moment.");
   setHeaders({ "cache-control": "public, max-age=300" });
-  return { thread: (await res.json()) as ForumThread, api };
+  const thread = (await res.json()) as ForumThread;
+  return { thread, api, appPath: `/social/forum/${thread.post.id}` };
 };

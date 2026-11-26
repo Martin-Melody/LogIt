@@ -125,7 +125,7 @@ public static class GroupEndpoints
         if (req.Access is not null && !Enum.TryParse(req.Access, true, out access)) return Results.BadRequest(new { error = "InviteOnly, Request or Open." });
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var group = new Group { Name = name, Kind = kind, Place = Clean(req.Place, 60), PhotoId = photo?.Id, InviteCode = NewCode(), CreatedAt = now, Access = access };
+        var group = new Group { Name = name, Kind = kind, Place = Clean(req.Place, 60), PhotoId = photo?.Id, InviteCode = NewCode(), CreatedAt = now, Access = access, Slug = GroupPostEndpoints.Slugify(name) };
         group.Members.Add(new GroupMember { UserId = me, Role = GroupRole.Organiser, JoinedAt = now });
         db.Groups.Add(group);
         var thread = new DmThread { PairKey = $"g:{group.Id}", Group = group, CreatedAt = now, LastMessageAt = now };
@@ -177,6 +177,7 @@ public static class GroupEndpoints
             var name = Clean(req.Name, 60);
             if (name is null) return Results.BadRequest(new { error = "Give the group a name." });
             g.Name = name;
+            g.Slug = GroupPostEndpoints.Slugify(name);
         }
         if (req.Kind is not null)
         {

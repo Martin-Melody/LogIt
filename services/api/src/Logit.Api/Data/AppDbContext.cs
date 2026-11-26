@@ -355,6 +355,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(g => g.InviteCode).IsUnique();
             e.Property(g => g.Note).HasMaxLength(500);
             e.HasIndex(g => g.Access);
+            e.Property(g => g.Slug).HasMaxLength(80);
+            e.HasIndex(g => g.Slug);
         });
         model.Entity<GroupEvent>(e =>
         {

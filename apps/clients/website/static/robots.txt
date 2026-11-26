@@ -3,3 +3,4 @@ Allow: /
 
 Sitemap: https://getlogit.app/sitemap-posts.xml
 Sitemap: https://getlogit.app/sitemap-profiles.xml
+Sitemap: https://getlogit.app/sitemap-groups.xml

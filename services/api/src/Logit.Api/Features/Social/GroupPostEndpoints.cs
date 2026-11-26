@@ -403,18 +403,33 @@ public static partial class GroupPostEndpoints
         var me = caller.GetUserId();
         var term = (q ?? "").Trim().ToLowerInvariant();
         if (term.Length < 2) return Results.Ok(Array.Empty<PostDto>());
-        var query = Open(db).Where(p => p.DeletedAt == null).NotBlocked(db, me);
+        var query = Matching(db, Open(db).Where(p => p.DeletedAt == null).NotBlocked(db, me), term);
+        var posts = await query.OrderByDescending(p => p.Upvotes + p.CommentCount).ThenByDescending(p => p.LastActivityAt).Take(30).ToListAsync();
+        return Results.Ok(await PostDtosAsync(db, posts, me));
+    }
+
+    /// Posts matching what was typed: "#sligo" is that tag, otherwise every word in the title, text, tags or group's name.
+    private static IQueryable<GroupPost> Matching(AppDbContext db, IQueryable<GroupPost> query, string term)
+    {
         if (term.StartsWith('#'))
         {
             var t = Hashtags.Normalize(term);
-            query = query.Where(p => db.Hashtags.Any(h => h.ForumPostId == p.Id && h.Tag == t));
+            return query.Where(p => db.Hashtags.Any(h => h.ForumPostId == p.Id && h.Tag == t));
         }
-        else
-            foreach (var w in term.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(5))
-                query = query.Where(p => p.Title.ToLower().Contains(w) || p.Body.ToLower().Contains(w) || p.Tags.Contains(w)
-                    || (p.Group != null && p.Group.Name.ToLower().Contains(w)));
-        var posts = await query.OrderByDescending(p => p.Upvotes + p.CommentCount).ThenByDescending(p => p.LastActivityAt).Take(30).ToListAsync();
-        return Results.Ok(await PostDtosAsync(db, posts, me));
+        foreach (var w in term.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(5))
+            query = query.Where(p => p.Title.ToLower().Contains(w) || p.Body.ToLower().Contains(w) || p.Tags.Contains(w)
+                || (p.Group != null && p.Group.Name.ToLower().Contains(w)));
+        return query;
+    }
+
+    /// Forum posts anyone can read (the web, signed out, canvas S2–S4): the Forum, one findable
+    /// group's posts, or the ones matching a search.
+    public static async Task<List<PostDto>> PublicListAsync(AppDbContext db, string? sort, int skip, int take, Guid? groupId = null, string? search = null)
+    {
+        var q = Open(db).Where(p => p.DeletedAt == null);
+        if (groupId is { } gid) q = q.Where(p => p.GroupId == gid);
+        if (search is not null) q = Matching(db, q, search);
+        return await PostDtosAsync(db, await Sorted(q, sort, groupId is not null).Skip(Math.Max(0, skip)).Take(take).ToListAsync(), null);
     }
 
     /// The public page. {postSlug} is the title's slug, a dash, and the post id's first 8 characters.

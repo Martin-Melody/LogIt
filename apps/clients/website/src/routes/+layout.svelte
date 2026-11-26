@@ -18,10 +18,15 @@
 
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground">Skip to content</a>
 
-<div class="flex min-h-screen flex-col bg-background text-foreground">
-  <SiteHeader />
-  <main id="main" class="topo-tile flex-1">
-    {@render children?.()}
-  </main>
-  <SiteFooter />
-</div>
+<!-- Social pages (canvas row 20) bring their own frame, like signed-in Social. -->
+{#if page.route.id?.startsWith("/(social)")}
+  {@render children?.()}
+{:else}
+  <div class="flex min-h-screen flex-col bg-background text-foreground">
+    <SiteHeader />
+    <main id="main" class="topo-tile flex-1">
+      {@render children?.()}
+    </main>
+    <SiteFooter />
+  </div>
+{/if}

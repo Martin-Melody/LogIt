@@ -1232,12 +1232,19 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
 
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Access");
 
                     b.HasIndex("InviteCode")
                         .IsUnique();
+
+                    b.HasIndex("Slug");
 
                     b.ToTable("Groups");
                 });
