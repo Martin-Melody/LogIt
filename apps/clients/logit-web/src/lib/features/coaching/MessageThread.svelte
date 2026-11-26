@@ -245,7 +245,7 @@
                     <button {...p} type="button" aria-label="React" class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100"><SmilePlusIcon class="size-4" /></button>
                   {/snippet}
                 </DropdownMenu.Trigger>
-                <DropdownMenu.Content side="top" align="start" class="flex min-w-0 gap-0.5 rounded-full p-1">
+                <DropdownMenu.Content side="top" align="start" class="flex w-auto min-w-0 gap-0.5 rounded-full p-1">
                   {#each DM_REACTIONS as e (e)}
                     <DropdownMenu.Item onSelect={() => void react(m, e)} aria-label="React {e}" class="size-8 justify-center rounded-full p-0 text-lg {m.reaction === e ? 'bg-primary/20' : ''}">{e}</DropdownMenu.Item>
                   {/each}

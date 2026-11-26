@@ -442,7 +442,7 @@
                                   <button {...props} type="button" aria-label="React" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SmilePlusIcon class="size-4" /></button>
                                 {/snippet}
                               </DropdownMenu.Trigger>
-                              <DropdownMenu.Content side="top" align={m.mine ? "end" : "start"} class="flex min-w-0 gap-0.5 rounded-full p-1">
+                              <DropdownMenu.Content side="top" align={m.mine ? "end" : "start"} class="flex w-auto min-w-0 gap-0.5 rounded-full p-1">
                                 {#each DM_REACTIONS as e (e)}
                                   <DropdownMenu.Item onSelect={() => void react(m, e)} aria-label="React {e}" class="size-8 justify-center rounded-full p-0 text-lg {m.reactions?.find((x) => x.mine)?.emoji === e ? 'bg-primary/20' : ''}">{e}</DropdownMenu.Item>
                                 {/each}
