@@ -1,6 +1,7 @@
 <!-- A tag's page (design canvas F4): forum posts with the tag (Top or New), then regular posts with
      it. Also on the web at getlogit.app/t/{tag}. -->
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { page } from "$app/state";
   import { Hash, Share2 } from "lucide-svelte";
@@ -79,11 +80,11 @@
     </span>
   </div>
 
-  <div role="tablist" aria-label="#{tag}" class="mx-4 flex border-b border-border">
-    {#each [["forum", "Forum"], ["posts", "Posts"]] as [v, label] (v)}
-      <button type="button" role="tab" aria-selected={view === v} class="h-11 flex-1 text-[14px] {view === v ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => (view = v as "forum" | "posts")}>{label}</button>
-    {/each}
-  </div>
+  <Tabs.Root value={view} onValueChange={(v) => (view = v as "forum" | "posts")} class="mx-4">
+    <Tabs.List variant="line" aria-label="#{tag}">
+      {#each [["forum", "Forum"], ["posts", "Posts"]] as [v, label] (v)}<Tabs.Trigger value={v}>{label}</Tabs.Trigger>{/each}
+    </Tabs.List>
+  </Tabs.Root>
 
   {#if view === "forum"}
     {#key tag}<ForumList filter={{ tag }} tags={[tag]} sorts={["top", "new"]} empty="No forum posts with #{tag} yet. Ask the first one." />{/key}

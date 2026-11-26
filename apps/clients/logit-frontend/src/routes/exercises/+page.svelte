@@ -1,6 +1,7 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
-  import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
+  import { chip } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -193,13 +194,11 @@
   </PageHeader>
 
   <div class="flex flex-col gap-2 px-3 pb-2 pt-3">
-    <div class={segmentTrack} role="tablist" aria-label="Kind">
-      {#each LIBRARY_KINDS as k (k)}
-        <button type="button" role="tab" aria-selected={kind === k} class={segment(kind === k)} onclick={() => setKind(k)}>
-          {KIND_LABEL[k]}
-        </button>
-      {/each}
-    </div>
+    <Tabs.Root value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+      <Tabs.List aria-label="Kind">
+        {#each LIBRARY_KINDS as k (k)}<Tabs.Trigger value={k}>{KIND_LABEL[k]}</Tabs.Trigger>{/each}
+      </Tabs.List>
+    </Tabs.Root>
 
     <div class="relative" data-guide="exercises-search">
       <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import LockIcon from "@lucide/svelte/icons/lock";
@@ -174,12 +175,11 @@
     {:else}
       <ProfileCards json={profile.publicProfileJson} name={profile.displayName} />
 
-      <div role="tablist" aria-label="Profile" class="flex gap-1 border-b border-border">
-        {#each [["posts", "Posts"], ["forum", "Forum"], ["followers", "Followers"], ["following", "Following"]] as [t, label] (t)}
-          <button type="button" role="tab" aria-selected={tab === t} onclick={() => setTab(t as Tab)}
-            class="-mb-px h-9 border-b-2 px-3 text-[13px] {tab === t ? 'border-primary font-semibold' : 'border-transparent text-muted-foreground'}">{label}</button>
-        {/each}
-      </div>
+      <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <Tabs.List variant="line" aria-label="Profile" class="gap-1">
+          {#each [["posts", "Posts"], ["forum", "Forum"], ["followers", "Followers"], ["following", "Following"]] as [t, label] (t)}<Tabs.Trigger value={t}>{label}</Tabs.Trigger>{/each}
+        </Tabs.List>
+      </Tabs.Root>
 
       {#if tab === "forum"}
         {#key username}<ForumPosts filter={{ user: username }} canPost={profile.isSelf} sorts={["new", "top"]} empty="No forum posts yet." />{/key}

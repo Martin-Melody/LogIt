@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { goto } from "$app/navigation";
@@ -273,14 +274,13 @@
     <FriendsRow />
     <FriendsBoardStrip />
     <div class="px-4 pb-2.5">
-      <div role="tablist" aria-label="Feed" class="grid grid-cols-3 gap-[3px] rounded-[10px] bg-muted p-[3px]">
-        <button type="button" role="tab" aria-selected={tab === "following"} onclick={() => setTab("following")}
-          class="h-[34px] rounded-lg text-sm {tab === 'following' ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">Following</button>
-        <button type="button" role="tab" aria-selected={tab === "discover"} onclick={() => setTab("discover")}
-          class="h-[34px] rounded-lg text-sm {tab === 'discover' ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">Discover</button>
-        <button type="button" role="tab" aria-selected={tab === "forum"} onclick={() => setTab("forum")}
-          class="h-[34px] rounded-lg text-sm {tab === 'forum' ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">Forum</button>
-      </div>
+      <Tabs.Root value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+        <Tabs.List aria-label="Feed" class="h-10 rounded-[10px]">
+          {#each [["following", "Following"], ["discover", "Discover"], ["forum", "Forum"]] as [t, label] (t)}
+            <Tabs.Trigger value={t} class="rounded-lg data-[state=active]:bg-primary data-[state=active]:font-semibold data-[state=active]:text-primary-foreground">{label}</Tabs.Trigger>
+          {/each}
+        </Tabs.List>
+      </Tabs.Root>
     </div>
 
     {#if settings && settings.showInDiscover === null && !settings.isPrivate}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -359,10 +360,12 @@
       <!-- Editor -->
       <section class="flex min-w-0 flex-[999_1_460px] flex-col overflow-hidden rounded-[10px] border border-border bg-card">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/50 px-2 pt-1.5">
-          <div role="tablist" aria-label="File" class="flex gap-0.5">
-            <button type="button" role="tab" aria-selected={view === "code"} onclick={() => (view = "code")} class="px-3 py-2 text-xs {view === 'code' ? 'border-b-2 border-primary' : 'text-muted-foreground'}">{sourceFileName(family)}</button>
-            <button type="button" role="tab" aria-selected={view === "manifest"} onclick={() => (view = "manifest")} class="px-3 py-2 text-xs {view === 'manifest' ? 'border-b-2 border-primary' : 'text-muted-foreground'}">manifest.json</button>
-          </div>
+          <Tabs.Root value={view} onValueChange={(v) => (view = v as "code" | "manifest")} class="w-auto">
+            <Tabs.List variant="line" aria-label="File" class="w-auto gap-0.5 border-b-0">
+              <Tabs.Trigger value="code" class="h-auto py-2 text-xs data-[state=active]:font-medium">{sourceFileName(family)}</Tabs.Trigger>
+              <Tabs.Trigger value="manifest" class="h-auto py-2 text-xs data-[state=active]:font-medium">manifest.json</Tabs.Trigger>
+            </Tabs.List>
+          </Tabs.Root>
           <span class="flex items-center gap-2 pb-1.5">
             <label for="b-upload" class="inline-flex h-7 cursor-pointer items-center rounded-[8px] border border-border px-2.5 text-xs">Upload files…</label>
             <input id="b-upload" type="file" multiple accept=".js,.mjs,.json" class="sr-only" onchange={upload} />

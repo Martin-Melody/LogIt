@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -70,12 +71,12 @@
     {/if}
   </header>
 
-  <div role="tablist" aria-label="Payments" data-guide="payments-tabs" class="flex gap-[22px] border-b border-border">
-    <button type="button" role="tab" aria-selected={tab === "clients"} onclick={() => setTab("clients")}
-      class="-mb-px h-[34px] border-b-2 px-1 text-sm {tab === 'clients' ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground'}">Clients</button>
-    <button type="button" role="tab" aria-selected={tab === "setup"} onclick={() => setTab("setup")}
-      class="-mb-px h-[34px] border-b-2 px-1 text-sm {tab === 'setup' ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground'}">Packages and settings</button>
-  </div>
+  <Tabs.Root value={tab} onValueChange={(v) => setTab(v as "clients" | "setup")}>
+    <Tabs.List variant="line" aria-label="Payments" data-guide="payments-tabs">
+      <Tabs.Trigger value="clients">Clients</Tabs.Trigger>
+      <Tabs.Trigger value="setup">Packages and settings</Tabs.Trigger>
+    </Tabs.List>
+  </Tabs.Root>
 
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>

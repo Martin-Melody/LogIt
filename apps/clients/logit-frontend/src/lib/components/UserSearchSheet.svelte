@@ -2,6 +2,7 @@
      by name or place (invite-only ones never show); tapping one opens its join screen, or its page
      if you're in. Events: upcoming events in findable groups by place or name, sport, kind and when. -->
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { toast } from "svelte-sonner";
@@ -14,7 +15,6 @@
   import { socialApi, type UserSearchResult } from "@logit/core/api/socialApi";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { groupsApi, type GroupSearchResult } from "@logit/core/api/groupsApi";
-  import { segment, segmentTrack } from "$lib/components/ui/choice";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import { ChevronDown, Circle, CircleCheck } from "lucide-svelte";
@@ -242,12 +242,14 @@
     </div>
 
     <div class="shrink-0 px-3 pt-2.5">
-      <div class={segmentTrack} role="tablist" aria-label="Search for">
-        <button type="button" role="tab" aria-selected={tab === "people"} class={segment(tab === "people")} onclick={() => (tab = "people")}>People</button>
-        <button type="button" role="tab" aria-selected={tab === "groups"} class={segment(tab === "groups")} onclick={() => (tab = "groups")}>Groups</button>
-        <button type="button" role="tab" aria-selected={tab === "events"} class={segment(tab === "events")} onclick={() => (tab = "events")}>Events</button>
-        <button type="button" role="tab" aria-selected={tab === "posts"} class={segment(tab === "posts")} onclick={() => (tab = "posts")}>Forum</button>
-      </div>
+      <Tabs.Root bind:value={tab}>
+        <Tabs.List aria-label="Search for">
+          <Tabs.Trigger value="people">People</Tabs.Trigger>
+          <Tabs.Trigger value="groups">Groups</Tabs.Trigger>
+          <Tabs.Trigger value="events">Events</Tabs.Trigger>
+          <Tabs.Trigger value="posts">Forum</Tabs.Trigger>
+        </Tabs.List>
+      </Tabs.Root>
     </div>
 
     <!-- Results -->

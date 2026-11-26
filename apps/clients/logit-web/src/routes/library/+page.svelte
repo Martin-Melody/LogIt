@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -148,12 +149,11 @@
   </header>
 
   <div class="flex flex-wrap items-center justify-between gap-2.5">
-    <div role="tablist" aria-label="Kind" class="inline-flex gap-[3px] rounded-[9px] bg-muted p-[3px]">
-      {#each LIBRARY_KINDS as k (k)}
-        <button type="button" role="tab" aria-selected={kind === k} onclick={() => go({ kind: k, id: null })}
-          class="h-8 rounded-[7px] px-3.5 text-[13px] {kind === k ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">{KIND_LABEL[k]}</button>
-      {/each}
-    </div>
+    <Tabs.Root value={kind} onValueChange={(v) => go({ kind: v as LibraryKind, id: null })}>
+      <Tabs.List aria-label="Kind" class="h-auto w-auto rounded-[9px]">
+        {#each LIBRARY_KINDS as k (k)}<Tabs.Trigger value={k} class="h-8 px-3.5 data-[state=active]:shadow-none rounded-lg data-[state=active]:bg-primary data-[state=active]:font-semibold data-[state=active]:text-primary-foreground rounded-[7px]">{KIND_LABEL[k]}</Tabs.Trigger>{/each}
+      </Tabs.List>
+    </Tabs.Root>
     <div class="flex flex-wrap gap-1.5" role="group" aria-label="Show">
       {#each [["all", "All"], ["logit", "LogIt"], ["mine", "Mine"], ...coaches.map(([id, n]) => [`coach:${id}`, `From ${n}`])] as [value, label] (value)}
         <button type="button" aria-pressed={source === value} onclick={() => (source = value as typeof source)}

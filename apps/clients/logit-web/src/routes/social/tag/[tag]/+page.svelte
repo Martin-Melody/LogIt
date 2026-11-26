@@ -1,6 +1,7 @@
 <!-- A tag's page on the web (design canvas F4): forum posts with the tag (Top or New), then
      regular posts with it. Signed out, getlogit.app/t/{tag} shows the same. -->
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { page } from "$app/state";
   import HashIcon from "@lucide/svelte/icons/hash";
   import { normalizeTag, tagsApi, type TagInfo } from "@logit/core/api/forumApi";
@@ -37,12 +38,11 @@
     <span class="flex size-14 items-center justify-center rounded-2xl bg-muted text-sky-700 dark:text-sky-300"><HashIcon class="size-6" /></span>
     <div class="flex flex-col"><h1 class="text-2xl font-bold">#{tag}</h1><span class="text-sm text-muted-foreground">{info ? `${count(info.forumPosts, "forum post")} · ${count(info.posts, "post")}` : " "}</span></div>
   </div>
-  <div role="tablist" aria-label="#{tag}" class="flex gap-1 border-b border-border">
-    {#each [["forum", "Forum"], ["posts", "Posts"]] as [v, label] (v)}
-      <button type="button" role="tab" aria-selected={view === v} onclick={() => (view = v as "forum" | "posts")}
-        class="-mb-px h-9 border-b-2 px-3 text-[13px] {view === v ? 'border-primary font-semibold' : 'border-transparent text-muted-foreground'}">{label}</button>
-    {/each}
-  </div>
+  <Tabs.Root value={view} onValueChange={(v) => (view = v as "forum" | "posts")}>
+    <Tabs.List variant="line" aria-label="#{tag}" class="gap-1">
+      {#each [["forum", "Forum"], ["posts", "Posts"]] as [v, label] (v)}<Tabs.Trigger value={v}>{label}</Tabs.Trigger>{/each}
+    </Tabs.List>
+  </Tabs.Root>
   {#if view === "forum"}
     {#key tag}<ForumPosts filter={{ tag }} tags={[tag]} sorts={["top", "new"]} empty="No forum posts with #{tag} yet. Ask the first one." />{/key}
   {:else if posts === null}

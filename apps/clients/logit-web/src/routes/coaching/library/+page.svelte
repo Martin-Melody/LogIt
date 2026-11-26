@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -76,12 +77,11 @@
   </header>
 
   <div class="flex flex-wrap items-center justify-between gap-2.5">
-    <div role="tablist" aria-label="Kind" class="inline-flex gap-[3px] rounded-[9px] bg-muted p-[3px]">
-      {#each (["all", "strength", "cardio", "mobility"] as const) as k (k)}
-        <button type="button" role="tab" aria-selected={kind === k} onclick={() => (kind = k)}
-          class="h-8 rounded-[7px] px-3.5 text-[13px] {kind === k ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">{k === "all" ? "All" : KIND_LABEL[k]}</button>
-      {/each}
-    </div>
+    <Tabs.Root value={kind} onValueChange={(v) => (kind = v as typeof kind)}>
+      <Tabs.List aria-label="Kind" class="h-auto w-auto rounded-[9px]">
+        {#each (["all", "strength", "cardio", "mobility"] as const) as k (k)}<Tabs.Trigger value={k} class="h-8 px-3.5 data-[state=active]:shadow-none rounded-lg data-[state=active]:bg-primary data-[state=active]:font-semibold data-[state=active]:text-primary-foreground rounded-[7px]">{k === "all" ? "All" : KIND_LABEL[k]}</Tabs.Trigger>{/each}
+      </Tabs.List>
+    </Tabs.Root>
     <div class="flex items-center gap-2">
       <label for="clib-q" class="sr-only">Search your library</label>
       <input id="clib-q" bind:value={query} placeholder="Search your library" class="h-9 w-60 max-w-full rounded-lg border border-border bg-background px-2.5 text-sm" />

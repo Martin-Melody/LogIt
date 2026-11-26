@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -26,7 +27,6 @@
   import FoodEditor from "$lib/features/nutrition/ui/FoodEditor.svelte";
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import { fmtNum } from "$lib/features/nutrition/ui/meals";
-  import { segment, segmentTrack } from "$lib/features/nutrition/ui/style";
 
   // Everything you've made: foods, recipes and saved meals.
   type Tab = "foods" | "recipes" | "meals";
@@ -118,17 +118,13 @@
 </PageHeader>
 
 <div class="flex flex-col gap-2.5 px-3 pb-32 pt-1">
-  <div class={segmentTrack} role="tablist">
-    <button type="button" role="tab" aria-selected={tab === "foods"} class={segment(tab === "foods")} onclick={() => setTab("foods")}>
-      Foods <span class="ml-1 opacity-60">{foods.length}</span>
-    </button>
-    <button type="button" role="tab" aria-selected={tab === "recipes"} class={segment(tab === "recipes")} onclick={() => setTab("recipes")}>
-      Recipes <span class="ml-1 opacity-60">{recipes.length}</span>
-    </button>
-    <button type="button" role="tab" aria-selected={tab === "meals"} class={segment(tab === "meals")} onclick={() => setTab("meals")}>
-      Meals <span class="ml-1 opacity-60">{meals.length}</span>
-    </button>
-  </div>
+  <Tabs.Root value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+    <Tabs.List aria-label="Your food">
+      <Tabs.Trigger value="foods">Foods <span class="opacity-60">{foods.length}</span></Tabs.Trigger>
+      <Tabs.Trigger value="recipes">Recipes <span class="opacity-60">{recipes.length}</span></Tabs.Trigger>
+      <Tabs.Trigger value="meals">Meals <span class="opacity-60">{meals.length}</span></Tabs.Trigger>
+    </Tabs.List>
+  </Tabs.Root>
 
   <label class="flex h-11 items-center gap-2.5 rounded-xl bg-muted px-3.5 focus-within:ring-2 focus-within:ring-ring">
     <Search class="size-4 text-muted-foreground" />

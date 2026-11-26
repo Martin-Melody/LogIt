@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -97,8 +98,6 @@
     }
   }
 
-  const tabClass = (on: boolean) =>
-    `inline-flex h-[34px] items-center border-b-2 px-1 text-sm ${on ? "border-primary font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`;
   const btn = "inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-border px-3 text-xs font-medium whitespace-nowrap";
   const btnPri = "inline-flex h-8 items-center gap-1.5 rounded-[9px] bg-primary px-3 text-xs font-semibold whitespace-nowrap text-primary-foreground disabled:opacity-50";
 </script>
@@ -114,11 +113,13 @@
     <a href="/plugins/builder/new" class="inline-flex h-[34px] items-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Build a plugin</a>
   </header>
 
-  <div role="tablist" aria-label="Plugins" data-guide="plugins-tabs" class="flex gap-[22px] border-b border-border">
-    <button type="button" role="tab" aria-selected={tab === "browse"} class={tabClass(tab === "browse")} onclick={() => setTab("browse")}>Browse</button>
-    <button type="button" role="tab" aria-selected={tab === "installed"} class={tabClass(tab === "installed")} onclick={() => setTab("installed")}>Installed{plugins.installsLoaded ? ` · ${plugins.installed.length}` : ""}</button>
-    <button type="button" role="tab" aria-selected={tab === "mine"} class={tabClass(tab === "mine")} onclick={() => setTab("mine")}>My plugins{mine ? ` · ${mine.length}` : ""}</button>
-  </div>
+  <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
+    <Tabs.List variant="line" aria-label="Plugins" data-guide="plugins-tabs">
+      <Tabs.Trigger value="browse">Browse</Tabs.Trigger>
+      <Tabs.Trigger value="installed">Installed{plugins.installsLoaded ? ` · ${plugins.installed.length}` : ""}</Tabs.Trigger>
+      <Tabs.Trigger value="mine">My plugins{mine ? ` · ${mine.length}` : ""}</Tabs.Trigger>
+    </Tabs.List>
+  </Tabs.Root>
 
   {#if loadError}
     <Alert.Root variant="destructive"><Alert.Description>{loadError}</Alert.Description></Alert.Root>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { onMount } from "svelte";
@@ -124,7 +125,6 @@
   }
 
   const NUDGE = "Hi! Just a reminder your check-in is waiting. Fill it in when you get a minute.";
-  const segBase = "h-8 rounded-lg px-3 text-[13px]";
 </script>
 
 <div class="flex flex-col gap-4">
@@ -133,12 +133,13 @@
       <h1 class="text-[26px] font-bold tracking-tight">Check-ins</h1>
       <p class="mt-1 text-[13px] text-muted-foreground">Your clients' answers in one place. Reviewed ones move out of the way on every device.</p>
     </div>
-    <div role="tablist" aria-label="Show" data-guide="checkins-tabs" class="flex flex-wrap gap-1 rounded-[10px] border border-border bg-card p-[3px]">
-      {#each [["review", `To review · ${toReview.length}`], ["missed", `Missed · ${missed.length}`], ["reviewed", "Reviewed"], ["forms", "Forms"]] as [f, label] (f)}
-        <button type="button" role="tab" aria-selected={filter === f} onclick={() => setFilter(f as Filter)}
-          class="{segBase} {filter === f ? 'bg-muted font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'}">{label}</button>
-      {/each}
-    </div>
+    <Tabs.Root value={filter} onValueChange={(v) => setFilter(v as Filter)}>
+      <Tabs.List aria-label="Show" data-guide="checkins-tabs" class="h-auto w-auto flex-wrap gap-1 rounded-[10px] border border-border bg-card">
+        {#each [["review", `To review · ${toReview.length}`], ["missed", `Missed · ${missed.length}`], ["reviewed", "Reviewed"], ["forms", "Forms"]] as [f, label] (f)}
+          <Tabs.Trigger value={f} class="h-8 flex-none rounded-lg data-[state=active]:bg-muted data-[state=active]:font-semibold data-[state=active]:shadow-none">{label}</Tabs.Trigger>
+        {/each}
+      </Tabs.List>
+    </Tabs.Root>
   </header>
 
   {#if error}

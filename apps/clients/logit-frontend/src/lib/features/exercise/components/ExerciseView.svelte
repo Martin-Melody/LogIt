@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
   import VideoEmbed from "./VideoEmbed.svelte";
   import { Copy, Package, RotateCcw, Trash2, ChevronRight } from "lucide-svelte";
@@ -286,13 +287,14 @@
   <p class="px-4 py-6 text-sm text-muted-foreground">Exercise not found.</p>
 {:else}
   {@const ex = exercise}
-  <div role="tablist" aria-label="{ex.name}" class="sticky top-0 z-10 flex border-b border-border bg-background px-4">
-    {#each [["progress", "Progress"], ["howto", "How to"], ["settings", "Settings"]] as [id, name] (id)}
-      <button type="button" role="tab" aria-selected={shown === id} data-testid="exercise-tab-{id}"
-        class="min-h-11 flex-1 border-b-2 text-sm {shown === id ? 'border-foreground font-semibold' : 'border-transparent text-muted-foreground'}"
-        onclick={() => (tab = id as ExerciseTab)}>{name}</button>
-    {/each}
-  </div>
+  <!-- sticky sits on the Root: it's the list's parent, and sticky can't leave its parent -->
+  <Tabs.Root value={shown} onValueChange={(v) => (tab = v as ExerciseTab)} class="sticky top-0 z-10 bg-background">
+    <Tabs.List variant="line" aria-label={ex.name} class="px-4">
+      {#each [["progress", "Progress"], ["howto", "How to"], ["settings", "Settings"]] as [id, name] (id)}
+        <Tabs.Trigger value={id} data-testid="exercise-tab-{id}">{name}</Tabs.Trigger>
+      {/each}
+    </Tabs.List>
+  </Tabs.Root>
 
   {#key shown}
   <div class="flex flex-col gap-5 px-4 py-4" role="tabpanel" in:popIn={{ duration: 180, y: 6 }}>

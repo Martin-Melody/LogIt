@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onDestroy } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -53,20 +54,20 @@
   }
 
   const shown = $derived(box === "chats" ? (chats ?? []) : requests);
-  const tab = (on: boolean) =>
-    `h-8 rounded-[8px] px-3 text-[13px] font-medium ${on ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`;
 </script>
 
 <svelte:head><title>Messages · LogIt</title></svelte:head>
 
 <div class="mx-auto flex h-[calc(100vh-7rem)] w-full max-w-[1100px] overflow-hidden rounded-[10px] border border-border bg-card">
   <aside class="flex w-full flex-col border-r border-border md:w-[320px] {to ? 'hidden md:flex' : ''}">
-    <div class="flex items-center gap-1 border-b border-border p-2" role="tablist" aria-label="Messages">
-      <button type="button" role="tab" aria-selected={box === "chats"} class={tab(box === "chats")} onclick={() => (box = "chats")}>Chats</button>
-      <button type="button" role="tab" aria-selected={box === "requests"} class={tab(box === "requests")} onclick={() => (box = "requests")}>
-        Requests{#if requests.length}<span class="ml-1.5 tabular-nums text-muted-foreground">{requests.length}</span>{/if}
-      </button>
-    </div>
+    <Tabs.Root bind:value={box} class="border-b border-border p-2">
+      <Tabs.List aria-label="Messages" class="h-auto w-auto gap-1 bg-transparent p-0">
+        <Tabs.Trigger value="chats" class="h-8 flex-none rounded-[8px] after:hidden data-[state=active]:bg-muted data-[state=active]:shadow-none">Chats</Tabs.Trigger>
+        <Tabs.Trigger value="requests" class="h-8 flex-none rounded-[8px] after:hidden data-[state=active]:bg-muted data-[state=active]:shadow-none">
+          Requests{#if requests.length}<span class="tabular-nums text-muted-foreground">{requests.length}</span>{/if}
+        </Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
     {#if box === "requests"}
       <p class="px-4 pt-3 text-xs text-muted-foreground">From people you don't follow. They won't know you've seen a message until you accept.</p>
     {/if}
