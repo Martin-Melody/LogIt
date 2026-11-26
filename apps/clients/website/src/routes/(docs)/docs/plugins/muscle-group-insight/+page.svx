@@ -1,5 +1,6 @@
 ---
 title: Muscle group insight
+description: "Write a muscle group insight that reads your training history for one muscle group and says what volume and frequency seem to work for you."
 ---
 
 A muscle group insight algorithm looks at your training history for one muscle

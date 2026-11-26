@@ -2,7 +2,7 @@
   import Phone from "$lib/site/Phone.svelte";
   import PlayBadge from "$lib/site/PlayBadge.svelte";
   import AppParts from "$lib/site/AppParts.svelte";
-  import { PLAY_CANCEL_PATH, PRICES } from "$lib/site";
+  import { GITHUB_URL, PLAY_CANCEL_PATH, PLAY_URL, PRICES, SITE_URL } from "$lib/site";
 
   // Design decisions for this page: docs/website-design.md
 
@@ -74,10 +74,27 @@
     { q: "Where is my data kept?", a: "On your phone. With an account it's also backed up on our servers in the EU (Pro keeps several devices in sync). You can export it or delete your account any time." },
     { q: "Is there an iPhone app?", a: "Not yet. Android comes first; iPhone is planned." },
   ];
+
+  // Tells search engines this is an Android app, free to install, and who makes it.
+  const jsonLd = JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "MobileApplication",
+      name: "LogIt",
+      url: SITE_URL,
+      description: "A workout, food and habit tracker that works out your next weight, works offline and never shows you an ad.",
+      operatingSystem: "Android",
+      applicationCategory: "HealthApplication",
+      installUrl: PLAY_URL,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+    },
+    { "@context": "https://schema.org", "@type": "Organization", name: "LogIt", url: SITE_URL, logo: `${SITE_URL}/favicon.png`, sameAs: [GITHUB_URL] },
+  ]).replace(/</g, "\\u003c");
 </script>
 
 <svelte:head>
   <title>LogIt: workout, food and habit tracker</title>
+  {@html `<script type="application/ld+json">${jsonLd}</script>`}
   <meta name="description" content="Log every set and know the next one. A workout, food and habit tracker that works out your next weight, works offline and never shows you an ad." />
   <meta property="og:title" content="LogIt: log every set, know the next one" />
   <meta property="og:description" content="Workout, food and habit tracking that works offline. Free on Android." />

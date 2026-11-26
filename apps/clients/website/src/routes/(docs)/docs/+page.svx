@@ -1,5 +1,6 @@
 ---
 title: Using LogIt
+description: "How to use LogIt: logging workouts, splits and programs, food, habits, progress, Pro sync and coaching."
 ---
 
 <script>

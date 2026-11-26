@@ -1,5 +1,6 @@
 ---
 title: Trust & the sandbox
+description: "How LogIt keeps plugins safe: what runs in the sandbox, what plugins can and can't see, and what Restricted Mode does."
 ---
 
 Installing a plugin should never be a security decision you have to think hard

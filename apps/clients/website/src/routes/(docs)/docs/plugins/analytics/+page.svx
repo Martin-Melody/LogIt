@@ -1,5 +1,6 @@
 ---
 title: Analytics
+description: "Write an analytics plugin that adds custom metrics, charts and insights for an exercise."
 ---
 
 An analytics plugin computes custom metrics, charts and insights for a single

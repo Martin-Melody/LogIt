@@ -1,5 +1,6 @@
 ---
 title: Exercise packs
+description: "Add exercises to LogIt's catalogue with an exercise pack: plain JSON, no code."
 ---
 
 An exercise pack adds a list of exercises to the catalogue. It's pure JSON — no
