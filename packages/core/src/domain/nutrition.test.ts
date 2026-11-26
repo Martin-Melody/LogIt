@@ -22,6 +22,9 @@ import {
   mealTotals,
   moveDiaryItem,
   copyDiaryItems,
+  atTimeOn,
+  timeOfDay,
+  localDateIso,
   recentFoodsFromDays,
   setDiaryItems,
   recipeAsFood,
@@ -128,6 +131,19 @@ describe("diary day", () => {
     // fresh ids, no photo carried over
     expect(new Set(target.items.map((i) => i.id)).size).toBe(3);
     expect(target.items.some((i) => i.photoDataUrl)).toBe(false);
+  });
+
+  it("keeps a time set on the item; today without one gets now, an earlier day none", () => {
+    const at = atTimeOn("2026-01-14", "19:02");
+    expect(timeOfDay(at)).toBe("19:02");
+    const past = addDiaryItem(createDiaryDay("2026-01-14"), { ...loggedItemFromFood(chicken, "breakfast", 100), loggedAtMs: at });
+    expect(past.items[0]!.loggedAtMs).toBe(at);
+    expect(addDiaryItem(createDiaryDay("2026-01-14"), loggedItemFromFood(chicken, "lunch", 100)).items[0]!.loggedAtMs).toBeUndefined();
+    const today = addDiaryItem(createDiaryDay(localDateIso()), loggedItemFromFood(chicken, "lunch", 100));
+    expect(today.items[0]!.loggedAtMs).toBeGreaterThan(0);
+    // Copied to another day: the same time of day on that day.
+    const copied = copyDiaryItems(createDiaryDay("2026-01-20"), past.items);
+    expect(copied.items[0]!.loggedAtMs).toBe(atTimeOn("2026-01-20", "19:02"));
   });
 
   it("copyDiaryItems can restrict to one meal", () => {

@@ -25,6 +25,7 @@
   import { pushNutritionDay, pushFavorite } from "$lib/sync/syncService";
   import { basisForItem, resolveFoodRef } from "$lib/features/nutrition/resolveFood";
   import { portionOptions, portionToGrams, portionLabel } from "$lib/features/nutrition/portion";
+  import MealTimeRow from "$lib/features/nutrition/ui/MealTimeRow.svelte";
   import MacroRing from "$lib/features/nutrition/MacroRing.svelte";
   import { fmtKcal } from "$lib/features/nutrition/nutrition";
 
@@ -48,6 +49,7 @@
 
   let amount = $state<number | string>(0);
   let portionId = $state("g");
+  let pickedAt = $state<number | undefined>();
   let meal = $state<MealSlot>("breakfast");
   // Quick-add items have no per-100g basis — edit the absolute macros instead.
   const raw = $state({ kcal: "", protein: "", carbs: "", fat: "" });
@@ -125,7 +127,7 @@
     if (!day || !item || ui.saving) return;
     ui.saving = true;
     try {
-      const patch: Partial<Omit<LoggedItem, "id">> = { meal };
+      const patch: Partial<Omit<LoggedItem, "id">> = { meal, ...(pickedAt !== undefined ? { loggedAtMs: pickedAt } : {}) };
       if (basis) {
         if (grams <= 0) return;
         patch.grams = grams;
@@ -230,6 +232,9 @@
           </Select.Content>
         </Select.Root>
       </div>
+      {#key item?.id}
+        <MealTimeRow class="px-3 py-3" {dateIso} startMs={item?.loggedAtMs ?? null} onchange={(ms) => (pickedAt = ms)} />
+      {/key}
     </div>
 
     <!-- Energy summary -->
