@@ -19,6 +19,8 @@
   import { ChevronDown, Circle, CircleCheck } from "lucide-svelte";
   import { EVENT_KINDS, EVENT_SPORTS, eventsApi, type EventKind, type EventSport, type GroupEvent } from "@logit/core/api/eventsApi";
   import { dayBadge, eventShort } from "$lib/features/groups/eventTime";
+  import { groupPostsApi, type GroupPost } from "@logit/core/api/groupPostsApi";
+  import PostRow from "$lib/components/social/PostRow.svelte";
 
   const { open, onclose } = $props<{
     open: boolean;
@@ -26,7 +28,18 @@
   }>();
 
   let query = $state("");
-  let tab = $state<"people" | "groups" | "events">("people");
+  let tab = $state<"people" | "groups" | "events" | "posts">("people");
+  let posts = $state<GroupPost[]>([]);
+  let postsLoaded = $state(false);
+  async function searchPosts() {
+    const q = query.trim();
+    if (q.length < 2) { posts = []; postsLoaded = false; return; }
+    posts = await groupPostsApi.search(q).catch(() => []);
+    postsLoaded = true;
+  }
+  $effect(() => {
+    if (tab === "posts") void searchPosts();
+  });
   let events = $state<GroupEvent[]>([]);
   let eventsLoaded = $state(false);
   let sport = $state<EventSport | null>(null);
@@ -118,7 +131,7 @@
       if (tab === "events") void searchEvents();
       return;
     }
-    debounceTimer = setTimeout(() => { void search(q); if (tab === "events") void searchEvents(); }, 250);
+    debounceTimer = setTimeout(() => { void search(q); if (tab === "events") void searchEvents(); if (tab === "posts") void searchPosts(); }, 250);
   }
 
   async function search(q: string) {
@@ -213,7 +226,7 @@
         bind:value={query}
         oninput={onInput}
         type="search"
-        placeholder={tab === "events" ? "Search events by place or name…" : tab === "groups" ? "Search groups by name or place…" : "Search by username or name…"}
+        placeholder={tab === "posts" ? "Search posts in groups…" : tab === "events" ? "Search events by place or name…" : tab === "groups" ? "Search groups by name or place…" : "Search by username or name…"}
         class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
       {#if loading}
@@ -229,12 +242,21 @@
         <button type="button" role="tab" aria-selected={tab === "people"} class={segment(tab === "people")} onclick={() => (tab = "people")}>People</button>
         <button type="button" role="tab" aria-selected={tab === "groups"} class={segment(tab === "groups")} onclick={() => (tab = "groups")}>Groups</button>
         <button type="button" role="tab" aria-selected={tab === "events"} class={segment(tab === "events")} onclick={() => (tab = "events")}>Events</button>
+        <button type="button" role="tab" aria-selected={tab === "posts"} class={segment(tab === "posts")} onclick={() => (tab = "posts")}>Posts</button>
       </div>
     </div>
 
     <!-- Results -->
     <div class="overflow-y-auto flex-1">
-      {#if tab === "events"}
+      {#if tab === "posts"}
+        {#if !postsLoaded}
+          <p class="px-6 py-10 text-center text-sm text-muted-foreground">Search questions, form checks and advice in groups anyone can find, and your own groups.</p>
+        {:else if posts.length === 0}
+          <p class="px-6 py-10 text-center text-sm text-muted-foreground">No posts found for "<span class="text-foreground">{query.trim()}</span>".</p>
+        {:else}
+          <div class="pb-8" role="presentation" onclick={onclose}>{#each posts as p (p.id)}<PostRow post={p} showGroup />{/each}</div>
+        {/if}
+      {:else if tab === "events"}
         <div class="flex gap-2 overflow-x-auto px-3 py-2.5">
           {#each [["sport", sport ?? "Any sport", !!sport], ["kind", kind ?? "Any kind", !!kind], ["when", WHEN[when], when !== "any"]] as [key, label, on] (key)}
             <button type="button" onclick={() => (picking = key as "sport" | "kind" | "when")}

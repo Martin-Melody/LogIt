@@ -110,6 +110,11 @@ public static class ModerationEndpoints
                 && db.DmMembers.Any(x => x.ThreadId == m.ThreadId && x.UserId == callerId)),
             // Someone else's story you can see.
             ReportTargetType.Story => await StoryEndpoints.Visible(db, callerId, clock.GetUtcNow().UtcDateTime).AnyAsync(s => s.Id == req.TargetId && s.AuthorId != callerId),
+            // A post or comment in a group you can read.
+            ReportTargetType.GroupPost => await db.GroupPosts.AnyAsync(p => p.Id == req.TargetId && p.DeletedAt == null && p.AuthorId != callerId
+                && (p.Group.Access != GroupAccess.InviteOnly || db.GroupMembers.Any(m => m.GroupId == p.GroupId && m.UserId == callerId))),
+            ReportTargetType.GroupComment => await db.GroupComments.AnyAsync(c => c.Id == req.TargetId && c.DeletedAt == null && c.AuthorId != callerId
+                && (c.Post.Group.Access != GroupAccess.InviteOnly || db.GroupMembers.Any(m => m.GroupId == c.Post.GroupId && m.UserId == callerId))),
             // A group you're in.
             ReportTargetType.Group => await db.GroupMembers.AnyAsync(m => m.GroupId == req.TargetId && m.UserId == callerId),
             _ => false,
@@ -124,9 +129,13 @@ public static class ModerationEndpoints
 
         // A message in a group's chat also goes to that group's moderators (canvas D3), without
         // saying who reported it.
-        Guid? groupId = targetType == ReportTargetType.Message
-            ? await db.DirectMessages.Where(m => m.Id == req.TargetId).Select(m => m.Thread.GroupId).FirstOrDefaultAsync()
-            : null;
+        Guid? groupId = targetType switch
+        {
+            ReportTargetType.Message => await db.DirectMessages.Where(m => m.Id == req.TargetId).Select(m => m.Thread.GroupId).FirstOrDefaultAsync(),
+            ReportTargetType.GroupPost => await db.GroupPosts.Where(p => p.Id == req.TargetId).Select(p => (Guid?)p.GroupId).FirstOrDefaultAsync(),
+            ReportTargetType.GroupComment => await db.GroupComments.Where(c => c.Id == req.TargetId).Select(c => (Guid?)c.Post.GroupId).FirstOrDefaultAsync(),
+            _ => null,
+        };
         if (groupId is { } gid && !await db.Reports.AnyAsync(r => r.GroupId == gid && r.TargetId == req.TargetId && r.GroupResolvedAt == null))
         {
             var mods = await db.GroupMembers.Where(m => m.GroupId == gid && (m.Role == GroupRole.Organiser || m.Role == GroupRole.Moderator)).Select(m => m.UserId).ToListAsync();

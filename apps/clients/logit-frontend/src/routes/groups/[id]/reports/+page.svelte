@@ -9,6 +9,7 @@
   import { toast } from "svelte-sonner";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { groupsApi, type Group, type GroupReport } from "@logit/core/api/groupsApi";
+  import { groupPostsApi } from "@logit/core/api/groupPostsApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
@@ -37,7 +38,9 @@
   async function act(r: GroupReport, remove: boolean) {
     reports = (reports ?? []).filter((x) => x.messageId !== r.messageId);
     try {
-      if (remove) await groupsApi.removeMessage(id, r.messageId);
+      if (remove && r.kind === "post") await groupPostsApi.moderate(r.messageId, { remove: true });
+      else if (remove && r.kind === "comment") await groupPostsApi.removeComment(r.messageId);
+      else if (remove) await groupsApi.removeMessage(id, r.messageId);
       else await groupsApi.keep(id, r.messageId);
       toast.success(remove ? "Message removed" : "Kept. It's off the group's list.");
     } catch {
@@ -75,11 +78,13 @@
   {:else}
     {#each reports as r (r.messageId)}
       <div class="flex flex-col gap-2.5 border-b border-border px-4 py-3.5">
-        <span class="text-[12px] text-muted-foreground">{r.reasons.map((x) => REASONS[x] ?? x).join(", ")}{r.count > 1 ? ` · ${r.count} reports` : ""} · {shortAgo(r.latestAtMs, Date.now())} ago</span>
+        <span class="text-[12px] text-muted-foreground">{r.kind === "post" ? "A post · " : r.kind === "comment" ? "A comment · " : ""}{r.reasons.map((x) => REASONS[x] ?? x).join(", ")}{r.count > 1 ? ` · ${r.count} reports` : ""} · {shortAgo(r.latestAtMs, Date.now())} ago</span>
         <div class="flex items-start gap-2.5">
           <PersonAvatar name={r.sender?.displayName ?? null} src={r.sender?.avatarUrl} size={32} />
           <span class="flex min-w-0 flex-col gap-1">
             <span class="text-[13px] font-semibold">{r.sender ? r.sender.displayName || r.sender.username : "Deleted account"}</span>
+            {#if r.title}<a href="/groups/posts/{r.postId}" class="text-[14px] font-semibold text-inherit">{r.title}</a>{/if}
+            {#if r.kind === "comment" && r.postId}<a href="/groups/posts/{r.postId}" class="text-[12px] text-muted-foreground">Open the post</a>{/if}
             {#if r.body}<span class="w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl bg-muted px-3 py-2 text-[14px]">{r.body}</span>{/if}
             {#if r.photoUrl}<img src={photoSrc(r.photoUrl)} alt="Reported" class="max-h-48 w-fit rounded-xl border border-border object-contain" />{/if}
           </span>

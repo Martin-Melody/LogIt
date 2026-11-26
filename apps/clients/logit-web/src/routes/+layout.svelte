@@ -101,6 +101,9 @@
     void page.url.pathname;
     return !apiClient.isSelfHosted() && apiClient.getUser()?.tier === "Free";
   });
+  // Social (feed, messages, groups and their posts) is open to every account on the web (Martin,
+  // 25 Nov: anyone can read, any account can take part); the training dashboard stays Pro.
+  const isSocialPath = $derived(page.url.pathname.startsWith("/social") || page.url.pathname.startsWith("/groups"));
   // A Free account trying coaching with sample clients gets the Coaching workspace (W3);
   // its own training dashboard still needs Pro, so "Me" lands on /upgrade.
   const isTrialCoaching = $derived.by(() => {
@@ -128,7 +131,7 @@
       return;
     }
     if (isBlockedFreeTier) {
-      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isPayFix && !isWelcome && !isTrialCoaching && !isAdminPath) {
+      if (!isUpgrade && !isFreeAccount && !isInviteLink && !isPayFix && !isWelcome && !isTrialCoaching && !isAdminPath && !isSocialPath) {
         // An admin on a Free account runs the server from here: the console, not the upgrade page (bug hunt 11.1).
         await adminState.refresh();
         await goto(adminState.isAdmin ? "/admin" : "/upgrade");
@@ -216,7 +219,7 @@
     </div>
     {@render children?.()}
   </div>
-{:else if apiClient.isAuthenticated() && (!isBlockedFreeTier || isTrialCoaching || isAdminPath)}
+{:else if apiClient.isAuthenticated() && (!isBlockedFreeTier || isTrialCoaching || isAdminPath || isSocialPath)}
   <Sidebar.Provider>
     <AppSidebar
       {isStudio}

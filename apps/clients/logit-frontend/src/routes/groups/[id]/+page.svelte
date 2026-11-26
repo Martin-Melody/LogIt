@@ -21,6 +21,7 @@
   import GroupFormSheet from "$lib/components/social/GroupFormSheet.svelte";
   import GroupInviteSheet from "$lib/components/social/GroupInviteSheet.svelte";
   import PinNoteSheet from "$lib/components/social/PinNoteSheet.svelte";
+  import GroupPostsTab from "$lib/components/social/GroupPostsTab.svelte";
   import EventRow from "$lib/components/social/EventRow.svelte";
   import EventFormSheet from "$lib/components/social/EventFormSheet.svelte";
   import { eventsApi, gatherSeries, type GroupEvent } from "@logit/core/api/eventsApi";
@@ -31,6 +32,9 @@
   import { back } from "$lib/navigation";
 
   const id = $derived(page.params.id!);
+  /** Overview (the page as it was) or Posts (canvas Q1). */
+  const tab = $derived(page.url.searchParams.get("tab") === "posts" ? "posts" : "overview");
+  const setTab = (t: "overview" | "posts") => void goto(t === "posts" ? `/groups/${id}?tab=posts` : `/groups/${id}`, { replaceState: true, noScroll: true, keepFocus: true });
   let group = $state<Group | null>(null);
   let error = $state<string | null>(null);
   let unread = $state(false);
@@ -152,6 +156,16 @@
       </div>
     </div>
 
+    {#if group.posts?.on}
+      <div role="tablist" aria-label="Group" class="mx-4 mt-1 flex border-b border-border">
+        {#each [["overview", "Overview"], ["posts", "Posts"]] as [t, label] (t)}
+          <button type="button" role="tab" aria-selected={tab === t} class="h-11 flex-1 text-[14px] {tab === t ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => setTab(t as "overview" | "posts")}>{label}</button>
+        {/each}
+      </div>
+    {/if}
+    {#if tab === "posts" && group.posts?.on}
+      <GroupPostsTab {group} />
+    {:else}
     {#if group.reports > 0}
       <a href="/groups/{group.id}/reports" class="mx-3 mt-3.5 flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-card px-3.5 text-[14px] font-medium text-inherit no-underline">
         {group.reports === 1 ? "1 reported message to look at" : `${group.reports} reported messages to look at`}<ChevronRight class="size-4 text-muted-foreground" />
@@ -209,6 +223,7 @@
         <ChevronRight class="size-4 shrink-0 text-muted-foreground" />
       </a>
     </section>
+    {/if}
   {/if}
 </div>
 

@@ -53,16 +53,20 @@ public static class GroupEndpoints
     public record MeDto(string Role, bool OnBoard, string Notify);
     /// Requests: how many are waiting (organisers only, else 0).
     public record GroupDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, Guid ThreadId, string InviteCode,
-        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview, string Access, int Requests, int Reports = 0, long? MutedUntilMs = null);
+        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview, string Access, int Requests, int Reports = 0, long? MutedUntilMs = null,
+        PostSettingsDto? Posts = null);
+    /// Posts (canvas Q4); Slug is the group's web name.
+    public record PostSettingsDto(bool On, string WhoCanPost, string WhoCanComment, bool OnWeb, string Slug);
     public record MemberDto(PersonDto User, string Role, long JoinedAtMs, long? MutedUntilMs = null);
     /// Requested: you asked to join and wait. InvitedBy: a member invited you from a chat.
     public record PreviewDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string? Organiser,
-        List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null);
+        List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null, PostSettingsDto? Posts = null);
     /// A search result; State is "member", "requested", "invited" or "none".
     public record SearchDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string Access, string State, string? Followed);
     public record RequestDto(PersonDto User, long AtMs, string? FollowedBy);
     public record CreateRequest(string Name, string? Kind, string? Place, Guid? PhotoId, string? Access = null);
-    public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false, string? Access = null);
+    public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false, string? Access = null,
+        bool? PostsOn = null, string? WhoCanPost = null, string? WhoCanComment = null);
     /// EventId: joining from an event in search, so you're going to it once you're in.
     public record JoinRequest(bool OnBoard = true, Guid? EventId = null);
     public record NoteRequest(string Text, bool Notify = true);
@@ -156,8 +160,12 @@ public static class GroupEndpoints
             g.Note is null ? null : new NoteDto(g.Note, noteBy is null ? null : Person(noteBy), Ms(g.NoteAt ?? g.CreatedAt)),
             new MeDto(mine.Role.ToString(), mine.OnBoard, mine.Notify.ToString()),
             [.. organisers.Select(Person)], [.. preview.Select(Person)], g.Access.ToString(), requests, reports,
-            mine.MutedUntil is { } mu && mu > DateTime.UtcNow ? Ms(mu) : null);
+            mine.MutedUntil is { } mu && mu > DateTime.UtcNow ? Ms(mu) : null,
+            await PostSettingsAsync(db, g));
     }
+
+    private static async Task<PostSettingsDto> PostSettingsAsync(AppDbContext db, Group g) =>
+        new(g.PostsOn, g.WhoCanPost.ToString(), g.WhoCanComment.ToString(), GroupPostEndpoints.OnWeb(g), await GroupPostEndpoints.GroupSlugAsync(db, g));
 
     private static async Task<IResult> Get(Guid id, ClaimsPrincipal caller, AppDbContext db)
     {
@@ -189,6 +197,17 @@ public static class GroupEndpoints
         {
             if (!Enum.TryParse<GroupAccess>(req.Access, true, out var access)) return Results.BadRequest(new { error = "InviteOnly, Request or Open." });
             g.Access = access;
+        }
+        if (req.PostsOn is { } postsOn) g.PostsOn = postsOn;
+        if (req.WhoCanPost is not null)
+        {
+            if (!Enum.TryParse<GroupPosting>(req.WhoCanPost, true, out var who)) return Results.BadRequest(new { error = "Anyone, Members or Staff." });
+            g.WhoCanPost = who;
+        }
+        if (req.WhoCanComment is not null)
+        {
+            if (!Enum.TryParse<GroupCommenting>(req.WhoCanComment, true, out var who)) return Results.BadRequest(new { error = "Anyone or Members." });
+            g.WhoCanComment = who;
         }
         if (req.PhotoId is { } pid && pid != g.PhotoId)
         {
@@ -393,7 +412,7 @@ public static class GroupEndpoints
             .Select(m => m.User).Take(3).ToListAsync();
         var requested = await db.GroupJoinRequests.AnyAsync(r => r.GroupId == id && r.UserId == me);
         return Results.Ok(new PreviewDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, organiser, [.. followed.Select(Person)], member,
-            g.Access.ToString(), requested, invite?.Inviter.DisplayName));
+            g.Access.ToString(), requested, invite?.Inviter.DisplayName, g.PostsOn ? await PostSettingsAsync(db, g) : null));
     }
 
     /// Joining from search or an invite card: straight in when invited or the group is open; a
@@ -496,7 +515,9 @@ public static class GroupEndpoints
     }
 
     public record MuteRequest(int? Minutes);
-    public record ReportedDto(Guid MessageId, string Body, string? PhotoUrl, PersonDto? Sender, List<string> Reasons, int Count, long LatestAtMs);
+    /// Kind: "message", "post" or "comment"; PostId to open a post or a comment's post.
+    public record ReportedDto(Guid MessageId, string Body, string? PhotoUrl, PersonDto? Sender, List<string> Reasons, int Count, long LatestAtMs,
+        string Kind = "message", Guid? PostId = null, string? Title = null);
 
     /// A moderator mutes someone in the chat (1 hour, 1 day, 1 week; null lifts it). Not an
     /// organiser or another moderator, unless you're an organiser.
@@ -538,18 +559,21 @@ public static class GroupEndpoints
         var mine = await MembershipAsync(db, id, caller.GetUserId());
         if (mine is null) return Gone();
         if (!CanModerate(mine)) return NotModerator();
-        var open = await db.Reports.Where(r => r.GroupId == id && r.GroupResolvedAt == null && r.TargetType == ReportTargetType.Message)
-            .Select(r => new { r.TargetId, Reason = r.Reason.ToString(), r.CreatedAt }).Take(500).ToListAsync();
+        var open = await db.Reports.Where(r => r.GroupId == id && r.GroupResolvedAt == null)
+            .Select(r => new { r.TargetId, r.TargetType, Reason = r.Reason.ToString(), r.CreatedAt }).Take(500).ToListAsync();
         var ids = open.Select(r => r.TargetId).Distinct().ToList();
         var messages = await db.DirectMessages.Include(m => m.Sender).Where(m => ids.Contains(m.Id) && m.DeletedAt == null).ToDictionaryAsync(m => m.Id);
-        return Results.Ok(open.Where(r => messages.ContainsKey(r.TargetId)).GroupBy(r => r.TargetId)
-            .Select(g =>
-            {
-                var m = messages[g.Key];
-                return new ReportedDto(m.Id, m.Body, m.PhotoId is { } p ? PhotoEndpoints.UrlOf(p) : null, m.Sender is null ? null : Person(m.Sender),
-                    [.. g.Select(r => r.Reason).Distinct()], g.Count(), Ms(g.Max(r => r.CreatedAt)));
-            })
-            .OrderByDescending(r => r.LatestAtMs));
+        var posts = await db.GroupPosts.Include(p => p.Author).Where(p => ids.Contains(p.Id) && p.DeletedAt == null).ToDictionaryAsync(p => p.Id);
+        var comments = await db.GroupComments.Include(c => c.Author).Where(c => ids.Contains(c.Id) && c.DeletedAt == null).ToDictionaryAsync(c => c.Id);
+        ReportedDto? Item(Guid target, List<string> reasons, int count, long at) =>
+            messages.TryGetValue(target, out var m) ? new ReportedDto(m.Id, m.Body, m.PhotoId is { } p ? PhotoEndpoints.UrlOf(p) : null, m.Sender is null ? null : Person(m.Sender), reasons, count, at)
+            : posts.TryGetValue(target, out var gp) ? new ReportedDto(gp.Id, gp.Body, gp.PhotoId is { } pp ? PhotoEndpoints.UrlOf(pp) : null, gp.Author is null ? null : Person(gp.Author), reasons, count, at, "post", gp.Id, gp.Title)
+            : comments.TryGetValue(target, out var gc) ? new ReportedDto(gc.Id, gc.Body, null, gc.Author is null ? null : Person(gc.Author), reasons, count, at, "comment", gc.PostId)
+            : null;
+        return Results.Ok(open.GroupBy(r => r.TargetId)
+            .Select(g => Item(g.Key, [.. g.Select(r => r.Reason).Distinct()], g.Count(), Ms(g.Max(r => r.CreatedAt))))
+            .Where(r => r is not null)
+            .OrderByDescending(r => r!.LatestAtMs));
     }
 
     /// "Keep it": off the group's list; LogIt's own review isn't affected.

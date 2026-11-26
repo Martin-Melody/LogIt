@@ -1,6 +1,6 @@
 namespace Logit.Api.Data.Entities;
 
-public enum ReportTargetType { Post, Comment, User, Message, Story, Group }
+public enum ReportTargetType { Post, Comment, User, Message, Story, Group, GroupPost, GroupComment }
 
 public enum ReportReason { Spam, Harassment, HateSpeech, Violence, SexualContent, SelfHarm, Misinformation, Other }
 

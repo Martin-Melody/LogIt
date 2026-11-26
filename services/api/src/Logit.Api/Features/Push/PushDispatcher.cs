@@ -255,7 +255,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
     public static Kind Of(NotificationType type) => type switch
     {
         NotificationType.Like or NotificationType.Repost or NotificationType.StoryCheer => Kind.Likes,
-        NotificationType.Comment or NotificationType.Reply or NotificationType.Mention or NotificationType.Quote => Kind.Comments,
+        NotificationType.Comment or NotificationType.Reply or NotificationType.Mention or NotificationType.Quote or NotificationType.GroupPostReply => Kind.Comments,
         NotificationType.Follow or NotificationType.FollowRequest or NotificationType.FollowAccepted => Kind.Follows,
         NotificationType.Cheer => Kind.Cheers,
         NotificationType.GroupNote or NotificationType.GroupRequest or NotificationType.GroupApproved or NotificationType.GroupEvent
@@ -317,7 +317,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventChanged => $"changed the time or place of {n.Event?.Title ?? "an event"}",
         NotificationType.GroupEventCancelled => $"cancelled {n.Event?.Title ?? "an event"}",
         NotificationType.GroupEventReminder => $"{n.Event?.Title ?? "Your event"} is tomorrow",
-        NotificationType.GroupReport => n.Group is null ? "A message in your group was reported" : $"A message in {n.Group.Name} was reported",
+        NotificationType.GroupReport => n.Group is null ? "Something in your group was reported" : $"Something in {n.Group.Name} was reported",
+        NotificationType.GroupPostReply => n.Group is null ? "replied to you in a group" : $"replied to you in {n.Group.Name}",
         _ => "sent you something",
     };
 
@@ -339,6 +340,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventCancelled => ("cancelled event", "cancelled events"),
         NotificationType.GroupEventReminder => ("event tomorrow", "events tomorrow"),
         NotificationType.GroupReport => ("report", "reports"),
+        NotificationType.GroupPostReply => ("reply", "replies"),
         _ => ("coaching update", "coaching updates"),
     };
 
@@ -350,7 +352,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         // day"), or just "Deadlift day is tomorrow" for the reminder.
         // A report in a group: the group's name, never who reported it.
         if (batch.Count == 1 && batch[0] is { Type: NotificationType.GroupReport, Group: not null } report)
-            return new PushMessage(report.Group.Name, "A message was reported. Open Reports in the group's ⋯", "social",
+            return new PushMessage(report.Group.Name, "Something was reported. Open Reports in the group's ⋯", "social",
                 new Dictionary<string, string> { ["type"] = "GroupReport", ["count"] = "1", ["notificationId"] = report.Id.ToString() });
         if (batch.Count == 1 && batch[0] is { Event: not null, Group: not null } one)
             return new PushMessage(one.Group.Name, one.Type == NotificationType.GroupEventReminder ? What(one) : $"{NameOf(one.Actor)} {What(one)}", "social",
